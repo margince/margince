@@ -17,7 +17,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
@@ -81,7 +80,7 @@ func matchesErrorText(n ast.Node) (verb string, found bool) {
 func TestNoErrorMessageStringMatching(t *testing.T) {
 	t.Parallel()
 	defer errTextMatchWaivers.AssertAllMatched(t)
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
@@ -93,7 +92,7 @@ func TestNoErrorMessageStringMatching(t *testing.T) {
 			strings.HasPrefix(path, "internal/contracts/") {
 			return nil
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}

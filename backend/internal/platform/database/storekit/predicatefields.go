@@ -91,6 +91,27 @@ type Field struct {
 	// offers them instead of asking a reader to type one, which is how a typo
 	// became a filter that matched nothing and read as a settled answer.
 	Options []string
+	// Withheld marks a field this caller may not filter by. A leaf naming it
+	// compiles to FALSE whatever its operator, so it selects no rows: rendering
+	// nothing would widen the answer, and a negated leaf that selected every row
+	// would let a reader learn who carries a value by watching the count move.
+	Withheld bool
+	// FoldCase compares a text field case-insensitively: the column and the
+	// operand are both lowercased, so `de` finds `DE` and `Anna@X.io` finds
+	// `anna@x.io`. `contains` needs no fold: it is ILIKE already.
+	FoldCase bool
+	// Instant marks a date field whose Expr is a timestamp, read as the day it
+	// falls on in the session time zone. A comparison compiles to bounds on
+	// the raw column rather than a cast of it, so the column's index serves.
+	Instant bool
+	// Currency is the ISO code a currency field's operand is counted in, as
+	// minor units of it, for a builder that lets a reader type major units.
+	// Empty where the engine does not know it.
+	Currency string
+	// LinkScope bounds which linked rows a Link leaf may find, rendered per
+	// statement because the bound binds the caller's own values. Nil means the
+	// link row carries no read rule beyond the record it hangs off.
+	LinkScope func(arg func(any) int) (string, error)
 }
 
 // Reference is a record type an id field's values point at. Named rather than a

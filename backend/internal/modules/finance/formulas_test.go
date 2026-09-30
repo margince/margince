@@ -429,3 +429,38 @@ func TestAnEvenSampleTakesTheMeanOfTheTwoMiddleValues(t *testing.T) {
 		t.Fatalf("median = %d, want 4", out.MedianDaysLate)
 	}
 }
+
+// The on-time boundary sits between 0 and 1 day late, and is asserted there.
+//
+// The sample the test above reads runs -2, 0, 3, 8, 12, so it proves 0 is on
+// time and 3 is late — and stays green if the comparison widened to `days <= 1`
+// or `days <= 2`. A silent grace period is exactly the change this figure
+// cannot afford: it does not fail, it just quietly reports a better record than
+// the one the customer was quoted.
+func TestOneDayLateIsLate(t *testing.T) {
+	asOf := on(t, "2026-08-09")
+	settle := func(daysLate int) Invoice {
+		due := on(t, "2026-06-01")
+		return Invoice{DueOn: ptr(due), FullyPaidAt: ptr(due.AddDate(0, 0, daysLate))}
+	}
+
+	// Five paid exactly on the due date: the whole sample is on time.
+	onDue := TimelinessOver([]Invoice{
+		settle(0), settle(0), settle(0), settle(0), settle(0),
+	}, asOf)
+	if onDue.OnTimeRate != 1 {
+		t.Errorf("five invoices paid ON the due date gave %v, want 1 — the rule is paid on or "+
+			"before, so the due date itself is on time", onDue.OnTimeRate)
+	}
+
+	// Five paid one day after it: none is, and this is the half no sample in
+	// the suite reached.
+	oneLate := TimelinessOver([]Invoice{
+		settle(1), settle(1), settle(1), settle(1), settle(1),
+	}, asOf)
+	if oneLate.OnTimeRate != 0 {
+		t.Errorf("five invoices paid ONE day late gave %v, want 0 — a tolerance has been "+
+			"introduced, and every rate already quoted to a customer now reads differently",
+			oneLate.OnTimeRate)
+	}
+}

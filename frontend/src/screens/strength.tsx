@@ -14,9 +14,11 @@ import {
 } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
+import { Stack } from "../design-system/stack";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
+import "./strength.css";
 
 // The relationship-strength card (Phase 3, P-4): "no mystery number" — the
 // composite score NEVER renders alone. It always carries its bucket badge
@@ -87,16 +89,10 @@ export function StrengthPanel({
     <Panel title={t("strength.title")}>
       <PanelBody>
         {query.isPending && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-3)",
-            }}
-          >
+          <Stack gap="3">
             <Skeleton width="40%" />
             <Skeleton width="90%" />
-          </div>
+          </Stack>
         )}
         {query.isError && (
           <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
@@ -149,15 +145,7 @@ function StrengthBody({
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          flexWrap: "wrap",
-          marginBottom: "var(--space-3)",
-        }}
-      >
+      <div className="strength-headline">
         <Badge tone={BUCKET_TONE[bucket]}>
           {t(`strength.bucket.${bucket}`)}
         </Badge>
@@ -165,18 +153,12 @@ function StrengthBody({
           {t("strength.score", { score: formatNumber(score, locale) })}
         </span>
       </div>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-2)",
-        }}
-      >
+      <Stack gap="2">
         {factorRows.map((row) => {
           const pct = factorPercent(row.value);
           return (
             <div key={row.key}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div className="strength-factor-head">
                 <span>{t(`strength.factor.${row.key}`)}</span>
                 <span className="t-num">{formatNumber(pct, locale)}%</span>
               </div>
@@ -188,8 +170,8 @@ function StrengthBody({
             </div>
           );
         })}
-      </div>
-      <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
+      </Stack>
+      <p className="t-caption strength-last-interaction">
         {strength.last_interaction
           ? t("strength.lastInteraction", {
               when: formatDateTime(

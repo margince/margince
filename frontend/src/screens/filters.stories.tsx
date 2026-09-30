@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { FiltersScreen } from "./filters";
+import { listsMe, liveList, shortlist } from "./lists.fixtures";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The screen reads four routes and no session probe: the vocabulary for the
@@ -162,7 +163,7 @@ export const LoadedFromASavedView: Story = {
     // are therefore found through the document, not the story's root.
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Load a saved filter" }),
+      await canvas.findByRole("button", { name: "Load saved filter" }),
     );
     await userEvent.click(
       await page.findByRole("button", { name: "Gold tier in Berlin" }),
@@ -242,5 +243,22 @@ export const WithAClause: Story = {
     );
     await userEvent.type(canvas.getByLabelText("Value"), "Berlin");
     await canvas.findByText("3 contacts match");
+  },
+};
+
+// With lists switched on the destination becomes the library: the reader's
+// views, the team's lists, and the builder a Live List is saved from. This is
+// the Team lists section.
+export const TeamListsLibrary: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () =>
+        jsonResponse({
+          data: [liveList, shortlist],
+          page: { has_more: false },
+        }),
+    });
+    return <FiltersScreen id="lists" />;
   },
 };

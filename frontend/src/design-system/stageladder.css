@@ -6,8 +6,13 @@
    because that is the one that says which stages are behind. */
 
 /* A fieldset, so the browser's own border, padding and margin are cleared —
-   none of them is wanted around a row of stages. */
+   none of them is wanted around a row of stages.
+
+   It is the width the narrow layout below reads, since the rail and the aside
+   decide the room rather than the window. The containment also keeps a long
+   run out of the host's min-content, which would be every stage end to end. */
 .stage-ladder {
+  container-type: inline-size;
   display: flex;
   /* The rungs and the line about them read as one row while there is room for
      both, and the line drops under the rungs when there is not. */
@@ -21,23 +26,58 @@
   min-inline-size: 0;
 }
 
+/* The run gives up width and the ways out never do. Top-aligned, because a
+   scrolling run grows a bar under its rungs and centring would lift them off
+   the ways out's line. The bar stays: every rung is a move, so a pointer
+   cannot click its way along the row, and the bar is how it drags. */
+.stage-ladder-track {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+/* The run of open stages: one row, scrolled rather than wrapped. The inset is
+   room for a focused rung's ring, which a scroller clips on both axes; the
+   negative margin gives it back so the row sits where an unscrolled one did. */
+.stage-ladder-run {
+  margin: calc(-1 * var(--space-1));
+  padding: var(--space-1);
+  min-inline-size: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  /* A rung reached by Tab stops clear of the faded edge, not under it. */
+  scroll-padding-inline: var(--space-6);
+}
+
 .stage-ladder-steps {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
-  flex-wrap: wrap;
+  inline-size: max-content;
   align-items: center;
   gap: var(--space-1);
 }
 
-/* Each step is its own flex item and carries the chevron that introduces it,
-   so the mark and its step wrap together and no row ends on a separator. */
-.stage-ladder-step {
-  display: inline-flex;
+.stage-ladder-exits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex: none;
   align-items: center;
   gap: var(--space-1);
-  min-width: 0;
+}
+
+/* Each step is its own flex item and carries the chevron that introduces it.
+   It never shrinks: a run too long for its row scrolls, and a rung squeezed
+   narrower than its name would print half of it. */
+.stage-ladder-step {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 /* The track between two rungs, drawn rather than typed. A chevron between
@@ -121,4 +161,78 @@
   flex: 0 1 auto;
   min-inline-size: 0;
   text-align: end;
+}
+
+/* A narrow ladder sets the ways out on the line under the run, which beside
+   them kept room for one stage at phone width. Opening that line, the first
+   way out sheds the track that led in from the run. 34rem is where the run
+   still shows about three stages beside them. */
+@container (max-width: 34rem) {
+  .stage-ladder-track {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+  /* The break goes on the ways out: a full-width basis on the run ignores its
+     negative margin and overflows a run that fits by the inset. */
+  .stage-ladder-exits {
+    flex-basis: 100%;
+  }
+  .stage-ladder-exits > .stage-ladder-step:first-child {
+    margin-left: 0;
+  }
+  .stage-ladder-exits > .stage-ladder-step:first-child > .stage-ladder-sep {
+    display: none;
+  }
+}
+
+/* The run fades at an edge only while more of it lies past that edge: its
+   scroll position drives the two fade widths. Without scroll timelines there
+   is no fade, since the unguarded animation would settle on its last frame
+   and fade the first stage for good. Declared only where motion is welcome:
+   the fade is an animation that runs for as long as the run can scroll, and
+   under reduced motion nothing may be left running for the axe sweep. */
+@property --stage-ladder-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --stage-ladder-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes stage-ladder-fade {
+  from {
+    --stage-ladder-fade-start: 0px;
+    --stage-ladder-fade-end: var(--space-6);
+  }
+  10% {
+    --stage-ladder-fade-start: var(--space-6);
+  }
+  90% {
+    --stage-ladder-fade-end: var(--space-6);
+  }
+  to {
+    --stage-ladder-fade-start: var(--space-6);
+    --stage-ladder-fade-end: 0px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .stage-ladder-run {
+      mask-image: linear-gradient(
+        to right,
+        transparent,
+        black var(--stage-ladder-fade-start),
+        black calc(100% - var(--stage-ladder-fade-end)),
+        transparent
+      );
+      animation: stage-ladder-fade linear both;
+      animation-timeline: scroll(self inline);
+    }
+    /* A mask clips the ring a focused region draws outside its box. */
+    .stage-ladder-run:focus-visible {
+      mask-image: none;
+    }
+  }
 }

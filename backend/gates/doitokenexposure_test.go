@@ -44,11 +44,12 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -114,6 +115,7 @@ var ratifiedDestinations = map[string]string{
 	// equally short-lived and equally worth following.
 	"ResolveWithdrawalToken":            "looks the token up and returns an address and a scope, never the token",
 	"resolveWithdrawalTokenTx":          "is the same resolve inside a caller's transaction",
+	"resolvePreferenceTokenTx":          "is the preference-centre resolve inside a caller's transaction, and returns a contact and an address row, never the token",
 	"legacyPreferenceTokenAsWithdrawal": "looks up an OLD preference token and returns a withdrawal ref, never the token",
 	"HasPrefix":                         "reads the credential's family prefix and returns a bool; a prefix test discloses nothing the link's own shape does not",
 	"StopForCredential":                 "re-resolves the token inside the transaction that writes and returns nothing about it. It receives the plaintext DELIBERATELY: resolving in the handler and writing in a second transaction let an erasure commit in the gap, after which the write put the erased plaintext address back",
@@ -727,13 +729,12 @@ func parseConsentPackage(t *testing.T) map[string]*ast.File {
 	if err != nil {
 		t.Fatalf("listing the consent package: %v", err)
 	}
-	fset := token.NewFileSet()
 	out := map[string]*ast.File{}
 	for _, path := range paths {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, err := gatekit.ParseFile(path, parser.ParseComments)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

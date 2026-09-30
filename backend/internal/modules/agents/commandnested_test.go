@@ -35,16 +35,16 @@ func TestListTagAndLineItemCommandsStageAndAdmitOutsideTheRecordSeam(t *testing.
 		call           GovernedCall
 		wantTargetType string
 	}{
-		{"apply_tag", NewApplyTagCall(unreadableProvider{}, ApplyTagCommand{ID: id}), "tag"},
-		{"add_offer_line_item", NewAddOfferLineItemCall(unreadableProvider{}, AddOfferLineItemCommand{ID: id}), "offer"},
+		{"apply_tag", NewApplyTagCall(unreadableProvider{}, nil, ApplyTagCommand{ID: id}), "tag"},
+		{"add_offer_line_item", NewAddOfferLineItemCall(unreadableProvider{}, nil, AddOfferLineItemCommand{ID: id}), "offer"},
 		{
 			"update_offer_line_item",
-			NewUpdateOfferLineItemCall(unreadableProvider{}, UpdateOfferLineItemCommand{ID: id, LineItemID: lineItemID}),
+			NewUpdateOfferLineItemCall(unreadableProvider{}, nil, UpdateOfferLineItemCommand{ID: id, LineItemID: lineItemID}),
 			"offer",
 		},
 		{
 			"remove_offer_line_item",
-			NewRemoveOfferLineItemCall(unreadableProvider{}, RemoveOfferLineItemCommand{ID: id, LineItemID: lineItemID}),
+			NewRemoveOfferLineItemCall(unreadableProvider{}, nil, RemoveOfferLineItemCommand{ID: id, LineItemID: lineItemID}),
 			"offer",
 		},
 	}
@@ -67,7 +67,7 @@ func TestListTagAndLineItemCommandsStageAndAdmitOutsideTheRecordSeam(t *testing.
 func TestOfferLineItemSummariesNameTheLineItem(t *testing.T) {
 	offerID, lineItemID := ids.NewV7(), ids.NewV7()
 
-	updateInfo, err := NewUpdateOfferLineItemCall(unreadableProvider{}, UpdateOfferLineItemCommand{ID: offerID, LineItemID: lineItemID}).
+	updateInfo, err := NewUpdateOfferLineItemCall(unreadableProvider{}, nil, UpdateOfferLineItemCommand{ID: offerID, LineItemID: lineItemID}).
 		Subject(context.Background())
 	if err != nil {
 		t.Fatalf("naming the update subject answered %v, want no error", err)
@@ -76,7 +76,7 @@ func TestOfferLineItemSummariesNameTheLineItem(t *testing.T) {
 		t.Errorf("update summary %q does not name the line item", updateInfo.Summary)
 	}
 
-	removeInfo, err := NewRemoveOfferLineItemCall(unreadableProvider{}, RemoveOfferLineItemCommand{ID: offerID, LineItemID: lineItemID}).
+	removeInfo, err := NewRemoveOfferLineItemCall(unreadableProvider{}, nil, RemoveOfferLineItemCommand{ID: offerID, LineItemID: lineItemID}).
 		Subject(context.Background())
 	if err != nil {
 		t.Fatalf("naming the remove subject answered %v, want no error", err)
@@ -95,7 +95,7 @@ func TestOfferLineItemSummariesNameTheLineItem(t *testing.T) {
 func TestCreateOfferStagesNoID(t *testing.T) {
 	dealID := ids.NewV7()
 	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityDeal, dealID, true)}
-	call := NewCreateOfferCall(provider, CreateOfferCommand{DealID: dealID, Fields: json.RawMessage(`{"currency":"EUR"}`)})
+	call := NewCreateOfferCall(provider, nil, CreateOfferCommand{DealID: dealID, Fields: json.RawMessage(`{"currency":"EUR"}`)})
 
 	info, err := StageSubject(context.Background(), call)
 	if err != nil {
@@ -116,7 +116,7 @@ func TestCreateOfferStagesNoID(t *testing.T) {
 // createOffer's Guards reads the DEAL, not an offer — deal IS served by the
 // record seam, so this is a real read, unlike the five stand-downs above.
 func TestCreateOfferGuardsRefuseAnUnreadableDeal(t *testing.T) {
-	call := NewCreateOfferCall(unreadableProvider{}, CreateOfferCommand{DealID: ids.NewV7(), Fields: json.RawMessage(`{}`)})
+	call := NewCreateOfferCall(unreadableProvider{}, nil, CreateOfferCommand{DealID: ids.NewV7(), Fields: json.RawMessage(`{}`)})
 
 	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("guarding an unreadable deal answered %v, want the row-scope miss", err)
@@ -126,7 +126,7 @@ func TestCreateOfferGuardsRefuseAnUnreadableDeal(t *testing.T) {
 // A deal held in another system of record is refused too — an approval for
 // it could never be released, the offer's create included.
 func TestCreateOfferGuardsRefuseADealHeldElsewhere(t *testing.T) {
-	call := NewCreateOfferCall(elsewhereProvider{}, CreateOfferCommand{DealID: ids.NewV7(), Fields: json.RawMessage(`{}`)})
+	call := NewCreateOfferCall(elsewhereProvider{}, nil, CreateOfferCommand{DealID: ids.NewV7(), Fields: json.RawMessage(`{}`)})
 
 	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("guarding a mirrored deal answered %v, want the unsupported-by-SoR refusal", err)
@@ -137,7 +137,7 @@ func TestCreateOfferGuardsRefuseADealHeldElsewhere(t *testing.T) {
 func TestCreateOfferGuardsAdmitAReadableDeal(t *testing.T) {
 	id := ids.NewV7()
 	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityDeal, id, true)}
-	if err := NewCreateOfferCall(provider, CreateOfferCommand{DealID: id, Fields: json.RawMessage(`{}`)}).
+	if err := NewCreateOfferCall(provider, nil, CreateOfferCommand{DealID: id, Fields: json.RawMessage(`{}`)}).
 		Guards(context.Background()); err != nil {
 		t.Fatalf("guarding a readable, authoritative deal answered %v, want it admitted", err)
 	}

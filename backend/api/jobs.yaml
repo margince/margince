@@ -145,8 +145,8 @@ queues:
   rate_refresh:
     max_workers: 2
     reason: >-
-      Rate refreshes (FX fetch + pricing-page crawl+LLM extract) are likewise
-      long; their own bounded pool keeps a multi-workspace burst from starving
+      The FX rate refresh (page fetch + LLM extract) is likewise long; its own
+      bounded pool keeps a multi-workspace burst from starving
       close-date, reconcile, and capture jobs.
   ai_capture:
     max_workers: 2
@@ -242,23 +242,6 @@ kinds:
       tick repeats anyway — and, because retryable is one of compose's
       activeSweepStates, a backing-off row SUPPRESSES that tick, so the ladder
       would delay the next pass rather than hasten it.
-
-  ai_model_rate_refresh:
-    role: worker
-    go_type: AiModelRateRefreshArgs
-    queue: rate_refresh
-    timeout: 20m
-    opts_owner: caller
-    args:
-      Workspace: id
-      RequestedBy: id
-    reason: >-
-      One fetch-and-extract per configured pricing source, run in series: each
-      is a page crawl plus one model call with the reasoning ladder's own retry
-      headroom, and the loop is as long as ModelPricingSources. An admin
-      triggers it and the sheet is diffed at the end, so a cut-off run stages
-      nothing and the next click starts over — the cap has to clear a realistic
-      provider set rather than a single page.
 
   capture_auto_enrich_sweep:
     role: worker
@@ -556,10 +539,27 @@ kinds:
       Daily, because the check is what the Forecast tab's readiness verdict,
       coverage line and findings are all read from, and a check that never runs
       leaves every one of them with nothing to say. Run at boot like the other
-      passes here, and for a sharper reason than most: until the first run
-      exists the read answers 404, which the tab renders as a failed panel — so
-      the gap between an install starting and its first check is time a contact
-      spends looking at what reads like a broken page.
+      passes here — but a workspace nobody has STARTED is skipped, however often
+      this fires: the first pass over a backlog raises every exception at once,
+      and that queue is the feature's first impression. Until somebody starts it
+      the read answers 404, which the tab renders as the preview and the start
+      button rather than as a failed panel.
+
+  assurance_run:
+    role: worker
+    go_type: AssuranceRunArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    args:
+      Workspace: id
+      RequestedBy: id
+    reason: >-
+      The same pass assurance_sweep runs, on one workspace, because a human
+      asked: either to start the cycle or to confirm a record they have just
+      fixed before a call. Same five minutes for the same work — one walk of the
+      eligible deals and one bundling pass. Uniqueness on the workspace makes a
+      second press while one is in flight a refusal rather than a second walk.
 
 
   close_date_sweep:
@@ -608,6 +608,13 @@ kinds:
       fixed months ago. Cheap: one grouped read over an index on decided_at,
       and on an installation whose authorities agree it finds nothing and says
       so once.
+    fault:
+      nil_after_logging: >-
+        the warn line is this pass's FINDING, not a failure: it is the mail
+        enforcing the engine would have stopped, logged at warn because that
+        is what an operator weighs before enforcing. A pass that read the
+        disagreement has succeeded whatever it found; a pass that could not
+        read it returns that through jobs.Fault.
 
   comms_scheduled_send_recovery:
     role: worker
@@ -815,6 +822,24 @@ kinds:
       the sooner the first one exists the sooner the second is worth taking.
 
 
+  risk_verdict_sweep:
+    role: worker
+    fleet: true
+    go_type: RiskVerdictSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    reason: >-
+      The first successful pass after local midnight records the set of
+      deals the day starts with, and every later pass that day finds the day
+      taken and writes nothing — the figure's denominator is that morning
+      set, not a sample. Hourly only so a pass missed early in the day is
+      taken by the next one rather than tomorrow's. Five minutes for the
+      forecast snapshot's reason: two bounded deal reads and one pricing pass
+      per workspace.
+
+
   follow_up_reconcile:
     role: worker
     fleet: true
@@ -836,9 +861,8 @@ kinds:
       RequestedBy: id
     reason: >-
       One page fetch and ONE reasoning-ladder model call, then a staged proposal
-      per changed currency. Ten minutes clears a slow rung of that ladder; the
-      per-source loop that makes ai_model_rate_refresh longer does not exist
-      here, because there is one configured FX source.
+      per changed currency. Ten minutes clears a slow rung of that ladder; there
+      is one configured FX source, so no loop stretches the run.
 
   gmail_sync:
     role: dispatcher
@@ -1008,6 +1032,86 @@ kinds:
       because its owner has gone or lost the grants is not a fault to retry at
       all — it is a proposal waiting for a contact, which is where it stays.
 
+  # Enqueued by the approval-notify consumer, in the same transaction as the
+  # notice it is about — so a notice that rolls back stages no message, and a
+  # message is never staged about a line nobody can see.
+  notification_email:
+    role: worker
+    go_type: SendNotificationEmailArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    fault:
+      nil_after_logging: >-
+        ONE branch, and it is a mis-wired ROLE rather than a failed send: a
+        worker composed with no operator relay says so at Warn, claims nothing,
+        and returns nil. No durable retry stands behind that, and none is
+        wanted — each role reads its own config, so returning a failure would
+        have an installation that deliberately runs no operator mail discard a
+        row per decision, and would leave a relay-less replica bouncing rows
+        rather than sending them. What makes the green row honest is that the
+        thing the product promises still happened: the notice is on the
+        recipient's Worklist, which is where every notice is, and this message
+        is only a nudge toward it. The log is how an operator tells one
+        unconfigured worker from a quiet week.
+
+        It waives THAT branch and no other. The failures above the claim are
+        returned and River retries them, and the ones below it are recorded
+        rather than logged away — a refusal writes its cause into
+        notice.email_error beside a claim that is never released. That is where
+        the durability lives, and it is deliberate: SMTP returns no receipt, so
+        a retried attempt could not tell a refused message from a delivered one
+        and would risk telling a colleague twice that the same decision is
+        waiting. The green River row means 'this notice's one attempt is
+        concluded'; the row says how it went.
+    args:
+      Workspace: id
+      NoticeID: id
+    reason: >-
+      One SMTP exchange for one colleague, bounded at forty-five seconds by the
+      sender's own budget — so the two-minute wall clock is the job's ceiling
+      over a claim, an address read and that exchange, not a window anything is
+      meant to use.
+
+      The DEFAULT queue rather than comms_send. That pool was split out for a
+      rep's outbound message once it started carrying files: a three-minute
+      upload budget, and a reason that turns on a contact waiting for a message
+      they pressed a button for. This is neither — it is short, it carries
+      nothing, and putting it there would queue a buyer's attachment behind a
+      fan-out of internal nudges.
+
+      No declared attempt cap, because opts_owner is caller and the enqueue
+      site owns the ladder (notificationMailJobAttempts): publishing a number
+      nothing applies is the declared-vs-actual drift this contract removes.
+
+  notification_digest:
+    role: worker
+    fleet: true
+    go_type: NotificationDigestArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 1h
+    reason: >-
+      Hourly, not daily, for the reason brief_generate ticks hourly: the morning
+      it aims at is the installation's local one, an hourly tick crosses that
+      hour in every zone the setting can name, and the per-(recipient, day) row
+      in notification_digest_run is what keeps twenty-four ticks from producing
+      twenty-four messages. The same property backfills a morning the worker was
+      down for, rather than skipping the day.
+
+      Ten minutes, like the other fleet-wide morning pass: the wall clock covers
+      every workspace and every due seat in each, while one colleague's SMTP
+      exchange is bounded separately at forty-five seconds by the sender's own
+      budget, so an unreachable relay cannot spend a team's whole tick on the
+      first seat in it.
+
+      No fault block, because nothing here is swallowed. A seat whose send fails
+      records its cause on the claim row and the pass carries on; the pass itself
+      returns every workspace's failures joined, and River retries the tick — at
+      which point the claims already taken make the retry a no-op for everyone
+      who was already served.
+
   # One job, not a dispatcher and a child (ADR-0103 §1). The delete it runs was
   # already table-wide once agent_task lost its tenant column, so the fan-out
   # was N identical passes over the same rows.
@@ -1065,6 +1169,22 @@ kinds:
       without a second migration; a narrower one would have to be widened by
       changing history nobody kept.
 
+  mail_draft_retention:
+    role: worker
+    go_type: MailDraftRetentionArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      Hourly, because each pass is capped (mailDraftRetentionBatch) and the
+      cadence is what drains a backlog deeper than one batch — the shape
+      stored_object_reap takes. It is the only way out for a draft whose
+      anchor was deleted or fell out of its author's scope — reading one
+      answers not found, so nobody can find it to discard it — and a draft
+      holds a subject's address and the words written to them.
+
   idempotency_retention:
     role: worker
     fleet: true
@@ -1076,7 +1196,9 @@ kinds:
     reason: >-
       Hourly rather than daily: the rows hold verbatim record snapshots and the
       replay window they serve is only 24h, so a daily pass would leave a day of
-      expired personal data sitting past its purpose.
+      expired personal data sitting past its purpose. The same pass deletes
+      lapsed bulk-change confirmations, which name who previewed and live 15
+      minutes.
 
 
   stored_object_reap:
@@ -1177,7 +1299,7 @@ kinds:
     queue: privacy_retention
     timeout:
       derived: privacyRetentionPassTimeout
-      value: 6h11m40s
+      value: 6h45m0s
       reason: >-
         privacy.MaxPassDuration is the pass's own ceiling — its stage count
         times its batch bound times its per-record allowance — and the margin
@@ -1270,6 +1392,22 @@ kinds:
       dispatcher's two minutes above unchanged — the scanning is entirely the
       child's, and this half enumerates the fleet and inserts one row per
       workspace.
+
+
+  deal_scout:
+    role: worker
+    fleet: true
+    go_type: DealScoutArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    reason: >-
+      Hourly, like signal_scan, whose signals are half of what it reads: a
+      proposal sent this morning should be a suggestion by lunch, not
+      tomorrow. The pass is a few indexed reads and at most two hundred
+      writes per workspace and calls no model, so five minutes is a ceiling
+      it does not approach.
 
 
   site_deep_read:
@@ -1640,3 +1778,16 @@ kinds:
     opts_owner: args
     cadence: {operator: WebhookRetry.Interval, schedule_when_positive: WebhookRetry.Interval}
     registration: {when: [WebhookRetry.Deliverer], absent: registers_nothing}
+
+  meeting_delivery:
+    role: worker
+    registration: {when: [GmailRegistry], absent: registers_nothing}
+    go_type: MeetingDeliveryArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 15s
+    reason: >-
+      Calendar commands survive request disconnects and worker restarts. A bounded
+      pass retries stable provider identities while reservations remain held.

@@ -11,7 +11,7 @@ import type { components } from "../api/schema";
 import { routeHash } from "../app/router";
 import type { BoardDeal, BoardDealMail } from "../design-system/composed";
 import { idleSince } from "../format/idlebase";
-import type { CompanyNaming } from "./deals";
+import type { CompanyNaming } from "./dealcompanymarks";
 import type { OwnerNaming } from "./entityref";
 
 type Deal = components["schemas"]["Deal"];
@@ -35,20 +35,22 @@ function dealCompany(
 ): Pick<
   BoardDeal,
   | "company"
+  | "companyId"
   | "companyHref"
   | "companyLogoUrl"
   | "companyWithheld"
   | "companyUnreadable"
 > {
   if (deal.masked_fields?.includes("company_id")) {
-    return { company: "", companyWithheld: true };
+    return { company: "", companyId: "", companyWithheld: true };
   }
   if (deal.company_id && naming.unreadable.has(deal.company_id)) {
-    return { company: "", companyUnreadable: true };
+    return { company: "", companyId: "", companyUnreadable: true };
   }
   const mark = deal.company_id ? naming.marks.get(deal.company_id) : undefined;
   return {
     company: mark?.name ?? "",
+    companyId: mark?.name ? (deal.company_id ?? "") : "",
     // The company's address, built HERE because this is the tier that holds
     // routes. A deal with no company, or one whose name has not resolved,
     // gets none — the card then draws prose, which is what a slot with no
@@ -67,6 +69,7 @@ export function toBoardDeal(
   owners?: OwnerNaming,
 ): BoardDeal {
   const since = idleSince(deal);
+  const ownerName = owners?.(deal.owner_id);
   return {
     id: deal.id,
     name: deal.name,
@@ -81,7 +84,10 @@ export function toBoardDeal(
     archived: deal.archived_at != null,
     closeDate: deal.expected_close_date ?? null,
     closeDateProvisional: deal.close_date_provisional ?? false,
-    owner: owners?.(deal.owner_id) ?? null,
+    owner:
+      ownerName && deal.owner_id
+        ? { id: deal.owner_id, name: ownerName }
+        : null,
     lastEmail: boardMail(deal.last_email),
   };
 }

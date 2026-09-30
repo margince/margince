@@ -67,11 +67,11 @@ func (s *Service) readProfileFields(ctx context.Context, tx pgx.Tx, contactID id
 	rows, err := tx.Query(ctx, `
 		-- updated_at, not created_at: this is when the value took its CURRENT
 		-- form, which is the date the receipt should show after a human edit.
-		SELECT field, value, evidence_snippet, source_ref, confidence, source, captured_by, updated_at,
-		       observed_at, superseded_value, superseded_observed_at
+		SELECT field, value, value_key, evidence_snippet, source_ref, confidence, source, captured_by,
+		       updated_at, observed_at, superseded_value, superseded_observed_at
 		FROM contact_profile_field
 		WHERE contact_id = $1
-		ORDER BY field`, contactID)
+		ORDER BY field, value_key`, contactID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,13 +79,14 @@ func (s *Service) readProfileFields(ctx context.Context, tx pgx.Tx, contactID id
 	out := make([]crmcontracts.ContactProfileField, 0, 5)
 	for rows.Next() {
 		var f crmcontracts.ContactProfileField
-		var field string
-		if err := rows.Scan(&field, &f.Value, &f.EvidenceSnippet, &f.SourceRef,
+		var field, valueKey string
+		if err := rows.Scan(&field, &f.Value, &valueKey, &f.EvidenceSnippet, &f.SourceRef,
 			&f.Confidence, &f.Source, &f.CapturedBy, &f.CapturedAt,
 			&f.ObservedAt, &f.SupersededValue, &f.SupersededObservedAt); err != nil {
 			return nil, err
 		}
 		f.Field = crmcontracts.ContactProfileFieldField(field)
+		f.ValueKey = &valueKey
 		out = append(out, f)
 	}
 	if err := rows.Err(); err != nil {

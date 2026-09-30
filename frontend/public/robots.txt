@@ -1,0 +1,15 @@
+# A shared app link is / plus a #/ fragment no fetcher sends, so a preview reads
+# only the static shell; api paths answer them as any anonymous client.
+User-agent: Twitterbot
+User-agent: LinkedInBot
+User-agent: Slackbot-LinkExpanding
+User-agent: facebookexternalhit
+User-agent: Discordbot
+User-agent: TelegramBot
+User-agent: WhatsApp
+User-agent: SkypeUriPreview
+User-agent: MicrosoftPreview
+Allow: /
+
+User-agent: *
+Disallow: /

@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { SignInMethodsCard } from "./sign-in-methods";
 
 // Which ways contacts may sign in. The list is the DEPLOYMENT's — an admin
@@ -45,6 +46,11 @@ function mount(
     if (request.method === "PATCH") {
       calls.push(JSON.parse(await request.text()));
       return new Response(null, { status: 204 });
+    }
+    // The grant editor picks from the roles the server says this reader may
+    // hand out, the same list the invite form reads.
+    if (request.url.includes("/users/assignable-roles")) {
+      return jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES });
     }
     // The narrow authentication-policy projection this card reads — not the
     // installation aggregate, which answers a different route.
@@ -130,7 +136,7 @@ describe("the group role grant editor", () => {
     expect(await screen.findByDisplayValue("engineering")).toBeTruthy();
     // The role reads under its product name, the same label the roster uses.
     const role = screen.getByRole("combobox", { name: /granted role/i });
-    expect(role.textContent).toContain("Team Lead");
+    expect(role.textContent).toContain("Team lead");
   });
 
   // The whole map travels: the setting replaces rather than merges, so the

@@ -96,6 +96,9 @@ const briefInputChanges = 3
 // happened — each already pruned to the reader's row scope by the read that
 // produced it.
 type Input struct {
+	// ID is in the payload so a sentence about the contact can cite them; the
+	// prompt offers `entity_type: contact` and knownRecords accepts {contact, ID}.
+	ID           string `json:"id"`
 	Name         string `json:"name"`
 	Title        string `json:"title,omitempty"`
 	Employer     string `json:"employer,omitempty"`
@@ -158,8 +161,11 @@ func renderedAmount(minor int64, currency string) string {
 // opposite claims about the same sentence, and the body alone loses which one
 // it was. So does the status: a commitment that is still open and one that was
 // kept read identically as bodies, and only one of them is something to do.
+//
+// It carries no id of its own: a claim is cited by the activity it was read
+// from, and an id the grounding filter refuses would only invite a citation it
+// drops.
 type ClaimIn struct {
-	ID     string `json:"id"`
 	Kind   string `json:"kind"`
 	Body   string `json:"body"`
 	Status string `json:"status"`
@@ -250,6 +256,7 @@ type ActIn struct {
 // of gates that could disagree with the first.
 func FromView(view crmcontracts.Contact360) Input {
 	in := Input{
+		ID:              view.Contact.Id.String(),
 		Name:            view.Contact.FullName,
 		SectionsOmitted: omittedNames(view.SectionsOmitted),
 	}
@@ -324,7 +331,6 @@ func foldClaims(in *Input, view crmcontracts.Contact360) {
 			continue
 		}
 		folded := ClaimIn{
-			ID:       claim.Id.String(),
 			Kind:     string(claim.Kind),
 			Body:     claim.Body,
 			Status:   string(claim.Status),

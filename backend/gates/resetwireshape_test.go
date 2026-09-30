@@ -23,13 +23,13 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -126,7 +126,7 @@ func indexOfLine(lines []string, want string) int {
 // jsonTagsOfStruct returns the sorted wire names the named struct's fields bind.
 func jsonTagsOfStruct(t *testing.T, path, typeName string) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

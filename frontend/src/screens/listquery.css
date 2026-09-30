@@ -1,0 +1,8 @@
+/* A list's failure, in the table's empty row: the cause sits close under the
+   headline it explains, and Retry a step further off both. */
+.listquery-cause {
+  margin-top: var(--space-1);
+}
+.listquery-retry {
+  margin-top: var(--space-2);
+}

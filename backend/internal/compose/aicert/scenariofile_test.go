@@ -74,7 +74,7 @@ func TestLoadScenarioFileRefusesWhatCannotRun(t *testing.T) {
 		name, body, want string
 	}{
 		{"a site this build does not register", "task: rate_extract\nsite: nonsense\nfixture:\n  a: 1\n", "does not register"},
-		{"no fixture, so the site is given nothing", "task: rate_extract\nsite: pricing\n", "no fixture"},
+		{"no fixture, so the site is given nothing", "task: rate_extract\nsite: fx\n", "no fixture"},
 		{"not a scenario at all", "just: some\nother: yaml\n", "not a scenario"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -105,7 +105,7 @@ func TestLoadScenarioFileRefusesWhatCannotRun(t *testing.T) {
 func TestLoadScenarioFileDoesNotDemandCorpusProvenance(t *testing.T) {
 	reg := census(t)
 	path := filepath.Join(t.TempDir(), "scratch.yaml")
-	body := "task: rate_extract\nsite: pricing\nfixture:\n  provider: Aurora AI\n  page_text: |\n    Aurora Large, input $5.00 / 1M tokens.\n"
+	body := "task: rate_extract\nsite: fx\nfixture:\n  provider: Aurora AI\n  page_text: |\n    Aurora Large, input $5.00 / 1M tokens.\n"
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +113,7 @@ func TestLoadScenarioFileDoesNotDemandCorpusProvenance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("a scratch scenario needs no source/sanitized_by: %v", err)
 	}
-	if sc.Task != "rate_extract" || sc.Site != "pricing" {
+	if sc.Task != "rate_extract" || sc.Site != "fx" {
 		t.Errorf("loaded %s/%s", sc.Task, sc.Site)
 	}
 }
@@ -124,7 +124,7 @@ func TestLoadScenarioFileDoesNotDemandCorpusProvenance(t *testing.T) {
 func TestRenderScenarioPreservesExactNumbers(t *testing.T) {
 	reg := census(t)
 	sc := aicert.Scenario{
-		Task: "rate_extract", Site: "pricing",
+		Task: "rate_extract", Site: "fx",
 		Fixture: aicert.JSONValue(`{"provider":"Aurora AI","page_text":"x","big_id":1234567890123456789,"exact":0.1}`),
 	}
 	body, err := aicert.RenderScenario(sc)
@@ -174,7 +174,7 @@ func TestRenderScenarioRefusesNumbersItCannotCarryBack(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			sc := aicert.Scenario{
-				Task: "rate_extract", Site: "pricing",
+				Task: "rate_extract", Site: "fx",
 				Fixture: aicert.JSONValue(`{"page_text":"x","n":` + tc.literal + `}`),
 			}
 			_, err := aicert.RenderScenario(sc)
@@ -194,7 +194,7 @@ func TestRenderScenarioKeepsEveryNumberItAccepts(t *testing.T) {
 	reg := census(t)
 	for _, literal := range []string{"9223372036854775807", "-9223372036854775808", "1234567890123456789", "0", "1.5", "0.25", "-3.75"} {
 		sc := aicert.Scenario{
-			Task: "rate_extract", Site: "pricing",
+			Task: "rate_extract", Site: "fx",
 			Fixture: aicert.JSONValue(`{"page_text":"x","n":` + literal + `}`),
 		}
 		body, err := aicert.RenderScenario(sc)
@@ -224,7 +224,7 @@ func TestRenderScenarioKeepsEveryNumberItAccepts(t *testing.T) {
 // dropped in silence — the fixture rendered would not be the fixture supplied.
 func TestRenderScenarioRefusesTrailingDataAfterTheFixture(t *testing.T) {
 	sc := aicert.Scenario{
-		Task: "rate_extract", Site: "pricing",
+		Task: "rate_extract", Site: "fx",
 		Fixture: aicert.JSONValue(`{"page_text":"x"} {"page_text":"y"}`),
 	}
 	_, err := aicert.RenderScenario(sc)
@@ -243,7 +243,7 @@ func TestRenderScenarioAcceptsEquivalentNumberSpellings(t *testing.T) {
 	reg := census(t)
 	for _, literal := range []string{"1e-6", "1E-6", "1e3", "1.50", "2.0", "-1e-7"} {
 		sc := aicert.Scenario{
-			Task: "rate_extract", Site: "pricing",
+			Task: "rate_extract", Site: "fx",
 			Fixture: aicert.JSONValue(`{"page_text":"x","n":` + literal + `}`),
 		}
 		body, err := aicert.RenderScenario(sc)

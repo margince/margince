@@ -519,7 +519,11 @@ describe("BriefScreen — the week against the one before", () => {
       ...withPrior,
       prior: { ...withPrior.prior, local_week_start: "2026-06-01" },
     });
-    expect(strip.textContent).toContain("+2 vs week of 01/06/2026");
+    expect(strip.textContent).toContain(
+      en["brief.weekly.sincePrior"]
+        .replace("{delta}", "+2")
+        .replace("{week}", "01/06/2026"),
+    );
     expect(strip.textContent).not.toContain("vs last week");
   });
 
@@ -545,20 +549,40 @@ describe("BriefScreen — the week against the one before", () => {
     expect(strip.textContent).not.toContain(marker);
   });
 
-  // ── Five outcomes, and the workings under them ──
+  // ── The outcomes, and the workings under them ──
 
   // The strip is read ACROSS as one comparison, so its width is the claim. At
-  // ten slots it folded into two ranks at 1280 and stopped being one reading —
-  // which is what #3709 reported.
-  it("keeps seven outcome readings above supporting activity", async () => {
+  // ten slots it folded into two ranks at 1280 and stopped being one reading.
+  it("keeps six outcome readings above supporting activity", async () => {
     const strip = await mount(withPrior);
 
-    expect(strip.querySelectorAll(".stat-card")).toHaveLength(7);
+    expect(strip.querySelectorAll(".stat-card")).toHaveLength(6);
   });
 
-  // The five are the week's OUTCOMES: what the rep planned and kept, what
-  // closed, how fast new business was answered, whether meetings led anywhere,
-  // and what did not get finished.
+  // ONE FACT, ONE SURFACE. Deals that moved without closing are a working, and
+  // the list under the strip reports them — a slot up here as well would put
+  // the same count in two places on one screen, where the only thing a reader
+  // can do with the pair is check whether they agree.
+  it("reports the deals that moved in the workings and not in the strip", async () => {
+    const strip = await mount(withPrior);
+
+    const labels = [...strip.querySelectorAll(".stat-card-label")].map(
+      (label) => label.textContent,
+    );
+    expect(labels).toEqual([
+      en["brief.week.lostLabel"],
+      en["brief.weekly.planCommitmentsKept"],
+      en["brief.weekly.dealsWon"],
+      en["brief.weekly.leadsAnswered"],
+      en["brief.weekly.meetingsHeld"],
+      en["brief.weekly.carriedOver"],
+    ]);
+    expect(screen.getByText(en["brief.weekly.dealsMoved"])).toBeTruthy();
+  });
+
+  // The strip's slots are the week's OUTCOMES: what the rep planned and kept,
+  // what closed, how fast new business was answered, whether meetings led
+  // anywhere, and what did not get finished.
   it("gives the strip the week's outcomes", async () => {
     const strip = await mount(withPrior);
 

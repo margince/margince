@@ -54,7 +54,15 @@ type CreateDealInput struct {
 	// whoever clicked Qualify.
 	OwnerExact    bool
 	ExpectedClose *time.Time
-	Source        string
+	// CloseDateProvisional marks ExpectedClose as a machine's proposal that no
+	// human has confirmed; it is what the nightly close-date pass may move.
+	CloseDateProvisional bool
+	Source               string
+	// SourceSystem names the system an import took this deal from; nil for
+	// one created here, which is what makes it unattributable.
+	SourceSystem *string
+	// Author is who wrote it in the system it came from; zero when unknown.
+	Author storekit.SourceAuthorInput
 	// Description is the human-authored brief. Distinct from the GENERATED
 	// deal briefing: no assembler writes this one.
 	Description *string
@@ -255,7 +263,6 @@ const (
 // visible company), inserts the deal with its first stage-history
 // row, and runs the write shape — all inside the caller's transaction.
 func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInput, born bornDeal, active []fieldcatalog.Column) (crmcontracts.Deal, error) {
-
 	if err := ensureOpenBirthStage(ctx, tx, in.StageID, in.PipelineID); err != nil {
 		return crmcontracts.Deal{}, err
 	}
@@ -264,6 +271,9 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	// deal never claims a past close date — reject at source rather
 	// than let the nightly corrector inherit a knowingly-invalid row.
 	if err := s.rejectPastCloseDate(ctx, tx, in.ExpectedClose); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return crmcontracts.Deal{}, err
 	}
 
@@ -290,21 +300,22 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	}
 
 	id := ids.New[ids.DealKind]()
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
+	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
 		id, in.Name, in.AmountMinor, in.Currency, in.PipelineID, in.StageID,
 		in.CompanyID, in.PartnerCompanyID, born.attribution,
 		in.ProjectID, in.OwnerID, in.ExpectedClose, in.Source, born.by,
 		in.Description, in.CommercialMotion, in.Priority, in.AcquisitionSource,
-		in.ExpectedArrMinor,
+		in.ExpectedArrMinor, in.SourceSystem, in.CloseDateProvisional,
 	})
+	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
 	_, err := tx.Exec(ctx,
 		`INSERT INTO deal (id, name, amount_minor, currency, pipeline_id, stage_id,
 		                   company_id, partner_company_id, partner_attribution,
 		                   project_id, owner_id, expected_close_date, source, captured_by,
 		                   description, commercial_motion, priority, acquisition_source,
-		                   expected_arr_minor`+cfCols+`)
+		                   expected_arr_minor, source_system, close_date_provisional`+authorCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-		         $15, $16, $17, $18, $19`+cfHolders+`)`,
+		         $15, $16, $17, $18, $19, $20, $21`+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Covers the remaining FKs (pipeline, owner); the stage/pipeline

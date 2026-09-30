@@ -4,11 +4,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { meFixture } from "../app/mefixture";
-import { AiBudgetCard, AiFeaturesCard } from "./ai-admin";
-import { allowance, status } from "./ai-admin.testkit";
+import { AiBudgetCard } from "./ai-admin";
+import { allowance, feature, status } from "./ai-admin.testkit";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-function story(band: "normal" | "degraded" | "queued", editable = true) {
+function story(
+  band: "normal" | "degraded" | "queued",
+  editable = true,
+  features = status.features,
+) {
   return () => {
     const budget = {
       ...allowance,
@@ -36,7 +40,7 @@ function story(band: "normal" | "degraded" | "queued", editable = true) {
           }),
         ),
       "GET /ai/budget": () => jsonResponse(budget),
-      "GET /ai/status": () => jsonResponse({ ...status, budget }),
+      "GET /ai/status": () => jsonResponse({ ...status, budget, features }),
       "POST /ai/budget/preview": () =>
         jsonResponse({
           current: budget,
@@ -49,7 +53,6 @@ function story(band: "normal" | "degraded" | "queued", editable = true) {
       <StoryProviders>
         <div className="settings-stack">
           <AiBudgetCard />
-          <AiFeaturesCard />
         </div>
       </StoryProviders>
     );
@@ -75,7 +78,6 @@ export const Preview: Story = {
   render: story("degraded"),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText("Summarize correspondence");
     await userEvent.click(
       await canvas.findByRole("button", { name: "Edit allowance" }),
     );
@@ -83,4 +85,41 @@ export const Preview: Story = {
       await canvas.findByRole("button", { name: "Preview effects" }),
     );
   },
+};
+
+// Decision-first rows lead and carry their marker; a task that declares a
+// decision form it cannot use follows; a two-rung ladder opens to the rungs
+// behind its lead.
+const [lead] = feature.effective_candidates;
+const mixedFeatures = [
+  { ...feature, task: "summarize" },
+  {
+    ...feature,
+    task: "site_triage",
+    display_name: "Triage a site",
+    decision_skip_reason: "local_only" as const,
+  },
+  {
+    ...feature,
+    task: "capture_classify",
+    display_name: "Classify correspondence",
+    decision_first: true,
+    decision_candidate: {
+      tier: "decide",
+      provider: "jev_compatible",
+      model: "jev-classify",
+      processing: "cloud_provider" as const,
+    },
+    effective_candidates: [
+      lead,
+      { ...lead, tier: "cheap_cloud", model: "fallback-model" },
+    ],
+  },
+];
+export const DecisionFirstOnTop: Story = {
+  render: story("normal", true, mixedFeatures),
+};
+export const DecisionFirstOnTopDark: Story = {
+  globals: { theme: "dark" },
+  render: story("normal", true, mixedFeatures),
 };

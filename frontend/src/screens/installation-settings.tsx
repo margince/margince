@@ -22,7 +22,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -172,7 +172,7 @@ function languageName(code: string, t: ReturnType<typeof useT>): string {
 // Derived rather than typed out, so the list cannot go short of twelve.
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
 
-// Which remaining pipeline a projected landing is built from, in the order the
+// Which remaining deals a projected landing is built from, in the order the
 // server offers them: strictest first, then the two that soften it.
 //
 // Typed as the schema's own union with `satisfies`, so a measure added to the
@@ -328,9 +328,7 @@ function InstallationSettingsForm({
   return (
     <Panel title={t("installationSettings.companyTitle")}>
       <PanelBody>
-        <p className="settings-panel-sub">
-          {t("installationSettings.companySub")}
-        </p>
+        <PanelIntro>{t("installationSettings.companySub")}</PanelIntro>
         {!canManage && (
           <p id={denialId}>{t("installationSettings.readOnly")}</p>
         )}

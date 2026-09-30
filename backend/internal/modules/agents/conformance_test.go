@@ -176,6 +176,7 @@ func fullRegistry(t *testing.T) *Registry {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil)
+	RegisterMeetingInvitationTool(r, nil, nil)
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, nil })
 	RegisterReportTool(r, nil, probeReportCatalog, probeReportPlan)
 	RegisterAnalyticsReportTool(r, nil)
@@ -186,7 +187,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterAssuranceTool(r, nil)
 	RegisterInputChecksTool(r, nil)
 	RegisterCoverageTool(r, nil)
-	RegisterIntentTools(r, inertRetriever{}, nil)
+	RegisterIntentTools(r, inertRetriever{}, nil, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context) ([]SlippingDeal, error) { return nil, nil },
@@ -206,9 +207,9 @@ func fullRegistry(t *testing.T) *Registry {
 		func(context.Context, ids.UUID) ([]IntroRoute, bool, error) { return nil, false, nil },
 		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, nil })
 	RegisterCommsTools(r, &recordingComms{}, &multiLinkProvider{})
-	RegisterGeoProbeTool(r)
 	RegisterLifecycleTools(r, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
 	RegisterEnrichTool(r, nil, inertLifecycle{})
+	RegisterBulkTool(r, inertLifecycle{})
 	RegisterQueryTool(r, nil, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{Coverage: CoverageCompleteExact}, nil
 	}, nil)
@@ -228,12 +229,16 @@ func fullRegistry(t *testing.T) *Registry {
 	// verifies is the tool's own, which restates nothing about the document.
 	RegisterAnalyticsVocabularyTool(r, &fakeAnalyticsVocabulary{doc: "pipeline-current\n"})
 	RegisterContextSearchTool(r, nil, inertRetriever{})
+	RegisterReportEvidenceTool(r, nil, func(context.Context, ReportEvidenceQuery) (ReportEvidence, error) {
+		return ReportEvidence{}, nil
+	})
 	RegisterResolveTool(r, nil, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
 		return nil, nil
 	})
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
 	RegisterColleaguesTool(r, func(context.Context, string) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
+	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})
 	RegisterListTool(r, nil, probeVocabulary{})
 	RegisterBriefTool(r, briefOf(0))
@@ -272,6 +277,22 @@ func (inertLifecycle) AdvanceProjectPhase(context.Context, ids.UUID, string, *st
 }
 
 func (inertLifecycle) EnrichCompany(context.Context, ids.UUID, string, EnrichDepth) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) PreviewBulkChange(context.Context, BulkChangeCommand) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) ExecuteBulkChange(context.Context, BulkChangeCommand) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) PreviewBulkUndo(context.Context, ids.UUID) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) UndoBulkChange(context.Context, ids.UUID, string) (json.RawMessage, error) {
 	return nil, nil
 }
 
@@ -520,6 +541,11 @@ func TestRegisterRefusesWireDefects(t *testing.T) {
 	mustPanic(t, "a runaway description is spent out of every run's prompt, which never elides it", func() {
 		spec := objectSpec("verbose", principal.ScopeRead)
 		spec.Description = strings.Repeat("a", maxDescriptionRunes+1)
+		NewRegistry(nil, nil).Register(echoTool{spec: spec})
+	})
+	mustPanic(t, "an Instead that is not a sentence of the Description would leave its pointer behind when cut", func() {
+		spec := objectSpec("pointing", principal.ScopeRead)
+		spec.Instead = "Use find_records instead."
 		NewRegistry(nil, nil).Register(echoTool{spec: spec})
 	})
 	// The bound has to admit what the surface actually ships, or it is a rule

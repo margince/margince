@@ -36,8 +36,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -97,7 +95,6 @@ func TestNoFixturePicksASeatAnOrderingDoesNotDecide(t *testing.T) {
 	t.Parallel()
 	defer seatPickWaivers.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
 	judged := 0
 	for _, path := range handWrittenGoSources(t) {
 		slash := filepath.ToSlash(path)
@@ -105,7 +102,7 @@ func TestNoFixturePicksASeatAnOrderingDoesNotDecide(t *testing.T) {
 		if filepath.Base(path) == "seatfixturepick_test.go" {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

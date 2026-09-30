@@ -3,6 +3,7 @@
 
 import { type ReactNode, useState } from "react";
 import { Button, type ButtonVariant } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { StageActions } from "../../design-system/onboarding-stage";
 
 /**
@@ -56,9 +57,7 @@ export function WayOnward({
   return (
     <StageActions>
       {attempted && blocked ? (
-        <p className="ob-stage-note" role="alert">
-          {stillNeeded(blockers)}
-        </p>
+        <ErrorLine inline>{stillNeeded(blockers)}</ErrorLine>
       ) : (
         note
       )}

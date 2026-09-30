@@ -152,9 +152,22 @@ func TestAnEmptyExpectationGradesAbstentionAsCorrectAndAnyClaimAsWrong(t *testin
 	}
 	cited := prepared.(*corpusAskCase).passages[0].ChunkID.String()
 
-	abstained := prepared.Evaluate(aitasks.Trace{Output: corpusReply()})
+	abstained := prepared.Evaluate(aitasks.Trace{Output: corpusRefusal()})
 	if abstained.Result != aitasks.OutcomeAccepted {
 		t.Fatalf("abstaining scored %v (%s)", abstained.Result, abstained.Detail)
+	}
+
+	// The case this scenario exists for, and the one it used to pass: a model
+	// that says the passages answer the question, writes claims, and has every
+	// one of them stripped by the quote check arrives with none — looking, to
+	// anything that counts only what survived, exactly like the refusal above.
+	// It is the opposite event, and it is graded as one.
+	stripped := prepared.Evaluate(aitasks.Trace{Output: corpusReply(askedClaim{
+		Text: "They are kept for 400 days.", ID: cited, Quote: "a span no passage holds",
+	})})
+	if stripped.Result != aitasks.OutcomeWrongAnswer {
+		t.Fatalf("a fabrication whose quotes were all stripped scored %v (%s)",
+			stripped.Result, stripped.Detail)
 	}
 
 	answered := prepared.Evaluate(aitasks.Trace{Output: corpusReply(askedClaim{

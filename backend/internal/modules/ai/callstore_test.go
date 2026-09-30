@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func TestClassifyError(t *testing.T) {
@@ -41,6 +43,9 @@ func TestClassifyError(t *testing.T) {
 				errors.New("http 429")),
 			"provider_refused",
 		},
+		// Outcomes, not provider failures: a model was reached and decided.
+		{"an answer the model withheld", withheldError{wire: providerAnthropic, reason: finishRefusal}, "output_withheld"},
+		{"a request the provider rejected", fmt.Errorf("%w: http 400", model.ErrRequestRejected), "request_rejected"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -49,4 +54,17 @@ func TestClassifyError(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The health read excludes answeredSentinels by spelling, so the sentinels the
+// answered errors classify to and that list must be one set: a sentinel
+// renamed on one side alone would count every withheld answer as an outage,
+// or hide a real failure from the health read.
+func TestTheAnsweredErrorsClassifyToExactlyTheAnsweredSentinels(t *testing.T) {
+	answered := []error{model.ErrOutputWithheld, model.ErrRequestRejected, errMeteringFailed}
+	classified := make([]string, 0, len(answered))
+	for _, err := range answered {
+		classified = append(classified, classifyError(fmt.Errorf("wrap: %w", err)))
+	}
+	assertSetEqual(t, "answered sentinels", classified, answeredSentinels)
 }

@@ -104,7 +104,7 @@ func ReadStageProgressionFacts(
 	}
 	out.Criteria = criteria
 
-	protected, reason, err := readProtection(ctx, tx, dealID, next.id, now)
+	protection, err := readProtection(ctx, tx, dealID, next.id, now)
 	if err != nil {
 		return out, err
 	}
@@ -120,14 +120,13 @@ func ReadStageProgressionFacts(
 	}
 
 	facts := StageMoveFacts{
-		Criteria:        make([]CriterionFact, 0, len(criteria)),
-		FromTerminal:    where.semantic.Terminal(),
-		ToTerminal:      next.semantic.Terminal(),
-		SingleStep:      true,
-		SamePipeline:    true,
-		Protected:       protected,
-		ProtectedReason: reason,
-		Autopilot:       autopilot,
+		Criteria:     make([]CriterionFact, 0, len(criteria)),
+		FromTerminal: where.semantic.Terminal(),
+		ToTerminal:   next.semantic.Terminal(),
+		SingleStep:   true,
+		SamePipeline: true,
+		Protection:   protection,
+		Autopilot:    autopilot,
 	}
 	for _, c := range criteria {
 		facts.Criteria = append(facts.Criteria, c.CriterionFact)
@@ -291,10 +290,10 @@ func readProgressionCriteria(
 // readProtection answers whether a human has recently steered this deal, and
 // in which of the three ways.
 //
-// Each arm is a different sentence to a rep, which is why the reason travels
-// with the boolean rather than being composed at the card: "you moved this
-// yourself", "this move was undone before" and "you already said no to this"
-// are three different things to be told.
+// Each arm is a different sentence to a rep, which is why it answers the arm
+// rather than a boolean: "you moved this yourself", "this move was undone
+// before" and "you already said no to this" are three different things to be
+// told.
 //
 // The third arm is the one that keeps the product from nagging: a proposal for
 // this same target already rejected, with nothing learned since. It reopens on
@@ -302,7 +301,7 @@ func readProgressionCriteria(
 // recorded afterwards is a different question.
 func readProtection(
 	ctx context.Context, tx pgx.Tx, dealID ids.DealID, toStageID ids.StageID, now time.Time,
-) (bool, string, error) {
+) (Protection, error) {
 	var humanMove, reversal, refusedAlready bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -344,19 +343,19 @@ func readProtection(
 		       )
 		)`, dealID, now.Add(-ProtectionWindow), toStageID).
 		Scan(&humanMove, &reversal, &refusedAlready); err != nil {
-		return false, "", fmt.Errorf("read the deal's recent stage history: %w", err)
+		return ProtectionNone, fmt.Errorf("read the deal's recent stage history: %w", err)
 	}
 	switch {
 	case humanMove:
-		return true, "you moved this deal yourself in the last fortnight", nil
+		return ProtectionHumanMove, nil
 	case reversal:
 		// A move that was undone once is a move this deal has already had the
 		// argument about. Proposing it again is the product not listening.
-		return true, "a stage move on this deal was undone before", nil
+		return ProtectionReversal, nil
 	case refusedAlready:
-		return true, "you turned this move down, and nothing new has been learned since", nil
+		return ProtectionRejected, nil
 	}
-	return false, "", nil
+	return ProtectionNone, nil
 }
 
 // evidenceSources zips the three parallel aggregates into one list.

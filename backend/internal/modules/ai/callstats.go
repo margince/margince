@@ -54,6 +54,8 @@ type ServedTaskTotal struct {
 // per-message cost, so another tenant's traffic in the numerator would price
 // this one's work wrong. An empty task set returns no rows.
 func (s *CallReadStore) ServedTaskTotals(ctx context.Context, tasks []Task, since time.Time) ([]ServedTaskTotal, error) {
+	// Decision rows are left out: a decision is priced on its own lane, and
+	// these totals price what a re-run of the task's LLM ladder would cost.
 	// tier is carried so a since-departed slice can be repriced at the current
 	// binding of its OWN tier (recorded since migration 0088), not the ladder
 	// head — a routine cheap_cloud swap must not reprice the departed cloud
@@ -66,7 +68,7 @@ func (s *CallReadStore) ServedTaskTotals(ctx context.Context, tasks []Task, sinc
 		FROM ai_call
 		WHERE occurred_at >= $1 AND NOT cache_hit
 		      AND (error_sentinel IS NULL OR error_sentinel = 'metering_failed')
-		      AND tokens_in > 0 AND task = ANY($2)
+		      AND tokens_in > 0 AND task = ANY($2) AND kind <> 'decision'
 		GROUP BY task, tier, provider, model_id`
 
 	taskStrings := make([]string, len(tasks))

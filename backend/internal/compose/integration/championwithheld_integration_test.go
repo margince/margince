@@ -24,6 +24,7 @@ package integration
 // one of the others. Varying only the contact arm cannot tell the two apart.
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -204,11 +205,16 @@ func TestACommitteeWhollyOutOfSightIsWithheldRatherThanMissing(t *testing.T) {
 // a probe reading only the contact arm reports the committee fully readable and
 // the deal says "no champion" over a champion that is sitting in it.
 //
-// It is reachable rather than theoretical. `rel_stakeholder_shape` pins
+// It is reachable rather than theoretical, and the row is seeded BY STATEMENT
+// because the writer no longer mints one. `rel_stakeholder_shape` pins
 // company_id, project_id and counterparty_contact_id to NULL on a
-// deal_stakeholder and says nothing about counterparty_company_id, and
-// CreateRelationshipInput accepts it. `company` is capture-private on the
-// same terms `contact` is, so an unpromoted company is a seat's hidden endpoint.
+// deal_stakeholder and still says nothing about counterparty_company_id, so the
+// DATABASE admits this row; what refuses it now is the Go shape guard at the
+// create door (contacts/relationshipshape.go). Tightening the CHECK is a
+// separate change and deliberately not made yet, because an installation may
+// already hold rows of exactly this shape — which is precisely why the READ
+// must still handle one. `company` is capture-private on the same terms
+// `contact` is, so an unpromoted company is a seat's hidden endpoint.
 //
 // The CHAMPION here is fully readable. That is the point: the contact arm admits
 // this seat, so only a probe reading the whole conjunction can find it refused.
@@ -231,11 +237,11 @@ func TestAChampionRefusedByANonContactEndpointIsWithheldRatherThanAbsent(t *test
 	makeCompanyCapturePrivate(t, e, partner, e.AdminUser)
 	partnerID := ids.From[ids.CompanyKind](partner)
 
-	champion := "champion"
-	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
-		Kind: "deal_stakeholder", ContactID: &visibleID, DealID: &dealID,
-		CounterpartyCompanyID: &partnerID, Role: &champion, Source: "manual",
-	}); err != nil {
+	if _, err := OwnerConn(t).Exec(context.Background(), `
+		INSERT INTO relationship (kind, contact_id, deal_id, counterparty_company_id,
+		                          role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, $3, 'champion', 'manual', 'human:x')`,
+		visibleID, dealID, partnerID); err != nil {
 		t.Fatalf("seating the champion behind a hidden counterparty company: %v", err)
 	}
 

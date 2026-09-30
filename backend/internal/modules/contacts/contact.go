@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -75,6 +74,11 @@ type CreateContactInput struct {
 	Emails      []ContactEmailInput
 	Phones      []ContactPhoneInput
 	Source      string
+	// SourceSystem names the system an import took this contact from; nil
+	// for one created here, which is what makes it unattributable.
+	SourceSystem *string
+	// Author is who wrote it in the system it came from; zero when unknown.
+	Author storekit.SourceAuthorInput
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (customfields.go).
@@ -103,7 +107,7 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 	var out crmcontracts.Contact
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = createContactInTx(ctx, tx, in, by, active)
+		out, err = s.createContactInTx(ctx, tx, in, by, active)
 		return err
 	})
 	return out, err
@@ -128,7 +132,7 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 		return crmcontracts.Contact{}, err
 	}
 	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
-	return createContactInTx(ctx, tx, in, by, nil)
+	return s.createContactInTx(ctx, tx, in, by, nil)
 }
 
 // readyContactCreate runs what a create settles BEFORE any transaction opens —
@@ -144,7 +148,7 @@ func (s *Store) readyContactCreate(ctx context.Context, in CreateContactInput) (
 
 // createContactInTx is CreateContact's transactional body, shared by the
 // store-opened and caller-opened entry points.
-func createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by string,
+func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by string,
 	active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {
 	if err := ensureContactEmailsUnclaimed(ctx, tx, in.Emails); err != nil {
@@ -161,7 +165,7 @@ func createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by
 		// which is the honest answer for a contact somebody typed in without
 		// saying why — and the answer that makes the gap visible rather than
 		// leaving the question unasked.
-		Acquisition: in.Acquisition,
+		Acquisition: acquisitionForCreate(in),
 		// A typed create publishes to the workspace, whoever typed it. An agent
 		// creating a contact on a rep's behalf is doing the rep's filing, and a
 		// contact only its creator can see is not in the CRM in any useful
@@ -182,6 +186,8 @@ func createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by
 		Emails:       in.Emails,
 		Phones:       in.Phones,
 		Source:       in.Source,
+		SourceSystem: in.SourceSystem,
+		Author:       in.Author,
 		CapturedBy:   by,
 		CustomFields: in.CustomFields,
 		Active:       active,
@@ -200,6 +206,10 @@ func createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by
 	if err := match.recordIfReview(ctx, tx, id, in.FullName, in.Source, by); err != nil {
 		return crmcontracts.Contact{}, err
 	}
+	// Somebody typing in a contact who is already a lead has qualified them.
+	if err := s.promoteHeldLeadsTx(ctx, tx, id, TriggerHumanQualify, nil, by); err != nil {
+		return crmcontracts.Contact{}, err
+	}
 
 	out, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
@@ -209,7 +219,9 @@ func createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by
 }
 
 // GetContact returns one contact with child rows; archived rows resolve
-// only under IncludeArchived (they stay fetchable by id after merge).
+// only under IncludeArchived (they stay fetchable by id after merge). The
+// object grant is asked before the transaction as well as inside
+// EnsureReadable, so a caller holding none costs no connection.
 func (s *Store) GetContact(ctx context.Context, id ids.ContactID, archived storekit.ArchivedFilter) (crmcontracts.Contact, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return crmcontracts.Contact{}, err
@@ -220,7 +232,7 @@ func (s *Store) GetContact(ctx context.Context, id ids.ContactID, archived store
 	}
 	var out crmcontracts.Contact
 	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
-		if err := auth.EnsureVisible(ctx, tx, "contact", id.UUID); err != nil {
+		if err := auth.EnsureReadable(ctx, tx, "contact", id.UUID); err != nil {
 			return err
 		}
 		out, err = readContact(ctx, tx, id, archived, active)
@@ -241,210 +253,10 @@ func (s *Store) GetContact(ctx context.Context, id ids.ContactID, archived store
 func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID,
 	archived storekit.ArchivedFilter, active CustomColumns,
 ) (crmcontracts.Contact, error) {
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return crmcontracts.Contact{}, err
-	}
-	if err := auth.EnsureVisible(ctx, tx, "contact", id.UUID); err != nil {
+	if err := auth.EnsureReadable(ctx, tx, "contact", id.UUID); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 	return readContact(ctx, tx, id, archived, active.cols)
-}
-
-// UpdateContactInput is a partial write; Clear below says "set this to NULL".
-type UpdateContactInput struct {
-	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
-	// it decodes to a nil pointer and reads as "not supplied" — so the
-	// reversal path names them here instead.
-	Clear []string
-	// Trail names what the audit trail calls this write; zero is an update.
-	Trail     storekit.AuditTrail
-	FullName  *string
-	FirstName *string
-	LastName  *string
-	Title     *string
-	OwnerID   *ids.UserID
-	// Visibility moves a contact between 'workspace' and 'owner', in either
-	// direction, for anybody the write gate admits.
-	//
-	// It was one-way until now — POST /contacts/{id}/publish only widened — on
-	// the reasoning that a colleague may already have acted on seeing the
-	// contact. That reasoning assumed a human made the disclosure, and the
-	// common case is not a human: the sender classifier publishes a contact it
-	// judges a real counterparty with nobody approving it, so a machine made a
-	// decision no human could undo, the row's own owner included.
-	Visibility *string
-	Social     map[string]any
-	Address    *crmcontracts.Address
-	// Emails replaces the contact's live addresses when non-nil. nil is "not
-	// supplied" and leaves the stored rows standing, exactly as Social is —
-	// the distinction matters for an import whose file carried no email
-	// column at all, which must not read as "this contact now has none".
-	Emails []ContactEmailInput
-	// Phones replaces the contact's live numbers when non-nil, with the same
-	// nil-vs-empty distinction Emails carries.
-	Phones    []ContactPhoneInput
-	IfVersion *int64
-	Source    string
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
-	CustomFields map[string]any
-}
-
-// UpdateContact applies a partial write under the caller's If-Match version,
-// replacing the child rows the input names and leaving the ones it does not.
-//
-//nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
-func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateContactInput) (crmcontracts.Contact, error) {
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
-		return crmcontracts.Contact{}, err
-	}
-	active, err := s.activeColumns(ctx, "contact")
-	if err != nil {
-		return crmcontracts.Contact{}, err
-	}
-	var out crmcontracts.Contact
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, "contact", id.UUID); err != nil {
-			return err
-		}
-		current, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
-		if err != nil {
-			return fmt.Errorf("read contact before update: %w", err)
-		}
-
-		if err := refuseUnreadableResult(current, in); err != nil {
-			return err
-		}
-		in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
-		p, err := buildContactPatch(current, in)
-		if err != nil {
-			return err
-		}
-		storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
-		if in.Social != nil || in.Emails != nil || in.Phones != nil {
-			// The relation replacement rides the contact row's version
-			// bump (updated_at below), so If-Match still guards it and
-			// the audit row still records the transition.
-			//
-			// Emails and Phones are in this condition for a second reason:
-			// without it a row whose ONLY change is an address or a number
-			// hits p.Empty() below and returns having written nothing, so a
-			// corrected export would report success and drop every such edit
-			// in the file.
-			p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
-		}
-		if p.Empty() {
-			out = current
-			return nil
-		}
-
-		if in.Visibility != nil {
-			if err := refuseStaleVisibility(ctx, tx, id, current); err != nil {
-				return err
-			}
-		}
-		if err := p.ApplyGuarded(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
-			if constraint, ok := storekit.CheckViolation(err); ok && constraint == "contact_owner_private_names_its_owner" {
-				return &RequiredFieldError{Field: filterOwnerID}
-			}
-			return fmt.Errorf("apply contact patch: %w", err)
-		}
-		if in.Social != nil {
-			if err := replaceContactSocial(ctx, tx, workspaceID(ctx), id, in.Social); err != nil {
-				return err
-			}
-		}
-
-		if in.Emails != nil || in.Phones != nil {
-			by, err := storekit.CapturedBy(ctx)
-			if err != nil {
-				return err
-			}
-			if err := replaceContactEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
-				return err
-			}
-			if err := replaceContactPhones(ctx, tx, id, in.Source, by, in.Phones); err != nil {
-				return err
-			}
-		}
-		// AFTER the addresses are replaced, never before: the cohort pass
-		// selects the correspondence to attach by reading this contact's live
-		// contact_email rows, so running it first would file mail from an
-		// address the same patch is removing — and the replacement archives
-		// the address without retracting the links.
-		if err := s.carryHistoryIfPublished(ctx, tx, id, current, in); err != nil {
-			return err
-		}
-		before, after := contactChangeImages(p, current, in)
-		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "contact", id.UUID, before, after)
-		if err != nil {
-			return fmt.Errorf("audit contact update: %w", err)
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
-			return fmt.Errorf("emit contact.updated: %w", err)
-		}
-		if out, err = readContact(ctx, tx, id, storekit.LiveOnly, active); err != nil {
-			return fmt.Errorf("read updated contact: %w", err)
-		}
-		return nil
-	})
-	return out, err
-}
-
-// Child sets are separate rows, so their audit images supplement the column patch.
-func contactChangeImages(
-	p *storekit.Patch, current crmcontracts.Contact, in UpdateContactInput,
-) (before, after map[string]any) {
-	before, after = p.Before(), p.After()
-	if in.Social != nil {
-		before["social"] = current.Social
-		after["social"] = in.Social
-	}
-	if in.Emails != nil {
-		before["emails"] = current.Emails
-		after["emails"] = in.Emails
-	}
-	if in.Phones != nil {
-		before["phones"] = current.Phones
-		after["phones"] = in.Phones
-	}
-	return before, after
-}
-
-func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput) (*storekit.Patch, error) {
-	p := storekit.NewPatch()
-	if in.FullName != nil {
-		p.Set("full_name", current.FullName, *in.FullName)
-	}
-	if in.FirstName != nil {
-		p.Set("first_name", current.FirstName, *in.FirstName)
-	}
-	if in.LastName != nil {
-		p.Set("last_name", current.LastName, *in.LastName)
-	}
-	if in.Title != nil {
-		p.Set("title", current.Title, *in.Title)
-	}
-	if in.OwnerID != nil {
-		p.Set(ownerIDColumn, current.OwnerId, *in.OwnerID)
-	}
-	if in.Visibility != nil {
-		p.Set("visibility", current.Visibility, *in.Visibility)
-	}
-	if err := storekit.ApplyClears(p, in.Clear, clearableContactColumns(current)); err != nil {
-		return nil, err
-	}
-	if in.Address != nil {
-		cur := addressColumns(current.Address)
-		p.Set("address_line1", cur.Line1, in.Address.Line1)
-		p.Set("address_line2", cur.Line2, in.Address.Line2)
-		p.Set("address_city", cur.City, in.Address.City)
-		p.Set("address_region", cur.Region, in.Address.Region)
-		p.Set("address_postal_code", cur.PostalCode, in.Address.PostalCode)
-		p.Set("address_country", cur.Country, in.Address.Country)
-	}
-	return p, nil
 }
 
 // EnsureContactByEmail returns the contact holding this address, creating one

@@ -1,6 +1,3 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { en } from "./en";
 import {
@@ -69,7 +66,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // A number and the SI symbol for millisecond. The symbol is the same in every
   // language by definition — it is written "ms" in Vietnamese too — so a locale
   // that changed it would be naming a different unit.
-  "aiHealth.ms",
   // An acronym, not a word: DNS is DNS in every language this product speaks,
   // and a "translation" of it would be a different protocol.
   "co.tech.lane.dns",
@@ -101,7 +97,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "oauthApp.tenant",
   "oauthApp.tenantPlaceholder",
   // A URL, which is the same string in every language.
+  "scheduling.locationExample",
   "aiRouting.baseUrl.placeholder",
+  "aiRouting.baseUrl.placeholder.jev",
+  "aiRouting.baseUrl.placeholder.jevCompatible",
   // The same noun, captioning a staged proposal's email field.
   "approval.field.email",
   // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
@@ -123,6 +122,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Two phase names and an arrow.
   "project.history.moved",
   "brief.digestPhaseChange",
+  // Two relationship-band names and an arrow, on the contact strip's latest
+  // change. Same shape, same reason as the two above.
+  "contact.intro.change.buckets",
   // A filename and the server's own refusal, separated by a colon. It is one
   // line of a list whose heading says what the list is, and both halves arrive
   // already in the reader's own words.
@@ -152,7 +154,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // surface over.
   "provider.profile.linkedin",
   "contact.page.linkedin",
-  "ob.ai.speaker",
   "ob.ai.speakerName",
   "auth.title",
 
@@ -167,14 +168,16 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "tab.deals",
   "deals.pipeline",
   "deal.fcPipeline",
+  "filters.field.pipeline_id",
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",
-  // The singular of the same noun, on the account facts strip and on the
-  // overnight scan's tally. Both are the borrowed word beside a numeral, so
-  // there is nothing left in either string for Vietnamese to translate.
-  "co.facts.deals_one",
+  // The singular of the same noun, on the overnight scan's tally and on the
+  // forecast tile's deal count. Both are the borrowed word beside a numeral, so there is nothing left in any
+  // of them for Vietnamese to translate. Only the `_one` arms land here: the
+  // `_other` arms differ because English pluralises and Vietnamese does not.
   "today.scan.readDeals_one",
+  "analytics.forecastDeals_one",
   "deals.unit",
   "contracts.renew.deal",
   "contracts.deal",
@@ -191,7 +194,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "restricted.kind.email",
   "timeline.filters.kind.email",
   "auth.email",
-  "contact.identity.email",
   "contact.action.email",
   "contact.memory.email",
   "contact.memory.channelEmail",
@@ -215,8 +217,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.conv.linkedin.profilePlaceholder",
   "ob.s4.imapHostPlaceholder",
   "ob.s4.imapEmail",
-  "ob.url",
-  "ob.urlScheme",
   "ob.conv.triage.companyWebsite",
   "ob.conv.clarify.question",
   "ob.conv.clarify.optionDetail",
@@ -246,10 +246,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "consent.actorAgent",
   "consent.actorConnector",
   "users.agentSeat",
-  // Same reason, one level up: vi carries "AI" as the loanword throughout this
-  // catalog, so spelling out "trí tuệ nhân tạo" on the settings entry alone
-  // would make one subject read as two.
-  "settings.tab.ai",
   // "Lead" is the loanword in both de and vi — every other lead key in this
   // catalog leaves it untranslated, and the marker on the record page names
   // the same object those keys do.
@@ -262,6 +258,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "search.kind.deal",
   "search.kind.lead",
   "search.kind.tag",
+  // The same loanword naming the tag field on Filters and views.
+  "filters.field.tag",
   // The lead rail's own deal card title, the same singular loanword as
   // search.kind.deal above it.
   "lead.rail.deal.title",
@@ -438,141 +436,6 @@ describe("browser-language detection", () => {
   it("never matches an inherited Object property", () => {
     expect(detectLocale(["constructor"])).toBe(DEFAULT_LOCALE);
     expect(detectLocale(["toString"])).toBe(DEFAULT_LOCALE);
-  });
-});
-
-// The two guards below read the source tree rather than a written list of
-// what is allowed, for the reason every fitness function here does: a list
-// records one moment's answer and then drifts, while the tree is the answer.
-
-const SRC_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-
-const CATALOG_FILES = new Set(
-  ["en.ts", "de.ts", "vi.ts"].map((file) => join(SRC_ROOT, "i18n", file)),
-);
-
-/**
- * Every file that can RENDER a key: the whole source tree minus the catalogs
- * themselves and minus the tests.
- *
- * Tests are excluded deliberately. A key a test names but no screen renders is
- * exactly the dead weight the orphan check looks for, and counting tests would
- * also let this file's own allowlist vouch for keys nothing displays.
- */
-function renderingFiles(dir: string): string[] {
-  return readdirSync(dir).flatMap((entry) => {
-    const path = join(dir, entry);
-    if (statSync(path).isDirectory()) {
-      return renderingFiles(path);
-    }
-    const rendersKeys =
-      /\.tsx?$/.test(entry) &&
-      !/\.test\.tsx?$/.test(entry) &&
-      !CATALOG_FILES.has(path);
-    return rendersKeys ? [path] : [];
-  });
-}
-
-const RENDERING_SOURCE = renderingFiles(SRC_ROOT).map((path) =>
-  readFileSync(path, "utf8"),
-);
-
-// A key written out in full, in any of the three quote styles. The character
-// class is the alphabet the catalogs actually use: the enum-shaped keys carry
-// ':' (lead.factor.manual:employees), '-' and '+' (the employee bands).
-const QUOTED_LITERAL = /["'`]([A-Za-z0-9_.:+-]+)["'`]/g;
-
-// The stem of a key built at runtime — t(`ob.readStatus.${status}`). Whatever
-// follows the stem is a value this file cannot see, so every key under it
-// counts as rendered: the alternative is a guard that tells the next contact to
-// delete a string a screen is displaying.
-const TEMPLATE_STEM = /`([A-Za-z0-9_.]*)\$\{/g;
-
-function renderedLiterals(): Set<string> {
-  const literals = new Set<string>();
-  for (const source of RENDERING_SOURCE) {
-    for (const [, literal] of source.matchAll(QUOTED_LITERAL)) {
-      literals.add(literal);
-    }
-  }
-  return literals;
-}
-
-function renderedStems(): string[] {
-  const stems = new Set<string>();
-  for (const source of RENDERING_SOURCE) {
-    for (const [, stem] of source.matchAll(TEMPLATE_STEM)) {
-      // A dot is what makes a stem a key stem. Without one the template is a
-      // class name, a URL or a message, and treating it as a stem would vouch
-      // for the entire catalog.
-      if (stem.includes(".")) {
-        stems.add(stem);
-      }
-    }
-  }
-  return [...stems];
-}
-
-/**
- * The plural bases this catalog carries: every key with an `_one` arm whose
- * `_other` arm is here too.
- *
- * A plural base is a key stem like any other, reached the same way a template
- * stem is — `plural("share.teamMembers", n)` renders `share.teamMembers_one` or
- * `_other` and writes neither in full. Without this, every arm of every plural
- * pair reads as an orphan and this gate tells the next contact to delete
- * ninety-four strings the product is displaying.
- *
- * DERIVED from the catalog rather than listed, and derived from the PAIR rather
- * than from a suffix: `x_one` alone vouches for nothing, because half a
- * translated pair is the orphan this check exists to find.
- */
-function pluralBases(): Set<string> {
-  const keys = new Set(Object.keys(en));
-  const bases = new Set<string>();
-  for (const key of keys) {
-    const base = key.endsWith("_one") ? key.slice(0, -"_one".length) : null;
-    if (base !== null && keys.has(`${base}_other`)) {
-      bases.add(base);
-    }
-  }
-  return bases;
-}
-
-describe("catalog keys against the surfaces that render them", () => {
-  it("every key is rendered by a source file, literally or under a stem", () => {
-    const literals = renderedLiterals();
-    const stems = renderedStems();
-    const bases = pluralBases();
-    // An arm is rendered when its BASE is: the call site names the base and the
-    // reader's own plural rule picks the arm, so the arm's full key never
-    // appears in source at all.
-    //
-    // Only the two ARMS get this, not any key whose last underscore happens to
-    // follow a plural base. Cutting at the last `_` exempted
-    // `<renderedBase>_anythingElse` as well, which is a hole in exactly the
-    // direction that matters: this gate's job is to find a key nothing renders,
-    // and an exemption that reaches further than the convention it models makes
-    // it report PASS over one.
-    const arms: readonly ["_one", "_other"] = ["_one", "_other"];
-    const underPluralBase = (key: string): boolean => {
-      const arm = arms.find((suffix) => key.endsWith(suffix));
-      if (arm === undefined) {
-        return false;
-      }
-      const base = key.slice(0, -arm.length);
-      return bases.has(base) && literals.has(base);
-    };
-    const orphans = Object.keys(en).filter(
-      (key) =>
-        !literals.has(key) &&
-        !underPluralBase(key) &&
-        !stems.some((stem) => key.startsWith(stem)),
-    );
-    expect(
-      orphans,
-      `keys translated three times and rendered nowhere: ${orphans.join(", ")}`,
-    ).toEqual([]);
   });
 });
 

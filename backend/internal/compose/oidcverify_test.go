@@ -290,8 +290,24 @@ func TestOIDCVerifyCoalescesConcurrentJWKSRefresh(t *testing.T) {
 	go func() { _, err := v.Verify(context.Background(), tok); errA <- err }()
 	// The first refresh is now registered and its fetch is held in flight.
 	<-entered
+	// Released only once B is WAITING on A's fetch. Racing B's arrival let A
+	// finish first, and B then met a cold cache — a second fetch or the
+	// cooldown's refusal, reported as a verifier that failed to coalesce when
+	// it was never asked to.
+	joined := make(chan struct{})
+	v.coalesced = func() { close(joined) }
 	errB := make(chan error, 1)
 	go func() { _, err := v.Verify(context.Background(), tok); errB <- err }()
+	// Bounded: a verifier that stopped coalescing never signals, and an
+	// unbounded receive hangs the package to its timeout instead of naming the
+	// defect. Not a timing assumption — the signal precedes any I/O.
+	select {
+	case <-joined:
+	case <-time.After(5 * time.Second):
+		close(release)
+		t.Fatal("the second caller never joined the in-flight refresh: it started its own fetch " +
+			"or met the cooldown, which is the coalescing this test exists to prove")
+	}
 	close(release)
 
 	if err := <-errA; err != nil {

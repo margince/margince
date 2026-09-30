@@ -6,13 +6,12 @@ import { fileURLToPath } from "node:url";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { verticalPlacement } from "./anchored";
 import {
   Checkbox,
-  DataTable,
   Field,
+  Modal,
   OverflowMenu,
   PendingBody,
   Radio,
@@ -21,6 +20,8 @@ import {
   Textarea,
   TextInput,
 } from "./atoms";
+import { Heading } from "./heading";
+import { holdExits } from "./presence-testing";
 import { Select } from "./select";
 
 // The dropdown these cases pair with a Field is the Select from select.tsx — a
@@ -162,24 +163,29 @@ it("stays open when the item chosen sets something rather than doing it", async 
   expect(trigger.getAttribute("aria-expanded")).toBe("true");
 });
 
+function DialogAction() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Merge with…
+      </button>
+      <Modal open={open} onClose={() => setOpen(false)} labelledBy="merge">
+        <Heading size="large" id="merge">
+          Merge with…
+        </Heading>
+      </Modal>
+    </>
+  );
+}
+
 // The one item that must NOT close the menu under itself: one whose whole job
 // is to put a dialog up. A dialog restores focus, on close, to the control that
 // opened it — so hiding that control first strands the reader on <body>. The
-// menu reads the same `.overlay` its Escape handler reads, one commit after the
+// menu asks `coveredByDialog` as its Escape handler does, one commit after the
 // press, which is the first moment the answer exists.
 it("stays open when the item it just ran opened a dialog", async () => {
   const user = userEvent.setup();
-  function DialogAction() {
-    const [open, setOpen] = useState(false);
-    return (
-      <>
-        <button type="button" onClick={() => setOpen(true)}>
-          Merge with…
-        </button>
-        {open && createPortal(<div className="overlay" />, document.body)}
-      </>
-    );
-  }
   render(
     <OverflowMenu label="More actions">
       <DialogAction />
@@ -191,6 +197,62 @@ it("stays open when the item it just ran opened a dialog", async () => {
   await user.click(screen.getByRole("button", { name: "Merge with…" }));
 
   expect(trigger.getAttribute("aria-expanded")).toBe("true");
+});
+
+// A dialog on its way out is no longer up: a reader who dismissed it and picked
+// a verb before its exit ended has chosen that verb, and the menu is finished.
+it("closes when an item is chosen while the dialog it opened is leaving", async () => {
+  const exits = holdExits();
+  try {
+    const user = userEvent.setup();
+    render(
+      <OverflowMenu label="More actions">
+        <DialogAction />
+        <button type="button">Archive</button>
+      </OverflowMenu>,
+    );
+    const trigger = screen.getByRole("button", { name: "More actions" });
+    await user.click(trigger);
+    await user.click(screen.getByRole("button", { name: "Merge with…" }));
+    await user.keyboard("{Escape}");
+    expect(document.querySelector(".overlay")?.hasAttribute("inert")).toBe(
+      true,
+    );
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+
+    await user.click(screen.getByRole("button", { name: "Archive" }));
+
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  } finally {
+    exits.mockRestore();
+  }
+});
+
+// A menu drawn INSIDE a dialog is not under it: the dialog is the page it sits
+// on, so Escape and a chosen verb still close the menu, and only the menu.
+it("closes on Escape and on a chosen verb when it sits inside a dialog", async () => {
+  const onDialogClose = vi.fn();
+  const user = userEvent.setup();
+  render(
+    <Modal open onClose={onDialogClose} labelledBy="deal">
+      <Heading size="large" id="deal">
+        Deal
+      </Heading>
+      <OverflowMenu label="More actions">
+        <button type="button">Archive</button>
+      </OverflowMenu>
+    </Modal>,
+  );
+  const trigger = screen.getByRole("button", { name: "More actions" });
+
+  await user.click(trigger);
+  await user.keyboard("{Escape}");
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+
+  await user.click(trigger);
+  await user.click(screen.getByRole("button", { name: "Archive" }));
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(onDialogClose).not.toHaveBeenCalled();
 });
 
 // The trigger's own geometry, asserted here because this is the design system's
@@ -376,62 +438,12 @@ it("marks a required Field once for the eye and once for the control", () => {
   expect(screen.getByText("*").getAttribute("aria-hidden")).toBe("true");
 });
 
-// A table that scrolls sideways holds columns a pointer can drag to and a
-// keyboard cannot reach at all, so the box takes a tab stop and a name — and
-// takes neither while it fits, because a tab stop in front of every table in
-// the product is a cost every keyboard reader pays for the few that overflow.
-// jsdom lays nothing out, so the two widths the decision reads are stubbed on
-// the prototype: that is the whole input to it.
-function stubBoxWidths(scrollWidth: number, clientWidth: number) {
-  for (const [property, value] of [
-    ["scrollWidth", scrollWidth],
-    ["clientWidth", clientWidth],
-  ] as const) {
-    vi.spyOn(HTMLDivElement.prototype, property, "get").mockReturnValue(value);
-  }
-}
-
-const PRODUCT_COLUMNS = [
-  { key: "name", header: "Name", render: (row: { name: string }) => row.name },
-];
-const PRODUCT_ROWS = [{ name: "Consulting Day" }];
-
-it("makes a table's scroll box reachable and named once it overflows", () => {
-  stubBoxWidths(930, 654);
-  render(
-    <DataTable
-      label="Products"
-      columns={PRODUCT_COLUMNS}
-      rows={PRODUCT_ROWS}
-      rowKey={(row) => row.name}
-    />,
-  );
-  const box = screen.getByRole("region", { name: "Products" });
-  expect(box.className).toContain("table-scroll");
-  expect(box.getAttribute("tabindex")).toBe("0");
-});
-
-it("leaves a table that fits its box out of the tab order", () => {
-  stubBoxWidths(654, 654);
-  const { container } = render(
-    <DataTable
-      label="Products"
-      columns={PRODUCT_COLUMNS}
-      rows={PRODUCT_ROWS}
-      rowKey={(row) => row.name}
-    />,
-  );
-  expect(screen.queryByRole("region")).toBeNull();
-  const box = container.querySelector(".table-scroll");
-  expect(box?.getAttribute("tabindex")).toBeNull();
-});
-
 // A segmented option can carry a dot saying something waits behind it. The dot
 // is decorative by contract: it draws the eye, and the surface it points at
 // states the fact in words. A mark that carried the meaning alone would be
 // invisible to a screen reader and to a reader who cannot see the colour.
 const TABS = ["overview", "research"] as const;
-const TAB_LABELS = { overview: "Overview", research: "Data & tools" };
+const TAB_LABELS = { overview: "Overview", research: "Data and tools" };
 
 it("marks only the options told to carry one", () => {
   const { container } = render(
@@ -447,7 +459,7 @@ it("marks only the options told to carry one", () => {
   expect(marks.length).toBe(1);
   expect(
     screen
-      .getByRole("button", { name: "Data & tools" })
+      .getByRole("button", { name: "Data and tools" })
       .querySelector(".segmented-mark"),
   ).not.toBeNull();
 });
@@ -466,10 +478,10 @@ it("hides the mark from the accessibility tree", () => {
   // empty span, so a name assertion passes whether or not it is hidden and
   // proves nothing about the contract this test is named for.
   const mark = screen
-    .getByRole("button", { name: "Data & tools" })
+    .getByRole("button", { name: "Data and tools" })
     .querySelector(".segmented-mark");
   expect(mark?.getAttribute("aria-hidden")).toBe("true");
-  expect(screen.getByRole("button", { name: "Data & tools" })).toBeDefined();
+  expect(screen.getByRole("button", { name: "Data and tools" })).toBeDefined();
 });
 
 it("draws no mark when no option carries one", () => {

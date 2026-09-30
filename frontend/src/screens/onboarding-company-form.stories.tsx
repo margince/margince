@@ -139,6 +139,11 @@ export const GroundedInARead: Story = {
   render: form(grounded, read(FACTS)),
 };
 
+/** A read grounded in a single page: the origin line in the singular. */
+export const GroundedInOnePage: Story = {
+  render: form(grounded, { ...read(FACTS), pages_read: 1 }),
+};
+
 /** No site to read, so the reader typed it. The origin line changes what it
  *  claims — human assertions, not evidence — and the fact list is absent
  *  because there was nothing to find. */

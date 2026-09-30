@@ -10,14 +10,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { AgentEdge } from "./agent-edge";
-import {
-  EDGE_LIGHT_KEY,
-  edgeLightShown,
-  setEdgeLightShown,
-} from "./agent-edge-preference";
+import { edgeLightShown, setEdgeLightShown } from "./agent-edge-preference";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
 import { meFixture } from "./mefixture";
+import { STORAGE_KEYS } from "./storage";
+
+const EDGE_LIGHT_KEY = STORAGE_KEYS.edgeLight.name;
 
 // The margins are the one thing on a workspace screen that moves without being
 // asked for, and they move around the whole window. Some contacts cannot work

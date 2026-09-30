@@ -1,5 +1,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
@@ -8,17 +15,24 @@ import {
   Button,
   EmptyState,
   Field,
+  Modal,
   Textarea,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { FileChip } from "../design-system/filechip";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
-import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
+import { CitedDocument } from "./citeddocument";
+import { AnswerView } from "./corpusanswer";
+import "./corpusask.css";
 import { problemMessageOf, throwProblem } from "./common";
 
 // Asking a document set a question, in the reader's own words.
+//
+// It is a DIALOG rather than a screen. Asking is something a reader does in the
+// middle of other work — they are on a deal, a question occurs to them, and the
+// answer sends them back to the deal — so it opens over the page they were on
+// and gives it back when it closes. A screen made them leave and navigate back.
 //
 // What makes the free-text box defensible here, and what the whole surface has
 // to keep visible: the search is BOUNDED. "Everything" is one finite set the
@@ -26,12 +40,11 @@ import { problemMessageOf, throwProblem } from "./common";
 // exactly what `POST /companies/{id}/ask` refused to promise, and why that
 // one takes its questions from a fixed list instead.
 //
-// So the three refusals are drawn as three different things, never as one
-// "no answer" state:
+// So the refusals are drawn as different things, never as one "no answer":
 //
 //   not_covered            the set was searched IN FULL and holds nothing close
-//                          enough — and the set's own topic statement is quoted
-//                          back, so the reader learns what it is FOR
+//                          enough. The writer's own sentence says what the set
+//                          DOES cover, so the reader knows where to go next
 //   not_ready              the set is mid-ingest or being re-read. Nothing is
 //                          wrong with the question
 //   retrieval_unavailable  no search lane is configured, so nothing was
@@ -42,10 +55,6 @@ import { problemMessageOf, throwProblem } from "./common";
 // the nearest passages are on screen, but no writer read them — so the reader
 // is told that in a callout above them, because a passage presented like an
 // answer is read as one.
-//
-// And `generated_by` is on screen whenever there is an answer. A reader
-// deciding how much to trust a sentence needs to know whether a model wrote it
-// or whether they are looking at the passages themselves.
 
 type Answer = components["schemas"]["KnowledgeAnswer"];
 type Corpus = components["schemas"]["KnowledgeCorpus"];
@@ -94,18 +103,25 @@ function preferredSet(sets: readonly Corpus[]): string {
   return marked?.id ?? sets[0]?.id ?? "";
 }
 
-export function CorpusAskCard({
+export function AskMarginceModal({
+  open,
   carriedQuestion,
-  onCarriedAsked,
+  onClose,
 }: Readonly<{
+  open: boolean;
   carriedQuestion?: string;
-  onCarriedAsked?: () => void;
+  onClose: () => void;
 }>) {
   const t = useT();
+  const titleId = useId();
   const canAsk = useCan("knowledge_corpus", "read");
-  const sets = useAskableSets(canAsk);
+  const sets = useAskableSets(canAsk && open);
   const [corpusId, setCorpusId] = useState("");
   const [question, setQuestion] = useState("");
+  // Which citation the document pane is showing, by its position in the answer.
+  // Null is "nothing picked yet", which is a different pane from "picked one
+  // that turned out to have no passage".
+  const [openCite, setOpenCite] = useState<number | null>(null);
   const ask = useAsk();
 
   // The set is chosen once the list arrives, and only while nothing is chosen:
@@ -118,217 +134,156 @@ export function CorpusAskCard({
     }
   }, [items, corpusId]);
 
-  // A question carried in has already been ASKED, so arriving with one fills
-  // the box AND submits it. It arrives as a change of ADDRESS and not as a
-  // mount — the reader is as often as not already standing on this screen — so
-  // it is an effect: a `useState` initialiser runs once per mount and would
-  // miss every arrival that is not one.
+  // The palette fills the box; it does not press Ask. A question typed into a
+  // palette is a question being COMPOSED — the reader was still writing it when
+  // the row matched — and asking it for them spends a model call on a fragment
+  // and shows them an answer to something they had not finished saying.
   //
-  // `asked` is what keeps one arrival to one ask. The effect is replayed for
-  // the set list landing, for the grant landing, for a caller's callback
-  // changing identity, and twice over on a development mount, and a model call
-  // is not a thing to make twice. It clears when the address does, which is
-  // what makes the same question carried again a second ask rather than a row
-  // that does nothing.
-  const carried = carriedQuestion?.trim() ?? "";
-  const asked = useRef("");
-  const submit = ask.mutate;
+  // Keyed on the QUESTION rather than on having filled once: the dialog is not
+  // remounted between one carried question and the next — the address changes
+  // under it — so a boolean guard left the second reader looking at the first
+  // reader's question with their own nowhere on screen.
+  const carried = carriedQuestion ?? "";
+  const filled = useRef<string | null>(null);
   useEffect(() => {
-    if (carried === "") {
-      asked.current = "";
+    if (!open) {
+      filled.current = null;
       return;
     }
-    // Two things have to be known first, and neither is on the first render.
-    // A set, because an ask with none to search is one the mutation refuses.
-    // And the GRANT: the set is chosen from whatever the corpora cache holds,
-    // and a warm cache outlives the grant that filled it, so without this the
-    // card would ask on behalf of a reader it is not even drawn for and spend
-    // the question doing it. Held rather than dropped either way, so a grant
-    // that lands a moment later still asks it.
-    if (!canAsk || corpusId === "" || asked.current === carried) {
+    if (filled.current === carried) {
       return;
     }
-    asked.current = carried;
+    filled.current = carried;
     setQuestion(carried);
-    submit({ corpusId, question: carried });
-    onCarriedAsked?.();
-  }, [canAsk, carried, corpusId, submit, onCarriedAsked]);
+  }, [open, carried]);
 
-  // Nothing is offered until we KNOW there is something to ask. The three
-  // cases collapse to one answer — no grant, no sets, or not yet told — and
-  // that is deliberate: rendering the box while the list is still in flight
-  // shows a reader an input that then vanishes under them, which is worse than
-  // a card that arrives a moment late. A box that answers nothing is worse
-  // than no box.
-  if (!canAsk || items === undefined || items.length === 0) {
-    return null;
-  }
+  const runAsk = useCallback(() => {
+    setOpenCite(null);
+    ask.mutate({ corpusId, question: question.trim() });
+  }, [ask, corpusId, question]);
+
+  // Only while it still belongs to the set on screen. useMutation keeps its
+  // last result across a change of selection, so without this a reader who asks
+  // one set, switches to another and reads on would see the FIRST set's answer
+  // and citations sitting under the second set's name.
+  const answer = ask.data?.corpus.id === corpusId ? ask.data : undefined;
+  const claims = useMemo(() => answer?.claims ?? [], [answer]);
+  const cited = openCite === null ? undefined : claims[openCite];
 
   return (
-    <Panel
-      title={t("corpusAsk.title")}
-      // Indigo, and the badge with it: the answer under this head is a model's
-      // reading of the set, and the verb the head offers is the model's too.
-      tone="ai"
-      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
+    // The house two-column dialog, and it is a RIGHT-SIDE drawer: `split`
+    // centred has no second column to hold and falls back to the roomy box,
+    // which this content overflowed. The drawer is what the design system
+    // offers for an answer beside the document it came from.
+    <Modal
+      open={open}
+      onClose={onClose}
+      labelledBy={titleId}
+      size="split"
+      placement="right"
     >
-      <PanelBody className="form-stack">
-        <p>{t("corpusAsk.sub")}</p>
-        {items && items.length > 1 ? (
-          <Field label={t("corpusAsk.whichSet")}>
+      <div className="ask-modal">
+        <header className="ask-modal-head">
+          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+          <Heading size="medium" id={titleId}>
+            {t("corpusAsk.title")}
+          </Heading>
+          {/* The set scopes the whole dialog rather than one question, which is
+              why it sits in the head and not beside the box: change it and the
+              NEXT ask goes somewhere else. ALWAYS drawn, even at one set — an
+              answer a reader cannot attribute to a named set is an answer they
+              cannot judge, and the day a second set arrives the control is
+              already where they learned to look. */}
+          <div className="ask-modal-set">
+            {/* No visible label: the head is one line, and the control already
+                says what it is by naming the set inside it. The name a screen
+                reader needs rides on the control instead, so nothing is lost
+                where nothing was gained by printing it twice. */}
+            <Select
+              aria-label={t("corpusAsk.whichSet")}
+              options={(items ?? []).map((set) => ({
+                value: set.id,
+                label: set.name,
+              }))}
+              value={corpusId}
+              disabled={(items?.length ?? 0) < 2}
+              onChange={(next) => {
+                setCorpusId(next);
+                setOpenCite(null);
+              }}
+            />
+          </div>
+        </header>
+        {/* The question spans the dialog, because asking is what the reader
+            came to do and the box is not half of anything. */}
+        <section className="ask-modal-ask">
+          {/* The bounded-search promise, and it stays on screen because it is
+              what makes a refusal mean something: a set that answers
+              everything is worth less than one that says when it cannot. */}
+          <p className="t-sub">{t("corpusAsk.sub")}</p>
+          <Field label={t("corpusAsk.question")}>
             {(control) => (
-              <Select
+              <Textarea
                 {...control}
-                options={items.map((set) => ({
-                  value: set.id,
-                  label: set.name,
-                }))}
-                value={corpusId}
-                onChange={setCorpusId}
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
               />
             )}
           </Field>
-        ) : null}
-        <Field label={t("corpusAsk.question")}>
-          {(control) => (
-            <Textarea
-              {...control}
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-            />
-          )}
-        </Field>
-        <div className="form-actions">
-          <Button
-            // The one AI call to action on this surface: the model does the
-            // reading and writes the sentence.
-            variant="ai"
-            disabled={question.trim() === "" || corpusId === ""}
-            pending={ask.isPending}
-            onClick={() => ask.mutate({ corpusId, question: question.trim() })}
-          >
-            {t("corpusAsk.submit")}
-          </Button>
-        </div>
-        {ask.isError ? (
-          <Callout tone="danger" kind="outcome" title={t("corpusAsk.failed")}>
-            {problemMessageOf(ask.error, t)}
-          </Callout>
-        ) : null}
-        {/* Only while it still belongs to the set on screen. useMutation keeps
-            its last result across a change of selection, so without this a
-            reader who asks one set, switches to another, and reads on would
-            see the FIRST set's answer and citations sitting under the second
-            set's name — with nothing on the page saying so. */}
-        {ask.data && ask.data.corpus.id === corpusId ? (
-          <AnswerView answer={ask.data} />
-        ) : null}
-      </PanelBody>
-    </Panel>
-  );
-}
-
-function AnswerView({ answer }: Readonly<{ answer: Answer }>) {
-  const t = useT();
-  // A line and a column are MAGNITUDES a contact counts with, so they take the
-  // reader's own notation like every other figure on the page.
-  const { locale } = useLocale();
-  if (answer.outcome !== "answered" && answer.outcome !== "unreviewed") {
-    return <Refusal answer={answer} />;
-  }
-  const claims = answer.claims ?? [];
-  return (
-    <div className="form-stack">
-      {/* NOBODY READ THESE. The passages are what the search ranked nearest,
-          and under `unreviewed` no writer judged whether they answer the
-          question — ranking alone cannot, so a reader who is not told would
-          read the nearest passage as the answer. It leads the panel rather
-          than sitting under it for that reason. */}
-      {answer.outcome === "unreviewed" ? (
-        <Callout
-          tone="warning"
-          kind="outcome"
-          title={t("corpusAsk.unreviewedTitle")}
-        >
-          {t("corpusAsk.unreviewed")}
-        </Callout>
-      ) : null}
-      {/* WHO WROTE THIS. Never omitted, and never inferred from whether the
-          claims carry sentences: a reader deciding how much to trust a line
-          needs to be told, not to work it out from the shape of the page. */}
-      <Badge tone={answer.generated_by === "model" ? "ai" : undefined}>
-        {answer.generated_by === "model"
-          ? t("corpusAsk.byModel")
-          : t("corpusAsk.byPassages")}
-      </Badge>
-      {claims.map((claim) => (
-        <PanelRow key={claim.chunk_id}>
-          <div className="form-stack">
-            {/* Absent when nobody wrote a sentence, which is the deterministic
-                answer's shape. The quote then stands on its own, which is
-                honest: the grounded part of a grounded answer was never the
-                prose. */}
-            {claim.text ? <p>{claim.text}</p> : null}
-            <blockquote className="t-caption">{claim.quote}</blockquote>
-            {/* The file itself, downloadable, beside where in it the quote
-                sits. A citation nobody can follow is a citation in name only —
-                the reader has the sentence and the quote, and this is what lets
-                them open the document and see it in place. */}
-            <div className="card-actions">
-              <FileChip
-                href={`/v1/knowledge/documents/${claim.document_id}`}
-                filename={claim.document_name}
-              />
-              {claim.line ? (
-                <span className="t-caption">
-                  {t("corpusAsk.atLine", {
-                    line: formatNumber(claim.line, locale),
-                    column: formatNumber(claim.column ?? 1, locale),
-                  })}
-                </span>
-              ) : null}
-            </div>
+          <div className="form-actions">
+            <Button
+              // The one AI call to action on this surface: the model does the
+              // reading and writes the sentence.
+              variant="ai"
+              disabled={question.trim() === "" || corpusId === ""}
+              pending={ask.isPending}
+              onClick={runAsk}
+            >
+              {t("corpusAsk.submit")}
+            </Button>
           </div>
-        </PanelRow>
-      ))}
-    </div>
-  );
-}
-
-function Refusal({ answer }: Readonly<{ answer: Answer }>) {
-  const t = useT();
-  // Counts, so they are MAGNITUDES and take the reader's own notation: a German
-  // reader seeing 1234 beside a formatted 1.234 is one screen written in two.
-  const { locale } = useLocale();
-  if (answer.outcome === "not_ready") {
-    return (
-      // The same plate the not_covered branch below draws: all three refusals
-      // stand where the answer would have been, so a reader who pressed Ask
-      // and got none reads one shape rather than three.
-      <EmptyState title={t("corpusAsk.notReadyTitle")}>
-        <p>
-          {t("corpusAsk.notReady", {
-            embedded: formatNumber(answer.coverage.chunks_embedded, locale),
-            total: formatNumber(answer.coverage.chunks_total, locale),
-          })}
-        </p>
-      </EmptyState>
-    );
-  }
-  if (answer.outcome === "retrieval_unavailable") {
-    return (
-      <EmptyState title={t("corpusAsk.retrievalUnavailableTitle")}>
-        <p>{t("corpusAsk.retrievalUnavailable")}</p>
-      </EmptyState>
-    );
-  }
-  // not_covered: the set WAS searched, in full. The topic statement is quoted
-  // back because it is the only thing on screen that tells the reader what this
-  // set is for — and they are reading it at their least patient moment.
-  return (
-    <EmptyState title={t("corpusAsk.notCovered.title")}>
-      <p>{t("corpusAsk.notCovered.body", { name: answer.corpus.name })}</p>
-      <blockquote>{answer.corpus.topic_statement}</blockquote>
-    </EmptyState>
+          {/* Two different facts, and the reader can act on only one of them.
+              A company with no documents filed has nothing to search; a reader
+              without the grant is looking at a company that may be full of
+              them. Telling the second they have no documents is a false
+              statement about somebody else's data. */}
+          {canAsk ? null : (
+            <EmptyState title={t("corpusAsk.noGrantTitle")}>
+              <p>{t("corpusAsk.noGrant")}</p>
+            </EmptyState>
+          )}
+          {canAsk && items && items.length === 0 ? (
+            <EmptyState title={t("corpusAsk.noSetsTitle")}>
+              <p>{t("corpusAsk.noSets")}</p>
+            </EmptyState>
+          ) : null}
+          {ask.isError ? (
+            <Callout tone="danger" kind="outcome" title={t("corpusAsk.failed")}>
+              {problemMessageOf(ask.error, t)}
+            </Callout>
+          ) : null}
+        </section>
+        {/* The document arrives only when a reader asks for it, and the answer
+            has the width to itself until then. A pane held open on an empty
+            state spends half the dialog saying nothing — and on a refusal it
+            says nothing FOREVER, because a refusal has no citation to press. */}
+        <div className="ask-modal-body">
+          <section className="ask-modal-answer">
+            {answer ? (
+              <AnswerView
+                answer={answer}
+                openCite={openCite}
+                onOpenCite={setOpenCite}
+              />
+            ) : null}
+          </section>
+          {cited ? (
+            <section className="ask-modal-doc">
+              <CitedDocument key={cited.chunk_id} claim={cited} />
+            </section>
+          ) : null}
+        </div>
+      </div>
+    </Modal>
   );
 }

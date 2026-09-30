@@ -498,6 +498,32 @@ func TestTheQueueGuidanceIsServedOnlyWhereTheQueueIs(t *testing.T) {
 	}
 }
 
+// The rule for sources that disagree reaches a client's model through the
+// instructions alone: it never reads the agent runner's frame, and the use-case
+// lane's failing answers came from exactly such a model.
+func TestTheInstructionsTellAClientsModelToNameADisagreement(t *testing.T) {
+	withQueue := modernDispatcher(t)
+	RegisterApprovalTools(withQueue.registry, stubInbox{})
+	for name, surface := range map[string]*Dispatcher{"without a queue": modernDispatcher(t), "with a queue": withQueue} {
+		if !strings.Contains(surface.instructions(), mcp.ConflictingSourcesRule) {
+			t.Errorf("a surface %s does not carry the conflicting-sources rule:\n%s", name, surface.instructions())
+		}
+	}
+	rule := mcp.ConflictingSourcesRule
+	for _, want := range []string{
+		// Naming both is the move; choosing silently is the failure that hides it.
+		"say that they disagree and name both",
+		// The measured failure: a second complaint nobody recorded.
+		"never invent an event",
+		// Which side wins, or a model told to flag a conflict still guesses.
+		"the field wins",
+	} {
+		if !strings.Contains(rule, want) {
+			t.Errorf("the conflicting-sources rule no longer says %q:\n%s", want, rule)
+		}
+	}
+}
+
 // stubInbox is an ApprovalInbox that is never called: this suite asks what the
 // surface SAYS about the queue, not what the queue answers.
 type stubInbox struct{}

@@ -135,7 +135,7 @@ func (e *voiceSendEnv) openVoiceDraft(t *testing.T, opts voiceDraftOptions) (ref
 		var foreign ids.UUID
 		if err := e.Owner.QueryRow(ctx, `
 			INSERT INTO voice_profile (owner_id, scope, status, source, captured_by)
-			VALUES ($1, 'user', 'ready', 'ui', $2) RETURNING id`,
+			VALUES ($1, 'user', 'ready', 'manual', $2) RETURNING id`,
 			colleague, "human:"+colleague.String()).Scan(&foreign); err != nil {
 			t.Fatalf("seeding the colleague's voice profile: %v", err)
 		}

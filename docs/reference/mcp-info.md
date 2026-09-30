@@ -11,12 +11,12 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 76 |
-| Resources | 12 |
-| Tool catalog | 218.6 KB |
-| Resource catalog | 4.5 KB |
-| Approx. wire tokens | 57102 |
-| Largest tool | `prep_for_meeting` (8.8 KB) |
+| Tools | 80 |
+| Resources | 11 |
+| Tool catalog | 235.4 KB |
+| Resource catalog | 4.1 KB |
+| Approx. wire tokens | 61299 |
+| Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the WIRE bytes: they carry each tool's output schema and the governance
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 99.6 KB | 45% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 57.5 KB | 26% | Yes, every step |
-| Input schemas | 45.4 KB | 20% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.0 KB | 7% | Partly |
-| **Description + input schema** | **102.9 KB** | **47%** | **the recurring cost** |
+| Output schemas | 106.2 KB | 45% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 60.0 KB | 25% | Yes, every step |
+| Input schemas | 52.4 KB | 22% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.7 KB | 7% | Partly |
+| **Description + input schema** | **112.5 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -45,7 +45,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 
 ## Index
 
-### Resources (12)
+### Resources (11)
 
 - [`margince://capabilities`](#capabilities) — What this installation can do
 - [`margince://schema/query`](#query_vocabulary) — Workspace query vocabulary
@@ -58,9 +58,8 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/commitments.html`](#commitments_view) — Open commitments
 - [`ui://margince/handoff.html`](#handoff_view) — Delivery handoff
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
-- [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (76)
+### Tools (80)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -70,11 +69,12 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
-| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.8 KB |
-| [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 2.8 KB |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.7 KB |
-| [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
-| [`commit_import`](#commit_import) | Commit an import |  |  | 2.1 KB |
+| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 4.7 KB |
+| [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
+| [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
+| [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.8 KB |
 | [`create_record`](#create_record) | Create a record |  |  | 3.6 KB |
@@ -99,17 +99,18 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
+| [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 2.5 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.4 KB |
 | [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.3 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
-| [`list_records`](#list_records) | List records | yes |  | 3.4 KB |
+| [`list_records`](#list_records) | List records | yes |  | 4.1 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 3.9 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
-| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
+| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 4.3 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
@@ -120,6 +121,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/company-brief.html`](#company_brief_view) | 3.2 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
+| [`read_lists`](#read_lists) | Find and read lists | yes |  | 3.1 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
@@ -129,9 +131,10 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.5 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.2 KB |
-| [`run_report`](#run_report) | Run a report | yes |  | 5.3 KB |
+| [`run_report`](#run_report) | Run a report | yes |  | 5.4 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
+| [`search_report_evidence`](#search_report_evidence) | Search the evidence behind a saved run | yes |  | 3.9 KB |
 | [`send_company_email`](#send_company_email) | Start an email conversation from a record |  |  | 4.6 KB |
 | [`send_email`](#send_email) | Send an email |  |  | 4.2 KB |
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.6 KB |
@@ -317,35 +320,6 @@ The deals at risk this week, worst first, with the evidence each risk claim rest
       "connectDomains": [],
       "frameDomains": [],
       "resourceDomains": []
-    },
-    "prefersBorder": true
-  }
-}
-```
-
-</details>
-
-### geo_probe_view
-
-`ui://margince/geo-probe.html` · text/html;profile=mcp-app
-
-**Location check**
-
-Whether this host lets a view read the device's position, and the browser's own words when it does not.
-
-<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
-
-```json
-{
-  "ui": {
-    "csp": {
-      "baseUriDomains": [],
-      "connectDomains": [],
-      "frameDomains": [],
-      "resourceDomains": []
-    },
-    "permissions": {
-      "geolocation": {}
     },
     "prefersBorder": true
   }
@@ -691,7 +665,7 @@ Move a project to another phase — initiative, pursuing, delivering, closed. Th
 
 **Write findings onto the morning brief**
 
-Write what you found onto the morning brief you just read: one sentence about the night as a whole, and for each deal you looked at, why it is on the list, what changed, and the one next move you would make. It writes onto that contact's own brief for today and nothing else — it cannot be pointed at another contact, another day, or a deal that is not already in their queue, and it cannot change the ranking. Every evidence id you cite must be one the brief already recorded for that item; citing anything else refuses the whole write, so cite from what read_brief gave you rather than from memory. Use log_activity to record something that happened on a deal, which belongs on the record itself and outlives today's brief. Calling it again replaces what you wrote before, so a second pass is a correction rather than an addition. (Governance: runs immediately; requires passport scope "write".)
+Write what you found onto the morning brief you just read: one sentence about the night as a whole, and for each deal you looked at, why it is on the list, what changed, and the one next move you would make. It writes onto that user's own brief for today and nothing else — it cannot be pointed at another user, another day, or a deal that is not already in their queue, and it cannot change the ranking. Every evidence id you cite must be one the brief already recorded for that item; citing anything else refuses the whole write, so cite from what read_brief gave you rather than from memory. Use log_activity to record something that happened on a deal, which belongs on the record itself and outlives today's brief. Calling it again replaces what you wrote before, so a second pass is a correction rather than an addition. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -1171,7 +1145,7 @@ Retire a record that should no longer be worked — a duplicate, a dead company,
 
 **Relationships going cold**
 
-Answer "where are our relationships thin?": across the caller's OPEN deals, the ones resting on a single contact, missing an engaged champion, or carried almost entirely by one contact on our side. It sweeps open deals — a deal already won or lost is not at risk and is left out — and it takes no arguments, because the caller's own visibility already decides which deals these are. It is about the shape of the relationships around a deal, not about the deal's own momentum. Use whats_slipping_this_week when the question is about deals losing momentum, and company_coverage when the question is about one deal rather than the whole book. Each finding names its deal_id and the contacts it is about; those are what intro_path_to and who_knows take next. (Governance: runs immediately; requires passport scope "read".)
+Answer "where are our relationships thin?": across the caller's OPEN deals, the ones resting on a single contact, missing an engaged champion, or carried almost entirely by one colleague on our side. It sweeps open deals — a deal already won or lost is not at risk and is left out — and it takes no arguments, because the caller's own visibility already decides which deals these are. It is about the shape of the relationships around a deal, not about the deal's own momentum. Use whats_slipping_this_week when the question is about deals losing momentum, and company_coverage when the question is about one deal rather than the whole book. Each finding names its deal_id and the contacts it is about; those are what intro_path_to and who_knows take next. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -1370,7 +1344,7 @@ Answer "where are our relationships thin?": across the caller's OPEN deals, the 
 
 **Book a meeting**
 
-Hold a slot in the host's calendar and record the meeting against the records it is about. Needs at least one link saying what it is about. The slot is taken and the meeting is a real commitment, and by default it is taken when this call answers — where an installation has raised this verb to confirm first, the answer is a staged approval instead. No attendee list: who is invited is the calendar connection's business. Check the slot is free first — this tool does not. Use check_availability to find the time, and log_activity to record a meeting that already happened. Keep the staged approval id and re-send the identical start, end and links: the approval is bound to the meeting as it was described. (Governance: runs immediately; requires passport scope "send".)
+Record a meeting against linked CRM records without sending an invitation. Reserves the recorded interval locally. It does not create a calendar event or notify attendees. Needs at least one record link. Use invite_meeting for an explicit provider-backed invitation, or log_activity for a past meeting. Keep the recorded activity id. Do not describe a record-only booking as an invitation sent. (Governance: runs immediately; requires passport scope "send".)
 
 <details><summary>Input schema</summary>
 
@@ -1546,6 +1520,381 @@ Hold a slot in the host's calendar and record the meeting against the records it
 
 </details>
 
+### bulk_update_records
+
+**Change many records at once**
+
+Hand up to 500 contacts, companies or deals to one owner, archive them, or add them to or take them off a Shortlist, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope "write".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "else": {
+    "required": [
+      "batch_id"
+    ]
+  },
+  "if": {
+    "properties": {
+      "mode": {
+        "enum": [
+          "preview",
+          "execute"
+        ]
+      }
+    }
+  },
+  "properties": {
+    "batch_id": {
+      "description": "For undo_preview and undo: the batch_id execute answered",
+      "format": "uuid",
+      "type": "string"
+    },
+    "confirm_token": {
+      "description": "The token preview or undo_preview answered; needed above 10 records",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version"
+        ],
+        "type": "object"
+      },
+      "maxItems": 500,
+      "minItems": 1,
+      "type": "array"
+    },
+    "list_id": {
+      "description": "The Shortlist, for add_to_list and remove_from_list",
+      "format": "uuid",
+      "type": "string"
+    },
+    "mode": {
+      "description": "preview says what would change; execute changes it; undo_preview and undo do the same for putting back the change batch_id names",
+      "enum": [
+        "preview",
+        "execute",
+        "undo_preview",
+        "undo"
+      ],
+      "type": "string"
+    },
+    "note": {
+      "description": "Why, for add_to_list and remove_from_list",
+      "maxLength": 500,
+      "type": "string"
+    },
+    "owner_id": {
+      "description": "The new owner, for reassign_owner",
+      "format": "uuid",
+      "type": "string"
+    },
+    "record_type": {
+      "enum": [
+        "contact",
+        "company",
+        "deal"
+      ],
+      "type": "string"
+    },
+    "verb": {
+      "enum": [
+        "reassign_owner",
+        "archive",
+        "add_to_list",
+        "remove_from_list"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "mode"
+  ],
+  "then": {
+    "required": [
+      "record_type",
+      "verb",
+      "items"
+    ]
+  },
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "affected": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "batch_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "changed": {
+          "type": "integer"
+        },
+        "confirm_token": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "excluded": {
+          "items": {
+            "properties": {
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "expires_at": {
+          "type": "string"
+        },
+        "left_behind": {
+          "items": {
+            "properties": {
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "ref_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "ref_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "record_type": {
+          "type": "string"
+        },
+        "requires_confirmation": {
+          "type": "boolean"
+        },
+        "sample": {
+          "items": {
+            "properties": {
+              "after": {
+                "properties": {
+                  "archived": {
+                    "type": "boolean"
+                  },
+                  "listed": {
+                    "type": "boolean"
+                  },
+                  "owner_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "archived"
+                ],
+                "type": "object"
+              },
+              "before": {
+                "properties": {
+                  "archived": {
+                    "type": "boolean"
+                  },
+                  "listed": {
+                    "type": "boolean"
+                  },
+                  "owner_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "archived"
+                ],
+                "type": "object"
+              },
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "after",
+              "before",
+              "id",
+              "label"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "skipped": {
+          "items": {
+            "properties": {
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "undo_of": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "verb": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### catch_me_up_on
 
 **Catch me up on a record**
@@ -1569,7 +1918,12 @@ Answer "what has been going on with this?" for one contact, company, deal, lead,
       "type": "string"
     },
     "record_id": {
+      "description": "The record to build around. Give this or record_name, not both.",
       "format": "uuid",
+      "type": "string"
+    },
+    "record_name": {
+      "description": "The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
       "type": "string"
     },
     "record_type": {
@@ -1585,8 +1939,7 @@ Answer "what has been going on with this?" for one contact, company, deal, lead,
     }
   },
   "required": [
-    "record_type",
-    "record_id"
+    "record_type"
   ],
   "type": "object"
 }
@@ -1766,11 +2119,279 @@ Answer "what has been going on with this?" for one contact, company, deal, lead,
 
 </details>
 
+### change_lists
+
+**Make and change lists**
+
+Make a Live List from a filter or a Shortlist of chosen records, change its name, purpose, filter, sharing or steward, archive or restore it, and add or remove one Shortlist member with a note on why. Only the steward of a list or a list admin may change it. A change must carry the version you read; a list changed since is refused. An archived list is read-only. A Live List's members follow its filter and cannot be added or removed by hand. Preview a filter with read_lists before saving it. bulk_update_records adds or removes many records at once, with a confirmation. Keep the list id and its new version from the answer. (Governance: runs immediately; requires passport scope "write".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "definition": {
+      "description": "A Live List's filter tree",
+      "properties": {
+        "and": {
+          "items": {
+            "properties": {
+              "and": {
+                "type": "array"
+              },
+              "field": {
+                "type": "string"
+              },
+              "op": {
+                "type": "string"
+              },
+              "or": {
+                "type": "array"
+              },
+              "value": {}
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "field": {
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "neq",
+            "gt",
+            "lt",
+            "gte",
+            "lte",
+            "in",
+            "contains",
+            "exists"
+          ],
+          "type": "string"
+        },
+        "or": {
+          "items": {
+            "properties": {
+              "and": {
+                "type": "array"
+              },
+              "field": {
+                "type": "string"
+              },
+              "op": {
+                "type": "string"
+              },
+              "or": {
+                "type": "array"
+              },
+              "value": {}
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "value": {
+          "description": "A value, a list for in, true or false for exists, or {\"days_ago\": N} for a date"
+        }
+      },
+      "type": "object"
+    },
+    "entity_type": {
+      "description": "For create, and the record type of record_id",
+      "enum": [
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project"
+      ],
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "list_id": {
+      "description": "The list, for every mode but create",
+      "format": "uuid",
+      "type": "string"
+    },
+    "list_type": {
+      "description": "For create: static is a Shortlist, dynamic a Live List",
+      "enum": [
+        "static",
+        "dynamic"
+      ],
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "create",
+        "update",
+        "archive",
+        "restore",
+        "add_member",
+        "remove_member"
+      ],
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "note": {
+      "description": "For add_member and remove_member: why",
+      "maxLength": 500,
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "record_id": {
+      "description": "For add_member and remove_member",
+      "format": "uuid",
+      "type": "string"
+    },
+    "sharing": {
+      "enum": [
+        "private",
+        "team",
+        "workspace"
+      ],
+      "type": "string"
+    },
+    "steward_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "team_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "version": {
+      "description": "For update: the version you read",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "mode"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "result": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "mode",
+        "result"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### check_availability
 
 **Check calendar availability**
 
-Find when a host is free, so a time can be proposed to someone. It reads free/busy over the window you ask for and books nothing. It answers for one host — the acting user unless another is named — not for the invitees. `calendar_backing` says what the window rests on: with no calendar connected the slots are only what meetings recorded in this CRM leave open, and for a host who is NOT the acting seat it is `unknown`, because another colleague's connector state is theirs. Unless it says `calendar`, a free window is no evidence the host is free, and none at all that a meeting they told you about is missing from their diary. Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already exists and the goal is walking in ready. Keep the exact start and end of the slot you intend to take; book_meeting takes those, and a slot re-derived later may no longer be free. (Governance: runs immediately; requires passport scope "read".)
+Find candidate times for a host without booking or sending anything. Set reliable=true to check the acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live occupancy was checked. This never checks invitees' availability. Use invite_meeting to request an approved calendar invitation after a time is agreed. book_meeting only records a meeting. prep_for_meeting prepares for an existing meeting. Keep the exact start and end, the calendar_backing value, and the truncated flag. Availability is checked again when reserving the time. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -1792,6 +2413,11 @@ Find when a host is free, so a time can be proposed to someone. It reads free/bu
       "description": "Defaults to the acting principal's user",
       "format": "uuid",
       "type": "string"
+    },
+    "reliable": {
+      "default": false,
+      "description": "Require live calendar occupancy and booking policy; fails if unavailable",
+      "type": "boolean"
     },
     "to": {
       "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
@@ -1930,137 +2556,11 @@ Find when a host is free, so a time can be proposed to someone. It reads free/bu
 
 </details>
 
-### check_location_support
-
-**Can a card read this device's location**
-
-Find out whether this chat host lets a Margince card read the device's location, which is what would let a contact be tagged with the event you are standing at. It does not read a location and cannot: the answer comes from the card shown beside this result, and only after the contact using it presses the button on that card. A host is free to refuse, and refusing is the expected outcome until one is shown not to. To record where something happened, put it in the activity you log with log_activity; this tool tags nothing and writes nothing. (Governance: runs immediately; requires passport scope "read".)
-
-Renders its result in [`ui://margince/geo-probe.html`](#geo_probe_view), visible to `model`, `app`.
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "answered_by": {
-          "type": "string"
-        },
-        "declared_permission": {
-          "type": "string"
-        },
-        "note": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "answered_by",
-        "declared_permission",
-        "note"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### commit_import
 
 **Commit an import**
 
-Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, which is the CONTACT's approval and not this call's to give: nothing stages it, and an import cannot be undone from here — undoing one needs the web app. Put the dry run's counts in front of them and let them say go — unless they have already been through the file and asked for it to be loaded, which is an approval and not a question to ask twice. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope "write".)
+Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app — so show the counts to whoever asked for the file unless they have already been through it and asked for it to be loaded. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -3329,7 +3829,7 @@ Answer one staged action for the colleague asking you: approve it, which lets it
       "type": "string"
     },
     "reason": {
-      "description": "Why, in the deciding contact's words. Recorded with the decision.",
+      "description": "Why, in the decider's own words. Recorded with the decision.",
       "type": "string"
     },
     "staged_action_id": {
@@ -3543,7 +4043,7 @@ Answer every still-waiting proposal that one act staged together — the overnig
       "type": "string"
     },
     "reason": {
-      "description": "Why, in the deciding contact's words. Recorded against every member.",
+      "description": "Why, in the decider's own words. Recorded against every member.",
       "type": "string"
     }
   },
@@ -4789,7 +5289,7 @@ Compose an email: a reply to a recorded thread (activity_id), or a FIRST message
 
 **Draft follow-ups**
 
-Draft a follow-up for each deal in a segment at once — today only the slipping deals — and leave each draft on its own deal's timeline. It writes drafts and sends none of them, and it drafts only for deals whose risk is evidenced, so it covers the same set whats_slipping_this_week reports. One call writes to many records, up to a server-side ceiling of 25. Use draft_email for one specific conversation; this tool answers "chase everything that is slipping", not "reply to this". Each draft comes back with its deal_id and draft_activity_id — those are how a contact finds the drafts to review. (Governance: runs immediately; requires passport scope "draft".)
+Draft a follow-up for each deal in a segment at once — today only the slipping deals — and leave each draft on its own deal's timeline. It writes drafts and sends none of them, and it drafts only for deals whose risk is evidenced, so it covers the same set whats_slipping_this_week reports. One call writes to many records, up to a server-side ceiling of 25. Use draft_email for one specific conversation; this tool answers "chase everything that is slipping", not "reply to this". Each draft comes back with its deal_id and draft_activity_id — those are how a human finds the drafts to review. (Governance: runs immediately; requires passport scope "draft".)
 
 <details><summary>Input schema</summary>
 
@@ -4971,7 +5471,7 @@ Draft a follow-up for each deal in a segment at once — today only the slipping
 
 **Enrich a company from its website**
 
-Learn about a company by reading its public website, and propose what was found for a contact to accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing lands on the record until someone accepts it, which is the review that guards this, not an approval on the call. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the company_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a human approves every call before it runs; requires passport scope "enrich".)
+Learn about a company by reading its public website, and propose what was found for a human to accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing lands on the record until someone accepts it, which is the review that guards this, not an approval on the call. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the company_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a human approves every call before it runs; requires passport scope "enrich".)
 
 <details><summary>Input schema</summary>
 
@@ -6168,11 +6668,197 @@ Find a warm route into a company: who we already know there, and which colleague
 
 </details>
 
+### invite_meeting
+
+**Send a calendar invitation**
+
+Create a real calendar invitation for one contact and notify their chosen address. Requires a connected writable calendar and a contact email the acting host may use. It checks actual busy time and returns pending until the provider confirms. Does not prove the guest agreed or received the notification. Use book_meeting only to record a meeting without inviting anyone. Use check_availability with reliable=true to propose calendar-checked times. Keep the invitation id and inspect its status before claiming it is booked. Retrying an uncertain delivery must use the existing invitation. (Governance: a human approves every call before it runs; requires passport scope "send".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "properties": {
+    "attendee_email": {
+      "type": "string"
+    },
+    "contact_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "end": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "start": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "attendee_email",
+    "contact_id",
+    "description",
+    "end",
+    "location",
+    "start",
+    "subject"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "calendar_url": {
+          "type": "string"
+        },
+        "end": {
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "management_token": {
+          "type": "string"
+        },
+        "reminder_status": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "end",
+        "id",
+        "location",
+        "start",
+        "status",
+        "subject",
+        "version"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### list_approvals
 
 **List what is waiting for a decision**
 
-The staged actions waiting for a contact's decision: what was proposed and what each would do. It is where a proposal that is already waiting turns up — a message staged and unsent is not one that needs writing again. It lists what the colleague you act for could decide themselves; anything else is absent rather than refused. A proposal past its expiry reads as expired and can no longer be answered. Each item carries its one-line summary, not the change itself. read_approval opens one and shows what it holds; decide_approval answers it. Keep the staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor. (Governance: runs immediately; requires passport scope "read".)
+The staged actions waiting for a human's decision: what was proposed and what each would do. It is where a proposal that is already waiting turns up — a message staged and unsent is not one that needs writing again. It lists what the colleague you act for could decide themselves; anything else is absent rather than refused. A proposal past its expiry reads as expired and can no longer be answered. Each item carries its one-line summary, not the change itself. read_approval opens one and shows what it holds; decide_approval answers it. Keep the staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -6532,7 +7218,7 @@ Find out which messaging transports exist in THIS installation, and what each is
 
 **List colleagues**
 
-List the contacts who work HERE — colleagues holding a seat, not the contacts stored as contact records. Reads only, and lists seats that can actually receive work — archived, suspended and locked-out ones are absent. `truncated` means there are more. A `q` matching nobody answers with `all_colleagues` and a warning; that list is ABSENT if it could not be read and partial if `all_colleagues_truncated`, so read the warning before concluding a contact has no seat. search_records/contact finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an is_agent seat. (Governance: runs immediately; requires passport scope "read".)
+List who works HERE — colleagues holding a seat, not the contacts stored as contact records. Reads only, and lists seats that can actually receive work — archived, suspended and locked-out ones are absent. `truncated` means there are more. A `q` matching nobody answers with `all_colleagues` and a warning; that list is ABSENT if it could not be read and partial if `all_colleagues_truncated`, so read the warning before concluding a colleague has no seat. search_records/contact finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an is_agent seat. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -7055,7 +7741,7 @@ List every pipeline this workspace has with its live stages — the configuratio
 
 **List records**
 
-Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one contact owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. (Governance: runs immediately; requires passport scope "read".)
+Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one rep owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -7068,10 +7754,76 @@ Enumerate the contacts, companies, deals, leads or projects that meet exact cond
       "type": "string"
     },
     "filters": {
-      "additionalProperties": {
-        "type": "string"
+      "additionalProperties": false,
+      "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+      "properties": {
+        "acquisition_source": {
+          "type": "string"
+        },
+        "commercial_motion": {
+          "type": "string"
+        },
+        "company_id": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "forecast_category": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "lifecycle": {
+          "type": "string"
+        },
+        "min_score": {
+          "type": "string"
+        },
+        "owner_id": {
+          "type": "string"
+        },
+        "partner_attribution": {
+          "type": "string"
+        },
+        "partner_company_id": {
+          "type": "string"
+        },
+        "partner_sourced": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "pipeline_id": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "relationship_type": {
+          "type": "string"
+        },
+        "stage_id": {
+          "type": "string"
+        },
+        "stalled": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "tag_id": {
+          "type": "string"
+        },
+        "tag_mode": {
+          "type": "string"
+        }
       },
-      "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
       "type": "object"
     },
     "limit": {
@@ -7912,7 +8664,12 @@ Get ready for a specific meeting: given the meeting, the same written brief a hu
       "type": "string"
     },
     "record_id": {
+      "description": "The record to build around. Give this or record_name, not both.",
       "format": "uuid",
+      "type": "string"
+    },
+    "record_name": {
+      "description": "The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
       "type": "string"
     },
     "record_type": {
@@ -7928,8 +8685,7 @@ Get ready for a specific meeting: given the meeting, the same written brief a hu
     }
   },
   "required": [
-    "record_type",
-    "record_id"
+    "record_type"
   ],
   "type": "object"
 }
@@ -9063,7 +9819,7 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
 
 **Preview an import**
 
-Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, contact or lead. Use `contact` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link contacts to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the contact weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope "write".)
+Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, contact or lead. Use `contact` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link contacts to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -10241,7 +10997,7 @@ Read one staged action in full: the exact change proposed, the record it acts on
 
 **Read the morning brief**
 
-Read the ranked queue the contact you act for sees when they open their morning brief — the deals the workspace decided are worth their attention today, in order, with the rows behind each ranking. It re-reads the last assembled run rather than building a new one, so its as_of says how current it is, and it is that contact's own queue: it cannot be asked for anyone else's. Acting on, dismissing or snoozing an item is theirs alone. Use whats_slipping_this_week when the question is which deals are losing momentum regardless of what today's brief chose, and read_record for what one of these deals currently says. Each item names a deal_id and its evidence_ids; read those to cite what the ranking rested on rather than restating the item's own summary. (Governance: runs immediately; requires passport scope "read".)
+Read the ranked queue the user you act for sees when they open their morning brief — the deals the workspace decided are worth their attention today, in order, with the rows behind each ranking. It re-reads the last assembled run rather than building a new one, so its as_of says how current it is, and it is that user's own queue: it cannot be asked for anyone else's. Acting on, dismissing or snoozing an item is theirs alone. Use whats_slipping_this_week when the question is which deals are losing momentum regardless of what today's brief chose, and read_record for what one of these deals currently says. Each item names a deal_id and its evidence_ids; read those to cite what the ranking rested on rather than restating the item's own summary. (Governance: runs immediately; requires passport scope "read".)
 
 Renders its result in [`ui://margince/company-brief.html`](#company_brief_view), visible to `model`, `app`.
 
@@ -10486,7 +11242,7 @@ Renders its result in [`ui://margince/company-brief.html`](#company_brief_view),
 
 **Read an import report**
 
-What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what a contact weighs before committing. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
+What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what the user weighs before committing. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -10834,6 +11590,243 @@ Where one import got to: awaiting approval, running, done, or stopped. A stopped
         "object",
         "run_id",
         "state"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### read_lists
+
+**Find and read lists**
+
+Find the team's Live Lists (saved filters whose members join and leave on their own) and Shortlists (records chosen by hand), read one, page through its members, say why a record is or is not on it, read what changed on it, or preview what a filter would select before a Live List is saved. Every count, member and reason is what the user you act for may see: a list shared with them never shows a member record they cannot read, so two users may see different counts for one list. A preview is logged as a read of those records. search_records finds records by name; tags are applied with apply_tag, not lists. Keep list_id, the version for a later change, and next_cursor to read the next page. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "cursor": {
+      "description": "For members and history: the next_cursor a page answered",
+      "type": "string"
+    },
+    "definition": {
+      "description": "For preview: a filter tree, as a Live List stores it",
+      "properties": {
+        "and": {
+          "items": {
+            "properties": {
+              "and": {
+                "type": "array"
+              },
+              "field": {
+                "type": "string"
+              },
+              "op": {
+                "type": "string"
+              },
+              "or": {
+                "type": "array"
+              },
+              "value": {}
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "field": {
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "neq",
+            "gt",
+            "lt",
+            "gte",
+            "lte",
+            "in",
+            "contains",
+            "exists"
+          ],
+          "type": "string"
+        },
+        "or": {
+          "items": {
+            "properties": {
+              "and": {
+                "type": "array"
+              },
+              "field": {
+                "type": "string"
+              },
+              "op": {
+                "type": "string"
+              },
+              "or": {
+                "type": "array"
+              },
+              "value": {}
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "value": {
+          "description": "A value, a list for in, true or false for exists, or {\"days_ago\": N} for a date"
+        }
+      },
+      "type": "object"
+    },
+    "entity_type": {
+      "description": "For find (optional) and preview (required)",
+      "enum": [
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project"
+      ],
+      "type": "string"
+    },
+    "limit": {
+      "maximum": 100,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "list_id": {
+      "description": "The list, for get, members, why and history",
+      "format": "uuid",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "find",
+        "get",
+        "members",
+        "why",
+        "history",
+        "preview"
+      ],
+      "type": "string"
+    },
+    "query": {
+      "description": "For find: matches name or purpose",
+      "type": "string"
+    },
+    "record_id": {
+      "description": "For why: the record to explain",
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "mode"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "result": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "mode",
+        "result"
       ],
       "type": "object"
     },
@@ -12892,6 +13885,9 @@ Compute a grouped aggregate — counts, sums, averages, medians — over a gover
           },
           "type": "array"
         },
+        "population_narrowed": {
+          "type": "string"
+        },
         "rows": {
           "items": {
             "type": "object"
@@ -13115,6 +14111,9 @@ Answer a question about totals, counts or breakdowns by running one of this work
         "plan": {
           "type": "object"
         },
+        "population_narrowed": {
+          "type": "string"
+        },
         "report": {
           "type": "string"
         },
@@ -13222,7 +14221,7 @@ Answer a question about totals, counts or breakdowns by running one of this work
 
 **Search for relevant material**
 
-Find the records most relevant to a description, ranked by meaning as well as by wording, each with the excerpt that ranked it. Ranked, never exhaustive: records that also match may be absent, and no count of them exists. You can narrow it to particular record types, but not by field, date or owner, and it does not group or total. It cannot be narrowed to a project either: the index carries no project column, so use catch_me_up_on with project_id for that. Use query_workspace when the question has conditions, a date bound or a related record to reach through, and search_records when you have the exact name or phrase. Read `coverage`: `partial_degraded` means `notes` matters, and `semantic_ranking_degraded_to_lexical` there means the ranking fell back to word overlap. Keep each hit's record_type and id. (Governance: runs immediately; requires passport scope "read".)
+Find the records most relevant to a description, ranked by meaning as well as by wording, each with the excerpt that ranked it. Ranked, never exhaustive: records that also match may be absent, and no count of them exists. You can narrow it to particular record types, but not by field, date or owner, and it does not group or total. It cannot be narrowed to a project either: the index carries no project column. Use catch_me_up_on with project_id for one project, query_workspace when the question has conditions, a date bound or a related record to reach through, and search_records when you have the exact name or phrase. Read `coverage`: `partial_degraded` means `notes` matters, and `semantic_ranking_degraded_to_lexical` there means the ranking fell back to word overlap. Keep each hit's record_type and id. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -13531,6 +14530,320 @@ Find contacts, companies, deals, leads and projects when you know roughly what t
       },
       "required": [
         "records"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### search_report_evidence
+
+**Search the evidence behind a saved run**
+
+Check a claim against the records behind a saved analytics run — or one cell of it — by searching their text: records that carry the words are citations, records that do not are counterexamples, and records with no text to judge are abstentions. It searches only the run's own records that this seat can read today, and every figure counts those — never records hidden from this seat. It states a prevalence only when coverage is complete_exact; otherwise prevalence is null and the notes say why. search_context sweeps the whole workspace by meaning; run_analytics_query counts. This one answers how much of a counted set supports a claim. Cite records by id. Quote a share only from prevalence, never by dividing the lists. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "cell": {
+      "description": "One cell's group key values, in the run's group_by order. Omit to search every record the run measured.",
+      "items": {},
+      "type": "array"
+    },
+    "limit": {
+      "description": "How many citations, counterexamples and abstentions to return, each.",
+      "maximum": 25,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "query": {
+      "description": "The words the evidence would carry.",
+      "maxLength": 1000,
+      "type": "string"
+    },
+    "run_id": {
+      "description": "A saved run: run_analytics_query with save answers one.",
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "query"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "abstentions": {
+          "items": {
+            "properties": {
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "record_type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "record_type"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "citations": {
+          "items": {
+            "properties": {
+              "excerpts": {
+                "items": {
+                  "properties": {
+                    "snippet": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "snippet",
+                    "source"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "record": {
+                "properties": {
+                  "fields": {
+                    "type": "object"
+                  },
+                  "id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "record_type": {
+                    "type": "string"
+                  },
+                  "trust_tier": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "fields",
+                  "id",
+                  "record_type"
+                ],
+                "type": "object"
+              },
+              "score": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "excerpts",
+              "record",
+              "score"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "counterexamples": {
+          "items": {
+            "properties": {
+              "fields": {
+                "type": "object"
+              },
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "record_type": {
+                "type": "string"
+              },
+              "trust_tier": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "fields",
+              "id",
+              "record_type"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "coverage": {
+          "type": "string"
+        },
+        "notes": {
+          "items": {
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "detail"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "prevalence": {
+          "properties": {
+            "matched": {
+              "type": "integer"
+            },
+            "of": {
+              "type": "integer"
+            },
+            "share": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "matched",
+            "of",
+            "share"
+          ],
+          "type": "object"
+        },
+        "tally": {
+          "properties": {
+            "matched": {
+              "type": "integer"
+            },
+            "unjudged": {
+              "type": "integer"
+            },
+            "unmatched": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "matched",
+            "unjudged",
+            "unmatched"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "abstentions",
+        "citations",
+        "counterexamples",
+        "coverage",
+        "notes",
+        "tally"
       ],
       "type": "object"
     },
@@ -14818,7 +16131,7 @@ Renders its result in [`ui://margince/pipeline-review.html`](#pipeline_review_vi
 
 **Who knows this contact**
 
-Answer "who here knows this contact?": the colleagues with a relationship to one contact, warmest first, with the interaction counts that ground the warmth. It reports relationships this workspace can evidence from its own recorded interactions, so a genuine relationship nobody has logged does not appear. Never spoken is reported as no relationship rather than a score of zero. Use intro_path_to when you want a route into a COMPANY rather than the contacts who know one contact. Each colleague comes back with a user_id; the strength bucket, not the raw score, is what a contact should be asked about. (Governance: runs immediately; requires passport scope "read".)
+Answer "who here knows this contact?": the colleagues with a relationship to one contact, warmest first, with the interaction counts that ground the warmth. It reports relationships this workspace can evidence from its own recorded interactions, so a genuine relationship nobody has logged does not appear. Never spoken is reported as no relationship rather than a score of zero. Use intro_path_to when you want a route into a COMPANY rather than the colleagues who know one contact. Each colleague comes back with a user_id; the strength bucket, not the raw score, is what a colleague should be asked about. (Governance: runs immediately; requires passport scope "read".)
 
 Renders its result in [`ui://margince/relationship-map.html`](#relationship_map_view), visible to `model`, `app`.
 

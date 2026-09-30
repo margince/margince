@@ -34,7 +34,9 @@ describe("VisibilityBadge", () => {
     ["workspace", "Shared", "visibility-open"],
     ["participants", "Participants", "visibility-limited"],
     ["selected", "Selected", "visibility-limited"],
-    ["private", "Only you", "visibility-limited"],
+    // The state and not the reader: the owner and a colleague it was shared
+    // with see one badge, and "Only you" would be false for the second.
+    ["private", "Private", "visibility-limited"],
     ["withheld", "Withheld", "visibility-withheld"],
   ])("says %s as %j and draws it %s", (state, word, look) => {
     const { container } = draw(<VisibilityBadge state={state} />);
@@ -44,6 +46,24 @@ describe("VisibilityBadge", () => {
     // Three looks for six states: every limit is drawn the same heavier way,
     // because the exception in a list is what a reader scans for.
     expect(container.querySelector(".visibility")?.className).toContain(look);
+  });
+
+  it("marks the face of a control that opens with a caret and nothing else", () => {
+    const { container } = draw(<VisibilityBadge state="workspace" opens />);
+    const mark = container.querySelector(".visibility");
+    expect(mark).toHaveClass("visibility-open", "visibility-opens");
+    expect(mark).toHaveTextContent(/^Shared$/);
+    const glyphs = mark?.querySelectorAll("svg") ?? [];
+    expect(glyphs).toHaveLength(2);
+    for (const glyph of glyphs) {
+      expect(glyph).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+
+  it("draws no caret on a mark that only states a fact", () => {
+    const { container } = draw(<VisibilityBadge state="workspace" />);
+    expect(container.querySelector(".visibility-opens")).toBeNull();
+    expect(container.querySelectorAll("svg")).toHaveLength(1);
   });
 
   it("hides the icon from a screen reader, which hears the word", () => {

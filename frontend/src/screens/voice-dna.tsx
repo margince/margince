@@ -6,7 +6,8 @@ import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Badge, Button, Disclosure, Textarea } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
+import { ErrorLine } from "../design-system/errorline";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
   type SettingControlProps,
   SettingList,
@@ -114,10 +115,8 @@ export function VoiceDnaCard() {
           // and a box saying there is nothing yet only pushes that job down.
           <Panel title={t("settings.voice.title")}>
             <PanelBody>
-              <p className="settings-panel-sub">{t("settings.voice.intro")}</p>
-              <p className="settings-panel-sub">
-                {t("settings.voice.emptyBody")}
-              </p>
+              <PanelIntro>{t("settings.voice.intro")}</PanelIntro>
+              <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
               {/* The first sample is what MINTS the profile, so the control
                   that adds it asks for the create grant rather than the update
                   one every later sample rides on. Withheld rather than absent:
@@ -190,7 +189,7 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
     <>
       <Panel title={t("settings.voice.title")}>
         <PanelBody>
-          <p className="settings-panel-sub">{t("settings.voice.intro")}</p>
+          <PanelIntro>{t("settings.voice.intro")}</PanelIntro>
           {/* Said ONCE, for the whole surface, rather than beside each of the
               controls a denial disables. The affordances below may then be
               absent without the page making a claim about the data — which is
@@ -400,7 +399,7 @@ function PersonalityEditor({
           >
             {t("settings.voice.savePreferences")}
           </Button>
-          {error && <span role="alert">{error}</span>}
+          {error && <ErrorLine inline>{error}</ErrorLine>}
         </div>
       )}
     </div>
@@ -479,7 +478,7 @@ function CorpusManifest({
           </div>
         )}
       </QueryGate>
-      {error && <p role="alert">{error}</p>}
+      {error && <ErrorLine>{error}</ErrorLine>}
     </div>
   );
 }
@@ -589,12 +588,12 @@ function SourceRow({
         {!source.included && ` · ${t("settings.voice.excluded")}`}
       </span>
       {armed && drops && (
-        <span role="alert">
+        <ErrorLine inline>
           {t("settings.voice.bandDrop", {
             from: bandLabel(t, summary.quality_band),
             to: bandLabel(t, bandAfter),
           })}
-        </span>
+        </ErrorLine>
       )}
       {canEdit && (
         <button
@@ -802,7 +801,7 @@ function BuildControls({
             <p className="t-caption" role="status">
               {buildStatusLine(t, build.isPending, outcome)}
             </p>
-            {error && <p role="alert">{error}</p>}
+            {error && <ErrorLine>{error}</ErrorLine>}
           </div>
         ) : null
       }

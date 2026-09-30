@@ -36,12 +36,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The writers, and the behaviour test that proves each one. A new writer joins
@@ -52,10 +52,6 @@ import (
 // does not exist.
 var audienceReasonWriters = map[string]string{
 	"internal/modules/activities/activityprojection.go": "TestAWithheldRowCarriesNoAudienceReason",
-	// The scan moved out of sectionstimeline.go when that file crossed the
-	// length cap; the behaviour and its proof are unchanged, only the file that
-	// assigns the field.
-	"internal/compose/contact360/timelinerow.go": "TestTheContactPageWithholdsALimitedMessagesReasonFromAColleague",
 }
 
 func TestEveryAudienceReasonWriterIsProvedToWithholdIt(t *testing.T) {
@@ -96,7 +92,7 @@ func writersOfAudienceReason(t *testing.T) map[string]bool {
 		if strings.HasPrefix(path, "internal/contracts/") {
 			return
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

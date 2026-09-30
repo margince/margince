@@ -106,6 +106,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// not a capture.* tuning knob, so it is set here rather than folded into
 	// CaptureConfigFromDeploy's own deployconfig.Capture-scoped contract.
 	captureCfg := compose.CaptureConfigFromDeploy(deployCfg.Capture, logger)
+	compose.WarnStaleRates(deployCfg.Rates, logger)
 	captureCfg.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
@@ -155,6 +156,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	opts = append(opts, modelOpts...)
 	opts = append(opts, compose.WithCompanyContextRollout(string(deployCfg.CompanyContext.EffectiveRollout())))
+	opts = append(opts, compose.WithListsEnabled(deployCfg.Lists.Enabled))
 
 	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, deployCfg, logger)
 	if err != nil {

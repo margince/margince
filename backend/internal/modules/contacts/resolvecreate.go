@@ -62,6 +62,15 @@ func visibilityFor(ownerScoped bool) string {
 	return visibilityWorkspace
 }
 
+// narrowingFor answers the reason a create path records: only an owner-scoped
+// row carries one, which the column's own CHECK also refuses to break.
+func narrowingFor(ownerScoped bool, reason NarrowingReason) NarrowingReason {
+	if !ownerScoped {
+		return ""
+	}
+	return reason
+}
+
 // ownerFromUUID adapts the storage-level owner id the capture and triage paths
 // carry to the typed one the specs take.
 func ownerFromUUID(u *ids.UUID) *ids.UserID {
@@ -90,6 +99,8 @@ type ContactSpec struct {
 	// Visibility is "" for the column default; capture mints 'owner' rows
 	// until a human promotes them, the channel bot mints 'workspace' ones.
 	Visibility string
+	// Narrowing is why an owner-scoped row is its owner's; "" records none.
+	Narrowing NarrowingReason
 	// Acquisition says why this contact exists — what the contact did, or what
 	// was done to obtain them. Distinct from Source, which says which surface
 	// typed it in. The zero value records unknown_legacy rather than nothing.
@@ -102,8 +113,13 @@ type ContactSpec struct {
 	// makes a promoted contact traceable to the lead it graduated from.
 	ConvertedFromLeadID *ids.UUID
 
-	Source       string
-	CapturedBy   string
+	Source     string
+	CapturedBy string
+	// SourceSystem names the system an import took this contact from. Nil on
+	// every path that creates a contact HERE, which is what tells attribution
+	// the row has no external author to name.
+	SourceSystem *string
+	Author       storekit.SourceAuthorInput
 	CustomFields map[string]any
 	// Active is the custom-field catalog for `contact`; nil on the capture
 	// paths, which carry no request body to source extra columns from.
@@ -125,16 +141,21 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 	wsID := workspaceID(ctx)
 	id := ids.New[ids.ContactKind]()
 	addr := addressColumns(spec.Address)
-	cfCols, cfHolders, args := storekit.InsertFragments(spec.Active, spec.CustomFields, []any{
+	if err := storekit.RefuseUnknownSeat(ctx, tx, spec.Author); err != nil {
+		return ids.ContactID{}, err
+	}
+	authorCols, authorHolders, base := storekit.AuthorInsertFragments(spec.Author, []any{
 		id, spec.FullName, spec.FirstName, spec.LastName, spec.Title, spec.OwnerID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.Visibility, spec.Quarantined, spec.ConvertedFromLeadID,
+		spec.SourceSystem, spec.Narrowing,
 	})
+	cfCols, cfHolders, args := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id`+cfCols+`)
+		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason`+authorCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
 		         coalesce(NULLIF($15, ''), 'workspace'),
-		         CASE WHEN $16 THEN now() ELSE NULL END, $17`+cfHolders+`)`,
+		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18, NULLIF($19, '')`+authorHolders+cfHolders+`)`,
 		args...); err != nil {
 		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
 	}
@@ -218,8 +239,13 @@ type CompanySpec struct {
 	// uq_company_anchor is what decides a race between two first saves.
 	IsAnchor bool
 
-	Source       string
-	CapturedBy   string
+	Source     string
+	CapturedBy string
+	// SourceSystem names the system an import took this company from. Nil on
+	// every path that creates a company HERE — including the anchor and the
+	// domain-triage ensure — so attribution knows there is no external author.
+	SourceSystem *string
+	Author       storekit.SourceAuthorInput
 	CustomFields map[string]any
 	Active       []fieldcatalog.Column
 }
@@ -257,16 +283,21 @@ func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec Comp
 	}
 	id := ids.New[ids.CompanyKind]()
 	addr := addressColumns(spec.Address)
-	cfCols, cfHolders, args := storekit.InsertFragments(spec.Active, spec.CustomFields, []any{
+	if err := storekit.RefuseUnknownSeat(ctx, tx, spec.Author); err != nil {
+		return ids.CompanyID{}, err
+	}
+	authorCols, authorHolders, base := storekit.AuthorInsertFragments(spec.Author, []any{
 		id, spec.DisplayName, spec.LegalName, spec.Description, spec.Industry, spec.SizeBand, spec.OwnerID, spec.ParentCompanyID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.NameSource, spec.Visibility, spec.IsAnchor,
+		spec.SourceSystem,
 	})
+	cfCols, cfHolders, args := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO company (id, display_name, legal_name, description, industry, size_band, owner_id, parent_company_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor`+cfCols+`)
+		`INSERT INTO company (id, display_name, legal_name, description, industry, size_band, owner_id, parent_company_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor, source_system`+authorCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
 		         coalesce(NULLIF($17, ''), 'human'),
-		         coalesce(NULLIF($18, ''), 'workspace'), $19`+cfHolders+`)`,
+		         coalesce(NULLIF($18, ''), 'workspace'), $19, $20`+authorHolders+cfHolders+`)`,
 		args...); err != nil {
 		return ids.CompanyID{}, fmt.Errorf("insert company: %w", err)
 	}

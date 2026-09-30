@@ -6,10 +6,10 @@ package activities
 // What the queue is NOT showing, and which rule is holding it back.
 //
 // The Worklist is designed to look finite: a rep works it to the bottom and the
-// day is done. Five rules make a waiting customer disappear from it, and three
-// of them are somebody's choice — `not_sales`, `not_mine`, `snooze`. The other
-// two are nobody's: a message older than the horizon, and one with no link to a
-// record the workspace sells to.
+// day is done. Several rules make a waiting customer disappear from it. Three
+// are somebody's choice — `not_sales`, `not_mine`, `snooze`; one is a model's,
+// `informs_us`; the rest are nobody's, such as a message older than the horizon
+// or one with no link to a record the workspace sells to.
 //
 // Nothing watched whether any of that was hiding real work. A rep who marks
 // every hard reply `not_sales` produces a page identical to a rep with a clean
@@ -54,9 +54,9 @@ type HiddenBacklog struct {
 	// Truncated says a read hit WaitingScanCap, which makes every figure below
 	// it a floor and `Clear` unsafe to believe.
 	//
-	// The cap is on the shared statement, so all five reads clip at the same
+	// The cap is on the shared statement, so every read clips at the same
 	// 200. On a queue at the cap the strict read and every relaxed read return
-	// 200, all four differences are zero, and a guardrail with no flag would
+	// 200, every difference is zero, and a guardrail with no flag would
 	// report a clear backlog over the one installation most likely to be hiding
 	// work — the exact under-reporting this reading exists to prevent, in the
 	// one shape that produces no failing assertion anywhere.
@@ -76,7 +76,7 @@ type HiddenBacklog struct {
 	// sender. Measuring either here would put a second copy of that baseline in
 	// the database.
 	//
-	// The four figures below are differences between runs of this same query, so
+	// The figures below are differences between runs of this same query, so
 	// they are counted the same way and the proportions hold.
 	Shown int
 	// SetAside is work this reader has snoozed or marked not_mine. Their own
@@ -105,6 +105,11 @@ type HiddenBacklog struct {
 	// list behind it: a domain entered by mistake suppresses a real customer's
 	// correspondence workspace-wide, and this is the number that would show it.
 	Colleagues int
+	// InformsUs is mail the classifier judged to ask nothing of us: a report, a
+	// receipt, a notification. A model's opinion rather than a human's, so it
+	// is counted where a wrong verdict would show. A request a human accepted
+	// is never hidden by it.
+	InformsUs int
 }
 
 // Clear reports whether nothing is being held back.
@@ -118,12 +123,12 @@ type HiddenBacklog struct {
 func (h HiddenBacklog) Clear() bool {
 	return !h.Truncated &&
 		h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0 &&
-		h.Colleagues == 0
+		h.Colleagues == 0 && h.InformsUs == 0
 }
 
 // HiddenWaiting counts what each hiding rule is keeping off this reader's queue.
 //
-// Five reads of ONE query rather than five queries. `waitingRepliesSQL` carries
+// Several reads of ONE query rather than one query per rule. `waitingRepliesSQL` carries
 // every eligibility rule the Worklist trusts — the anti-joins, the machine-sender
 // exclusion, the live-record predicates, the visibility gates — and a second
 // statement restating them would be a second answer to "is this contact waiting",
@@ -175,6 +180,7 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 			{&out.PastHorizon, waitingRelaxation{reader: reader, wholeHorizon: true}},
 			{&out.Unlinked, waitingRelaxation{reader: reader, keepUnlinked: true}},
 			{&out.Colleagues, waitingRelaxation{reader: reader, keepColleagues: true}},
+			{&out.InformsUs, waitingRelaxation{reader: reader, keepInformsUs: true}},
 		} {
 			widened, err := s.countWaiting(ctx, tx, asOf, relaxed.with, measured)
 			if err != nil {
@@ -221,29 +227,49 @@ type waitingRelaxation struct {
 	keepUnlinked bool
 	// keepColleagues admits mail from our own email domains.
 	keepColleagues bool
+	// keepInformsUs admits mail the classifier judged to ask nothing of us.
+	keepInformsUs bool
 }
 
 // countWaiting runs the waiting query under one relaxation and counts its rows.
-func (s *Store) countWaiting(
+// waitingStatement renders the eligibility query for ONE relaxation, together
+// with the arguments it was built against.
+//
+// The caller owns the argument list and passes its `arg`, so two reads built
+// for one query — the relaxed and the strict halves of a difference — number
+// their placeholders continuously into one slice. Renumbering a finished
+// statement instead would mean rewriting $N inside SQL that contains string
+// literals, which is the kind of surgery this tree does not do.
+//
+// Extracted so the count and the row list are the same statement asked two
+// ways. They must be: every hidden figure is a difference between runs of this
+// query, and a row list built from a second spelling would name rows the count
+// never counted — which is the one way this reading can lie to the reader who
+// clicks a figure to see what is behind it.
+//
+// waiting.go carries a third spelling of the same constant for the queue's own
+// paged read, and it is deliberately left alone: this change adds no copy, and
+// folding that one in means threading its keyset bound through here, which is
+// a refactor of the queue's read rather than of this guardrail.
+func (s *Store) waitingStatement(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, relax waitingRelaxation, measured int,
-) (int, error) {
-	args := []any{}
-	arg := func(v any) int { args = append(args, v); return len(args) }
+	arg func(any) int,
+) (string, error) {
 	instant := arg(asOf)
 	content, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	// The same gate for the reply that may LIFT a snooze. A reply this
 	// reader cannot see must not put the row back on their day: the row
 	// reappearing is itself the disclosure that it arrived.
 	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	if linkVisible == "" {
 		linkVisible = scopeUnbounded
@@ -254,12 +280,15 @@ func (s *Store) countWaiting(
 	}
 	// The two judgement relaxations are predicates OR-ed in front of their
 	// clause rather than clauses removed, so the statement's shape — and every
-	// rule around it — is identical across all five reads.
+	// rule around it — is identical across every read.
 	// `scopeUnbounded` is this package's word for an always-true predicate, and
 	// it is the right one here: a relaxation admits every row the clause would
 	// have removed, which is the same "no bound applies" this constant already
 	// spells everywhere a scope is absent.
-	notSales, unlinked, colleague := neverRelaxed, neverRelaxed, neverRelaxed
+	notSales, unlinked, colleague, informsUs := neverRelaxed, neverRelaxed, neverRelaxed, neverRelaxed
+	if relax.keepInformsUs {
+		informsUs = scopeUnbounded
+	}
 	if relax.keepNotSales {
 		notSales = scopeUnbounded
 	}
@@ -271,13 +300,13 @@ func (s *Store) countWaiting(
 	}
 	ownDomains, err := s.ownDomainList(ctx, tx)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
 	if err != nil {
-		return 0, err
+		return "", err
 	}
-	inner := fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
+	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
@@ -289,8 +318,20 @@ func (s *Store) countWaiting(
 		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		fmt.Sprintf("$%d", arg(readerAddresses)),
-		unansweredConversationAdmittingThreadless(fmt.Sprintf("$%d", instant)),
-		noKeyset)
+		informsUs,
+		noKeyset), nil
+}
+
+// countWaiting is the statement above asked for how many.
+func (s *Store) countWaiting(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, relax waitingRelaxation, measured int,
+) (int, error) {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	inner, err := s.waitingStatement(ctx, tx, asOf, relax, measured, arg)
+	if err != nil {
+		return 0, err
+	}
 	var count int
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a

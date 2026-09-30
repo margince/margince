@@ -87,7 +87,7 @@ func TestEveryDealRowWriteRecordsTheForecastItMoved(t *testing.T) {
 	// Whole packages, not the files that happen to apply a patch: a helper that
 	// mints a lock and returns it applies nothing, and resolving only appliers
 	// would call each of its callers unplaceable.
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	var recorded, elsewhere int
 	for _, scope := range packagesThatMayWrite(t, table) {
 		parsedPackage := parsePackageDir(t, fset, scope.dir)
@@ -579,7 +579,7 @@ func callsFunction(fn *ast.FuncDecl, name string) bool {
 // the rename, which is when a rule is least likely to still hold.
 func dealWriteVocabulary(t *testing.T) (table string, forecastColumns []string) {
 	t.Helper()
-	files := parsePackageDir(t, token.NewFileSet(), dealsDir)
+	files := parsePackageDir(t, gatekit.SourceFileSet(), dealsDir)
 
 	consts := map[string]string{}
 	for _, file := range files {

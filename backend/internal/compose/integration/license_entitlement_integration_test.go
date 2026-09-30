@@ -67,6 +67,7 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 		}
 	}))
 	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
 
 	// A second contact, through the members surface — the writer, not an insert.
 	if status := e.Call(t, "POST", "/v1/users", map[string]any{

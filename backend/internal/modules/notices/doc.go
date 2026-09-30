@@ -9,5 +9,5 @@
 // claiming a channel this repo does not have. Nothing here asks for a
 // decision; a notice with a verb to perform belongs to approvals.
 //
-// Tables owned: notice
+// Tables owned: notice, notification_preference, notification_digest_run
 package notices

@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package runner
+
+// The step protocol as a schema the PROVIDER enforces, kept beside its own
+// tests rather than inside window.go: the window is about what the model is
+// shown, and this is about what it may answer.
+
+import (
+	"encoding/json"
+	"sort"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+)
+
+// stepSchema is the step protocol as a JSON Schema, so a provider with
+// schema-constrained decoding enforces the shape at GENERATION rather than
+// leaving parseStep to refuse it afterwards.
+//
+// A model answering in its own tool-call channel emits that channel's syntax as
+// literal text, which is not JSON to recover, so the only place the wrong shape
+// can be prevented is before it is generated.
+//
+// HAND-WRITTEN, against shared/schema's own instruction to compose instead —
+// because each branch's `args` is the tool's own registered input schema,
+// carried verbatim, which is raw JSON rather than a builder node. Property
+// ORDER is load-bearing here too: converted to a builder that sorted keys into
+// args, final, tool, agent_loop fell 0.78→0.18 on one binding and 0.53→0.31 on
+// another, and no tool call in the failing run carried args at all. Any
+// rewrite must keep tool before args, and re-certify agent_loop on two
+// bindings.
+//
+// NO OBJECT HERE MAY BE DECLARED WITHOUT ITS KEYS. Gemini's decoder admits no
+// key into an object whose schema lists no properties, open or not, and pads it
+// with whitespace to the output ceiling instead. So args is the named tool's
+// own input schema, closed wherever the tool closes it because decodeArgs
+// refuses an unknown key, and final declares its summary.
+//
+// ONE BRANCH PER OFFERED TOOL, pairing `tool` with that tool's own `args`, so
+// each tool's `required` is enforced and `tool` is one offered name. Under a
+// single branch whose args is an anyOf over every tool, a zero-argument tool's
+// `{}` satisfies every name. `enum`, not `const`: Gemini's documented keyword
+// subset has no `const`.
+//
+// Each branch REQUIRES its keys, because Gemini's decoder skips an optional
+// args and closes the object after "tool". The branches are the exactly-one-of
+// rule parseStep holds, and each is closed as parseStep's envelope is.
+//
+// The schema is O(offered tools) and rides every step, so window.bounded counts
+// it against the prompt window with the rest of the request.
+//
+// Held by: TestTheStepSchemaAdmitsExactlyWhatTheStepParserAccepts (internal/modules/agents/runner/stepschema_test.go)
+func stepSchema(offered []mcp.ToolSpec) json.RawMessage {
+	var b strings.Builder
+	b.WriteString(`{"anyOf":[`)
+	for _, branch := range toolCallBranches(offered) {
+		b.WriteString(branch)
+		b.WriteString(",")
+	}
+	b.WriteString(`{"type":"object","properties":{"final":{"type":"object",` +
+		`"properties":{"summary":{"type":"string"}},"required":["summary"]}},` +
+		`"required":["final"],"additionalProperties":false}]}`)
+	return json.RawMessage(b.String())
+}
+
+// toolCallBranches renders one branch per offered tool, in the listing's name
+// order so one catalog always yields one request. Each is written tool, then
+// args: the order that was measured.
+//
+// There is NO fallback for a schema that will not parse. Registration panics on
+// one at boot (assertObjectSchemas), and one that bypassed it is carried
+// verbatim, so the adapter refuses to encode the request instead of the model
+// being offered a bare `args` — the exact shape this schema keeps off the wire.
+func toolCallBranches(offered []mcp.ToolSpec) []string {
+	sorted := append([]mcp.ToolSpec(nil), offered...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+	branches := make([]string, 0, len(sorted))
+	for _, spec := range sorted {
+		branches = append(branches, `{"type":"object","properties":{"tool":{"type":"string","enum":[`+
+			jsonString(spec.Name)+`]},"args":`+stepArguments(spec)+
+			`},"required":["tool","args"],"additionalProperties":false}`)
+	}
+	return branches
+}
+
+// jsonString is name as a JSON string literal. Go's own quoting is not JSON's:
+// strconv.Quote writes a control byte as `\a` or `\x07`, which no JSON parser
+// reads. Marshalling a string cannot fail; an empty enum member would admit no
+// tool, which is the side to err on.
+func jsonString(name string) string {
+	encoded, err := json.Marshal(name)
+	if err != nil {
+		return `""`
+	}
+	return string(encoded)
+}

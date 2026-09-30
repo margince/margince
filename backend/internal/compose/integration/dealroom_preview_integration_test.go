@@ -144,7 +144,7 @@ func TestAFreshRoomIsLiveAndCanBePreviewedAtOnce(t *testing.T) {
 	dealID := apptest.CreateOpenDeal(t, e, stages)
 	var room AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms", AnyMap{
-		"deal_id": dealID, "title": "Fresh", "welcome_message": "Welcome.", "source": "ui",
+		"deal_id": dealID, "title": "Fresh", "welcome_message": "Welcome.", "source": "manual",
 	}, nil, &room); status != http.StatusCreated {
 		t.Fatalf("create room = %d %v", status, room)
 	}
@@ -237,7 +237,7 @@ func TestARoomSaysWhetherItsPreviewWillOpen(t *testing.T) {
 	dealID := apptest.CreateOpenDeal(t, e, stages)
 	var room AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms", AnyMap{
-		"deal_id": dealID, "title": "Advertised", "welcome_message": "Welcome.", "source": "ui",
+		"deal_id": dealID, "title": "Advertised", "welcome_message": "Welcome.", "source": "manual",
 	}, nil, &room); status != http.StatusCreated {
 		t.Fatalf("create room = %d %v", status, room)
 	}

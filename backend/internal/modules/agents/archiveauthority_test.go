@@ -188,7 +188,7 @@ func TestAV1ProviderStillRefusesAnUnarchivableTypeByName(t *testing.T) {
 // already spent the approval.
 func TestGuardsRefuseWhatTheExecutorsOwnProbesWouldRefuse(t *testing.T) {
 	provider := &narrowArchiver{types: threeTypes(), refuse: apperrors.ErrPermissionDenied}
-	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
+	call := NewArchiveCall(provider, nil, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 
 	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("guarding a readable-but-unwritable contact answered %v, want the executor's own "+
@@ -213,7 +213,7 @@ func TestTheHeldElsewhereRefusalStillWinsOverTheExecutorProbe(t *testing.T) {
 		heldElsewhere: true,
 		refuse:        apperrors.ErrPermissionDenied,
 	}
-	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
+	call := NewArchiveCall(provider, nil, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 
 	err := call.Guards(context.Background())
 

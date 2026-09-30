@@ -26,6 +26,24 @@ import (
 // installations bootstrapped afterwards, and an operator reading their own
 // retention page is the one who decides for theirs.
 //
+// An unconverted lead is ARCHIVED after a year, not anonymized. Archiving takes
+// it off every list and keeps it restorable; anonymizing left a nameless row
+// that served nobody (Lars, 26 Sep 2026). An installation that must not keep
+// the lead's identity authors `anonymize` instead.
+//
+// `raw_capture` holds the verbatim provider original, and it ages on its own
+// clock rather than on the activity's. 730 days rather than the activity
+// ladder's 1095 because the original outlives nothing that reads it: the
+// extracted activity survives this stage untouched — the selector joins to it
+// precisely so it can — and with it the `(source_system, source_id)` tombstone
+// a replay is refused by. What ages out is the second copy.
+//
+// It destroys less than the number suggests. The selector carries the statutory
+// correspondence floor and the legal-hold test, so a Handelsbrief inside its
+// window keeps its original however short this is set; and an original with no
+// activity row is left alone, because there the raw_capture row IS the
+// tombstone.
+//
 // `ai_call_payload` / `content` is the one worth reading twice. With payload
 // capture on (`ai.capture_payloads`, opt-in) it is how long the model's whole
 // request stays on disk after the work is done, and for a reading of a meeting
@@ -39,17 +57,24 @@ import (
 // spells no address is reached by neither, and for those this window is the
 // guaranteed end. config/margince.example.yaml says the same beside the switch
 // that turns capture on, because that is where an operator is deciding.
+//
+// `deal_risk_day` is the queue's record of which deals each day began material
+// and at risk; its verdict rows go with it. 90 days is the widest window GET /worklist/response
+// reads, and the row answers nothing past it; the gate
+// TestTheVerdictWindowIsTheFiguresWidestWindow keeps the two numbers one.
 func SeedDefaultRetentionTx(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, `
 		INSERT INTO retention_policy (object_type, category, retain_days, action, lawful_basis)
 		SELECT v.object_type, v.category, v.retain_days, v.action, 'storage_limitation'
 		FROM (VALUES
-		  ('lead',     'unconverted',        365,  'anonymize'),
+		  ('lead',     'unconverted',        365,  'archive'),
 		  ('activity', NULL,                 1095, 'archive'),
 		  ('activity', 'transcript',         365,  'erase'),
 		  ('contact',   'no_consent_no_deal', 730,  'anonymize'),
 		  ('deal',     'lost',               1825, 'archive'),
-		  ('ai_call_payload', 'content',     365,  'erase')
+		  ('ai_call_payload', 'content',     365,  'erase'),
+		  ('raw_capture', NULL,              730,  'erase'),
+		  ('deal_risk_day', NULL,            90,   'erase')
 		) AS v(object_type, category, retain_days, action)`)
 	return err
 }

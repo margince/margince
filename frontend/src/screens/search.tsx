@@ -6,7 +6,7 @@ import { type FormEvent, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
+import { navigate, routeHash } from "../app/router";
 import {
   SEARCH_HIT_GROUP_KEY,
   SEARCH_HIT_ORDER,
@@ -20,8 +20,9 @@ import { FilterPills } from "../design-system/filterpills";
 import { Heading } from "../design-system/heading";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { formatDateTime, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
+import { companyTabRoute } from "./companytab";
 import { useOpenEmail } from "./openemail";
 import "./search.css";
 
@@ -202,6 +203,7 @@ function SearchHit({
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const zone = useRecordZone();
   // An email hit IS the canonical row — the same one the timeline draws, from
@@ -265,6 +267,24 @@ function SearchHit({
         {hit.trust_tier === "unverified" && (
           <Badge tone="warning">{t("search.tier.unverified")}</Badge>
         )}
+        {/* The route rides with the badge: a mark with nowhere to go leaves the
+            reader on a Partners screen reachable only by knowing it exists.
+            `true` alone draws it — null is a marker nobody took, not a company
+            checked and found plain. */}
+        {hit.type === "company" && hit.is_partner === true && (
+          <>
+            <Badge>{t("search.partner.badge")}</Badge>
+            <a
+              className="entity-link"
+              href={routeHash(companyTabRoute(hit.id, "partner"))}
+              aria-label={t("search.partner.openNamed", {
+                name: hit.title ?? hit.id,
+              })}
+            >
+              {t("search.partner.open")}
+            </a>
+          </>
+        )}
       </div>
       {/* `hit.score` is deliberately not drawn. The contract bounds it to
           nothing (schema: "Relevance score"), so the retriever's raw figure
@@ -276,7 +296,7 @@ function SearchHit({
           no number: a count it could not take is not a count of none. */}
       {isTag && hit.carried_by != null && (
         <p>
-          {t("search.tag.carriedBy", {
+          {plural("search.tag.carriedBy", hit.carried_by, {
             count: formatNumber(hit.carried_by, locale),
           })}
         </p>

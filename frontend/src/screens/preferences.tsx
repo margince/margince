@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { Button, Card, EmptyState, Skeleton } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -364,9 +365,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
           {t("prefs.unsubscribeAll")}
         </Button>
         {unsubscribeAll.isError && (
-          <p className="pref-unsub-error">
-            {explainPublicError(unsubscribeAll.error, t)}
-          </p>
+          <ErrorLine>{explainPublicError(unsubscribeAll.error, t)}</ErrorLine>
         )}
       </Card>
 

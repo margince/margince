@@ -647,6 +647,7 @@ func callDescription(t *testing.T, e *apptest.AppEnv, id string) string {
 func TestProjectOwnershipTransferOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
 	company := anchorCompany(t, e, "Northwind")
 
 	var me struct {

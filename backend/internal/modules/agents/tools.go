@@ -7,9 +7,9 @@ package agents
 // SystemOfRecordProvider seam so the same tools serve whichever provider
 // answers for the records. Record-type-generic by design:
 // one read_record with a record_type argument, mapping onto the per-type
-// contract operations. Writes stamp source="mcp"; captured_by is derived
-// from the authenticated Principal by the store — an agent cannot forge
-// provenance any more than a browser can.
+// contract operations. Writes stamp source="manual" (see ToolSource below);
+// captured_by is derived from the authenticated Principal by the store — an
+// agent cannot forge provenance any more than a browser can.
 
 import (
 	"bytes"
@@ -19,6 +19,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -39,7 +41,7 @@ const toolVersionV1 = "1.0.0"
 // assistant rather than through a form. Which door it came through, and who
 // walked through it, are recorded in captured_by, where retrieval ranking and
 // the record history both read them.
-const ToolSource = "manual"
+const ToolSource = provenance.RecordSourceManual
 
 // StageResolver supplies the advance_deal tier resolver's input: the
 // target stage's configured semantic (won/lost is a property of pipeline
@@ -63,16 +65,16 @@ type StageResolver interface {
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor) {
 	r.Register(searchRecords{p: p})
 	r.Register(readRecord{p: p})
-	r.Register(createRecord{p: p, duplicates: duplicates})
-	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals})
+	r.Register(createRecord{p: p, duplicates: duplicates, language: r.language})
+	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals, language: r.language})
 	r.Register(logActivity{p: p})
 	r.Register(createTask{p: p})
-	r.Register(advanceDeal{p: p, stages: stages})
-	r.Register(progressDeal{p: p, stages: stages})
+	r.Register(advanceDeal{p: p, stages: stages, language: r.language})
+	r.Register(progressDeal{p: p, stages: stages, language: r.language})
 	r.Register(qualifyLead{p: p, consumerMail: consumerMail})
-	r.Register(archiveRecord{p: p})
-	r.Register(promoteLead{p: p, promoter: promoter})
-	r.Register(mergeRecords{p: p})
+	r.Register(archiveRecord{p: p, language: r.language})
+	r.Register(promoteLead{p: p, promoter: promoter, language: r.language})
+	r.Register(mergeRecords{p: p, language: r.language})
 }
 
 // FieldOwnership answers the human-edit-precedence question
@@ -115,6 +117,7 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "search_records", Title: "Search records", Version: toolVersionV1,
 		Description:   searchRecordsCopy.render(),
+		Instead:       searchRecordsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		// The cross-object search operation, not the per-type list ones: those
 		// declare list_records now, and naming them here would leave the two
@@ -206,6 +209,7 @@ func (t readRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_record", Title: "Read a record", Version: toolVersionV1,
 		Description:   readRecordCopy.render(),
+		Instead:       readRecordCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getContact/getCompany/getDeal/getLead/getActivity/getProject/getPartner",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
@@ -241,12 +245,14 @@ type createRecord struct {
 	// failing: silence is what this surface did before, so it is the safe
 	// degradation.
 	duplicates OpenDuplicatesFor
+	language   baselanguage.Resolver
 }
 
 func (t createRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "create_record", Title: "Create a record", Version: toolVersionV1,
 		Description:   createRecordCopy.render(),
+		Instead:       createRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
@@ -254,7 +260,8 @@ func (t createRecord) Spec() mcp.ToolSpec {
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
-		OutputSchema: schemaFor[createdRecord](),
+		UnkeyedArguments: recordFieldsUnkeyed(),
+		OutputSchema:     schemaFor[createdRecord](),
 	}
 }
 
@@ -334,7 +341,7 @@ func (t createRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	// archiveRecord.StageInfo, command.go), so it converts rather than
 	// restating the fields: a field CreateCommand grows fails to compile here
 	// instead of quietly leaving it unset.
-	return StageSubject(ctx, NewCreateCall(CreateCommand(args)))
+	return StageSubject(ctx, NewCreateCall(t.language, CreateCommand(args)))
 }
 
 // --- log_activity (🟢 write) ---
@@ -347,6 +354,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "log_activity", Title: "Log an activity", Version: toolVersionV1,
 		Description:   logActivityCopy.render(),
+		Instead:       logActivityCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "logActivity",
 		// The two vocabularies are SPLICED from the contract, never spelled

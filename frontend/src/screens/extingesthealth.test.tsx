@@ -96,7 +96,7 @@ it("says nothing was refused rather than showing an empty card", async () => {
   // names the window, because a reassurance with no span is one the reader has
   // to guess the meaning of.
   expect(
-    await screen.findByText(/Nothing refused in the last 7 days/),
+    await screen.findByText(/No records refused in the last 7 days/),
   ).toBeInTheDocument();
 });
 
@@ -113,7 +113,7 @@ it("reports a malformed payload rather than drawing it as a clean installation",
   // could not be read instead.
   expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(
-    screen.queryByText(/Nothing refused in the last/),
+    screen.queryByText(/No records refused in the last/),
   ).not.toBeInTheDocument();
 });
 
@@ -125,7 +125,7 @@ it("withholds the card from a seat without the grant, and asks the server nothin
   render(<ExtensionIngestHealthCard />);
 
   expect(
-    await screen.findByText(/needs permission your seat does not hold/),
+    await screen.findByText(/requires a permission your role does not have/),
   ).toBeInTheDocument();
   // A refusal the reader cannot act on has no business becoming this card's
   // error state, so the call is never issued.

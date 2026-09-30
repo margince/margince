@@ -85,7 +85,12 @@ describe("the buying committee, drawn", () => {
 
   it("says how many of ours carry the deal, which the picture can only size", () => {
     draw({ coverage: coverage(), withheld: false, pending: false });
-    expect(screen.getByText("1 of ours carry it")).toBeTruthy();
+    expect(screen.getByText("1 colleague on this deal")).toBeTruthy();
+    cleanup();
+    const [lena] = coverage().our_side;
+    const twoOfUs = coverage({ our_side: [lena, { ...lena, user_id: "u2" }] });
+    draw({ coverage: twoOfUs, withheld: false, pending: false });
+    expect(screen.getByText("2 colleagues on this deal")).toBeTruthy();
   });
 
   // Each of the three no-seat states asserts ITS OWN sentence, not merely the
@@ -99,12 +104,8 @@ describe("the buying committee, drawn", () => {
       withheld: true,
       pending: false,
     });
-    expect(
-      screen.getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
-    expect(
-      screen.queryByText("No stakeholder is recorded on this deal"),
-    ).toBeNull();
+    expect(screen.getByText("Hidden for your role")).toBeTruthy();
+    expect(screen.queryByText("No stakeholders on this deal")).toBeNull();
     expect(screen.queryByText("Dana Weiss")).toBeNull();
   });
 
@@ -121,9 +122,7 @@ describe("the buying committee, drawn", () => {
     expect(
       document.querySelector('[role="status"][aria-busy="true"]'),
     ).toBeTruthy();
-    expect(
-      screen.queryByText("No stakeholder is recorded on this deal"),
-    ).toBeNull();
+    expect(screen.queryByText("No stakeholders on this deal")).toBeNull();
     expect(screen.queryByText("Dana Weiss")).toBeNull();
   });
 
@@ -141,9 +140,7 @@ describe("the buying committee, drawn", () => {
       pending: false,
     });
     expect(container.firstChild).toBeNull();
-    expect(
-      screen.queryByText("No stakeholder is recorded on this deal"),
-    ).toBeNull();
+    expect(screen.queryByText("No stakeholders on this deal")).toBeNull();
   });
 
   it("still names the withheld case rather than falling silent with it", () => {
@@ -153,8 +150,6 @@ describe("the buying committee, drawn", () => {
       pending: false,
     });
     expect(container.firstChild).not.toBeNull();
-    expect(
-      screen.getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
+    expect(screen.getByText("Hidden for your role")).toBeTruthy();
   });
 });

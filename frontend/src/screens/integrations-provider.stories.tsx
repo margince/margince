@@ -262,3 +262,13 @@ export const OperatorPricedCategories: Story = {
     },
   ]),
 };
+
+// Two registered providers under ONE lookup switch: the switch answers for the
+// installation, so it is drawn once above the connections rather than once per
+// provider row.
+export const OperatorTwoProviders: Story = {
+  render: cardStory(OPERATOR, [
+    connected,
+    { ...unconnected, provider: "second_provider" },
+  ]),
+};

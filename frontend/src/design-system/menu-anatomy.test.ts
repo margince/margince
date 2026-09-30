@@ -6,6 +6,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { selectorList } from "../../scripts/lib/css-rules";
 import { filesMatching, sourceFileAt } from "../../scripts/lib/source-tree";
 import { type CssRule, rulesIn } from "../testing/css";
 
@@ -166,7 +167,7 @@ function ruleFor(sheet: string, selector: string): CssRule {
   const found = (sheets.get(sheet) ?? []).find(
     (rule) =>
       rule.parents.length === 0 &&
-      rule.selector.split(",").some((one) => one.trim() === selector),
+      selectorList(rule.selector).includes(selector),
   );
   if (!found) {
     throw new Error(`${sheet} declares no rule for ${selector}`);

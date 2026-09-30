@@ -48,9 +48,10 @@ type appliedField struct {
 	field string
 	rowID *ids.UUID
 	value *string
-	// subject and provider are read back by the revert, which needs to know
-	// whose record it is clearing and whose purchase it is undoing. The apply
-	// side already holds both and leaves them zero.
+	// ledgerID, subject and provider are read back by the revert: the ledger
+	// row its statement joins on, and whose record and purchase it undoes. The
+	// apply side has no ledger row yet and leaves all three zero.
+	ledgerID ids.UUID
 	subject  ids.UUID
 	provider string
 }

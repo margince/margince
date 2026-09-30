@@ -9,13 +9,15 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatDateAbbrev, formatMoneyCompact } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { ForecastView } from "./analytics.forecast";
 
 // The population these tests read under. Workspace because that is what a
 // manager sees, and because a nameable scope is what the editor requires.
 const WORKSPACE_SELECTION = {
-  scope: { kind: "workspace" as const, label: "Whole workspace" },
+  scope: { kind: "workspace" as const, label: "Whole company" },
 };
 
 afterEach(() => {
@@ -146,12 +148,76 @@ describe("ForecastView", () => {
     expect(answer.textContent).toContain("1,200.00");
   });
 
+  // The gap between a call and its evidence has a DIRECTION, and one sentence
+  // cannot carry both: a signed figure in "… over evidence" printed a call
+  // twenty thousand short of its evidence as "-€200.00 over evidence", which is
+  // the wrong direction stated twice. Three arms, and the magnitude unsigned.
+  describe("how far the call sits from the evidence", () => {
+    function withCall(amountMinor: number) {
+      vi.stubGlobal(
+        "fetch",
+        forecastStub({
+          readings: readings({
+            current_call: {
+              id: "c1",
+              period_start: "2026-04-01",
+              period_end: "2026-06-30",
+              scope_kind: "workspace",
+              amount_minor: amountMinor,
+              currency: "EUR",
+              author_id: "u1",
+              created_at: "2026-05-01T09:00:00Z",
+            },
+          }),
+        }),
+      );
+      render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+    }
+
+    it("says a call above its evidence is over it", async () => {
+      withCall(200_000);
+
+      const detail = await screen.findByText(/over evidence$/);
+      expect(detail.textContent).toContain(
+        formatMoneyCompact(80_000, "EUR", "en"),
+      );
+      expect(detail.textContent).not.toContain("-");
+    });
+
+    it("says a call below its evidence is under it, not over it by a minus", async () => {
+      withCall(100_000);
+
+      const detail = await screen.findByText(/under evidence$/);
+      expect(detail.textContent).toContain(
+        formatMoneyCompact(20_000, "EUR", "en"),
+      );
+      expect(detail.textContent).not.toContain("-");
+      expect(screen.queryByText(/over evidence/)).toBeNull();
+    });
+
+    // Its own arm rather than a zero: "±€0 over evidence" is a difference
+    // nobody has.
+    it("says a call that matches its evidence carries no gap at all", async () => {
+      withCall(120_000);
+
+      expect(
+        await screen.findByText(
+          en["forecast.currentCallDetailEven"].replace(
+            "{date}",
+            formatDateAbbrev("2026-05-01T09:00:00Z", "en", "Europe/Berlin"),
+          ),
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByText(/(over|under) evidence/)).toBeNull();
+    });
+  });
+
   // Nobody having called is a real answer, and a different one from a call of
   // zero. It must not render as "the current call is €0".
   it("says nobody has called rather than calling it zero", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-    expect(await screen.findByText(/Nobody has called/i)).toBeTruthy();
+    expect(await screen.findByText(/No call recorded/i)).toBeTruthy();
   });
 
   // An unpriced deal is real pipeline contributing zero money. A total shown
@@ -168,7 +234,7 @@ describe("ForecastView", () => {
   it("says nothing about pricing when every deal carries an amount", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-    await screen.findByText(/Nobody has called/i);
+    await screen.findByText(/No call recorded/i);
     expect(screen.queryByText(/of 12 deals/i)).toBeNull();
   });
 
@@ -212,7 +278,7 @@ describe("ForecastView", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /^Week$/i }));
     await user.click(
-      await screen.findByRole("button", { name: /Update the current call/i }),
+      await screen.findByRole("button", { name: /Update call/i }),
     );
     await user.click(screen.getByRole("button", { name: /Save call/i }));
 
@@ -227,7 +293,7 @@ describe("ForecastView", () => {
 
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: /Update the current call/i }),
+      await screen.findByRole("button", { name: /Update call/i }),
     );
     await user.type(
       await screen.findByLabelText(/Supporting note/i),
@@ -249,7 +315,7 @@ describe("ForecastView", () => {
 
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: /Update the current call/i }),
+      await screen.findByRole("button", { name: /Update call/i }),
     );
     await user.click(screen.getByRole("button", { name: /Save call/i }));
 
@@ -280,9 +346,7 @@ describe("ForecastView", () => {
     vi.stubGlobal("fetch", forecastStub({ assuranceStatus: 404 }));
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
-    expect(
-      await screen.findByText(/Nothing has been checked yet/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Nothing checked yet/)).toBeTruthy();
     // And NOT the broken-view state, which is what shipped.
     expect(screen.queryByText(/Couldn't load this view/)).toBeNull();
     expect(screen.queryByText(/not found/)).toBeNull();

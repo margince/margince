@@ -35,7 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The rest of the shared vocabulary: the fields a card and a signature both
@@ -84,7 +83,9 @@ const (
 	observedReplaced
 )
 
-// applyObservedField writes one dated statement, superseding what is older.
+// applyObservedField writes one dated statement of a single-answer field,
+// superseding what is older. A phone is a list and goes through
+// applyObservedNumbers instead.
 //
 // The sidecar row is the decision: its ON CONFLICT carries the date comparison,
 // so a column mirror below runs only when the sidecar actually moved. That is
@@ -181,9 +182,6 @@ func observedFieldColumn(field string) (string, bool) {
 // what tells those apart: a column that disagrees with the sidecar was written
 // by somebody else, and it is the value a reader wants back.
 func seedFromColumn(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, f observedField) (string, error) {
-	if f.Field == fieldPhone {
-		return seedFromLiveNumber(ctx, tx, contactID, f)
-	}
 	column, mirrored := observedFieldColumn(f.Field)
 	if !mirrored {
 		return "", nil
@@ -211,233 +209,4 @@ func seedFromColumn(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, f o
 		return "", nil
 	}
 	return *current, nil
-}
-
-// observedPhone is one dated statement of a number.
-type observedPhone struct {
-	Phone      string
-	PhoneType  string
-	SourceRef  string
-	Source     string
-	CapturedBy string
-	ObservedAt time.Time
-}
-
-// applyObservedPhone adds a number, or replaces the one of its type that is
-// older than it.
-//
-// Additive across types on purpose: a mobile in a signature says nothing about
-// the desk number, and a pass that replaced it would delete a working way to
-// reach somebody on no evidence at all. Within one type it is recency, because
-// two work numbers for one contact is what a changed number looks like when
-// nothing supersedes.
-//
-// An identical number still advances observed_at. The row then says "still true
-// as of this date", which is what stops a late-delivered OLDER mail from
-// winning afterwards — without it, a number confirmed a dozen times still
-// carries the date of its first sighting.
-//
-//nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
-func applyObservedPhone(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, p observedPhone) (observedOutcome, error) {
-	parsed, err := values.ParsePhone(p.Phone)
-	if err != nil {
-		// Declined, not failed: a number this reader cannot parse is one field
-		// skipped, exactly like an absent one. Propagating it would abandon the
-		// other fields of the same signature over one contact's formatting,
-		// which is the choice readSignatureValue already made for this shape.
-		//nolint:nilerr // a footer this reader cannot parse is a skipped field, not a fault
-		return observedSkipped, nil
-	}
-	// Held before the first child row, for applyObservedField's reason: the
-	// eraser takes the subject first and this must not race it the other way.
-	if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return observedSkipped, nil
-		}
-		return observedSkipped, err
-	}
-	normalized := parsed.String()
-	phoneType := p.PhoneType
-	if phoneType == "" {
-		phoneType = emailTypeWork
-	}
-	// The transaction's own clock when the caller states no date — a card
-	// carries none. Read from the database rather than the process so it
-	// compares against the stored dates on the same clock that wrote them, and
-	// so the four statements below all use ONE date rather than drifting apart
-	// across the transaction.
-	observedAt := p.ObservedAt
-	if observedAt.IsZero() {
-		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&observedAt); err != nil {
-			return observedSkipped, fmt.Errorf("contacts: dating an undated statement: %w", err)
-		}
-	}
-
-	// A number the record already carries is confirmed rather than duplicated,
-	// and either way the caller is done with it.
-	known, err := confirmKnownNumber(ctx, tx, contactID, normalized, observedAt)
-	if err != nil || known != observedSkipped {
-		return known, err
-	}
-
-	// A number of this type stated LATER than this one already stands, so this
-	// statement is stale and adds nothing. Asked before the replace below,
-	// because "no older row to replace" and "a newer row already answers" are
-	// different situations that would otherwise both end in an insert: a
-	// re-delivered old mail would file its number beside the current one, and
-	// the record would carry two work numbers with no way to tell which rings.
-	// STRICTLY newer, not "at least as new". A business card states two work
-	// numbers as one statement and they share its date; > would let the first
-	// one written reject the second as already superseded, and the card would
-	// silently import half its numbers. A tie is two numbers the contact gave
-	// together, which is a contact with two numbers.
-	var newerStands bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM contact_phone
-			WHERE contact_id = $1 AND phone_type = $2 AND archived_at IS NULL
-			  AND observed_at > $3)`,
-		contactID, phoneType, observedAt).Scan(&newerStands); err != nil {
-		return observedSkipped, fmt.Errorf("contacts: looking for a number stated later: %w", err)
-	}
-	if newerStands {
-		return observedSkipped, nil
-	}
-
-	supersededID, err := numberThisReplaces(ctx, tx, contactID, phoneType, observedAt)
-	if err != nil {
-		return observedSkipped, err
-	}
-
-	if supersededID != nil {
-		if _, err := tx.Exec(ctx, `
-			UPDATE contact_phone SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`,
-			supersededID); err != nil {
-			return observedSkipped, fmt.Errorf("contacts: retiring the replaced number: %w", err)
-		}
-	}
-
-	// is_primary only when this type has no live primary left: the partial
-	// unique index permits exactly one, and claiming it from a number this
-	// statement said nothing about would silently re-rank the record.
-	tag, err := tx.Exec(ctx, `
-		INSERT INTO contact_phone
-		  (contact_id, phone, phone_type, is_primary, position, source, captured_by, observed_at, superseded_phone_id)
-		SELECT $1, $2, $3,
-		  NOT EXISTS (
-			SELECT 1 FROM contact_phone
-			WHERE contact_id = $1 AND phone_type = $3 AND is_primary AND archived_at IS NULL),
-		  COALESCE((SELECT MAX(position) + 1 FROM contact_phone
-			WHERE contact_id = $1 AND archived_at IS NULL), 0),
-		  $4, $5, $6, $7
-		WHERE EXISTS (SELECT 1 FROM contact WHERE id = $1 AND archived_at IS NULL)`,
-		contactID, normalized, phoneType, p.Source, p.CapturedBy, observedAt, supersededID)
-	if err != nil {
-		return observedSkipped, fmt.Errorf("contacts: writing the observed number: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return observedSkipped, nil
-	}
-	if supersededID != nil {
-		// This number took another's place, which is what the undo buffer is
-		// for. The caller records the evidence line against THIS number rather
-		// than against whichever the card happened to list first.
-		return observedReplaced, nil
-	}
-	return observedApplied, nil
-}
-
-// confirmKnownNumber handles a number the record already carries: it advances
-// the date rather than filing a duplicate, and reports observedSkipped when
-// this is a number the caller still has to write.
-//
-// Advancing on an identical value is what makes the row say "still true as of
-// this date". Without it a number confirmed a dozen times keeps the date of its
-// first sighting, and a late-delivered OLDER mail would then outrank it.
-func confirmKnownNumber(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, normalized string, observedAt time.Time) (observedOutcome, error) {
-	tag, err := tx.Exec(ctx, `
-		UPDATE contact_phone SET observed_at = $3
-		WHERE contact_id = $1 AND phone = $2 AND archived_at IS NULL AND observed_at < $3`,
-		contactID, normalized, observedAt)
-	if err != nil {
-		return observedSkipped, fmt.Errorf("contacts: confirming a known number: %w", err)
-	}
-	if tag.RowsAffected() > 0 {
-		return observedApplied, nil
-	}
-	// The number is here but was already dated at or after this statement, so
-	// there is nothing to advance and nothing to add.
-	var live bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM contact_phone
-			WHERE contact_id = $1 AND phone = $2 AND archived_at IS NULL)`,
-		contactID, normalized).Scan(&live); err != nil {
-		return observedSkipped, fmt.Errorf("contacts: looking for a known number: %w", err)
-	}
-	if live {
-		return observedConfirmed, nil
-	}
-	return observedSkipped, nil
-}
-
-// seedFromLiveNumber is seedFromColumn's phone arm: the number about to be
-// replaced, read from the list rather than from a column.
-//
-// A phone has no mirror column, so the general path seeds nothing — and a
-// number that only ever lived in contact_phone (one typed at create, say) would
-// then be replaced with superseded_value left NULL, which is exactly the state
-// RestoreProfileField reads as "nothing to undo". The undo would be silently
-// unavailable for the commonest phone there is.
-//
-// The PRIMARY of the type being stated, because that is the number a reader is
-// shown and therefore the one they would expect back.
-func seedFromLiveNumber(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, f observedField) (string, error) {
-	// The number this one REPLACED, read from the row that says so, and not
-	// from whatever is live now: the numbers are written before this line is,
-	// so by the time it runs the old row is already archived and "live" names
-	// the replacement itself. Falling back to the live primary covers the
-	// signature path, where the line is written first and no supersede has
-	// happened yet.
-	var current *string
-	if err := tx.QueryRow(ctx, `
-		SELECT COALESCE(
-			(SELECT was.phone
-			   FROM contact_phone live
-			   JOIN contact_phone was ON was.id = live.superseded_phone_id
-			  WHERE live.contact_id = $1 AND live.archived_at IS NULL
-			    AND live.phone = $2 AND was.contact_id = $1
-			  LIMIT 1),
-			(SELECT phone FROM contact_phone
-			  WHERE contact_id = $1 AND archived_at IS NULL
-			  ORDER BY is_primary DESC, position, created_at
-			  LIMIT 1))`, contactID, f.Value).Scan(&current); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", nil
-		}
-		return "", fmt.Errorf("contacts: reading the number before it is superseded: %w", err)
-	}
-	if current == nil || *current == f.Value {
-		return "", nil
-	}
-	return *current, nil
-}
-
-// numberThisReplaces finds the row of this type a statement supersedes, or nil
-// where it supersedes none.
-//
-// Chosen by id so the archive and the insert name the same row: several live
-// numbers of one type are permitted, and the primary is the one displayed.
-func numberThisReplaces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, phoneType string, observedAt time.Time) (*ids.UUID, error) {
-	var supersededID *ids.UUID
-	if err := tx.QueryRow(ctx, `
-		SELECT id FROM contact_phone
-		WHERE contact_id = $1 AND phone_type = $2 AND archived_at IS NULL AND observed_at < $3
-		ORDER BY is_primary DESC, position, created_at
-		LIMIT 1`,
-		contactID, phoneType, observedAt).Scan(&supersededID); err != nil &&
-		!errors.Is(err, pgx.ErrNoRows) {
-		return nil, fmt.Errorf("contacts: looking for the number this replaces: %w", err)
-	}
-	return supersededID, nil
 }

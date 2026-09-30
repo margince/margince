@@ -41,8 +41,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -112,7 +110,7 @@ func TestEveryScheduledOccurrenceIsNamedForOneSeat(t *testing.T) {
 // iteration is meaningless to them: nothing they produce is inserted, so
 // nothing they produce can collide.
 var mintsAShapeRatherThanAnOccurrence = gatekit.Waive(map[string]string{
-	"internal/compose/certcase_agentlooptrigger.go:mintedSchedulerTriggerRef": "mints a ref from a fixed day and seat so the certification fixture validator can compare a corpus trigger ref's SHAPE against what the writer produces, rather than restating the format; the value is compared and discarded, and never reaches EnqueueJob or a job row",
+	"internal/compose/certcase_agentlooptrigger.go:refuseUnmintableTriggerRef": "mints a ref from a fixed day and seat so the certification fixture validator can compare a corpus trigger ref's SHAPE against what the writer produces, rather than restating the format; the value is compared and discarded, and never reaches EnqueueJob or a job row",
 })
 
 // TestTheTriggerRefStillCarriesTheWholeUniquenessKey fails when a migration
@@ -175,7 +173,7 @@ type triggerRefCall struct {
 func triggerRefCalls(t *testing.T) []triggerRefCall {
 	t.Helper()
 	var out []triggerRefCall
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	const root = "internal"
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -184,7 +182,7 @@ func triggerRefCalls(t *testing.T) []triggerRefCall {
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		file, perr := parser.ParseFile(fset, path, nil, 0)
+		file, perr := gatekit.ParseFile(path, 0)
 		if perr != nil {
 			return perr
 		}

@@ -125,10 +125,10 @@ describe("OnboardingGate", () => {
     );
 
     await userEvent.type(
-      screen.getByLabelText("Your website address"),
+      screen.getByLabelText("Website address"),
       "https://x.co/path",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Read my site" }));
+    await userEvent.click(screen.getByRole("button", { name: "Read website" }));
 
     expect(onSubmit).toHaveBeenCalledWith("x.co");
   });
@@ -145,17 +145,17 @@ describe("OnboardingGate", () => {
     );
 
     await userEvent.type(
-      screen.getByLabelText("Your website address"),
+      screen.getByLabelText("Website address"),
       "notadomain",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Read my site" }));
+    await userEvent.click(screen.getByRole("button", { name: "Read website" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "That does not look like a web address. Try it as yourcompany.com.",
+      "This is not a valid web address. Enter it as yourcompany.com.",
     );
     expect(onSubmit).not.toHaveBeenCalled();
     // The field is marked invalid and points at the message.
-    expect(screen.getByLabelText("Your website address")).toHaveAttribute(
+    expect(screen.getByLabelText("Website address")).toHaveAttribute(
       "aria-invalid",
       "true",
     );
@@ -173,7 +173,7 @@ describe("OnboardingGate", () => {
     );
 
     await userEvent.type(
-      screen.getByLabelText("Your website address"),
+      screen.getByLabelText("Website address"),
       "gradion.com{Enter}",
     );
 
@@ -191,7 +191,7 @@ describe("OnboardingGate", () => {
       />,
     );
     expect(
-      screen.getByRole("heading", { level: 1, name: /Hi Lars/ }),
+      screen.getByRole("heading", { level: 1, name: /Welcome, Lars/ }),
     ).toBeInTheDocument();
     unmount();
 
@@ -204,7 +204,7 @@ describe("OnboardingGate", () => {
       />,
     );
     expect(
-      screen.getByRole("heading", { level: 1, name: "I am the Margince AI." }),
+      screen.getByRole("heading", { level: 1, name: "Welcome to Margince" }),
     ).toBeInTheDocument();
   });
 
@@ -220,7 +220,7 @@ describe("OnboardingGate", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Enter the details yourself" }),
+      screen.getByRole("button", { name: "Enter details manually" }),
     );
 
     expect(onManual).toHaveBeenCalledTimes(1);
@@ -240,7 +240,7 @@ describe("OnboardingGate", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "I could not read that site. The host did not answer. Try another address, or enter the details yourself.",
     );
-    expect(screen.getByRole("button", { name: "Read my site" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Read website" })).toBeEnabled();
   });
 
   // A deferral is the server shelving the work, not the reader getting it
@@ -287,11 +287,11 @@ describe("OnboardingGate", () => {
     );
 
     await userEvent.type(
-      screen.getByLabelText("Your website address"),
+      screen.getByLabelText("Website address"),
       "gradion.com{Enter}",
     );
 
-    expect(screen.getByRole("button", { name: "Read my site" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Read website" })).toBeDisabled();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });
@@ -307,7 +307,7 @@ describe("the gate while a start is in flight", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: /Enter the details yourself/ }),
+      screen.getByRole("button", { name: /Enter details manually/ }),
     ).toBeInTheDocument();
 
     rerender(
@@ -321,7 +321,7 @@ describe("the gate while a start is in flight", () => {
       </LocaleProvider>,
     );
     expect(
-      screen.queryByRole("button", { name: /Enter the details yourself/ }),
+      screen.queryByRole("button", { name: /Enter details manually/ }),
     ).toBeNull();
   });
 });
@@ -339,7 +339,7 @@ describe("the gate-to-read handoff", () => {
     const core = document.querySelector(".core");
     const title = screen.getByRole("heading", { level: 1 });
     expect(core).not.toBeNull();
-    expect(screen.getByLabelText(/Your website address/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Website address/)).toBeInTheDocument();
 
     rerender(
       <LocaleProvider initial="en">
@@ -360,7 +360,7 @@ describe("the gate-to-read handoff", () => {
     expect(document.querySelector(".core")).toBe(core);
     expect(screen.getByRole("heading", { level: 1 })).toBe(title);
     // Only the tail changed: the question is gone, the read's regions are there.
-    expect(screen.queryByLabelText(/Your website address/)).toBeNull();
+    expect(screen.queryByLabelText(/Website address/)).toBeNull();
     expect(
       screen.getByRole("list", { name: "Pages read so far" }),
     ).toBeInTheDocument();
@@ -370,13 +370,13 @@ describe("the gate-to-read handoff", () => {
 
 describe("ReadTheatre phase line", () => {
   const cases: ReadonlyArray<[string, Partial<CompanySiteRead>, string]> = [
-    ["queued", { status: "queued", phase: null }, "Queued, starting shortly"],
-    ["deferred", { status: "deferred", phase: null }, "Paused for now"],
+    ["queued", { status: "queued", phase: null }, "Queued"],
+    ["deferred", { status: "deferred", phase: null }, "Paused"],
     ["crawling", { status: "reading", phase: "crawling" }, "Fetching pages"],
     [
       "extracting",
       { status: "reading", phase: "extracting" },
-      "Working out what you sell",
+      "Identifying what the company sells",
     ],
   ];
 
@@ -745,7 +745,7 @@ describe("ReadTheatre page ticker", () => {
     // ticker, because the screen-reader list beside the crawl picture names
     // every page by its full url on purpose, and that is a different job.
     const ticker = screen.getByRole("list", {
-      name: "The pages I am walking, newest first",
+      name: "Pages read, newest first",
     });
     expect(within(ticker).getByText("/legal")).toBeInTheDocument();
     expect(
@@ -853,7 +853,7 @@ describe("ReadTheatre cost strip", () => {
       />,
     );
 
-    expect(screen.getByText("no model calls billed yet")).toBeInTheDocument();
+    expect(screen.getByText("no billed model calls yet")).toBeInTheDocument();
     expect(screen.queryByText(/\$/)).toBeNull();
   });
 

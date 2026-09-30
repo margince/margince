@@ -35,7 +35,6 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -72,12 +71,11 @@ func contractEnumIndex(t *testing.T) (byName map[string]string, byEnum map[strin
 	if err != nil {
 		t.Fatalf("reading %s: %v", contractsPkgDir, err)
 	}
-	fset := token.NewFileSet()
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(contractsPkgDir, entry.Name()), nil, 0)
+		file, err := gatekit.ParseFile(filepath.Join(contractsPkgDir, entry.Name()), 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", entry.Name(), err)
 		}

@@ -43,7 +43,7 @@ func TestSearchFoldsAccentsAndStemsByLanguage(t *testing.T) {
 	}
 
 	// Quick-find: a name fragment (no full token) must hit via trigram.
-	contacts, _, err := e.Contacts.ListContacts(admin, contacts.ListContactsInput{Query: strPtr("Müll")})
+	contacts, _, err := e.Contacts.ListContacts(admin, contacts.ListContactsInput{Query: StrPtr("Müll")})
 	if err != nil {
 		t.Fatalf("list contacts: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestSearchFoldsApostrophesInNames(t *testing.T) {
 	}
 
 	// List quick-find: the trigram contains-match must fold the same way.
-	contacts, _, err := e.Contacts.ListContacts(admin, contacts.ListContactsInput{Query: strPtr("oreil")})
+	contacts, _, err := e.Contacts.ListContacts(admin, contacts.ListContactsInput{Query: StrPtr("oreil")})
 	if err != nil {
 		t.Fatalf("list contacts: %v", err)
 	}

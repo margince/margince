@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -155,6 +156,55 @@ function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
   }
 }
 
+type RedirectUri = Readonly<{ purpose: string; url: string }>;
+
+// One callback address, with the verb that copies it.
+//
+// A component per row rather than one `copied` on the list: a failed copy has
+// something to SAY, and what it says belongs under the row the reader pressed.
+// It used to say nothing at all — the guard returned in silence, so on a
+// plain-http deployment this button was simply dead, which is the one outcome
+// the rest of the product already agreed not to ship.
+//
+// Which row reads Copied is the CARD's to decide, not the row's, so the label
+// comes from `copied` rather than from the hook: the clipboard holds one
+// address, and a row still claiming an earlier copy would send an operator to
+// paste the other row's URI into a vendor console, where a wrong callback
+// fails later and somewhere else.
+function RedirectUriRow({
+  uri,
+  copied,
+  onCopied,
+}: Readonly<{ uri: RedirectUri; copied: boolean; onCopied: () => void }>) {
+  const t = useT();
+  const purpose = purposeLabel(uri.purpose, t);
+  const copy = useClipboardCopy(
+    uri.url,
+    {
+      copy: t("oauthApp.redirectCopy", { purpose }),
+      copied: t("oauthApp.redirectCopied"),
+      remedy: t("oauthApp.redirectCopyFailed"),
+    },
+    onCopied,
+  );
+  return (
+    <>
+      <SettingRow
+        label={purpose}
+        value={<code>{uri.url}</code>}
+        control={
+          <Button onClick={copy.copy}>
+            {copied
+              ? t("oauthApp.redirectCopied")
+              : t("oauthApp.redirectCopy", { purpose })}
+          </Button>
+        }
+      />
+      {copy.notice}
+    </>
+  );
+}
+
 // RedirectUris lists the callback URLs an operator must register on their OAuth
 // client, one per purpose this deployment actually serves.
 //
@@ -170,11 +220,12 @@ export function RedirectUris({
   uris,
   sub,
 }: Readonly<{
-  uris: readonly { purpose: string; url: string }[] | undefined;
+  uris: readonly RedirectUri[] | undefined;
   sub: string;
 }>) {
   const t = useT();
-  const [copied, setCopied] = useState("");
+  // The address the clipboard actually holds, not a flag per row.
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   // Absent and empty are the same answer here — nothing to register — and the
   // field is contract-required, but a body that lost one hands over `undefined`
   // anyway. This card shares a screen with the installation's own settings, so
@@ -188,40 +239,14 @@ export function RedirectUris({
       <p className="t-label">{t("oauthApp.redirectTitle")}</p>
       <p className="t-caption">{sub}</p>
       <SettingList>
-        {uris.map((uri) => {
-          const purpose = purposeLabel(uri.purpose, t);
-          return (
-            <SettingRow
-              key={uri.purpose}
-              label={purpose}
-              value={<code>{uri.url}</code>}
-              control={
-                <Button
-                  onClick={() => {
-                    // The object itself is guarded, not just the promise: the
-                    // Clipboard API is absent outside a secure context, so on a
-                    // plain-HTTP deployment this THROWS rather than rejecting and
-                    // the rejection handler never runs. A denied permission is
-                    // the rejecting case. Either way the URL stays on screen to
-                    // copy by hand, so the honest failure is to stop claiming it
-                    // was copied.
-                    if (!navigator.clipboard) {
-                      return;
-                    }
-                    navigator.clipboard.writeText(uri.url).then(
-                      () => setCopied(uri.purpose),
-                      () => setCopied(""),
-                    );
-                  }}
-                >
-                  {copied === uri.purpose
-                    ? t("oauthApp.redirectCopied")
-                    : t("oauthApp.redirectCopy", { purpose })}
-                </Button>
-              }
-            />
-          );
-        })}
+        {uris.map((uri) => (
+          <RedirectUriRow
+            key={uri.purpose}
+            uri={uri}
+            copied={copiedUrl === uri.url}
+            onCopied={() => setCopiedUrl(uri.url)}
+          />
+        ))}
       </SettingList>
     </div>
   );

@@ -620,6 +620,35 @@ describe("TeamsCard membership", () => {
     }
   });
 
+  // Only an admin changes who is on a team (identity/teams.go). A seat holding
+  // the team write without the admin role reads membership and cannot change
+  // it or archive the team, since the server would refuse both.
+  it("shows membership read-only to a team_admin holder who is not an admin", async () => {
+    const { fetchMock } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 1 }],
+      users: ROSTER,
+      me: ["custom"],
+      allow: {
+        team_admin: { read: true, create: true, update: true, delete: false },
+        user_admin: { read: true, create: false, update: false, delete: false },
+      },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+    await openTeam();
+
+    const boxes = await screen.findAllByRole("checkbox");
+    expect(boxes.length).toBeGreaterThan(0);
+    for (const box of boxes) {
+      expect(box).toBeDisabled();
+    }
+    expect(screen.queryByRole("button", { name: /archive/i })).toBeNull();
+  });
+
   it("withholds membership entirely from a seat that may not read or change it", async () => {
     const { fetchMock, calls } = backend({
       teams: [{ id: "t-1", name: "Nord", member_count: 1 }],

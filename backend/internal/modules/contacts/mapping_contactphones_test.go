@@ -70,7 +70,7 @@ func TestCreateAndUpdateMapANumberTheSameWay(t *testing.T) {
 	const body = `{"phones":[{"phone":"+49 170 222222","phone_type":"mobile"}]}`
 
 	var create crmcontracts.CreateContactRequest
-	decodeInto(t, `{"full_name":"Ada Lovelace","source":"ui",`+body[1:], &create)
+	decodeInto(t, `{"full_name":"Ada Lovelace","source":"manual",`+body[1:], &create)
 	made, err := contactCreateInput(create)
 	if err != nil {
 		t.Fatalf("mapping the create: %v", err)

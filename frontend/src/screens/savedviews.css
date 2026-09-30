@@ -1,0 +1,31 @@
+/* The reader's saved views, one per row, each row's verbs on its trailing
+   edge so they line up in one column whatever length the name is. */
+.savedviews-manage {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.savedviews-manage-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.savedviews-manage-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A row asking its one question (the new name, or whether to delete) takes
+   the whole row, wrapping its buttons under the field on a narrow dialog. */
+.savedviews-manage-edit {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  width: 100%;
+}

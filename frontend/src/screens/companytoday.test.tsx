@@ -273,7 +273,7 @@ describe("the day's call, and which record it is read from", () => {
         },
       },
     });
-    expect(screen.getByText("Waiting on us")).toBeTruthy();
+    expect(screen.getByText("Waiting on your team")).toBeTruthy();
     // Days since our own last message say nothing once they have replied, and
     // "no answer in 18 days" over a thread that ended with their answer is
     // what costs a reader trust in every other reading beside it.
@@ -584,7 +584,7 @@ describe("the account scan on the needs list", () => {
     );
     expect(
       screen.getByText(
-        "Margince is reading this account's exchanges and deals.",
+        "Margince is analyzing this company’s exchanges and deals.",
       ),
     ).toBeTruthy();
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
@@ -610,10 +610,10 @@ describe("the account scan on the needs list", () => {
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByText("Written by Margince")).toBeTruthy();
-    expect(screen.getByText("Read 14 exchanges and 2 deals")).toBeTruthy();
+    expect(screen.getByText("Analyzed 14 exchanges and 2 deals")).toBeTruthy();
     expect(
       screen.getByText(
-        "The account has moved since. It is read again within the hour.",
+        "The company has changed since. It is analyzed again within the hour.",
       ),
     ).toBeTruthy();
   });
@@ -632,7 +632,7 @@ describe("the account scan on the needs list", () => {
       },
     );
     expect(
-      screen.getByText(/Reading resumes .*Paused by the AI budget/),
+      screen.getByText(/Analysis resumes .*Paused by the AI budget/),
     ).toBeTruthy();
   });
 
@@ -651,7 +651,7 @@ describe("the account scan on the needs list", () => {
         },
       },
     );
-    expect(screen.getByText("Read 1 exchange and 1 deal")).toBeTruthy();
+    expect(screen.getByText("Analyzed 1 exchange and 1 deal")).toBeTruthy();
   });
 
   it("says why the model did not write the rows when the read degraded", () => {

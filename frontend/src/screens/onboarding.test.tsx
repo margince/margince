@@ -15,6 +15,7 @@ import {
   SLOWEST_MEASURED_TEST_MS,
 } from "../../vitest.budget";
 import type { components } from "../api/schema";
+import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import {
   CUSTOMER_FIELDS,
@@ -182,6 +183,8 @@ type StubOptions = {
   proposal?: Proposal;
   messageReply?: MessageReply;
   saveError?: { detail: string; status: number };
+  /** GET /me grants; none unless the case says otherwise. */
+  allow?: GrantSpec;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -273,6 +276,10 @@ function stubApi(options: StubOptions = {}) {
         }
         return jsonResponse(options.read ?? readyRead);
       }
+      // GET /company answers only an admin, so the journey's session is one.
+      if (path.endsWith("/me") && request.method === "GET") {
+        return jsonResponse(meFixture({ allow: options.allow }));
+      }
       if (path.endsWith("/company") && request.method === "GET") {
         return jsonResponse({ detail: "no company yet" }, 404);
       }
@@ -306,7 +313,7 @@ function render(
 
 async function submitWebsite() {
   const composer = await screen.findByRole("textbox", {
-    name: /Your website address/,
+    name: /Website address/,
   });
   await userEvent.type(composer, "gradion.com{Enter}");
 }
@@ -314,7 +321,7 @@ async function submitWebsite() {
 async function chooseManual() {
   await userEvent.click(
     await screen.findByRole("button", {
-      name: /Enter the details yourself/,
+      name: /Enter details manually/,
     }),
   );
   await screen.findByRole("textbox", {
@@ -352,9 +359,7 @@ async function completeManualInterview() {
   await skipManual();
   await skipManual();
   await skipManual();
-  await userEvent.click(
-    screen.getByRole("button", { name: /Review my answers/ }),
-  );
+  await userEvent.click(screen.getByRole("button", { name: /Review answers/ }));
   await screen.findByLabelText(/Company name/);
 }
 
@@ -400,16 +405,16 @@ const DOSSIER_TEST_MS =
  */
 async function openTheEditingBoard(): Promise<void> {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Read the whole profile" }),
+    await screen.findByRole("button", { name: "Read full profile" }),
   );
   await userEvent.click(
-    await screen.findByRole("button", { name: "Choose the facts to keep" }),
+    await screen.findByRole("button", { name: "Choose facts to keep" }),
   );
 }
 
 describe("the conversational company act", () => {
   it("loads the detailed AI profile after the public login profile was cached", async () => {
-    const calls = stubApi();
+    const calls = stubApi({ allow: { automation: ["update"] } });
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -427,13 +432,27 @@ describe("the conversational company act", () => {
     expect(requestTo(calls, "/ai/profile", "GET")).toBeTruthy();
   });
 
+  // GET /ai/profile is gated on automation:update, so a seat without it names
+  // no model rather than drawing a 403 on every journey screen.
+  it("does not read the AI profile for a seat without automation update", async () => {
+    const calls = stubApi();
+    render(<OnboardingScreen />);
+
+    expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
+    await waitFor(() => expect(requestTo(calls, "/me", "GET")).toBeTruthy());
+    expect(requestTo(calls, "/ai/profile", "GET")).toBeUndefined();
+    expect(
+      screen.getAllByText(/Runtime details unavailable/).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("offers an honest choice between website reading and telling directly", async () => {
     stubApi();
     render(<OnboardingScreen />);
 
-    expect(await screen.findByLabelText(/Your website address/)).toBeTruthy();
+    expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: /Enter the details yourself/ }),
+      screen.getByRole("button", { name: /Enter details manually/ }),
     ).toBeTruthy();
     expect(screen.queryByLabelText(/Company name/)).toBeNull();
   });
@@ -460,7 +479,7 @@ describe("the conversational company act", () => {
       // the collapsed row's own summary.
       await openTheEditingBoard();
       await screen.findByRole("heading", {
-        name: /Here is everything I found/,
+        name: /This is everything I found/,
       });
       const icpRow = document.getElementById("ob-triage-row-icp");
       if (icpRow === null) {
@@ -561,13 +580,13 @@ describe("the conversational company act", () => {
     // A deferral is scheduled work, not a failure: it arrives as a status and
     // carries the server's own explanation of when it resumes.
     const paused = await screen.findByRole("status");
-    expect(paused.textContent).toContain("That read is paused.");
+    expect(paused.textContent).toContain("The read is paused.");
     expect(paused.textContent).toContain(
       "This website read will resume automatically.",
     );
     expect(screen.queryByRole("alert")).toBeNull();
     expect(
-      screen.getByRole("button", { name: /Enter the details yourself/ }),
+      screen.getByRole("button", { name: /Enter details manually/ }),
     ).toBeTruthy();
   });
 
@@ -628,7 +647,7 @@ describe("the mandatory company minimum", () => {
   it("saves a manually entered company without requiring a website", async () => {
     const calls = stubApi();
     render(<OnboardingScreen />);
-    await screen.findByLabelText(/Your website address/);
+    await screen.findByLabelText(/Website address/);
     await chooseManual();
     await completeManualInterview();
 
@@ -656,10 +675,10 @@ describe("the mandatory company minimum", () => {
   it("starts with legal identity and does not advance without the required company name", async () => {
     const calls = stubApi();
     render(<OnboardingScreen />);
-    await screen.findByLabelText(/Your website address/);
+    await screen.findByLabelText(/Website address/);
     await chooseManual();
 
-    expect(screen.getByText("Your legal company")).toBeTruthy();
+    expect(screen.getByText("Legal company")).toBeTruthy();
     // Past the six optional legal facts to display_name, the one question in
     // this chapter that blocks the interview until it is answered.
     await skipManual();
@@ -681,14 +700,16 @@ describe("the mandatory company minimum", () => {
   it("treats whitespace as missing and keeps a failed save editable", async () => {
     stubApi({ saveError: { detail: "database unavailable", status: 503 } });
     render(<OnboardingScreen />);
-    await screen.findByLabelText(/Your website address/);
+    await screen.findByLabelText(/Website address/);
     await chooseManual();
     await completeManualInterview();
 
-    await userEvent.clear(screen.getByLabelText(/What do you sell\?/));
-    await userEvent.type(screen.getByLabelText(/What do you sell\?/), "   ");
+    await userEvent.clear(screen.getByLabelText(/Products and services/));
+    await userEvent.type(screen.getByLabelText(/Products and services/), "   ");
     expect(
-      screen.getByText("Fill these in before you continue: What do you sell?"),
+      screen.getByText(
+        "Complete these fields to continue: Products and services",
+      ),
     ).toBeTruthy();
     expect(
       (
@@ -698,18 +719,18 @@ describe("the mandatory company minimum", () => {
       ).disabled,
     ).toBe(true);
 
-    await userEvent.clear(screen.getByLabelText(/What do you sell\?/));
+    await userEvent.clear(screen.getByLabelText(/Products and services/));
     await userEvent.type(
-      screen.getByLabelText(/What do you sell\?/),
+      screen.getByLabelText(/Products and services/),
       "Revenue software",
     );
     await userEvent.click(
       screen.getByRole("button", { name: /Confirm and save company/ }),
     );
-    expect(await screen.findByText("Couldn't save your company")).toBeTruthy();
+    expect(await screen.findByText("Company not saved")).toBeTruthy();
     expect(screen.getByText("database unavailable")).toBeTruthy();
     expect(
-      (screen.getByLabelText(/What do you sell\?/) as HTMLTextAreaElement)
+      (screen.getByLabelText(/Products and services/) as HTMLTextAreaElement)
         .value,
     ).toBe("Revenue software");
   });

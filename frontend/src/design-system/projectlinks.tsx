@@ -34,6 +34,7 @@ export type LinkWords = Readonly<{
   attach: string;
   move: string;
   detachTitle: string;
+  detachConfirm: string;
   search: string;
 }>;
 
@@ -93,8 +94,10 @@ export type ProjectLinksAdapter = Readonly<{
   // Take this project off the record. Absent means the link cannot be removed
   // from HERE — a project's own company list says so on the project page.
   detach?: (projectID: string) => Promise<void>;
-  // Start a new project on this record, when the page offers it.
-  onCreate?: () => void;
+  // The page's own create verb, when it offers one. A node rather than a
+  // callback: the create form, its fields and its write are the page's, and a
+  // callback would leave this section owning a button with no form behind it.
+  create?: ReactNode;
 }>;
 
 export function ProjectLinks({
@@ -137,6 +140,7 @@ export function ProjectLinks({
     attach: t("projectLinks.attach"),
     move: t("projectLinks.move"),
     detachTitle: t("projectLinks.detachTitle"),
+    detachConfirm: t("projectLinks.detachConfirm"),
     search: t("projectLinks.searchLabel"),
   };
   // Focus returns to the SECTION rather than to the row's own verb: a
@@ -178,11 +182,7 @@ export function ProjectLinks({
 
   const verbs = !adapter.readOnly && (
     <div className="pl-verbs">
-      {adapter.onCreate && (
-        <Button variant="ghost" onClick={adapter.onCreate}>
-          {t("projectLinks.new")}
-        </Button>
-      )}
+      {adapter.create}
       {canAdd || moving ? (
         <Button variant="ghost" onClick={() => setPicking(true)}>
           {moving ? said.move : said.attach}
@@ -391,7 +391,7 @@ function DetachDialog({
       onClose={onClose}
       returnFocusTo={returnFocusTo}
       title={words.detachTitle}
-      confirmLabel={t("projectLinks.detachConfirm")}
+      confirmLabel={words.detachConfirm}
       confirmVariant="danger"
       pending={busy}
       error={refusal}

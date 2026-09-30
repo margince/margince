@@ -120,13 +120,13 @@ func claimedConsts(t *testing.T) []claimedConst {
 	t.Helper()
 	seen := map[string]bool{}
 	var out []claimedConst
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, c := range allClaims(t) {
 		if c.shape != driftShape || !strings.Contains(c.decl, "const") ||
 			(c.held != "" && c.held != thisGate) {
 			continue
 		}
-		file, err := parser.ParseFile(fset, c.path, nil, parser.ParseComments)
+		file, err := gatekit.ParseFile(c.path, parser.ParseComments)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", c.path, err)
 		}
@@ -200,8 +200,8 @@ func rawSpellingsOf(t *testing.T, c claimedConst) []string {
 			continue
 		}
 		path := filepath.Join(c.dir, entry.Name())
-		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		fset := gatekit.SourceFileSet()
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

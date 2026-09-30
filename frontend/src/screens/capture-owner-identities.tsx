@@ -12,7 +12,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
@@ -100,7 +100,7 @@ export function OwnerIdentitiesCard() {
   return (
     <Panel title={t("ownerIdentities.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("ownerIdentities.sub")}</p>
+        <PanelIntro>{t("ownerIdentities.sub")}</PanelIntro>
         <SettingList>
           <SettingRow
             label={t("ownerIdentities.addLabel")}

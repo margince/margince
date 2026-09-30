@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { LocaleProvider } from "../i18n";
+import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { installFetchStub, jsonResponse } from "./story-utils";
 
@@ -14,7 +15,7 @@ import { installFetchStub, jsonResponse } from "./story-utils";
 // the DEPLOYMENT composed and what the admin chose of it.
 
 const meta: Meta<typeof SignInMethodsCard> = {
-  title: "Settings/Company/Sign-in & apps/Sign-in methods",
+  title: "Settings/Company/Sign-in and apps/Sign-in methods",
   component: SignInMethodsCard,
   parameters: { layout: "padded" },
 };
@@ -45,8 +46,13 @@ function Served({
     "GET /me": () =>
       jsonResponse({
         user: { email: "admin@brandt.example" },
-        authorization: { installation_settings: ["read", "update"] },
+        authorization: {
+          installation_settings: ["read", "update"],
+          authentication_policy: ["read", "update"],
+        },
       }),
+    "GET /users/assignable-roles": () =>
+      jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
   });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },

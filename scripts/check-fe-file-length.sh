@@ -29,14 +29,19 @@ cd "$(dirname "$0")/.."
 
 CAP="${FE_FILE_LINE_CAP:-500}"
 TEST_CAP="${FE_TEST_FILE_LINE_CAP:-1000}"
-WAIVERS="scripts/fe-file-length-waivers.txt"
+# The tree and the ledger, overridable for the gate's own test. A ratchet that
+# has never been shown to refuse a grown file is a ratchet nobody has tested —
+# and it cannot be tested against the real tree, where every case it must catch
+# would be a real failure. The defaults are the product's.
+ROOT="${FE_FILE_LENGTH_ROOT:-frontend/src}"
+WAIVERS="${FE_FILE_LENGTH_WAIVERS:-scripts/fe-file-length-waivers.txt}"
 
-find frontend/src \( -name "*.ts" -o -name "*.tsx" \) \
+find "$ROOT" \( -name "*.ts" -o -name "*.tsx" \) \
     ! -name "*.d.ts" \
-    ! -path "frontend/src/api/public-events.ts" \
-    ! -path "frontend/src/i18n/en.ts" \
-    ! -path "frontend/src/i18n/de.ts" \
-    ! -path "frontend/src/i18n/vi.ts" \
+    ! -path "$ROOT/api/public-events.ts" \
+    ! -path "$ROOT/i18n/en.ts" \
+    ! -path "$ROOT/i18n/de.ts" \
+    ! -path "$ROOT/i18n/vi.ts" \
     -exec wc -l {} + \
 | awk -v cap="$CAP" -v testcap="$TEST_CAP" -v waivers="$WAIVERS" '
 BEGIN {

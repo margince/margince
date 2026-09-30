@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -80,7 +81,7 @@ func sendEmailCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewSendEmailCall(deps.records, agents.SendEmailCommand{
+	return agents.NewSendEmailCall(deps.records, deps.language, agents.SendEmailCommand{
 		ActivityID: id,
 		To:         in.To,
 		Cc:         in.Cc,
@@ -104,7 +105,7 @@ func sendMessageCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewSendMessageCall(deps.records, deps.channels, agents.SendMessageCommand{
+	return agents.NewSendMessageCall(deps.records, deps.channels, deps.language, agents.SendMessageCommand{
 		ActivityID: id,
 		Body:       in.Body,
 	}), nil
@@ -126,7 +127,7 @@ func sendCompanyEmailCommand(_ agentPolicy, deps restCommandDeps, _ *http.Reques
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewSendCompanyEmailCall(deps.records, agents.SendCompanyEmailCommand{
+	return agents.NewSendCompanyEmailCall(deps.records, deps.language, agents.SendCompanyEmailCommand{
 		To:      in.To,
 		Cc:      in.Cc,
 		Subject: in.Subject,
@@ -150,11 +151,20 @@ func bookMeetingCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, bo
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewBookMeetingCall(deps.records, agents.BookMeetingCommand{
+	return agents.NewBookMeetingCall(deps.records, deps.language, agents.BookMeetingCommand{
 		HostUserID: in.HostUserID,
 		Start:      in.Start,
 		End:        in.End,
 		Subject:    in.Subject,
 		Links:      in.Links,
 	}), nil
+}
+
+//nolint:ireturn // both transports resolve the same invitation command.
+func meetingInvitationCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+	in, err := commandBody[crmcontracts.MeetingInvitationRequest](body)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewMeetingInvitationCall(deps.records, deps.language, in), nil
 }

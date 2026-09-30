@@ -5,13 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import { company360 } from "./company.fixtures";
-import {
-  CompanyActionBadges,
-  CompanyLifecycleControl,
-  CompanyRelationshipBadges,
-} from "./companyheader";
+import { CompanyActionBadges } from "./companyheader";
 import { CompanyHeaderActions } from "./companyheaderactions";
 import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
+import { CompanyMarks } from "./companymarks";
 import {
   installFetchStub,
   jsonResponse,
@@ -43,6 +40,7 @@ const company: Company = {
   legal_name: "Brandt Automotive GmbH",
   lifecycle: "customer",
   owner_id: "u-1",
+  visibility: "workspace",
   industry: "Automotive",
   size_band: "51-200",
   description: "Retrofits commercial fleets for zero-emission depots.",
@@ -133,15 +131,8 @@ function Header({
     <StoryProviders>
       <div style={{ maxWidth: 640 }}>
         <CompanySubtitle company={record} />
-        <div
-          style={{
-            marginTop: "var(--space-2)",
-            display: "flex",
-            gap: "var(--space-2)",
-          }}
-        >
-          <CompanyLifecycleControl company={record} />
-          <CompanyRelationshipBadges company={record} />
+        <div style={{ marginTop: "var(--space-2)" }}>
+          <CompanyMarks company={record} />
         </div>
         <CompanyIdentityFacts company={record} view={view} loading={loading} />
         <div
@@ -232,11 +223,12 @@ export const MenuOpen: Story = {
   },
 };
 
-// An archived account. Its verbs stay in the menu, refused, over the one
-// sentence that says why — a control blocked by the record's STATE is disabled
-// with its reason, never dropped (STATE-4a), because a missing button reads as
-// a build without the feature. The play() opens the menu, since the refusal is
-// the thing worth seeing here.
+// An archived account. "Archived" leads the pills under the name, a state of
+// the record rather than one more control among its verbs. Its verbs stay in
+// the menu, refused, over the one sentence that says why — a control blocked
+// by the record's STATE is disabled with its reason, never dropped (STATE-4a),
+// because a missing button reads as a build without the feature. The play()
+// opens the menu, since the refusal is the thing worth seeing here.
 export const ArchivedAccount: Story = {
   render: () => (
     <Header

@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { usePublishSelection } from "../app/attention";
-import { useCanUpsert } from "../app/capability";
+import { useCanUpsert, useHoldsAdminRole } from "../app/capability";
 import { navigate } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
@@ -25,11 +25,11 @@ import {
 } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { confidenceLevel, FieldDiff } from "../design-system/trust";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   coldFieldLabel,
@@ -43,6 +43,7 @@ import {
 } from "./common";
 import { ReadWarnings, SavedNotice } from "./company-context.notices";
 import { CompanyMark } from "./companymark";
+import { storeCompany, useCompany } from "./installationcompany";
 import "./company-context.css";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];
@@ -127,8 +128,8 @@ const MULTILINE_FIELDS = new Set<keyof CompanyInput>([
   "history",
 ]);
 
-// The rollout answer every surface that gates on the flag shares — the page
-// here, the onboarding entry, and the settings nav. Named so a caller can ask
+// The rollout answer every surface that gates on the flag shares — the card
+// here and the onboarding journey. Named so a caller can ask
 // the cache whether the answer has LANDED, which is a different question from
 // whether the request went out.
 export const companyContextCapabilitiesQueryKey = [
@@ -167,7 +168,7 @@ export function ManualCompanySetup() {
       return data;
     },
     onSuccess: (profile) => {
-      queryClient.setQueryData(["company"], profile);
+      storeCompany(queryClient, profile);
       navigate({ screen: "home" });
     },
   });
@@ -292,25 +293,19 @@ export function CompanyContextCard() {
   const t = useT();
   const queryClient = useQueryClient();
   const capabilities = useCompanyContextCapabilities();
-  // Every seat reads this profile — it is the shared business context behind
-  // drafting and search — and the settings entry that leads here opens on the
-  // read grant. Writing it is an upsert: the company is one standing record
+  // Writing it is an upsert: the company is one standing record
   // that the first save MINTS, so the server demands `create` when no anchor
   // exists and `update` when one does, deciding inside its own transaction. A
   // client asking for either verb alone would hide the editor from a principal
   // the server would have admitted.
   const me = useMe();
   const canEdit = useCanUpsert("company");
-  const company = useQuery({
-    queryKey: ["company"],
-    queryFn: async (): Promise<CompanyProfile> => {
-      const { data, error } = await api.GET("/company");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  // The installation's own profile is administered, not read on a grant:
+  // useCompany asks only from an admin seat, and for any other this card draws
+  // nothing (below). The settings page it sits on opens for readers who are not
+  // admins too (settingscatalog.ts, the `company` entry); this card is not theirs.
+  const isAdmin = useHoldsAdminRole();
+  const company = useCompany(true);
   const [form, setForm] = useState<CompanyInput | null>(null);
   // Which row's Edit was pressed, and so where the dialog puts focus. One
   // dialog holds every field because ONE PUT writes them: a per-group form
@@ -365,7 +360,7 @@ export function CompanyContextCard() {
       return data;
     },
     onSuccess: (profile) => {
-      queryClient.setQueryData(["company"], profile);
+      storeCompany(queryClient, profile);
       // Committing is what the dialog was opened for, so a landed save closes
       // it and leaves the confirmation on the card behind — where the rows the
       // save changed are. A refused save keeps the dialog open with what was
@@ -500,7 +495,7 @@ export function CompanyContextCard() {
       // which owns that state — so this only writes what the applied refresh
       // ENDS: the read the reviewer was working through, and the choices they
       // made in it.
-      queryClient.setQueryData(["company"], profile);
+      storeCompany(queryClient, profile);
       setReadID(null);
       setResolutions({});
     },
@@ -526,6 +521,14 @@ export function CompanyContextCard() {
     stored !== null &&
     JSON.stringify(form) !== JSON.stringify(stored);
   useUnsavedGuard(dirty);
+
+  // Nothing rather than a refusal, for the reason the rollout flag returns
+  // nothing: a surface that is none of this reader's work is not a fact being
+  // withheld from them, and a card saying so on a tab they are entitled to
+  // open would draw a permission boundary as a fault.
+  if (!isAdmin) {
+    return null;
+  }
 
   if (capabilities.data && !capabilities.data.read_enabled) {
     return null;
@@ -616,7 +619,7 @@ function CompanyFactsCard({
   saved,
   onEdit,
 }: Readonly<{
-  company: QueryLike<CompanyProfile>;
+  company: QueryLike<CompanyProfile | null>;
   /** Which rollout stage this installation is on, once the probe has answered. */
   rollout?: Capabilities["rollout"];
   form: CompanyInput | null;
@@ -626,7 +629,9 @@ function CompanyFactsCard({
   onEdit: (field: keyof CompanyInput) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
+  const confirmed = company.data?.fields?.length ?? 0;
   return (
     <Panel
       tone="accent"
@@ -646,10 +651,9 @@ function CompanyFactsCard({
         company.data ? (
           <>
             <span className="company-context-count">
-              <strong>
-                {formatNumber(company.data.fields?.length ?? 0, locale)}
-              </strong>{" "}
-              {t("settings.companyConfirmed")}
+              {plural("settings.companyConfirmed", confirmed, {
+                count: formatNumber(confirmed, locale),
+              })}
             </span>
             {rollout && <Badge>{rollout}</Badge>}
           </>
@@ -657,7 +661,7 @@ function CompanyFactsCard({
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.companySub")}</p>
+        <PanelIntro>{t("settings.companySub")}</PanelIntro>
         {/* The surface keeps its place and states its posture ONCE. This is a
             PERMISSION, which is why it speaks at all — the rollout flag returns
             null instead, because a capability this installation does not have
@@ -668,6 +672,7 @@ function CompanyFactsCard({
           pendingLabel={t("settings.companySourceTitle")}
         >
           {(profile) =>
+            profile !== null &&
             form && (
               <>
                 {/* The company's FACE, above the statements about it. It is the
@@ -756,7 +761,7 @@ function CompanySourceCard({
   return (
     <Panel title={t("settings.companySourceTitle")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.companyTrust")}</p>
+        <PanelIntro>{t("settings.companyTrust")}</PanelIntro>
         <SettingList>
           <SettingRow
             label={t("settings.companyWebsite")}

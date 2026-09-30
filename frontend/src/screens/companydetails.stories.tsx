@@ -9,7 +9,7 @@ import {
 } from "./story-utils";
 
 const meta: Meta<typeof CompanyDetails> = {
-  title: "Records/Company Details",
+  title: "Records/Company 360/Rail/Editable details",
   component: CompanyDetails,
   decorators: [
     (Story) => (

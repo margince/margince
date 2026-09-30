@@ -42,6 +42,11 @@ type Message struct {
 	counterparty     string
 	counterpartyName string // display name from the counterparty's header — untrusted text
 	threadKey        string // conversation identity: References root / In-Reply-To / own Message-ID
+	// replyTo lists the Message-IDs this message says it answers: In-Reply-To
+	// and each References entry, unbracketed and deduplicated. threadKey keeps
+	// only the first; the rest is what joins two roots of one conversation
+	// once a mail program has shortened the chain (capture/threadjoin.go).
+	replyTo []string
 	// deliveredTo is the address the receiving infrastructure recorded this
 	// message as delivered to, from a position a sender could not have
 	// authored, and empty whenever no such claim can be trusted
@@ -66,7 +71,7 @@ type Message struct {
 	sentByOwner     bool // the PROVIDER attested the owner sent this — set by AttestSentByOwner, never parsed
 	// participants are everyone on To, Cc and Bcc who is neither the mailbox
 	// owner nor the counterparty — the two ends already have their own rows.
-	participants []connector.MessageParticipant
+	participants connector.Parties
 	// addresses is every address the message names, the two ends included. The
 	// internal-vs-external rule is about the whole message, so it needs the
 	// full set rather than the derived ends (ADR-0082 §3).
@@ -176,6 +181,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		counterparty:     counterparty,
 		counterpartyName: counterpartyName,
 		threadKey:        threadKey(header.Get("References"), header.Get("In-Reply-To"), messageID),
+		replyTo:          replyIDs(header.Get("References"), header.Get("In-Reply-To"), messageID),
 		deliveredTo:      deliveredTo,
 		autoReply:        autoReply,
 		machineTouched:   machineTouched,
@@ -207,10 +213,10 @@ func (m Message) Addresses() []string { return m.addresses }
 // To names, and giving it Parse's whole Message would invite it to re-derive
 // direction or subject from headers the activity row already settled at
 // capture time.
-func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, error) {
+func ParticipantsOf(raw []byte, owner string) (connector.Parties, error) {
 	msg, err := Parse(raw, owner)
 	if err != nil {
-		return nil, err
+		return connector.Parties{}, err
 	}
 	return msg.participants, nil
 }
@@ -227,7 +233,7 @@ func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, e
 // To wins over Cc when an address appears on both, which is a real thing
 // senders do: a direct recipient who is also copied was addressed directly,
 // and that is the stronger claim about their part in the conversation.
-func otherParties(toList, ccList, bccList []*mail.Address, ownerLower, counterparty string) []connector.MessageParticipant {
+func otherParties(toList, ccList, bccList []*mail.Address, ownerLower, counterparty string) connector.Parties {
 	counterpartyLower := strings.ToLower(strings.TrimSpace(counterparty))
 	seen := map[string]bool{ownerLower: true, counterpartyLower: true}
 	delete(seen, "")
@@ -286,6 +292,43 @@ func threadKey(references, inReplyTo, messageID string) string {
 		return trimAngle(irt)
 	}
 	return trimAngle(strings.TrimSpace(messageID))
+}
+
+// maxReplyIDs bounds how many referenced ids one message contributes. A real
+// References chain is a handful of ids; the header is the sender's text, and
+// an unbounded list would let one message fan out into arbitrarily many rows.
+const maxReplyIDs = 50
+
+// maxReplyIDBytes is the longest referenced id kept, the same bound the
+// capture sink holds a thread key to (maxIndexedHeaderChars).
+const maxReplyIDBytes = 998
+
+// replyIDs lists every Message-ID this message says it answers: In-Reply-To
+// first, then the References chain from its newest end, so the ids nearest
+// this message survive the bound. Its own id and anything oversized are left
+// out.
+func replyIDs(references, inReplyTo, messageID string) []string {
+	own := trimAngle(strings.TrimSpace(messageID))
+	refs := strings.Fields(references)
+	candidates := make([]string, 0, len(refs)+1)
+	candidates = append(candidates, strings.Fields(inReplyTo)...)
+	for i := len(refs) - 1; i >= 0; i-- {
+		candidates = append(candidates, refs[i])
+	}
+	seen := make(map[string]bool, len(candidates))
+	out := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		id := trimAngle(c)
+		if id == "" || id == own || seen[id] || len(id) > maxReplyIDBytes {
+			continue
+		}
+		seen[id] = true
+		out = append(out, id)
+		if len(out) == maxReplyIDs {
+			break
+		}
+	}
+	return out
 }
 
 // trimAngle strips the RFC822 angle brackets off a message id.
@@ -349,7 +392,8 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 		DeliveredTo:  m.deliveredTo,
 		Counterparty: m.recordCounterparty(),
 		ThreadKey:    m.threadKey,
-		Participants: m.participants,
+		ReplyTo:      m.replyTo,
+		Participants: m.participants.Participants,
 		Addresses:    m.addresses,
 		Parts:        m.recordParts(),
 		PartDrops:    m.recordDrops(),

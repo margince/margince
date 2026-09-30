@@ -37,8 +37,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -285,6 +283,7 @@ var touchStatements = gatekit.Waive(map[string]string{
 	"internal/modules/capture/sinkprojectwrite.go:linkActivityToProject":          "the automatic half of the same relink: filing under a project changes who the activity reaches, so it must move the version a staged approval pinned, for the reason the human path gives",
 	"internal/modules/contacts/providerclaimrevertfields.go:touchRevertedContact": "taking a bought profile link or address back off a record changes what that record says without writing a contact column, and the contact's version is what an editor's If-Match is checked against — the same claim touchContact makes for the write direction. Distinct from it because a revert must reach an ARCHIVED contact: archiving is not erasure, the purchase is still on the record, and touchContact's liveness refusal would roll the whole revert back while the action reported success. The caller holds the row FOR UPDATE, so the bump is not a blind write",
 	"internal/modules/contacts/linkedinmatchapply.go:touchContact":                "a LinkedIn handle decision changes what the contact record says without writing a contact column, and the contact's own version is what an editor's If-Match is checked against; the row is locked first, so the bump is not a blind write",
+	"internal/modules/deals/reorder.go:markLadderChanged":                         "a pipeline's version is its ladder's version: adding, removing or repositioning a stage writes no pipeline column, yet a stage reorder's If-Match is judged against the pipeline's version, so every such write must move it. Its callers hold the row through lockLadder first, so the bump is not a blind write",
 	"internal/modules/contacts/domaintriagenametwin.go:adoptDomainIntoCompany":    "adopting a second domain onto a company changes the record's domain set without writing a company column, and the company's version is what an editor's If-Match is checked against — a client holding the version from before the adoption could otherwise replace the domain set and silently drop the domain just added, with no conflict to notice. The same claim an ordinary domain replace-set makes in company_update.go. The row is locked first, so the bump is not a blind write",
 })
 
@@ -345,7 +344,7 @@ func TestNoStatementWritesAColumnItsTriggerAlreadyWrites(t *testing.T) {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}

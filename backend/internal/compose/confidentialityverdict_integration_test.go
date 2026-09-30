@@ -764,8 +764,8 @@ func TestFinishingSettledThreadsIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first pass: %v", err)
 	}
-	if first != 1 {
-		t.Fatalf("first pass finished %d threads, want 1", first)
+	if first.processed != 1 {
+		t.Fatalf("first pass finished %d threads, want 1", first.processed)
 	}
 	if got := activityAudience(t, e, stranded); got != "workspace" {
 		t.Fatalf("the stranded message is %q, want workspace", got)
@@ -775,9 +775,9 @@ func TestFinishingSettledThreadsIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second pass: %v", err)
 	}
-	if second != 0 {
+	if second.processed != 0 {
 		t.Fatalf("second pass finished %d threads, want 0: a repair that keeps finding work "+
-			"it already did writes an audit trail of changes that did not happen", second)
+			"it already did writes an audit trail of changes that did not happen", second.processed)
 	}
 }
 

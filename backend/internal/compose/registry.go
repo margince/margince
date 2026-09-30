@@ -46,16 +46,16 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 	// handle: a registry built for a named workspace must not admit through a
 	// service that resolves a different one.
 	return registryWithGate(db, auth.NewGate(identity.NewServiceFor(db)), nil, send, companyEnricher{}, nil, nil, nil,
-		meetingBriefReader(newMeetingBriefService(db)), slog.Default())
+		meetingBriefReader(newMeetingBriefService(db)), slog.Default(), false)
 }
 
 func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) *agents.Registry {
 	db := InstallationDB(pool)
 	brief := meetingBriefReader(newMeetingBriefService(db))
 	if brain == nil {
-		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default())
+		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), false)
 	}
-	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default())
+	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), false)
 }
 
 // registryWithGate composes the tool surface. The volume budget charger arrives as
@@ -72,12 +72,9 @@ func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) 
 // model path has none, and the offline fake binds no embeddings model — and
 // every path that can lose the vector lane says so on the wire rather than
 // serving a lexically-ranked page under a semantic label.
-func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.EmailDrafter, send SendPath, enricher agents.CompanyEnricher, embedder search.Embedder, transcriptOnLanding activities.TranscriptReadEnqueue, imports agents.Imports, meetingBrief agents.MeetingBriefReader, log *slog.Logger, opts ...agents.RegistryOption) *agents.Registry {
+func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.EmailDrafter, send SendPath, enricher agents.CompanyEnricher, embedder search.Embedder, transcriptOnLanding activities.TranscriptReadEnqueue, imports agents.Imports, meetingBrief agents.MeetingBriefReader, log *slog.Logger, listsOn bool, opts ...agents.RegistryOption) *agents.Registry {
 	pool := db.Pool()
-	provider := NewProviderFor(db)
-	if transcriptOnLanding != nil {
-		provider = provider.WithTranscriptEnqueue(transcriptOnLanding)
-	}
+	provider := providerWithTranscripts(db, transcriptOnLanding)
 	// Retry safety, wired for EVERY role that composes this surface rather than
 	// arriving as the API server's option the way the read charger does. The
 	// difference is who the promise is made to: the read bound governs agent
@@ -95,7 +92,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// the contract tightened and the REST door refuses (#982) — one credential,
 	// two answers, which is what ADR-0055 exists to prevent.
 	opts = append(opts, withContractTierFloor(),
-		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider))
+		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
+		agents.WithBaseLanguage(installationLanguage(pool)))
 	// ONE approvals service for both directions of the 🟡 loop, and it is the
 	// service that carries the follow-on EFFECTS. Staging can run on a bare
 	// engine — it writes a proposal and nothing else — but deciding cannot: a
@@ -120,6 +118,10 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// entry point, which is what the REST route calls too.
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)
+	// The bulk change runs the engine the /v1/bulk routes run, admitted against
+	// this registry's own gate so an agent's changed records meet the write
+	// counter the registry charges them to.
+	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(listsOn)})
 	// enrich rides the site-read seam rather than the datasource one: it reads
 	// the company's OWN website, which no record provider can answer.
 	agents.RegisterEnrichTool(registry, provider, enricher)
@@ -208,11 +210,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// The comms tools ride the same store paths as the HTTP transport. The risk
 	// decorator adds the coverage findings a deal anchor would otherwise
 	// assemble without.
-	retriever := riskAwareRetriever{
-		pool:  pool,
-		inner: search.NewRetriever(search.NewStore(InstallationDB(pool)), embedder),
-	}
-	agents.RegisterIntentTools(registry, retriever, meetingBrief)
+	searchRetriever := search.NewRetriever(search.NewStore(InstallationDB(pool)), embedder)
+	retriever := riskAwareRetriever{pool: pool, inner: searchRetriever}
+	agents.RegisterIntentTools(registry, retriever, meetingBrief, provider)
 	// The transport directory, read from this package's boot snapshot — the
 	// composed set is the composition root's fact, so the module takes it as a
 	// seam rather than enumerating connectors it may not reach.
@@ -223,6 +223,13 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// stamped, the caller's own row scope is re-applied, and the record is
 	// charged against their read bound.
 	agents.RegisterContextSearchTool(registry, provider, retriever)
+	// The evidence behind a saved run: the report drawer's own drill-through
+	// names the records, the same retriever searches only those, and each
+	// listed record is read back through the provider as search_context's are.
+	agents.RegisterReportEvidenceTool(registry, provider, reportEvidenceSeam{
+		db: InstallationDB(pool), floor: analyticsquery.DefaultFloor,
+		ranker: searchRetriever, classifier: searchRetriever,
+	}.SearchReportEvidence)
 	// Identity resolution. The ladder is workspace-wide by design — a duplicate
 	// is a duplicate whoever is looking — so the provider is not decoration
 	// here: it is the ONLY thing that applies this caller's row scope to a
@@ -232,16 +239,16 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterWhoamiTool(registry, actingIdentity(pool))
 	agents.RegisterColleaguesTool(registry, colleagueLister(pool))
 	agents.RegisterTagTools(registry, tagSeam(pool))
+	// Registered on every role so the tool list is the contract's, and refused
+	// while the installation has lists switched off, as the routes are.
+	agents.RegisterListTools(registry, newListSeam(pool, listsOn))
 	// The migrate-in verbs, ALWAYS served: the contract declares all four, and
 	// a registry that does not serve a declared verb advertises something
 	// tools/list cannot offer. A registry built with no Server falls back to
 	// bare handlers — its reads work, and the three verbs that need the source
 	// file refuse with errNoObjectStore, which is what a role storing no
 	// objects can honestly do.
-	if imports == nil {
-		imports = importsOverDB(db)
-	}
-	agents.RegisterImportTools(registry, imports)
+	agents.RegisterImportTools(registry, importsOr(imports, db))
 	// The pipeline-risk intents: the candidate set rides the deals
 	// module's row-scoped list, the drafts land through the provider.
 	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider))
@@ -262,14 +269,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		introPathLister(pool),
 		atRiskLister(pool, contacts.NewStore(InstallationDB(pool))))
 	agents.RegisterCommsTools(registry, newCommsAdapter(pool, drafter, send), provider)
-	// The location check (🟢), and the verb the probe card hangs off. It reads
-	// no record and takes no seam, so it registers unconditionally.
-	//
-	// TEMPORARY. It exists to answer one question — does a chat host let a
-	// Margince card read the device's position — which no document can answer
-	// and which has a different answer per host. Delete it and its view once the
-	// matrix is filled in; see apps.GeoProbeURI.
-	agents.RegisterGeoProbeTool(registry)
+	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
 	// The composed extension set's governed tools ride the same registry
 	// and admission gate as the core tools, registered last so a name that
 	// collides with a core verb fails loudly (RegisterExtensions stashed
@@ -348,6 +348,11 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 		if outcome.ExcludedByPermission != nil {
 			result["excluded_by_permission"] = *outcome.ExcludedByPermission
 		}
+		// The owner narrowing too: a model reading a per-rep breakdown with no
+		// signal would report it as every rep's.
+		if outcome.PopulationNarrowed != "" {
+			result["population_narrowed"] = outcome.PopulationNarrowed
+		}
 		return json.Marshal(result)
 	}
 }
@@ -372,4 +377,14 @@ func decidingApprovalsService(pool *pgxpool.Pool, send SendPath, log *slog.Logge
 		svc = svc.WithLogger(log)
 	}
 	return svc
+}
+
+// providerWithTranscripts is the provider over db, starting a transcript read
+// when one lands if the role wired a reader for it.
+func providerWithTranscripts(db *database.DB, onLanding activities.TranscriptReadEnqueue) *Provider {
+	provider := NewProviderFor(db)
+	if onLanding != nil {
+		provider = provider.WithTranscriptEnqueue(onLanding)
+	}
+	return provider
 }

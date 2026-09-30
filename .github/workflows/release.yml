@@ -125,7 +125,7 @@ jobs:
       # The SBOM pipeline pins its SPDX validator to linux/amd64 (its
       # dependency wheel hashes resolve for that platform), which this arm64
       # runner can only execute emulated.
-      - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       # Fresh SBOMs at the release commit, through the full pinned pipeline
       # (generate, normalize, supplement, parity, validate). The dist service
       # verifies that the SBOMs attest the bytes of every file the patch
@@ -227,11 +227,11 @@ jobs:
       # qemu runs the foreign runtime layers of the multi-platform bake; the
       # builder stages cross-compile on the native platform (the Dockerfiles
       # pin their builders to $BUILDPLATFORM).
-      - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       # The docker-container driver: with the default docker driver the bake
       # metadata file carries no pushed-manifest digest, and the digest is
       # exactly what the release records.
-      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0
       # The runner is ephemeral, so every bake would otherwise start cold. Two
       # caches bridge the runs, and they cover different things:
       #   - CACHE=gha (docker-bake.hcl) exports the LAYER cache — its one

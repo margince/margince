@@ -6,7 +6,7 @@ package customfields
 // Rename and Retire — the two catalog-only lifecycle mutations. Neither
 // runs DDL, so both stay on the workspace-bound app pool inside
 // database.WithWorkspaceTx; only Create and SetOptions need the schema
-// pool's owner-ALTER-then-downgrade shape (create.go, options.go).
+// pool's one-transaction owner-ALTER shape (create.go, options.go).
 
 import (
 	"context"

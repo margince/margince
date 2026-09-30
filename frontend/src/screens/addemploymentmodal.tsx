@@ -6,18 +6,19 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
 import {
   type EmploymentActions,
   searchCompanyCandidates,
 } from "./contactemployers";
 import { datePatch, validDateEntry } from "./employmentpatch";
+import "./common.css";
 
 // The "add a company" modal: pick the company (RecordPicker, the shared
 // debounced search-and-pick), optionally its role, and whether it is the
@@ -119,12 +120,7 @@ export function AddEmploymentModal({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("contact.rail.addEmployment")}
       </Heading>
       <div className="form-stack">
@@ -168,11 +164,7 @@ export function AddEmploymentModal({
           onChange={(event) => setIsCurrent(event.target.checked)}
         />
       </div>
-      {create.isError && (
-        <p role="alert" style={{ color: "var(--dangerText)" }}>
-          {problemMessageOf(create.error, t)}
-        </p>
-      )}
+      <ErrorLine error={create.error} />
       <div className="actions">
         <Button onClick={close} disabled={create.isPending}>
           {t("create.cancel")}

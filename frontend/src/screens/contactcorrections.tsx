@@ -6,10 +6,13 @@ import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, TextInput } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
+import { Row } from "../design-system/stack";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
+import "./contactcorrections.css";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ProfileField = components["schemas"]["ContactProfileField"];
@@ -55,21 +58,15 @@ export function EnrichedFields({
         <p className="t-sub">{t("contact.enriched.sub")}</p>
       </PanelBody>
       <PanelBody>
-        <ul
-          style={{
-            margin: 0,
-            padding: 0,
-            listStyle: "none",
-            display: "grid",
-            gap: "var(--space-3)",
-          }}
-        >
+        <ul className="corrections-fields">
           {fields.map((field) => (
-            // The claim's own key, falling back to the field name: two claims
-            // on one field are two rows, and the key must not move when a
-            // field is re-captured under an open editor, or the editor
-            // remounts and loses what it opened on.
-            <li key={field.claim_key ?? field.field}>
+            // The claim's own key, falling back to the field name, plus the
+            // value key: a phone has one row per number under one claim key.
+            // The key must not move when a field is re-captured under an open
+            // editor, or the editor remounts and loses what it opened on.
+            <li
+              key={`${field.claim_key ?? field.field}:${field.value_key ?? ""}`}
+            >
               <EnrichedField
                 contactId={contactId}
                 field={field}
@@ -154,7 +151,13 @@ function EnrichedField({
     mutationFn: async () => {
       const { error } = await api.POST(
         "/contacts/{id}/profile-fields/{field}/restore",
-        { params: { path: { id: contactId, field: field.field } } },
+        {
+          params: {
+            path: { id: contactId, field: field.field },
+            // Which number, for a phone: each number has its own undo.
+            query: field.value_key ? { value_key: field.value_key } : {},
+          },
+        },
       );
       if (error) {
         throwProblem(error);
@@ -170,30 +173,14 @@ function EnrichedField({
   // right half empty; opposite the claim they judge, they sit where the lead
   // card above keeps its verbs.
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: "var(--space-4)",
-        alignItems: "flex-start",
-      }}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            alignItems: "baseline",
-            flexWrap: "wrap",
-          }}
-        >
+    <Row gap="4" align="start" wrap={false}>
+      <div className="corrections-claim">
+        <Row gap="2" align="baseline">
           {/* Semibold, the heading weight, not the element's own bold: six of
             these labels down one card at 700 outweighed the panel's title. */}
           <strong>{t(`contact.enriched.field.${field.field}`)}</strong>
           {editing ? (
-            // This field sits beside its label on one line rather than filling a
-            // form column, so it keeps its intrinsic width instead of the atom's.
             <TextInput
-              style={{ width: "auto" }}
               aria-label={t(`contact.enriched.field.${field.field}`)}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -207,11 +194,11 @@ function EnrichedField({
           {field.verdict === "confirmed" && (
             <Badge>{t("contact.enriched.confirmed")}</Badge>
           )}
-        </div>
+        </Row>
 
         {/* The evidence stays visible after a correction, not instead of it:
           what the machine read is the reason the correction was needed. */}
-        <p className="t-sub" style={{ margin: "var(--space-1) 0 0" }}>
+        <p className="t-sub corrections-note">
           {t("contact.enriched.readFrom", {
             source: field.source,
             // The record's zone: when the machine read this is a fact about the
@@ -226,7 +213,7 @@ function EnrichedField({
           reader who remembers typing the old value needs to see where it went
           rather than doubt what they typed. */}
         {field.superseded_value && (
-          <p className="t-sub" style={{ margin: "var(--space-1) 0 0" }}>
+          <p className="t-sub corrections-note">
             {t("contact.enriched.replaced", { was: field.superseded_value })}{" "}
             {mayCorrect && (
               <Button
@@ -239,24 +226,10 @@ function EnrichedField({
           </p>
         )}
 
-        {record.isError && (
-          <p
-            role="alert"
-            style={{ margin: "var(--space-2) 0 0", color: "var(--dangerText)" }}
-          >
-            {problemMessageOf(record.error, t)}
-          </p>
-        )}
+        <ErrorLine error={record.error} />
       </div>
       {mayCorrect && (
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--gapActions)",
-            alignItems: "center",
-            flex: "none",
-          }}
-        >
+        <div className="corrections-verbs">
           {editing ? (
             <>
               {/* Pending is not refusal: the write the reader just started keeps
@@ -320,6 +293,6 @@ function EnrichedField({
           )}
         </div>
       )}
-    </div>
+    </Row>
   );
 }

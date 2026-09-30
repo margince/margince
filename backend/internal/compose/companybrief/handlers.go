@@ -12,6 +12,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -58,7 +59,7 @@ func (h Handlers) AskAboutCompany(w http.ResponseWriter, r *http.Request, id crm
 	}
 	answer, err := h.svc.AskScoped(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)), req.Question, projectScope(req.ProjectId))
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, answer)
@@ -67,7 +68,7 @@ func (h Handlers) AskAboutCompany(w http.ResponseWriter, r *http.Request, id crm
 func (h Handlers) serve(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, force bool, projectID *ids.ProjectID) {
 	brief, err := h.svc.GetScoped(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)), force, projectID)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, brief)

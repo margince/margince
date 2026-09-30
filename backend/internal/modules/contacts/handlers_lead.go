@@ -10,6 +10,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,6 +36,13 @@ func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmco
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned
+	var err error
+	if params.ListId != nil {
+		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId, leadEntity); err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
+	}
 
 	leads, page, err := h.store.ListLeads(r.Context(), in)
 	if err != nil {
@@ -50,7 +58,15 @@ func (h Handlers) CreateLead(w http.ResponseWriter, r *http.Request, _ crmcontra
 		return
 	}
 
-	in, err := leadCreateInput(req)
+	// A declared importer — a HUMAN holding import_run:create — may stamp the
+	// reserved mirror: namespace, which is what gives an import its own replay
+	// key. Everyone else gets the client door, an agent carrying that human's
+	// grants included.
+	mapInput := leadCreateInput
+	if auth.DeclaredImporter(r.Context()) {
+		mapInput = leadCreateInputFromImporter
+	}
+	in, err := mapInput(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

@@ -480,13 +480,6 @@
 .ob-stage-foot:not(:has(> .ob-stage-hint)):has(> .ob-stage-acts:empty) {
   display: none;
 }
-/* What still stands between the reader and the next step, said beside the
-   button that was pressed: the fields themselves carry the same words, and the
-   rail repeats them because the rail is where the press happened. */
-.ob-stage-note {
-  margin: 0;
-  color: var(--dangerText);
-}
 .ob-stage-hint {
   margin: 0;
   max-width: 62ch;

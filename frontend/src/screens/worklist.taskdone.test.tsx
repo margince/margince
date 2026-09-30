@@ -158,7 +158,7 @@ describe("the day's figures after the work is done", () => {
 
     // The figure the day starts on, so the assertion below is a CHANGE rather
     // than a number that happened to be right from the first render.
-    await screen.findByText(/2 in all/);
+    await screen.findByText(/· 2 total/);
     await user.click(
       (await screen.findAllByRole("button", { name: en["tasks.complete"] }))[0],
     );
@@ -170,9 +170,9 @@ describe("the day's figures after the work is done", () => {
     // what lets a stale count ship: the finished row disappears optimistically
     // while the sentence above it still says two are waiting.
     await waitFor(() => {
-      expect(screen.getByText(/1 in all/)).toBeTruthy();
+      expect(screen.getByText(/· 1 total/)).toBeTruthy();
     });
-    expect(screen.queryByText(/2 in all/)).toBeNull();
+    expect(screen.queryByText(/· 2 total/)).toBeNull();
     // And the day still holds the work that was not finished, so the count fell
     // because one row left rather than because the queue emptied itself.
     expect(screen.getByText("Call the buyer back")).toBeTruthy();

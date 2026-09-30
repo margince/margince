@@ -12,7 +12,7 @@ import { TagsPanel } from "./tagspanel";
 // than one story with a prop.
 
 const meta: Meta = {
-  title: "Records/Tags panel",
+  title: "Records/Record 360/Tags panel",
   parameters: { layout: "padded" },
 };
 export default meta;

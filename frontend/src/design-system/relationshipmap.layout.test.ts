@@ -58,7 +58,7 @@ function model(over: Partial<RelationshipMapModel> = {}): RelationshipMapModel {
         kind: "route",
         band: "cold",
         lastAt: "2026-08-29T09:00:00Z",
-        words: "never written to",
+        words: "never contacted",
       },
       {
         id: "m-1",
@@ -149,7 +149,7 @@ test("lights the strongest route rather than the most recent", () => {
         kind: "route",
         band: "cold",
         lastAt: "2026-08-29T09:00:00Z",
-        words: "never written to",
+        words: "never contacted",
       },
       {
         id: "e-warm",

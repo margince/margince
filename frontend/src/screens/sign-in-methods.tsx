@@ -3,7 +3,6 @@ import { X } from "lucide-react";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
-import { isOption } from "../app/options";
 import { INSTALLATION_SETTINGS_KEY } from "../app/uploadlimit";
 import { Button, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -13,7 +12,12 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { ROLES, roleOptions } from "./users-invite-form";
+import {
+  type AssignableRole,
+  roleLabel,
+  roleOptions,
+  useAssignableRoles,
+} from "./roles.queries";
 import "./sign-in-methods.css";
 
 /** The narrow sign-in read, keyed apart from the installation aggregate. */
@@ -127,18 +131,20 @@ function useSetGroupRoleMap() {
 // input under the admin's cursor at every keystroke.
 type GrantRow = Readonly<{ id: number; group: string; role: string }>;
 
-// The six system roles, with the stored value prepended when it is not one of
-// them: the contract promises a system role key, but a map written by an older
-// or newer server is still this admin's to see and to keep — a Select that
-// showed its placeholder instead would read as a mapping that lost its role.
+// The roles this admin may hand out, with the stored value prepended when it is
+// not among them: a role archived since the map was written, or one a reader
+// who may not assign roles never receives, is still this map's answer — a
+// Select that showed its placeholder instead would read as a mapping that lost
+// its role.
 function grantRoleOptions(
   role: string,
   t: ReturnType<typeof useT>,
+  offered: readonly AssignableRole[],
 ): SelectOption[] {
-  const options = roleOptions(t);
-  return isOption(role, ROLES)
+  const options = roleOptions(t, offered);
+  return options.some((option) => option.value === role)
     ? options
-    : [{ value: role, label: role }, ...options];
+    : [{ value: role, label: roleLabel(t)(role) }, ...options];
 }
 
 /**
@@ -186,6 +192,10 @@ function GroupRoleGrants({
 }: Readonly<{ initial: Record<string, string>; canManage: boolean }>) {
   const t = useT();
   const save = useSetGroupRoleMap();
+  // Asked only of a reader who may write the map: the list is the invite's own
+  // assignable-roles ceiling, which refuses anybody else.
+  const assignable = useAssignableRoles(canManage);
+  const offered = assignable.data ?? [];
   const [rows, setRows] = useState<readonly GrantRow[]>(() =>
     Object.entries(initial).map(([group, role], index) => ({
       id: index,
@@ -238,7 +248,7 @@ function GroupRoleGrants({
               />
               <Select
                 aria-label={t("groupRoles.role")}
-                options={grantRoleOptions(row.role, t)}
+                options={grantRoleOptions(row.role, t, offered)}
                 value={row.role}
                 disabled={!canManage || save.isPending}
                 onChange={(role) => editRow(row.id, { role })}

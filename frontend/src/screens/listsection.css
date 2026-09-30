@@ -43,13 +43,12 @@
   padding-bottom: 0;
 }
 
-/* The intro's own gap owns the interval between the description and the
-   read-only line under it, and the body below brings its own top padding — so
-   the shared card-description class gives up its 16px here. Named against that
-   class rather than against "any p", or the two rules tie on specificity and
-   the winner depends on which sheet the bundler emitted last. */
-.listsection-intro > p,
-.listsection-intro > p.settings-panel-sub {
+/* The two lines here are ONE caption — what the section is, and what a reader
+   may not do in it — so the gap above holds them at a pair's interval rather
+   than at the --space-4 `PanelIntro` puts between two blocks of prose. The
+   element selector is what carries it past that class whatever order the
+   bundler emits, and the body below still brings its own top padding. */
+.listsection-intro > p {
   margin: 0;
 }
 

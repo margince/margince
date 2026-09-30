@@ -40,6 +40,7 @@ const (
 	sectionStateStrip     = crmcontracts.Company360SectionsOmitted("state_strip")
 	sectionHealth         = crmcontracts.Company360SectionsOmitted("health")
 	sectionTags           = crmcontracts.Company360SectionsOmitted("tags")
+	sectionLists          = crmcontracts.Company360SectionsOmitted("list_memberships")
 	sectionApprovals      = crmcontracts.Company360SectionsOmitted("pending_approvals")
 	sectionNextSteps      = crmcontracts.Company360SectionsOmitted("next_steps")
 	sectionSinceLastVisit = crmcontracts.Company360SectionsOmitted("since_last_visit")
@@ -59,6 +60,8 @@ type Service struct {
 	// scans recognises a dismissal of advice the account scan raised, when a
 	// deployment has one. See RecogniseScanFindings.
 	scans ScanRecogniser
+	// lists: the page names the Shortlists the account is on (lists.enabled).
+	lists bool
 }
 
 // NewService binds the composite read to the module stores it composes.
@@ -159,6 +162,7 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.Company
 		{sectionNextMeeting, a.readNextMeeting},
 		{sectionBilling, a.readBillingContacts},
 		{sectionTags, a.readTags},
+		{sectionLists, a.readListMemberships},
 		{sectionApprovals, a.readPendingApprovals},
 		{sectionSinceLastVisit, a.readSinceLastVisit},
 		// Last because it is derived, not because it reads the sections above —
@@ -399,18 +403,6 @@ func (a *assembly) readNextMeeting() error {
 		return err
 	}
 	a.out.NextMeeting = meeting
-	return nil
-}
-
-func (a *assembly) readTags() error {
-	if err := auth.Require(a.ctx, "tag", principal.ActionRead); err != nil {
-		return err
-	}
-	tags, err := tagsSection(a.ctx, a.tx, a.companyID)
-	if err != nil {
-		return err
-	}
-	a.out.Tags = &tags
 	return nil
 }
 

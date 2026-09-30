@@ -51,6 +51,33 @@ func TestAPresentButZeroDealIDIsRefusedWhileAnAbsentOneIsFine(t *testing.T) {
 	}
 }
 
+// The draft on screen reaches the request, and its absence is a first draft.
+// Both, because a mapping that dropped the field would look exactly like a
+// caller who sent none — and the whole point of the field is that a rewrite
+// stops generating a different email.
+func TestTheDraftOnScreenReachesTheRequest(t *testing.T) {
+	contact := openapi_types.UUID(ids.NewV7())
+	shown := "Guten Tag Frau Malherbe,\n\nwir liefern am Montag."
+
+	req, err := requestFrom(crmcontracts.DraftCompanyEmailJSONRequestBody{
+		ContactId: contact, RewriteOf: &shown,
+	})
+	if err != nil {
+		t.Fatalf("a body carrying the shown draft was refused: %v", err)
+	}
+	if req.RewriteOf != shown {
+		t.Fatalf("RewriteOf = %q, want the draft the composer is showing", req.RewriteOf)
+	}
+
+	first, err := requestFrom(crmcontracts.DraftCompanyEmailJSONRequestBody{ContactId: contact})
+	if err != nil {
+		t.Fatalf("a body with no rewrite_of was refused: %v", err)
+	}
+	if first.RewriteOf != "" {
+		t.Fatalf("an absent rewrite_of became %q — a first draft has nothing to rewrite", first.RewriteOf)
+	}
+}
+
 func assertNamesField(t *testing.T, err error, field string) {
 	t.Helper()
 	var validation *httperr.DetailedError

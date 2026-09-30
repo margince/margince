@@ -40,7 +40,7 @@ const PROJECTS = [
 // can be in — assembling, failed, empty and prepared alike — and a per-story
 // copy would be the same two lines eighteen times.
 const meta: Meta<typeof ContactMeetingBrief> = {
-  title: "Records/Contact record/Meeting brief",
+  title: "Records/Record 360/Meeting brief/Drawer",
   component: ContactMeetingBrief,
   play: async () => {
     const drawer = within(await screen.findByRole("dialog"));
@@ -155,7 +155,8 @@ export const WithPlanDark: Story = {
 
 export const WithPlanPhone: Story = {
   render: () => drawer(() => jsonResponse(briefWithPlan)),
-  globals: { viewport: { value: "mobile1" } },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 // What a lead sees: the same brief, with one layer on top.
@@ -170,7 +171,8 @@ export const ManagerCoachingDark: Story = {
 
 export const ManagerCoachingPhone: Story = {
   render: () => drawer(() => jsonResponse(briefManager)),
-  globals: { viewport: { value: "mobile1" } },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 export const Dark: Story = {
@@ -181,5 +183,6 @@ export const Dark: Story = {
 // The phone sheet: full width, its three bands still paying their own padding.
 export const Phone: Story = {
   render: () => drawer(() => jsonResponse(briefReady)),
-  globals: { viewport: { value: "mobile1" } },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

@@ -50,8 +50,14 @@ import (
 const (
 	replayWroteParticipants = "participants"
 	replayFoundNone         = "none"
-	replayUnreadable        = "unreadable"
-	replayNoOwner           = "no_owner"
+	// replayCapped is an original whose party list the cap refused — it named
+	// more than MaxParticipants further parties, so the parser withheld all of
+	// them. Its own outcome for the reason the attendee repair's is: the marker
+	// settles the activity permanently, and recorded as `none` a message whose
+	// parties were refused is indistinguishable from one that named nobody.
+	replayCapped     = "capped"
+	replayUnreadable = "unreadable"
+	replayNoOwner    = "no_owner"
 )
 
 // The connectors whose stored originals this pass can re-read. A connector
@@ -301,7 +307,7 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 	if decodeErr != nil {
 		return replayUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
-	var participants []connector.MessageParticipant
+	var parties connector.Parties
 	var parseErr error
 	switch c.source {
 	case sourceGmail, sourceIMAP, sourceGraph:
@@ -311,25 +317,29 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 		// shares the mail IDENTITY but not the format — the offline demo, which
 		// stores JSON — falls to the default arm rather than being fed to this
 		// parser, which is why the switch reads the connector and not the key.
-		participants, parseErr = mailmap.ParticipantsOf(raw, c.owner)
+		parties, parseErr = mailmap.ParticipantsOf(raw, c.owner)
 	case sourceGCal:
-		participants, parseErr = gcal.ParticipantsOf(raw, c.owner)
+		parties, parseErr = gcal.ParticipantsOf(raw, c.owner)
 	case sourceGraphCal:
-		participants, parseErr = graphcal.ParticipantsOf(raw, c.owner)
+		parties, parseErr = graphcal.ParticipantsOf(raw, c.owner)
 	default:
 		return replayUnreadable, nil
 	}
 	if parseErr != nil {
 		return replayUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
-	if len(participants) == 0 {
+	// BEFORE the empty branch, because a capped list arrives as an empty one.
+	if parties.Capped() {
+		return replayCapped, nil
+	}
+	if len(parties.Participants) == 0 {
 		return replayFoundNone, nil
 	}
 	// No transport: this pass re-reads stored MAIL and CALENDAR originals, whose
 	// parties are addresses. A party named by a channel account arrives from a
 	// live record and has no stored original to replay.
 	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind, "",
-		c.partyListIsAttested(), participants); err != nil {
+		c.partyListIsAttested(), parties.Participants); err != nil {
 		return "", err
 	}
 	// The rows just written carry whatever name the original gave, so the

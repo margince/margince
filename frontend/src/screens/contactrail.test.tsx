@@ -171,7 +171,10 @@ function json(body: unknown): Response {
 // modal's whole contract with the server is the shape of one request.
 const sent: Array<{ method: string; path: string; body: unknown }> = [];
 
-function mount(view: Contact360) {
+function mount(
+  view: Contact360,
+  guard?: components["schemas"]["ContactConsentGuard"],
+) {
   sent.length = 0;
   vi.stubGlobal(
     "fetch",
@@ -263,7 +266,7 @@ function mount(view: Contact360) {
   const tree = (shown: Contact360) => (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ContactRail view={shown} guard={undefined} />
+        <ContactRail view={shown} guard={guard} />
       </LocaleProvider>
     </QueryClientProvider>
   );
@@ -308,7 +311,7 @@ function section(heading: string): HTMLElement {
   throw new Error(`the rail drew no section headed "${heading}"`);
 }
 
-const WITHHELD_SENTENCE = "Hidden — your role cannot read this";
+const WITHHELD_SENTENCE = "Hidden for your role";
 
 // contactStanding is the one line of relationship standing the record's head
 // carries: a pure derivation from the two touch timestamps, tested directly
@@ -656,9 +659,9 @@ describe("which employer is the current one", () => {
     const [first, second] = employerOrder();
     expect(first).toContain("Notice GmbH");
     // Serving notice is still the current job, so the row says so.
-    expect(first).toContain("current");
+    expect(first).toContain("Current");
     expect(second).toContain("Former GmbH");
-    expect(second).not.toContain("current");
+    expect(second).not.toContain("Current");
   });
 
   it("stops calling it current once the last day has passed", async () => {
@@ -686,7 +689,7 @@ describe("which employer is the current one", () => {
     // Nobody is current here, so the section marks nobody — a flag left over
     // from a job that has ended must not outrank a row that never claimed one.
     for (const row of employerOrder()) {
-      expect(row).not.toContain("current");
+      expect(row).not.toContain("Current");
     }
   });
 
@@ -784,5 +787,71 @@ describe("a contact with no primary employer", () => {
       await screen.findByText(en["contact.rail.noEmployment"]),
     ).toBeTruthy();
     expect(screen.queryByText(en["contact.rail.noPrimaryEmployer"])).toBeNull();
+  });
+});
+
+// THE TRANSPORT ROW ANSWERS FOR ITSELF OR NOT AT ALL.
+//
+// Only the correspondence class speaks for a transport: it is the purpose a
+// reply rides, and the only one an inbound message can flip on its own. A
+// marketing grant drawn against Email is a permission the composer then refuses
+// on the record — the pair of true answers a rep has no way to reconcile.
+describe("the consent rail's transport row", () => {
+  const reachable: Contact360 = {
+    ...granted,
+    contact: {
+      ...contact,
+      emails: [
+        {
+          id: "pe-1",
+          contact_id: "p-1",
+          email: "dana@brandt.example",
+          email_type: "work",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "human:u-1",
+          created_at: "2026-06-01T08:00:00Z",
+          updated_at: "2026-08-01T08:00:00Z",
+        },
+      ],
+    },
+  };
+
+  const marketingOnly: components["schemas"]["ContactConsentGuard"] = {
+    contact_id: "p-1",
+    entries: [
+      {
+        purpose_key: "newsletter",
+        purpose_label: "Newsletter",
+        purpose_class: "marketing",
+        channel: "email",
+        verdict: "allowed",
+        reason: "They opted in on 3 March.",
+      },
+    ],
+  };
+
+  it("stays unanswered when no correspondence purpose is defined", async () => {
+    mount(reachable, marketingOnly);
+
+    const panel = section(en["contact.rail.consentTitle"]);
+    // The grant that does exist keeps its own name and its own answer.
+    expect(await within(panel).findByText("Newsletter")).toBeTruthy();
+    // Scoped to the row rather than matched across the panel: the phone row
+    // reads "Unknown" too the moment a fixture gains a number, and a
+    // whole-panel match would then pass on the wrong row.
+    const email = within(panel)
+      .getByText(en["contact.rail.email"])
+      .closest(".pe-rail-row");
+    if (!(email instanceof HTMLElement)) {
+      throw new Error("the consent panel drew no Email row");
+    }
+    expect(
+      within(email).getByText(en["contact.consent.unknownWord"]),
+    ).toBeTruthy();
+    expect(
+      within(email).queryByText(en["contact.consent.allowedWord"]),
+    ).toBeNull();
   });
 });

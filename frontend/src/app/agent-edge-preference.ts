@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useSyncExternalStore } from "react";
+import { readStored, STORAGE_KEYS, writeStored } from "./storage";
 
 /**
  * Whether this reader wants the margins lit at all.
@@ -24,24 +25,11 @@ import { useSyncExternalStore } from "react";
  * place in the workspace, and it has to hold before any read of `/me` answers.
  */
 
-/** Where the answer is kept. The theme's namespace, not its key. */
-export const EDGE_LIGHT_KEY = "margince.edgeLight";
-
 /** The two words storage carries. Anything else is an install that never chose. */
 const OFF = "off";
 const ON = "on";
 
 const listeners = new Set<() => void>();
-
-/** Storage is unavailable in some embedded contexts; a preference nobody can
- *  read is an unstated one, never an error. */
-function readStored(): boolean {
-  try {
-    return window.localStorage.getItem(EDGE_LIGHT_KEY) !== OFF;
-  } catch {
-    return true;
-  }
-}
 
 /**
  * What this page is showing, resolved on first read.
@@ -55,7 +43,7 @@ let shown: boolean | null = null;
 
 function ensureLoaded(): boolean {
   if (shown === null) {
-    shown = readStored();
+    shown = readStored(STORAGE_KEYS.edgeLight) !== OFF;
   }
   return shown;
 }
@@ -73,11 +61,7 @@ export function edgeLightShown(): boolean {
  */
 export function setEdgeLightShown(next: boolean): void {
   shown = next;
-  try {
-    window.localStorage.setItem(EDGE_LIGHT_KEY, next ? ON : OFF);
-  } catch {
-    // Persisting is the enhancement; honouring the flip is the feature.
-  }
+  writeStored(STORAGE_KEYS.edgeLight, next ? ON : OFF);
   for (const listener of listeners) {
     listener();
   }

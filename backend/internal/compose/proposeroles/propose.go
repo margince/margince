@@ -280,7 +280,7 @@ func Parse(raw string) ([]Proposal, error) {
 	var answer struct {
 		Proposals *[]Proposal `json:"proposals"`
 	}
-	if err := json.Unmarshal([]byte(raw), &answer); err != nil {
+	if err := json.Unmarshal([]byte(ai.Unfence(raw)), &answer); err != nil {
 		return nil, fmt.Errorf("proposeroles: the reply is not the shape this site takes: %w", err)
 	}
 	// The field is REQUIRED by the schema, so its absence is a malformed reply

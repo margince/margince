@@ -146,7 +146,7 @@ export const EditingEssentials: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Edit What do you sell?" }),
+      await canvas.findByRole("button", { name: "Edit Products and services" }),
     );
   },
 };
@@ -163,5 +163,13 @@ export const Sparse: Story = {
       "Fleet retrofit programmes for mid-size logistics operators.",
     icp: "Operators running 50–400 vans on mixed-age fleets.",
     fields: [],
+  }),
+};
+
+// One confirmed statement: the footer's count in the singular.
+export const OneConfirmed: Story = {
+  render: story(CAPABILITIES, EDITOR, {
+    ...PROFILE,
+    fields: PROFILE.fields.slice(0, 1),
   }),
 };

@@ -35,8 +35,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -114,13 +112,12 @@ func systemActorBindings(t *testing.T, dir string) []actorBinding {
 	if err != nil {
 		t.Fatalf("listing %s to find the actors it binds: %v", dir, err)
 	}
-	fset := token.NewFileSet()
 	var found []actorBinding
 	for _, where := range sources {
 		if strings.HasSuffix(where, "_test.go") {
 			continue
 		}
-		file, parseErr := parser.ParseFile(fset, where, nil, 0)
+		file, parseErr := gatekit.ParseFile(where, 0)
 		if parseErr != nil {
 			t.Fatalf("parsing %s: %v", where, parseErr)
 		}

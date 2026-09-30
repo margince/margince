@@ -5,6 +5,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import spaConfig from "./vite.config";
 
 // Every origin-relative address the product HANDS SOMEBODY has to answer on the
 // app's own port.
@@ -58,43 +59,40 @@ function sourceFiles(dir: string): string[] {
   return out;
 }
 
-// proxiedPrefixes reads the proxy entries out of vite.config.ts.
-//
-// The BLOCK, matched by its braces, not everything from the marker to the end
-// of the file. `indexOf` answers -1 when the marker moves or is renamed, and
-// `slice(-1)` is then the file's last character — an empty set, reported only
-// as the size floor further down, which reads as "the config has no proxy" when
-// what happened is that this function stopped being able to find it. Scanning
-// to EOF has the opposite failure too: any later object spelled `"key": {`
-// counts as a proxied prefix and masks a genuinely missing route.
-function proxiedPrefixes(): Set<string> {
-  const config = readFileSync(join(here, "vite.config.ts"), "utf8");
-  const marker = config.indexOf("proxy: {");
-  expect(
-    marker,
-    "vite.config.ts has no `proxy: {` — this test derives the proxied set from that " +
-      "block, and without it every assertion below would pass over an empty set",
-  ).toBeGreaterThan(-1);
+// The keys vite-pwa.ts reads too: the one list of what the api owns on this origin.
+function proxiedPrefixes(): string[] {
+  const keys = Object.keys(spaConfig.server?.proxy ?? {});
+  // The floor: a reading that found nothing would report a clean pass over an
+  // empty set.
+  expect(keys.length).toBeGreaterThan(4);
+  return keys;
+}
 
-  let depth = 0;
-  let end = marker;
-  for (let i = config.indexOf("{", marker); i < config.length; i++) {
-    if (config[i] === "{") depth++;
-    if (config[i] === "}") depth--;
-    if (depth === 0) {
-      end = i;
-      break;
-    }
-  }
-  expect(
-    end,
-    "the `proxy: {` block in vite.config.ts is not brace-balanced",
-  ).toBeGreaterThan(marker);
-
-  const block = config.slice(marker, end);
-  return new Set(
-    [...block.matchAll(/"\/([a-z0-9._-]+)"\s*:\s*\{/gi)].map((m) => m[1]),
+// launcherPrefixes reads the `apiPrefixes` literal in desktop/launcher/web.go,
+// refusing any element that is not a plain string rather than skipping it.
+function launcherPrefixes(): string[] {
+  const source = readFileSync(
+    join(repo, "desktop", "launcher", "web.go"),
+    "utf8",
   );
+  const literal = /\bvar apiPrefixes = \[\]string\{([^}]*)\}/.exec(source);
+  if (literal === null) {
+    throw new Error(
+      "desktop/launcher/web.go declares no `var apiPrefixes = []string{…}` for this test to read",
+    );
+  }
+  const elements = literal[1]
+    .replace(/\/\/[^\n]*/g, "")
+    .split(",")
+    .map((element) => element.trim())
+    .filter((element) => element.length > 0);
+  for (const element of elements) {
+    expect(
+      element,
+      "an apiPrefixes element in desktop/launcher/web.go is not a string literal this test can read",
+    ).toMatch(/^"[^"\\]*"$/);
+  }
+  return elements.map((element) => element.slice(1, -1));
 }
 
 // neighbourhood answers the files an address could be assembled across: the one
@@ -131,10 +129,7 @@ function neighbourhood(file: string): string[] {
 
 describe("the dev server's proxy", () => {
   it("answers every origin-relative address the product hands somebody", () => {
-    const proxied = proxiedPrefixes();
-    // The floor: a scan that found nothing would report a clean pass over an
-    // empty set.
-    expect(proxied.size).toBeGreaterThan(4);
+    const proxied = new Set(proxiedPrefixes());
 
     const files = [
       ...sourceFiles(join(repo, "frontend", "src")),
@@ -175,11 +170,20 @@ describe("the dev server's proxy", () => {
 
     for (const [prefix, file] of built) {
       expect(
-        proxied.has(prefix),
+        proxied.has(`/${prefix}`),
         `${file} builds an address at /${prefix} from the app's own origin, which the dev ` +
           `server does not proxy — the command it hands a reader 404s on the app's port while ` +
           `the endpoint answers one port over. Add "/${prefix}" to the proxy list in vite.config.ts.`,
       ).toBe(true);
     }
+  });
+
+  it("is the list the desktop launcher proxies, in both directions", () => {
+    expect(
+      launcherPrefixes().sort(),
+      "desktop/launcher/web.go apiPrefixes and the proxy in vite.config.ts disagree: a path in " +
+        "one and not the other reaches the api under `pnpm dev` and 404s in the desktop app, or " +
+        "the reverse. Make the two lists the same.",
+    ).toEqual(proxiedPrefixes().sort());
   });
 });

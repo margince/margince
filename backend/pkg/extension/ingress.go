@@ -187,8 +187,9 @@ type ActivityFields struct {
 	// OccurredAt is when the message happened at the PROVIDER, not when the
 	// poll saw it — a timeline ordered by discovery is a timeline of this
 	// system's own scheduling.
-	OccurredAt time.Time
-	Direction  string
+	OccurredAt      time.Time
+	DurationSeconds *int
+	Direction       string
 }
 
 // The bounds every ingested record is held to, applied before any transaction

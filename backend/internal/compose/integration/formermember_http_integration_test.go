@@ -49,6 +49,7 @@ func fullSeatsInUse(t *testing.T, e *apptest.AppEnv) int {
 func TestAFormerMemberIsASeatNobodyCanEnterAndNobodyPaysFor(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
 
 	before := fullSeatsInUse(t, e)
 	// A zero would pass the assertion below while proving the meter never ran:
@@ -144,6 +145,7 @@ func TestAFormerMemberIsASeatNobodyCanEnterAndNobodyPaysFor(t *testing.T) {
 func TestAFormerMemberSourceIsBoundedTheWayTheContractSaysItIs(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
 
 	var refused refusalWire
 	if status := e.Call(t, "POST", "/v1/users/former", map[string]any{

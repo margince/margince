@@ -81,7 +81,8 @@ func (h Handlers) GetMyAiActivity(w http.ResponseWriter, r *http.Request, params
 		// ten later successes push a fault off it — and the rail holds a fault
 		// until somebody acknowledges it, which is precisely the case where
 		// nobody has looked yet.
-		Faults: toWire(feed.Faults),
+		Faults:    toWire(feed.Faults),
+		LiveTotal: &feed.LiveTotal,
 	})
 }
 

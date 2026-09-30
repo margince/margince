@@ -1,7 +1,18 @@
-import { MutationObserver, type QueryClient } from "@tanstack/react-query";
+import {
+  MutationObserver,
+  onlineManager,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ProblemError } from "../screens/common";
+import { api } from "../api/client";
+import { ProblemError, throwProblem } from "../screens/common";
 import { ENTITY_NAME_KEY } from "../screens/entityref";
+import {
+  ConnectivityError,
+  reportReached,
+  reportUnreached,
+  watchConnectivity,
+} from "./connectivity";
 import {
   createQueryClient,
   liveInterval,
@@ -246,5 +257,196 @@ describe("the history a reader is looking at", () => {
       .catch(() => undefined);
 
     expect(client.getQueryState(key)?.isInvalidated).toBe(false);
+  });
+});
+
+describe("who can see a record", () => {
+  // A share granted or revoked, a record made private, an owner changed: each
+  // is a different write, and the panel listing who can see the record must
+  // not keep naming the colleagues it named before any of them.
+  it("is read again after any successful write", async () => {
+    const client = createQueryClient();
+    const key = ["record-access", "contact", "c-1"];
+    await client.fetchQuery({
+      queryKey: key,
+      queryFn: () => Promise.resolve({ data: [] }),
+    });
+
+    await new MutationObserver(client, {
+      mutationFn: () => Promise.resolve("shared"),
+    }).mutate();
+
+    expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+  });
+});
+
+// Reads wait out an outage and run again when it clears, but only where the
+// shell's banner says why; a write is attempted at once either way.
+describe("while Margince cannot be reached", () => {
+  const banners: (() => void)[] = [];
+  const bannerUp = () => banners.push(watchConnectivity(() => undefined));
+
+  async function readMe(): Promise<unknown> {
+    const { data, error } = await api.GET("/me");
+    if (error) throwProblem(error);
+    return data;
+  }
+
+  // A refused request sends a probe, and only the probe failing too is an outage.
+  async function outageConfirmed() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+    );
+    reportUnreached();
+    await vi.advanceTimersByTimeAsync(0);
+  }
+
+  afterEach(() => {
+    for (const bannerDown of banners.splice(0)) bannerDown();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("tells the data layer about the server, not only about the device", async () => {
+    vi.useFakeTimers();
+    createQueryClient();
+    bannerUp();
+    await outageConfirmed();
+    expect(onlineManager.isOnline()).toBe(false);
+    reportReached();
+    expect(onlineManager.isOnline()).toBe(true);
+  });
+
+  it("holds a read until Margince answers, then runs it", async () => {
+    vi.useFakeTimers();
+    const client = createQueryClient();
+    client.mount();
+    bannerUp();
+    const read = vi.fn(async () => "fresh");
+    await outageConfirmed();
+
+    const answer = client.fetchQuery({
+      queryKey: ["outage-read"],
+      queryFn: read,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(client.getQueryState(["outage-read"])?.fetchStatus).toBe("paused");
+    expect(read).not.toHaveBeenCalled();
+
+    reportReached();
+    await expect(answer).resolves.toBe("fresh");
+    client.unmount();
+  });
+
+  it("attempts a write at once and lets it fail, rather than holding it for later", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = createQueryClient();
+    expect(client.getDefaultOptions().mutations?.networkMode).toBe("always");
+    bannerUp();
+    await outageConfirmed();
+    expect(onlineManager.isOnline()).toBe(false);
+
+    const observer = new MutationObserver(client, {
+      mutationFn: () => Promise.reject(new Error("not reached")),
+    });
+    const attempt = observer.mutate();
+    expect(observer.getCurrentResult().isPaused).toBe(false);
+    await expect(attempt).rejects.toThrow("not reached");
+  });
+
+  // A public page draws no banner: a pause there is a spinner that never ends.
+  it("lets reads run and fail on a proxy's bare 502 while no banner is up", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = createQueryClient();
+    client.mount();
+    const gateway = vi.fn(
+      async () => new Response("Bad Gateway", { status: 502 }),
+    );
+    vi.stubGlobal("fetch", gateway);
+
+    for (const read of ["first", "second"]) {
+      await expect(
+        client.fetchQuery({ queryKey: ["gateway", read], queryFn: readMe }),
+      ).rejects.toBeInstanceOf(ProblemError);
+    }
+    expect(gateway).toHaveBeenCalledTimes(2);
+    expect(onlineManager.isOnline()).toBe(true);
+    client.unmount();
+  });
+
+  it("pauses reads behind a proxy's bare 502 while the banner is up, until a probe answers", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = createQueryClient();
+    client.mount();
+    bannerUp();
+    let apiUp = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (!apiUp) return new Response("Bad Gateway", { status: 502 });
+        const url = input instanceof Request ? input.url : String(input);
+        return url === "/healthz"
+          ? new Response("ok")
+          : new Response("{}", {
+              headers: { "Content-Type": "application/json" },
+            });
+      }),
+    );
+
+    await expect(
+      client.fetchQuery({ queryKey: ["gateway", "first"], queryFn: readMe }),
+    ).rejects.toBeInstanceOf(ProblemError);
+    // The probe the bare 502 sent gets a bare 502 as well.
+    await vi.advanceTimersByTimeAsync(0);
+    const held = client.fetchQuery({
+      queryKey: ["gateway", "second"],
+      queryFn: readMe,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(client.getQueryState(["gateway", "second"])?.fetchStatus).toBe(
+      "paused",
+    );
+
+    apiUp = true;
+    await vi.advanceTimersByTimeAsync(2_000);
+    await expect(held).resolves.toEqual({});
+    client.unmount();
+  });
+});
+
+// The banner states an outage once; a console line per refused request would
+// bury the failures an operator actually opens the console for.
+describe("the failure sinks during an outage", () => {
+  const refused = (method: string) =>
+    new ConnectivityError(
+      "unreachable",
+      new Request("http://localhost/v1/contacts", { method }),
+      new TypeError("Failed to fetch"),
+      false,
+    );
+
+  it("report neither a read nor a write the network refused", async () => {
+    const reported = vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = createQueryClient();
+
+    await expect(
+      client.fetchQuery({
+        queryKey: ["outage-sink"],
+        queryFn: () => Promise.reject(refused("GET")),
+      }),
+    ).rejects.toBeInstanceOf(ConnectivityError);
+    await expect(
+      new MutationObserver(client, {
+        mutationFn: () => Promise.reject(refused("PATCH")),
+      }).mutate(),
+    ).rejects.toBeInstanceOf(ConnectivityError);
+
+    expect(reported).not.toHaveBeenCalled();
   });
 });

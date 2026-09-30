@@ -100,14 +100,14 @@ var columnValueShapes = map[string]analyticsquery.ColumnShape{
 
 // schemaVersion is a digest of the vocabulary this caller was handed.
 //
-// It rides on a compiled plan so a plan can be refused after the schema moves:
-// a plan naming a field that has since been renamed would otherwise render SQL
-// against a column that no longer exists, and the caller would read a database
-// error where they should read "ask again".
+// Every answer echoes it, so a caller comparing two answers can tell whether
+// they were asked in the same vocabulary. Nothing refuses on it: a question
+// carries no version and is compiled against the vocabulary current when it
+// runs, so a field that has since gone is refused by name.
 //
 // Per-caller rather than installation-wide, deliberately. A seat that LOSES a
-// grant must have its outstanding plans refused too, and an installation-wide
-// version would not move when one contact's roles changed.
+// grant is asking in a different vocabulary, and an installation-wide version
+// would not move when one contact's roles changed.
 func schemaVersion(entities map[string]analyticsquery.Entity) string {
 	sum := sha256.New()
 	for _, name := range slices.Sorted(maps.Keys(entities)) {

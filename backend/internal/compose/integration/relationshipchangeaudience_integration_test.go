@@ -72,7 +72,7 @@ func TestALimitedReplyIsNotDerivedIntoARelationshipChange(t *testing.T) {
 			// Always workspace-visible, so the only variable is the reply.
 			openSubject := "Angebot nachgefasst"
 			oldTouch, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-				Kind: "email", Subject: &openSubject, Direction: strPtr("outbound"), Links: link,
+				Kind: "email", Subject: &openSubject, Direction: StrPtr("outbound"), Links: link,
 			})
 			if err != nil {
 				t.Fatalf("logging the outbound that opens the silence: %v", err)
@@ -82,7 +82,7 @@ func TestALimitedReplyIsNotDerivedIntoARelationshipChange(t *testing.T) {
 			replySubject, replyBody := "Re: Angebot", "intern noch nicht spruchreif"
 			reply, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 				Kind: "email", Subject: &replySubject, Body: &replyBody,
-				Direction: strPtr("inbound"), Links: link,
+				Direction: StrPtr("inbound"), Links: link,
 			})
 			if err != nil {
 				t.Fatalf("logging the reply: %v", err)
@@ -177,7 +177,7 @@ func TestAHeldMessageDoesNotShortenTheGapAReplyBroke(t *testing.T) {
 			log := func(subject, direction string, daysAgo int, audience string) {
 				t.Helper()
 				logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-					Kind: "email", Subject: &subject, Direction: strPtr(direction), Links: link,
+					Kind: "email", Subject: &subject, Direction: StrPtr(direction), Links: link,
 				})
 				if err != nil {
 					t.Fatalf("logging %q: %v", subject, err)

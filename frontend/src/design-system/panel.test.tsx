@@ -4,7 +4,8 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { PANEL_TONES, Panel, PanelBody, PanelRow } from "./panel";
+import { selectorList, subjectsOf } from "../../scripts/lib/css-rules";
+import { PANEL_TONES, Panel, PanelBody, PanelIntro, PanelRow } from "./panel";
 
 afterEach(cleanup);
 
@@ -189,6 +190,61 @@ describe("panel.css keeps the row's hover on the interactive variant", () => {
   });
 });
 
+// The panel's descriptive line owns ONE thing, the interval under it, and that
+// is what these read. Spelled in a screen sheet it was corrected in three more,
+// so the same sentence stood at three distances from the rows it described.
+describe("PanelIntro is the line, and panel.css is its interval", () => {
+  it("draws a paragraph and takes the caller's class beside its own", () => {
+    render(
+      <Panel title="Lead vocabulary">
+        <PanelBody>
+          <PanelIntro className="listsection-intro">The stages.</PanelIntro>
+        </PanelBody>
+      </Panel>,
+    );
+    const line = screen.getByText("The stages.");
+    expect(line.tagName).toBe("P");
+    expect([...line.classList]).toEqual(["panel-intro", "listsection-intro"]);
+  });
+
+  it("spaces the line, drops that space last, and pays a stack the difference", () => {
+    const css = panelCss();
+    const ruleFor = (selector: string) =>
+      cssRules(css).find((candidate) => candidate.selector === selector);
+    const rule = (selector: string) => ruleFor(selector)?.block;
+
+    expect(declaredValue(rule(".panel-intro") ?? "", "margin")).toBe(
+      "0 0 var(--space-4)",
+    );
+    // Nothing else: the line reads at the body's type and in the body's ink,
+    // and a sheet that gave it either would be a second author for prose the
+    // document already decides.
+    expect(ruleFor(".panel-intro")?.properties).toEqual(["margin"]);
+
+    // Last in its body the line owes nothing — what follows brings its own top
+    // padding, and a trailing margin paid that gap twice.
+    expect(
+      declaredValue(rule(".panel-intro:last-child") ?? "", "margin-bottom"),
+    ).toBe("0");
+
+    // A margin inside a gapped stack ADDS to the gap rather than collapsing
+    // into it, so the stack pays the difference and lands on the same interval.
+    // Both tokens are read off the stack's own rule rather than named here: a
+    // retuned `.form-stack` gap that left this arithmetic behind would put the
+    // two spellings back on two rhythms and still pass a literal expectation.
+    const gap = declaredValue(
+      cssRules(readFileSync(join(here, "atoms.css"), "utf8")).find(
+        (candidate) => candidate.selector === ".form-stack",
+      )?.block ?? "",
+      "gap",
+    );
+    expect(gap).toBeDefined();
+    expect(
+      declaredValue(rule(".form-stack > .panel-intro") ?? "", "margin-bottom"),
+    ).toBe(`calc(var(--space-4) - ${gap})`);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // The head band: one height, one owner.
 //
@@ -261,11 +317,11 @@ function declaredProperties(block: string): readonly string[] {
 function cssRules(css: string): readonly CssRule[] {
   const flat = unwrapAtRules(stripComments(css));
   return [...flat.matchAll(/([^{}]+)\{([^{}]*)\}/g)].flatMap(
-    ([, selectorList, block]) =>
-      selectorList.split(",").map((selector) => ({
+    ([, selectors, block]) =>
+      selectorList(selectors).map((selector) => ({
         // One space per combinator, whatever the sheet wrapped across lines:
         // the compound scan below reads a descendant combinator as a space.
-        selector: selector.trim().replace(/\s+/g, " "),
+        selector: selector.replace(/\s+/g, " "),
         block,
         properties: declaredProperties(block),
       })),
@@ -274,25 +330,13 @@ function cssRules(css: string): readonly CssRule[] {
 
 // What a rule STYLES is the last compound of its selector: `.pe-memory
 // .panel-head` re-shapes the band, `.panel-head .panel-title` shapes the title
-// inside it, `.panel-head > .ext-unit-actions` an action beside it. Combinators
-// inside parentheses do not divide a compound, so `:has(.panel-title)` stays
-// part of the band it qualifies.
-function lastCompound(selector: string): string {
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < selector.length; index += 1) {
-    const character = selector[index];
-    if (character === "(") depth += 1;
-    else if (character === ")") depth -= 1;
-    else if (depth === 0 && " >+~".includes(character)) start = index + 1;
-  }
-  return selector.slice(start);
-}
-
-// A class whose name merely BEGINS with the band's — `.panel-head-count`, say —
-// is content inside it, not the band.
+// inside it, `.panel-head > .ext-unit-actions` an action beside it. A class
+// whose name merely BEGINS with the band's — `.panel-head-count`, say — is
+// content inside it, not the band.
 function stylesTheBand(selector: string): boolean {
-  return /^\.panel-head(?![\w-])/.test(lastCompound(selector));
+  return subjectsOf(selector).some((subject) =>
+    /^\.panel-head(?![\w-])/.test(subject),
+  );
 }
 
 function bandRules(css: string): readonly CssRule[] {
@@ -304,7 +348,9 @@ function bandRules(css: string): readonly CssRule[] {
 // a `.panel-title:hover` are all the same node. The dot is load-bearing —
 // `.rmap-panel-title` is the map's own aside and not this title at all.
 function stylesTheTitle(selector: string): boolean {
-  return /(?:^|[^\w-])\.panel-title(?![\w-])/.test(lastCompound(selector));
+  return subjectsOf(selector).some((subject) =>
+    /(?:^|[^\w-])\.panel-title(?![\w-])/.test(subject),
+  );
 }
 
 function titleRules(css: string): readonly CssRule[] {
@@ -413,8 +459,7 @@ describe("a panel tone tints the head band and never reshapes it", () => {
   it("paints every tone the component offers", () => {
     const declared = new Set(
       cssRules(panelCss())
-        .flatMap((rule) => rule.selector.split(","))
-        .map((selector) => /^\s*\.panel-([\w-]+)\s*$/.exec(selector)?.[1])
+        .map((rule) => /^\.panel-([\w-]+)$/.exec(rule.selector)?.[1])
         .filter((tone): tone is string => tone !== undefined),
     );
     expect([...PANEL_TONES].filter((tone) => !declared.has(tone))).toEqual([]);
@@ -575,7 +620,9 @@ describe("panel.css is the only sheet that shapes the head band", () => {
 // A state arm is the whole thing `PendingBody` or `EmptyState` draws.
 // `.pending-line` and `.empty-plate` are parts of one, not one.
 function isStateArm(selector: string): boolean {
-  return /^\.(?:pending|empty)$/.test(lastCompound(selector));
+  return subjectsOf(selector).some((subject) =>
+    /^\.(?:pending|empty)$/.test(subject),
+  );
 }
 
 const INSET = /^padding(?:-inline(?:-start|-end)?|-left|-right)?$/;

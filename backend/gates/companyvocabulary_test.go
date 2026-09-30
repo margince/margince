@@ -162,6 +162,15 @@ var exempt = gatekit.Waive(map[string]string{
 	"docs/reference/record-vocabulary.md": "it states the rule both record nouns hold, which it " +
 		"cannot do without naming the word each one retires",
 
+	"docs/handbook/what-margince-is.md": "its glossary maps the words a user types to the " +
+		"product's own, and it is the default corpus behind the in-app ask: \"an organisation is " +
+		"called a company\" cannot be retrieved for a question saying organisation unless it says " +
+		"organisation. Every other handbook page says company",
+	"backend/internal/modules/knowledge/handbook/what-margince-is.md": "the embedded copy of the " +
+		"page above, byte for byte",
+	"scripts/handbook-ask/questions.txt": "questions in the words users type, which is the " +
+		"point of the bank: it measures whether the glossary above catches them",
+
 	"backend/gates/companyvocabulary_test.go": "this file names the word in order to refuse it",
 })
 
@@ -315,6 +324,11 @@ func TestThePathCheckSeesAConcatenatedName(t *testing.T) {
 // namesTheOtherWord reports whether a line calls this record type by a former
 // name, once the words that merely resemble it are taken out.
 func namesTheOtherWord(line string) bool {
+	// Every spelling matched, and every spelling removed first, contains "org"
+	// in some case, so a line without it cannot match — and most lines lack it.
+	if !strings.Contains(strings.ToLower(line), "org") {
+		return false
+	}
 	line = hostname.ReplaceAllString(line, "")
 	line = notThisRecordType.ReplaceAllString(line, "")
 	return theOtherWord.MatchString(line)

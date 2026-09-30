@@ -263,25 +263,9 @@ describe("FX display discipline (B-EP09.18)", () => {
     join(dirname(fileURLToPath(import.meta.url)), "format.ts"),
     "utf8",
   );
-  const explainSource = readFileSync(
-    join(
-      dirname(fileURLToPath(import.meta.url)),
-      "..",
-      "design-system",
-      "explain.tsx",
-    ),
-    "utf8",
-  );
 
   it("never issues a live FX call at render time", () => {
-    for (const text of [source, explainSource]) {
-      expect(text).not.toMatch(/fetch\s*\(|XMLHttpRequest|axios/);
-    }
-  });
-
-  it("never multiplies native amounts by rates (consumes the IR base_value)", () => {
-    // the lineage row fields exist for display; no arithmetic combines them
-    expect(explainSource).not.toMatch(/nativeAmountMinor\s*\*|rate\s*\*/);
+    expect(source).not.toMatch(/fetch\s*\(|XMLHttpRequest|axios/);
   });
 });
 

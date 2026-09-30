@@ -109,7 +109,7 @@
           }
         },
         "retention": {
-          "description": "RetentionSeed selects the retention POSTURE a fresh installation is bootstrapped into (GCS-PARAM-7). It does not select the policy rows: those stay the data-model's pins (DM-SEED-1..6) under either posture, so an installation that must keep everything still SEES the ladder it is not running.",
+          "description": "RetentionSeed selects the retention POSTURE a fresh installation is bootstrapped into (GCS-PARAM-7). It does not select the policy rows: those stay the data-model's pins (DM-SEED-1..8) under either posture, so an installation that must keep everything still SEES the ladder it is not running.",
           "type": [
             "object",
             "null"
@@ -233,7 +233,7 @@
       }
     },
     "rates": {
-      "description": "RatesConfig is the (worker-role) source config for the admin \"Refresh from sources\" jobs. Fx is the URL of a page the FX refresh fetches and AI-extracts rates from (defaults to api.frankfurter.dev when empty — read as page text, not parsed JSON); FxCurrencies is the candidate set the FX refresh proposes to bootstrap an empty sheet (worker default: USD/GBP/CHF). ModelPricing maps a provider to its pricing-page URL; absent ⇒ the model-cost refresh no-ops. The FX refresh defaults both its source and candidate set, but extracts with the same model lane, so it no-ops when that lane is absent exactly as the model-cost refresh does. Neither refresh auto-applies — a human approves every staged proposal.",
+      "description": "RatesConfig is the (worker-role) source config for the admin \"Refresh from sources\" jobs. Fx is the URL of a page the FX refresh fetches and AI-extracts rates from (defaults to api.frankfurter.dev when empty — read as page text, not parsed JSON); FxCurrencies is the candidate set the FX refresh proposes to bootstrap an empty sheet (worker default: USD/GBP/CHF). The FX refresh defaults both its source and candidate set, and no-ops when the model lane that extracts the page is absent. It never auto-applies — a human approves every staged proposal.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -247,6 +247,7 @@
           }
         },
         "model_pricing": {
+          "description": "ModelPricing is still decoded, and deliberately: the file is parsed with KnownFields(true), so deleting it would turn an upgrade into a refusal to boot. Model prices now come from the broker's own catalogue; values here are IGNORED and Warnings says so.",
           "type": "object",
           "additionalProperties": {
             "type": "string"
@@ -302,6 +303,13 @@
             "boolean",
             "null"
           ]
+        },
+        "max_backfill_months": {
+          "description": "MaxBackfillMonths caps how far back a mailbox import may reach, for the whole installation. Absent means no cap, which is what every deployment has today — the offered ceiling was widened deliberately, and a default here would take that back from operators who chose it.",
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       }
     },
@@ -312,6 +320,16 @@
       "properties": {
         "rollout": {
           "type": "string"
+        }
+      }
+    },
+    "lists": {
+      "description": "Lists switches Live Lists and Shortlists on. They are off until an operator turns them on: the product is being built, and nothing an installation shows should advertise an unfinished surface.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
         }
       }
     },
@@ -408,6 +426,10 @@
         "embeddings": {
           "description": "The embedding lane, bound separately from chat (retrieval must survive a chat-budget exhaustion). Required.",
           "$ref": "#/$defs/embeddingsBinding"
+        },
+        "decisions": {
+          "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, on a certified site, and falls back to its ladder whenever the answer does not stand.",
+          "$ref": "#/$defs/decisionsBinding"
         }
       }
     },
@@ -455,6 +477,15 @@
         },
         "routing": {
           "$ref": "#/$defs/upstreamRouting"
+        },
+        "thinking_level": {
+          "description": "How deeply a gemini tier thinks when the request names no level of its own. Omit it for the adapter's default: a structured request thinks at low, and a Flash-Lite keeps its own shallower default (minimal), which low RAISES. Gemini charges thinking to the same output ceiling as the answer. Gemini 3 or later only — a Gemini 2.5 answers the field with a 400, and gemini-3.1-pro-preview refuses minimal.",
+          "enum": [
+            "minimal",
+            "low",
+            "medium",
+            "high"
+          ]
         }
       },
       "allOf": [
@@ -473,27 +504,45 @@
           }
         },
         {
+          "$ref": "#/$defs/routingNeedsOpenRouter"
+        },
+        {
           "if": {
             "required": [
-              "routing"
+              "thinking_level"
             ]
           },
           "then": {
             "properties": {
               "provider": {
-                "const": "openai_compatible"
-              },
-              "base_url": {
-                "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://([^/]*\\.)?[Oo][Pp][Ee][Nn][Rr][Oo][Uu][Tt][Ee][Rr]\\.[Aa][Ii](:[0-9]+)?(/|$)"
+                "const": "gemini"
               }
-            },
-            "required": [
-              "provider",
-              "base_url"
-            ]
+            }
           }
         }
       ]
+    },
+    "routingNeedsOpenRouter": {
+      "description": "A routing block is OpenRouter's own fields, so a lane may declare one only when it is an openai_compatible binding whose base_url is an OpenRouter host. One clause for both lanes, so the chat tiers and the embeddings lane cannot come to disagree about which host that is. The pattern is case-insensitive because URL hosts are, and the parser lowercases the host before it compares.",
+      "if": {
+        "required": [
+          "routing"
+        ]
+      },
+      "then": {
+        "properties": {
+          "provider": {
+            "const": "openai_compatible"
+          },
+          "base_url": {
+            "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://([^/]*\\.)?[Oo][Pp][Ee][Nn][Rr][Oo][Uu][Tt][Ee][Rr]\\.[Aa][Ii](:[0-9]+)?(/|$)"
+          }
+        },
+        "required": [
+          "provider",
+          "base_url"
+        ]
+      }
     },
     "upstreamRouting": {
       "description": "Which of a broker's upstream hosts may serve this tier. OpenRouter fronts many inference hosts per model, and its own default picks among them weighted by the inverse square of price — so one model id is served at fp4 on one call and at bf16 on the next, with latency to match. Valid ONLY on an openai_compatible binding whose base_url is an OpenRouter host; the parser refuses it anywhere else rather than send a vendor fields it never asked for. OMIT the block to inherit the product default (sort: throughput, quantizations: [fp16, bf16], require_parameters: true — reliability over price); write an empty object to opt out and take the broker's own price-weighted routing. Measured 2026-09-02 — see docs/reference/openrouter.md.",
@@ -608,6 +657,9 @@
           "minimum": 0,
           "maximum": 2000,
           "description": "Vector width the provider is asked to emit. Optional; 0 or omitted defaults to 1536."
+        },
+        "routing": {
+          "$ref": "#/$defs/embeddingsRouting"
         }
       },
       "allOf": [
@@ -624,8 +676,70 @@
               "base_url"
             ]
           }
+        },
+        {
+          "$ref": "#/$defs/routingNeedsOpenRouter"
         }
       ]
+    },
+    "decisionsBinding": {
+      "description": "The decisions-lane binding: a provider that answers the decision wire, its model and its endpoint. No input and no routing: the lane sends no attachments and the decisions endpoint takes no broker preferences.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "model"
+      ],
+      "properties": {
+        "provider": {
+          "description": "jev (TypeSafe's own API; key TYPESAFE_API_KEY, required; base_url optional, default https://api.typesafe.ai/v1/systemone) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; key JEV_COMPATIBLE_API_KEY, sent when set and never required; base_url required).",
+          "enum": [
+            "jev",
+            "jev_compatible"
+          ]
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The decision model id, e.g. jev-1.13.0 on jev, or typesafe/jev-1.13 on OpenRouter."
+        },
+        "base_url": {
+          "type": "string",
+          "description": "The FULL decision endpoint URL, posted to as written: nothing is appended. REQUIRED for jev_compatible (e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone). Empty on jev ⇒ TypeSafe's own endpoint."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "jev_compatible"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "base_url"
+            ]
+          }
+        }
+      ]
+    },
+    "embeddingsRouting": {
+      "description": "Which of a broker's upstream hosts may read the text this lane embeds. Only the host-selection fields: the lane embeds the same text the chat tiers send, so a residency pin must reach it too, and the other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to leave the broker's own choice of host.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "only": {
+          "$ref": "#/$defs/upstreamRouting/properties/only"
+        },
+        "ignore": {
+          "$ref": "#/$defs/upstreamRouting/properties/ignore"
+        },
+        "allow_fallbacks": {
+          "$ref": "#/$defs/upstreamRouting/properties/allow_fallbacks"
+        }
+      }
     }
   }
 }

@@ -3,17 +3,13 @@ import { type CSSProperties, type ReactNode, useState } from "react";
 import { identifierNumber } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import {
-  ApprovalGate,
   AutonomyDot,
   ConfidenceMeter,
   confidenceLevel,
   EvidenceChip,
   FieldDiff,
   PassportChip,
-  type Proposal,
   ProvenanceTag,
-  type Resolution,
-  StagedProposal,
   StagingCard,
 } from "./trust";
 
@@ -26,7 +22,7 @@ import {
 // rather than left to the reviewing machine's browser: the catalog has to say
 // the same words on every screenshot.
 const meta: Meta = {
-  title: "Design System/Trust",
+  title: "Components/AI and provenance/Trust",
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -239,17 +235,7 @@ export const Diffs: Story = {
   ),
 };
 
-const TRIAD_OUTCOMES: Record<string, string> = {
-  accept: "Accepted — the value keeps its agent provenance.",
-  edit: "Edited — the value is human-typed, the evidence stays attached.",
-  dismiss: "Dismissed — nothing was written.",
-};
-
-// The gate is three buttons and no state of its own, so the story owns the
-// outcome and says what each verb means. The universal triad is Accept / Edit
-// / Dismiss (§4.4) and it never varies by surface.
 function StagingDemo() {
-  const [outcome, setOutcome] = useState<string | null>(null);
   return (
     <StagingCard>
       <div style={row}>
@@ -260,59 +246,10 @@ function StagingDemo() {
         Headquarters: <span className="staged-value">Munich, Germany</span>
       </p>
       <EvidenceChip evidence={WEB_EVIDENCE} />
-      <ApprovalGate
-        onAccept={() => setOutcome(TRIAD_OUTCOMES.accept)}
-        onEdit={() => setOutcome(TRIAD_OUTCOMES.edit)}
-        onDismiss={() => setOutcome(TRIAD_OUTCOMES.dismiss)}
-      />
-      {outcome && <p className="t-caption">{outcome}</p>}
     </StagingCard>
   );
 }
 
 export const Staging: Story = {
   render: () => <StagingDemo />,
-};
-
-const EVIDENCED_PROPOSAL: Proposal = {
-  description: "Employee count",
-  value: "1,200",
-  agent: "enrich",
-  confidence: "high",
-  evidence: WEB_EVIDENCE,
-};
-
-// Evidence is optional on a proposal, and the version WITHOUT it is the one
-// worth cataloguing: a low-confidence value with nothing behind it is exactly
-// what a reader must be able to spot before accepting it.
-const BARE_PROPOSAL: Proposal = {
-  description: "Industry",
-  value: "Logistics",
-  agent: "capture",
-  confidence: "low",
-};
-
-// StagedProposal drives one proposal through the triad itself — accept, edit
-// or dismiss it in the canvas and the card resolves in place. Persisting the
-// outcome is the caller's job, which is what onResolve reports here.
-function ProposalDemo() {
-  const [resolution, setResolution] = useState<Resolution | null>(null);
-  return (
-    <div style={stack}>
-      <StagedProposal proposal={EVIDENCED_PROPOSAL} onResolve={setResolution} />
-      {resolution && (
-        <span className="t-caption">
-          onResolve fired: {resolution.outcome}
-          {resolution.outcome === "dismissed" ? "" : ` (${resolution.value})`}
-        </span>
-      )}
-      {/* No onResolve: the callback is optional and the card still runs its
-          own state machine. */}
-      <StagedProposal proposal={BARE_PROPOSAL} />
-    </div>
-  );
-}
-
-export const Proposals: Story = {
-  render: () => <ProposalDemo />,
 };

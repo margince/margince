@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestTheProposalCarriesTheExportsSpellingAndNotTheFoldedForms(t *testing.T) {
@@ -72,11 +73,14 @@ func TestAConnectionWithNoEmployerStillReadsAsASentence(t *testing.T) {
 	// LinkedIn's company field is member-edited and often empty. A summary
 	// reading "Andreas Müller at  looks like Andreas Müller" is the kind of
 	// thing that makes a queue feel broken.
-	if got := employerOrPlaceholder(""); got == "" || strings.TrimSpace(got) == "" {
-		t.Errorf("an empty employer renders as %q, leaving a hole in the summary", got)
-	}
-	if got := employerOrPlaceholder("Acme GmbH"); got != "Acme GmbH" {
-		t.Errorf("a real employer was rewritten to %q", got)
+	for _, lang := range textlang.Shipped {
+		said := approvalSummaryByLang[lang]
+		if got := employerOrPlaceholder(said, ""); got == "" || strings.TrimSpace(got) == "" {
+			t.Errorf("%s: an empty employer renders as %q, leaving a hole in the summary", lang, got)
+		}
+		if got := employerOrPlaceholder(said, "Acme GmbH"); got != "Acme GmbH" {
+			t.Errorf("%s: a real employer was rewritten to %q", lang, got)
+		}
 	}
 }
 

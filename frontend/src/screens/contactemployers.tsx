@@ -5,13 +5,15 @@ import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import { AddEmploymentModal } from "./addemploymentmodal";
-import { problemMessageOf, RefusalLine, throwProblem } from "./common";
+import { BoughtMark, boughtFields } from "./boughtmarks";
+import { problemMessageOf, throwProblem } from "./common";
 import { EmploymentRow } from "./contactemploymentrow";
 import {
   bodyState,
@@ -120,6 +122,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   // cannot edit which company they work at either.
   const canEdit = useCanWriteRecord("contact", contact) && !readOnlyReason;
   const actions = useEmploymentActions(contact.id);
+  const bought = boughtFields(contact);
   const more = useEmploymentPages(view);
   const allEmployments = [
     ...new Map(
@@ -211,6 +214,14 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
                 employments[index - 1]?.company_id !== employment.company_id
               }
               employment={employment}
+              mark={
+                <BoughtMark
+                  bought={bought.get(
+                    `employment:${employment.relationship_id}`,
+                  )}
+                  subject={employment.company_name ?? ""}
+                />
+              }
               // The title the contact's own record carries stands in for a
               // role not yet written on the current employment: the same fact
               // the header shows under the name, offered here where a reader
@@ -242,7 +253,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
         {noPrimaryEmployer && (
           <p className="t-caption">{t("contact.rail.noPrimaryEmployer")}</p>
         )}
-        {more.isError && <RefusalLine error={more.error} />}
+        <ErrorLine error={more.error} />
         {more.hasNextPage && (
           <Button
             pending={more.isFetchingNextPage}

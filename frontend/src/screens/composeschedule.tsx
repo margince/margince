@@ -147,7 +147,7 @@ export function ScheduleDialog({
   const picked = new Date(`${day}T${String(hour).padStart(2, "0")}:00`);
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId} size="wide">
-      <Heading size="large" id={headingId} className="t-h2">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {picking ? t("compose.schedulePick") : t("compose.scheduleSend")}
       </Heading>
       {picking ? (

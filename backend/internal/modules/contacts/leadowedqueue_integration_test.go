@@ -22,7 +22,6 @@ package contacts
 
 import (
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -42,10 +41,15 @@ func TestTheOwedDialKeepsAnsweredLeadsOutOfTheBoundedPage(t *testing.T) {
 		}
 		answered = append(answered, ids.UUID(lead.Id))
 	}
-	replied := time.Now().UTC()
+	// Stamped from the DATABASE's clock, which is the one that wrote
+	// created_at. Taken from the Go process instead, the two run independently
+	// — and a container a few milliseconds ahead makes the response precede
+	// the creation it must follow, which lead_first_response_follows_creation
+	// correctly refuses. The test then fails on a constraint the product is
+	// right to enforce, under parallel load and nowhere else.
 	for _, id := range answered {
 		if _, err := e.owner.Exec(e.ctx,
-			`UPDATE lead SET first_response_at = $2 WHERE id = $1`, id, replied); err != nil {
+			`UPDATE lead SET first_response_at = now() WHERE id = $1`, id); err != nil {
 			t.Fatalf("stamping a first response: %v", err)
 		}
 	}

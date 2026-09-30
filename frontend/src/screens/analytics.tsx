@@ -1,30 +1,25 @@
-import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Info } from "lucide-react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
-import { ENTITY } from "../app/entity";
-import { routeHash, useRoute } from "../app/router";
-import {
-  Button,
-  DataTable,
-  EmptyState,
-  SectionHeader,
-  Skeleton,
-  StatCard,
-} from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { useRoute } from "../app/router";
+import { EmptyState, StatCard } from "../design-system/atoms";
+import { DataTable } from "../design-system/datatable";
+import { IconAction } from "../design-system/iconaction";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
 import {
   formatDateTime,
+  formatMoneyCompact,
   formatMoneyOrAbsent,
   formatNumber,
   MONEY_ABSENT,
 } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   openAnalyticsSection,
@@ -33,18 +28,45 @@ import {
   sectionFromAddress,
 } from "./analytics.address";
 import {
+  BarFigure,
+  CountLink,
+  columnScale,
+  type ReportRow,
+  rowCount,
+  rowCurrency,
+  rowMoney,
+  type Stage,
+} from "./analytics.cells";
+import {
   type AnalyticsSelection,
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
+import {
+  ProjectCommitmentsTable,
+  ProjectsByPhaseTable,
+  ProjectsGoneQuietTable,
+} from "./analytics.delivery";
+import {
+  CellExplain,
+  CompanyCellExplain,
+  ExplainFrame,
+  ExplainPanel,
+  rowDerivationUrl,
+} from "./analytics.explain";
 import { ForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
+import { StageAgeTable, WinLossTable } from "./analytics.performance";
+import { QuestionsView } from "./analytics.questions";
+import {
+  FORECAST_CATEGORIES,
+  MEETING_STATUSES,
+} from "./analytics.questions.values";
+import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { ShareViewButton } from "./analytics.share";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { ForecastShareActions } from "./analytics.share";
+import { QueryGate, throwProblem } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
-import { EntityRef } from "./entityref";
-import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 import "./analytics.css";
 
 // Analytics: a picker over three reports — deals-by-stage (unweighted beside
@@ -73,6 +95,7 @@ type StageAgg = {
   // is "we do not know", and folding it into 0 would print "0 of 2 priced"
   // for a stage nobody actually finished pricing.
   pricedDeals: number | null;
+  derivationUrl: string | null;
 };
 
 type ReportKey =
@@ -107,27 +130,8 @@ const SECTION_REPORTS = {
   coverage: [],
   // What was sold becoming what is delivered: the three project reports.
   delivery: ["projects-by-phase", "project-commitments", "projects-gone-quiet"],
+  questions: [],
 } as const satisfies Record<Section, readonly ReportKey[]>;
-
-type ReportRow = components["schemas"]["ReportResult"]["rows"][number];
-type Derivation = components["schemas"]["ReportDerivation"];
-type Stage = components["schemas"]["Stage"];
-
-// A figure that names a set, drawn as the way into it. The count stays the
-// text — a reader is looking for the number, not for a verb — and the link is
-// what the number now is.
-function CountLink({
-  count,
-  href,
-  title,
-}: Readonly<{ count: number; href: string; title: string }>) {
-  const { locale } = useLocale();
-  return (
-    <a className="link-button" href={href} title={title}>
-      {formatNumber(count, locale)}
-    </a>
-  );
-}
 
 // The report engine's own name for the currency dimension. Spelled once: it
 // reaches the request, every row read and the column header, and a typo in any
@@ -159,30 +163,9 @@ const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
   "projects-gone-quiet": [],
 };
 
-// A report row arrives as `{ [key: string]: unknown }`, so every read narrows.
-// These keep the narrowing in one place, and keep the distinction the cells
-// depend on: an absent measure is not a zero, and an absent currency is not EUR.
-function rowCurrency(row: ReportRow): string | null {
-  // An empty code is not a currency. Left as "" it renders a blank cell where a
-  // code belongs, and it groups apart from null while meaning the same thing —
-  // which would give the forecast two bands with the same key.
-  return typeof row.currency === "string" && row.currency !== ""
-    ? row.currency
-    : null;
-}
-
-function rowMoney(row: ReportRow, key: string): number | null {
-  const value = row[key];
-  return value == null ? null : Number(value);
-}
-
-function rowCount(row: ReportRow, key: string): number {
-  return Number(row[key] ?? 0);
-}
-
 // The footnote for a money figure a currency the rate sheet cannot price left
-// short. Null when every counted deal was priced, which is the common case and
-// not worth a caption nobody needs to read.
+// short. Null when every counted deal was priced. The TABLE's spelling; a stat
+// card states the same gap through `analytics.forecastPriced`, as a fragment.
 function pricedFootnote(
   pricedDeals: number,
   total: number,
@@ -198,19 +181,17 @@ function pricedFootnote(
   });
 }
 
-// A report's own name, spelled once: the segment picker and the heading of the
-// card that segment opens read the same key, so the tab and the surface behind
-// it cannot drift into two names for one report.
-const REPORT_LABEL_KEY = {
-  "pipeline-current": "analytics.reportDeals",
-  forecast: "analytics.reportForecast",
-  "open-deals-per-company": "analytics.reportOpenByCompany",
-  "win-loss": "analytics.reportWinLoss",
-  "stage-age": "analytics.reportStageAge",
-  "projects-by-phase": "analytics.reportProjectsByPhase",
-  "project-commitments": "analytics.reportProjectCommitments",
-  "projects-gone-quiet": "analytics.reportProjectsGoneQuiet",
-} as const satisfies Record<ReportKey, string>;
+// What a reading says when the row it needs is not there. THREE facts, not one:
+// a read in flight resolves by waiting, a failed one never will, and a lens
+// that answered with nothing has told the truth. One word over all three said
+// "nothing to read yet" over a request that had failed.
+function absentReading(
+  query: Readonly<{ isLoading: boolean; isError: boolean }>,
+): MessageKey {
+  if (query.isLoading) return "analytics.readingLoading";
+  if (query.isError) return "analytics.readingUnavailable";
+  return "analytics.readingNone";
+}
 
 // The line under a report's title, for the reports whose copy says something
 // the card's own title does not. A report absent from here gets no caption: an
@@ -264,41 +245,6 @@ const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
   "projects-gone-quiet": [],
 };
 
-// Parse a server-minted `derivation_url` into the typed derivation query.
-// The generated client's derivation query is ONLY `{ by?, agg? }` (no
-// predicate params, no index signature), so callers forward just those two;
-// the extra predicate keys ride along on the return value for inspection
-// only (spec constraint 6: never raw-fetch the URL itself).
-export function parseDerivationQuery(
-  url: string,
-): { by: string[]; agg: string[] } & Record<string, unknown> {
-  const qs = new URLSearchParams(url.split("?")[1] ?? "");
-  const extra: Record<string, unknown> = {};
-  for (const [k, v] of qs.entries()) {
-    if (k !== "by" && k !== "agg") extra[k] = v;
-  }
-  return { ...extra, by: qs.getAll("by"), agg: qs.getAll("agg") };
-}
-
-// The derivation URL's path names the report key (prebuilt or saved-report
-// id) the typed path param expects.
-function derivationReportKey(url: string): string {
-  return url.match(/reports\/([^/?]+)\/derivation/)?.[1] ?? "";
-}
-
-// forecast_category dimension values (report.go's forecastCategoryExpr):
-// the four the deal itself can carry, plus the server-derived "slipped" —
-// a claimed commit/best_case deal whose close date is past, missing, or
-// still provisional (formulas §11). Omitting it here doesn't shrink the
-// total; it moves the deal's amount into no tile at all.
-const FORECAST_CATEGORIES = [
-  { key: "commit", labelKey: "deal.fcCommit" },
-  { key: "best_case", labelKey: "deal.fcBestCase" },
-  { key: "pipeline", labelKey: "deal.fcPipeline" },
-  { key: "omitted", labelKey: "deal.fcOmitted" },
-  { key: "slipped", labelKey: "deal.fcSlipped" },
-] as const;
-
 // One forecast category as one slot of the strip: the raw total is the reading
 // and the probability-weighted total is the basis it was drawn from, which is
 // exactly what StatCard's label/value/detail carry. Exported for the Storybook
@@ -313,6 +259,7 @@ export function ForecastTile({
   pricedDeals,
   currency,
   locale,
+  explainUrl,
 }: Readonly<{
   label: string;
   // Both halves are nullable and neither absence has a substitute. A category
@@ -334,58 +281,65 @@ export function ForecastTile({
   pricedDeals?: number | null;
   currency: string | null;
   locale: Locale;
+  // The category row's own handle; a tile with none draws no trigger.
+  explainUrl?: string | null;
 }>) {
   const t = useT();
-  const amount = formatMoneyOrAbsent(amountMinor, currency, locale);
-  return (
-    <StatCard
-      label={label}
-      // A word, never a glyph: "nothing measured" is a reading a manager acts
-      // on, where a dash reads as a slot that failed to draw.
-      value={amount === MONEY_ABSENT ? t("analytics.forecastNoFigure") : amount}
-      detail={forecastTileDetail(
-        { weightedMinor, dealCount, pricedDeals, currency, locale },
-        t,
-      )}
-    />
-  );
-}
-
-// The second line of a tile: the weighted total, and how many deals the
-// category holds. Both are optional and each stands without the other, so a
-// caller with one figure to give is not made to invent the other.
-function forecastTileDetail(
-  {
-    weightedMinor,
-    dealCount,
-    pricedDeals,
-    currency,
-    locale,
-  }: Readonly<{
-    weightedMinor?: number | null;
-    dealCount?: number | null;
-    pricedDeals?: number | null;
-    currency: string | null;
-    locale: Locale;
-  }>,
-  t: ReturnType<typeof useT>,
-): string | undefined {
+  const plural = usePlural();
+  // No handle, no slot: StatCard draws a source box for any node, even empty.
+  const source = explainUrl ? (
+    <CellExplain url={explainUrl} figure={label} />
+  ) : undefined;
+  // "1 deals" is a sentence no call site should be able to spell.
+  const deals = (n: number) =>
+    plural("analytics.forecastDeals", n, { count: formatNumber(n, locale) });
+  if (amountMinor == null || !currency) {
+    // A word, never a glyph: with no money the deals the category HOLDS are
+    // the reading, and with no count either nothing was measured at all.
+    return (
+      <StatCard
+        narrow="row"
+        label={label}
+        source={source}
+        value={
+          dealCount == null ? t("analytics.forecastNoFigure") : deals(dealCount)
+        }
+        detail={dealCount == null ? undefined : t("analytics.forecastNoAmount")}
+      />
+    );
+  }
+  // The line under the figure: what it was weighted to, and how many deals it
+  // covers — FRAGMENTS, never "Label: value" pairs, because a caption is read
+  // as one sentence about the figure and a colon makes it a small table.
   const parts: string[] = [];
   if (weightedMinor != null) {
     parts.push(
-      `${t("analytics.weighted")}: ${formatMoneyOrAbsent(weightedMinor, currency, locale)}`,
+      t("analytics.forecastWeighted", {
+        amount: formatMoneyCompact(weightedMinor, currency, locale),
+      }),
     );
   }
   if (dealCount != null) {
-    parts.push(`${t("analytics.count")}: ${formatNumber(dealCount, locale)}`);
+    // The gap is stated only where there IS one: "8 of 8 priced" sends a reader
+    // looking for a shortfall the category does not have.
+    parts.push(
+      pricedDeals != null && pricedDeals < dealCount
+        ? t("analytics.forecastPriced", {
+            priced: formatNumber(pricedDeals, locale),
+            count: formatNumber(dealCount, locale),
+          })
+        : deals(dealCount),
+    );
   }
-  if (dealCount != null && pricedDeals != null) {
-    const footnote = pricedFootnote(pricedDeals, dealCount, locale, t);
-    if (footnote) {
-      parts.push(footnote);
-    }
-  }
-  return parts.length > 0 ? parts.join(" · ") : undefined;
+  return (
+    <StatCard
+      narrow="row"
+      label={label}
+      source={source}
+      value={formatMoneyCompact(amountMinor, currency, locale)}
+      detail={parts.join(" · ") || undefined}
+    />
+  );
 }
 
 // The wire allows a deal to carry no forecast category, and the five named ones
@@ -414,13 +368,10 @@ function ForecastStrip({
   const t = useT();
   return (
     <>
-      <Callout
-        tone="info"
-        kind="standing"
-        title={t("analytics.forecastBannerTitle")}
-      >
-        {t("analytics.forecastBanner")}
-      </Callout>
+      {/* How to read the second figure in every slot, as the panel's one
+          descriptive line: a notice box inside the panel was a pane inside a
+          pane, and it outweighed the readings it was only explaining. */}
+      <PanelIntro>{t("analytics.forecastBanner")}</PanelIntro>
       {/* ONE strip, because there is now one denomination. A plate of ruled
           slots claims its figures are ONE comparison, and a strip per currency
           — the only honest way to show native sums, since adding euros to dong
@@ -431,34 +382,33 @@ function ForecastStrip({
           The slots stay slots rather than becoming a bar list: every category
           carries TWO figures, the raw total and the probability-weighted one
           beneath it, and a ranked bar carries a single amount per row. */}
-      <div style={{ marginTop: "var(--space-4)" }}>
-        <StatStrip>
-          {[...FORECAST_CATEGORIES, ...uncategorisedSlot(rows)].map(
-            (category) => {
-              const row = rows.find(
-                (candidate) =>
-                  String(candidate.forecast_category ?? UNCATEGORISED) ===
-                  category.key,
-              );
-              return (
-                <ForecastTile
-                  key={category.key}
-                  label={t(category.labelKey)}
-                  amountMinor={row ? rowMoney(row, "raw_minor") : null}
-                  weightedMinor={row ? rowMoney(row, "weighted_minor") : null}
-                  dealCount={row ? rowCount(row, "deal_count") : null}
-                  // Not rowCount: an absent aggregate here means the server
-                  // did not answer, and rowCount's 0 default would print
-                  // that as "0 priced" instead of leaving the detail out.
-                  pricedDeals={row ? rowMoney(row, "priced_deals") : null}
-                  currency={baseCurrency}
-                  locale={locale}
-                />
-              );
-            },
-          )}
-        </StatStrip>
-      </div>
+      <StatStrip>
+        {[...FORECAST_CATEGORIES, ...uncategorisedSlot(rows)].map(
+          (category) => {
+            const row = rows.find(
+              (candidate) =>
+                String(candidate.forecast_category ?? UNCATEGORISED) ===
+                category.key,
+            );
+            return (
+              <ForecastTile
+                key={category.key}
+                label={t(category.labelKey)}
+                amountMinor={row ? rowMoney(row, "raw_minor") : null}
+                weightedMinor={row ? rowMoney(row, "weighted_minor") : null}
+                dealCount={row ? rowCount(row, "deal_count") : null}
+                // Not rowCount: an absent aggregate here means the server
+                // did not answer, and rowCount's 0 default would print
+                // that as "0 priced" instead of leaving the detail out.
+                pricedDeals={row ? rowMoney(row, "priced_deals") : null}
+                explainUrl={row ? rowDerivationUrl(row) : null}
+                currency={baseCurrency}
+                locale={locale}
+              />
+            );
+          },
+        )}
+      </StatStrip>
     </>
   );
 }
@@ -492,16 +442,36 @@ function singleCurrencyKeys(keys: readonly string[]): ReadonlySet<string> {
   );
 }
 
+// The key a row groups under: its company, or "" for the deals that have none.
+const companyKey = (row: ReportRow) =>
+  typeof row.company_id === "string" ? row.company_id : "";
+
+// The largest native sum in each currency, the scale that currency's bars
+// share. A row with no currency has no unit to be drawn in and joins none.
+function currencyScales(
+  rows: readonly ReportRow[],
+): ReadonlyMap<string, number> {
+  const scales = new Map<string, number>();
+  for (const row of rows) {
+    const currency = rowCurrency(row);
+    const rawMinor = rowMoney(row, "raw_minor");
+    if (currency && rawMinor != null) {
+      scales.set(currency, Math.max(scales.get(currency) ?? 0, rawMinor));
+    }
+  }
+  return scales;
+}
+
 function CompanyTable({
   rows,
   locale,
 }: Readonly<{ rows: ReportRow[]; locale: Locale }>) {
   const t = useT();
-  const addressable = singleCurrencyKeys(
-    rows
-      .map((row) => row.company_id)
-      .filter((id): id is string => typeof id === "string"),
-  );
+  const addressable = singleCurrencyKeys(rows.map(companyKey));
+  // One scale PER CURRENCY: these sums are native, so a euro bar measured
+  // against a dong one would compare numbers with no common unit — the
+  // unit-less comparison the table's own rows refuse to add up.
+  const scaleOf = currencyScales(rows);
   return (
     <DataTable
       label={t("analytics.reportOpenByCompany")}
@@ -515,16 +485,14 @@ function CompanyTable({
           // minute and shared with every other reference on screen. The cost is
           // per row and this table is one report page long; the alternative is a
           // table of uuids, which is not a cheaper report but an unusable one.
-          render: (row: ReportRow) =>
-            typeof row.company_id === "string" ? (
-              <EntityRef kind="company" id={row.company_id} />
-            ) : (
-              // Deals with no company at all, grouped into one row. An empty
-              // cell read as a rendering fault; this says what the row is, and
-              // it is a fact about the data rather than a permission — so it
-              // says "none", which no other state is allowed to claim.
-              <span>{t("analytics.noCompany")}</span>
-            ),
+          render: (row: ReportRow) => (
+            <CompanyCellExplain
+              url={rowDerivationUrl(row)}
+              currency={rowCurrency(row)}
+              companyId={companyKey(row) || null}
+              split={!addressable.has(companyKey(row))}
+            />
+          ),
         },
         {
           key: FIELD_CURRENCY,
@@ -534,6 +502,7 @@ function CompanyTable({
         {
           key: "count",
           header: t("analytics.openDeals"),
+          align: "end",
           render: (row: ReportRow) =>
             typeof row.company_id === "string" &&
             addressable.has(row.company_id) ? (
@@ -556,15 +525,21 @@ function CompanyTable({
         {
           key: "raw",
           header: t("analytics.unweighted"),
-          render: (row: ReportRow) => (
-            <span className="t-num">
-              {formatMoneyOrAbsent(
-                rowMoney(row, "raw_minor"),
-                rowCurrency(row),
-                locale,
-              )}
-            </span>
-          ),
+          align: "end",
+          grow: true,
+          render: (row: ReportRow) => {
+            const currency = rowCurrency(row);
+            const rawMinor = rowMoney(row, "raw_minor");
+            return (
+              <BarFigure
+                value={currency ? rawMinor : null}
+                scale={currency ? (scaleOf.get(currency) ?? 0) : 0}
+                label={t("analytics.unweighted")}
+              >
+                {formatMoneyOrAbsent(rawMinor, currency, locale)}
+              </BarFigure>
+            );
+          },
         },
       ]}
       rows={rows}
@@ -610,6 +585,7 @@ export function buildStageAggregates(
           // answer the question, and rowCount's 0 default would print that
           // as an answer.
           pricedDeals: rowMoney(row, "priced_deals"),
+          derivationUrl: rowDerivationUrl(row),
         };
       })
       // Stage position alone orders the ladder now. The old tiebreak on currency
@@ -635,6 +611,7 @@ function StageTable({
 }>) {
   const t = useT();
   const aggregates = buildStageAggregates(rows, stages);
+  const scale = columnScale(aggregates.map((row) => row.rawMinor));
   return (
     <DataTable
       label={t("analytics.reportDeals")}
@@ -642,11 +619,16 @@ function StageTable({
         {
           key: "stage",
           header: t("deals.stage"),
-          render: (row: StageAgg) => row.stageName,
+          render: (row: StageAgg) => (
+            <CellExplain url={row.derivationUrl} figure={row.stageName}>
+              {row.stageName}
+            </CellExplain>
+          ),
         },
         {
           key: "count",
           header: t("analytics.count"),
+          align: "end",
           // Every row addresses its deals: converted, one stage is one row and
           // one set again, where a stage split across two currency rows had no
           // single set to open. The link asks for OPEN deals, which is what
@@ -666,448 +648,41 @@ function StageTable({
         {
           key: "raw",
           header: t("analytics.unweighted"),
+          align: "end",
+          grow: true,
+          // The bar is the stage's open value against the largest stage's,
+          // with the weighted worth solid inside it: the two money columns as
+          // one shape, so how much of each stage the probabilities discount
+          // is read at a glance rather than by dividing.
           render: (row: StageAgg) => {
             const footnote =
               row.pricedDeals == null
                 ? null
                 : pricedFootnote(row.pricedDeals, row.count, locale, t);
             return (
-              <span className="t-num analytics-money-cell">
-                {formatMoneyOrAbsent(row.rawMinor, baseCurrency, locale)}
-                {footnote && (
-                  <span className="t-caption t-num">{footnote}</span>
-                )}
-              </span>
+              <BarFigure
+                value={row.rawMinor}
+                part={row.weightedMinor}
+                scale={scale}
+                label={row.stageName}
+              >
+                <span className="analytics-money-cell">
+                  {formatMoneyOrAbsent(row.rawMinor, baseCurrency, locale)}
+                  {footnote && <span className="t-caption">{footnote}</span>}
+                </span>
+              </BarFigure>
             );
           },
         },
         {
           key: "weighted",
           header: t("analytics.weighted"),
-          render: (row: StageAgg) => (
-            <span className="t-num">
-              {formatMoneyOrAbsent(row.weightedMinor, baseCurrency, locale)}
-            </span>
-          ),
+          align: "end",
+          render: (row: StageAgg) =>
+            formatMoneyOrAbsent(row.weightedMinor, baseCurrency, locale),
         },
       ]}
       rows={aggregates}
-      rowKey={(row) => row.stageId}
-    />
-  );
-}
-
-// The vocabulary's own words for the columns a drill-through can carry.
-// A column outside it keeps its wire name, which is honest: the reader sees
-// what the plan selected rather than a guess at what it meant.
-const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
-  label: "explain.col.record",
-  amount_base_minor: "analytics.unweighted",
-  weighted_base_minor: "analytics.weighted",
-  amount_minor: "analytics.unweighted",
-  currency: "analytics.currency",
-  stage_id: "explain.col.stage",
-  owner_id: "explain.col.owner",
-  pipeline_id: "explain.col.pipeline",
-  company_id: "analytics.company",
-  partner_company_id: "analytics.company",
-};
-
-// A column the vocabulary knows gets its word; anything else keeps the wire
-// name the plan selected it under.
-function derivationHeader(col: string, t: (key: MessageKey) => string): string {
-  const key = DERIVATION_HEADERS[col];
-  return key ? t(key) : col;
-}
-
-// The server names the row and the reader reads the name, so the raw id
-// becomes noise beside it — but only once EVERY row has a name.
-//
-// Labelling is per row: the seam withholds a name for a record this reader may
-// not read, and the column appears as soon as one row was named. Dropping the
-// id on that alone would blank the withheld rows' only identifier, so the rows
-// a reader can least account for become the ones they cannot identify at all.
-export function derivationColumns(derivation: Derivation): string[] {
-  const rows = derivation.rows ?? [];
-  const everyRowNamed =
-    derivation.columns.includes("label") &&
-    rows.length > 0 &&
-    rows.every((row) => typeof row.label === "string" && row.label !== "");
-  return derivation.columns.filter((col) => !everyRowNamed || col !== "id");
-}
-
-// Which money a row's minor-unit figure is written in.
-//
-// The two are not the same column. A `_base_minor` measure was converted by the
-// server, so it is in the installation's base currency; a plain `_minor` is the
-// deal's OWN amount, and the forecast's rows carry that currency beside it —
-// reading the base currency there would put a euro sign on a dollar deal.
-export function derivationCellCurrency(
-  col: string,
-  row: Record<string, unknown>,
-  baseCurrency: string | null,
-): string | null {
-  if (col.endsWith("_base_minor")) {
-    return baseCurrency;
-  }
-  const own = row.currency;
-  return typeof own === "string" && own !== "" ? own : null;
-}
-
-// Money on these rows is stored in minor units, and a minor-unit integer
-// printed raw is the single most misread thing on this screen: 500000 next
-// to €5,000.00 are the same number wearing different clothes.
-function renderDerivationCell(
-  col: string,
-  row: Record<string, unknown>,
-  baseCurrency: string | null,
-  locale: Locale,
-): ReactNode {
-  const value = row[col];
-  if (value == null) {
-    return "";
-  }
-  if (typeof value === "string" && value !== "") {
-    if (col === "pipeline_id")
-      return <DerivationPipelineName pipelineId={value} />;
-    if (col === "stage_id" && typeof row.pipeline_id === "string") {
-      return (
-        <DerivationPipelineName pipelineId={row.pipeline_id} stageId={value} />
-      );
-    }
-    if (col === "owner_id") return <EntityRef kind="user" id={value} />;
-    if (col === "company_id" || col === "partner_company_id") {
-      return <EntityRef kind="company" id={value} />;
-    }
-  }
-  if (col.endsWith("_minor") && typeof value === "number") {
-    return formatMoneyOrAbsent(
-      value,
-      derivationCellCurrency(col, row, baseCurrency),
-      locale,
-    );
-  }
-  return String(value);
-}
-
-function DerivationPipelineName({
-  pipelineId,
-  stageId,
-}: Readonly<{ pipelineId: string; stageId?: string }>) {
-  const t = useT();
-  const pipeline = useQuery({
-    queryKey: ["pipeline", pipelineId],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines/{id}", {
-        params: { path: { id: pipelineId } },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
-  if (pipeline.isPending) return <>{t("common.loading")}</>;
-  if (pipeline.isError) return <>{t("common.error")}</>;
-  return (
-    <>
-      {stageId
-        ? (pipeline.data?.stages?.find((stage) => stage.id === stageId)?.name ??
-          t("common.empty"))
-        : pipeline.data?.name}
-    </>
-  );
-}
-
-// The source rows the explained figure reconciles to. A section INSIDE the
-// explain card's own section, so its heading steps down with the outline
-// rather than reading as a peer of the card's title.
-function DerivationRows({
-  derivation,
-  baseCurrency,
-}: Readonly<{ derivation: Derivation; baseCurrency: string | null }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const columns = derivationColumns(derivation);
-  return (
-    <>
-      <SectionHeader title={t("explain.sources")} level={3} />
-      {derivation.rows.length === 0 ? (
-        <SurfaceState
-          state="empty"
-          emptyLabel={t("common.empty")}
-          loadingLabel={t("explain.sources")}
-        >
-          {null}
-        </SurfaceState>
-      ) : (
-        <DataTable
-          label={t("explain.sources")}
-          columns={columns.map((col) => ({
-            key: col,
-            header: derivationHeader(col, t),
-            render: (row: Record<string, unknown>) =>
-              renderDerivationCell(col, row, baseCurrency, locale),
-          }))}
-          rows={derivation.rows}
-          rowKey={(row) => derivation.rows.indexOf(row).toString()}
-        />
-      )}
-    </>
-  );
-}
-
-// "Explain this number": the zone that shows where a figure came from, so a
-// number on this screen is never presented without its derivation.
-function ExplainPanel({
-  id,
-  url,
-  query,
-  baseCurrency,
-}: Readonly<{
-  // The toggle above points `aria-controls` here, so the card has to carry the
-  // id the toggle was given rather than mint one of its own.
-  id: string;
-  url: string | null;
-  query: UseQueryResult<Derivation>;
-  // The currency the report converted into, so the source rows behind a
-  // converted total are written in the same money as the total.
-  baseCurrency: string | null;
-}>) {
-  const t = useT();
-  return (
-    // The toggle names this panel with `aria-controls` and Panel mints its own
-    // ids, so the handle the toggle was given lives on the wrapper.
-    <div id={id}>
-      <Panel title={t("explain.title")}>
-        <PanelBody>
-          {/* What the figure MEANS, in the server's own words: a sentence,
-              and the head band holds one line of one. */}
-          <p className="t-sub">
-            {query.data?.definition ?? t("analytics.planNote")}
-          </p>
-          {url == null && <p>{t("common.empty")}</p>}
-          {url != null && query.isPending && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-2)",
-              }}
-            >
-              <Skeleton width="60%" />
-              <Skeleton width="90%" />
-            </div>
-          )}
-          {query.isError && (
-            <>
-              <p>{problemMessageOf(query.error, t)}</p>
-              <div className="card-actions">
-                <Button onClick={() => query.refetch()}>
-                  {t("common.retry")}
-                </Button>
-              </div>
-            </>
-          )}
-          {/* A link minted before the handle carried an instant — an old one,
-              or one a reader saved. The figures below were recomputed at a NEW
-              moment, so a rate sheet effective in between makes them disagree
-              with the number they explain. This is opened by someone already
-              doubting a figure, and a detail that quietly reconciles to
-              something else reads as proof rather than as a discrepancy. */}
-          {query.data?.as_of_pinned === false && (
-            <p className="surfacestate-stale">{t("explain.mayHaveMoved")}</p>
-          )}
-          {query.data && (
-            <DerivationRows
-              derivation={query.data}
-              baseCurrency={baseCurrency}
-            />
-          )}
-        </PanelBody>
-      </Panel>
-    </div>
-  );
-}
-
-// A duration cell: the server's median or p75, or the withheld state the
-// engine answers below its sample floor. A dash would read as zero-ish; the
-// words say why there is no number.
-function DaysCell({
-  value,
-  locale,
-}: Readonly<{ value: unknown; locale: Locale }>) {
-  const t = useT();
-  if (value == null) {
-    return <span>{t("analytics.tooFewForMedian")}</span>;
-  }
-  return (
-    <>{t("analytics.days", { days: formatNumber(Number(value), locale) })}</>
-  );
-}
-
-type OutcomeRow = {
-  status: string;
-  count: number;
-  baseMinor: number | null;
-  medianDays: unknown;
-  p75Days: unknown;
-};
-
-// Won and lost, side by side: counts, converted value, and how long the
-// closed deals took. No rate is computed here — a win rate is the server's to
-// answer the day it owns a denominator, and a browser-made quotient would be
-// a second answer to what the cohort is.
-function WinLossTable({
-  rows,
-  locale,
-  baseCurrency,
-}: Readonly<{
-  rows: ReportRow[];
-  locale: Locale;
-  baseCurrency: string | null;
-}>) {
-  const t = useT();
-  const outcomes: OutcomeRow[] = rows
-    .filter((row) => typeof row.status === "string")
-    .map((row) => ({
-      status: String(row.status),
-      count: rowCount(row, "deal_count"),
-      baseMinor: rowMoney(row, "raw_minor"),
-      medianDays: row.median_days,
-      p75Days: row.p75_days,
-    }));
-  if (outcomes.length === 0) {
-    // Nothing closed yet is a real answer, not a broken table: the population
-    // is closed deals, and a young installation has none.
-    return <EmptyState>{t("analytics.noClosedDeals")}</EmptyState>;
-  }
-  return (
-    <DataTable
-      label={t("analytics.reportWinLoss")}
-      columns={[
-        {
-          key: "outcome",
-          header: t("analytics.outcome"),
-          render: (row: OutcomeRow) =>
-            row.status === "won" ? t("analytics.won") : t("analytics.lost"),
-        },
-        {
-          key: "count",
-          header: t("analytics.count"),
-          render: (row: OutcomeRow) => (
-            <CountLink
-              count={row.count}
-              href={dealsFilteredBy("status", row.status)}
-              title={t("analytics.openOutcomeDeals", {
-                outcome:
-                  row.status === "won"
-                    ? t("analytics.won")
-                    : t("analytics.lost"),
-              })}
-            />
-          ),
-        },
-        {
-          key: "value",
-          header: t("analytics.baseValue", { currency: baseCurrency ?? "" }),
-          render: (row: OutcomeRow) =>
-            formatMoneyOrAbsent(row.baseMinor, baseCurrency, locale),
-        },
-        {
-          key: "median",
-          header: t("analytics.medianDaysToClose"),
-          render: (row: OutcomeRow) => (
-            <DaysCell value={row.medianDays} locale={locale} />
-          ),
-        },
-        {
-          key: "p75",
-          header: t("analytics.p75DaysToClose"),
-          render: (row: OutcomeRow) => (
-            <DaysCell value={row.p75Days} locale={locale} />
-          ),
-        },
-      ]}
-      rows={outcomes}
-      rowKey={(row) => row.status}
-    />
-  );
-}
-
-type StageAgeRow = {
-  stageId: string;
-  stageName: string;
-  stagePosition: number;
-  count: number;
-  medianDays: unknown;
-  p75Days: unknown;
-};
-
-// How long open deals have sat in each stage, from the stage history's own
-// entry instants. The median and p75 arrive computed; below the sample floor
-// they arrive withheld, and the count beside the blank still says how many.
-function StageAgeTable({
-  rows,
-  stages,
-  locale,
-}: Readonly<{
-  rows: ReportRow[];
-  stages: readonly Stage[];
-  locale: Locale;
-}>) {
-  const t = useT();
-  const byId = new Map(stages.map((stage) => [stage.id, stage]));
-  const aged: StageAgeRow[] = rows
-    .filter((row) => typeof row.stage_id === "string")
-    .map((row) => {
-      const stage = byId.get(String(row.stage_id));
-      return {
-        stageId: String(row.stage_id),
-        stageName: stage?.name ?? t("analytics.unknownStage"),
-        stagePosition: stage?.position ?? Number.MAX_SAFE_INTEGER,
-        count: rowCount(row, "deal_count"),
-        medianDays: row.median_days,
-        p75Days: row.p75_days,
-      };
-    })
-    .sort((a, b) => a.stagePosition - b.stagePosition);
-  return (
-    <DataTable
-      label={t("analytics.reportStageAge")}
-      columns={[
-        {
-          key: "stage",
-          header: t("deals.stage"),
-          render: (row: StageAgeRow) => row.stageName,
-        },
-        {
-          key: "count",
-          header: t("analytics.count"),
-          render: (row: StageAgeRow) => (
-            <CountLink
-              count={row.count}
-              href={dealsFilteredBy("stage_id", row.stageId, {
-                status: "open",
-              })}
-              title={t("analytics.openStageDeals", { stage: row.stageName })}
-            />
-          ),
-        },
-        {
-          key: "median",
-          header: t("analytics.medianDaysInStage"),
-          render: (row: StageAgeRow) => (
-            <DaysCell value={row.medianDays} locale={locale} />
-          ),
-        },
-        {
-          key: "p75",
-          header: t("analytics.p75DaysInStage"),
-          render: (row: StageAgeRow) => (
-            <DaysCell value={row.p75Days} locale={locale} />
-          ),
-        },
-      ]}
-      rows={aged}
       rowKey={(row) => row.stageId}
     />
   );
@@ -1147,7 +722,7 @@ function DataCoverageView({
         ) : (
           <Panel title={t("analytics.sectionCoverage")}>
             <PanelBody>
-              <p className="t-sub">{t("analytics.coverageSub")}</p>
+              <PanelIntro>{t("analytics.coverageSub")}</PanelIntro>
               <DataTable
                 label={t("analytics.sectionCoverage")}
                 columns={[
@@ -1213,17 +788,6 @@ function useDataCoverage() {
 }
 
 type AnalyticsScopeWire = components["schemas"]["AnalyticsScope"];
-
-// The current standing a meeting can hold, in the order a week reads: what is
-// ahead, what happened, what did not, what was called off. A hand-kept mirror
-// of the server's CHECK vocabulary — a status the server grows is absent here
-// until this list learns it, rather than mislabeled.
-const MEETING_STATUSES = [
-  { key: "booked", labelKey: "analytics.meetingsBooked" },
-  { key: "held", labelKey: "analytics.meetingsHeld" },
-  { key: "no_show", labelKey: "analytics.meetingsNoShow" },
-  { key: "canceled", labelKey: "analytics.meetingsCanceled" },
-] as const;
 
 // The seat's own outcomes: open pipeline and meetings, nothing computed here.
 //
@@ -1301,23 +865,23 @@ function MyOutcomesView({
 
   const pipelineRow = pipelineQuery.data?.rows[0];
   const baseCurrency = pipelineQuery.data?.base_currency ?? null;
-  // "…" said a read was in flight on a lens that had come back empty instead.
-  const noRow = t("analytics.myPipelineNoRow");
+  const noRow = t(absentReading(pipelineQuery));
   const pipelineCount = pipelineRow
     ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
     : noRow;
-  const pipelineValue = pipelineRow
-    ? formatMoneyOrAbsent(
-        rowMoney(pipelineRow, "raw_minor"),
-        baseCurrency,
-        locale,
-      )
-    : noRow;
-  // The currency names what the figure is IN, so a read with none to name
-  // drops the parenthetical rather than drawing an empty one.
+  const rawMinor = pipelineRow ? rowMoney(pipelineRow, "raw_minor") : null;
+  // The currency names what the figure is IN, so a read with none to name drops
+  // the parenthetical. TWO absences follow, never one word for both: no
+  // currency is a setting to fill, an absent sum is a row with no priced deal
+  // in it — and only the first has a reason worth a detail line.
   const valueLabel = baseCurrency
     ? t("analytics.baseValue", { currency: baseCurrency })
     : t("analytics.baseValueUnnamed");
+  const openMoney = !baseCurrency
+    ? t("analytics.noBaseCurrency")
+    : rawMinor == null
+      ? t("analytics.forecastNoAmount")
+      : formatMoneyCompact(rawMinor, baseCurrency, locale);
   const meetingRows = meetingsQuery.data?.rows ?? [];
   const meetingsByStatus = new Map(
     meetingRows
@@ -1331,17 +895,27 @@ function MyOutcomesView({
         <PanelBody>
           <StatStrip>
             {/* Both readings are one row of the pipeline report, and the
-                pipeline section is what draws that report — so the door is
-                that section rather than a deal list this view never
-                queried. */}
+                pipeline section draws that report — so the door is that
+                section rather than a deal list this view never queried. */}
             <StatCard
+              narrow="row"
               label={t("analytics.count")}
               value={pipelineCount}
               onOpen={() => openAnalyticsSection("pipeline")}
             />
             <StatCard
+              narrow="row"
               label={valueLabel}
-              value={pipelineValue}
+              value={pipelineRow ? openMoney : noRow}
+              // WHY there is no figure, where a row came back and no currency
+              // names it: an installation that never set one is a setting away
+              // from a number, and "No amount" alone reads as a book worth
+              // nothing.
+              detail={
+                pipelineRow && !baseCurrency
+                  ? t("analytics.noBaseCurrencyWhy")
+                  : undefined
+              }
               onOpen={() => openAnalyticsSection("pipeline")}
             />
           </StatStrip>
@@ -1352,11 +926,12 @@ function MyOutcomesView({
           {/* Current standing, stated as such: a held meeting was once booked
               and the record no longer says so, so these are today's facts and
               not a funnel. */}
-          <p className="t-sub">{t("analytics.meetingsAsTheyStand")}</p>
+          <PanelIntro>{t("analytics.meetingsAsTheyStand")}</PanelIntro>
           <StatStrip>
             {MEETING_STATUSES.map((status) => (
               <StatCard
                 key={status.key}
+                narrow="row"
                 label={t(status.labelKey)}
                 value={formatNumber(
                   meetingsByStatus.get(status.key) ?? 0,
@@ -1368,197 +943,6 @@ function MyOutcomesView({
         </PanelBody>
       </Panel>
     </>
-  );
-}
-
-type PhaseRow = {
-  phase: string;
-  projects: number;
-  openMinor: number | null;
-  wonMinor: number | null;
-};
-
-// Projects per phase, with the deal money standing behind each phase — both
-// server-converted sums; this file only formats them.
-function ProjectsByPhaseTable({
-  rows,
-  locale,
-  baseCurrency,
-}: Readonly<{
-  rows: ReportRow[];
-  locale: Locale;
-  baseCurrency: string | null;
-}>) {
-  const t = useT();
-  const phased: PhaseRow[] = rows
-    .filter((row) => typeof row.phase === "string")
-    .map((row) => ({
-      phase: String(row.phase),
-      projects: rowCount(row, "projects"),
-      openMinor: rowMoney(row, "open_deal_value_minor"),
-      wonMinor: rowMoney(row, "won_deal_value_minor"),
-    }));
-  if (phased.length === 0) {
-    return <EmptyState>{t("analytics.noProjectsYet")}</EmptyState>;
-  }
-  return (
-    <DataTable
-      label={t("analytics.reportProjectsByPhase")}
-      columns={[
-        {
-          key: "phase",
-          header: t("project.phaseLabel"),
-          render: (row: PhaseRow) => phaseLabel(row.phase, t),
-        },
-        {
-          key: "projects",
-          header: t("analytics.projects"),
-          render: (row: PhaseRow) => formatNumber(row.projects, locale),
-        },
-        {
-          key: "open",
-          header: t("analytics.openDealValue", {
-            currency: baseCurrency ?? "",
-          }),
-          render: (row: PhaseRow) =>
-            formatMoneyOrAbsent(row.openMinor, baseCurrency, locale),
-        },
-        {
-          key: "won",
-          header: t("analytics.wonDealValue", { currency: baseCurrency ?? "" }),
-          render: (row: PhaseRow) =>
-            formatMoneyOrAbsent(row.wonMinor, baseCurrency, locale),
-        },
-      ]}
-      rows={phased}
-      rowKey={(row) => row.phase}
-    />
-  );
-}
-
-type ProjectListRow = {
-  projectId: string;
-  name: string;
-  phase: string;
-  overdue: number;
-  open: number;
-};
-
-function projectHref(projectId: string): string {
-  // The entity registry owns the route; a hand-written copy goes stale
-  // silently, which is the registry's own stated reason to exist.
-  return routeHash(ENTITY.project.route(projectId));
-}
-
-// A phase spelled to a human, the one way the Projects screen spells it.
-function phaseLabel(phase: string, t: ReturnType<typeof useT>): string {
-  return isProjectPhase(phase) ? t(PHASE_LABEL[phase]) : phase;
-}
-
-// Each project's promises: how many stand open, how many are already late.
-function ProjectCommitmentsTable({
-  rows,
-  locale,
-}: Readonly<{ rows: ReportRow[]; locale: Locale }>) {
-  const t = useT();
-  const listed: ProjectListRow[] = rows
-    .filter((row) => typeof row.project_id === "string")
-    .map((row) => ({
-      projectId: String(row.project_id),
-      name: typeof row.name === "string" ? row.name : "",
-      phase: typeof row.phase === "string" ? row.phase : "",
-      overdue: rowCount(row, "overdue_commitments"),
-      open: rowCount(row, "open_commitments"),
-    }));
-  if (listed.length === 0) {
-    return <EmptyState>{t("analytics.noProjectsYet")}</EmptyState>;
-  }
-  return (
-    <DataTable
-      label={t("analytics.reportProjectCommitments")}
-      columns={[
-        {
-          key: "project",
-          header: t("analytics.project"),
-          render: (row: ProjectListRow) => (
-            <a className="link-button" href={projectHref(row.projectId)}>
-              {row.name}
-            </a>
-          ),
-        },
-        {
-          key: "phase",
-          header: t("project.phaseLabel"),
-          render: (row: ProjectListRow) => phaseLabel(row.phase, t),
-        },
-        {
-          key: "open",
-          header: t("analytics.openCommitments"),
-          render: (row: ProjectListRow) => formatNumber(row.open, locale),
-        },
-        {
-          key: "overdue",
-          header: t("analytics.overdueCommitments"),
-          render: (row: ProjectListRow) => formatNumber(row.overdue, locale),
-        },
-      ]}
-      rows={listed}
-      rowKey={(row) => row.projectId}
-    />
-  );
-}
-
-// Delivering projects nobody has spoken into lately, oldest silence first on
-// the server's own ordering.
-function ProjectsGoneQuietTable({
-  rows,
-  locale,
-  timezone,
-}: Readonly<{ rows: ReportRow[]; locale: Locale; timezone: string | null }>) {
-  const t = useT();
-  const listed = rows
-    .filter((row) => typeof row.project_id === "string")
-    .map((row) => ({
-      projectId: String(row.project_id),
-      name: typeof row.name === "string" ? row.name : "",
-      phase: typeof row.phase === "string" ? row.phase : "",
-      quietSince: typeof row.quiet_since === "string" ? row.quiet_since : null,
-    }));
-  if (listed.length === 0) {
-    // Nothing quiet is the good answer, and it should say so rather than
-    // draw headers over blank space.
-    return <EmptyState>{t("analytics.nothingQuiet")}</EmptyState>;
-  }
-  return (
-    <DataTable
-      label={t("analytics.reportProjectsGoneQuiet")}
-      columns={[
-        {
-          key: "project",
-          header: t("analytics.project"),
-          render: (row: (typeof listed)[number]) => (
-            <a className="link-button" href={projectHref(row.projectId)}>
-              {row.name}
-            </a>
-          ),
-        },
-        {
-          key: "phase",
-          header: t("project.phaseLabel"),
-          render: (row: (typeof listed)[number]) => phaseLabel(row.phase, t),
-        },
-        {
-          key: "quiet",
-          header: t("analytics.quietSince"),
-          render: (row: (typeof listed)[number]) =>
-            row.quietSince && timezone
-              ? formatDateTime(row.quietSince, locale, timezone)
-              : "—",
-        },
-      ]}
-      rows={listed}
-      rowKey={(row) => row.projectId}
-    />
   );
 }
 
@@ -1662,56 +1046,59 @@ function ReportCard({
     },
   });
 
-  // Hooks can't run inside the QueryGate render-prop callback (the run
-  // result lives there), so the derivation handle is lifted to the top
-  // level from the already-top-level run query.
-  const derivationUrl = reportQuery.data?.derivation_url ?? null;
-  const derivationQuery = useQuery({
-    queryKey: ["derivation", derivationUrl],
-    enabled: explain && derivationUrl != null,
-    queryFn: async () => {
-      // parsed carries by/agg PLUS every equality predicate from the handle
-      // (group-key values + plan filters). The endpoint treats each extra key
-      // as a predicate, so forward the whole object — dropping the predicates
-      // would explain the wrong slice (or 422 on a bound grouping dimension).
-      const parsed = parseDerivationQuery(derivationUrl ?? "");
-      const { data, error } = await api.GET("/reports/{report}/derivation", {
-        params: {
-          path: { report: derivationReportKey(derivationUrl ?? "") },
-          query: parsed,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
   return (
-    <QueryGate query={reportQuery} pendingLabel={t(REPORT_LABEL_KEY[report])}>
+    <QueryGate query={reportQuery} pendingLabel={t(ENTITY_LABEL_KEY[report])}>
       {(run) => (
-        <>
+        <ExplainFrame
+          frame={{
+            baseCurrency: run.base_currency ?? null,
+            timezone: run.timezone ?? null,
+          }}
+        >
           <Panel
-            title={t(REPORT_LABEL_KEY[report])}
-            // The verb that reveals the derivation under this panel: it
-            // announces its open state and names what it controls, so a
-            // reader who cannot see the panel appear is still told it did.
-            actions={
-              <Button
-                aria-expanded={explain}
-                aria-controls={explainId}
+            title={t(ENTITY_LABEL_KEY[report])}
+            // The verb that reveals the derivation under this panel, in the
+            // head beside the title it explains: it announces its open state
+            // and names what it controls, so a reader who cannot see the panel
+            // appear is still told it did.
+            titleAction={
+              // The same glyph as a row's own explain, so the panel's verb and
+              // a cell's read as one control at two sizes of subject — and a
+              // glyph rather than words, because the band is one line shared
+              // with the title and a phrase there cut the title to "O…".
+              <IconAction
+                label={t("explain.open")}
+                icon={<Info aria-hidden />}
+                disclosure={{ expanded: explain, controls: explainId }}
                 onClick={() => setExplain((value) => !value)}
-              >
-                {t("explain.open")}
-              </Button>
+              />
+            }
+            // The frame every figure above was cut in: the instant and the zone
+            // it is stated in, because a total with no zone is a number a
+            // reader places by assumption. A fact about the WHOLE panel, so it
+            // is the panel's footer rather than one more line of its body.
+            //
+            // It names no CURRENCY and must not: open-deals-per-company prints
+            // native rows beside converted blocks, so one line can say nothing
+            // true of them all — naming one read ₫367,620,000,000 as a euro
+            // figure. Drawn only when the server sent both halves; half a frame
+            // is worse than none.
+            footer={
+              run.as_of && run.timezone ? (
+                <span className="t-caption">
+                  {t("analytics.frame", {
+                    asOf: formatDateTime(run.as_of, locale, run.timezone),
+                    zone: run.timezone,
+                  })}
+                </span>
+              ) : undefined
             }
           >
             <PanelBody>
               {reportSub[report] && (
-                <p className="t-sub">
+                <PanelIntro>
                   {t(reportSub[report], { currency: run.base_currency ?? "" })}
-                </p>
+                </PanelIntro>
               )}
               <ReportBody
                 report={report}
@@ -1719,34 +1106,12 @@ function ReportCard({
                 stages={stages}
                 locale={locale}
               />
-              {/* The frame every figure above was cut in: the instant and
-                  the zone it is stated in, because a total with no zone is a
-                  number a reader places by assumption.
-
-                  It names no CURRENCY and must not: open-deals-per-company
-                  prints native rows beside converted blocks, so one line can
-                  say nothing true of them all — naming one read
-                  ₫367,620,000,000 as a euro figure. Drawn only when the
-                  server sent both halves; half a frame is worse than none. */}
-              {run.as_of && run.timezone && (
-                <p className="t-caption">
-                  {t("analytics.frame", {
-                    asOf: formatDateTime(run.as_of, locale, run.timezone),
-                    zone: run.timezone,
-                  })}
-                </p>
-              )}
             </PanelBody>
           </Panel>
           {explain && (
-            <ExplainPanel
-              id={explainId}
-              url={derivationUrl}
-              query={derivationQuery}
-              baseCurrency={run.base_currency ?? null}
-            />
+            <ExplainPanel id={explainId} url={run.derivation_url ?? null} />
           )}
-        </>
+        </ExplainFrame>
       )}
     </QueryGate>
   );
@@ -1810,32 +1175,38 @@ export function AnalyticsScreen() {
           outcomes: t("analytics.sectionOutcomes"),
           coverage: t("analytics.sectionCoverage"),
           delivery: t("analytics.sectionDelivery"),
+          questions: t("analytics.sectionQuestions"),
         }}
         label={t("analytics.sections")}
       />
-      {selection && context.data ? (
-        <AnalyticsScopePicker
-          scopes={context.data.allowed_scopes}
-          selected={selection.scope}
-          onSelect={selectScope}
-        />
-      ) : null}
-      {section === "forecast" && selection ? (
-        <ShareViewButton target="forecast" scope={selection.scope} />
-      ) : null}
+      <div className="analytics-header-end">
+        {selection && context.data ? (
+          <AnalyticsScopePicker
+            scopes={context.data.allowed_scopes}
+            selected={selection.scope}
+            onSelect={selectScope}
+          />
+        ) : null}
+        {section === "forecast" && selection ? (
+          <ForecastShareActions target="forecast" scope={selection.scope} />
+        ) : null}
+      </div>
     </div>
   );
 
   return (
     <div className="wrap">
       {header}
-      <SectionBody
-        section={section}
-        locale={locale}
-        context={context.data}
-        selection={selection}
-        stages={pipelineQuery.data?.stages ?? []}
-      />
+      <div className="analytics-body">
+        <SectionBody
+          section={section}
+          locale={locale}
+          context={context.data}
+          selection={selection}
+          onSelectScope={selectScope}
+          stages={pipelineQuery.data?.stages ?? []}
+        />
+      </div>
     </div>
   );
 }
@@ -1847,18 +1218,27 @@ function SectionBody({
   locale,
   context,
   selection,
+  onSelectScope,
   stages,
 }: Readonly<{
   section: Section;
   locale: Locale;
   context: components["schemas"]["AnalyticsContext"] | undefined;
   selection: AnalyticsSelection | null;
+  onSelectScope: (scope: AnalyticsSelection["scope"]) => void;
   stages: readonly Stage[];
 }>) {
   switch (section) {
+    case "questions":
+      return selection && context ? (
+        <QuestionsView
+          context={context}
+          selection={selection}
+          onSelectScope={onSelectScope}
+        />
+      ) : null;
     case "coverage":
-      // Like the other context-bearing sections: nothing renders before the
-      // frame arrives, so the view never has to guess a zone.
+      // Nothing renders before the frame arrives, so no zone is guessed.
       return context ? (
         <DataCoverageView locale={locale} timezone={context.timezone} />
       ) : null;

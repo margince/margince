@@ -55,6 +55,28 @@ import (
 // unreachable from the real surface; a caller who reached it anyway is better
 // served by an unhelpfully large schema than by a silently absent one.
 func CompactSchema(spec mcp.ToolSpec) string {
+	return listingCompaction.render(spec)
+}
+
+// stepArguments is the args schema a step's tool-call branch carries: the
+// listing's compaction, except that every object the tool closes stays closed.
+// The frame's sentence covers the listing, but the step schema is ENFORCED at
+// generation, and decodeArgs refuses the unknown key an open args would admit.
+func stepArguments(spec mcp.ToolSpec) string {
+	return argumentCompaction.render(spec)
+}
+
+// compaction is which of the surface-owned members a rendering takes out.
+type compaction struct {
+	keepClosed bool
+}
+
+var (
+	listingCompaction  = compaction{keepClosed: false}
+	argumentCompaction = compaction{keepClosed: true}
+)
+
+func (c compaction) render(spec mcp.ToolSpec) string {
 	var shape map[string]json.RawMessage
 	if err := json.Unmarshal(spec.InputSchema, &shape); err != nil {
 		return string(spec.InputSchema)
@@ -65,14 +87,14 @@ func CompactSchema(spec mcp.ToolSpec) string {
 	// description of the surface's own member is what this is for. Deciding it
 	// from the spec instead would mean a second predicate beside withRetryKey's,
 	// and the two disagreed on extension-owned tools.
-	compacted, err := json.Marshal(compactSchemaShape(shape, atSchemaRoot))
+	compacted, err := json.Marshal(c.shape(shape, atSchemaRoot))
 	if err != nil {
 		return string(spec.InputSchema)
 	}
 	return string(compacted)
 }
 
-// atSchemaRoot / nestedInSchema say which level compactSchemaShape is walking,
+// atSchemaRoot / nestedInSchema say which level compaction.shape is walking,
 // because ONE of the two omissions is level-sensitive and the other is not.
 //
 // The surface owns `idempotency_key` at the ROOT of a mutating tool's schema and
@@ -89,7 +111,7 @@ const (
 	nestedInSchema = false
 )
 
-// compactSchemaShape rewrites one schema object and everything nested under it.
+// shape rewrites one schema object and everything nested under it.
 //
 // It recurses because `additionalProperties` is not only a top-level member:
 // run_report's `aggregates` items close themselves, and the whole-catalog count
@@ -106,7 +128,7 @@ const (
 // Read back as members and re-marshalled, the way spliceRetryKey does it:
 // marshalling a map sorts its keys, so every process renders the same bytes and
 // the equivalence gate can compare them.
-func compactSchemaShape(shape map[string]json.RawMessage, root bool) map[string]json.RawMessage {
+func (c compaction) shape(shape map[string]json.RawMessage, root bool) map[string]json.RawMessage {
 	out := make(map[string]json.RawMessage, len(shape))
 	for key, raw := range shape {
 		switch key {
@@ -117,13 +139,16 @@ func compactSchemaShape(shape map[string]json.RawMessage, root bool) map[string]
 			// because it is an object schema like any other and can close
 			// itself. qualify_lead nests a whole `properties` tree under one.
 			if string(raw) == "false" {
+				if c.keepClosed {
+					out[key] = raw
+				}
 				continue
 			}
-			out[key] = compactNestedSchema(raw)
+			out[key] = c.nested(raw)
 		case schemaProperties:
-			out[key] = compactSchemaProperties(raw, root)
+			out[key] = c.properties(raw, root)
 		case schemaItems:
-			out[key] = compactNestedSchema(raw)
+			out[key] = c.nested(raw)
 		default:
 			out[key] = raw
 		}
@@ -131,9 +156,9 @@ func compactSchemaShape(shape map[string]json.RawMessage, root bool) map[string]
 	return out
 }
 
-// compactSchemaProperties compacts each property's own schema, and at the ROOT
-// strips the description from the one member the surface owns there.
-func compactSchemaProperties(raw json.RawMessage, root bool) json.RawMessage {
+// properties compacts each property's own schema, and at the ROOT strips the
+// description from the one member the surface owns there.
+func (c compaction) properties(raw json.RawMessage, root bool) json.RawMessage {
 	var properties map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &properties); err != nil {
 		return raw
@@ -144,7 +169,7 @@ func compactSchemaProperties(raw json.RawMessage, root bool) json.RawMessage {
 			rewritten[name] = withoutDescription(property)
 			continue
 		}
-		rewritten[name] = compactNestedSchema(property)
+		rewritten[name] = c.nested(property)
 	}
 	encoded, err := json.Marshal(rewritten)
 	if err != nil {
@@ -153,14 +178,14 @@ func compactSchemaProperties(raw json.RawMessage, root bool) json.RawMessage {
 	return encoded
 }
 
-// compactNestedSchema applies the compaction one level down, leaving anything
-// that is not an object schema exactly as it arrived.
-func compactNestedSchema(raw json.RawMessage) json.RawMessage {
+// nested applies the compaction one level down, leaving anything that is not an
+// object schema exactly as it arrived.
+func (c compaction) nested(raw json.RawMessage) json.RawMessage {
 	var nested map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &nested); err != nil {
 		return raw
 	}
-	encoded, err := json.Marshal(compactSchemaShape(nested, nestedInSchema))
+	encoded, err := json.Marshal(c.shape(nested, nestedInSchema))
 	if err != nil {
 		return raw
 	}

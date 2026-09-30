@@ -89,6 +89,7 @@ var catalog = map[string]struct {
 	"company.updated":  {companyStreamEntity, 1},
 	"company.archived": {companyStreamEntity, 1},
 	"company.merged":   {companyStreamEntity, 1},
+	"company.restored": {companyStreamEntity, 1},
 
 	"deal.created":       {dealStreamEntity, 1},
 	"pipeline.created":   {dealStreamEntity, 1},
@@ -162,9 +163,22 @@ var catalog = map[string]struct {
 	"lead_source.changed":            {leadStreamEntity, 1},
 	"lead_disqualify_reason.changed": {leadStreamEntity, 1},
 
-	"activity.captured": {activityStreamEntity, 1},
-	"activity.updated":  {activityStreamEntity, 1},
-	"activity.archived": {activityStreamEntity, 1},
+	// A list groups customer records of one type, so its lifecycle and its
+	// Shortlist membership ride the contact stream, the customer-record
+	// family's home; a consumer re-reads the member through its own gates.
+	"list.created":        {contactStreamEntity, 1},
+	"list.updated":        {contactStreamEntity, 1},
+	"list.archived":       {contactStreamEntity, 1},
+	"list.restored":       {contactStreamEntity, 1},
+	"list.member_added":   {contactStreamEntity, 1},
+	"list.member_removed": {contactStreamEntity, 1},
+
+	"booking_page.updated":       {identityStreamEntity, 1},
+	"meeting_proposal.updated":   {activityStreamEntity, 1},
+	"meeting_invitation.updated": {activityStreamEntity, 1},
+	"activity.captured":          {activityStreamEntity, 1},
+	"activity.updated":           {activityStreamEntity, 1},
+	"activity.archived":          {activityStreamEntity, 1},
 	// Somebody decided what to do about a waiting message and the Worklist
 	// stopped offering it. `disposition_recorded` rather than `disposition_set`
 	// because the catalog's verbs are past tense, and a compound one puts the
@@ -194,6 +208,10 @@ var catalog = map[string]struct {
 	// read is the recipient settling it.
 	"notice.created": {identityStreamEntity, 1},
 	"notice.read":    {identityStreamEntity, 1},
+
+	// How a seat wants their notices to reach them is a fact about the seat, so
+	// it rides the stream those notices ride — and only they are its subject.
+	"notification.preference_changed": {identityStreamEntity, 1},
 
 	// A weekly plan belongs to one rep, so its changes ride the same identity
 	// stream a notice does. help_requested is its own type rather than another
@@ -274,6 +292,13 @@ var catalog = map[string]struct {
 	// Product telemetry: the morning Brief was read. Internal only — nothing
 	// subscribes to it, and api/internal-events.yaml says why that file exists.
 	"brief.opened": {briefStreamEntity, 1},
+
+	// Deal Scout's suggestions and the decisions on them. Internal only, and
+	// entity-less for the reason api/internal-events.yaml gives.
+	"deal_suggestion.created":    {dealStreamEntity, 1},
+	"deal_suggestion.accepted":   {dealStreamEntity, 1},
+	"deal_suggestion.dismissed":  {dealStreamEntity, 1},
+	"deal_suggestion.superseded": {dealStreamEntity, 1},
 }
 
 // IsPipelineEvent reports whether an event type is an entity-less

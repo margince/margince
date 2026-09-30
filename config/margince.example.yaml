@@ -64,6 +64,22 @@ bootstrap_admin:
   # environment alongside files, so ${env:} is a deliberate transitional form.
   password_file: config/margince-admin-password
 
+# The SMTP relay for mail the installation writes by itself (optional): the
+# privacy notice, the confirm-your-details and double opt-in links, password
+# reset, member and Deal Room invitations, and the emailed weekly review and
+# morning brief. These never go through a rep's connected Gmail or Outlook.
+# Without this block every one of them is not sent, and a privacy-notice duty
+# cannot be discharged from inside the product. Needs --public-base-url, and the
+# worker must read this file too. docs/how-to/set-up-outbound-mail.md explains.
+# email:
+#   enabled: true
+#   from_address: privacy@example.com
+#   smtp:
+#     host: smtp.example.com
+#     port: 587
+#     username: privacy@example.com
+#     password: ${env:MARGINCE_SMTP_PASSWORD}
+
 # Retention posture at first boot (optional). Consumed ONCE, when the api
 # bootstraps the company against an empty database — it is not re-read, and
 # an admin can change the posture afterwards on the privacy settings screen.
@@ -120,7 +136,9 @@ bootstrap_admin:
 #
 # seeds:
 #   ai_routing:
-#     profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+#     # cloud_frontier, not eu_hosted: the Gemini Developer API states no EU
+#     # processing region, so nothing here keeps text in the EU.
+#     profile: cloud_frontier     # eu_hosted | sovereign | cloud_frontier
 #     tiers:
 #       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
 #       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
@@ -236,41 +254,32 @@ bootstrap_admin:
 #
 # The hourly sweep deletes payloads with the rows that carry them, and an
 # erasure request reaches them inside the window.
+# max_backfill_months caps how far back a mailbox import may reach, for the whole
+# installation. Absent means no cap, which is the shipped behaviour: whoever
+# connects a mailbox picks from 3 months to 10 years, and picks again next time.
+#
+# Set one when the answer should be the installation's rather than each
+# colleague's. A ten-year import is not a bigger version of a one-year import —
+# it predates every notice, policy and exclusion rule you have handed out, and it
+# is the input to the raw_capture growth your retention rule then ages back out.
+#
+# The number is matched against the offered windows (3, 6, 12, 24, 36, 60, 84,
+# 120), so the connect dialog offers only what it admits and a start above it is
+# refused at the door as well as at the preview.
 # capture:
 #   trace_payloads: false
+#   max_backfill_months: 24
 
 # Rates & costs "Refresh from sources" (worker role): an admin triggers an async
-# refresh that stages confirm-first proposals into the approvals inbox; a human
-# approves every change, nothing is auto-applied. Field reference:
-# docs/reference/configuration.md#rates.
+# FX refresh that stages confirm-first proposals into the approvals inbox; a
+# human approves every change, nothing is auto-applied. Model prices are not
+# configured here: "Refresh model prices" reads the broker's own catalogue.
+# Field reference: docs/reference/configuration.md#rates.
 rates:
   # Base-relative FX JSON API ({base,rates}); defaults to api.frankfurter.dev.
   fx_source: https://api.frankfurter.dev/v1/latest
   # Currencies proposed to bootstrap an empty FX sheet; defaults to USD/GBP/CHF.
   fx_currencies: [USD, GBP, CHF]
-  # provider -> pricing-page URL the model-cost refresh crawls + AI-extracts.
-  # Name the provider exactly as `seeds.ai_routing` binds it; a provider with no
-  # entry here is never refreshed, and its seeded rates go stale in silence.
-  model_pricing:
-    gemini: https://ai.google.dev/gemini-api/docs/pricing
-    # anthropic: https://docs.anthropic.com/en/docs/about-claude/pricing
-    # openai: https://platform.openai.com/docs/pricing
-    # OpenRouter publishes prices as JSON rather than a page — per-token, so a
-    # proposal is the catalog's number x 1e12 to reach micro-USD/MTok. Uncomment
-    # for an OpenAI-wire broker. The key is the generic
-    # adapter's name: it refreshes whichever broker openai_compatible is bound to,
-    # so change the URL if that is not OpenRouter.
-    #
-    # A JSON catalog is read one passage PER MODEL and narrowed to the models
-    # the binding names ON THIS PROVIDER — a broker lists hundreds, and
-    # asking for all of them overruns the extraction's output ceiling. Two
-    # consequences worth knowing: a model you do not bind is never repriced from
-    # here (its seeded rate in ai.SeedModelRates stands), and if NONE of this
-    # provider's bound ids appears in the catalog the refresh fails loudly rather
-    # than reporting a successful no-op — that means an id here disagrees with
-    # the vendor's own spelling. Debug it with `make ai-probe`
-    # (docs/how-to/debug-an-ai-task.md).
-    # openai_compatible: https://openrouter.ai/api/v1/models
 
 # Remote MCP connector (Gate 1). On means /mcp and /oauth/* are served, so any
 # human here can lend one of their passports to an outside client; it is on in
@@ -303,6 +312,12 @@ mcp:
 # company data. Stages include the prior stage: off < read < tasks < onboarding.
 company_context:
   rollout: onboarding
+
+# Live Lists and Shortlists: named, shared sets of one record type. Off until an
+# operator switches them on; while off, the /lists routes answer 404, no agent
+# tool reaches them and no screen offers them.
+lists:
+  enabled: false
 
 # Ops kill switches (OPS-CFG-9): capabilities this installation turns on
 # deliberately, in the file the deployment reviews. The whole section is

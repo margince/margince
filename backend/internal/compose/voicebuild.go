@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // VoiceBuildArgs runs ONE durable voice build. Unique by args while
@@ -199,8 +200,13 @@ func (w *voiceBuildWorker) Work(ctx context.Context, job *river.Job[VoiceBuildAr
 			return nil
 		}
 		// The row carries only the safe detail; the OPERATOR needs the real
-		// cause or a repeated invalid_output is undiagnosable from any log.
-		w.log.WarnContext(ctx, "voice build error", "build", buildID.String(), "err", err)
+		// cause or a repeated invalid_output is undiagnosable from any log. A
+		// request the provider refused is our own defect, so it is an error.
+		if errors.Is(err, model.ErrRequestRejected) {
+			w.log.ErrorContext(ctx, "voice build error", "build", buildID.String(), "err", err)
+		} else {
+			w.log.WarnContext(ctx, "voice build error", "build", buildID.String(), "err", err)
+		}
 		return jobs.FaultContext(ctx, w.fail(ctx, buildID, claimedAt, failureStatusCode(err), ai.SafeVoiceBuildFailure(err)))
 	}
 	return nil
@@ -343,6 +349,15 @@ func failureStatusCode(err error) string {
 	// say "try again" to somebody whose every retry is already failing.
 	if errors.Is(err, ai.ErrUnconfiguredModel) {
 		return "model_unavailable"
+	}
+	// Also by sentinel and before the markers, because both carry the
+	// provider's own words: a lane that declined has no answer to give, and a
+	// request it refused is our own fault whatever the vendor's sentence says.
+	if errors.Is(err, model.ErrOutputWithheld) {
+		return "model_unavailable"
+	}
+	if errors.Is(err, model.ErrRequestRejected) {
+		return "internal"
 	}
 	text := err.Error()
 	for _, marker := range []string{"no model path", "no bound", "not bound", "unbound"} {

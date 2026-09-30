@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button, Modal } from "./atoms";
 import { Heading } from "./heading";
+import { armHoverIntent } from "./hoverintent-testing";
 import { Popover } from "./popover";
 
 // A dialog covers the page. `aria-modal` says so to a screen reader and does
@@ -192,6 +193,7 @@ describe("a dialog holds the keyboard", () => {
 
   it("holds Tab in the open panel the reader is in, not the first one", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    armHoverIntent();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     try {
       render(<TwoReceipts />);

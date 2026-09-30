@@ -15,6 +15,7 @@ import { type Locale, useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import { leadPromotePreviewKey, leadWriteKeys } from "./leadkeys";
+import { usePipelines } from "./pipelines.queries";
 
 type Lead = components["schemas"]["Lead"];
 type PromoteLeadRequest = components["schemas"]["PromoteLeadRequest"];
@@ -44,22 +45,6 @@ function usePromotePreview(id: string, open: boolean) {
         throwProblem(error, t);
       }
       return data;
-    },
-  });
-}
-
-function usePipelinesForQualify(open: boolean) {
-  return useQuery({
-    queryKey: ["pipelines", "all"],
-    enabled: open,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data;
     },
   });
 }
@@ -152,7 +137,7 @@ export function QualifyDialog({
   const zone = viewerZone();
   const queryClient = useQueryClient();
   const preview = usePromotePreview(lead.id, open);
-  const pipelines = usePipelinesForQualify(open);
+  const pipelines = usePipelines(open);
   // The money pair holds from birth: an amount travels with the
   // installation's base currency, the only one a qualify dialog can name.
   const installation = useInstallationSettings();

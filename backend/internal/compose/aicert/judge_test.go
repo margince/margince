@@ -9,15 +9,27 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-func TestSelfJudgedComparesTheResolvedIdentities(t *testing.T) {
+// A judge from the candidate's own family grades its own homework whether or not
+// it is the very same model, and both spellings a served identity takes — a bare
+// provider name and a broker's publisher/name — must be recognised.
+func TestSelfJudgedFlagsTheCandidatesOwnFamily(t *testing.T) {
 	cases := []struct {
 		name             string
 		candidate, judge string
 		want             bool
 	}{
-		{"identical", "anthropic:claude-sonnet-4-6", "anthropic:claude-sonnet-4-6", true},
-		{"different", "anthropic:claude-haiku", "anthropic:claude-opus", false},
+		{"identical", "gemini-3.5-flash", "gemini-3.5-flash", true},
+		{"same line, different model", "gemini-3.1-pro-preview", "gemini-3.5-flash", true},
+		{"same line across a broker and a direct provider", "google/gemini-3.5-flash", "gemini-3.1-flash-lite", true},
+		{"same publisher, different line", "mistralai/ministral-14b-2512", "mistralai/mistral-large-2512", true},
+		{"a direct line under its broker's publisher", "mistral-large-2512", "mistralai/ministral-8b-2512", true},
+		{"same line under a local tag", "openai/gpt-oss-120b", "gpt-oss:20b", true},
+		{"a Bedrock id against Claude's broker identity", "us.anthropic.claude-sonnet-4-5-20250929-v1:0", "anthropic/claude", true},
+		{"a Bedrock id against a bare Claude", "anthropic.claude-3-haiku-20240307-v1:0", "claude-sonnet-4-6", true},
+		{"different vendors", "gemini-3.1-flash-lite", "mistralai/mistral-large-2512", false},
+		{"different vendors, both brokered", "openai/gpt-oss-120b", "z-ai/glm-5.2", false},
 		{"empty candidate never counts as a match", "", "", false},
+		{"empty judge never counts as a match", "gemini-3.5-flash", "", false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

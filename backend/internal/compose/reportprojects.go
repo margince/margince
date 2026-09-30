@@ -29,7 +29,7 @@ const (
 	fieldQuietSince     = "quiet_since"
 	fieldDays           = "days"
 
-	colProjectRowID = "t.id"
+	colRowID        = "t.id"
 	colName         = "t.name"
 	colKey          = "t.key"
 	colPhase        = "t.phase"
@@ -75,7 +75,7 @@ var openDealValueBaseExpr = "(SELECT coalesce(sum(" + deals.OpenDealBaseValueSQL
 // columns a reader needs to act on it.
 func projectRowDimensions() map[string]string {
 	return map[string]string{
-		fieldProjectID: colProjectRowID,
+		fieldProjectID: colRowID,
 		fieldName:      colName,
 		fieldKey:       colKey,
 		fieldPhase:     colPhase,
@@ -114,14 +114,10 @@ func projectsByPhaseSpec() reportSpec {
 		table:     tableProject,
 		baseWhere: whereArchivedNull,
 		basePlain: "live (unarchived) projects, with each project's open and won deal value in the installation's base currency",
-		// Stays on the caller's own/team default: owner_id is both a
-		// dimension and a filter here, the aggregates are money
-		// (open/won deal value), and `project` is an identity table (row
-		// scope renders unconditionally TRUE) — declaring
-		// measureEveryReadableRow would remove the only narrowing between a
-		// rep and a named colleague's exact delivery-value figures. The
-		// unowned-row arm (analyticsscope.go) still reaches this report's own
-		// default population.
+		// A delivery lead asks how many projects are in delivery across the
+		// installation. Naming one owner goes through the owner gate
+		// (reportownergate.go).
+		population: measureEveryReadableRow,
 		dimensions: map[string]string{
 			fieldPhase:     colPhase,
 			fieldCompanyID: colProjectCustomer,
@@ -160,9 +156,10 @@ func projectCommitmentsSpec() reportSpec {
 		table:     tableProject,
 		baseWhere: whereArchivedNull,
 		basePlain: "live (unarchived) projects, each with the open tasks filed under it (overdue: due date already past)",
-		// Stays on the caller's own/team default, same reason as
-		// projectsByPhaseSpec: owner_id is in defaultBy, and `project` is an
-		// identity table with no other narrowing on it.
+		// Install-wide, as projectsByPhaseSpec. The default grouping names
+		// owner_id beside the project's own id, which is a listing and not a
+		// breakdown by owner, so it answers whole.
+		population: measureEveryReadableRow,
 		dimensions: projectRowDimensions(),
 		measures: map[string]string{
 			measureOpenCommitments: openCommitmentsExpr,
@@ -200,8 +197,8 @@ func projectsGoneQuietSpec() reportSpec {
 		table:     tableProject,
 		baseWhere: whereArchivedNull + " AND " + projects.ProjectInFlightSQL("t"),
 		basePlain: "live projects being pursued or delivered that nothing has been filed against for at least `days` days (a project with no activity at all is measured from its creation)",
-		// Stays on the caller's own/team default, same reason as
-		// projectsByPhaseSpec.
+		// Install-wide, as projectCommitmentsSpec.
+		population: measureEveryReadableRow,
 		dimensions: dimensions,
 		measures:   map[string]string{},
 		filters: map[string]string{

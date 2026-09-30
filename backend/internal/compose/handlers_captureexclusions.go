@@ -102,5 +102,25 @@ func (h captureExclusionHandlers) PurgeCaptureExclusion(
 		Skipped:    outcome.Skipped,
 		Anonymised: outcome.Anonymised,
 		Preview:    outcome.Preview,
+		Kept:       keptContract(outcome.Kept),
 	})
+}
+
+// keptContract carries the reasons onto the wire. The statutory fields stay
+// pointers so a purge that kept nothing under the floor omits them entirely
+// rather than sending an empty class beside a zero.
+func keptContract(kept KeptBreakdown) crmcontracts.CaptureKeptBreakdown {
+	out := crmcontracts.CaptureKeptBreakdown{
+		Held:         kept.Held,
+		UnderStatute: kept.UnderStatute,
+		UnderRequest: kept.UnderRequest,
+	}
+	if kept.StatutoryClass != "" {
+		out.StatutoryClass = &kept.StatutoryClass
+		out.StatutoryFromYearEnd = &kept.StatutoryFromYearEnd
+		if kept.StatutoryYears > 0 {
+			out.StatutoryYears = &kept.StatutoryYears
+		}
+	}
+	return out
 }

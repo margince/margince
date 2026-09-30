@@ -7,10 +7,13 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import { Button, Field, Modal } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { useArchiveRecord } from "./archive";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
+import "./companyreject.css";
+import "./common.css";
 
 type Company = components["schemas"]["Company"];
 
@@ -127,15 +130,10 @@ export function CompanyRejectAction({
         onClose={() => setConfirming(false)}
         labelledBy={headingId}
       >
-        <Heading
-          size="large"
-          id={headingId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t("company.reject")}
         </Heading>
-        <p style={{ marginBottom: "var(--space-4)" }}>
+        <p className="companyreject-confirm">
           {t("company.rejectConfirm", {
             name: company.display_name,
             domain: primary.domain,
@@ -155,14 +153,7 @@ export function CompanyRejectAction({
             />
           )}
         </Field>
-        {mutation.isError && (
-          // role="alert" so a refused rejection is announced: the dialog stays
-          // open either way, and without this the only difference between "it
-          // failed" and "it is still working" is a line of red text.
-          <p role="alert" style={{ color: "var(--dangerText)" }}>
-            {problemMessageOf(mutation.error, t)}
-          </p>
-        )}
+        <ErrorLine error={mutation.error} />
         <div className="actions">
           <Button
             onClick={() => setConfirming(false)}

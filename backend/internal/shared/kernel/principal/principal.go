@@ -101,8 +101,13 @@ type Principal struct {
 	UserID     ids.UUID // the app_user behind a human call (row-scope key); zero for system
 	TeamIDs    []ids.UUID
 	PassportID ids.UUID // Agent Seat Passport authorizing an agent action; zero for humans
-	OnBehalfOf ids.UUID // the human authority behind an agent/connector action; zero otherwise
-	Scopes     ScopeSet // effective = Passport scopes ∩ granting human's RBAC ("agent ≤ human")
+	// ConnectionID is the OAuth grant the passport was minted under; zero for a
+	// human and for a passport a human minted directly. A refresh retires the
+	// passport and mints a replacement under the same grant, so this — not
+	// PassportID — is what identifies one connected agent over time.
+	ConnectionID ids.UUID
+	OnBehalfOf   ids.UUID // the human authority behind an agent/connector action; zero otherwise
+	Scopes       ScopeSet // effective = Passport scopes ∩ granting human's RBAC ("agent ≤ human")
 
 	// SeatType is the licensing ceiling of the human behind the call — for
 	// an agent it is the granting human's seat, since "agent ≤ human"

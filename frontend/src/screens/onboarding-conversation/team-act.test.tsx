@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
+import { SEEDED_ASSIGNABLE_ROLES } from "../roles.testkit";
 import { installFetchStub, jsonResponse } from "../story-utils";
 import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";
@@ -40,6 +41,8 @@ function renderTeam(
         admin_password_link: options.passwordLink ?? false,
       }),
     "GET /teams": () => jsonResponse({ data: [], next_cursor: null }),
+    "GET /users/assignable-roles": () =>
+      jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
     "POST /users/access-preview": () =>
       jsonResponse({ role: "rep", row_scope: "own", objects: {} }),
     "POST /users": () => jsonResponse({ id: NEW_USER }, 201),
@@ -74,14 +77,14 @@ describe("TeamAct", () => {
   it("shows the settings invite form under its own title, and a skip while nobody is invited", async () => {
     renderTeam();
     expect(
-      await screen.findByText("Invite the first user."),
+      await screen.findByText("Invite the first user"),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(/New user's email/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Email/)).toBeInTheDocument();
     // One address is enough here; the name is derived from it.
     expect(screen.queryByLabelText(/New user's full name/)).toBeNull();
     // The form's own heading stays in the settings dialog: here the scene's
     // title has already said it.
-    expect(screen.queryByText("Invite a user")).not.toBeInTheDocument();
+    expect(screen.queryByText("Invite user")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Skip for now" }),
     ).toBeInTheDocument();
@@ -121,7 +124,7 @@ describe("TeamAct", () => {
     const user = userEvent.setup();
 
     await user.type(
-      await screen.findByLabelText(/New user's email/),
+      await screen.findByLabelText(/^Email/),
       "ada.byron@example.com",
     );
     await user.click(screen.getByRole("button", { name: "Invite" }));

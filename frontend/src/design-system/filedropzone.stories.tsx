@@ -8,7 +8,8 @@ import { LocaleProvider } from "../i18n";
 import { FileDropzone } from "./filedropzone";
 
 const meta: Meta = {
-  title: "Design System/FileDropzone",
+  title: "Components/Forms and input/File dropzone",
+  component: FileDropzone,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -29,7 +30,7 @@ export const Empty: Story = {
     <FileDropzone
       label="Document"
       hint="PDF, Word or plain text, up to 25 MB."
-      emptyLabel="Drop the file here, or click to choose one"
+      emptyLabel="Drop a file here, or click to choose one"
       onPick={() => {}}
     />
   ),
@@ -42,7 +43,7 @@ export const Chosen: Story = {
     <FileDropzone
       label="Document"
       hint="PDF, Word or plain text, up to 25 MB."
-      emptyLabel="Drop the file here, or click to choose one"
+      emptyLabel="Drop a file here, or click to choose one"
       file={new File(["order form"], "order_form.txt", { type: "text/plain" })}
       onPick={() => {}}
     />
@@ -59,7 +60,7 @@ export const Dragover: Story = {
     <FileDropzone
       label="Document"
       hint="PDF, Word or plain text, up to 25 MB."
-      emptyLabel="Drop the file here, or click to choose one"
+      emptyLabel="Drop a file here, or click to choose one"
       onPick={() => {}}
     />
   ),
@@ -87,7 +88,7 @@ export const Interactive: Story = {
       <FileDropzone
         label="Document"
         hint="Choosing a second file replaces the first."
-        emptyLabel="Drop the file here, or click to choose one"
+        emptyLabel="Drop a file here, or click to choose one"
         file={file}
         onPick={setFile}
       />

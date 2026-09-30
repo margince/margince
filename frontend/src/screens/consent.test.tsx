@@ -533,7 +533,7 @@ describe("ConsentSection", () => {
     });
     render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     expect(
-      await screen.findByText(/couldn't load the consent purpose catalogue/i),
+      await screen.findByText(/consent purpose catalog did not load/i),
     ).toBeInTheDocument();
     // The DOI-required "Marketing" row must not render as freely grantable
     // with no sign anything failed.
@@ -610,7 +610,7 @@ describe("asking a contact to confirm their details", () => {
     // retries and can park. "Sent" would tell a rep somebody was asked while the
     // message is still waiting, and they would stop watching for an answer.
     const sent = await screen.findByTestId("confirm-details-sent");
-    expect(sent).toHaveTextContent(/on its way/i);
+    expect(sent).toHaveTextContent(/Link queued for/i);
     expect(sent).not.toHaveTextContent(/sends no mail/i);
   });
 

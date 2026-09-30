@@ -103,10 +103,13 @@ func TestCompanyContextIsDelimitedUserDataAndNeverSystemContent(t *testing.T) {
 	if strings.Contains(got.System, "Acme") {
 		t.Fatalf("system prompt contains company data: %q", got.System)
 	}
-	if len(got.Messages) != 2 || got.Messages[0].Role != "user" || got.Messages[1] != original.Messages[0] {
-		t.Fatalf("context was not prepended as its own user-data message: %+v", got.Messages)
+	// One user turn, the block ahead of the caller's words: two user turns in a
+	// row are refused by the chat templates chatturns.go names.
+	if len(got.Messages) != 1 || got.Messages[0].Role != "user" ||
+		!strings.HasSuffix(got.Messages[0].Content, "\n\n"+original.Messages[0].Content) {
+		t.Fatalf("context was not joined ahead of the caller's user turn: %+v", got.Messages)
 	}
-	block := got.Messages[0].Content
+	block := strings.TrimSuffix(got.Messages[0].Content, "\n\n"+original.Messages[0].Content)
 	for _, want := range []string{
 		"<" + marker + ">", `"name":"identity"`, `"key":"offer_summary"`,
 		`"source":"site_read"`, `"source_url":"https://acme.example/products"`,

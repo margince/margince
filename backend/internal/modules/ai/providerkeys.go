@@ -143,6 +143,11 @@ func (cfg RoutingConfig) CloudProvidersBound() []string {
 		named[tier.Provider] = true
 	}
 	named[cfg.Embeddings.Provider] = true
+	// The decisions lane is bound apart from the tiers, so its key is named
+	// here or nowhere. A key the adapter only sends when held is never demanded.
+	if cfg.Decisions != nil && !keyIsOptional(cfg.Decisions.Provider) {
+		named[cfg.Decisions.Provider] = true
+	}
 
 	out := make([]string, 0, len(named))
 	for _, provider := range CloudProvidersNeedingKeys() {
@@ -161,7 +166,7 @@ func (cfg RoutingConfig) CloudProvidersBound() []string {
 // that silently leaves a new vendor's key in the environment.
 func CloudProvidersNeedingKeys() []string {
 	out := make([]string, 0, len(cloudKeyEnv))
-	for _, provider := range knownProviders {
+	for _, provider := range providerNames() {
 		if _, cloud := cloudKeyEnv[provider]; cloud {
 			out = append(out, provider)
 		}
@@ -173,3 +178,11 @@ func CloudProvidersNeedingKeys() []string {
 // takes no key. The names match each vendor's own convention, which is why they
 // carry no MARGINCE_ prefix.
 func KeyEnvVarFor(provider string) string { return cloudKeyEnv[provider] }
+
+// keyIsOptional reports whether provider calls without its key when none is
+// held — a server on the operator's own host needs none — so a missing one is
+// a state to show, never a gap that blocks setup.
+func keyIsOptional(provider string) bool {
+	d, _ := providerByName(provider)
+	return d.keyOptional
+}

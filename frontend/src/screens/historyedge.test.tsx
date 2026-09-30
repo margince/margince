@@ -131,7 +131,7 @@ describe("an edge row in a record's history", () => {
       <RecordHistory kind="contact" id="p1" restore={RESTORE} />,
     );
 
-    expect(await screen.findByText(/name didn't load/i)).toBeTruthy();
+    expect(await screen.findByText(/name did not load/i)).toBeTruthy();
     expect(screen.queryByText("null")).toBeNull();
     expect(container.querySelector(".entry-edge")?.textContent).toBeTruthy();
   });
@@ -157,9 +157,9 @@ describe("an edge row in a record's history", () => {
     );
     render(<RecordHistory kind="contact" id="p1" restore={RESTORE} />);
 
-    const button = await screen.findByRole("button", { name: /put back/i });
+    const button = await screen.findByRole("button", { name: /^undo$/i });
     expect(button.hasAttribute("disabled")).toBe(true);
-    expect(screen.getByText(/add it again on this record/i)).toBeTruthy();
+    expect(screen.getByText(/add the link again on this record/i)).toBeTruthy();
   });
 
   // A link change must be tellable from a field edit before a word of either is
@@ -309,7 +309,7 @@ describe("reversing a link asks before it writes", () => {
     const fetchMock = servingHistory([linked]);
     vi.stubGlobal("fetch", fetchMock);
     render(<RecordHistory kind="contact" id="p-1" restore={RESTORE} />);
-    const button = await screen.findByRole("button", { name: /put back/i });
+    const button = await screen.findByRole("button", { name: /^undo$/i });
     await userEvent.click(button);
 
     // The dialog names the record at the other end, so the reader knows which
@@ -317,7 +317,7 @@ describe("reversing a link asks before it writes", () => {
     // because the ROW names the company too — asserting on the name alone would
     // pass on a page that never opened a dialog at all.
     const asked = await screen.findByText(
-      /only the connection between them changes/i,
+      /only the link between them changes/i,
     );
     expect(asked.textContent).toContain("Employer GmbH");
     // Nothing was written by the press that opened it. The restore route is

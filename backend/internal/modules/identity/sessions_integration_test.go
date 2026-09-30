@@ -49,6 +49,7 @@ func (e *revocationEnv) signIn(t *testing.T, userAgent string) string {
 func (e *revocationEnv) asMember() context.Context {
 	return withHumanPrincipal(e.wsOnlyCtx(), e.member)
 }
+
 func (e *revocationEnv) asAdmin() context.Context { return withHumanPrincipal(e.wsOnlyCtx(), e.admin) }
 
 func TestListSessionsReturnsNewestActivityFirstMarkingTheCurrentOne(t *testing.T) {

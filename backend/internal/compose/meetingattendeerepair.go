@@ -43,16 +43,22 @@ import (
 
 // The outcomes this repair records.
 //
-// `attendees` is the only one that bound anybody. The other two are both
-// UNRESOLVED for the purpose of judging the rollout: a meeting whose original
-// will not parse has not been repaired but given up on, and `none` covers both a
-// genuinely empty invitation and one the party cap refused — in which case real
-// colleagues are still locked out. Counting either as success would let a pass
-// that repaired nothing report itself finished, which is the one way a privacy
-// rollout must not be wrong.
+// `attendees` is the only one that bound anybody. The other three are all
+// UNRESOLVED for the purpose of judging the rollout: counting any of them as
+// success would let a pass that repaired nothing report itself finished, which
+// is the one way a privacy rollout must not be wrong.
+//
+// `none` and `capped` are two facts, not one. A genuinely empty invitation has
+// nobody to bind and is finished work; one the party cap refused has real
+// colleagues still locked out of a meeting they attended, and a pass that
+// recorded both as `none` could not say how much of its own backlog was which.
+// The cap itself is not relaxed here — a two-hundred-contact invitation is a
+// distribution list, and folding its names in would report a relationship with
+// everyone who got the same mail.
 const (
 	repairBoundAttendees = "attendees"
 	repairFoundNone      = "none"
+	repairCapped         = "capped"
 	repairUnreadable     = "unreadable"
 )
 
@@ -148,39 +154,32 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate) (string
 	if decodeErr != nil {
 		return repairUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
-	var participants []connector.MessageParticipant
+	var parties connector.Parties
 	var parseErr error
 	switch c.source {
 	case sourceGCal:
-		participants, parseErr = gcal.ParticipantsOf(raw, c.owner)
+		parties, parseErr = gcal.ParticipantsOf(raw, c.owner)
 	case sourceGraphCal:
-		participants, parseErr = graphcal.ParticipantsOf(raw, c.owner)
+		parties, parseErr = graphcal.ParticipantsOf(raw, c.owner)
 	default:
 		return repairUnreadable, nil
 	}
 	if parseErr != nil {
 		return repairUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
-	if len(participants) == 0 {
-		// UNRESOLVED, never "this meeting had nobody on it".
-		//
-		// Two different states reach here and this pass cannot tell them apart:
-		// an event that genuinely names no further party, and one the party cap
-		// refused. connector.CapParticipants returns NOTHING rather than a
-		// truncated list once a message names more than MaxParticipants further
-		// parties — deliberately, because a 200-contact invitation is a
-		// distribution list and folding its names in would report a relationship
-		// with everyone who got the same mail. That rule is not this change's to
-		// relax.
-		//
-		// What it costs here is real: a capped meeting keeps every attendee
-		// unresolved, so a colleague who was on it still cannot read it. Recording
-		// that as `none` would let a pass that left real contacts locked out report
-		// itself complete, so both land in the same UNRESOLVED bucket the
-		// rollout check reads — the honest answer while the two are
-		// indistinguishable. Telling them apart needs the pre-cap count, which
-		// lives inside the shared calendar parser and reaches four callers;
-		// filed rather than done here.
+	if parties.Capped() {
+		// The event named more parties than the cap admits, so it named them
+		// all or none and the cap chose none. Recorded as its own outcome:
+		// a colleague who was on this meeting still cannot read it, and the
+		// difference between "nobody to bind" and "we refused to look" is the
+		// difference between finished work and a backlog nobody can see.
+		return repairCapped, nil
+	}
+	if len(parties.Participants) == 0 {
+		// UNRESOLVED, never "this meeting had nobody on it". The invitation
+		// named no further party, so there is nothing here to bind — but a pass
+		// that counted that as success would be reporting on its own reach
+		// rather than on the meetings it repaired.
 		return repairFoundNone, nil
 	}
 	// True, not c.partyListIsAttested(): the query above admits calendar
@@ -189,7 +188,7 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate) (string
 	// two answers drift.
 	// No transport, for the reason the kind already gives: a calendar invitation
 	// names its attendees by address, and a meeting rode no channel.
-	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind, "", true, participants); err != nil {
+	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind, "", true, parties.Participants); err != nil {
 		return "", err
 	}
 	// The superseded rows, retired now that a resolved one stands beside them.

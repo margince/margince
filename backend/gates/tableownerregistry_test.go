@@ -119,7 +119,6 @@ var tableOwners = map[string]string{
 	// owns an external audience, its own credentials and an immutable
 	// publication history, none of which the deal spine has a place for.
 	"deal_room":             "internal/modules/dealrooms",
-	"deal_room_release":     "internal/modules/dealrooms",
 	"deal_room_participant": "internal/modules/dealrooms",
 	"deal_room_invitation":  "internal/modules/dealrooms",
 	"deal_room_session":     "internal/modules/dealrooms",
@@ -139,6 +138,16 @@ var tableOwners = map[string]string{
 	// has since taken it back. NOT a second audit ledger — the audit row owns
 	// the before/after images and this row points at it.
 	"deal_correction": "internal/modules/deals",
+	// The day's first risk pass and the deals it judged material and at risk.
+	// Written by compose's hourly pass through deals.RecordRiskDay; the day is
+	// aged out by the retention engine and its verdicts go with it.
+	"deal_risk_day":     "internal/modules/deals",
+	"deal_risk_verdict": "internal/modules/deals",
+	// Deal Scout's suggestions and the evidence each cites. Written by
+	// compose's hourly deal_scout pass through deals.RecordSuggestionTx, and
+	// decided by a rep through the deals store.
+	"deal_suggestion":          "internal/modules/deals",
+	"deal_suggestion_evidence": "internal/modules/deals",
 	// The project is its own bounded context, superseding ADR-0073 — see
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
 	// a layout: a statement writing either table from any other package fails
@@ -174,6 +183,7 @@ var tableOwners = map[string]string{
 	// second provider's copy of a message resolves to, so it belongs to the
 	// module that owns that row.
 	"activity_identity":        "internal/modules/activities",
+	"activity_mail_reference":  "internal/modules/activities",
 	"activity_sales_state":     "internal/modules/activities",
 	"activity_reader_state":    "internal/modules/activities",
 	"activity_review_template": "internal/modules/activities",
@@ -208,6 +218,8 @@ var tableOwners = map[string]string{
 	// is written by exactly the module that writes those rows.
 	"stored_object_intent": "internal/modules/activities",
 	"deal_document_hide":   "internal/modules/activities",
+	"meeting_proposal":     "internal/modules/activities",
+	"meeting_invitation":   "internal/modules/activities",
 	"booking_page":         "internal/modules/activities",
 	// approvals (signing_key backs the approval-token JWS; the autonomy policy
 	// is what each rep has decided about a KIND of proposal, so it belongs to
@@ -224,18 +236,17 @@ var tableOwners = map[string]string{
 	// What made business correspondence lawful, and the §7(3) flag: both are
 	// the gate's own evidence (ADR-0098 D2/D4), written where the gate that
 	// relies on them lives.
-	"contact_acquisition_evidence":   "internal/modules/contacts",
-	"privacy_notice_case":            "internal/modules/consent",
-	"consent_text_version":           "internal/modules/consent",
-	"communication_decision":         "internal/modules/consent",
-	"communication_basis":            "internal/modules/consent",
-	"communication_review":           "internal/modules/consent",
-	"communication_instruction":      "internal/modules/consent",
-	"communication_suppression":      "internal/modules/consent",
-	"consent_qualifying_event":       "internal/modules/consent",
-	"consent_existing_customer_flag": "internal/modules/consent",
-	"data_subject_request":           "internal/modules/consent",
-	"preference_token":               "internal/modules/consent",
+	"contact_acquisition_evidence": "internal/modules/contacts",
+	"privacy_notice_case":          "internal/modules/consent",
+	"consent_text_version":         "internal/modules/consent",
+	"communication_decision":       "internal/modules/consent",
+	"communication_basis":          "internal/modules/consent",
+	"communication_review":         "internal/modules/consent",
+	"communication_instruction":    "internal/modules/consent",
+	"communication_suppression":    "internal/modules/consent",
+	"consent_qualifying_event":     "internal/modules/consent",
+	"data_subject_request":         "internal/modules/consent",
+	"preference_token":             "internal/modules/consent",
 	// The emailed link that shows a contact their own record and carries their
 	// marketing answer back, and what comes back through it. Consent's, because
 	// what the token authorises is a consent decision and the address it was
@@ -272,6 +283,9 @@ var tableOwners = map[string]string{
 	// Sync has echoed it back yet — internal bookkeeping, not audited;
 	// rows are retained rather than swept.
 	"capture_test_mailbox_sent": "internal/modules/capture",
+	// One receipt per repair pass per workspace turn — bookkeeping about a
+	// pass rather than a record fact, not audited; pruned to a history.
+	"capture_sweep_run": "internal/modules/capture",
 	// What the pipeline decided about each message, for 24 hours. Written by
 	// the sink alone; compose reads it and sweeps it, and the verdict engine
 	// writes nothing here — its answers live in the disposition ledger and are
@@ -330,6 +344,8 @@ var tableOwners = map[string]string{
 	// automation (the deterministic trigger-and-action catalog)
 	"workflow_run":            "internal/modules/automation",
 	"notice":                  "internal/modules/notices",
+	"notification_digest_run": "internal/modules/notices",
+	"notification_preference": "internal/modules/notices",
 	"intro_request":           "internal/modules/introductions",
 	"automation_effect_claim": "internal/modules/automation",
 	"automation":              "internal/modules/automation",
@@ -355,14 +371,17 @@ var tableOwners = map[string]string{
 	"signal":                         "internal/modules/signals",
 	"signal_resolution":              "internal/modules/signals",
 	// collections
-	"list":        "internal/modules/collections",
-	"list_member": "internal/modules/collections",
-	"tag":         "internal/modules/collections",
-	"taggable":    "internal/modules/collections",
-	"saved_view":  "internal/modules/collections",
+	"list":              "internal/modules/collections",
+	"list_member":       "internal/modules/collections",
+	"list_member_event": "internal/modules/collections",
+	"list_revision":     "internal/modules/collections",
+	"tag":               "internal/modules/collections",
+	"taggable":          "internal/modules/collections",
+	"saved_view":        "internal/modules/collections",
 	// privacy (the erasure suppression list is the module's own state;
 	// its other writes are ratified waivers below)
 	"erasure_suppression": "internal/modules/privacy",
+	"restore_drill":       "internal/modules/continuity",
 	// customfields (the governed add-field engine's catalog)
 	"custom_field": "internal/modules/customfields",
 	// knowledge (the asked document corpus; the chunk is a derived artifact of
@@ -376,6 +395,9 @@ var tableOwners = map[string]string{
 	// user-visible fact and stays owned by activities)
 	"comms_outbound": "internal/modules/comms",
 	"scheduled_send": "internal/modules/activities",
+	// the rep's unsent message: composer state beside the scheduled send, and
+	// like it never an activity
+	"mail_draft": "internal/modules/activities",
 	// migration (the shared importer engine's run records, IEM-DDL-1;
 	// native rows land through injected Writers, so the record tables'
 	// owners are untouched)
@@ -389,6 +411,11 @@ var tableOwners = map[string]string{
 	// extension port, before any module is reached.
 	"extension_ingest_refusal": "internal/compose",
 	"idempotency_key":          "internal/compose",
+	// A bulk change and the user's confirmation of one. compose owns both
+	// because the change spans three record types in two modules, and the
+	// engine that writes them is the composition layer's (bulkchange.go).
+	"bulk_operation":    "internal/compose",
+	"bulk_confirmation": "internal/compose",
 	// The MCP Tasks handle, beside the claim above and owned for the same
 	// reason: it is transport-owned operational state, not a domain record, and
 	// modules/agents declares the seam while owning no SQL.
@@ -450,13 +477,6 @@ var tableOwners = map[string]string{
 	// records a completed PARSE, and every meeting this pass must re-read
 	// already carries one.
 	"activity_meeting_attendee_repair": "internal/compose",
-	// What the source-author repair has applied per record, so a re-run is a
-	// no-op and a correction is not mistaken for a replay. Owned here for the
-	// reason the markers around it are: the repair reads ONE source system and
-	// writes across activities, contacts, companies, deals, leads and projects,
-	// so no single module can hold the ledger of what it did without reaching
-	// into its siblings' tables to keep it.
-	"source_attribution_repair": "internal/compose",
 	// Which captured meetings have had their stored original re-read for the
 	// RSVP nobody looked at when they were captured. The same bookkeeping,
 	// owned here for the same reason — and a marker of its own again, because

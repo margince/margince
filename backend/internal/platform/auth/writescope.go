@@ -87,13 +87,12 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // at the call site.
 //
 // It NARROWS the window rather than closing it, and a caller whose write would
-// be harmful on the far side of it owes LockSubjectLive as well. This reads a
-// snapshot; the write happens in a later statement of the same transaction, and
-// under READ COMMITTED an archive or an erasure committing in between lands
-// anyway. For most callers the
-// residue is a stale write. Where it is a live capability or a PII row an
-// erasure had just cleared, it is not, and the lock is what makes the two take
-// turns. Which writers owe it is derived in backend/liveprobelock_test.go.
+// be harmful on the far side owes LockSubjectLive too. This reads a snapshot and
+// the write lands in a later statement, so under READ COMMITTED an archive or an
+// erasure committing in between still applies. For most callers the residue is a
+// stale write; where it is a live capability or a PII row an erasure just
+// cleared it is not, and the lock is what makes the two take turns. Which
+// writers owe it is derived in backend/liveprobelock_test.go.
 func EnsureWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	if err := EnsureVisibleLive(ctx, tx, table, id); err != nil {
 		return err
@@ -328,14 +327,12 @@ func writeAuthorityPredicateAs(p principal.Principal, table, alias string, arg f
 	// keeps is AAD-AC-4: a read-seat member may not hold write authority over a
 	// record, whatever a stored grant says.
 	//
-	// Its only guard was refuseWriteGrantToReadSeat, at grant CREATION. Nothing
-	// revokes a standing write grant when a seat is downgraded, so between the
-	// downgrade and a cleanup nobody has written yet, the stored data says the
-	// opposite of the rule. The seat ceiling makes that inert on the doors that
-	// exist today — a REST mutation dies at the ceiling, an agent call at the
-	// admission gate — which is exactly the state that stops being inert when a
-	// third door arrives, and a seat-change endpoint is what would create the
-	// window in the first place.
+	// Guarding it at grant CREATION alone is not enough: nothing revokes a
+	// standing write grant when a seat is downgraded, so the stored data can say
+	// the opposite of the rule. The seat ceiling makes that inert on today's
+	// doors — a REST mutation dies at the ceiling, an agent call at the admission
+	// gate — which is exactly the state that stops being inert when a third door
+	// arrives.
 	//
 	// Read from the PRINCIPAL rather than joined from app_user: the seat is
 	// already resolved on every call, it is the same value the ceiling reads,

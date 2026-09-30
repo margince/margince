@@ -9,7 +9,7 @@ import { Panel, PanelBody } from "./panel";
 // breathes and a light passes over the lines; under reduced motion both rest
 // and the shape alone says the answer is coming.
 const meta: Meta<typeof AiPending> = {
-  title: "Design System/AiPending",
+  title: "Components/AI and provenance/AI pending",
   component: AiPending,
   parameters: { layout: "padded" },
   decorators: [
@@ -26,11 +26,11 @@ type Story = StoryObj<typeof AiPending>;
 
 export const ReadingAnAccount: Story = {
   args: {
-    label: "Margince is reading this account's exchanges and deals.",
+    label: "Margince is analyzing this company’s exchanges and deals.",
     lines: 3,
   },
   render: (args) => (
-    <Panel title="What needs you">
+    <Panel title="Needs attention">
       <PanelBody>
         <AiPending {...args} />
       </PanelBody>

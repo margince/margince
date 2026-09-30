@@ -12,6 +12,7 @@ package storekit
 import (
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -146,7 +147,7 @@ func scalarOperand(value any, field Field, name, op string) (any, error) {
 	}
 	switch field.Type {
 	case FieldText, FieldPicklist, FieldMultiselect:
-		return scalarStringOperand(value, invalid, "a string")
+		return scalarStringOperand(value, invalid, field.FoldCase)
 	case FieldDomain:
 		return scalarDomainOperand(value, invalid)
 	case FieldID:
@@ -168,14 +169,17 @@ func scalarOperand(value any, field Field, name, op string) (any, error) {
 }
 
 // scalarStringOperand is scalarOperand's text/picklist branch: any plain
-// string is a valid bind value, so there is nothing to validate beyond
-// the type itself.
+// string is a valid bind value, so there is nothing to validate beyond the
+// type itself, and a field whose column is stored lowercased folds it.
 //
-//craft:ignore naked-any value is a decoded JSON filter operand and the return a bind parameter — both inherit scalarOperand's own span across the SQL scalar types
-func scalarStringOperand(value any, invalid func(string) error, want string) (any, error) {
+//craft:ignore naked-any value is a decoded JSON filter operand — it inherits scalarOperand's own span across the SQL scalar types
+func scalarStringOperand(value any, invalid func(string) error, fold bool) (string, error) {
 	s, ok := value.(string)
 	if !ok {
-		return nil, invalid(want)
+		return "", invalid("a string")
+	}
+	if fold {
+		return strings.ToLower(s), nil
 	}
 	return s, nil
 }
@@ -265,9 +269,12 @@ func scalarCurrencyOperand(value any, invalid func(string) error) (any, error) {
 //
 //craft:ignore naked-any value is a decoded JSON filter operand and the return a bind parameter — both inherit scalarOperand's own span across the SQL scalar types
 func scalarDateOperand(value any, invalid func(string) error) (any, error) {
+	if relative, ok := value.(map[string]any); ok {
+		return relativeDateOperand(relative, invalid)
+	}
 	s, ok := value.(string)
 	if !ok {
-		return nil, invalid("an ISO date (YYYY-MM-DD)")
+		return nil, invalid("an ISO date (YYYY-MM-DD) or {\"days_ago\": N}")
 	}
 	if _, err := time.Parse("2006-01-02", s); err != nil {
 		return nil, invalid("an ISO date (YYYY-MM-DD)")
@@ -342,4 +349,52 @@ func inDomainOperand(raw []any, name string) ([]string, error) {
 		out = append(out, parsed.String())
 	}
 	return out, nil
+}
+
+// RelativeDays is a date operand counted back from the day the filter runs:
+// {"days_ago": 45} is the day 45 days before today. It is what lets a stored
+// filter say "no activity in 45 days" and keep meaning it tomorrow, where a
+// literal date would go stale the day after it was saved.
+type RelativeDays int
+
+// relativeDaysKey is the one key a relative date operand carries, and
+// MaxRelativeDays bounds it at a century, past which no business question sits.
+const (
+	relativeDaysKey = "days_ago"
+	MaxRelativeDays = 36600
+)
+
+// relativeDateOperand validates {"days_ago": N}: exactly that key, a whole
+// number from zero to MaxRelativeDays.
+func relativeDateOperand(relative map[string]any, invalid func(string) error) (RelativeDays, error) {
+	const want = "{\"days_ago\": N} with N a whole number of days from 0 to 36600"
+	raw, ok := relative[relativeDaysKey]
+	if !ok || len(relative) != 1 {
+		return 0, invalid(want)
+	}
+	var days float64
+	switch n := raw.(type) {
+	case float64:
+		days = n
+	case int:
+		days = float64(n)
+	default:
+		return 0, invalid(want)
+	}
+	if math.Trunc(days) != days || days < 0 || days > MaxRelativeDays {
+		return 0, invalid(want)
+	}
+	return RelativeDays(days), nil
+}
+
+// operandSQL is where a validated scalar operand enters the statement: as one
+// bind parameter, or for a relative date as today's date minus a bound day
+// count, so the day is read when the filter runs rather than when it was saved.
+//
+//craft:ignore naked-any value is a validated operand from scalarOperand, which spans the SQL scalar types
+func operandSQL(value any, arg func(any) int) string {
+	if days, ok := value.(RelativeDays); ok {
+		return fmt.Sprintf("(CURRENT_DATE - $%d::integer)", arg(int(days)))
+	}
+	return fmt.Sprintf("$%d", arg(value))
 }

@@ -18,3 +18,12 @@
   justify-content: space-between;
   gap: var(--gapActions);
 }
+
+/* The preview and the way to the room's own page, kept together at the end of
+   the head so the space between them is the actions gap, not the head's. */
+.roomtab-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}

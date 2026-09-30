@@ -6,25 +6,29 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
-import { routeHash } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
   Badge,
   Button,
-  DataTable,
   Disclosure,
   EmptyState,
   Field,
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CellStack } from "../design-system/cellstack";
+import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
+import { formatTokens } from "../format/tokens";
 import { useLocale, useT } from "../i18n";
+import { decisionSkipLabel } from "./ai-decision-labels";
+import { decisionFirstOrder } from "./ai-feature-order";
+import { TaskState } from "./ai-lane-state";
+import { ModelChain, ModelRef } from "./ai-terms";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { settingsHref } from "./settingsrouting";
 
 type Budget = components["schemas"]["AiBudgetSnapshot"];
 type Change = components["schemas"]["AiBudgetChange"];
@@ -77,13 +81,14 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
   const t = useT();
   const { locale } = useLocale();
   const number = (value: number) => formatNumber(value, locale);
+  const tokens = (value: number) => formatTokens(value, locale);
   const pct = Math.round((budget.spent_tokens / budget.monthly_tokens) * 100);
   return (
     <>
       <p>
         {t("aiAdmin.consumption", {
-          spent: number(budget.spent_tokens),
-          total: number(budget.monthly_tokens),
+          spent: tokens(budget.spent_tokens),
+          total: tokens(budget.monthly_tokens),
           pct: number(pct),
         })}
       </p>
@@ -93,7 +98,7 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
         label={t("aiAdmin.allowance")}
       />
       <p>
-        {t("aiAdmin.remaining", { tokens: number(budget.remaining_tokens) })} ·{" "}
+        {t("aiAdmin.remaining", { tokens: tokens(budget.remaining_tokens) })} ·{" "}
         {t("aiAdmin.reset", {
           date: formatDateTime(budget.resets_at, locale, "UTC"),
         })}
@@ -103,7 +108,7 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
           ? t("aiAdmin.fixed")
           : t("aiAdmin.formula", {
               users: number(budget.eligible_full_users),
-              tokens: number(budget.config.tokens_per_full_user),
+              tokens: tokens(budget.config.tokens_per_full_user),
             })}
         {budget.eligible_full_users === 0 &&
         budget.source !== "company_override"
@@ -327,33 +332,6 @@ export function AiFeaturesWithheldPanel() {
   );
 }
 
-export function AiFeaturesCard() {
-  const t = useT();
-  const canSee = useCan("ai_diagnostics", "read");
-  const canBudget = useCan("ai_budget", "read");
-  const canRoute = useCan("ai_routing", "read");
-  const query = useAiStatus(canSee && canBudget);
-  if (!canSee || !canBudget) return <AiFeaturesWithheldPanel />;
-  return (
-    <Panel title={t("aiAdmin.features")}>
-      <PanelBody>
-        <p>{t("aiAdmin.prospective")}</p>
-        <QueryGate query={query} pendingLabel={t("aiAdmin.features")}>
-          {(status) => (
-            <>
-              {canRoute && <AiFeatureTable rows={status.features} />}
-              <DeferredWork rows={status.deferred_work} />
-              <a href={routeHash(settingsHref("model-calls"))}>
-                {t("aiAdmin.calls")}
-              </a>
-            </>
-          )}
-        </QueryGate>
-      </PanelBody>
-    </Panel>
-  );
-}
-
 function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -381,81 +359,110 @@ function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
   );
 }
 
+// Read-only by design: a task's tier is fixed by the task contract, and the
+// binding a tier names is edited on the Model tiers card.
 export function AiFeatureTable({
   rows,
-  onEdit,
-}: Readonly<{ rows: Feature[]; onEdit?: (tier: string) => void }>) {
+  health,
+}: Readonly<{
+  rows: Feature[];
+  // Present for a reader who may see how the lanes answer.
+  health?: components["schemas"]["AiHealth"];
+}>) {
   const t = useT();
+  // Only a departure from the default is worth a badge; the unchanged case is
+  // what every quiet row already says.
   const impact = (row: Feature) => {
     switch (row.impact) {
       case "budget_blocked":
         return t("aiAdmin.impact.blocked");
       case "model_changed":
         return t("aiAdmin.impact.model");
+      case "decision_changed":
+        return t("aiAdmin.impact.decision");
       case "fallback_changed":
         return t("aiAdmin.impact.fallback");
       case "unconfigured":
         return t("aiAdmin.impact.unconfigured");
+      case "unchanged":
+        return row.budget_exempt ? t("aiAdmin.impact.exempt") : null;
       default:
-        return row.budget_exempt
-          ? t("aiAdmin.impact.exempt")
-          : t("aiAdmin.impact.same");
+        // A new impact must be named here rather than read as "unchanged".
+        return row.impact satisfies never;
     }
   };
+  // Which model answers, and where the decision model stands in front of the
+  // ladder. Only the lead is summarized: the rungs behind it are the tiers
+  // above, and repeating them per task is the same list said again.
+  const summary = (row: Feature) => {
+    const lead = row.effective_candidates[0];
+    const ladder = <ModelRef provider={lead.provider} model={lead.model} />;
+    const decision = row.decision_candidate;
+    if (!row.decision_first || !decision) {
+      return ladder;
+    }
+    return (
+      <ModelChain
+        steps={[decision, lead]}
+        connector={t("aiAdmin.thenLadder")}
+      />
+    );
+  };
+  const modelCell = (row: Feature) =>
+    row.effective_candidates.length ? summary(row) : "—";
   return (
     <DataTable
       label={t("aiAdmin.features")}
-      rows={rows}
+      rows={decisionFirstOrder(rows)}
       rowKey={(row) => row.task}
       columns={[
         {
           key: "activity",
           header: t("aiAdmin.activity"),
-          render: (row: Feature) => (
-            <span title={row.task}>{row.display_name}</span>
-          ),
+          render: (row: Feature) => {
+            const changed = impact(row);
+            return (
+              <CellStack>
+                <span>{row.display_name}</span>
+                <span className="t-caption">
+                  {row.task} · {row.execution_mode}
+                </span>
+                {row.decision_first ? (
+                  <Badge>{t("aiTasks.decisionFirst")}</Badge>
+                ) : null}
+                <TaskState
+                  health={health}
+                  tier={row.leading_tier}
+                  decisionFirst={row.decision_first === true}
+                />
+                {changed ? (
+                  <Badge
+                    tone={
+                      row.impact === "budget_blocked" ||
+                      row.impact === "unconfigured"
+                        ? "warning"
+                        : undefined
+                    }
+                  >
+                    {changed}
+                  </Badge>
+                ) : null}
+              </CellStack>
+            );
+          },
         },
         {
           key: "model",
           header: t("aiAdmin.model"),
-          render: (row: Feature) =>
-            row.effective_candidates.length ? (
-              <Disclosure
-                summary={`${row.effective_candidates[0].provider} · ${row.effective_candidates[0].model}`}
-              >
-                <ol>
-                  {row.effective_candidates.map((candidate) => (
-                    <li key={candidate.tier}>
-                      {candidate.provider} · {candidate.model} ·{" "}
-                      {candidate.processing === "cloud_provider"
-                        ? t("aiAdmin.cloud")
-                        : t("aiAdmin.endpoint")}
-                    </li>
-                  ))}
-                </ol>
-                {onEdit && (
-                  <Button onClick={() => onEdit(row.leading_tier)}>
-                    {t("aiAdmin.editBinding")}
-                  </Button>
-                )}
-              </Disclosure>
-            ) : (
-              "—"
-            ),
-        },
-        {
-          key: "impact",
-          header: t("aiAdmin.effect"),
           render: (row: Feature) => (
-            <Badge
-              tone={
-                row.impact === "budget_blocked" || row.impact === "unconfigured"
-                  ? "warning"
-                  : undefined
-              }
-            >
-              {impact(row)}
-            </Badge>
+            <>
+              {modelCell(row)}
+              {row.decision_skip_reason ? (
+                <p className="t-caption">
+                  {decisionSkipLabel(row.decision_skip_reason, t)}
+                </p>
+              ) : null}
+            </>
           ),
         },
       ]}

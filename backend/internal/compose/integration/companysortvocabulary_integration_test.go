@@ -55,10 +55,10 @@ func TestTheAccountsListSortsByTheDescriptionAndLifecycleItDraws(t *testing.T) {
 	// Seeded so that neither answer can come from insertion order or from the
 	// name, which is the sort the list already had.
 	zeta := seedAccount(t, e, contacts.CreateCompanyInput{
-		DisplayName: "Zeta Holding", Description: strPtr("An early note"),
+		DisplayName: "Zeta Holding", Description: StrPtr("An early note"),
 	})
 	alma := seedAccount(t, e, contacts.CreateCompanyInput{
-		DisplayName: "Alma Werke", Description: strPtr("Zero interest so far"),
+		DisplayName: "Alma Werke", Description: StrPtr("Zero interest so far"),
 	})
 	setLifecycle(t, e, zeta, "customer")
 	setLifecycle(t, e, alma, "target")

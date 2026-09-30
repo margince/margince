@@ -61,7 +61,25 @@ import (
 func currentEmployerFrom(
 	ctx context.Context, contactBinding string, arg func(any) int,
 ) (from string, visible bool, err error) {
-	edgeBound, err := auth.EdgeReadScope(ctx, "rel", arg)
+	scope, visible, err := employerScope(ctx, "rel", arg)
+	if err != nil || !visible {
+		return "", visible, err
+	}
+	return `
+		 FROM relationship rel
+		 JOIN company company ON company.id = rel.company_id
+		 WHERE ` + contactBinding + `
+		   AND rel.kind = 'employment'
+		   AND ` + employment.CurrentPrimarySQL("rel") + `
+		   AND rel.archived_at IS NULL
+		   AND ` + scope, true, nil
+}
+
+// employerScope is the clause under which an employment edge aliased relAlias,
+// joined to its company as `company`, is this caller's to see. Shared by every
+// read that names an employer, so the three gates are asked in one place.
+func employerScope(ctx context.Context, relAlias string, arg func(any) int) (clause string, visible bool, err error) {
+	edgeBound, err := auth.EdgeReadScope(ctx, relAlias, arg)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		return "", false, nil
 	}
@@ -84,16 +102,7 @@ func currentEmployerFrom(
 	if companyScope == "" {
 		companyScope = scopeAllRows
 	}
-	return `
-		 FROM relationship rel
-		 JOIN company company ON company.id = rel.company_id
-		 WHERE ` + contactBinding + `
-		   AND rel.kind = 'employment'
-		   AND ` + employment.CurrentPrimarySQL("rel") + `
-		   AND rel.archived_at IS NULL
-		   AND ` + edgeBound + `
-		   AND company.archived_at IS NULL
-		   AND ` + companyScope, true, nil
+	return edgeBound + ` AND company.archived_at IS NULL AND ` + companyScope, true, nil
 }
 
 func attachContactEmployers(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Contact, contactIDs []ids.UUID) error {

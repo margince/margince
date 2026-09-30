@@ -46,3 +46,8 @@
 .auto-preview-explainer {
   margin-top: var(--space-3);
 }
+
+/* One labelled fact of a run, stepped off the line above it. */
+.auto-detail-line {
+  margin-top: var(--space-1);
+}

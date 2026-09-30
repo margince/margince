@@ -25,7 +25,7 @@ import {
 const COMPANY_ID = "01a02000-0000-7000-8000-000000000001";
 
 const meta: Meta<typeof CompanyTriageSection> = {
-  title: "Records/Company rail/Capture triage",
+  title: "Records/Company 360/Rail/Capture triage",
   component: CompanyTriageSection,
   parameters: { layout: "padded" },
 };
@@ -68,7 +68,7 @@ const openIt = async ({
   canvasElement,
 }: Readonly<{ canvasElement: HTMLElement }>) => {
   await userEvent.click(
-    await within(canvasElement).findByText("Where this company came from"),
+    await within(canvasElement).findByText("Company origin"),
   );
 };
 

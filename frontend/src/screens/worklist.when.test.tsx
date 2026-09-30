@@ -24,7 +24,7 @@ vi.mock("../format/timezone", async (importOriginal) => {
 // The clock a row is racing, drawn.
 //
 // `due_at` reached the client on meetings and tasks and no worklist file read
-// it. A meeting said "starting shortly" — the same three words whether it began
+// it. A meeting said "starting soon" — the same three words whether it began
 // in four minutes or in fifty — so the one row a rep must open BEFORE a
 // wall-clock time was the row that would not say the time. A task said
 // "Overdue" and left the reader to find out by how much.
@@ -146,7 +146,7 @@ function taskDue(dueAt: string, overdue: boolean): WorklistItem {
 }
 
 describe("a meeting says when it starts", () => {
-  // The case the whole change is for: "starting shortly" is the same three
+  // The case the whole change is for: "starting soon" is the same three
   // words at four minutes and at fifty, and a rep planning a morning around it
   // needs the number.
   it("draws today's start as a wall-clock time", async () => {

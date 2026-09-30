@@ -5,10 +5,11 @@ package compose
 
 // Whether capture's judgement queues are keeping up.
 //
-// Two sweeps repair backlogs that were previously invisible and permanent —
-// settled threads whose messages never took the verdict, and captured contacts
-// nobody was ever asked about. They log their counts and nothing else, so
-// nobody could answer "is anything stuck".
+// Three sweeps repair backlogs that were previously invisible and permanent —
+// settled threads whose messages never took the verdict, captured contacts
+// nobody was ever asked about, and filed meetings still held to their
+// attendees. Each leaves a receipt per run, and this page reads the receipts
+// beside the backlogs, so "is anything stuck" has an answer.
 //
 // The contacts are the reason this is worth serving at all: they are
 // owner-private, and `ownerPrivateTables` makes them invisible to every reader

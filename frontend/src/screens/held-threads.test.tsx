@@ -171,15 +171,37 @@ describe("held threads", () => {
     // slow one.
     renderCard([PENDING]);
     expect(
-      await screen.findByText(/waiting on a verdict/i),
+      await screen.findByText(/awaiting classification/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/asked 3 time/i)).toBeInTheDocument();
+    expect(screen.getByText("Asked 3 times")).toBeInTheDocument();
   });
+
+  it("counts a single attempt in the singular", async () => {
+    renderCard([{ ...PENDING, attempts: 1 }]);
+    expect(await screen.findByText("Asked 1 time")).toBeInTheDocument();
+  });
+
+  it.each([
+    [1, /1 thread was asked about repeatedly/],
+    [2, /2 threads were asked about repeatedly/],
+  ])(
+    "counts the stalled threads in the backlog notice (%i)",
+    async (count, line) => {
+      const rows = Array.from({ length: count }, (_unused, index) => ({
+        ...PENDING,
+        thread_key: `t-stalled-${index}`,
+      }));
+      renderCard(rows);
+      expect(await screen.findByText(line)).toBeInTheDocument();
+    },
+  );
 
   it("names why a judged thread is held", async () => {
     renderCard([JUDGED]);
     expect(await screen.findByText("Legal")).toBeInTheDocument();
-    expect(screen.queryByText(/waiting on a verdict/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/awaiting classification/i),
+    ).not.toBeInTheDocument();
   });
 
   it("says the opening message is gone rather than drawing an empty subject", async () => {
@@ -194,7 +216,7 @@ describe("held threads", () => {
       },
     ]);
     expect(
-      await screen.findByText(/the message this began with is gone/i),
+      await screen.findByText(/first message erased/i),
     ).toBeInTheDocument();
   });
 
@@ -205,9 +227,7 @@ describe("held threads", () => {
     // left the subject line empty.
     renderCard([{ ...JUDGED, subject: undefined }]);
     expect(await screen.findByText(/^no subject$/i)).toBeInTheDocument();
-    expect(
-      screen.queryByText(/the message this began with is gone/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/first message erased/i)).not.toBeInTheDocument();
     // And not the withheld reading either: a blank subject is a fact about the
     // sender, "not shared with you" a fact about the reader.
     expect(screen.queryByText(/not shared with you/i)).not.toBeInTheDocument();
@@ -220,9 +240,7 @@ describe("held threads", () => {
     // for.
     renderCard([WITHHELD]);
     expect(await screen.findByText(/not shared with you/i)).toBeInTheDocument();
-    expect(
-      screen.queryByText(/the message this began with is gone/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/first message erased/i)).not.toBeInTheDocument();
   });
 
   it("refuses the release when there is no message left to share", async () => {
@@ -237,22 +255,28 @@ describe("held threads", () => {
     expect(screen.getByText(/no message left to share/i)).toBeInTheDocument();
   });
 
-  it("reports a release that opened nothing", async () => {
-    // A message two mailboxes imported opens only when both owners release it.
-    // Reporting the other holder is the difference between a control that looks
-    // broken and one that says what happened.
-    const user = userEvent.setup();
-    renderCard([JUDGED], { shared: false, held_by_others: 1 });
-    await user.click(
-      await screen.findByRole("button", { name: /share with the team/i }),
-    );
-    expect(await screen.findByText(/still held/i)).toBeInTheDocument();
-  });
+  // A message two mailboxes imported opens only when both owners release it.
+  // Reporting the other holder is the difference between a control that looks
+  // broken and one that says what happened.
+  it.each([
+    [1, /1 other mailbox imported this message and has not shared it/],
+    [2, /2 other mailboxes imported this message and have not shared it/],
+  ])(
+    "reports a release the other holders kept closed (%i)",
+    async (owners, line) => {
+      const user = userEvent.setup();
+      renderCard([JUDGED], { shared: false, held_by_others: owners });
+      await user.click(
+        await screen.findByRole("button", { name: /share with the team/i }),
+      );
+      expect(await screen.findByText(line)).toBeInTheDocument();
+    },
+  );
 
   it("reports an empty list as nothing held rather than as a failure", async () => {
     renderCard([]);
     expect(
-      await screen.findByText(/withholding nothing right now/i),
+      await screen.findByText(/withholding no threads/i),
     ).toBeInTheDocument();
   });
 });
@@ -318,7 +342,7 @@ it("says when the thread pass runs while a row is pending", async () => {
 
   const note = await screen.findByTestId("verdict-pass-threads");
   expect(note).toHaveTextContent(/every 10 minutes/i);
-  expect(note).toHaveTextContent(/next pass/i);
+  expect(note).toHaveTextContent(/next check/i);
 });
 
 // A thread held because the model judged it personnel is not waiting for

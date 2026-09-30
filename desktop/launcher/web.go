@@ -18,17 +18,15 @@ import (
 	"time"
 )
 
-// apiPrefixes are the paths that belong to the api rather than the SPA.
-//
-// This list mirrors frontend/vite.config.ts exactly. The dev server proxies
-// these to the api role and serves everything else from the bundle; the
-// desktop app must make the same split, or a route that works under `pnpm
-// dev` 404s in the shipped product.
+// apiPrefixes are the paths the api owns on this origin: the dev server's proxy
+// keys in frontend/vite.config.ts, held equal to this list by frontend/vite-proxy.test.ts.
 var apiPrefixes = []string{
 	"/v1",
+	"/setup",
 	"/readyz",
 	"/healthz",
 	"/metrics",
+	"/webhooks",
 	"/mcp",
 	"/oauth",
 	"/.well-known",
@@ -76,17 +74,9 @@ func (u *ui) start(ctx context.Context) error {
 		)
 	}
 
-	mux := http.NewServeMux()
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	for _, prefix := range apiPrefixes {
-		mux.Handle(prefix, proxy)
-		mux.Handle(prefix+"/", proxy)
-	}
-	mux.Handle("/", spaHandler(webRoot))
-
 	u.srv = &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           routes(target, webRoot),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	u.errs = make(chan error, 1)
@@ -103,6 +93,19 @@ func (u *ui) start(ctx context.Context) error {
 	return waitUntil(ctx, "web ui", 15*time.Second, nil, func() error {
 		return dialTCP(addr)
 	})
+}
+
+// routes matches an api prefix by whole path segment, unlike the dev server's
+// string prefix: /mcp goes to the api while the bundled /mcp-apps/ views stay files.
+func routes(api *url.URL, webRoot string) *http.ServeMux {
+	mux := http.NewServeMux()
+	proxy := httputil.NewSingleHostReverseProxy(api)
+	for _, prefix := range apiPrefixes {
+		mux.Handle(prefix, proxy)
+		mux.Handle(prefix+"/", proxy)
+	}
+	mux.Handle("/", spaHandler(webRoot))
+	return mux
 }
 
 // spaHandler serves the built frontend, falling back to index.html for paths

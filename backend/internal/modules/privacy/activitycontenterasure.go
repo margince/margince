@@ -72,18 +72,6 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 		DELETE FROM field_provenance WHERE object_type = 'activity' AND object_id = $1`, id); err != nil {
 		return err
 	}
-	// The byline the author repair wrote into its own bookkeeping. Every arm
-	// that reaches here has just cleared `source_author_name` off the activity,
-	// and the ledger holds a second copy of that same free text about the same
-	// human — so an erasure that stopped at the message would leave the erased
-	// name standing in a table anything can read.
-	//
-	// Here rather than beside each of those column writes, for the reason this
-	// function exists at all: the sweep and the lift both run this, and a clear
-	// spelled separately at each of them is the second list that goes short.
-	if err := clearAttributionLedgerNames(ctx, tx, "activity", []ids.UUID{id}); err != nil {
-		return err
-	}
 	// What a classifier concluded the message MEANT, and every human correction
 	// of that conclusion. It is derived from the text this act destroys, so it
 	// goes with it: a verdict saying somebody replied negatively is a claim
@@ -95,6 +83,23 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	// holds the subject's data after an operator was told it was gone.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_reply_verdict_history WHERE activity_id = $1`, id); err != nil {
+		return err
+	}
+	// What was promised, asked or decided in the message — and, on every one of
+	// these rows, a VERBATIM quotation of the words it was read from. The
+	// writer refuses a claim that carries neither the activity nor the snippet,
+	// so there is no such row without a copy of the text on it.
+	//
+	// The same argument as the verdict history above, one step stronger: a
+	// verdict is a conclusion ABOUT the text, and this is the text. Clearing
+	// the body and leaving the quotation erases nothing a reader would notice
+	// the difference of.
+	//
+	// The contact foreign key cannot be left to do this. Art. 17 ANONYMIZES the
+	// contact row in place rather than deleting it, so the cascade never fires
+	// — the identical reason transcript_read is deleted by statement here.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM conversation_claim WHERE source_activity_id = $1`, id); err != nil {
 		return err
 	}
 	// The external identities this message answered to, through the helper the

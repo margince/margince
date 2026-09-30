@@ -153,6 +153,37 @@ expect_llm "a model lane that never drove a scenario is not reported as a bad an
 expect_llm "a scenario that drove and failed is reported as the use case failing" \
 	"scenario-failed" "$LLM_CASE_TITLE"
 
+# The body told a reader that case 6 was a known standing failure and to file a
+# case 6 red away as the existing finding. #6298 fixed case 6 — it passes 3 of 3
+# on the lane's default model — so that sentence pointed the one reader who was
+# looking straight past a regression. Asserted in BOTH directions: the new claim
+# is present, and the retired one is gone rather than reworded around.
+expect_llm_body() {
+	local name="$1" body
+	export ACTION_LOG="$stub_dir/actions"
+	export BODY_LOG="$stub_dir/body"
+	: >"$ACTION_LOG"
+	: >"$BODY_LOG"
+	OPEN_TITLES="" GH_TOKEN=stub REPO=owner/repo RUN_URL=https://example.test/run/1 \
+		LLM_RESULT=failure LLM_OUTCOME=scenario-failed \
+		"$root/scripts/scheduled-report.sh" >/dev/null 2>&1
+	body="$(cat "$BODY_LOG" 2>/dev/null || true)"
+
+	if grep -qiF -- "known standing failure" <<<"$body"; then
+		echo "FAIL: $name — the body still calls a failure standing, and case 6 is fixed"
+		failures=$((failures + 1))
+		return
+	fi
+	if ! grep -qF -- "REGRESSION" <<<"$body"; then
+		echo "FAIL: $name — the body no longer tells a reader a case 6 red is a regression"
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: $name"
+}
+
+expect_llm_body "a failing use case is reported as a regression, not a known finding"
+
 # A tracker of `n` open issues, none of them the reported one, newest first.
 noise() {
 	local n="$1" i
@@ -268,6 +299,10 @@ expect_split() {
 expect_split perf PERF_RESULT PERF_OUTCOME breach \
 	"the weekly PERF-3/PERF-7 run could not complete" \
 	"a PERF-3/PERF-7 budget is breaching on main"
+
+expect_split renovate RENOVATE_RESULT RENOVATE_OUTCOME quiet \
+	"the Renovate liveness check could not run" \
+	"Renovate has stopped running against main"
 
 expect_split mobile MOBILE_RESULT MOBILE_OUTCOME breach \
 	"the weekly MOBILE-AC-2 run could not complete" \
@@ -417,7 +452,7 @@ expect_merge() {
 	set +e
 	out="$(env OPEN_TITLES="" GH_TOKEN=stub REPO=owner/repo RUN_URL=https://example.test/run/1 \
 		MERGE_VERDICT_RESULT=failure MERGE_VERDICT_PR="$pr" \
-		MERGE_VERDICT_WHY="$why" \
+		MERGE_VERDICT_WHY="$why" MERGE_VERDICT_LANE="${6:-ci}" \
 		"$root/scripts/scheduled-report.sh" 2>&1)"
 	status=$?
 	set -e
@@ -447,8 +482,13 @@ expect_merge() {
 # title would collect every case under one issue, be closed once, and go stale —
 # which is the dedupe above working exactly as designed against a subject it does
 # not fit.
+#
+# It still LEADS with the state of main and the lane that broke, matching the
+# health check's own titles. Six of these fired for one outage and read as six
+# unrelated merges, because a reader scanning open issues saw the pull request
+# and not the tree.
 expect_merge "a merge over a red check is filed against its pull request" \
-	2516 "A merge landed on main against a failing verdict (#2516)" \
+	2516 "main is red: \`ci\` failed on the tree merged by #2516" \
 	'its required `ci` check then reported `failure`'
 
 # A commit with no pull request has no number to name, and the title must still
@@ -644,6 +684,92 @@ for lane in $lanes; do
 	esac
 	if ! grep -qE "^ *${lane}: \\\$\{\{ needs\.${job}\.result \}\}" <<<"$report_job"; then
 		echo "FAIL: $lane has a reporter arm, but main-health never passes needs.${job}.result in as $lane"
+		failures=$((failures + 1))
+	fi
+done
+
+# --- scheduled.yml carries every verdict it produces --------------------------
+#
+# The census above is main-health's, and it keys on a job name DERIVED from the
+# variable (MAIN_UAT_RESULT -> uat). scheduled.yml cannot be asked that way:
+# GATE_RESULT is quality-gate, LANE_RESULT is backend-lane, CLOCK_RESULT is
+# fe-clock-drift. Nothing mechanical connects the two halves of those names, and
+# a census that needed a hand-kept mapping would be a second copy of the wiring
+# it checks — stale the first time somebody edits one and not the other.
+#
+# So this asks the two questions that ARE mechanical, and between them they close
+# the same hole from both ends:
+#
+#   a job the report job does not need   — its result never reaches the reporter.
+#   a result the reporter reads and the  — the arm is reached, reads an empty
+#   report job never passes in             string, files nothing, fails nothing.
+#
+# Both are silent. A job added without its `needs:` entry produces a lane that
+# runs, goes red, and is reported by nobody — which is indistinguishable from a
+# lane that passed.
+sched="$root/.github/workflows/scheduled.yml"
+sched_report="$(awk '/^  report:/{inside=1} inside&&/^  [A-Za-z_][A-Za-z0-9_-]*:/&&!/^  report:/{exit} inside' "$sched")"
+if [[ -z "$sched_report" ]]; then
+	echo "FAIL: no 'report' job found in scheduled.yml — the wiring checks below would pass by scanning nothing"
+	failures=$((failures + 1))
+fi
+sched_needs="$(grep -oE '^    needs: \[[^]]*\]' <<<"$sched_report" | sed -E 's/^    needs: \[//; s/\]$//')"
+
+# The job keys are the two-space-indented ones after `jobs:`; a step or a `with:`
+# sits deeper and a top-level key sits shallower. Derived from the workflow
+# rather than listed, so a job added tomorrow is covered without editing this.
+for job in $(awk '/^jobs:/{j=1;next} j&&/^  [A-Za-z_][A-Za-z0-9_-]*:/{gsub(/[: ]/,"");print}' "$sched"); do
+	[[ "$job" == "report" ]] && continue
+	case ",${sched_needs// /}," in
+	*",$job,"*) ;;
+	*)
+		echo "FAIL: scheduled.yml job '$job' is not in its report job's 'needs:' — it can go red with nobody reporting it"
+		failures=$((failures + 1))
+		;;
+	esac
+done
+
+# The other end: every result and outcome the reporter READS is handed in by one
+# of the workflows that CALL it. Three do, and the reporter serves all three from
+# one set of arms — MAIN_* is main-health's, MERGE_VERDICT_* is merge-attest's —
+# so asking scheduled.yml alone for every variable reports the other two
+# workflows' arms as unwired.
+#
+# The callers are derived by grepping for the script, and the block searched is
+# the JOB that runs it rather than the whole file: any other job's matching line
+# would otherwise stand in for the one that was removed. A caller added tomorrow
+# joins this census by existing; a skip-list per prefix would instead have to be
+# remembered, and the one nobody remembers is the arm that silently does nothing.
+callers="$(grep -rl 'scheduled-report\.sh' "$root/.github/workflows/")"
+if [[ -z "$callers" ]]; then
+	echo "FAIL: no workflow calls scheduled-report.sh — this census would pass by scanning nothing"
+	failures=$((failures + 1))
+fi
+handed_in="$(for wf in $callers; do
+	awk '
+		/^  [A-Za-z_][A-Za-z0-9_-]*:/ { if (buf ~ /scheduled-report\.sh/) printf "%s", buf; buf = "" }
+		{ buf = buf $0 "\n" }
+		END { if (buf ~ /scheduled-report\.sh/) printf "%s", buf }
+	' "$wf"
+done)"
+if [[ -z "$handed_in" ]]; then
+	echo "FAIL: no reporting job found in any caller — this census would pass by scanning nothing"
+	failures=$((failures + 1))
+fi
+# `[^}]*` rather than nothing between `:-` and `}`. A variable read with a
+# FALLBACK — ${RENOVATE_STATUS:-unknown} — is still a variable the reporter
+# needs handed in, and an extractor that only matched the empty default read a
+# smaller reporter than the real one and reported PASS over the difference.
+# There is no failing assertion for a census that under-counts, which is why the
+# boundary is wide here and the cases below pin it.
+for var in $(grep -oE '\$\{[A-Z_]+_(RESULT|OUTCOME|STATUS):-[^}]*\}' "$root/scripts/scheduled-report.sh" |
+	sed -E 's/^\$\{//; s/:-[^}]*\}$//' | sort -u); do
+	# `needs.vuln` and `needs['fe-clock-drift']` are both how a verdict is handed
+	# in — a hyphenated job name has no dotted spelling — so the boundary admits
+	# either. Matching only the dotted one would report every hyphenated job as
+	# unwired, and a census that cries wolf gets deleted rather than fixed.
+	if ! grep -qE "^ *${var}: \\\$\{\{ needs[.[]" <<<"$handed_in"; then
+		echo "FAIL: the reporter reads $var, but no workflow that calls it passes it in — the arm reads empty and does nothing"
 		failures=$((failures + 1))
 	fi
 done

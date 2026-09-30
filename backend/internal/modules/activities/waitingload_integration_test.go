@@ -74,7 +74,7 @@ func setupLoad(t *testing.T) *loadEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	e.pool = pool
 	return e
 }

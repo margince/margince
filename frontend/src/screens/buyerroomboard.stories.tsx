@@ -126,7 +126,7 @@ function board(
 }
 
 const meta: Meta<typeof BuyerBoard> = {
-  title: "Signed out/Deal room board",
+  title: "Signed out/Deal room/Board",
   component: BuyerBoard,
 };
 export default meta;

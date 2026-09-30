@@ -224,8 +224,12 @@ func countWeekMeetings(
 	if err != nil {
 		return 0, 0, err
 	}
+	// NULL admitted, because this window is a week that has already passed: a
+	// meeting nothing said was off, whose time has come and gone, is one that
+	// happened. A calendar connector records no status at all, so the strict
+	// form counted none of a rep's synced meetings in their own review.
 	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
-		      AND m.meeting_status = 'held'
+		      AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
 		      AND ` + meetingIsTheirsSQL("$%[5]d", "$%[3]d") + `
 		      AND m.occurred_at >= $%[1]d AND m.occurred_at < $%[2]d
 		      AND (%[4]s)`

@@ -40,9 +40,10 @@ type rawEvent struct {
 	// every occurrence of one series carries the same value — so it names the
 	// series and the occurrence's start names the meeting within it.
 	ICalUID     string        `json:"iCalUID"` //nolint:tagliatelle // Google's wire format
-	Status      string        `json:"status"`  // "confirmed" | "tentative" | "cancelled"
+	Status      string        `json:"status"`  // "confirmed" | "tentative" | calendarCanceled
 	Summary     string        `json:"summary"`
 	Description string        `json:"description"`
+	End         eventDateTime `json:"end"`
 	Start       eventDateTime `json:"start"`
 	Organizer   eventActor    `json:"organizer"`
 	Attendees   []eventActor  `json:"attendees"`
@@ -117,11 +118,13 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 	return meetingmap.Event{
 		ID:            ev.ID,
 		ICalUID:       strings.TrimSpace(ev.ICalUID),
-		Cancelled:     strings.EqualFold(strings.TrimSpace(ev.Status), "cancelled"),
+		Cancelled:     strings.EqualFold(strings.TrimSpace(ev.Status), calendarCanceled),
 		OwnerDeclined: ownerDeclined(ev.Attendees, owner),
 		Subject:       ev.Summary,
 		Description:   ev.Description,
 		StartsAt:      parseStart(ev.Start),
+		EndsAt:        parseStart(ev.End),
+		AllDay:        isAllDay(ev.Start),
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.Email, Name: ev.Organizer.DisplayName},
 		Attendees:     attendees,
 	}
@@ -175,7 +178,7 @@ func ownerAttendee(attendees []eventActor, owner string) (eventActor, bool) {
 // ParticipantsOf reads the organizer and attendees out of one stored event
 // resource, for the replay pass that recovers meetings captured before
 // participants were recorded.
-func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, error) {
+func ParticipantsOf(raw []byte, owner string) (connector.Parties, error) {
 	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
 }
 
@@ -199,6 +202,16 @@ func parseStart(start eventDateTime) time.Time {
 		return t
 	}
 	return time.Time{}
+}
+
+// isAllDay reports that Google stated the start as a date with no time — the
+// shape parseStart anchors at noon.
+func isAllDay(start eventDateTime) bool {
+	if strings.TrimSpace(start.DateTime) != "" {
+		return false
+	}
+	_, ok := meetingmap.AllDayStart(start.Date)
+	return ok
 }
 
 // domainOf returns the lowercased domain part of an address, or "" if it

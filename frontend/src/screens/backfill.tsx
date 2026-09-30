@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -117,6 +118,7 @@ export function BackfillPanel({
         narrowing={narrowing}
         previewPending={preview.isPending}
         previewData={preview.data}
+        offeredWindows={run?.offered_windows}
         previewErrorMessage={
           preview.isError ? problemMessageOf(preview.error, t) : null
         }
@@ -153,6 +155,7 @@ function BackfillSetup({
   narrowing,
   previewPending,
   previewData,
+  offeredWindows,
   previewErrorMessage,
   startPending,
   startErrorMessage,
@@ -165,6 +168,8 @@ function BackfillSetup({
   narrowing: boolean;
   previewPending: boolean;
   previewData: components["schemas"]["BackfillPreview"] | undefined;
+  /** The windows this installation admits; absent means the whole set. */
+  offeredWindows: readonly ImportWindow[] | undefined;
   previewErrorMessage: string | null;
   startPending: boolean;
   startErrorMessage: string | null;
@@ -197,11 +202,10 @@ function BackfillSetup({
         value={window}
         onChange={onWindowChange}
         preview={previewData}
+        offered={offeredWindows}
       />
       <p className="t-caption">{t("backfill.extendNote")}</p>
-      {previewErrorMessage && (
-        <p className="backfill-error">{previewErrorMessage}</p>
-      )}
+      {previewErrorMessage && <ErrorLine>{previewErrorMessage}</ErrorLine>}
       <EstimateCard
         preview={previewData}
         window={window}
@@ -210,9 +214,9 @@ function BackfillSetup({
         onStart={onStart}
       />
       {startErrorMessage && (
-        <p className="backfill-error">
+        <ErrorLine>
           {narrowing ? t("backfill.narrowingNote") : startErrorMessage}
-        </p>
+        </ErrorLine>
       )}
       {/* The one button on this panel that is not a Button — a bare <button>
           carrying a class from a sheet this file never imported, so on Settings

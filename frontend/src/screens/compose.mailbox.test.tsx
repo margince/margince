@@ -146,7 +146,7 @@ describe("whose mailbox the composer is answering from", () => {
   // because this one proves the notice renders at all when it should.
   it("names the colleague whose mailbox took delivery", async () => {
     await openOnColleaguesThread(["u-charlotte"]);
-    expect(await screen.findByText(/Charlotte Weber's mailbox/)).toBeTruthy();
+    expect(await screen.findByText(/mailbox of Charlotte Weber/)).toBeTruthy();
     // And says where the reply comes from, which is the half that stops a
     // reader assuming the send goes out as Charlotte.
     expect(
@@ -227,7 +227,7 @@ describe("whose mailbox the composer is answering from", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /ACTION REQUIRED/ }),
     );
-    const notice = await screen.findByText(/a colleague's mailbox/);
+    const notice = await screen.findByText(/mailbox of a colleague/);
     expect(notice).toBeTruthy();
     // Never the raw id, and never the doubled possessive a bare fragment makes.
     expect(notice.textContent).not.toMatch(/u-ghost/);
@@ -294,7 +294,7 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await screen.findByText(/Charlotte Weber's mailbox/);
+    await screen.findByText(/mailbox of Charlotte Weber/);
 
     // Re-anchor on the reader's OWN thread, whose answer has not arrived yet.
     // Charlotte's name must go at once rather than waiting for it.

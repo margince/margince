@@ -103,7 +103,7 @@ function assign(roles: RecordRole[], moving?: RecordAssignment) {
 // a play that names what it expects, so a modal that never mounted fails the
 // render gate instead of passing it.
 const meta: Meta<typeof RecordTeamAssign> = {
-  title: "Records/Shared/Name who is responsible",
+  title: "Records/Record 360/Name who is responsible",
   component: RecordTeamAssign,
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));

@@ -31,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
-	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -68,7 +67,6 @@ func loadDeployment(cfg *workerConfig) (deployconfig.Config, error) {
 	cfg.allowDataReset = deployCfg.Operations.AllowDataReset
 	cfg.ratesFx = deployCfg.Rates.Fx
 	cfg.ratesCurrencies = deployCfg.Rates.FxCurrencies
-	cfg.ratesModelPricing = deployCfg.Rates.ModelPricing
 	return deployCfg, nil
 }
 
@@ -145,7 +143,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	if err := startRunnerLane(laneCtx, cfg, pool, rdb, vault, modelPath, &lanes, logger, stdout); err != nil {
 		return lanes, err
 	}
-	startProjectionLanes(laneCtx, pool, rdb, modelPath, lanes.background, logger, stdout)
+	startProjectionLanes(laneCtx, pool, rdb, modelPath, lanes.background, lanes.inserter, logger, stdout)
 	// Said out loud for the reason the api says it: each role reads its own
 	// --config, so an unarmed worker beside an armed api is a purge whose cache
 	// flush never reaches this process.
@@ -232,61 +230,6 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	return lanes, nil
 }
 
-// startExtensionSubscriptionLanes starts one consumer per composed unit
-// subscription — the tier's half of the bus, and this role's alone: every role
-// composes the same units, and the worker is the role that consumes.
-//
-// It is started from run(), AFTER the job runner, rather than with the lanes
-// above. A delivery reaches the installation through the per-call Runtime, and
-// this role's unconditional BindExtensionRuntime is the job runner's; started
-// with its siblings, a retained entry redelivered in the window before that
-// bind would fail on the wiring and then wait out the subscriber's whole
-// reclaim interval before anything tried again. It still runs on the LANES'
-// context, so it ends when they do.
-//
-// A listener whose group cannot be built is LOGGED and skipped rather than
-// failing the boot, because the boot already refused the only way that can
-// happen: RegisterExtensions preflights every declared type against the
-// catalog. Reaching this branch means those two disagree, which is a defect in
-// this binary rather than in the deployment — and taking down the worker's
-// other lanes over one unit's listener would turn a unit-sized fault into an
-// installation-sized one.
-func startExtensionSubscriptionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, background *sync.WaitGroup, logger *slog.Logger, stdout io.Writer) {
-	for _, lane := range extensionSubscriptionLanes(pool, logger, stdout) {
-		background.Go(func() { runGroupSubscriber(ctx, rdb, lane.group, lane.handler, logger, 0) })
-	}
-}
-
-// subscriptionLane is one composed listener resolved to what running it takes:
-// the group to consume, and the handler to consume it with.
-type subscriptionLane struct {
-	group   kevents.Group
-	handler events.Handler
-}
-
-// extensionSubscriptionLanes resolves every composed listener, announcing the
-// ones it can run and skipping the ones it cannot.
-//
-// It is split from the starter above so this decision — which lanes exist, and
-// what happens to a listener that cannot be resolved — can be exercised without
-// a bus to consume from. The skip is the part worth pinning: one unresolvable
-// listener must not cost the others their lane.
-func extensionSubscriptionLanes(pool *pgxpool.Pool, logger *slog.Logger, stdout io.Writer) []subscriptionLane {
-	var lanes []subscriptionLane
-	for _, sub := range compose.ComposedSubscriptions() {
-		group, err := sub.Group()
-		if err != nil {
-			logger.Error("worker: an extension subscription has no consumer group, so it would receive nothing",
-				"unit", string(sub.Unit), "subscription", sub.Sub.Name, "error", err)
-			continue
-		}
-		_, _ = fmt.Fprintf(stdout, "worker delivering %s to %s/%s (%s)\n",
-			strings.Join(sub.Sub.Events, ", "), sub.Unit, sub.Sub.Name, group.Name)
-		lanes = append(lanes, subscriptionLane{group: group, handler: sub.Handler(pool, logger)})
-	}
-	return lanes
-}
-
 // startWorkflowLane starts the cg:workflows dispatcher. It needs nothing the job
 // runner builds, so it belongs with the other event lanes rather than after it.
 func startWorkflowLane(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, modelPath compose.ModelPath, background *sync.WaitGroup, logger *slog.Logger, stdout io.Writer) {
@@ -337,6 +280,13 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	if err != nil {
 		return err
 	}
+	// Carried BEFORE the model guard below, and that placement is the point: the
+	// approval-notify lane stages its mail through this same insert-only client,
+	// and it runs on every worker — including one with no model configured,
+	// where this function returns two lines down. Resolved past the guard, a
+	// brainless worker would announce every decision on screen and mail none of
+	// them, which reads exactly like an installation with no relay.
+	lanes.inserter = sendInserter
 	send := sendPath(cfg, compose.NewDeliveryStager(pool, sendInserter))
 	if modelPath.AgentLoop == nil {
 		return nil
@@ -369,7 +319,7 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 // startProjectionLanes starts the lanes that maintain derived read models: the
 // retrieval embeddings a declared embed lane feeds, and the two deterministic
 // projections that need no model at all.
-func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, modelPath compose.ModelPath, background *sync.WaitGroup, logger *slog.Logger, stdout io.Writer) {
+func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, modelPath compose.ModelPath, background *sync.WaitGroup, inserter *jobs.Runner, logger *slog.Logger, stdout io.Writer) {
 	if modelPath.Embedder != nil {
 		gen := search.NewEmbedGen(search.NewStore(compose.InstallationDB(pool)), modelPath.Embedder)
 		_, _ = fmt.Fprintln(stdout, "worker maintaining retrieval embeddings")
@@ -404,6 +354,18 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	cohort := compose.NewCohortPromoteGen(pool, contacts.NewStore(compose.InstallationDB(pool)), logger)
 	_, _ = fmt.Fprintln(stdout, "worker repairing captured cohorts as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:cohort-promote", cohort.HandleEvent, logger, 0) })
+
+	// Telling the seats that could decide a staged approval that it is waiting
+	// on them. Deterministic like the projections above, so it runs on every
+	// worker: an installation whose lane is not running has an inbox that reads
+	// empty, which is indistinguishable from nobody being asked for anything.
+	//
+	// The inserter is how a seat who asked for that class by mail gets one: the
+	// job is staged in the same transaction as the notice, so a message is never
+	// staged about a line that was never written.
+	notify := compose.NewApprovalNotify(pool, compose.InstallationDB(pool), inserter)
+	_, _ = fmt.Fprintln(stdout, "worker telling seats when a decision is waiting on them")
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:approval-notify", notify.HandleEvent, logger, 0) })
 
 	startCommissionAccrual(ctx, pool, rdb, background, logger, stdout)
 

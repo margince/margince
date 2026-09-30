@@ -87,3 +87,19 @@ export function renderApp(): void {
     </QueryClientProvider>,
   );
 }
+
+// A wizard row at the step named — the shape the shell's journey gate reads.
+export function wizardRow(step: string) {
+  return {
+    path: "member",
+    step,
+    source_mode: null,
+    company_draft: {},
+    selected_fact_keys: [],
+    voice_skipped: false,
+    connect_skipped: false,
+    version: 1,
+    created_at: "2026-07-01T00:00:00Z",
+    updated_at: "2026-07-01T00:00:00Z",
+  };
+}

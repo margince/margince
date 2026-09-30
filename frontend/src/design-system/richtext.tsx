@@ -3,6 +3,7 @@
 
 import { Bold, Italic, Link2, List, ListOrdered } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { escapeHtml } from "../format/html";
 import "./richtext.css";
 
 /**
@@ -423,14 +424,14 @@ export function safeEditorHTML(markup: string): string {
       return `<${lower}>`;
     }
     const href = tag === "A" ? safeHref(element.getAttribute("href")) : "";
-    const attr = href ? ` href="${escapeText(href)}"` : "";
+    const attr = href ? ` href="${escapeHtml(href)}"` : "";
     return `<${lower}${attr}>${clean(element)}</${lower}>`;
   };
   const clean = (parent: Node): string => {
     let out = "";
     for (const child of Array.from(parent.childNodes)) {
       if (child.nodeType === Node.TEXT_NODE) {
-        out += escapeText(child.textContent ?? "");
+        out += escapeHtml(child.textContent ?? "");
       } else if (child instanceof Element) {
         out += cleanElement(child);
       }
@@ -476,14 +477,6 @@ function safeHref(href: string | null): string {
   return ok ? trimmed : "";
 }
 
-function escapeText(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
 /**
  * Plain text as the markup this editor round-trips — the inverse of
  * {@link plainTextOf}, and the way a machine-written draft arrives in a field a
@@ -502,15 +495,10 @@ function escapeText(text: string): string {
  * escape our own markup instead of the words inside it.
  */
 export function paragraphsFrom(text: string): string {
-  const escaped = (line: string) =>
-    line
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;");
   return text
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter((block) => block !== "")
-    .map((block) => `<p>${escaped(block).replaceAll("\n", "<br>")}</p>`)
+    .map((block) => `<p>${escapeHtml(block).replaceAll("\n", "<br>")}</p>`)
     .join("");
 }

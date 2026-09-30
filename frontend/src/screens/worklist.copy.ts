@@ -2,7 +2,7 @@ import { sourceName } from "./worklist.sources";
 
 export { sourceName } from "./worklist.sources";
 
-import { ENTITY, isEntityKind } from "../app/entity";
+import { ENTITY, recordRoute } from "../app/entity";
 import { routeHash } from "../app/router";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import {
@@ -13,7 +13,7 @@ import {
   formatTimeOfDay,
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
-import { translatePlural } from "../i18n";
+import { isMessageKey, translatePlural } from "../i18n";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
@@ -44,17 +44,14 @@ type T = ReturnType<typeof useT>;
 
 // Which record an item points at, as an address the router understands.
 //
-// Through the entity registry, never a switch written here: the record types
-// have route names of their own (`contacts`, not `contacts`), and a second
-// spelling of them sends a reader to a page that does not exist. An activity
-// resolves to nothing on purpose — it is a timeline entry rather than a record
-// with a page, so naming it on the row is honest and linking it is not.
+// Through `recordRoute`, which is the one place the product decides whether a
+// typed reference off the wire may be linked at all — the approval undo and the
+// notification centre ask it too. A switch written here would be a second
+// spelling of the record types, and the reader it sent to a page that does not
+// exist would have no way of telling which copy was wrong.
 export function subjectHref(item: WorklistItem): string | undefined {
-  const subject = item.subject;
-  if (!subject || !isEntityKind(subject.type)) {
-    return undefined;
-  }
-  return routeHash(ENTITY[subject.type].route(subject.id));
+  const route = recordRoute(item.subject?.type, item.subject?.id);
+  return route === undefined ? undefined : routeHash(route);
 }
 
 // Sources without record pages link to their existing work surface.
@@ -676,13 +673,16 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     // "automation_run:01a0…-… failed 12 times" at a rep, which names nothing
     // they can act on and cannot be told from a bug. A group whose lane minted
     // no name falls back to the generic phrase rather than to the identity.
-    if (item.batch.key === "system_incident") {
-      return t("worklist.batch.system_incident", {
-        count,
-        cause: item.batch.label ?? t("worklist.batch.unnamedCause"),
-      });
+    // Typed as a plural base, so a batch kind the catalog carries no pair for
+    // fails the build; only the incident sentence reads `cause`.
+    const base = `worklist.batch.${item.batch.key}` as const;
+    const cause = item.batch.label ?? t("worklist.batch.unnamedCause");
+    // A kind from a newer server has no pair here: its own label, else the
+    // generic group name, rather than a lookup that throws.
+    if (!isMessageKey(`${base}_other`)) {
+      return item.batch.label ?? t("worklist.untitled.batch");
     }
-    return t(`worklist.batch.${item.batch.key}` as const, { count });
+    return translatePlural(locale, base, item.batch.count, { count, cause });
   }
   if (item.title) {
     // A title that names no record, on a row that HAS one, gets the record's
@@ -738,6 +738,7 @@ export function sourceUnavailableText(
 export const KNOWN_SOURCES = {
   approval: true,
   dedupe_candidate: true,
+  deal_suggestion: true,
   task: true,
   weekly_commitment: true,
   brief_item: true,
@@ -758,8 +759,7 @@ export const KNOWN_SOURCES = {
   automation_run: true,
   notice: true,
   introduction_request: true,
-  // An undecided domain. It names no record either — the subject is the domain
-  // itself, and the row is answered in place rather than by opening anything.
+  // An undecided domain: it names no record, and is answered in place.
   domain_question: true,
   // A group of routine decisions, which names no single record.
   batch: true,

@@ -40,6 +40,10 @@ type Store struct {
 	// ask): an email hit then carries no row, and the frontend renders it the
 	// generic way rather than showing a blank canonical one.
 	emailSummaries EmailSummaryReader
+	// partnerMarks reads a company hit's live partner programme (PartnerMarker).
+	// Nil where nothing supplied it (a worker's store, a test that does not
+	// ask), and a company hit then carries no marker.
+	partnerMarks PartnerMarker
 }
 
 // NewStore opens this module's store on a handle already bound to the
@@ -60,6 +64,12 @@ func (s *Store) WithEmailSummaries(read EmailSummaryReader) *Store {
 	return s
 }
 
+// WithPartnerMarks binds the reader behind a company hit's `is_partner`.
+func (s *Store) WithPartnerMarks(mark PartnerMarker) *Store {
+	s.partnerMarks = mark
+	return s
+}
+
 // bounded is this store with a time ceiling on every statement it runs.
 //
 // The ceiling rides the HANDLE, so it reaches the lanes this store opens for
@@ -69,7 +79,10 @@ func (s *Store) WithEmailSummaries(read EmailSummaryReader) *Store {
 func (s *Store) bounded(budget time.Duration) *Store {
 	// Every field travels, not just the handle: this rebuilds the store, so a
 	// field left out here is one the bounded lane silently does without.
-	return &Store{db: s.db.Bounded(budget), carriedBy: s.carriedBy, emailSummaries: s.emailSummaries}
+	return &Store{
+		db: s.db.Bounded(budget), carriedBy: s.carriedBy,
+		emailSummaries: s.emailSummaries, partnerMarks: s.partnerMarks,
+	}
 }
 
 // forWorkspace is this store re-bound to one tenant of the fleet enumeration.
@@ -99,6 +112,9 @@ type Hit struct {
 	// caller may read. Nil on every other hit type, nil for a non-email
 	// activity, and nil when no reader is bound.
 	EmailSummary *crmcontracts.EmailSummary
+	// IsPartner is set on a `company` hit alone: whether the account carries a
+	// live partner programme. Nil elsewhere, and nil when no marker was taken.
+	IsPartner *bool
 }
 
 type Page struct {
@@ -112,6 +128,10 @@ type Input struct {
 	Types  []string
 	Limit  int
 	Cursor string
+	// Within bounds the search to these records; nil bounds nothing. An empty,
+	// non-nil set finds nothing, because a bound set with no members is still
+	// a bound — reading it as "no bound" would search the whole corpus.
+	Within []ids.UUID
 }
 
 // Search runs the ranked cross-object query (contract /search). Every
@@ -153,19 +173,8 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
-		// The query split at the last separator: the words the reader FINISHED,
-		// and the fragment they are still typing. The two are matched
-		// differently — finished words whole, the fragment as a prefix.
-		head, tail := splitTypedQuery(query)
-		headPos := arg(head)
-		// Bound only when there IS a fragment: a parameter no SQL references
-		// cannot have its type inferred, and Postgres fails the whole statement.
-		tailPos := 0
-		if tail != "" {
-			tailPos = arg(tail)
-		}
-
-		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, tail != "", arg)
+		headPos, tailPos, hasFragment := bindTypedQuery(query, arg)
+		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, hasFragment, arg)
 		if err != nil {
 			return err
 		}
@@ -176,13 +185,20 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return nil
 		}
 
-		sql := "SELECT rtype, id, title, snippet, score FROM (" + strings.Join(branches, " UNION ALL ") + ") ranked"
+		var where []string
+		if bound := withinClause(in.Within, arg); bound != "" {
+			where = append(where, bound)
+		}
 		if cursor != nil {
 			// Keyset over the ranked order: strictly worse score, or the
 			// same score past the (type, id) tie-break.
-			sql += fmt.Sprintf(
-				` WHERE score < $%d OR (score = $%d AND (rtype, id) > ($%d, $%d))`,
-				arg(cursor.Score), len(args), arg(cursor.Type), arg(cursor.ID))
+			where = append(where, fmt.Sprintf(
+				`(score < $%d OR (score = $%d AND (rtype, id) > ($%d, $%d)))`,
+				arg(cursor.Score), len(args), arg(cursor.Type), arg(cursor.ID)))
+		}
+		sql := "SELECT rtype, id, title, snippet, score FROM (" + strings.Join(branches, " UNION ALL ") + ") ranked"
+		if len(where) > 0 {
+			sql += " WHERE " + strings.Join(where, " AND ")
 		}
 		sql += fmt.Sprintf(" ORDER BY score DESC, rtype, id LIMIT $%d", arg(limit+1))
 
@@ -203,12 +219,39 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		if err := s.countTagReach(ctx, tx, page.Hits); err != nil {
 			return err
 		}
-		return s.attachEmailSummaries(ctx, tx, page.Hits)
+		if err := s.attachEmailSummaries(ctx, tx, page.Hits); err != nil {
+			return err
+		}
+		return s.markPartners(ctx, tx, page.Hits)
 	})
 	if err != nil {
 		return Page{}, err
 	}
 	return page, nil
+}
+
+// bindTypedQuery binds a query split at the last separator: the words the
+// reader FINISHED, and the fragment they are still typing. The two are matched
+// differently — finished words whole, the fragment as a prefix.
+func bindTypedQuery(query string, arg func(any) int) (headPos, tailPos int, hasFragment bool) {
+	head, tail := splitTypedQuery(query)
+	headPos = arg(head)
+	// Bound only when there IS a fragment: a parameter no SQL references
+	// cannot have its type inferred, and Postgres fails the whole statement.
+	if tail != "" {
+		tailPos = arg(tail)
+	}
+	return headPos, tailPos, tail != ""
+}
+
+// withinClause renders a search's record bound over the ranked union's id, or
+// "" when there is none. Applied to the union rather than to each branch so
+// every branch, present and future, is bounded by the one predicate.
+func withinClause(within []ids.UUID, arg func(any) int) string {
+	if within == nil {
+		return ""
+	}
+	return fmt.Sprintf("id = ANY($%d)", arg(within))
 }
 
 // admittedBranchSQL builds one ranked SELECT per requested-and-admitted

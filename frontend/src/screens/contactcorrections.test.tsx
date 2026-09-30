@@ -12,7 +12,7 @@ import { EnrichedFields } from "./contactcorrections";
 //
 //   - a control is offered only to somebody the server will admit. `POST
 //     /ai/feedback` demands `update` on the subject, so a read seat pressing
-//     "That is right" was promised a verdict and handed a 403.
+//     "Confirm" was promised a verdict and handed a 403.
 //   - a control is offered only where it can still apply. A claim a human has
 //     already corrected has been settled by the only party who settles it.
 //   - what the editor opens on is what the field says NOW. Text a reader
@@ -115,7 +115,7 @@ describe("who may correct what a machine read", () => {
     renderFields([field({})]);
 
     expect(await screen.findByRole("button", { name: "Edit" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "That is right" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Confirm value" })).toBeTruthy();
   });
 
   it("shows the evidence but no controls to a reader without the grant", async () => {
@@ -128,7 +128,7 @@ describe("who may correct what a machine read", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Edit" })).toBeNull(),
     );
-    expect(screen.queryByRole("button", { name: "That is right" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirm value" })).toBeNull();
   });
 
   it("shows no controls on a read seat, whatever the grant says", async () => {
@@ -142,7 +142,7 @@ describe("who may correct what a machine read", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Edit" })).toBeNull(),
     );
-    expect(screen.queryByRole("button", { name: "That is right" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirm value" })).toBeNull();
   });
 });
 
@@ -160,7 +160,7 @@ describe("which verdicts are still open", () => {
     // longer shows is asking about something that is not there.
     await waitFor(() =>
       expect(
-        screen.getAllByRole("button", { name: "That is right" }),
+        screen.getAllByRole("button", { name: "Confirm value" }),
       ).toHaveLength(1),
     );
     // Correct stays on every field: a value already settled once can still be
@@ -230,13 +230,63 @@ describe("what the editor opens on", () => {
         return new Response(null, { status: 204 });
       }),
     );
-    await user.click(
-      screen.getByRole("button", { name: "Save the correction" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Save correction" }));
 
     await waitFor(() => expect(sent).not.toBe(""));
     const body = JSON.parse(sent);
     expect(body.value_shown).toBe("Head of Procurement");
     expect(body.value_captured_at).toBe("2026-08-01T08:00:00Z");
+  });
+});
+
+describe("a phone is a list", () => {
+  // Each number has its own evidence row and its own undo, so the undo names
+  // the number it is about; without it the server cannot tell which of a
+  // contact's numbers the reader meant.
+  it("undoes the number whose row the reader pressed, by its key", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(
+          input instanceof Request ? input.url : String(input),
+          "http://localhost",
+        );
+        if (url.pathname.endsWith("/restore")) {
+          calls.push(`${url.pathname}${url.search}`);
+          return new Response(null, { status: 204 });
+        }
+        return new Response(
+          JSON.stringify({
+            user: { id: "u-1", email: "rep@example.com", name: "Demo Rep" },
+            authorization: MAY_CORRECT,
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }),
+    );
+    renderFields([
+      field({
+        field: "phone",
+        value: "+491715550109",
+        value_key: "+491715550109",
+        superseded_value: "+491755550101",
+      }),
+      field({
+        field: "phone",
+        value: "+6595550103",
+        value_key: "+6595550103",
+      }),
+    ]);
+
+    const undo = await screen.findAllByRole("button", { name: "Undo" });
+    expect(undo).toHaveLength(1);
+    await userEvent.click(undo[0]);
+
+    await waitFor(() =>
+      expect(calls).toEqual([
+        "/v1/contacts/p-1/profile-fields/phone/restore?value_key=%2B491715550109",
+      ]),
+    );
   });
 });

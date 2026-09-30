@@ -1,0 +1,11 @@
+-- Nothing to undo, and that is a statement about Postgres rather than a gap
+-- here: a validated CHECK cannot be returned to NOT VALID. There is no
+-- `ALTER TABLE ... INVALIDATE CONSTRAINT`, and dropping and re-adding it NOT
+-- VALID would take the ACCESS EXCLUSIVE lock the pair exists to avoid — a
+-- rollback that costs more than the thing it is rolling back.
+--
+-- The constraint itself goes when the migration that ADDED it goes, along with
+-- the two columns it is about. Reversing to before this file leaves a validated
+-- constraint over rows that satisfy it, which is exactly what reversing to
+-- before the file after it would leave.
+SELECT 1;

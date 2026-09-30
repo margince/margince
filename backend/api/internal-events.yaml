@@ -15,6 +15,31 @@ info:
     coverage gate that walks the subscribable set.
 components:
   schemas:
+    InternalEventBookingPageUpdated:
+      type: object
+      x-event-type: booking_page.updated
+      x-entity-type: booking_page
+      description: A host changed the policy or public availability of their booking page.
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+    InternalEventMeetingProposalUpdated:
+      type: object
+      x-event-type: meeting_proposal.updated
+      x-entity-type: activity
+      description: A personal scheduling proposal changed state.
+      required: [status]
+      properties:
+        status: { type: string }
+    InternalEventMeetingInvitationUpdated:
+      type: object
+      x-event-type: meeting_invitation.updated
+      x-entity-type: activity
+      description: The durable calendar operation changed state; consumers reread permissioned details.
+      required: [status, version]
+      properties:
+        status: { type: string }
+        version: { type: integer, format: int64 }
     InternalEventAiBudgetUpdated:
       type: object
       x-event-type: ai_budget.updated
@@ -213,4 +238,47 @@ components:
             How many of those carried no act, dismiss or snooze mark yet.
             Together with items it separates a first open from a return visit
             without needing a second event type for the difference.
+      additionalProperties: false
+    InternalEventDealSuggestionCreated:
+      type: object
+      x-event-type: deal_suggestion.created
+      x-entity-type: ""
+      description: >-
+        Deal Scout suggested opening a deal for a company with no open deal.
+        Entity-less, which keeps it off the subscribable set: a suggestion is
+        visible only to a reader who may see every piece of its evidence, and
+        no webhook consumer can be held to that. The suggestion id stays on
+        the audit row the emit points at.
+      required:
+        - evidence_count
+      properties:
+        evidence_count:
+          type: integer
+          minimum: 1
+          description: How many pieces of evidence the suggestion cites.
+      additionalProperties: false
+    InternalEventDealSuggestionAccepted:
+      type: object
+      x-event-type: deal_suggestion.accepted
+      x-entity-type: ""
+      description: >-
+        A rep accepted a suggestion and a deal was opened from it. The deal
+        publishes its own deal.created; this records the decision.
+      additionalProperties: false
+    InternalEventDealSuggestionDismissed:
+      type: object
+      x-event-type: deal_suggestion.dismissed
+      x-entity-type: ""
+      description: >-
+        A rep dismissed a suggestion for the whole workspace. The company is
+        suggested again only on evidence newer than the dismissal.
+      additionalProperties: false
+    InternalEventDealSuggestionSuperseded:
+      type: object
+      x-event-type: deal_suggestion.superseded
+      x-entity-type: ""
+      description: >-
+        A suggestion stopped standing without anybody deciding it: its company
+        gained an open deal or was archived, or a piece of its evidence was
+        erased.
       additionalProperties: false

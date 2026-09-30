@@ -154,3 +154,100 @@
 .barlist-amount {
   text-align: right;
 }
+
+/* A fill holding a stricter measure: the part is the solid head, and the rest
+   of the fill steps down to a tint of the same hue, so the bar reads as one
+   figure inside another rather than as two bars laid over each other. */
+.meterbar.meterbar-has-part > span {
+  background: color-mix(in srgb, var(--accentText) 40%, var(--bgElevated));
+}
+.meterbar .meterbar-part {
+  background: var(--accentText);
+}
+
+/* SegmentBar — disjoint parts of one total, end to end. The steps run down one
+   hue from the most certain part, measured in both themes to stay apart for a
+   reader with full colour vision and with each common deficiency. The accent's
+   INK is the base rather than the fill colour, because it is the one that lifts
+   in dark: stepping toward the ground from a colour that already sits near it
+   leaves three greens nobody can tell apart. */
+/* Standing in a body under the sentence it draws, it takes the interval a
+   block of its own pays; first in its box, it takes none. */
+.segbar {
+  margin-top: var(--space-4);
+}
+.segbar:first-child {
+  margin-top: 0;
+}
+.segbar-step-0 {
+  background: var(--accentText);
+}
+.segbar-step-1 {
+  background: color-mix(in srgb, var(--accentText) 55%, var(--bgElevated));
+}
+.segbar-step-2 {
+  background: color-mix(in srgb, var(--accentText) 20%, var(--bgElevated));
+}
+.segbar-track {
+  position: relative;
+  display: flex;
+  height: 12px;
+  background: var(--bgChip);
+  border-radius: 0 var(--r-xs) var(--r-xs) 0;
+}
+/* Parts meet on a 2px rule of the ground rather than a stroke: the gap is what
+   separates them, and a border drawn round a part is ink that is not data. */
+.segbar-part {
+  flex: none;
+  box-sizing: border-box;
+  height: 100%;
+}
+.segbar-part + .segbar-part {
+  border-left: 2px solid var(--bgElevated);
+}
+.segbar-part:last-of-type {
+  border-radius: 0 var(--r-xs) var(--r-xs) 0;
+}
+/* The mark overhangs the track so it reads as a line ACROSS the parts. Its
+   flanks are ground, so it stays legible where it lands inside a filled part:
+   a 2px ink line between two 2px borders rather than a ring, because an outline
+   is the focus ring's alone and a shadow is the depth tokens'. */
+.segbar-marker {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  box-sizing: border-box;
+  width: 6px;
+  margin-left: -3px;
+  border-inline: 2px solid var(--bgElevated);
+  background: var(--textPrimary);
+  background-clip: padding-box;
+}
+.segbar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.segbar-key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.segbar-amount {
+  font-weight: var(--fontWeightMedium);
+}
+.segbar-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-xs);
+}
+.segbar-swatch-marker {
+  width: 2px;
+  height: 14px;
+  background: var(--textPrimary);
+  border-radius: var(--r-full);
+  corner-shape: round;
+}

@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// Package mailsubject holds the prefixes a mail client puts in front of a
+// subject line, so the draft checker and the "was this answered" query read
+// one list.
+//
+// Reply and forward prefixes are kept apart on purpose. A reply to a sender
+// with their own subject answers them; a forward to them passes something on
+// and answers nothing, so only the reply list may count as an answer.
+//
+// Stdlib only, which the shared tier requires.
+package mailsubject
+
+import "strings"
+
+// ReplyPrefixes are the ways a client marks a subject as a reply, in the
+// languages this product writes. Lower case, colon included.
+func ReplyPrefixes() []string {
+	return []string{"re:", "aw:", "antw:"}
+}
+
+// ForwardPrefixes are the ways a client marks a subject as a forward.
+func ForwardPrefixes() []string {
+	return []string{"fwd:", "wg:"}
+}
+
+// ReplyPrefixPattern matches any run of reply prefixes at the start of a
+// subject, with the spaces around them. It reads the same in Go's regexp and
+// in a Postgres regular expression, so SQL can strip what ReplyPrefixes
+// names without a second copy of the list.
+func ReplyPrefixPattern() string {
+	words := make([]string, 0, len(ReplyPrefixes()))
+	for _, prefix := range ReplyPrefixes() {
+		words = append(words, strings.TrimSuffix(prefix, ":"))
+	}
+	return `^(\s*(` + strings.Join(words, "|") + `)\s*:)+\s*`
+}

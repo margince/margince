@@ -100,3 +100,23 @@
   align-items: center;
   gap: var(--space-1);
 }
+
+/* A date operand's two ways of being written sit on one line: the switch that
+   chooses, then the value it chose. */
+.filter-date-value {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* A money operand and the currency it is typed in, on one line. */
+.filter-money-value {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.filter-money-unit {
+  color: var(--textSecondary);
+}

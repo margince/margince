@@ -50,6 +50,7 @@ export function TodayPanel({
   tasksLabel,
   footer,
   notice,
+  complete = true,
   children,
 }: Readonly<{
   state?: "ready" | "loading" | "failed";
@@ -67,6 +68,9 @@ export function TodayPanel({
   // some of its sources is not the same brief, and the reader is the only one
   // who can judge whether the missing one mattered.
   notice?: ReactNode;
+  // False when a source the rows are read from was withheld: an empty list is
+  // then no basis for "nothing needs you", so it draws nothing but the notice.
+  complete?: boolean;
   children?: ReactNode;
 }>) {
   const t = useT();
@@ -117,17 +121,15 @@ export function TodayPanel({
           <EmptyState>{t("today.failed")}</EmptyState>
         </PanelBody>
       )}
-      {state === "ready" &&
-        (rows.length === 0 ? (
-          // Not "nothing to do": the brief read everything it can read and
-          // found nothing that needs a contact today. That is a real answer and
-          // it is different from the record being empty.
-          <PanelBody>
-            <EmptyState>{t("today.quiet")}</EmptyState>
-          </PanelBody>
-        ) : (
-          rows
-        ))}
+      {state === "ready" && rows}
+      {/* Not "nothing to do": the brief read everything it can read and found
+          nothing that needs a contact today. That is a real answer and it is
+          different from the record being empty. */}
+      {state === "ready" && rows.length === 0 && complete && (
+        <PanelBody>
+          <EmptyState>{t("today.quiet")}</EmptyState>
+        </PanelBody>
+      )}
       {/* Under whatever the read produced, and only once it has settled: a
           withheld-sources line over a skeleton describes a reading that does
           not exist yet. */}
@@ -283,8 +285,9 @@ export function TodoRow({
   action,
 }: Readonly<{
   // Whose list it sits on. Absent when the record cannot say — an unassigned
-  // task draws no mark rather than a monogram of nobody.
-  who?: string;
+  // task draws no mark rather than a monogram of nobody. `identity` is their
+  // record or seat id, which keys the mark.
+  who?: Readonly<{ name: string; identity: string }>;
   title: ReactNode;
   meta?: ReactNode;
   // When it is owed, coloured only where it is bad news: a late promise is the
@@ -299,7 +302,7 @@ export function TodoRow({
 }>) {
   return (
     <PanelRow className="co-todo">
-      {who && <Avatar name={who} />}
+      {who && <Avatar name={who.name} identity={who.identity} />}
       <span className="co-todo-body">
         <span className="co-todo-title">{title}</span>
         {meta && <span className="t-caption">{meta}</span>}

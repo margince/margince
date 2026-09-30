@@ -45,7 +45,3 @@
   align-items: flex-start;
   gap: var(--space-1);
 }
-
-.emailaccess__error {
-  color: var(--dangerText);
-}

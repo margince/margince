@@ -12,7 +12,7 @@ import { RecordCard } from "./recordcard";
 // actually meets: the two kinds, a record with nothing but a name, one the
 // reader may not open, and the stack they arrive in.
 const meta: Meta<typeof RecordCard> = {
-  title: "Design System/RecordCard",
+  title: "Components/Text and data display/Record card",
   component: RecordCard,
   parameters: { layout: "padded" },
   decorators: [
@@ -48,11 +48,7 @@ export const Contact: Story = {
   ),
 };
 
-/**
- * A company, which the mark's shape says before the name is read. The two
- * shapes are the reason `kind` exists: on a page carrying both, the square is
- * what tells a reader which chips are companies before they read a word.
- */
+/** A company listed on a record: the same round mark, keyed on its id. */
 export const Company: Story = {
   render: () => (
     <RecordCard
@@ -120,7 +116,10 @@ export const WithAside: Story = {
           email="anna.brandt@nordwind-logistik.de"
           aside={
             <AvatarStack
-              contacts={[{ name: "Tim Rasche" }, { name: "Lena Ott" }]}
+              contacts={[
+                { name: "Tim Rasche", identity: "Tim Rasche" },
+                { name: "Lena Ott", identity: "Lena Ott" },
+              ]}
             />
           }
         />

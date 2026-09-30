@@ -60,6 +60,8 @@ type ListContactsInput struct {
 	// an edge, not a column on contact, so this is a link predicate too — see
 	// contactEmployerClause.
 	CompanyID *ids.CompanyID
+	// Membership narrows to one list's members (list_id).
+	Membership storekit.ListMemberFilter
 }
 
 // contactListFields is the contact list's core sortable vocabulary —
@@ -189,6 +191,7 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 		identifier: storekit.Identifier{
 			Table: "contact_email", FK: contactFK, Column: emailColumn,
 		},
+		Membership: in.Membership,
 	}
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Contact]{
 		entity:  contactEntity,

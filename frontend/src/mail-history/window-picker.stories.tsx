@@ -7,7 +7,7 @@ import { ImportWindowPicker } from "./window-picker";
 
 type ImportWindow = components["schemas"]["StartBackfillRequest"]["window"];
 const meta: Meta<typeof ImportWindowPicker> = {
-  title: "Settings/Connections/Import window",
+  title: "Settings/You/Connections/Import window",
   component: ImportWindowPicker,
 };
 export default meta;

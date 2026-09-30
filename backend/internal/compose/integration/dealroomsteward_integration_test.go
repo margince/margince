@@ -66,7 +66,7 @@ func TestARoomRefusesADeactivatedColleagueTheCallerNamed(t *testing.T) {
 	steward := ids.From[ids.UserKind](e.Rep1)
 	_, err := dealrooms.NewStore(e.DB()).CreateRoom(ctx, dealrooms.CreateRoomInput{
 		DealID: ids.From[ids.DealKind](dealID), Title: "Acme — Deal Room",
-		StewardUserID: &steward, Source: "ui",
+		StewardUserID: &steward, Source: "manual",
 	})
 
 	if err == nil {
@@ -101,7 +101,7 @@ func TestARoomOpensWithNoStewardWhenTheDealsOwnerHasBeenDeactivated(t *testing.T
 	deactivate(t, e, e.Rep1)
 
 	room, err := dealrooms.NewStore(e.DB()).CreateRoom(ctx, dealrooms.CreateRoomInput{
-		DealID: ids.From[ids.DealKind](dealID), Title: "Acme — Deal Room", Source: "ui",
+		DealID: ids.From[ids.DealKind](dealID), Title: "Acme — Deal Room", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("opening a room on a deal whose owner has left: %v — refusing here blocks a room "+

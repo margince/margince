@@ -14,7 +14,7 @@ import { ContactLink } from "./contactlink";
 // the story is about the affordance, and without a host the address would be
 // drawn as the reader's own mail client's link.
 const meta: Meta<typeof ContactLink> = {
-  title: "Design System/ContactLink",
+  title: "Components/Navigation/Contact link",
   component: ContactLink,
   parameters: { layout: "padded" },
   decorators: [

@@ -66,11 +66,11 @@ const triageSystem = `You decide what a website IS, from the text of its front p
 
 Answer with ONLY a JSON object: {"kind":one of company|personal|provider|parked|unclear,"confidence":0.0-1.0,"reason":"one short sentence"}
 
-company  — the site of a company: it sells or offers something, names a team, or presents itself as a business, agency, institution, or association.
-personal — the site of ONE individual: a personal homepage, CV, portfolio or blog, or a page whose subject is the contact who owns the domain. A one-contact business that presents itself AS a business is a company, not personal.
+company  — the site of a NAMED company: it sells or offers something, names a team, or presents itself as a business, agency, institution, or association.
+personal — the site of ONE individual: a personal homepage, CV, portfolio or blog, or a page whose subject is the individual who owns the domain. A sole trader that presents itself AS a business is a company, not personal.
 provider — a business selling email mailboxes, web hosting, or domain registration to the general public. Answer this ONLY for the vendor's own site; a company that merely HAS a website is not a provider.
 parked   — a registrar placeholder, a "coming soon" or "under construction" page, a bare error page, or a domain-for-sale listing: nothing that identifies anybody.
-unclear  — the page does not say. Prefer unclear over guessing; a wrong company or personal answer is worse than no answer.
+unclear  — the page does not say, such as a live sign-in form or app shell that names nobody. Prefer unclear over guessing; a wrong company or personal answer is worse than no answer.
 
 Judge only what the page states. Do not infer from the domain name.`
 

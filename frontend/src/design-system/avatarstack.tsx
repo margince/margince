@@ -16,7 +16,8 @@ export function AvatarStack({
   contacts,
   max = 5,
 }: Readonly<{
-  contacts: readonly { name: string }[];
+  // `identity` is each face's own id, keying its chip as everywhere else.
+  contacts: readonly { name: string; identity: string }[];
   max?: number;
 }>) {
   const { locale } = useLocale();
@@ -25,8 +26,8 @@ export function AvatarStack({
   return (
     <span className="avatar-stack">
       {shown.map((contact) => (
-        <span className="avatar-stack-item" key={contact.name}>
-          <Avatar name={contact.name} />
+        <span className="avatar-stack-item" key={contact.identity}>
+          <Avatar name={contact.name} identity={contact.identity} />
         </span>
       ))}
       {rest > 0 && (

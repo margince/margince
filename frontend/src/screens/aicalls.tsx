@@ -4,131 +4,17 @@ import { useId, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
-import {
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  TableScroll,
-} from "../design-system/atoms";
-import { Eyebrow } from "../design-system/eyebrow";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Badge, Button, EmptyState, TableScroll } from "../design-system/atoms";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { ExportScenarioDialog } from "./aiexport";
+import { tierLabel } from "./ai-decision-labels";
+import { CallDetailPanel } from "./aicalls-detail";
 import { QueryGate, QueryStates, throwProblem, useMe } from "./common";
 import "./aicalls.css";
-
-// A string response is shown verbatim (real newlines); an object is
-// pretty-printed. Either way the .code-block surface wraps and scrolls it.
-function payloadText(value: unknown): string {
-  return typeof value === "string" ? value : JSON.stringify(value, null, 2);
-}
-
-export function CallDetailPanel({
-  id,
-  captureEnabled,
-}: Readonly<{ id: string; captureEnabled: boolean }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const [exporting, setExporting] = useState(false);
-  const query = useQuery({
-    queryKey: ["ai-call", id],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/ai/calls/{id}", {
-        params: { path: { id } },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
-  return (
-    <QueryStates query={query} pendingLabel={t("aicalls.title")}>
-      {query.data && (
-        <Card as="div" inset className="aicalls-detail">
-          <p>
-            {t("aicalls.detail.identity", {
-              served: query.data.served_model,
-              provider: query.data.provider,
-              configured: query.data.model_id,
-            })}
-          </p>
-          <p>
-            {t("aicalls.detail.source", {
-              source: query.data.served_identity_source,
-            })}
-          </p>
-          <p>
-            {query.data.context_scopes.length > 0
-              ? t("aicalls.detail.context", {
-                  scopes: query.data.context_scopes.join(", "),
-                })
-              : t("aicalls.detail.contextNone")}
-          </p>
-          {/* A bare h3 carries no class, and preflight leaves it at body size
-              and body weight — a heading only the document tree can see. The
-              eyebrow is the one spelling of a label over a block, and `as="h3"`
-              is what keeps it a real heading inside the card's own h2. */}
-          <Eyebrow as="h3">{t("aicalls.detail.attempts")}</Eyebrow>
-          <ol>
-            {query.data.attempts.map((attempt) => (
-              <li key={attempt.attempt}>
-                <span className="t-num">#{ordinalNumber(attempt.attempt)}</span>{" "}
-                {attempt.attempt_reason || "—"} ·{" "}
-                {t("aicalls.ms", {
-                  value: formatNumber(attempt.latency_ms, locale),
-                })}
-                {attempt.error_sentinel && (
-                  <Badge tone="danger">{attempt.error_sentinel}</Badge>
-                )}
-              </li>
-            ))}
-          </ol>
-          {!captureEnabled ? (
-            <p>{t("aicalls.payload.off")}</p>
-          ) : !query.data.payload_captured || !query.data.payload ? (
-            <p>{t("aicalls.payload.none")}</p>
-          ) : (
-            <>
-              <div className="form-stack">
-                <div className="field">
-                  <span className="code-label t-eyebrow">
-                    {t("aicalls.detail.request")}
-                  </span>
-                  <pre className="code-block">
-                    {payloadText(query.data.payload.request)}
-                  </pre>
-                </div>
-                <div className="field">
-                  <span className="code-label t-eyebrow">
-                    {t("aicalls.detail.response")}
-                  </span>
-                  <pre className="code-block">
-                    {payloadText(query.data.payload.response)}
-                  </pre>
-                </div>
-                <div>
-                  <Button onClick={() => setExporting(true)}>
-                    {t("aiexport.button")}
-                  </Button>
-                </div>
-              </div>
-              {exporting && (
-                <ExportScenarioDialog
-                  call={query.data}
-                  onClose={() => setExporting(false)}
-                />
-              )}
-            </>
-          )}
-        </Card>
-      )}
-    </QueryStates>
-  );
-}
 
 // The trace's first page, as one query the card and the page header share.
 //
@@ -156,21 +42,37 @@ function useCallTrace(task: string, enabled: boolean) {
 }
 
 /**
- * When the runtime last reached a model, as epoch ms — or null while nobody
- * knows yet.
+ * When the runtime last reached a model — and, where there is no instant to
+ * give, WHICH silence this is.
  *
- * Null covers three different silences on purpose, because the caller draws
- * nothing for any of them: the read is not this reader's, the page has not
- * arrived, and the installation has never called. A zero here would be an
- * instant in 1970, and a "never" would be a claim this hook cannot make for the
- * first two.
+ * `never` is a claim about the INSTALLATION: nothing has ever called a model.
+ * The other three are claims about the READ — this reader may not make it, it
+ * has not answered yet, it failed — and none of them is evidence about the
+ * installation at all. One `null` over all four let a caller say "Never called"
+ * over a trace that was still arriving, which is the defect this type exists to
+ * make unspellable.
+ *
+ * `failed` is its own arm rather than folded into `unread` for the reason
+ * `never` is its own: only one of the two resolves by waiting, and a reading
+ * that goes silent on a broken read tells a reader nothing is wrong. Every
+ * caller draws it; none may assume another surface will.
+ */
+export type LastCall =
+  | { state: "withheld" }
+  | { state: "unread" }
+  | { state: "failed" }
+  | { state: "never" }
+  | { state: "at"; epochMs: number };
+
+/**
+ * The newest call, as a state a caller can switch on.
  *
  * Its OWN query rather than the card's. The card pages through a filtered trace
  * on demand; this wants the newest row and wants it to keep up, and the two
  * cannot share a key without one imposing its refetch on the other — a poll
  * over every page the reader had loaded.
  */
-export function useLastCallAt(): number | null {
+export function useLastCallAt(): LastCall {
   const canSee = useCan("ai_diagnostics", "read");
   const query = useQuery({
     enabled: canSee,
@@ -185,13 +87,21 @@ export function useLastCallAt(): number | null {
     },
   });
   // Read through the grant, not only around it. A revoked grant disables the
-  // query but leaves its last answer in the cache, and returning that would go
-  // on showing a seat the runtime activity it may no longer see.
+  // query but leaves its last answer in the cache, and answering from it would
+  // go on showing a seat the runtime activity it may no longer see.
   if (!canSee) {
-    return null;
+    return { state: "withheld" };
   }
-  const newest = query.data?.data[0];
-  return newest ? Date.parse(newest.occurred_at) : null;
+  if (query.isError) {
+    return { state: "failed" };
+  }
+  if (query.data === undefined) {
+    return { state: "unread" };
+  }
+  const newest = query.data.data[0];
+  return newest
+    ? { state: "at", epochMs: Date.parse(newest.occurred_at) }
+    : { state: "never" };
 }
 
 export function AiCallsCard() {
@@ -221,7 +131,7 @@ export function AiCallsCard() {
     return (
       <Panel title={t("aicalls.title")}>
         <PanelBody>
-          <p className="settings-panel-sub">{t("aicalls.sub")}</p>
+          <PanelIntro>{t("aicalls.sub")}</PanelIntro>
           <QueryGate query={me} pendingLabel={t("aicalls.title")}>
             {() => <EmptyState>{t("aicalls.withheld")}</EmptyState>}
           </QueryGate>
@@ -234,7 +144,7 @@ export function AiCallsCard() {
   return (
     <Panel title={t("aicalls.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("aicalls.sub")}</p>
+        <PanelIntro>{t("aicalls.sub")}</PanelIntro>
         <QueryStates query={query} pendingLabel={t("aicalls.title")}>
           <SettingList>
             <SettingRow
@@ -267,13 +177,16 @@ export function AiCallsCard() {
                   {calls.length === 0 ? (
                     <EmptyState>{t("aicalls.empty")}</EmptyState>
                   ) : (
-                    // Six columns of trace, none of them droppable — a call is
-                    // only diagnosable with its model, its tokens and its latency
-                    // side by side. `TableScroll` is the one spelling of that
-                    // containment, the same box DataTable puts every list it
-                    // draws inside (atoms.tsx).
+                    // Every figure of a call stays — a call is only diagnosable
+                    // with its model, its tokens and its latency side by side —
+                    // but they share three columns, not six: the moment and the
+                    // latency ride under the task and the tokens, and the model
+                    // wraps. A table wider than its card scrolls, and an overlay
+                    // scrollbar draws nothing, so it just looks cut off.
+                    // `TableScroll` stays as the containment for a viewport too
+                    // narrow for even this.
                     <TableScroll label={t("aicalls.callsLabel")}>
-                      <table className="table">
+                      <table className="table aicalls-table">
                         <thead>
                           <tr>
                             {/* The disclosure column. Named rather than left
@@ -282,11 +195,14 @@ export function AiCallsCard() {
                             <th className="sr-only">
                               {t("aicalls.col.detail")}
                             </th>
-                            <th>{t("aicalls.col.when")}</th>
-                            <th>{t("aicalls.col.task")}</th>
+                            <th>
+                              {t("aicalls.col.task")} / {t("aicalls.col.when")}
+                            </th>
                             <th>{t("aicalls.col.model")}</th>
-                            <th>{t("aicalls.col.tokens")}</th>
-                            <th>{t("aicalls.col.latency")}</th>
+                            <th>
+                              {t("aicalls.col.tokens")} /{" "}
+                              {t("aicalls.col.latency")}
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -351,6 +267,12 @@ function FragmentRow({
   const t = useT();
   const { locale } = useLocale();
   const panelId = useId();
+  // The attempts the ladder itself made. A decision model that fell back is
+  // the first of `calls_attempted`, and the rung after it is a second model
+  // asked, not a retry of the first — so it does not count toward the badge.
+  const ladderAttempts = call.decision_attempted
+    ? call.calls_attempted - 1
+    : call.calls_attempted;
   return (
     <>
       {/* The disclosure is a real button in the first cell, not a click handler on
@@ -385,10 +307,16 @@ function FragmentRow({
             <ChevronDown className="expander-chevron" aria-hidden />
           </Button>
         </td>
-        <td>{when}</td>
         <td>
           {call.task}
+          <div className="t-caption">{when}</div>
           <div className="aicalls-badges">
+            {/* The logical call's flag, not this row's kind: a fallback's
+                terminal row is the completion that answered after the
+                decision model was asked. */}
+            {call.decision_attempted && (
+              <Badge>{t("aicalls.badge.decision")}</Badge>
+            )}
             {call.cache_hit && <Badge>{t("aicalls.badge.cacheHit")}</Badge>}
             {call.degraded && (
               <Badge tone="warning">{t("aicalls.badge.degraded")}</Badge>
@@ -396,26 +324,28 @@ function FragmentRow({
             {call.error_sentinel && (
               <Badge tone="danger">{call.error_sentinel}</Badge>
             )}
-            {call.calls_attempted > 1 && (
+            {ladderAttempts > 1 && (
               <Badge>
                 {t("aicalls.badge.retries", {
-                  count: formatNumber(call.calls_attempted, locale),
+                  count: formatNumber(ladderAttempts, locale),
                 })}
               </Badge>
             )}
           </div>
         </td>
         <td>
-          {call.tier} · {call.provider}/{call.served_model}
+          {tierLabel(call.tier, t)} · {call.provider}/{call.served_model}
         </td>
-        <td>{tokens}</td>
         <td>
-          {t("aicalls.ms", { value: formatNumber(call.latency_ms, locale) })}
+          {tokens}
+          <div className="t-caption">
+            {t("aicalls.ms", { value: formatNumber(call.latency_ms, locale) })}
+          </div>
         </td>
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} id={panelId}>
+          <td colSpan={4} id={panelId}>
             <CallDetailPanel id={call.id} captureEnabled={captureEnabled} />
           </td>
         </tr>

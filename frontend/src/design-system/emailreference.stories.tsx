@@ -8,7 +8,7 @@ import { EmailReference } from "./emailreference";
 // line where the row has room, stacked where a column does not; readable, and
 // held from this reader.
 const meta: Meta<typeof EmailReference> = {
-  title: "Design System/EmailReference",
+  title: "Components/Text and data display/Email reference",
   component: EmailReference,
   parameters: { layout: "padded" },
 };

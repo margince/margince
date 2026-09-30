@@ -1,0 +1,44 @@
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* SPDX-FileCopyrightText: 2026 Gradion */
+
+@import "../design-system/tokens.css";
+@import "../design-system/base.css";
+
+html {
+  color: var(--textPrimary);
+}
+
+body {
+  margin: 0;
+  min-block-size: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  box-sizing: border-box;
+  font: var(--fontBody);
+  background: var(--bgPage);
+  -webkit-font-smoothing: antialiased;
+}
+
+.offline {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  max-inline-size: 28rem;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.offline[hidden] {
+  display: none;
+}
+
+.offline h1 {
+  margin: 0;
+  font: var(--fontHeadingLarge);
+}
+
+.offline p {
+  margin: 0;
+  color: var(--textSecondary);
+}

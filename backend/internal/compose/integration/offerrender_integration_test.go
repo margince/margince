@@ -262,7 +262,7 @@ func TestOfferRenderPrepareRender_TemplateLocaleAndLayoutResolveFromOfferTemplat
 
 	tmpl, err := e.Deals.CreateOfferTemplate(ctx, deals.CreateOfferTemplateInput{
 		Name: "English Standard", Locale: "en-US",
-		Layout: map[string]any{"header_text": "English Standard header", "footer_text": "English Standard footer"},
+		Layout: map[string]any{"header": "English Standard header", "footer": "English Standard footer"},
 	})
 	if err != nil {
 		t.Fatalf("create offer template: %v", err)
@@ -282,7 +282,7 @@ func TestOfferRenderPrepareRender_TemplateLocaleAndLayoutResolveFromOfferTemplat
 	if ing.Locale != "en-US" {
 		t.Fatalf("PrepareRender must resolve locale via the offer's template, got %q want en-US", ing.Locale)
 	}
-	if ing.Layout["header_text"] != "English Standard header" || ing.Layout["footer_text"] != "English Standard footer" {
+	if ing.Layout["header"] != "English Standard header" || ing.Layout["footer"] != "English Standard footer" {
 		t.Fatalf("PrepareRender must resolve the offer's template LAYOUT alongside its locale, got %+v", ing.Layout)
 	}
 
@@ -292,6 +292,44 @@ func TestOfferRenderPrepareRender_TemplateLocaleAndLayoutResolveFromOfferTemplat
 		Currency: "EUR", Source: "manual", TemplateID: &bogus,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("create offer with an unknown template_id = %v, want ErrNotFound", err)
+	}
+}
+
+// TestOfferRenderPrintsWhatTheTemplateAndOfferFormsSaved drives the stored
+// rows through PrepareRender into the renderer: the header and footer a
+// template was saved with, and the intro and terms saved on the offer, all
+// reach the document. The PDF is uncompressed, so drawn text is in the bytes.
+func TestOfferRenderPrintsWhatTheTemplateAndOfferFormsSaved(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	dealID := e.SeedDeal(t, "Render text deal", pipeline, open, &e.Rep1)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
+
+	tmpl, err := e.Deals.CreateOfferTemplate(ctx, deals.CreateOfferTemplateInput{
+		Name: "Letterhead", Locale: "en-US",
+		Layout: map[string]any{"header": "Saved template header", "footer": "Saved template footer"},
+	})
+	if err != nil {
+		t.Fatalf("create offer template: %v", err)
+	}
+	templateID := ids.From[ids.OfferTemplateKind](ids.UUID(tmpl.Id))
+	intro, terms := "Saved offer intro", "Saved offer terms"
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{
+		TemplateID: &templateID, IntroText: &intro, TermsText: &terms,
+	})
+
+	ing, err := e.Deals.PrepareRender(ctx, ids.From[ids.OfferKind](ids.UUID(created.Id)))
+	if err != nil {
+		t.Fatalf("prepare render: %v", err)
+	}
+	pdf, err := deals.RenderOfferPDF(ing.Offer, ing.LineItems, ing.BuyerBlock, ing.IssuerName, ing.Locale, ing.Layout)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	for _, want := range []string{"Saved template header", "Saved template footer", intro, terms} {
+		if !bytes.Contains(pdf, []byte(want)) {
+			t.Errorf("the rendered PDF must print %q", want)
+		}
 	}
 }
 

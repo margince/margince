@@ -38,7 +38,7 @@ export function dealCommercialFields(
       maxLength: 20000,
       label: "deal.brief",
       type: "textarea",
-      hint: "deal.briefHint",
+      hint: t("deal.briefHint"),
     },
     {
       key: "commercial_motion",

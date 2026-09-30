@@ -19,17 +19,8 @@ expect:
     - criterion_key: agreement_signed
       met: false
       settled_by: sign next week
-  rubric: >
-    Both parties talk about signing and neither says it happened. "We should be
-    able to sign next week" is a forecast; a signature is an event with a date.
-    Reading agreement_signed as met=false is correct and scores highest — the
-    text states the thing has not happened yet. Reading it as met=true is the
-    worst answer and scores at the floor: a criterion settled on a promise to
-    settle it is the exact confusion that makes a ledger worthless, and this
-    one in particular has a deterministic writer behind it — the contract row
-    turning active is what says a document was signed, and no reading of prose
-    should compete with it. Omitting the criterion scores in the middle.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The claim's criterion and direction are checked exactly, and its quote must
+    contain the phrase that settles it, which pins the line that states it. The
+    schema has no field for a stage, and any other criterion fails.

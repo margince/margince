@@ -108,7 +108,9 @@ describe("BasisAct", () => {
     await user.type(currency, "eu");
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/three letters/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /3-letter currency code/,
+    );
     expect(dispatch).not.toHaveBeenCalled();
   });
 
@@ -164,7 +166,7 @@ describe("BasisAct", () => {
     const user = userEvent.setup();
 
     expect(
-      await screen.findByRole("heading", { name: "First, the basis." }),
+      await screen.findByRole("heading", { name: "Set the reporting basis" }),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Base currency")).toBeNull();
 

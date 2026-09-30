@@ -343,12 +343,10 @@ function WeeklyBody({
             value={formatNumber(c.deals_lost, locale)}
             detail={since(c.deals_lost, prior?.deals_lost)}
           />
-          <StatCard
-            narrow="row"
-            label={t("brief.week.movedLabel")}
-            value={formatNumber(c.deals_moved, locale)}
-            detail={since(c.deals_moved, prior?.deals_moved)}
-          />
+          {/* No stage-change slot: the workings list below already reports the
+              deals that moved without closing, and one fact spelled on two
+              surfaces of one screen makes a reader check whether they differ.
+              The strip carries the week's OUTCOMES; movement is a working. */}
           <StatCard
             narrow="row"
             label={t("brief.weekly.planCommitmentsKept")}
@@ -468,15 +466,16 @@ function WeeklyBody({
           and a reader should meet the numbers before the lessons drawn from
           them. */}
         <LearningsPanel learnings={review.learnings} />
-        {/* FIVE slots, because a strip is read ACROSS as one comparison and ten
-          is a table wearing a strip's clothes — at 1280 the row folded to two
-          ranks of five and stopped being one reading at all (#3709).
-          These five are the week's outcomes: what the rep planned and kept,
-          what closed, how fast new business was answered, whether meetings led
-          anywhere, and what did not get finished. The other five are workings
-          — how the queue was worked, how proposals were decided — and they
-          read as a list under the strip, where they are still available to
-          anyone who wants them and no longer compete with the outcomes. */}
+        {/* THE STRIP CARRIES OUTCOMES, THE LIST UNDER IT CARRIES WORKINGS. A
+          strip is read ACROSS as one comparison, and a row that grew to ten
+          was a table wearing a strip's clothes: at 1280 it folded to two ranks
+          and stopped being one reading at all. So what the rep planned and
+          kept, what closed, how fast new business was answered, whether
+          meetings led anywhere and what did not get finished stay in the row,
+          and how the queue was worked, how proposals were decided and how many
+          deals moved without closing read as a list beneath it — still
+          available to anyone who wants them, no longer competing with the
+          outcomes, and each fact on one surface only. */}
       </Disclosure>
     </>
   );

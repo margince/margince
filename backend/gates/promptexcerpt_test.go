@@ -31,13 +31,13 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // promptLanesDir holds the lanes that build model calls.
@@ -59,13 +59,13 @@ func TestEverySnippetIndexIsBuiltFromAnExcerpt(t *testing.T) {
 	t.Parallel()
 	var raw []string
 	built := 0
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	err := filepath.WalkDir(promptLanesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
 		path = filepath.ToSlash(path)
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}

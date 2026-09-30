@@ -12,6 +12,7 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
@@ -29,7 +30,7 @@ import {
 } from "./activitybody";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
 import { TaskAssigneeField } from "./assigneepicker";
-import { problemMessageOf, throwProblem, useMe } from "./common";
+import { throwProblem, useMe } from "./common";
 
 // Log a note or task from a 360 (contact/company/deal/lead): the contract's
 // logActivity POST, linked to the record being viewed, occurred_at stamped
@@ -362,9 +363,7 @@ export function LogActivityForm({
           )}
         </Field>
       )}
-      {log.isError && (
-        <p className="form-error">{problemMessageOf(log.error, t)}</p>
-      )}
+      <ErrorLine error={log.error} />
       <div className="form-actions">
         <Button
           variant="primary"

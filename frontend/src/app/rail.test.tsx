@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  act,
   cleanup,
   fireEvent,
   screen,
@@ -18,11 +17,14 @@ import { Shell, WorkspaceRail } from "./shell";
 import {
   fixtureSection,
   ignoreSearch,
+  MARKER,
   navGroupNames,
   newClient,
   render,
   renderWith,
+  repSeeing,
   stubPhoneViewport,
+  TWO_MARKS,
 } from "./testing/shellharness";
 
 // A composed installation, because the vanilla registry is empty by
@@ -52,14 +54,13 @@ vi.mock("@composition/extensions", () => ({
 // B-EP09.4 acceptance, for the SIDEBAR — the left-hand panel and nothing else.
 //
 // It is destinations only: the canonical nav in order (AC-shell-1b —
-// Automations left it for Settings → AI while the dedupe queue and the filter
-// builder took rows, which is a UI divergence on the founder's back-fill list),
-// at most one active
-// item tracking the route (AC-shell-2), badges only on the attention screens and
-// only from live counts (AC-shell-1e), collapsed rows on the expanded rows' own
-// geometry with a dismissible tooltip (AC-shell-1d), and the phone bar with its
-// More sheet. It carries no search row, no collapse control, no Settings door
-// and no account block any more — each of those moved to the top bar
+// Automations left it for Settings → AI while the filter builder took a row and
+// the duplicate queue is a lane inside Today, a UI divergence on the founder's
+// back-fill list), at most one active item tracking the route (AC-shell-2),
+// badges only on the attention screens and only from live counts (AC-shell-1e),
+// collapsed rows on the expanded rows' own geometry with a dismissible tooltip
+// (AC-shell-1d), and the phone bar with its More sheet. It carries no search
+// row, no collapse control, no Settings door and no account block any more — each of those moved to the top bar
 // (topbar.test.tsx).
 //
 // The second suite is the panel's own DEPTH: a section route replaces the
@@ -100,9 +101,8 @@ const CANONICAL_ORDER = [
   "Leads",
   "Deals",
   "Projects",
-  "Filters & views",
+  "Filters and views",
   "Analytics",
-  "Ask Margince",
 ];
 
 // The rows of whatever level the panel is showing — the destinations, or a
@@ -136,13 +136,6 @@ function mountShellStyles(): HTMLStyleElement {
   document.head.append(style);
   return style;
 }
-
-// The head's stage marker: the house Badge on the attribution row, carrying no
-// class of its own. Named once here so the shape of that row is stated in one
-// place, and the word is READ from the catalog rather than typed out — a
-// literal here would go on passing after the marker started saying something
-// else. Temporary, with app/betabadge.tsx.
-const MARKER = ".ws-company .badge";
 
 // A row that is not in the rail at all is not the same thing as a hidden one,
 // and must not read as one: the head keeps its elements and the level takes
@@ -278,16 +271,15 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   // and containment is what this asserts. A sibling tooltip would vanish under
   // the cursor and no assertion on its text would notice.
   //
-  // The hover itself is deliberately NOT simulated: user-event dispatches
-  // `mouseleave` on the row when the pointer moves to a child of it, which a
-  // browser does not do, so a pass there would measure the simulator and a
-  // failure would report a defect that is not in the product.
+  // Raised by focus, and the hover itself is deliberately NOT simulated:
+  // user-event dispatches `mouseleave` on the row when the pointer moves to a
+  // child of it, which a browser does not do, so a pass there would measure the
+  // simulator. Focus and pointer raise the same tip in the same place.
   it("nests the collapsed tooltip inside its own row so hovering it cannot dismiss it", async () => {
-    const user = userEvent.setup();
     render(<WorkspaceRail route={{ screen: "home" }} collapsed />);
     const deals = screen.getByRole("link", { name: "Deals" });
 
-    await user.hover(deals);
+    deals.focus();
     const tip = await screen.findByRole("tooltip");
     expect(deals.contains(tip)).toBe(true);
     expect(tip.parentElement).toBe(deals);
@@ -463,10 +455,10 @@ describe("Rail levels (a section's entries as the second level)", () => {
     // The destinations are GONE, not pushed below a second list: 56px cannot
     // carry two levels and 256px carrying both is a list of twenty places to go.
     expect(screen.queryByRole("link", { name: "Deals" })).toBeNull();
-    expect(levelLabels()).toEqual(["Account", "Privacy & retention"]);
+    expect(levelLabels()).toEqual(["Account", "Privacy and retention"]);
     expect(
       screen
-        .getByRole("link", { name: "Privacy & retention" })
+        .getByRole("link", { name: "Privacy and retention" })
         .getAttribute("href"),
     ).toBe("#/settings/deep");
     // Exactly one row claims the current page, and it is the entry the SECTION
@@ -645,7 +637,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
   it("draws an installation's own head the same on a level as off one", () => {
     shellStyles = mountShellStyles();
     const client = newClient();
-    client.setQueryData(["company"], TWO_MARKS);
+    client.setQueryData(["me"], repSeeing(TWO_MARKS));
     const parts = [".company-logo", ".ws-company-text", MARKER];
     const plain = renderWith(
       client,
@@ -666,177 +658,6 @@ describe("Rail levels (a section's entries as the second level)", () => {
     }
   });
 
-  // Whose product this is, above whose product it runs on. Every reader of a
-  // live installation is in this case — the cases above are the pre-onboarding
-  // one — so the heading is the company they work for and the product is the
-  // line beneath it.
-  it("heads the rail with the full company logo and puts the product under it", () => {
-    const client = newClient();
-    client.setQueryData(["company"], {
-      company_id: "11111111-1111-4111-8111-111111111111",
-      display_name: "Demo GmbH",
-      logo_url: "/v1/companies/11111111-1111-4111-8111-111111111111/logo",
-    });
-    renderWith(client, <WorkspaceRail route={{ screen: "home" }} />);
-    const brand = screen.getByRole("link", {
-      name: "Demo GmbH home, powered by Margince",
-    });
-    const logo = within(brand).getByRole("img", { name: "Demo GmbH" });
-    const image = logo.querySelector("img");
-    if (!image) throw new Error("the company logo image was not rendered");
-    fireEvent.load(image);
-    expect(logo.classList.contains("company-logo")).toBe(true);
-    // Beside the link rather than inside it: the attribution and the build badge
-    // are one row of the head, and neither is somewhere a press should lead.
-    const attribution = document.querySelector(".ws-company");
-    expect(attribution?.textContent).toContain("Powered by");
-    expect(attribution?.textContent).toContain("Margince");
-    expect(within(brand).queryByText("Powered by")).toBeNull();
-    expect(brand.getAttribute("href")).toBe("#/home");
-  });
-
-  // The settings card writes a chosen mark straight into this cache entry. The
-  // rail has to be OBSERVING the entry rather than peeking at it once: a peek
-  // left the old face in the rail until something unrelated re-rendered the
-  // shell, so a contact who had just uploaded a mark saw the monogram stay.
-  it("re-draws the head when a new mark is written into the company entry", async () => {
-    const client = newClient();
-    const profile = {
-      company_id: "44444444-4444-4444-8444-444444444444",
-      display_name: "Demo GmbH",
-    };
-    client.setQueryData(["company"], profile);
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(container.querySelector(".company-logo img")).toBeNull();
-
-    act(() => {
-      client.setQueryData(["company"], {
-        ...profile,
-        logo_url: "/v1/companies/44444444-4444-4444-8444-444444444444/logo",
-      });
-    });
-    await waitFor(() =>
-      expect(
-        container.querySelector(".company-logo img")?.getAttribute("src"),
-      ).toBe("/v1/companies/44444444-4444-4444-8444-444444444444/logo"),
-    );
-  });
-
-  // The mark is the company's own, drawn from the site the onboarding read
-  // resolved it from — not the product's, and not a monogram standing in for a
-  // logo the installation actually has.
-  it("draws the company's resolved logo as the rail's mark", () => {
-    const client = newClient();
-    client.setQueryData(["company"], {
-      company_id: "22222222-2222-4222-8222-222222222222",
-      display_name: "Demo GmbH",
-      logo_url: "/v1/companies/22222222-2222-4222-8222-222222222222/logo",
-    });
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe("/v1/companies/22222222-2222-4222-8222-222222222222/logo");
-  });
-
-  // A company whose site declared no icon has a face rather than a gap: the
-  // monogram is the floor under the mark, so an absent logo_url is a rendering
-  // decision and never an empty slot.
-  it("draws the company's monogram when no logo resolved", () => {
-    const client = newClient();
-    client.setQueryData(["company"], {
-      company_id: "33333333-3333-4333-8333-333333333333",
-      display_name: "Demo GmbH",
-    });
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(container.querySelector(".ws-chip img")).toBeNull();
-    expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe("DG");
-  });
-
-  // A company has two marks because the panel has two widths, and the whole
-  // point of the square one is that it is the one drawn at 56px. The wide mark
-  // is still what stands there when no icon was uploaded — a real logo squeezed
-  // small reads as that company, where initials would not — so both directions
-  // are asserted rather than only the interesting one.
-  const TWO_MARKS = {
-    company_id: "55555555-5555-4555-8555-555555555555",
-    display_name: "Demo GmbH",
-    logo_url: "/v1/companies/55555555-5555-4555-8555-555555555555/logo",
-    logo_icon_url:
-      "/v1/companies/55555555-5555-4555-8555-555555555555/logo/icon",
-  };
-
-  // Every brand branch carries it — the product's own mark, an installation's
-  // logo, an installation with only a monogram. The marker is a fact about the
-  // BUILD, so it does not depend on whether there is a company name above it,
-  // and the branch with nothing to attribute is the one a first-run reader sees.
-  it.each([
-    ["the product's own mark", undefined],
-    ["an installation's logo", TWO_MARKS],
-    [
-      "an installation's monogram",
-      { ...TWO_MARKS, logo_url: undefined, logo_icon_url: undefined },
-    ],
-  ])("stamps the stage on the head with %s", (_name, company) => {
-    const client = newClient();
-    if (company) {
-      client.setQueryData(["company"], company);
-    }
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(container.querySelectorAll(MARKER)).toHaveLength(1);
-    expect(container.querySelector(MARKER)?.textContent).toBe(en["shell.beta"]);
-  });
-
-  it("draws the square icon when the panel is collapsed", () => {
-    const client = newClient();
-    client.setQueryData(["company"], TWO_MARKS);
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} collapsed />,
-    );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_icon_url);
-  });
-
-  it("draws the wide mark when the panel is expanded", () => {
-    const client = newClient();
-    client.setQueryData(["company"], TWO_MARKS);
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_url);
-  });
-
-  it("keeps the wide mark in the collapsed panel when no icon was uploaded", () => {
-    const client = newClient();
-    client.setQueryData(["company"], {
-      ...TWO_MARKS,
-      logo_icon_url: undefined,
-    });
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} collapsed />,
-    );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_url);
-  });
-
   // An entry that HAS children opens them: standing on it, the panel shows the
   // level it leads to rather than the list it came from. Nothing carries the
   // current page there until a child is addressed — the same as any list a
@@ -848,9 +669,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
         section={fixtureSection("deep")}
       />,
     );
-    expect(levelLabels()).toEqual(["Data model"]);
+    expect(levelLabels()).toEqual(["Fields"]);
     expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
-    expect(navGroupNames()).toEqual(["Privacy & retention"]);
+    expect(navGroupNames()).toEqual(["Privacy and retention"]);
   });
 
   it("renders a third level from the data, addressed under the entry that opens it", () => {
@@ -861,11 +682,11 @@ describe("Rail levels (a section's entries as the second level)", () => {
       />,
     );
     // The child level: only the entry's children, addressed under it.
-    expect(levelLabels()).toEqual(["Data model"]);
+    expect(levelLabels()).toEqual(["Fields"]);
     expect(
-      screen.getByRole("link", { name: "Data model" }).getAttribute("href"),
+      screen.getByRole("link", { name: "Fields" }).getAttribute("href"),
     ).toBe("#/settings/deep/deeper");
-    expect(navGroupNames()).toEqual(["Privacy & retention"]);
+    expect(navGroupNames()).toEqual(["Privacy and retention"]);
   });
 
   // One step at a time, and the step is an ADDRESS: below the section's own
@@ -897,7 +718,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     );
     const account = screen.getByRole("link", { name: "Account" });
     const privacyEntry = screen.getByRole("link", {
-      name: "Privacy & retention",
+      name: "Privacy and retention",
     });
     expect(screen.queryByRole("tooltip")).toBeNull();
 
@@ -912,7 +733,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     privacyEntry.focus();
     await waitFor(() =>
       expect(screen.getByRole("tooltip").textContent).toBe(
-        "Privacy & retention",
+        "Privacy and retention",
       ),
     );
     expect(screen.getAllByRole("tooltip")).toHaveLength(1);
@@ -940,7 +761,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     // No level at all: no entries, no way back up, and no `leveled` arrangement
     // for the bar to be rearranged by.
     expect(
-      screen.queryByRole("link", { name: "Privacy & retention" }),
+      screen.queryByRole("link", { name: "Privacy and retention" }),
     ).toBeNull();
     expect(screen.queryByRole("button", { name: /^Back/ })).toBeNull();
     expect(
@@ -952,7 +773,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     await user.click(screen.getByRole("button", { name: "More" }));
     expect(levelLabels()).toEqual(CANONICAL_ORDER);
     expect(
-      screen.queryByRole("link", { name: "Privacy & retention" }),
+      screen.queryByRole("link", { name: "Privacy and retention" }),
     ).toBeNull();
   });
 
@@ -966,7 +787,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
         section={fixtureSection("account")}
       />,
     );
-    expect(levelLabels()).toEqual(["Account", "Privacy & retention"]);
+    expect(levelLabels()).toEqual(["Account", "Privacy and retention"]);
     expect(
       screen.getByRole("navigation", { name: "Primary navigation" }).className,
     ).toContain("leveled");

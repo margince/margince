@@ -193,3 +193,18 @@ func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (boo
 	}
 	return slices.Contains(granted, scope), nil
 }
+
+// Worker roles register the transports they can actually transmit through.
+func workerMailAuthority(registry *capture.Registry) mailboxAuthority {
+	return mailboxAuthority{grants: registry, mailAppConfigured: func(provider string) bool {
+		if registry == nil {
+			return false
+		}
+		for _, descriptor := range registry.Connectors() {
+			if descriptor.Name == provider {
+				return true
+			}
+		}
+		return false
+	}}
+}

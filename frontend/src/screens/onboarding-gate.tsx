@@ -194,9 +194,8 @@ export function OnboardingGate({
         {/* The border and the focus ring sit on the WRAPPER, so the field and
             its inline submit share one outline instead of drawing two. The
             stylesheet reads the input's own `aria-invalid` through `:has()` to
-            colour that outline, which is why rejection is not mirrored onto a
-            second attribute here: one source, and it is the one assistive
-            technology already reads. */}
+            colour that outline, so rejection is not mirrored onto a second
+            attribute: one source, the one assistive technology reads. */}
         <div className="ob-gate-field">
           <input
             id="ob-gate-website"
@@ -226,6 +225,7 @@ export function OnboardingGate({
       </form>
 
       {invalid ? (
+        // ds:ignore a bordered banner box, not a line
         <p className="ob-gate-alert" id="ob-gate-invalid" role="alert">
           {t("ob.gate.invalidUrl")}
         </p>
@@ -438,8 +438,7 @@ function coreStateFor(read: CompanySiteRead): MarginceCoreState {
   // A site read IS intake: pages arriving, one after another — until the
   // extracting phase, where the agent is working over what it has rather than
   // taking more on. Reading the phase as well as the status is what keeps this
-  // orb saying the same thing as the one on the read screen itself
-  // (onboarding-read.tsx), which has always drawn the distinction.
+  // orb saying the same thing as the conversation's own (presence.ts).
   return read.phase === "extracting" ? "working" : "ingest";
 }
 

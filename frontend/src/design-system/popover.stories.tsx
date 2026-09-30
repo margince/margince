@@ -12,7 +12,7 @@ import { Popover } from "./popover";
 // the one the CSS caps rather than lets run the page long: a panel of more
 // rows than the viewport holds.
 const meta: Meta<typeof Popover> = {
-  title: "Design System/Popover",
+  title: "Components/Overlays and layering/Popover",
   component: Popover,
   parameters: { layout: "padded" },
 };

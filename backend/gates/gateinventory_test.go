@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -31,6 +30,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // gateKinds is the closed set of shapes, in the order the page renders them.
@@ -241,7 +242,7 @@ func readGateDeclarations(t *testing.T) (gates []gate, untagged []string) {
 // the prose below an import block reachable.
 func parseGateFile(t *testing.T, path string, source []byte) *ast.File {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, source, parser.ParseComments)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), path, source, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
@@ -370,8 +371,26 @@ func renderGateInventory(gates []gate) string {
 	for _, g := range gates {
 		byKind[g.kind] = append(byKind[g.kind], g)
 	}
+	// The heading carries NO count, and that is the one thing about this page
+	// that must not be helpfully improved.
+	//
+	// A per-shape total is a single line whose value depends on the whole tree,
+	// which makes it the only merge-hostile thing the page can contain. Two
+	// pull requests that each add a gate of the same shape each regenerate
+	// correctly and both produce the SAME new number — so git sees one identical
+	// change on both sides, takes it once, reports no conflict, and main lands
+	// with a count one short of its own tree. It is a semantic conflict wearing
+	// textual agreement, and nothing in git or in a PR's checks can see it:
+	// each branch was green against the base it was tested on, and main is not
+	// required to be current before a merge.
+	//
+	// It has happened twice — #4791 (120 where the tree held 121) and #5955
+	// (160 where it held 161) — and the rows never once went wrong, because a
+	// row is its own line and two of them merge additively. So the rows stay
+	// and the total goes: what this page owes a reader is WHICH gates exist and
+	// what each holds, and every row below still says so.
 	for _, kind := range gateKinds {
-		fmt.Fprintf(&page, "\n## %s (%d)\n\n", capitalized(kind), len(byKind[kind]))
+		fmt.Fprintf(&page, "\n## %s\n\n", capitalized(kind))
 		page.WriteString("| Gate | Hardness | What it holds |\n|---|---|---|\n")
 		for _, g := range byKind[kind] {
 			fmt.Fprintf(&page, "| `%s` | %s | %s |\n", g.name, g.hardness, cellText(g.holds))

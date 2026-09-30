@@ -116,6 +116,7 @@ func TestWithEmbedReindexLeavesEngineNilOnUnboundLane(t *testing.T) {
 	if s.embedReindexHandlers.engine != nil {
 		t.Fatal("WithEmbedReindex must leave the engine nil on an unbound embed lane")
 	}
+	assertMeAgreesWithTheReindexEngine(t, s)
 }
 
 // TestWithEmbedReindexWiresTheEngineWhenBound is the control: a router
@@ -144,6 +145,41 @@ func TestWithEmbedReindexWiresTheEngineWhenBound(t *testing.T) {
 	if s.embedReindexHandlers.engine == nil {
 		t.Fatal("WithEmbedReindex must wire the engine when the embed lane is bound")
 	}
+	assertMeAgreesWithTheReindexEngine(t, s)
+}
+
+// /me offers the reindex surface exactly when the engine behind it is wired.
+// Either disagreement is silent: a settings entry whose routes 501, or a bound
+// lane nobody can reach.
+func assertMeAgreesWithTheReindexEngine(t *testing.T, s *Server) {
+	t.Helper()
+	advertised, wired := s.EmbedReindexAvailable(), s.embedReindexHandlers.engine != nil
+	if advertised != wired {
+		t.Errorf("/me advertises embedding_reindex=%v while the reindex engine is wired=%v", advertised, wired)
+	}
+}
+
+// A role with no router takes the option's first early return and reports the
+// surface absent, the same answer its generated 501 routes give.
+func TestMeReportsNoReindexSurfaceWithoutARouter(t *testing.T) {
+	s := &Server{}
+	WithEmbedReindex(nil, insertOnlyRunnerForTest(t))(s, nil)
+
+	if s.EmbedReindexAvailable() {
+		t.Error("/me advertises the reindex surface on a server with no router")
+	}
+	assertMeAgreesWithTheReindexEngine(t, s)
+}
+
+// A server that never ran the option at all agrees with itself too: the zero
+// value is absent and so is the engine, with no post-loop publish needed.
+func TestMeReportsNoReindexSurfaceWhenTheOptionNeverRan(t *testing.T) {
+	s := &Server{}
+
+	if s.EmbedReindexAvailable() {
+		t.Error("/me advertises the reindex surface on a server that never wired it")
+	}
+	assertMeAgreesWithTheReindexEngine(t, s)
 }
 
 // TestReadyzEmbedStateUnboundLaneReportsUnknownWithoutReadingTheMarker is

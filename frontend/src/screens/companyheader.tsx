@@ -12,6 +12,7 @@ import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { useT } from "../i18n";
+import { AddToShortlistAction } from "./addtoshortlist";
 import { ArchiveAction } from "./archive";
 import { useClaimRecord } from "./claimrecord";
 import { throwProblem, useViewerId } from "./common";
@@ -22,6 +23,7 @@ import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
 import { rosterMissLabel, useRoster, useRosterPartial } from "./entityref";
 import { MergeAction } from "./merge";
+import { memberName, useRosterNames } from "./roster";
 import { ShareAction } from "./share";
 
 // The account header's editable pieces: lifecycle and owner, the two values a
@@ -112,9 +114,8 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
   // reason, and folding them in again would answer "no grant" as though it were
   // a fact about the record.
   const mine = company.writable ?? false;
-  // Archived first: it is the reason a reader can act on, by restoring the
-  // record. Ownership comes last because it is the standing state — a company
-  // that is simply somebody else's is not a problem to solve, it is who owns it.
+  // Archived first: no grant or owner lifts it, since nothing unarchives. Ownership
+  // comes last: somebody else's company is who owns it, not a problem to solve.
   if (company.archived_at) {
     return t("record.archivedReadOnly");
   }
@@ -147,6 +148,11 @@ export function CompanyLifecycleControl({
   const patch = useCompanyFieldPatch(company);
   return (
     <InlineChoice
+      // Named for the company record's own layout suite, which measures this
+      // control's drawn size. Neither the shared primitive's class (it matches
+      // every other screen's inline choice) nor the German copy inside it (a
+      // copy change must not fail a layout assertion) can name it.
+      testId="company-lifecycle"
       label={t("company.lifecycle")}
       // The badge already reads as the account's standing beside its name —
       // a "Lifecycle: " prefix in front of it would be the one value on the
@@ -178,11 +184,9 @@ export function CompanyLifecycleControl({
 
 // What to call an owner the roster's answer does not name. "No longer in the
 // user list" is a claim about a read that came back WITHOUT them, so it is the
-// only reading this screen supplies; the three that are not about an owner at
-// all — still reading, read failed, walk stopped short — belong to the roster
-// and are spelled once there. Shared by every control here that names the
-// current owner, so one of them cannot go on making the claim after the others
-// stopped.
+// only reading this screen supplies; still reading, read failed and walk stopped
+// short belong to the roster and are spelled once there. Shared by every control
+// here that names the current owner, so none goes on making the claim alone.
 function unresolvedOwnerLabel(
   roster: Readonly<{ isPending: boolean; isError: boolean }>,
   partial: boolean,
@@ -212,41 +216,46 @@ export function CompanyOwnerControl({
   // the server holds it — this is the grant plus the seat, which is what the
   // claim endpoint itself requires.
   const canClaim = useCanWrite("company", "update");
-  const canUpdate =
-    useCanWriteRecord("company", company) || (!company.owner_id && canClaim);
+  const canWriteRow = useCanWriteRecord("company", company);
+  const canUpdate = canWriteRow || (!company.owner_id && canClaim);
   const readOnlyReason = useCompanyReadOnlyReason(company);
   const patch = useCompanyFieldPatch(company);
   const claim = useClaimRecord("company", company.id, company.version);
   const viewerId = useViewerId();
   const roster = useRoster("user", true);
+  const allMembers = useRosterNames("user", true);
   const rosterPartial = useRosterPartial("user", true);
   const owners = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry
       ? [{ value: entry.id, label: entry.display_name }]
       : [],
   );
-  // The account's current owner may sit outside what the roster read — a
-  // deactivated user, or a workspace deeper than the walk reaches — and a select
-  // whose current value is not an option renders blank. Naming them keeps the
-  // control honest about who owns it today even when it cannot resolve them;
-  // which sentence is honest is `unresolvedOwnerLabel`'s question, not this
-  // one's.
+  // The current owner may not be offerable (invited, deactivated, or past the
+  // walk), and a select whose value is no option renders blank. An invited one
+  // is named; for the rest, `unresolvedOwnerLabel` says which honest sentence.
   if (
     company.owner_id &&
     !owners.some((user) => user.value === company.owner_id)
   ) {
     owners.unshift({
       value: company.owner_id,
-      label: unresolvedOwnerLabel(roster, rosterPartial, t),
+      label:
+        memberName(allMembers.data, company.owner_id) ??
+        unresolvedOwnerLabel(roster, rosterPartial, t),
     });
   }
   // "Unowned" is offered only while the account IS unowned. `owner_id` cannot
   // carry "unassign" on the wire — a null is indistinguishable from an omitted
   // field — so offering it on an owned account would take the answer and drop
   // it. Present as the truthful current state, absent as an edit we cannot make.
+  // A reader here only through the claim door may name nobody but themselves:
+  // the server refuses a bounded seat's patch on a row nobody owns.
+  const nameable = canWriteRow
+    ? owners
+    : owners.filter((user) => user.value === viewerId);
   const options = company.owner_id
     ? owners
-    : [{ value: "", label: t("co.pulse.unowned") }, ...owners];
+    : [{ value: "", label: t("co.pulse.unowned") }, ...nameable];
   return (
     <InlineChoice
       label={t("co.pulse.owner")}
@@ -273,10 +282,9 @@ export function CompanyOwnerControl({
           unresolvedOwnerLabel(roster, rosterPartial, t)
         );
       }}
-      // An unowned account is nobody's to change until somebody claims it, so
-      // a reader taking it on goes through the claim — the door the write arm
-      // leaves open to every seat — while naming a colleague stays a patch,
-      // which an unbounded seat may make and a bounded one may not.
+      // Taking an unowned account goes through the claim, the door open to
+      // every seat; naming a colleague is a patch, offered only to a reader
+      // who can write the row (`nameable`).
       onSave={(next) =>
         !company.owner_id && next === viewerId
           ? claim()
@@ -383,14 +391,9 @@ export function CompanyActionBadges({
   const refusedByState = refusedReason ? menuReasonId : undefined;
   return (
     <>
-      {/* What the company IS to us is drawn beside its NAME, by
-          CompanyRelationshipBadges — a tag on the record belongs with the
-          record. Drawn here as well it was the same badge in two places on one
-          screen, and a reader who found both had to satisfy themselves the two
-          agreed. */}
-      {company.archived_at && (
-        <Badge tone="warning">{t("record.archived")}</Badge>
-      )}
+      {/* What the company IS to us, and whether it is archived, are drawn
+          beside its NAME (companymarks.tsx): a tag on the record belongs with
+          the record, and among the verbs it reads as one more control. */}
       {/* The trigger is unconditional because the menu always holds something
           to say: an archived account's verbs are refused rather than dropped,
           and the sentence refusing them travels with them. Only a panel with
@@ -466,10 +469,9 @@ export function CompanyActionBadges({
           company={company}
           disabledReasonId={refusedByState}
         />
-        {/* Last, and set apart by the panel's own seam (atoms.css). This is
-            the one verb here a reader cannot walk back from the header, so it
-            does not sit in the run of routine ones where a slipped pointer
-            reaches it. */}
+        <AddToShortlistAction entityType="company" entityId={company.id} />
+        {/* Last, set apart by the panel's seam (atoms.css): the one verb here
+            a reader cannot walk back from the header. */}
         <ArchiveAction
           disabledReasonId={refusedByState}
           label={t("record.archive")}

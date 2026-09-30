@@ -55,7 +55,7 @@ export const PickingAnHour: Story = {
     // `screen`, because Modal portals to document.body rather than into the
     // story's canvas.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Pick date and time" }),
+      await screen.findByRole("button", { name: "Select date and time" }),
     );
     await screen.findByRole("button", { name: "13:00", pressed: true });
   },

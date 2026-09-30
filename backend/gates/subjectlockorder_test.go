@@ -95,7 +95,7 @@ func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 			}
 			return false
 		}
-		fset := token.NewFileSet()
+		fset := gatekit.SourceFileSet()
 		files := parsePackageDir(t, fset, dir)
 		// Which functions take a row lock at all — spelled themselves, or
 		// through anything they call. A helper holding the UPDATE is what makes

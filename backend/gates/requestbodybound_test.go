@@ -41,7 +41,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"strings"
 	"testing"
 
@@ -481,7 +480,7 @@ func h(w http.ResponseWriter, r *http.Request) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", tc.source, 0)
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", tc.source, 0)
 			if err != nil {
 				t.Fatalf("parsing the probe: %v", err)
 			}

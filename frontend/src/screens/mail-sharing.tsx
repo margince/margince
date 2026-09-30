@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
@@ -128,7 +128,7 @@ export function MailSharingCard() {
   return (
     <Panel title={t("mailSharing.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("mailSharing.sub")}</p>
+        <PanelIntro>{t("mailSharing.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("mailSharing.title")}>
           {(settings) => {
             const shown = pending ?? settings.mail_sharing;

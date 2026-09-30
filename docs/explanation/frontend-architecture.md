@@ -64,11 +64,11 @@ it, so a `?utm=…` never leaks into a screen name.
   verbatim from the design source of truth and pinned value-by-value by
   `tokens.test.ts`. `brand.css` is the DERIVED layer: every value there is a
   `color-mix()` of a canonical token, never a new hex. Then `atoms.tsx` (Button,
-  Badge, Avatar, Card, DataTable, Modal, …), `trust.tsx` (the trust vocabulary
+  Badge, Avatar, Card, Modal, …), `trust.tsx` (the trust vocabulary
   of §4 of the design language — `design/00-design-language.md` in the spec
   repo, which the section numbers on this page all refer to:
   `AutonomyDot`, `EvidenceChip`, `ConfidenceMeter`, `ProvenanceTag`,
-  `StagingCard`, `ApprovalGate`, `StagedProposal`, `FieldDiff`), the Margince
+  `StagingCard`, `FieldDiff`), the Margince
   Core (`margince-core*`), and `composed.tsx`, which builds on both
   (`RecordView`, `PipelineBoard`, `GroupedTimelineList`, …). `motion.ts` holds
   the reduced-motion rule — reduced motion jumps to the END state, never to
@@ -90,10 +90,16 @@ it, so a `?utm=…` never leaks into a screen name.
   file with co-located `*.test.tsx` and `*.stories.tsx`. A route with no screen
   behind it renders the honest pending state (`App.tsx`'s `PendingScreen`),
   never a blank page.
-- **`src/i18n/`** — DE + EN catalogs with key parity enforced twice: `MessageKey`
-  is `keyof typeof en` and the German catalog is `satisfies`-checked against it,
-  so a missing key fails `tsc`; `i18n.test.ts` re-checks at runtime so a build
-  that skipped typechecking still fails loudly.
+- **`src/i18n/`** — three catalogs (`en`, `de`, `vi`), `en` the default. Key
+  parity is enforced twice: `MessageKey` is `keyof typeof en` and the other
+  catalogs are `satisfies`-checked against it, so a missing key fails `tsc`;
+  `i18n.test.ts` re-checks at runtime and proves `LOCALES` is exactly the
+  registered catalogs, so a build that skipped typechecking still fails loudly.
+  A new string therefore lands in all three catalogs in one change: one catalog
+  alone is a red build, never a missing translation on a reader's screen. A
+  count takes its wording from the reader's own `Intl.PluralRules` category
+  (`format/plural.ts`), and `one-plural-rule.test.ts` refuses a `count === 1`
+  choosing a message key anywhere outside this directory.
   Resolution order is the explicit choice → the browser's languages → `en`
   (A100: unconfigured English is `en-GB`, not `en-US`). Locale is presentation
   only: it never participates in storage or math.
@@ -165,7 +171,7 @@ whose rendered text is free to differ, and today three of the ten do:
 `deals` routes to the pipeline surface; `inbox` is a governance surface, not a
 mailbox. The command palette leans on the split deliberately: every screen
 command carries its route id as a hidden `keyword`, so someone typing "deals" or
-"inbox" still finds the relabeled destination, in either locale, without a
+"inbox" still finds the relabeled destination, in any locale, without a
 hand-kept synonym list. **Never rename a `screen` to match a label** — that
 breaks every existing hash URL and every `SCREEN_ENTITY` / `OFF_RAIL_TITLE_KEYS`
 lookup keyed on it.
@@ -267,8 +273,7 @@ The older primitives survive in two places, both deliberate:
   `screens/onboarding-company-form.tsx`), the Company-context settings screen,
   and the record surfaces that show a single provenance line
   (`contacts.tsx`, `leads.tsx`, `consent.tsx`, `history.tsx`).
-  `StagedProposal`/`FieldDiff`/`ApprovalGate` are the composed forms of the same
-  vocabulary.
+  `StagingCard`/`FieldDiff` are the composed forms of the same vocabulary.
 
 **One open at a time, for pointer *and* keyboard.** A module-level
 `closeOpenMark` holds the single currently-open panel; opening one closes the
@@ -328,7 +333,9 @@ discipline even if the test tree regresses.
 | Action rows | `design-system/actionrow.test.ts` | a container whose element children are two or more buttons and nothing else, that does not get `gap: var(--gapActions)` from a class it names or from its own inline style — including a class **no stylesheet defines**, which is the failure a CSS-only gate cannot see. Waived in line with `{/* ds:ignore <reason> */}` |
 | Contract type drift | `make frontend-check` | `pnpm gen:api` produces a diff in `src/api/schema.d.ts` / `public-events.ts` |
 | Lint | `pnpm lint` (Biome) | formatting and lint findings over `src` + `index.html` |
-| Conformance suite | `design-system/conformance.test.ts` | the AST-accurate arm of the same rules, plus: hard-coded user-facing copy outside the i18n catalogs, a class namespace declared in two stylesheets, a service worker shipped or registered (there is none), an invalid web-app manifest |
+| Conformance suite | `design-system/conformance.test.ts` | the AST-accurate arm of the same rules, plus: hard-coded user-facing copy outside the i18n catalogs, an invalid web-app manifest |
+| Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/src/app/serviceworker-registrar.test.ts` | the SPA build not emitting `/sw.js`; the emitted worker answering anything from Cache Storage but a navigation the network could not make and the offline page's own script, intercepting a path the api owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed; any shipped module but `src/app/pwa.ts`, in any script dialect, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
+| Stylesheet namespaces | `design-system/stylesheetnamespace.test.ts` | a screen's class namespace declared in a stylesheet other than its home sheet, across every `.css` under `frontend/src` and each extension's frontend layer |
 | Token canon | `design-system/tokens.test.ts` | a Ledger-Green value drifting from the design canon |
 | Typecheck + build | `pnpm build` (`tsc -b && vite build`) | any type error |
 | Unit tests | `pnpm test` (Vitest) | co-located `*.test.tsx` |
@@ -350,7 +357,7 @@ frontend lane is separate from the Go merge gate and needs node + pnpm. Run
 | light/dark behaviour | `src/app/theme.ts` + `tokens.css`, which carries all three states: the light palette on bare `:root`, the `prefers-color-scheme` arm for a surface whose host states nothing, and the `[data-theme]` arms an explicit choice stamps |
 | how a derived value shows its receipts | `src/design-system/evidencemark.tsx` |
 | a staging/approval surface | `src/design-system/trust.tsx` + `src/screens/worklist.tsx` |
-| copy | `src/i18n/en.ts` **and** `src/i18n/de.ts` — key parity is compile-time |
+| copy | `src/i18n/en.ts`, `de.ts` **and** `vi.ts` — key parity is compile-time |
 | money, dates, durations, zones | `src/format/format.ts` — except which calendar day an instant falls on, and the instant a picked day ends, which are `src/format/calendarday.ts` |
 | an API call | `src/api/client.ts` is the seam; regenerate types with `pnpm gen:api` |
 | the Core's appearance or states | `src/design-system/margince-core.tsx` + `margince-core-shader.ts` + `margince-core-motion.ts` |
@@ -360,7 +367,8 @@ frontend lane is separate from the Go merge gate and needs node + pnpm. Run
 | | |
 |---|---|
 | The API seam + generated contract types | `frontend/src/api/{client.ts,schema.d.ts,public-events.ts}` |
-| Boot: theme, query client, 403 handling | `frontend/src/main.tsx` |
+| Boot: theme, install offer, service worker, query client, 403 handling | `frontend/src/main.tsx` |
+| Service worker registration, install state / the worker and its offline page | `frontend/src/app/pwa.ts` / `frontend/src/offline/`, built by `frontend/scripts/vite-pwa.ts` |
 | Route → screen, the auth gate, the onboarding gate | `frontend/src/App.tsx` |
 | Shell frame, sidebar, page heading | `frontend/src/app/{shell.tsx,shell.css}` |
 | Top bar: breadcrumb, search, account | `frontend/src/app/{topbar.tsx,topbar.css,account.tsx}` |
@@ -382,7 +390,8 @@ frontend lane is separate from the Go merge gate and needs node + pnpm. Run
 ## Where to go next
 
 [company-record-page.md](company-record-page.md) (the biggest
-screen this structure carries) ·
+screen this structure carries) · [pwa.md](pwa.md) (installing the app, the
+service worker and the offline page) ·
 [company-context.md](company-context.md) (the onboarding wizard and the
 company-profile screens) · [architecture.md](architecture.md) (the Go side of
 the same contract) · [../reference/make-targets.md](../reference/make-targets.md)

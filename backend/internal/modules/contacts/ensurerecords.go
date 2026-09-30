@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // reviewPair is the record capture just minted, as the review queue needs to
@@ -200,4 +201,78 @@ func acquiredFromCapture(replied bool) string {
 		return AcquiredSubjectInitiated
 	}
 	return AcquiredUnknownLegacy
+}
+
+// acquiredFromCaptureTx widens acquiredFromCapture by the mail itself: an
+// address that SENT us a captured message gave us its data by writing, whether
+// or not we had written first. Bulk mail does not count, as it does not for a
+// reply (capture's wroteBackTx): a newsletter is a list writing to everyone,
+// not the sender writing to us. A first mail from a stranger is them contacting
+// us, and a disclosure duty for it would be owed to nobody. Only the reverse —
+// an address we wrote to, or saw on a Cc, that never wrote — stays unknown.
+func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email string) (string, error) {
+	if kind := acquiredFromCapture(replied); kind == AcquiredSubjectInitiated {
+		return kind, nil
+	}
+	var wrote bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM activity_participant p
+		    JOIN activity a ON a.id = p.activity_id
+		   WHERE p.role = 'from' AND p.address = lower($1)
+		     AND a.direction = 'inbound' AND a.archived_at IS NULL
+		     AND NOT a.bulk_mail_attested)`, email).Scan(&wrote); err != nil {
+		return "", fmt.Errorf("contacts: did this address write to us: %w", err)
+	}
+	if wrote {
+		return AcquiredSubjectInitiated, nil
+	}
+	migrated, err := heldByMigratedLeadTx(ctx, tx, email)
+	if err != nil {
+		return "", err
+	}
+	if migrated {
+		return AcquiredCRMMigration, nil
+	}
+	return AcquiredUnknownLegacy, nil
+}
+
+// heldByMigratedLeadTx reports that a lead carried over from the previous CRM
+// already holds this address.
+//
+// The import files a counterparty with no deal and no conversation as a LEAD,
+// not a contact. When a connected mailbox later finds mail with them, capture
+// mints a contact beside that lead — and without this, the contact read as a
+// stranger found in old mail and owed an Art. 14 notice, though they came over
+// from the old CRM like every other migrated record (DutyFor, "crm_migration").
+//
+// The address must be the one the lead was IMPORTED with, read from its create
+// audit row. Only an importer may write the mirror: prefix, but anyone who may
+// edit leads may change a lead's email — and an imported lead retargeted at a
+// stranger's address would otherwise excuse that stranger's notice. An email
+// changed after the import therefore counts for nothing; changed back, it is
+// the imported address again.
+//
+// Only a LIVE lead counts. A promoted lead already has its contact, so capture
+// never mints one beside it; a retired lead leaves the duty owed, which is the
+// safe direction. It also keeps the read on the lead email index, which covers
+// live rows only. An erased lead has had its address scrubbed and matches
+// nothing.
+func heldByMigratedLeadTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	var held bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM lead l
+		   WHERE l.email = lower($1)
+		     AND l.archived_at IS NULL
+		     AND starts_with(l.source_system, $2)
+		     AND EXISTS (
+		           SELECT 1 FROM audit_log a
+		            WHERE a.entity_type = 'lead' AND a.entity_id = l.id
+		              AND a.action = 'create'
+		              AND lower(a.after->>'email') = l.email))`,
+		email, provenance.ReservedSourceSystemPrefix).Scan(&held); err != nil {
+		return false, fmt.Errorf("contacts: did a migrated lead hold this address: %w", err)
+	}
+	return held, nil
 }

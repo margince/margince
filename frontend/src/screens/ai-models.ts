@@ -43,9 +43,12 @@ export type ModelLane = ModelRate["lane"];
 /** The sheet as a caller holds it, before the read has landed. */
 export type ModelCatalogue = readonly ModelRate[] | undefined;
 
-export function useAiModelCatalogue() {
+// `enabled` is for a caller that already knows the read is not this reader's:
+// asking anyway would spend a request on a 403 the empty answer stands in for.
+export function useAiModelCatalogue(enabled = true) {
   return useQuery({
     queryKey: ["ai-model-rates"],
+    enabled,
     // The sheet changes when an operator adds a price, which is not something
     // that happens while somebody is filling in this form.
     staleTime: 5 * 60 * 1000,
@@ -176,19 +179,26 @@ export function unreadablePrice(price: string): boolean {
   return price.trim() === "" || !Number.isFinite(Number(price));
 }
 
+// Whether a lane is billed on its input alone. An embedder has no output and a
+// decision model's wire bills input only, so a blank output price there is the
+// sheet being right rather than unreadable.
+export function inputOnlyLane(lane: ModelLane): boolean {
+  return lane === "embeddings" || lane === "decisions";
+}
+
 function priceHint(rate: ModelRate, locale: Locale): string | undefined {
   // The hint is decoration, so an unreadable sheet offers the model without a
   // price — never a NaN in the list, and never a throw inside a render, which
   // takes the whole settings page down with it.
-  if (
-    unreadablePrice(rate.input_per_mtok) ||
-    unreadablePrice(rate.output_per_mtok)
-  ) {
+  if (unreadablePrice(rate.input_per_mtok)) {
     return undefined;
   }
   const shown = formatUsdPerMTok(rate.input_per_mtok, locale);
-  if (rate.lane === "embeddings") {
+  if (inputOnlyLane(rate.lane)) {
     return translate(locale, "aiAdmin.inputRate", { input: shown });
+  }
+  if (unreadablePrice(rate.output_per_mtok)) {
+    return undefined;
   }
   return translate(locale, "aiAdmin.rates", {
     input: shown,
@@ -310,7 +320,7 @@ export function useAvailableModels(
  * and the sheet on what it COSTS, and a reader needs both — an id the sheet
  * still lists but the vendor has retired is worth keeping visible (it may be
  * what this lane is bound to today), and one the vendor serves that nothing has
- * priced is the case the UNPRICED pill was built for.
+ * priced is the case the editor's "not priced" plate was built for.
  *
  * Vendor order first, because a vendor that dates its models returns them
  * newest first and that is the order somebody looking for "the new one" wants;
@@ -340,4 +350,21 @@ export function offeredModels(
     .map(([value, hint]) => ({ value, hint }))
     .sort((a, b) => stable(a.value, b.value));
   return [...fromVendor, ...fromSheet];
+}
+
+// A vendor whose key is optional calls without one, so an absent key there is
+// no warning to draw.
+export function unkeyedProviders(
+  providers:
+    | readonly { provider: string; configured: boolean; optional: boolean }[]
+    | undefined,
+): ReadonlySet<string> | null {
+  if (!providers) {
+    return null;
+  }
+  return new Set(
+    providers
+      .filter((p) => !p.configured && !p.optional)
+      .map((p) => p.provider),
+  );
 }

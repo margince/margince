@@ -31,6 +31,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -46,9 +47,10 @@ type RelinkThreadCommand struct {
 // NewRelinkThreadCall binds one thread move to the resolver that answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewRelinkThreadCall(records datasource.SystemOfRecordProvider, cmd RelinkThreadCommand) GovernedCall {
+func NewRelinkThreadCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd RelinkThreadCommand) GovernedCall {
 	return destinationTieredCall{
 		GovernedCall: bind[RelinkThreadCommand](&relinkThreadResolver{
+			language:    language,
 			destination: destinationRecord(records, cmd.EntityType),
 		}, cmd),
 		entityType: cmd.EntityType,
@@ -57,6 +59,7 @@ func NewRelinkThreadCall(records datasource.SystemOfRecordProvider, cmd RelinkTh
 
 type relinkThreadResolver struct {
 	destination anchoredRecord
+	language    baselanguage.Resolver
 }
 
 // Subject names the destination, for the reason the file comment gives. It is
@@ -65,8 +68,9 @@ type relinkThreadResolver struct {
 // what keeps the resolver whole rather than a gap a later tier change falls
 // through.
 func (r *relinkThreadResolver) Subject(ctx context.Context, cmd RelinkThreadCommand) (StageInfo, error) {
+	said := summaryIn(ctx, r.language)
 	return destinationSubject(ctx, &r.destination, cmd.EntityType, cmd.EntityID,
-		fmt.Sprintf("Re-associate the conversation %q to %s %s", cmd.ThreadKey, cmd.EntityType, cmd.EntityID))
+		fmt.Sprintf(said.relinkThread, cmd.ThreadKey, said.noun(cmd.EntityType), cmd.EntityID))
 }
 
 // Guards refuses a blank key and a destination outside the vocabulary, and
@@ -103,9 +107,10 @@ type RelinkActivitiesCommand struct {
 // answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewRelinkActivitiesCall(records datasource.SystemOfRecordProvider, cmd RelinkActivitiesCommand) GovernedCall {
+func NewRelinkActivitiesCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd RelinkActivitiesCommand) GovernedCall {
 	return destinationTieredCall{
 		GovernedCall: bind[RelinkActivitiesCommand](&relinkActivitiesResolver{
+			language:    language,
 			destination: destinationRecord(records, cmd.EntityType),
 		}, cmd),
 		entityType: cmd.EntityType,
@@ -114,6 +119,7 @@ func NewRelinkActivitiesCall(records datasource.SystemOfRecordProvider, cmd Reli
 
 type relinkActivitiesResolver struct {
 	destination anchoredRecord
+	language    baselanguage.Resolver
 }
 
 // Subject names the destination record and pins its version; the count is in
@@ -122,8 +128,9 @@ type relinkActivitiesResolver struct {
 // line is read by whoever may decide the destination, and the rows are not
 // theirs to be shown by name.
 func (r *relinkActivitiesResolver) Subject(ctx context.Context, cmd RelinkActivitiesCommand) (StageInfo, error) {
+	said := summaryIn(ctx, r.language)
 	return destinationSubject(ctx, &r.destination, cmd.EntityType, cmd.EntityID,
-		fmt.Sprintf("Re-associate %d activities to %s %s", len(cmd.ActivityIDs), cmd.EntityType, cmd.EntityID))
+		fmt.Sprintf(said.relinkActivities, len(cmd.ActivityIDs), said.noun(cmd.EntityType), cmd.EntityID))
 }
 
 // Guards refuses the destination vocabulary, an empty or oversized set — the

@@ -158,7 +158,7 @@ would report a documentation PR as a broken integration lane.
 | Scope | Paths | Gates |
 |---|---|---|
 | `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it invokes — globbed so a lane added later is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in — every lane that opens a database |
-| `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus everything a Go gate READS rather than executes: the agent rulebooks `AGENTS.md`, `CLAUDE.md`, `frontend/AGENTS.md` and `frontend/CLAUDE.md`, and `docs/**` | Go build/gate, extension reference, craftsmanship, unit coverage, vuln |
+| `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus everything a Go gate READS rather than executes. The agent rulebooks `AGENTS.md` and `CLAUDE.md`, and `docs/**`. The two trees the gates read but do not build, `frontend/**` and `desktop/**` — 48 gates under `backend/gates/` read files under `frontend/`, so a frontend-only pull request used to skip the lane holding them and could break one and merge green. And the rest of what the suite opens: `.github/**`, `.coderabbit.yaml`, `.env.example`, `.tool-versions`, `config/**`, `e2e/**`, `tools/**`, `user-guide/**`, `Dockerfile*`, `package.json`, `pnpm-lock.yaml`, `renovate.json`, `README.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`. That list is derived rather than remembered: `backend/gates/gatelanetrigger_test.go` resolves every path literal in the suite against the tree and fails on one this scope does not cover. They sit here and **not** in `backend_db` because a Go gate needs no Postgres shard — the cut this split exists to make | Go build/gate, extension reference, craftsmanship, unit coverage, vuln |
 | `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), plus the composition inputs the lane now typechecks against — `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile` — and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, which decide *which* dependency the SPA builds on and which one `openapi-typescript` parses the contract with (`overrides` lives in the workspace file, so it resolves versions the lockfile then merely records; `packageManager` lives in the manifest and decides which pnpm reads both) | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `extensions/**`, `fixtures/**`, `composition/**` | full-stack live-boot |
 | `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml` (`overrides` lives there, so it decides resolved versions the way a manifest does), `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `.github/workflows/**` (syft catalogs a `uses:` as a package, so any workflow gaining a reference changes what the gate judges — a pinned remote action brings its license, a local reusable workflow brings none), `.github/actions/**` | the license gate |
@@ -420,6 +420,45 @@ simpler:
   Dropping the dependency hash on the last hop is deliberate — a stale restore
   only misses the entries whose inputs changed, so a three-hour-old cache is
   substantially warm and a post-dependency-bump cache still beats a cold one.
+
+### Test results replay only on stable mtimes
+
+The build cache holds test results as well as compiled packages, so a PR whose
+change does not reach a package replays that package's result instead of
+running it. Go checks a cached result against every file the test opened at
+runtime — a migration, a fixture, its own source — by size, mode and **mtime**,
+never content. A fresh checkout stamps every file with the time of checkout, so
+until the action stamped them, each of the 42 packages whose tests read the
+tree re-ran on every job, `internal/compose` and `identity` among them.
+
+[`scripts/ci-stable-mtimes.sh`](../../scripts/ci-stable-mtimes.sh) runs first
+in the action, in the writer and every reader alike. It sets each tracked file's
+mtime from a hash of its bytes, and each directory's from its tracked entries.
+Unchanged content therefore reads as it did in the run that wrote the cache, and
+changed content reads as new. Measured on a simulated fresh checkout, 121 of 163
+unit packages replayed before this and all 163 after. `./gates` and the ai
+module still run uncached on purpose — `UNCACHED_TEST_PKGS` in
+`backend/Makefile` says why.
+
+Two kinds of input stay invisible to that check, and each is declared through
+`gatekit.DeclareInputs`:
+
+- **Files outside the test's module.** Go never rechecks them at all — not
+  `docs/`, `config/`, `frontend/`, nor, for the `backend/tools` module,
+  `backend/` itself. The script exports one digest per top-level entry as
+  `TREE_DIGEST_<NAME>`, a test reading outside its module reads that
+  variable, and Go keys the result on every variable a test reads.
+- **What a child process read.** A test that runs `git ls-files` or `go list`
+  opens nothing itself, so it walks the paths the process read.
+
+The first kind is held by a census, not a scan, because such paths are mostly
+built at run time. Before `cache-warm` saves an entry, it reruns the cached pass
+through [`scripts/testlog-exec.sh`](../../scripts/testlog-exec.sh) with Go's
+test log on, and `backend/tools/check-test-inputs` fails on any package that
+read outside its module without reading the matching digest. A failing census
+withholds the entry, so readers stay on the last one that was honest. The
+second kind is held by a gate: a cached test file that runs `git` or `go` must
+declare its inputs.
 
 What this replaced: both refresh steps used to ride inside gating jobs, gated on
 `github.event_name == 'push' && github.ref == 'refs/heads/main'`. The cache was

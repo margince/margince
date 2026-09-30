@@ -200,7 +200,7 @@ func TestTheDeclaredFilterCensusReadsTheGeneratedShape(t *testing.T) {
 	// The contact list declares exactly these. All three page dials are among
 	// them — the gate judges a dial the same way it judges a filter, and none
 	// of the three is scoped out any more.
-	want := "ai_written,captured_by_kind,company_id,cursor,include_archived,limit,owner_id," +
+	want := "ai_written,captured_by_kind,company_id,cursor,include_archived,limit,list_id,owner_id," +
 		"owner_team_id,q,sort,tag_id,tag_mode,unassigned"
 	if got := strings.Join(wire, ","); got != want {
 		t.Errorf("listContacts's narrowing parameters = %q, want %q", got, want)
@@ -420,7 +420,7 @@ func pointedToTypeName(expr ast.Expr) string {
 // parseGoFile parses one source of the backend module, relative to its root.
 func parseGoFile(t *testing.T, rel string) gatekit.ParsedFile {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), filepath.FromSlash(rel), nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(filepath.FromSlash(rel), parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", rel, err)
 	}
@@ -430,7 +430,7 @@ func parseGoFile(t *testing.T, rel string) gatekit.ParsedFile {
 // parseGoSource parses source written for the walk's own defect test.
 func parseGoSource(t *testing.T, src string) gatekit.ParsedFile {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), "probe.go", src, parser.SkipObjectResolution)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", src, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing the probe source: %v", err)
 	}

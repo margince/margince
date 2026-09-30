@@ -2,13 +2,12 @@ import {
   type ComponentPropsWithoutRef,
   forwardRef,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
-import { BusyMark, Textarea, TextInput } from "./atoms";
+import { BusyMark, Field, Textarea, TextInput } from "./atoms";
 import "./inlinechoice.css";
 
 // Free-text editing follows the same save/refusal contract as choices.
@@ -139,8 +138,6 @@ export function InlineText({
   // deliberately does NOT set it: the reader is already somewhere else, and
   // dragging focus back here would undo the move they just made.
   const restoreFocus = useRef(false);
-  const fieldId = useId();
-  const errorId = useId();
 
   // The click that opened this asked to TYPE here, so the caret belongs in the
   // field without a second click. It is also what makes every exit rule below
@@ -240,60 +237,59 @@ export function InlineText({
   };
 
   return (
-    <span className="inlinetext-edit">
-      <label className="sr-only" htmlFor={fieldId}>
-        {label}
-      </label>
-      <InlineTextControl
-        multiline={multiline}
-        type={type}
-        step={step}
-        ref={field}
-        id={fieldId}
-        value={draft}
-        maxLength={maxLength}
-        // `readOnly`, not `disabled`, and this is the one that had to change.
-        // A disabled field leaves the tab order, so a reader who pressed Enter
-        // and then Tab was thrown to the far side of the form for as long as
-        // the write took. Read-only holds the field, holds the caret, and
-        // refuses the keystroke — which is the whole of what a write in flight
-        // needs. `aria-busy` carries the reason.
-        readOnly={saving}
-        aria-busy={saving || undefined}
-        aria-invalid={failure ? true : undefined}
-        aria-describedby={failure ? errorId : undefined}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          // In a paragraph Enter is a newline and the commit moves to
-          // Cmd/Ctrl+Enter; in a line Enter is still the commit.
-          if (
-            event.key === "Enter" &&
-            (!multiline || event.metaKey || event.ctrlKey)
-          ) {
-            event.preventDefault();
-            void commit(true);
-          }
-          if (event.key === "Escape") {
-            cancelling.current = true;
-            restoreFocus.current = true;
-            setDraft(value);
-            setEditing(false);
-          }
-        }}
-        onBlur={() => {
-          if (cancelling.current) {
-            cancelling.current = false;
-            return;
-          }
-          void commit();
-        }}
-      />
-      {saving && <BusyMark />}
-      {failure && (
-        <span id={errorId} role="alert" className="form-error">
-          {failure}
-        </span>
+    <Field
+      label={label}
+      labelHidden
+      error={failure ?? undefined}
+      className="inlinetext-edit"
+    >
+      {(control) => (
+        <>
+          <InlineTextControl
+            {...control}
+            multiline={multiline}
+            type={type}
+            step={step}
+            ref={field}
+            value={draft}
+            maxLength={maxLength}
+            // `readOnly`, not `disabled`, and this is the one that had to change.
+            // A disabled field leaves the tab order, so a reader who pressed Enter
+            // and then Tab was thrown to the far side of the form for as long as
+            // the write took. Read-only holds the field, holds the caret, and
+            // refuses the keystroke — which is the whole of what a write in flight
+            // needs. `aria-busy` carries the reason.
+            readOnly={saving}
+            aria-busy={saving || undefined}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              // In a paragraph Enter is a newline and the commit moves to
+              // Cmd/Ctrl+Enter; in a line Enter is still the commit.
+              if (
+                event.key === "Enter" &&
+                (!multiline || event.metaKey || event.ctrlKey)
+              ) {
+                event.preventDefault();
+                void commit(true);
+              }
+              if (event.key === "Escape") {
+                cancelling.current = true;
+                restoreFocus.current = true;
+                setDraft(value);
+                setEditing(false);
+              }
+            }}
+            onBlur={() => {
+              if (cancelling.current) {
+                cancelling.current = false;
+                return;
+              }
+              void commit();
+            }}
+          />
+          {saving && <BusyMark />}
+        </>
       )}
-    </span>
+    </Field>
   );
 }

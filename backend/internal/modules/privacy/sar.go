@@ -146,6 +146,11 @@ type SARPackage struct {
 	// them, and that round is as much a decision about the subject as the last
 	// one is.
 	HandoffHistory []map[string]any `json:"handoff_history"`
+	// ListMemberships is each Shortlist the subject is on, by name, with who
+	// chose them, when and the note on why. ListMembershipHistory is every
+	// time they were added or taken off one.
+	ListMemberships       []map[string]any `json:"list_memberships"`
+	ListMembershipHistory []map[string]any `json:"list_membership_history"`
 	// ProviderClaims is what a licensed data provider asserted about the
 	// subject and this installation retained — bought from a third party
 	// rather than given by them, which is precisely the holding Art. 15(1)(g)
@@ -166,13 +171,19 @@ type SARPackage struct {
 	CaptureDispositions []map[string]any `json:"capture_dispositions"`
 	// The governed outbound messages addressed to the subject: what was sent
 	// to them, when, and whether it left (comms_outbound).
-	SentMessages []map[string]any `json:"sent_messages"`
+	MeetingProposals   []map[string]any `json:"meeting_proposals"`
+	MeetingInvitations []map[string]any `json:"meeting_invitations"`
+	SentMessages       []map[string]any `json:"sent_messages"`
 	// The messages addressed to the subject that have NOT been sent: waiting
 	// for their moment, withdrawn, or held for a human (scheduled_send,
 	// ADR-0104). Held apart from SentMessages because the distinction is the
 	// subject's to know — one is a message they received, the other is one
 	// somebody wrote to them that the system is still holding.
 	ScheduledMessages []map[string]any `json:"scheduled_messages"`
+	// The messages a rep started to the subject and has not sent or scheduled:
+	// the composer's saved drafts (mail_draft). Apart from ScheduledMessages
+	// because nobody has decided to send these at all.
+	DraftMessages []map[string]any `json:"draft_messages"`
 	// The messages written to the subject that nobody has DECIDED yet: an
 	// automation composed them and they are waiting in somebody's approval
 	// inbox (#707). Held apart from ScheduledMessages for the same reason that

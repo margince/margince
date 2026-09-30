@@ -34,7 +34,7 @@ import (
 // so a record the reader cannot see is a 404 with no body — the existence of a
 // record they may not open is itself a disclosure (DOSS-AC-11).
 func EvidenceFor(ctx context.Context, facts Facts, companyID ids.CompanyID,
-	entityType string, entityID openapi_types.UUID,
+	entityType string, entityID openapi_types.UUID, lang string,
 ) (crmcontracts.ClaimEvidence, error) {
 	var zero crmcontracts.ClaimEvidence
 	in, err := BuildInput(ctx, facts, companyID)
@@ -43,7 +43,7 @@ func EvidenceFor(ctx context.Context, facts Facts, companyID ids.CompanyID,
 	}
 	switch entityType {
 	case citeProfileField:
-		return profileFieldEvidence(in, entityID)
+		return profileFieldEvidence(in, entityID, lang)
 	case citeFact:
 		return factEvidence(in, entityID)
 	case citeCompany:
@@ -55,7 +55,7 @@ func EvidenceFor(ctx context.Context, facts Facts, companyID ids.CompanyID,
 	return zero, apperrors.ErrNotFound
 }
 
-func profileFieldEvidence(in Input, entityID openapi_types.UUID) (crmcontracts.ClaimEvidence, error) {
+func profileFieldEvidence(in Input, entityID openapi_types.UUID, lang string) (crmcontracts.ClaimEvidence, error) {
 	for _, field := range in.ProfileFields {
 		if field.Id == nil || *field.Id != entityID {
 			continue
@@ -64,7 +64,7 @@ func profileFieldEvidence(in Input, entityID openapi_types.UUID) (crmcontracts.C
 			entityType:  citeProfileField,
 			entityID:    entityID,
 			source:      string(field.Source),
-			label:       fieldLabel(field.Field),
+			label:       fieldLabel(field.Field, lang),
 			value:       field.Value,
 			excerpt:     field.EvidenceSnippet,
 			sourceURL:   field.SourceUrl,

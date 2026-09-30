@@ -50,18 +50,12 @@ type ResponseMetrics struct {
 	DisposedNotSales int
 }
 
-// firstResponseSQL measures the wait on threads that WERE answered.
+// firstResponseSQL measures the wait on messages that WERE answered.
 //
-// The mirror of waitingRepliesSQL, which finds the newest inbound with no later
-// outbound. This finds the newest inbound that HAS one, and how long it took —
-// so the two together cover every sales thread: answered, and not yet.
-//
-// Deliberately NOT sharing that constant. The anti-join is the whole of what
-// this differs by, and forcing one statement to express both questions would
-// mean a flag deciding whether a NOT EXISTS is an EXISTS — the shape where a
-// reader can no longer tell what either caller runs. What the two DO share is
-// the definition of a sales thread, and that is stated here as the same three
-// clauses rather than inherited: see the comment on the sales link below.
+// The answer is the first one firstAnswerAtSQL finds: our reply on the thread,
+// our same-subject mail to the sender, or a call or held meeting with them. It
+// is the same evidence that takes a message off the waiting lane, so the two
+// together cover every sales message: answered, and not yet.
 //
 // The window is bounded by the caller. An unbounded read would answer "how fast
 // have we ever been", which no reader is asking and which grows without limit.
@@ -70,51 +64,24 @@ type ResponseMetrics struct {
 // metrics window takes the median, which is what "how fast do we answer" means
 // to a reader reading a number. The waiting horizon takes a high one, because
 // its question is the opposite end: the point past which this installation
-// essentially does not answer at all (waitinghorizon.go). Shared rather than
-// copied because what must not drift is the DEFINITION of an answered sales
-// thread, which is the whole body below.
-const firstResponseSQL = `
+// essentially does not answer at all (waitinghorizon.go).
+var firstResponseSQL = `
 	SELECT count(*),
 	       COALESCE(
 	         percentile_cont(%[5]s) WITHIN GROUP (
 	           ORDER BY EXTRACT(EPOCH FROM (reply.occurred_at - inbound.occurred_at)) / 60
 	         )::bigint, 0)
 	  FROM activity inbound
-	  -- The FIRST reply after it, not the newest: what a customer waited is the
-	  -- time to the answer they actually got, and taking the latest outbound on
-	  -- the thread would report the wait as the length of the whole conversation.
-	  JOIN LATERAL (
-	         SELECT a.occurred_at
-	           FROM activity a
-	          -- Matched within ONE medium, on the same triple every other thread
-	          -- reader in this tree matches on, and it is a SECURITY control
-	          -- rather than a convenience.
-	          --
-	          -- thread_key is one flat namespace holding both a mail thread root
-	          -- and a channel's provider:bot:chat key, and the mail half
-	          -- is attacker-supplied: it is the message's own References root, so
-	          -- a sender chooses it verbatim. Matching on the key alone lets a
-	          -- forged References header naming a Telegram conversation — a bot
-	          -- id is public and a private chat's id is the target's own — count
-	          -- somebody else's channel reply as the answer to that mail. The
-	          -- published median then carries a data point a stranger chose, in
-	          -- whichever direction they chose it.
-	          --
-	          -- It also keeps the two readers of "was this answered" agreeing:
-	          -- waitingSQL's anti-join matches this same triple, so without it a
-	          -- thread would be answered here and still waiting there.
-	          WHERE a.thread_key = inbound.thread_key
-	            AND a.kind = inbound.kind
-	            AND a.channel_provider IS NOT DISTINCT FROM inbound.channel_provider
-	            AND a.direction = 'outbound'
-	            AND a.archived_at IS NULL
-	            AND a.occurred_at > inbound.occurred_at
-	          ORDER BY a.occurred_at
-	          LIMIT 1) reply ON TRUE
+	  -- The FIRST answer after it, not the newest: what a customer waited is the
+	  -- time to the answer they actually got. Unbounded above, because an answer
+	  -- that came after the window closed still ends a wait the window opened.
+	  CROSS JOIN LATERAL (
+	         SELECT ` + firstAnswerAtSQL("inbound", "'infinity'::timestamptz") + ` AS occurred_at
+	       ) reply
 	 WHERE inbound.kind IN ('email', 'message')
 	   AND inbound.direction = 'inbound'
 	   AND inbound.archived_at IS NULL
-	   AND inbound.thread_key IS NOT NULL
+	   AND reply.occurred_at IS NOT NULL
 	   AND inbound.occurred_at >= $1
 	   AND inbound.occurred_at < $2
 	   AND %[1]s

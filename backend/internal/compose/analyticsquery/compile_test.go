@@ -430,3 +430,24 @@ func TestEveryBindableFilterSpellingStillCompiles(t *testing.T) {
 		})
 	}
 }
+
+// A population defined as every row — leads-by-status counts the archived too —
+// explains with no WHERE at all rather than an empty one.
+func TestAnExplanationOverEveryRowRendersNoEmptyWhere(t *testing.T) {
+	t.Parallel()
+	schema := testSchema()
+	everyRow := schema.Entities["deals"]
+	everyRow.BaseWhere = ""
+	schema.Entities["deals"] = everyRow
+
+	plan, err := CompileExplain(Explain{Query: Query{
+		Entity: "deals", Measures: []Measure{{Fn: CountAll}},
+	}}, schema, noScope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const want = "SELECT t.id FROM deal t ORDER BY t.id LIMIT $1"
+	if plan.SQL != want {
+		t.Errorf("got %s\nwant %s", plan.SQL, want)
+	}
+}

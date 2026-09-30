@@ -107,7 +107,7 @@ func assert422Code(t *testing.T, e *apptest.AppEnv, path, wantCode string) {
 func assertCursorSortRefusals(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	status, score, problem := createCustomField(t, e, integration.AnyMap{
-		"object": "contact", "label": "Score", "type": "number", "source": "ui",
+		"object": "contact", "label": "Score", "type": "number", "source": "manual",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create contact number field status = %d: %+v", status, problem)
@@ -146,16 +146,16 @@ func TestCustomFieldVocabHTTP(t *testing.T) {
 	e := schemaWiredEnv(t)
 
 	status, tier, problem := createCustomField(t, e, integration.AnyMap{
-		"object": "contact", "label": "Tier", "type": "text", "source": "ui",
+		"object": "contact", "label": "Tier", "type": "text", "source": "manual",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create contact field status = %d: %+v", status, problem)
 	}
 	col := tier.ColumnName
 
-	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact B", "source": "ui", col: "beta"})
-	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact A", "source": "ui", col: "alpha"})
-	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact N", "source": "ui"})
+	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact B", "source": "manual", col: "beta"})
+	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact A", "source": "manual", col: "alpha"})
+	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact N", "source": "manual"})
 
 	t.Run("cf_ sort orders the page, NULL last", func(t *testing.T) {
 		got := listContactsNames(t, e, "?sort="+col)

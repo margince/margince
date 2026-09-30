@@ -69,7 +69,11 @@ function DealCardCompany({
   }
   return (
     <span className="deal-company">
-      <Avatar name={deal.company} src={deal.companyLogoUrl} shape="company" />
+      <Avatar
+        name={deal.company}
+        identity={deal.companyId}
+        src={deal.companyLogoUrl}
+      />
       {/* The name needs a box of its own to be truncated in: a bare text node
           has nothing for the ellipsis to apply to, and wraps under its own
           mark instead. */}
@@ -108,7 +112,9 @@ function DealCardCompany({
  * stop of its own: the card is a link and already has one, and a second stop
  * inside it would be a control that does nothing.
  */
-function DealOwner({ name }: Readonly<{ name: string }>) {
+function DealOwner({
+  owner: { id, name },
+}: Readonly<{ owner: Readonly<{ id: string; name: string }> }>) {
   const tip = useTooltip<HTMLSpanElement>(name);
   return (
     <span
@@ -118,7 +124,7 @@ function DealOwner({ name }: Readonly<{ name: string }>) {
       ref={tip.ref}
       {...tip.trigger}
     >
-      <Avatar name={name} />
+      <Avatar name={name} identity={id} />
       {tip.tip}
     </span>
   );
@@ -307,7 +313,7 @@ export function DealCard({
       )}
       <span className="deal-head">
         <DealCardCompany deal={deal} onOpen={onOpen} />
-        {deal.owner && <DealOwner name={deal.owner} />}
+        {deal.owner && <DealOwner owner={deal.owner} />}
       </span>
       <span className="deal-figure">
         <span className="deal-value">

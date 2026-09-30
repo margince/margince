@@ -65,6 +65,30 @@ repo_root="$PWD"
 COMPOSE_OWNER_DSN="postgres://margince_owner:dev@localhost:15432/margince"
 COMPOSE_APP_DSN="postgres://margince_app:margince_app_dev@localhost:15432/margince"
 
+# .env.local FIRST, before anything below resolves a default out of the
+# environment.
+#
+# It used to be sourced deep inside the `dev` command, beside the AI block that
+# needed the cloud keys — which is after every `${VAR:-default}` in this file
+# has already run. So the file lost every question it was asked: the DSN
+# resolution below explained in a comment that it consults MARGINCE_DSN, and did
+# so against an environment that had not yet been read. A value set in
+# .env.local looked meaningful and did nothing, which is the failure this whole
+# file has now made twice.
+#
+# Seeded here too, and on every invocation rather than only on `dev`: the seed
+# and the read are one step, and splitting them is what let the read move.
+seed_and_source_env_local() {
+    if [[ ! -f .env.local && -f .env.example ]]; then
+        cp .env.example .env.local
+        echo "dev: seeded .env.local from .env.example — edit it to set keys (GEMINI_API_KEY, MARGINCE_GMAIL_*, …)"
+    fi
+    if [[ -f .env.local ]]; then
+        set -a; . ./.env.local; set +a
+    fi
+}
+seed_and_source_env_local
+
 # This stack's connection surface, resolved the way the product resolves it:
 # an explicit argument, else the environment the binaries themselves read, else
 # the compose default. OWNER_DSN runs migrations; APP_DSN is the non-superuser
@@ -82,6 +106,39 @@ REDIS_PORT="${REDIS_PORT:-16379}"
 # well-known throwaway dev credential the compose stack already ships, never a
 # production secret.
 MINIO_PORT="${MINIO_PORT:-29000}"
+
+# WHAT THIS STACK OWNS, AND WHAT IT MERELY DEFAULTS.
+#
+# `make dev` owns what makes this a per-worktree dev stack: MARGINCE_ENV, the
+# database name, the Redis logical database and the port pair. Override those
+# and you do not have this stack any more — you have a stack that looks like it
+# and answers somebody else's rows.
+#
+# Everything else it sets is a DEFAULT. The blobstore four point at the MinIO
+# the compose stack starts, and pointing them at a real object store instead is
+# a thing an engineer legitimately wants; they were passed as command-prefix
+# assignments, which outrank an exported variable, so a value set in .env.local
+# was read, exported and then discarded with nothing said.
+# Its own function so a test can call it rather than read it: the failure this
+# replaces was a resolution that looked right in the file and lost at runtime.
+resolve_stack_environment() { # minio_port
+    MARGINCE_BLOBSTORE_ENDPOINT="${MARGINCE_BLOBSTORE_ENDPOINT:-localhost:${1}}"
+    MARGINCE_BLOBSTORE_ACCESS_KEY="${MARGINCE_BLOBSTORE_ACCESS_KEY:-minioadmin}"
+    MARGINCE_BLOBSTORE_SECRET_KEY="${MARGINCE_BLOBSTORE_SECRET_KEY:-minioadmin}"
+    MARGINCE_BLOBSTORE_REGION="${MARGINCE_BLOBSTORE_REGION:-us-east-1}"
+    export MARGINCE_BLOBSTORE_ENDPOINT MARGINCE_BLOBSTORE_ACCESS_KEY \
+        MARGINCE_BLOBSTORE_SECRET_KEY MARGINCE_BLOBSTORE_REGION
+
+    # MARGINCE_ENV is this script's, and says so rather than winning silently.
+    # A `make dev` that booted a production posture would refuse an unlicensed
+    # install and hide the data reset, for a reason nobody would connect to a
+    # line in their own .env.local.
+    if [[ -n "${MARGINCE_ENV:-}" && "${MARGINCE_ENV}" != "dev" ]]; then
+        echo "dev: MARGINCE_ENV=${MARGINCE_ENV} is set, and this stack runs as dev regardless — the dev postures are what \`make dev\` is. Run the binary yourself to serve another posture."
+    fi
+    export MARGINCE_ENV=dev
+}
+resolve_stack_environment "$MINIO_PORT"
 
 # Slug, state root and bucket come from the shared helper — three scripts need
 # the same answers and dev.sh knowing them alone is how `make dev-logs` came to
@@ -368,7 +425,27 @@ else
   label="dev '$slug'"
   db="margince_dev_${slug}"
 fi
-blob_bucket="$(dev_bucket_for_slug "$slug")"
+
+# Under the machine-global root, not the worktree's own .tmp/ — the same reason
+# the claim registry moved there. The pids land in the SAME file claim_stack
+# reserved, so a sweep from any worktree can see this stack; while these were two
+# different files the reservation carried ports and no pids, and the sweep read a
+# directory only this worktree could see.
+rundir="$(dev_state_dir "$slug")"
+log="${rundir}/dev.log"
+state="${rundir}/env"
+
+# Set HERE, above every reader, rather than beside the boot that uses `log`: the
+# takedown paths run first and stack_victims reads `state`. Left with the boot,
+# that read was unbound — under `set -u` the subshell died, the collector printed
+# nothing, and the takedown reported success having killed nothing. The boot then
+# failed on a port its own restart was supposed to have freed.
+
+# The bucket is a DEFAULT like the other three: the per-worktree name keeps two
+# stacks off each other's objects, and an engineer pointing the endpoint at a
+# real store names the bucket there too. Nothing here has to create it —
+# blobstore.New makes a missing bucket — so an override costs no setup step.
+blob_bucket="${MARGINCE_BLOBSTORE_BUCKET:-$(dev_bucket_for_slug "$slug")}"
 # :8080 is THE port — the app, the thing a human opens, always and only. The api
 # sits behind it at fe+10000 and the app's dev server proxies /v1 and the probes
 # through, so `curl localhost:8080/v1/...` still answers and nobody has to
@@ -385,6 +462,90 @@ DEV_API_PORT_OFFSET=10000
 # developer's browser among them — and this sweep kills what it is given.
 port_listeners() { # port
   lsof -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null || true
+}
+
+# with_database and stack_server_pids sit HERE, above the takedown that calls
+# them through stack_victims, and not beside the boot code that also uses them.
+# Below it they were simply not defined yet when a restart ran: bash reported
+# "command not found", the collector lost both its DSN arm and its command-line
+# arm, and the takedown killed only what a port could name. The worker binds no
+# port — which is the survivor this whole path exists for.
+
+# with_database DSN NAME — the same connection, pointed at a different database.
+#
+# The database segment is REPLACED, never inherited. DEV_SLUG owns the name
+# ($db above), and a stack that took the name from a supplied DSN would sit on
+# slug-derived ports in front of the BASE database — two stacks that look
+# isolated quietly sharing one.
+#
+# A query string is carried over rather than dropped with the rest of the
+# suffix. That was harmless while these were dev-only variables nobody wrote
+# that way; MARGINCE_DSN is what a DEPLOYMENT fills in, where `?sslmode=require`
+# is ordinary, and silently dropping it would quietly downgrade the connection.
+#
+# A DSN that is not a URL is refused rather than rewritten. libpq also accepts
+# `host=… dbname=…`, and there is no correct way to swap a database segment that
+# is not there — building something malformed from it would fail later, further
+# from the cause. Nothing here echoes the DSN: it carries a password.
+with_database() { # dsn name
+  local dsn="$1" name="$2" query="" scheme rest
+  case "$dsn" in
+    *\?*) query="?${dsn#*\?}"; dsn="${dsn%%\?*}" ;;
+  esac
+  # Both spellings libpq itself accepts, and only those. A `mysql://` DSN would
+  # otherwise be rewritten to point at this stack's database and then fail at the
+  # client, which is the same "fails later, further from the cause" this function
+  # refuses the key/value form to avoid.
+  case "$dsn" in
+    postgres://*|postgresql://*) scheme="${dsn%%://*}://"; rest="${dsn#*://}" ;;
+    *)
+      echo "FAIL: the DSN must be a postgres:// or postgresql:// URL so this stack can point it at ${name}; neither another scheme nor libpq's 'host=… dbname=…' form can be redirected here. Set OWNER_DSN/APP_DSN (or MARGINCE_OWNER_DSN/MARGINCE_DSN) to one." >&2
+      return 1 ;;
+  esac
+  # Everything from the first slash on is whatever database that DSN named; the
+  # authority (credentials, host, port) is the part this stack reuses.
+  rest="${rest%%/*}"
+  printf '%s%s/%s%s' "$scheme" "$rest" "$name" "$query"
+}
+
+# stack_server_pids names THIS stack's api and worker wherever they came from —
+# including a run whose pid the state file no longer holds.
+#
+# The state file records one BACKEND_PID/WORKER_PID and every `make dev`
+# overwrites it, so a worker that outlived its own start is invisible to the
+# only thing that would kill it. The api is caught anyway, by its port; a worker
+# binds none, so nothing looked for it and they accumulated — four against one
+# database, three of them stale builds. They share a River leader election, and
+# the leader is what inserts the periodic jobs: an old leader renewing its lease
+# schedules only the job kinds ITS binary knows, so a job kind added since is
+# never enqueued at all. Every other lane keeps running, which is what makes a
+# stale worker read as a broken feature rather than as a process nobody stopped.
+#
+# Matched on the DSN, and on the Redis address when the caller knows it. The
+# database name is already one-to-one with the slug — `margince` for the primary
+# worktree, `margince_dev_<slug>` for a linked one — so the DSN alone names a
+# stack. The Redis address narrows it further and is passed whenever a record
+# supplies it.
+#
+# It is OMITTED rather than guessed when there is no record. A stack whose state
+# file is gone has no claim to read, and the registry's fallback for "no claim"
+# is logical database 0 — the PRIMARY stack's. Passing that would ask for a
+# linked worktree's database on the primary's Redis database, match nothing, and
+# clean up nothing, silently: the same shape of miss this function exists to
+# close.
+# The DSN match ends at a WORD BOUNDARY, never mid-value. `margince` is a prefix
+# of every `margince_dev_<slug>`, so a substring test run from the primary
+# worktree matches every linked worktree's servers — and the primary is the one
+# whose cleanup would then kill all of them at once.
+stack_server_pids() { # dsn [redis_addr]
+  local pid cmd
+  for pid in $(pgrep -f 'bin/(api|worker)|exe/(api|worker)' 2>/dev/null || true); do
+    [[ "$pid" == "$$" ]] && continue
+    cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
+    [[ "$cmd" == *"--dsn $1 "* || "$cmd" == *"--dsn $1" ]] || continue
+    [[ -n "${2:-}" && "$cmd" != *"--redis $2 "* && "$cmd" != *"--redis $2" ]] && continue
+    echo "$pid"
+  done
 }
 
 # The Redis instance serves 80 logical databases in three blocks that must not
@@ -612,43 +773,6 @@ if [[ "$cmd" == "up" ]]; then
 fi
 REDIS_ADDR="localhost:${REDIS_PORT}/${redis_db}"
 
-# with_database DSN NAME — the same connection, pointed at a different database.
-#
-# The database segment is REPLACED, never inherited. DEV_SLUG owns the name
-# ($db above), and a stack that took the name from a supplied DSN would sit on
-# slug-derived ports in front of the BASE database — two stacks that look
-# isolated quietly sharing one.
-#
-# A query string is carried over rather than dropped with the rest of the
-# suffix. That was harmless while these were dev-only variables nobody wrote
-# that way; MARGINCE_DSN is what a DEPLOYMENT fills in, where `?sslmode=require`
-# is ordinary, and silently dropping it would quietly downgrade the connection.
-#
-# A DSN that is not a URL is refused rather than rewritten. libpq also accepts
-# `host=… dbname=…`, and there is no correct way to swap a database segment that
-# is not there — building something malformed from it would fail later, further
-# from the cause. Nothing here echoes the DSN: it carries a password.
-with_database() { # dsn name
-  local dsn="$1" name="$2" query="" scheme rest
-  case "$dsn" in
-    *\?*) query="?${dsn#*\?}"; dsn="${dsn%%\?*}" ;;
-  esac
-  # Both spellings libpq itself accepts, and only those. A `mysql://` DSN would
-  # otherwise be rewritten to point at this stack's database and then fail at the
-  # client, which is the same "fails later, further from the cause" this function
-  # refuses the key/value form to avoid.
-  case "$dsn" in
-    postgres://*|postgresql://*) scheme="${dsn%%://*}://"; rest="${dsn#*://}" ;;
-    *)
-      echo "FAIL: the DSN must be a postgres:// or postgresql:// URL so this stack can point it at ${name}; neither another scheme nor libpq's 'host=… dbname=…' form can be redirected here. Set OWNER_DSN/APP_DSN (or MARGINCE_OWNER_DSN/MARGINCE_DSN) to one." >&2
-      return 1 ;;
-  esac
-  # Everything from the first slash on is whatever database that DSN named; the
-  # authority (credentials, host, port) is the part this stack reuses.
-  rest="${rest%%/*}"
-  printf '%s%s/%s%s' "$scheme" "$rest" "$name" "$query"
-}
-
 dev_owner_url="$(with_database "$OWNER_DSN" "$db")"
 dev_app_url="$(with_database "$APP_DSN" "$db")"
 
@@ -698,15 +822,6 @@ dsn_port() { # dsn
   *) printf '5432\n' ;;
   esac
 }
-
-# Under the machine-global root, not the worktree's own .tmp/ — the same reason
-# the claim registry moved there. The pids land in the SAME file claim_stack
-# reserved, so a sweep from any worktree can see this stack; while these were two
-# different files the reservation carried ports and no pids, and the sweep read a
-# directory only this worktree could see.
-rundir="$(dev_state_dir "$slug")"
-log="${rundir}/dev.log"
-state="${rundir}/env"
 
 # Tag every line with the process that wrote it. api, worker and Vite all append
 # to one log, and once their output interleaves there is no way to recover which
@@ -826,46 +941,6 @@ margince_server_pids() {
     [[ "$pid" == "$$" ]] && continue
     cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
     [[ "$cmd" == *margince* ]] && echo "$pid"
-  done
-}
-
-# stack_server_pids names THIS stack's api and worker wherever they came from —
-# including a run whose pid the state file no longer holds.
-#
-# The state file records one BACKEND_PID/WORKER_PID and every `make dev`
-# overwrites it, so a worker that outlived its own start is invisible to the
-# only thing that would kill it. The api is caught anyway, by its port; a worker
-# binds none, so nothing looked for it and they accumulated — four against one
-# database, three of them stale builds. They share a River leader election, and
-# the leader is what inserts the periodic jobs: an old leader renewing its lease
-# schedules only the job kinds ITS binary knows, so a job kind added since is
-# never enqueued at all. Every other lane keeps running, which is what makes a
-# stale worker read as a broken feature rather than as a process nobody stopped.
-#
-# Matched on the DSN, and on the Redis address when the caller knows it. The
-# database name is already one-to-one with the slug — `margince` for the primary
-# worktree, `margince_dev_<slug>` for a linked one — so the DSN alone names a
-# stack. The Redis address narrows it further and is passed whenever a record
-# supplies it.
-#
-# It is OMITTED rather than guessed when there is no record. A stack whose state
-# file is gone has no claim to read, and the registry's fallback for "no claim"
-# is logical database 0 — the PRIMARY stack's. Passing that would ask for a
-# linked worktree's database on the primary's Redis database, match nothing, and
-# clean up nothing, silently: the same shape of miss this function exists to
-# close.
-# The DSN match ends at a WORD BOUNDARY, never mid-value. `margince` is a prefix
-# of every `margince_dev_<slug>`, so a substring test run from the primary
-# worktree matches every linked worktree's servers — and the primary is the one
-# whose cleanup would then kill all of them at once.
-stack_server_pids() { # dsn [redis_addr]
-  local pid cmd
-  for pid in $(pgrep -f 'bin/(api|worker)|exe/(api|worker)' 2>/dev/null || true); do
-    [[ "$pid" == "$$" ]] && continue
-    cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
-    [[ "$cmd" == *"--dsn $1 "* || "$cmd" == *"--dsn $1" ]] || continue
-    [[ -n "${2:-}" && "$cmd" != *"--redis $2 "* && "$cmd" != *"--redis $2" ]] && continue
-    echo "$pid"
   done
 }
 
@@ -1080,14 +1155,9 @@ up)
   # .env.local exports those vars, and the api/worker started below inherit them —
   # no key ever lands in a config file. Seed .env.local from the tracked template
   # on first run so a fresh clone has a documented place for these keys.
-  if [[ ! -f .env.local && -f .env.example ]]; then
-    cp .env.example .env.local
-    echo "dev: seeded .env.local from .env.example — edit it to set keys (GEMINI_API_KEY, MARGINCE_GMAIL_*, …)"
-  fi
+  # Already sourced, at the top of this file — see seed_and_source_env_local.
+  # The keys the scan below looks for are in the environment by now.
   ai_flag=(--ai-fake)
-  if [[ -f .env.local ]]; then
-    set -a; . ./.env.local; set +a
-  fi
   # Real routing needs the key for EVERY cloud provider the routing file
   # actually binds — SelectBrain fails closed at boot on the first bound
   # provider whose env key is missing, so "any key present" is not enough
@@ -1109,6 +1179,7 @@ up)
       openai)            _env="OPENAI_API_KEY" ;;
       gemini)            _env="GEMINI_API_KEY" ;;
       openai_compatible) _env="OPENAI_COMPATIBLE_API_KEY" ;;
+      jev)               _env="TYPESAFE_API_KEY" ;;
     esac
     if [[ -n "$_env" && -z "${!_env:-}" ]]; then
       missing_keys="$missing_keys $_env"
@@ -1284,13 +1355,8 @@ up)
   # relay: it coexists with the worker's standalone relay (started below) —
   # outbox rows are claimed FOR UPDATE SKIP LOCKED, so two relays never
   # double-ship.
-  MARGINCE_ENV=dev \
-    MARGINCE_SCHEMA_DSN="$dev_owner_url" \
-    MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
-    MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
+  MARGINCE_SCHEMA_DSN="$dev_owner_url" \
     MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
-    MARGINCE_BLOBSTORE_REGION=us-east-1 \
     ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" \
     --redis "${REDIS_ADDR}" \
     "${public_base_url_flag[@]}" \
@@ -1338,12 +1404,7 @@ up)
     # A short poll makes the demo mailbox responsive; the default is 2m.
     worker_gmail_flags=(--gmail-sync-interval 30s)
   fi
-  MARGINCE_ENV=dev \
-    MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
-    MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
-    MARGINCE_BLOBSTORE_REGION=us-east-1 \
+  MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
     ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
     --config "$deploy_cfg" \
     "${public_base_url_flag[@]}" \

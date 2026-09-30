@@ -21,6 +21,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -63,6 +64,11 @@ var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 // pipeline, its contacts, and what has moved recently — each already pruned
 // to the reader's row scope by the read that produced it.
 type Input struct {
+	// ID is in the payload because the prompt tells the model to cite it — "a
+	// sentence about the account itself cites the company" — and knownRecords
+	// accepts {company, ID} as evidence. An id the model is not shown makes
+	// every company-level sentence ungroundable.
+	ID           string    `json:"id"`
 	Name         string    `json:"name"`
 	Industry     string    `json:"industry,omitempty"`
 	SizeBand     string    `json:"size_band,omitempty"`
@@ -77,10 +83,12 @@ type Input struct {
 	// the 360 converts to at each deal's frozen close-time rate. It has no
 	// relation to whatever the open deals are priced in, so it must never be
 	// labelled with theirs.
-	WonCurrency string   `json:"won_currency,omitempty"`
-	LostCount   int      `json:"lost_count"`
-	OpenTasks   []TaskIn `json:"open_tasks,omitempty"`
-	Recent      []ActIn  `json:"recent,omitempty"`
+	WonCurrency string `json:"won_currency,omitempty"`
+	// LostCount is nil when the reader cannot see deals: a zero there would
+	// tell the writer a fact about the section it was told to stay silent on.
+	LostCount *int     `json:"lost_count,omitempty"`
+	OpenTasks []TaskIn `json:"open_tasks,omitempty"`
+	Recent    []ActIn  `json:"recent,omitempty"`
 	// SectionsOmitted names what the reader could NOT see. It rides the
 	// fingerprint so two readers with different grants never share a cached
 	// brief, and it tells the writer to stay silent about those sections
@@ -168,6 +176,10 @@ type ActIn struct {
 	ID      string `json:"id"`
 	Kind    string `json:"kind"`
 	Subject string `json:"subject,omitempty"`
+	// Speaker is who sent it — "them" for the account, "you" for the reader's
+	// side — named the way the contact brief names it, and empty on a row that
+	// records no direction.
+	Speaker string `json:"speaker,omitempty"`
 	At      string `json:"at"`
 	// Done says whether a timeline item that CAN be finished has been. It is a
 	// pointer because most items cannot: a call happened, and asking whether it
@@ -249,7 +261,7 @@ const briefInputActivities = 12
 // re-queries: the 360 ran under the caller's gates, so anything absent from
 // it is absent because that caller may not see it.
 func FromView(view crmcontracts.Company360) Input {
-	in := Input{Name: view.Company.DisplayName}
+	in := Input{ID: view.Company.Id.String(), Name: view.Company.DisplayName}
 	if view.Company.Industry != nil {
 		in.Industry = *view.Company.Industry
 	}
@@ -286,7 +298,8 @@ func foldDeals(view crmcontracts.Company360, in *Input) {
 	if view.Deals == nil {
 		return
 	}
-	in.LostCount = view.Deals.LostCount
+	lost := view.Deals.LostCount
+	in.LostCount = &lost
 	if view.Deals.WonLifetime.AmountMinor != nil && view.Deals.WonLifetime.Currency != nil {
 		in.WonCurrency = *view.Deals.WonLifetime.Currency
 		in.WonLifetime = *view.Deals.WonLifetime.AmountMinor
@@ -337,6 +350,9 @@ func foldRecent(view crmcontracts.Company360, in *Input) {
 		}
 		if activity.Subject != nil {
 			act.Subject = *activity.Subject
+		}
+		if activity.Direction != nil {
+			act.Speaker = contactbrief.SpeakerFor(*activity.Direction)
 		}
 		// Only the kinds that HAVE an outcome carry one. A call or a mail is
 		// neither outstanding nor complete, and answering for it would invent

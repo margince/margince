@@ -76,8 +76,10 @@ those rows cannot be distinguished from deliberate opt-outs. Eligible pending
 proposals follow the effective mode when the next automatic pass runs.
 
 **An invited member walks the personal stops.** Their company and its basis are
-already settled, so their rail reads Voice · Connect and the restore plan lands
-them straight in the voice act. The app's onboarding gate
+already settled — the server refuses every new seat with 409
+`company_not_described` until the company is saved — so their rail reads
+Voice · Connect and the restore plan lands them straight in the voice act. The
+app's onboarding gate
 sends every human whose wizard state is absent or unfinished here, a read seat
 excepted (it cannot write the checkpoint the journey ends on), so a member
 invited later trains their voice and connects their mailbox exactly as the

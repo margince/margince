@@ -5,7 +5,6 @@ package contacts
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -99,6 +98,10 @@ type ContactCandidate struct {
 	// a name and no key. So it is stated by whoever knows what they will do with
 	// the answer.
 	QueueNameCollisions bool
+	// ExcludeID leaves one contact out of the candidate set: the contact being
+	// re-checked after a rename, which would otherwise match itself perfectly
+	// and hide every real twin behind the self-score.
+	ExcludeID *ids.ContactID
 }
 
 // ContactResolution is PO-F-1's output: the decision, the contact it names,
@@ -127,36 +130,6 @@ type ContactResolution struct {
 	Conflict *LaneConflict
 }
 
-// LaneConflict names both sides of an exact-lane disagreement and which
-// lane spoke for each, so the caller's policy has the evidence it needs
-// without re-running the ladder.
-type LaneConflict struct {
-	RoutedTo, Rival       ids.ContactID
-	RoutedLane, RivalLane string
-}
-
-// The exact lanes, named for LaneConflict's evidence. Ladder order is
-// routing precedence: an established channel binding outranks a shared
-// address, which outranks a phone number households and switchboards
-// share.
-//
-// LaneEmail alone is exported, and only because the published
-// extension.MergeKeyEmail must equal it: a source declares that key to have an
-// address reach this lane, and a fitness test outside this package reads both to
-// hold them equal. The other two name no vocabulary beyond this module.
-const (
-	laneChannelIdentity = "channel_identity"
-	LaneEmail           = "email"
-	lanePhone           = "phone"
-)
-
-// exactLane is one lane's answer, in ladder order.
-type exactLane struct {
-	name      string
-	contactID ids.ContactID
-	found     bool
-}
-
 // DedupeContact is PO-F-1, the single contact-matching implementation —
 // "one dedupe implementation, not two". It reads; it never writes and
 // never merges. Callers map the decision onto their own policy.
@@ -175,81 +148,6 @@ func DedupeContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactR
 		return ContactResolution{Decision: DecisionNoMatch}, nil
 	}
 	return fuzzyContact(ctx, tx, c)
-}
-
-// exactLanes runs every exact lane, in ladder order. All of them run even
-// once one has hit: a disagreement between two lanes is itself an answer
-// the caller needs, and only the rival lanes can report it. A lane whose
-// candidate keys are empty costs no query.
-func exactLanes(ctx context.Context, tx pgx.Tx, c ContactCandidate) ([]exactLane, error) {
-	channelHit, channelFound, err := exactContactByChannelIdentity(ctx, tx, c.ChannelIdentities)
-	if err != nil {
-		return nil, err
-	}
-	emailHit, emailFound, err := exactContactByEmail(ctx, tx, c.Emails)
-	if err != nil {
-		return nil, err
-	}
-	phoneHit, phoneFound, err := exactContactByPhone(ctx, tx, c.Phones)
-	if err != nil {
-		return nil, err
-	}
-	return []exactLane{
-		{laneChannelIdentity, channelHit, channelFound},
-		{LaneEmail, emailHit, emailFound},
-		{lanePhone, phoneHit, phoneFound},
-	}, nil
-}
-
-// routeExact picks the routed contact deterministically — the first lane
-// that hit — and reports the first later lane that named someone else.
-// Routing is immediate and never deferred to a human: a message with
-// nowhere to land is worse than a message on the record whose binding was
-// established first.
-func routeExact(lanes []exactLane) (ContactResolution, bool) {
-	for i, lane := range lanes {
-		if !lane.found {
-			continue
-		}
-		res := ContactResolution{Decision: DecisionExactCollision, ContactID: lane.contactID, MatchedLane: lane.name}
-		for _, rival := range lanes[i+1:] {
-			if rival.found && rival.contactID != lane.contactID {
-				res.Conflict = &LaneConflict{
-					RoutedTo: lane.contactID, Rival: rival.contactID,
-					RoutedLane: lane.name, RivalLane: rival.name,
-				}
-				break
-			}
-		}
-		return res, true
-	}
-	return ContactResolution{}, false
-}
-
-// exactContactByEmail is PO-F-1 tier 1. Every candidate email is checked;
-// the lowest contact id wins so a candidate colliding on two emails
-// against two contacts resolves the same way on every run.
-func exactContactByEmail(ctx context.Context, tx pgx.Tx, emails []string) (ids.ContactID, bool, error) {
-	if len(emails) == 0 {
-		return ids.ContactID{}, false, nil
-	}
-	lowered := make([]string, 0, len(emails))
-	for _, e := range emails {
-		lowered = append(lowered, normalizeEmail(e))
-	}
-	var id ids.ContactID
-	err := tx.QueryRow(ctx, `
-		SELECT contact_id FROM contact_email
-		WHERE email = ANY($1) AND archived_at IS NULL
-		ORDER BY contact_id
-		LIMIT 1`, lowered).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.ContactID{}, false, nil
-	}
-	if err != nil {
-		return ids.ContactID{}, false, fmt.Errorf("dedupe contact exact tier: %w", err)
-	}
-	return id, true, nil
 }
 
 // contactCandidateRow is one row of the restricted candidate set.
@@ -281,7 +179,7 @@ type contactCandidateRow struct {
 // trigram arm does. Computing one side in Go would move the divergence rather
 // than close it: SQL's lower+unaccent and Go's Unicode full folding are two
 // different normalizations, and the point is to stop relying on either being a
-// superset of the other. It is contactNameKeySQL, which spells the two
+// superset of the other. It is exactNameKeySQL, which spells the two
 // properties NormalizeContactName has and a bare SQL comparison does not: the
 // trim, and the internal-whitespace collapse. Both are real divergences —
 // "  Lucy Vo  " and "Lucy Vo" are Go-equal, and so are "Éva  Ő" and "Éva Ő",
@@ -314,10 +212,11 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 		  LEFT JOIN company_domain od
 		    ON od.company_id = r.company_id AND od.archived_at IS NULL
 		 WHERE p.archived_at IS NULL
+		   AND ($3::uuid IS NULL OR p.id <> $3)
 		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
 		        OR ($2::uuid IS NOT NULL AND r.company_id = $2)
-		        OR `+contactNameKeySQL("p.full_name")+` = `+contactNameKeySQL("$1")+`)`,
-		c.FullName, c.CurrentPrimaryCompanyID)
+		        OR `+exactNameKeySQL("p.full_name")+` = `+exactNameKeySQL("$1")+`)`,
+		c.FullName, c.CurrentPrimaryCompanyID, c.ExcludeID)
 	if err != nil {
 		return ContactResolution{}, fmt.Errorf("dedupe contact candidate set: %w", err)
 	}

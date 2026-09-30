@@ -12,7 +12,7 @@ import { type SectionState, SurfaceState } from "./surfacestate";
 // card make the same shape on screen and mean opposite things, and the words
 // are all that separate them.
 const meta: Meta<typeof SurfaceState> = {
-  title: "Design System/SurfaceState",
+  title: "Components/Messaging/Surface state",
   component: SurfaceState,
   parameters: { layout: "padded" },
   decorators: [
@@ -51,7 +51,7 @@ const DETAIL = {
   remaining: 4,
 };
 
-function AllStates() {
+function AllStates({ label }: Readonly<{ label?: string }>) {
   return (
     <div
       style={{
@@ -63,9 +63,10 @@ function AllStates() {
       {ALL.map((state) => (
         <Card key={state} title={state}>
           <SurfaceState
+            label={label}
             loadingLabel="Loading the section"
             state={state}
-            emptyLabel="No open deal on this account."
+            emptyLabel="No open deals for this company."
             detail={DETAIL}
           >
             {ROWS}
@@ -78,6 +79,12 @@ function AllStates() {
 
 export const EveryState: Story = { render: () => <AllStates /> };
 
+/** The same states under a part's own heading: every sentence sits one step
+ * under it, so "none" and "hidden" are not told apart by where they sit. */
+export const EveryStateNamed: Story = {
+  render: () => <AllStates label="Deals" />,
+};
+
 /** `stale` puts the caveat ABOVE the rows and `partial` puts the count BELOW
  * them, and neither is a layout preference: a caveat under a figure arrives
  * after the reader has already taken it as current, while a truncation count
@@ -89,7 +96,7 @@ function OrderDemo() {
         <SurfaceState
           loadingLabel="Loading the section"
           state="stale"
-          emptyLabel="No open deal on this account."
+          emptyLabel="No open deals for this company."
           detail={{ staleAsOf: "9:15 this morning" }}
         >
           {ROWS}
@@ -99,7 +106,7 @@ function OrderDemo() {
         <SurfaceState
           loadingLabel="Loading the section"
           state="partial"
-          emptyLabel="No open deal on this account."
+          emptyLabel="No open deals for this company."
           detail={{ remaining: 4 }}
         >
           {ROWS}

@@ -22,7 +22,9 @@ import (
 // generator uses: these descriptions are hand-tuned and the key order is
 // deliberate, and round-tripping them would churn the file on every
 // regeneration for no reader's benefit. What is NOT literal is the tier enum,
-// which comes from the task contract through ai.AllTiers.
+// which comes from the task contract through ai.AllTiers, and the decisions
+// provider enum, which comes from the provider registry through
+// ai.DecisionProviders.
 const routingDefsTemplate = `{
   "aiRouting": {
     "description": "The tier-to-model binding a fresh installation is bootstrapped with. Consumed ONCE, at bootstrap: a running installation is rebound through Settings -> AI, and editing this afterwards changes nothing until the database is rebuilt.",
@@ -45,6 +47,10 @@ const routingDefsTemplate = `{
   "embeddings": {
     "description": "The embedding lane, bound separately from chat (retrieval must survive a chat-budget exhaustion). Required.",
     "$ref": "#/$defs/embeddingsBinding"
+  },
+  "decisions": {
+    "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, on a certified site, and falls back to its ladder whenever the answer does not stand.",
+    "$ref": "#/$defs/decisionsBinding"
   }
 }
   },
@@ -68,24 +74,34 @@ const routingDefsTemplate = `{
         "contains": { "const": "text" },
         "items": { "enum": ["text", "image"] }
       },
-      "routing": { "$ref": "#/$defs/upstreamRouting" }
+      "routing": { "$ref": "#/$defs/upstreamRouting" },
+      "thinking_level": {
+        "description": "How deeply a gemini tier thinks when the request names no level of its own. Omit it for the adapter's default: a structured request thinks at low, and a Flash-Lite keeps its own shallower default (minimal), which low RAISES. Gemini charges thinking to the same output ceiling as the answer. Gemini 3 or later only — a Gemini 2.5 answers the field with a 400, and gemini-3.1-pro-preview refuses minimal.",
+        "enum": ["minimal", "low", "medium", "high"]
+      }
     },
     "allOf": [
       {
         "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
         "then": { "required": ["base_url"] }
       },
+      { "$ref": "#/$defs/routingNeedsOpenRouter" },
       {
-        "if": { "required": ["routing"] },
-        "then": {
-          "properties": {
-            "provider": { "const": "openai_compatible" },
-            "base_url": { "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://([^/]*\\.)?[Oo][Pp][Ee][Nn][Rr][Oo][Uu][Tt][Ee][Rr]\\.[Aa][Ii](:[0-9]+)?(/|$)" }
-          },
-          "required": ["provider", "base_url"]
-        }
+        "if":   { "required": ["thinking_level"] },
+        "then": { "properties": { "provider": { "const": "gemini" } } }
       }
     ]
+  },
+  "routingNeedsOpenRouter": {
+    "description": "A routing block is OpenRouter's own fields, so a lane may declare one only when it is an openai_compatible binding whose base_url is an OpenRouter host. One clause for both lanes, so the chat tiers and the embeddings lane cannot come to disagree about which host that is. The pattern is case-insensitive because URL hosts are, and the parser lowercases the host before it compares.",
+    "if": { "required": ["routing"] },
+    "then": {
+      "properties": {
+        "provider": { "const": "openai_compatible" },
+        "base_url": { "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://([^/]*\\.)?[Oo][Pp][Ee][Nn][Rr][Oo][Uu][Tt][Ee][Rr]\\.[Aa][Ii](:[0-9]+)?(/|$)" }
+      },
+      "required": ["provider", "base_url"]
+    }
   },
   "upstreamRouting": {
     "description": "Which of a broker's upstream hosts may serve this tier. OpenRouter fronts many inference hosts per model, and its own default picks among them weighted by the inverse square of price — so one model id is served at fp4 on one call and at bf16 on the next, with latency to match. Valid ONLY on an openai_compatible binding whose base_url is an OpenRouter host; the parser refuses it anywhere else rather than send a vendor fields it never asked for. OMIT the block to inherit the product default (sort: throughput, quantizations: [fp16, bf16], require_parameters: true — reliability over price); write an empty object to opt out and take the broker's own price-weighted routing. Measured 2026-09-02 — see docs/reference/openrouter.md.",
@@ -148,25 +164,59 @@ const routingDefsTemplate = `{
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
       "base_url": { "type": "string", "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default." },
-      "dimensions": { "type": "integer", "minimum": 0, "maximum": 2000, "description": "Vector width the provider is asked to emit. Optional; 0 or omitted defaults to 1536." }
+      "dimensions": { "type": "integer", "minimum": 0, "maximum": 2000, "description": "Vector width the provider is asked to emit. Optional; 0 or omitted defaults to 1536." },
+      "routing": { "$ref": "#/$defs/embeddingsRouting" }
     },
     "allOf": [
       {
         "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
         "then": { "required": ["base_url"] }
+      },
+      { "$ref": "#/$defs/routingNeedsOpenRouter" }
+    ]
+  },
+  "decisionsBinding": {
+    "description": "The decisions-lane binding: a provider that answers the decision wire, its model and its endpoint. No input and no routing: the lane sends no attachments and the decisions endpoint takes no broker preferences.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["provider", "model"],
+    "properties": {
+      "provider": {
+        "description": "jev (TypeSafe's own API; key TYPESAFE_API_KEY, required; base_url optional, default https://api.typesafe.ai/v1/systemone) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; key JEV_COMPATIBLE_API_KEY, sent when set and never required; base_url required).",
+        "enum": [__DECISION_PROVIDERS__]
+      },
+      "model":    { "type": "string", "minLength": 1, "description": "The decision model id, e.g. jev-1.13.0 on jev, or typesafe/jev-1.13 on OpenRouter." },
+      "base_url": { "type": "string", "description": "The FULL decision endpoint URL, posted to as written: nothing is appended. REQUIRED for jev_compatible (e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone). Empty on jev ⇒ TypeSafe's own endpoint." }
+    },
+    "allOf": [
+      {
+        "if":   { "properties": { "provider": { "const": "jev_compatible" } } },
+        "then": { "required": ["base_url"] }
       }
     ]
+  },
+  "embeddingsRouting": {
+    "description": "Which of a broker's upstream hosts may read the text this lane embeds. Only the host-selection fields: the lane embeds the same text the chat tiers send, so a residency pin must reach it too, and the other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to leave the broker's own choice of host.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "only":            { "$ref": "#/$defs/upstreamRouting/properties/only" },
+      "ignore":          { "$ref": "#/$defs/upstreamRouting/properties/ignore" },
+      "allow_fallbacks": { "$ref": "#/$defs/upstreamRouting/properties/allow_fallbacks" }
+    }
   }
 }`
 
-// routingDefs renders the $defs block with the tier names the contract declares.
+// routingDefs renders the $defs block with the tier names the contract declares
+// and the decision providers the registry holds.
 func routingDefs() json.RawMessage {
 	tiers := ai.AllTiers()
-	quoted := make([]string, len(tiers))
+	names := make([]string, len(tiers))
 	for i, t := range tiers {
-		quoted[i] = fmt.Sprintf("%q", string(t))
+		names[i] = string(t)
 	}
-	raw := strings.Replace(routingDefsTemplate, "__TIERS__", strings.Join(quoted, ", "), 1)
+	raw := strings.Replace(routingDefsTemplate, "__TIERS__", quotedList(names), 1)
+	raw = strings.Replace(raw, "__DECISION_PROVIDERS__", quotedList(ai.DecisionProviders()), 1)
 	// Validated here so a substitution bug fails generation rather than shipping
 	// a schema no editor can load.
 	var probe any
@@ -174,4 +224,14 @@ func routingDefs() json.RawMessage {
 		fail(fmt.Errorf("gen-configschema: the routing $defs are not valid JSON: %w", err))
 	}
 	return json.RawMessage(raw)
+}
+
+// quotedList is names as JSON string literals, comma-separated, for an enum
+// the template leaves a placeholder for.
+func quotedList(names []string) string {
+	quoted := make([]string, len(names))
+	for i, name := range names {
+		quoted[i] = fmt.Sprintf("%q", name)
+	}
+	return strings.Join(quoted, ", ")
 }

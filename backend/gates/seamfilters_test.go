@@ -33,7 +33,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"path/filepath"
 	"slices"
@@ -74,7 +73,10 @@ var filterSetModules = []string{
 // whose answer would be a disclosure an agent should not be handed by
 // enumeration. The escape exists so that case can be stated rather than left as
 // a silence indistinguishable from the gap this gate closes.
-var unofferedSeamFilters = gatekit.Waive(map[string]string{})
+var unofferedSeamFilters = gatekit.Waive(map[string]string{
+	"company.id": "a screen's batch read of companies it already holds ids for; an agent reads a " +
+		"company by id through read_record, and a second route to the same answer is prompt text for nothing",
+})
 
 // deferredSeamFilters are the gaps this gate found on the day it landed: a
 // filter both halves carry that the seam does not name, and that SHOULD be
@@ -151,7 +153,7 @@ func TestEveryDeclaredFilterTheStoreBindsIsOfferedToTheSeam(t *testing.T) {
 // from crm.yaml, as record type to filter names.
 func declaredRecordFilters(t *testing.T) map[string][]string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), recordShapesFile, nil, 0)
+	file, err := gatekit.ParseFile(recordShapesFile, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", recordShapesFile, err)
 	}
@@ -447,7 +449,7 @@ func parsedSources(t *testing.T, dir string) []*ast.File {
 		if strings.HasSuffix(source, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
+		file, err := gatekit.ParseFile(source, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", source, err)
 		}

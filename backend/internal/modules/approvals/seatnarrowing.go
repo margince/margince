@@ -21,32 +21,35 @@ import (
 // the member it was staged for.
 //
 // The inbox is a SHARED surface by design — a manager triages what a rep
-// staged — and for almost every kind that is the point. It is wrong for one:
-// a LinkedIn match names a third party out of one member's imported address
-// book, contacts who never agreed to be in this CRM at all. The endpoints this
-// kind replaced were owner-only and said so; routing the same question through
-// a shared inbox would have handed every admin a readable copy of a
-// colleague's contact list, which is a bigger disclosure than the feature it
-// enables.
+// staged — and for almost every kind that is the point. A self-only kind adds
+// one predicate to the two below: the deciding human must BE the member it was
+// staged for.
 //
-// So a self-only kind adds one predicate to the two below: the deciding human
-// must BE the member it was staged for. It is the inbox's mirror of the
-// webhooks module's selfOnlyEvents, which keeps the same three LinkedIn facts
-// off the workspace fan-out for the same reason.
+// The test is whether deciding the proposal needs something no colleague has,
+// and there are two shapes of that here. A vCard review carries a third party
+// nobody else may read. A step-up and a held send and a held draft each carry
+// an authority nobody else holds — a connection's own lending, a rep's message,
+// a rep's mailbox.
 //
-// A step-up is the other: "may this agent keep reading" is a question about ONE
-// connection, and the only colleague who can answer it is the human whose authority
-// that connection borrows.
-// A held scheduled send is the third: the message is one rep's, the decision is
-// whether to retry it or abandon it, and nobody else has standing to answer.
+// WHAT IS NOT HERE, and why: a LinkedIn MATCH. Its subject is a contact already
+// on file and already readable by whoever the inbox shows it to, so it is
+// decided by any seat whose row scope reaches that contact and which holds
+// `contact:update` — the ordinary inbox rule, nothing added. The COUNT-never-a-
+// list disclosure rule that argued for narrowing it governs the company-level
+// reach view, whose rows are unmatched ghosts; a match proposal is the opposite case,
+// and the founder decision is that anyone with access decides one. The other
+// two LinkedIn facts — the account itself, and the import's own events — stay
+// self-only where they are held, including the webhooks module's selfOnlyEvents,
+// which this is no longer a mirror of.
 var selfOnlyKinds = map[string]bool{
-	kindLinkedInMatch:     true,
 	KindVolumeRelease:     true,
 	KindScheduledSendHeld: true,
-	// A vCard review is one member's own uploaded address book, exactly the
-	// LinkedIn-match shape: the staged card names a third party who never
-	// agreed to be in this CRM, and a shared inbox would hand every
-	// contact:create holder a readable copy of a colleague's contacts.
+	// A vCard review is one member's own uploaded address book: the staged card
+	// names a third party who never agreed to be in this CRM and whom no
+	// colleague can otherwise see, so a shared inbox would hand every
+	// contact:create holder a readable copy of a colleague's contacts. This is
+	// the shape a LinkedIn match is NOT — there the subject is a contact the
+	// decider can already read.
 	"vcard_create": true,
 	// A held draft is the fourth, and it is about WHOSE MAILBOX the message
 	// leaves from rather than who may read it. Releasing one sends it, and the

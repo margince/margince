@@ -96,7 +96,7 @@ func TestEveryReportedOperatorCompilesAndEveryOmittedOneIsRefused(t *testing.T) 
 		if err != nil || !ok {
 			t.Fatalf("%s: filterVocabulary: ok=%v err=%v", resource, ok, err)
 		}
-		engine, _, err := store.SegmentEngine(context.Background(), resource)
+		engine, _, err := store.SegmentEngine(readerCtx(), resource)
 		if err != nil {
 			t.Fatalf("%s: segmentEngine: %v", resource, err)
 		}

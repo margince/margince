@@ -1,5 +1,12 @@
 import type { paths } from "@composition/schema";
 import createClient from "openapi-fetch";
+import {
+  ConnectivityError,
+  connectivityNow,
+  reportReached,
+  reportUnreached,
+} from "../app/connectivity";
+import { readStored, STORAGE_KEYS } from "../app/storage";
 import { beginModelCall, endModelCall } from "./model-inflight";
 
 // The ONE API seam (architecture/01: the frontend depends on the generated
@@ -26,15 +33,9 @@ import { beginModelCall, endModelCall } from "./model-inflight";
 // The reader's language, read from where the shell stores it. Sent on every
 // request as Accept-Language so a server-side writer — the model-written
 // briefs — answers in the language the reader is reading, rather than making
-// them translate a summary they asked for. Storage can throw (private windows,
-// blocked site data), and a client that cannot read a preference still has to
-// make the call, so a failure is simply no header.
+// them translate a summary they asked for.
 function readerLanguage(): string | undefined {
-  try {
-    return globalThis.localStorage?.getItem("margince.locale") ?? undefined;
-  } catch {
-    return undefined;
-  }
+  return readStored(STORAGE_KEYS.locale) ?? undefined;
 }
 
 // How long a request may stay open before this client stops waiting for it.
@@ -104,6 +105,29 @@ export class RequestTimeoutError extends Error {
   }
 }
 
+// A request the caller abandoned says nothing about the connection. One the
+// deadline ended does, unless a model was still working on it.
+function reportFailure(
+  failure: unknown,
+  request: Request,
+  deadline: AbortSignal,
+  unsent: boolean,
+): unknown {
+  if (request.signal.aborted) {
+    return failure;
+  }
+  if (!deadline.aborted) {
+    const outage = reportUnreached();
+    return outage === null
+      ? failure
+      : new ConnectivityError(outage, request, failure, unsent);
+  }
+  if (modelWaitOf(request) === null) {
+    reportUnreached();
+  }
+  return failure;
+}
+
 // A deadline on every request through this seam, because a request that opens
 // and never answers is indistinguishable, to everything above, from one still
 // arriving: `isPending` stays true, no error state is ever reached, and the
@@ -144,11 +168,16 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
       new RequestTimeoutError(request.method, request.url, timeoutMs),
     );
   }, timeoutMs);
+  // Read as the request leaves: a device offline then sent nothing at all.
+  const unsent = connectivityNow() === "offline";
   try {
-    return withGatewayProblem(
-      await globalThis.fetch(request, { signal: deadline.signal }),
-      request,
-    );
+    const response = await globalThis.fetch(request, {
+      signal: deadline.signal,
+    });
+    reportAnswer(response, request);
+    return withGatewayProblem(response, request);
+  } catch (failure) {
+    throw reportFailure(failure, request, deadline.signal, unsent);
   } finally {
     // Whatever the outcome. A cleared timer is what keeps a settled request
     // from holding the page awake, and — on a request that failed for its own
@@ -160,6 +189,21 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
 // The statuses a PROXY answers with when it gave up on the app behind it,
 // rather than the app refusing something.
 const GATEWAY_STATUSES = new Set([502, 503, 504]);
+
+function carriesProblem(response: Response): boolean {
+  const contentType = response.headers.get("Content-Type") ?? "";
+  return contentType.includes("application/problem+json");
+}
+
+// The api writes every 5xx of its own as a problem body, so a bare gateway
+// status is a proxy reporting it gone; on a model route it only stopped waiting.
+function reportAnswer(response: Response, request: Request): void {
+  if (!GATEWAY_STATUSES.has(response.status) || carriesProblem(response)) {
+    reportReached();
+  } else if (modelWaitOf(request) === null) {
+    reportUnreached();
+  }
+}
 
 // The routes whose handler calls a model and waits, and whether they do so on
 // every call.
@@ -276,11 +320,11 @@ const MODEL_ROUTE_MATCHERS: readonly (readonly [
  * passes through untouched — the server's own sentence is always better.
  */
 function withGatewayProblem(response: Response, request: Request): Response {
-  if (!GATEWAY_STATUSES.has(response.status) || modelWaitOf(request) === null) {
-    return response;
-  }
-  const contentType = response.headers.get("Content-Type") ?? "";
-  if (contentType.includes("application/problem+json")) {
+  if (
+    !GATEWAY_STATUSES.has(response.status) ||
+    modelWaitOf(request) === null ||
+    carriesProblem(response)
+  ) {
     return response;
   }
   return new Response(

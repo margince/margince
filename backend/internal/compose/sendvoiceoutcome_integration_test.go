@@ -109,7 +109,7 @@ func seedVoiceProfile(t *testing.T, owner *pgx.Conn, workspace, ownerUser ids.UU
 	var profile ids.UUID
 	if err := owner.QueryRow(context.Background(), `
 		INSERT INTO voice_profile (owner_id, scope, status, source, captured_by)
-		VALUES ($1, 'user', 'ready', 'ui', $2) RETURNING id`,
+		VALUES ($1, 'user', 'ready', 'manual', $2) RETURNING id`,
 		ownerUser, "human:"+ownerUser.String()).Scan(&profile); err != nil {
 		t.Fatalf("seeding the voice profile: %v", err)
 	}

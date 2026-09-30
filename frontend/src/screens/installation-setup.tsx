@@ -3,10 +3,12 @@ import type { ReactNode } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { readStored, STORAGE_KEYS, writeStored } from "../app/storage";
 import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { ComboBox } from "../design-system/combobox";
+import { ErrorLine } from "../design-system/errorline";
 import { OffsiteLink } from "../design-system/offsitelink";
 import {
   OnboardingStage,
@@ -116,7 +118,9 @@ const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
  * it. A re-claimed installation mints its own administrator, so its cold start
  * asks again; the same contact on the same installation is still asked once.
  */
-const PLATFORM_DECLINED_KEY = "margince.first-run.platform-declined";
+function declinedKey(account: string) {
+  return { family: STORAGE_KEYS.platformDeclined, member: account };
+}
 
 // The accounts that declined in THIS tab, whether or not storage kept it.
 const declinedThisSession = new Set<string>();
@@ -132,10 +136,6 @@ export function forgetPlatformDeclines(): void {
   declinedThisSession.clear();
 }
 
-function declinedKey(account: string): string {
-  return `${PLATFORM_DECLINED_KEY}:${account}`;
-}
-
 /** Whether `account` declined the question. An unknown account — the session
  *  probe has not answered yet — has declined nothing, which is the reading
  *  that asks rather than the one that hides. */
@@ -143,17 +143,11 @@ function platformDeclined(account: string | null): boolean {
   if (account === null) {
     return false;
   }
-  if (declinedThisSession.has(account)) {
-    return true;
-  }
-  try {
-    return window.localStorage.getItem(declinedKey(account)) === "1";
-  } catch {
-    // Storage blocked (a private window, a policy) and nothing declined in
-    // this session either: the question is asked again, which is the safe
-    // reading of not knowing.
-    return false;
-  }
+  // Storage blocked and nothing declined in this tab either: the question is
+  // asked again, which is the safe reading of not knowing.
+  return (
+    declinedThisSession.has(account) || readStored(declinedKey(account)) === "1"
+  );
 }
 
 // Who is watching the decline: the gate on this screen and the act that
@@ -175,11 +169,7 @@ function rememberPlatformDeclined(account: string | null): void {
   // only to storage meant a private window asked the question again on the
   // very next render, which is the step reappearing under the reader.
   declinedThisSession.add(account);
-  try {
-    window.localStorage.setItem(declinedKey(account), "1");
-  } catch {
-    // Only this session remembers it, which the set above has already done.
-  }
+  writeStored(declinedKey(account), "1");
   for (const listener of declinedListeners) {
     listener();
   }
@@ -259,11 +249,13 @@ function useBindModels() {
       };
       const { error } = await api.PUT("/ai/routing", {
         body: {
-          // eu_hosted rather than a question: `sovereign` forbids the cloud
-          // vendors this screen offers, and asking a first-time admin to choose
-          // a location ladder before they have bound anything is asking them to
-          // answer a question they cannot yet have.
-          profile: "eu_hosted",
+          // cloud_frontier rather than a question: `sovereign` forbids the
+          // cloud vendors this screen offers, `eu_hosted` promises EU inference
+          // that none of them is bound to keep (the server refuses an unpinned
+          // broker under it), and asking a first-time admin to choose a location
+          // ladder before they have bound anything is asking them to answer a
+          // question they cannot yet have.
+          profile: "cloud_frontier",
           tiers: {
             local_small: binding,
             cheap_cloud: binding,
@@ -829,9 +821,9 @@ function StepNeeds({
     return null;
   }
   return (
-    <p className="ob-stage-note" role="alert">
+    <ErrorLine inline>
       {t("firstRun.stillNeeded", { fields: missing.join(", ") })}
-    </p>
+    </ErrorLine>
   );
 }
 

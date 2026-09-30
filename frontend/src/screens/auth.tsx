@@ -3,6 +3,7 @@ import { Lock, Mail } from "lucide-react";
 import { type FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useAuthCapabilities } from "../app/capabilities";
+import { useOutageRecovery } from "../app/connectivity";
 import {
   forgetHashCredential,
   navigate,
@@ -28,7 +29,7 @@ import {
   ProviderButtons,
   startFederatedSignIn,
 } from "./auth-providers";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, sessionAnswers, throwProblem } from "./common";
 import { isTooShort, MIN_PASSWORD } from "./passwordrule";
 import "./auth.css";
 
@@ -318,15 +319,14 @@ export function AuthScreen({
   );
 }
 
-// AvailabilityScreen is the boundary's non-authentication half (§4): the
-// API cannot be reached (network / 5xx) or the installation is not ready
-// (503 — pre-bootstrap, or a violated singleton invariant). A server
-// outage must never read as "wrong password".
+// The boundary's non-authentication half (§4): the api cannot be reached or the
+// installation is not ready (503), and neither may read as a wrong password.
 export function AvailabilityScreen({
   kind,
   onRetry,
 }: Readonly<{ kind: "connection" | "installation"; onRetry: () => void }>) {
   const t = useT();
+  useOutageRecovery(kind === "connection", sessionAnswers, onRetry);
   usePageTitle(t("auth.pageTitle"));
   return (
     <AuthExperience phase="unavailable">

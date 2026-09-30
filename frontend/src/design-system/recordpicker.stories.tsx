@@ -9,7 +9,8 @@ import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 // candidate list stands in for a real search transport until the offer
 // header (Task 2.3) and line-item pickers (Task 3.3) wire a live one.
 const meta: Meta = {
-  title: "Design System/RecordPicker",
+  title: "Components/Forms and input/Record picker",
+  component: RecordPicker,
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -13,7 +13,7 @@ import { LocaleProvider } from "../i18n";
 import { CompanyScreen } from "./companies";
 import { companyBackstop, jsonResponse, stubFetch } from "./company.fixtures";
 
-// "Ask about this account" spent months reachable only from a test file: the
+// "Ask about this company" spent months reachable only from a test file: the
 // panel existed, its round-trip worked, and no route rendered it. So the claim
 // this file makes is deliberately the one mounting the component in isolation
 // cannot make — that a reader who opens a company finds the questions on the
@@ -59,10 +59,10 @@ describe("the company overview carries the ask surface", () => {
     // overview actually draws AssistantPanel — a question button alone would
     // still be found if the panel were mounted anywhere else on the record.
     expect(
-      await screen.findByRole("heading", { name: "Ask about this account" }),
+      await screen.findByRole("heading", { name: "Ask about this company" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "What's open here?" }),
+      screen.getByRole("button", { name: "What is open here?" }),
     ).toBeTruthy();
   });
 
@@ -80,7 +80,7 @@ describe("the company overview carries the ask surface", () => {
     render(<CompanyScreen id="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "What's open here?" }),
+      await screen.findByRole("button", { name: "What is open here?" }),
     );
 
     await waitFor(() => expect(asked).toEqual({ question: "whats_open" }));

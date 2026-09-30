@@ -57,7 +57,7 @@ function Row({ summary }: Readonly<{ summary: EmailSummary }>) {
 }
 
 const meta: Meta<typeof Row> = {
-  title: "Design System/Email entry",
+  title: "Components/Text and data display/Email entry",
   component: Row,
 };
 export default meta;

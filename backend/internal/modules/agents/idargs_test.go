@@ -219,6 +219,22 @@ func (seamProbeLifecycle) EnrichCompany(context.Context, ids.UUID, string, Enric
 	return nil, errSeamReached
 }
 
+func (seamProbeLifecycle) PreviewBulkChange(context.Context, BulkChangeCommand) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeLifecycle) ExecuteBulkChange(context.Context, BulkChangeCommand) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeLifecycle) PreviewBulkUndo(context.Context, ids.UUID) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeLifecycle) UndoBulkChange(context.Context, ids.UUID, string) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
 // seamProbeInbox answers every queue door by reaching its seam, so a walk that
 // runs handlers proves the arguments got there rather than stopping short.
 type seamProbeInbox struct{}
@@ -247,6 +263,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	RegisterCoreTools(r, seamProbeProvider{}, seamProbeProvider{}, nil, noConflicts{}, nil, nil)
+	RegisterMeetingInvitationTool(r, seamProbeInviter{}, seamProbeProvider{})
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, errSeamReached })
 	RegisterReportTool(r, func(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
@@ -273,7 +290,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterCoverageTool(r, func(context.Context) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
-	RegisterIntentTools(r, inertRetriever{}, nil)
+	RegisterIntentTools(r, inertRetriever{}, nil, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context) ([]SlippingDeal, error) { return nil, errSeamReached },
@@ -295,15 +312,10 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 		func(context.Context, ids.UUID) ([]IntroRoute, bool, error) { return nil, false, errSeamReached },
 		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, errSeamReached })
 	RegisterCommsTools(r, &recordingComms{}, seamProbeProvider{})
-	// Registered so the registrar-parity gate stays satisfied, though it takes
-	// no seam and declares no argument at all — the walk below probes
-	// format:uuid properties, so this tool contributes nothing and is skipped on
-	// its own. Wiring it anyway is what keeps "every registrar is invoked here"
-	// a rule with no exceptions to remember.
-	RegisterGeoProbeTool(r)
 	RegisterLifecycleTools(r, seamProbeProvider{},
 		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
 	RegisterEnrichTool(r, seamProbeProvider{}, seamProbeLifecycle{})
+	RegisterBulkTool(r, seamProbeLifecycle{})
 	RegisterQueryTool(r, seamProbeProvider{}, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{}, errSeamReached
 	}, nil)
@@ -312,12 +324,16 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterRecordFieldsTool(r, RecordFieldsResource{})
 	RegisterAnalyticsVocabularyTool(r, seamProbeAnalyticsVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})
+	RegisterReportEvidenceTool(r, seamProbeProvider{}, func(context.Context, ReportEvidenceQuery) (ReportEvidence, error) {
+		return ReportEvidence{}, errSeamReached
+	})
 	RegisterResolveTool(r, seamProbeProvider{}, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
 		return nil, errSeamReached
 	})
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
 	RegisterColleaguesTool(r, func(context.Context, string) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
+	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})
 	RegisterListTool(r, seamProbeProvider{}, probeVocabulary{})
 	RegisterBriefTool(r, func(context.Context) (ReadBriefResult, error) {
@@ -589,4 +605,10 @@ func absentIDArgs(t *testing.T, tool string, inputSchema json.RawMessage, omit s
 		t.Fatalf("marshal probe args: %v", err)
 	}
 	return encoded
+}
+
+type seamProbeInviter struct{}
+
+func (seamProbeInviter) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {
+	return crmcontracts.MeetingInvitation{}, errSeamReached
 }

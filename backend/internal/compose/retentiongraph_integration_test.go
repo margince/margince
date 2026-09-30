@@ -105,6 +105,7 @@ func TestRetentionCorrectsTheRelationshipGraphInItsOwnTransaction(t *testing.T) 
 	// exactly as the worker wires it" stays true when a seam is added rather
 	// than becoming a claim this file has to be edited to keep.
 	svc := NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	integration.SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(principal.SystemActing(e.Admin(), "system")); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}

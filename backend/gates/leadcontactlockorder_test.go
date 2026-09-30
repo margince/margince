@@ -75,14 +75,16 @@ var lockOrderRoots = []string{"internal/modules/contacts"}
 // lock-order edit, so it is tracked as its own change rather than settled here
 // as a side effect.
 //
-// Two entries because both entry points reach the locks: QualifyLead holds the
-// body, and PromoteLead is the one-line wrapper callers use. Waiving only the
-// body would leave the wrapper failing and read as a second, different defect.
+// Three entries because every entry point reaches the locks: promoteLeadTx
+// holds the body, QualifyLead opens its transaction, and PromoteLead is the
+// one-line wrapper callers use. Waiving only the body would leave the
+// wrappers failing and read as a second, different defect.
 var promoteTakesTheOldOrder = gatekit.Waive(map[string]string{
-	"QualifyLead": "promotion resolves its contact by matching the lead's emails, so it cannot name the " +
+	"promoteLeadTx": "promotion resolves its contact by matching the lead's emails, so it cannot name the " +
 		"row to lock before it has read the lead — reordering it changes what a racing promote answers, " +
 		"which is a product decision about what a racing promote returns, not a lock-order edit",
-	"PromoteLead": "the one-line wrapper over QualifyLead, waived with it and for the same reason",
+	"QualifyLead": "opens the transaction promoteLeadTx runs in, waived with it and for the same reason",
+	"PromoteLead": "the one-line wrapper over QualifyLead, whose body is promoteLeadTx, waived with it and for the same reason",
 })
 
 // TestOneLockOrderOverTheLeadAndItsContact fails on a writer that reaches the

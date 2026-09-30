@@ -42,6 +42,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -365,7 +367,6 @@ func handWrittenGoFiles(t *testing.T) []string {
 
 func TestNobodyBuildsAMinorUnitScaleByHand(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
 	var findings []string
 	for _, path := range handWrittenGoFiles(t) {
 		// values is where the arithmetic belongs, so it is the one place the
@@ -375,7 +376,7 @@ func TestNobodyBuildsAMinorUnitScaleByHand(t *testing.T) {
 		if filepath.ToSlash(path) == valuesOwner+"/minorunits.go" {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -591,7 +592,7 @@ func decimate(n int64) int64 {
 
 func TestTheHandScaledDetectorSeesWhatItClaimsTo(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, tc := range handScaledProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			// The probe carries the same imports the real call sites do, because

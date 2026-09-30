@@ -270,7 +270,7 @@ func applyDraftEmail(ctx context.Context, comms Comms, action workflow.Action) (
 // synthetic scaled scope, never a caller-set override.
 func applyAssignOwner(ctx context.Context, ex Executors, action workflow.Action, scope AssignOwnerScope) error {
 	if resolveAssignOwnerTier(scope) == mcp.TierConfirmationRequired {
-		id, err := stageForApproval(ctx, ex.Approvals, action)
+		id, err := stageForApproval(ctx, ex.Approvals, ex.Language, action)
 		if err != nil {
 			return err
 		}

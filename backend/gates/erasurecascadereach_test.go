@@ -7,13 +7,13 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // Every file the Art. 17 cascade executes SQL from is one the PII censuses read.
@@ -95,7 +95,6 @@ func filesReachableFrom(t *testing.T, dir, entry string) map[string]bool {
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
-	fset := token.NewFileSet()
 	fileOf := map[string]string{}
 	declOf := map[string]*ast.FuncDecl{}
 	for _, entry := range entries {
@@ -104,7 +103,7 @@ func filesReachableFrom(t *testing.T, dir, entry string) map[string]bool {
 			continue
 		}
 		path := filepath.ToSlash(filepath.Join(dir, name))
-		parsed, parseErr := parser.ParseFile(fset, path, nil, 0)
+		parsed, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			t.Fatalf("parsing %s: %v", path, parseErr)
 		}

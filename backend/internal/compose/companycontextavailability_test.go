@@ -11,13 +11,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
-// One writer decides whether the Company settings page exists, and it resolves
-// the same rollout the endpoints gate on.
+// One writer sets /me's company-context availability, and it resolves the same
+// rollout the endpoints gate on.
 //
-// The failure is silent in both directions. A stack advertising a page its own
-// endpoints refuse sends the reader to a surface that 404s; one hiding a page
-// they would serve loses a feature the operator paid to enable. Neither shows up
-// as an error anywhere, and both are what a second writer produces.
+// The failure is silent in both directions. /me advertising a surface its own
+// endpoints refuse misleads every caller that trusts it; one under-reporting a
+// surface they would serve hides a feature the operator paid to enable. Neither
+// shows up as an error anywhere, and both are what a second writer produces.
 //
 // Read from SOURCE, because the defect is invisible in the result: both sides
 // are booleans, so any two expressions agreeing on the five stages this package
@@ -28,7 +28,7 @@ import (
 // writer lives in today. A gate naming its own subject's file passes beside a
 // rival writer in the file next door — which is the exact scenario this test's
 // reason for existing names.
-func TestOneWriterDecidesWhetherTheCompanyPageExists(t *testing.T) {
+func TestOneWriterReportsTheCompanyContextRollout(t *testing.T) {
 	call := regexp.MustCompile(`(?m)^\s*s\.authHandlers = s\.WithCompanyContextAvailable\((.*)\)$`)
 
 	writers := map[string]string{}
@@ -46,7 +46,7 @@ func TestOneWriterDecidesWhetherTheCompanyPageExists(t *testing.T) {
 
 	if len(writers) != 1 {
 		t.Fatalf("%d files set /me's company-context availability (%v), want exactly one. "+
-			"Two writers of one question drift, and the drift is a page a client offers that "+
+			"Two writers of one question drift, and the drift is a surface /me reports that "+
 			"the server refuses.", len(writers), writers)
 	}
 	got, ok := writers[owner]
@@ -74,7 +74,7 @@ func TestOneWriterDecidesWhetherTheCompanyPageExists(t *testing.T) {
 // This is the case the earlier wiring got wrong, and it got it wrong invisibly.
 // An unset rollout means every stage is on — companyContextReadEnabled says so
 // and GetCompanyContextCapabilities re-derives it — while the injected boolean
-// was the zero value, false. So /me reported the Company page absent on a server
+// was the zero value, false. So /me reported company context absent on a server
 // whose endpoints served it, and only a server that HAD the option agreed.
 //
 // Asked of the predicate rather than of a booted Server, because booting one
@@ -92,9 +92,9 @@ func TestAnUnsetRolloutResolvesThroughTheSamePredicate(t *testing.T) {
 		advertised := srv.CompanyContextAvailable()
 		gated := companyContextReadEnabled(srv.companyContextRollout)
 		if advertised != gated {
-			t.Errorf("rollout option ran=%v: /me advertises the Company page as available=%v "+
-				"while the endpoints admit=%v — the reader is sent to a page that 404s, or a "+
-				"page that works is hidden", ran, advertised, gated)
+			t.Errorf("rollout option ran=%v: /me reports company context available=%v "+
+				"while the endpoints admit=%v — a caller trusting /me is sent to a surface "+
+				"that 404s, or told one that works is absent", ran, advertised, gated)
 		}
 	}
 }

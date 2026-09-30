@@ -30,7 +30,7 @@ import { AutonomyDot } from "./trust";
 // shadow that reads on paper is invisible, which is exactly the case
 // `tokens.css` themes the shadow for.
 const meta: Meta<typeof DecisionDeck> = {
-  title: "Design System/DecisionDeck",
+  title: "Components/AI and provenance/Decision deck/Deck",
   component: DecisionDeck,
   parameters: { layout: "padded" },
   decorators: [
@@ -58,7 +58,7 @@ const CARD_LABELS: DecisionCardLabels = {
   expired: "This ran out of time before anyone answered it.",
   draftSubject: "Subject",
   draftBody: "Message",
-  showMore: "Show the whole message",
+  showMore: "Show full message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",
   loading: "Reading the proposal",
@@ -168,8 +168,8 @@ const CHIPS = (
           <AutonomyDot tier="confirm" />
           <span className="t-caption">
             {shared.kind === "site_lead"
-              ? "Add a contact found on the site"
-              : "Send an email"}
+              ? "Add contact from website"
+              : "Send email"}
           </span>
         </>
       )}
@@ -354,7 +354,7 @@ export const FramedCompactList: Story = {
     items: MANY,
     labels: {
       ...LABELS,
-      compactRow: { detail: "What is being proposed", more: "Other answers" },
+      compactRow: { detail: "Proposal", more: "More options" },
     },
     listCap: 3,
     // The count goes through the formatter like every other magnitude drawn

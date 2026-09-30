@@ -39,6 +39,7 @@ type Config struct {
 	MCP            MCP             `yaml:"mcp"`
 	Capture        Capture         `yaml:"capture"`
 	CompanyContext CompanyContext  `yaml:"company_context"`
+	Lists          Lists           `yaml:"lists"`
 	Operations     Operations      `yaml:"operations"`
 	Uploads        Uploads         `yaml:"uploads"`
 }
@@ -75,6 +76,13 @@ type Operations struct {
 	// also holds a real gmail/graph grant still sends through that one —
 	// SendableMailProvider picks the first alphabetically capable provider.
 	AllowTestMailbox bool `yaml:"allow_test_mailbox"`
+}
+
+// Lists switches Live Lists and Shortlists on. They are off until an operator
+// turns them on: the product is being built, and nothing an installation shows
+// should advertise an unfinished surface.
+type Lists struct {
+	Enabled bool `yaml:"enabled"`
 }
 
 // CompanyContextRollout is the ordered deployment capability for company
@@ -199,7 +207,7 @@ func (b BootstrapAdmin) passwordRef() Secret {
 
 // RetentionSeed selects the retention POSTURE a fresh installation is
 // bootstrapped into (GCS-PARAM-7). It does not select the policy rows: those stay
-// the data-model's pins (DM-SEED-1..6) under either posture, so an installation
+// the data-model's pins (DM-SEED-1..8) under either posture, so an installation
 // that must keep everything still SEES the ladder it is not running.
 //
 // The key exists because bootstrap plants the rows and the nightly pass can fire
@@ -214,7 +222,7 @@ type RetentionSeed struct {
 
 // The two postures seeds.retention.default_policy admits.
 const (
-	// RetentionStandardPosture plants DM-SEED-1..6 with destruction enabled —
+	// RetentionStandardPosture plants DM-SEED-1..8 with destruction enabled —
 	// storage limitation (Art. 5(1)(e)) as the out-of-the-box posture.
 	RetentionStandardPosture = "standard"
 	// RetentionRetainOnlyPosture plants the same rows and turns the retain-only

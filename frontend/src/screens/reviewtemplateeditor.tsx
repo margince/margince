@@ -9,10 +9,11 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { RefusalLine, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import {
   REVIEW_TEMPLATES_KEY,
   type ReviewQuestion,
@@ -71,7 +72,11 @@ export function ReviewTemplateEditor({
     );
   return (
     <Modal open onClose={onClose} labelledBy="review-template-heading">
-      <Heading size="large" id="review-template-heading" className="t-h2">
+      <Heading
+        size="large"
+        id="review-template-heading"
+        className="t-h2 modal-title"
+      >
         {template.label}
       </Heading>
       <p>{t("reviewTemplates.editHint")}</p>
@@ -160,7 +165,7 @@ export function ReviewTemplateEditor({
         >
           {t("reviewTemplates.addQuestion")}
         </Button>
-        {save.isError && <RefusalLine error={save.error} />}
+        <ErrorLine error={save.error} />
         <div className="actions">
           <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
             {t("deals.cancel")}

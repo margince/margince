@@ -15,7 +15,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // Profile is the §4 location ladder — the privacy choice is WHERE the
@@ -63,6 +62,9 @@ type RoutingConfig struct {
 	Tiers      map[Tier]ProviderConfig `yaml:"tiers" json:"tiers"`
 	Embeddings EmbeddingsConfig        `yaml:"embeddings" json:"embeddings"`
 	Profile    Profile                 `yaml:"profile" json:"profile"`
+	// Decisions is the optional decision-model lane (decisionlane.go). Last and
+	// omitempty, so a config binding none encodes and digests as it always did.
+	Decisions *DecisionsConfig `yaml:"decisions" json:"decisions,omitempty"`
 	// sourceHash is the sha256 digest of the raw yaml bytes this config was
 	// parsed from (spec §4) — the routing half of the ai_call_config
 	// dimension key, alongside the generated TaskContractHash. Set by
@@ -87,40 +89,6 @@ type RoutingConfig struct {
 	// fake and local providers — the ones struct-literal configs actually use —
 	// need no key at all.
 	keys config.Lookup
-}
-
-// BoundModelIDsByProvider is every model this deployment actually calls, keyed
-// by the PROVIDER that serves it: each bound tier's model plus the embeddings
-// model. The identity is the model id as the VENDOR spells it, which is the
-// same string that vendor's catalog entry names itself by.
-//
-// Keyed by provider rather than flattened because the cost refresh applies it
-// per pricing SOURCE, and a source is one provider's catalog
-// (rates.model_pricing names the provider exactly as this file binds it). A
-// flat set would let one provider's bindings decide what another provider's
-// catalog is filtered to, and — worse — make "none of the bound models appear
-// here" indistinguishable from "this catalog belongs to a provider that binds
-// nothing".
-//
-// Returns an empty (non-nil) map when nothing is bound, so a caller can tell
-// "this deployment binds nothing" from a nil it forgot to build.
-func (cfg RoutingConfig) BoundModelIDsByProvider() map[string]map[string]bool {
-	bound := make(map[string]map[string]bool, len(cfg.Tiers)+1)
-	add := func(provider, modelID string) {
-		provider, modelID = strings.TrimSpace(provider), strings.TrimSpace(modelID)
-		if provider == "" || modelID == "" {
-			return
-		}
-		if bound[provider] == nil {
-			bound[provider] = map[string]bool{}
-		}
-		bound[provider][modelID] = true
-	}
-	for _, tier := range cfg.Tiers {
-		add(tier.Provider, tier.Model)
-	}
-	add(cfg.Embeddings.Provider, cfg.Embeddings.Model)
-	return bound
 }
 
 // RoutingVersion identifies the model binding this config expresses — the
@@ -182,17 +150,25 @@ func ParseRouting(raw []byte) (RoutingConfig, error) {
 			strings.Join(blank, ", "),
 		)
 	}
-	return cfg.finalize()
+	cfg, err = cfg.finalize()
+	if err != nil {
+		return RoutingConfig{}, err
+	}
+	if err := cfg.ResidencyGap(); err != nil {
+		return RoutingConfig{}, err
+	}
+	return cfg, nil
 }
 
 // finalize applies the defaults, validates, and stamps the version — the steps
 // every routing config takes however it arrived.
 //
-// It is the ONE defaulting site for embeddings.dimensions: NewRouter and
-// NewLocalRouter both build their config through a function that ends here, so
-// no role can construct a router with an out-of-range or undefaulted width. The
-// digest is taken last, over the DEFAULTED value, which is what makes an
-// omitted width and an explicitly-written default the same binding.
+// ParseRouting and FromStored both end here, so a parsed or stored config
+// cannot reach a router with an out-of-range or undefaulted width.
+// NewLocalRouter's callers build by struct literal and never reach it, so that
+// constructor applies the upstream default itself. The digest is taken last,
+// over the DEFAULTED value, which is what makes an omitted width and an
+// explicitly-written default the same binding.
 func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
 	if d := cfg.Embeddings.Dimensions; d < 0 || d > maxEmbedDimensions {
 		return RoutingConfig{}, fmt.Errorf("ai: routing config: embeddings dimensions %d out of range [1,%d]", d, maxEmbedDimensions)
@@ -258,7 +234,12 @@ func (cfg RoutingConfig) bindingDigest() string {
 }
 
 // localProviders can serve the sovereign zero-egress profile.
-var localProviders = map[string]bool{providerOllama: true, providerVLLM: true, ProviderFake: true}
+// It is a set of CHAT providers: the decisions lane asks DecisionsConfig.isLocal,
+// since a decision adapter is never a tier's answer.
+var localProviders = projectProviders(
+	func(providerDescriptor) bool { return true },
+	func(d providerDescriptor) bool { return d.local && speaksChat(d) },
+)
 
 // ProviderIsLocal reports whether provider names same-host inference
 // rather than a network-hosted vendor — the one exported spelling of
@@ -305,9 +286,18 @@ func (cfg RoutingConfig) validate() error {
 		if err := validateUpstreamPreferences(string(tier), binding); err != nil {
 			return err
 		}
+		if err := validateThinkingLevel("tier "+string(tier), binding); err != nil {
+			return err
+		}
 	}
 	if cfg.Embeddings.Provider == "" {
 		return fmt.Errorf("ai: routing config: embeddings lane has no provider")
+	}
+	if err := refuseDecisionOnlyProvider("the embeddings lane", cfg.Embeddings.Provider); err != nil {
+		return err
+	}
+	if err := validateEmbeddingsRouting(cfg.Embeddings.ProviderConfig); err != nil {
+		return err
 	}
 	// EmbeddingsConfig embeds ProviderConfig INLINE, so `input:` under
 	// `embeddings:` decodes happily and would reach the embedder's client. The
@@ -315,11 +305,11 @@ func (cfg RoutingConfig) validate() error {
 	// — refuse it here, where the parser is the gate. The generated schema omits
 	// it from embeddingsBinding for the same reason, but the schema is editor
 	// tooling and cannot be the thing that holds this.
-	if cfg.Embeddings.Routing != nil {
-		return fmt.Errorf("ai: routing config: the embeddings lane takes no `routing` — upstream selection bounds a completion's tail, and an embedding is one forward pass; declare it on the chat tier that needs it")
-	}
 	if cfg.Embeddings.Input != nil {
 		return fmt.Errorf("ai: routing config: the embeddings lane takes no `input` — it sends no attachments; declare it on the chat tier that reads documents")
+	}
+	if cfg.Embeddings.ThinkingLevel != "" {
+		return fmt.Errorf("ai: routing config: the embeddings lane takes no `thinking_level` — an embedding is one forward pass and does not think; declare it on a chat tier")
 	}
 	if cfg.Profile == ProfileSovereign {
 		if !localProviders[cfg.Embeddings.Provider] {
@@ -349,7 +339,7 @@ func (cfg RoutingConfig) validate() error {
 			"give it the vendor host root, with no version segment (the adapter adds /v1), " +
 			"e.g. https://openrouter.ai/api")
 	}
-	return nil
+	return cfg.validateDecisionsLane()
 }
 
 // AllTiers lists the tier names knownTiers admits, sorted for determinism.
@@ -383,6 +373,9 @@ func AllTiers() []Tier {
 func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) error {
 	if binding.Provider == "" {
 		return fmt.Errorf("ai: routing config: tier %s has no provider", tier)
+	}
+	if err := refuseDecisionOnlyProvider(fmt.Sprintf("tier %s", tier), binding.Provider); err != nil {
+		return err
 	}
 	// Sovereign means zero egress BY CONSTRUCTION, which takes both halves:
 	// a cloud provider in any chat tier is a config error, and so is a local
@@ -460,23 +453,4 @@ func (cfg RoutingConfig) UnboundLadderWarnings() []string {
 // own table.
 func TaskLadder(task Task) []Tier {
 	return append([]Tier(nil), taskLadders[task]...)
-}
-
-// buildClients turns validated bindings into live Clients via
-// SelectBrain. Construction errors (missing BYOK key, unknown provider)
-// surface here — still startup, still loud.
-func (cfg RoutingConfig) buildClients() (map[Tier]model.Client, model.Client, error) {
-	clients := make(map[Tier]model.Client, len(cfg.Tiers))
-	for tier, binding := range cfg.Tiers {
-		client, err := SelectBrain(binding, cfg.keys)
-		if err != nil {
-			return nil, nil, fmt.Errorf("ai: tier %s: %w", tier, err)
-		}
-		clients[tier] = client
-	}
-	embedder, err := SelectBrain(cfg.Embeddings.ProviderConfig, cfg.keys)
-	if err != nil {
-		return nil, nil, fmt.Errorf("ai: embeddings lane: %w", err)
-	}
-	return clients, embedder, nil
 }

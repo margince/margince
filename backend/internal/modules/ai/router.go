@@ -41,6 +41,9 @@ const traceWriteTimeout = 5 * time.Second
 type routeMeta struct {
 	provider string
 	model    string
+	// baseURL is part of the identity rejectedAgainAbove compares: one model
+	// behind two endpoints is two APIs, which may refuse different requests.
+	baseURL string
 }
 
 // Router is the tiered routing engine (B-EP06.4): tasks name tiers,
@@ -72,6 +75,12 @@ type Router struct {
 	// the cert lane and scripted repeat-call tests need every call to reach
 	// the model, not collapse onto a cached answer.
 	cacheOff bool
+	// decisionCertified answers whether the decisions lane may serve one site:
+	// the generated certification table, except on the certification lane's
+	// own DB-less router (WithEveryDecisionCertified).
+	decisionCertified func(DecisionCertKey) bool
+	// decisionTimeout bounds one decision call (DecisionCallTimeout).
+	decisionTimeout time.Duration
 }
 
 // installConfigSnapshot computes and stores this Router's config-snapshot
@@ -101,9 +110,13 @@ func NewRouter(cfg RoutingConfig, meter *Meter, budget BudgetPolicy, calls callS
 	if err != nil {
 		return nil, err
 	}
+	decisions, err := cfg.buildDecisionLane()
+	if err != nil {
+		return nil, err
+	}
 	meta := embedInclusiveMeta(cfg)
 	router := assembleRouter(clients, embedder, cfg.Profile, meter, budget, calls, meta, capturePayloads, log)
-	router.install(router.binding().withConfigSnapshot(cfg))
+	router.install(router.binding().withConfig(cfg, decisions))
 	return router, nil
 }
 
@@ -124,8 +137,10 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 		// coldStartOptions and offerDraftOptions each mint their own Router
 		// over the same routing config, and /metrics must report one honest
 		// total across both, rendered exactly once.
-		metrics: sharedCallMetrics,
-		now:     time.Now,
+		metrics:           sharedCallMetrics,
+		now:               time.Now,
+		decisionCertified: decisionIsCertified,
+		decisionTimeout:   DecisionCallTimeout,
 	}
 	r.install(binding{clients: clients, embedder: embedder, profile: profile, routeMeta: meta})
 	return r
@@ -201,6 +216,10 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	strips := newStripRecorder(req.SecretStripper)
 	req.SecretStripper = strips
 	key, keyErr := cacheKey(wsID, task, req)
+	if keyErr == nil {
+		// The site's own defect, found with the key's: before any provider.
+		req, keyErr = withSiteThinking(req, task)
+	}
 
 	// Every terminal from here on is traced — the budget-read and cache-key
 	// failures included: one Call appended to lc for the served call, the
@@ -226,16 +245,15 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	}
 
 	trace.Degraded = degraded
-	if degraded {
-		// The budget guardrail forced a demoted ladder — worth naming even
-		// on what is otherwise attempt 1, since it explains why this
-		// attempt did not run the caller's default route.
+	if degraded && !isDecisionFallbackReason(reason) {
+		// The budget guardrail forced a demoted ladder — worth naming on the
+		// walk's first rung even when that is otherwise attempt 1, since it
+		// explains why this walk did not run the caller's default route. A decision
+		// attempt's reason is kept: it says why the ladder ran at all, and
+		// Degraded still says the band demoted it.
 		trace.AttemptReason = attemptReasonBudgetDegrade
 	}
-	// Profile and clients come from the same binding snapshot as the route.
-	// Mixing two loads could produce a ladder no installed binding chose.
-	_, hasLarge := b.clients[TierLocalLarge]
-	ladder = profileLadder(b.profile, hasLarge, ladder)
+	ladder = servableLadder(b, task, ladder)
 
 	// The rail's opening line. It sits HERE and not higher — announceRailStartOnce
 	// says why.
@@ -252,7 +270,7 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 		return r.serveCacheHit(ctx, b, &trace, task, tier, cached, degraded)
 	}
 
-	out, tier, served, ladderErr := r.attemptLadder(ctx, b, lc, trace, task, ladder, req, key, wsID, start)
+	out, tier, served, ladderErr := r.attemptLadder(ctx, b, lc, &trace, task, ladder, req, key, wsID, start)
 	// Stamp tier and usage even when the ladder returns an error: a
 	// metering failure of a successfully-served call still spent provider
 	// tokens on a real tier, and an all-rungs-failed walk names the last
@@ -279,6 +297,36 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// run actually hits.
 	return model.Response{}, RouteInfo{},
 		fmt.Errorf("%w: no bound tier can serve %s in profile %s", ErrAllTiersFailed, task, b.profile)
+}
+
+// servableLadder is the ladder a call over b may actually walk, remapped for
+// the sovereign profile. Profile and clients come from the one binding
+// snapshot, so no ladder mixes two loads. serveAttempt walks it and Decide
+// peeks the cache against it, so both read the same ladder when asking which
+// cached answer would serve.
+//
+// A rung is narrowed out only when localOnlyAdmits refuses it — currently
+// never, per #6396: the tier a task's ladder names is a capability class the
+// deployment binds, and local_small is bound to a hosted provider by most
+// shipped configs, so refusing there took the task off those deployments
+// entirely. Whether that is the right trade is the open question on #3351;
+// reading the same predicate the decision lane reads means restoring it is
+// one edit, not two.
+func servableLadder(b *binding, task Task, ladder []Tier) []Tier {
+	_, hasLarge := b.clients[TierLocalLarge]
+	ladder = profileLadder(b.profile, hasLarge, ladder)
+	if !LocalOnly(task) {
+		return ladder
+	}
+	out := make([]Tier, 0, len(ladder))
+	for _, tier := range ladder {
+		m := b.routeMeta[tier]
+		isLocal := DecisionsConfig{Provider: m.provider, Model: m.model, BaseURL: m.baseURL}.isLocal()
+		if localOnlyAdmits(task, isLocal) {
+			out = append(out, tier)
+		}
+	}
+	return out
 }
 
 // Invalidate drops a workspace's cached results — the hook the §6
@@ -353,7 +401,9 @@ func cacheKey(wsID ids.WorkspaceID, task Task, req model.Request) (string, error
 		ProviderOptions    map[string]json.RawMessage `json:"provider_options"`
 		ContextScopes      []string                   `json:"context_scopes"`
 		ContextFingerprint string                     `json:"context_fingerprint"`
-	}{req.Model, req.System, req.Messages, req.Tools, req.MaxTokens, req.ResponseSchema, req.Attachments, req.ProviderOptions, req.ContextScopes, req.ContextFingerprint})
+		Site               string                     `json:"site,omitempty"`
+		ThinkingFloor      string                     `json:"thinking_floor,omitempty"`
+	}{req.Model, req.System, req.Messages, req.Tools, req.MaxTokens, req.ResponseSchema, req.Attachments, req.ProviderOptions, req.ContextScopes, req.ContextFingerprint, req.Site, req.ThinkingFloor})
 	if err != nil {
 		// A ProviderOptions namespace carrying invalid JSON would otherwise
 		// marshal to nil and collapse every such request onto one cache key —

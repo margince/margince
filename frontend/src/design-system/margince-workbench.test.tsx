@@ -6,11 +6,14 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { Heading } from "./heading";
 import {
   MarginceWorkbench,
   type WorkbenchRuntimeLabels,
+  type WorkbenchStep,
 } from "./margince-workbench";
+import { Modal } from "./modal";
 
 // The workbench chrome's own claims, as opposed to what the acts put inside it.
 // The one that needs proving is the runtime chip: hover and keyboard focus BOTH
@@ -27,34 +30,33 @@ const LABELS: WorkbenchRuntimeLabels = {
   latency: "Latency",
   estimatedCost: "Estimated cost",
   partial: "Partial",
-  awaiting: "Shown after my first model call",
+  awaiting: "Shown after the first model call",
   unavailable: "Not available yet",
-  chip: "What is answering, and what it costs",
+  chip: "Active model and cost",
   answering: "Answering right now",
   scope: "This run only",
 };
 
 afterEach(cleanup);
 
-function renderWorkbench() {
-  return render(
+function workbench() {
+  return (
     <MarginceWorkbench
       state="working"
       eyebrow="Margince"
-      title="Your company research AI"
+      title="Company research AI"
       status="Reading"
       configured="ollama/gemma3"
       locale="en"
       runtimeLabels={LABELS}
-      steps={[
-        { label: "Read", state: "done" },
-        { label: "Confirm", state: "now" },
-        { label: "Voice", state: "todo" },
-      ]}
     >
       <p>Thread</p>
-    </MarginceWorkbench>,
+    </MarginceWorkbench>
   );
+}
+
+function renderWorkbench() {
+  return render(workbench());
 }
 
 describe("the runtime chip", () => {
@@ -107,6 +109,32 @@ describe("the runtime chip", () => {
     expect(chip).toHaveAttribute("aria-expanded", "false");
   });
 
+  // A dialog raised over the pinned popover owns Escape, so one press closes
+  // the dialog alone rather than it and the popover the reader cannot see.
+  it("leaves Escape to a dialog raised over it", async () => {
+    const onDialogClose = vi.fn();
+    const page = (dialogOpen: boolean) => (
+      <>
+        {workbench()}
+        <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+          <Heading size="large" id="edit">
+            Edit deal
+          </Heading>
+        </Modal>
+      </>
+    );
+    const user = userEvent.setup();
+    const { rerender } = render(page(false));
+    const chip = screen.getByRole("button", { name: new RegExp(LABELS.chip) });
+    await user.click(chip);
+    rerender(page(true));
+
+    await user.keyboard("{Escape}");
+
+    expect(onDialogClose).toHaveBeenCalledOnce();
+    expect(chip).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("opens again after focus leaves and comes back", async () => {
     renderWorkbench();
     const chip = screen.getByRole("button", { name: new RegExp(LABELS.chip) });
@@ -123,64 +151,6 @@ describe("the runtime chip", () => {
   });
 });
 
-describe("the step rail", () => {
-  it("states where the journey is without offering a control", () => {
-    renderWorkbench();
-
-    const rail = screen.getByRole("list");
-    const stops = [...rail.querySelectorAll("li")];
-    expect(stops.map((stop) => stop.textContent)).toEqual([
-      "1Readdone",
-      "2Confirmin progress",
-      "3Voicewaiting",
-    ]);
-    // The machine decides what comes next, so no stop may look clickable.
-    expect(rail.querySelector("button")).toBeNull();
-    expect(rail.querySelector("a")).toBeNull();
-    expect(stops.map((stop) => stop.className)).toEqual([
-      "mw-step t-eyebrow is-done",
-      "mw-step t-eyebrow is-now",
-      "mw-step t-eyebrow is-todo",
-    ]);
-  });
-
-  // On screen the three states are told apart by label colour and a ring on the
-  // numeral. A reader who gets none of that has to be told, so each stop names
-  // its state in words that never show, and the current one is marked as such.
-  it("says each stop's state in words for assistive tech", () => {
-    renderWorkbench();
-
-    const stops = screen.getAllByRole("listitem");
-    expect(
-      stops.map((stop) => stop.querySelector(".sr-only")?.textContent),
-    ).toEqual(["done", "in progress", "waiting"]);
-  });
-
-  it("marks the stop the journey is on, and only that one", () => {
-    renderWorkbench();
-
-    const stops = screen.getAllByRole("listitem");
-    expect(stops.map((stop) => stop.getAttribute("aria-current"))).toEqual([
-      null,
-      "step",
-      null,
-    ]);
-  });
-
-  // `list-style: none` is enough for Safari to drop list semantics, and with
-  // them the "stop 2 of 3" a screen reader would otherwise announce. The
-  // numeral is decorative precisely because the list position says it.
-  it("keeps list semantics even though the bullets are styled off", () => {
-    renderWorkbench();
-
-    const rail = screen.getByRole("list");
-    expect(rail.tagName).toBe("OL");
-    expect(rail).toHaveAttribute("role", "list");
-    expect(screen.getAllByRole("listitem")).toHaveLength(3);
-    expect(rail.querySelector("b")).toHaveAttribute("aria-hidden");
-  });
-});
-
 // The rail is the variant with no top bar, so its foot row is the only place a
 // surface-level control can live. The row therefore has to hold that control
 // even while the signed-in identity beside it is still loading — a control that
@@ -192,13 +162,13 @@ describe("the rail's contact row", () => {
   // produce nothing.
   function renderContactRow(
     variant: "split" | "rail",
-    contact?: Readonly<{ name: string; detail: string }>,
+    contact?: Readonly<{ name: string; detail: string; identity: string }>,
   ) {
     return render(
       <MarginceWorkbench
         state="working"
         eyebrow="Margince"
-        title="Your company research AI"
+        title="Company research AI"
         status="Reading"
         configured="ollama/gemma3"
         locale="en"
@@ -215,6 +185,7 @@ describe("the rail's contact row", () => {
 
   it("puts the caller's control after the identity it belongs beside", () => {
     const { container } = renderContactRow("rail", {
+      identity: "u-ada",
       name: "Ada Lovelace",
       detail: "ada@example.com",
     });
@@ -237,6 +208,7 @@ describe("the rail's contact row", () => {
 
   it("renders no contact row at all in the split variant", () => {
     const { container } = renderContactRow("split", {
+      identity: "u-ada",
       name: "Ada Lovelace",
       detail: "ada@example.com",
     });
@@ -247,5 +219,55 @@ describe("the rail's contact row", () => {
     expect(container.querySelector(".mw-contact")).toBeNull();
     expect(container.textContent).not.toContain("Ada Lovelace");
     expect(screen.queryByRole("button", { name: "Theme" })).toBeNull();
+  });
+});
+
+describe("the rail's step progress line", () => {
+  const STEP_LABEL = "Step 2 of 3 · Confirm";
+
+  function renderRailSteps(steps?: readonly WorkbenchStep[]) {
+    return render(
+      <MarginceWorkbench
+        state="working"
+        eyebrow="Margince"
+        title="Company research AI"
+        status="Reading"
+        configured="ollama/gemma3"
+        locale="en"
+        runtimeLabels={LABELS}
+        variant="rail"
+        steps={steps}
+        stepLabel={STEP_LABEL}
+      >
+        <p>Thread</p>
+      </MarginceWorkbench>,
+    );
+  }
+
+  it("shows where the journey stands when there are steps", () => {
+    const { container } = renderRailSteps([
+      { label: "Connect", state: "done" },
+      { label: "Confirm", state: "now" },
+      { label: "Invite", state: "todo" },
+    ]);
+
+    expect(screen.getByText(STEP_LABEL)).toBeInTheDocument();
+    expect(container.querySelectorAll(".mw-progress-track > i")).toHaveLength(
+      3,
+    );
+  });
+
+  it("renders no progress line when no steps are given", () => {
+    const { container } = renderRailSteps(undefined);
+
+    expect(screen.queryByText(STEP_LABEL)).toBeNull();
+    expect(container.querySelector(".mw-progress")).toBeNull();
+  });
+
+  it("renders no progress line when the step list is empty", () => {
+    const { container } = renderRailSteps([]);
+
+    expect(screen.queryByText(STEP_LABEL)).toBeNull();
+    expect(container.querySelector(".mw-progress")).toBeNull();
   });
 });

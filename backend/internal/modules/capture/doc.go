@@ -34,6 +34,8 @@
 // capture_test_mailbox_sent (what the QC-only test_mailbox connector has
 // sent and whether its own Sync has echoed it back yet — internal
 // bookkeeping, not audited; rows are retained, unlike capture_trace's own
-// swept 24-hour window).
+// swept 24-hour window), and capture_sweep_run (one receipt per repair pass
+// per workspace turn, so "when did it last succeed" outlives River's day of
+// retention — bookkeeping about a pass, not audited).
 // Imports shared + platform only; never a sibling module.
 package capture

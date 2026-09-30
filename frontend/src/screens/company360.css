@@ -537,6 +537,9 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   margin: 8px 0 0;
+  /* The step to whatever answers the press: the wait, the failure, the reply
+     (whose own top margin collapses into this one). */
+  margin-bottom: var(--space-3);
 }
 /* The reply itself: a white plate on the panel's indigo ground, so the answer
    reads as the thing that came back rather than as more of the panel. */
@@ -555,9 +558,6 @@
 .co-ask-asked {
   margin: 0;
   color: var(--aiText);
-}
-.co-ask-answer > .surfacestate-empty {
-  margin: 0;
 }
 /* Who wrote it and when, under a hairline: the plate's own footer band, told
    apart from the answer the way every card on this page tells its foot apart
@@ -664,9 +664,6 @@
   border-radius: var(--r-md);
   background: var(--bgCard);
 }
-.co-strip-withheld .surfacestate-withheld {
-  margin-top: 0;
-}
 
 /* The brief under the questions it answers. Label and prose sit side by side
    in one row — the label is a column heading read once per row, not a
@@ -765,10 +762,6 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-3);
-}
-.co-part-error {
-  margin-top: var(--space-2);
-  color: var(--dangerText);
 }
 
 /* The receipt behind one cited value. Read as a short record, not as prose:
@@ -892,24 +885,6 @@
   }
 }
 
-/* The shared figure-block anatomy: an eyebrow, then the figure itself set
-   tabular, then a one-line note where the caller has one. Both the Commercial
-   panel and the Finance panel draw their headline numbers through this one
-   shape, so a reader learns it once. */
-.co-figures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-5);
-  margin-bottom: var(--space-3);
-}
-.co-figure {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.co-figure-value {
-  font-variant-numeric: tabular-nums;
-}
 /* The finance panel: one decision figure with its reasons, a quieter column
    of context beside it, and the invoice table under both. The two columns are
    separated by a rule rather than by space alone — at this width space reads
@@ -1045,22 +1020,6 @@
   margin-top: var(--space-3);
 }
 
-/* One open deal in the overview's Commercial panel: the name carries the row,
-   with the close date underneath it as a quiet second line rather than
-   competing with the stage badge and the amount on the same line. */
-.co-commercial-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.co-commercial-name {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  text-align: left;
-  min-width: 0;
-}
 /* The overview's chronology: a day heading above the run of entries that
    happened on it, so several messages read as how one day went rather than
    as an undifferentiated list. */
@@ -1160,10 +1119,6 @@
   margin-bottom: 0;
 }
 .co-rail .co-sect > summary {
-  /* The slice's own name, on the pane's gutter and clear of the hairline over
-     it: at the row's tighter interval the label sat against the rule and the
-     five slices read as one crowded list rather than five sections. */
-  padding: var(--space-4) var(--space-5) var(--space-3);
   transition: background 0.15s;
 }
 .co-rail .co-sect > summary:hover {
@@ -1179,6 +1134,12 @@
 .co-rail .co-sect > .disclosure-body {
   margin-top: 0;
   padding: 0 var(--padPanel) var(--padPanel);
+}
+/* That body already stands on the pane's gutter, so a PanelBody inside it adds
+   none: a second inset set its rows a card's padding right of the card lists
+   and verbs the other slices draw straight into their body. */
+.co-rail .co-sect > .disclosure-body > .panel-body {
+  padding: 0;
 }
 
 /* The summary's own row: the section name, then whatever it carries (a count,
@@ -1982,4 +1943,9 @@
 .billing-email {
   overflow-wrap: anywhere;
   min-width: 0;
+}
+
+/* The rollup's fine print, set under the figures it qualifies. */
+.co-rollup-note {
+  margin-top: var(--space-2);
 }

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { selectorList, stylesheets } from "../../scripts/lib/css-rules";
 import { withoutComments } from "../testing/css";
 
 // Fitness function for a disclosure nested inside a disclosure.
@@ -35,18 +36,6 @@ import { withoutComments } from "../testing/css";
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-function stylesheets(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "node_modules" || entry.name === "dist"
-        ? []
-        : stylesheets(path);
-    }
-    return entry.name.endsWith(".css") ? [path] : [];
-  });
-}
-
 /** One selector mentioning `.disclosure-body`, and where it was written. */
 type Mention = Readonly<{ sheet: string; selector: string }>;
 
@@ -56,9 +45,8 @@ type Mention = Readonly<{ sheet: string; selector: string }>;
 const mentions: Mention[] = stylesheets(srcRoot).flatMap((sheet) => {
   const css = withoutComments(readFileSync(sheet, "utf8"));
   return [...css.matchAll(/([^{}]+)\{[^{}]*\}/g)].flatMap((rule) =>
-    rule[1]
-      .split(",")
-      .map((one) => one.trim().replace(/\s+/g, " "))
+    selectorList(rule[1])
+      .map((one) => one.replace(/\s+/g, " "))
       .filter((one) => one.includes(".disclosure-body"))
       .map((selector) => ({ sheet: relative(srcRoot, sheet), selector })),
   );

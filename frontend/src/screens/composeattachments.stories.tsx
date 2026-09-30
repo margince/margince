@@ -20,7 +20,7 @@ const BLOCKS: readonly CarriageViolation[] = [
 ];
 
 const meta: Meta = {
-  title: "Patterns/Compose attachments",
+  title: "Patterns/Compose mail/Attachments",
 };
 export default meta;
 
@@ -32,6 +32,15 @@ export const CarriageBlocked: Story = {
   render: () => (
     <StoryProviders>
       <CarriageNotice channel="WhatsApp" blocks={BLOCKS} />
+    </StoryProviders>
+  ),
+};
+
+// A channel that carries no files at all, with one attachment: the singular.
+export const CarriesNoFiles: Story = {
+  render: () => (
+    <StoryProviders>
+      <CarriageNotice channel="SMS" blocks={[{ kind: "carries", count: 1 }]} />
     </StoryProviders>
   ),
 };

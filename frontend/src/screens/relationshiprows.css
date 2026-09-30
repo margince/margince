@@ -1,0 +1,14 @@
+.relationshiprows-verbs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Stacked, the verbs sit under the facts rather than in a cell of their own, so
+   they go to the far end: a control on the labels' edge reads as one more label. */
+.relationshiprows-verbs-stacked {
+  justify-content: flex-end;
+}
+
+.relationshiprows-remove-lede {
+  margin-bottom: var(--space-4);
+}

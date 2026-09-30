@@ -29,8 +29,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -100,13 +98,12 @@ var ownPools = gatekit.Waive(map[string]string{
 func TestModuleSuitesTakeTheProcessSharedPool(t *testing.T) {
 	t.Parallel()
 	var offenders, sharing, unguarded []string
-	fset := token.NewFileSet()
 	err := filepath.WalkDir(modulesTree, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, "_integration_test.go") {
 			return err
 		}
 		path = filepath.ToSlash(path)
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}

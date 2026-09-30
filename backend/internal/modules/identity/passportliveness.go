@@ -62,7 +62,7 @@ const (
 // makes the liveness rule above impossible to have on one path and miss on
 // the other.
 func agentAuthQuery(predicate string) string {
-	return `SELECT p.id, p.on_behalf_of, p.scopes, u.seat_type
+	return `SELECT p.id, p.on_behalf_of, p.scopes, u.seat_type, p.oauth_grant_id
 		FROM passport p
 		JOIN app_user u ON u.id = p.on_behalf_of` + agentLivenessJoins + `
 		WHERE ` + predicate + agentLivenessWhere

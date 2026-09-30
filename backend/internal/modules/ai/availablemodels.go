@@ -76,6 +76,10 @@ type AvailableModel struct {
 	// USD-per-million-tokens decimal strings, absent where the vendor
 	// publishes no price.
 	InputPerMtok, OutputPerMtok *string
+	// CacheReadPerMtok and CacheWritePerMtok are the vendor's prompt-cache
+	// prices in the same unit, absent where it publishes none. Only the full
+	// view carries them: they exist for the rate refresh, not for a picker.
+	CacheReadPerMtok, CacheWritePerMtok *string
 	// RankScore is this model's score under AvailableModels.RankedBy, absent
 	// where the list is not ranked.
 	RankScore *string
@@ -127,15 +131,11 @@ func (s *RoutingStore) ListAvailableModels(
 		return AvailableModels{}, err
 	}
 	out := AvailableModels{Provider: provider}
-	// The profile decides where inference may happen, and a list call is egress
-	// like any other. Refused here for the same reason a binding is refused at
-	// save time: a sovereign installation must not reach a cloud vendor, and
-	// discovering that at the first call is too late. OpenRouter is cloud
-	// egress like any other broker, so it is refused here too rather than
-	// falling through to the unauthenticated read below.
-	if cfg.Profile == ProfileSovereign && !ProviderIsLocal(provider) {
-		out.Unavailable = AvailabilityProfileForbids
+	if out.Unavailable = listRefusal(cfg.Profile, provider); out.Unavailable != AvailabilityOK {
 		return out, nil
+	}
+	if isDecisionProvider(provider) {
+		return s.listDecisionModels(ctx, cfg, provider), nil
 	}
 	// OpenRouter publishes its list unauthenticated and unbound: there is no
 	// stored binding to resolve a host from, and SelectBrain knows no adapter
@@ -173,6 +173,63 @@ func (s *RoutingStore) ListAvailableModels(
 		out.Models[i] = AvailableModel{Info: m}
 	}
 	return out, nil
+}
+
+// listRefusal is why provider's list is not asked for at all, or
+// AvailabilityOK when it may be.
+//
+// The profile decides where inference may happen, and a list call is egress
+// like any other. Refused for the same reason a binding is refused at save
+// time: a sovereign installation must not reach a cloud vendor, and
+// discovering that at the first call is too late. OpenRouter is cloud egress
+// like any other broker, so it is refused too rather than falling through to
+// the unauthenticated read. The registry's own local flag decides, so a local
+// decision adapter is not mistaken for a cloud one.
+func listRefusal(profile Profile, provider string) ModelAvailability {
+	d, _ := providerByName(provider)
+	if profile == ProfileSovereign && !d.local && !d.localByEndpoint {
+		return AvailabilityProfileForbids
+	}
+	return AvailabilityOK
+}
+
+// isDecisionProvider is whether provider answers the decision wire rather than
+// a chat one, which decides how it is listed and tested.
+func isDecisionProvider(provider string) bool {
+	d, _ := providerByName(provider)
+	return d.caps.has(capDecision)
+}
+
+// listDecisionModels asks a decision endpoint what it serves, at the lane it
+// would serve. A host that publishes no list answers not_published, and the
+// price sheet's rows stay its suggestions.
+func (s *RoutingStore) listDecisionModels(ctx context.Context, cfg RoutingConfig, provider string) AvailableModels {
+	out := AvailableModels{Provider: provider}
+	lane := boundDecisionLane(cfg, provider)
+	if decisionLaneForbidden(cfg.Profile, lane) {
+		out.Unavailable = AvailabilityProfileForbids
+		return out
+	}
+	client, err := selectDecider(lane, s.resolvedKeys(ctx))
+	if err != nil {
+		out.Unavailable = unavailableFor(err)
+		return out
+	}
+	asked, cancel := context.WithTimeout(ctx, listTimeout)
+	defer cancel()
+	models, listed, err := client.decisionModels(asked, provider)
+	switch {
+	case !listed:
+		out.Unavailable = AvailabilityNotPublished
+	case err != nil:
+		out.Unavailable = AvailabilityUnreachable
+	default:
+		out.Models = make([]AvailableModel, len(models))
+		for i, m := range models {
+			out.Models[i] = AvailableModel{Info: m}
+		}
+	}
+	return out
 }
 
 // unavailableFor reads why a binding could not be turned into a client.

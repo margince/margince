@@ -54,7 +54,7 @@ const items: components["schemas"]["EmploymentImportItem"][] = [
   },
 ];
 const meta: Meta<typeof ImportedEmploymentHistory> = {
-  title: "Records/Contact record/Imported employment",
+  title: "Records/Contact 360/Imported employment",
   component: ImportedEmploymentHistory,
   args: { view, canEdit: true },
   decorators: [

@@ -121,6 +121,14 @@ type Handlers struct {
 	// rollout lives in the composition root and identity may not import it —
 	// the same shape as dataResetAvailable above, and for the same reason.
 	companyContextAvailable bool
+	// embedReindexAvailable is whether an embeddings model is bound, so the
+	// reindex routes serve rather than 501. Injected for the same reason.
+	embedReindexAvailable bool
+	// listsAvailable is the installation's lists.enabled.
+	listsAvailable bool
+	// installationBrand reads the anchor company's name and marks for /me.
+	// Nil omits them (installationbrand.go).
+	installationBrand InstallationBrand
 	// mcpResource is the canonical MCP server URL (public_base_url +
 	// "/mcp"), injected by the composition root from deployment config.
 	// The RFC 9728 protected-resource document advertises this verbatim
@@ -323,9 +331,14 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	me, err := h.me(r.Context(), id)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	setSessionCookie(w, session.Token)
 	setDeviceCookie(w, session.DeviceProof)
-	httperr.WriteJSON(w, http.StatusOK, h.meResponse(r.Context(), id))
+	httperr.WriteJSON(w, http.StatusOK, me)
 }
 
 // Logout implements (POST /auth/logout): revoke + clear, idempotent, 204.
@@ -356,8 +369,13 @@ func (h Handlers) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 	// a shared cache that served it to the next caller would hand them someone
 	// else's capabilities, and a stored copy would survive the role change that
 	// revoked them.
+	me, err := h.me(r.Context(), id)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	httperr.WriteJSON(w, http.StatusOK, h.meResponse(r.Context(), id))
+	httperr.WriteJSON(w, http.StatusOK, me)
 }
 
 func setSessionCookie(w http.ResponseWriter, token string) {

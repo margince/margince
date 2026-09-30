@@ -13,7 +13,7 @@ import { CrawlCanvas, type CrawlPage } from "./crawl-canvas";
 // two themes: the ink is `--ai` and the resting nodes are `--textTertiary`, and
 // both move with the theme control.
 const meta: Meta<typeof CrawlCanvas> = {
-  title: "Onboarding/Crawl canvas",
+  title: "Components/Text and data display/Crawl canvas",
   component: CrawlCanvas,
   parameters: { layout: "padded" },
 };

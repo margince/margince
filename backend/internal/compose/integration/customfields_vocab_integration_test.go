@@ -30,7 +30,7 @@ import (
 func (f dealCFVFixture) seedScoredDeal(t *testing.T, name string, cf map[string]any) ids.UUID {
 	t.Helper()
 	d, err := f.store.CreateDeal(f.ctx, deals.CreateDealInput{
-		Name: name, PipelineID: f.pipeline, StageID: f.stage, Source: "ui",
+		Name: name, PipelineID: f.pipeline, StageID: f.stage, Source: "manual",
 		CustomFields: cf,
 	})
 	if err != nil {
@@ -71,7 +71,7 @@ func assertIDOrder(t *testing.T, got, want []ids.UUID, label string) {
 // DESC) tuple.
 func TestCustomFieldVocab_SortByCustomColumn(t *testing.T) {
 	f := setupDealCFV(t)
-	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
 	a := f.seedScoredDeal(t, "A", map[string]any{score: float64(2)})
 	b := f.seedScoredDeal(t, "B", map[string]any{score: float64(2)})
@@ -95,7 +95,7 @@ func TestCustomFieldVocab_SortByCustomColumn(t *testing.T) {
 // at a page boundary).
 func TestCustomFieldVocab_SortPaginatesStably(t *testing.T) {
 	f := setupDealCFV(t)
-	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
 	a := f.seedScoredDeal(t, "A", map[string]any{score: float64(2)})
 	b := f.seedScoredDeal(t, "B", map[string]any{score: float64(2)})
@@ -128,9 +128,9 @@ func TestCustomFieldVocab_SortPaginatesStably(t *testing.T) {
 // other AND-wise.
 func TestCustomFieldVocab_FilterEqualityPerType(t *testing.T) {
 	f := setupDealCFV(t)
-	tier := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Tier", Type: customfields.TypeText, Source: "ui"})
-	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
-	strategic := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Strategic", Type: customfields.TypeBoolean, Source: "ui"})
+	tier := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Tier", Type: customfields.TypeText, Source: "manual"})
+	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
+	strategic := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Strategic", Type: customfields.TypeBoolean, Source: "manual"})
 
 	gold := f.seedScoredDeal(t, "Gold", map[string]any{tier: "gold", score: float64(1.5), strategic: true})
 	silver := f.seedScoredDeal(t, "Silver", map[string]any{tier: "silver", score: float64(2), strategic: false})
@@ -158,7 +158,7 @@ func TestCustomFieldVocab_FilterEqualityPerType(t *testing.T) {
 // by it answers the same typed 422 codes an unknown cf_ field gets.
 func TestCustomFieldVocab_RetiredAndUnknownRefused(t *testing.T) {
 	f := setupCFV(t)
-	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{Object: "contact", Label: "Legacy Tier", Type: customfields.TypeText, Source: "ui"})
+	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{Object: "contact", Label: "Legacy Tier", Type: customfields.TypeText, Source: "manual"})
 	if err != nil {
 		t.Fatalf("defining field: %v", err)
 	}
@@ -240,11 +240,11 @@ func assertSpecFieldsSortable(t *testing.T, resources map[string]vocabResource) 
 // accepted and newest-first.
 func assertFullNameAndDefaultSort(t *testing.T, f cfvFixture) {
 	t.Helper()
-	zoe, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Zoe Last", Source: "ui"})
+	zoe, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Zoe Last", Source: "manual"})
 	if err != nil {
 		t.Fatalf("CreateContact: %v", err)
 	}
-	ada, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Ada First", Source: "ui"})
+	ada, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Ada First", Source: "manual"})
 	if err != nil {
 		t.Fatalf("CreateContact: %v", err)
 	}
@@ -323,7 +323,7 @@ func TestCustomFieldVocab_CoreVocabulary(t *testing.T) {
 // error.
 func TestCustomFieldVocab_MalformedFilterValueRefused(t *testing.T) {
 	f := setupDealCFV(t)
-	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
 	_, _, err := f.store.ListDeals(f.ctx, deals.ListDealsInput{CustomFilters: map[string]string{score: "not-a-number"}})
 	var pred *storekit.PredicateError
@@ -338,7 +338,7 @@ func TestCustomFieldVocab_MalformedFilterValueRefused(t *testing.T) {
 // cursor_param_mismatch) instead of silently mis-paging.
 func TestCustomFieldVocab_SortedCursorRefusedUnderOtherSort(t *testing.T) {
 	f := setupDealCFV(t)
-	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 	f.seedScoredDeal(t, "A", map[string]any{score: float64(1)})
 	f.seedScoredDeal(t, "B", map[string]any{score: float64(2)})
 
@@ -361,7 +361,7 @@ func TestCustomFieldVocab_SortedCursorRefusedUnderOtherSort(t *testing.T) {
 // typed bind cast where Postgres would fail the query (22P02 → 500).
 func TestCustomFieldVocab_CraftedCursorKeyIsClientFault(t *testing.T) {
 	f := setupDealCFV(t)
-	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 	f.seedScoredDeal(t, "A", map[string]any{score: float64(1)})
 
 	badKey := "abc"

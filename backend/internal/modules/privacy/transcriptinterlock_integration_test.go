@@ -82,7 +82,7 @@ func TestPurgingReadingsWaitsForAReadingInFlight(t *testing.T) {
 	}
 	// Registered where the pool is handed out and before any cleanup of this
 	// test's own, so it runs last and sees a package that has genuinely stopped.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 
 	activityID := ids.NewV7()
 	holder := heldTranscriptLock(ctx, t, pool, activityID)

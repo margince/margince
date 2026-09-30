@@ -330,7 +330,9 @@ describe("OAuthConsent", () => {
   it("discloses a self-renewing connection", async () => {
     renderConsent({ offline: true, scopes: ["read"] });
     expect(
-      await screen.findByText(/stay connected without asking again/i),
+      await screen.findByText(
+        /stays connected and renews access without asking again/i,
+      ),
     ).toBeTruthy();
   });
 });
@@ -345,7 +347,7 @@ describe("OAuthConsent — what a refused consent is handed back", () => {
     // The nonce is spent forever, so the recovery is the client, never a
     // reload of this page — the copy says so rather than staying silent.
     expect(
-      await screen.findByText(/reloading this page will not help/i),
+      await screen.findByText(/reloading this page does not help/i),
     ).toBeTruthy();
   });
 

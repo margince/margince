@@ -415,6 +415,11 @@ func (s *RetentionService) dueRecords(ctx context.Context, pol retentionPolicy, 
 	// precisely to inherit it. Keyed on the object type, a selector that took
 	// the floor without being called "activity" would be sent two arguments
 	// short and fail its whole stage, taking every later policy with it.
+	// A selector that asks the policy's action takes it as $3 (the lead
+	// selector: archive and anonymize reach different rows).
+	if strings.Contains(selector, "$3") && !strings.Contains(selector, "$4") {
+		args = append(args, pol.Action)
+	}
 	if strings.Contains(selector, "$4") {
 		floor := jurisdiction.RetentionClass{}
 		if pol.Action != actionArchive {
@@ -466,3 +471,9 @@ func isDestructive(action string) bool {
 // (voice_learning_signal.retention_until, set at capture); this sweep only
 // honors it — the window is the ai module's fixed operational floor, not a
 // policy-configurable domain record.
+
+// WithPayloadVault lets destructive actions retire sealed booking capabilities.
+func (s *RetentionService) WithPayloadVault(payloads PayloadPurger) *RetentionService {
+	s.eraser = s.eraser.WithPayloadVault(payloads)
+	return s
+}

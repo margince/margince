@@ -133,7 +133,7 @@ func scanUnitSQL(t testing.TB, unit string, sources map[string]string) extSQLSca
 	}
 	prefix := namespace + "_"
 
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	files := make([]*ast.File, 0, len(sources))
 	for _, path := range slices.Sorted(maps.Keys(sources)) {
 		file, parseErr := parser.ParseFile(fset, path, sources[path], 0)

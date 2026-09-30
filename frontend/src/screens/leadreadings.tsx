@@ -14,7 +14,7 @@ import { throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import { leadScoreKey } from "./leadkeys";
 import { leadStatusLabel, scoreFactorLabel } from "./leadpresentation";
-import { firstResponseClock, terminalBadge } from "./leadstanding";
+import { firstResponseClock } from "./leadstanding";
 
 // The lead's four readings, in the cards every record page draws them in: how
 // it scores and what made the score; whether anybody has answered, and how
@@ -71,38 +71,73 @@ export function LeadReadings({ lead }: Readonly<{ lead: Lead }>) {
     <ReadingsGrid label={t("lead.readings.title")} testId="lead-readings">
       <ScoreCard lead={lead} locale={locale} t={t} />
       <FirstResponseCard lead={lead} locale={locale} t={t} />
-      {/* The status names the set of leads in it, and `#/leads` declares
-          `status` as a filter chip — a chip's key IS its wire parameter, so
-          this reading was an address already. */}
+      <StatusCard lead={lead} t={t} />
       <StatCard
-        label={t("lead.status")}
-        value={statusReading(lead, t)}
-        onOpen={() =>
-          navigate({ screen: "leads" }, new Map([["status", lead.status]]))
-        }
-      />
-      <StatCard
-        label={t("create.companyName")}
-        value={lead.company_name ?? t("lead.detailsUnset")}
+        label={t("lead.readings.company")}
+        // A lead with no company HAS none, which is a fact about the lead.
+        // "Not set" is a form's word for an empty input, and this is a reading.
+        // A name the server sent as whitespace is no name: a StatCard value is
+        // a non-empty string by contract, and a blank one draws a slot that
+        // reads as a reading which failed to load.
+        value={lead.company_name?.trim() || t("lead.readings.noCompany")}
       />
     </ReadingsGrid>
   );
 }
 
-// The score's own words: the override sentence, else which factor won it,
-// else nothing to point at yet. Shared with the header's Score fact
-// (leadheader.tsx) so the two cannot come to name one number differently.
-export function scoreReasonLabel(lead: Lead, t: Translator): string {
-  if (lead.score_override_reason) return t("lead.overriddenBadge");
+// The score's own words: what overrode it, else which factor won it, else
+// nothing to point at yet. Shared with the header's Score fact
+// (leadheader.tsx) so the two cannot come to name one number differently —
+// apart from the override, whose word each surface owns: the header wears a
+// lower-case badge, and a card's detail line is written as a line.
+export function scoreReasonLabel(
+  lead: Lead,
+  t: Translator,
+  overridden: MessageKey = "lead.overriddenBadge",
+): string {
+  if (lead.score_override_reason) return t(overridden);
   if (lead.score_reason) return scoreFactorLabel(lead.score_reason, t);
   return t("lead.scoreNoSignals");
 }
 
-/** The status as the readings state it: the terminal wording when it has one. */
-export function statusReading(lead: Lead, t: Translator): string {
-  const terminal = terminalBadge(lead);
-  const label = terminal?.label ?? leadStatusLabel(lead.status);
-  return label ? t(label) : lead.status;
+/**
+ * Where the lead stands on the ladder, with the ending it reached under it.
+ *
+ * Two facts, two lines. Collapsing them left a promoted lead reading only
+ * "Archived" — the filing that followed the good ending standing in for the
+ * ending itself — and a merged one saying nothing about where it went.
+ *
+ * The status names the set of leads in it, and `#/leads` declares `status` as
+ * a filter chip — a chip's key IS its wire parameter, so this reading is an
+ * address already.
+ */
+function StatusCard({ lead, t }: Readonly<{ lead: Lead; t: Translator }>) {
+  return (
+    <StatCard
+      label={t("lead.status")}
+      value={t(
+        lead.merged_into_id
+          ? "lead.readings.merged"
+          : leadStatusLabel(lead.status),
+      )}
+      detail={terminalDetail(lead, t)}
+      onOpen={() =>
+        navigate({ screen: "leads" }, new Map([["status", lead.status]]))
+      }
+    />
+  );
+}
+
+// The ending under the ladder word, where the lead reached one. A merge is
+// read first: it archives the lead and leaves `status` exactly where it stood,
+// so a lead merged away mid-conversation has both an ending and a rung.
+function terminalDetail(lead: Lead, t: Translator): string | undefined {
+  if (lead.merged_into_id) {
+    // WHERE it went is not on this payload, so the detail says that it went
+    // rather than naming a survivor nothing here can name.
+    return t("lead.readings.mergedInto");
+  }
+  return lead.status === "promoted" ? t("lead.readings.archived") : undefined;
 }
 
 // The score, with the factors that add up to it behind the figure. The bar is
@@ -165,7 +200,7 @@ function ScoreCard({
     <StatCard
       label={t("lead.score")}
       value={formatNumber(lead.score, locale)}
-      detail={scoreReasonLabel(lead, t)}
+      detail={scoreReasonLabel(lead, t, "lead.readings.scoreManual")}
       meter={{ filled: lead.score, total: 100 }}
       basis={basis}
     />
@@ -217,12 +252,15 @@ function FirstResponseCard({
   return (
     <StatCard
       label={label}
+      // Inside the target is still OWED: nobody has answered, and "on time" is
+      // a verdict on a response that does not exist yet. The deadline under it
+      // says everything the verdict was standing in for.
       value={
         breached
           ? t("lead.sla.breached")
           : atRisk
             ? t("lead.sla.atRisk")
-            : t("lead.sla.withinTarget")
+            : t("lead.readings.owed")
       }
       detail={t(breached ? "lead.sla.overdueSince" : "lead.sla.dueBy", {
         at: formatDateTime(clock.deadline, locale, zone),

@@ -20,15 +20,18 @@ func (h Handlers) ListUsers(w http.ResponseWriter, r *http.Request, params crmco
 	// take its own — a second evaluation here disagreed with the service for an
 	// agent request, which reaches the handler with a kernel principal and no
 	// human Identity to ask about.
-	if actor, ok := identityFrom(r.Context()); ok {
-		r = r.WithContext(actorCtx(r.Context(), actor))
-	}
-	roster, err := h.svc.ListUsers(r.Context(), ListUsersInput{
+	in := ListUsersInput{
 		Q:               params.Q,
 		Cursor:          params.Cursor,
 		Limit:           params.Limit,
 		IncludeInactive: params.IncludeInactive != nil && *params.IncludeInactive,
-	})
+		IncludeInvited:  params.IncludeInvited != nil && *params.IncludeInvited,
+	}
+	if actor, ok := identityFrom(r.Context()); ok {
+		r = r.WithContext(actorCtx(r.Context(), actor))
+		in.Actor = &actor
+	}
+	roster, err := h.svc.ListUsers(r.Context(), in)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -40,7 +43,12 @@ func (h Handlers) ListUsers(w http.ResponseWriter, r *http.Request, params crmco
 	wire := rosterUserMapping(roster.Management)
 	data := make([]crmcontracts.User, 0, len(roster.Users))
 	for _, u := range roster.Users {
-		data = append(data, wire(u))
+		user := wire(u)
+		if actions, computed := roster.Actions[u.ID]; computed {
+			allowed := h.wireMemberActions(actions)
+			user.AllowedActions = &allowed
+		}
+		data = append(data, user)
 	}
 	httperr.WriteJSON(w, http.StatusOK,
 		crmcontracts.UserListResponse{Data: data, Page: pageInfo(roster.Page)})
@@ -141,4 +149,18 @@ func wireTeam(tm teamRow) crmcontracts.Team {
 		MemberCount: &count,
 		CreatedAt:   &created,
 	}
+}
+
+// wireMemberActions maps the service's answer onto the wire, dropping the
+// password link where this installation cannot build one: the endpoint
+// refuses it before ever reaching the service, with passwordLinkRefusal.
+func (h Handlers) wireMemberActions(actions []memberAction) []crmcontracts.UserAllowedActions {
+	out := make([]crmcontracts.UserAllowedActions, 0, len(actions))
+	for _, action := range actions {
+		if action == actionIssuePasswordLink && h.passwordLinkRefusal() != nil {
+			continue
+		}
+		out = append(out, crmcontracts.UserAllowedActions(action))
+	}
+	return out
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -46,16 +47,86 @@ type Result struct {
 	Status    string
 }
 
-// Scan asks every rule of every live open deal, once.
+// walked is what one pass of the rules came to, before anything is written.
+//
+// ONE walk serves the nightly pass and the preview a human reads before
+// starting the cycle. Two copies would let the preview promise findings the run
+// it authorises then does not raise, which is the one way a preview can be
+// worse than no preview at all.
+type walked struct {
+	// eligible is counted in the LOOP, one per deal actually evaluated. Taken
+	// from len(subjects) it would be the same number the query returned, which
+	// makes the census assert x == x and leaves a loop that broke early looking
+	// complete.
+	eligible int
+	raised   []raised
+	// seen are the logical keys of this walk's findings, and deals are the ids
+	// it visited. Together they are what absence stands on: a finding whose key
+	// is missing from a walk that visited its deal has no condition left.
+	seen  []string
+	deals []string
+}
+
+// raised is one finding and the seat it belongs to. The owner comes from the
+// subject rather than the rule, so it travels with the finding instead of being
+// looked up a second time at the write.
+type raised struct {
+	finding Finding
+	owner   string
+}
+
+// findings is the walk's findings alone, for readiness and for counting.
+func (w walked) findings() []Finding {
+	out := make([]Finding, 0, len(w.raised))
+	for _, r := range w.raised {
+		out = append(out, r.finding)
+	}
+	return out
+}
+
+// askEveryRule asks every rule of every subject, once, and writes nothing.
+func askEveryRule(now time.Time, subjects []Subject, cfg Config) walked {
+	var out walked
+	for _, subject := range subjects {
+		out.deals = append(out.deals, subject.DealID)
+		out.eligible++
+		for _, rule := range Rules() {
+			found := rule.Ask(now, subject, cfg)
+			if found == nil {
+				continue
+			}
+			out.raised = append(out.raised, raised{finding: *found, owner: subject.Owner})
+			out.seen = append(out.seen, LogicalKey(*found))
+		}
+	}
+	return out
+}
+
+// Scan asks every rule of every live open deal, once, and records what it found.
 //
 // It NEVER refuses to start. An upstream that could not be read makes the run
 // incomplete and its readiness `checks_incomplete` — it does not make the run
 // absent. Refusing would produce no record in exactly the case this pass exists
 // to report, and the brief waiting on it would run without ever learning why.
-func (s *Scanner) Scan(ctx context.Context, now time.Time) (Result, error) {
+// requestedBy names the seat that asked, and nil is the nightly cadence.
+func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) (Result, error) {
 	var out Result
 	err := s.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		runID, err := s.store.StartRun(ctx, tx, now)
+		// ONE pass at a time, and the lock is the whole reason a human may ask
+		// for one. Two overlapping passes walk two snapshots, and CloseCleared
+		// closes any open finding its own walk did not re-mint — so the older
+		// snapshot can close a finding the newer one just raised, and the deal
+		// it belongs to loses the task that was about to be minted for it.
+		// Nothing arbitrated this while the nightly sweep was the only caller.
+		//
+		// The key carries no workspace, following LockWriteIdentity's own rule:
+		// one installation serves one company, so a workspace would distinguish
+		// nothing. A pass that has to wait is correct — it runs next, over the
+		// records the first one left.
+		if err := storekit.LockWriteIdentity(ctx, tx, "assurance", "pass"); err != nil {
+			return err
+		}
+		runID, err := s.store.StartRun(ctx, tx, now, requestedBy)
 		if err != nil {
 			return err
 		}
@@ -83,44 +154,30 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time) (Result, error) {
 			return s.store.FinishRun(ctx, tx, runID, 0, 0, 0, out.Status, out.Readiness)
 		}
 
-		var findings []Finding
-		var seen, walked []string
-		for _, subject := range subjects {
-			walked = append(walked, subject.DealID)
-			// Counted in the LOOP, one per deal actually evaluated. Taken from
-			// len(subjects) it would be the same number the query returned,
-			// which makes the census assert x == x and leaves a loop that
-			// broke early looking complete.
-			out.EligibleDeals++
-			for _, rule := range Rules() {
-				found := rule.Ask(now, subject, s.cfg)
-				if found == nil {
-					continue
-				}
-				findings = append(findings, *found)
-				seen = append(seen, LogicalKey(*found))
-				if err := s.store.UpsertException(ctx, tx, *found, subject.Owner); err != nil {
-					return err
-				}
+		pass := askEveryRule(now, subjects, s.cfg)
+		out.EligibleDeals = pass.eligible
+		out.Findings = len(pass.raised)
+		for _, r := range pass.raised {
+			if err := s.store.UpsertException(ctx, tx, r.finding, r.owner); err != nil {
+				return err
 			}
 		}
-		out.Findings = len(findings)
 		// Which findings THIS run saw, before the clearing below removes the
 		// ones it did not. Recorded from the same `seen` set that decides what
 		// stays open, so the membership and the clearing can never disagree
 		// about what tonight observed.
-		if err := s.store.RecordRunFindings(ctx, tx, runID, seen); err != nil {
+		if err := s.store.RecordRunFindings(ctx, tx, runID, pass.seen); err != nil {
 			return err
 		}
 		// A finding this complete walk did not re-mint has no condition left to
 		// report — close it, but only for rules whose required sources were
 		// read tonight. Absence is a claim, and it stands on what was looked at.
-		cleared, err := s.store.CloseCleared(ctx, tx, clearableTypes(coverage), walked, seen)
+		cleared, err := s.store.CloseCleared(ctx, tx, clearableTypes(coverage), pass.deals, pass.seen)
 		if err != nil {
 			return err
 		}
 		out.Cleared = cleared
-		out.Readiness = Readiness(coverage, findings, s.cfg)
+		out.Readiness = Readiness(coverage, pass.findings(), s.cfg)
 		out.Status = StatusComplete
 		if out.Readiness == ReadinessChecksIncomplete {
 			out.Status = StatusIncomplete

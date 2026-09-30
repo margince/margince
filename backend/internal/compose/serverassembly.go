@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -38,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -68,8 +70,11 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
 		// A merge carries the retiring subject's stops, or it refuses. consent
 		// owns communication_suppression; contacts owns the merge; neither
-		// imports the other, so the edge is injected here.
-		WithStopCarrier(consent.NewStore(InstallationDB(pool)))
+		// imports the other, so the edge is injected here. The consent links
+		// and the introduction asks ride the same way.
+		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
+		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
+			introductions.NewStore(InstallationDB(pool), time.Now))
 }
 
 // newFinanceHandlers builds the invoicing transport over the two edges it
@@ -97,6 +102,10 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	return activities.NewHandlers(InstallationDB(pool)).
 		WithConsent(gate).
 		WithSendPreview(gate).
+		// The SAME seam the check_availability tool reads, so the two doors
+		// answer one question one way: whether a window was read off the host's
+		// own diary or derived from this CRM's records.
+		WithCalendarConnected(activities.CalendarConnected(calendarBackingResolver(pool))).
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
@@ -154,8 +163,17 @@ func (o ownDomainReader) ReaderAddresses(
 // wiring gate on this one constructor covers every caller, rather than
 // needing one gate per independently-built store.
 func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
-	return collections.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
+	return collections.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).
+		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithBaseCurrency(identity.BaseCurrencyOf)
 }
+
+// dealWorthTodaySQL is what the filter builder's deal amount compares: the
+// forecast's base value, priced at today's rate for an open deal.
+var dealWorthTodaySQL = BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "t")
+
+// installationBaseCurrencySQL reads the reporting currency inside the filter's
+// own statement, which the segment engine compiles without a Go-side bind.
+const installationBaseCurrencySQL = "(SELECT (bc.value #>> '{}')::text FROM setting bc WHERE bc.key = 'installation.base_currency')"
 
 // newCollectionsHandlers builds the lists/tags/saved-views transport over
 // NewCollectionsStore, so dynamic-list create validation and the members
@@ -165,6 +183,29 @@ func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 // cannot be refused here while an export of the same list accepts it.
 func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 	return collections.NewHandlers(NewCollectionsStore(pool))
+}
+
+// wireSurfaces binds the handler sets built after the literal, each over a
+// dependency the literal had to build first.
+func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
+	s.wireStagedSurfaces(pool)
+	s.wireAnalyticsSurface(pool)
+	s.wireCaptureSettingsSurface(pool)
+	s.wireExportSurface(pool, log)
+	s.wireOnboardingSurface(pool)
+	s.wireSystemOfRecordReads(pool)
+	s.wireBulkSurface(pool)
+}
+
+// wireStagedSurfaces binds the two surfaces that read the staged queue. They
+// share ONE approvals engine, so the day's card and the receipt's line are one
+// queue rather than two readings of it; a second engine here is how the two
+// would come to disagree.
+func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
+	staged := approvalsServiceWithEffects(pool)
+	s.attentionHandlers = newAttentionHandlers(pool, staged)
+	s.magicService = newMagicService(pool, staged, time.Now)
+	s.magicHandlers = magic.NewHandlers(s.magicService)
 }
 
 // wireCaptureSettingsSurface binds the workspace's own capture posture
@@ -189,7 +230,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	// number, and moving it to installation settings is a migration plus a
 	// reader, which is its own change.
 	s.analyticsQueryHandlers = newAnalyticsQueryHandlers(
-		InstallationDB(pool), analyticsquery.DefaultFloor)
+		InstallationDB(pool), analyticsquery.DefaultFloor, newAttentionNames(InstallationDB(pool)))
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(
@@ -216,10 +257,12 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 	// WithCatalogue wires the public OpenRouter model read unconditionally: it
 	// needs no tenant credential, so there is no "no provider connected"
 	// configuration to honor here.
-	s.aiRoutingHandlers = aiRoutingHandlers{
-		store: ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).
-			WithCatalogue(ai.NewModelCatalogue(systemClock{})),
-	}
+	catalogue := ai.NewModelCatalogue(systemClock{})
+	routing := ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).WithCatalogue(catalogue)
+	s.aiRoutingHandlers = aiRoutingHandlers{store: routing}
+	// The price refresh reads the same bindings and the same broker list, so
+	// its 15-minute cache is the picker's too.
+	s.voiceHandlers = s.WithCatalogueRefresh(routing, catalogue)
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 	// The installation's own identity and reporting basis (ADR-0090/A135):
@@ -324,13 +367,6 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
-	// The author repair reaches one module's store and its own ledger table,
-	// both off the same installation handle — so the write and the record of
-	// the write cannot end up addressing different databases.
-	s.attributionHandlers = attributionHandlers{
-		db:         InstallationDB(pool),
-		activities: activities.NewStore(InstallationDB(pool)),
-	}
 	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), approvals.NewService(InstallationDB(pool)), time.Now)
 	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))

@@ -53,6 +53,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // stagingObligations are the calls a staging method must pair. Each is the
@@ -135,7 +137,7 @@ const stagingCorpusFloor = 3
 func TestEveryStagedDeliveryCarriesItsAuthorization(t *testing.T) {
 	t.Parallel()
 
-	subjects := stagingMethodsIn(t, token.NewFileSet(), composeTier)
+	subjects := stagingMethodsIn(t, gatekit.SourceFileSet(), composeTier)
 	// Under-recognition is the one way this must not fail. A gate that walked
 	// the wrong directory, or a rename that made every method stop matching,
 	// would find no subjects and report PASS.
@@ -178,7 +180,7 @@ func TestEveryStagedDeliveryCarriesItsAuthorization(t *testing.T) {
 func TestAStagingPathWithNoAuthorityFailsRatherThanStages(t *testing.T) {
 	t.Parallel()
 
-	subjects := stagingMethodsIn(t, token.NewFileSet(), composeTier)
+	subjects := stagingMethodsIn(t, gatekit.SourceFileSet(), composeTier)
 	if len(subjects) < stagingCorpusFloor {
 		t.Fatalf("found %d staging methods in %s, want at least %d: this gate would "+
 			"otherwise report PASS having checked nothing",

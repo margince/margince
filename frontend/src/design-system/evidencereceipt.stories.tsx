@@ -7,7 +7,8 @@ import { EvidenceReceipt } from "./evidencereceipt";
 
 // What a number was drawn from, beside the number.
 const meta: Meta = {
-  title: "Design System/EvidenceReceipt",
+  title: "Components/AI and provenance/Evidence receipt",
+  component: EvidenceReceipt,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

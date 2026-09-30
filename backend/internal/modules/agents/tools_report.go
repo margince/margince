@@ -70,6 +70,7 @@ func (t runReport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "run_report", Title: "Run a report", Version: toolVersionV1,
 		Description:   runReportCopy.render(),
+		Instead:       runReportCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "runReport",
 		InputSchema: schema(`{"type":"object","required":["report"],"properties":{
@@ -82,6 +83,14 @@ func (t runReport) Spec() mcp.ToolSpec {
 				"as":{"type":"string","description":"Output column name for this aggregate"}},"additionalProperties":false},
 				"description":"Omit for the report's own default aggregates."}},
 			"additionalProperties":false}`),
+		// Unkeyed rather than keyed by the union of every report's filter
+		// names: those names are the published vocabulary's, and reciting them
+		// here costs more than one tool's share of an agent's window
+		// (TestNoSingleToolTakesMoreOfTheWindowThanItsShare), the limit that
+		// keeps the plan vocabularies out of this schema too.
+		UnkeyedArguments: map[string]string{
+			"$.filters": "filters is keyed by the named report's own filter names, published in its vocabulary",
+		},
 		OutputSchema: schemaFor[RunReportResult](),
 	}
 }

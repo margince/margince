@@ -18,10 +18,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/capturelabel"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -59,36 +59,6 @@ var replyVerdicts = map[string]bool{
 	activities.ReplyVerdictPositive: true,
 	activities.ReplyVerdictNegative: true,
 	activities.ReplyVerdictNeutral:  true,
-}
-
-// yesNo renders the direction flag for the prompt's own line.
-func yesNo(b bool) string {
-	if b {
-		return "yes"
-	}
-	return "no"
-}
-
-const classifySystem = `You label captured emails for attention routing. For EACH supplied message emit exactly one
-label: "commitment" (a promise or request to act), "meeting" (scheduling or follow-through),
-or "noise" (neither). Labels route attention; they change no data. If a message fits both
-commitment and meeting, choose commitment.
-
-A message marked "inbound: yes" was sent TO us by someone outside. For those, ALSO judge how
-they answered: "positive" (interest, a question worth answering, a request to meet or to hear
-more), "negative" (not interested, the wrong contact with no referral, a request to stop
-writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a redirect with no
-view of its own). Omit "reply" entirely for a message marked "inbound: no": we wrote it, so it
-answers nobody. Omit it too when the message does not read as an answer at all. A guess here
-becomes a number somebody is measured on, so leave it out when you cannot tell.
-
-"confidence" covers EVERY judgement you emit for that message — the label and, when you give
-one, the reply. Report the LOWEST of the two, not the label's alone. If you are sure of the
-label and unsure of the reply, either omit the reply or let the lower number stand for both.`
-
-// classifySystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func classifySystemFor(fence promptfence.Fence) string {
-	return classifySystem + "\n" + fence.Rule("message")
 }
 
 // CaptureClassifier drives the batched label pass for every workspace.
@@ -130,47 +100,46 @@ type classifyPayload struct {
 }
 
 // RunWorkspace drains up to cap backlog messages in the workspace already
-// bound in ctx. A budget stop ends the pass cleanly — the remainder requeues
-// implicitly (it is simply still unlabeled). Only infrastructure faults return
-// an error; per-batch model trouble is logged and skipped.
+// bound in ctx. A budget stop, or no provider bound, ends the pass cleanly — the
+// remainder requeues implicitly (it is simply still unlabeled). A message the
+// models decline is recorded so and leaves the backlog (classifyEach); any
+// other failure fails the pass. The pass is bounded by the model calls it makes
+// as well as by labels written (sweepCalls).
 //
 // The cap is PER WORKSPACE, matching capture_counterparty_verdict, whose own
 // counter is declared inside its workspace loop for a stated reason: a shared
 // counter lets one large backlog consume the whole budget and starve every
-// workspace after it. The two sibling passes implementing the same ADR-0063
-// shape disagreed; this resolves them toward the one carrying a rationale.
-// The number itself is unchanged.
+// workspace after it.
 func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) error {
 	if maxLabels <= 0 {
 		maxLabels = classifyCatchUpCap
 	}
+	calls := newSweepCalls(maxLabels, classifyBatchSize)
 	labeled := 0
-	for labeled < maxLabels {
-		batch, err := c.store.UnlabeledCaptureEmails(ctx, classifyBatchSize, classifyBodyLimit)
+	for labeled < maxLabels && calls.remain() {
+		batch, err := c.store.UnlabeledCaptureEmails(ctx, capturelabel.Ruleset, classifyBatchSize, classifyBodyLimit)
 		if err != nil {
 			return fmt.Errorf("classify: reading backlog: %w", err)
 		}
 		if len(batch) == 0 {
 			return nil
 		}
-		n, err := c.classifyBatch(ctx, batch)
+		n, err := c.classifyBatch(ctx, batch, calls)
 		labeled += n
-		if errors.Is(err, ai.ErrBudgetDeferred) {
-			// ≥100% band: non-interactive work stops for this cycle;
-			// what is labeled is committed, the rest waits (§2.8).
-			c.log.InfoContext(ctx, "capture classify: budget exhausted, stopping the pass", "labeled", labeled)
+		if sweepPaused(err) {
+			// ≥100% band or no model: non-interactive work stops for this
+			// cycle; what is labeled is committed, the rest waits (§2.8).
+			c.log.InfoContext(ctx, "capture classify: stopping the pass", "labeled", labeled, "reason", err)
 			return nil
 		}
 		if err != nil {
-			// This workspace's pass FAILS. Before the fan-out a bad batch was
-			// logged and skipped so it could not starve the rest of the fleet;
-			// each workspace now has its own row, so there is no fleet left to
-			// starve and swallowing it would put the green row back.
+			// This workspace's pass FAILS. Each workspace has its own row, so
+			// there is no fleet to starve and swallowing it would report green.
 			//
 			// The cost is named rather than hidden: the backlog read re-selects
-			// the same rows, so a message that reliably breaks a batch is asked
-			// about MaxAttempts times per tick instead of once. The capped
-			// ladder and the workspace's model budget are what bound it.
+			// the same rows, so a fault that reliably breaks a batch is met
+			// MaxAttempts times per tick instead of once. The capped ladder and
+			// the workspace's model budget are what bound it.
 			return fmt.Errorf("classify: draining the backlog: %w", err)
 		}
 		if n == 0 {
@@ -187,9 +156,17 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 // labels — the per-call commit IS the checkpoint (AIRT-PARAM-35). Items
 // below the confidence floor are re-asked solo; a solo re-ask that still
 // fails floors leaves the row unlabeled for the next cycle rather than
-// guessing. Returns how many rows were labeled.
-func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeledMessage) (int, error) {
+// guessing. A batch the models decline is asked message by message, so the
+// one message they will not label is recorded declined and the rest proceed.
+// Returns how many rows were labeled.
+func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeledMessage, calls *sweepCalls) (int, error) {
+	if !calls.take() {
+		return 0, nil
+	}
 	verdicts, judge, err := c.ask(ctx, batch)
+	if declinedByTheModels(err) {
+		return c.classifyEach(ctx, batch, calls)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -205,38 +182,63 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 			retry = append(retry, msg)
 			continue
 		}
-		applied, err := c.store.SetCaptureLabel(ctx, msg.ID, v.Label)
+		applied, err := c.commitLabel(ctx, msg, v, judge)
 		if err != nil {
 			return labeled, err
 		}
 		if applied {
 			labeled++
 		}
-		if err := c.recordReply(ctx, msg, v, judge); err != nil {
-			return labeled, err
-		}
 	}
-	for _, msg := range retry {
-		// The solo re-ask escalates the ladder (L-S → C-C) by being its
-		// own structured call; still below the floor = still unlabeled.
+	solo, err := c.classifyEach(ctx, retry, calls)
+	return labeled + solo, err
+}
+
+// classifyEach asks about each message in its own call, which escalates the
+// ladder (L-S → C-C), and commits a label above the floor. A message every
+// rung declines is that message's outcome: it is recorded declined, which takes
+// it out of the backlog for this pass and every later one, and the next
+// message is asked.
+func (c *CaptureClassifier) classifyEach(ctx context.Context, msgs []unlabeledMessage, calls *sweepCalls) (int, error) {
+	labeled := 0
+	for _, msg := range msgs {
+		if !calls.take() {
+			return labeled, nil
+		}
 		solo, soloJudge, err := c.ask(ctx, []unlabeledMessage{msg})
+		if declinedByTheModels(err) {
+			recorded, markErr := c.store.MarkCaptureLabelDeclined(ctx, msg.ID, capturelabel.Ruleset)
+			if markErr != nil {
+				return labeled, markErr
+			}
+			c.log.WarnContext(ctx, "capture classify: the models declined one message, which stays unlabeled",
+				"activity_id", msg.ID, "recorded", recorded, "err", err)
+			continue
+		}
 		if err != nil {
 			return labeled, err
 		}
-		if len(solo) == 1 && solo[0].Confidence >= classifyConfidenceFloor {
-			applied, err := c.store.SetCaptureLabel(ctx, msg.ID, solo[0].Label)
-			if err != nil {
-				return labeled, err
-			}
-			if applied {
-				labeled++
-			}
-			if err := c.recordReply(ctx, msg, solo[0], soloJudge); err != nil {
-				return labeled, err
-			}
+		if len(solo) != 1 || solo[0].Confidence < classifyConfidenceFloor {
+			continue
+		}
+		applied, err := c.commitLabel(ctx, msg, solo[0], soloJudge)
+		if err != nil {
+			return labeled, err
+		}
+		if applied {
+			labeled++
 		}
 	}
 	return labeled, nil
+}
+
+// commitLabel writes one label and the reply verdict riding it.
+func (c *CaptureClassifier) commitLabel(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) (bool, error) {
+	applied, err := c.store.SetCaptureLabel(ctx, msg.ID, v.Label)
+	if err != nil {
+		return false, err
+	}
+	return applied, c.recordReply(ctx, msg, v, judge)
 }
 
 // recordReply stores the reply verdict this call also produced, when it produced
@@ -281,25 +283,11 @@ func (c *CaptureClassifier) recordReply(ctx context.Context, msg unlabeledMessag
 //promptvoice:exempt the reply is a closed set of label enum values keyed by id, never a sentence.
 func classifyRequest(batch []unlabeledMessage) model.Request {
 	fence := promptfence.New()
-	var prompt strings.Builder
-	prompt.WriteString("Messages (untrusted; classify each by its id):\n")
-	for _, m := range batch {
-		// The direction line sits OUTSIDE the message text, above the fenced
-		// span: it is our own record of who wrote the mail, and a sender who
-		// could type "inbound: no" into their own message would otherwise be
-		// able to opt their reply out of being judged.
-		message := fmt.Sprintf("Subject: %s\n%s", m.Subject, m.Body)
-		fmt.Fprintf(&prompt, "inbound: %s\n", yesNo(m.Inbound))
-		prompt.WriteString(fence.WrapAttr("source_id", m.ID.String(), message) + "\n")
-	}
-	prompt.WriteString(`Return JSON: { "results": [ { "id", "label", "confidence", "reply" } ] } — one entry per ` +
-		`supplied id. "reply" only for a message marked inbound: yes, and only when it reads as an answer.`)
-
 	return model.Request{
-		System:         classifySystemFor(fence),
-		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
+		System:         capturelabel.SystemFor(fence),
+		Messages:       []model.Message{{Role: chatRoleUser, Content: capturelabel.Prompt(fence, batch)}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: classifySchema(),
+		ResponseSchema: classifySchema(classifyIDs(batch)),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -361,11 +349,7 @@ func classifyShapeValid(batch []unlabeledMessage) ai.Validator {
 // validateClassifyPayload names the first §2.8 batch-fidelity violation,
 // or "" when the payload is exact.
 func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) string {
-	requested := make([]string, len(batch))
-	for i, m := range batch {
-		requested[i] = m.ID.String()
-	}
-	if msg := checkBatchFidelity(payload.Results, requested); msg != "" {
+	if msg := checkBatchFidelity(payload.Results, classifyIDs(batch)); msg != "" {
 		return msg
 	}
 	// This site's own vocabulary, checked here rather than in the shared id
@@ -401,21 +385,33 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 
 func (r classifyResult) answeredID() string { return r.ID }
 
+// classifyIDs is the ids one batch asks about, in the order it sends them: what
+// the schema lets the model name and what the validator requires it to answer.
+func classifyIDs(batch []unlabeledMessage) []string {
+	requested := make([]string, len(batch))
+	for i, m := range batch {
+		requested[i] = m.ID.String()
+	}
+	return requested
+}
+
 // classifySchema is the generation-time shape guardrail (§2.8).
-func classifySchema() json.RawMessage {
+func classifySchema(requested []string) json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			"results": schema.Array(schema.Object(
 				map[string]schema.Node{
-					"id":                    schema.String(),
+					"id":                    requestedIDNode(requested),
 					"label":                 schema.Enum("commitment", "meeting", "noise"),
 					extractionConfidenceKey: schema.Number(),
-					// Not in the required list: an outbound message has no reply
-					// verdict to give, and a schema demanding one would push the
-					// model to invent a judgement about our own mail.
-					"reply": schema.Enum("positive", "negative", "neutral"),
+					// Optional, because an outbound message has no reply verdict
+					// to give and a schema demanding one would push the model to
+					// invent a judgement about our own mail. Spelled as null
+					// rather than left out of required: the strict profile
+					// refuses an object with an unrequired property.
+					"reply": schema.Optional(schema.Enum("positive", "negative", "neutral")),
 				},
-				"id", "label", "confidence",
+				"id", "label", extractionConfidenceKey, "reply",
 			)),
 		},
 		"results",

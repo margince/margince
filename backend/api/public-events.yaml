@@ -38,6 +38,12 @@ components:
         - project.updated
         - project.phase_changed
         - project.archived
+        - list.created
+        - list.updated
+        - list.archived
+        - list.restored
+        - list.member_added
+        - list.member_removed
         - commission.accrued
         - commission.decided
         - contract.created
@@ -78,6 +84,7 @@ components:
         - company.archived
         - company.merged
         - company.updated
+        - company.restored
         - lead.created
         - lead.disqualified
         - lead.promoted
@@ -105,6 +112,7 @@ components:
         - activity.disposition_recorded
         - relationship_nudge.decided
         - notice.read
+        - notification.preference_changed
         - intro_request.created
         - intro_request.decided
         - intro_request.completed
@@ -781,6 +789,80 @@ components:
       description: Payload for project.archived — a project was archived. Carries no data.
       additionalProperties: false
 
+    PublicEventListCreated:
+      type: object
+      x-event-type: list.created
+      x-entity-type: list
+      x-version: 1
+      description: >-
+        Payload for list.created — somebody made a Live List (list_type dynamic) or a Shortlist
+        (static). Delivered to a subscriber who may find the list by its sharing.
+      required: [record_type, list_type, sharing]
+      properties:
+        record_type: { type: string, description: 'The record type the list holds.' }
+        list_type: { type: string, description: 'static or dynamic.' }
+        sharing: { type: string, description: 'private, team or workspace.' }
+      additionalProperties: false
+
+    PublicEventListUpdated:
+      type: object
+      x-event-type: list.updated
+      x-entity-type: list
+      x-version: 1
+      description: >-
+        Payload for list.updated — a list's name, purpose, filter, sharing, team or steward
+        changed. The version is the list's new one.
+      required: [version, changed]
+      properties:
+        version: { type: integer, format: int64 }
+        changed: { type: array, items: { type: string } }
+      additionalProperties: false
+
+    PublicEventListArchived:
+      type: object
+      x-event-type: list.archived
+      x-entity-type: list
+      x-version: 1
+      description: Payload for list.archived — a list was archived. Carries no data.
+      additionalProperties: false
+
+    PublicEventListRestored:
+      type: object
+      x-event-type: list.restored
+      x-entity-type: list
+      x-version: 1
+      description: Payload for list.restored — an archived list was brought back. Carries no data.
+      additionalProperties: false
+
+    PublicEventListMemberAdded:
+      type: object
+      x-event-type: list.member_added
+      x-entity-type: dynamic
+      x-version: 1
+      description: >-
+        Payload for list.member_added — a record was added to a Shortlist by hand or in a bulk
+        change. The subject is the RECORD (contact, company, deal, lead or project), so the event
+        reaches only a subscriber who may see that record. It names no list: delivery is decided
+        by the record, and a list its subscriber cannot find must not be named to them. Which list,
+        and the note, stay on the list's history, which is read under the list's own sharing.
+      required: [reason]
+      properties:
+        reason: { type: string, description: 'chosen or bulk.' }
+      additionalProperties: false
+
+    PublicEventListMemberRemoved:
+      type: object
+      x-event-type: list.member_removed
+      x-entity-type: dynamic
+      x-version: 1
+      description: >-
+        Payload for list.member_removed — a record was taken off a Shortlist by hand or in a bulk
+        change. The subject is the record, as for list.member_added.
+      required: [reason]
+      properties:
+        reason: { type: string, description: 'chosen or bulk.' }
+      additionalProperties: false
+
     PublicEventDealOwnerChanged:
       type: object
       x-event-type: deal.owner_changed
@@ -912,10 +994,9 @@ components:
       x-entity-type: deal
       x-version: 1
       description: >-
-        Payload for deal.restored. Never emitted today (no restore path
-        exists for deal); the schema is published so the type is a valid
-        subscription target and the coverage gate can name it explicitly
-        rather than silently omitting it.
+        Payload for deal.restored — an archived deal was brought back, with
+        the relationships, list memberships and tags its archive took down
+        where they can still come back. Carries no data.
       additionalProperties: false
 
     PublicEventOfferCreated:
@@ -963,9 +1044,12 @@ components:
       x-entity-type: offer
       x-version: 1
       description: >-
-        Payload for offer.sent — a draft offer left the workspace. Carries
-        the FX rate frozen at send time (RT-PR-C2) so consumers never need
-        a read-back for the native-currency-to-base conversion.
+        Payload for offer.sent — a draft offer moved to `sent` and its
+        commercial terms were frozen. Nothing was delivered to a counterparty:
+        delivery is a separate capability that does not exist yet, so a
+        subscriber must not read this as an offer having reached anybody.
+        Carries the FX rate frozen at send time (RT-PR-C2) so consumers never
+        need a read-back for the native-currency-to-base conversion.
       required:
         - offer_id
         - deal_id
@@ -1138,9 +1222,10 @@ components:
       description: >-
         Payload for pipeline.updated — an OPEN envelope: its emit sites
         carry divergent shapes (a flat name/is_default/position patch from
-        UpdatePipeline, or a stage_positions reorder map from UpdateStage
-        when a stage's position changes), so the honest shape is a
-        change-set map rather than a fixed field list.
+        UpdatePipeline or reorderPipelines, or a stage_positions reorder map
+        from UpdateStage, reorderStages or a stage removal when stage
+        positions change), so the honest shape is a change-set map rather
+        than a fixed field list.
       required:
         - changed_fields
       properties:
@@ -1358,10 +1443,10 @@ components:
       x-entity-type: contact
       x-version: 1
       description: >-
-        Payload for contact.restored. Never emitted today (no restore path
-        exists for contact); the schema is published so the type is a
-        valid subscription target and the coverage gate can name it
-        explicitly rather than silently omitting it.
+        Payload for contact.restored — an archived contact was brought back,
+        with the emails, phones, channel identities, relationships, list
+        memberships and tags its archive took down where they can still come
+        back. Carries no data.
       additionalProperties: false
 
     PublicEventConversationClaimCaptured:
@@ -1462,6 +1547,18 @@ components:
       x-entity-type: company
       x-version: 1
       description: Payload for company.archived — a company was archived. Carries no data.
+      additionalProperties: false
+
+    PublicEventCompanyRestored:
+      type: object
+      x-event-type: company.restored
+      x-entity-type: company
+      x-version: 1
+      description: >-
+        Payload for company.restored — an archived company was brought back,
+        with the domains, relationship types, partner programme,
+        relationships, list memberships and tags its archive took down where
+        they can still come back. Carries no data.
       additionalProperties: false
 
     PublicEventCompanyMerged:
@@ -2428,6 +2525,28 @@ components:
         notice_id:
           type: string
           format: uuid
+      additionalProperties: false
+
+    PublicEventNotificationPreferenceChanged:
+      type: object
+      x-event-type: notification.preference_changed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for notification.preference_changed — one seat decided how a
+        class of notification reaches them (notices/preference.go's
+        SaveNotificationPreference). The entity is that seat. The CLASS is on
+        the wire and the choice is not: what somebody decided about their own
+        interruptions is theirs, and a fan-out carrying the value would tell
+        every subscription owner who had switched their mail off.
+      required:
+        - class
+      properties:
+        class:
+          type: string
+          description: >-
+            Which class of notification was decided about (automation,
+            approval_pending, coach).
       additionalProperties: false
 
     PublicEventCommsDeliveryBounced:

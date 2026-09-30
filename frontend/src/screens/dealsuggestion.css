@@ -1,0 +1,29 @@
+/* A Deal Scout suggestion inside its staging card. The card itself draws the
+   indigo edge and ground; these rules only space what sits inside it. */
+.dealsuggestion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dealsuggestion-amount {
+  margin: 0;
+}
+
+.dealsuggestion-evidence {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  color: var(--aiText);
+}
+
+.dealsuggestion-answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dealsuggestion-money {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-3);
+}

@@ -34,7 +34,7 @@ func seedContactsWithTier(t *testing.T, e *apptest.AppEnv, gold, other int) stri
 	t.Helper()
 	var field integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
-		"object": "contact", "label": "Preview Tier", "type": "text", "source": "ui",
+		"object": "contact", "label": "Preview Tier", "type": "text", "source": "manual",
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
 	}
@@ -49,7 +49,7 @@ func seedContactsWithTier(t *testing.T, e *apptest.AppEnv, gold, other int) stri
 		}
 		var contact integration.AnyMap
 		if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-			"full_name": "Preview Subject", "source": "ui", column: tier,
+			"full_name": "Preview Subject", "source": "manual", column: tier,
 		}, nil, &contact); status != http.StatusCreated {
 			t.Fatalf("create contact %d: status=%d body=%v", i, status, contact)
 		}

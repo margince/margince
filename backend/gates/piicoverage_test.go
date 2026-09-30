@@ -21,6 +21,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // piiHandling declares how erasure and SAR must reach a PII table.
@@ -114,17 +116,6 @@ var piiTables = map[string]piiHandling{
 	"contact_email":  {erasureWrite: true, sarRead: true},
 	"contact_social": {erasureWrite: true, sarRead: true},
 	"contact_phone":  {erasureWrite: true, sarRead: true},
-	// What the source-author repair applied per record. It keeps a SECOND copy
-	// of the free-text author name, so an erasure that stopped at the activity
-	// would clear the name from the message and leave it readable in the
-	// bookkeeping beside it. It keeps a THIRD in `payload_hash` — an unkeyed
-	// digest over that same name, which is not anonymous when the candidate set
-	// is a staff list — so the erasure clears the two together.
-	//
-	// No sarRead: the subject of one of these rows is the AUTHOR of a message,
-	// not its counterparty. An Art. 15 export answers for the requester's own
-	// records rather than for everyone named inside them.
-	"source_attribution_repair": {erasureWrite: true},
 	// The channel identity binds a human to their Telegram account: the
 	// provider's user id for them plus the @username they message under. Both
 	// identify the subject as directly as an address does, and the id is the
@@ -284,6 +275,20 @@ var piiTables = map[string]piiHandling{
 	// a subject asking what we concluded about their mail is asking for exactly
 	// this.
 	"activity_reply_verdict_history": {erasureWrite: true, sarRead: true},
+	// A claim carries a VERBATIM quotation of the activity it was read from —
+	// the writer refuses one that does not — so the row is a copy of the
+	// subject's own words held outside the message. It goes when the body goes,
+	// and the contact foreign key cannot do it: Art. 17 anonymizes that
+	// row in place, so nothing cascades.
+	//
+	// Neither sarRead nor sarForbidden, deliberately and temporarily. Whether
+	// an Art. 15 package returns a colleague's or an agent's READING of the
+	// subject's words as well as the words is a product and legal call, and it
+	// is open — until it is answered, declaring either here would assert a
+	// decision nobody has made. Registered unflagged means a future SAR query
+	// over this table passes this gate silently, which is the cost of leaving
+	// it open and is named here so the next reader is not surprised by it.
+	"conversation_claim": {erasureWrite: true},
 	// A handoff names the subject it was about, and its note is what one seat
 	// wrote about them to another. The judgement — accepted, or refused for this
 	// reason — is a decision contacts made about that contact, the same holding
@@ -292,6 +297,12 @@ var piiTables = map[string]piiHandling{
 	// has to reach these rows itself.
 	"sdr_handoff":       {erasureWrite: true, sarRead: true},
 	"sdr_handoff_event": {erasureWrite: true, sarRead: true},
+	// A Shortlist membership says somebody chose the subject for a purpose, and
+	// its note says why in a colleague's words; the event row keeps who added or
+	// removed them and that note. Erasure anonymizes the contact in place, so no
+	// archive runs to remove them, and the erasure deletes both itself.
+	"list_member":       {erasureWrite: true, sarRead: true},
+	"list_member_event": {erasureWrite: true, sarRead: true},
 	// The capture disposition ledger keys on the subject's own address and
 	// keeps the display name their mail arrived with (CAP-DDL-8).
 	"capture_pending_counterparty": {erasureWrite: true, sarRead: true},
@@ -459,6 +470,79 @@ var sarAssemblyFiles = []string{
 	"internal/modules/privacy/sarcommunication.go",
 	"internal/modules/privacy/sarconsentlinks.go",
 	"internal/modules/privacy/sarmessages.go",
+	// The workspace's own cf_ columns, which hold subject data exactly like
+	// core ones. Its file says it serves both engines and sar.go calls into it
+	// from appendSubjectCustomValues, so it has been on the export path the
+	// whole time and off this list — found by the reach census below, which is
+	// what that census exists to find.
+	"internal/modules/privacy/subjectcolumns.go",
+}
+
+// sarReachedButNotAssembly are files AssembleSAR's call graph reaches which do
+// NOT assemble the package, each with the reason it does not.
+//
+// Same shape as reachedButNotCascade next door and for the same reason: the
+// list above cannot notice its own omissions, and a derivation alone
+// over-reaches. Here the over-reach is narrower and worth naming precisely —
+// every entry is a file the export touches for a STRING HELPER that happens to
+// live in it, never for its SQL. Admitting those statements would report
+// erasure's writes as disclosures, which is the confusion the list was made to
+// avoid in the first place.
+var sarReachedButNotAssembly = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/scheduledsends.go":    "reached because sarmessages.go calls loweredAddresses, a string helper living here. Its own SQL is the queued-send scrub's, on the erasure path",
+	"internal/modules/privacy/erasure_approvals.go": "reached because sarmessages.go calls addressPatterns, likewise. Its SQL erases staged proposals and discloses nothing",
+	"internal/modules/privacy/erasure_consent.go":   "reached because sarcommunication.go calls lowerAll, likewise. Its SQL revokes consent capabilities, which are other contacts' secrets rather than this subject's data",
+})
+
+// Every file the Art. 15 export reads SQL from is one the PII census reads.
+//
+// sarAssemblyFiles is hand-kept for a stated reason — a glob over the package
+// would read erasure's DELETE statements as disclosures — and that reason is
+// sound. What it cannot do is notice its own omissions, which is the failure
+// mode a census must not have: a chapter moved into a new file leaves the
+// census reporting coverage over a smaller export and saying the same word for
+// it. It had one already, subjectcolumns.go, on the export path since
+// appendSubjectCustomValues was written and in no census.
+//
+// So the reach is DERIVED and the list is judged against it, exactly as the
+// cascade's is. Every file AssembleSAR can reach that executes SQL is either in
+// the assembly or in the register that says why it is not.
+func TestEveryFileTheSARExportReadsSQLFromIsCensused(t *testing.T) {
+	t.Parallel()
+	reached := filesReachableFrom(t, "internal/modules/privacy", "AssembleSAR")
+
+	assembly := map[string]bool{}
+	for _, path := range sarAssemblyFiles {
+		assembly[path] = true
+	}
+	var unaccounted []string
+	for _, path := range sortedStrings(reached) {
+		if assembly[path] || sarReachedButNotAssembly.Waived(t, path) {
+			continue
+		}
+		if !executesSQL(t, path) {
+			continue
+		}
+		unaccounted = append(unaccounted, path)
+	}
+	if len(unaccounted) > 0 {
+		t.Errorf("AssembleSAR reaches %d file(s) that execute SQL and no census reads:\n\t%s\n\n"+
+			"Add each to sarAssemblyFiles, or to sarReachedButNotAssembly with the reason it does "+
+			"not assemble the package. A file left off is a PII table the census reports as "+
+			"unexported while the export carries it.", len(unaccounted), strings.Join(unaccounted, "\n\t"))
+	}
+
+	// AND THE LIST IS NOT STALE THE OTHER WAY: a named file the export can no
+	// longer reach is a chapter that was removed or renamed, and leaving it
+	// listed keeps its tables counted as exported by nothing.
+	for _, path := range sarAssemblyFiles {
+		if !reached[path] {
+			t.Errorf("sarAssemblyFiles names %s, which AssembleSAR cannot reach — the chapter moved "+
+				"or went, and its tables are counted as exported by a file that no longer exports "+
+				"them", path)
+		}
+	}
+	sarReachedButNotAssembly.AssertAllMatched(t)
 }
 
 // fromJoinRe extracts the table named by a FROM/JOIN clause — SAR reads are

@@ -100,6 +100,7 @@ export function ContactTimelineTab({
     // no money of its own, so the currency is absent and a minor-unit column
     // says so rather than printing a bare integer.
     values: { currency: null, locale, zone: recordZone },
+    about: view?.contact,
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}

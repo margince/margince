@@ -17,7 +17,7 @@ import { DealPulse } from "./dealpulse";
 // alone.
 
 const meta: Meta = {
-  title: "Records/Deal 360",
+  title: "Records/Deal 360/Pulse",
   parameters: { layout: "padded" },
 };
 export default meta;

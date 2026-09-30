@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Ellipsis } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 import { Button, SegmentedControl } from "./atoms";
 import {
@@ -43,19 +44,23 @@ const noteEntry: TimelineEntry = {
 };
 const baseTimeline: TimelineEntry[] = [emailEntry, meetingEntry, noteEntry];
 
-const meta: Meta<typeof RecordView> = {
+// `satisfies` and `StoryObj<typeof meta>`, not `Meta<…>` and a bare StoryObj:
+// that pair makes every arg optional, which let stories render RecordView with
+// no `identity` although the prop is required.
+const meta = {
   title: "Design System/RecordView",
   component: RecordView,
-};
+} satisfies Meta<typeof RecordView>;
 export default meta;
 
-type Story = StoryObj<typeof RecordView>;
+type Story = StoryObj<typeof meta>;
 
 // The unchanged shape: no row carries an action, so every entry renders as it
 // did before the slot existed.
 export const Default: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     subtitle: "Enterprise · Munich",
     zone: "Europe/Berlin",
     timeline: baseTimeline,
@@ -70,6 +75,7 @@ export const Default: Story = {
 export const MailWithSignatureAndQuote: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     subtitle: "Enterprise · Munich",
     zone: "Europe/Berlin",
     timeline: [
@@ -106,6 +112,7 @@ export const MailWithSignatureAndQuote: Story = {
 export const NoteThatReadsLikeASignOff: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     zone: "Europe/Berlin",
     timeline: [
       {
@@ -126,6 +133,7 @@ export const NoteThatReadsLikeASignOff: Story = {
 export const WithRowActions: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     subtitle: "Enterprise · Munich",
     zone: "Europe/Berlin",
     timeline: [
@@ -139,6 +147,53 @@ export const WithRowActions: Story = {
       },
       noteEntry,
     ],
+  },
+};
+
+/**
+ * A head whose verbs are wider than the header holding them.
+ *
+ * A company carries five verbs and, where the record refuses an edit, the
+ * sentence that says why — together wider than the reading column the record is
+ * drawn in. The group FOLDS: the verbs take a second rung at the header's end
+ * (`composed.css`, `.record-actions-inline`), and a verb keeps its own width
+ * inside it. A group that refused to fold would stand past the column's right
+ * edge, and the whole record could be dragged sideways after it.
+ *
+ * Framed at the width where the fold IS the layout, because the catalog's own
+ * canvas is wider than any record column and would picture the case this story
+ * exists to show as the one that never happens.
+ */
+export const InlineVerbsWiderThanTheHeader: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: 520 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    name: "Brandt Automotive GmbH",
+    subtitle: "Automotive · München",
+    zone: "Europe/Berlin",
+    identity: "o-1",
+    actionsInline: true,
+    actions: (
+      <>
+        <Button onClick={() => {}}>E-Mail schreiben</Button>
+        <Button onClick={() => {}}>Aktivität erfassen</Button>
+        <Button onClick={() => {}}>Aufgabe anlegen</Button>
+        <Button onClick={() => {}}>Deal anlegen</Button>
+        <Button iconOnly aria-label="Weitere Aktionen" onClick={() => {}}>
+          <Ellipsis aria-hidden="true" />
+        </Button>
+        <p className="t-caption">
+          Du kannst diese Firma nicht ändern. Bitte den Inhaber, sie mit dir zu
+          teilen.
+        </p>
+      </>
+    ),
+    timeline: baseTimeline,
   },
 };
 
@@ -160,6 +215,7 @@ function boardDeal(
     id,
     name,
     company: "Acme GmbH",
+    companyId: "o-1",
     valueMinor,
     currency: "EUR",
     ageMs: ageDays * 24 * 60 * 60 * 1000,
@@ -180,7 +236,7 @@ const boardColumns: BoardMoneyColumn[] = [
       boardDeal("d1", "Contoso renewal", 12_000, 3, {
         singleThreaded: true,
         closeDate: "2026-10-14",
-        owner: "Ada Lindqvist",
+        owner: { id: "u-1", name: "Ada Lindqvist" },
         lastEmail: { agoMs: 2 * DAY_MS, direction: "inbound" },
       }),
       // A close date the nightly run set and nobody confirmed: marked, not
@@ -202,7 +258,9 @@ const boardColumns: BoardMoneyColumn[] = [
     weightedMinor: 8_400,
     currency: "EUR",
     deals: [
-      boardDeal("d3", "Globex onboarding", 28_000, 14, { owner: "Tim Rasche" }),
+      boardDeal("d3", "Globex onboarding", 28_000, 14, {
+        owner: { id: "u-2", name: "Tim Rasche" },
+      }),
     ],
   },
   {
@@ -352,7 +410,7 @@ const absentMoneyColumns: BoardMoneyColumn[] = [
     weightedMinor: null,
     currency: null,
     sumHidden: true,
-    sumHiddenReason: "Loaded only — filter to My deals for the total",
+    sumHiddenReason: "Loaded deals only. No total while a tag filter is on.",
     count: 2,
     deals: [
       boardDeal("a6", "Northwind renewal", 12_000, 3),

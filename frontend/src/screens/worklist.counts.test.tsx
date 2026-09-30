@@ -100,10 +100,10 @@ describe("what the page says about what it is not showing", () => {
     renderWorklist();
 
     // The number rides inside the button, so it joins the accessible name: a
-    // reader hears "Decisions, 12" rather than meeting a bare figure.
+    // reader hears "Approvals, 12" rather than meeting a bare figure.
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /Decisions.*12/ }),
+        screen.getByRole("button", { name: /Approvals.*12/ }),
       ).toBeTruthy();
     });
   });
@@ -152,11 +152,11 @@ describe("what the page says about what it is not showing", () => {
     renderWorklist();
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Decisions/ })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /Approvals/ })).toBeTruthy();
     });
     // The server knows a floor, not a total. A floor printed as a count is a
     // wrong number rather than a missing one, so the pill draws none.
-    expect(screen.queryByRole("button", { name: /Decisions.*200/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Approvals.*200/ })).toBeNull();
   });
 
   it("does not print a fraction whose denominator is a floor", async () => {

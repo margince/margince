@@ -47,7 +47,7 @@ import (
 //
 // Comparing the column to what the caller was shown is not enough on its own,
 // and the reason is worth stating because the check looks complete without it.
-// auth.EnsureWritable runs at the top of updateCompanyInTx, before the name
+// auth.EnsureChangeable runs at the top of updateCompanyInTx, before the name
 // lock and before the row is read. Under READ COMMITTED a privatization
 // committing in that window is INVISIBLE to the comparison: the caller's own
 // `current` is read after the commit too, so both sides say 'owner', they

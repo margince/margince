@@ -24,9 +24,9 @@ func TestRepeatsOrDefault(t *testing.T) {
 		wantErr bool
 	}{
 		{"zero defaults to three", 0, 3, false},
-		{"valid odd", 5, 5, false},
+		{"odd is valid", 5, 5, false},
 		{"one is valid", 1, 1, false},
-		{"even is refused", 4, 0, true},
+		{"even is valid", 4, 4, false},
 		{"negative is refused", -1, 0, true},
 	}
 	for _, c := range cases {
@@ -170,20 +170,6 @@ func TestGroupByTaskFiltersAndSortedTasksOrdersDeterministically(t *testing.T) {
 	}
 }
 
-func TestWorstVerdictRanksNotSupportedBelowDegradedBelowCertified(t *testing.T) {
-	cases := []struct{ a, b, want string }{
-		{VerdictCertified, VerdictNotSupported, VerdictNotSupported},
-		{VerdictCertified, VerdictSupportedDegraded, VerdictSupportedDegraded},
-		{VerdictSupportedDegraded, VerdictNotSupported, VerdictNotSupported},
-		{VerdictCertified, VerdictCertified, VerdictCertified},
-	}
-	for _, c := range cases {
-		if got := worstVerdict(c.a, c.b); got != c.want {
-			t.Errorf("worstVerdict(%s, %s) = %s, want %s", c.a, c.b, got, c.want)
-		}
-	}
-}
-
 func TestPercentileNearestRank(t *testing.T) {
 	sorted := []int64{10, 20, 30}
 	if got := percentile(sorted, 0.50); got != 20 {
@@ -194,5 +180,18 @@ func TestPercentileNearestRank(t *testing.T) {
 	}
 	if got := percentile(nil, 0.50); got != 0 {
 		t.Errorf("percentile of an empty slice = %d, want 0", got)
+	}
+}
+
+// A sovereign record's claim is about the candidate. The judge is the lane's own
+// grader, sent only the corpus and the candidate's answer, so a sovereign run may
+// be graded by a cloud judge — and the candidate is still held to sovereign.
+func TestASovereignRunTakesACloudJudgeAndStillRefusesACloudCandidate(t *testing.T) {
+	cloud := ai.ProviderConfig{Provider: "anthropic", Model: "claude-cert-test"}
+	if _, err := ladderForTask("judge", cloud, judgeRole.profileFor(ai.ProfileSovereign), ai.TaskCertJudge); err != nil {
+		t.Errorf("a cloud judge was refused under a sovereign run: %v", err)
+	}
+	if _, err := ladderForTask("candidate", cloud, candidateRole.profileFor(ai.ProfileSovereign), ai.TaskColdStart); err == nil {
+		t.Error("a cloud candidate was accepted under a sovereign run; its record would describe a deployment nobody has")
 	}
 }

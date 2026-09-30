@@ -12,7 +12,7 @@ import { FoundMove, TodayPanel, TodoRow } from "./today";
 // The stories are the shapes it takes — a record with a move to make, and a
 // record with nothing waiting on anyone.
 const meta: Meta<typeof RecordReading> = {
-  title: "Records/Record reading",
+  title: "Records/Record 360/Reading",
   component: RecordReading,
   parameters: { layout: "padded" },
 };
@@ -65,7 +65,7 @@ export const WithAMove: Story = {
               defer={{ onDefer: () => {} }}
             />
             <TodoRow
-              who="Lena Fischer"
+              who={{ name: "Lena Fischer", identity: "contact-lena" }}
               title="Send the promised line-item 3 breakdown"
               meta="Lena Fischer · promised 05/08"
               due={{ label: "19 days late", tone: "danger" }}

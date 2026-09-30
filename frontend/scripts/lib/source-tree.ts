@@ -2,21 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The walk the source-wide fitness functions share: which files a gate reads,
-// and where an extension's frontend layer is.
+// how an import between them resolves, and where an extension's frontend
+// layer is.
 //
-// It exists because there are two of them now — the native-control gate in
-// src/design-system/native-controls.test.ts and the extension-import gate in
-// scripts/ext-imports.test.ts — and both had, independently, to answer the same
-// three questions: skip node_modules, find every directory named `frontend` at
-// any depth, and collect every extension a bundler resolves. A second answer to
-// one question is two answers that drift until they disagree, and a walk is the
-// worst place for that: the gate whose walk is narrower reads a smaller tree and
+// Every gate that walks the tree asks these questions, and a second answer to
+// one of them drifts: the gate whose walk is narrower reads a smaller tree and
 // reports the same word, PASS.
-//
-// They had already drifted before this file existed. One collected four
-// extensions and the other eight, so a unit shipping a `.cjs` was gated by one
-// of the two and invisible to the other — for no reason either author chose.
-// There is ONE set here, and it is the wide one.
 
 import type { Dirent } from "node:fs";
 import {
@@ -26,7 +17,7 @@ import {
   realpathSync,
   statSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import ts from "typescript";
 
 // Every extension a bundler resolves. Not just the two a well-behaved unit
@@ -193,4 +184,81 @@ export function sourceFileAt(path: string): ts.SourceFile {
   const parsed = parseSource(path, readFileSync(path, "utf8"));
   parsedSources.set(path, parsed);
   return parsed;
+}
+
+// Vite's default `resolve.extensions`, in its order, tried on the exact path and
+// then as a directory's `index`. `.json` is left out: it is data, not a module.
+const RESOLVED_EXTENSIONS = [".mjs", ".js", ".mts", ".ts", ".jsx", ".tsx"];
+
+// A module FILE: taking the directory `./x` would end a walk before its
+// `index.tsx`, and `./x.css` is no module a walk can parse.
+function isModuleOnDisk(path: string): boolean {
+  return MODULE_FILE.test(path) && existsSync(path) && statSync(path).isFile();
+}
+
+// moduleAt is the file a bundler loads for an extensionless absolute `base`.
+// `isModule` lets a caller resolve against the files it read instead of the disk.
+export function moduleAt(
+  base: string,
+  isModule: (path: string) => boolean = isModuleOnDisk,
+): string | null {
+  const candidates = [
+    base,
+    ...RESOLVED_EXTENSIONS.map((extension) => base + extension),
+    ...RESOLVED_EXTENSIONS.map((extension) => join(base, `index${extension}`)),
+  ];
+  return candidates.find(isModule) ?? null;
+}
+
+// resolveRelative resolves `./x` or `../x` beside `fromFile`. A bare specifier
+// is a package or an alias, which only the caller knows how to map, so it is null.
+export function resolveRelative(
+  fromFile: string,
+  specifier: string,
+  isModule: (path: string) => boolean = isModuleOnDisk,
+): string | null {
+  return specifier.startsWith(".")
+    ? moduleAt(resolve(dirname(fromFile), specifier), isModule)
+    : null;
+}
+
+// moduleSpecifiers lists what `source` imports, statically or by `import()`.
+// "values" drops only `import type` and `export type … from`, the forms erased.
+export function moduleSpecifiers(
+  source: ts.SourceFile,
+  edges: "all" | "values",
+): string[] {
+  const found: string[] = [];
+  const visit = (node: ts.Node): void => {
+    const declared = declaredSpecifier(node, edges);
+    if (declared !== null) found.push(declared);
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments.length > 0 &&
+      ts.isStringLiteralLike(node.arguments[0])
+    ) {
+      found.push(node.arguments[0].text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
+function declaredSpecifier(
+  node: ts.Node,
+  edges: "all" | "values",
+): string | null {
+  if (!ts.isImportDeclaration(node) && !ts.isExportDeclaration(node)) {
+    return null;
+  }
+  const specifier = node.moduleSpecifier;
+  if (specifier === undefined || !ts.isStringLiteral(specifier)) return null;
+  // Not the inline `{ type X }`: under verbatimModuleSyntax it emits
+  // `import {} from "m"`, and the module still loads.
+  const typeOnly = ts.isImportDeclaration(node)
+    ? node.importClause?.phaseModifier === ts.SyntaxKind.TypeKeyword
+    : node.isTypeOnly;
+  return edges === "values" && typeOnly ? null : specifier.text;
 }

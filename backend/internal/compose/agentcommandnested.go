@@ -28,7 +28,7 @@ func applyTagCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []b
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewApplyTagCall(deps.records, agents.ApplyTagCommand{ID: id}), nil
+	return agents.NewApplyTagCall(deps.records, deps.language, agents.ApplyTagCommand{ID: id}), nil
 }
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -37,7 +37,7 @@ func addOfferLineItemCommand(_ agentPolicy, deps restCommandDeps, r *http.Reques
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewAddOfferLineItemCall(deps.records, agents.AddOfferLineItemCommand{ID: id}), nil
+	return agents.NewAddOfferLineItemCall(deps.records, deps.language, agents.AddOfferLineItemCommand{ID: id}), nil
 }
 
 // lineItemID reads the offer line item's {lineItemId} path parameter — the
@@ -69,7 +69,7 @@ func updateOfferLineItemCommand(_ agentPolicy, deps restCommandDeps, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewUpdateOfferLineItemCall(deps.records, agents.UpdateOfferLineItemCommand{ID: id, LineItemID: itemID}), nil
+	return agents.NewUpdateOfferLineItemCall(deps.records, deps.language, agents.UpdateOfferLineItemCommand{ID: id, LineItemID: itemID}), nil
 }
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -82,7 +82,7 @@ func removeOfferLineItemCommand(_ agentPolicy, deps restCommandDeps, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewRemoveOfferLineItemCall(deps.records, agents.RemoveOfferLineItemCommand{ID: id, LineItemID: itemID}), nil
+	return agents.NewRemoveOfferLineItemCall(deps.records, deps.language, agents.RemoveOfferLineItemCommand{ID: id, LineItemID: itemID}), nil
 }
 
 // createOfferCommand decodes POST /v1/deals/{id}/offers. The route's own
@@ -97,7 +97,7 @@ func createOfferCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewCreateOfferCall(deps.records, agents.CreateOfferCommand{
+	return agents.NewCreateOfferCall(deps.records, deps.language, agents.CreateOfferCommand{
 		DealID: dealID,
 		Fields: json.RawMessage(body),
 	}), nil

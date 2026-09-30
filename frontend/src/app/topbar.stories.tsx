@@ -10,6 +10,7 @@ import {
   installFetchStub,
   meRoute,
   StoryProviders,
+  WithInstallationBrand,
 } from "../screens/story-utils";
 import type { NavCounts, NavSection } from "./nav";
 import { CommandPalette, useBuiltinCommands } from "./palette";
@@ -113,14 +114,13 @@ function stubSession() {
 }
 
 /**
- * The two cache entries the chrome around the bar reads, seeded rather than
- * fetched.
+ * What the chrome around the bar reads, seeded rather than fetched.
  *
- * `["company"]` is the installation profile the onboarding gate fills in the
- * real app; without it the sidebar's brand block honestly shows the product name
- * alone. `[kind, "ref", id]` is `useEntityName`'s entry, which is where the last
- * segment of a record's trail comes from — the trail is a READ, and a story that
- * left it unresolved would be showing a uuid where the product shows a name.
+ * The installation's brand rides `/me` in the real app; without it the sidebar's
+ * brand block honestly shows the product name alone. `[kind, "ref", id]` is
+ * `useEntityName`'s entry, which is where the last segment of a record's trail
+ * comes from — the trail is a READ, and a story that left it unresolved would be
+ * showing a uuid where the product shows a name.
  */
 function SeedCache({
   record,
@@ -130,19 +130,17 @@ function SeedCache({
   children: ReactNode;
 }>) {
   const client = useQueryClient();
-  if (client.getQueryData(["company"]) === undefined) {
-    client.setQueryData(["company"], {
-      company_id: "company-1",
-      display_name: "Gradion GmbH",
-    });
-  }
   if (
     record &&
     client.getQueryData(["contact", "ref", record.id]) === undefined
   ) {
     client.setQueryData(["contact", "ref", record.id], record.name);
   }
-  return <>{children}</>;
+  return (
+    <WithInstallationBrand brand={{ display_name: "Gradion GmbH" }}>
+      {children}
+    </WithInstallationBrand>
+  );
 }
 
 /**

@@ -76,7 +76,6 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskDocumentExtract, "fields", documentFieldsCases{})
 	oneShot(ai.TaskGrowthFit, "growth_fit", growthFitCases{})
 	oneShot(ai.TaskCertJudge, "judge", certJudgeCases{})
-	oneShot(ai.TaskRateExtract, "pricing", ratePricingCases{})
 	oneShot(ai.TaskRateExtract, "fx", rateFxCases{})
 	oneShot(ai.TaskVoiceBuild, "derive", voiceDeriveCases{})
 	oneShot(ai.TaskVoiceBuild, "eval_draft", voiceEvalDraftCases{})
@@ -86,7 +85,9 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	multiTurn(ai.TaskColdStart, "company_message", onboardingCompanyMessageCases{})
 	multiTurn(ai.TaskColdStart, "sitereadmessage", companyReadMessageCases{})
 	multiTurn(ai.TaskColdStart, "acts", onboardingActCases{})
-	agentLoop(ai.TaskAgentLoop, "loop", agentLoopCases{})
+	for _, agent := range ai.AgentsFor(ai.TaskAgentLoop) {
+		agentLoop(ai.TaskAgentLoop, agent.Name, agentLoopCases{agent: agent.Name})
+	}
 
 	return r, r.Validate()
 }

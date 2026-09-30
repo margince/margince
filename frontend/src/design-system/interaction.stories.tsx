@@ -20,7 +20,7 @@ import { type CSSProperties, useEffect, useRef } from "react";
  * --accent is 5.21:1 in light and 5.37:1 in dark.
  */
 const meta = {
-  title: "Design System/Interaction colours",
+  title: "Foundations/Color/Interaction colors",
   parameters: { layout: "centered" },
 } satisfies Meta;
 export default meta;

@@ -1,5 +1,6 @@
 import {
   MutationCache,
+  onlineManager,
   QueryCache,
   QueryClient,
   type QueryKey,
@@ -7,6 +8,11 @@ import {
 import { isRecordRead } from "../screens/activitykeys";
 import { logUnexpectedError, ProblemError } from "../screens/common";
 import { ENTITY_NAME_KEY } from "../screens/entityref";
+import {
+  ConnectivityError,
+  connectivityNow,
+  subscribeConnectivity,
+} from "./connectivity";
 
 // The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The
 // library's defaults are not this product's: they hold nothing back from the
@@ -157,9 +163,12 @@ export function retryQuery(failureCount: number, error: Error): boolean {
 // has no telemetry sink, so reporting means the browser console — where an
 // operator can read it and the reader never sees it. It must stay that way:
 // the surface whose query failed renders its own error state, and a second,
-// global one would talk over it.
+// global one would talk over it. An outage is not reported per read: the
+// connectivity banner already states it, once.
 function reportQueryError(error: Error): void {
-  console.error("margince: query failed", error);
+  if (!(error instanceof ConnectivityError)) {
+    console.error("margince: query failed", error);
+  }
 }
 
 // A write can rename the record it touches, and the chrome around the reader is
@@ -195,10 +204,30 @@ function refreshRecordHistory(client: QueryClient): void {
   });
 }
 
+// Who can see a record changes with a share, a visibility or owner change, or
+// a role or team edit, and each of those is a different write. Invalidated for
+// every successful mutation for the reason the two above are.
+function refreshRecordAccess(client: QueryClient): void {
+  client.invalidateQueries({
+    predicate: (query) => query.queryKey[0] === "record-access",
+  });
+}
+
+// The library listens to the browser's online events alone, which cannot see a
+// server that stopped answering on a working network.
+function followConnectivity(): void {
+  onlineManager.setEventListener((setOnline) => {
+    const follow = () => setOnline(connectivityNow() === "online");
+    follow();
+    return subscribeConnectivity(follow);
+  });
+}
+
 // Built per call rather than exported as a module singleton so the policy can
 // be exercised without importing main.tsx, which mounts the application into
 // the document as a side effect of being imported.
 export function createQueryClient(): QueryClient {
+  followConnectivity();
   const client: QueryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -217,6 +246,9 @@ export function createQueryClient(): QueryClient {
         // exactly when the reader acts on it.
         refetchOnWindowFocus: liveOnReturn,
       },
+      // Reads wait out an outage and rerun when it clears. A write never
+      // waits: a paused one would run on reconnect, after the reader moved on.
+      mutations: { networkMode: "always" },
     },
     queryCache: new QueryCache({ onError: reportQueryError }),
     // FE-PARAM-4 for the other half of the data layer. A mutation has no
@@ -234,6 +266,7 @@ export function createQueryClient(): QueryClient {
       onSuccess: () => {
         refreshNamedReferences(client);
         refreshRecordHistory(client);
+        refreshRecordAccess(client);
       },
     }),
   });

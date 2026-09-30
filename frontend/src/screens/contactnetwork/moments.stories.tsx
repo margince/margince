@@ -40,7 +40,7 @@ function card(view: Moments) {
 }
 
 const meta: Meta<typeof MomentsPanel> = {
-  title: "Records/Contact network/What changed lately",
+  title: "Records/Contact 360/Network/What changed lately",
   component: MomentsPanel,
   parameters: { layout: "padded" },
 };

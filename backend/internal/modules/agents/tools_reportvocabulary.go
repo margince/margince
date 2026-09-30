@@ -77,6 +77,7 @@ func (t describeReportVocabulary) Spec() mcp.ToolSpec {
 		Name: "describe_report_vocabulary", Title: "Describe the report vocabulary",
 		Version:       toolVersionV1,
 		Description:   describeReportVocabularyCopy.render(),
+		Instead:       describeReportVocabularyCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		// No arguments. The document is the same for every caller, so a
 		// `report` filter would only let one narrow what it already receives,

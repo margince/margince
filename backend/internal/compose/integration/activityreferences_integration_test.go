@@ -50,7 +50,7 @@ func TestAReceiptCarriesItsSubjectForAReaderWhoMayReadIt(t *testing.T) {
 
 	subject, body := "Depot slot confirmed", "Facilities signed off this morning."
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -133,7 +133,7 @@ func TestAReceiptKeepsItsRowAndLosesItsWordsOutsideTheAudience(t *testing.T) {
 
 	subject, body := "Severance terms", "the agreed figure is confidential"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("outbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -178,7 +178,7 @@ func TestASeatWithoutTheActivityGrantNamesNoReceipts(t *testing.T) {
 
 	subject := "Depot slot confirmed"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Direction: strPtr("inbound"),
+		Kind: "email", Subject: &subject, Direction: StrPtr("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {

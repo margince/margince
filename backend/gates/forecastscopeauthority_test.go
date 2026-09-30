@@ -12,9 +12,14 @@ package gates
 // only the first: auth.Require says a seat may make forecast calls at all and
 // nothing about WHOSE. So a manager holding forecast.create recorded a
 // commitment against a rival team — attributed to that team, superseding its
-// standing call, and unremovable, since no seat holds forecast.update or
-// forecast.delete — and any forecast.read holder read back every owner's
-// committed number and the note explaining it.
+// standing call, and unremovable, since no seat holds forecast.delete — and any
+// forecast.read holder read back every owner's committed number and the note
+// explaining it.
+//
+// forecast.UPDATE is held now, by the seats that answer an assurance finding,
+// and it does not reopen that: answering a finding names no scope, so it is
+// outside this corpus by the same rule everything else is — the entry points
+// here are the ones whose parameters carry one.
 //
 // The corpus is DERIVED three ways over, because the defect was one entry point
 // looking exactly like its gated siblings:

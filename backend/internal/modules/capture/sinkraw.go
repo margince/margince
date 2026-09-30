@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -39,22 +40,40 @@ import (
 // identity, not a new policy — but it does mean the stored original is one
 // provider's rendering. Equal Message-IDs do not promise equal bytes: delivery
 // headers differ per mailbox, and a Bcc survives only on the sender's copy.
-func storeRawCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) error {
+// It returns the row's id so the activity can name the original it was read
+// from durably. A connector that persisted the original itself says so in
+// rec.StoredOriginal and stores nothing here.
+func storeRawCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (ids.UUID, error) {
+	if !rec.StoredOriginal.IsZero() {
+		return rec.StoredOriginal, nil
+	}
 	if len(rec.Raw) == 0 {
-		return nil
+		return ids.Nil, nil
 	}
 	payload, err := rawCapturePayload(rec.Raw)
 	if err != nil {
-		return err
+		return ids.Nil, err
 	}
-	if _, err := tx.Exec(ctx, `
+	// RETURNING on the insert, then a read on the conflict. The append-once
+	// rule above means the second delivery of one message stores nothing — and
+	// its activity still has to name the original the FIRST delivery stored,
+	// or the row that keeps the bytes is the one nothing points at.
+	var id ids.UUID
+	err = tx.QueryRow(ctx, `
 		INSERT INTO raw_capture (source_system, source_id, payload)
 		VALUES ($1, $2, $3)
-		ON CONFLICT (source_system, source_id) DO NOTHING`,
-		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, payload); err != nil {
-		return fmt.Errorf("capture: raw store: %w", err)
+		ON CONFLICT (source_system, source_id) DO NOTHING
+		RETURNING id`,
+		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, payload).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		err = tx.QueryRow(ctx, `
+			SELECT id FROM raw_capture WHERE source_system = $1 AND source_id = $2`,
+			rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID).Scan(&id)
 	}
-	return nil
+	if err != nil {
+		return ids.Nil, fmt.Errorf("capture: raw store: %w", err)
+	}
+	return id, nil
 }
 
 // RawCaptureBase64Encoding names the envelope rawCapturePayload uses for a

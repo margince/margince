@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -93,7 +94,7 @@ func TestAResumedRunIsStillToldWhereARecordIdComesFrom(t *testing.T) {
 	staging := &fakeSurface{errs: map[string]error{
 		"send_email": &workflow.StagedApprovalError{ApprovalID: ids.New[ids.ApprovalKind]()},
 	}}
-	job := Job{Goal: "follow up after the meeting", TriggerRef: triggerRef}
+	job := Job{Goal: "follow up after the meeting", TriggerRef: triggerRef, Tools: []string{"send_email"}}
 	suspended, err := New(staging, &scriptedBrain{texts: []string{
 		`{"tool":"send_email","args":{"to":"a@b.c"}}`,
 	}}).Run(context.Background(), job)
@@ -215,5 +216,65 @@ func TestTheFrameOffersStoppingAsAMoveAndNotOnlyAsCompletion(t *testing.T) {
 	// and the two new ones are offered beside it rather than as a footnote.
 	if !strings.Contains(prompt, "the goal is done") {
 		t.Error("the frame no longer names completion as a reason to end the turn")
+	}
+}
+
+// A model given two sources that disagree smooths them into one story unless it
+// is told otherwise, and the story it invents is the part nothing checks.
+func TestTheFrameTellsAModelToNameADisagreementRatherThanReconcileIt(t *testing.T) {
+	prompt := systemPrompt(nil, promptfence.New(), "")
+	if !strings.Contains(prompt, mcp.ConflictingSourcesRule) {
+		t.Errorf("the frame no longer carries the conflicting-sources rule:\n%s", prompt)
+	}
+}
+
+// The published per-step cost is the part of a real step request that is not
+// transcript: the same system prompt and the same step schema the window sends,
+// so the budget gate holds the bytes a run pays rather than a model of them.
+func TestTheFixedStepCostIsWhatAStepRequestCarriesBesideItsTranscript(t *testing.T) {
+	offered := []mcp.ToolSpec{readRecordSpec(), zeroArgumentSpec()}
+	req := newWindow(Job{Goal: "prep the meeting", TriggerRef: triggerRef}, offered, nil).asRequest(1000, 0)
+
+	cost := FixedStepCost(offered)
+	if want := requestTokens(req.System, req.ResponseSchema, nil); cost.Tokens != want {
+		t.Errorf("FixedStepCost is %d tokens and a real step request carries %d beside its transcript", cost.Tokens, want)
+	}
+	if want := len(req.ResponseSchema) / 4; cost.Schema != want || want == 0 {
+		t.Errorf("the step schema is %d tokens on the wire and FixedStepCost reports %d", want, cost.Schema)
+	}
+	if cost.Listing+cost.Schema > cost.Tokens {
+		t.Errorf("the listing (%d) and the schema (%d) outweigh the whole fixed cost (%d)", cost.Listing, cost.Schema, cost.Tokens)
+	}
+}
+
+// A run is never pointed at a neighbour it cannot call: the Instead text goes
+// when it names a tool outside the offer, and stays, with everything else in
+// the description, when every tool it names is offered.
+func TestTheListingPointsAtNoNeighbourTheRunIsNotOffered(t *testing.T) {
+	const instead = "Use prep_for_meeting when a meeting is near, and read_record for stored fields."
+	catchUp := mcp.ToolSpec{
+		Name:         "catch_me_up_on",
+		Description:  "Answer what has been going on. Built around one record. " + instead + " Keep each record_id.",
+		Instead:      instead,
+		InsteadTools: []string{"prep_for_meeting", "read_record"},
+	}
+	prep := mcp.ToolSpec{Name: "prep_for_meeting", Description: "Get ready for a meeting."}
+
+	narrow := newWindow(Job{Goal: "catch up"}, []mcp.ToolSpec{catchUp, readRecordSpec()}, nil).system
+	if strings.Contains(narrow, "prep_for_meeting") {
+		t.Errorf("a run not offered prep_for_meeting is still told to use it:\n%s", narrow)
+	}
+	for _, kept := range []string{"Built around one record.", "Keep each record_id."} {
+		if !strings.Contains(narrow, kept) {
+			t.Errorf("cutting the Instead also cut %q:\n%s", kept, narrow)
+		}
+	}
+	if !strings.Contains(narrow, "one record. Keep each") {
+		t.Errorf("the cut left the description's sentences apart by more than one space:\n%s", narrow)
+	}
+
+	closed := newWindow(Job{Goal: "catch up"}, []mcp.ToolSpec{catchUp, readRecordSpec(), prep}, nil).system
+	if !strings.Contains(closed, instead) {
+		t.Errorf("a run offered every neighbour lost the Instead that names them:\n%s", closed)
 	}
 }

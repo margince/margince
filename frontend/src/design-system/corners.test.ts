@@ -40,6 +40,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { selectorList } from "../../scripts/lib/css-rules";
 import { withoutComments } from "../testing/css";
 
 const frontendRoot = resolve(__dirname, "..", "..");
@@ -241,10 +242,7 @@ function squircleSelectors(tokens: string): string[] {
     // collapsed and not removed: `:where(*) ::before` is every descendant's
     // generated box and NOT the subject's own, which is the near miss this
     // check has to fail. Runs of space become one; the two forms stay apart.
-    return m[1]
-      .split(",")
-      .map((one) => one.trim().replace(/\s+/g, " "))
-      .filter(Boolean);
+    return selectorList(m[1]).map((one) => one.replace(/\s+/g, " "));
   }
   return [];
 }

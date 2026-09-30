@@ -70,12 +70,12 @@ it states — a specific thing a named party said they would do. Report one only
 transcript SAYS it: "I'll send the pricing by Friday", "we'll get you the security review".
 Report nothing for topics discussed without a commitment, for things you are inferring
 rather than reading, and for anything about what the DEAL should do — a transcript records
-what contacts said, not what should happen to the account. Cite the line numbers the
+what was said, not what should happen to the account. Cite the line numbers the
 commitment is stated on. Reporting nothing is the correct answer for many transcripts.`
 
 // transcriptSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 // The language rule governs the "summary" field. "owner" is excluded by
-// promptlang.Rule's own carve-out for contacts's names — it is the party as the
+// promptlang.Rule's own carve-out for personal names — it is the party as the
 // transcript names them, and a translated name is a different contact.
 func transcriptSystemFor(fence promptfence.Fence, lang string) string {
 	return transcriptSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("line")
@@ -173,7 +173,9 @@ func transcriptRequest(lines []string, meetingDay string, lang string) model.Req
 	}
 }
 
-// transcriptSchema is the generation-time shape guardrail.
+// transcriptSchema is the generation-time shape guardrail. A cited line is an
+// integer because the reader decodes it into an int: a line 2.5 is not a line
+// this call supplied, and `number` would let a decoder write one.
 func transcriptSchema() json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
@@ -182,7 +184,7 @@ func transcriptSchema() json.RawMessage {
 					"summary":               schema.String(),
 					"owner":                 schema.String(),
 					"due_date":              schema.String(),
-					"source_lines":          schema.Array(schema.Number()),
+					"source_lines":          schema.Array(schema.Integer()),
 					extractionConfidenceKey: schema.Number(),
 				},
 				"summary", "owner", "due_date", "source_lines", extractionConfidenceKey,
@@ -288,7 +290,7 @@ func (p *TranscriptProposer) ask(ctx context.Context, lines []string, meetingDay
 	validate := transcriptShapeValid(len(lines))
 	resp, err := ai.Ask(ctx, p.brain, req, validate)
 	if err != nil {
-		if errors.Is(err, ai.ErrOutputRejected) {
+		if ai.ModelDeclined(err) {
 			return nil, fmt.Errorf("%w: %w", errRefusedTranscript, err)
 		}
 		return nil, err

@@ -126,11 +126,9 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 		n, err := e.judgeClaimed(wsCtx, batch)
 		resolved += n
 		if errors.Is(err, ai.ErrBudgetDeferred) {
-			// Every thread this pass never reached is refunded: no model saw
-			// them, and charging for a budget stop would let two quiet cycles
-			// exhaust a thread's allowance and retire it to `unsure` — an
-			// infrastructure condition turned into a per-thread terminal answer.
-			e.releaseBatch(wsCtx, batch)
+			// The refund is judgeClaimed's, because it is what knows where it
+			// stopped. Releasing from here would hand back the whole batch,
+			// including the thread already deferred and refunded inside.
 			e.log.InfoContext(wsCtx, "confidentiality verdict: budget exhausted, stopping the pass", "resolved", resolved)
 			return nil
 		}
@@ -144,18 +142,42 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 // judgeClaimed judges each claimed thread on its OWN model call, and applies
 // each answer on its own transaction. The transaction IS the checkpoint, so a
 // budget stop or a crash keeps whatever was already decided.
-func (e *ConfidentialityVerdictEngine) judgeClaimed(ctx context.Context, claimed []capture.PendingThread) (int, error) {
+// A budget stop refunds the threads it never REACHED, and only those. The
+// thread it stopped on is deferred and refunded below, and releasing it a
+// second time attempts a refund that the first Defer's cleared claimed_by
+// silently matches nothing for — safe by that accident alone, and one relaxed
+// CAS away from double-decrementing a thread's attempts. The release happens
+// here rather than in the caller because this is what knows where it stopped:
+// a caller handed the remainder could still pass the whole batch.
+func (e *ConfidentialityVerdictEngine) judgeClaimed(
+	ctx context.Context, claimed []capture.PendingThread,
+) (int, error) {
+	// A LOCAL rather than a method, which is what makes the wrong call
+	// unwritable instead of merely unwritten: only the loop that knows where it
+	// stopped can reach this, so no caller can hand back a batch that includes
+	// the row already refunded below.
+	releaseUnreached := func(rest []capture.PendingThread) {
+		for _, row := range rest {
+			if err := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
+				"the workspace was out of model budget", true); err != nil {
+				e.log.WarnContext(ctx, "confidentiality verdict: releasing a claimed thread failed",
+					"thread", row.ID.String(), "err", err)
+			}
+		}
+	}
 	applied := 0
-	for _, row := range claimed {
+	for i, row := range claimed {
 		n, err := e.judgeOne(ctx, row)
 		applied += n
 		if err != nil {
 			outOfBudget := errors.Is(err, ai.ErrBudgetDeferred)
 			if deferErr := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
 				"the confidentiality verdict could not be completed", outOfBudget); deferErr != nil {
+				releaseUnreached(claimed[i+1:])
 				return applied, deferErr
 			}
 			if outOfBudget {
+				releaseUnreached(claimed[i+1:])
 				return applied, err
 			}
 			// Any other fault is a property of THIS thread, whose text an
@@ -246,17 +268,12 @@ func (e *ConfidentialityVerdictEngine) apply(
 		if err := e.retractPrivateContactsTx(ctx, tx, row, kind); err != nil {
 			return err
 		}
-		if err := recomputeJudgedMessageTx(ctx, tx, row); err != nil {
-			return err
-		}
-		// Each stamped sibling re-derived over every seat's contribution, so a
-		// colleague's mailbox still holding this message keeps holding it.
-		for _, id := range outcome.Stamped {
-			if err := activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](id)); err != nil {
-				return err
-			}
-		}
-		return nil
+		// The judged message and each stamped sibling, re-derived over every
+		// seat's contribution so a colleague's mailbox still holding one keeps
+		// holding it — as ONE set, because the anchor is an activity row like
+		// the rest and taking it first was a lock order nothing else agreed to.
+		return activities.RecomputeAudiencesTx(ctx, tx,
+			append(judgedMessageIDs(row), asActivityIDs(outcome.Stamped)...))
 	})
 	if err != nil {
 		// The thread key is workspace-internal and already in this workspace's
@@ -318,31 +335,26 @@ func threadAddressesTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread
 	return seen, nil
 }
 
-// recomputeJudgedMessageTx re-derives the audience of the message this verdict
-// was about, so the answer reaches the row it concerns.
+// judgedMessageIDs is the message this verdict was about, as a set of none or
+// one, so it can join the siblings in a single ordered recompute.
 //
-// One message, matching the stamp above. The thread's other messages were never
-// read by the classifier and keep whatever their own contributors ask for.
-func recomputeJudgedMessageTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread) error {
+// None when the message was erased while the question stood: there is nothing
+// to recompute, and the verdict is still worth recording for the threads that
+// inherit from it.
+func judgedMessageIDs(row capture.PendingThread) []ids.ActivityID {
 	if row.ActivityID == ids.Nil {
-		// The message was erased while the question stood. There is nothing to
-		// recompute, and the verdict is still worth recording for the threads
-		// that inherit from it.
 		return nil
 	}
-	return activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](row.ActivityID))
+	return []ids.ActivityID{ids.From[ids.ActivityKind](row.ActivityID)}
 }
 
-// releaseBatch hands a whole claimed batch back after a budget stop, so no
-// thread is charged for a pass that never reached a model.
-func (e *ConfidentialityVerdictEngine) releaseBatch(ctx context.Context, batch []capture.PendingThread) {
-	for _, row := range batch {
-		if err := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
-			"the workspace was out of model budget", true); err != nil {
-			e.log.WarnContext(ctx, "confidentiality verdict: releasing a claimed thread failed",
-				"thread", row.ID.String(), "err", err)
-		}
+// asActivityIDs types a stamped set for the recompute.
+func asActivityIDs(raw []ids.UUID) []ids.ActivityID {
+	out := make([]ids.ActivityID, 0, len(raw))
+	for _, id := range raw {
+		out = append(out, ids.From[ids.ActivityKind](id))
 	}
+	return out
 }
 
 // RetireExhausted ends the threads that spent every attempt without an answer.
@@ -375,26 +387,34 @@ const confidentialityStragglerBatch = 200
 // could not: a thread retired without an apply, a thread judged before that
 // pass existed, and an apply that lost the claim race after the ledger was
 // written. Its subject is a query, so a workspace with none does nothing.
-func (e *ConfidentialityVerdictEngine) FinishSettledThreads(ctx context.Context) (int, error) {
+func (e *ConfidentialityVerdictEngine) FinishSettledThreads(ctx context.Context) (sweepTally, error) {
+	var tally sweepTally
+	err := e.finishSettledThreadsInto(ctx, &tally)
+	return tally, err
+}
+
+// finishSettledThreadsInto is the pass, counting into tally as each repair
+// commits.
+func (e *ConfidentialityVerdictEngine) finishSettledThreadsInto(ctx context.Context, tally *sweepTally) error {
 	// The pass's own provenance, taken once for the listing and again per
 	// thread below, so each repair's stamps and audience events trace together
 	// under a correlation id of their own.
 	settled, err := e.threads.ThreadsWithUndecidedMessages(
 		e.workspaceCtx(ctx), confidentialityStragglerBatch)
 	if err != nil {
-		return 0, fmt.Errorf("confidentiality: listing settled threads with undecided messages: %w", err)
+		return fmt.Errorf("confidentiality: listing settled threads with undecided messages: %w", err)
 	}
-	finished := 0
+	tally.capHit = len(settled) >= confidentialityStragglerBatch
 	for _, t := range settled {
 		done, err := e.finishOneSettledThread(ctx, t)
 		if err != nil {
-			return finished, err
+			return err
 		}
 		if done {
-			finished++
+			tally.processed++
 		}
 	}
-	return finished, nil
+	return nil
 }
 
 // finishOneSettledThread is one thread's repair, in one transaction.
@@ -420,10 +440,9 @@ func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 		if err != nil {
 			return err
 		}
-		for _, id := range outcome.Stamped {
-			if err := activities.RecomputeAudienceTx(wsCtx, tx, ids.From[ids.ActivityKind](id)); err != nil {
-				return err
-			}
+		if err := activities.RecomputeAudiencesTx(
+			wsCtx, tx, asActivityIDs(outcome.Stamped)); err != nil {
+			return err
 		}
 		done = len(outcome.Stamped) > 0 || outcome.Reopened != ids.Nil
 		return nil

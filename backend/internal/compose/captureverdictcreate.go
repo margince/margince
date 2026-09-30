@@ -59,23 +59,26 @@ func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx p
 	return created.TriageDomain, nil
 }
 
-// createOwnerScopedCounterparty is the `advisor` effect: the same records an
-// ordinary verdict makes, kept visible to the mailbox owner alone.
+// createOwnerScopedCounterparty makes the same records an ordinary verdict
+// makes, kept visible to the mailbox owner alone for the reason given: the
+// `advisor` effect, and a `contact` verdict whose record must stay the owner's.
 //
 // It shares createCounterpartyRecords with the ordinary path rather than
 // spelling the creation twice — the two differ in ONE field, and a second
 // assembler is how the linking, the triage hand-off and the erasure check would
 // drift apart between them.
-func (e *CounterpartyVerdictEngine) createOwnerScopedCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
+func (e *CounterpartyVerdictEngine) createOwnerScopedCounterparty(
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, reason contacts.NarrowingReason,
+) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, e.contacts, e.tagFiler, counterpartyCreation{
-		Email:       row.Email,
-		DisplayName: row.DisplayName,
-		Domain:      row.Domain,
-		OwnerID:     row.OwnerID,
-		ActivityID:  row.ActivityID,
-		Source:      verdictReason,
-		CapturedBy:  verdictActor,
-		OwnerScoped: true,
+		Email:           row.Email,
+		DisplayName:     row.DisplayName,
+		Domain:          row.Domain,
+		OwnerID:         row.OwnerID,
+		ActivityID:      row.ActivityID,
+		Source:          verdictReason,
+		CapturedBy:      verdictActor,
+		NarrowedBecause: reason,
 	})
 	if err != nil {
 		return "", err
@@ -102,11 +105,11 @@ type counterpartyCreation struct {
 	// same thing and stamping the channel into both puts a value on the wire
 	// that no client can parse.
 	CapturedBy string
-	// OwnerScoped births the contact visible to the mailbox owner alone. An
-	// ordinary verdict leaves this false, which is what PROMOTES a record
-	// capture minted owner-scoped; an advisor verdict sets it, so the record is
-	// made and the promotion does not happen.
-	OwnerScoped bool
+	// NarrowedBecause births the contact visible to the mailbox owner alone,
+	// and says why. An ordinary verdict leaves it empty, which is what PROMOTES
+	// a record capture minted owner-scoped; a narrowing verdict sets it, so the
+	// record is made, the promotion does not happen, and the reason is kept.
+	NarrowedBecause contacts.NarrowingReason
 }
 
 // counterpartyCreated reports what a `real` answer produced that its caller has
@@ -135,14 +138,15 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 	filer *connectorTagFiler, in counterpartyCreation,
 ) (counterpartyCreated, error) {
 	res, err := store.EnsureCounterpartyTx(ctx, tx, contacts.EnsureCounterpartyInput{
-		Email:       in.Email,
-		DisplayName: in.DisplayName,
-		Domain:      in.Domain,
-		OwnerID:     in.OwnerID,
-		ActivityID:  ids.From[ids.ActivityKind](in.ActivityID),
-		Source:      in.Source,
-		CapturedBy:  in.CapturedBy,
-		OwnerScoped: in.OwnerScoped,
+		Email:           in.Email,
+		DisplayName:     in.DisplayName,
+		Domain:          in.Domain,
+		OwnerID:         in.OwnerID,
+		ActivityID:      ids.From[ids.ActivityKind](in.ActivityID),
+		Source:          in.Source,
+		CapturedBy:      in.CapturedBy,
+		OwnerScoped:     in.NarrowedBecause != "",
+		NarrowedBecause: in.NarrowedBecause,
 	})
 	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		return counterpartyCreated{Suppressed: true}, nil
@@ -196,11 +200,11 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 func (e *CounterpartyVerdictEngine) createContactForVerdict(
 	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty,
 ) (string, error) {
-	narrow, err := e.contactStaysTheOwners(ctx, tx, row)
+	reason, err := e.contactStaysTheOwners(ctx, tx, row)
 	if err != nil {
 		return "", err
 	}
-	if narrow {
+	if reason != "" {
 		// The ledger says so too, in this transaction.
 		//
 		// Two other readers ask this ledger whether the sender is a judged
@@ -212,7 +216,7 @@ func (e *CounterpartyVerdictEngine) createContactForVerdict(
 		if err := capture.MarkWithheldFromWorkspaceTx(ctx, tx, row.ID); err != nil {
 			return "", err
 		}
-		return e.createOwnerScopedCounterparty(ctx, tx, row)
+		return e.createOwnerScopedCounterparty(ctx, tx, row, reason)
 	}
 	triageDomain, err := e.createCounterparty(ctx, tx, row)
 	if err != nil {
@@ -230,21 +234,32 @@ func (e *CounterpartyVerdictEngine) createContactForVerdict(
 	return triageDomain, e.widenClearedSender(ctx, tx, row.Email)
 }
 
-// contactStaysTheOwners reports whether a `contact` verdict's record must stay
-// visible to the mailbox owner alone.
+// contactStaysTheOwners answers why a `contact` verdict's record must stay
+// visible to the mailbox owner alone, or "" when it need not.
+//
+// The hold is asked FIRST. Mail we sent on a held thread is both, and only the
+// outbound reason ends when the address answers; recording that one would let
+// a reply publish the counterparty the hold keeps quiet.
 func (e *CounterpartyVerdictEngine) contactStaysTheOwners(
 	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty,
-) (bool, error) {
+) (contacts.NarrowingReason, error) {
+	// A thread under a confidentiality hold. The hold says who may read the
+	// correspondence, and a workspace-visible contact minted off it announces
+	// the counterparty the hold exists to keep quiet — the record would name
+	// them on a surface everybody reads while the mail itself stayed shut.
+	held, err := capture.ThreadHoldsItsCounterparty(ctx, tx, row.ActivityID)
+	if err != nil {
+		return "", err
+	}
+	if held {
+		return contacts.NarrowedConfidentialityHold, nil
+	}
 	// An address WE reached that has never answered. Judged on the recorded
 	// direction rather than inferred: a row written before the direction was
 	// recorded says nothing, and treating an unknown direction as outbound
 	// would narrow every historical contact at once.
 	if row.Direction == connector.DirectionOutbound && !row.WroteBack {
-		return true, nil
+		return contacts.NarrowedOutboundNoAnswer, nil
 	}
-	// A thread under a confidentiality hold. The hold says who may read the
-	// correspondence, and a workspace-visible contact minted off it announces
-	// the counterparty the hold exists to keep quiet — the record would name
-	// them on a surface everybody reads while the mail itself stayed shut.
-	return capture.ThreadHoldsItsCounterparty(ctx, tx, row.ActivityID)
+	return "", nil
 }

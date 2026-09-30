@@ -11,7 +11,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // The verbs on the project page's stakeholders card, drawn on their own so both
 // dialogs can be read in either theme without the surrounding 360 read.
 const meta: Meta = {
-  title: "Records/ProjectStakeholders",
+  title: "Records/Project 360/Stakeholders",
   parameters: { layout: "padded" },
 };
 export default meta;

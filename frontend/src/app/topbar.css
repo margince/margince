@@ -242,3 +242,21 @@
     display: none;
   }
 }
+
+/* The coarse-pointer floor (WCAG 2.2 AA), the way `.stat-card-open` takes it in
+   atoms.css. `max()` for the reason `.btn-federated` gives: a later rise in the
+   shared control height must not be capped by this floor. Declared under
+   `pointer: coarse` and not at a width, because a narrow WINDOW on a desktop is
+   still a mouse — the floor is about what a thumb can hit, not about how much
+   room there is. */
+@media (pointer: coarse) {
+  .topbar-search,
+  /* The trail's triggers by STRUCTURE, not by name: they are icon-sized by
+     default and one of them wears no class at all, so a list here would be a
+     list somebody has to remember to extend. Grandchildren only — an open
+     menu's own rows are not the strip's targets. */
+  .topbar-trail > button,
+  .topbar-trail > * > button {
+    min-height: max(var(--controlHeight), 44px);
+  }
+}

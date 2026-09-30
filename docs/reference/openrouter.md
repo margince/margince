@@ -121,6 +121,25 @@ Three states, and the last two are different:
 The distinction survives the settings store, because an omitted key and a
 written `{}` are different JSON.
 
+### Pinning a region
+
+Neither the default nor `{}` says anything about *where* a call is served. The
+broker lists each model's endpoints by slug, and a region is part of the slug:
+`mistral/eu` is Mistral's EU endpoint, while the base slug `mistral` matches
+every region Mistral serves from and a variant such as `mistral/zdr` names a
+retention policy rather than a place. Only `only: [<provider>/<region>]` keeps a
+call in a region, and OpenRouter answers 404 when no endpoint matches rather
+than falling back elsewhere. Read a model's endpoints at
+`https://openrouter.ai/api/v1/models/<model id>/endpoints` before binding it: a
+model with no EU endpoint cannot be pinned to the EU at all, and the list
+changes — `mistral-medium-3-5` had none until the broker added `mistral/eu`.
+
+The embeddings lane takes `only`, `ignore` and `allow_fallbacks` — the fields
+that choose hosts — and refuses the rest, which bound a completion's tail. A
+preset whose name ends in `_eu.yaml` must pin every lane, embeddings included,
+to an EU-region slug; `TestAResidencyPresetPinsEveryLaneToAnEURegion` fails one
+that does not.
+
 ## 3b. Validated through the config path
 
 The figures in §3 were taken with the preferences injected by hand. They were
@@ -265,6 +284,10 @@ Since the change that added this page's subject, `ai_call` carries:
   `provider` field. Empty on a direct vendor, which reports none.
 - **`finish_reason`** — so a truncated answer and a complete one are different
   rows.
+- **`cached_tokens` and `cache_write_tokens`** — read from the response's
+  `usage.prompt_tokens_details`, both already inside `prompt_tokens`. An upstream
+  that caches (Anthropic through the broker is the one that charges for the
+  write) therefore prices at its cache rates rather than as plain input.
 
 `served_identity_source` deliberately stays `'echo'` for this wire: the
 broker's `model` field is our own request reflected back, so we now know **who**
@@ -353,3 +376,25 @@ Two things to re-check specifically, because both would change the default:
 whether Cerebras is still the throughput leader, and whether it still serves at
 fp16 — the `quantizations` clause admits it today, and a re-quantized host would
 silently fall out of the candidate set.
+
+## 11. The decisions endpoint
+
+OpenRouter also brokers TypeSafe Jev at
+`POST https://openrouter.ai/api/alpha/decisions`, billed on input tokens only.
+It is one server on the Jev wire, so it binds the routing config's `decisions:`
+lane under `jev_compatible`, with the FULL endpoint as `base_url` (nothing is
+appended), beside `embeddings:` in `seeds.ai_routing` or through
+`PUT /v1/ai/routing`. The routing card's **Use OpenRouter** button fills the
+same two values, and `openrouter_cloud.yaml` carries them as a commented block:
+
+```yaml
+    decisions:
+      provider: jev_compatible
+      model: typesafe/jev-1.13
+      base_url: https://openrouter.ai/api/alpha/decisions
+```
+
+`JEV_COMPATIBLE_API_KEY` carries the OpenRouter key (the `OPENAI_COMPATIBLE_API_KEY`
+value). It takes no `routing:` preferences, so `eu_hosted` refuses it. A bound lane
+answers only the sites certified for it; the rest go to the ladder
+([ai-runtime.md](../explanation/ai-runtime.md#the-decision-lane)).

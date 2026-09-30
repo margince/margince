@@ -7,8 +7,9 @@ import type { components } from "../api/schema";
 import { DraftBand, RewriteRow } from "./composedraftband";
 import { DraftOffer } from "./composedraftcontext";
 import { StoryProviders } from "./story-utils";
-// The drawer's own sheet: `.compose-band` and `.compose-rewrite` are reached BY
-// CLASS, and a story's module graph stops short of compose.tsx, which loads it.
+// The drawer's own sheet: `.compose-band-body` and `.compose-rewrite` are
+// reached BY CLASS, and a story's module graph stops short of compose.tsx,
+// which loads it.
 import "./compose.css";
 
 // The card that says a MACHINE wrote the words below, and the rewrites offered
@@ -32,8 +33,7 @@ type Provenance = Pick<
 
 const WROTE_IT: Provenance = {
   ai_generated: true,
-  ai_disclosure:
-    "This message was drafted with AI assistance and reviewed by the sender.",
+  ai_disclosure: "Drafted with AI assistance. Review before sending.",
   voice_profile_version: 1234,
   voice_degraded: false,
 };

@@ -48,7 +48,7 @@ const LABELS: DecisionDeckLabels = {
   edited: (count: number) => `${count} being edited`,
   skipped: (count) => `${count} skipped`,
   commit: "Commit",
-  commitNothingToSend: "Finish these",
+  commitNothingToSend: "Clear skipped",
   unstage: "Undo the last",
   clearedTitle: "The queue is clear.",
   cleared: (count) => `You decided ${count}.`,
@@ -840,7 +840,7 @@ describe("DecisionDeck — a list the surface caps", () => {
       deck({
         labels: {
           ...LABELS,
-          compactRow: { detail: "What is proposed", more: "Other answers" },
+          compactRow: { detail: "What is proposed", more: "More options" },
         },
       }),
     );
@@ -866,7 +866,7 @@ describe("DecisionDeck — a verdict that sends nothing", () => {
     // Held, and named as a SKIP rather than counted as something staged to
     // send: the tray holds nothing the commit will put on a wire.
     expect(screen.getByText(/1 skipped/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Finish these" }));
+    await user.click(screen.getByRole("button", { name: "Clear skipped" }));
     // The caller was told what the reader answered...
     expect(onCommit).toHaveBeenCalledWith([{ id: "id-1", verdict: "skip" }]);
     // ...and the tray is empty rather than holding a verdict nobody will send.
@@ -903,7 +903,7 @@ describe("DecisionDeck — a verdict that sends nothing", () => {
     await user.click(screen.getByRole("button", { name: "Later" }));
 
     expect(
-      screen.getByRole("button", { name: "Finish these" }),
+      screen.getByRole("button", { name: "Clear skipped" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Commit" })).toBeNull();
     expect(screen.queryByText(/staged/)).toBeNull();

@@ -61,9 +61,8 @@ const (
 	VisibilityApp = "app"
 )
 
-// ResourceUI is what a view declares about itself: the origins it may reach
-// and the browser capabilities it asks for. Nil on an ordinary document,
-// which is every resource that is not a view.
+// ResourceUI is what a view declares about itself: the origins it may reach.
+// Nil on an ordinary document, which is every resource that is not a view.
 //
 // EVERYTHING HERE IS AN ALLOWLIST, and an empty one denies. The host builds
 // the sandbox's content-security policy from these lists and MUST NOT admit
@@ -73,8 +72,7 @@ const (
 // declares its lists explicitly rather than inheriting a default: an
 // allowlist that grows has to grow in a diff, next to the reason.
 type ResourceUI struct {
-	CSP         ResourceCSP
-	Permissions ResourcePermissions
+	CSP ResourceCSP
 	// Domain optionally asks the host for a dedicated sandbox origin. It is
 	// host-specific and only means anything to a view that needs an origin of
 	// its own to persist against; a stateless view leaves it empty and is
@@ -109,23 +107,6 @@ type ResourceCSP struct {
 func (c ResourceCSP) Empty() bool {
 	return len(c.ConnectDomains) == 0 && len(c.ResourceDomains) == 0 &&
 		len(c.FrameDomains) == 0 && len(c.BaseURIDomains) == 0
-}
-
-// ResourcePermissions are the browser capabilities a view asks the host to
-// grant its sandbox. Every one is false on a view that needs none.
-//
-// ON THE WIRE THIS IS A SET, NOT A SET OF FLAGS. The extension declares each
-// permission as an optional object member (`camera?: {}`), so a host reads the
-// member's PRESENCE as the request — which means a shape that spelled every
-// permission out as `false` would present four REQUESTED permissions to a host
-// reading presence, and a view asking for nothing would get the widest sandbox
-// available. The booleans here are for the Go caller; the renderer emits only
-// the ones asked for, and omits the member entirely when there are none.
-type ResourcePermissions struct {
-	Camera         bool
-	Microphone     bool
-	Geolocation    bool
-	ClipboardWrite bool
 }
 
 // AppMIMEType is the content type a view MUST be served as. The profile

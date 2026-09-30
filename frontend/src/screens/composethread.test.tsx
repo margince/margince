@@ -33,7 +33,7 @@ it("draws a failed thread read as a failure with a retry, not as an empty conver
   );
 
   expect(screen.getByText("This section did not load.")).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Try again" }));
+  await user.click(screen.getByRole("button", { name: "Retry" }));
   expect(retry).toHaveBeenCalledTimes(1);
 });
 
@@ -53,7 +53,7 @@ it("keeps the ways in on screen as a failure when the record's mail could not be
   );
 
   expect(screen.getByText("This section did not load.")).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Try again" }));
+  await user.click(screen.getByRole("button", { name: "Retry" }));
   expect(retry).toHaveBeenCalledTimes(1);
 });
 

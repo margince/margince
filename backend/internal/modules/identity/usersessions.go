@@ -44,7 +44,7 @@ func (s *Service) ListUserSessions(ctx context.Context, actor Identity, targetUs
 	}
 	var sessions []UserSession
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, targetUserID); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, targetUserID, reachDenial); err != nil {
 			return err
 		}
 		if err := ensureUserExists(ctx, tx, targetUserID); err != nil {
@@ -90,7 +90,7 @@ func (s *Service) RevokeUserSession(ctx context.Context, actor Identity, targetU
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, targetUserID); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, targetUserID, reachDenial); err != nil {
 			return err
 		}
 		var present bool

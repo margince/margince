@@ -18,7 +18,7 @@ const MAY_WRITE_RELATIONSHIPS = {
 } as const;
 
 const meta: Meta = {
-  title: "Records/Relationships",
+  title: "Records/Company 360/Relationships",
   parameters: { layout: "padded" },
 };
 export default meta;

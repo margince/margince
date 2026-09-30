@@ -18,7 +18,7 @@ import { Heading } from "./heading";
 // `ambient-waves-shader.ts`, "WHY IT SAYS NOTHING"). What a capture DOES show
 // is the two themes and that the copy over it stays legible in both.
 const meta = {
-  title: "Signed out/Ambient waves",
+  title: "Components/Images and icons/Ambient waves",
   component: AmbientWaves,
   parameters: { layout: "padded" },
 } satisfies Meta<typeof AmbientWaves>;

@@ -36,6 +36,7 @@ import { RecordTeam } from "./recordteam";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { ListsSection } from "./companyraillists";
 
 // The record page's LEFT rail (mockup State A): the account's context,
 // beside the work rather than under it. Passed to RecordView's `rail` slot,
@@ -147,6 +148,7 @@ export function CompanyRail({
         <DealsSection view={view} loading={loading} onTab={onTab} />
         <ProjectsSection view={view} loading={loading} onTab={onTab} />
         <ContactsSection view={view} loading={loading} onTab={onTab} />
+        <ListsSection lists={view?.list_memberships} />
         <CompanyHoldSection company={resolved} />
         {/* Beside the hold, and for the same reason: both are about the
             account's mail DOMAIN rather than about the work on it. */}
@@ -313,6 +315,7 @@ function ContactCard({ contact }: Readonly<{ contact: Contact }>) {
                   <AvatarStack
                     contacts={colleagues.map((route) => ({
                       name: route.display_name,
+                      identity: route.user_id,
                     }))}
                   />
                 </>

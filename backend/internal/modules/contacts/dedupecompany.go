@@ -12,9 +12,9 @@ package contacts
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -51,6 +51,22 @@ type CompanyMatch struct {
 	// dispositioned `not_a_duplicate`, and a single-winner result would let
 	// that dismissal mask a genuine duplicate behind it forever.
 	Ranked []CompanyCandidateScore
+	// DomainSplit is non-nil when the candidate's own domains named more than
+	// one live company: two employers' addresses on one card, an import row
+	// carrying a parent and a subsidiary. It is a REPORT — this resolver writes
+	// nothing — and the routed company is still the lowest id, which is the
+	// answer this ladder has always given.
+	//
+	// There is only ONE exact lane for a company, so unlike the contact side
+	// this can never be two lanes disagreeing; it is always the payload
+	// disagreeing with itself.
+	DomainSplit *DomainSplit
+}
+
+// DomainSplit names both companies a candidate's domains reached, so the
+// caller's policy has the evidence without re-running the ladder.
+type DomainSplit struct {
+	RoutedTo, Rival ids.CompanyID
 }
 
 // CompanyCandidateScore is one scored rival from the fuzzy tier, with the
@@ -84,8 +100,16 @@ type CompanyCandidateScore struct {
 // implementation. Domain is the exact key; name similarity alone is the
 // fuzzy tier, because without a domain there is nothing to anchor on.
 func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMatch, error) {
-	if hit, found, err := exactCompanyByDomain(ctx, tx, c.Domains, c.ExcludeID); err != nil || found {
-		return CompanyMatch{Decision: DecisionExactCollision, CompanyID: hit}, err
+	hits, err := exactCompanyByDomain(ctx, tx, c.Domains, c.ExcludeID)
+	if err != nil {
+		return CompanyMatch{}, err
+	}
+	if len(hits) > 0 {
+		match := CompanyMatch{Decision: DecisionExactCollision, CompanyID: hits[0]}
+		if len(hits) > 1 {
+			match.DomainSplit = &DomainSplit{RoutedTo: hits[0], Rival: hits[1]}
+		}
+		return match, nil
 	}
 	if NormalizeCompanyName(c.DisplayName) == "" && NormalizeCompanyName(c.LegalName) == "" {
 		return CompanyMatch{Decision: DecisionNoMatch}, nil
@@ -114,29 +138,26 @@ func DedupeCompanyForCreate(ctx context.Context, tx pgx.Tx, c CompanyCandidate) 
 // exactCompanyByDomain is PO-F-2 tier 1: any candidate domain already mapped
 // to a live company. This is also the capture employer-inference path — a
 // domain hit lands the contact on the existing company.
-func exactCompanyByDomain(ctx context.Context, tx pgx.Tx, domains []string, exclude *ids.CompanyID) (ids.CompanyID, bool, error) {
+// AT MOST TWO are returned, and the statement's own LIMIT says so. The first is
+// the company this routes to — the same lowest id the `LIMIT 1` this replaced
+// returned, which is what makes the routing outcome unchanged — and the second
+// is the evidence that the candidate's own domains named more than one. The
+// report names ONE rival, so a third adds nothing a review row can carry.
+func exactCompanyByDomain(ctx context.Context, tx pgx.Tx, domains []string, exclude *ids.CompanyID) ([]ids.CompanyID, error) {
 	if len(domains) == 0 {
-		return ids.CompanyID{}, false, nil
+		return nil, nil
 	}
 	lowered := make([]string, 0, len(domains))
 	for _, d := range domains {
 		lowered = append(lowered, normalizeDomain(d))
 	}
-	var id ids.CompanyID
-	err := tx.QueryRow(ctx, `
-		SELECT company_id FROM company_domain
+	return exactOwners[ids.CompanyID](ctx, tx, entityCompany, `
+		SELECT DISTINCT company_id FROM company_domain
 		WHERE domain = ANY($1) AND archived_at IS NULL
 		  
 		  AND ($2::uuid IS NULL OR company_id <> $2)
 		ORDER BY company_id
-		LIMIT 1`, lowered, exclude).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.CompanyID{}, false, nil
-	}
-	if err != nil {
-		return ids.CompanyID{}, false, fmt.Errorf("dedupe company exact tier: %w", err)
-	}
-	return id, true, nil
+		LIMIT 2`, lowered, exclude)
 }
 
 // fuzzyCompany scores name similarity over the trigram-restricted
@@ -167,6 +188,7 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 	// searchAxes drops a value equal to one already there, so the common case —
 	// a name with no legal form to strip — adds no arms.
 	arms := companyTrigramArms(&args, searchAxes(c)...)
+	arms = append(arms, companyExactNameArms(&args, c)...)
 	if len(arms) == 0 {
 		return CompanyMatch{Decision: DecisionNoMatch}, nil
 	}
@@ -241,6 +263,54 @@ func searchAxes(c CompanyCandidate) []string {
 		}
 	}
 	return axes
+}
+
+// companyExactNameArms builds one equality arm per (non-empty candidate name ×
+// stored name column), so a pair the Go comparison calls the SAME NAME reaches
+// the scorer whatever the trigram operators make of it.
+//
+// WHY THE ARM, when the trigram ones are already here. Those narrow a set for a
+// SCORE, and being approximate is right there: a row they miss was never going
+// to win. ExactName is not a score — it is decided by companyNamesAreTheSame,
+// and a reviewer is shown a name collision on the strength of it — so a
+// prefilter that is merely approximate can hide a row that would have been
+// exactly equal, and the company lane has no employer arm to rescue it the way
+// the contact lane does.
+//
+// THE SAME KEY, not a company-shaped one. companyNamesAreTheSame folds case,
+// accents and spacing and nothing else, which is exactly what exactNameKeySQL
+// spells; the legal-suffix strip that searchAxes applies is a different
+// question and must not reach here, because "Baqend GmbH" and "Baqend Inc"
+// fold together under it and are two legal entities.
+//
+// Both sides folded by SQL's own functions, exactly as the trigram arms do.
+// Computing one side in Go would move the divergence rather than close it.
+//
+// NO KNOWN PAIR NEEDS IT — measured, `'health care' % 'healthcare'` is 0.64 and
+// `'the group' % 'the group ltd'` is 0.71, both well over the 0.3 limit. It is
+// a GUARANTEE rather than a bug fix, for the reason the contact lane states:
+// this lane's correctness should not rest on one approximate predicate
+// happening to cover another normalization's output.
+func companyExactNameArms(args *[]any, c CompanyCandidate) []string {
+	var arms []string
+	for _, name := range []string{c.DisplayName, c.LegalName} {
+		// An empty candidate name is dropped rather than passed as "": SQL
+		// would fold it to the empty key and match every stored name that
+		// folds to nothing, which is the one pairing companyNamesAreTheSame
+		// refuses outright.
+		if collapseSpaces(normalizeName(name)) == "" {
+			continue
+		}
+		*args = append(*args, name)
+		at := "$" + strconv.Itoa(len(*args))
+		// The same two columns bestCompanyNamePairing scores, named by the
+		// same constants: an arm that reached a column the scorer never reads
+		// would widen the candidate set for nothing.
+		for _, column := range []string{fieldDisplayName, fieldLegalName} {
+			arms = append(arms, exactNameKeySQL(column)+" = "+exactNameKeySQL(at))
+		}
+	}
+	return arms
 }
 
 // companyTrigramArms builds one `<%` arm per (non-empty candidate axis × stored

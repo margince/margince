@@ -1,0 +1,28 @@
+{
+  "model": "typed-decisions",
+  "answers": {
+    "kind": {
+      "type": "choice",
+      "choice": "company",
+      "probabilities": {
+        "company": 0.91,
+        "personal": 0.04,
+        "provider": 0.02,
+        "parked": 0.02,
+        "unclear": 0.01
+      },
+      "confidence": 0.87
+    }
+  },
+  "answer_confidence": 0.87,
+  "action": "answer",
+  "routing": {
+    "path": "encoder",
+    "escalate": false
+  },
+  "usage": {
+    "input_tokens": 212,
+    "output_tokens": 0
+  },
+  "id": "dec_fixture"
+}

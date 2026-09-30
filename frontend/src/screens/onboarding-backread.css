@@ -61,10 +61,6 @@
   color: var(--aiText);
 }
 
-.ob-backread-problem {
-  color: var(--dangerText);
-}
-
 /* ---- the running read -------------------------------------------------- */
 
 .ob-backread-progress {

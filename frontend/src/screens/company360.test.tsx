@@ -16,12 +16,8 @@ import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
 import { CompanyScreen } from "./companies";
-import {
-  CommercialPanel,
-  NextSteps,
-  type SuggestionAction,
-  SuggestionsSection,
-} from "./company360";
+import { NextSteps, type SuggestionAction } from "./company360";
+import { TodayOnThisAccount } from "./companytoday";
 import { sinceLastVisitFooter } from "./companywork";
 import { SentenceList } from "./record360";
 import { TaskQuickActions, useTaskUpdate } from "./taskactions";
@@ -309,17 +305,17 @@ function renderWork(three60: Company360) {
   render(sinceLastVisitFooter(three60) ?? null);
 }
 
-// The lead panel, rendered on its own: it moved out of CompanyBrief so the
-// stack could tint and box it separately, and the advice it carries is
-// exercised through it directly now.
+// The advice rows, through the brief the record page mounts them in.
 function renderSuggestions(
   three60: Company360,
   onPerform: (action: SuggestionAction) => void = () => {},
 ) {
   render(
-    <SuggestionsSection
+    <TodayOnThisAccount
       companyId="o-1"
       view={three60}
+      loading={false}
+      failed={false}
       onOpenRecord={() => {}}
       onPerform={onPerform}
     />,
@@ -341,13 +337,11 @@ describe("company view — withheld sections", () => {
     if (!deals) {
       throw new Error("the deals card has no section wrapper");
     }
-    expect(
-      within(deals).getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
+    expect(within(deals).getByText("Hidden for your role")).toBeTruthy();
     // The empty state and the withheld state must never both appear: one
     // says there is nothing, the other says you may not know.
     expect(
-      within(deals).queryByText("No open deal on this account."),
+      within(deals).queryByText("No open deals for this company."),
     ).toBeNull();
   });
 
@@ -364,11 +358,9 @@ describe("company view — withheld sections", () => {
       throw new Error("the deals card has no section wrapper");
     }
     expect(
-      within(deals).getByText("No open deal on this account."),
+      within(deals).getByText("No open deals for this company."),
     ).toBeTruthy();
-    expect(
-      within(deals).queryByText("Hidden — your role cannot read this"),
-    ).toBeNull();
+    expect(within(deals).queryByText("Hidden for your role")).toBeNull();
   });
 
   it("reports no committee gap when the contacts section was withheld", async () => {
@@ -410,11 +402,9 @@ describe("company view — withheld sections", () => {
     renderCompany();
 
     const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
-    expect(
-      within(strip).getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
+    expect(within(strip).getByText("Hidden for your role")).toBeTruthy();
   });
 
   it("says the health verdict is hidden rather than drawing no card", async () => {
@@ -435,7 +425,7 @@ describe("company view — withheld sections", () => {
 
     // The standing is the 360's word now, under the readings row: withheld
     // reads as withheld there, on the word and on each dimension.
-    const call = await screen.findByText("Account brief");
+    const call = await screen.findByText("Company brief");
     const pane = call.closest(".panel");
     if (!(pane instanceof HTMLElement)) {
       throw new Error("the 360 has no pane");
@@ -458,7 +448,7 @@ describe("company view — withheld sections", () => {
     );
     renderCompany();
 
-    const call = await screen.findByText("Account brief");
+    const call = await screen.findByText("Company brief");
     const pane = call.closest(".panel");
     if (!(pane instanceof HTMLElement)) {
       throw new Error("the 360 has no pane");
@@ -479,18 +469,16 @@ describe("company view — withheld sections", () => {
     renderCompany();
 
     const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
     const relationship = within(strip)
-      .getByText("Conversation")
-      .closest(".stat-card");
+      .getAllByText("Relationship")[0]
+      ?.closest(".stat-card");
     if (!(relationship instanceof HTMLElement)) {
       throw new Error("the relationship card has no wrapper");
     }
-    expect(within(relationship).getByText("In conversation")).toBeTruthy();
-    expect(
-      within(relationship).queryByText("They have never written"),
-    ).toBeNull();
+    expect(within(relationship).getByText("Active")).toBeTruthy();
+    expect(within(relationship).queryByText("No exchange")).toBeNull();
   });
 });
 
@@ -510,7 +498,7 @@ describe("company view — the verbs that change a section", () => {
       throw new Error("the deals card has no section wrapper");
     }
     expect(
-      within(deals).getByText("No open deal on this account."),
+      within(deals).getByText("No open deals for this company."),
     ).toBeTruthy();
     // Awaited: the verb appears once the pipeline read resolves, because a
     // deal needs somewhere to land before the page offers to open one. Scoped
@@ -541,13 +529,11 @@ describe("company view — the verbs that change a section", () => {
       await screen.findByRole("button", { name: /^Deals/ }),
     );
     await waitFor(() =>
-      expect(
-        screen.queryAllByText("Hidden — your role cannot read this"),
-      ).toHaveLength(2),
+      expect(screen.queryAllByText("Hidden for your role")).toHaveLength(2),
     );
     // And the empty state it did NOT draw: "no open deal" is a claim about
     // the account that this payload cannot support.
-    expect(screen.queryByText("No open deal on this account.")).toBeNull();
+    expect(screen.queryByText("No open deals for this company.")).toBeNull();
     // The absent button alone would prove nothing: the verb also renders null
     // while its pipeline read is in flight, so the assertion could pass on
     // that transient state with the guard deleted. What pins the guard is
@@ -641,7 +627,7 @@ describe("company view — what changed since the last visit", () => {
     renderWork(three60);
 
     expect(
-      screen.getByText("You are opening this account for the first time."),
+      screen.getByText("You have not opened this company before."),
     ).toBeTruthy();
     expect(screen.queryByText("Nothing new since your last visit.")).toBeNull();
   });
@@ -717,7 +703,7 @@ describe("company view — a section still loading is not one that failed", () =
     // arrives.
     const brief = () => {
       const panel = screen
-        .getByRole("heading", { name: "What needs you" })
+        .getByRole("heading", { name: "Needs attention" })
         .closest("section");
       if (!panel) {
         throw new Error("the day's brief has no section wrapper");
@@ -735,7 +721,7 @@ describe("company view — a section still loading is not one that failed", () =
     // the honest answer the brief gives once it has actually read the account,
     // never the failure text a still-loading read would be mistaken for.
     expect(
-      within(brief()).getByText("Nothing needs you right now."),
+      within(brief()).getByText("Nothing needs attention right now."),
     ).toBeTruthy();
     expect(within(brief()).queryByText(/Could not be loaded/)).toBeNull();
   });
@@ -747,17 +733,15 @@ describe("company view — a failed read is not an empty account", () => {
     renderCompany();
 
     await waitFor(() =>
-      expect(screen.getByText(/may not show everything/)).toBeTruthy(),
+      expect(screen.getByText(/this page may be incomplete/)).toBeTruthy(),
     );
     // The business rail STAYS, with each card saying it could not be loaded.
     // Removing it would read as an account with no contacts and no deals,
     // which is the one thing this page does not know.
     const card = screen.getByRole("complementary", { name: "Context" });
+    expect(within(card).getAllByText(/did not load/).length).toBeGreaterThan(0);
     expect(
-      within(card).getAllByText(/Could not be loaded/).length,
-    ).toBeGreaterThan(0);
-    expect(
-      within(card).queryByText("No open deal on this account."),
+      within(card).queryByText("No open deals for this company."),
     ).toBeNull();
     expect(
       within(card).queryByText("No contact linked to this account yet."),
@@ -779,13 +763,11 @@ describe("company view — a failed read is not an empty account", () => {
     if (!deals) {
       throw new Error("the deals card has no section wrapper");
     }
-    expect(within(deals).getByText(/Could not be loaded/)).toBeTruthy();
+    expect(within(deals).getByText(/did not load/)).toBeTruthy();
     expect(
-      within(deals).queryByText("No open deal on this account."),
+      within(deals).queryByText("No open deals for this company."),
     ).toBeNull();
-    expect(
-      within(deals).queryByText("Hidden — your role cannot read this"),
-    ).toBeNull();
+    expect(within(deals).queryByText("Hidden for your role")).toBeNull();
   });
 });
 
@@ -809,7 +791,7 @@ describe("company view — figures that outlive the list they sit under", () => 
     // No OPEN deal is true and is said. The account still won €120,000 —
     // hiding that because today's pipeline is empty loses a real fact.
     expect(
-      await screen.findByText("No open deal on this account."),
+      await screen.findByText("No open deals for this company."),
     ).toBeTruthy();
     expect(screen.getByText(/120,000/)).toBeTruthy();
     expect(screen.getByText("3 lost")).toBeTruthy();
@@ -1041,13 +1023,11 @@ describe("company view — what is waiting on a decision", () => {
     // anything, and drawn in the header it outranked the verbs that do.
     (await screen.findByRole("button", { name: "More actions" })).click();
     const open = await screen.findByRole("button", {
-      name: "Review 2 waiting",
+      name: "Review 2 pending",
     });
     open.click();
     await waitFor(() =>
-      expect(
-        screen.getByText("2 × Add a contact found on the site"),
-      ).toBeTruthy(),
+      expect(screen.getByText("2 × Add contact from website")).toBeTruthy(),
     );
   });
 
@@ -1081,7 +1061,7 @@ describe("company view — an open task can be acted on", () => {
       ).toBeTruthy(),
     );
     expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Snooze 1d" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Snooze 1 day" })).toBeTruthy();
   });
 
   it("offers no snooze for a task with no date to move", async () => {
@@ -1093,7 +1073,7 @@ describe("company view — an open task can be acted on", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Done" })).toBeTruthy(),
     );
-    expect(screen.queryByRole("button", { name: "Snooze 1d" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Snooze 1 day" })).toBeNull();
   });
 
   it("draws no checkbox when the caller has no write path for it", async () => {
@@ -1104,51 +1084,6 @@ describe("company view — an open task can be acted on", () => {
       expect(screen.getByText("Send the retrofit proposal")).toBeTruthy(),
     );
     expect(screen.queryByRole("checkbox")).toBeNull();
-  });
-});
-
-describe("CommercialPanel — a capped deals page says so", () => {
-  const openDeal = {
-    deal_id: "d-1",
-    name: "Pilot rollout",
-    status: "open" as const,
-    stalled: false,
-  };
-
-  it("names the truncation rather than reading as the whole pipeline", async () => {
-    const three60 = view({
-      deals: {
-        data: [openDeal],
-        page: { has_more: true, next_cursor: "c2" },
-        won_lifetime: { amount_minor: 0, currency: "EUR" },
-        lost_count: 0,
-      },
-    });
-    render(<CommercialPanel view={three60} />);
-    await waitFor(() => expect(screen.getByText("Pilot rollout")).toBeTruthy());
-    expect(
-      screen.getByText(
-        "This account has more open deals than fit here. Open All deals to see the rest.",
-      ),
-    ).toBeTruthy();
-  });
-
-  it("draws no truncation notice on a page that holds every open deal", async () => {
-    const three60 = view({
-      deals: {
-        data: [openDeal],
-        page: emptyPage,
-        won_lifetime: { amount_minor: 0, currency: "EUR" },
-        lost_count: 0,
-      },
-    });
-    render(<CommercialPanel view={three60} />);
-    await waitFor(() => expect(screen.getByText("Pilot rollout")).toBeTruthy());
-    expect(
-      screen.queryByText(
-        "This account has more open deals than fit here. Open All deals to see the rest.",
-      ),
-    ).toBeNull();
   });
 });
 
@@ -1190,7 +1125,7 @@ describe("company view — Partner is not a permanent tab", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     await userEvent.click(
-      screen.getByRole("button", { name: "Set up partner programme" }),
+      screen.getByRole("button", { name: "Set up partner program" }),
     );
 
     // Asking for the form is what puts the tab on screen — without this the
@@ -1265,7 +1200,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // implementation reused rather than a second one, so both show the same
     // value and either one writes through the same patch.
     const controls = await screen.findAllByRole("button", {
-      name: "Change Account lifecycle",
+      name: "Change Lifecycle",
     });
     expect(controls).toHaveLength(2);
     for (const control of controls) {
@@ -1299,7 +1234,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // field name and 'Not assessed' never stands on its own. Both mount
     // points (header, grid) show it, since both draw the same control.
     const controls = await screen.findAllByRole("button", {
-      name: "Change Account lifecycle",
+      name: "Change Lifecycle",
     });
     expect(controls).toHaveLength(2);
     for (const control of controls) {
@@ -1361,7 +1296,7 @@ describe("company view — where the account stands, and what it is to us", () =
     await screen.findByRole("complementary", { name: "Context" });
 
     const [headerControl] = await screen.findAllByRole("button", {
-      name: "Change Account lifecycle",
+      name: "Change Lifecycle",
     });
     await userEvent.click(headerControl);
     await userEvent.click(screen.getByRole("option", { name: "Prospect" }));
@@ -1373,7 +1308,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // read from, not because either wrote a second time.
     await waitFor(async () => {
       const updated = await screen.findAllByRole("button", {
-        name: "Change Account lifecycle",
+        name: "Change Lifecycle",
       });
       expect(updated).toHaveLength(2);
       for (const control of updated) {
@@ -1404,7 +1339,7 @@ describe("company view — the KPI row never invents a figure", () => {
     stub(view({ state_strip: commercial({}) }));
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
 
     // A zero here would claim a priced pipeline worth nothing. The truth is
@@ -1412,10 +1347,10 @@ describe("company view — the KPI row never invents a figure", () => {
     // No currency figure AT ALL — not merely no zero. A stray non-zero total
     // would be the worse failure, and the loose form would have passed it.
     expect(strip.textContent).not.toMatch(/[€$£]/);
-    expect(within(strip).getByText("2 open")).toBeTruthy();
-    expect(
-      within(strip).getByText("No convertible amount on these deals"),
-    ).toBeTruthy();
+    // The COUNT takes the money's place as the reading, because the count is
+    // the fact this account has.
+    expect(within(strip).getByText("2")).toBeTruthy();
+    expect(within(strip).getByText("No amount")).toBeTruthy();
   });
 
   // Two cards saying "in conversation" in different words is one card's worth
@@ -1446,27 +1381,27 @@ describe("company view — the KPI row never invents a figure", () => {
     );
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
 
     // 86% of the exchange is theirs: they are asking more than we answer.
     expect(within(strip).getByText("One-sided")).toBeTruthy();
-    expect(
-      within(strip).getByText(/86% of the exchange is theirs/),
-    ).toBeTruthy();
+    expect(within(strip).getByText("86% inbound")).toBeTruthy();
   });
 
   it("says an empty pipeline is empty, not unpriced", async () => {
     stub(view({ state_strip: commercial({ open_count: 0 }) }));
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
 
-    // "No convertible amount" on an account with nothing open reports a data
-    // problem where the truth is that nothing is running.
-    expect(within(strip).getByText("No open deals")).toBeTruthy();
-    expect(strip.textContent).not.toContain("No convertible amount");
+    // "No amount" on an account with nothing open reports a data problem
+    // where the truth is that nothing is running.
+    expect(
+      within(strip).getByText("Open deals").closest(".stat-card")?.textContent,
+    ).toContain("None");
+    expect(strip.textContent).not.toContain("No amount");
   });
 
   it("names the conversion behind a cross-currency total", async () => {
@@ -1483,7 +1418,7 @@ describe("company view — the KPI row never invents a figure", () => {
     );
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
 
     // §4.2 bars a cross-currency sum with no conversion source and as-of date.
@@ -1491,21 +1426,19 @@ describe("company view — the KPI row never invents a figure", () => {
     // it reaches.
     // The DATE itself, not just the prefix: a dropped or wrong interpolation
     // is exactly the failure this qualification exists to prevent.
-    expect(
-      within(strip).getByText(/1 converted, rates from .*2026/),
-    ).toBeTruthy();
+    expect(within(strip).getByText(/1 converted, rates .*2026/)).toBeTruthy();
   });
 
   it("keeps saying the pipeline is unpriced even when a deal has stalled", async () => {
     stub(view({ state_strip: commercial({ stalled_count: 1 }) }));
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
 
-    // A reader told only "1 stalled" has no way to know the pipeline carries
-    // no figure at all. Both qualifications are true, so both are shown.
-    expect(strip.textContent).toContain("No convertible amount on these deals");
+    // A reader told only "1 stalled" has no way to know the deals carry no
+    // figure at all. Both qualifications are true, so both are shown.
+    expect(strip.textContent).toContain("No amount");
     expect(strip.textContent).toContain("1 stalled");
   });
 
@@ -1521,15 +1454,15 @@ describe("company view — the KPI row never invents a figure", () => {
     );
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
 
-    // A sum covering one of two deals, shown bare, reads as the whole
-    // pipeline — the unlabelled cross-currency total §4.2 forbids.
-    expect(within(strip).getByText("1 of 2 deals priced")).toBeTruthy();
+    // A sum covering one of two deals, shown bare, reads as the whole of the
+    // open work — the unlabelled cross-currency total §4.2 forbids.
+    expect(within(strip).getByText("1 of 2 priced")).toBeTruthy();
   });
 
-  it("labels the sum of open deals Open pipeline, never revenue or potential", async () => {
+  it("labels the sum of open deals Open deals, never revenue or potential", async () => {
     stub(
       view({
         state_strip: commercial({
@@ -1541,11 +1474,13 @@ describe("company view — the KPI row never invents a figure", () => {
     );
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
 
-    expect(within(strip).getByText("Open pipeline")).toBeTruthy();
-    expect(strip.textContent).not.toMatch(/revenue|potential/i);
+    // Scoped to the card that holds the sum: the money slot beside it is a
+    // revenue reading and is entitled to the word.
+    const deals = within(strip).getByText("Open deals").closest(".stat-card");
+    expect(deals?.textContent).not.toMatch(/revenue|potential/i);
   });
 
   // §4.2 gives customers and prospects different questions. A customer's page
@@ -1571,12 +1506,15 @@ describe("company view — the KPI row never invents a figure", () => {
     );
     renderCompany();
     let strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
-    expect(within(strip).getByText("Not a customer yet")).toBeTruthy();
-    // Conversation and health are on BOTH rows — a prospect is not asked to
-    // give up knowing how the relationship stands.
-    expect(within(strip).getByText("Conversation")).toBeTruthy();
+    expect(within(strip).getByText("Not invoiced")).toBeTruthy();
+    expect(within(strip).getByText("Prospect")).toBeTruthy();
+    // The relationship and health are on BOTH rows — a prospect is not asked
+    // to give up knowing how the relationship stands.
+    expect(within(strip).getAllByText("Relationship").length).toBeGreaterThan(
+      0,
+    );
 
     cleanup();
     stub(
@@ -1597,11 +1535,13 @@ describe("company view — the KPI row never invents a figure", () => {
     );
     renderCompany();
     strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
-    expect(within(strip).getByText("Conversation")).toBeTruthy();
-    expect(within(strip).getByText("Gone quiet")).toBeTruthy();
-    expect(within(strip).queryByText("Not a customer yet")).toBeNull();
+    expect(within(strip).getAllByText("Relationship").length).toBeGreaterThan(
+      0,
+    );
+    expect(within(strip).getByText("Quiet")).toBeTruthy();
+    expect(within(strip).queryByText("Not invoiced")).toBeNull();
   });
 });
 
@@ -1636,15 +1576,15 @@ describe("company view — the state strip", () => {
       }),
     );
     renderCompany();
-    await screen.findByRole("region", { name: "Where this account stands" });
+    await screen.findByRole("region", { name: "Company status" });
     const strip = screen.getByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
-    expect(within(strip).getByText("2 open")).toBeTruthy();
+    expect(within(strip).getByText("2")).toBeTruthy();
     expect(strip.textContent).toContain("1 stalled");
     // Whose move it is reads the SAME `engagement` field, now in the daily
     // brief rather than a second copy in the strip.
-    expect(within(strip).queryByText("Waiting on them")).toBeNull();
+    expect(within(strip).queryByText("Awaiting their reply")).toBeNull();
   });
 
   it("does not draw the worst open signal a second time", async () => {
@@ -1664,7 +1604,7 @@ describe("company view — the state strip", () => {
     );
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Where this account stands",
+      name: "Company status",
     });
     // The risk reads the same `state_strip.signal` field, now in the daily
     // brief (companytoday.test.tsx carries the wording coverage).
@@ -1715,9 +1655,7 @@ describe("company view — advice you can act on", () => {
     expect(screen.getByRole("button", { name: "Create draft" })).toBeTruthy();
     // The second rule named no action, so it advises without a control. A
     // button that does nothing teaches the reader to stop pressing them.
-    expect(
-      screen.queryByRole("button", { name: "Add the next step" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add next step" })).toBeNull();
   });
 
   // The lead panel's footer names what is owed, ported from the retired
@@ -1904,7 +1842,7 @@ describe("a customer's KPI row reports what the account is worth", () => {
     ...extra,
   });
   const strip = async () =>
-    await screen.findByRole("region", { name: "Where this account stands" });
+    await screen.findByRole("region", { name: "Company status" });
 
   // The window the slot names is the window the figure covers. Both figures are
   // on the wire and the lifetime one is the larger, so a slot that reached for
@@ -1925,7 +1863,7 @@ describe("a customer's KPI row reports what the account is worth", () => {
     // first pass, so the assertions below wait for the settled figure.
     await waitFor(() => expect(region.textContent).not.toMatch(/Loading…/));
 
-    expect(within(region).getByText("Net invoiced · 12 mo")).toBeTruthy();
+    expect(within(region).getByText("Revenue · 12 mo")).toBeTruthy();
     // Abbreviated: the strip's slots share its width, and a full euro amount
     // wraps mid-number there. The finance card renders the exact figure.
     expect(within(region).getByText(/186(\.4)?K/i)).toBeTruthy();
@@ -1980,7 +1918,7 @@ describe("the money slot says WHY it has no figure", () => {
     account: { lifecycle: "customer" as const, relationship_types: [] },
   };
   const strip = async () =>
-    await screen.findByRole("region", { name: "Where this account stands" });
+    await screen.findByRole("region", { name: "Company status" });
 
   it("names the setup step only when there is no source", async () => {
     stub(view({ state_strip: customer }), 200, company, {
@@ -1990,7 +1928,7 @@ describe("the money slot says WHY it has no figure", () => {
     renderCompany();
     await strip();
     expect(
-      (await screen.findAllByText("Connect your accounting")).length,
+      (await screen.findAllByText("Accounting not connected")).length,
     ).toBeGreaterThan(0);
   });
 
@@ -2003,10 +1941,10 @@ describe("the money slot says WHY it has no figure", () => {
     renderCompany();
     const region = await strip();
     expect(
-      (await screen.findAllByText("Not matched to a customer yet")).length,
+      (await screen.findAllByText("Customer not matched")).length,
     ).toBeGreaterThan(0);
     // The wrong advice, specifically: this reader HAS connected a source.
-    expect(region.textContent).not.toMatch(/Connect your accounting/);
+    expect(region.textContent).not.toMatch(/Accounting not connected/);
   });
 
   it("says a first sync is running rather than that nothing is connected", async () => {
@@ -2017,8 +1955,8 @@ describe("the money slot says WHY it has no figure", () => {
     });
     renderCompany();
     const region = await strip();
-    expect((await screen.findAllByText("Syncing…")).length).toBeGreaterThan(0);
-    expect(region.textContent).not.toMatch(/Connect your accounting/);
+    expect((await screen.findAllByText("Syncing")).length).toBeGreaterThan(0);
+    expect(region.textContent).not.toMatch(/Accounting not connected/);
   });
 
   // A denial and a setup gap are opposite problems. Sending a reader whose
@@ -2039,11 +1977,12 @@ describe("the money slot says WHY it has no figure", () => {
     );
     renderCompany();
     const region = await strip();
-    expect(
-      (await screen.findAllByText("You may not see this account's finance"))
-        .length,
-    ).toBeGreaterThan(0);
-    expect(region.textContent).not.toMatch(/Connect your accounting/);
+    // The refusal stands AS the reading, with no reason under it: there is
+    // nothing the reader can do here, and setup advice would be wrong advice.
+    expect((await screen.findAllByText("Restricted")).length).toBeGreaterThan(
+      0,
+    );
+    expect(region.textContent).not.toMatch(/Accounting not connected/);
   });
 
   it("says the read failed rather than that nothing is connected", async () => {
@@ -2056,10 +1995,13 @@ describe("the money slot says WHY it has no figure", () => {
     );
     renderCompany();
     const region = await strip();
-    expect(
-      (await screen.findAllByText("Could not be read")).length,
-    ).toBeGreaterThan(0);
-    expect(region.textContent).not.toMatch(/Connect your accounting/);
+    expect((await screen.findAllByText("Unavailable")).length).toBeGreaterThan(
+      0,
+    );
+    expect((await screen.findAllByText("Load failed")).length).toBeGreaterThan(
+      0,
+    );
+    expect(region.textContent).not.toMatch(/Accounting not connected/);
   });
 
   // `stale` and `error` are opposite claims about whether anything is broken.
@@ -2075,10 +2017,12 @@ describe("the money slot says WHY it has no figure", () => {
     renderCompany();
     await strip();
     expect((await screen.findAllByText(/186\.4k/i)).length).toBeGreaterThan(0);
-    expect(
-      (await screen.findAllByText(/Last synced a while ago/)).length,
-    ).toBeGreaterThan(0);
-    expect(screen.queryByText(/sync failed/)).toBeNull();
+    // Beside a figure the caveat qualifies the FIGURE: this one is the last
+    // good number and may have moved since.
+    expect((await screen.findAllByText("Not current")).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByText(/sync failed/i)).toBeNull();
   });
 
   // Without this the last good figure renders bare, reading as current.
@@ -2106,10 +2050,13 @@ describe("the money slot says WHY it has no figure", () => {
     });
     renderCompany();
     const region = await strip();
-    expect(
-      (await screen.findAllByText("Nothing invoiced yet")).length,
-    ).toBeGreaterThan(0);
-    expect(region.textContent).not.toMatch(/Connect your accounting/);
+    // The same word a never-billed prospect gets, kept apart from it by the
+    // lifecycle in the detail.
+    expect((await screen.findAllByText("Not invoiced")).length).toBeGreaterThan(
+      0,
+    );
+    expect((await screen.findAllByText("Customer")).length).toBeGreaterThan(0);
+    expect(region.textContent).not.toMatch(/Accounting not connected/);
   });
 
   it("names the source beside a real figure", async () => {
@@ -2134,7 +2081,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
     account: { lifecycle: "customer" as const, relationship_types: [] },
   };
   const strip = async () =>
-    await screen.findByRole("region", { name: "Where this account stands" });
+    await screen.findByRole("region", { name: "Company status" });
 
   it("says why there is no figure once, not once per money window", async () => {
     stub(view({ state_strip: customer }), 200, company, {
@@ -2145,9 +2092,9 @@ describe("the money slot says its reason once and borrows no figure", () => {
     renderCompany();
     const region = await strip();
     await waitFor(() =>
-      expect(
-        within(region).getAllByText("Not matched to a customer yet").length,
-      ).toBe(1),
+      expect(within(region).getAllByText("Customer not matched").length).toBe(
+        1,
+      ),
     );
 
     // One statement, not three blanks: the other money windows are the Finance
@@ -2175,9 +2122,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
     // No figure at all, and the reason named: the lifetime total on the wire is
     // not this slot's answer, and a dash with no reason would not be either.
     expect(region.textContent).not.toMatch(/428(\.0)?K/i);
-    expect(
-      within(region).getAllByText("Not matched to a customer yet").length,
-    ).toBe(1);
+    expect(within(region).getAllByText("Customer not matched").length).toBe(1);
   });
 
   // The team lead's two mandated shapes: a customer whose finance connection
@@ -2185,10 +2130,10 @@ describe("the money slot says its reason once and borrows no figure", () => {
   // account's own standing (pipeline, relationship, health) — the defect this
   // whole suite exists for was the standing readings disappearing behind the
   // money, not the money itself.
-  // A relationship dimension and a live reply balance are enough to draw
-  // both HealthStat ("Conversation") and HealthSummaryStat ("Health") with real
-  // verdicts rather than their unassessed readings, which is what makes the
-  // standing half of the row worth asserting here.
+  // A relationship dimension and a live reply balance are enough to draw both
+  // HealthStat and HealthSummaryStat with real verdicts rather than their
+  // unassessed readings, which is what makes the standing half of the row
+  // worth asserting here.
   const withStanding = () =>
     view({
       state_strip: {
@@ -2218,25 +2163,26 @@ describe("the money slot says its reason once and borrows no figure", () => {
     renderCompany();
     const region = await strip();
     await waitFor(() =>
-      expect(
-        within(region).getAllByText("Not matched to a customer yet").length,
-      ).toBe(1),
+      expect(within(region).getAllByText("Customer not matched").length).toBe(
+        1,
+      ),
     );
 
-    expect(within(region).getByText("Open pipeline")).toBeTruthy();
-    // The card's own label: the tile reads the correspondence and is named
-    // Conversation, while the health receipt still names a Relationship
-    // dimension of its own.
+    expect(within(region).getByText("Open deals")).toBeTruthy();
+    // The card's own label, which the health receipt's own dimension name
+    // now matches: one word for one reading across the page.
     expect(
-      within(region).getByText("Conversation", {
+      within(region).getByText("Relationship", {
         selector: ".stat-card-label-text",
       }),
     ).toBeTruthy();
-    // The other two doors: the last touch and the calendar, whatever the
+    // The other two doors: the last contact and the calendar, whatever the
     // money slot could or could not read.
-    expect(within(region).getByText("Last touch")).toBeTruthy();
+    expect(within(region).getByText("Last contact")).toBeTruthy();
     expect(within(region).getByText("Next meeting")).toBeTruthy();
-    expect(within(region).getByText("Finance")).toBeTruthy();
+    // ONE label on the money slot whatever it can report, so a reader is not
+    // asked to notice that the slot renamed itself.
+    expect(within(region).getByText("Revenue · 12 mo")).toBeTruthy();
   });
 
   it("shows the real figure beside the same standing readings", async () => {
@@ -2252,21 +2198,18 @@ describe("the money slot says its reason once and borrows no figure", () => {
     const region = await strip();
     await waitFor(() => expect(region.textContent).not.toMatch(/Loading…/));
 
-    expect(within(region).getByText("Open pipeline")).toBeTruthy();
-    // The card's own label: the tile reads the correspondence and is named
-    // Conversation, while the health receipt still names a Relationship
-    // dimension of its own.
+    expect(within(region).getByText("Open deals")).toBeTruthy();
     expect(
-      within(region).getByText("Conversation", {
+      within(region).getByText("Relationship", {
         selector: ".stat-card-label-text",
       }),
     ).toBeTruthy();
-    expect(within(region).getByText("Last touch")).toBeTruthy();
+    expect(within(region).getByText("Last contact")).toBeTruthy();
     expect(within(region).getByText("Next meeting")).toBeTruthy();
-    expect(within(region).getByText("Net invoiced · 12 mo")).toBeTruthy();
+    expect(within(region).getByText("Revenue · 12 mo")).toBeTruthy();
     expect(within(region).getByText(/186(\.4)?K/i)).toBeTruthy();
-    // "Finance" is the label of a slot that has nothing to report, so it must
-    // not stand over a figure — the label names which reading the value is.
+    // The slot never renames itself: "Finance" was the label it wore with no
+    // figure, and a label that moves is a reading read twice.
     expect(within(region).queryByText("Finance")).toBeNull();
   });
 });

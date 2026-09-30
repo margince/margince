@@ -50,7 +50,7 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 	// ONE set of read-side dependencies for both questions this door asks of a
 	// command: what tier it runs at, and what an approval of it would bind to.
 	// They were two structs while the tier had its own table to feed.
-	deps := restCommandDeps{records: records, stages: stages, channels: channelKinds{}, imports: imports, tags: tags}
+	deps := restCommandDeps{records: records, stages: stages, channels: channelKinds{}, imports: imports, tags: tags, language: reg.BaseLanguage()}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()

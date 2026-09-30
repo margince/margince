@@ -86,7 +86,7 @@ export function IntroDrawer({
       placement="right"
       size="wide"
     >
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t("contact.intro.askTitle", { name: contactName })}
       </Heading>
 

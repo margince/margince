@@ -75,8 +75,18 @@ func TestAccountCoincidenceDoesNotProveAMeetingFollowUp(t *testing.T) {
 	}
 	links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.UUID(contact.Id)}}
 	held := "held"
+	// The meeting happened an HOUR ago, and the follow-ups are logged now.
+	//
+	// Pinned rather than defaulted, because the query below compares a task's
+	// created_at — a database timestamp — against the meeting's occurred_at,
+	// and a defaulted occurred_at is read from a different clock. Under a
+	// loaded lane the two invert: the meeting reads as later than a task
+	// logged after it, the follow-up stops counting, and the failure is a
+	// property of how busy the machine was.
+	heldAt := time.Now().UTC().Add(-time.Hour)
 	meeting, _, err := e.Activities.LogActivity(e.repCtx, activities.LogActivityInput{
-		Kind: "meeting", Source: "manual", MeetingStatus: &held, HostUserID: &assignee, Links: links,
+		Kind: "meeting", Source: "manual", MeetingStatus: &held, HostUserID: &assignee,
+		OccurredAt: &heldAt, Links: links,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -99,13 +109,18 @@ func TestAccountCoincidenceDoesNotProveAMeetingFollowUp(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	read(unrelated.CreatedAt.Add(time.Second), 0)
+	// Ends an hour out rather than a second past the last write: the claim is
+	// "no follow-up exists yet", and a margin the machine can outrun tests the
+	// clock instead.
+	read(unrelated.CreatedAt.Add(time.Hour), 0)
 	linked, _, err := e.Activities.LogActivity(e.repCtx, activities.LogActivityInput{Kind: "task", Source: "manual", AssigneeID: &assignee, SourceActivityID: &source})
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The boundary is half-open, so a window ending exactly at the follow-up
+	// excludes it. Exact, not a margin — this one is the assertion.
 	read(linked.CreatedAt, 0)
-	read(linked.CreatedAt.Add(time.Second), 1)
+	read(linked.CreatedAt.Add(time.Hour), 1)
 }
 
 func TestAnUnmeasuredTeamRecoversButAMeasuredWeekStaysFrozen(t *testing.T) {

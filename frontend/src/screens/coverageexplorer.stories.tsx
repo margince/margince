@@ -61,7 +61,7 @@ function story(graph: Record<string, unknown>) {
 }
 
 const meta: Meta<typeof CoverageExplorer> = {
-  title: "Records/Company/Coverage explorer",
+  title: "Records/Company 360/Contacts/Coverage explorer",
   component: CoverageExplorer,
 };
 export default meta;

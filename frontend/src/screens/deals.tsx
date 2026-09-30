@@ -1,7 +1,6 @@
 import {
   useInfiniteQuery,
   useMutation,
-  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -33,7 +32,6 @@ import { ActionRow } from "../design-system/actionrow";
 import {
   Badge,
   Button,
-  DataTable,
   EmptyState,
   SegmentedControl,
 } from "../design-system/atoms";
@@ -43,6 +41,8 @@ import {
   type BoardMoneyColumn,
   PipelineBoard,
 } from "../design-system/composed";
+import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { IconAction } from "../design-system/iconaction";
 import { IdentityLine } from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
@@ -58,6 +58,7 @@ import { RecordTabs } from "../design-system/recordtabs";
 import { useRecordTimeline } from "../design-system/recordtimeline";
 import { RecordView } from "../design-system/recordview";
 import { Select } from "../design-system/select";
+import { Row } from "../design-system/stack";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
 import { middayInstant } from "../format/calendarday";
@@ -80,7 +81,6 @@ import { usePendingApprovals } from "./approvals.queries";
 import { toBoardDeal } from "./boarddeal";
 import {
   LoadMoreButton,
-  problemMessageOf,
   provenanceOf,
   QueryGate,
   throwProblem,
@@ -122,6 +122,7 @@ import { DealRoomTab } from "./deal360/dealroomtab";
 import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { DealBulkBar } from "./dealbulk";
+import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
 import { dealMailAside, lastMailColumn } from "./dealmailaside";
@@ -133,6 +134,7 @@ import {
   useProjectsOfCompany,
 } from "./dealproject";
 import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
+import { useSuggestionGhosts } from "./dealsuggestion";
 import {
   EntityRef,
   type OwnerNaming,
@@ -140,6 +142,7 @@ import {
   useEntityName,
   useRoster,
 } from "./entityref";
+import { searchCompanies } from "./filterreference";
 import {
   LIST_PAGE_SIZES,
   type ListQuery,
@@ -154,6 +157,7 @@ import {
   withoutScreenDials,
 } from "./listquery";
 import { useOpenEmail } from "./openemail";
+import { usePipelines } from "./pipelines.queries";
 import type { Project } from "./projects.form";
 import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
@@ -203,27 +207,6 @@ function usePipeline(pipelineId?: string | null) {
         throw new Error("no pipeline");
       }
       return pipeline;
-    },
-  });
-}
-
-// The plural read over ALL pipelines (D-9's selector) — a DISTINCT cache key
-// from usePipeline's ["pipelines"] (which DealScreen still reads as a single
-// Pipeline). Sharing the key would let the cache hold either shape depending
-// on which screen loaded last; ["pipelines","all"] still gets refreshed by
-// any mutation that invalidates the ["pipelines"] prefix (react-query prefix
-// matching), so freshness is preserved without a shape collision.
-function usePipelines() {
-  return useQuery({
-    queryKey: ["pipelines", "all"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data;
     },
   });
 }
@@ -375,32 +358,27 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
 // have told a reader whose report answered 422 to press a filter instead of
 // showing them the failure.
 //
-// The two reasons:
-//
 // A TAG has no filter field on the report — sending one is a 422 — so the
-// totals would count deals the board is not showing.
-//
-// The POPULATION differs unless the owner filter names the viewer. `GET /deals`
-// returns every deal the reader may SEE, a deal being readable by every seat,
-// while the report engine narrows to the caller's OWN records (reportwhere.go
-// applies a population clause on top of row scope, precisely because a deal is
-// an identity table whose row scope renders TRUE). On the demo installation
-// that is 35 open deals as cards against 7 in the header — the "1 deal" over
-// eight cards the rehearsal found.
-function totalsWithheldBecause(
-  f: DealFilters,
-  viewerID: string | undefined,
-): MessageKey | undefined {
+// totals would count deals the board is not showing. Every other dial is one
+// the report takes, and the report measures every deal the reader may see,
+// which is the set `GET /deals` draws as cards.
+function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (parseTagIDs(f.filters.tag_id).length > 0) {
     return "deals.totalsNoTagFilter";
-  }
-  if (viewerID === undefined || f.filters.owner_id !== viewerID) {
-    return "deals.totalsNeedOwnerFilter";
   }
   return undefined;
 }
 
-function useStageTotals(f: DealFilters, viewerID: string | undefined) {
+// The one reason the SERVER decides: an owner dial naming somebody whose
+// totals this reader may not measure answers 403. The cards stay, because
+// reading a deal and measuring its owner are different permissions.
+function totalsRefusedBecause(
+  totals: Map<string, StageTotals> | null | undefined,
+): MessageKey | undefined {
+  return totals === null ? "deals.totalsOwnerNotMeasurable" : undefined;
+}
+
+function useStageTotals(f: DealFilters) {
   return useQuery({
     // Under ["deals"] on purpose, so the ONE invalidation every deal mutation
     // already fires refreshes the column headers along with the cards. Keyed
@@ -412,9 +390,9 @@ function useStageTotals(f: DealFilters, viewerID: string | undefined) {
     // Asked only when the report would count the deals the board is drawing.
     // totalsWithheldBecause owns that decision and the words for it both, so
     // the column cannot explain a missing total by the wrong rule.
-    enabled: totalsWithheldBecause(f, viewerID) === undefined,
-    queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
+    enabled: totalsWithheldBecause(f) === undefined,
+    queryFn: async (): Promise<Map<string, StageTotals> | null> => {
+      const { data, error, response } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },
         body: {
           group_by: ["stage_id", "currency"],
@@ -431,40 +409,15 @@ function useStageTotals(f: DealFilters, viewerID: string | undefined) {
         },
       });
       if (error) {
+        if (response.status === 403) {
+          return null;
+        }
         throwProblem(error);
       }
       return buildStageTotals(data.rows);
     },
   });
 }
-
-/** A company's display name and the mark drawn beside it. */
-type CompanyMark = { name: string; logoUrl?: string | null };
-
-/**
- * Every company the loaded deals name, id → mark (`useCompanyMarks` resolves them).
- *
- * A company this reader may not read is in no map: the wire sends
- * `company_id` as null and names it in `masked_fields`, so what the card
- * needs there is the withheld READING, which the card itself spells as the mask
- * — not a name this screen could supply.
- */
-export type CompanyMarks = ReadonlyMap<string, CompanyMark>;
-
-/**
- * What the screen knows about the companies its deals name.
- *
- * `unreadable` is the reading the board used to lose. A read that FAILED — a
- * 403 because the reader holds row visibility of the company but no
- * `company:read` grant, a 5xx, a dropped connection — is not the same fact
- * as a deal that names no company, and collapsing the two told the reader the
- * most misleading of the two. The table has always had this reading through
- * `EntityRef`'s failed state; this is the board's half of it.
- */
-export type CompanyNaming = Readonly<{
-  marks: CompanyMarks;
-  unreadable: ReadonlySet<string>;
-}>;
 
 type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
 type CreateDealRequest = components["schemas"]["CreateDealRequest"];
@@ -1159,95 +1112,6 @@ export function buildStageTotals(
   return totals;
 }
 
-/**
- * The company marks the board draws, for every company its cards name.
- *
- * The create form's picker reads ONE capped page of companies, and the
- * board took its marks from exactly that page — so a deal whose company fell
- * outside it drew a card with no company row at all, which a reader reads as a
- * deal nobody has linked. The set that has to be resolvable is the set the
- * loaded deals actually name, so the ids that page did not cover are read one
- * at a time and cached per id: reading the same board again, or scrolling back
- * over the same companies, costs no further request.
- *
- * A withheld company is never among them — the wire sends no id to read — so
- * this cannot turn a mask into a name.
- */
-export function useCompanyMarks(
-  deals: Deal[],
-  page: Company[],
-  pageSettled: boolean,
-): CompanyNaming {
-  const fromPage = new Map<string, CompanyMark>(
-    page.map((company) => [
-      company.id,
-      { name: company.display_name, logoUrl: company.logo_url },
-    ]),
-  );
-  // Nothing is fanned out until the picker's page has ANSWERED. The two reads
-  // are issued together and settle in no fixed order, so on every render where
-  // the deals have arrived and the companies have not, `fromPage` is empty
-  // and every company a loaded deal names looks unresolved — one request each,
-  // for a page that is about to answer most of them. A cold board paint fired
-  // up to a hundred, and nothing un-sends a request.
-  const unnamed = pageSettled
-    ? [
-        ...new Set(
-          deals.flatMap((deal) =>
-            deal.company_id && !fromPage.has(deal.company_id)
-              ? [deal.company_id]
-              : [],
-          ),
-        ),
-      ]
-    : [];
-  const reads = useQueries({
-    queries: unnamed.map((id) => ({
-      queryKey: ["companies", "mark", id],
-      queryFn: async (): Promise<CompanyMark | null> => {
-        const { data, error, response } = await api.GET("/companies/{id}", {
-          params: { path: { id } },
-        });
-        if (error) {
-          // A 404 is an ANSWER — the company is archived, or row scope hides
-          // its existence from this reader — and no retry turns it into a
-          // name, so the card has no company to draw. Every other failure is a
-          // read that never arrived and throws, so it is held as an error
-          // rather than settled as an absence. The same rule the shared
-          // reference resolver states (screens/entityref.tsx).
-          if (response.status === 404) {
-            return null;
-          }
-          throwProblem(error);
-        }
-        return { name: data.display_name, logoUrl: data.logo_url };
-      },
-      // A company's name and mark change far more rarely than the board
-      // refetches, so a card that already has one does not ask again.
-      staleTime: 60_000,
-    })),
-  });
-  const marks = new Map(fromPage);
-  const unreadable = new Set<string>();
-  reads.forEach((read, index) => {
-    const id = unnamed[index];
-    if (!id) {
-      return;
-    }
-    if (read.data) {
-      marks.set(id, read.data);
-      return;
-    }
-    // The error the queryFn deliberately threw rather than settling as an
-    // absence. Read here, or the card it belongs to says "no company" — which
-    // is the one thing this read exists to stop it saying.
-    if (read.isError) {
-      unreadable.add(id);
-    }
-  });
-  return { marks, unreadable };
-}
-
 export function buildColumns(
   stages: Stage[],
   deals: Deal[],
@@ -1578,24 +1442,6 @@ function setOrClearFilter(
   });
 }
 
-// The company filter's own value source: a workspace holds more companies
-// than any fixed list should offer, so the value step searches /companies
-// by name instead of one this screen happened to fetch for something else.
-async function searchCompanies(
-  query: string,
-): Promise<readonly { value: string; label: string }[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q: query, limit: 20 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.map((company) => ({
-    value: company.id,
-    label: company.display_name,
-  }));
-}
-
 // Whether the reader has narrowed this list themselves.
 //
 // The same question `SaveViewAction` asks before it offers to save, asked here
@@ -1613,9 +1459,9 @@ function narrowsTheDealList(query: ListQuery): boolean {
 
 // The stage and company filters. The stage list is loaded whole already (a
 // pipeline has few stages), so it stays a fixed chip; the company filter
-// searches rather than listing (see searchCompanies above). Both are still
-// filters, so they read as the same chip as every other one instead of as a
-// native select sitting among them.
+// searches rather than listing (see searchCompanies in filterreference.ts).
+// Both are still filters, so they read as the same chip as every other one
+// instead of as a native select sitting among them.
 function dealFilterChips(
   stages: Stage[],
   t: ReturnType<typeof useT>,
@@ -1764,6 +1610,7 @@ function DealBoardBody({
     companies,
     companiesSettled,
   );
+  const suggestionGhosts = useSuggestionGhosts(effectivePipeline?.id);
   return (
     <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
       {() =>
@@ -1795,6 +1642,7 @@ function DealBoardBody({
                 mailAside={dealMailAside}
                 cardDragHandlers={cardDragHandlers}
                 columnDropHandlers={columnDropHandlers}
+                columnExtras={suggestionGhosts}
               />
               <LoadMoreButton query={dealsQuery} />
             </>
@@ -2156,7 +2004,7 @@ function dealRowSelection({
             }
             return next;
           }),
-        label: (deal) => t("deals.bulkSelectRow", { name: deal.name }),
+        label: (deal) => t("bulk.selectRow", { name: deal.name }),
         bar: (
           <DealBulkBar
             deals={selectedRows}
@@ -2195,55 +2043,6 @@ function savableDealQuery(query: ListQuery, pipelineId: string): ListQuery {
     : query;
 }
 
-// The dials that sit above whichever surface is showing.
-//
-// The board/table switch and the pipeline picker are shared, so the reader
-// sees the same dials either way. The SAVE action is not: a view holds a sort
-// as well as its filters, and the board offers no way to see or change a sort
-// — its order is the pipeline's stage order. Saving from there would pin an
-// ordering the reader never chose into a view they will restore on the table.
-function DealSurfaceTools({
-  view,
-  setView,
-  pipelines,
-  pipeline,
-  setPipelineId,
-  query,
-  setQuery,
-}: Readonly<{
-  view: "board" | "table";
-  setView: (next: "board" | "table") => void;
-  pipelines: Pipeline[];
-  pipeline?: Pipeline;
-  setPipelineId: (next: string) => void;
-  query: ListQuery;
-  setQuery: (update: SetStateAction<ListQuery>) => void;
-}>) {
-  const pipelineId = pipeline?.id ?? "";
-  const dials = (
-    <DealViewTools
-      view={view}
-      setView={setView}
-      pipelines={pipelines}
-      pipelineId={pipelineId}
-      setPipelineId={setPipelineId}
-      setQuery={setQuery}
-    />
-  );
-  if (view === "board") {
-    return dials;
-  }
-  return (
-    <>
-      {dials}
-      <SaveViewAction
-        resource="deals"
-        query={savableDealQuery(query, pipelineId)}
-      />
-    </>
-  );
-}
-
 export function DealsScreen({
   startCreating = false,
 }: Readonly<{ startCreating?: boolean }>) {
@@ -2269,13 +2068,12 @@ export function DealsScreen({
   // over EVERY matching deal, not just the capped page useDeals fetches —
   // built from the SAME filter dials so cards and totals never disagree
   // about which deals are in view.
-  const stageTotalsQuery = useStageTotals(dealFilters, meQuery.data?.user.id);
+  const stageTotalsQuery = useStageTotals(dealFilters);
   // The same answer the query keys its `enabled` on, so the column explains the
   // absence by the rule that caused it.
-  const totalsWithheld = totalsWithheldBecause(
-    dealFilters,
-    meQuery.data?.user.id,
-  );
+  const totalsWithheld =
+    totalsWithheldBecause(dealFilters) ??
+    totalsRefusedBecause(stageTotalsQuery.data);
   const [pending, setPending] = useState<PendingAdvance | null>(null);
   // The deal that just closed, while the review is on offer for it. Separate
   // from `pending`, which is the question BEFORE the close; this is the offer
@@ -2355,15 +2153,27 @@ export function DealsScreen({
     />
   );
 
+  const pipelineId = effectivePipeline?.id ?? "";
+  // The board/table switch and the pipeline picker are shared, so the reader
+  // sees the same dials either way.
   const tools = (
-    <DealSurfaceTools
+    <DealViewTools
       view={view}
       setView={setView}
       pipelines={pipelinesQuery.data ?? []}
-      pipeline={effectivePipeline}
+      pipelineId={pipelineId}
       setPipelineId={setPipelineId}
-      query={dealsListState.query}
       setQuery={setQuery}
+    />
+  );
+  // Saving is NOT shared: a view holds a sort as well as its filters, and the
+  // board offers no way to see or change one — its order is the pipeline's
+  // stage order. Saving from there would pin an ordering the reader never
+  // chose into a view they will restore on the table.
+  const saveView = view === "table" && (
+    <SaveViewAction
+      resource="deals"
+      query={savableDealQuery(dealsListState.query, pipelineId)}
     />
   );
   const dealChips = dealFilterChips(stages, t);
@@ -2418,6 +2228,7 @@ export function DealsScreen({
         searchable={false}
         action={createAction}
         tools={tools}
+        saveView={saveView}
         body={boardBody}
         bodyOwnsPaging={view === "board"}
         bodyCount={
@@ -2443,11 +2254,7 @@ export function DealsScreen({
         })}
         views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
       />
-      {advance.isError && (
-        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>
-          {problemMessageOf(advance.error, t)}
-        </p>
-      )}
+      <ErrorLine error={advance.error} />
       <ConfirmAdvanceModal
         pending={pending}
         onClose={() => setPending(null)}
@@ -2686,13 +2493,7 @@ function DealApprovals({
       <PanelBody className="form-stack">
         {approvals.map((approval) => (
           <div key={approval.id} className="staging-card">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-              }}
-            >
+            <Row gap="2" wrap={false}>
               <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
               {/* The same two facts the approvals inbox states, said the same
                 way. Printed off the wire they read `advance_deal` and
@@ -2704,7 +2505,7 @@ function DealApprovals({
               <ProvenanceTag
                 provenance={provenanceOf(approval.proposed_by, viewerId)}
               />
-            </div>
+            </Row>
             <ActionRow
               className="approval-gate"
               primary={
@@ -3190,6 +2991,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 aside={dealContext(deal)}
                 asideOpen={details.open}
                 name={deal.name}
+                identity={deal.id}
                 // One rung under the record scale: the name is still the
                 // largest thing on the page, but beside a work column that
                 // opens on the reader's ask it no longer needs to be the size
@@ -3336,16 +3138,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   zone={recordZone}
                   onClose={() => setOpenEmail(null)}
                 />
-                {advance.isError && (
-                  <p
-                    style={{
-                      color: "var(--dangerText)",
-                      marginTop: "var(--space-2)",
-                    }}
-                  >
-                    {problemMessageOf(advance.error, t)}
-                  </p>
-                )}
+                <ErrorLine error={advance.error} />
                 <ConfirmAdvanceModal
                   pending={pending}
                   onClose={() => setPending(null)}

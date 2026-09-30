@@ -29,13 +29,14 @@ package gates
 import (
 	"encoding/json"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"strconv"
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestTheWonReasonDetailBoundIsOneNumber(t *testing.T) {
@@ -100,7 +101,7 @@ func publishedWonReasonDetailBound(t *testing.T) int {
 func appliedWonReasonDetailBound(t *testing.T) int {
 	t.Helper()
 	const declaration = "internal/modules/deals/win_evidence.go"
-	file, err := parser.ParseFile(token.NewFileSet(), declaration, nil, 0)
+	file, err := gatekit.ParseFile(declaration, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", declaration, err)
 	}
@@ -137,7 +138,7 @@ func appliedWonReasonDetailBound(t *testing.T) int {
 func advertisedWonReasonDetailBound(t *testing.T) int {
 	t.Helper()
 	const declaration = "internal/modules/agents/tools_advance.go"
-	file, err := parser.ParseFile(token.NewFileSet(), declaration, nil, 0)
+	file, err := gatekit.ParseFile(declaration, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", declaration, err)
 	}

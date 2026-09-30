@@ -64,11 +64,6 @@
   margin: var(--space-3) 0 var(--space-1);
 }
 
-.cp-intro-error {
-  margin: var(--space-2) 0 0;
-  color: var(--dangerText);
-}
-
 .cp-intro-actions {
   display: flex;
   flex-wrap: wrap;

@@ -6,13 +6,14 @@ import {
   Modal,
   Textarea,
 } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
-import { RefusalLine } from "../common";
 import {
   type ReviewTemplate,
   useCreateOutcomeReview,
 } from "../outcomereview.queries";
+import "../common.css";
 
 /**
  * Writing a review of how the deal went.
@@ -145,12 +146,7 @@ export function OutcomeReviewModal({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {draftTemplate.label}
       </Heading>
       <div className="form-stack">
@@ -217,7 +213,7 @@ export function OutcomeReviewModal({
             />
           )}
         </Field>
-        {create.isError && <RefusalLine error={create.error} />}
+        <ErrorLine error={create.error} />
         <div className="actions">
           <Button variant="ghost" onClick={close} disabled={create.isPending}>
             {t("deals.cancel")}

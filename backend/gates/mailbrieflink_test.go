@@ -23,6 +23,10 @@ package gates
 // WHAT IT HOLDS: every view word the mail fragments name is a view the frontend
 // still offers, and the morning — the Brief's default — carries no parameter,
 // because the frontend's own writer emits only what DIFFERS from the default.
+// And the half in front of the parameter: every SCREEN a mailed link addresses
+// is one the router still answers to. The two read different frontend files
+// because they are different lists — a Brief view is a parameter on one screen,
+// and the notice mail's link names another screen entirely.
 //
 // WHAT IT CANNOT SEE: whether the app's route table still answers to "home", or
 // whether the parameter is still called "view". Both are read off the frontend
@@ -38,6 +42,7 @@ import (
 
 const (
 	frontendBriefView = "../frontend/src/screens/brief.view.ts"
+	frontendRouter    = "../frontend/src/app/router.tsx"
 	backendMailLink   = "internal/platform/mailcopy/link.go"
 )
 
@@ -112,4 +117,65 @@ func TestTheMorningsMailedLinkAsksForNoView(t *testing.T) {
 				"the default, and the frontend writes only what differs from it.",
 			morning[1])
 	}
+}
+
+// The SCREEN half of the same pair, and it is a different frontend file.
+//
+// A Brief view is a parameter on one screen; the address BEFORE that parameter
+// is a screen in the router's own SCREENS list, and the notice mail's link
+// names one that is not the Brief at all (the Worklist). The silent-drift
+// argument is identical — `parseRoute` answers "not-found" for an address this
+// app does not have, and the shell renders that rather than erroring — so a
+// screen renamed on one side leaves every reader of the message somewhere that
+// says nothing about what they were told was waiting.
+//
+// Derived from BOTH sides: every *Fragment constant the catalog spells, against
+// the list the router exports. A fragment added later is covered without
+// editing this gate.
+func TestEveryMailedLinkNamesAScreenTheAppStillAnswersTo(t *testing.T) {
+	t.Parallel()
+	back := readFiscalSource(t, backendMailLink)
+	offered := screensOffered(t, readFiscalSource(t, frontendRouter))
+
+	// Every fragment constant, then the screen each one addresses. Counted
+	// apart so a fragment written in a shape the address pattern does not match
+	// fails here rather than being silently left out of the check.
+	declared := regexp.MustCompile(`\w+Fragment\s*=`).FindAllString(back, -1)
+	if len(declared) == 0 {
+		t.Fatal("no *Fragment constants in " + backendMailLink + " — this gate can no longer see its subject")
+	}
+	addressed := regexp.MustCompile(`(\w+Fragment)\s*=\s*"/#/([a-z-]+)`).FindAllStringSubmatch(back, -1)
+	if len(addressed) != len(declared) {
+		t.Fatalf("%s declares %d fragment(s) and %d of them spell an address this gate can read: "+
+			"a fragment it cannot see is one no check holds", backendMailLink, len(declared), len(addressed))
+	}
+
+	for _, fragment := range addressed {
+		if !contains(offered, fragment[2]) {
+			t.Errorf(
+				"%s addresses screen %q, which %s no longer offers (%v). The app renders "+
+					"not-found for an address it does not have, so every reader of that message "+
+					"lands nowhere and nothing fails.",
+				fragment[1], fragment[2], frontendRouter, offered)
+		}
+	}
+}
+
+// screensOffered reads the router's own SCREENS list rather than restating it.
+// A gate that hard-codes part of its subject has become a second copy of it.
+func screensOffered(t *testing.T, source string) []string {
+	t.Helper()
+	list := regexp.MustCompile(`SCREENS\s*=\s*\[([^\]]*)\]`).FindStringSubmatch(source)
+	if list == nil {
+		t.Fatal("no SCREENS list in " + frontendRouter + " — this gate can no longer see its subject")
+	}
+	screens := regexp.MustCompile(`"([a-z-]+)"`).FindAllStringSubmatch(list[1], -1)
+	if len(screens) == 0 {
+		t.Fatalf("the SCREENS list in %s named no screens: %q", frontendRouter, list[1])
+	}
+	out := make([]string, 0, len(screens))
+	for _, screen := range screens {
+		out = append(out, screen[1])
+	}
+	return out
 }

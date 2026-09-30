@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -111,5 +112,53 @@ describe("the tab carries the room's own access list", () => {
     withProviders(<DealRoomTab dealId="deal-1" dealName="BaymeOps" />);
 
     expect(await screen.findByText("Access")).toBeInTheDocument();
+  });
+});
+
+// Pause, resume, close and the end date are the room's own verbs and live on
+// its own page; the tab is where a rep arrives, so the tab is the way there.
+describe("the tab leads to the room's own page", () => {
+  function roomRoutes(state: DealRoom["state"] = "live") {
+    return {
+      "GET /deal-rooms": () =>
+        jsonResponse({ data: [room({ state })], page: { next_cursor: null } }),
+      "GET /deal-rooms/room-1/participants": () =>
+        jsonResponse({ data: [], page: {} }),
+    };
+  }
+
+  it("takes a reader who may manage the room to its page", async () => {
+    stubWithSession(roomRoutes(), { deal_room: ["read", "update"] });
+    const user = userEvent.setup();
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Manage room" }),
+    );
+
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/deals/deal-1/room"),
+    );
+  });
+
+  // Once closed, the tab stops offering revoke and new links; the page still
+  // does, so the way there has to outlive the room's last live day.
+  it("keeps the way there once the room is closed", async () => {
+    stubWithSession(roomRoutes("closed"), { deal_room: ["read", "update"] });
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+
+    expect(
+      await screen.findByRole("button", { name: "Manage room" }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers a reader who may not manage the room no way to its verbs", async () => {
+    stubWithSession(roomRoutes(), { deal_room: ["read"] });
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+
+    expect(
+      await screen.findByDisplayValue("Acme Expansion — Deal Room"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manage room" })).toBeNull();
   });
 });

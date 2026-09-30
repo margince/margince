@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // workerLanes is what the event lanes leave behind for the job runner, which
@@ -41,8 +42,13 @@ type workerLanes struct {
 	// the job runner makes — still lives and dies with all the others. A second
 	// context there would be a second shutdown, and join() would return with a
 	// consumer still reading the bus.
-	ctx       context.Context //nolint:containedctx // the lanes' lifetime IS this value; join() is the only thing that ends it.
-	runner    *compose.RunnerService
+	ctx    context.Context //nolint:containedctx // the lanes' lifetime IS this value; join() is the only thing that ends it.
+	runner *compose.RunnerService
+	// inserter is this role's insert-only River client: the one the lanes stage
+	// durable work through, as against the runner that WORKS it. Insert-only
+	// because a lane staging onto the runner it is itself being wired into
+	// would need that runner to exist before the lanes do.
+	inserter  *jobs.Runner
 	deliverer func(*database.DB) *webhooks.Deliverer
 	blob      blobstore.Store
 	// providers is the licensed-data-provider adapter registry this boot was

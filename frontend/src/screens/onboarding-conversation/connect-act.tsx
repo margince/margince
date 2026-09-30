@@ -1,6 +1,7 @@
 import type { Dispatch } from "react";
 import { useEffect, useState } from "react";
 import { navigateReplacing } from "../../app/router";
+import { ErrorLine } from "../../design-system/errorline";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../common";
@@ -342,9 +343,7 @@ export function ConnectAct({
           disclosure). What survives from the thread is the one thing a
           reader still has to act on: a finish that could not be recorded. */}
       {finishFailed && (
-        <p className="ob-conv-notice" role="alert">
-          {t("ob.conv.connect.persistFailed")}
-        </p>
+        <ErrorLine>{t("ob.conv.connect.persistFailed")}</ErrorLine>
       )}
     </ConversationWorkbench>
   );

@@ -467,7 +467,7 @@ describe("editing the tree", () => {
       <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "u1")])} />,
     );
 
-    await user.click(screen.getByRole("button", { name: "ANY · OR" }));
+    await user.click(screen.getByRole("button", { name: "Any (OR)" }));
 
     expect(wire()).toEqual({
       or: [{ field: "owner_id", op: "eq", value: "u1" }],
@@ -487,7 +487,7 @@ describe("editing the tree", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /Remove the owner id clause/ }),
+      screen.getByRole("button", { name: "Remove Owner clause" }),
     );
 
     expect(wire()).toEqual({
@@ -507,7 +507,7 @@ describe("editing the tree", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "Field" }),
-      "created at",
+      "Created",
     );
 
     // A date has no `contains`, so the clause falls back to the new field's first

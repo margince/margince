@@ -10,8 +10,10 @@ package activities
 // message all reach this and share little else.
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -102,8 +104,26 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	if len(links) > maxActivityLinks {
 		return &TooManyLinksError{Count: len(links)}
 	}
+	// SORTED, and the order is the one the last-activity trigger locks in.
+	//
+	// Each link's insert fires refresh_last_activity_for_link, which takes a
+	// FOR UPDATE on every record it reaches. Inserting in the caller's order
+	// meant two writers naming the same records through different lists locked
+	// them in different sequences — one logging [deal D, contact X] and another
+	// [contact X, deal D] deadlock, and Postgres aborts one. The trigger orders
+	// the records inside one firing; only the writer can order the firings.
+	//
+	// It changes which error a caller with two bad links is told about first,
+	// and that is the honest cost: neither was ever promised.
+	ordered := slices.Clone(links)
+	slices.SortStableFunc(ordered, func(a, b ActivityLinkInput) int {
+		if c := cmp.Compare(a.EntityType, b.EntityType); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.EntityID.String(), b.EntityID.String())
+	})
 	seen := make(map[ActivityLinkInput]struct{}, len(links))
-	for _, link := range links {
+	for _, link := range ordered {
 		if _, duplicate := seen[link]; duplicate {
 			continue
 		}

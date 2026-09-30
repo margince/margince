@@ -101,14 +101,15 @@ func TestADelegatedMemberAdministratorCannotReachAnAdmin(t *testing.T) {
 		}
 	})
 
-	// A role the caller CAN assign still works, so the ceiling is about the
-	// authority being handed out and not about the verb being unusable.
-	t.Run("invite a rep, which the delegation allows", func(t *testing.T) {
-		if _, _, err := e.svc.InviteUser(escalationCtx(delegated), delegated, InviteUserInput{
+	// A rep is record work this delegate does not hold, and the invite mails a
+	// link to an address the delegate chooses, so it is refused too: an account
+	// they produce may hold nothing they do not.
+	t.Run("invite a rep whose record rights the delegate lacks", func(t *testing.T) {
+		_, _, err := e.svc.InviteUser(escalationCtx(delegated), delegated, InviteUserInput{
 			Email: "newrep@" + e.slug + ".test", DisplayName: "New Rep", Role: "rep",
-		}); err != nil {
-			t.Errorf("a delegated user_admin holder invited a rep: %v — the delegation is "+
-				"supposed to make exactly this possible", err)
+		})
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("a delegate holding only user_admin invited a rep: %v, want permission denied", err)
 		}
 	})
 }

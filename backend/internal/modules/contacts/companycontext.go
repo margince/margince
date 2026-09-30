@@ -271,8 +271,8 @@ func fingerprintCompanyContext(sections []CompanyContextSection) string {
 
 func normalizeCompanySource(source string) string {
 	switch source {
-	case "manual", companySourceHuman:
-		return companySourceHuman
+	case "manual", CompanySourceHuman:
+		return CompanySourceHuman
 	case "coldstart", "deepread", companySourceSiteRead:
 		return companySourceSiteRead
 	case "enrich", "connector":

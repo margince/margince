@@ -132,6 +132,13 @@ func writeRelationshipInTx(
 	if err := validEmploymentAssertion(in.Kind, in.EmploymentStatus, in.StartedPrecision, in.EndedPrecision); err != nil {
 		return out, err
 	}
+	// BEFORE anything is locked or probed. The endpoint probe below asks
+	// whether each named record exists; this asks whether the SET of them
+	// belongs to the kind, which is the question neither it nor the shape
+	// CHECKs were asking in full (relationshipshape.go).
+	if err := validRelationshipShape(in.Kind, in); err != nil {
+		return out, err
+	}
 	// Before the endpoints are checked, because the check is what this lock
 	// makes true: an archive in flight either commits first and LiveOnly
 	// refuses this attach, or waits and sweeps the edge this writes with

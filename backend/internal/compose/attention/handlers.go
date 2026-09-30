@@ -97,6 +97,23 @@ func (h Handlers) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// GetHiddenBacklogRows answers WHICH threads one hiding rule is holding back.
+//
+// The rule arrives typed: the generated router validates it against the
+// contract's enum before this runs, so an unknown word is a 400 from the
+// chassis rather than a question reaching the store. The store refuses one
+// anyway — it is reachable from a seam that has no router in front of it.
+func (h Handlers) GetHiddenBacklogRows(
+	w http.ResponseWriter, r *http.Request, rule crmcontracts.GetHiddenBacklogRowsParamsRule,
+) {
+	out, err := h.svc.HiddenBacklogRows(r.Context(), string(rule))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // GetResponseMetrics answers how fast the workspace replies over a window.
 //
 // The window is the ONE parameter, and it is a length rather than a pair of

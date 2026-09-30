@@ -65,7 +65,7 @@ func TestResolveSiteNamesTheNearMatches(t *testing.T) {
 	}
 	if _, err := resolveSite(census, "rate_extract/nonsense"); err == nil {
 		t.Fatal("an unregistered variant must be refused")
-	} else if !strings.Contains(err.Error(), "pricing") {
+	} else if !strings.Contains(err.Error(), "rate_extract/fx") {
 		t.Errorf("error %q should name the variants rate_extract does ship", err)
 	}
 	if _, err := resolveSite(census, "rate_extract"); err == nil {
@@ -123,9 +123,10 @@ func TestProbeCompleterRefusesAMalformedModelOverride(t *testing.T) {
 func TestProbeRunsASiteEndToEndOverTheFake(t *testing.T) {
 	dir := t.TempDir()
 	fixture := filepath.Join(dir, "fixture.json")
-	body, err := json.Marshal(map[string]string{
-		"provider":  "Aurora AI",
-		"page_text": "Aurora AI — Aurora Large (model id: aurora-large). Input $5.00 / 1M tokens, output $25.00 / 1M tokens.",
+	body, err := json.Marshal(map[string]any{
+		"base_currency":      "EUR",
+		"tracked_currencies": []string{"USD"},
+		"page_text":          "Base currency EUR. 1 EUR = 1.0800 USD as of today.",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -134,14 +135,14 @@ func TestProbeRunsASiteEndToEndOverTheFake(t *testing.T) {
 		t.Fatal(err)
 	}
 	expect := filepath.Join(dir, "expect.json")
-	if err := os.WriteFile(expect, []byte(`{"aurora-large":{"input_per_mtok":"5","output_per_mtok":"25","cache_read_per_mtok":"0","cache_write_per_mtok":"0"}}`), 0o600); err != nil {
+	if err := os.WriteFile(expect, []byte(`{"USD":"0.9259259259"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	jsonOut := filepath.Join(dir, "result.json")
 
 	var out strings.Builder
 	err = runAITaskProbe(context.Background(), []string{
-		"run", "--site", "rate_extract/pricing",
+		"run", "--site", "rate_extract/fx",
 		"--fixture", fixture, "--expect", expect,
 		"--ai-fake", "--corpus", testCorpusDir(),
 		"--json", jsonOut, "--dump-request", dir,
@@ -152,7 +153,7 @@ func TestProbeRunsASiteEndToEndOverTheFake(t *testing.T) {
 		t.Fatalf("the probe itself must not fail on an unusable reply: %v", err)
 	}
 	report := out.String()
-	if !strings.Contains(report, "rate_extract/pricing") || !strings.Contains(report, "call 1") {
+	if !strings.Contains(report, "rate_extract/fx") || !strings.Contains(report, "call 1") {
 		t.Errorf("the report must name the site and the call it made:\n%s", report)
 	}
 
@@ -164,8 +165,8 @@ func TestProbeRunsASiteEndToEndOverTheFake(t *testing.T) {
 	if err := json.Unmarshal(raw, &res); err != nil {
 		t.Fatalf("--json must be machine-readable: %v", err)
 	}
-	if res.Site != "rate_extract/pricing" || len(res.Calls) != 1 {
-		t.Errorf("json result = %+v, want one call against rate_extract/pricing", res)
+	if res.Site != "rate_extract/fx" || len(res.Calls) != 1 {
+		t.Errorf("json result = %+v, want one call against rate_extract/fx", res)
 	}
 	if res.Outcome == nil {
 		t.Error("the production validator's outcome must reach the json result")
@@ -190,7 +191,7 @@ func TestProbeRunsASiteEndToEndOverTheFake(t *testing.T) {
 
 func TestProbeJSONToStdoutWritesNoFile(t *testing.T) {
 	var out strings.Builder
-	res := probeResult{Site: "rate_extract/pricing"}
+	res := probeResult{Site: "rate_extract/fx"}
 	if err := writeProbeJSON(&out, "-", res); err != nil {
 		t.Fatalf("writeProbeJSON: %v", err)
 	}
@@ -224,18 +225,18 @@ func TestProbeEntryPointDispatchesTheReadOnlyVerbs(t *testing.T) {
 	if err := runAITaskProbe(context.Background(), []string{"list", "--corpus", testCorpusDir()}, &listed); err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if !strings.Contains(listed.String(), "rate_extract/pricing") {
+	if !strings.Contains(listed.String(), "rate_extract/fx") {
 		t.Errorf("list did not reach listSites:\n%s", listed.String())
 	}
 
 	var scaffolded strings.Builder
 	err := runAITaskProbe(context.Background(), []string{
-		"scaffold", "rate_extract/pricing", "--corpus", testCorpusDir(), "--out", "-",
+		"scaffold", "rate_extract/fx", "--corpus", testCorpusDir(), "--out", "-",
 	}, &scaffolded)
 	if err != nil {
 		t.Fatalf("scaffold: %v", err)
 	}
-	if !strings.Contains(scaffolded.String(), "site: pricing") {
+	if !strings.Contains(scaffolded.String(), "site: fx") {
 		t.Errorf("scaffold did not reach scaffoldSite:\n%s", scaffolded.String())
 	}
 }
@@ -246,7 +247,7 @@ func TestProbeRefusesAScenarioThatCarriesNoFixture(t *testing.T) {
 		t.Fatalf("census: %v", err)
 	}
 	path := filepath.Join(t.TempDir(), "empty.yaml")
-	if err := os.WriteFile(path, []byte("name: x\ntask: rate_extract\nsite: pricing\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("name: x\ntask: rate_extract\nsite: fx\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := loadScenarioInput(census, path); err == nil {
@@ -300,9 +301,10 @@ func TestProbeStripsCredentialsOutOfEverythingItWritesDown(t *testing.T) {
 
 	dir := t.TempDir()
 	fixture := filepath.Join(dir, "fixture.json")
-	body, err := json.Marshal(map[string]string{
-		"provider":  "Aurora AI",
-		"page_text": "Aurora Large (model id: aurora-large). Input $5.00 / 1M tokens, output $25.00 / 1M tokens. Contact support with " + secret,
+	body, err := json.Marshal(map[string]any{
+		"base_currency":      "EUR",
+		"tracked_currencies": []string{"USD"},
+		"page_text":          "Base currency EUR. 1 EUR = 1.0800 USD as of today. Contact support with " + secret,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -311,14 +313,14 @@ func TestProbeStripsCredentialsOutOfEverythingItWritesDown(t *testing.T) {
 		t.Fatal(err)
 	}
 	expect := filepath.Join(dir, "expect.json")
-	if err := os.WriteFile(expect, []byte(`{"aurora-large":{"input_per_mtok":"5","output_per_mtok":"25","cache_read_per_mtok":"0","cache_write_per_mtok":"0"}}`), 0o600); err != nil {
+	if err := os.WriteFile(expect, []byte(`{"USD":"0.9259259259"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	jsonOut := filepath.Join(dir, "result.json")
 
 	var out strings.Builder
 	if err := runAITaskProbe(context.Background(), []string{
-		"run", "--site", "rate_extract/pricing",
+		"run", "--site", "rate_extract/fx",
 		"--fixture", fixture, "--expect", expect,
 		"--ai-fake", "--corpus", testCorpusDir(),
 		"--json", jsonOut, "--dump-request", dir,
@@ -342,7 +344,7 @@ func TestProbeStripsCredentialsOutOfEverythingItWritesDown(t *testing.T) {
 		}
 		// The surrounding page must still be there — a redaction that ate the
 		// payload would pass the check above while making the dump useless.
-		if !strings.Contains(string(raw), "aurora-large") {
+		if !strings.Contains(string(raw), "1.0800 USD") {
 			t.Errorf("%s lost the page it was supposed to record", filepath.Base(path))
 		}
 	}
@@ -358,7 +360,7 @@ func TestProbeStripsCredentialsOutOfAFailureItReports(t *testing.T) {
 	fixture := filepath.Join(dir, "fixture.json")
 	// A fixture the site REFUSES: page_text is the shape it takes, so a number
 	// here makes Prepare quote the value it could not read.
-	body := []byte(`{"provider":"Aurora AI","page_text":"` + secret + `","tracked_currencies":5}`)
+	body := []byte(`{"base_currency":"EUR","page_text":"` + secret + `","tracked_currencies":5}`)
 	if err := os.WriteFile(fixture, body, 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -366,7 +368,7 @@ func TestProbeStripsCredentialsOutOfAFailureItReports(t *testing.T) {
 
 	var out strings.Builder
 	err := runAITaskProbe(context.Background(), []string{
-		"run", "--site", "rate_extract/pricing", "--fixture", fixture,
+		"run", "--site", "rate_extract/fx", "--fixture", fixture,
 		"--ai-fake", "--corpus", testCorpusDir(), "--json", jsonOut,
 	}, &out)
 	// A refused fixture IS the scenario under test: the probe must report it as

@@ -64,7 +64,7 @@ func graphWatchConfig(cfg workerConfig) compose.GraphWatchConfig {
 // drain — what the bare tickers lacked. The domain logic (Sweep/Reconcile)
 // is unchanged; only the scheduler is River now. The returned stop function
 // drains in-flight jobs on shutdown.
-func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger, cfg workerConfig, modelPath compose.ModelPath, boundModels map[string]map[string]bool, lanes workerLanes, weeklyMail compose.WeeklyMailConfig, stdout io.Writer) (func(), error) {
+func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger, cfg workerConfig, modelPath compose.ModelPath, lanes workerLanes, weeklyMail compose.WeeklyMailConfig, stdout io.Writer) (func(), error) {
 	// The sweep registry is always live — the standing IMAP connector needs
 	// no deployment config; gmail joins it when the OAuth app is configured.
 	// The vault holds every connection's sealed credential (the standing
@@ -116,7 +116,7 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// attachment store rather than two that drift.
 	compose.BindExtensionCapture(pool, cfg.captureConfig)
 
-	runner, err := newJobRunner(pool, logger, cfg, captureReg, watchCfg, vault, lanes, modelPath, boundModels, weeklyMail)
+	runner, err := newJobRunner(pool, logger, cfg, captureReg, watchCfg, vault, lanes, modelPath, weeklyMail)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func stopJobRunner(ctx context.Context, lane jobLane, logger *slog.Logger) {
 // deployment condition that turns it on — or the omission that honestly leaves
 // it off. One declaration, so no lane can be enabled by one boot phase and
 // starved by another.
-func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, vault keyvault.Vault, lanes workerLanes, modelPath compose.ModelPath, boundModels map[string]map[string]bool, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
+func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, vault keyvault.Vault, lanes workerLanes, modelPath compose.ModelPath, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
 	// Firing a scheduled message stages its delivery and enqueues the dispatch
 	// job, through the SAME machinery an immediate send uses. Insert-only, like
 	// the api's: this role works what it inserts, and a stager built on the
@@ -279,7 +279,12 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// configures outbound mail once, and deriving the brief's channel here
 		// rather than resolving it a second time is what keeps the two from
 		// disagreeing about whether this installation can send at all.
-		BriefMail:              compose.BriefMailConfig(weeklyMail),
+		BriefMail: compose.BriefMailConfig(weeklyMail),
+		// And the same relay a third time, for the one notice that leaves the
+		// product the moment it is raised rather than on a schedule. Converted
+		// like the brief's is: three resolutions of one operator setting could
+		// disagree about whether this installation can send at all.
+		NotificationMail:       compose.NotificationMailConfig(weeklyMail),
 		TranscriptProposeBrain: modelPath.TranscriptPropose,
 		StageEvidenceBrain:     modelPath.StageEvidenceExtract,
 		// The account scan registers regardless too: a queued scan on a
@@ -296,16 +301,11 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// Same posture for the voice build: the worker registers with or
 		// without a model, failing picked-up builds actionably when brainless.
 		VoiceBrain: modelPath.VoiceBuild,
-		// The rate-refresh producers register regardless; without a source
-		// (empty FX url / no pricing sources) or a model (nil RateExtract)
-		// they no-op honestly. FX and model-cost both extract from a fetched
-		// page via the shared RateExtract lane.
-		RateExtractBrain:      modelPath.RateExtract,
+		// The FX refresh registers regardless; without a source (empty url) or
+		// a model (nil RateExtract) it no-ops honestly.
 		FxSourceURL:           cmp.Or(cfg.ratesFx, "https://api.frankfurter.dev/v1/latest"),
 		FxBootstrapCurrencies: fxBootstrapCurrencies(cfg.ratesCurrencies),
 		FxExtractBrain:        modelPath.RateExtract,
-		ModelPricingSources:   compose.PricingSourcesFromMap(cfg.ratesModelPricing),
-		BoundModelIDs:         boundModels,
 		DeepReadCaps:          compose.CrawlCaps{MaxPages: cfg.deepReadMaxPages, MaxBytes: cfg.deepReadMaxBytes, Wall: cfg.deepReadWall},
 		// The same object store retention purges from: a deep read resolves
 		// the company's logo out of the site it just crawled and stores the

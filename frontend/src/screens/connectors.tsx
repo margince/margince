@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Mail, RefreshCw, Send } from "lucide-react";
+import { CalendarDays, Mail, RefreshCw } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -13,8 +13,9 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
@@ -27,15 +28,17 @@ import { useCaptureSettings } from "./capture-settings";
 import { problemCode, problemMessageOf, throwProblem } from "./common";
 import {
   errorClassKey,
+  missingCalendarWriteGrant,
   missingSendGrant,
   statusLabel,
   statusTone,
 } from "./connector-status";
 import { isMailbox, isMailIcon } from "./connectorproviders";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
+import { ConnectionIdentity } from "./connectors.identity";
 import { OAuthOutcomeNote } from "./connectors.notices";
+import { TelegramConnectorsPanel } from "./connectors.telegram";
 import { ImapConnectForm } from "./imap-connect-form";
-import { TelegramConnectForm } from "./telegram-connect-form";
 import "./connectors.css";
 
 // The connected-inboxes surface (RC-8): the Settings cards the onboarding copy
@@ -130,29 +133,6 @@ type PublicOriginStatus =
 type ProviderReadiness = NonNullable<
   components["schemas"]["CaptureConnectionListResponse"]["providers"]
 >[number];
-
-// A connection's identity, as the left half of its row: the provider this
-// build's own name for it, and the account it reads. One shape for a mailbox
-// and for a bot, because a reader auditing the page reads both the same way.
-function ConnectionIdentity({
-  icon: Icon,
-  name,
-  account,
-}: Readonly<{
-  icon: typeof Mail;
-  name: string;
-  account?: string | null;
-}>) {
-  return (
-    <span className="connector-id">
-      <Icon aria-hidden />
-      <span>
-        <strong>{name}</strong>
-        {account && <span className="connector-account">{account}</span>}
-      </span>
-    </span>
-  );
-}
 
 // What each provider actually brings, one sentence each. They exist because
 // the choice cannot be made from the names alone: on both vendors the mail and
@@ -271,233 +251,6 @@ function AddConnectionDialog({
   );
 }
 
-type ChannelConnection = components["schemas"]["ChannelConnection"];
-
-type ChannelConnectionsResult = {
-  // GET /channel-connections answers 503 when this deployment serves no
-  // messaging channels, or has no credential store to seal a bot token in — a
-  // calm, documented feature-off state, mirroring the mail card's 501
-  // not_implemented treatment above rather than an error card.
-  notConfigured: boolean;
-  data: ChannelConnection[];
-};
-
-function useChannelConnections() {
-  return useQuery({
-    queryKey: ["channel-connections"],
-    queryFn: async (): Promise<ChannelConnectionsResult> => {
-      const { data, error, response } = await api.GET("/channel-connections");
-      if (
-        response.status === 503 &&
-        (problemCode(error) === "channel_connections_not_configured" ||
-          problemCode(error) === "channel_credentials_not_configured")
-      ) {
-        return { notConfigured: true, data: [] };
-      }
-      if (error) {
-        throwProblem(error);
-      }
-      return { notConfigured: false, data: data.data };
-    },
-  });
-}
-
-// One live bot as a row: which bot it is on the left, whether it is live on the
-// right, and the two verbs that change it beside that.
-function TelegramConnectionRow({
-  connection,
-  onEdit,
-  onDisconnect,
-}: Readonly<{
-  connection: ChannelConnection;
-  onEdit: () => void;
-  onDisconnect: () => void;
-}>) {
-  const t = useT();
-  return (
-    <SettingRow
-      testId="telegram-connection"
-      label={
-        <ConnectionIdentity
-          icon={Send}
-          name={t("connectors.provTelegram")}
-          account={`@${connection.channelLabel}`}
-        />
-      }
-      value={
-        <Badge tone={statusTone(connection.status)}>
-          {t(statusLabel(connection.status))}
-        </Badge>
-      }
-      control={
-        <div className="connector-actions">
-          <Button onClick={onEdit}>
-            <RefreshCw aria-hidden /> {t("connectors.telegramEditToken")}
-          </Button>
-          <Button variant="ghost" onClick={onDisconnect}>
-            {t("connectors.disconnect")}
-          </Button>
-        </div>
-      }
-    />
-  );
-}
-
-// Everything the Telegram panel shows INSTEAD of its rows. Split out so the
-// panel function keeps one return and its hooks stay unconditional.
-function TelegramNotice({
-  query,
-}: Readonly<{ query: ReturnType<typeof useChannelConnections> }>) {
-  const t = useT();
-  if (query.isPending) {
-    return <p>{t("connectors.loading")}</p>;
-  }
-  if (query.isError) {
-    return (
-      <Callout tone="danger" kind="outcome" title={t("connectors.loadFailed")}>
-        {problemMessageOf(query.error, t)}
-      </Callout>
-    );
-  }
-  if (query.data.notConfigured) {
-    return (
-      <EmptyState>
-        <p>{t("connectors.telegramNotConfigured")}</p>
-      </EmptyState>
-    );
-  }
-  return null;
-}
-
-// The workspace's messaging bot, as its own panel.
-//
-// A bot connects for the WHOLE workspace rather than per-user (Task 17,
-// design §9.1/§9.2), and a send needs exactly one of them: with a second
-// live bot the workspace can send nothing at all until an admin removes it.
-// This panel is the only surface that can, so it must show every connection
-// the list returns — a bot it hides is a bot nobody can disconnect. Every one
-// of them is a row of its own for exactly that reason.
-//
-// Editing goes through the SAME TelegramConnectForm modal, whose PATCH takes
-// the place of a disconnect-reconnect cycle (§9.2). The panel mounts one
-// form instance, keyed to whichever row opened it.
-function TelegramConnectorsPanel() {
-  const t = useT();
-  const qc = useQueryClient();
-  const query = useChannelConnections();
-  const [connectOpen, setConnectOpen] = useState(false);
-  const [editingConnection, setEditingConnection] =
-    useState<ChannelConnection | null>(null);
-  const [disconnecting, setDisconnecting] = useState<ChannelConnection | null>(
-    null,
-  );
-
-  const disconnect = useMutation({
-    mutationFn: async (connection: ChannelConnection) => {
-      const { error } = await api.DELETE("/channel-connections/{id}", {
-        params: { path: { id: connection.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: () => {
-      setDisconnecting(null);
-      void qc.invalidateQueries({ queryKey: ["channel-connections"] });
-    },
-  });
-
-  const connections =
-    query.isSuccess && !query.data.notConfigured ? query.data.data : [];
-  const closeForms = () => {
-    setConnectOpen(false);
-    setEditingConnection(null);
-  };
-
-  return (
-    <Panel
-      title={t("connectors.telegramTitle")}
-      // The connect verb in the header, the same shape the mail card next to it
-      // takes: as the zero state's row it was labelled "Telegram" under a card
-      // titled "Telegram bot" — the card's own subject, said twice, with the
-      // act beside it.
-      titleAction={
-        query.isSuccess &&
-        !query.data.notConfigured &&
-        connections.length === 0 && (
-          <Button
-            data-testid="telegram-connect"
-            onClick={() => setConnectOpen(true)}
-          >
-            <Send aria-hidden /> {t("connectors.telegramConnectCta")}
-          </Button>
-        )
-      }
-    >
-      <PanelBody>
-        {/* In the BODY, not `Panel`'s `sub`. A description in the header band
-            raises that band's own height, so this card's title sat lower than
-            every sibling's on the tab and the whole page lost its beat over one
-            sentence. Read here it is also the first thing under the title
-            rather than a second line competing with it. */}
-        <p className="settings-panel-sub">{t("connectors.telegramSub")}</p>
-        <TelegramNotice query={query} />
-        {query.isSuccess && !query.data.notConfigured && (
-          <SettingList>
-            {connections.length === 0 ? (
-              // What the card is FOR, in the roster's own place: which bot is
-              // carrying messages. The verb that changes it is in the header.
-              <SettingRow
-                label={t("connectors.telegramRosterLabel")}
-                layout="stack"
-                control={
-                  <EmptyState>{t("connectors.telegramEmpty")}</EmptyState>
-                }
-              />
-            ) : (
-              connections.map((connection) => (
-                <TelegramConnectionRow
-                  key={connection.id}
-                  connection={connection}
-                  onEdit={() => setEditingConnection(connection)}
-                  onDisconnect={() => setDisconnecting(connection)}
-                />
-              ))
-            )}
-          </SettingList>
-        )}
-      </PanelBody>
-      <TelegramConnectForm
-        // Keyed to the row that opened it, so the form never carries one
-        // connection's in-progress state onto another's rotation.
-        key={editingConnection?.id ?? "new"}
-        open={connectOpen || editingConnection !== null}
-        connection={editingConnection ?? undefined}
-        onClose={closeForms}
-        onConnected={closeForms}
-      />
-      <ConfirmModal
-        open={disconnecting !== null}
-        onClose={() => setDisconnecting(null)}
-        title={t("connectors.telegramDisconnectTitle")}
-        confirmLabel={t("connectors.disconnect")}
-        confirmVariant="danger"
-        pending={disconnect.isPending}
-        error={
-          disconnect.isError ? problemMessageOf(disconnect.error, t) : null
-        }
-        onConfirm={() => {
-          if (disconnecting) {
-            disconnect.mutate(disconnecting);
-          }
-        }}
-      >
-        <p>{t("connectors.telegramDisconnectBody")}</p>
-      </ConfirmModal>
-    </Panel>
-  );
-}
-
 type ConnectFailure = {
   provider: Provider | undefined;
   message: string;
@@ -544,13 +297,19 @@ function ConnectorFacts({ conn }: Readonly<{ conn: CaptureConnection }>) {
           : t("connectors.polled")}
       </span>
       {(conn.status === "error" || conn.status === "reauth_required") && (
-        <span className="connector-fact connector-error">
-          {t(errorClassKey(conn.last_sync_error_class))}
+        <span className="connector-fact">
+          <ErrorLine inline standing>
+            {t(errorClassKey(conn.last_sync_error_class))}
+          </ErrorLine>
         </span>
       )}
-      {/* Named here rather than at send time: the composer's 422 arrives
-          after the rep has written the mail, and it can only be cleared
-          from this card. */}
+      {missingCalendarWriteGrant(conn) && (
+        <span className="connector-fact">
+          {t("scheduling.readOnlyCalendar")}
+        </span>
+      )}
+      {/* Show the missing grant before a draft reaches send; only this card
+          can recover the connection. */}
       {missingSendGrant(conn) && (
         <span className="connector-fact">
           {t("connectors.reconnectToSend")}
@@ -593,11 +352,10 @@ function ConnectorRow({
 }>) {
   const t = useT();
   const needsReconnect =
-    conn.status === "reauth_required" || missingSendGrant(conn);
-  // A calendar is not a mailbox, and three of the rows below only make sense
-  // against one. The account label is the member's own email address on both
-  // kinds, so the envelope was the only thing distinguishing them and it was
-  // wrong for half of them.
+    conn.status === "reauth_required" ||
+    missingSendGrant(conn) ||
+    missingCalendarWriteGrant(conn);
+  // Calendar accounts share mailbox labels, but cannot expose mailbox actions.
   const mailbox = isMailbox(conn.provider);
   return (
     <>
@@ -616,6 +374,9 @@ function ConnectorRow({
             <Badge tone={statusTone(conn.status)}>
               {t(statusLabel(conn.status))}
             </Badge>
+            {missingCalendarWriteGrant(conn) && (
+              <Badge tone="warning">{t("scheduling.readOnlyBadge")}</Badge>
+            )}
             {missingSendGrant(conn) && (
               <Badge tone="warning">{t("connectors.cannotSend")}</Badge>
             )}
@@ -882,25 +643,17 @@ function useSetSignatureEnrichment(provider: CaptureConnection["provider"]) {
   });
 }
 
-/**
- * The installation's capture connections, in one spelling.
- *
- * Exported because the card is no longer the only reader: the chrome that
- * reports whether the agent can reach its sources needs the same list, and so
- * do onboarding's connect surfaces. Two queries against one path are two
- * answers that can disagree on screen — and two SHAPES under the one
- * `["connectors"]` cache entry are worse than that, because react-query keeps
- * one entry per key and whichever reader fetched last decides what the others
- * read. So every reader comes through here.
- */
+// Readers share the connector query shape because its cache entry is shared.
 export function useConnectors(
   options?: Readonly<{
     /** False holds the request without leaving the key: a reader that only
      *  wants the answer when it already exists still shares the one entry. */
     enabled?: boolean;
+    refetchOnWindowFocus?: boolean | "always";
   }>,
 ) {
   return useQuery({
+    ...options,
     queryKey: ["connectors"],
     enabled: options?.enabled ?? true,
     queryFn: async (): Promise<ConnectorsResult> => {
@@ -1130,7 +883,7 @@ function MailConnectorsPanel() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("connectors.sub")}</p>
+        <PanelIntro>{t("connectors.sub")}</PanelIntro>
         <OAuthOutcomeNote />
         {connectors.isPending && <p>{t("connectors.loading")}</p>}
         {connectors.isError && (

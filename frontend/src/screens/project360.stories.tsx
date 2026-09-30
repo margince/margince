@@ -27,7 +27,7 @@ import {
 // switch at its end, which is where every other record page keeps it.
 
 const meta: Meta<typeof ProjectScreen> = {
-  title: "Records/Project/Screen",
+  title: "Records/Project 360/Page",
   component: ProjectScreen,
   parameters: { layout: "padded" },
 };

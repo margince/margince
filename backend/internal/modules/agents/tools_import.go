@@ -35,6 +35,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -76,7 +77,7 @@ func RegisterImportTools(r *Registry, imports Imports) {
 	r.Register(previewImport{imports: imports})
 	r.Register(readImportRun{imports: imports})
 	r.Register(readImportReport{imports: imports})
-	r.Register(commitImport{imports: imports})
+	r.Register(commitImport{imports: imports, language: r.language})
 }
 
 // importObjectEnum is what a file's rows may be.
@@ -152,6 +153,7 @@ func (t readImportRun) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_import_run", Title: "Read an import run", Version: toolVersionV1,
 		Description:   readImportRunCopy.render(),
+		Instead:       readImportRunCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "getImportRun",
 		InputSchema:  schema(`{"type":"object","required":["run_id"],"properties":{"run_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
@@ -177,6 +179,7 @@ func (t readImportReport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_import_report", Title: "Read an import report", Version: toolVersionV1,
 		Description:   readImportReportCopy.render(),
+		Instead:       readImportReportCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "getImportRunReport",
 		InputSchema:  schema(`{"type":"object","required":["run_id"],"properties":{"run_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
@@ -196,12 +199,16 @@ func (t readImportReport) Handle(ctx context.Context, in json.RawMessage) (json.
 	return json.Marshal(ImportReportResult{Report: report})
 }
 
-type commitImport struct{ imports Imports }
+type commitImport struct {
+	imports  Imports
+	language baselanguage.Resolver
+}
 
 func (t commitImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "commit_import", Title: "Commit an import", Version: toolVersionV1,
 		Description:   commitImportCopy.render(),
+		Instead:       commitImportCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "approveImportRun",
 		InputSchema: schema(`{"type":"object","required":["run_id"],"properties":{
@@ -220,7 +227,7 @@ func (t commitImport) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	if err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewImportCall(t.imports, ImportCommand{
+	return StageSubject(ctx, NewImportCall(t.imports, t.language, ImportCommand{
 		Verb: ImportVerbCommit, RunID: id,
 	}))
 }

@@ -25,6 +25,9 @@ func pathID[K ids.EntityKind](id crmcontracts.Id) ids.ID[K] {
 // generated list/tag stubs are shadowed by real code.
 type Handlers struct {
 	store *Store
+	// listsOn is the installation's lists.enabled; off, the list routes
+	// answer 404.
+	listsOn bool
 }
 
 // NewHandlers wires the transport over a store the caller already built.

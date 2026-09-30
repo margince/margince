@@ -9,10 +9,10 @@
 // reader west of UTC watched a task they had just filed for today appear under
 // Upcoming.
 //
-// Both are pure and take their zone (or the reader's own wall clock) as input,
-// so nothing here has to be tested against the machine's own zone.
+// All but `today` are pure and take their zone (or the reader's own wall clock)
+// as input, so nothing here has to be tested against the machine's own zone.
 
-import { endOfDayInZone } from "./timezone";
+import { endOfDayInZone, viewerZone } from "./timezone";
 
 // The calendar day an instant falls on, in a named IANA zone, as `yyyy-mm-dd` so
 // two of them compare as strings without a second parse.
@@ -94,6 +94,13 @@ export function calendarDay(at: Date, zone: string): string {
     throw new Error(`no calendar day for zone ${zone}`);
   }
   return `${year}-${month}-${day}`;
+}
+
+// The reader's own today, for a form whose date box opens on it and refuses
+// anything earlier: the sheets it feeds read their effective dates against
+// the reader's calendar rather than UTC's, so the floor is read the same way.
+export function today(): string {
+  return calendarDay(new Date(), viewerZone());
 }
 
 // The calendar MONTH an instant falls in, in a named IANA zone, as `yyyy-mm`.

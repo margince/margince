@@ -5,6 +5,11 @@ import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import {
+  classesOf,
+  selectorList,
+  subjectsOf,
+} from "../../scripts/lib/css-rules";
 import { filesMatching, parseSource } from "../../scripts/lib/source-tree";
 import { classNamesOn } from "../testing/classnames";
 import { rulesIn } from "../testing/css";
@@ -57,29 +62,14 @@ function read(where: string): string {
 }
 
 /**
- * The compound a rule SELECTS, one per comma part: the last link in the chain,
- * with `:not()` blanked first. `.worklist-row button:not(.worklist-rank-select)`
- * selects a button and excuses one class — reading the excused class as the
- * subject would file the rule against the very thing it leaves alone.
+ * The compound a rule SELECTS, one per comma part and per `:is()` alternative:
+ * the last link in the chain.
+ * `.worklist-row button:not(.worklist-rank-select)` selects a button and
+ * excuses one class — reading the excused class as the subject would file the
+ * rule against the very thing it leaves alone.
  */
-function subjectsOf(selector: string): string[] {
-  return selector
-    .split(",")
-    .map((part) => part.replaceAll(/:not\([^)]*\)/g, " ").trim())
-    .map(
-      (part) =>
-        part
-          .split(/[\s>+~]+/)
-          .filter(Boolean)
-          .pop() ?? "",
-    )
-    .filter(Boolean);
-}
-
-function classesIn(compound: string): string[] {
-  return [...compound.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)].map(
-    (found) => found[1],
-  );
+function subjectsIn(selector: string): string[] {
+  return selectorList(selector).flatMap(subjectsOf);
 }
 
 /** A rule that draws a `<button>` element itself, rather than a class on one. */
@@ -102,16 +92,16 @@ const THE_HEIGHT = "var(--controlHeight)";
  *
  * This is the reading that covers what the markup cannot say. A class assembled
  * from a template — `.btn-${variant}` — or joined in a helper is invisible to
- * an AST walk of the markup, and three of the controls below (`.railmore`,
- * `.calendar-day`, `.probe-button`) arrive only this way.
+ * an AST walk of the markup, and two of the controls below (`.railmore`,
+ * `.calendar-day`) arrive only this way.
  */
 function pressableClasses(): Set<string> {
   const out = new Set<string>();
   for (const where of sheets()) {
     for (const rule of rulesIn(read(where))) {
       if (!/(?<![\w-])cursor\s*:\s*pointer/.test(rule.body)) continue;
-      for (const subject of subjectsOf(rule.selector)) {
-        for (const name of classesIn(subject)) {
+      for (const subject of subjectsIn(rule.selector)) {
+        for (const name of classesOf(subject)) {
           out.add(name);
         }
       }
@@ -163,8 +153,8 @@ function findingsIn(
 ): Finding[] {
   const out: Finding[] = [];
   for (const rule of rulesIn(css)) {
-    const subjects = subjectsOf(rule.selector);
-    const names = subjects.flatMap(classesIn);
+    const subjects = subjectsIn(rule.selector);
+    const names = subjects.flatMap((subject) => [...classesOf(subject)]);
     const pressable =
       subjects.some(selectsButton) || names.some((name) => corpus.has(name));
     if (!pressable) continue;
@@ -223,12 +213,41 @@ const ACCEPTED = new Map<string, string>([
       "and height floors come straight back off",
   ],
   ["btn-link", "the same affordance, worn by Button's link variant"],
-  [
-    "explain-toggle",
-    "sits INSIDE a line of running figures; the min-* pair is what holds it " +
-      "under the .iconbtn floor it is drawn beside",
-  ],
   ["stat-card-open", "the card's own 'open' link, not a control on it"],
+  // Touch FLOORS, not second heights. Each of these stands at --controlHeight
+  // for a mouse and is lifted only under `@media (pointer: coarse)`, where WCAG
+  // 2.2 AA asks 44px of a thumb. `max()` is what keeps them a floor: a later
+  // rise in the shared height passes straight through.
+  [
+    "user",
+    "the account chip takes the coarse-pointer 44px floor; at a fine pointer it " +
+      "is --controlHeight like every other control",
+  ],
+  [
+    ".segmented button",
+    "a segment takes the coarse-pointer 44px floor; the strip is --controlHeight " +
+      "for a mouse, which is what makes it read as one control",
+  ],
+  [
+    "rail-count-go",
+    "a digest chip takes the coarse-pointer 44px floor; it is a line of text for " +
+      "a mouse and a target for a thumb",
+  ],
+  [
+    "record-details-toggle",
+    "the queue drawer's handle takes the coarse-pointer 44px floor, for the " +
+      "reason the chips beside it do",
+  ],
+  [
+    ".worklist-more .btn",
+    "the worklist's one load-more verb takes the coarse-pointer 44px floor " +
+      "the row verbs beside it get",
+  ],
+  [
+    "button:has(> .visibility-opens)",
+    "a visibility mark's button takes the coarse-pointer 44px floor; the pill " +
+      "inside it keeps its own height, so a row of marks keeps one line",
+  ],
   [
     "worklist-rank-select",
     "the rank NUMBER made pressable, held at the column's floor so a row " +
@@ -259,7 +278,6 @@ const ACCEPTED = new Map<string, string>([
       ".btn-federated beside it carries one",
   ],
   ["ob-gate-submit", "the onboarding gate's door, the same floor"],
-  ["probe-button", "the standalone MCP view's one action, sized for a thumb"],
   [
     "commstatus",
     "a 44px finger target around a mark that stays 18px, so the mark keeps " +
@@ -373,6 +391,15 @@ describe("what a second height looks like", () => {
 
   it("reads a rule the element itself selects", () => {
     expect(found(".bar button { height: 26px; }")).toEqual(["height:26px"]);
+  });
+
+  it("reads a rule through any one of its :is() alternatives", () => {
+    expect(found(":is(.thing, .other) { height: 26px; }")).toEqual([
+      "height:26px",
+    ]);
+    expect(found(".bar :where(.other, button) { height: 26px; }")).toEqual([
+      "height:26px",
+    ]);
   });
 
   it("reads a height inside a breakpoint, which is where a second one hides", () => {

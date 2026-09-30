@@ -28,6 +28,7 @@
  */
 
 import { useSyncExternalStore } from "react";
+import { readStored, STORAGE_KEYS, writeStored } from "./storage";
 
 export type Theme = "light" | "dark";
 
@@ -48,19 +49,7 @@ export const THEME_CHOICES: readonly ThemeChoice[] = [
   "system",
 ];
 
-export const THEME_KEY = "margince.theme";
-
 const PREFERS_DARK = "(prefers-color-scheme: dark)";
-
-/** Storage is unavailable in some embedded contexts; a missing preference is a
- *  default, never an error. */
-function readStoredValue(): string | null {
-  try {
-    return window.localStorage.getItem(THEME_KEY);
-  } catch {
-    return null;
-  }
-}
 
 /**
  * The stored choice, or "system".
@@ -73,18 +62,10 @@ function readStoredValue(): string | null {
  * the page nothing at all.
  */
 function readStoredChoice(): ThemeChoice {
-  const stored = readStoredValue();
+  const stored = readStored(STORAGE_KEYS.theme);
   return stored === "light" || stored === "dark" || stored === "system"
     ? stored
     : "system";
-}
-
-function persistChoice(choice: ThemeChoice): void {
-  try {
-    window.localStorage.setItem(THEME_KEY, choice);
-  } catch {
-    // A browser refusing storage must not break the chooser.
-  }
 }
 
 /** `matchMedia` is absent in some embedded contexts, and a missing media query
@@ -217,7 +198,7 @@ function subscribeToTheme(listener: () => void): () => void {
 export function setThemeChoice(choice: ThemeChoice): void {
   const theme = themeFor(choice);
   current = { choice, theme };
-  persistChoice(choice);
+  writeStored(STORAGE_KEYS.theme, choice);
   applyTheme(theme);
   if (choice === "system") {
     startFollowingSystem();
