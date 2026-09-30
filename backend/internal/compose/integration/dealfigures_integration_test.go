@@ -225,3 +225,72 @@ func TestDealFiguresDoesNotFlagATodayOrFutureCloseDateAsOverdue(t *testing.T) {
 		t.Fatal("a deal due TODAY came back overdue")
 	}
 }
+
+// The figures carry the win probability recorded on the deal's stage.
+//
+// It reaches the Worklist card beside the deal's own money, so a reader sees
+// the stage's odds without reading the stage. Asserted against the DATABASE
+// rather than the projection alone, because the column lives on another table
+// and the only thing that proves the join reaches it is a real one — a wrong
+// table name compiles perfectly and fails on the first query.
+func TestDealFiguresCarryTheStagesWinProbability(t *testing.T) {
+	e := Setup(t)
+	dealID := seedFiguresDeal(t, e.Rep1, 160_100_00)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+
+	figures, err := e.Deals.Figures(rep, []ids.UUID{dealID})
+	if err != nil {
+		t.Fatalf("reading the deal's figures: %v", err)
+	}
+
+	got, ok := figures[dealID]
+	if !ok {
+		t.Fatal("a deal the reader owns did not come back at all")
+	}
+	// The stage seedFiguresDealClosing writes records 10.
+	if got.StageWinProbability == nil {
+		t.Fatal("the deal came back with no win probability, though its stage records one — the " +
+			"card then states nothing and a reader goes to the stage for it")
+	}
+	if *got.StageWinProbability != 10 {
+		t.Errorf("win probability came back %d, wanted the stage's 10", *got.StageWinProbability)
+	}
+	if got.AmountMinor == nil || *got.AmountMinor != 160_100_00 {
+		t.Errorf("amount_minor = %v, want 16010000 unweighted — reading the probability must not "+
+			"start applying it", got.AmountMinor)
+	}
+}
+
+// A stage scored zero reaches the reader as zero, not as absent.
+//
+// This is the case the pointer exists for. `stage.win_probability` is NOT NULL,
+// so every deal arrives with a score; what the type has to keep apart is a
+// stage nobody rates highly from a fact nobody stated. Collapsing them would
+// tell a reader "unscored" about a deal the pipeline scores at 0.
+func TestADealOnAStageScoredZeroCarriesZeroRatherThanNothing(t *testing.T) {
+	e := Setup(t)
+	dealID := seedFiguresDeal(t, e.Rep1, 50_000_00)
+	if _, err := OwnerConn(t).Exec(context.Background(),
+		`UPDATE stage SET win_probability = 0
+		  WHERE id = (SELECT stage_id FROM deal WHERE id = $1)`, dealID); err != nil {
+		t.Fatalf("scoring the stage zero: %v", err)
+	}
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+
+	figures, err := e.Deals.Figures(rep, []ids.UUID{dealID})
+	if err != nil {
+		t.Fatalf("reading the deal's figures: %v", err)
+	}
+
+	got, ok := figures[dealID]
+	if !ok {
+		t.Fatal("the deal did not come back at all")
+	}
+	if got.StageWinProbability == nil {
+		t.Fatal("a stage scored 0 came back as no score at all — a reader is told nobody rated " +
+			"this deal when the pipeline rates it at zero")
+	}
+	if *got.StageWinProbability != 0 {
+		t.Errorf("win probability came back %d, wanted the stage's 0", *got.StageWinProbability)
+	}
+}

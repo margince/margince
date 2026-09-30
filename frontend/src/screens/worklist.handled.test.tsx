@@ -181,7 +181,7 @@ describe("what was handled for the reader", () => {
     expect(screen.queryByRole("table")).toBeNull();
     // And no figure in the footer band either: a count of nothing is a row of
     // chrome saying zero on a panel that has already said it in words.
-    expect(screen.queryByText(/done for you/)).toBeNull();
+    expect(screen.queryByText(/^\d+ handled$/)).toBeNull();
   });
 
   // An answer carrying no list AT ALL is not a quiet day. `receipts` is
@@ -193,7 +193,7 @@ describe("what was handled for the reader", () => {
 
     render(panel());
 
-    expect(await screen.findByText(/Could not be loaded/)).toBeTruthy();
+    expect(await screen.findByText(en["state.unavailable"])).toBeTruthy();
     expect(screen.queryByText(en["worklist.handled.empty"])).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
   });
@@ -219,7 +219,7 @@ describe("what was handled for the reader", () => {
       defaultOptions: { queries: { retry: false } },
     });
     render(panel(client));
-    await screen.findByText("1 done for you");
+    await screen.findByText("1 handled");
 
     // Through the panel's OWN query rather than a second render over a failing
     // stub: what has to be reached is the state where the rows are still in the
@@ -242,7 +242,7 @@ describe("what was handled for the reader", () => {
     });
 
     expect(await screen.findByText(en["state.failed"])).toBeTruthy();
-    expect(screen.queryByText(/done for you/)).toBeNull();
+    expect(screen.queryByText(/^\d+ handled$/)).toBeNull();
   });
 });
 

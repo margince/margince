@@ -16,7 +16,9 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -24,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // replayCtx binds the workspace and the system principal the pass runs under.
@@ -196,4 +199,56 @@ func TestReplayRefusesANonPositiveLimit(t *testing.T) {
 	if _, err := replayParticipantsBatch(replayCtx(e), e.Pool, 0, slog.Default()); err == nil {
 		t.Error("a zero batch limit was accepted; a caller looping on it would spin forever")
 	}
+}
+
+// A stored original the party cap refused is recorded as CAPPED, not as one
+// that named nobody.
+//
+// The marker settles the activity permanently, so the two have to be told apart
+// where they are written: recorded as `none`, a message whose fifty-one further
+// parties were withheld reads as a message between two contacts and is never
+// offered again.
+func TestReplayRecordsCappedRatherThanFoundNone(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+
+	recipients := make([]string, 0, connector.MaxParticipants+1)
+	for i := range connector.MaxParticipants + 1 {
+		recipients = append(recipients, fmt.Sprintf("guest%d@list.example", i))
+	}
+	blast := seedReplayableMail(t, e, "msg-blast", crlfMessage(
+		"From: sender@target.example",
+		"To: owner@myco.example",
+		"Cc: "+strings.Join(recipients, ", "),
+		"Subject: Newsletter",
+		"Date: Wed, 04 Jun 2026 09:00:00 +0000",
+		"Message-ID: <blast@target.example>",
+		"Content-Type: text/plain; charset=utf-8",
+		"",
+		"Body.",
+		"",
+	))
+	if _, err := owner.Exec(context.Background(), `INSERT INTO capture_connection
+		(id, provider, user_id, scopes, status, auth, account_label)
+		VALUES ($1, 'gmail', $2, '{}', 'connected', ''::bytea, 'owner@myco.example')`,
+		ids.NewV7(), e.Rep1); err != nil {
+		t.Fatalf("seeding the mailbox connection: %v", err)
+	}
+
+	if _, err := replayParticipantsBatch(replayCtx(e), e.Pool, 10, slog.Default()); err != nil {
+		t.Fatalf("replayParticipantsBatch: %v", err)
+	}
+	outcome, found := replayOutcome(t, blast)
+	if !found {
+		t.Fatal("the blast was never settled, so the pass will re-read it forever")
+	}
+	if outcome != replayCapped {
+		t.Errorf("outcome = %q, want %q — recorded as %q the refused list is indistinguishable "+
+			"from a message that named nobody", outcome, replayCapped, outcome)
+	}
+}
+
+// crlfMessage joins header lines the way a stored RFC822 original carries them.
+func crlfMessage(lines ...string) string {
+	return strings.Join(lines, "\r\n")
 }

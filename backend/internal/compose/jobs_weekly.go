@@ -48,5 +48,6 @@ func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger,
 func newWeeklyEngine(pool *pgxpool.Pool) *weekly.Engine {
 	return weekly.NewEngine(pool, newTeammatesSeam(pool)).
 		WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)}).
+		WithNumeric(weeklyNumericEvaluator{}).
 		WithForecast(NewWeeklyForecast(forecasting.NewStore(InstallationDB(pool))))
 }

@@ -94,7 +94,7 @@ function strip(body: DealCoverage) {
 }
 
 const meta: Meta = {
-  title: "Records/Deal signals",
+  title: "Records/Deal 360/Signals",
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -53,6 +53,10 @@ type RunReportResult struct {
 	// this run — the count of visible rows excluded from every aggregate, so
 	// a smaller total reads as governed rather than as missing data.
 	ExcludedByPermission *int `json:"excluded_by_permission,omitempty"`
+	// PopulationNarrowed is present when a breakdown by owner was narrowed to
+	// the owners the caller may measure (`owners_you_may_measure`), so the rows
+	// read as some owners' rather than every owner's.
+	PopulationNarrowed *string `json:"population_narrowed,omitempty"`
 	// BaseCurrency is what a converted money measure is denominated in.
 	//
 	// The payload has always carried it; this struct did not declare it, so a

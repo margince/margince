@@ -27,19 +27,54 @@ import (
 type pendingSource struct {
 	table string
 	text  string // expression over the aliased table t
+	// embeddable narrows the set to the rows the PER-ROW indexer would embed.
+	// Empty means every live row of the table qualifies.
+	//
+	// It exists because the set form and the per-row form must admit the same
+	// rows, and for activity they did not: embedgen's statement carries
+	// `audience = 'workspace'` and the set form carried nothing, so a
+	// binding-change re-index recreated an embedding for every `participants`
+	// and `selected` message — publishing a held message into semantic search,
+	// where a colleague finds it by a phrase from its body. The pending count
+	// read the same set and over-reported by the same rows.
+	//
+	// Declared here rather than spelled into each statement so the two readers
+	// cannot drift again, which is how they drifted the first time.
+	//
+	// Held by: TestTheSetFormAndThePerRowFormAgreeOnWhatIsEmbeddable
+	// (backend/internal/modules/search/embeddableparity_test.go), with
+	// TestTheTwoFormsNarrowOnTheSameAudienceValue beside it: the pair fails
+	// when the set form and embedText disagree about whether they narrow,
+	// about which value they narrow to, or about which entities exist at all.
+	embeddable string // predicate over the aliased table t
+}
+
+// embeddablePredicate is the source's own narrowing, or TRUE when it declares
+// none — so a caller composes it unconditionally rather than branching, and a
+// source that forgets one cannot silently widen the set.
+// admitsEveryRow is the predicate a source with no narrowing composes, so a
+// caller never branches and a source that forgets one cannot silently widen.
+const admitsEveryRow = "TRUE"
+
+func (p pendingSource) embeddablePredicate() string {
+	if p.embeddable == "" {
+		return admitsEveryRow
+	}
+	return p.embeddable
 }
 
 // pendingSources is the set-form counterpart to embedgen.go's embedText —
 // one entry per embeddable entity, in the exact source-column shape that
 // module maintains per-row. Adding a searchable entity means adding a row
 // to BOTH maps; they must never diverge, since the pending count and the
-// live indexer must agree on what "this entity's text" means.
+// live indexer must agree on what "this entity's text" means — and, since
+// the embeddable predicate landed, on which rows are embeddable at all.
 var pendingSources = map[string]pendingSource{
 	entityContact:  {table: entityContact, text: "t.full_name"},
 	entityCompany:  {table: entityCompany, text: "concat_ws(' ', t.display_name, t.legal_name, t.industry)"},
 	entityDeal:     {table: entityDeal, text: "t.name"},
 	entityLead:     {table: entityLead, text: "concat_ws(' ', t.full_name, t.company_name, t.title)"},
-	entityActivity: {table: entityActivity, text: "concat_ws(' ', t.subject, t.body)"},
+	entityActivity: {table: entityActivity, text: "concat_ws(' ', t.subject, t.body)", embeddable: "t.audience = 'workspace'"},
 	entityProject:  {table: entityProject, text: "concat_ws(' ', t.name, t.key, t.description)"},
 }
 
@@ -152,11 +187,12 @@ func (s *Store) workspacePending(ctx context.Context, currentIdentity string) (c
 				SELECT count(*), coalesce(sum(octet_length(btrim(%s))), 0)
 				FROM %s t
 				WHERE t.archived_at IS NULL
+				  AND %s
 				  AND btrim(%s) <> ''
 				  AND NOT EXISTS (
 				        SELECT 1 FROM embedding e
 				        WHERE e.entity_type = '%s' AND e.entity_id = t.id AND e.model = $1)`,
-				src.text, src.table, src.text, entityType)
+				src.text, src.table, src.embeddablePredicate(), src.text, entityType)
 			var c int
 			var l int64
 			if err := tx.QueryRow(ctx, sql, currentIdentity).Scan(&c, &l); err != nil {

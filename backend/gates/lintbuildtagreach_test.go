@@ -177,6 +177,7 @@ func mergeGatePasses(t *testing.T) []compilingPass {
 var unreadFiles = gatekit.Waive(map[string]string{
 	// Backend, cross-compiled for windows by `make build` and linted by nothing.
 	"backend/internal/platform/blobstore/fs_sync_windows.go": "the windows half of a file-sync primitive: `make build` cross-compiles it so a type error is caught, but golangci runs at the host GOOS and never opens it — so gosec, depguard and revive have never read this syscall-adjacent code, and its unix sibling is the only half they judge",
+	"backend/internal/compose/aicert/claudecli_windows.go":   "the windows half of the cert lane's CLI kill: a no-op that leaves exec's default kill, so the cost is only that a lint finding in one empty function would go unseen",
 	"backend/internal/platform/ownedfile/owned_windows.go":   "the windows half of the owned-file primitive, cross-compiled and unlinted for the reason its blobstore sibling above states — the cost is that a permissions or error-handling defect here is caught only by review",
 
 	// The desktop launcher is its own module, released by its own lanes.

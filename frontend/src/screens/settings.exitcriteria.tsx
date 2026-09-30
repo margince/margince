@@ -78,7 +78,7 @@ export function StageExitCriteria({
   });
 
   if (terminal) {
-    return <p className="settings-panel-sub">{t("stage.criteria.terminal")}</p>;
+    return <p>{t("stage.criteria.terminal")}</p>;
   }
   // Sorted here as well as in the query, exactly as PipelineRow sorts its
   // stages: position is what the reader is promised, and a list that depended
@@ -89,7 +89,7 @@ export function StageExitCriteria({
   );
   return (
     <div className="form-stack">
-      <p className="settings-panel-sub">{t("stage.criteria.sub")}</p>
+      <p>{t("stage.criteria.sub")}</p>
       {criteria.some((c) => BUYER_KINDS.includes(c.kind)) && (
         <Callout
           tone="info"
@@ -108,6 +108,7 @@ export function StageExitCriteria({
           {/* The server's own account of the failure, the way every sibling
               read on this card reports one — a fixed sentence here would throw
               away the one detail that says whether reloading can help. */}
+          {/* ds:ignore the cause inside a Callout's body; the Callout is the notice */}
           <p>{problemMessageOf(query.error, t)}</p>
           <p>{t("stage.criteria.unreadable")}</p>
         </Callout>
@@ -117,7 +118,7 @@ export function StageExitCriteria({
           a screen that reported an empty configuration after a 500 would have
           an admin adding criteria that are already there. */}
       {criteria.length === 0 && !query.isPending && !query.isError && (
-        <p className="settings-panel-sub">{t("stage.criteria.none")}</p>
+        <p>{t("stage.criteria.none")}</p>
       )}
       <ul className="criterion-rows">
         {criteria.map((criterion) => (

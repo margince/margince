@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
@@ -11,9 +12,10 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { RefusalLine, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { searchCompanyCandidates } from "./contactemployers";
 import { invalidateRecord } from "./recordwritekeys";
+import "./common.css";
 
 type Item = components["schemas"]["EmploymentImportItem"];
 type Request = components["schemas"]["EmploymentImportRequest"];
@@ -85,13 +87,14 @@ export function ImportedEmploymentHistory({
   }
   return (
     <div className="form-stack">
+      {/* A read's warnings are a fact of that read, not news. */}
       {reading.data?.warnings?.map((warning) => (
-        <p role="alert" key={warning}>
+        <ErrorLine standing key={warning}>
           {warning}
-        </p>
+        </ErrorLine>
       ))}
       {reading.isPending && <p>{t("employment.importLoading")}</p>}
-      {reading.isError && <RefusalLine error={reading.error} />}
+      <ErrorLine error={reading.error} />
       {canEdit && outstanding.some((item) => item.state === "pending") && (
         <Button
           disabled={apply.isPending}
@@ -194,7 +197,7 @@ export function ImportedEmploymentHistory({
               </p>
             ),
         )}
-      {apply.isError && !resolving && <RefusalLine error={apply.error} />}
+      {!resolving && <ErrorLine error={apply.error} />}
       {resolving && (
         <EmploymentMatchModal
           key={resolving.key}
@@ -233,12 +236,7 @@ function EmploymentMatchModal({
   );
   return (
     <Modal open onClose={onClose} labelledBy={heading}>
-      <Heading
-        size="large"
-        id={heading}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={heading} className="t-h2 modal-title">
         {t("employment.resolve")}
       </Heading>
       <div className="form-stack">
@@ -304,7 +302,7 @@ function EmploymentMatchModal({
           }))}
           disabled={pending}
         />
-        {error != null && <RefusalLine error={error} />}
+        <ErrorLine error={error} />
         <Button
           disabled={
             pending ||

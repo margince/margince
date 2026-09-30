@@ -81,6 +81,7 @@ var cannotReachIdentity = gatekit.Waive(map[string]string{
 	"internal/modules/dealrooms/store_public.go":       "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/dealrooms/room_write.go":         "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first. It arrived here from namesTheSeatRatherThanOffersIt, where it did NOT belong: a steward is somebody a buyer is pointed at for help, so the seat is being offered rather than named, and the entry was recording the defect (a deactivated colleague could be one) instead of a reason. Fixed in issue 2596",
 	"internal/modules/capture/owneridentitystore.go":   "capture cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/capture/registry_connections.go": "capture cannot import identity (ADR-0054 §3); the predicate must move tier first. This one is the poll's own refusal to read a departed seat's mailbox — the SECOND lock on it, beside the cascade that disconnects the connection on deactivation (identity/capturewithdrawal.go). It is deliberately both: the cascade is what ends the connection, and this is what makes a row the cascade missed — one written before it existed, or flipped back by hand — stop being polled anyway. A connection outliving its seat means a former colleague's mail keeps arriving, which is the one thing an operator who deactivated them is entitled to assume stopped",
 	"internal/modules/contacts/counterpartyname.go":    "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/contacts/domainadmissionlist.go": "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first. It decides which unanswered domain questions the operator's list carries: one whose owner can no longer sign in has no queue left to reach, so liveness is exactly the question being asked",
 	"internal/modules/contacts/leadrouting.go":         "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
@@ -130,7 +131,7 @@ var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
 	"internal/modules/identity/actoridentity.go": "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",
 	"internal/modules/identity/seatnames.go":     "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",
 	"internal/modules/identity/userlocale.go":    "reads a seat's locale to format a stored string; the formatting of last month's number does not depend on whether they still work here",
-	"internal/modules/identity/users.go":         "ChangeUserRole reads what the target IS because an agent seat holds no role; changing a deactivated member's role is how an admin prepares a reactivation",
+	"internal/modules/identity/userrole.go":      "ChangeUserRole reads what the target IS because an agent seat holds no role; changing a deactivated member's role is how an admin prepares a reactivation",
 })
 
 // appUserAlias finds what app_user is called in a statement, so a sibling
@@ -161,7 +162,6 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	defer deliberatelyNotLiveness.AssertAllMatched(t)
 	defer namesTheSeatRatherThanOffersIt.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
 	var copies, activatableCopies, halves []string
 	judged, constrained := 0, 0
 	for _, path := range handWrittenGoSources(t) {
@@ -171,7 +171,7 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 		if slash == liveMemberOwner || filepath.Base(path) == "livemember_test.go" {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -251,7 +251,7 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 // Every call site names a table alias it wrote itself, and this says so.
 func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	var findings []string
 	calls := 0
 	for _, path := range handWrittenGoSources(t) {
@@ -261,7 +261,7 @@ func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -816,7 +816,7 @@ func read() string {
 
 func TestTheLiveMemberDetectorSeesWhatItClaimsTo(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, tc := range liveMemberProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			head := "package probe\n"

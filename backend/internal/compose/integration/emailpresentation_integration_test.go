@@ -40,7 +40,7 @@ const contractPathForLists = "../../../api/crm.yaml"
 func logEmailActivity(author context.Context, t *testing.T, e *Env, contact ids.UUID, subject, body string) ids.ActivityID {
 	t.Helper()
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -303,8 +303,10 @@ func TestEmailSummaryRidesEveryActivityRow(t *testing.T) {
 	if got.EmailSummary.Preview == nil || *got.EmailSummary.Preview != "Können wir Dienstag sprechen?" {
 		t.Errorf("preview = %v, want the sentence without the sign-off", got.EmailSummary.Preview)
 	}
-	if got.EmailSummary.Move != crmcontracts.EmailSummaryMoveNone {
-		t.Errorf("move = %v on an unclassified message; direction alone establishes no obligation", got.EmailSummary.Move)
+	// Unanswered inbound mail is owed until something answers it, judged or
+	// not: the waiting lane shows it, so the badge says the same.
+	if got.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
+		t.Errorf("move = %v on an unanswered inbound message the waiting lane would show", got.EmailSummary.Move)
 	}
 
 	subject := "a call"
@@ -648,7 +650,7 @@ func assertBadge(
 	}
 
 	page, _, err := e.Activities.ListActivities(reader, activities.ListActivitiesInput{
-		EntityType: strPtr("contact"), EntityID: &contact,
+		EntityType: StrPtr("contact"), EntityID: &contact,
 	})
 	if err != nil {
 		t.Fatalf("listing the contact's timeline: %v", err)

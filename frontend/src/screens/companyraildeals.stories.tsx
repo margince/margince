@@ -18,7 +18,7 @@ import {
 // Deals tab rather than the create verb.
 
 const meta: Meta = {
-  title: "Records/Company rail/Deals",
+  title: "Records/Company 360/Rail/Deals",
   parameters: { layout: "padded" },
 };
 export default meta;

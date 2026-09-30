@@ -23,13 +23,14 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -50,13 +51,12 @@ func declaredSentinels(t *testing.T) map[string]bool {
 		t.Fatalf("reading %s: %v", apperrorsDir, err)
 	}
 	found := map[string]bool{}
-	fset := token.NewFileSet()
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(apperrorsDir, name), nil, 0)
+		file, err := gatekit.ParseFile(filepath.Join(apperrorsDir, name), 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", name, err)
 		}
@@ -89,8 +89,7 @@ func declaredSentinels(t *testing.T) map[string]bool {
 // registry, so it cannot be satisfied by a copy of the table kept here.
 func mappedSentinels(t *testing.T) map[string]bool {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, httperrSource, nil, 0)
+	file, err := gatekit.ParseFile(httperrSource, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", httperrSource, err)
 	}

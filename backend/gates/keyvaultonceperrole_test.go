@@ -30,8 +30,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path"
 	"path/filepath"
@@ -60,7 +58,6 @@ func TestTheKeyVaultIsResolvedOncePerRole(t *testing.T) {
 	t.Parallel()
 	var resolvers, roleCalls []string
 	callsPerRole := map[string]int{}
-	fset := token.NewFileSet()
 	err := filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") {
 			return err
@@ -73,7 +70,7 @@ func TestTheKeyVaultIsResolvedOncePerRole(t *testing.T) {
 		if strings.HasPrefix(p, keyvaultDir+"/") {
 			return nil
 		}
-		file, err := parser.ParseFile(fset, p, nil, 0)
+		file, err := gatekit.ParseFile(p, 0)
 		if err != nil {
 			return err
 		}

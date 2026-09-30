@@ -275,7 +275,7 @@ describe("a reader can put a row at the top of their own day", () => {
     ]);
     renderWorklist();
 
-    await screen.findByText(/12 addresses to decide on/);
+    await screen.findByText(/12 addresses to review/);
     // A group's id is synthetic and minted by the fold, so a pin on one names a
     // group that will not exist under that key on the next read — the reader
     // would press it, and their day would look unchanged forever.

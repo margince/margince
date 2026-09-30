@@ -22,7 +22,7 @@ var searchRecordsCopy = toolCopy{
 
 var listRecordsCopy = toolCopy{
 	Purpose: "Enumerate the contacts, companies, deals, leads or projects that meet exact " +
-		"conditions — every deal in one pipeline, the leads one contact owns, the projects still " +
+		"conditions — every deal in one pipeline, the leads one rep owns, the projects still " +
 		"being delivered.",
 	Limits: "It narrows only by the filters this workspace publishes for that record_type, which " +
 		"the schema lists per type, and it answers ONE page: the set continues past it.",
@@ -128,6 +128,19 @@ var relinkActivitiesCopy = toolCopy{
 	Limits:  "Each id must be visible and writable to you. A project destination needs a human.",
 	Instead: "relink_thread moves one conversation.",
 	Retain:  "The answer lists the ids moved.",
+}
+
+var bulkUpdateRecordsCopy = toolCopy{
+	Purpose: "Hand up to 500 contacts, companies or deals to one owner, archive them, or add them " +
+		"to or take them off a Shortlist, in one change — or undo such a change.",
+	Limits: "Call mode preview first and show the user what it says: how many records change, " +
+		"which are left alone and why, and the sample rows. Execute only after they agree. Each " +
+		"record is changed only if it still has the version you sent and you may change it. To " +
+		"undo, pass the batch_id to undo_preview, show the user the answer, and call undo after " +
+		"they agree; a change is undone once, and records changed since are left alone.",
+	Instead: "update_record and archive_record change one record.",
+	Retain: "Above 10 records, execute and undo need the confirm_token their preview answered; " +
+		"it is good once. Keep batch_id from the answer: undo names the change by it.",
 }
 
 var archiveRecordCopy = toolCopy{

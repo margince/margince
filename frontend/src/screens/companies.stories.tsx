@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CompaniesScreen, CompanyScreen } from "./companies";
+import { CompanyScreen } from "./companies";
 import {
   installFetchStub,
   jsonResponse,
@@ -10,11 +10,11 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// CompaniesScreen (list) and CompanyScreen (360 Overview) both read through
-// the api client on mount — fixtures mirror companies.test.tsx's `company`
-// plus the dormant-strength default the Overview tab always fires.
+// CompanyScreen reads through the api client on mount — fixtures mirror
+// companies.test.tsx's `company` plus the dormant-strength default the Overview
+// tab always fires.
 const meta: Meta = {
-  title: "Records/Companies",
+  title: "Records/Company 360/Page",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -105,24 +105,6 @@ const facts = [
 // Every story below states its own ADDRESS. The company page reads its open
 // tab off the route (useCompanyTab), so a story that left the hash alone would
 // draw whichever tab the story before it happened to set.
-export const CompaniesList: Story = {
-  render: () => {
-    globalThis.location.hash = "#/companies";
-    installFetchStub({
-      "GET /me": meRoute({ company: ["read", "update"] }),
-      "GET /companies": () =>
-        jsonResponse({
-          data: [company],
-          page: { next_cursor: null, has_more: false },
-        }),
-    });
-    return (
-      <StoryProviders>
-        <CompaniesScreen />
-      </StoryProviders>
-    );
-  },
-};
 
 // The composite read that now serves the whole page. An account with a warm
 // contact, an open deal and an overdue task — the state the view was

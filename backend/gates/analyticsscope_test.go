@@ -21,8 +21,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -52,6 +50,9 @@ var narrowingCalls = map[string]bool{
 	// whole installation. That is how a rep's Pipeline disagreed with their own
 	// Forecast.
 	"AnalyticsPopulationClause": true,
+	// The owner narrowing is the population's half for an install-wide spec,
+	// and a door that skipped it would answer a breakdown by every owner.
+	"ownerBreakdownClause": true,
 }
 
 // composesItsOwnNarrowing ratifies the spec-taking functions that legitimately
@@ -83,7 +84,6 @@ func TestEveryPopulationsNarrowingsAreComposedInOnePlace(t *testing.T) {
 	t.Parallel()
 	defer composesItsOwnNarrowing.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
 	var offences []string
 	judged := 0
 	for _, path := range handWrittenGoSources(t) {
@@ -94,7 +94,7 @@ func TestEveryPopulationsNarrowingsAreComposedInOnePlace(t *testing.T) {
 		if !strings.HasPrefix(where, "internal/compose/") || strings.HasSuffix(where, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", where, err)
 		}

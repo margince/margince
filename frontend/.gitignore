@@ -4,6 +4,11 @@ dist/
 test-results/
 playwright-report/
 coverage
+# The unit-screen lane's own report, for the reason `coverage` above is listed:
+# it is generated, and it is written locally the moment anybody runs
+# `make fe-test-ext FE_COVERAGE=1`. Listed rather than left to the first
+# reviewer to notice — the directory carries an HTML tree as well as the lcov.
+coverage-ext
 # The shard lane's two working directories: .vitest-reports/ is the blob a
 # `make fe-unit FE_SHARD=k/N` run writes and `--merge-reports` reads back, and
 # it must hold BLOBS AND NOTHING ELSE — the merge parses every file in it. The

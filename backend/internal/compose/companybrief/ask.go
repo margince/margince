@@ -71,13 +71,13 @@ func ParseQuestion(raw crmcontracts.CompanyQuestion) (crmcontracts.CompanyQuesti
 // so the grounding rules are stated once and cannot drift between questions.
 const askSystem = `You answer one question about one account in a salesperson's CRM, from a JSON summary of that account.
 Return ONLY a JSON object: {"sentences":[{"text":"...","evidence":[{"entity_type":"deal|activity|contact|company","entity_id":"..."}]}]}.
-Answer in one to four sentences, plainly, in the reader's second contact where natural.
+Answer in one to four sentences, plainly, addressing the reader as "you" where natural.
 State only what the summary states. Never infer a cause, a mood, an intent or a next step it does not contain.
 Cite the ids the summary gave you; a sentence about the account itself cites the company.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
 Write one claim per sentence, and cite the ONE record that sentence is about. Three records worth naming are three sentences.
-If the summary does not answer the question, return an empty sentences array rather than a sentence that talks around it.
-If the summary names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
+If the summary names sections_omitted, leave those subjects out of the answer and say nothing about them at all — the reader is not allowed to see them. A withheld section does not make the question unanswerable: answer from what remains.
+If what remains does not answer the question, return an empty sentences array rather than a sentence that talks around it.`
 
 // The answer is filed against the account and read by whoever asks the same
 // question next, so it takes the installation's language like the brief above.
@@ -115,7 +115,7 @@ func Answer(
 	if err != nil {
 		return nil, "", err
 	}
-	deterministic := deterministicAnswer(question, companyID, in)
+	deterministic := deterministicAnswer(question, companyID, in, lang)
 	if lane == nil {
 		return deterministic, crmcontracts.WrittenByDeterministic, nil
 	}
@@ -164,15 +164,16 @@ func answerWithModel(
 //
 // Unexported on purpose, and reached only through Answer, which validates its
 // question first — so a question this switch does not handle cannot arrive.
-func deterministicAnswer(question crmcontracts.CompanyQuestion, companyID string, in Input) []Sentence {
+func deterministicAnswer(question crmcontracts.CompanyQuestion, companyID string, in Input, lang string) []Sentence {
+	say := companyPhrasesFor(lang)
 	var answered []Sentence
 	switch question {
 	case askWhatsOpen:
-		answered = openAnswer(in)
+		answered = openAnswer(in, say)
 	case askMeetingPrep:
-		answered = prepAnswer(companyID, in)
+		answered = prepAnswer(companyID, in, say)
 	case askWhatsChanged:
-		answered = changedAnswer(in)
+		answered = changedAnswer(in, say)
 	default:
 		// Unreachable: Answer validates against askInstruction, and
 		// TestEveryPreparedQuestionCarriesItsOwnInstruction reads the contract's
@@ -190,49 +191,52 @@ func deterministicAnswer(question crmcontracts.CompanyQuestion, companyID string
 // each task gets its own sentence and its own citation. The count is not
 // dropped when the list is short: it carries the money — the pipeline total and
 // what the account has won — which no per-deal line states.
-func openAnswer(in Input) []Sentence {
+func openAnswer(in Input, say spoken) []Sentence {
 	sentences := make([]Sentence, 0, 2*listedRecords+2)
 	if len(in.OpenDeals) > 0 {
-		sentences = append(sentences, Sentence{Text: pipelineLine(in), Evidence: leadDealEvidence(in)})
+		sentences = append(sentences, Sentence{Text: pipelineLine(in, say), Evidence: leadDealEvidence(in)})
 		sentences = append(sentences,
-			perRecordSentences(in.OpenDeals, citeDeal, dealID, openDealLine)...)
+			perRecordSentences(in.OpenDeals, citeDeal, dealID,
+				func(deal DealIn) string { return openDealLine(deal, say) })...)
 	}
 	if len(in.OpenTasks) > 0 {
 		// A single task needs no count in front of it: its own sentence names
 		// it and says when it is due, which is everything the count would add.
 		if len(in.OpenTasks) > 1 {
-			sentences = append(sentences, openTasksLine(in.OpenTasks))
+			sentences = append(sentences, openTasksLine(in.OpenTasks, say))
 		}
 		sentences = append(sentences,
-			perRecordSentences(in.OpenTasks, citeActivity, taskID, openTaskLine)...)
+			perRecordSentences(in.OpenTasks, citeActivity, taskID,
+				func(task TaskIn) string { return openTaskLine(task, say) })...)
 	}
 	return sentences
 }
 
-func prepAnswer(companyID string, in Input) []Sentence {
+func prepAnswer(companyID string, in Input, say spoken) []Sentence {
 	sentences := make([]Sentence, 0, listedRecords+4)
 	sentences = append(sentences, Sentence{
-		Text:     identityLine(in),
+		Text:     identityLine(in, say),
 		Evidence: []Evidence{{EntityType: citeCompany, EntityID: companyID}},
 	})
 	if len(in.Contacts) > 0 {
 		if len(in.Contacts) > 1 {
 			sentences = append(sentences, Sentence{
-				Text: plural(len(in.Contacts), "known contact") + ".",
+				Text: countPhrase(len(in.Contacts), say.say(floor.KnownContactOne), say.say(floor.KnownContactMany)) + ".",
 				// The count names nobody, so it cites the contact the list
 				// starts with and gives the reader somewhere to open.
 				Evidence: []Evidence{{EntityType: citeContact, EntityID: in.Contacts[0].ID}},
 			})
 		}
 		sentences = append(sentences,
-			perRecordSentences(in.Contacts, citeContact, contactID, contactLine)...)
+			perRecordSentences(in.Contacts, citeContact, contactID,
+				func(contact NamedIn) string { return contactLine(contact, say) })...)
 	}
 	if len(in.OpenDeals) > 0 {
-		sentences = append(sentences, Sentence{Text: pipelineLine(in), Evidence: leadDealEvidence(in)})
+		sentences = append(sentences, Sentence{Text: pipelineLine(in, say), Evidence: leadDealEvidence(in)})
 	}
 	if len(in.Recent) > 0 {
 		sentences = append(sentences, Sentence{
-			Text:     lastTouchLine(in.Recent[0]),
+			Text:     lastTouchLine(in.Recent[0], say),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: in.Recent[0].ID}},
 		})
 	}
@@ -242,7 +246,7 @@ func prepAnswer(companyID string, in Input) []Sentence {
 // changedAnswer walks the timeline newest-first. Each entry is its own
 // sentence citing itself, so the reader can open the one they care about
 // instead of trusting a rolled-up count.
-func changedAnswer(in Input) []Sentence {
+func changedAnswer(in Input, say spoken) []Sentence {
 	const mostRecent = 3
 	sentences := make([]Sentence, 0, mostRecent)
 	for i, act := range in.Recent {
@@ -250,7 +254,7 @@ func changedAnswer(in Input) []Sentence {
 			break
 		}
 		sentences = append(sentences, Sentence{
-			Text:     lastTouchLine(act),
+			Text:     lastTouchLine(act, say),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: act.ID}},
 		})
 	}
@@ -261,8 +265,8 @@ func taskID(task TaskIn) string { return task.ID }
 
 func contactID(contact NamedIn) string { return contact.ID }
 
-func contactLine(contact NamedIn) string {
-	return fmt.Sprintf("Known contact: %s.", contact.Name)
+func contactLine(contact NamedIn, say spoken) string {
+	return fmt.Sprintf(say.say(floor.KnownContactLine), contact.Name)
 }
 
 // openTasksLine counts the open tasks and anchors the count on the one that is
@@ -271,11 +275,12 @@ func contactLine(contact NamedIn) string {
 // The count is the TRUE total even when the per-task sentences below it stop at
 // listedRecords, because a reader told "5 open tasks" who has nine is worse off
 // than one told nothing.
-func openTasksLine(tasks []TaskIn) Sentence {
+func openTasksLine(tasks []TaskIn, say spoken) Sentence {
 	earliest := earliestDue(tasks)
-	text := plural(len(tasks), "open task") + "."
-	if due := shortDate(earliest.Due); due != "" {
-		text = fmt.Sprintf("%s, the earliest due %s.", plural(len(tasks), "open task"), due)
+	counted := countPhrase(len(tasks), say.say(floor.OpenTaskOne), say.say(floor.OpenTaskMany))
+	text := counted + "."
+	if due := shortDate(earliest.Due, say); due != "" {
+		text = fmt.Sprintf(say.say(floor.TasksEarliestDue), counted, due)
 	}
 	return Sentence{Text: text, Evidence: []Evidence{{EntityType: citeActivity, EntityID: earliest.ID}}}
 }
@@ -296,17 +301,17 @@ func earliestDue(tasks []TaskIn) TaskIn {
 	return earliest
 }
 
-func openTaskLine(task TaskIn) string {
+func openTaskLine(task TaskIn, say spoken) string {
 	// The subject is quoted for the same reason an activity's is: a task can be
 	// raised from mail this workspace did not write, and it must read as theirs.
-	if due := shortDate(task.Due); due != "" {
-		return fmt.Sprintf("Open task: %q, due %s.", task.Name, due)
+	if due := shortDate(task.Due, say); due != "" {
+		return fmt.Sprintf(say.say(floor.OpenTaskDue), task.Name, due)
 	}
-	return fmt.Sprintf("Open task: %q.", task.Name)
+	return fmt.Sprintf(say.say(floor.OpenTaskNamed), task.Name)
 }
 
-func openDealLine(deal DealIn) string {
-	line := "Open deal: " + deal.Name
+func openDealLine(deal DealIn, say spoken) string {
+	line := fmt.Sprintf(say.say(floor.OpenDealNamed), deal.Name)
 	if deal.Stage != "" {
 		line += ", " + deal.Stage
 	}
@@ -318,7 +323,7 @@ func openDealLine(deal DealIn) string {
 		line += ", " + amount + " " + deal.Currency
 	}
 	if deal.Stalled {
-		line += ", stalled"
+		line += ", " + say.say(floor.DealStalledMark)
 	}
 	return line + "."
 }

@@ -1,0 +1,22 @@
+name: overnight_sweep_one_quiet_deal_is_not_the_book
+task: agent_loop
+site: overnight_at_risk_sweep
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  trigger_ref: overnight_at_risk_sweep:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202
+  grounding:
+    - source_id: deal:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e11
+      content: >-
+        Pump retrofit — last activity 2026-06-30; no next step recorded.
+expect:
+  outcome: accepted
+  answer: whats_slipping_this_week
+  near_misses:
+    - catch_me_up_on
+    - read_record
+    - log_activity
+  judge: none
+  judge_none_reason: >
+    The answer is the turn's first tool call, which the check reads off the
+    replayed loop. The rubric asked for that call and graded nothing else.

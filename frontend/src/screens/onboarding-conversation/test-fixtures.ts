@@ -24,7 +24,11 @@ export function run(
 
 export const entityQuestion: ConversationQuestion = {
   id: "clarify-entity",
-  i18nKey: "ob.conv.clarify.entity",
+  i18nKey: "ob.conv.clarify.question",
+  params: {
+    question:
+      "The site names more than one legal entity. Which one is this installation for?",
+  },
   options: [
     { value: "acme-gmbh", label: "Acme GmbH" },
     { value: "acme-holding", label: "Acme Holding SE" },

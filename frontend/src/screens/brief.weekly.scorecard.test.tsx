@@ -116,6 +116,71 @@ describe("the weekly scorecard", () => {
     ).toBeGreaterThan(0);
   });
 
+  // A week with no open deal has no denominator, so the three coverage cards
+  // have nothing to be a share OF. "0 of 0 open deals" states a rate nobody
+  // could have scored, and the bar under it draws a share of nothing.
+  it("says there were no open deals rather than scoring a share of none", () => {
+    render(
+      <ScorecardPanel
+        scorecard={{
+          deal: {
+            ...dealBlock,
+            open: 0,
+            with_next_step: 0,
+            multi_threaded: 0,
+            close_date_sound: 0,
+          },
+        }}
+      />,
+    );
+
+    // One arm for all three: the strip is read across, and three spellings of
+    // one absence would read as three different weeks.
+    expect(
+      screen.getAllByText(en["brief.weekly.scorecard.noOpen"]),
+    ).toHaveLength(3);
+    expect(
+      screen.queryByText(
+        en["brief.weekly.scorecard.ofOpen"].replace("{total}", "0"),
+      ),
+    ).toBeNull();
+    expect(
+      screen.getByTestId("scorecard-deal").querySelector(".stat-card-meter"),
+    ).toBeNull();
+  });
+
+  // THE BREACH IS THE READING. A card that led with the leads answered in
+  // target put the reassurance in the figure slot and left the week's one
+  // actionable number as a footnote.
+  it("leads the target card with the breaches, not with the answers", () => {
+    render(<ScorecardPanel scorecard={{ lead: leadBlock }} />);
+
+    const card = screen
+      .getByText(en["brief.weekly.scorecard.answeredInTarget"])
+      .closest(".stat-card");
+    expect(card?.querySelector(".stat-card-value")?.textContent).toBe("3");
+    expect(card?.querySelector(".stat-card-detail")?.textContent).toBe(
+      en["brief.weekly.scorecard.answeredDetail"].replace("{count}", "9"),
+    );
+  });
+
+  // Zero breaches is a finding, and "0 answered in target" would be its
+  // opposite: the line under the figure has to say the week was clean rather
+  // than count the exceptions that were not there.
+  it("says every lead was answered in target when none breached", () => {
+    render(
+      <ScorecardPanel scorecard={{ lead: { ...leadBlock, breached: 0 } }} />,
+    );
+
+    const card = screen
+      .getByText(en["brief.weekly.scorecard.answeredInTarget"])
+      .closest(".stat-card");
+    expect(card?.querySelector(".stat-card-value")?.textContent).toBe("0");
+    expect(card?.querySelector(".stat-card-detail")?.textContent).toBe(
+      en["brief.weekly.scorecard.allInTarget"],
+    );
+  });
+
   it("says the meeting counts are a floor only when history is actually missing", () => {
     render(<ScorecardPanel scorecard={{ lead: leadBlock }} />);
     expect(

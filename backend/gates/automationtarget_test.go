@@ -32,12 +32,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // actionProducerRoots are the trees a workflow handler can be written in.
@@ -52,13 +52,13 @@ func TestNoHandlerTargetsAnActivityAwayFromItsTrigger(t *testing.T) {
 	t.Parallel()
 	seen := 0
 	for _, root := range actionProducerRoots {
-		fset := token.NewFileSet()
+		fset := gatekit.SourceFileSet()
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 				return err
 			}
-			file, perr := parser.ParseFile(fset, path, nil, 0)
+			file, perr := gatekit.ParseFile(path, 0)
 			if perr != nil {
 				return perr
 			}

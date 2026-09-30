@@ -7,10 +7,17 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { EvidenceMark } from "./evidencemark";
+import { Heading } from "./heading";
+import { armHoverIntent } from "./hoverintent-testing";
+import { Modal } from "./modal";
 
+// Hover intent is inert here unless a case arms it (vitest.setup.ts), so a
+// click alone decides whether the panel is open. The cases that arm it wait for
+// the settle and leave the trigger before they end.
+//
 // The one provenance affordance. What it has to get right:
 //
 //   - a value a CONTACT typed carries no mark, or the underline stops meaning
@@ -45,9 +52,11 @@ describe("evidence mark", () => {
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
     await userEvent.click(trigger);
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    const panel = screen.getByRole("region", {
-      name: /Where "Fleet retrofits without downtime" came from/,
+    await waitFor(() => {
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    });
+    const panel = await screen.findByRole("region", {
+      name: /Where “Fleet retrofits without downtime” came from/,
     });
     expect(panel.textContent).toContain("We retrofit fleets without downtime");
     expect(panel.textContent).toContain("https://brandt.example");
@@ -78,12 +87,43 @@ describe("evidence mark", () => {
 
     const trigger = screen.getByRole("button", { name: /1998/ });
     await userEvent.click(trigger);
-    expect(screen.getByRole("region")).toBeTruthy();
+    await screen.findByRole("region");
 
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("region")).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByRole("region")).toBeNull();
+    });
     // Escape must not drop the reader at the top of the document.
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it("leaves Escape to a dialog raised over it", async () => {
+    const onDialogClose = vi.fn();
+    const page = (dialogOpen: boolean) => (
+      <LocaleProvider initial="en">
+        <EvidenceMark
+          value="1998"
+          source={{
+            provenance: { kind: "agent", agent: "capture" },
+            snippet: "Founded in 1998",
+          }}
+        />
+        <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+          <Heading size="large" id="edit">
+            Edit deal
+          </Heading>
+        </Modal>
+      </LocaleProvider>
+    );
+    const user = userEvent.setup();
+    const { rerender } = render(page(false));
+    await user.click(screen.getByRole("button", { name: /1998/ }));
+    rerender(page(true));
+
+    await user.keyboard("{Escape}");
+
+    expect(onDialogClose).toHaveBeenCalledOnce();
+    expect(screen.getByText("Founded in 1998")).toBeTruthy();
   });
 
   it("offers no full-history link when there is nowhere to send the reader", async () => {
@@ -94,6 +134,10 @@ describe("evidence mark", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /1998/ }));
+    // The PANEL FIRST, then the absence inside it. Asserting the link is gone
+    // straight after the click passes just as well over a panel that never
+    // opened, which is the one outcome this case must not read as success.
+    await screen.findByRole("region");
     expect(screen.queryByText("Full history")).toBeNull();
   });
 
@@ -111,12 +155,6 @@ describe("evidence mark", () => {
     const trigger = screen.getByRole("button", { name: /1998/ });
     await userEvent.click(trigger);
     await userEvent.click(screen.getByText("Full history"));
-    // The pointer leaves, which is what a reader who has navigated away has
-    // done. Without it the hover-intent poll this click armed is still running
-    // on the real clock — a 25ms tick with a 260ms ceiling that settles
-    // whatever the pointer is doing — and it re-opens the panel a moment after
-    // the assertion below, or a moment before it on a loaded machine.
-    await userEvent.unhover(trigger);
 
     expect(opened).toBe(true);
     // The panel closes on the way out, so the reader does not return to a
@@ -145,6 +183,7 @@ describe("evidence mark", () => {
   });
 
   it("leaves focus on the value when the panel opened under a settled pointer", async () => {
+    armHoverIntent();
     show(
       <EvidenceMark
         value="1998"
@@ -198,6 +237,7 @@ describe("evidence mark", () => {
 // A claim is checked by resting on it: the receipt opens under a pointer that
 // has settled on the value and closes once it has left, without a click.
 it("opens under a settled pointer and closes when it leaves", async () => {
+  armHoverIntent();
   show(
     <EvidenceMark
       value="1998"
@@ -215,4 +255,30 @@ it("opens under a settled pointer and closes when it leaves", async () => {
   await waitFor(() => expect(screen.getByRole("region")).toBeTruthy());
   fireEvent.pointerLeave(mark);
   await waitFor(() => expect(screen.queryByRole("region")).toBeNull());
+});
+
+// A mark beside its value shows a word ("bought", "read") rather than the value,
+// and a voice user targets a control by the words on screen: the name has to
+// open with that word (WCAG 2.5.3), then say which value it explains.
+describe("evidence mark beside its value", () => {
+  const source = {
+    provenance: { kind: "connector" as const, connector: "Surfe" },
+  };
+  for (const [locale, word] of [
+    ["en", "bought"],
+    ["de", "gekauft"],
+  ] as const) {
+    it(`opens its name with the word it shows (${locale})`, () => {
+      render(
+        <LocaleProvider initial={locale}>
+          <EvidenceMark value={word} subject="Head of Sales" source={source} />
+        </LocaleProvider>,
+      );
+      const trigger = screen.getByRole("button");
+      const name = trigger.getAttribute("aria-label") ?? "";
+      expect(trigger.textContent).toBe(word);
+      expect(name.startsWith(word)).toBe(true);
+      expect(name).toContain("Head of Sales");
+    });
+  }
 });

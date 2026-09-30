@@ -81,7 +81,7 @@ function QueueFrame({ day }: Readonly<{ day?: Worklist }>) {
 }
 
 const meta: Meta<typeof BriefQueue> = {
-  title: "Shell/Home work queue",
+  title: "Shell/Home/Work queue",
   component: BriefQueue,
   render: () => <QueueFrame />,
 };

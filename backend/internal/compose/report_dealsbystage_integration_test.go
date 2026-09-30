@@ -15,6 +15,7 @@ package compose
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -95,18 +96,12 @@ func TestDealsByStageWeightedDerivationReconcilesExactly(t *testing.T) {
 	}
 }
 
-// A report measures the reader's own population, and the drill-through returns
-// the SAME set the aggregate counted.
+// The board's column totals measure every deal the reader may see, which is
+// the set the board draws as cards, and the drill-through opens that same set.
 //
-// The read model is unchanged and still worth stating: deals are readable by
-// every seat holding the deal grant, whatever the tier — row scope hides
-// nothing here. What narrows a REPORT is the population, which is a different
-// question and the one an own-scoped rep's Pipeline was not asking. It counted
-// the whole installation while their Forecast counted their own.
-//
-// The half that must not drift is the second: whatever the aggregate measured,
-// the drill-through opens exactly that.
-func TestDealsByStageMeasuresTheReadersOwnPopulation(t *testing.T) {
+// Deals are readable by every seat holding the deal grant, whatever the tier.
+// A total narrowed to the reader's own work printed "1 deal" above eight cards.
+func TestDealsByStageMeasuresEveryDealTheReaderMaySee(t *testing.T) {
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, int64p(10000), stringp("commit"))
 	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, int64p(20000), stringp("commit"))
@@ -115,12 +110,11 @@ func TestDealsByStageMeasuresTheReadersOwnPopulation(t *testing.T) {
 	result := e.runReport(rep, t, "deals-by-stage",
 		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"},{"fn":"sum","field":"weighted_amount_minor","as":"weighted_minor"}]}`)
 	row := dealsByStageRow(t, result, e.stages[60].String())
-	if got := wireInt(t, row, "deals"); got != 1 {
-		t.Fatalf("deals = %d, want the rep's own 1 — a count of 2 is the whole "+
-			"installation answered to a seat measuring their own work", got)
+	if got := wireInt(t, row, "deals"); got != 2 {
+		t.Fatalf("deals = %d, want both cards the rep's board draws", got)
 	}
-	if want := weightedMinor(10000, 60); wireInt(t, row, "weighted_minor") != want {
-		t.Errorf("weighted_minor = %d, want %d (their own deal in the stage)",
+	if want := weightedMinor(10000, 60) + weightedMinor(20000, 60); wireInt(t, row, "weighted_minor") != want {
+		t.Errorf("weighted_minor = %d, want %d (both deals in the stage)",
 			wireInt(t, row, "weighted_minor"), want)
 	}
 
@@ -129,8 +123,22 @@ func TestDealsByStageMeasuresTheReadersOwnPopulation(t *testing.T) {
 		t.Fatalf("aggregate row has no derivation_url: %+v", row)
 	}
 	derivation := e.explainReport(rep, t, "deals-by-stage", handle)
-	if derivation.TotalRows != 1 {
-		t.Errorf("own-scope drill-through total = %d, want the 1 deal the aggregate counted", derivation.TotalRows)
+	if derivation.TotalRows != 2 {
+		t.Errorf("drill-through total = %d, want the 2 deals the aggregate counted", derivation.TotalRows)
+	}
+}
+
+// The board's owner dial is an owner filter: naming a colleague is refused for
+// a rep, as on every install-wide report.
+func TestDealsByStageRefusesARepsOwnerDialOnAColleague(t *testing.T) {
+	e := setupForecast(t)
+	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, int64p(20000), stringp("commit"))
+
+	rep := e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn)
+	status, body := e.runReportStatus(rep, t, "deals-by-stage",
+		fmt.Sprintf(`{"group_by":["stage_id","currency"],"filters":{"owner_id":%q}}`, e.Rep3.String()))
+	if status != http.StatusForbidden {
+		t.Fatalf("a rep's owner dial on a colleague got %d %s, want 403", status, body)
 	}
 }
 
@@ -171,19 +179,18 @@ func TestDealsByStageCountsAnUnownedDealForATeamManager(t *testing.T) {
 	}
 }
 
-// A deal owned by a real seat who shares none of the caller's teams stays
-// OUT of a team manager's population — the fix above widens for UNOWNED rows
-// only, never for somebody else's specifically-claimed work.
-func TestDealsByStageStillExcludesAnUnrelatedSeatsDealForATeamManager(t *testing.T) {
+// A deal owned by a seat who shares none of the caller's teams is on the
+// manager's board, so it is in the board's totals too.
+func TestDealsByStageCountsAnUnrelatedSeatsDealForATeamManager(t *testing.T) {
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, int64p(20000), stringp("commit"))
 
 	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
 	result := e.runReport(manager, t, "deals-by-stage",
 		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"}]}`)
-	if len(result.Rows) != 0 {
-		t.Fatalf("Team1 manager saw %d rows, want 0 — Rep3's Team2 deal must stay "+
-			"outside Team1's population", len(result.Rows))
+	row := dealsByStageRow(t, result, e.stages[60].String())
+	if got := wireInt(t, row, "deals"); got != 1 {
+		t.Fatalf("deals = %d, want Rep3's Team2 deal — it is a card on this manager's board", got)
 	}
 }
 

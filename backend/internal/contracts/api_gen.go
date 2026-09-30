@@ -280,6 +280,36 @@ func (e ActivityDirection) Valid() bool {
 	}
 }
 
+// Defines values for ActivityInvitationStatus.
+const (
+	ActivityInvitationStatusCanceled       ActivityInvitationStatus = "canceled"
+	ActivityInvitationStatusCanceling      ActivityInvitationStatus = "canceling"
+	ActivityInvitationStatusConfirmed      ActivityInvitationStatus = "confirmed"
+	ActivityInvitationStatusNeedsAttention ActivityInvitationStatus = "needs_attention"
+	ActivityInvitationStatusPending        ActivityInvitationStatus = "pending"
+	ActivityInvitationStatusRescheduling   ActivityInvitationStatus = "rescheduling"
+)
+
+// Valid indicates whether the value is a known member of the ActivityInvitationStatus enum.
+func (e ActivityInvitationStatus) Valid() bool {
+	switch e {
+	case ActivityInvitationStatusCanceled:
+		return true
+	case ActivityInvitationStatusCanceling:
+		return true
+	case ActivityInvitationStatusConfirmed:
+		return true
+	case ActivityInvitationStatusNeedsAttention:
+		return true
+	case ActivityInvitationStatusPending:
+		return true
+	case ActivityInvitationStatusRescheduling:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityKind.
 const (
 	ActivityKindCall    ActivityKind = "call"
@@ -748,9 +778,37 @@ func (e AiActivityKind) Valid() bool {
 	}
 }
 
+// Defines values for AiEmbeddingsBindingThinkingLevel.
+const (
+	AiEmbeddingsBindingThinkingLevelDefault AiEmbeddingsBindingThinkingLevel = "default"
+	AiEmbeddingsBindingThinkingLevelHigh    AiEmbeddingsBindingThinkingLevel = "high"
+	AiEmbeddingsBindingThinkingLevelLow     AiEmbeddingsBindingThinkingLevel = "low"
+	AiEmbeddingsBindingThinkingLevelMedium  AiEmbeddingsBindingThinkingLevel = "medium"
+	AiEmbeddingsBindingThinkingLevelMinimal AiEmbeddingsBindingThinkingLevel = "minimal"
+)
+
+// Valid indicates whether the value is a known member of the AiEmbeddingsBindingThinkingLevel enum.
+func (e AiEmbeddingsBindingThinkingLevel) Valid() bool {
+	switch e {
+	case AiEmbeddingsBindingThinkingLevelDefault:
+		return true
+	case AiEmbeddingsBindingThinkingLevelHigh:
+		return true
+	case AiEmbeddingsBindingThinkingLevelLow:
+		return true
+	case AiEmbeddingsBindingThinkingLevelMedium:
+		return true
+	case AiEmbeddingsBindingThinkingLevelMinimal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiModelRateLane.
 const (
 	AiModelRateLaneChat       AiModelRateLane = "chat"
+	AiModelRateLaneDecisions  AiModelRateLane = "decisions"
 	AiModelRateLaneEmbeddings AiModelRateLane = "embeddings"
 )
 
@@ -758,6 +816,8 @@ const (
 func (e AiModelRateLane) Valid() bool {
 	switch e {
 	case AiModelRateLaneChat:
+		return true
+	case AiModelRateLaneDecisions:
 		return true
 	case AiModelRateLaneEmbeddings:
 		return true
@@ -874,6 +934,39 @@ func (e AiProfileState) Valid() bool {
 	}
 }
 
+// Defines values for AiProviderKeyTestResultReason.
+const (
+	AiProviderKeyTestResultReasonAuthFailed     AiProviderKeyTestResultReason = "auth_failed"
+	AiProviderKeyTestResultReasonNoEndpoint     AiProviderKeyTestResultReason = "no_endpoint"
+	AiProviderKeyTestResultReasonNoKey          AiProviderKeyTestResultReason = "no_key"
+	AiProviderKeyTestResultReasonNotPublished   AiProviderKeyTestResultReason = "not_published"
+	AiProviderKeyTestResultReasonProfileForbids AiProviderKeyTestResultReason = "profile_forbids"
+	AiProviderKeyTestResultReasonRateLimited    AiProviderKeyTestResultReason = "rate_limited"
+	AiProviderKeyTestResultReasonUnreachable    AiProviderKeyTestResultReason = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the AiProviderKeyTestResultReason enum.
+func (e AiProviderKeyTestResultReason) Valid() bool {
+	switch e {
+	case AiProviderKeyTestResultReasonAuthFailed:
+		return true
+	case AiProviderKeyTestResultReasonNoEndpoint:
+		return true
+	case AiProviderKeyTestResultReasonNoKey:
+		return true
+	case AiProviderKeyTestResultReasonNotPublished:
+		return true
+	case AiProviderKeyTestResultReasonProfileForbids:
+		return true
+	case AiProviderKeyTestResultReasonRateLimited:
+		return true
+	case AiProviderKeyTestResultReasonUnreachable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiRoutingProfile.
 const (
 	AiRoutingProfileCloudFrontier AiRoutingProfile = "cloud_frontier"
@@ -904,6 +997,33 @@ const (
 func (e AiRunSummaryCurrency) Valid() bool {
 	switch e {
 	case AiRunSummaryCurrencyUSD:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiTierBindingThinkingLevel.
+const (
+	AiTierBindingThinkingLevelDefault AiTierBindingThinkingLevel = "default"
+	AiTierBindingThinkingLevelHigh    AiTierBindingThinkingLevel = "high"
+	AiTierBindingThinkingLevelLow     AiTierBindingThinkingLevel = "low"
+	AiTierBindingThinkingLevelMedium  AiTierBindingThinkingLevel = "medium"
+	AiTierBindingThinkingLevelMinimal AiTierBindingThinkingLevel = "minimal"
+)
+
+// Valid indicates whether the value is a known member of the AiTierBindingThinkingLevel enum.
+func (e AiTierBindingThinkingLevel) Valid() bool {
+	switch e {
+	case AiTierBindingThinkingLevelDefault:
+		return true
+	case AiTierBindingThinkingLevelHigh:
+		return true
+	case AiTierBindingThinkingLevelLow:
+		return true
+	case AiTierBindingThinkingLevelMedium:
+		return true
+	case AiTierBindingThinkingLevelMinimal:
 		return true
 	default:
 		return false
@@ -997,6 +1117,27 @@ func (e AnalyticsMeasureFn) Valid() bool {
 	case AnalyticsMeasureFnAnalyticsP75:
 		return true
 	case AnalyticsMeasureFnAnalyticsSum:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AnalyticsRefusalDetailsKind.
+const (
+	AnalyticsRefusalDetailsKindInvalid     AnalyticsRefusalDetailsKind = "invalid"
+	AnalyticsRefusalDetailsKindPrivacy     AnalyticsRefusalDetailsKind = "privacy"
+	AnalyticsRefusalDetailsKindUnsupported AnalyticsRefusalDetailsKind = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsRefusalDetailsKind enum.
+func (e AnalyticsRefusalDetailsKind) Valid() bool {
+	switch e {
+	case AnalyticsRefusalDetailsKindInvalid:
+		return true
+	case AnalyticsRefusalDetailsKindPrivacy:
+		return true
+	case AnalyticsRefusalDetailsKindUnsupported:
 		return true
 	default:
 		return false
@@ -1102,6 +1243,7 @@ const (
 	ApprovalBundleMemberOutcomeDecided        ApprovalBundleMemberOutcome = "decided"
 	ApprovalBundleMemberOutcomeEffectFailed   ApprovalBundleMemberOutcome = "effect_failed"
 	ApprovalBundleMemberOutcomeExpired        ApprovalBundleMemberOutcome = "expired"
+	ApprovalBundleMemberOutcomeRefused        ApprovalBundleMemberOutcome = "refused"
 )
 
 // Valid indicates whether the value is a known member of the ApprovalBundleMemberOutcome enum.
@@ -1114,6 +1256,8 @@ func (e ApprovalBundleMemberOutcome) Valid() bool {
 	case ApprovalBundleMemberOutcomeEffectFailed:
 		return true
 	case ApprovalBundleMemberOutcomeExpired:
+		return true
+	case ApprovalBundleMemberOutcomeRefused:
 		return true
 	default:
 		return false
@@ -1372,6 +1516,42 @@ func (e AssistantProfileState) Valid() bool {
 	case AssistantProfileStateDevelopment:
 		return true
 	case AssistantProfileStateUnconfigured:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssuranceFindingCountSeverity.
+const (
+	AssuranceFindingCountSeverityAssuranceCountHigh   AssuranceFindingCountSeverity = "high"
+	AssuranceFindingCountSeverityAssuranceCountLow    AssuranceFindingCountSeverity = "low"
+	AssuranceFindingCountSeverityAssuranceCountMedium AssuranceFindingCountSeverity = "medium"
+)
+
+// Valid indicates whether the value is a known member of the AssuranceFindingCountSeverity enum.
+func (e AssuranceFindingCountSeverity) Valid() bool {
+	switch e {
+	case AssuranceFindingCountSeverityAssuranceCountHigh:
+		return true
+	case AssuranceFindingCountSeverityAssuranceCountLow:
+		return true
+	case AssuranceFindingCountSeverityAssuranceCountMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssuranceRunAcceptedStatus.
+const (
+	AssuranceRunAcceptedStatusAssuranceRunEnqueued AssuranceRunAcceptedStatus = "enqueued"
+)
+
+// Valid indicates whether the value is a known member of the AssuranceRunAcceptedStatus enum.
+func (e AssuranceRunAcceptedStatus) Valid() bool {
+	switch e {
+	case AssuranceRunAcceptedStatusAssuranceRunEnqueued:
 		return true
 	default:
 		return false
@@ -1689,6 +1869,7 @@ const (
 	AttentionItemSourceConversationClaim   AttentionItemSource = "conversation_claim"
 	AttentionItemSourceCustomerWaiting     AttentionItemSource = "customer_waiting"
 	AttentionItemSourceDealAtRisk          AttentionItemSource = "deal_at_risk"
+	AttentionItemSourceDealSuggestion      AttentionItemSource = "deal_suggestion"
 	AttentionItemSourceDedupeCandidate     AttentionItemSource = "dedupe_candidate"
 	AttentionItemSourceDomainQuestion      AttentionItemSource = "domain_question"
 	AttentionItemSourceDsr                 AttentionItemSource = "dsr"
@@ -1724,6 +1905,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceCustomerWaiting:
 		return true
 	case AttentionItemSourceDealAtRisk:
+		return true
+	case AttentionItemSourceDealSuggestion:
 		return true
 	case AttentionItemSourceDedupeCandidate:
 		return true
@@ -1793,6 +1976,7 @@ func (e AttentionPairEvidenceField) Valid() bool {
 const (
 	AttentionPairEvidenceSignalCollide       AttentionPairEvidenceSignal = "collide"
 	AttentionPairEvidenceSignalExactConflict AttentionPairEvidenceSignal = "exact_conflict"
+	AttentionPairEvidenceSignalLaneSplit     AttentionPairEvidenceSignal = "lane_split"
 	AttentionPairEvidenceSignalOneSided      AttentionPairEvidenceSignal = "one_sided"
 )
 
@@ -1802,6 +1986,8 @@ func (e AttentionPairEvidenceSignal) Valid() bool {
 	case AttentionPairEvidenceSignalCollide:
 		return true
 	case AttentionPairEvidenceSignalExactConflict:
+		return true
+	case AttentionPairEvidenceSignalLaneSplit:
 		return true
 	case AttentionPairEvidenceSignalOneSided:
 		return true
@@ -1936,11 +2122,13 @@ const (
 	AuditLogEntryActionImport             AuditLogEntryAction = "import"
 	AuditLogEntryActionImportUndo         AuditLogEntryAction = "import_undo"
 	AuditLogEntryActionInvite             AuditLogEntryAction = "invite"
+	AuditLogEntryActionLiftLegalHold      AuditLogEntryAction = "lift_legal_hold"
 	AuditLogEntryActionMerge              AuditLogEntryAction = "merge"
 	AuditLogEntryActionPasswordLinkIssued AuditLogEntryAction = "password_link_issued"
 	AuditLogEntryActionPause              AuditLogEntryAction = "pause"
 	AuditLogEntryActionPay                AuditLogEntryAction = "pay"
 	AuditLogEntryActionPin                AuditLogEntryAction = "pin"
+	AuditLogEntryActionPlaceLegalHold     AuditLogEntryAction = "place_legal_hold"
 	AuditLogEntryActionPromote            AuditLogEntryAction = "promote"
 	AuditLogEntryActionPublish            AuditLogEntryAction = "publish"
 	AuditLogEntryActionRecordShare        AuditLogEntryAction = "record_share"
@@ -2012,6 +2200,8 @@ func (e AuditLogEntryAction) Valid() bool {
 		return true
 	case AuditLogEntryActionInvite:
 		return true
+	case AuditLogEntryActionLiftLegalHold:
+		return true
 	case AuditLogEntryActionMerge:
 		return true
 	case AuditLogEntryActionPasswordLinkIssued:
@@ -2021,6 +2211,8 @@ func (e AuditLogEntryAction) Valid() bool {
 	case AuditLogEntryActionPay:
 		return true
 	case AuditLogEntryActionPin:
+		return true
+	case AuditLogEntryActionPlaceLegalHold:
 		return true
 	case AuditLogEntryActionPromote:
 		return true
@@ -2230,6 +2422,7 @@ func (e AutomationRunTier) Valid() bool {
 // Defines values for AvailableModelLane.
 const (
 	AvailableModelLaneChat       AvailableModelLane = "chat"
+	AvailableModelLaneDecisions  AvailableModelLane = "decisions"
 	AvailableModelLaneEmbeddings AvailableModelLane = "embeddings"
 )
 
@@ -2237,6 +2430,8 @@ const (
 func (e AvailableModelLane) Valid() bool {
 	switch e {
 	case AvailableModelLaneChat:
+		return true
+	case AvailableModelLaneDecisions:
 		return true
 	case AvailableModelLaneEmbeddings:
 		return true
@@ -2362,6 +2557,42 @@ func (e BackfillPreviewRequestWindow) Valid() bool {
 	case BackfillPreviewRequestWindowN84m:
 		return true
 	case BackfillPreviewRequestWindowNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BackfillStatusOfferedWindows.
+const (
+	BackfillStatusOfferedWindowsN120m BackfillStatusOfferedWindows = "120m"
+	BackfillStatusOfferedWindowsN12m  BackfillStatusOfferedWindows = "12m"
+	BackfillStatusOfferedWindowsN24m  BackfillStatusOfferedWindows = "24m"
+	BackfillStatusOfferedWindowsN36m  BackfillStatusOfferedWindows = "36m"
+	BackfillStatusOfferedWindowsN3m   BackfillStatusOfferedWindows = "3m"
+	BackfillStatusOfferedWindowsN60m  BackfillStatusOfferedWindows = "60m"
+	BackfillStatusOfferedWindowsN6m   BackfillStatusOfferedWindows = "6m"
+	BackfillStatusOfferedWindowsN84m  BackfillStatusOfferedWindows = "84m"
+)
+
+// Valid indicates whether the value is a known member of the BackfillStatusOfferedWindows enum.
+func (e BackfillStatusOfferedWindows) Valid() bool {
+	switch e {
+	case BackfillStatusOfferedWindowsN120m:
+		return true
+	case BackfillStatusOfferedWindowsN12m:
+		return true
+	case BackfillStatusOfferedWindowsN24m:
+		return true
+	case BackfillStatusOfferedWindowsN36m:
+		return true
+	case BackfillStatusOfferedWindowsN3m:
+		return true
+	case BackfillStatusOfferedWindowsN60m:
+		return true
+	case BackfillStatusOfferedWindowsN6m:
+		return true
+	case BackfillStatusOfferedWindowsN84m:
 		return true
 	default:
 		return false
@@ -2536,6 +2767,138 @@ func (e BriefDeliveryWeeklyDelivery) Valid() bool {
 	case BriefDeliveryWeeklyDeliveryEmail:
 		return true
 	case BriefDeliveryWeeklyDeliveryNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BulkLeftBehindKind.
+const (
+	BulkLeftBehindKindCompanyDomain           BulkLeftBehindKind = "company_domain"
+	BulkLeftBehindKindCompanyRelationshipType BulkLeftBehindKind = "company_relationship_type"
+	BulkLeftBehindKindContactChannelIdentity  BulkLeftBehindKind = "contact_channel_identity"
+	BulkLeftBehindKindContactEmail            BulkLeftBehindKind = "contact_email"
+	BulkLeftBehindKindContactPhone            BulkLeftBehindKind = "contact_phone"
+	BulkLeftBehindKindList                    BulkLeftBehindKind = "list"
+	BulkLeftBehindKindPartner                 BulkLeftBehindKind = "partner"
+	BulkLeftBehindKindRelationship            BulkLeftBehindKind = "relationship"
+	BulkLeftBehindKindTag                     BulkLeftBehindKind = "tag"
+)
+
+// Valid indicates whether the value is a known member of the BulkLeftBehindKind enum.
+func (e BulkLeftBehindKind) Valid() bool {
+	switch e {
+	case BulkLeftBehindKindCompanyDomain:
+		return true
+	case BulkLeftBehindKindCompanyRelationshipType:
+		return true
+	case BulkLeftBehindKindContactChannelIdentity:
+		return true
+	case BulkLeftBehindKindContactEmail:
+		return true
+	case BulkLeftBehindKindContactPhone:
+		return true
+	case BulkLeftBehindKindList:
+		return true
+	case BulkLeftBehindKindPartner:
+		return true
+	case BulkLeftBehindKindRelationship:
+		return true
+	case BulkLeftBehindKindTag:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BulkRecordType.
+const (
+	BulkRecordTypeCompany BulkRecordType = "company"
+	BulkRecordTypeContact BulkRecordType = "contact"
+	BulkRecordTypeDeal    BulkRecordType = "deal"
+)
+
+// Valid indicates whether the value is a known member of the BulkRecordType enum.
+func (e BulkRecordType) Valid() bool {
+	switch e {
+	case BulkRecordTypeCompany:
+		return true
+	case BulkRecordTypeContact:
+		return true
+	case BulkRecordTypeDeal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BulkSkipReason.
+const (
+	BulkSkipReasonAnchorCompany       BulkSkipReason = "anchor_company"
+	BulkSkipReasonChangedSinceBatch   BulkSkipReason = "changed_since_batch"
+	BulkSkipReasonChangedSincePreview BulkSkipReason = "changed_since_preview"
+	BulkSkipReasonErased              BulkSkipReason = "erased"
+	BulkSkipReasonMerged              BulkSkipReason = "merged"
+	BulkSkipReasonNoChange            BulkSkipReason = "no_change"
+	BulkSkipReasonNoPreviousOwner     BulkSkipReason = "no_previous_owner"
+	BulkSkipReasonNotFound            BulkSkipReason = "not_found"
+	BulkSkipReasonNotPreviewed        BulkSkipReason = "not_previewed"
+	BulkSkipReasonNotWritable         BulkSkipReason = "not_writable"
+	BulkSkipReasonRefused             BulkSkipReason = "refused"
+	BulkSkipReasonValueTaken          BulkSkipReason = "value_taken"
+)
+
+// Valid indicates whether the value is a known member of the BulkSkipReason enum.
+func (e BulkSkipReason) Valid() bool {
+	switch e {
+	case BulkSkipReasonAnchorCompany:
+		return true
+	case BulkSkipReasonChangedSinceBatch:
+		return true
+	case BulkSkipReasonChangedSincePreview:
+		return true
+	case BulkSkipReasonErased:
+		return true
+	case BulkSkipReasonMerged:
+		return true
+	case BulkSkipReasonNoChange:
+		return true
+	case BulkSkipReasonNoPreviousOwner:
+		return true
+	case BulkSkipReasonNotFound:
+		return true
+	case BulkSkipReasonNotPreviewed:
+		return true
+	case BulkSkipReasonNotWritable:
+		return true
+	case BulkSkipReasonRefused:
+		return true
+	case BulkSkipReasonValueTaken:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BulkVerb.
+const (
+	BulkVerbAddToList      BulkVerb = "add_to_list"
+	BulkVerbArchive        BulkVerb = "archive"
+	BulkVerbReassignOwner  BulkVerb = "reassign_owner"
+	BulkVerbRemoveFromList BulkVerb = "remove_from_list"
+)
+
+// Valid indicates whether the value is a known member of the BulkVerb enum.
+func (e BulkVerb) Valid() bool {
+	switch e {
+	case BulkVerbAddToList:
+		return true
+	case BulkVerbArchive:
+		return true
+	case BulkVerbReassignOwner:
+		return true
+	case BulkVerbRemoveFromList:
 		return true
 	default:
 		return false
@@ -2776,6 +3139,51 @@ func (e CaptureSenderDecisionDecision) Valid() bool {
 	}
 }
 
+// Defines values for CaptureSweepHealthSweep.
+const (
+	CaptureSweepHealthSweepFiledMeetingHolds     CaptureSweepHealthSweep = "filed_meeting_holds"
+	CaptureSweepHealthSweepSettledThreadVerdicts CaptureSweepHealthSweep = "settled_thread_verdicts"
+	CaptureSweepHealthSweepStrandedContacts      CaptureSweepHealthSweep = "stranded_contacts"
+)
+
+// Valid indicates whether the value is a known member of the CaptureSweepHealthSweep enum.
+func (e CaptureSweepHealthSweep) Valid() bool {
+	switch e {
+	case CaptureSweepHealthSweepFiledMeetingHolds:
+		return true
+	case CaptureSweepHealthSweepSettledThreadVerdicts:
+		return true
+	case CaptureSweepHealthSweepStrandedContacts:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaptureSweepRunOutcome.
+const (
+	CaptureSweepRunOutcomeFailed  CaptureSweepRunOutcome = "failed"
+	CaptureSweepRunOutcomeOk      CaptureSweepRunOutcome = "ok"
+	CaptureSweepRunOutcomePartial CaptureSweepRunOutcome = "partial"
+	CaptureSweepRunOutcomeSkipped CaptureSweepRunOutcome = "skipped"
+)
+
+// Valid indicates whether the value is a known member of the CaptureSweepRunOutcome enum.
+func (e CaptureSweepRunOutcome) Valid() bool {
+	switch e {
+	case CaptureSweepRunOutcomeFailed:
+		return true
+	case CaptureSweepRunOutcomeOk:
+		return true
+	case CaptureSweepRunOutcomePartial:
+		return true
+	case CaptureSweepRunOutcomeSkipped:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureTraceEntryOutcome.
 const (
 	CaptureTraceEntryOutcomeCaptured   CaptureTraceEntryOutcome = "captured"
@@ -2881,36 +3289,6 @@ func (e ChangeContractStatusRequestStatus) Valid() bool {
 	case ChangeContractStatusRequestStatusExpired:
 		return true
 	case ChangeContractStatusRequestStatusSuperseded:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ChangeUserRoleRequestRole.
-const (
-	ChangeUserRoleRequestRoleAdmin      ChangeUserRoleRequestRole = "admin"
-	ChangeUserRoleRequestRoleManagement ChangeUserRoleRequestRole = "management"
-	ChangeUserRoleRequestRoleManager    ChangeUserRoleRequestRole = "manager"
-	ChangeUserRoleRequestRoleOps        ChangeUserRoleRequestRole = "ops"
-	ChangeUserRoleRequestRoleReadOnly   ChangeUserRoleRequestRole = "read_only"
-	ChangeUserRoleRequestRoleRep        ChangeUserRoleRequestRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the ChangeUserRoleRequestRole enum.
-func (e ChangeUserRoleRequestRole) Valid() bool {
-	switch e {
-	case ChangeUserRoleRequestRoleAdmin:
-		return true
-	case ChangeUserRoleRequestRoleManagement:
-		return true
-	case ChangeUserRoleRequestRoleManager:
-		return true
-	case ChangeUserRoleRequestRoleOps:
-		return true
-	case ChangeUserRoleRequestRoleReadOnly:
-		return true
-	case ChangeUserRoleRequestRoleRep:
 		return true
 	default:
 		return false
@@ -3402,6 +3780,7 @@ const (
 	Company360SectionsOmittedDeals            Company360SectionsOmitted = "deals"
 	Company360SectionsOmittedHealth           Company360SectionsOmitted = "health"
 	Company360SectionsOmittedLastTouch        Company360SectionsOmitted = "last_touch"
+	Company360SectionsOmittedListMemberships  Company360SectionsOmitted = "list_memberships"
 	Company360SectionsOmittedMoments          Company360SectionsOmitted = "moments"
 	Company360SectionsOmittedNextMeeting      Company360SectionsOmitted = "next_meeting"
 	Company360SectionsOmittedNextSteps        Company360SectionsOmitted = "next_steps"
@@ -3428,6 +3807,8 @@ func (e Company360SectionsOmitted) Valid() bool {
 	case Company360SectionsOmittedHealth:
 		return true
 	case Company360SectionsOmittedLastTouch:
+		return true
+	case Company360SectionsOmittedListMemberships:
 		return true
 	case Company360SectionsOmittedMoments:
 		return true
@@ -5806,6 +6187,7 @@ func (e ContactMomentDestinationEntityType) Valid() bool {
 // Defines values for ContactMomentDestinationSurface.
 const (
 	ContactMomentDestinationSurfaceActivityLog  ContactMomentDestinationSurface = "activity_log"
+	ContactMomentDestinationSurfaceBooking      ContactMomentDestinationSurface = "booking"
 	ContactMomentDestinationSurfaceComposer     ContactMomentDestinationSurface = "composer"
 	ContactMomentDestinationSurfaceMeetingBrief ContactMomentDestinationSurface = "meeting_brief"
 	ContactMomentDestinationSurfaceRecord       ContactMomentDestinationSurface = "record"
@@ -5817,6 +6199,8 @@ const (
 func (e ContactMomentDestinationSurface) Valid() bool {
 	switch e {
 	case ContactMomentDestinationSurfaceActivityLog:
+		return true
+	case ContactMomentDestinationSurfaceBooking:
 		return true
 	case ContactMomentDestinationSurfaceComposer:
 		return true
@@ -6016,6 +6400,27 @@ func (e ContactProfileFieldVerdict) Valid() bool {
 	case ContactProfileFieldVerdictCorrected:
 		return true
 	case ContactProfileFieldVerdictSuppressed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactProviderAttributeKind.
+const (
+	ContactProviderAttributeKindDepartment ContactProviderAttributeKind = "department"
+	ContactProviderAttributeKindLocation   ContactProviderAttributeKind = "location"
+	ContactProviderAttributeKindSeniority  ContactProviderAttributeKind = "seniority"
+)
+
+// Valid indicates whether the value is a known member of the ContactProviderAttributeKind enum.
+func (e ContactProviderAttributeKind) Valid() bool {
+	switch e {
+	case ContactProviderAttributeKindDepartment:
+		return true
+	case ContactProviderAttributeKindLocation:
+		return true
+	case ContactProviderAttributeKindSeniority:
 		return true
 	default:
 		return false
@@ -6513,22 +6918,22 @@ func (e CreateActivityRequestLinksEntityType) Valid() bool {
 
 // Defines values for CreateActivityRequestMeetingStatus.
 const (
-	CreateActivityRequestMeetingStatusBooked   CreateActivityRequestMeetingStatus = "booked"
-	CreateActivityRequestMeetingStatusCanceled CreateActivityRequestMeetingStatus = "canceled"
-	CreateActivityRequestMeetingStatusHeld     CreateActivityRequestMeetingStatus = "held"
-	CreateActivityRequestMeetingStatusNoShow   CreateActivityRequestMeetingStatus = "no_show"
+	CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusBooked   CreateActivityRequestMeetingStatus = "booked"
+	CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusCanceled CreateActivityRequestMeetingStatus = "canceled"
+	CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusHeld     CreateActivityRequestMeetingStatus = "held"
+	CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusNoShow   CreateActivityRequestMeetingStatus = "no_show"
 )
 
 // Valid indicates whether the value is a known member of the CreateActivityRequestMeetingStatus enum.
 func (e CreateActivityRequestMeetingStatus) Valid() bool {
 	switch e {
-	case CreateActivityRequestMeetingStatusBooked:
+	case CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusBooked:
 		return true
-	case CreateActivityRequestMeetingStatusCanceled:
+	case CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusCanceled:
 		return true
-	case CreateActivityRequestMeetingStatusHeld:
+	case CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusHeld:
 		return true
-	case CreateActivityRequestMeetingStatusNoShow:
+	case CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusNoShow:
 		return true
 	default:
 		return false
@@ -6817,6 +7222,93 @@ func (e CreateLeadRequestStatus) Valid() bool {
 	case CreateLeadRequestStatusNew:
 		return true
 	case CreateLeadRequestStatusPromoted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateListRequestEntityType.
+const (
+	CreateListRequestEntityTypeCompany CreateListRequestEntityType = "company"
+	CreateListRequestEntityTypeContact CreateListRequestEntityType = "contact"
+	CreateListRequestEntityTypeDeal    CreateListRequestEntityType = "deal"
+	CreateListRequestEntityTypeLead    CreateListRequestEntityType = "lead"
+	CreateListRequestEntityTypeProject CreateListRequestEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the CreateListRequestEntityType enum.
+func (e CreateListRequestEntityType) Valid() bool {
+	switch e {
+	case CreateListRequestEntityTypeCompany:
+		return true
+	case CreateListRequestEntityTypeContact:
+		return true
+	case CreateListRequestEntityTypeDeal:
+		return true
+	case CreateListRequestEntityTypeLead:
+		return true
+	case CreateListRequestEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateListRequestListType.
+const (
+	CreateListRequestListTypeDynamic CreateListRequestListType = "dynamic"
+	CreateListRequestListTypeStatic  CreateListRequestListType = "static"
+)
+
+// Valid indicates whether the value is a known member of the CreateListRequestListType enum.
+func (e CreateListRequestListType) Valid() bool {
+	switch e {
+	case CreateListRequestListTypeDynamic:
+		return true
+	case CreateListRequestListTypeStatic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateListRequestSharing.
+const (
+	CreateListRequestSharingPrivate   CreateListRequestSharing = "private"
+	CreateListRequestSharingTeam      CreateListRequestSharing = "team"
+	CreateListRequestSharingWorkspace CreateListRequestSharing = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the CreateListRequestSharing enum.
+func (e CreateListRequestSharing) Valid() bool {
+	switch e {
+	case CreateListRequestSharingPrivate:
+		return true
+	case CreateListRequestSharingTeam:
+		return true
+	case CreateListRequestSharingWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreatePipelineStageSemantic.
+const (
+	CreatePipelineStageSemanticLost CreatePipelineStageSemantic = "lost"
+	CreatePipelineStageSemanticOpen CreatePipelineStageSemantic = "open"
+	CreatePipelineStageSemanticWon  CreatePipelineStageSemantic = "won"
+)
+
+// Valid indicates whether the value is a known member of the CreatePipelineStageSemantic enum.
+func (e CreatePipelineStageSemantic) Valid() bool {
+	switch e {
+	case CreatePipelineStageSemanticLost:
+		return true
+	case CreatePipelineStageSemanticOpen:
+		return true
+	case CreatePipelineStageSemanticWon:
 		return true
 	default:
 		return false
@@ -7627,6 +8119,93 @@ func (e DealRoomState) Valid() bool {
 	case DealRoomStatePublishing:
 		return true
 	case DealRoomStateReady:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealSuggestionKind.
+const (
+	DealSuggestionKindAdvanceStage DealSuggestionKind = "advance_stage"
+	DealSuggestionKindOpenDeal     DealSuggestionKind = "open_deal"
+	DealSuggestionKindRevive       DealSuggestionKind = "revive"
+)
+
+// Valid indicates whether the value is a known member of the DealSuggestionKind enum.
+func (e DealSuggestionKind) Valid() bool {
+	switch e {
+	case DealSuggestionKindAdvanceStage:
+		return true
+	case DealSuggestionKindOpenDeal:
+		return true
+	case DealSuggestionKindRevive:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealSuggestionNameHint.
+const (
+	DealSuggestionNameHintMeetingHeld          DealSuggestionNameHint = "meeting_held"
+	DealSuggestionNameHintOpportunitySignalled DealSuggestionNameHint = "opportunity_signalled"
+	DealSuggestionNameHintProposalSent         DealSuggestionNameHint = "proposal_sent"
+)
+
+// Valid indicates whether the value is a known member of the DealSuggestionNameHint enum.
+func (e DealSuggestionNameHint) Valid() bool {
+	switch e {
+	case DealSuggestionNameHintMeetingHeld:
+		return true
+	case DealSuggestionNameHintOpportunitySignalled:
+		return true
+	case DealSuggestionNameHintProposalSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealSuggestionState.
+const (
+	DealSuggestionStateAccepted   DealSuggestionState = "accepted"
+	DealSuggestionStateDismissed  DealSuggestionState = "dismissed"
+	DealSuggestionStateOpen       DealSuggestionState = "open"
+	DealSuggestionStateSuperseded DealSuggestionState = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the DealSuggestionState enum.
+func (e DealSuggestionState) Valid() bool {
+	switch e {
+	case DealSuggestionStateAccepted:
+		return true
+	case DealSuggestionStateDismissed:
+		return true
+	case DealSuggestionStateOpen:
+		return true
+	case DealSuggestionStateSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealSuggestionEvidenceKind.
+const (
+	DealSuggestionEvidenceKindAttachment DealSuggestionEvidenceKind = "attachment"
+	DealSuggestionEvidenceKindMeeting    DealSuggestionEvidenceKind = "meeting"
+	DealSuggestionEvidenceKindSignal     DealSuggestionEvidenceKind = "signal"
+)
+
+// Valid indicates whether the value is a known member of the DealSuggestionEvidenceKind enum.
+func (e DealSuggestionEvidenceKind) Valid() bool {
+	switch e {
+	case DealSuggestionEvidenceKindAttachment:
+		return true
+	case DealSuggestionEvidenceKindMeeting:
+		return true
+	case DealSuggestionEvidenceKindSignal:
 		return true
 	default:
 		return false
@@ -8548,6 +9127,30 @@ func (e ForecastAssuranceStatus) Valid() bool {
 	}
 }
 
+// Defines values for ForecastAssurancePreviewReadiness.
+const (
+	ForecastAssurancePreviewReadinessAssurancePreviewChecksIncomplete    ForecastAssurancePreviewReadiness = "checks_incomplete"
+	ForecastAssurancePreviewReadinessAssurancePreviewNeedsReview         ForecastAssurancePreviewReadiness = "needs_review"
+	ForecastAssurancePreviewReadinessAssurancePreviewReady               ForecastAssurancePreviewReadiness = "ready"
+	ForecastAssurancePreviewReadinessAssurancePreviewReadyWithExceptions ForecastAssurancePreviewReadiness = "ready_with_exceptions"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssurancePreviewReadiness enum.
+func (e ForecastAssurancePreviewReadiness) Valid() bool {
+	switch e {
+	case ForecastAssurancePreviewReadinessAssurancePreviewChecksIncomplete:
+		return true
+	case ForecastAssurancePreviewReadinessAssurancePreviewNeedsReview:
+		return true
+	case ForecastAssurancePreviewReadinessAssurancePreviewReady:
+		return true
+	case ForecastAssurancePreviewReadinessAssurancePreviewReadyWithExceptions:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastAssuranceSourceSource.
 const (
 	ForecastAssuranceSourceSourceCalendar  ForecastAssuranceSourceSource = "calendar"
@@ -8761,6 +9364,45 @@ func (e ForecastReadingsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ForecastShareKind.
+const (
+	ForecastShareKindLive     ForecastShareKind = "live"
+	ForecastShareKindSnapshot ForecastShareKind = "snapshot"
+)
+
+// Valid indicates whether the value is a known member of the ForecastShareKind enum.
+func (e ForecastShareKind) Valid() bool {
+	switch e {
+	case ForecastShareKindLive:
+		return true
+	case ForecastShareKindSnapshot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastShareScopeKind.
+const (
+	ForecastShareScopeKindOwner     ForecastShareScopeKind = "owner"
+	ForecastShareScopeKindTeam      ForecastShareScopeKind = "team"
+	ForecastShareScopeKindWorkspace ForecastShareScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ForecastShareScopeKind enum.
+func (e ForecastShareScopeKind) Valid() bool {
+	switch e {
+	case ForecastShareScopeKindOwner:
+		return true
+	case ForecastShareScopeKindTeam:
+		return true
+	case ForecastShareScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastSufficiencyAbsent.
 const (
 	ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientBasis   ForecastSufficiencyAbsent = "insufficient_basis"
@@ -8791,36 +9433,6 @@ func (e ForecastSufficiencyBasis) Valid() bool {
 	case ForecastSufficiencyBasisSufficiencyBasisHistoricalMedian:
 		return true
 	case ForecastSufficiencyBasisSufficiencyBasisManagerCall:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for FormerMemberRequestRole.
-const (
-	FormerMemberRequestRoleAdmin      FormerMemberRequestRole = "admin"
-	FormerMemberRequestRoleManagement FormerMemberRequestRole = "management"
-	FormerMemberRequestRoleManager    FormerMemberRequestRole = "manager"
-	FormerMemberRequestRoleOps        FormerMemberRequestRole = "ops"
-	FormerMemberRequestRoleReadOnly   FormerMemberRequestRole = "read_only"
-	FormerMemberRequestRoleRep        FormerMemberRequestRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the FormerMemberRequestRole enum.
-func (e FormerMemberRequestRole) Valid() bool {
-	switch e {
-	case FormerMemberRequestRoleAdmin:
-		return true
-	case FormerMemberRequestRoleManagement:
-		return true
-	case FormerMemberRequestRoleManager:
-		return true
-	case FormerMemberRequestRoleOps:
-		return true
-	case FormerMemberRequestRoleReadOnly:
-		return true
-	case FormerMemberRequestRoleRep:
 		return true
 	default:
 		return false
@@ -8890,6 +9502,63 @@ func (e HealthDimensionRating) Valid() bool {
 	case HealthDimensionRatingGood:
 		return true
 	case HealthDimensionRatingStrong:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HeldEntityType.
+const (
+	HeldEntityTypeCompany HeldEntityType = "company"
+	HeldEntityTypeContact HeldEntityType = "contact"
+	HeldEntityTypeDeal    HeldEntityType = "deal"
+	HeldEntityTypeLead    HeldEntityType = "lead"
+	HeldEntityTypeProject HeldEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the HeldEntityType enum.
+func (e HeldEntityType) Valid() bool {
+	switch e {
+	case HeldEntityTypeCompany:
+		return true
+	case HeldEntityTypeContact:
+		return true
+	case HeldEntityTypeDeal:
+		return true
+	case HeldEntityTypeLead:
+		return true
+	case HeldEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HiddenBacklogRowsRule.
+const (
+	HiddenBacklogRowsRuleColleagues  HiddenBacklogRowsRule = "colleagues"
+	HiddenBacklogRowsRuleInformsUs   HiddenBacklogRowsRule = "informs_us"
+	HiddenBacklogRowsRuleNotSales    HiddenBacklogRowsRule = "not_sales"
+	HiddenBacklogRowsRulePastHorizon HiddenBacklogRowsRule = "past_horizon"
+	HiddenBacklogRowsRuleSetAside    HiddenBacklogRowsRule = "set_aside"
+	HiddenBacklogRowsRuleUnlinked    HiddenBacklogRowsRule = "unlinked"
+)
+
+// Valid indicates whether the value is a known member of the HiddenBacklogRowsRule enum.
+func (e HiddenBacklogRowsRule) Valid() bool {
+	switch e {
+	case HiddenBacklogRowsRuleColleagues:
+		return true
+	case HiddenBacklogRowsRuleInformsUs:
+		return true
+	case HiddenBacklogRowsRuleNotSales:
+		return true
+	case HiddenBacklogRowsRulePastHorizon:
+		return true
+	case HiddenBacklogRowsRuleSetAside:
+		return true
+	case HiddenBacklogRowsRuleUnlinked:
 		return true
 	default:
 		return false
@@ -9367,36 +10036,6 @@ func (e IntroRequestStatus) Valid() bool {
 	}
 }
 
-// Defines values for InviteUserRequestRole.
-const (
-	InviteUserRequestRoleAdmin      InviteUserRequestRole = "admin"
-	InviteUserRequestRoleManagement InviteUserRequestRole = "management"
-	InviteUserRequestRoleManager    InviteUserRequestRole = "manager"
-	InviteUserRequestRoleOps        InviteUserRequestRole = "ops"
-	InviteUserRequestRoleReadOnly   InviteUserRequestRole = "read_only"
-	InviteUserRequestRoleRep        InviteUserRequestRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the InviteUserRequestRole enum.
-func (e InviteUserRequestRole) Valid() bool {
-	switch e {
-	case InviteUserRequestRoleAdmin:
-		return true
-	case InviteUserRequestRoleManagement:
-		return true
-	case InviteUserRequestRoleManager:
-		return true
-	case InviteUserRequestRoleOps:
-		return true
-	case InviteUserRequestRoleReadOnly:
-		return true
-	case InviteUserRequestRoleRep:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for IssuePassportRequestScopes.
 const (
 	IssuePassportRequestScopesDraft  IssuePassportRequestScopes = "draft"
@@ -9727,6 +10366,243 @@ func (e LicenseEntitlementState) Valid() bool {
 	}
 }
 
+// Defines values for ListEntityType.
+const (
+	ListEntityTypeCompany ListEntityType = "company"
+	ListEntityTypeContact ListEntityType = "contact"
+	ListEntityTypeDeal    ListEntityType = "deal"
+	ListEntityTypeLead    ListEntityType = "lead"
+	ListEntityTypeProject ListEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the ListEntityType enum.
+func (e ListEntityType) Valid() bool {
+	switch e {
+	case ListEntityTypeCompany:
+		return true
+	case ListEntityTypeContact:
+		return true
+	case ListEntityTypeDeal:
+		return true
+	case ListEntityTypeLead:
+		return true
+	case ListEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListHealth.
+const (
+	ListHealthInvalid   ListHealth = "invalid"
+	ListHealthOk        ListHealth = "ok"
+	ListHealthOwnerless ListHealth = "ownerless"
+)
+
+// Valid indicates whether the value is a known member of the ListHealth enum.
+func (e ListHealth) Valid() bool {
+	switch e {
+	case ListHealthInvalid:
+		return true
+	case ListHealthOk:
+		return true
+	case ListHealthOwnerless:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListListType.
+const (
+	ListListTypeDynamic ListListType = "dynamic"
+	ListListTypeStatic  ListListType = "static"
+)
+
+// Valid indicates whether the value is a known member of the ListListType enum.
+func (e ListListType) Valid() bool {
+	switch e {
+	case ListListTypeDynamic:
+		return true
+	case ListListTypeStatic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSharing.
+const (
+	ListSharingPrivate   ListSharing = "private"
+	ListSharingTeam      ListSharing = "team"
+	ListSharingWorkspace ListSharing = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListSharing enum.
+func (e ListSharing) Valid() bool {
+	switch e {
+	case ListSharingPrivate:
+		return true
+	case ListSharingTeam:
+		return true
+	case ListSharingWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListClauseVerdictJoin.
+const (
+	ListClauseVerdictJoinAnd ListClauseVerdictJoin = "and"
+	ListClauseVerdictJoinOr  ListClauseVerdictJoin = "or"
+)
+
+// Valid indicates whether the value is a known member of the ListClauseVerdictJoin enum.
+func (e ListClauseVerdictJoin) Valid() bool {
+	switch e {
+	case ListClauseVerdictJoinAnd:
+		return true
+	case ListClauseVerdictJoinOr:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListDependencyKind.
+const (
+	ListDependencyKindExport ListDependencyKind = "export"
+)
+
+// Valid indicates whether the value is a known member of the ListDependencyKind enum.
+func (e ListDependencyKind) Valid() bool {
+	switch e {
+	case ListDependencyKindExport:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListHistoryEntryKind.
+const (
+	ListHistoryEntryKindMemberAdded   ListHistoryEntryKind = "member_added"
+	ListHistoryEntryKindMemberRemoved ListHistoryEntryKind = "member_removed"
+	ListHistoryEntryKindRevised       ListHistoryEntryKind = "revised"
+)
+
+// Valid indicates whether the value is a known member of the ListHistoryEntryKind enum.
+func (e ListHistoryEntryKind) Valid() bool {
+	switch e {
+	case ListHistoryEntryKindMemberAdded:
+		return true
+	case ListHistoryEntryKindMemberRemoved:
+		return true
+	case ListHistoryEntryKindRevised:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListHistoryEntryReason.
+const (
+	ListHistoryEntryReasonBulk           ListHistoryEntryReason = "bulk"
+	ListHistoryEntryReasonChosen         ListHistoryEntryReason = "chosen"
+	ListHistoryEntryReasonRecordArchived ListHistoryEntryReason = "record_archived"
+	ListHistoryEntryReasonRecordRestored ListHistoryEntryReason = "record_restored"
+)
+
+// Valid indicates whether the value is a known member of the ListHistoryEntryReason enum.
+func (e ListHistoryEntryReason) Valid() bool {
+	switch e {
+	case ListHistoryEntryReasonBulk:
+		return true
+	case ListHistoryEntryReasonChosen:
+		return true
+	case ListHistoryEntryReasonRecordArchived:
+		return true
+	case ListHistoryEntryReasonRecordRestored:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMemberEntityType.
+const (
+	ListMemberEntityTypeCompany ListMemberEntityType = "company"
+	ListMemberEntityTypeContact ListMemberEntityType = "contact"
+	ListMemberEntityTypeDeal    ListMemberEntityType = "deal"
+	ListMemberEntityTypeLead    ListMemberEntityType = "lead"
+	ListMemberEntityTypeProject ListMemberEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the ListMemberEntityType enum.
+func (e ListMemberEntityType) Valid() bool {
+	switch e {
+	case ListMemberEntityTypeCompany:
+		return true
+	case ListMemberEntityTypeContact:
+		return true
+	case ListMemberEntityTypeDeal:
+		return true
+	case ListMemberEntityTypeLead:
+		return true
+	case ListMemberEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMemberChangeRequestEntityType.
+const (
+	ListMemberChangeRequestEntityTypeCompany ListMemberChangeRequestEntityType = "company"
+	ListMemberChangeRequestEntityTypeContact ListMemberChangeRequestEntityType = "contact"
+	ListMemberChangeRequestEntityTypeDeal    ListMemberChangeRequestEntityType = "deal"
+	ListMemberChangeRequestEntityTypeLead    ListMemberChangeRequestEntityType = "lead"
+	ListMemberChangeRequestEntityTypeProject ListMemberChangeRequestEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the ListMemberChangeRequestEntityType enum.
+func (e ListMemberChangeRequestEntityType) Valid() bool {
+	switch e {
+	case ListMemberChangeRequestEntityTypeCompany:
+		return true
+	case ListMemberChangeRequestEntityTypeContact:
+		return true
+	case ListMemberChangeRequestEntityTypeDeal:
+		return true
+	case ListMemberChangeRequestEntityTypeLead:
+		return true
+	case ListMemberChangeRequestEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMemberExplanationListType.
+const (
+	ListMemberExplanationListTypeDynamic ListMemberExplanationListType = "dynamic"
+	ListMemberExplanationListTypeStatic  ListMemberExplanationListType = "static"
+)
+
+// Valid indicates whether the value is a known member of the ListMemberExplanationListType enum.
+func (e ListMemberExplanationListType) Valid() bool {
+	switch e {
+	case ListMemberExplanationListTypeDynamic:
+		return true
+	case ListMemberExplanationListTypeStatic:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MagicActorType.
 const (
 	MagicActorTypeMagicActorAgent     MagicActorType = "agent"
@@ -9793,6 +10669,36 @@ func (e MagicNotShownReason) Valid() bool {
 	}
 }
 
+// Defines values for MailDraftAnchorType.
+const (
+	MailDraftAnchorTypeActivity MailDraftAnchorType = "activity"
+	MailDraftAnchorTypeCompany  MailDraftAnchorType = "company"
+	MailDraftAnchorTypeContact  MailDraftAnchorType = "contact"
+	MailDraftAnchorTypeDeal     MailDraftAnchorType = "deal"
+	MailDraftAnchorTypeLead     MailDraftAnchorType = "lead"
+	MailDraftAnchorTypeProject  MailDraftAnchorType = "project"
+)
+
+// Valid indicates whether the value is a known member of the MailDraftAnchorType enum.
+func (e MailDraftAnchorType) Valid() bool {
+	switch e {
+	case MailDraftAnchorTypeActivity:
+		return true
+	case MailDraftAnchorTypeCompany:
+		return true
+	case MailDraftAnchorTypeContact:
+		return true
+	case MailDraftAnchorTypeDeal:
+		return true
+	case MailDraftAnchorTypeLead:
+		return true
+	case MailDraftAnchorTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeResponsePassportScopes.
 const (
 	MeResponsePassportScopesActWithApproval    MeResponsePassportScopes = "act_with_approval"
@@ -9850,6 +10756,81 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	case MeetingBriefSectionKindTalkingPoints:
 		return true
 	case MeetingBriefSectionKindWhatChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingInvitationReminderStatus.
+const (
+	MeetingInvitationReminderStatusOff         MeetingInvitationReminderStatus = "off"
+	MeetingInvitationReminderStatusPending     MeetingInvitationReminderStatus = "pending"
+	MeetingInvitationReminderStatusQueued      MeetingInvitationReminderStatus = "queued"
+	MeetingInvitationReminderStatusUnavailable MeetingInvitationReminderStatus = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationReminderStatus enum.
+func (e MeetingInvitationReminderStatus) Valid() bool {
+	switch e {
+	case MeetingInvitationReminderStatusOff:
+		return true
+	case MeetingInvitationReminderStatusPending:
+		return true
+	case MeetingInvitationReminderStatusQueued:
+		return true
+	case MeetingInvitationReminderStatusUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingInvitationStatus.
+const (
+	MeetingInvitationStatusCanceled       MeetingInvitationStatus = "canceled"
+	MeetingInvitationStatusCanceling      MeetingInvitationStatus = "canceling"
+	MeetingInvitationStatusConfirmed      MeetingInvitationStatus = "confirmed"
+	MeetingInvitationStatusNeedsAttention MeetingInvitationStatus = "needs_attention"
+	MeetingInvitationStatusPending        MeetingInvitationStatus = "pending"
+	MeetingInvitationStatusRescheduling   MeetingInvitationStatus = "rescheduling"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationStatus enum.
+func (e MeetingInvitationStatus) Valid() bool {
+	switch e {
+	case MeetingInvitationStatusCanceled:
+		return true
+	case MeetingInvitationStatusCanceling:
+		return true
+	case MeetingInvitationStatusConfirmed:
+		return true
+	case MeetingInvitationStatusNeedsAttention:
+		return true
+	case MeetingInvitationStatusPending:
+		return true
+	case MeetingInvitationStatusRescheduling:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingInvitationChangeAction.
+const (
+	MeetingInvitationChangeActionCancel     MeetingInvitationChangeAction = "cancel"
+	MeetingInvitationChangeActionReschedule MeetingInvitationChangeAction = "reschedule"
+	MeetingInvitationChangeActionRetry      MeetingInvitationChangeAction = "retry"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationChangeAction enum.
+func (e MeetingInvitationChangeAction) Valid() bool {
+	switch e {
+	case MeetingInvitationChangeActionCancel:
+		return true
+	case MeetingInvitationChangeActionReschedule:
+		return true
+	case MeetingInvitationChangeActionRetry:
 		return true
 	default:
 		return false
@@ -10258,6 +11239,60 @@ func (e NoticeKind) Valid() bool {
 	case NoticeKindCoachReplyAging:
 		return true
 	case NoticeKindCoachReviewBacklog:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationClass.
+const (
+	NotificationClassApprovalPending NotificationClass = "approval_pending"
+	NotificationClassAutomation      NotificationClass = "automation"
+	NotificationClassCapture         NotificationClass = "capture"
+	NotificationClassCoach           NotificationClass = "coach"
+	NotificationClassLeadSla         NotificationClass = "lead_sla"
+	NotificationClassSystem          NotificationClass = "system"
+)
+
+// Valid indicates whether the value is a known member of the NotificationClass enum.
+func (e NotificationClass) Valid() bool {
+	switch e {
+	case NotificationClassApprovalPending:
+		return true
+	case NotificationClassAutomation:
+		return true
+	case NotificationClassCapture:
+		return true
+	case NotificationClassCoach:
+		return true
+	case NotificationClassLeadSla:
+		return true
+	case NotificationClassSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationDelivery.
+const (
+	NotificationDeliveryDigest NotificationDelivery = "digest"
+	NotificationDeliveryEmail  NotificationDelivery = "email"
+	NotificationDeliveryInApp  NotificationDelivery = "in_app"
+	NotificationDeliveryOff    NotificationDelivery = "off"
+)
+
+// Valid indicates whether the value is a known member of the NotificationDelivery enum.
+func (e NotificationDelivery) Valid() bool {
+	switch e {
+	case NotificationDeliveryDigest:
+		return true
+	case NotificationDeliveryEmail:
+		return true
+	case NotificationDeliveryInApp:
+		return true
+	case NotificationDeliveryOff:
 		return true
 	default:
 		return false
@@ -10759,6 +11794,21 @@ func (e PipelineStageRungSubjectKind) Valid() bool {
 	case PipelineStageRungSubjectKindSender:
 		return true
 	case PipelineStageRungSubjectKindThread:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PopulationNarrowed.
+const (
+	PopulationNarrowedOwnersYouMayMeasure PopulationNarrowed = "owners_you_may_measure"
+)
+
+// Valid indicates whether the value is a known member of the PopulationNarrowed enum.
+func (e PopulationNarrowed) Valid() bool {
+	switch e {
+	case PopulationNarrowedOwnersYouMayMeasure:
 		return true
 	default:
 		return false
@@ -11290,6 +12340,99 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	case QualifyingEventRecordKindInquiry:
 		return true
 	case QualifyingEventRecordKindMeeting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordAccessVisibility.
+const (
+	RecordAccessVisibilityOwner     RecordAccessVisibility = "owner"
+	RecordAccessVisibilityWorkspace RecordAccessVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the RecordAccessVisibility enum.
+func (e RecordAccessVisibility) Valid() bool {
+	switch e {
+	case RecordAccessVisibilityOwner:
+		return true
+	case RecordAccessVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordAccessMemberGroup.
+const (
+	RecordAccessMemberGroupEveryone   RecordAccessMemberGroup = "everyone"
+	RecordAccessMemberGroupOwner      RecordAccessMemberGroup = "owner"
+	RecordAccessMemberGroupShared     RecordAccessMemberGroup = "shared"
+	RecordAccessMemberGroupTeamShared RecordAccessMemberGroup = "team_shared"
+)
+
+// Valid indicates whether the value is a known member of the RecordAccessMemberGroup enum.
+func (e RecordAccessMemberGroup) Valid() bool {
+	switch e {
+	case RecordAccessMemberGroupEveryone:
+		return true
+	case RecordAccessMemberGroupOwner:
+		return true
+	case RecordAccessMemberGroupShared:
+		return true
+	case RecordAccessMemberGroupTeamShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordAccessReasonAccess.
+const (
+	RecordAccessReasonAccessRead  RecordAccessReasonAccess = "read"
+	RecordAccessReasonAccessWrite RecordAccessReasonAccess = "write"
+)
+
+// Valid indicates whether the value is a known member of the RecordAccessReasonAccess enum.
+func (e RecordAccessReasonAccess) Valid() bool {
+	switch e {
+	case RecordAccessReasonAccessRead:
+		return true
+	case RecordAccessReasonAccessWrite:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordAccessReasonCode.
+const (
+	RecordAccessReasonCodeAllRecords       RecordAccessReasonCode = "all_records"
+	RecordAccessReasonCodeOwner            RecordAccessReasonCode = "owner"
+	RecordAccessReasonCodeSameTeamAsOwner  RecordAccessReasonCode = "same_team_as_owner"
+	RecordAccessReasonCodeTeamShare        RecordAccessReasonCode = "team_share"
+	RecordAccessReasonCodeUserShare        RecordAccessReasonCode = "user_share"
+	RecordAccessReasonCodeWorkspaceVisible RecordAccessReasonCode = "workspace_visible"
+	RecordAccessReasonCodeWriteShare       RecordAccessReasonCode = "write_share"
+)
+
+// Valid indicates whether the value is a known member of the RecordAccessReasonCode enum.
+func (e RecordAccessReasonCode) Valid() bool {
+	switch e {
+	case RecordAccessReasonCodeAllRecords:
+		return true
+	case RecordAccessReasonCodeOwner:
+		return true
+	case RecordAccessReasonCodeSameTeamAsOwner:
+		return true
+	case RecordAccessReasonCodeTeamShare:
+		return true
+	case RecordAccessReasonCodeUserShare:
+		return true
+	case RecordAccessReasonCodeWorkspaceVisible:
+		return true
+	case RecordAccessReasonCodeWriteShare:
 		return true
 	default:
 		return false
@@ -11848,6 +12991,369 @@ func (e ReportBlockSeverity) Valid() bool {
 	}
 }
 
+// Defines values for ReportScopeKind.
+const (
+	ReportScopeKindOwner     ReportScopeKind = "owner"
+	ReportScopeKindTeam      ReportScopeKind = "team"
+	ReportScopeKindWorkspace ReportScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ReportScopeKind enum.
+func (e ReportScopeKind) Valid() bool {
+	switch e {
+	case ReportScopeKindOwner:
+		return true
+	case ReportScopeKindTeam:
+		return true
+	case ReportScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingBlockKind.
+const (
+	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
+	ReportingBlockKindForecastSupport   ReportingBlockKind = "forecast_support"
+	ReportingBlockKindMetricReading     ReportingBlockKind = "metric_reading"
+	ReportingBlockKindOwnerAttainment   ReportingBlockKind = "owner_attainment"
+	ReportingBlockKindPipelineMovement  ReportingBlockKind = "pipeline_movement"
+	ReportingBlockKindSdrOutcomes       ReportingBlockKind = "sdr_outcomes"
+	ReportingBlockKindStageAge          ReportingBlockKind = "stage_age"
+	ReportingBlockKindStageDistribution ReportingBlockKind = "stage_distribution"
+	ReportingBlockKindTargetProgress    ReportingBlockKind = "target_progress"
+)
+
+// Valid indicates whether the value is a known member of the ReportingBlockKind enum.
+func (e ReportingBlockKind) Valid() bool {
+	switch e {
+	case ReportingBlockKindBookingsTrend:
+		return true
+	case ReportingBlockKindForecastSupport:
+		return true
+	case ReportingBlockKindMetricReading:
+		return true
+	case ReportingBlockKindOwnerAttainment:
+		return true
+	case ReportingBlockKindPipelineMovement:
+		return true
+	case ReportingBlockKindSdrOutcomes:
+		return true
+	case ReportingBlockKindStageAge:
+		return true
+	case ReportingBlockKindStageDistribution:
+		return true
+	case ReportingBlockKindTargetProgress:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingExecutionStatus.
+const (
+	ReportingExecutionStatusFailed    ReportingExecutionStatus = "failed"
+	ReportingExecutionStatusPartial   ReportingExecutionStatus = "partial"
+	ReportingExecutionStatusPending   ReportingExecutionStatus = "pending"
+	ReportingExecutionStatusRunning   ReportingExecutionStatus = "running"
+	ReportingExecutionStatusSkipped   ReportingExecutionStatus = "skipped"
+	ReportingExecutionStatusSucceeded ReportingExecutionStatus = "succeeded"
+	ReportingExecutionStatusSuspended ReportingExecutionStatus = "suspended"
+)
+
+// Valid indicates whether the value is a known member of the ReportingExecutionStatus enum.
+func (e ReportingExecutionStatus) Valid() bool {
+	switch e {
+	case ReportingExecutionStatusFailed:
+		return true
+	case ReportingExecutionStatusPartial:
+		return true
+	case ReportingExecutionStatusPending:
+		return true
+	case ReportingExecutionStatusRunning:
+		return true
+	case ReportingExecutionStatusSkipped:
+		return true
+	case ReportingExecutionStatusSucceeded:
+		return true
+	case ReportingExecutionStatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingFrameworkInputTemplate.
+const (
+	ReportingFrameworkInputTemplateSales ReportingFrameworkInputTemplate = "sales"
+	ReportingFrameworkInputTemplateSdr   ReportingFrameworkInputTemplate = "sdr"
+)
+
+// Valid indicates whether the value is a known member of the ReportingFrameworkInputTemplate enum.
+func (e ReportingFrameworkInputTemplate) Valid() bool {
+	switch e {
+	case ReportingFrameworkInputTemplateSales:
+		return true
+	case ReportingFrameworkInputTemplateSdr:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingMetricDefinitionTemporalBasis.
+const (
+	ReportingMetricDefinitionTemporalBasisEventPeriod ReportingMetricDefinitionTemporalBasis = "event_period"
+	ReportingMetricDefinitionTemporalBasisStateAt     ReportingMetricDefinitionTemporalBasis = "state_at"
+)
+
+// Valid indicates whether the value is a known member of the ReportingMetricDefinitionTemporalBasis enum.
+func (e ReportingMetricDefinitionTemporalBasis) Valid() bool {
+	switch e {
+	case ReportingMetricDefinitionTemporalBasisEventPeriod:
+		return true
+	case ReportingMetricDefinitionTemporalBasisStateAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingMetricID.
+const (
+	ReportingMetricIDAcceptedOpportunities    ReportingMetricID = "accepted_opportunities"
+	ReportingMetricIDBookingsWon              ReportingMetricID = "bookings_won"
+	ReportingMetricIDClosedWinRate            ReportingMetricID = "closed_win_rate"
+	ReportingMetricIDForecastLanding          ReportingMetricID = "forecast_landing"
+	ReportingMetricIDMeetingsHeld             ReportingMetricID = "meetings_held"
+	ReportingMetricIDOpenPipeline             ReportingMetricID = "open_pipeline"
+	ReportingMetricIDQualifiedPipelineCreated ReportingMetricID = "qualified_pipeline_created"
+	ReportingMetricIDStageAge                 ReportingMetricID = "stage_age"
+)
+
+// Valid indicates whether the value is a known member of the ReportingMetricID enum.
+func (e ReportingMetricID) Valid() bool {
+	switch e {
+	case ReportingMetricIDAcceptedOpportunities:
+		return true
+	case ReportingMetricIDBookingsWon:
+		return true
+	case ReportingMetricIDClosedWinRate:
+		return true
+	case ReportingMetricIDForecastLanding:
+		return true
+	case ReportingMetricIDMeetingsHeld:
+		return true
+	case ReportingMetricIDOpenPipeline:
+		return true
+	case ReportingMetricIDQualifiedPipelineCreated:
+		return true
+	case ReportingMetricIDStageAge:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingReportAudience.
+const (
+	ReportingReportAudiencePrivate   ReportingReportAudience = "private"
+	ReportingReportAudienceTeam      ReportingReportAudience = "team"
+	ReportingReportAudienceWorkspace ReportingReportAudience = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ReportingReportAudience enum.
+func (e ReportingReportAudience) Valid() bool {
+	switch e {
+	case ReportingReportAudiencePrivate:
+		return true
+	case ReportingReportAudienceTeam:
+		return true
+	case ReportingReportAudienceWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingReportInputAudience.
+const (
+	ReportingReportInputAudiencePrivate   ReportingReportInputAudience = "private"
+	ReportingReportInputAudienceTeam      ReportingReportInputAudience = "team"
+	ReportingReportInputAudienceWorkspace ReportingReportInputAudience = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ReportingReportInputAudience enum.
+func (e ReportingReportInputAudience) Valid() bool {
+	switch e {
+	case ReportingReportInputAudiencePrivate:
+		return true
+	case ReportingReportInputAudienceTeam:
+		return true
+	case ReportingReportInputAudienceWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingScheduleInputFrequency.
+const (
+	ReportingScheduleInputFrequencyMonthly ReportingScheduleInputFrequency = "monthly"
+	ReportingScheduleInputFrequencyWeekly  ReportingScheduleInputFrequency = "weekly"
+)
+
+// Valid indicates whether the value is a known member of the ReportingScheduleInputFrequency enum.
+func (e ReportingScheduleInputFrequency) Valid() bool {
+	switch e {
+	case ReportingScheduleInputFrequencyMonthly:
+		return true
+	case ReportingScheduleInputFrequencyWeekly:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingScopeKind.
+const (
+	ReportingScopeKindManagedTeams ReportingScopeKind = "managed_teams"
+	ReportingScopeKindOwner        ReportingScopeKind = "owner"
+	ReportingScopeKindTeam         ReportingScopeKind = "team"
+	ReportingScopeKindWorkspace    ReportingScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ReportingScopeKind enum.
+func (e ReportingScopeKind) Valid() bool {
+	switch e {
+	case ReportingScopeKindManagedTeams:
+		return true
+	case ReportingScopeKindOwner:
+		return true
+	case ReportingScopeKindTeam:
+		return true
+	case ReportingScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingSelectionCloseWindow.
+const (
+	ReportingSelectionCloseWindowAllOpen       ReportingSelectionCloseWindow = "all_open"
+	ReportingSelectionCloseWindowFiscalQuarter ReportingSelectionCloseWindow = "fiscal_quarter"
+)
+
+// Valid indicates whether the value is a known member of the ReportingSelectionCloseWindow enum.
+func (e ReportingSelectionCloseWindow) Valid() bool {
+	switch e {
+	case ReportingSelectionCloseWindowAllOpen:
+		return true
+	case ReportingSelectionCloseWindowFiscalQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingSelectionPeriod.
+const (
+	ReportingSelectionPeriodCustom      ReportingSelectionPeriod = "custom"
+	ReportingSelectionPeriodLastMonth   ReportingSelectionPeriod = "last_month"
+	ReportingSelectionPeriodLastWeek    ReportingSelectionPeriod = "last_week"
+	ReportingSelectionPeriodThisMonth   ReportingSelectionPeriod = "this_month"
+	ReportingSelectionPeriodThisQuarter ReportingSelectionPeriod = "this_quarter"
+)
+
+// Valid indicates whether the value is a known member of the ReportingSelectionPeriod enum.
+func (e ReportingSelectionPeriod) Valid() bool {
+	switch e {
+	case ReportingSelectionPeriodCustom:
+		return true
+	case ReportingSelectionPeriodLastMonth:
+		return true
+	case ReportingSelectionPeriodLastWeek:
+		return true
+	case ReportingSelectionPeriodThisMonth:
+		return true
+	case ReportingSelectionPeriodThisQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingSelectionTargetBasis.
+const (
+	ReportingSelectionTargetBasisFiscalQuarter ReportingSelectionTargetBasis = "fiscal_quarter"
+	ReportingSelectionTargetBasisMonth         ReportingSelectionTargetBasis = "month"
+)
+
+// Valid indicates whether the value is a known member of the ReportingSelectionTargetBasis enum.
+func (e ReportingSelectionTargetBasis) Valid() bool {
+	switch e {
+	case ReportingSelectionTargetBasisFiscalQuarter:
+		return true
+	case ReportingSelectionTargetBasisMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingStatus.
+const (
+	ReportingStatusInsufficientSample ReportingStatus = "insufficient_sample"
+	ReportingStatusNoData             ReportingStatus = "no_data"
+	ReportingStatusNotConfigured      ReportingStatus = "not_configured"
+	ReportingStatusOk                 ReportingStatus = "ok"
+	ReportingStatusPartial            ReportingStatus = "partial"
+	ReportingStatusUnavailable        ReportingStatus = "unavailable"
+	ReportingStatusUnsupported        ReportingStatus = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the ReportingStatus enum.
+func (e ReportingStatus) Valid() bool {
+	switch e {
+	case ReportingStatusInsufficientSample:
+		return true
+	case ReportingStatusNoData:
+		return true
+	case ReportingStatusNotConfigured:
+		return true
+	case ReportingStatusOk:
+		return true
+	case ReportingStatusPartial:
+		return true
+	case ReportingStatusUnavailable:
+		return true
+	case ReportingStatusUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingTargetInputPeriodKind.
+const (
+	ReportingTargetInputPeriodKindFiscalQuarter ReportingTargetInputPeriodKind = "fiscal_quarter"
+	ReportingTargetInputPeriodKindMonth         ReportingTargetInputPeriodKind = "month"
+)
+
+// Valid indicates whether the value is a known member of the ReportingTargetInputPeriodKind enum.
+func (e ReportingTargetInputPeriodKind) Valid() bool {
+	switch e {
+	case ReportingTargetInputPeriodKindFiscalQuarter:
+		return true
+	case ReportingTargetInputPeriodKindMonth:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolveInputCheckOutcome.
 const (
 	ResolveInputCheckOutcomeAddedEvidence ResolveInputCheckOutcome = "added_evidence"
@@ -11905,10 +13411,12 @@ const (
 	RetentionScopeActivitytranscript     RetentionScope = "activity/transcript"
 	RetentionScopeAiCallPayloadcontent   RetentionScope = "ai_call_payload/content"
 	RetentionScopeContactnoConsentNoDeal RetentionScope = "contact/no_consent_no_deal"
+	RetentionScopeDealRiskDay            RetentionScope = "deal_risk_day"
 	RetentionScopeDeallost               RetentionScope = "deal/lost"
 	RetentionScopeDealwon                RetentionScope = "deal/won"
 	RetentionScopeLeadunconverted        RetentionScope = "lead/unconverted"
 	RetentionScopeRawCapture             RetentionScope = "raw_capture"
+	RetentionScopeReportEdition          RetentionScope = "report_edition"
 )
 
 // Valid indicates whether the value is a known member of the RetentionScope enum.
@@ -11922,6 +13430,8 @@ func (e RetentionScope) Valid() bool {
 		return true
 	case RetentionScopeContactnoConsentNoDeal:
 		return true
+	case RetentionScopeDealRiskDay:
+		return true
 	case RetentionScopeDeallost:
 		return true
 	case RetentionScopeDealwon:
@@ -11929,6 +13439,8 @@ func (e RetentionScope) Valid() bool {
 	case RetentionScopeLeadunconverted:
 		return true
 	case RetentionScopeRawCapture:
+		return true
+	case RetentionScopeReportEdition:
 		return true
 	default:
 		return false
@@ -11965,6 +13477,27 @@ func (e RightsCaseReceiptKind) Valid() bool {
 	case RightsCaseReceiptKindErasure:
 		return true
 	case RightsCaseReceiptKindRectify:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RoleRowScope.
+const (
+	RoleRowScopeAll  RoleRowScope = "all"
+	RoleRowScopeOwn  RoleRowScope = "own"
+	RoleRowScopeTeam RoleRowScope = "team"
+)
+
+// Valid indicates whether the value is a known member of the RoleRowScope enum.
+func (e RoleRowScope) Valid() bool {
+	switch e {
+	case RoleRowScopeAll:
+		return true
+	case RoleRowScopeOwn:
+		return true
+	case RoleRowScopeTeam:
 		return true
 	default:
 		return false
@@ -12214,6 +13747,27 @@ func (e ScheduledSendStatus) Valid() bool {
 	case ScheduledSendStatusScheduled:
 		return true
 	case ScheduledSendStatusSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingProfileProvider.
+const (
+	SchedulingProfileProviderEmpty    SchedulingProfileProvider = ""
+	SchedulingProfileProviderGcal     SchedulingProfileProvider = "gcal"
+	SchedulingProfileProviderGraphcal SchedulingProfileProvider = "graphcal"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingProfileProvider enum.
+func (e SchedulingProfileProvider) Valid() bool {
+	switch e {
+	case SchedulingProfileProviderEmpty:
+		return true
+	case SchedulingProfileProviderGcal:
+		return true
+	case SchedulingProfileProviderGraphcal:
 		return true
 	default:
 		return false
@@ -12487,6 +14041,7 @@ func (e SetActivityDispositionRequestDisposition) Valid() bool {
 // Defines values for SetAiModelRateRequestLane.
 const (
 	SetAiModelRateRequestLaneChat       SetAiModelRateRequestLane = "chat"
+	SetAiModelRateRequestLaneDecisions  SetAiModelRateRequestLane = "decisions"
 	SetAiModelRateRequestLaneEmbeddings SetAiModelRateRequestLane = "embeddings"
 )
 
@@ -12494,6 +14049,8 @@ const (
 func (e SetAiModelRateRequestLane) Valid() bool {
 	switch e {
 	case SetAiModelRateRequestLaneChat:
+		return true
+	case SetAiModelRateRequestLaneDecisions:
 		return true
 	case SetAiModelRateRequestLaneEmbeddings:
 		return true
@@ -12883,6 +14440,24 @@ func (e SignalIntroPathNextMoveKind) Valid() bool {
 	}
 }
 
+// Defines values for SignalResolutionOutcome.
+const (
+	SignalResolutionOutcomeDismissed SignalResolutionOutcome = "dismissed"
+	SignalResolutionOutcomeResolved  SignalResolutionOutcome = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the SignalResolutionOutcome enum.
+func (e SignalResolutionOutcome) Valid() bool {
+	switch e {
+	case SignalResolutionOutcomeDismissed:
+		return true
+	case SignalResolutionOutcomeResolved:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SignalWarmContactRelationshipKind.
 const (
 	SignalWarmContactRelationshipKindDealStakeholder SignalWarmContactRelationshipKind = "deal_stakeholder"
@@ -13111,57 +14686,6 @@ func (e SiteReadStartedStatus) Valid() bool {
 	case SiteReadStartedStatusQueued:
 		return true
 	case SiteReadStartedStatusRunning:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SourceAttributionRowObjectType.
-const (
-	SourceAttributionRowObjectTypeActivity SourceAttributionRowObjectType = "activity"
-	SourceAttributionRowObjectTypeCompany  SourceAttributionRowObjectType = "company"
-	SourceAttributionRowObjectTypeContact  SourceAttributionRowObjectType = "contact"
-	SourceAttributionRowObjectTypeDeal     SourceAttributionRowObjectType = "deal"
-	SourceAttributionRowObjectTypeLead     SourceAttributionRowObjectType = "lead"
-	SourceAttributionRowObjectTypeProject  SourceAttributionRowObjectType = "project"
-)
-
-// Valid indicates whether the value is a known member of the SourceAttributionRowObjectType enum.
-func (e SourceAttributionRowObjectType) Valid() bool {
-	switch e {
-	case SourceAttributionRowObjectTypeActivity:
-		return true
-	case SourceAttributionRowObjectTypeCompany:
-		return true
-	case SourceAttributionRowObjectTypeContact:
-		return true
-	case SourceAttributionRowObjectTypeDeal:
-		return true
-	case SourceAttributionRowObjectTypeLead:
-		return true
-	case SourceAttributionRowObjectTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SourceAttributionRowResultOutcome.
-const (
-	SourceAttributionRowResultOutcomeApplied   SourceAttributionRowResultOutcome = "applied"
-	SourceAttributionRowResultOutcomeSkipped   SourceAttributionRowResultOutcome = "skipped"
-	SourceAttributionRowResultOutcomeUnchanged SourceAttributionRowResultOutcome = "unchanged"
-)
-
-// Valid indicates whether the value is a known member of the SourceAttributionRowResultOutcome enum.
-func (e SourceAttributionRowResultOutcome) Valid() bool {
-	switch e {
-	case SourceAttributionRowResultOutcomeApplied:
-		return true
-	case SourceAttributionRowResultOutcomeSkipped:
-		return true
-	case SourceAttributionRowResultOutcomeUnchanged:
 		return true
 	default:
 		return false
@@ -14167,6 +15691,27 @@ func (e UpdateLeadRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for UpdateListRequestSharing.
+const (
+	UpdateListRequestSharingPrivate   UpdateListRequestSharing = "private"
+	UpdateListRequestSharingTeam      UpdateListRequestSharing = "team"
+	UpdateListRequestSharingWorkspace UpdateListRequestSharing = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the UpdateListRequestSharing enum.
+func (e UpdateListRequestSharing) Valid() bool {
+	switch e {
+	case UpdateListRequestSharingPrivate:
+		return true
+	case UpdateListRequestSharingTeam:
+		return true
+	case UpdateListRequestSharingWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateOfferLineItemRequestBillingIntervalMonths.
 const (
 	UpdateOfferLineItemRequestBillingIntervalMonthsN1  UpdateOfferLineItemRequestBillingIntervalMonths = 1
@@ -14305,6 +15850,27 @@ func (e UpdateRelationshipRequestStartedPrecision) Valid() bool {
 	case UpdateRelationshipRequestStartedPrecisionDay:
 		return true
 	case UpdateRelationshipRequestStartedPrecisionMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateRoleRequestRowScope.
+const (
+	UpdateRoleRequestRowScopeAll  UpdateRoleRequestRowScope = "all"
+	UpdateRoleRequestRowScopeOwn  UpdateRoleRequestRowScope = "own"
+	UpdateRoleRequestRowScopeTeam UpdateRoleRequestRowScope = "team"
+)
+
+// Valid indicates whether the value is a known member of the UpdateRoleRequestRowScope enum.
+func (e UpdateRoleRequestRowScope) Valid() bool {
+	switch e {
+	case UpdateRoleRequestRowScopeAll:
+		return true
+	case UpdateRoleRequestRowScopeOwn:
+		return true
+	case UpdateRoleRequestRowScopeTeam:
 		return true
 	default:
 		return false
@@ -14533,6 +16099,30 @@ func (e UpsertPartnerRequestRelationshipStage) Valid() bool {
 	case UpsertPartnerRequestRelationshipStageNoFit:
 		return true
 	case UpsertPartnerRequestRelationshipStageResearch:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserAllowedActions.
+const (
+	UserAllowedActionsChangeRole        UserAllowedActions = "change_role"
+	UserAllowedActionsDeactivate        UserAllowedActions = "deactivate"
+	UserAllowedActionsIssuePasswordLink UserAllowedActions = "issue_password_link"
+	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
+)
+
+// Valid indicates whether the value is a known member of the UserAllowedActions enum.
+func (e UserAllowedActions) Valid() bool {
+	switch e {
+	case UserAllowedActionsChangeRole:
+		return true
+	case UserAllowedActionsDeactivate:
+		return true
+	case UserAllowedActionsIssuePasswordLink:
+		return true
+	case UserAllowedActionsReactivate:
 		return true
 	default:
 		return false
@@ -15481,6 +17071,27 @@ func (e WorklistScopeOptions) Valid() bool {
 	}
 }
 
+// Defines values for WorklistTeamWeek.
+const (
+	WorklistTeamWeekEveryTeam WorklistTeamWeek = "every_team"
+	WorklistTeamWeekNone      WorklistTeamWeek = "none"
+	WorklistTeamWeekTeamsLed  WorklistTeamWeek = "teams_led"
+)
+
+// Valid indicates whether the value is a known member of the WorklistTeamWeek enum.
+func (e WorklistTeamWeek) Valid() bool {
+	switch e {
+	case WorklistTeamWeekEveryTeam:
+		return true
+	case WorklistTeamWeekNone:
+		return true
+	case WorklistTeamWeekTeamsLed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistBandBand.
 const (
 	WorklistBandBandBuildPipeline WorklistBandBand = "build_pipeline"
@@ -15961,6 +17572,7 @@ const (
 	WorklistItemSourceConversationClaim   WorklistItemSource = "conversation_claim"
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
+	WorklistItemSourceDealSuggestion      WorklistItemSource = "deal_suggestion"
 	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
 	WorklistItemSourceDomainQuestion      WorklistItemSource = "domain_question"
 	WorklistItemSourceDsr                 WorklistItemSource = "dsr"
@@ -15999,6 +17611,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceCustomerWaiting:
 		return true
 	case WorklistItemSourceDealAtRisk:
+		return true
+	case WorklistItemSourceDealSuggestion:
 		return true
 	case WorklistItemSourceDedupeCandidate:
 		return true
@@ -16096,6 +17710,7 @@ const (
 	WorklistReachSourceConversationClaim   WorklistReachSource = "conversation_claim"
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
+	WorklistReachSourceDealSuggestion      WorklistReachSource = "deal_suggestion"
 	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
 	WorklistReachSourceDomainQuestion      WorklistReachSource = "domain_question"
 	WorklistReachSourceDsr                 WorklistReachSource = "dsr"
@@ -16134,6 +17749,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceCustomerWaiting:
 		return true
 	case WorklistReachSourceDealAtRisk:
+		return true
+	case WorklistReachSourceDealSuggestion:
 		return true
 	case WorklistReachSourceDedupeCandidate:
 		return true
@@ -16603,6 +18220,279 @@ func (e RelinkActivityJSONBodyEntityType) Valid() bool {
 	}
 }
 
+// Defines values for DeleteAiModelRateParamsLane.
+const (
+	DeleteAiModelRateParamsLaneChat       DeleteAiModelRateParamsLane = "chat"
+	DeleteAiModelRateParamsLaneDecisions  DeleteAiModelRateParamsLane = "decisions"
+	DeleteAiModelRateParamsLaneEmbeddings DeleteAiModelRateParamsLane = "embeddings"
+)
+
+// Valid indicates whether the value is a known member of the DeleteAiModelRateParamsLane enum.
+func (e DeleteAiModelRateParamsLane) Valid() bool {
+	switch e {
+	case DeleteAiModelRateParamsLaneChat:
+		return true
+	case DeleteAiModelRateParamsLaneDecisions:
+		return true
+	case DeleteAiModelRateParamsLaneEmbeddings:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EvaluateReportingParamsScopeKind.
+const (
+	EvaluateReportingParamsScopeKindOwner     EvaluateReportingParamsScopeKind = "owner"
+	EvaluateReportingParamsScopeKindTeam      EvaluateReportingParamsScopeKind = "team"
+	EvaluateReportingParamsScopeKindWorkspace EvaluateReportingParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the EvaluateReportingParamsScopeKind enum.
+func (e EvaluateReportingParamsScopeKind) Valid() bool {
+	switch e {
+	case EvaluateReportingParamsScopeKindOwner:
+		return true
+	case EvaluateReportingParamsScopeKindTeam:
+		return true
+	case EvaluateReportingParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EvaluateReportingParamsPeriod.
+const (
+	EvaluateReportingParamsPeriodCustom      EvaluateReportingParamsPeriod = "custom"
+	EvaluateReportingParamsPeriodLastMonth   EvaluateReportingParamsPeriod = "last_month"
+	EvaluateReportingParamsPeriodLastWeek    EvaluateReportingParamsPeriod = "last_week"
+	EvaluateReportingParamsPeriodThisMonth   EvaluateReportingParamsPeriod = "this_month"
+	EvaluateReportingParamsPeriodThisQuarter EvaluateReportingParamsPeriod = "this_quarter"
+)
+
+// Valid indicates whether the value is a known member of the EvaluateReportingParamsPeriod enum.
+func (e EvaluateReportingParamsPeriod) Valid() bool {
+	switch e {
+	case EvaluateReportingParamsPeriodCustom:
+		return true
+	case EvaluateReportingParamsPeriodLastMonth:
+		return true
+	case EvaluateReportingParamsPeriodLastWeek:
+		return true
+	case EvaluateReportingParamsPeriodThisMonth:
+		return true
+	case EvaluateReportingParamsPeriodThisQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EvaluateReportingParamsTargetBasis.
+const (
+	EvaluateReportingParamsTargetBasisFiscalQuarter EvaluateReportingParamsTargetBasis = "fiscal_quarter"
+	EvaluateReportingParamsTargetBasisMonth         EvaluateReportingParamsTargetBasis = "month"
+)
+
+// Valid indicates whether the value is a known member of the EvaluateReportingParamsTargetBasis enum.
+func (e EvaluateReportingParamsTargetBasis) Valid() bool {
+	switch e {
+	case EvaluateReportingParamsTargetBasisFiscalQuarter:
+		return true
+	case EvaluateReportingParamsTargetBasisMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EvaluateReportingParamsCloseWindow.
+const (
+	EvaluateReportingParamsCloseWindowAllOpen       EvaluateReportingParamsCloseWindow = "all_open"
+	EvaluateReportingParamsCloseWindowFiscalQuarter EvaluateReportingParamsCloseWindow = "fiscal_quarter"
+)
+
+// Valid indicates whether the value is a known member of the EvaluateReportingParamsCloseWindow enum.
+func (e EvaluateReportingParamsCloseWindow) Valid() bool {
+	switch e {
+	case EvaluateReportingParamsCloseWindowAllOpen:
+		return true
+	case EvaluateReportingParamsCloseWindowFiscalQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExportReportingEvaluationParamsScopeKind.
+const (
+	ExportReportingEvaluationParamsScopeKindOwner     ExportReportingEvaluationParamsScopeKind = "owner"
+	ExportReportingEvaluationParamsScopeKindTeam      ExportReportingEvaluationParamsScopeKind = "team"
+	ExportReportingEvaluationParamsScopeKindWorkspace ExportReportingEvaluationParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ExportReportingEvaluationParamsScopeKind enum.
+func (e ExportReportingEvaluationParamsScopeKind) Valid() bool {
+	switch e {
+	case ExportReportingEvaluationParamsScopeKindOwner:
+		return true
+	case ExportReportingEvaluationParamsScopeKindTeam:
+		return true
+	case ExportReportingEvaluationParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExportReportingEvaluationParamsPeriod.
+const (
+	ExportReportingEvaluationParamsPeriodCustom      ExportReportingEvaluationParamsPeriod = "custom"
+	ExportReportingEvaluationParamsPeriodLastMonth   ExportReportingEvaluationParamsPeriod = "last_month"
+	ExportReportingEvaluationParamsPeriodLastWeek    ExportReportingEvaluationParamsPeriod = "last_week"
+	ExportReportingEvaluationParamsPeriodThisMonth   ExportReportingEvaluationParamsPeriod = "this_month"
+	ExportReportingEvaluationParamsPeriodThisQuarter ExportReportingEvaluationParamsPeriod = "this_quarter"
+)
+
+// Valid indicates whether the value is a known member of the ExportReportingEvaluationParamsPeriod enum.
+func (e ExportReportingEvaluationParamsPeriod) Valid() bool {
+	switch e {
+	case ExportReportingEvaluationParamsPeriodCustom:
+		return true
+	case ExportReportingEvaluationParamsPeriodLastMonth:
+		return true
+	case ExportReportingEvaluationParamsPeriodLastWeek:
+		return true
+	case ExportReportingEvaluationParamsPeriodThisMonth:
+		return true
+	case ExportReportingEvaluationParamsPeriodThisQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExportReportingEvaluationParamsTargetBasis.
+const (
+	ExportReportingEvaluationParamsTargetBasisFiscalQuarter ExportReportingEvaluationParamsTargetBasis = "fiscal_quarter"
+	ExportReportingEvaluationParamsTargetBasisMonth         ExportReportingEvaluationParamsTargetBasis = "month"
+)
+
+// Valid indicates whether the value is a known member of the ExportReportingEvaluationParamsTargetBasis enum.
+func (e ExportReportingEvaluationParamsTargetBasis) Valid() bool {
+	switch e {
+	case ExportReportingEvaluationParamsTargetBasisFiscalQuarter:
+		return true
+	case ExportReportingEvaluationParamsTargetBasisMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExportReportingEvaluationParamsCloseWindow.
+const (
+	ExportReportingEvaluationParamsCloseWindowAllOpen       ExportReportingEvaluationParamsCloseWindow = "all_open"
+	ExportReportingEvaluationParamsCloseWindowFiscalQuarter ExportReportingEvaluationParamsCloseWindow = "fiscal_quarter"
+)
+
+// Valid indicates whether the value is a known member of the ExportReportingEvaluationParamsCloseWindow enum.
+func (e ExportReportingEvaluationParamsCloseWindow) Valid() bool {
+	switch e {
+	case ExportReportingEvaluationParamsCloseWindowAllOpen:
+		return true
+	case ExportReportingEvaluationParamsCloseWindowFiscalQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetReportingEvidenceParamsScopeKind.
+const (
+	GetReportingEvidenceParamsScopeKindOwner     GetReportingEvidenceParamsScopeKind = "owner"
+	GetReportingEvidenceParamsScopeKindTeam      GetReportingEvidenceParamsScopeKind = "team"
+	GetReportingEvidenceParamsScopeKindWorkspace GetReportingEvidenceParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetReportingEvidenceParamsScopeKind enum.
+func (e GetReportingEvidenceParamsScopeKind) Valid() bool {
+	switch e {
+	case GetReportingEvidenceParamsScopeKindOwner:
+		return true
+	case GetReportingEvidenceParamsScopeKindTeam:
+		return true
+	case GetReportingEvidenceParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetReportingEvidenceParamsPeriod.
+const (
+	GetReportingEvidenceParamsPeriodCustom      GetReportingEvidenceParamsPeriod = "custom"
+	GetReportingEvidenceParamsPeriodLastMonth   GetReportingEvidenceParamsPeriod = "last_month"
+	GetReportingEvidenceParamsPeriodLastWeek    GetReportingEvidenceParamsPeriod = "last_week"
+	GetReportingEvidenceParamsPeriodThisMonth   GetReportingEvidenceParamsPeriod = "this_month"
+	GetReportingEvidenceParamsPeriodThisQuarter GetReportingEvidenceParamsPeriod = "this_quarter"
+)
+
+// Valid indicates whether the value is a known member of the GetReportingEvidenceParamsPeriod enum.
+func (e GetReportingEvidenceParamsPeriod) Valid() bool {
+	switch e {
+	case GetReportingEvidenceParamsPeriodCustom:
+		return true
+	case GetReportingEvidenceParamsPeriodLastMonth:
+		return true
+	case GetReportingEvidenceParamsPeriodLastWeek:
+		return true
+	case GetReportingEvidenceParamsPeriodThisMonth:
+		return true
+	case GetReportingEvidenceParamsPeriodThisQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetReportingEvidenceParamsTargetBasis.
+const (
+	GetReportingEvidenceParamsTargetBasisFiscalQuarter GetReportingEvidenceParamsTargetBasis = "fiscal_quarter"
+	GetReportingEvidenceParamsTargetBasisMonth         GetReportingEvidenceParamsTargetBasis = "month"
+)
+
+// Valid indicates whether the value is a known member of the GetReportingEvidenceParamsTargetBasis enum.
+func (e GetReportingEvidenceParamsTargetBasis) Valid() bool {
+	switch e {
+	case GetReportingEvidenceParamsTargetBasisFiscalQuarter:
+		return true
+	case GetReportingEvidenceParamsTargetBasisMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetReportingEvidenceParamsCloseWindow.
+const (
+	GetReportingEvidenceParamsCloseWindowAllOpen       GetReportingEvidenceParamsCloseWindow = "all_open"
+	GetReportingEvidenceParamsCloseWindowFiscalQuarter GetReportingEvidenceParamsCloseWindow = "fiscal_quarter"
+)
+
+// Valid indicates whether the value is a known member of the GetReportingEvidenceParamsCloseWindow enum.
+func (e GetReportingEvidenceParamsCloseWindow) Valid() bool {
+	switch e {
+	case GetReportingEvidenceParamsCloseWindowAllOpen:
+		return true
+	case GetReportingEvidenceParamsCloseWindowFiscalQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListApprovalsParamsStatus.
 const (
 	ListApprovalsParamsStatusApproved ListApprovalsParamsStatus = "approved"
@@ -16741,6 +18631,27 @@ func (e ListAutomationRunsParamsOutcome) Valid() bool {
 	case ListAutomationRunsParamsOutcomeQueuedForApproval:
 		return true
 	case ListAutomationRunsParamsOutcomeSkipped:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAvailability200JSONResponseBodyCalendarBacking.
+const (
+	GetAvailability200JSONResponseBodyCalendarBackingCalendar GetAvailability200JSONResponseBodyCalendarBacking = "calendar"
+	GetAvailability200JSONResponseBodyCalendarBackingNone     GetAvailability200JSONResponseBodyCalendarBacking = "none"
+	GetAvailability200JSONResponseBodyCalendarBackingUnknown  GetAvailability200JSONResponseBodyCalendarBacking = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the GetAvailability200JSONResponseBodyCalendarBacking enum.
+func (e GetAvailability200JSONResponseBodyCalendarBacking) Valid() bool {
+	switch e {
+	case GetAvailability200JSONResponseBodyCalendarBackingCalendar:
+		return true
+	case GetAvailability200JSONResponseBodyCalendarBackingNone:
+		return true
+	case GetAvailability200JSONResponseBodyCalendarBackingUnknown:
 		return true
 	default:
 		return false
@@ -17767,6 +19678,51 @@ func (e ListLeadsParamsSlaState) Valid() bool {
 	}
 }
 
+// Defines values for ListListsParamsEntityType.
+const (
+	ListListsParamsEntityTypeCompany ListListsParamsEntityType = "company"
+	ListListsParamsEntityTypeContact ListListsParamsEntityType = "contact"
+	ListListsParamsEntityTypeDeal    ListListsParamsEntityType = "deal"
+	ListListsParamsEntityTypeLead    ListListsParamsEntityType = "lead"
+	ListListsParamsEntityTypeProject ListListsParamsEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the ListListsParamsEntityType enum.
+func (e ListListsParamsEntityType) Valid() bool {
+	switch e {
+	case ListListsParamsEntityTypeCompany:
+		return true
+	case ListListsParamsEntityTypeContact:
+		return true
+	case ListListsParamsEntityTypeDeal:
+		return true
+	case ListListsParamsEntityTypeLead:
+		return true
+	case ListListsParamsEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListListsParamsListType.
+const (
+	ListListsParamsListTypeDynamic ListListsParamsListType = "dynamic"
+	ListListsParamsListTypeStatic  ListListsParamsListType = "static"
+)
+
+// Valid indicates whether the value is a known member of the ListListsParamsListType enum.
+func (e ListListsParamsListType) Valid() bool {
+	switch e {
+	case ListListsParamsListTypeDynamic:
+		return true
+	case ListListsParamsListTypeStatic:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetOnboardingCompanyProposalParamsLocale.
 const (
 	GetOnboardingCompanyProposalParamsLocaleOnboardingProposalLocaleDE GetOnboardingCompanyProposalParamsLocale = "de"
@@ -17854,15 +19810,48 @@ func (e ListProjectsParamsPhase) Valid() bool {
 	}
 }
 
+// Defines values for BookPublicMeetingJSONBodyDelivery.
+const (
+	BookPublicMeetingJSONBodyDeliveryCalendar   BookPublicMeetingJSONBodyDelivery = "calendar"
+	BookPublicMeetingJSONBodyDeliveryRecordOnly BookPublicMeetingJSONBodyDelivery = "record_only"
+)
+
+// Valid indicates whether the value is a known member of the BookPublicMeetingJSONBodyDelivery enum.
+func (e BookPublicMeetingJSONBodyDelivery) Valid() bool {
+	switch e {
+	case BookPublicMeetingJSONBodyDeliveryCalendar:
+		return true
+	case BookPublicMeetingJSONBodyDeliveryRecordOnly:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BookPublicMeeting201JSONResponseBodyBooking.
 const (
-	BookPublicMeeting201JSONResponseBodyBookingConfirmed BookPublicMeeting201JSONResponseBodyBooking = "confirmed"
+	BookPublicMeeting201JSONResponseBodyBookingCanceled       BookPublicMeeting201JSONResponseBodyBooking = "canceled"
+	BookPublicMeeting201JSONResponseBodyBookingCanceling      BookPublicMeeting201JSONResponseBodyBooking = "canceling"
+	BookPublicMeeting201JSONResponseBodyBookingConfirmed      BookPublicMeeting201JSONResponseBodyBooking = "confirmed"
+	BookPublicMeeting201JSONResponseBodyBookingNeedsAttention BookPublicMeeting201JSONResponseBodyBooking = "needs_attention"
+	BookPublicMeeting201JSONResponseBodyBookingPending        BookPublicMeeting201JSONResponseBodyBooking = "pending"
+	BookPublicMeeting201JSONResponseBodyBookingRescheduling   BookPublicMeeting201JSONResponseBodyBooking = "rescheduling"
 )
 
 // Valid indicates whether the value is a known member of the BookPublicMeeting201JSONResponseBodyBooking enum.
 func (e BookPublicMeeting201JSONResponseBodyBooking) Valid() bool {
 	switch e {
+	case BookPublicMeeting201JSONResponseBodyBookingCanceled:
+		return true
+	case BookPublicMeeting201JSONResponseBodyBookingCanceling:
+		return true
 	case BookPublicMeeting201JSONResponseBodyBookingConfirmed:
+		return true
+	case BookPublicMeeting201JSONResponseBodyBookingNeedsAttention:
+		return true
+	case BookPublicMeeting201JSONResponseBodyBookingPending:
+		return true
+	case BookPublicMeeting201JSONResponseBodyBookingRescheduling:
 		return true
 	default:
 		return false
@@ -18067,6 +20056,42 @@ func (e ListRelationshipsParamsKind) Valid() bool {
 	}
 }
 
+// Defines values for ExplainReportParamsHandleVersion.
+const (
+	ExplainReportParamsHandleVersionN2 ExplainReportParamsHandleVersion = "2"
+)
+
+// Valid indicates whether the value is a known member of the ExplainReportParamsHandleVersion enum.
+func (e ExplainReportParamsHandleVersion) Valid() bool {
+	switch e {
+	case ExplainReportParamsHandleVersionN2:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExplainReportParamsScopeKind.
+const (
+	ExplainReportParamsScopeKindOwner     ExplainReportParamsScopeKind = "owner"
+	ExplainReportParamsScopeKindTeam      ExplainReportParamsScopeKind = "team"
+	ExplainReportParamsScopeKindWorkspace ExplainReportParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ExplainReportParamsScopeKind enum.
+func (e ExplainReportParamsScopeKind) Valid() bool {
+	switch e {
+	case ExplainReportParamsScopeKindOwner:
+		return true
+	case ExplainReportParamsScopeKindTeam:
+		return true
+	case ExplainReportParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListScheduledSendsParamsStatus.
 const (
 	ListScheduledSendsParamsStatusCancelled ListScheduledSendsParamsStatus = "cancelled"
@@ -18088,6 +20113,24 @@ func (e ListScheduledSendsParamsStatus) Valid() bool {
 	case ListScheduledSendsParamsStatusScheduled:
 		return true
 	case ListScheduledSendsParamsStatusSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSchedulingCalendarsParamsProvider.
+const (
+	GetSchedulingCalendarsParamsProviderGcal     GetSchedulingCalendarsParamsProvider = "gcal"
+	GetSchedulingCalendarsParamsProviderGraphcal GetSchedulingCalendarsParamsProvider = "graphcal"
+)
+
+// Valid indicates whether the value is a known member of the GetSchedulingCalendarsParamsProvider enum.
+func (e GetSchedulingCalendarsParamsProvider) Valid() bool {
+	switch e {
+	case GetSchedulingCalendarsParamsProviderGcal:
+		return true
+	case GetSchedulingCalendarsParamsProviderGraphcal:
 		return true
 	default:
 		return false
@@ -18241,36 +20284,6 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 	}
 }
 
-// Defines values for PreviewAccessParamsRole.
-const (
-	PreviewAccessParamsRoleAdmin      PreviewAccessParamsRole = "admin"
-	PreviewAccessParamsRoleManagement PreviewAccessParamsRole = "management"
-	PreviewAccessParamsRoleManager    PreviewAccessParamsRole = "manager"
-	PreviewAccessParamsRoleOps        PreviewAccessParamsRole = "ops"
-	PreviewAccessParamsRoleReadOnly   PreviewAccessParamsRole = "read_only"
-	PreviewAccessParamsRoleRep        PreviewAccessParamsRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the PreviewAccessParamsRole enum.
-func (e PreviewAccessParamsRole) Valid() bool {
-	switch e {
-	case PreviewAccessParamsRoleAdmin:
-		return true
-	case PreviewAccessParamsRoleManagement:
-		return true
-	case PreviewAccessParamsRoleManager:
-		return true
-	case PreviewAccessParamsRoleOps:
-		return true
-	case PreviewAccessParamsRoleReadOnly:
-		return true
-	case PreviewAccessParamsRoleRep:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
 const (
 	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
@@ -18361,6 +20374,36 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	}
 }
 
+// Defines values for GetHiddenBacklogRowsParamsRule.
+const (
+	GetHiddenBacklogRowsParamsRuleColleagues  GetHiddenBacklogRowsParamsRule = "colleagues"
+	GetHiddenBacklogRowsParamsRuleInformsUs   GetHiddenBacklogRowsParamsRule = "informs_us"
+	GetHiddenBacklogRowsParamsRuleNotSales    GetHiddenBacklogRowsParamsRule = "not_sales"
+	GetHiddenBacklogRowsParamsRulePastHorizon GetHiddenBacklogRowsParamsRule = "past_horizon"
+	GetHiddenBacklogRowsParamsRuleSetAside    GetHiddenBacklogRowsParamsRule = "set_aside"
+	GetHiddenBacklogRowsParamsRuleUnlinked    GetHiddenBacklogRowsParamsRule = "unlinked"
+)
+
+// Valid indicates whether the value is a known member of the GetHiddenBacklogRowsParamsRule enum.
+func (e GetHiddenBacklogRowsParamsRule) Valid() bool {
+	switch e {
+	case GetHiddenBacklogRowsParamsRuleColleagues:
+		return true
+	case GetHiddenBacklogRowsParamsRuleInformsUs:
+		return true
+	case GetHiddenBacklogRowsParamsRuleNotSales:
+		return true
+	case GetHiddenBacklogRowsParamsRulePastHorizon:
+		return true
+	case GetHiddenBacklogRowsParamsRuleSetAside:
+		return true
+	case GetHiddenBacklogRowsParamsRuleUnlinked:
+		return true
+	default:
+		return false
+	}
+}
+
 // AIFeedbackInput A human's verdict on one derived claim.
 type AIFeedbackInput struct {
 	ClaimKind AIFeedbackInputClaimKind `json:"claim_kind"`
@@ -18399,6 +20442,25 @@ type AIFeedbackInputSubjectType string
 // AIFeedbackInputVerdict defines model for AIFeedbackInput.Verdict.
 type AIFeedbackInputVerdict string
 
+// AcceptDealSuggestionRequest The caller's corrections. An omitted field keeps the suggestion's value.
+type AcceptDealSuggestionRequest struct {
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// CloseDate A date the caller chose. Without one the deal carries the suggestion's date, marked provisional.
+	CloseDate *openapi_types.Date `json:"close_date,omitempty"`
+	Currency  *string             `json:"currency,omitempty"`
+
+	// Name Without one the deal is named after the company.
+	Name *string `json:"name,omitempty"`
+
+	// NoAmount Open the deal with no amount, dropping the one the suggestion proposed. Refused together with amount_minor or currency.
+	NoAmount *bool               `json:"no_amount,omitempty"`
+	OwnerId  *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// StageId Any open stage; the deal opens in that stage's pipeline.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
+}
+
 // AcceptExtractionRequest defines model for AcceptExtractionRequest.
 type AcceptExtractionRequest struct {
 	// Edits field -> edited value, for fields the user typed over before accepting. A key
@@ -18428,7 +20490,7 @@ type AcceptedExtractionField struct {
 // AcceptedExtractionFieldProvenance defines model for AcceptedExtractionField.Provenance.
 type AcceptedExtractionFieldProvenance string
 
-// AccessPreview What a seat with this role and these teams may do — computed by the server from the evaluated policy, the same one the gates read, so the screen never interprets the role a second way. Used before an invite (`POST /users/access-preview`) and for an existing member (`GET /users/{id}/access`).
+// AccessPreview What a seat with this role and these teams may do — computed by the server from the evaluated policy, the same one the gates read, so the screen never interprets the role a second way. Used before an invite (`GET /users/access-preview`) and for an existing member (`GET /users/{id}/access`).
 type AccessPreview struct {
 	FieldMasks []struct {
 		Condition AccessPreviewFieldMasksCondition `json:"condition"`
@@ -18542,7 +20604,7 @@ type Activity struct {
 	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
 	AudienceReason *string `json:"audience_reason,omitempty"`
 
-	// Author Who wrote this where it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
+	// Author Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
 	// WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
 	Author *SourceAuthor `json:"author,omitempty"`
@@ -18582,6 +20644,9 @@ type Activity struct {
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
 	Id         openapi_types.UUID  `json:"id"`
+
+	// InvitationStatus Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
+	InvitationStatus *ActivityInvitationStatus `json:"invitation_status,omitempty"`
 
 	// IsDone Task only.
 	IsDone *bool        `json:"is_done,omitempty"`
@@ -18633,6 +20698,9 @@ type ActivityContentState string
 
 // ActivityDirection inbound/outbound for email/call; null for note/task.
 type ActivityDirection string
+
+// ActivityInvitationStatus Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
+type ActivityInvitationStatus string
 
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string
@@ -18869,6 +20937,10 @@ type AiActivity struct {
 	// A run live past its lease is absent on purpose — it is reported as `stalled` in `running`, and listing it here as well would report one occurrence as two.
 	Faults []AiActivityItem `json:"faults"`
 
+	// LiveTotal How many occurrences are queued or running WITHIN their lease for this caller, across EVERY kind. Neither the `kinds` parameter nor the 25-row bound on `running` narrows it, so it can exceed the length of `running`. A run past its lease is not counted, because a client pulsing for it would claim work that may have stopped; `running` reports it as `stalled` when its kind is asked for.
+	// It counts work and carries no kind, subject or sentence: a client can tell the AI is busy with something it does not narrate, and must not caption that pulse as if there were a line to read. Optional so an older server can omit it, and a client reads its absence as unknown rather than zero; this server always writes it.
+	LiveTotal *int `json:"live_total,omitempty"`
+
 	// Recent Occurrences that SETTLED since midnight in the server's own timezone (not the reader's, and not UTC unless the server runs on it), newest-settled first, at most 10.
 	Recent []AiActivityItem `json:"recent"`
 
@@ -19037,6 +21109,16 @@ type AiCall struct {
 	// CallsAttempted The attempt number of this terminal attempt: 1 = first try succeeded/failed terminally, >1 = retries happened.
 	CallsAttempted int `json:"calls_attempted"`
 
+	// Config What that identity resolves to. OMITTED — not null — on a call
+	// that names no configuration, which is the only case it is absent
+	// for: `ai_call_config_fk` binds a hash that IS set to a row, so a
+	// call carrying one always resolves.
+	//
+	// The hash alone tells a reader that two calls shared a
+	// configuration, and nothing about what it was — which is the
+	// question a diagnostics reader is actually asking.
+	Config *AiCallConfig `json:"config,omitempty"`
+
 	// ConfigHash Routing/prompt config identity of this call.
 	ConfigHash         *string `json:"config_hash,omitempty"`
 	ContextFingerprint string  `json:"context_fingerprint"`
@@ -19044,16 +21126,27 @@ type AiCall struct {
 	// ContextScopes Company-context scopes injected into the request.
 	ContextScopes []string            `json:"context_scopes"`
 	CorrelationId *openapi_types.UUID `json:"correlation_id,omitempty"`
-	Degraded      bool                `json:"degraded"`
+
+	// DecisionAttempted Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which.
+	DecisionAttempted bool `json:"decision_attempted"`
+	Degraded          bool `json:"degraded"`
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
-	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause. `provider_error` is the FALLBACK: a provider failure naming none of those three. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
+	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
+	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
 	Id         openapi_types.UUID `json:"id"`
-	LatencyMs  int                `json:"latency_ms"`
+
+	// Kind What the call asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
+
+	// LogicalCallId Shared by every attempt of this call: the id that groups them in the trace.
+	LogicalCallId openapi_types.UUID `json:"logical_call_id"`
 
 	// ModelId The configured binding.
 	ModelId    string    `json:"model_id"`
@@ -19061,7 +21154,7 @@ type AiCall struct {
 
 	// Payload Present only when payload_captured. Post-secret-stripper content (AIRT-AC-4); rune-capped with a visible truncation marker.
 	Payload *struct {
-		// Request The captured request: {"system": string, "messages": [{role, content}]}.
+		// Request The captured request: {"system": string, "messages": [{role, content}]}, or, for a decision call, {"state": string, "questions": {…}}.
 		Request interface{} `json:"request"`
 
 		// Response The captured response text (JSON string).
@@ -19088,14 +21181,52 @@ type AiCall struct {
 type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
-	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder.
-	AttemptReason string    `json:"attempt_reason"`
-	ErrorSentinel *string   `json:"error_sentinel,omitempty"`
-	IsTerminal    bool      `json:"is_terminal"`
-	LatencyMs     int       `json:"latency_ms"`
-	OccurredAt    time.Time `json:"occurred_at"`
-	TokensIn      int       `json:"tokens_in"`
-	TokensOut     int       `json:"tokens_out"`
+	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
+	AttemptReason string `json:"attempt_reason"`
+
+	// DecisionChoice The label a decision attempt was answered with, whether or not it stood; absent on every other kind and on a decision attempt that got no answer.
+	DecisionChoice *string `json:"decision_choice,omitempty"`
+
+	// DecisionConfidence The confidence the decision model gave decision_choice, as it sent it; present exactly when decision_choice is.
+	DecisionConfidence *float64 `json:"decision_confidence,omitempty"`
+
+	// ErrorSentinel This attempt's failure code, as on the call; null when it answered.
+	ErrorSentinel *string `json:"error_sentinel,omitempty"`
+	IsTerminal    bool    `json:"is_terminal"`
+
+	// Kind What this attempt asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
+
+	// ModelId The configured binding this attempt ran on.
+	ModelId    *string   `json:"model_id,omitempty"`
+	OccurredAt time.Time `json:"occurred_at"`
+	Provider   *string   `json:"provider,omitempty"`
+
+	// ServedModel What the provider reported serving this attempt; absent when it reported nothing.
+	ServedModel *string `json:"served_model,omitempty"`
+
+	// ServedProvider The upstream a broker routed this attempt to; absent on a direct vendor or when the broker named none.
+	ServedProvider *string `json:"served_provider,omitempty"`
+
+	// Tier The tier this attempt ran on; decide for the decision lane.
+	Tier      *string `json:"tier,omitempty"`
+	TokensIn  int     `json:"tokens_in"`
+	TokensOut int     `json:"tokens_out"`
+}
+
+// AiCallConfig The configuration an AI call ran under, resolved from its `config_hash`.
+//
+// Written on every call since the table existed and joined by nothing: a
+// reader could see that two calls shared a configuration and never what
+// changed between two that did not.
+type AiCallConfig struct {
+	PromptVersion string `json:"prompt_version"`
+
+	// ProviderParams The provider parameters this configuration pinned.
+	ProviderParams    *map[string]interface{} `json:"provider_params,omitempty"`
+	RoutingConfigHash string                  `json:"routing_config_hash"`
+	TaskContractHash  string                  `json:"task_contract_hash"`
 }
 
 // AiCallListResponse defines model for AiCallListResponse.
@@ -19116,17 +21247,25 @@ type AiCallSummary struct {
 	CachedTokens int  `json:"cached_tokens"`
 
 	// CallsAttempted The attempt number of this terminal attempt: 1 = first try succeeded/failed terminally, >1 = retries happened.
-	CallsAttempted int  `json:"calls_attempted"`
-	Degraded       bool `json:"degraded"`
+	CallsAttempted int `json:"calls_attempted"`
+
+	// DecisionAttempted Some attempt of this logical call asked a decision model. True on a call the decision lane answered and on one it fell back from, where the terminal attempt is a completion; the detail ladder says which.
+	DecisionAttempted bool `json:"decision_attempted"`
+	Degraded          bool `json:"degraded"`
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
-	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause. `provider_error` is the FALLBACK: a provider failure naming none of those three. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
+	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
+	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
 	Id         openapi_types.UUID `json:"id"`
-	LatencyMs  int                `json:"latency_ms"`
+
+	// Kind What the call asked: a chat completion, an embedding, or a decision model.
+	Kind      string `json:"kind"`
+	LatencyMs int    `json:"latency_ms"`
 
 	// ModelId The configured binding.
 	ModelId         string    `json:"model_id"`
@@ -19142,6 +21281,34 @@ type AiCallSummary struct {
 	Tier      string `json:"tier"`
 	TokensIn  int    `json:"tokens_in"`
 	TokensOut int    `json:"tokens_out"`
+}
+
+// AiDecisionSummary One task's decision-model pass and fallback counts over the usage window.
+type AiDecisionSummary struct {
+	// Asked Logical calls that consulted the decision model, including those refused before any call was sent.
+	Asked int `json:"asked"`
+
+	// Decided Logical calls the decision model answered: its answer stood and no LLM ran.
+	Decided int `json:"decided"`
+
+	// Fallbacks Logical calls handed to the LLM ladder, keyed by the attempt reason the ladder's first attempt carries (decision_below_floor, decision_error, …). A reason with no calls is absent. Read an unrecognized key as "some reason" rather than refusing it.
+	Fallbacks map[string]int `json:"fallbacks"`
+	Task      string         `json:"task"`
+}
+
+// AiDecisionsBinding The decision-model lane: a model that answers a typed question with calibrated
+// probabilities, asked before a decision site's ladder. Absent means no task uses
+// one. It serves a task only when certified for that site and when its endpoint
+// reaches no further than the task's own bindings.
+type AiDecisionsBinding struct {
+	// BaseUrl The FULL decision endpoint URL, posted to as written. Optional for jev (default https://api.typesafe.ai/v1/systemone); required for jev_compatible, e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone.
+	BaseUrl *string `json:"base_url,omitempty"`
+
+	// Model The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter.
+	Model string `json:"model"`
+
+	// Provider jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY is sent when held and never required).
+	Provider string `json:"provider"`
 }
 
 // AiDeferredWork defines model for AiDeferredWork.
@@ -19172,18 +21339,51 @@ type AiEmbeddingsBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+
+	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
+	// OpenRouter; refused on any other binding, and on the embeddings lane every
+	// preference but only, ignore and allow_fallbacks is refused. Absent means the
+	// product default (reliability over price); an empty object means no preferences
+	// (the broker's own price-weighted routing). The two are different choices and a
+	// client must not turn one into the other.
+	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
+
+	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
+	// Gemini 3 or later only; refused on any other provider, on a model that predates
+	// the field, and on the embeddings lane. Absent means the adapter's default, and a
+	// save that omits it keeps the stored level while provider, host and model are
+	// unchanged. `default` clears a stored level back to the adapter's default; it is
+	// never stored or returned, and is accepted on any binding.
+	ThinkingLevel *AiEmbeddingsBindingThinkingLevel `json:"thinking_level,omitempty"`
 }
+
+// AiEmbeddingsBindingThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
+// Gemini 3 or later only; refused on any other provider, on a model that predates
+// the field, and on the embeddings lane. Absent means the adapter's default, and a
+// save that omits it keeps the stored level while provider, host and model are
+// unchanged. `default` clears a stored level back to the adapter's default; it is
+// never stored or returned, and is accepted on any binding.
+type AiEmbeddingsBindingThinkingLevel string
 
 // AiFeatureRoute defines model for AiFeatureRoute.
 type AiFeatureRoute struct {
-	BudgetExempt        bool               `json:"budget_exempt"`
+	BudgetExempt      bool              `json:"budget_exempt"`
+	DecisionCandidate *AiRouteCandidate `json:"decision_candidate,omitempty"`
+
+	// DecisionFirst The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.
+	DecisionFirst bool `json:"decision_first"`
+
+	// DecisionSkipReason Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
+	DecisionSkipReason  *string            `json:"decision_skip_reason,omitempty"`
 	DisplayName         string             `json:"display_name"`
 	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
 	ExecutionMode       string             `json:"execution_mode"`
-	Impact              string             `json:"impact"`
-	LeadingTier         string             `json:"leading_tier"`
-	NormalCandidates    []AiRouteCandidate `json:"normal_candidates"`
-	Task                string             `json:"task"`
+
+	// Impact How the proposed routing changes what answers this feature. decision_changed — only the decision model that answers it first moved (added, removed or rebound) while every tier binding stayed put; model_changed wins when the lead tier binding moved as well.
+	Impact           string             `json:"impact"`
+	LeadingTier      string             `json:"leading_tier"`
+	NormalCandidates []AiRouteCandidate `json:"normal_candidates"`
+	Task             string             `json:"task"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -19202,9 +21402,10 @@ type AiModelRate struct {
 	InputPerMtok      string             `json:"input_per_mtok"`
 
 	// Lane What the model is FOR. A property of the model rather than of this dated row: the
-	// routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-	// where the embeddings lane binds, and a zero output price cannot tell them apart —
-	// every local chat row carries one too.
+	// routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+	// where the embeddings lane binds and a `decisions` one where the decision lane
+	// binds, and a zero output price cannot tell them apart — every local chat row
+	// carries one too.
 	Lane          AiModelRateLane `json:"lane"`
 	ModelId       string          `json:"model_id"`
 	OutputPerMtok string          `json:"output_per_mtok"`
@@ -19212,14 +21413,78 @@ type AiModelRate struct {
 }
 
 // AiModelRateLane What the model is FOR. A property of the model rather than of this dated row: the
-// routing form offers a `chat` model where a chat tier binds and an `embeddings` one
-// where the embeddings lane binds, and a zero output price cannot tell them apart —
-// every local chat row carries one too.
+// routing form offers a `chat` model where a chat tier binds, an `embeddings` one
+// where the embeddings lane binds and a `decisions` one where the decision lane
+// binds, and a zero output price cannot tell them apart — every local chat row
+// carries one too.
 type AiModelRateLane string
 
 // AiModelRateListResponse defines model for AiModelRateListResponse.
 type AiModelRateListResponse struct {
 	Data []AiModelRate `json:"data"`
+}
+
+// AiModelRateProviderRefresh defines model for AiModelRateProviderRefresh.
+type AiModelRateProviderRefresh struct {
+	// Models Model ids written this run.
+	Models []string `json:"models"`
+
+	// Outcome `updated` wrote at least one price; `unchanged` found every priced model already
+	// current; `not_available` means the provider (or the catalogue, for these models)
+	// publishes no price to read; `not_listed` means a bound model is absent from the
+	// catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
+	// could not be read;
+	// `not_bound` means nothing this provider serves is bound or on the sheet.
+	Outcome string `json:"outcome"`
+
+	// Provider The provider as the routing document spells it.
+	Provider string `json:"provider"`
+
+	// Unchanged Models already at the catalogue price.
+	Unchanged int `json:"unchanged"`
+
+	// Unlisted Bound model ids the catalogue does not name.
+	Unlisted []string `json:"unlisted"`
+
+	// Updated Prices written today.
+	Updated int `json:"updated"`
+}
+
+// AiModelRateRefreshReport The outcome of a catalogue refresh, one entry per provider this build knows.
+type AiModelRateRefreshReport struct {
+	Providers []AiModelRateProviderRefresh `json:"providers"`
+}
+
+// AiOpenRouterRouting Upstream-selection preferences for an openai_compatible binding pointed at
+// OpenRouter; refused on any other binding, and on the embeddings lane every
+// preference but only, ignore and allow_fallbacks is refused. Absent means the
+// product default (reliability over price); an empty object means no preferences
+// (the broker's own price-weighted routing). The two are different choices and a
+// client must not turn one into the other.
+type AiOpenRouterRouting struct {
+	// AllowFallbacks Override the broker's host fallback. False is a real choice, distinct from absent.
+	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
+
+	// Ignore Upstream slugs excluded; a hard filter.
+	Ignore *[]string `json:"ignore,omitempty"`
+
+	// Only Upstream slugs allowed; a hard filter.
+	Only *[]string `json:"only,omitempty"`
+
+	// PreferredMaxLatencyP90 Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
+	PreferredMaxLatencyP90 *float64 `json:"preferred_max_latency_p90,omitempty"`
+
+	// Quantizations Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.
+	Quantizations *[]string `json:"quantizations,omitempty"`
+
+	// ReasoningEffort none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.
+	ReasoningEffort *string `json:"reasoning_effort,omitempty"`
+
+	// RequireParameters Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent.
+	RequireParameters *bool `json:"require_parameters,omitempty"`
+
+	// Sort price | throughput | latency. Reorders rather than filters, and disables load balancing.
+	Sort *string `json:"sort,omitempty"`
 }
 
 // AiProfile defines model for AiProfile.
@@ -19261,7 +21526,7 @@ type AiProviderKeyList struct {
 	Providers []AiProviderKeyStatus `json:"providers"`
 }
 
-// AiProviderKeyStatus What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless.
+// AiProviderKeyStatus What may be known about one vendor's credential. Facts about the vendor and whether a key is held, and nothing about the key: it has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless.
 type AiProviderKeyStatus struct {
 	// Configured Whether a credential is held. A screen reads this to offer "add" or "rotate"; it says nothing about whether the key still works, which only the vendor can answer.
 	Configured bool `json:"configured"`
@@ -19269,9 +21534,33 @@ type AiProviderKeyStatus struct {
 	// EnvVar The variable the same key may arrive in. Named so an operator can see which export seeded a vendor; the names follow each vendor's own convention, which is why they carry no MARGINCE_ prefix.
 	EnvVar string `json:"env_var"`
 
+	// Optional Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix.
+	Optional bool `json:"optional"`
+
 	// Provider The routing name of the vendor, the same string a binding uses.
 	Provider string `json:"provider"`
 }
+
+// AiProviderKeyTestResult One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words.
+type AiProviderKeyTestResult struct {
+	// KeyConfirmed Present only when `ok`. False when the pass proves the vendor answered but not that it checked the key — the empty decision request to a self-hosted or other Jev-wire server.
+	KeyConfirmed *bool `json:"key_confirmed,omitempty"`
+
+	// ModelCount How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one.
+	ModelCount *int `json:"model_count,omitempty"`
+
+	// Ok Whether the test passed: the vendor answered the probe the operation describes for it (a model list, a key endpoint, or the empty decision request) without refusing this credential.
+	Ok bool `json:"ok"`
+
+	// Provider The routing name of the vendor that was asked.
+	Provider string `json:"provider"`
+
+	// Reason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+	Reason *AiProviderKeyTestResultReason `json:"reason,omitempty"`
+}
+
+// AiProviderKeyTestResultReason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+type AiProviderKeyTestResultReason string
 
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
@@ -19286,6 +21575,11 @@ type AiRouteCandidate struct {
 // refuses an unknown key with a 422 naming it — restating the set here would be a second
 // copy free to drift from the generated one.
 type AiRouting struct {
+	// Decisions The decision-model lane: a model that answers a typed question with calibrated
+	// probabilities, asked before a decision site's ladder. Absent means no task uses
+	// one. It serves a task only when certified for that site and when its endpoint
+	// reaches no further than the task's own bindings.
+	Decisions  *AiDecisionsBinding `json:"decisions,omitempty"`
 	Embeddings AiEmbeddingsBinding `json:"embeddings"`
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
@@ -19351,13 +21645,16 @@ type AiRunSummaryCurrency string
 
 // AiRungHealth One model tier and what it has been doing.
 type AiRungHealth struct {
-	// Calls Terminal attempts in the window.
+	// Calls Attempts this tier made in the window, each counted once — including one that failed
+	// and handed the call to the next tier, and each same-tier retry. Cache hits are not
+	// counted.
 	Calls int `json:"calls"`
 
-	// Failures How many of them carried an error.
+	// Failures How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached.
 	Failures int `json:"failures"`
 
-	// Healthy The tier answered at least once in the window without every attempt failing. Decided
+	// Healthy The tier's latest attempt in the window answered. The latest, not a ratio: a tier
+	// that answered fifty minutes ago and has failed every attempt since is down now. Decided
 	// here rather than left to each client: two clients deciding what an all-failed rung
 	// means would be two answers, and one surface would call an outage while the other did
 	// not.
@@ -19406,7 +21703,31 @@ type AiTierBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+
+	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
+	// OpenRouter; refused on any other binding, and on the embeddings lane every
+	// preference but only, ignore and allow_fallbacks is refused. Absent means the
+	// product default (reliability over price); an empty object means no preferences
+	// (the broker's own price-weighted routing). The two are different choices and a
+	// client must not turn one into the other.
+	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
+
+	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
+	// Gemini 3 or later only; refused on any other provider, on a model that predates
+	// the field, and on the embeddings lane. Absent means the adapter's default, and a
+	// save that omits it keeps the stored level while provider, host and model are
+	// unchanged. `default` clears a stored level back to the adapter's default; it is
+	// never stored or returned, and is accepted on any binding.
+	ThinkingLevel *AiTierBindingThinkingLevel `json:"thinking_level,omitempty"`
 }
+
+// AiTierBindingThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
+// Gemini 3 or later only; refused on any other provider, on a model that predates
+// the field, and on the embeddings lane. Absent means the adapter's default, and a
+// save that omits it keeps the stored level while provider, host and model are
+// unchanged. `default` clears a stored level back to the adapter's default; it is
+// never stored or returned, and is accepted on any binding.
+type AiTierBindingThinkingLevel string
 
 // AiUsage AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total.
 type AiUsage struct {
@@ -19437,7 +21758,7 @@ type AiUsage struct {
 			Task            string  `json:"task"`
 			TaskDisplayName *string `json:"task_display_name,omitempty"`
 
-			// Tier local_small, cheap_cloud, premium, frontier, local_large.
+			// Tier local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane).
 			Tier      string `json:"tier"`
 			TokensIn  int    `json:"tokens_in"`
 			TokensOut int    `json:"tokens_out"`
@@ -19446,6 +21767,9 @@ type AiUsage struct {
 			UnpricedCalls *int `json:"unpriced_calls,omitempty"`
 		} `json:"tasks"`
 	} `json:"days"`
+
+	// Decisions Per task, how often the decision model was consulted over the same window and how often its answer stood. Read from the ai_call trace, one logical call counted once, because the metered calls above count attempts and cannot give a rate. Empty when no call in the window consulted a decision model.
+	Decisions *[]AiDecisionSummary `json:"decisions,omitempty"`
 }
 
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
@@ -19455,6 +21779,12 @@ type AiUsageBudgetBand string
 type AnalyticsAnswer struct {
 	// Columns What each value in a row means, in order.
 	Columns []string `json:"columns"`
+
+	// Labels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
+	Labels *AnalyticsIdLabels `json:"labels,omitempty"`
+
+	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
 
 	// Rows One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
 	Rows []map[string]interface{} `json:"rows"`
@@ -19525,9 +21855,16 @@ type AnalyticsExplainRequest struct {
 
 // AnalyticsExplanation defines model for AnalyticsExplanation.
 type AnalyticsExplanation struct {
+	// Columns The keys a row may carry, in order: `id`, the dimensions, the measured fields, and `label` last when at least one row was named.
 	Columns []string `json:"columns"`
 
-	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over.
+	// Labels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
+	Labels *AnalyticsIdLabels `json:"labels,omitempty"`
+
+	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
+
+	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. `label` is the record's display name, read under this caller's own grants; it is ABSENT on a row the caller may not name, which keeps its id and nothing more.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// Truncated The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why.
@@ -19548,6 +21885,9 @@ type AnalyticsFilter struct {
 
 // AnalyticsFilterOp defines model for AnalyticsFilter.Op.
 type AnalyticsFilterOp string
+
+// AnalyticsIdLabels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
+type AnalyticsIdLabels map[string]map[string]string
 
 // AnalyticsMeasure defines model for AnalyticsMeasure.
 type AnalyticsMeasure struct {
@@ -19600,11 +21940,40 @@ type AnalyticsQuery struct {
 	ScopeKind *string `json:"scope_kind,omitempty"`
 }
 
+// AnalyticsRefusal A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
+// The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+type AnalyticsRefusal struct {
+	Code   string  `json:"code"`
+	Detail *string `json:"detail,omitempty"`
+
+	// Details Why a question was not answered, in parts a client can render. `detail` beside it says the same as one sentence, for a reader that has only prose.
+	Details  *AnalyticsRefusalDetails `json:"details,omitempty"`
+	Instance *string                  `json:"instance,omitempty"`
+	Status   int                      `json:"status"`
+	Title    *string                  `json:"title,omitempty"`
+	Type     *string                  `json:"type,omitempty"`
+}
+
+// AnalyticsRefusalDetails Why a question was not answered, in parts a client can render. `detail` beside it says the same as one sentence, for a reader that has only prose.
+type AnalyticsRefusalDetails struct {
+	// Kind `invalid`: the question means nothing as asked, such as a sum over a stage name. `unsupported`: it names a population, field, aggregate or comparison this caller's vocabulary does not have. `privacy`: the answer would describe too few records.
+	Kind AnalyticsRefusalDetailsKind `json:"kind"`
+
+	// Message What is wrong, in the asker's terms.
+	Message string `json:"message"`
+
+	// Suggest The smallest change that would have worked.
+	Suggest string `json:"suggest"`
+}
+
+// AnalyticsRefusalDetailsKind `invalid`: the question means nothing as asked, such as a sum over a stage name. `unsupported`: it names a population, field, aggregate or comparison this caller's vocabulary does not have. `privacy`: the answer would describe too few records.
+type AnalyticsRefusalDetailsKind string
+
 // AnalyticsSchema The populations and fields one caller may ask about.
 type AnalyticsSchema struct {
 	Entities []AnalyticsEntity `json:"entities"`
 
-	// Version Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run.
+	// Version Changes when this caller's vocabulary changes. Echoed on every answer as `schema_version`.
 	Version string `json:"version"`
 }
 
@@ -19797,7 +22166,9 @@ type ApprovalBundleMember struct {
 	// (the status says which). `expired` — it lapsed undecided and is no longer
 	// approvable; re-propose instead. `effect_failed` — the verdict IS recorded and
 	// audited, but the follow-on change did not land; the member reads approved and
-	// unredeemed, and the server log carries the cause.
+	// unredeemed, and the server log carries the cause. `refused` — its kind refused
+	// approving it before anything was decided (the same check a single approval runs),
+	// so it is still pending and can be declined or decided later.
 	Outcome ApprovalBundleMemberOutcome `json:"outcome"`
 }
 
@@ -19806,7 +22177,9 @@ type ApprovalBundleMember struct {
 // (the status says which). `expired` — it lapsed undecided and is no longer
 // approvable; re-propose instead. `effect_failed` — the verdict IS recorded and
 // audited, but the follow-on change did not land; the member reads approved and
-// unredeemed, and the server log carries the cause.
+// unredeemed, and the server log carries the cause. `refused` — its kind refused
+// approving it before anything was decided (the same check a single approval runs),
+// so it is still pending and can be declined or decided later.
 type ApprovalBundleMemberOutcome string
 
 // ApprovalEvidence One claim's backing material, so confirming a proposal is a check rather than a vote of confidence in the model. Per claim, not per approval: a proposal asserting three things carries three of these.
@@ -19903,6 +22276,23 @@ type AssignNoticeCase struct {
 	OwnerUserId openapi_types.UUID `json:"owner_user_id"`
 }
 
+// AssignableRole defines model for AssignableRole.
+type AssignableRole struct {
+	// IsSystem True for a role the product ships.
+	IsSystem bool `json:"is_system"`
+
+	// Key The role key an invite or a role change sends.
+	Key string `json:"key"`
+
+	// Name The role's name as stored. A client shows a seeded role under its own translated label and a custom role under this.
+	Name string `json:"name"`
+}
+
+// AssignableRoleDirectory defines model for AssignableRoleDirectory.
+type AssignableRoleDirectory struct {
+	Roles []AssignableRole `json:"roles"`
+}
+
 // AssignmentRecordType The kind of record an assignment hangs on.
 type AssignmentRecordType string
 
@@ -19947,6 +22337,24 @@ type AssistantProfileProviders string
 
 // AssistantProfileState defines model for AssistantProfile.State.
 type AssistantProfileState string
+
+// AssuranceFindingCount One exception type at one severity, and how many of it a pass would raise.
+type AssuranceFindingCount struct {
+	Count    int                           `json:"count"`
+	Severity AssuranceFindingCountSeverity `json:"severity"`
+	Type     string                        `json:"type"`
+}
+
+// AssuranceFindingCountSeverity defines model for AssuranceFindingCount.Severity.
+type AssuranceFindingCountSeverity string
+
+// AssuranceRunAccepted The pass is enqueued. Its findings appear when it lands.
+type AssuranceRunAccepted struct {
+	Status AssuranceRunAcceptedStatus `json:"status"`
+}
+
+// AssuranceRunAcceptedStatus defines model for AssuranceRunAccepted.Status.
+type AssuranceRunAcceptedStatus string
 
 // Attachment A file hung off an entity. Mirrors the `attachment` table: the row is the
 // system of record and the tenant anchor; the bytes live in object storage,
@@ -20427,6 +22835,9 @@ type AttentionCounts struct {
 	// Commitments How many promises are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`
 
+	// DealSuggestionsOpen Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all.
+	DealSuggestionsOpen *int `json:"deal_suggestions_open,omitempty"`
+
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
 	DidNotRun *int `json:"did_not_run,omitempty"`
 
@@ -20497,6 +22908,9 @@ type AttentionDealFacts struct {
 
 	// StageId The deal's current stage.
 	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
+
+	// WinProbability The win probability recorded on the deal's current stage. A fact about the stage the deal sits in, never a weighting applied to `amount_minor`.
+	WinProbability *int `json:"win_probability,omitempty"`
 }
 
 // AttentionItem One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -20839,9 +23253,6 @@ type AttentionSubject struct {
 // AttentionSubjectType defines model for AttentionSubject.Type.
 type AttentionSubjectType string
 
-// AttributionRebuildResult Deliberately empty of counts. The edge table belongs to the search module and the composition layer does not read it, so a number here would be a second reader of somebody else's table, kept in step by hand, answering a question nobody asked. The status says the fold ran.
-type AttributionRebuildResult = map[string]interface{}
-
 // AudienceMember One user or team admitted to a message besides its participants. The same shape the
 // audience write takes and the presentation reads back, so an editor that renders the
 // current set submits it in the vocabulary it received.
@@ -20949,6 +23360,9 @@ type AuditLogEntry struct {
 
 	// AuthorizationRule Which RBAC/scope rule allowed it.
 	AuthorizationRule *string `json:"authorization_rule,omitempty"`
+
+	// BatchId The bulk change that wrote this row; null for a change made on its own.
+	BatchId *openapi_types.UUID `json:"batch_id,omitempty"`
 
 	// Before The record image before the change. For an `activity` row this read
 	// REDACTS content the caller's audience does not admit. What survives
@@ -21241,11 +23655,11 @@ type AvailableModelList struct {
 	// RankedBy The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten.
 	RankedBy *string `json:"ranked_by,omitempty"`
 
-	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
 	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
 }
 
-// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
 type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
@@ -21308,14 +23722,20 @@ type BackfillStatus struct {
 	EstimatedMessages *int `json:"estimated_messages,omitempty"`
 
 	// LastErrorClass Error class only; detail lives in system_log (0078 rationale).
-	LastErrorClass *string             `json:"last_error_class,omitempty"`
-	StartedAt      *time.Time          `json:"started_at,omitempty"`
-	State          BackfillStatusState `json:"state"`
+	LastErrorClass *string `json:"last_error_class,omitempty"`
+
+	// OfferedWindows The windows THIS installation admits, in reach order — the product's supported set narrowed by `capture.max_backfill_months` where an operator set one. A picker offers these and no others: the preview and the start both refuse a window above the cap, so offering one is offering a choice that 422s. Absent or empty means the client should fall back to the full supported set rather than render an empty picker.
+	OfferedWindows *[]BackfillStatusOfferedWindows `json:"offered_windows,omitempty"`
+	StartedAt      *time.Time                      `json:"started_at,omitempty"`
+	State          BackfillStatusState             `json:"state"`
 
 	// UpdatedAt Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").
 	UpdatedAt *time.Time            `json:"updated_at,omitempty"`
 	Window    *BackfillStatusWindow `json:"window,omitempty"`
 }
+
+// BackfillStatusOfferedWindows defines model for BackfillStatus.OfferedWindows.
+type BackfillStatusOfferedWindows string
 
 // BackfillStatusState defines model for BackfillStatus.State.
 type BackfillStatusState string
@@ -21401,9 +23821,9 @@ type BlockedDomain struct {
 	// Source What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 	// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
 	// found named a company; `stale_evidence` means the newest mail from the domain is too
-	// old to mint one from today's site; `near_duplicate` means the name it resolved to is
-	// close to a company already here, and which of them this domain belongs to is a
-	// human's call rather than the machine's.
+	// old to mint one from today's site; `near_duplicate` means more than one company
+	// here already carries the name it resolved to, and which of them this domain belongs
+	// to is a human's call rather than the machine's.
 	Source BlockedDomainSource `json:"source"`
 }
 
@@ -21415,9 +23835,9 @@ type BlockedDomainAdmission string
 // BlockedDomainSource What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 // `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
 // found named a company; `stale_evidence` means the newest mail from the domain is too
-// old to mint one from today's site; `near_duplicate` means the name it resolved to is
-// close to a company already here, and which of them this domain belongs to is a
-// human's call rather than the machine's.
+// old to mint one from today's site; `near_duplicate` means more than one company
+// here already carries the name it resolved to, and which of them this domain belongs
+// to is a human's call rather than the machine's.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -21428,6 +23848,24 @@ type BlockedDomainListResponse struct {
 	// automatically from every bulk-sender verdict, so a list that quietly stopped at its
 	// page size would tell an operator their domain was never refused when it was.
 	Total int `json:"total"`
+}
+
+// BoughtField One value on a contact that a data provider's purchase wrote and still owns.
+type BoughtField struct {
+	// AppliedAt When the purchase wrote it.
+	AppliedAt time.Time `json:"applied_at"`
+
+	// Provider A licensed data provider registered in THIS installation; the domain/run contract
+	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
+	// enum, for the reason `ProviderRef` gives for messaging transports: which providers
+	// exist is a deployment fact — what this binary composed — so an enum would assert
+	// that the legal set is identical everywhere, which is false. The registry refuses a
+	// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+	// live set.
+	Provider Provider `json:"provider"`
+
+	// Target Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the purchase wrote is bought.
+	Target string `json:"target"`
 }
 
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
@@ -21477,6 +23915,234 @@ type BriefSnoozeRequest struct {
 	// the future.
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 }
+
+// BulkChangeExecuteRequest defines model for BulkChangeExecuteRequest.
+type BulkChangeExecuteRequest struct {
+	// ConfirmToken The token a preview of exactly this selection returned. Required above 10 records.
+	ConfirmToken *string    `json:"confirm_token,omitempty"`
+	Items        []BulkItem `json:"items"`
+
+	// ListId The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.
+	ListId *openapi_types.UUID `json:"list_id,omitempty"`
+
+	// Note Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.
+	Note *string `json:"note,omitempty"`
+
+	// OwnerId The new owner. Required for `reassign_owner` and refused for every other verb.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
+	Verb BulkVerb `json:"verb"`
+}
+
+// BulkChangePreview defines model for BulkChangePreview.
+type BulkChangePreview struct {
+	// Affected The records the change would alter.
+	Affected []openapi_types.UUID `json:"affected"`
+
+	// ConfirmToken Present when the change would alter at least one record. Required above 10 records; below that, presenting it holds the execution to `affected`.
+	ConfirmToken *string `json:"confirm_token,omitempty"`
+
+	// Count The number of records the change would alter.
+	Count int `json:"count"`
+
+	// Excluded The records the change would leave alone, each with its reason.
+	Excluded []BulkSkip `json:"excluded"`
+
+	// ExpiresAt When `confirm_token` stops being accepted.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+
+	// RequiresConfirmation True above 10 records: executing needs `confirm_token`.
+	RequiresConfirmation bool            `json:"requires_confirmation"`
+	Sample               []BulkSampleRow `json:"sample"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
+	Verb BulkVerb `json:"verb"`
+}
+
+// BulkChangePreviewRequest defines model for BulkChangePreviewRequest.
+type BulkChangePreviewRequest struct {
+	Items []BulkItem `json:"items"`
+
+	// ListId The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.
+	ListId *openapi_types.UUID `json:"list_id,omitempty"`
+
+	// Note Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.
+	Note *string `json:"note,omitempty"`
+
+	// OwnerId The new owner. Required for `reassign_owner` and refused for every other verb.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
+	Verb BulkVerb `json:"verb"`
+}
+
+// BulkChangeResult defines model for BulkChangeResult.
+type BulkChangeResult struct {
+	// BatchId The id every audit row of this change carries as `batch_id`.
+	BatchId openapi_types.UUID `json:"batch_id"`
+
+	// Changed The number of records changed.
+	Changed int `json:"changed"`
+
+	// LeftBehind What an undo restored a record without, because it could not come back.
+	LeftBehind *[]BulkLeftBehind `json:"left_behind,omitempty"`
+
+	// Skipped The records left alone, each with its reason.
+	Skipped []BulkSkip `json:"skipped"`
+
+	// UndoOf For an undo, the change it put back.
+	UndoOf *openapi_types.UUID `json:"undo_of,omitempty"`
+}
+
+// BulkItem One selected record and the version the caller was shown.
+type BulkItem struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Version The version the caller read. A record whose version has moved since is skipped as `changed_since_preview`.
+	Version int64 `json:"version"`
+}
+
+// BulkLeftBehind One thing an undo could not bring back with its record. `kind` names the child table, or
+// `list` and `tag` for a membership or tag; `ref_id` is that row, list or tag.
+type BulkLeftBehind struct {
+	// Id The record that was restored.
+	Id    openapi_types.UUID `json:"id"`
+	Kind  BulkLeftBehindKind `json:"kind"`
+	RefId openapi_types.UUID `json:"ref_id"`
+}
+
+// BulkLeftBehindKind defines model for BulkLeftBehind.Kind.
+type BulkLeftBehindKind string
+
+// BulkOperation One executed bulk change or undo, as `getBulkChange` reads it.
+type BulkOperation struct {
+	BatchId openapi_types.UUID `json:"batch_id"`
+
+	// Changed The number of records changed.
+	Changed    int              `json:"changed"`
+	CreatedAt  time.Time        `json:"created_at"`
+	LeftBehind []BulkLeftBehind `json:"left_behind"`
+
+	// ListId The Shortlist a list verb named.
+	ListId *openapi_types.UUID `json:"list_id,omitempty"`
+
+	// OwnerId The new owner a reassignment named.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+	Skipped    []BulkSkip     `json:"skipped"`
+
+	// UndoOf Set on an undo: the change it put back.
+	UndoOf *openapi_types.UUID `json:"undo_of,omitempty"`
+
+	// UndoneBy Set once the change was undone: the undo that put it back.
+	UndoneBy *openapi_types.UUID `json:"undone_by,omitempty"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
+	Verb BulkVerb `json:"verb"`
+}
+
+// BulkRecordState The facts a bulk change can move on a record.
+type BulkRecordState struct {
+	Archived bool `json:"archived"`
+
+	// Listed For a list verb, whether the record is on the Shortlist.
+	Listed  *bool               `json:"listed,omitempty"`
+	OwnerId *openapi_types.UUID `json:"owner_id"`
+}
+
+// BulkRecordType The kind of record a bulk change acts on. One change acts on one kind.
+type BulkRecordType string
+
+// BulkSampleRow One record the change would alter, as it is and as it would be.
+type BulkSampleRow struct {
+	// After The facts a bulk change can move on a record.
+	After BulkRecordState `json:"after"`
+
+	// Before The facts a bulk change can move on a record.
+	Before BulkRecordState    `json:"before"`
+	Id     openapi_types.UUID `json:"id"`
+
+	// Label The record's name as its list shows it.
+	Label string `json:"label"`
+}
+
+// BulkSkip defines model for BulkSkip.
+type BulkSkip struct {
+	// Code Which single-record rule refused the record, when the reason is `refused` — the same
+	// code the single-record operation answers, for example `sole_project_company`.
+	Code *string            `json:"code,omitempty"`
+	Id   openapi_types.UUID `json:"id"`
+
+	// Message The refusal in English, for a code the client does not know.
+	Message *string `json:"message,omitempty"`
+
+	// Params The values the rule named, when it named any.
+	Params *map[string]interface{} `json:"params,omitempty"`
+
+	// Reason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
+	// archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
+	// its version moved since the caller read it. `no_change`: it already has this owner, or is
+	// already on (or already off) the Shortlist.
+	// `anchor_company`: it is the installation's own company, which is never archived.
+	// `not_previewed`: the preview whose token this execution presents did not list it.
+	// `refused`: a single-record rule refuses it; `code` says which.
+	//
+	// An undo adds five. `changed_since_batch`: the record changed after the change being undone.
+	// `merged`: it was merged into another record. `erased`: its personal data was erased or
+	// purged. `value_taken`: another live record now holds its email or domain.
+	// `no_previous_owner`: it had no owner before the reassignment.
+	Reason BulkSkipReason `json:"reason"`
+}
+
+// BulkSkipReason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
+// archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
+// its version moved since the caller read it. `no_change`: it already has this owner, or is
+// already on (or already off) the Shortlist.
+// `anchor_company`: it is the installation's own company, which is never archived.
+// `not_previewed`: the preview whose token this execution presents did not list it.
+// `refused`: a single-record rule refuses it; `code` says which.
+//
+// An undo adds five. `changed_since_batch`: the record changed after the change being undone.
+// `merged`: it was merged into another record. `erased`: its personal data was erased or
+// purged. `value_taken`: another live record now holds its email or domain.
+// `no_previous_owner`: it had no owner before the reassignment.
+type BulkSkipReason string
+
+// BulkUndoRequest defines model for BulkUndoRequest.
+type BulkUndoRequest struct {
+	// ConfirmToken The token `previewBulkUndo` returned. Required above 10 records.
+	ConfirmToken *string `json:"confirm_token,omitempty"`
+}
+
+// BulkVerb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+// `addListMember` and `removeListMember` do, and change nothing on the record itself.
+type BulkVerb string
 
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room
 // is open and the list can be worked. `closed` — the deal is done; everything
@@ -21609,6 +24275,24 @@ type CaptureActivityResponse struct {
 
 	// WindowHours The window these counts cover. Fixed at 24.
 	WindowHours int `json:"window_hours"`
+}
+
+// CaptureAwaitingContact One of your captured contacts waiting on a sender decision.
+type CaptureAwaitingContact struct {
+	// CapturedAt When the contact was created, which is how long it has been waiting.
+	CapturedAt time.Time          `json:"captured_at"`
+	ContactId  openapi_types.UUID `json:"contact_id"`
+
+	// DisplayName Absent when the contact has no name.
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// Emails The contact's live addresses. The decision is made about these senders.
+	Emails []string `json:"emails"`
+}
+
+// CaptureAwaitingContactListResponse defines model for CaptureAwaitingContactListResponse.
+type CaptureAwaitingContactListResponse struct {
+	Data []CaptureAwaitingContact `json:"data"`
 }
 
 // CaptureClassifierHealth The sender queue as a whole, across every mailbox.
@@ -21858,8 +24542,65 @@ type CaptureHealth struct {
 	Classifier  CaptureClassifierHealth `json:"classifier"`
 	GeneratedAt time.Time               `json:"generated_at"`
 
+	// HeldMeetings Captured records already filed under a contact that are still held to their
+	// participants because, when they arrived, they named nobody the workspace knew. The
+	// nightly link reconcile lifts every one of them, so anything counted here is backlog.
+	// Counted with the pass's own selector and without its per-tick bound.
+	HeldMeetings CaptureHeldMeetings `json:"held_meetings"`
+
 	// Mailboxes One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent.
 	Mailboxes []CaptureMailboxHealth `json:"mailboxes"`
+
+	// Sweeps One row per repair pass, always all of them, in a fixed order. A pass that has
+	// never run is listed with no `last_run`, not left out.
+	Sweeps []CaptureSweepHealth `json:"sweeps"`
+}
+
+// CaptureHeldMeetings Captured records already filed under a contact that are still held to their
+// participants because, when they arrived, they named nobody the workspace knew. The
+// nightly link reconcile lifts every one of them, so anything counted here is backlog.
+// Counted with the pass's own selector and without its per-tick bound.
+type CaptureHeldMeetings struct {
+	Count int `json:"count"`
+
+	// OldestAgeSeconds How long ago the oldest of them was captured. Null when none are held.
+	OldestAgeSeconds *int `json:"oldest_age_seconds,omitempty"`
+}
+
+// CaptureKeptBreakdown Why the skipped messages were skipped. The four counts are disjoint and sum to `skipped`.
+// Reported because the count alone tells an owner that something survived their deletion and
+// not what would have to change for it to go: a hold lifts when somebody lifts it, a statutory
+// window expires on a date, an open request closes when it is finished, and an undetermined
+// floor lifts when the installation can say what the law requires.
+type CaptureKeptBreakdown struct {
+	// Held Messages an erasure or a controller pinned by hand.
+	Held int `json:"held"`
+
+	// StatutoryClass The retention class that shielded them, named only when it kept something — a reader
+	// shown a rule beside a zero would reasonably think it applied to their deletion.
+	StatutoryClass *string `json:"statutory_class,omitempty"`
+
+	// StatutoryFromYearEnd True when the period counts from the end of the calendar year rather than from the
+	// message's own date — the difference between "six years" and "up to seven".
+	StatutoryFromYearEnd *bool `json:"statutory_from_year_end,omitempty"`
+
+	// StatutoryYears How many years that class keeps its records, as a number the reader's own copy renders.
+	// Absent when the compiled-in packs declare a period that is not whole years, because a
+	// screen that rounded one would misstate how long somebody's mail is held.
+	StatutoryYears *int `json:"statutory_years,omitempty"`
+
+	// UnderRequest Messages a data-subject request is still about, and which it needs in order to be answered.
+	UnderRequest int `json:"under_request"`
+
+	// UnderStatute Messages inside their commercial-retention window — correspondence the law still requires keeping.
+	UnderStatute int `json:"under_statute"`
+
+	// UnderUndeterminedFloor Messages kept because this installation could not determine what the law requires of
+	// them. Distinct from `under_statute`, which is a claim that a retention window applies:
+	// these were shielded because a purge that cannot ask what the law requires must not
+	// guess that the answer is "nothing", and reporting them as a statute would tell an owner
+	// their mail is commercial correspondence when nothing established that.
+	UnderUndeterminedFloor int `json:"under_undetermined_floor"`
 }
 
 // CaptureMailboxHealth defines model for CaptureMailboxHealth.
@@ -21966,6 +24707,13 @@ type CapturePurgeOutcome struct {
 
 	// Destroyed Messages gone entirely — text, original, attachments, vectors, delivery copies.
 	Destroyed int `json:"destroyed"`
+
+	// Kept Why the skipped messages were skipped. The four counts are disjoint and sum to `skipped`.
+	// Reported because the count alone tells an owner that something survived their deletion and
+	// not what would have to change for it to go: a hold lifts when somebody lifts it, a statutory
+	// window expires on a date, an open request closes when it is finished, and an undetermined
+	// floor lifts when the installation can say what the law requires.
+	Kept CaptureKeptBreakdown `json:"kept"`
 
 	// Preview True when nothing was actually done.
 	Preview bool `json:"preview"`
@@ -22083,6 +24831,53 @@ type CaptureSourceEntry struct {
 	Source string `json:"source"`
 }
 
+// CaptureSweepHealth When one repair pass last ran and last succeeded, from the receipt each pass writes
+// per workspace turn. Never names what the pass worked on.
+type CaptureSweepHealth struct {
+	// CadenceSeconds How often the job that runs this pass is scheduled. Null when it has no fixed cadence.
+	CadenceSeconds *int `json:"cadence_seconds,omitempty"`
+
+	// LastRun The pass's most recent receipt.
+	LastRun *CaptureSweepRun `json:"last_run,omitempty"`
+
+	// LastSucceededAt When the pass last finished without an error, `partial` included. Null when no
+	// receipt on record succeeded.
+	LastSucceededAt *time.Time `json:"last_succeeded_at,omitempty"`
+
+	// Sweep `settled_thread_verdicts` applies a settled thread's answer to its remaining
+	// messages; `stranded_contacts` asks about captured contacts nobody was asked
+	// about; `filed_meeting_holds` lifts the hold on filed meetings.
+	Sweep CaptureSweepHealthSweep `json:"sweep"`
+}
+
+// CaptureSweepHealthSweep `settled_thread_verdicts` applies a settled thread's answer to its remaining
+// messages; `stranded_contacts` asks about captured contacts nobody was asked
+// about; `filed_meeting_holds` lifts the hold on filed meetings.
+type CaptureSweepHealthSweep string
+
+// CaptureSweepRun The pass's most recent receipt.
+type CaptureSweepRun struct {
+	// CapHit Whether it stopped at its per-tick bound.
+	CapHit bool `json:"cap_hit"`
+
+	// ErrorClass Set only when `outcome` is `failed`: a class token from the job failure
+	// vocabulary, `panicked` when the pass panicked, or `unclassified`. Never the
+	// error's text, which stays in the log.
+	ErrorClass *string   `json:"error_class,omitempty"`
+	FinishedAt time.Time `json:"finished_at"`
+
+	// Outcome `partial` ran cleanly and stopped at its per-tick bound, so a backlog remains.
+	// `skipped` never ran because an earlier stage of the same job failed.
+	Outcome CaptureSweepRunOutcome `json:"outcome"`
+
+	// Processed What the pass committed before it returned.
+	Processed int `json:"processed"`
+}
+
+// CaptureSweepRunOutcome `partial` ran cleanly and stopped at its per-tick bound, so a backlog remains.
+// `skipped` never ran because an earlier stage of the same job failed.
+type CaptureSweepRunOutcome string
+
 // CaptureTraceEntry defines model for CaptureTraceEntry.
 type CaptureTraceEntry struct {
 	// ActivityId The timeline row this message became. Present only where one exists AND the caller may read it — an entry whose activity moved out of their row scope still lists, with no link, rather than handing back an existence proof.
@@ -22155,11 +24950,9 @@ type ChangeContractStatusRequestStatus string
 
 // ChangeUserRoleRequest defines model for ChangeUserRoleRequest.
 type ChangeUserRoleRequest struct {
-	Role ChangeUserRoleRequestRole `json:"role"`
+	// Role A live role's key; see `InviteUserRequest.role`.
+	Role string `json:"role"`
 }
-
-// ChangeUserRoleRequestRole defines model for ChangeUserRoleRequest.Role.
-type ChangeUserRoleRequestRole string
 
 // ChannelConnection One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds.
 type ChannelConnection struct {
@@ -22441,6 +25234,12 @@ type CommissionAttribution string
 // quarter, and the deal amount that can be corrected after the close, would
 // otherwise make the same entry answer a different question each time it is read.
 // Carries no owner — visibility is inherited from the deal.
+//
+// An entry carries no `masked_fields`, because no column of one can be withheld on
+// its own: the rate IS the partner's margin tier and the amount over the basis is
+// that rate again. A role whose field mask withholds `partner.margin_tier` therefore
+// reads no entry at all — the list omits it, the single read answers 404, and the
+// summary leaves it out of the totals.
 type CommissionEntry struct {
 	// AmountMinor What the rate produced.
 	AmountMinor int64 `json:"amount_minor"`
@@ -22635,7 +25434,7 @@ type Company struct {
 	Address    *Address   `json:"address,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
-	// Author Who created this company in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
+	// Author Who created this company in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
@@ -22667,7 +25466,10 @@ type Company struct {
 	// LastActivityAt When something last happened with this account — the newest `occurred_at` of a WORKSPACE-AUDIENCE activity linked to it, maintained on the activity write exactly as `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must reproduce it). NULL until the first such activity. Sortable (DM-VOCAB-2).
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
-	LegalName      *string    `json:"legal_name,omitempty"`
+
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool   `json:"legal_hold,omitempty"`
+	LegalName *string `json:"legal_name,omitempty"`
 
 	// Lifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
 	Lifecycle *CompanyLifecycle `json:"lifecycle,omitempty"`
@@ -22781,6 +25583,9 @@ type Company360 struct {
 
 	// LastOutboundAt When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// ListMemberships The Shortlists this company is on that the caller may find. Absent while the installation has not switched lists on.
+	ListMemberships *[]List `json:"list_memberships,omitempty"`
 
 	// Moment The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's contacts — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
 	// The schema is `ContactMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose promise it is.
@@ -25287,6 +28092,20 @@ type ConnectorAppRedirectUri struct {
 // None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
 type ConnectorAppRedirectUriPurpose string
 
+// ConnectorContainer One folder or label: the provider's own token, and the name its owner reads.
+type ConnectorContainer struct {
+	// Id The provider's token, and what a container exclusion stores. Opaque by nature — a Gmail label id, a Graph folder id — except on IMAP, where a mailbox is named by its path and the two are the same string.
+	Id string `json:"id"`
+
+	// Name What the owner sees in their mail client. For display only: two folders may share it, and a rename must not silently re-point a rule, which is why the rule stores the id.
+	Name string `json:"name"`
+}
+
+// ConnectorContainers The folders or labels one mailbox has, as a picker offers them.
+type ConnectorContainers struct {
+	Containers []ConnectorContainer `json:"containers"`
+}
+
 // ConnectorContextTag The one existing word every record this connector creates is filed under, so
 // "which records came in from this source" has an answer. Absent when the operator
 // chose none, which is the honest default rather than a guess.
@@ -25424,9 +28243,12 @@ type Contact struct {
 	Address    *Address   `json:"address,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
-	// Author Who created this contact in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
+	// Author Who created this contact in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
+
+	// BoughtFields Which of this contact's values a data provider's purchase put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete bought data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company.
+	BoughtFields *[]BoughtField `json:"bought_fields,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
@@ -25453,6 +28275,9 @@ type Contact struct {
 	// LastActivityAt When something last happened with this contact — the newest `occurred_at` of an activity linked to it, maintained on the activity write exactly as `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must reproduce it). NULL until the first linked activity. Sortable (DM-VOCAB-1).
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 	LastName       *string    `json:"last_name,omitempty"`
+
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool `json:"legal_hold,omitempty"`
 
 	// MergedIntoId Set when this row was merged away.
 	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
@@ -25756,8 +28581,8 @@ type ContactConsentGuardEntry struct {
 	// PurposeClass Which gate this purpose answers to (ADR-0098 D1). `business_correspondence` and
 	// `transactional` are never consent-gated — their lawful basis is Art 6(1)(b)/(f), and
 	// treating a reply to someone who wrote to us as a consent violation is a frame that is
-	// legally wrong. `marketing` needs express consent with double-opt-in proof or the
-	// §7(3) existing-customer flag. `phone_outreach` is specced and dormant.
+	// legally wrong. `marketing` needs express consent with double-opt-in proof; the §7(3)
+	// existing-customer exception is not offered. `phone_outreach` is specced and dormant.
 	PurposeClass ContactConsentGuardEntryPurposeClass `json:"purpose_class"`
 	PurposeKey   string                               `json:"purpose_key"`
 	PurposeLabel *string                              `json:"purpose_label,omitempty"`
@@ -25778,8 +28603,8 @@ type ContactConsentGuardEntryChannel string
 // ContactConsentGuardEntryPurposeClass Which gate this purpose answers to (ADR-0098 D1). `business_correspondence` and
 // `transactional` are never consent-gated — their lawful basis is Art 6(1)(b)/(f), and
 // treating a reply to someone who wrote to us as a consent violation is a frame that is
-// legally wrong. `marketing` needs express consent with double-opt-in proof or the
-// §7(3) existing-customer flag. `phone_outreach` is specced and dormant.
+// legally wrong. `marketing` needs express consent with double-opt-in proof; the §7(3)
+// existing-customer exception is not offered. `phone_outreach` is specced and dormant.
 type ContactConsentGuardEntryPurposeClass string
 
 // ContactConsentGuardEntryVerdict `allowed` proceeds. `blocked` refuses and `reason` says why. `unknown` means no decision is recorded — the offered action is to request consent, never a silent grant.
@@ -26131,14 +28956,14 @@ type ContactMomentDestination struct {
 	// Prefill What the surface opens with — a draft intent, a subject, a task title. Strings only: a prefill is what a human is about to edit, never a structure the client must interpret.
 	Prefill *map[string]string `json:"prefill,omitempty"`
 
-	// Surface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system.
+	// Surface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact.
 	Surface ContactMomentDestinationSurface `json:"surface"`
 }
 
 // ContactMomentDestinationEntityType defines model for ContactMomentDestination.EntityType.
 type ContactMomentDestinationEntityType string
 
-// ContactMomentDestinationSurface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system.
+// ContactMomentDestinationSurface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact.
 type ContactMomentDestinationSurface string
 
 // ContactMomentEvidence One thing that actually happened, which the reader can open.
@@ -26236,7 +29061,9 @@ type ContactPhoneInput struct {
 type ContactPhoneInputPhoneType string
 
 // ContactProfileField One enriched field with the evidence it was read from. Evidence-or-omit: a row
-// exists only where a verbatim snippet was captured.
+// exists only where a verbatim snippet was captured. A phone is a list, so a contact
+// has one `phone` row per number, told apart by `value_key`; every other field has at
+// most one row.
 type ContactProfileField struct {
 	CapturedAt time.Time `json:"captured_at"`
 
@@ -26268,10 +29095,16 @@ type ContactProfileField struct {
 	// SupersededValue What this field held before a newer statement replaced it. The contact's own
 	// signature or business card, carrying a later date than the value on record,
 	// replaces what is older than it — including a value a colleague typed, because a
-	// number stated last week outranks one typed in March. Present only where
-	// something was actually replaced, and it is what the undo control restores.
+	// number stated last week outranks one typed in March. For a phone it is the older
+	// number of the same country this number replaced; a number a newer statement
+	// simply leaves out is kept, not replaced. Present only where something was
+	// actually replaced, and it is what the undo control restores.
 	SupersededValue *string `json:"superseded_value,omitempty"`
 	Value           string  `json:"value"`
+
+	// ValueKey What tells two rows of one field apart: the E.164 number for a `phone` row, empty
+	// for every other field. Pass it to the restore to name which number to undo.
+	ValueKey *string `json:"value_key,omitempty"`
 
 	// Verdict What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm — a correction outranks a later statement by the contact themselves, which is the one thing recency does not decide; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
 	Verdict *ContactProfileFieldVerdict `json:"verdict,omitempty"`
@@ -26285,6 +29118,18 @@ type ContactProfileFieldField string
 
 // ContactProfileFieldVerdict What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm — a correction outranks a later statement by the contact themselves, which is the one thing recency does not decide; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
 type ContactProfileFieldVerdict string
+
+// ContactProviderAttribute defines model for ContactProviderAttribute.
+type ContactProviderAttribute struct {
+	Kind ContactProviderAttributeKind `json:"kind"`
+
+	// RetrievedAt When the run that last reported this value retrieved it.
+	RetrievedAt time.Time `json:"retrieved_at"`
+	Value       string    `json:"value"`
+}
+
+// ContactProviderAttributeKind defines model for ContactProviderAttribute.Kind.
+type ContactProviderAttributeKind string
 
 // ContactProviderEmail defines model for ContactProviderEmail.
 type ContactProviderEmail struct {
@@ -26332,6 +29177,9 @@ type ContactProviderPhone struct {
 // overwrite canonical fields. The reader sees one of these per connection, so every value
 // on the page says who was paid for it.
 type ContactProviderProfile struct {
+	// Attributes The location, departments and seniorities, one entry per distinct value, each dated by the run that last reported it. Runs replace the location and add to the other two, so the profile's own `retrieved_at` would misdate every value an older run reported. Never copied into the contact's address.
+	Attributes *[]ContactProviderAttribute `json:"attributes,omitempty"`
+
 	// CategoriesAsked What the latest run actually PUT TO the provider. Usually every requested category, but not always: a fallback fires only when the category it follows comes back empty, and a category with a prerequisite is skipped when that prerequisite found nothing — Surfe asks for no mobile number when it found no email. Neither was sent, so neither is a question the provider declined to answer, and counting them would report a lookup nobody made. This is the honest denominator for "how much of what we asked came back".
 	CategoriesAsked        *[]string `json:"categories_asked,omitempty"`
 	CategoriesNotRequested []string  `json:"categories_not_requested"`
@@ -26807,9 +29655,15 @@ type CreateActivityRequest struct {
 	// RfcMessageId This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated.
 	RfcMessageId *string `json:"rfc_message_id,omitempty"`
 	Source       string  `json:"source"`
-	SourceId     *string `json:"source_id,omitempty"`
-	SourceSystem *string `json:"source_system,omitempty"`
-	Subject      *string `json:"subject,omitempty"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
+	SourceId         *string `json:"source_id,omitempty"`
+	SourceSystem     *string `json:"source_system,omitempty"`
+	Subject          *string `json:"subject,omitempty"`
 
 	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread.
 	ThreadKey *string `json:"thread_key,omitempty"`
@@ -26886,16 +29740,25 @@ type CreateCompanyRequest struct {
 	Address *Address `json:"address,omitempty"`
 
 	// Description One human-written line saying what the company does.
-	Description          *string                       `json:"description,omitempty"`
-	DisplayName          string                        `json:"display_name"`
-	Domains              *[]CompanyDomainInput         `json:"domains,omitempty"`
-	Industry             *string                       `json:"industry,omitempty"`
-	LegalName            *string                       `json:"legal_name,omitempty"`
-	OwnerId              *openapi_types.UUID           `json:"owner_id,omitempty"`
-	ParentCompanyId      *openapi_types.UUID           `json:"parent_company_id,omitempty"`
-	SizeBand             *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
-	Source               string                        `json:"source"`
-	AdditionalProperties map[string]interface{}        `json:"-"`
+	Description     *string                       `json:"description,omitempty"`
+	DisplayName     string                        `json:"display_name"`
+	Domains         *[]CompanyDomainInput         `json:"domains,omitempty"`
+	Industry        *string                       `json:"industry,omitempty"`
+	LegalName       *string                       `json:"legal_name,omitempty"`
+	OwnerId         *openapi_types.UUID           `json:"owner_id,omitempty"`
+	ParentCompanyId *openapi_types.UUID           `json:"parent_company_id,omitempty"`
+	SizeBand        *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
+	Source          string                        `json:"source"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
+	SourceSystem         *string                `json:"source_system,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // CreateCompanyRequestSizeBand defines model for CreateCompanyRequest.SizeBand.
@@ -26926,17 +29789,26 @@ type CreateContactEnrichmentRunRequest struct {
 // CreateContactRequest defines model for CreateContactRequest.
 type CreateContactRequest struct {
 	// Address Structured postal address.
-	Address              *Address                `json:"address,omitempty"`
-	Emails               *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName            *string                 `json:"first_name,omitempty"`
-	FullName             string                  `json:"full_name"`
-	LastName             *string                 `json:"last_name,omitempty"`
-	OwnerId              *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones               *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social               *map[string]interface{} `json:"social,omitempty"`
-	Source               string                  `json:"source"`
-	Title                *string                 `json:"title,omitempty"`
-	AdditionalProperties map[string]interface{}  `json:"-"`
+	Address   *Address                `json:"address,omitempty"`
+	Emails    *[]ContactEmailInput    `json:"emails,omitempty"`
+	FirstName *string                 `json:"first_name,omitempty"`
+	FullName  string                  `json:"full_name"`
+	LastName  *string                 `json:"last_name,omitempty"`
+	OwnerId   *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones    *[]ContactPhoneInput    `json:"phones,omitempty"`
+	Social    *map[string]interface{} `json:"social,omitempty"`
+	Source    string                  `json:"source"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
+	SourceSystem         *string                `json:"source_system,omitempty"`
+	Title                *string                `json:"title,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // CreateContractRequest defines model for CreateContractRequest.
@@ -27029,8 +29901,17 @@ type CreateDealRequest struct {
 	Priority *CreateDealRequestPriority `json:"priority,omitempty"`
 
 	// ProjectId The body of work this deal belongs to; must name the same company as the deal.
-	ProjectId            *openapi_types.UUID    `json:"project_id,omitempty"`
-	Source               string                 `json:"source"`
+	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+	Source    string              `json:"source"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
+	SourceSystem         *string                `json:"source_system,omitempty"`
 	StageId              openapi_types.UUID     `json:"stage_id"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -27196,12 +30077,18 @@ type CreateLeadRequest struct {
 	FullName            *string              `json:"full_name,omitempty"`
 
 	// LinkedinUrl Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.
-	LinkedinUrl  *string             `json:"linkedin_url,omitempty"`
-	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
-	ProjectId    *openapi_types.UUID `json:"project_id,omitempty"`
-	Source       string              `json:"source"`
-	SourceId     *string             `json:"source_id,omitempty"`
-	SourceSystem *string             `json:"source_system,omitempty"`
+	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
+	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
+	ProjectId   *openapi_types.UUID `json:"project_id,omitempty"`
+	Source      string              `json:"source"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
+	SourceId         *string `json:"source_id,omitempty"`
+	SourceSystem     *string `json:"source_system,omitempty"`
 
 	// Status The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
 	Status               *CreateLeadRequestStatus `json:"status,omitempty"`
@@ -27222,6 +30109,27 @@ type CreateLeadSourceRequest struct {
 	Label     string  `json:"label"`
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
+
+// CreateListRequest defines model for CreateListRequest.
+type CreateListRequest struct {
+	Definition *map[string]interface{}     `json:"definition,omitempty"`
+	EntityType CreateListRequestEntityType `json:"entity_type"`
+	ListType   *CreateListRequestListType  `json:"list_type,omitempty"`
+	Name       string                      `json:"name"`
+	Purpose    *string                     `json:"purpose,omitempty"`
+	Sharing    *CreateListRequestSharing   `json:"sharing,omitempty"`
+	StewardId  *openapi_types.UUID         `json:"steward_id,omitempty"`
+	TeamId     *openapi_types.UUID         `json:"team_id,omitempty"`
+}
+
+// CreateListRequestEntityType defines model for CreateListRequest.EntityType.
+type CreateListRequestEntityType string
+
+// CreateListRequestListType defines model for CreateListRequest.ListType.
+type CreateListRequestListType string
+
+// CreateListRequestSharing defines model for CreateListRequest.Sharing.
+type CreateListRequestSharing string
 
 // CreateOfferRequest defines model for CreateOfferRequest.
 type CreateOfferRequest struct {
@@ -27276,8 +30184,28 @@ type CreatePipelineRequest struct {
 	Position  *int   `json:"position,omitempty"`
 
 	// Stages Optional initial stages.
-	Stages *[]CreateStageRequest `json:"stages,omitempty"`
+	Stages *[]CreatePipelineStage `json:"stages,omitempty"`
 }
+
+// CreatePipelineStage One initial stage of a pipeline being created. It joins the pipeline this same request
+// creates, so unlike `CreateStageRequest` it needs no `pipeline_id`. A won stage without a
+// `win_probability` takes 100, as `createStage` fills it.
+type CreatePipelineStage struct {
+	Name string `json:"name"`
+
+	// PipelineId Accepted and ignored. The stage joins the pipeline this request creates; the field
+	// stays so a client written when nested stages reused `CreateStageRequest` is not refused.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	PipelineId *openapi_types.UUID `json:"pipeline_id,omitempty"`
+
+	// Position Omitted or 0, the stage takes its place in the list (1-based).
+	Position       *int                         `json:"position,omitempty"`
+	Semantic       *CreatePipelineStageSemantic `json:"semantic,omitempty"`
+	WinProbability *int                         `json:"win_probability,omitempty"`
+}
+
+// CreatePipelineStageSemantic defines model for CreatePipelineStage.Semantic.
+type CreatePipelineStageSemantic string
 
 // CreateProductRequest defines model for CreateProductRequest.
 type CreateProductRequest struct {
@@ -27334,11 +30262,20 @@ type CreateProjectHealthCorrectionRequest struct {
 
 // CreateProjectRequest defines model for CreateProjectRequest.
 type CreateProjectRequest struct {
-	CompanyId            openapi_types.UUID     `json:"company_id"`
-	Description          *string                `json:"description,omitempty"`
-	Name                 string                 `json:"name"`
-	OwnerId              *openapi_types.UUID    `json:"owner_id,omitempty"`
-	Source               string                 `json:"source"`
+	CompanyId   openapi_types.UUID  `json:"company_id"`
+	Description *string             `json:"description,omitempty"`
+	Name        string              `json:"name"`
+	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
+	Source      string              `json:"source"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
+	SourceSystem         *string                `json:"source_system,omitempty"`
 	StartedAt            *openapi_types.Date    `json:"started_at,omitempty"`
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -27434,6 +30371,15 @@ type CreateRetentionPolicyRequest struct {
 	//
 	// Extending this enum means adding a selector in the same change.
 	Scope RetentionScope `json:"scope"`
+}
+
+// CreateRoleRequest defines model for CreateRoleRequest.
+type CreateRoleRequest struct {
+	// CopyFrom The key of the live role the new one starts as a copy of.
+	CopyFrom string `json:"copy_from"`
+
+	// Name The new role's name. Unique among live roles, ignoring case.
+	Name string `json:"name"`
 }
 
 // CreateSavedViewRequest defines model for CreateSavedViewRequest.
@@ -27702,7 +30648,7 @@ type Deal struct {
 	// ArrSourceOfferId The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
 	ArrSourceOfferId *openapi_types.UUID `json:"arr_source_offer_id,omitempty"`
 
-	// Author Who created this deal in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a deal somebody entered here has no author but the one `captured_by` already names.
+	// Author Who created this deal in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a deal somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
@@ -27745,10 +30691,13 @@ type Deal struct {
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool `json:"legal_hold,omitempty"`
+
 	// LostReason Required when status=lost.
 	LostReason *string `json:"lost_reason,omitempty"`
 
-	// MaskedFields The fields of THIS row the caller's role withholds (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Sorting or filtering the list by a masked field is refused (422).
+	// MaskedFields The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422).
 	MaskedFields *[]string           `json:"masked_fields,omitempty"`
 	Name         string              `json:"name"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -28403,6 +31352,78 @@ type DealStatusCardVerdict struct {
 	Standing string `json:"standing"`
 }
 
+// DealSuggestion One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal.
+type DealSuggestion struct {
+	// AmountMinor Proposed only when a finished reading of a cited document stated both an amount and a currency.
+	AmountMinor *int64              `json:"amount_minor,omitempty"`
+	CloseDate   *openapi_types.Date `json:"close_date,omitempty"`
+	CompanyId   openapi_types.UUID  `json:"company_id"`
+	CompanyName string              `json:"company_name"`
+	Confidence  float32             `json:"confidence"`
+	CreatedAt   time.Time           `json:"created_at"`
+
+	// Currency Present exactly when amount_minor is.
+	Currency *string                  `json:"currency,omitempty"`
+	Evidence []DealSuggestionEvidence `json:"evidence"`
+	Id       openapi_types.UUID       `json:"id"`
+
+	// Kind Only open_deal is suggested today.
+	Kind DealSuggestionKind `json:"kind"`
+
+	// NameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
+	NameHint   DealSuggestionNameHint `json:"name_hint"`
+	PipelineId openapi_types.UUID     `json:"pipeline_id"`
+
+	// StageId The stage the deal would open in: the default pipeline's first open stage.
+	StageId openapi_types.UUID  `json:"stage_id"`
+	State   DealSuggestionState `json:"state"`
+}
+
+// DealSuggestionKind Only open_deal is suggested today.
+type DealSuggestionKind string
+
+// DealSuggestionNameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
+type DealSuggestionNameHint string
+
+// DealSuggestionState defines model for DealSuggestion.State.
+type DealSuggestionState string
+
+// DealSuggestionAcceptance defines model for DealSuggestionAcceptance.
+type DealSuggestionAcceptance struct {
+	AcknowledgedSignals int                `json:"acknowledged_signals"`
+	DealId              openapi_types.UUID `json:"deal_id"`
+
+	// Suggestion One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal.
+	Suggestion DealSuggestion `json:"suggestion"`
+
+	// UnlinkedActivityIds Evidence messages the caller may not move, left where they were.
+	UnlinkedActivityIds []openapi_types.UUID `json:"unlinked_activity_ids"`
+}
+
+// DealSuggestionEvidence One cited piece of evidence. Exactly one of the three ids is present, and it matches kind.
+type DealSuggestionEvidence struct {
+	// ActivityId The held meeting.
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
+	// AttachmentId The document sent to the company.
+	AttachmentId *openapi_types.UUID        `json:"attachment_id,omitempty"`
+	Kind         DealSuggestionEvidenceKind `json:"kind"`
+	OccurredAt   time.Time                  `json:"occurred_at"`
+	SignalId     *openapi_types.UUID        `json:"signal_id,omitempty"`
+
+	// Title The meeting's subject, the signal's summary or the document's file name.
+	Title string `json:"title"`
+}
+
+// DealSuggestionEvidenceKind defines model for DealSuggestionEvidence.Kind.
+type DealSuggestionEvidenceKind string
+
+// DealSuggestionListResponse defines model for DealSuggestionListResponse.
+type DealSuggestionListResponse struct {
+	Data []DealSuggestion `json:"data"`
+	Page PageInfo         `json:"page"`
+}
+
 // DecideCommissionRequest defines model for DecideCommissionRequest.
 type DecideCommissionRequest struct {
 	// Decision `approve` moves an accrued entry to approved; `pay` moves an approved one to paid.
@@ -28501,14 +31522,14 @@ type DemoteLeadResponse struct {
 	Lead Lead `json:"lead"`
 
 	// Unwind `reversed` — the promotion had created a contact, which is now archived and the
-	// lead restored to `working`. `merge_lineage_only` — the promotion had merged into
+	// lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
 	// a pre-existing contact, which is left untouched; only the lineage pointers are
 	// nulled (formulas §26).
 	Unwind DemoteLeadResponseUnwind `json:"unwind"`
 }
 
 // DemoteLeadResponseUnwind `reversed` — the promotion had created a contact, which is now archived and the
-// lead restored to `working`. `merge_lineage_only` — the promotion had merged into
+// lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
 // a pre-existing contact, which is left untouched; only the lineage pointers are
 // nulled (formulas §26).
 type DemoteLeadResponseUnwind string
@@ -29270,6 +32291,14 @@ type FilterVocabularyResource string
 
 // FilterVocabularyField One field a filter clause may name, with what it accepts.
 type FilterVocabularyField struct {
+	// Currency For a `currency` field, the ISO 4217 code its values are counted in: the
+	// installation's base currency for a deal's `amount`, the field's own currency
+	// for a custom one. The operand is a whole number of that currency's minor
+	// units (cents for EUR, whole yen for JPY), so a builder that lets a reader
+	// type an amount scales it by the currency's exponent. Absent for every other
+	// type, and where this reader may not learn the currency.
+	Currency *string `json:"currency,omitempty"`
+
 	// Custom Whether this is a workspace-defined custom-field column. Where true,
 	// `name` is the catalog's `column_name` — join on it to show an admin's
 	// `label`, which the catalog owns and this vocabulary does not.
@@ -29352,23 +32381,26 @@ type FilterVocabularyFieldReferences string
 // a folded value has no fragment to match against.
 type FilterVocabularyFieldType string
 
-// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`) or a `view_id` (a saved view whose filter state is exported). The slice is always row-scoped to the caller through the one filter engine.
+// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported) or a `list_id` (a Live List whose filter is exported). The slice is always row-scoped to the caller through the one filter engine.
 type FilteredExportRequest struct {
 	// Filter The canonical §13.5 predicate tree (nested and/or groups over typed leaves). Required with `object`.
 	Filter *map[string]interface{}     `json:"filter,omitempty"`
 	Format FilteredExportRequestFormat `json:"format"`
 
-	// Object The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
+	// ListId Export the members of a Live List the caller may find, as its filter selects them now. Mutually exclusive with object/view_id.
+	ListId *openapi_types.UUID `json:"list_id,omitempty"`
+
+	// Object The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
 	Object *FilteredExportRequestObject `json:"object,omitempty"`
 
-	// ViewId Export the filter state of one of the caller's saved views. Mutually exclusive with object.
+	// ViewId Export the filter state of one of the caller's saved views. Mutually exclusive with object/list_id.
 	ViewId *openapi_types.UUID `json:"view_id,omitempty"`
 }
 
 // FilteredExportRequestFormat defines model for FilteredExportRequest.Format.
 type FilteredExportRequestFormat string
 
-// FilteredExportRequestObject The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
+// FilteredExportRequestObject The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
 type FilteredExportRequestObject string
 
 // FinanceInvoice One mirrored invoice, in the currency it was issued in.
@@ -29437,6 +32469,27 @@ type ForecastAssuranceReadiness string
 
 // ForecastAssuranceStatus `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
 type ForecastAssuranceStatus string
+
+// ForecastAssurancePreview What a pass would find now, for somebody deciding whether to start one. Nothing here was recorded, and looking changed nothing.
+type ForecastAssurancePreview struct {
+	// EligibleDeals How much there would be to check, counted once per deal evaluated.
+	EligibleDeals int `json:"eligible_deals"`
+
+	// Findings What would be raised, grouped by type and severity. Counts only — no deal is named and no amount is given.
+	Findings []AssuranceFindingCount `json:"findings"`
+
+	// Readiness The verdict this pass would reach. `checks_incomplete` here means the preview itself could not read a required source — starting on it would produce a run that says the same.
+	Readiness *ForecastAssurancePreviewReadiness `json:"readiness,omitempty"`
+
+	// Sources Which sources the preview could reach, and how far.
+	Sources []ForecastAssuranceSource `json:"sources"`
+
+	// Started Whether any pass has ever run in this workspace. False is a workspace the nightly sweep is skipping until somebody starts it — which is what makes this a first check rather than a recheck.
+	Started bool `json:"started"`
+}
+
+// ForecastAssurancePreviewReadiness The verdict this pass would reach. `checks_incomplete` here means the preview itself could not read a required source — starting on it would produce a run that says the same.
+type ForecastAssurancePreviewReadiness string
 
 // ForecastAssuranceSource defines model for ForecastAssuranceSource.
 type ForecastAssuranceSource struct {
@@ -29590,6 +32643,28 @@ type ForecastReadings struct {
 // ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
 
+// ForecastShare A share link as it stands. Carries no token: that is shown once, when the link is issued, and the table holds only its digest.
+type ForecastShare struct {
+	CreatedAt time.Time          `json:"created_at"`
+	ExpiresAt time.Time          `json:"expires_at"`
+	Id        openapi_types.UUID `json:"id"`
+	Kind      ForecastShareKind  `json:"kind"`
+
+	// ScopeId Whose forecast, for a team or owner scope. Absent for the workspace.
+	ScopeId   *openapi_types.UUID    `json:"scope_id,omitempty"`
+	ScopeKind ForecastShareScopeKind `json:"scope_kind"`
+
+	// SnapshotId The frozen state a snapshot share serves. Absent on a live share.
+	SnapshotId *openapi_types.UUID `json:"snapshot_id,omitempty"`
+	Target     string              `json:"target"`
+}
+
+// ForecastShareKind defines model for ForecastShare.Kind.
+type ForecastShareKind string
+
+// ForecastShareScopeKind defines model for ForecastShare.ScopeKind.
+type ForecastShareScopeKind string
+
 // ForecastSufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 // NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
 type ForecastSufficiency struct {
@@ -29627,15 +32702,12 @@ type FormerMemberRequest struct {
 	// LeftAt When they left, when the source system knows it. Recorded on the audit row.
 	LeftAt *time.Time `json:"left_at,omitempty"`
 
-	// Role Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
-	Role *FormerMemberRequestRole `json:"role,omitempty"`
+	// Role A live role's key. Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
+	Role *string `json:"role,omitempty"`
 
 	// Source Where this record came from, for an operator reading the audit trail later ("hubspot-mirror-2026-09-17").
 	Source *string `json:"source,omitempty"`
 }
-
-// FormerMemberRequestRole Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
-type FormerMemberRequestRole string
 
 // FxRate One effective-dated FX rate converting from_currency into the workspace base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
 type FxRate struct {
@@ -29723,6 +32795,18 @@ type HealthDimension struct {
 
 // HealthDimensionRating Three values, not a scale. A dimension that cannot be computed is ABSENT rather than rated `unknown`: absence is a fact about the reading, where a rating is a claim about the account.
 type HealthDimensionRating string
+
+// HeldEntityType defines model for HeldEntityType.
+type HeldEntityType string
+
+// HeldRecord defines model for HeldRecord.
+type HeldRecord struct {
+	EntityType HeldEntityType `json:"entity_type"`
+
+	// Label The record's own name, so a controller can recognise it without a second read.
+	Label    string             `json:"label"`
+	RecordId openapi_types.UUID `json:"record_id"`
+}
 
 // HeldThread One thread your mailbox is withholding, and what is known about why.
 type HeldThread struct {
@@ -29818,6 +32902,13 @@ type HiddenBacklog struct {
 	// see. A contractor's genuine account at a customer must not read as internal.
 	Colleagues int `json:"colleagues"`
 
+	// InformsUs Mail the classifier judged to ask nothing of us — a report, a receipt, a
+	// notification — hidden by this rule alone. A MODEL'S CHOICE, and watched for
+	// that reason: one model call's opinion about a customer's mail ends the
+	// obligation, so a wrong verdict has to show up somewhere a lead can see it. A
+	// request a human accepted is never hidden by it, whatever the verdict.
+	InformsUs int `json:"informs_us"`
+
 	// NotSales Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
 	// the judgement worth watching: it hides the thread from the WHOLE workspace and
 	// never lifts, so one rep's mistake removes a customer from everybody's day
@@ -29858,7 +32949,7 @@ type HiddenBacklog struct {
 	// page. Measuring it here would mean a second copy of that baseline inside the
 	// database, drifting from the first.
 	//
-	// The four hidden figures are differences between runs of THIS query, so they
+	// The hidden figures are differences between runs of THIS query, so they
 	// are counted the same way and the proportions hold. It is the absolute figure
 	// that is a near neighbour of the page's own count rather than equal to it.
 	Shown int `json:"shown"`
@@ -29867,7 +32958,7 @@ type HiddenBacklog struct {
 	// it a FLOOR rather than a count.
 	//
 	// The bound is on the shared statement, so the strict read and every relaxed read
-	// clip at the same number. On a queue already at the cap all five return it, every
+	// clip at the same number. On a queue already at the cap every read returns it, every
 	// difference is zero, and a guardrail without this flag would report a clear
 	// backlog over the installation most likely to be hiding work.
 	//
@@ -29883,6 +32974,40 @@ type HiddenBacklog struct {
 	// that reason rather than folded into a total.
 	Unlinked int `json:"unlinked"`
 }
+
+// HiddenBacklogRow One thread a hiding rule is keeping off the queue — enough to say what it is and
+// to open it, which is what the figure it sits behind could not do.
+type HiddenBacklogRow struct {
+	// ActivityId The message itself — what a reply would be drafted to.
+	ActivityId openapi_types.UUID  `json:"activity_id"`
+	CompanyId  *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// ContactId The record the thread is filed under, when it names one. Absent rather than a
+	// zero uuid: a zero on the wire is an id a client could try to open.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+	DealId    *openapi_types.UUID `json:"deal_id,omitempty"`
+
+	// EmailSummary Present exactly when this wait is an EMAIL the reader may read. The lane spans
+	// email and channel messages, and only an email has an email's shape.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
+
+	// Since When they wrote. The wait is measured from it.
+	Since   time.Time `json:"since"`
+	Subject string    `json:"subject"`
+}
+
+// HiddenBacklogRows The threads one hiding rule is holding back, at one instant.
+type HiddenBacklogRows struct {
+	// AsOf The instant the difference was read at.
+	AsOf time.Time          `json:"as_of"`
+	Rows []HiddenBacklogRow `json:"rows"`
+
+	// Rule Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
+	Rule HiddenBacklogRowsRule `json:"rule"`
+}
+
+// HiddenBacklogRowsRule Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
+type HiddenBacklogRowsRule string
 
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
 // of this one, and null on every ordinary row.
@@ -30362,6 +33487,18 @@ type InputCheckStatus string
 // InputCheckSubjectKind defines model for InputCheck.SubjectKind.
 type InputCheckSubjectKind string
 
+// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
+type InstallationBrand struct {
+	// DisplayName What the company is called day to day.
+	DisplayName string `json:"display_name"`
+
+	// LogoIconUrl The square badge a collapsed sidebar draws — the `getCompanyLogoIcon` path, absent on the same terms as `logo_url`. A client without one draws the wide mark.
+	LogoIconUrl *string `json:"logo_icon_url,omitempty"`
+
+	// LogoUrl The wide mark — the same `getCompanyLogo` path `CompanyProfile.logo_url` carries. Absent when the company wears none, or when this caller holds no read on companies and so could not load it; a client draws the company's monogram instead.
+	LogoUrl *string `json:"logo_url,omitempty"`
+}
+
 // InstallationSettings The installation's identity and reporting basis (ADR-0090). Read by every role,
 // changed only by admin/ops.
 type InstallationSettings struct {
@@ -30724,15 +33861,12 @@ type InviteUserRequest struct {
 	DisplayName string              `json:"display_name"`
 	Email       openapi_types.Email `json:"email"`
 
-	// Role System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power.
-	Role InviteUserRequestRole `json:"role"`
+	// Role A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. A caller who is not an admin may only produce an account whose whole access their own contains — every grant, row scope, team and readable field — because the set-password link goes to an address the caller chooses. `listAssignableRoles` names the roles this caller may hand out.
+	Role string `json:"role"`
 
 	// TeamIds The teams the member joins on arrival, in the same transaction as the seat and the role. A team-scoped role (`manager`, `rep`) with no team sees and edits only its own records; the access preview says what a given role + teams will see before the invite is sent.
 	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
 }
-
-// InviteUserRequestRole System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power.
-type InviteUserRequestRole string
 
 // IssuePassportRequest defines model for IssuePassportRequest.
 type IssuePassportRequest struct {
@@ -30832,7 +33966,7 @@ type JobHealth struct {
 
 // JobKindHealth defines model for JobKindHealth.
 type JobKindHealth struct {
-	// Dead Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE — River retains a terminal row for seven days, so this is a week's history and a report figure, not a call to action.
+	// Dead Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE — River retains a discarded row for seven days and a cancelled one for a day, so this is up to a week's history and a report figure, not a call to action.
 	Dead int `json:"dead"`
 
 	// DeadRecent The same count inside `dead_window_hours`. This is the one to alarm on: an outage that ended an hour ago and one still running are indistinguishable in `dead`, and that is the distinction a maintenance banner exists to draw.
@@ -30917,6 +34051,12 @@ type KnowledgeAnswer struct {
 
 	// Outcome The five are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all; unreviewed says the corpus WAS searched and the nearest passages are attached, but no writer read them, so nothing has judged whether they answer the question — the claims are what the search found, not an answer. Collapsing them is the failure this endpoint exists to avoid.
 	Outcome KnowledgeAnswerOutcome `json:"outcome"`
+
+	// Summary The answer in one short paragraph, in the words a colleague would use, written by the same pass that wrote the claims. The claims are shaped like evidence on purpose — a sentence each, welded to a verbatim quote — which is what makes every one of them checkable, and also what makes the list read as a citation trail rather than as a reply to what was asked. This is the reply; the claims below it are why it is believable.
+	// PRESENT ON not_covered TOO, and that is the case it matters most for. There it is the refusal in plain words — what these documents do not cover, and what they say about the subject instead. A reader who asked something the handbook never addresses otherwise meets an empty result and reads it as a malfunction; the sentence is what tells them the set was searched and came back with nothing, so they go and ask a colleague rather than assume the product broke.
+	// It is the one place the writer may describe what it could not find. A claim may never say that: a claim is welded to a verbatim quote and renders as evidence, so a sentence like "I couldn't find instructions for this" arrives dressed exactly as an answer does. Giving the observation its own field is what keeps it out of the citation trail.
+	// Absent when generated_by is deterministic: nothing wrote prose then, and a paragraph composed here over passages no writer read would be the one part of the answer with nothing holding it to the documents. Absent under not_ready, retrieval_unavailable and unreviewed, where no writer judged the passages at all — the claims under unreviewed are merely the nearest passages, so there is nothing to say plainly about them.
+	Summary *string `json:"summary,omitempty"`
 }
 
 // KnowledgeAnswerOutcome The five are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all; unreviewed says the corpus WAS searched and the nearest passages are attached, but no writer read them, so nothing has judged whether they answer the question — the claims are what the search found, not an answer. Collapsing them is the failure this endpoint exists to avoid.
@@ -30937,6 +34077,14 @@ type KnowledgeClaim struct {
 	Column       *int               `json:"column,omitempty"`
 	DocumentId   openapi_types.UUID `json:"document_id"`
 	DocumentName string             `json:"document_name"`
+
+	// EndColumn The 1-based column on `end_line` just PAST the quote's last character, counted in CHARACTERS for the reason `column` is. Past rather than on, so the range is half-open: a quote that ends a line then needs no column the line does not have. Absent whenever `line` is.
+	EndColumn *int `json:"end_column,omitempty"`
+
+	// EndLine The 1-based line the quote ENDS on. A reader who follows a citation wants the sentence marked, not a cursor dropped at its first character, and with the start alone a viewer can only guess how far the quoted span runs — a guess that runs long marks words the claim does not rest on. With `end_column` it closes the half-open range [line, column) .. [end_line, end_column) a highlight covers.
+	// It is a line and column rather than a character offset into the document because nothing on this side holds the document. What the answer is written from is the retrieved passage, and a passage records the line it starts on and no offset at all — so a document-relative offset would want a new column, a migration and a backfill of every passage already stored, to say what the quote and the start location already determine between them.
+	// Absent whenever `line` is: a span the passage could not locate has no end either, and half a range is a highlight over the wrong words.
+	EndLine *int `json:"end_line,omitempty"`
 
 	// Line The 1-based line of the document where this quote begins, so a reader can open the file and land on it. Absent when the quote could not be located in the passage's own text — a line number pointing at the wrong line is worse than none.
 	Line *int `json:"line,omitempty"`
@@ -31008,7 +34156,7 @@ type KnowledgeDocumentList struct {
 type Lead struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
-	// Author Who created this lead in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a lead somebody entered here has no author but the one `captured_by` already names.
+	// Author Who created this lead in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a lead somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
@@ -31039,6 +34187,9 @@ type Lead struct {
 
 	// LastActivityAt Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool `json:"legal_hold,omitempty"`
 
 	// LinkedinUrl Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
@@ -31489,6 +34640,182 @@ type LinkedInReachResponse struct {
 	UnresolvedConnections int `json:"unresolved_connections"`
 }
 
+// List A Live List (list_type dynamic: its members are its filter's current result) or a Shortlist (static: members chosen by hand). Mirrors the `list` table.
+type List struct {
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
+	// CanEdit Whether this caller holds list authority over the list.
+	CanEdit   bool       `json:"can_edit"`
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+
+	// Definition A Live List's filter tree; null for a Shortlist.
+	Definition *map[string]interface{} `json:"definition,omitempty"`
+
+	// Dependencies What uses this list. Exports are listed as usage and block nothing.
+	Dependencies *[]ListDependency `json:"dependencies,omitempty"`
+	EntityType   ListEntityType    `json:"entity_type"`
+
+	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles.
+	Health   ListHealth          `json:"health"`
+	Id       openapi_types.UUID  `json:"id"`
+	ListType ListListType        `json:"list_type"`
+	Name     string              `json:"name"`
+	OwnerId  *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Purpose What the list is for, in the words of its steward.
+	Purpose *string `json:"purpose,omitempty"`
+
+	// Sharing Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
+	Sharing ListSharing `json:"sharing"`
+
+	// StewardId Who looks after the list and may change it.
+	StewardId   *openapi_types.UUID `json:"steward_id,omitempty"`
+	StewardName *string             `json:"steward_name,omitempty"`
+
+	// TeamId The team a team list is shared with; null shares it with the teams of its owner.
+	TeamId    *openapi_types.UUID `json:"team_id,omitempty"`
+	UpdatedAt *time.Time          `json:"updated_at,omitempty"`
+	Version   int64               `json:"version"`
+
+	// VisibleCount How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size.
+	VisibleCount *int `json:"visible_count,omitempty"`
+}
+
+// ListEntityType defines model for List.EntityType.
+type ListEntityType string
+
+// ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles.
+type ListHealth string
+
+// ListListType defines model for List.ListType.
+type ListListType string
+
+// ListSharing Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
+type ListSharing string
+
+// ListClauseVerdict One node of a Live List's filter judged for one record: a group (`join`, `children`) or a clause (`field`, `op`, `operand`). `result` is null where SQL answers unknown, which the filter treats as not selected.
+type ListClauseVerdict struct {
+	Children *[]ListClauseVerdict `json:"children,omitempty"`
+	Field    *string              `json:"field,omitempty"`
+
+	// Hidden The value is not shown to this caller.
+	Hidden *bool                  `json:"hidden,omitempty"`
+	Join   *ListClauseVerdictJoin `json:"join,omitempty"`
+	Op     *string                `json:"op,omitempty"`
+
+	// Operand The clause's value as the filter states it.
+	Operand interface{} `json:"operand,omitempty"`
+	Result  *bool       `json:"result"`
+
+	// Value The record's current value of the field, as text.
+	Value *string `json:"value,omitempty"`
+}
+
+// ListClauseVerdictJoin defines model for ListClauseVerdict.Join.
+type ListClauseVerdictJoin string
+
+// ListDependency defines model for ListDependency.
+type ListDependency struct {
+	Actor *string `json:"actor,omitempty"`
+
+	// Blocking Whether it refuses a breaking change or archive of the list.
+	Blocking   bool               `json:"blocking"`
+	Kind       ListDependencyKind `json:"kind"`
+	OccurredAt time.Time          `json:"occurred_at"`
+}
+
+// ListDependencyKind defines model for ListDependency.Kind.
+type ListDependencyKind string
+
+// ListHistoryEntry defines model for ListHistoryEntry.
+type ListHistoryEntry struct {
+	Actor      string                  `json:"actor"`
+	ActorName  *string                 `json:"actor_name,omitempty"`
+	Definition *map[string]interface{} `json:"definition,omitempty"`
+	EntityId   *openapi_types.UUID     `json:"entity_id,omitempty"`
+	EntityType *string                 `json:"entity_type,omitempty"`
+	Id         openapi_types.UUID      `json:"id"`
+	Kind       ListHistoryEntryKind    `json:"kind"`
+	Name       *string                 `json:"name,omitempty"`
+	Note       *string                 `json:"note,omitempty"`
+	OccurredAt time.Time               `json:"occurred_at"`
+	Reason     *ListHistoryEntryReason `json:"reason,omitempty"`
+	Sharing    *string                 `json:"sharing,omitempty"`
+	Version    *int64                  `json:"version,omitempty"`
+}
+
+// ListHistoryEntryKind defines model for ListHistoryEntry.Kind.
+type ListHistoryEntryKind string
+
+// ListHistoryEntryReason defines model for ListHistoryEntry.Reason.
+type ListHistoryEntryReason string
+
+// ListHistoryResponse defines model for ListHistoryResponse.
+type ListHistoryResponse struct {
+	Data []ListHistoryEntry `json:"data"`
+	Page PageInfo           `json:"page"`
+}
+
+// ListListResponse defines model for ListListResponse.
+type ListListResponse struct {
+	Data []List   `json:"data"`
+	Page PageInfo `json:"page"`
+}
+
+// ListMember defines model for ListMember.
+type ListMember struct {
+	// AddedBy The principal that added a Shortlist member; `dynamic` for a Live List member.
+	AddedBy    *string              `json:"added_by,omitempty"`
+	CreatedAt  *time.Time           `json:"created_at,omitempty"`
+	EntityId   openapi_types.UUID   `json:"entity_id"`
+	EntityType ListMemberEntityType `json:"entity_type"`
+	Id         openapi_types.UUID   `json:"id"`
+	ListId     openapi_types.UUID   `json:"list_id"`
+	Note       *string              `json:"note,omitempty"`
+}
+
+// ListMemberEntityType defines model for ListMember.EntityType.
+type ListMemberEntityType string
+
+// ListMemberChangeRequest defines model for ListMemberChangeRequest.
+type ListMemberChangeRequest struct {
+	EntityId   openapi_types.UUID                `json:"entity_id"`
+	EntityType ListMemberChangeRequestEntityType `json:"entity_type"`
+
+	// Note Why, in the words of whoever made the change.
+	Note *string `json:"note,omitempty"`
+}
+
+// ListMemberChangeRequestEntityType defines model for ListMemberChangeRequest.EntityType.
+type ListMemberChangeRequestEntityType string
+
+// ListMemberExplanation defines model for ListMemberExplanation.
+type ListMemberExplanation struct {
+	AddedAt     *time.Time `json:"added_at,omitempty"`
+	AddedBy     *string    `json:"added_by,omitempty"`
+	AddedByName *string    `json:"added_by_name,omitempty"`
+
+	// Clauses One node of a Live List's filter judged for one record: a group (`join`, `children`) or a clause (`field`, `op`, `operand`). `result` is null where SQL answers unknown, which the filter treats as not selected.
+	Clauses *ListClauseVerdict `json:"clauses,omitempty"`
+
+	// Eligible For a Live List, whether the record is live and eligible at all, before any clause.
+	Eligible *bool                         `json:"eligible,omitempty"`
+	EntityId openapi_types.UUID            `json:"entity_id"`
+	ListId   openapi_types.UUID            `json:"list_id"`
+	ListType ListMemberExplanationListType `json:"list_type"`
+	Member   bool                          `json:"member"`
+	Note     *string                       `json:"note,omitempty"`
+}
+
+// ListMemberExplanationListType defines model for ListMemberExplanation.ListType.
+type ListMemberExplanationListType string
+
+// ListMemberListResponse defines model for ListMemberListResponse.
+type ListMemberListResponse struct {
+	Data []ListMember `json:"data"`
+	Page PageInfo     `json:"page"`
+}
+
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
 	Email    openapi_types.Email `json:"email"`
@@ -31503,6 +34830,13 @@ type LoginRequest struct {
 // decision it was acting on.
 type MagicActor struct {
 	Id string `json:"id"`
+
+	// Label What happened, as a key and the values to fill it with.
+	//
+	// Typed rather than composed on the server for the reason every other sentence in
+	// this contract is: the product ships three languages, and a sentence assembled here
+	// reaches a German reader in English.
+	Label *MagicSentence `json:"label,omitempty"`
 
 	// OnBehalfOf The seat whose authority the action was taken under, where it bound one.
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
@@ -31523,10 +34857,25 @@ type MagicEntityRef struct {
 	Type  string  `json:"type"`
 }
 
+// MagicFieldChange defines model for MagicFieldChange.
+type MagicFieldChange struct {
+	// After The value after the change; absent when the change cleared it.
+	After interface{} `json:"after,omitempty"`
+
+	// Before The value before the change; absent when the field was empty.
+	Before interface{} `json:"before,omitempty"`
+
+	// Field The field's key as the record stores it (`industry`, `legal_name`).
+	Field string `json:"field"`
+}
+
 // MagicLine One thing the machinery did, needs, could not finish, or is watching.
 //
 // EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
 // with no author a reader can name is the spookiness this surface exists to remove.
+// `actor.label` is that name as a reader reads it ("Mail filing", "Retention"), and
+// `reason` says why the machinery did it ("the sender's address belongs to this
+// contact"). Both are keys with values, for the reason `summary` is.
 type MagicLine struct {
 	// Actor Who acted, and on whose behalf.
 	//
@@ -31545,6 +34894,9 @@ type MagicLine struct {
 	// Consequence What this means for the reader, where the action has one to state. A key, not a sentence: the product ships three languages.
 	Consequence *string `json:"consequence,omitempty"`
 
+	// Count How many records this line stands for. One background job that did the same thing to many records is ONE line with a count, not one line per record: a receipt of 1,200 identical rows says nothing a reader can use. Absent means one; `entity` then names the most recent of them.
+	Count *int `json:"count,omitempty"`
+
 	// Entity The record this line is about, where it names one.
 	Entity *MagicEntityRef `json:"entity,omitempty"`
 
@@ -31552,8 +34904,17 @@ type MagicLine struct {
 	Id openapi_types.UUID `json:"id"`
 
 	// Lane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
-	Lane       MagicLineLane `json:"lane"`
-	OccurredAt time.Time     `json:"occurred_at"`
+	Lane MagicLineLane `json:"lane"`
+
+	// OccurredAt When the thing happened. On a `watching` line it is when the condition was OBSERVED instead, uniformly: a source that is off rather than failing has no beginning to report, and dating the observation as the outage would tell a reader a long-dead mailbox broke just now. Where a condition does have a start, it travels as the `failing_since` value on the summary.
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// Reason What happened, as a key and the values to fill it with.
+	//
+	// Typed rather than composed on the server for the reason every other sentence in
+	// this contract is: the product ships three languages, and a sentence assembled here
+	// reaches a German reader in English.
+	Reason *MagicSentence `json:"reason,omitempty"`
 
 	// Summary What happened, as a key and the values to fill it with.
 	//
@@ -31571,6 +34932,30 @@ type MagicLine struct {
 
 // MagicLineLane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
 type MagicLineLane string
+
+// MagicLineRecord One record a done line stands for, and its newest change in the window.
+type MagicLineRecord struct {
+	AuditId openapi_types.UUID `json:"audit_id"`
+
+	// Changes Every field the change moved, old value to new. Bookkeeping keys are left out.
+	Changes []MagicFieldChange `json:"changes"`
+
+	// Entity The record this line is about, where it names one.
+	Entity     MagicEntityRef `json:"entity"`
+	OccurredAt time.Time      `json:"occurred_at"`
+
+	// Undo Whether this change can be taken back, and why not when it cannot.
+	//
+	// A greyed control with no reason is the shape this replaces. The reasons are
+	// compose/undoability's own vocabulary rather than a second set written here.
+	Undo MagicUndo `json:"undo"`
+}
+
+// MagicLineRecords One page of the records a done line stands for.
+type MagicLineRecords struct {
+	Data []MagicLineRecord `json:"data"`
+	Page PageInfo          `json:"page"`
+}
 
 // MagicNotShown One kind of thing this read left out, and how many of it there were.
 type MagicNotShown struct {
@@ -31668,6 +35053,50 @@ type MagicUndo struct {
 	// Reason Why not, when it is not. Absent when it is.
 	Reason   *string `json:"reason,omitempty"`
 	Undoable bool    `json:"undoable"`
+
+	// Version The record's current version, sent as the restore's `If-Match`. Present exactly when `undoable` is true.
+	Version *int64 `json:"version,omitempty"`
+}
+
+// MailDraft One rep's unsent message, readable by its author and nobody else. Not an activity.
+type MailDraft struct {
+	AnchorId openapi_types.UUID `json:"anchor_id"`
+
+	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
+	// record a new conversation starts from.
+	AnchorType MailDraftAnchorType `json:"anchor_type"`
+	Bcc        []string            `json:"bcc"`
+	Body       string              `json:"body"`
+	Cc         []string            `json:"cc"`
+	CreatedAt  time.Time           `json:"created_at"`
+	HtmlBody   *string             `json:"html_body,omitempty"`
+	Id         openapi_types.UUID  `json:"id"`
+	Subject    string              `json:"subject"`
+	To         []string            `json:"to"`
+	UpdatedAt  time.Time           `json:"updated_at"`
+	Version    int64               `json:"version"`
+}
+
+// MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
+// record a new conversation starts from.
+type MailDraftAnchorType string
+
+// MailDraftInput The composer's fields as they stand. Every content field is optional and an omitted
+// one saves as empty, because a draft is whatever the rep had typed so far.
+type MailDraftInput struct {
+	AnchorId openapi_types.UUID `json:"anchor_id"`
+
+	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
+	// record a new conversation starts from.
+	AnchorType MailDraftAnchorType `json:"anchor_type"`
+	Bcc        *[]string           `json:"bcc,omitempty"`
+	Body       *string             `json:"body,omitempty"`
+	Cc         *[]string           `json:"cc,omitempty"`
+
+	// HtmlBody The editor's markup beside the plain body, so reopening restores the formatting.
+	HtmlBody *string   `json:"html_body,omitempty"`
+	Subject  *string   `json:"subject,omitempty"`
+	To       *[]string `json:"to,omitempty"`
 }
 
 // MeResponse defines model for MeResponse.
@@ -31682,6 +35111,9 @@ type MeResponse struct {
 
 	// DataResetAvailable True when this installation armed `operations.allow_data_reset` in its deployment file. It is the SAME value `POST /admin/reset-data` gates on, so a client never renders an action for a route that would answer 404. Absent or false means the capability does not exist here — the compiled default in every posture, dev included.
 	DataResetAvailable *bool `json:"data_reset_available,omitempty"`
+
+	// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
+	InstallationBrand *InstallationBrand `json:"installation_brand,omitempty"`
 
 	// NonProduction True when the installation runs a non-production posture (MARGINCE_ENV=dev|test). DEPRECATED as the gate for the "Reset data" action — read `data_reset_available` instead. A deployment being non-production is not consent to purge its tenant data, and inferring one from the other is why a `staging` installation full of real internal users could be wiped through the API.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -31714,6 +35146,15 @@ type MeResponse struct {
 
 // MeResponsePassportScopes defines model for MeResponse.Passport.Scopes.
 type MeResponsePassportScopes string
+
+// MeetingAvailability defines model for MeetingAvailability.
+type MeetingAvailability struct {
+	Slots []struct {
+		End   time.Time `json:"end"`
+		Start time.Time `json:"start"`
+	} `json:"slots"`
+	Truncated bool `json:"truncated"`
+}
 
 // MeetingBrief The pre-meeting brief for one booked meeting (ADR-0097 D5), assembled fresh on every
 // read from what the CALLER can see.
@@ -31816,6 +35257,48 @@ type MeetingBriefSection struct {
 // `talking_points` — each tied to a specific captured statement.
 // `company_context` — background, collapsed and last.
 type MeetingBriefSectionKind string
+
+// MeetingInvitation defines model for MeetingInvitation.
+type MeetingInvitation struct {
+	CalendarUrl     *string                          `json:"calendar_url,omitempty"`
+	End             time.Time                        `json:"end"`
+	Id              openapi_types.UUID               `json:"id"`
+	Location        string                           `json:"location"`
+	ManagementToken *string                          `json:"management_token,omitempty"`
+	ReminderStatus  *MeetingInvitationReminderStatus `json:"reminder_status,omitempty"`
+	Start           time.Time                        `json:"start"`
+	Status          MeetingInvitationStatus          `json:"status"`
+	Subject         string                           `json:"subject"`
+	Version         int64                            `json:"version"`
+}
+
+// MeetingInvitationReminderStatus defines model for MeetingInvitation.ReminderStatus.
+type MeetingInvitationReminderStatus string
+
+// MeetingInvitationStatus defines model for MeetingInvitation.Status.
+type MeetingInvitationStatus string
+
+// MeetingInvitationChange defines model for MeetingInvitationChange.
+type MeetingInvitationChange struct {
+	Action  MeetingInvitationChangeAction `json:"action"`
+	End     *time.Time                    `json:"end,omitempty"`
+	Start   *time.Time                    `json:"start,omitempty"`
+	Version int64                         `json:"version"`
+}
+
+// MeetingInvitationChangeAction defines model for MeetingInvitationChange.Action.
+type MeetingInvitationChangeAction string
+
+// MeetingInvitationRequest defines model for MeetingInvitationRequest.
+type MeetingInvitationRequest struct {
+	AttendeeEmail openapi_types.Email `json:"attendee_email"`
+	ContactId     openapi_types.UUID  `json:"contact_id"`
+	Description   string              `json:"description"`
+	End           time.Time           `json:"end"`
+	Location      string              `json:"location"`
+	Start         time.Time           `json:"start"`
+	Subject       string              `json:"subject"`
+}
 
 // MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
 // KNOWN about it.
@@ -32020,6 +35503,20 @@ type MeetingPlanUnknown struct {
 
 // MeetingPlanUnknownKind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
 type MeetingPlanUnknownKind string
+
+// MeetingProposalRequest defines model for MeetingProposalRequest.
+type MeetingProposalRequest struct {
+	AttendeeEmail   openapi_types.Email `json:"attendee_email"`
+	ContactId       openapi_types.UUID  `json:"contact_id"`
+	Description     string              `json:"description"`
+	DurationMinutes int                 `json:"duration_minutes"`
+	Location        string              `json:"location"`
+	Options         []struct {
+		End   time.Time `json:"end"`
+		Start time.Time `json:"start"`
+	} `json:"options"`
+	Subject string `json:"subject"`
+}
 
 // MergeTagsRequest defines model for MergeTagsRequest.
 type MergeTagsRequest struct {
@@ -32524,6 +36021,129 @@ type NoticeOrigin struct {
 	} `json:"stage_change,omitempty"`
 }
 
+// NotificationClass A class of notification a seat decides delivery about. Closed, and deliberately coarser
+// than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
+// is waiting on your approval", so the choice is made per class and every kind the product
+// raises is placed in one of them.
+type NotificationClass string
+
+// NotificationDelivery Where a class of notification reaches its reader.
+//
+// `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
+// sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
+// the only class with a sending leg, and taking the word for any other would record a
+// choice the product does not keep; the others answer `422 value_not_allowed` and reach a
+// mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+// following morning, and is accepted for every class.
+//
+// `off` records the notice and stops there: no lane, no badge, no message. It does NOT
+// discard it — the centre lists it like any other, because a preference governs DELIVERY
+// and never existence, and a class switched off must not silently drop something that
+// changed what the reader believes about their data. Going to look is not being
+// interrupted.
+type NotificationDelivery string
+
+// NotificationItem One line of the notification centre: a durable notice addressed to the caller, and
+// whether they have already answered it.
+type NotificationItem struct {
+	// Body The notice's own words beneath the headline. Absent when it had none.
+	Body      *string            `json:"body,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Kind What the notice is about. A plain string and NOT `NoticeKind`: that vocabulary is the
+	// coaching one, and the kinds a system flow raises — an automation firing, a lead going
+	// past its SLA, a capture backlog stalling — are deliberately absent from it. Read
+	// `subject` for the headline and `target` for where to go; a client that switches on
+	// this breaks the day a flow raises one more.
+	Kind string `json:"kind"`
+
+	// Origin The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link.
+	Origin *NoticeOrigin `json:"origin,omitempty"`
+
+	// ReadAt When the reader settled it. ABSENT means unread. The instant rather than a flag,
+	// because the centre renders history: "you read this on Tuesday" is what tells a reader
+	// they are looking at something they already dealt with, and a flag cannot say when.
+	ReadAt *time.Time `json:"read_at,omitempty"`
+
+	// Subject The headline the recipient reads, derived from the kind rather than supplied.
+	Subject string `json:"subject"`
+
+	// Target The record the notice is about, when it is about one. Both halves or neither — a type
+	// with no id names a KIND of thing and cannot be opened. Absent is the common case: a
+	// capture backlog and a colleague's word are about no single record.
+	Target *struct {
+		Id openapi_types.UUID `json:"id"`
+
+		// Type The record's class, as its own endpoint spells it.
+		Type string `json:"type"`
+	} `json:"target,omitempty"`
+}
+
+// NotificationPage One window of the calling contact's notification centre.
+type NotificationPage struct {
+	// Items Newest first, read and unread, including the classes this reader set to `off` —
+	// those reach no lane and no badge, and this is where they remain findable. Empty is
+	// the honest answer for a seat nothing has told anything.
+	Items []NotificationItem `json:"items"`
+
+	// NextCursor Send this back as `cursor` to continue past the last line of this page.
+	//
+	// ABSENT MEANS THERE IS NOTHING FURTHER BACK. It is deliberately not minted on a final
+	// page: a cursor there invites one more request that can only answer empty, and a
+	// client walking until the cursor disappears would never stop.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// UnreadCount How many unsettled notices are waiting on the reader — all of them and not this
+	// page's share, because a badge that fell as somebody scrolled would be counting the
+	// wrong thing.
+	//
+	// IT COUNTS THE LANE AND NOT THE LIST, so it is the narrower of the two. The reader's
+	// own stage moves are outside it, as they are outside `items`. A class they set to
+	// `off` is outside it too and still listed in `items`: the count is the interruption
+	// they declined, and the line is the record they did not. So one page can show more
+	// unsettled lines than the count, and the count can exceed what any one page holds:
+	// what it never counts is a row `items` would not reach on some page, because a badge
+	// numbering rows the panel cannot list is a badge nobody can clear.
+	UnreadCount int `json:"unread_count"`
+}
+
+// NotificationPreference One class's setting for the calling seat, as it stands.
+type NotificationPreference struct {
+	// Chosen Whether the seat DECIDED this, or is following the installation's default. False
+	// follows, and moves if that default moves; true is a choice that stays. Rendering the
+	// two the same would silently re-decide for everybody on the day a default changed.
+	Chosen bool `json:"chosen"`
+
+	// Class A class of notification a seat decides delivery about. Closed, and deliberately coarser
+	// than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
+	// is waiting on your approval", so the choice is made per class and every kind the product
+	// raises is placed in one of them.
+	Class NotificationClass `json:"class"`
+
+	// Delivery Where a class of notification reaches its reader.
+	//
+	// `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
+	// sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
+	// the only class with a sending leg, and taking the word for any other would record a
+	// choice the product does not keep; the others answer `422 value_not_allowed` and reach a
+	// mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+	// following morning, and is accepted for every class.
+	//
+	// `off` records the notice and stops there: no lane, no badge, no message. It does NOT
+	// discard it — the centre lists it like any other, because a preference governs DELIVERY
+	// and never existence, and a class switched off must not silently drop something that
+	// changed what the reader believes about their data. Going to look is not being
+	// interrupted.
+	Delivery NotificationDelivery `json:"delivery"`
+}
+
+// NotificationPreferenceList The calling seat's whole set — one entry per class the product sends, always all of them,
+// so a screen rendering one row per class never has to take the others from its own memory.
+type NotificationPreferenceList struct {
+	Items []NotificationPreference `json:"items"`
+}
+
 // Offer A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
 type Offer struct {
 	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
@@ -32942,7 +36562,7 @@ type OpenDealRoomThreadRequest struct {
 	// RequiredChange Only with a document. Marks the thread as one the seller still owes an answer on.
 	RequiredChange *bool `json:"required_change,omitempty"`
 
-	// Source Provenance. Defaults to `ui` on the public edge.
+	// Source Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for someone writing through this product.
 	Source *string `json:"source,omitempty"`
 }
 
@@ -33026,7 +36646,10 @@ type Partner struct {
 	LastContactAt *time.Time              `json:"last_contact_at,omitempty"`
 
 	// MarginTier Scenario-C margin tier (business/14-partner-program.md; data-model §4.3 CHECK).
-	MarginTier    *PartnerMarginTier  `json:"margin_tier,omitempty"`
+	MarginTier *PartnerMarginTier `json:"margin_tier,omitempty"`
+
+	// MaskedFields The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
+	MaskedFields  *[]string           `json:"masked_fields,omitempty"`
 	NextStep      *string             `json:"next_step,omitempty"`
 	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
 
@@ -33141,6 +36764,12 @@ type PipelineListResponse struct {
 	Page PageInfo   `json:"page"`
 }
 
+// PipelineOrderRequest The live pipelines, first to last.
+type PipelineOrderRequest struct {
+	// PipelineIds Every live pipeline, each exactly once, in the new order.
+	PipelineIds []openapi_types.UUID `json:"pipeline_ids"`
+}
+
 // PipelineStageRung defines model for PipelineStageRung.
 type PipelineStageRung struct {
 	// At When this rung happened, for the stages that know. Null rather than invented: a derived rung usually carries no timestamp of its own, and dating it from the activity would date the wrong event.
@@ -33197,6 +36826,9 @@ type PipelineTrace struct {
 	// Stages Every registered stage, ordered as a message meets them. Never a subset.
 	Stages []PipelineStageRung `json:"stages"`
 }
+
+// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+type PopulationNarrowed string
 
 // PostDealRoomCommentRequest defines model for PostDealRoomCommentRequest.
 type PostDealRoomCommentRequest struct {
@@ -33462,7 +37094,7 @@ type ProductListResponse struct {
 type Project struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
-	// Author Who created this project in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a project somebody entered here has no author but the one `captured_by` already names.
+	// Author Who created this project in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a project somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
@@ -33487,6 +37119,9 @@ type Project struct {
 
 	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project, maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool `json:"legal_hold,omitempty"`
 
 	// MaskedFields The fields of THIS row the caller may not read (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
 	MaskedFields *[]string           `json:"masked_fields,omitempty"`
@@ -34129,6 +37764,19 @@ type ProviderSpend struct {
 	Months []ProviderMonthlySpend `json:"months"`
 }
 
+// PublicMeetingProposal defines model for PublicMeetingProposal.
+type PublicMeetingProposal struct {
+	Description string             `json:"description"`
+	ExpiresAt   time.Time          `json:"expires_at"`
+	Meeting     *MeetingInvitation `json:"meeting,omitempty"`
+	Options     []struct {
+		End   time.Time `json:"end"`
+		Start time.Time `json:"start"`
+	} `json:"options"`
+	Profile PublicSchedulingProfile `json:"profile"`
+	Used    bool                    `json:"used"`
+}
+
 // PublicOriginStatus The address this installation puts in outgoing links, and whether it answered when last asked.
 // Reported so an operator can SEE the value rather than discover it from a recipient; the boot and
 // send guards are what actually refuse an unusable one. A probe from inside the deployment says this
@@ -34144,6 +37792,19 @@ type PublicOriginStatus struct {
 
 	// Reachable Null until the first probe answers, so a screen can say "not checked yet" rather than implying a failure.
 	Reachable *bool `json:"reachable,omitempty"`
+}
+
+// PublicSchedulingProfile defines model for PublicSchedulingProfile.
+type PublicSchedulingProfile struct {
+	CompanyName     string `json:"company_name"`
+	DurationMinutes int    `json:"duration_minutes"`
+	Enabled         bool   `json:"enabled"`
+	HostName        string `json:"host_name"`
+	Location        string `json:"location"`
+
+	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
+	LogoUrl *string `json:"logo_url,omitempty"`
+	Title   string  `json:"title"`
 }
 
 // PutOnboardingStateRequest defines model for PutOnboardingStateRequest.
@@ -34292,6 +37953,110 @@ type Receipt struct {
 	// Undo The way back, on a receipt for work that was APPLIED rather than approved.
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
 	Undo *AppliedUndo `json:"undo,omitempty"`
+}
+
+// RecordAccess Who can open one contact or company and who can change it. `data` is one page of the
+// members who can open it; `group_counts` and `page.total` count all of them.
+type RecordAccess struct {
+	// Archived An archived record still opens; nobody can change it until it is restored.
+	Archived bool `json:"archived"`
+
+	// CanChangeCount How many of the members who can open the record can also change it.
+	CanChangeCount int                  `json:"can_change_count"`
+	Data           []RecordAccessMember `json:"data"`
+
+	// Detail True for a caller holding the `user_admin` read grant, the boundary `GET /users` applies to
+	// who is in which team. Then every member is judged with their teams, and role keys and team
+	// names ride the rows. When false, every member other than the caller is judged without their
+	// teams, so no row tells the caller who belongs to a team; `team_access_count` counts the
+	// members whose access or edit rights that leaves out.
+	Detail bool `json:"detail"`
+
+	// GroupCounts How many members fall in each group, by their first reason in the order owner, direct share, team share, everyone.
+	GroupCounts RecordAccessGroupCounts `json:"group_counts"`
+
+	// OwnerId The owner, or null when nobody owns the record.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+	Page    PageInfo            `json:"page"`
+
+	// RefreshAt When the earliest share on this record lapses and this answer changes; null when no share expires.
+	RefreshAt *time.Time `json:"refresh_at,omitempty"`
+
+	// TeamAccessCount How many members have access or edit rights only through a team and are not shown as such, because `detail` is false. Always 0 when `detail` is true.
+	TeamAccessCount int `json:"team_access_count"`
+
+	// Visibility `workspace` opens to every member whose role reads this record type; `owner` only to its owner and the members it is shared with.
+	Visibility RecordAccessVisibility `json:"visibility"`
+
+	// You One member's access to the record and the reasons for it.
+	You RecordAccessVerdict `json:"you"`
+}
+
+// RecordAccessVisibility `workspace` opens to every member whose role reads this record type; `owner` only to its owner and the members it is shared with.
+type RecordAccessVisibility string
+
+// RecordAccessGroupCounts How many members fall in each group, by their first reason in the order owner, direct share, team share, everyone.
+type RecordAccessGroupCounts struct {
+	Everyone   int `json:"everyone"`
+	Owner      int `json:"owner"`
+	Shared     int `json:"shared"`
+	TeamShared int `json:"team_shared"`
+}
+
+// RecordAccessMember A member who can open the record.
+type RecordAccessMember struct {
+	CanChange     bool                 `json:"can_change"`
+	ChangeReasons []RecordAccessReason `json:"change_reasons"`
+	DisplayName   string               `json:"display_name"`
+
+	// Group The group the panel lists this member under, from their first reason.
+	Group       RecordAccessMemberGroup `json:"group"`
+	ReadReasons []RecordAccessReason    `json:"read_reasons"`
+
+	// Roles The member's role keys. Present only when `detail` is true.
+	Roles  *[]string          `json:"roles,omitempty"`
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// RecordAccessMemberGroup The group the panel lists this member under, from their first reason.
+type RecordAccessMemberGroup string
+
+// RecordAccessReason One reason a member can open or change the record. `workspace_visible` means the record is
+// open to everyone whose role reads this record type. `owner` means they own it.
+// `user_share` and `team_share` are live shares. `same_team_as_owner` and `all_records` come
+// from the member's role scope and apply only to changing. `write_share` is a share that allows
+// changing.
+type RecordAccessReason struct {
+	// Access The share's access level, on the three share codes.
+	Access *RecordAccessReasonAccess `json:"access,omitempty"`
+	Code   RecordAccessReasonCode    `json:"code"`
+
+	// ExpiresAt When the share lapses, on the three share codes; null when it does not.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+
+	// TeamId The team behind a team share. Present only when `detail` is true.
+	TeamId *openapi_types.UUID `json:"team_id,omitempty"`
+
+	// TeamName The team's name. Present only when `detail` is true.
+	TeamName *string `json:"team_name,omitempty"`
+}
+
+// RecordAccessReasonAccess The share's access level, on the three share codes.
+type RecordAccessReasonAccess string
+
+// RecordAccessReasonCode defines model for RecordAccessReason.Code.
+type RecordAccessReasonCode string
+
+// RecordAccessVerdict One member's access to the record and the reasons for it.
+type RecordAccessVerdict struct {
+	// CanChange Whether the record's edit path admits this member.
+	CanChange bool `json:"can_change"`
+
+	// ChangeReasons Why this member can change it; empty when they cannot.
+	ChangeReasons []RecordAccessReason `json:"change_reasons"`
+
+	// ReadReasons Why the record opens for this member.
+	ReadReasons []RecordAccessReason `json:"read_reasons"`
 }
 
 // RecordAssignment One responsibility held on one record. It records WHO is responsible, never who may see the record: visibility stays with ownership and record grants, and adding an assignment changes nobody's access.
@@ -34832,6 +38597,11 @@ type RenderedReport struct {
 
 // RenderedValue defines model for RenderedValue.
 type RenderedValue struct {
+	Context           *ReportingContext  `json:"context,omitempty"`
+	Coverage          *ReportingCoverage `json:"coverage,omitempty"`
+	DefinitionVersion *string            `json:"definition_version,omitempty"`
+	Unit              *string            `json:"unit,omitempty"`
+
 	// Value The figure the database computed, or null when it was withheld. A null with `withheld` false means the cell resolved to no value at all, which is a different fact from one kept back.
 	Value interface{} `json:"value,omitempty"`
 
@@ -34930,17 +38700,29 @@ type ReportBlockKind string
 // ReportBlockSeverity Types a callout, and is meaningless elsewhere. A callout says what the numbers cannot — a partial figure, an unanswerable question, an unsupported grouping — and an untyped one renders as prose, which is how a measured absence becomes indistinguishable from one nobody looked for.
 type ReportBlockSeverity string
 
-// ReportCell One figure, named by the run it lives in and the cell within it.
+// ReportCell Exactly one live saved-run cell, live catalog metric reference, or frozen edition metric reference.
 type ReportCell struct {
 	// Column Which measure of the cell to show. A cell can carry several and a block shows one, so which is not a detail a renderer may pick.
-	Column string `json:"column"`
+	Column     *string                 `json:"column,omitempty"`
+	EditionRef *ReportEditionReference `json:"edition_ref,omitempty"`
 
 	// Group The cell's group key values, one per grouping in the saved question. Omitted for an ungrouped run, which has one cell.
-	Group *[]interface{} `json:"group,omitempty"`
+	Group     *[]interface{}         `json:"group,omitempty"`
+	MetricRef *ReportMetricReference `json:"metric_ref,omitempty"`
 
 	// RunId The saved run. Resolved under the reading caller's own authority.
-	RunId openapi_types.UUID `json:"run_id"`
+	RunId *openapi_types.UUID `json:"run_id,omitempty"`
+	union json.RawMessage
 }
+
+// ReportCell0 defines model for .
+type ReportCell0 = interface{}
+
+// ReportCell1 defines model for .
+type ReportCell1 = interface{}
+
+// ReportCell2 defines model for .
+type ReportCell2 = interface{}
 
 // ReportDerivation The "Explain This Number" resolution (features/03 §1.3): a plain-language definition of
 // the exact filter+group+aggregate plus the underlying source rows, which reconcile
@@ -34974,8 +38756,11 @@ type ReportDerivation struct {
 	GeneratedAt          *time.Time `json:"generated_at,omitempty"`
 
 	// Plan The validated predicate/group/aggregate set that was resolved.
-	Plan   map[string]interface{} `json:"plan"`
-	Report string                 `json:"report"`
+	Plan map[string]interface{} `json:"plan"`
+
+	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
+	Report             string              `json:"report"`
 
 	// Rows The underlying source rows (drill-through), row-scoped exactly like the report.
 	Rows []map[string]interface{} `json:"rows"`
@@ -34987,6 +38772,18 @@ type ReportDerivation struct {
 // ReportDocument A report as composed: structure and words, with every figure named by a handle.
 type ReportDocument struct {
 	Blocks []ReportBlock `json:"blocks"`
+}
+
+// ReportEditionReference defines model for ReportEditionReference.
+type ReportEditionReference struct {
+	EditionId openapi_types.UUID `json:"edition_id"`
+	Metric    ReportingMetricID  `json:"metric"`
+}
+
+// ReportMetricReference defines model for ReportMetricReference.
+type ReportMetricReference struct {
+	Metric    ReportingMetricID  `json:"metric"`
+	Selection ReportingSelection `json:"selection"`
 }
 
 // ReportResult defines model for ReportResult.
@@ -35011,8 +38808,11 @@ type ReportResult struct {
 	GeneratedAt          *time.Time `json:"generated_at,omitempty"`
 
 	// Plan The validated query plan that was executed (shown before/after run).
-	Plan   map[string]interface{} `json:"plan"`
-	Report string                 `json:"report"`
+	Plan map[string]interface{} `json:"plan"`
+
+	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
+	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
+	Report             string              `json:"report"`
 
 	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
 	Rows []map[string]interface{} `json:"rows"`
@@ -35031,7 +38831,7 @@ type ReportRun struct {
 	AskedBy openapi_types.UUID `json:"asked_by"`
 	Id      openapi_types.UUID `json:"id"`
 
-	// Query The question as it was saved, unchanged.
+	// Query The question as it was saved, with one addition: `limit` is always present and is the bound this read applied, including the default when the asker named none.
 	Query AnalyticsQuery `json:"query"`
 
 	// StoredFloor The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing.
@@ -35042,6 +38842,407 @@ type ReportRun struct {
 type ReportRunCell struct {
 	// Group The cell's group key values, one per grouping in the SAVED question and in that question's own order. Omitted for an ungrouped run, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none.
 	Group *[]interface{} `json:"group,omitempty"`
+}
+
+// ReportScope defines model for ReportScope.
+type ReportScope struct {
+	Id   *openapi_types.UUID `json:"id,omitempty"`
+	Kind ReportScopeKind     `json:"kind"`
+}
+
+// ReportScopeKind defines model for ReportScope.Kind.
+type ReportScopeKind string
+
+// ReportingBlockKind defines model for ReportingBlockKind.
+type ReportingBlockKind string
+
+// ReportingCaptureContext defines model for ReportingCaptureContext.
+type ReportingCaptureContext struct {
+	PipelineId *openapi_types.UUID `json:"pipeline_id,omitempty"`
+	Scope      ReportingScope      `json:"scope"`
+}
+
+// ReportingCaptureStatus defines model for ReportingCaptureStatus.
+type ReportingCaptureStatus struct {
+	Failure       *string    `json:"failure,omitempty"`
+	LastAttemptAt time.Time  `json:"last_attempt_at"`
+	LastSuccessAt *time.Time `json:"last_success_at,omitempty"`
+	NextCaptureAt time.Time  `json:"next_capture_at"`
+}
+
+// ReportingCatalog defines model for ReportingCatalog.
+type ReportingCatalog struct {
+	Metrics []ReportingMetricDefinition `json:"metrics"`
+}
+
+// ReportingChart defines model for ReportingChart.
+type ReportingChart struct {
+	AllocatedTarget      *float64                `json:"allocated_target,omitempty"`
+	AllocationDifference *float64                `json:"allocation_difference,omitempty"`
+	CaptureStatus        *ReportingCaptureStatus `json:"capture_status,omitempty"`
+	Closing              *float64                `json:"closing,omitempty"`
+	ComparisonInterval   *ReportingWindow        `json:"comparison_interval,omitempty"`
+	ContextId            string                  `json:"context_id"`
+	Coverage             ReportingCoverage       `json:"coverage"`
+	Interval             *ReportingWindow        `json:"interval,omitempty"`
+	Kind                 ReportingBlockKind      `json:"kind"`
+	Marker               *float64                `json:"marker,omitempty"`
+	Metric               ReportingMetricID       `json:"metric"`
+	Opening              *float64                `json:"opening,omitempty"`
+	OpeningSnapshotId    *openapi_types.UUID     `json:"opening_snapshot_id,omitempty"`
+	Points               []ReportingPoint        `json:"points"`
+	SnapshotId           *openapi_types.UUID     `json:"snapshot_id,omitempty"`
+	StateAt              *time.Time              `json:"state_at,omitempty"`
+	Unit                 string                  `json:"unit"`
+}
+
+// ReportingComparison defines model for ReportingComparison.
+type ReportingComparison struct {
+	Compatible bool             `json:"compatible"`
+	Deltas     []ReportingDelta `json:"deltas"`
+	Left       ReportingEdition `json:"left"`
+	Reason     *string          `json:"reason,omitempty"`
+	Right      ReportingEdition `json:"right"`
+}
+
+// ReportingContext defines model for ReportingContext.
+type ReportingContext struct {
+	CloseInterval         *ReportingWindow     `json:"close_interval,omitempty"`
+	Currency              string               `json:"currency"`
+	DefinitionVersion     string               `json:"definition_version"`
+	EvaluatedAt           time.Time            `json:"evaluated_at"`
+	FrameworkRevision     int64                `json:"framework_revision"`
+	Interval              ReportingWindow      `json:"interval"`
+	MemberIds             []openapi_types.UUID `json:"member_ids"`
+	PeriodKind            string               `json:"period_kind"`
+	PipelineId            *openapi_types.UUID  `json:"pipeline_id,omitempty"`
+	PopulationFingerprint string               `json:"population_fingerprint"`
+	Scope                 ReportingScope       `json:"scope"`
+	StateAt               time.Time            `json:"state_at"`
+	TargetInterval        *ReportingWindow     `json:"target_interval,omitempty"`
+	Timezone              string               `json:"timezone"`
+}
+
+// ReportingCoverage defines model for ReportingCoverage.
+type ReportingCoverage struct {
+	EligibleCount *int64          `json:"eligible_count,omitempty"`
+	PricedCount   *int64          `json:"priced_count,omitempty"`
+	Reason        *string         `json:"reason,omitempty"`
+	Status        ReportingStatus `json:"status"`
+	Withheld      bool            `json:"withheld"`
+}
+
+// ReportingDelta defines model for ReportingDelta.
+type ReportingDelta struct {
+	Absolute   float64           `json:"absolute"`
+	Metric     ReportingMetricID `json:"metric"`
+	Percentage *float64          `json:"percentage,omitempty"`
+}
+
+// ReportingEdition defines model for ReportingEdition.
+type ReportingEdition struct {
+	CapturedAt time.Time           `json:"captured_at"`
+	Evaluation ReportingEvaluation `json:"evaluation"`
+
+	// Expired Retention removed the readings; dated metadata remains.
+	Expired        *bool              `json:"expired,omitempty"`
+	Id             openapi_types.UUID `json:"id"`
+	IntendedDueAt  time.Time          `json:"intended_due_at"`
+	Name           string             `json:"name"`
+	Redacted       bool               `json:"redacted"`
+	ReportId       openapi_types.UUID `json:"report_id"`
+	ReportRevision int64              `json:"report_revision"`
+	Withheld       bool               `json:"withheld"`
+}
+
+// ReportingEditionList defines model for ReportingEditionList.
+type ReportingEditionList struct {
+	Data       []ReportingEdition `json:"data"`
+	NextCursor *string            `json:"next_cursor,omitempty"`
+}
+
+// ReportingEvaluation defines model for ReportingEvaluation.
+type ReportingEvaluation struct {
+	Charts        []ReportingChart   `json:"charts"`
+	Context       ReportingContext   `json:"context"`
+	EvaluationKey string             `json:"evaluation_key"`
+	Metrics       []ReportingMetric  `json:"metrics"`
+	Selection     ReportingSelection `json:"selection"`
+}
+
+// ReportingEvidence defines model for ReportingEvidence.
+type ReportingEvidence struct {
+	Context    ReportingContext       `json:"context"`
+	Metric     ReportingMetricID      `json:"metric"`
+	NextCursor *string                `json:"next_cursor,omitempty"`
+	Rows       []ReportingEvidenceRow `json:"rows"`
+	Truncated  bool                   `json:"truncated"`
+}
+
+// ReportingEvidenceRef defines model for ReportingEvidenceRef.
+type ReportingEvidenceRef struct {
+	ContextId string            `json:"context_id"`
+	GroupKey  *string           `json:"group_key,omitempty"`
+	Metric    ReportingMetricID `json:"metric"`
+	Through   *time.Time        `json:"through,omitempty"`
+}
+
+// ReportingEvidenceRow defines model for ReportingEvidenceRow.
+type ReportingEvidenceRow struct {
+	Key        string              `json:"key"`
+	Label      string              `json:"label"`
+	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
+	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
+	Restricted bool                `json:"restricted"`
+	SourceId   *openapi_types.UUID `json:"source_id,omitempty"`
+	SourceType *string             `json:"source_type,omitempty"`
+	Value      *float64            `json:"value"`
+}
+
+// ReportingExecution defines model for ReportingExecution.
+type ReportingExecution struct {
+	Attempt        int64                    `json:"attempt"`
+	EditionId      *openapi_types.UUID      `json:"edition_id,omitempty"`
+	Id             openapi_types.UUID       `json:"id"`
+	IntendedDueAt  time.Time                `json:"intended_due_at"`
+	Reason         *string                  `json:"reason,omitempty"`
+	ReportId       openapi_types.UUID       `json:"report_id"`
+	ReportRevision int64                    `json:"report_revision"`
+	Status         ReportingExecutionStatus `json:"status"`
+}
+
+// ReportingExecutionStatus defines model for ReportingExecution.Status.
+type ReportingExecutionStatus string
+
+// ReportingExecutionList defines model for ReportingExecutionList.
+type ReportingExecutionList struct {
+	Data       []ReportingExecution `json:"data"`
+	NextCursor *string              `json:"next_cursor,omitempty"`
+}
+
+// ReportingFramework defines model for ReportingFramework.
+type ReportingFramework struct {
+	Definition  ReportingFrameworkInput `json:"definition"`
+	EffectiveAt time.Time               `json:"effective_at"`
+	Revision    int64                   `json:"revision"`
+	Version     int64                   `json:"version"`
+}
+
+// ReportingFrameworkInput defines model for ReportingFrameworkInput.
+type ReportingFrameworkInput struct {
+	CaptureContexts []ReportingCaptureContext       `json:"capture_contexts"`
+	Qualification   []ReportingQualification        `json:"qualification"`
+	Reason          string                          `json:"reason"`
+	Template        ReportingFrameworkInputTemplate `json:"template"`
+}
+
+// ReportingFrameworkInputTemplate defines model for ReportingFrameworkInput.Template.
+type ReportingFrameworkInputTemplate string
+
+// ReportingMetric defines model for ReportingMetric.
+type ReportingMetric struct {
+	Attainment     *float64             `json:"attainment,omitempty"`
+	Coverage       ReportingCoverage    `json:"coverage"`
+	Denominator    *float64             `json:"denominator,omitempty"`
+	Evidence       ReportingEvidenceRef `json:"evidence"`
+	Id             ReportingMetricID    `json:"id"`
+	Numerator      *float64             `json:"numerator,omitempty"`
+	Target         *float64             `json:"target,omitempty"`
+	TargetActual   *float64             `json:"target_actual,omitempty"`
+	TargetRevision *int64               `json:"target_revision,omitempty"`
+	Unit           string               `json:"unit"`
+	Value          *float64             `json:"value"`
+	Version        string               `json:"version"`
+}
+
+// ReportingMetricDefinition defines model for ReportingMetricDefinition.
+type ReportingMetricDefinition struct {
+	AllowedFilters   *[]string                              `json:"allowed_filters,omitempty"`
+	Attribution      *string                                `json:"attribution,omitempty"`
+	Blocks           []ReportingBlockKind                   `json:"blocks"`
+	Definition       string                                 `json:"definition"`
+	FrozenSupport    *bool                                  `json:"frozen_support,omitempty"`
+	Id               ReportingMetricID                      `json:"id"`
+	IncompletePolicy *string                                `json:"incomplete_policy,omitempty"`
+	MaxContributions *int                                   `json:"max_contributions,omitempty"`
+	MinimumCohort    *int                                   `json:"minimum_cohort,omitempty"`
+	ReadObject       *string                                `json:"read_object,omitempty"`
+	RequiredFields   *[]string                              `json:"required_fields,omitempty"`
+	SupportsTarget   bool                                   `json:"supports_target"`
+	TemporalBasis    ReportingMetricDefinitionTemporalBasis `json:"temporal_basis"`
+	Unit             string                                 `json:"unit"`
+	Version          string                                 `json:"version"`
+}
+
+// ReportingMetricDefinitionTemporalBasis defines model for ReportingMetricDefinition.TemporalBasis.
+type ReportingMetricDefinitionTemporalBasis string
+
+// ReportingMetricID defines model for ReportingMetricID.
+type ReportingMetricID string
+
+// ReportingPoint defines model for ReportingPoint.
+type ReportingPoint struct {
+	At           *time.Time            `json:"at,omitempty"`
+	Comparison   *float64              `json:"comparison,omitempty"`
+	Evidence     *ReportingEvidenceRef `json:"evidence,omitempty"`
+	Key          string                `json:"key"`
+	Label        string                `json:"label"`
+	Observations *int64                `json:"observations,omitempty"`
+	Status       ReportingStatus       `json:"status"`
+	Target       *float64              `json:"target,omitempty"`
+	Upper        *float64              `json:"upper,omitempty"`
+	Value        *float64              `json:"value"`
+}
+
+// ReportingQualification defines model for ReportingQualification.
+type ReportingQualification struct {
+	PipelineId openapi_types.UUID   `json:"pipeline_id"`
+	StageIds   []openapi_types.UUID `json:"stage_ids"`
+}
+
+// ReportingReport defines model for ReportingReport.
+type ReportingReport struct {
+	ArchivedAt     *time.Time              `json:"archived_at,omitempty"`
+	Audience       ReportingReportAudience `json:"audience"`
+	AudienceTeamId *openapi_types.UUID     `json:"audience_team_id,omitempty"`
+	Cadence        *string                 `json:"cadence,omitempty"`
+
+	// CanManage Whether the current human may manage this report, before individual object-action grants.
+	CanManage        *bool              `json:"can_manage,omitempty"`
+	CreatedAt        time.Time          `json:"created_at"`
+	EditionCount     *int               `json:"edition_count,omitempty"`
+	Id               openapi_types.UUID `json:"id"`
+	LastStatus       *string            `json:"last_status,omitempty"`
+	LatestCapturedAt *time.Time         `json:"latest_captured_at,omitempty"`
+	Name             string             `json:"name"`
+	NextDueAt        *time.Time         `json:"next_due_at,omitempty"`
+	OwnerId          openapi_types.UUID `json:"owner_id"`
+	Revision         int64              `json:"revision"`
+	Selection        ReportingSelection `json:"selection"`
+	Version          int64              `json:"version"`
+}
+
+// ReportingReportAudience defines model for ReportingReport.Audience.
+type ReportingReportAudience string
+
+// ReportingReportInput defines model for ReportingReportInput.
+type ReportingReportInput struct {
+	Audience       ReportingReportInputAudience `json:"audience"`
+	AudienceTeamId *openapi_types.UUID          `json:"audience_team_id,omitempty"`
+	Name           string                       `json:"name"`
+	Selection      ReportingSelection           `json:"selection"`
+}
+
+// ReportingReportInputAudience defines model for ReportingReportInput.Audience.
+type ReportingReportInputAudience string
+
+// ReportingReportList defines model for ReportingReportList.
+type ReportingReportList struct {
+	Data       []ReportingReport `json:"data"`
+	NextCursor *string           `json:"next_cursor,omitempty"`
+}
+
+// ReportingSchedule defines model for ReportingSchedule.
+type ReportingSchedule struct {
+	Definition ReportingScheduleInput `json:"definition"`
+	Id         openapi_types.UUID     `json:"id"`
+	LastStatus *string                `json:"last_status,omitempty"`
+	NextDueAt  time.Time              `json:"next_due_at"`
+	OwnerId    openapi_types.UUID     `json:"owner_id"`
+	ReportId   openapi_types.UUID     `json:"report_id"`
+	Timezone   string                 `json:"timezone"`
+	Version    int64                  `json:"version"`
+}
+
+// ReportingScheduleInput defines model for ReportingScheduleInput.
+type ReportingScheduleInput struct {
+	Day            int                             `json:"day"`
+	Enabled        bool                            `json:"enabled"`
+	Frequency      ReportingScheduleInputFrequency `json:"frequency"`
+	LocalTime      string                          `json:"local_time"`
+	ReportRevision int64                           `json:"report_revision"`
+}
+
+// ReportingScheduleInputFrequency defines model for ReportingScheduleInput.Frequency.
+type ReportingScheduleInputFrequency string
+
+// ReportingScheduleList defines model for ReportingScheduleList.
+type ReportingScheduleList struct {
+	Data       []ReportingSchedule `json:"data"`
+	NextCursor *string             `json:"next_cursor,omitempty"`
+}
+
+// ReportingScope defines model for ReportingScope.
+type ReportingScope struct {
+	Id    *openapi_types.UUID `json:"id,omitempty"`
+	Kind  ReportingScopeKind  `json:"kind"`
+	Label *string             `json:"label,omitempty"`
+}
+
+// ReportingScopeKind defines model for ReportingScope.Kind.
+type ReportingScopeKind string
+
+// ReportingSelection defines model for ReportingSelection.
+type ReportingSelection struct {
+	Blocks      []ReportingBlockKind          `json:"blocks"`
+	CloseWindow ReportingSelectionCloseWindow `json:"close_window"`
+	Interval    *ReportingWindow              `json:"interval,omitempty"`
+	Metrics     []ReportingMetricID           `json:"metrics"`
+	Period      ReportingSelectionPeriod      `json:"period"`
+	PipelineId  *openapi_types.UUID           `json:"pipeline_id,omitempty"`
+	Scope       ReportingScope                `json:"scope"`
+	TargetBasis ReportingSelectionTargetBasis `json:"target_basis"`
+}
+
+// ReportingSelectionCloseWindow defines model for ReportingSelection.CloseWindow.
+type ReportingSelectionCloseWindow string
+
+// ReportingSelectionPeriod defines model for ReportingSelection.Period.
+type ReportingSelectionPeriod string
+
+// ReportingSelectionTargetBasis defines model for ReportingSelection.TargetBasis.
+type ReportingSelectionTargetBasis string
+
+// ReportingStatus defines model for ReportingStatus.
+type ReportingStatus string
+
+// ReportingTarget defines model for ReportingTarget.
+type ReportingTarget struct {
+	AllocatedValue       *int64               `json:"allocated_value,omitempty"`
+	AllocationDifference *int64               `json:"allocation_difference,omitempty"`
+	CreatedAt            time.Time            `json:"created_at"`
+	Definition           ReportingTargetInput `json:"definition"`
+	Id                   openapi_types.UUID   `json:"id"`
+	Interval             ReportingWindow      `json:"interval"`
+	Revision             int64                `json:"revision"`
+	Unit                 string               `json:"unit"`
+	Version              int64                `json:"version"`
+}
+
+// ReportingTargetInput defines model for ReportingTargetInput.
+type ReportingTargetInput struct {
+	Metric      ReportingMetricID              `json:"metric"`
+	PeriodKind  ReportingTargetInputPeriodKind `json:"period_kind"`
+	PeriodStart openapi_types.Date             `json:"period_start"`
+	PipelineId  *openapi_types.UUID            `json:"pipeline_id,omitempty"`
+	Reason      string                         `json:"reason"`
+	Scope       ReportingScope                 `json:"scope"`
+	Value       int64                          `json:"value"`
+}
+
+// ReportingTargetInputPeriodKind defines model for ReportingTargetInput.PeriodKind.
+type ReportingTargetInputPeriodKind string
+
+// ReportingTargetList defines model for ReportingTargetList.
+type ReportingTargetList struct {
+	Data       []ReportingTarget `json:"data"`
+	NextCursor *string           `json:"next_cursor,omitempty"`
+}
+
+// ReportingWindow defines model for ReportingWindow.
+type ReportingWindow struct {
+	EndAt   time.Time `json:"end_at"`
+	StartAt time.Time `json:"start_at"`
 }
 
 // RequestAccessResponse defines model for RequestAccessResponse.
@@ -35089,14 +39290,63 @@ type ResolveInputCheck struct {
 // ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
 type ResolveInputCheckOutcome string
 
-// ResponseMetrics What the workspace did with its waiting work over one window. Two questions: how
-// fast it answered what it answered, and how much it put down instead.
+// ResponseMetrics What the workspace did with its work over one window. Three questions: how fast it
+// answered what it answered, how much it put down instead, and how often a deal the
+// queue called material and at risk got a next step booked the same day.
+//
+// These are the worklist's success metrics. A fourth was once named beside them —
+// finite-queue completion, how much of the queue a rep's day started with was
+// finished by its end — and it is DROPPED, not pending: answering it would mean
+// recording what each rep was shown each day, which the product does not keep.
 type ResponseMetrics struct {
 	// Answered How many inbound sales messages got a reply in the window. It is the
 	// denominator `median_minutes` is worth reading against: a fast median over three
 	// answered messages says less about the workspace than a slower one over three
 	// hundred.
 	Answered int `json:"answered"`
+
+	// AtRiskBookedSameDay How many of those deal-days got a next step booked the same day: a task on the
+	// deal created within that day, done or not. The day's bounds are the ones in force
+	// when it was recorded, so moving the installation to another timezone later does
+	// not move which tasks fell on it. A meeting
+	// does not count, because its record is created when the calendar sync sees it
+	// rather than when somebody booked it.
+	AtRiskBookedSameDay *int `json:"at_risk_booked_same_day,omitempty"`
+
+	// AtRiskFromDay The first day the two figures above count: the first whole day inside the
+	// window, in the installation's timezone.
+	AtRiskFromDay *openapi_types.Date `json:"at_risk_from_day,omitempty"`
+
+	// AtRiskJudged How many deal-days in the window BEGAN material and at risk — one per deal per
+	// day, over the deals THIS caller may see. The denominator of the same-day
+	// next-step rate: of the material at-risk deals a day started with, how many got a
+	// next step that day.
+	//
+	// The set is the one the day's FIRST pass judged: a pass runs hourly, the first one
+	// after local midnight records the day, and later passes that day add nothing — so a
+	// deal turning at risk in the afternoon waits for tomorrow. The bar is the
+	// workspace's own, the median of the whole at-risk pipeline over every amount,
+	// judged once for everybody; it cannot be recomputed for a past day, so nothing
+	// before `at_risk_recorded_since` exists to count.
+	//
+	// The five `at_risk_*` fields are one group, and the whole group is ABSENT — not
+	// zero — for a caller whose field masks withhold a deal's amount or currency on any
+	// row. The deals were chosen by amounts that caller may not read, so a rate over
+	// them would say something about those amounts.
+	AtRiskJudged *int `json:"at_risk_judged,omitempty"`
+
+	// AtRiskRecordedSince The first day on record in this installation. Absent when there is none yet, and
+	// absent with the rest of the group when the figure is withheld.
+	//
+	// Read the figures against it rather than as a rate over the whole window: days
+	// before it were never measured, so a window reaching back past it holds no data
+	// for those days, not zeros. When it is absent, both figures are zero because
+	// nothing has been recorded — say "no data yet", never 0%.
+	AtRiskRecordedSince *openapi_types.Date `json:"at_risk_recorded_since,omitempty"`
+
+	// AtRiskToDay The day the two figures stop BEFORE — today, in the installation's timezone. A
+	// day still running is left out, because its next step can still be booked.
+	AtRiskToDay *openapi_types.Date `json:"at_risk_to_day,omitempty"`
 
 	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
 	// judged not sales.
@@ -35274,6 +39524,9 @@ type RightsCaseReceiptKind string
 
 // Role One role as `role.permissions` stores it. This is a ROLE's document, not a principal's — unlike `Authorization.objects` nothing here is merged, because the thing being edited is the single role.
 type Role struct {
+	// ArchivedAt When the role was archived. Absent or null for a live role.
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
 	// IsSystem True for a role the workspace bootstrap seeded and the RBAC migrations top up. It is NOT an immutability flag — a system role's grants are editable through `setRoleObjectGrant`, which is what makes granting an extension object possible at all on an installation that never defined a custom role. A client may surface it as "shipped with the product", never as "read-only".
 	IsSystem bool `json:"is_system"`
 
@@ -35286,11 +39539,17 @@ type Role struct {
 	// Objects This role's grants, keyed by RBAC object name, verbatim from the stored document. An ABSENT key means the role grants nothing on that object — the same denial an all-false grant expresses, so a client must render a missing key as "no access" rather than as unknown. May carry names outside `RbacObject` and outside any enabled extension; see `listRoles`.
 	Objects map[string]RbacObjectGrant `json:"objects"`
 
+	// RowScope Whose records the grants reach: the holder's own, those of everyone sharing a live team with them, or every record. A document storing none reads as `own`, the narrowest, which is how authentication reads it too.
+	RowScope RoleRowScope `json:"row_scope"`
+
 	// Version The row's optimistic-concurrency version (`RowVersion` semantics, data-model §1.3a). Spelled inline rather than as a `$ref` because this one is REQUIRED and a `$ref` renders optional in the generated clients: the editor must always have a version to echo in `If-Match`, and an optional one would let a client omit the guard by accident rather than by decision.
 	Version int64 `json:"version"`
 }
 
-// RoleDirectory Every role this workspace defines. Not paginated and deliberately not: the set is bounded by what an operator created (five seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
+// RoleRowScope Whose records the grants reach: the holder's own, those of everyone sharing a live team with them, or every record. A document storing none reads as `own`, the narrowest, which is how authentication reads it too.
+type RoleRowScope string
+
+// RoleDirectory Every role this workspace defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
 type RoleDirectory struct {
 	Roles []Role `json:"roles"`
 }
@@ -35334,6 +39593,7 @@ type RunReportRequest struct {
 	// Filters Typed predicates (period, status, owner, ...) — keys must be in the report vocabulary.
 	Filters *map[string]interface{} `json:"filters,omitempty"`
 	GroupBy *[]string               `json:"group_by,omitempty"`
+	Scope   *ReportScope            `json:"scope,omitempty"`
 }
 
 // RunReportRequestAggregatesFn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
@@ -35537,6 +39797,38 @@ type ScheduledSendHeldReason string
 // a human reschedules or cancels it.
 type ScheduledSendStatus string
 
+// SchedulingProfile defines model for SchedulingProfile.
+type SchedulingProfile struct {
+	BlockingCalendars *[]string `json:"blocking_calendars,omitempty"`
+	BufferMinutes     int       `json:"buffer_minutes"`
+	CalendarId        string    `json:"calendar_id"`
+
+	// CompanyName Derived from the anchor company; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
+	CompanyName     *string `json:"company_name,omitempty"`
+	DurationMinutes int     `json:"duration_minutes"`
+
+	// EmailReminder Send one operational email reminder one hour before future meetings.
+	EmailReminder *bool `json:"email_reminder,omitempty"`
+	Enabled       bool  `json:"enabled"`
+	HorizonDays   int   `json:"horizon_days"`
+
+	// HostName Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
+	HostName *string `json:"host_name,omitempty"`
+	Location string  `json:"location"`
+
+	// LogoUrl Derived from the anchor company; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.
+	LogoUrl       *string                   `json:"logo_url,omitempty"`
+	NoticeMinutes int                       `json:"notice_minutes"`
+	Provider      SchedulingProfileProvider `json:"provider"`
+	PublicUrl     *string                   `json:"public_url,omitempty"`
+	ReplaceLink   *bool                     `json:"replace_link,omitempty"`
+	Slug          *string                   `json:"slug,omitempty"`
+	Title         string                    `json:"title"`
+}
+
+// SchedulingProfileProvider defines model for SchedulingProfile.Provider.
+type SchedulingProfileProvider string
+
 // SearchResponse defines model for SearchResponse.
 type SearchResponse struct {
 	Data []SearchResult `json:"data"`
@@ -35552,6 +39844,9 @@ type SearchResult struct {
 	EmailSummary *EmailSummary      `json:"email_summary,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
 
+	// IsPartner For a `company` hit only: whether the account carries a LIVE partner programme. True when a partner record exists and has not been retired, false when it was checked and carries none. Null on every other hit type, and null when the marker was not taken — a caller who may not read partner programmes gets null rather than false, because null means UNKNOWN while false would tell them this account is not a partner. A client renders the partner marker, with a route to the company's partner record, on `true` alone.
+	IsPartner *bool `json:"is_partner,omitempty"`
+
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`
 	Snippet *string  `json:"snippet,omitempty"`
@@ -35559,12 +39854,12 @@ type SearchResult struct {
 	// Title Display label (name/subject).
 	Title *string `json:"title,omitempty"`
 
-	// TrustTier Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
+	// TrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 	TrustTier *SearchResultTrustTier `json:"trust_tier,omitempty"`
 	Type      SearchResultType       `json:"type"`
 }
 
-// SearchResultTrustTier Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
+// SearchResultTrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 type SearchResultTrustTier string
 
 // SearchResultType defines model for SearchResult.Type.
@@ -35767,6 +40062,10 @@ type SendCompanyEmailRequest struct {
 	// at 25 (a message about more records than that is about none of them).
 	Links []ActivityLinkInput `json:"links"`
 
+	// MailDraftId The caller's saved draft this message was composed in, discarded in the same
+	// transaction as the send or the scheduling, exactly as on `send_email`.
+	MailDraftId *openapi_types.UUID `json:"mail_draft_id,omitempty"`
+
 	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
 	// Marketing consent is purpose-specific: a grant for one topic authorizes that
 	// topic and no other.
@@ -35939,6 +40238,13 @@ type SendEmailRequest struct {
 	// receives the words. The sender's signature and the unsubscribe footer are
 	// appended to BOTH parts by the server, in each part's own syntax.
 	HtmlBody *string `json:"html_body,omitempty"`
+
+	// MailDraftId The caller's saved draft (`PUT /mail-drafts`) this message was composed in. The
+	// send, or the scheduling, discards it in the SAME transaction, so a message that
+	// left the composer leaves no draft behind; a refused send commits nothing and the
+	// draft stays. Only a human caller's own draft for this message's anchor is
+	// discarded — any other id is ignored — and omitting it discards nothing.
+	MailDraftId *openapi_types.UUID `json:"mail_draft_id,omitempty"`
 
 	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
 	// Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -36323,6 +40629,15 @@ type SetTransitionPolicyRequestMode string
 type SettingsAvailability struct {
 	// CompanyContext True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it.
 	CompanyContext bool `json:"company_context"`
+
+	// EmbeddingReindex True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it.
+	EmbeddingReindex bool `json:"embedding_reindex"`
+
+	// Lists True when the installation has switched on Live Lists and Shortlists (`lists.enabled`). False while they are being built: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them.
+	Lists *bool `json:"lists,omitempty"`
+
+	// Reporting Whether analytics.performance_enabled makes saved reporting available.
+	Reporting *bool `json:"reporting,omitempty"`
 }
 
 // SettleClaimRequest How a claim finished.
@@ -36418,8 +40733,16 @@ type Signal struct {
 	Kind SignalKind `json:"kind"`
 
 	// RawRef Pointer to the raw source payload the resolver works from: an email address/handle, a domain, a URL, or a company mention.
-	RawRef               *string  `json:"raw_ref,omitempty"`
-	ResolutionConfidence *float32 `json:"resolution_confidence,omitempty"`
+	RawRef *string `json:"raw_ref,omitempty"`
+
+	// Resolution How a human resolved this signal, and who. Null while `status` is
+	// `open` or `acknowledged` — only a human outcome appends one.
+	//
+	// The latest, not the history: a signal reopened and resolved again
+	// says how it stands now. Every append is kept, and an audit reader
+	// is where the earlier ones belong.
+	Resolution           *SignalResolution `json:"resolution,omitempty"`
+	ResolutionConfidence *float32          `json:"resolution_confidence,omitempty"`
 
 	// ResolutionState The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.
 	ResolutionState SignalResolutionState `json:"resolution_state"`
@@ -36521,6 +40844,27 @@ type SignalListResponse struct {
 	Data []Signal `json:"data"`
 	Page PageInfo `json:"page"`
 }
+
+// SignalResolution A human's answer on one signal. `outcome` is the status they set,
+// `note` is what they wrote, `resolved_by` is who they are.
+//
+// Written on every human resolution since the table existed and read
+// nowhere until this projection: the note explaining WHY a signal was
+// dismissed was recorded and then invisible to the next reader of it.
+type SignalResolution struct {
+	// Note What they wrote about it, if anything.
+	Note *string `json:"note,omitempty"`
+
+	// Outcome The status the human set.
+	Outcome    SignalResolutionOutcome `json:"outcome"`
+	ResolvedAt time.Time               `json:"resolved_at"`
+
+	// ResolvedBy The colleague who answered; null once their account is deleted.
+	ResolvedBy *openapi_types.UUID `json:"resolved_by,omitempty"`
+}
+
+// SignalResolutionOutcome The status the human set.
+type SignalResolutionOutcome string
 
 // SignalWarmContact One contact edge in our own graph that makes the signal warm — evidence, with its explainable §4 strength.
 type SignalWarmContact struct {
@@ -36636,81 +40980,6 @@ type SiteReadStarted struct {
 // SiteReadStartedStatus The joined dossier state when a read is already in flight.
 type SiteReadStartedStatus string
 
-// SourceAttributionRequest One batch of author attributions. Every row names a record that already
-// exists here; nothing is created.
-type SourceAttributionRequest struct {
-	// BatchRef Names this RUN, for an operator reading the ledger months later
-	// ("hubspot-mirror-2026-09-17"). Not an id and not a foreign key: the
-	// repair keeps its history in `audit_log` with everything else.
-	//
-	// A LABEL, NOT A SENTENCE. Letters, digits, dot, underscore, colon
-	// and hyphen carry a date and a source system; the pattern keeps the
-	// column tidy and keeps a paragraph out of it.
-	//
-	// It does NOT make the label safe, and nothing here pretends
-	// otherwise: `alice-smith` satisfies the pattern and names a human.
-	// The label is free text an operator types, so it is cleared on any
-	// record whose content the Art. 17 erasure destroys, exactly as the
-	// author's name and its digest are. What survives an erasure is the
-	// ledger row and its revision, which is what stops a later run
-	// re-attributing the erased record.
-	BatchRef string `json:"batch_ref"`
-
-	// Rows Bounded at five hundred because each row is its own transaction and a batch is the unit an interrupted run resumes at. A larger batch buys nothing and takes longer to redo.
-	Rows []SourceAttributionRow `json:"rows"`
-}
-
-// SourceAttributionResult defines model for SourceAttributionResult.
-type SourceAttributionResult struct {
-	// Applied Records whose attribution this call wrote.
-	Applied int `json:"applied"`
-
-	// Rows One entry per row sent, in the order they were sent.
-	Rows []SourceAttributionRowResult `json:"rows"`
-
-	// Skipped Records not written; each carries its reason below.
-	Skipped int `json:"skipped"`
-
-	// Unchanged Records already carrying this answer, or a newer one.
-	Unchanged int `json:"unchanged"`
-}
-
-// SourceAttributionRow defines model for SourceAttributionRow.
-type SourceAttributionRow struct {
-	// ObjectId The record's id in THIS installation, not in the system it came from.
-	ObjectId openapi_types.UUID `json:"object_id"`
-
-	// ObjectType Which kind of record this row attributes. All six carry the same column pair, and each is written through its own module's store: activities through one that must also reckon with retention holds and message audiences, the five record types through simpler ones that have neither.
-	// The enum is enforced twice — here for a reader, and in the route, because the generated wrapper validates no enum. An unchecked type would be worse than cosmetic: the ledger is keyed on whatever the caller sent, so two rows naming one id under two types would edit one record while recording their revisions in different places, and the gate meant to refuse a stale answer would stop seeing it.
-	ObjectType SourceAttributionRowObjectType `json:"object_type"`
-
-	// SourceAuthorId The member who wrote it, when the author holds a seat here.
-	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
-
-	// SourceAuthorName The author's name as the source system spelled it, for somebody who never held a seat here. At least one of this and `source_author_id` must be given; sending neither is how a caller would silently clear an attribution, so it is refused.
-	SourceAuthorName *string `json:"source_author_name,omitempty"`
-
-	// SourceRevision A counter the caller raises whenever it changes its mind about a record. A row whose stored revision is greater than or equal to this answers `unchanged` and is not written, so a delayed retry of an old batch cannot overwrite a correction that landed after it.
-	SourceRevision int64 `json:"source_revision"`
-}
-
-// SourceAttributionRowObjectType Which kind of record this row attributes. All six carry the same column pair, and each is written through its own module's store: activities through one that must also reckon with retention holds and message audiences, the five record types through simpler ones that have neither.
-// The enum is enforced twice — here for a reader, and in the route, because the generated wrapper validates no enum. An unchecked type would be worse than cosmetic: the ledger is keyed on whatever the caller sent, so two rows naming one id under two types would edit one record while recording their revisions in different places, and the gate meant to refuse a stale answer would stop seeing it.
-type SourceAttributionRowObjectType string
-
-// SourceAttributionRowResult defines model for SourceAttributionRowResult.
-type SourceAttributionRowResult struct {
-	ObjectId   openapi_types.UUID                `json:"object_id"`
-	ObjectType string                            `json:"object_type"`
-	Outcome    SourceAttributionRowResultOutcome `json:"outcome"`
-
-	// Reason Why a row was skipped, in words an operator can act on — the record is not here, it is archived, it came from no source system, or the author names a seat this installation does not have. Null on the other two outcomes.
-	Reason *string `json:"reason,omitempty"`
-}
-
-// SourceAttributionRowResultOutcome defines model for SourceAttributionRowResult.Outcome.
-type SourceAttributionRowResultOutcome string
-
 // SourceAuthor Who wrote a record in the system it was imported from, when that is not
 // whoever recorded it here.
 //
@@ -36733,6 +41002,7 @@ type SourceAuthor struct {
 	UserId *openapi_types.UUID `json:"user_id,omitempty"`
 
 	// Via Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
+	// An import writes its rows inside a reserved `mirror:` namespace, which is machinery for the replay key and is never what a reader should see. The prefix is stripped here: a row stored as `mirror:hubspot` reads `hubspot`.
 	Via *string `json:"via,omitempty"`
 }
 
@@ -36902,6 +41172,12 @@ type StageExitCriterionListResponse struct {
 type StageListResponse struct {
 	Data []Stage  `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// StageOrderRequest One pipeline's stage ladder, first to last.
+type StageOrderRequest struct {
+	// StageIds Every live stage of the pipeline, each exactly once, in the new order.
+	StageIds []openapi_types.UUID `json:"stage_ids"`
 }
 
 // StageTransitionEvidenceRecord defines model for StageTransitionEvidenceRecord.
@@ -37324,6 +41600,9 @@ type TeamWeeklyReview struct {
 	GeneratedAt    time.Time            `json:"generated_at"`
 	Id             openapi_types.UUID   `json:"id"`
 	LocalWeekStart openapi_types.Date   `json:"local_week_start"`
+
+	// NumericSummary Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
+	NumericSummary *WeeklyNumericSummary `json:"numeric_summary,omitempty"`
 
 	// Outlook Where the TEAM's week was landing, one entry per horizon — the week, the month and
 	// the fiscal quarter.
@@ -38171,6 +42450,27 @@ type UpdateLeadSourceRequest struct {
 	SortOrder *int              `json:"sort_order,omitempty"`
 }
 
+// UpdateListRequest defines model for UpdateListRequest.
+type UpdateListRequest struct {
+	// Definition A Live List's new filter tree.
+	Definition *map[string]interface{} `json:"definition,omitempty"`
+	Name       *string                 `json:"name,omitempty"`
+
+	// Purpose Null removes the purpose.
+	Purpose   *string                   `json:"purpose,omitempty"`
+	Sharing   *UpdateListRequestSharing `json:"sharing,omitempty"`
+	StewardId *openapi_types.UUID       `json:"steward_id,omitempty"`
+
+	// TeamId Null shares a team list with the teams of its owner.
+	TeamId *openapi_types.UUID `json:"team_id,omitempty"`
+
+	// Version The version the caller read.
+	Version int64 `json:"version"`
+}
+
+// UpdateListRequestSharing defines model for UpdateListRequest.Sharing.
+type UpdateListRequestSharing string
+
 // UpdateOfferLineItemRequest Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
 type UpdateOfferLineItemRequest struct {
 	// BillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -38330,6 +42630,15 @@ type UpdateRetentionSettingsRequest struct {
 	RetainOnly *bool `json:"retain_only,omitempty"`
 }
 
+// UpdateRoleRequest A sparse patch. An absent field is left as it is.
+type UpdateRoleRequest struct {
+	Name     *string                    `json:"name,omitempty"`
+	RowScope *UpdateRoleRequestRowScope `json:"row_scope,omitempty"`
+}
+
+// UpdateRoleRequestRowScope defines model for UpdateRoleRequest.RowScope.
+type UpdateRoleRequestRowScope string
+
 // UpdateSavedViewRequest A partial update; omitted fields keep their stored value.
 type UpdateSavedViewRequest struct {
 	Name  *string                 `json:"name,omitempty"`
@@ -38452,11 +42761,13 @@ type UpsertPartnerRequestRelationshipStage string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	ArchivedAt  *time.Time          `json:"archived_at,omitempty"`
-	CreatedAt   *time.Time          `json:"created_at,omitempty"`
-	DisplayName string              `json:"display_name"`
-	Email       openapi_types.Email `json:"email"`
-	Id          openapi_types.UUID  `json:"id"`
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, and whether this installation can build a set-password link. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
+	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
+	CreatedAt      *time.Time            `json:"created_at,omitempty"`
+	DisplayName    string                `json:"display_name"`
+	Email          openapi_types.Email   `json:"email"`
+	Id             openapi_types.UUID    `json:"id"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
@@ -38479,6 +42790,9 @@ type User struct {
 	Timezone  *string    `json:"timezone,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
+
+// UserAllowedActions defines model for User.AllowedActions.
+type UserAllowedActions string
 
 // UserLocale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
 // Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
@@ -38887,6 +43201,18 @@ type WeeklyLearningCitation struct {
 // WeeklyLearningCitationSubjectType defines model for WeeklyLearningCitation.SubjectType.
 type WeeklyLearningCitationSubjectType string
 
+// WeeklyNumericSummary Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
+type WeeklyNumericSummary struct {
+	BookingsCoverage ReportingCoverage `json:"bookings_coverage"`
+	Currency         string            `json:"currency"`
+	EvaluatedAt      time.Time         `json:"evaluated_at"`
+	Interval         ReportingWindow   `json:"interval"`
+	MeetingsCoverage ReportingCoverage `json:"meetings_coverage"`
+	Timezone         string            `json:"timezone"`
+	Version          string            `json:"version"`
+	WonMinor         *int64            `json:"won_minor,omitempty"`
+}
+
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
 // WeeklyReview beside it.
 type WeeklyPlan struct {
@@ -39038,6 +43364,9 @@ type WeeklyReview struct {
 	// It adds nothing: every fact it may state is already in the counts and the lines
 	// beside it, which is what makes the whole lane safe to lose.
 	Narrative *string `json:"narrative,omitempty"`
+
+	// NumericSummary Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
+	NumericSummary *WeeklyNumericSummary `json:"numeric_summary,omitempty"`
 
 	// Outlook Where the week was landing, one entry per horizon — the week itself, the month, and
 	// the fiscal quarter, because a rep asks three different questions on a Monday.
@@ -39572,6 +43901,15 @@ type Worklist struct {
 	// parts to add up to the whole they are shown beside.
 	Summary WorklistSummary `json:"summary"`
 
+	// TeamWeek Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
+	// answered by the rule that endpoint is served on. `every_team` for a seat holding
+	// `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
+	// `none` for everyone else, a read-only seat included. Separate from
+	// `scope_options`, because the `team` worklist is the team's live work and the
+	// week is a lead's verdict on named colleagues. Absent from an older server, which
+	// a client reads as `none`.
+	TeamWeek *WorklistTeamWeek `json:"team_week,omitempty"`
+
 	// Walk What has happened to this walk since it started.
 	//
 	// A walk is frozen at its first page: the rows it covers and the order they sit in
@@ -39598,6 +43936,15 @@ type WorklistScope string
 
 // WorklistScopeOptions defines model for Worklist.ScopeOptions.
 type WorklistScopeOptions string
+
+// WorklistTeamWeek Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
+// answered by the rule that endpoint is served on. `every_team` for a seat holding
+// `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
+// `none` for everyone else, a read-only seat included. Separate from
+// `scope_options`, because the `team` worklist is the team's live work and the
+// week is a lead's verdict on named colleagues. Absent from an older server, which
+// a client reads as `none`.
+type WorklistTeamWeek string
 
 // WorklistBand One outcome band and how much of it this page is showing — the headings a client draws,
 // in the order it draws them.
@@ -39831,9 +44178,9 @@ type WorklistCountCategory string
 // WorklistDealFacts The deal behind an item, with the facts its card states. `expected_minor_base` is
 // `amount_minor` converted to the installation's base currency — the only figure by
 // which two deals in different currencies may be compared. It is not weighted by
-// `win_probability`: the pipeline this row comes from does not read a deal's stage,
-// so the two fields are independent facts rather than one computed from the other,
-// and a reader must not multiply them together expecting the product to equal a
+// `win_probability`: the two are independent facts, one the deal's own money and the
+// other a property of the stage it sits in, rather than one computed from the other.
+// A reader must not multiply them together expecting the product to equal a
 // risk-adjusted figure the API does not compute.
 type WorklistDealFacts struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
@@ -40091,9 +44438,9 @@ type WorklistItem struct {
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
 	// `amount_minor` converted to the installation's base currency — the only figure by
 	// which two deals in different currencies may be compared. It is not weighted by
-	// `win_probability`: the pipeline this row comes from does not read a deal's stage,
-	// so the two fields are independent facts rather than one computed from the other,
-	// and a reader must not multiply them together expecting the product to equal a
+	// `win_probability`: the two are independent facts, one the deal's own money and the
+	// other a property of the stage it sits in, rather than one computed from the other.
+	// A reader must not multiply them together expecting the product to equal a
 	// risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
 
@@ -40880,6 +45227,9 @@ type IncludeArchived = bool
 // Limit defines model for Limit.
 type Limit = int
 
+// ListMembershipFilter defines model for ListMembershipFilter.
+type ListMembershipFilter = openapi_types.UUID
+
 // ProfileFieldKey defines model for ProfileFieldKey.
 type ProfileFieldKey string
 
@@ -41275,6 +45625,16 @@ type ResetDataJSONBody struct {
 	Confirmation string `json:"confirmation"`
 }
 
+// DeleteAiModelRateParams defines parameters for DeleteAiModelRate.
+type DeleteAiModelRateParams struct {
+	Provider string                      `form:"provider" json:"provider"`
+	ModelId  string                      `form:"model_id" json:"model_id"`
+	Lane     DeleteAiModelRateParamsLane `form:"lane" json:"lane"`
+}
+
+// DeleteAiModelRateParamsLane defines parameters for DeleteAiModelRate.
+type DeleteAiModelRateParamsLane string
+
 // ListAiModelRatesParams defines parameters for ListAiModelRates.
 type ListAiModelRatesParams struct {
 	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
@@ -41317,6 +45677,169 @@ type GetAiUsageParams struct {
 
 	// To Default: today.
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+}
+
+// CompareReportingEditionsParams defines parameters for CompareReportingEditions.
+type CompareReportingEditionsParams struct {
+	LeftId  openapi_types.UUID `form:"left_id" json:"left_id"`
+	RightId openapi_types.UUID `form:"right_id" json:"right_id"`
+}
+
+// GetReportingEditionEvidenceParams defines parameters for GetReportingEditionEvidence.
+type GetReportingEditionEvidenceParams struct {
+	Metric    ReportingMetricID `form:"metric" json:"metric"`
+	ContextId string            `form:"context_id" json:"context_id"`
+	GroupKey  *string           `form:"group_key,omitempty" json:"group_key,omitempty"`
+	Through   *time.Time        `form:"through,omitempty" json:"through,omitempty"`
+	Cursor    *string           `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit     *int              `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// EvaluateReportingParams defines parameters for EvaluateReporting.
+type EvaluateReportingParams struct {
+	ScopeKind   *EvaluateReportingParamsScopeKind   `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId     *openapi_types.UUID                 `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	PipelineId  *openapi_types.UUID                 `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
+	Period      *EvaluateReportingParamsPeriod      `form:"period,omitempty" json:"period,omitempty"`
+	StartAt     *time.Time                          `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt       *time.Time                          `form:"end_at,omitempty" json:"end_at,omitempty"`
+	TargetBasis *EvaluateReportingParamsTargetBasis `form:"target_basis,omitempty" json:"target_basis,omitempty"`
+	CloseWindow *EvaluateReportingParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
+	Metrics     *[]ReportingMetricID                `form:"metrics,omitempty" json:"metrics,omitempty"`
+	Blocks      *[]ReportingBlockKind               `form:"blocks,omitempty" json:"blocks,omitempty"`
+}
+
+// EvaluateReportingParamsScopeKind defines parameters for EvaluateReporting.
+type EvaluateReportingParamsScopeKind string
+
+// EvaluateReportingParamsPeriod defines parameters for EvaluateReporting.
+type EvaluateReportingParamsPeriod string
+
+// EvaluateReportingParamsTargetBasis defines parameters for EvaluateReporting.
+type EvaluateReportingParamsTargetBasis string
+
+// EvaluateReportingParamsCloseWindow defines parameters for EvaluateReporting.
+type EvaluateReportingParamsCloseWindow string
+
+// ExportReportingEvaluationParams defines parameters for ExportReportingEvaluation.
+type ExportReportingEvaluationParams struct {
+	EvaluationKey     string                                      `form:"evaluation_key" json:"evaluation_key"`
+	EvaluatedAt       time.Time                                   `form:"evaluated_at" json:"evaluated_at"`
+	FrameworkRevision int64                                       `form:"framework_revision" json:"framework_revision"`
+	ScopeKind         *ExportReportingEvaluationParamsScopeKind   `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId           *openapi_types.UUID                         `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	PipelineId        *openapi_types.UUID                         `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
+	Period            *ExportReportingEvaluationParamsPeriod      `form:"period,omitempty" json:"period,omitempty"`
+	StartAt           *time.Time                                  `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt             *time.Time                                  `form:"end_at,omitempty" json:"end_at,omitempty"`
+	TargetBasis       *ExportReportingEvaluationParamsTargetBasis `form:"target_basis,omitempty" json:"target_basis,omitempty"`
+	CloseWindow       *ExportReportingEvaluationParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
+	Metrics           *[]ReportingMetricID                        `form:"metrics,omitempty" json:"metrics,omitempty"`
+	Blocks            *[]ReportingBlockKind                       `form:"blocks,omitempty" json:"blocks,omitempty"`
+}
+
+// ExportReportingEvaluationParamsScopeKind defines parameters for ExportReportingEvaluation.
+type ExportReportingEvaluationParamsScopeKind string
+
+// ExportReportingEvaluationParamsPeriod defines parameters for ExportReportingEvaluation.
+type ExportReportingEvaluationParamsPeriod string
+
+// ExportReportingEvaluationParamsTargetBasis defines parameters for ExportReportingEvaluation.
+type ExportReportingEvaluationParamsTargetBasis string
+
+// ExportReportingEvaluationParamsCloseWindow defines parameters for ExportReportingEvaluation.
+type ExportReportingEvaluationParamsCloseWindow string
+
+// GetReportingEvidenceParams defines parameters for GetReportingEvidence.
+type GetReportingEvidenceParams struct {
+	EvaluationKey     string                                 `form:"evaluation_key" json:"evaluation_key"`
+	EvaluatedAt       time.Time                              `form:"evaluated_at" json:"evaluated_at"`
+	FrameworkRevision int64                                  `form:"framework_revision" json:"framework_revision"`
+	ContextId         string                                 `form:"context_id" json:"context_id"`
+	ScopeKind         *GetReportingEvidenceParamsScopeKind   `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId           *openapi_types.UUID                    `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	PipelineId        *openapi_types.UUID                    `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
+	Period            *GetReportingEvidenceParamsPeriod      `form:"period,omitempty" json:"period,omitempty"`
+	StartAt           *time.Time                             `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt             *time.Time                             `form:"end_at,omitempty" json:"end_at,omitempty"`
+	TargetBasis       *GetReportingEvidenceParamsTargetBasis `form:"target_basis,omitempty" json:"target_basis,omitempty"`
+	CloseWindow       *GetReportingEvidenceParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
+	Metrics           *[]ReportingMetricID                   `form:"metrics,omitempty" json:"metrics,omitempty"`
+	Blocks            *[]ReportingBlockKind                  `form:"blocks,omitempty" json:"blocks,omitempty"`
+	Metric            ReportingMetricID                      `form:"metric" json:"metric"`
+	GroupKey          *string                                `form:"group_key,omitempty" json:"group_key,omitempty"`
+	Through           *time.Time                             `form:"through,omitempty" json:"through,omitempty"`
+	Cursor            *string                                `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit             *int                                   `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetReportingEvidenceParamsScopeKind defines parameters for GetReportingEvidence.
+type GetReportingEvidenceParamsScopeKind string
+
+// GetReportingEvidenceParamsPeriod defines parameters for GetReportingEvidence.
+type GetReportingEvidenceParamsPeriod string
+
+// GetReportingEvidenceParamsTargetBasis defines parameters for GetReportingEvidence.
+type GetReportingEvidenceParamsTargetBasis string
+
+// GetReportingEvidenceParamsCloseWindow defines parameters for GetReportingEvidence.
+type GetReportingEvidenceParamsCloseWindow string
+
+// PublishReportingFrameworkParams defines parameters for PublishReportingFramework.
+type PublishReportingFrameworkParams struct {
+	IfMatch string `json:"If-Match"`
+}
+
+// ListReportingReportsParams defines parameters for ListReportingReports.
+type ListReportingReportsParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Scheduled Return only reports with an enabled schedule.
+	Scheduled *bool `form:"scheduled,omitempty" json:"scheduled,omitempty"`
+}
+
+// UpdateReportingReportParams defines parameters for UpdateReportingReport.
+type UpdateReportingReportParams struct {
+	IfMatch string `json:"If-Match"`
+}
+
+// ListReportingEditionsParams defines parameters for ListReportingEditions.
+type ListReportingEditionsParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// FreezeReportingEditionParams defines parameters for FreezeReportingEdition.
+type FreezeReportingEditionParams struct {
+	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
+// EvaluateReportingReportParams defines parameters for EvaluateReportingReport.
+type EvaluateReportingReportParams struct {
+	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty"`
+}
+
+// ListReportingExecutionsParams defines parameters for ListReportingExecutions.
+type ListReportingExecutionsParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// UpdateReportingScheduleParams defines parameters for UpdateReportingSchedule.
+type UpdateReportingScheduleParams struct {
+	IfMatch string `json:"If-Match"`
+}
+
+// ListReportingTargetsParams defines parameters for ListReportingTargets.
+type ListReportingTargetsParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// UpdateReportingTargetParams defines parameters for UpdateReportingTarget.
+type UpdateReportingTargetParams struct {
+	IfMatch string `json:"If-Match"`
 }
 
 // ListApprovalsParams defines parameters for ListApprovals.
@@ -41456,6 +45979,9 @@ type ListAuditLogParams struct {
 	EntityType *string             `form:"entity_type,omitempty" json:"entity_type,omitempty"`
 	EntityId   *openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
 
+	// BatchId Only the rows one bulk change wrote (`executeBulkChange` answers the id).
+	BatchId *openapi_types.UUID `form:"batch_id,omitempty" json:"batch_id,omitempty"`
+
 	// Action One of the AuditLogEntry.action values.
 	Action *string    `form:"action,omitempty" json:"action,omitempty"`
 	From   *time.Time `form:"from,omitempty" json:"from,omitempty"`
@@ -41544,12 +46070,17 @@ type ListAutomationRunsParamsOutcome string
 
 // GetAvailabilityParams defines parameters for GetAvailability.
 type GetAvailabilityParams struct {
+	Reliable *bool `form:"reliable,omitempty" json:"reliable,omitempty"`
+
 	// HostUserId Host to check (defaults to the caller).
 	HostUserId      *openapi_types.UUID `form:"host_user_id,omitempty" json:"host_user_id,omitempty"`
 	From            time.Time           `form:"from" json:"from"`
 	To              time.Time           `form:"to" json:"to"`
 	DurationMinutes *int                `form:"duration_minutes,omitempty" json:"duration_minutes,omitempty"`
 }
+
+// GetAvailability200JSONResponseBodyCalendarBacking defines parameters for GetAvailability.
+type GetAvailability200JSONResponseBodyCalendarBacking string
 
 // BookMeetingJSONBody defines parameters for BookMeeting.
 type BookMeetingJSONBody struct {
@@ -41610,6 +46141,44 @@ type BookMeetingParams struct {
 
 // BookMeetingJSONBodyLinksEntityType defines parameters for BookMeeting.
 type BookMeetingJSONBodyLinksEntityType string
+
+// ExecuteBulkChangeParams defines parameters for ExecuteBulkChange.
+type ExecuteBulkChangeParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// UndoBulkChangeParams defines parameters for UndoBulkChange.
+type UndoBulkChangeParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
 
 // ListMyCaptureActivityParams defines parameters for ListMyCaptureActivity.
 type ListMyCaptureActivityParams struct {
@@ -41715,6 +46284,13 @@ type ListCompaniesParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+	// filter selects now — narrowed before sorting and paging, so the page is the list's members
+	// in the record list's own columns. The list must be one the caller may find and of this
+	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+	// the caller's row scope still applies to every row.
+	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -41835,6 +46411,12 @@ type ListCompaniesParams struct {
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListCompaniesParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
+
+	// Id Narrow to these companies. Repeat the parameter for several, up to 100; more is `422`.
+	// A screen that names many companies it did not list itself, such as the deals board,
+	// reads them in one request instead of one each. An id the caller cannot see, or that
+	// is archived without `include_archived`, is simply absent from the page.
+	Id *[]openapi_types.UUID `form:"id,omitempty" json:"id,omitempty"`
 }
 
 // ListCompaniesParamsCapturedByKind defines parameters for ListCompanies.
@@ -41911,6 +46493,22 @@ type UpdateCompanyParams struct {
 type GetCompany360Params struct {
 	// ProjectId Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out.
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
+}
+
+// GetCompanyAccessParams defines parameters for GetCompanyAccess.
+type GetCompanyAccessParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // AskAboutCompanyJSONBody defines parameters for AskAboutCompany.
@@ -42046,6 +46644,9 @@ type DraftCompanyEmailJSONBody struct {
 
 	// ProjectId Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+
+	// RewriteOf The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. The contact-side mirror carries the same field for the same reason — see `POST /contacts/{id}/draft-email`.
+	RewriteOf *string `json:"rewrite_of,omitempty"`
 }
 
 // CreateCompanyFactParams defines parameters for CreateCompanyFact.
@@ -42484,6 +47085,13 @@ type ListContactsParams struct {
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
+	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+	// filter selects now — narrowed before sorting and paging, so the page is the list's members
+	// in the record list's own columns. The list must be one the caller may find and of this
+	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+	// the caller's row scope still applies to every row.
+	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
+
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
@@ -42684,6 +47292,22 @@ type GetContact360Params struct {
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
 }
 
+// GetContactAccessParams defines parameters for GetContactAccess.
+type GetContactAccessParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // RecordConsentParams defines parameters for RecordConsent.
 type RecordConsentParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -42765,6 +47389,11 @@ type DraftContactEmailJSONBody struct {
 
 	// ProjectId Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+
+	// RewriteOf The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
+	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
+	// Absent or empty is a first draft, which is the behaviour every caller had before this field existed.
+	RewriteOf *string `json:"rewrite_of,omitempty"`
 }
 
 // CreateContactEnrichmentRunParams defines parameters for CreateContactEnrichmentRun.
@@ -42829,6 +47458,14 @@ type MergeContactParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// RestoreContactProfileFieldParams defines parameters for RestoreContactProfileField.
+type RestoreContactProfileFieldParams struct {
+	// ValueKey Which row of a field that holds several — a phone number, as the row's
+	// `value_key`. May be omitted while only one row of the field has something to
+	// restore; answers 422 when several do.
+	ValueKey *string `form:"value_key,omitempty" json:"value_key,omitempty"`
 }
 
 // CreateContractParams defines parameters for CreateContract.
@@ -43202,6 +47839,55 @@ type ListDealRoomThreadsParams struct {
 	DocumentId *openapi_types.UUID `form:"document_id,omitempty" json:"document_id,omitempty"`
 }
 
+// ListDealSuggestionsParams defines parameters for ListDealSuggestions.
+type ListDealSuggestionsParams struct {
+	CompanyId  *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+	PipelineId *openapi_types.UUID `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
+	StageId    *openapi_types.UUID `form:"stage_id,omitempty" json:"stage_id,omitempty"`
+
+	// Cursor Opaque keyset cursor.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// AcceptDealSuggestionParams defines parameters for AcceptDealSuggestion.
+type AcceptDealSuggestionParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// DismissDealSuggestionParams defines parameters for DismissDealSuggestion.
+type DismissDealSuggestionParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListDealsParams defines parameters for ListDeals.
 type ListDealsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -43216,6 +47902,13 @@ type ListDealsParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+	// filter selects now — narrowed before sorting and paging, so the page is the list's members
+	// in the record list's own columns. The list must be one the caller may find and of this
+	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+	// the caller's row scope still applies to every row.
+	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -43795,6 +48488,13 @@ type ListLeadsParams struct {
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
+	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+	// filter selects now — narrowed before sorting and paging, so the page is the list's members
+	// in the record list's own columns. The list must be one the caller may find and of this
+	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+	// the caller's row scope still applies to every row.
+	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
+
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
@@ -44036,6 +48736,56 @@ type ExplainLeadScoreParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListListsParams defines parameters for ListLists.
+type ListListsParams struct {
+	EntityType *ListListsParamsEntityType `form:"entity_type,omitempty" json:"entity_type,omitempty"`
+	ListType   *ListListsParamsListType   `form:"list_type,omitempty" json:"list_type,omitempty"`
+
+	// Q Matches the name or purpose, case-insensitively.
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// IncludeArchived Include soft-deleted (archived) rows. Default false.
+	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+}
+
+// ListListsParamsEntityType defines parameters for ListLists.
+type ListListsParamsEntityType string
+
+// ListListsParamsListType defines parameters for ListLists.
+type ListListsParamsListType string
+
+// ListListHistoryParams defines parameters for ListListHistory.
+type ListListHistoryParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListListMembersParams defines parameters for ListListMembers.
+type ListListMembersParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetMagicParams defines parameters for GetMagic.
 type GetMagicParams struct {
 	// Since The instant to report from. Absent means the acting rep's last brief cutoff, and 24 hours where there is no brief — a window the reader has not already seen, rather than a fixed one that repeats what they read this morning.
@@ -44043,10 +48793,36 @@ type GetMagicParams struct {
 	Limit *int       `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// GetMagicLineRecordsParams defines parameters for GetMagicLineRecords.
+type GetMagicLineRecordsParams struct {
+	// Since The receipt's `since`, so the line is regrouped over the window it was drawn in.
+	Since time.Time `form:"since" json:"since"`
+
+	// Cursor Opaque position from a previous page's `next_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetMailDraftParams defines parameters for GetMailDraft.
+type GetMailDraftParams struct {
+	AnchorType MailDraftAnchorType `form:"anchor_type" json:"anchor_type"`
+	AnchorId   openapi_types.UUID  `form:"anchor_id" json:"anchor_id"`
+}
+
+// SaveMailDraftParams defines parameters for SaveMailDraft.
+type SaveMailDraftParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // GetMyAiActivityParams defines parameters for GetMyAiActivity.
 type GetMyAiActivityParams struct {
-	// Kinds Restrict both arrays to these kinds of AI work, applied BEFORE the bounds.
-	// Omitted means every kind.
+	// Kinds Restrict the arrays to these kinds of AI work, applied BEFORE the bounds.
+	// Omitted means every kind. `live_total` is never restricted.
 	//
 	// An empty list is a 422, and so is a name this enum does not carry. Both come
 	// back as an empty feed, and an empty feed is the TRUE answer for an AI at rest —
@@ -44066,6 +48842,50 @@ type ImportLinkedInConnectionsMultipartBody struct {
 type GetMyLinkedInReachParams struct {
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// SaveNotificationPreferenceJSONBody defines parameters for SaveNotificationPreference.
+type SaveNotificationPreferenceJSONBody struct {
+	// Class A class of notification a seat decides delivery about. Closed, and deliberately coarser
+	// than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
+	// is waiting on your approval", so the choice is made per class and every kind the product
+	// raises is placed in one of them.
+	Class NotificationClass `json:"class"`
+
+	// Delivery Where a class of notification reaches its reader.
+	//
+	// `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
+	// sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
+	// the only class with a sending leg, and taking the word for any other would record a
+	// choice the product does not keep; the others answer `422 value_not_allowed` and reach a
+	// mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+	// following morning, and is accepted for every class.
+	//
+	// `off` records the notice and stops there: no lane, no badge, no message. It does NOT
+	// discard it — the centre lists it like any other, because a preference governs DELIVERY
+	// and never existence, and a class switched off must not silently drop something that
+	// changed what the reader believes about their data. Going to look is not being
+	// interrupted.
+	Delivery NotificationDelivery `json:"delivery"`
+}
+
+// ListNoticesParams defines parameters for ListNotices.
+type ListNoticesParams struct {
+	// Limit How many lines to answer with. Fifty is both the ceiling and the default, because
+	// this is a panel somebody opens rather than a record list somebody exports — the
+	// shared list cap of 200 sizes the wrong thing here.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Where to continue, from a prior response's root-level `next_cursor`. Omitted starts
+	// at the newest, which is what a reader opening the panel wants.
+	//
+	// NOT the shared keyset cursor the CRUD lists use, which is why this endpoint
+	// declares its own: there is no `sort` to fingerprint, the order is always newest
+	// first, and the token carries only the last line's `(created_at, id)`. Keyset and
+	// never an offset — notices arrive while somebody is reading, and an offset page
+	// would show them a line twice for every one that landed above it. A token this
+	// endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // GetConsentRequestParams defines parameters for GetConsentRequest.
@@ -44345,6 +49165,25 @@ type CreatePipelineParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ReorderPipelinesParams defines parameters for ReorderPipelines.
+type ReorderPipelinesParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ArchivePipelineParams defines parameters for ArchivePipeline.
 type ArchivePipelineParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -44357,6 +49196,32 @@ type ArchivePipelineParams struct {
 
 // UpdatePipelineParams defines parameters for UpdatePipeline.
 type UpdatePipelineParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ReorderStagesParams defines parameters for ReorderStages.
+type ReorderStagesParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -44795,9 +49660,13 @@ type BookPublicMeetingJSONBody struct {
 	// (EP07 capture contract, `features/07`; feedback/11 + /14). Names the purpose and the exact
 	// wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
 	Consent CaptureConsent `json:"consent"`
-	End     time.Time      `json:"end"`
-	Start   time.Time      `json:"start"`
-	Subject *string        `json:"subject,omitempty"`
+
+	// Delivery Accepted for compatibility. Public bookings always send a calendar invitation; the host must enable their page.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Delivery *BookPublicMeetingJSONBodyDelivery `json:"delivery,omitempty"`
+	End      time.Time                          `json:"end"`
+	Start    time.Time                          `json:"start"`
+	Subject  *string                            `json:"subject,omitempty"`
 }
 
 // BookPublicMeetingParams defines parameters for BookPublicMeeting.
@@ -44818,6 +49687,9 @@ type BookPublicMeetingParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
+
+// BookPublicMeetingJSONBodyDelivery defines parameters for BookPublicMeeting.
+type BookPublicMeetingJSONBodyDelivery string
 
 // BookPublicMeeting201JSONResponseBodyBooking defines parameters for BookPublicMeeting.
 type BookPublicMeeting201JSONResponseBodyBooking string
@@ -44858,6 +49730,12 @@ type SubmitConfirmDetailsJSONBodyCorrectionsField string
 // SubmitConfirmDetailsJSONBodyMarketingChoice defines parameters for SubmitConfirmDetails.
 type SubmitConfirmDetailsJSONBodyMarketingChoice string
 
+// GetPublicMeetingAvailabilityParams defines parameters for GetPublicMeetingAvailability.
+type GetPublicMeetingAvailabilityParams struct {
+	From time.Time `form:"from" json:"from"`
+	To   time.Time `form:"to" json:"to"`
+}
+
 // UpdatePreferencesJSONBody defines parameters for UpdatePreferences.
 type UpdatePreferencesJSONBody struct {
 	Choices []struct {
@@ -44897,6 +49775,22 @@ type OneClickUnsubscribeParams struct {
 
 // OneClickUnsubscribeFormdataBodyListUnsubscribe defines parameters for OneClickUnsubscribe.
 type OneClickUnsubscribeFormdataBodyListUnsubscribe string
+
+// AcceptPublicMeetingProposalJSONBody defines parameters for AcceptPublicMeetingProposal.
+type AcceptPublicMeetingProposalJSONBody struct {
+	Consent struct {
+		PolicyVersion string `json:"policy_version"`
+		Wording       string `json:"wording"`
+	} `json:"consent"`
+	End   time.Time `json:"end"`
+	Start time.Time `json:"start"`
+}
+
+// GetPublicProposalAvailabilityParams defines parameters for GetPublicProposalAvailability.
+type GetPublicProposalAvailabilityParams struct {
+	From time.Time `form:"from" json:"from"`
+	To   time.Time `form:"to" json:"to"`
+}
 
 // ListBuyerRoomThreadsParams defines parameters for ListBuyerRoomThreads.
 type ListBuyerRoomThreadsParams struct {
@@ -45113,11 +50007,80 @@ type UpdateRelationshipParams struct {
 
 // ExplainReportParams defines parameters for ExplainReport.
 type ExplainReportParams struct {
+	// HandleVersion Version of a scope-bearing derivation handle; legacy handles omit it.
+	HandleVersion *ExplainReportParamsHandleVersion `form:"handle_version,omitempty" json:"handle_version,omitempty"`
+
+	// ScopeKind Requested population, revalidated against the current reader.
+	ScopeKind *ExplainReportParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId Team or owner identifier for the requested scope.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
 	// By The plan's grouping dimensions (each must also appear as a predicate parameter carrying the explained row's group-key value).
 	By *[]string `form:"by,omitempty" json:"by,omitempty"`
 
 	// Agg The plan's aggregates as `fn:field:alias` triplets (field empty for `count`), e.g. `sum:amount_minor:unweighted_minor`.
 	Agg *[]string `form:"agg,omitempty" json:"agg,omitempty"`
+}
+
+// ExplainReportParamsHandleVersion defines parameters for ExplainReport.
+type ExplainReportParamsHandleVersion string
+
+// ExplainReportParamsScopeKind defines parameters for ExplainReport.
+type ExplainReportParamsScopeKind string
+
+// ListLegalHoldsParams defines parameters for ListLegalHolds.
+type ListLegalHoldsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// LiftLegalHoldParams defines parameters for LiftLegalHold.
+type LiftLegalHoldParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// PlaceLegalHoldParams defines parameters for PlaceLegalHold.
+type PlaceLegalHoldParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // ListRestrictedActivitiesParams defines parameters for ListRestrictedActivities.
@@ -45174,6 +50137,22 @@ type ReleaseRestrictedActivityParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ListRolesParams defines parameters for ListRoles.
+type ListRolesParams struct {
+	// IncludeArchived True also lists archived roles, each carrying `archived_at`.
+	IncludeArchived *bool `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+}
+
+// UpdateRoleParams defines parameters for UpdateRole.
+type UpdateRoleParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // SetRoleObjectGrantParams defines parameters for SetRoleObjectGrant.
 type SetRoleObjectGrantParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -45201,6 +50180,67 @@ type RescheduleScheduledSendParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// GetSchedulingCalendarsParams defines parameters for GetSchedulingCalendars.
+type GetSchedulingCalendarsParams struct {
+	Provider GetSchedulingCalendarsParamsProvider `form:"provider" json:"provider"`
+}
+
+// GetSchedulingCalendarsParamsProvider defines parameters for GetSchedulingCalendars.
+type GetSchedulingCalendarsParamsProvider string
+
+// CreateMeetingInvitationParams defines parameters for CreateMeetingInvitation.
+type CreateMeetingInvitationParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
+	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
+	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// GetMeetingAvailabilityParams defines parameters for GetMeetingAvailability.
+type GetMeetingAvailabilityParams struct {
+	From time.Time `form:"from" json:"from"`
+	To   time.Time `form:"to" json:"to"`
+}
+
+// CreateMeetingProposalParams defines parameters for CreateMeetingProposal.
+type CreateMeetingProposalParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // SearchParams defines parameters for Search.
@@ -45534,16 +50574,19 @@ type ListUsersParams struct {
 
 	// IncludeInactive Admin management view — include deactivated/suspended members. Honored only for an admin caller.
 	IncludeInactive *bool `form:"include_inactive,omitempty" json:"include_inactive,omitempty"`
+
+	// IncludeInvited Also list invited seats — members who have not signed in yet. For NAMING the colleagues records
+	// already point at (an imported record's owner is often an invited colleague); any member may ask.
+	// Pickers leave it off, so nobody is offered work they cannot open.
+	IncludeInvited *bool `form:"include_invited,omitempty" json:"include_invited,omitempty"`
 }
 
 // PreviewAccessParams defines parameters for PreviewAccess.
 type PreviewAccessParams struct {
-	Role    PreviewAccessParamsRole `form:"role" json:"role"`
-	TeamIds *[]openapi_types.UUID   `form:"team_ids,omitempty" json:"team_ids,omitempty"`
+	// Role A live role's key — a seeded one or one made with `createRole`.
+	Role    string                `form:"role" json:"role"`
+	TeamIds *[]openapi_types.UUID `form:"team_ids,omitempty" json:"team_ids,omitempty"`
 }
-
-// PreviewAccessParamsRole defines parameters for PreviewAccess.
-type PreviewAccessParamsRole string
 
 // ListSavedViewsParams defines parameters for ListSavedViews.
 type ListSavedViewsParams struct {
@@ -46065,6 +51108,9 @@ type GetWorklistParamsScope string
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
 
+// GetHiddenBacklogRowsParamsRule defines parameters for GetHiddenBacklogRows.
+type GetHiddenBacklogRowsParamsRule string
+
 // UnpinWorklistRowParams defines parameters for UnpinWorklistRow.
 type UnpinWorklistRowParams struct {
 	// Source The lane the row came from, paired with `row_id` to name it.
@@ -46160,14 +51206,35 @@ type PreviewAiRoutingJSONRequestBody = AiRouting
 // ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
 type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
 
+// PublishReportingFrameworkJSONRequestBody defines body for PublishReportingFramework for application/json ContentType.
+type PublishReportingFrameworkJSONRequestBody = ReportingFrameworkInput
+
 // RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
 type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
+
+// CreateReportingReportJSONRequestBody defines body for CreateReportingReport for application/json ContentType.
+type CreateReportingReportJSONRequestBody = ReportingReportInput
 
 // RenderAnalyticsReportJSONRequestBody defines body for RenderAnalyticsReport for application/json ContentType.
 type RenderAnalyticsReportJSONRequestBody = ReportDocument
 
+// UpdateReportingReportJSONRequestBody defines body for UpdateReportingReport for application/json ContentType.
+type UpdateReportingReportJSONRequestBody = ReportingReportInput
+
+// CreateReportingScheduleJSONRequestBody defines body for CreateReportingSchedule for application/json ContentType.
+type CreateReportingScheduleJSONRequestBody = ReportingScheduleInput
+
 // ExplainReportRunCellJSONRequestBody defines body for ExplainReportRunCell for application/json ContentType.
 type ExplainReportRunCellJSONRequestBody = ReportRunCell
+
+// UpdateReportingScheduleJSONRequestBody defines body for UpdateReportingSchedule for application/json ContentType.
+type UpdateReportingScheduleJSONRequestBody = ReportingScheduleInput
+
+// CreateReportingTargetJSONRequestBody defines body for CreateReportingTarget for application/json ContentType.
+type CreateReportingTargetJSONRequestBody = ReportingTargetInput
+
+// UpdateReportingTargetJSONRequestBody defines body for UpdateReportingTarget for application/json ContentType.
+type UpdateReportingTargetJSONRequestBody = ReportingTargetInput
 
 // ApproveApprovalBundleJSONRequestBody defines body for ApproveApprovalBundle for application/json ContentType.
 type ApproveApprovalBundleJSONRequestBody = ApprovalBundleDecisionRequest
@@ -46225,6 +51292,15 @@ type AnnotateMorningBriefJSONRequestBody = AnnotateBriefRequest
 
 // SnoozeBriefItemJSONRequestBody defines body for SnoozeBriefItem for application/json ContentType.
 type SnoozeBriefItemJSONRequestBody = BriefSnoozeRequest
+
+// ExecuteBulkChangeJSONRequestBody defines body for ExecuteBulkChange for application/json ContentType.
+type ExecuteBulkChangeJSONRequestBody = BulkChangeExecuteRequest
+
+// PreviewBulkChangeJSONRequestBody defines body for PreviewBulkChange for application/json ContentType.
+type PreviewBulkChangeJSONRequestBody = BulkChangePreviewRequest
+
+// UndoBulkChangeJSONRequestBody defines body for UndoBulkChange for application/json ContentType.
+type UndoBulkChangeJSONRequestBody = BulkUndoRequest
 
 // SetBlockedDomainJSONRequestBody defines body for SetBlockedDomain for application/json ContentType.
 type SetBlockedDomainJSONRequestBody = SetBlockedDomainRequest
@@ -46484,6 +51560,9 @@ type OpenDealRoomThreadJSONRequestBody = OpenDealRoomThreadRequest
 // ReplyDealRoomThreadJSONRequestBody defines body for ReplyDealRoomThread for application/json ContentType.
 type ReplyDealRoomThreadJSONRequestBody = PostDealRoomCommentRequest
 
+// AcceptDealSuggestionJSONRequestBody defines body for AcceptDealSuggestion for application/json ContentType.
+type AcceptDealSuggestionJSONRequestBody = AcceptDealSuggestionRequest
+
 // CreateDealJSONRequestBody defines body for CreateDeal for application/json ContentType.
 type CreateDealJSONRequestBody = CreateDealRequest
 
@@ -46607,6 +51686,21 @@ type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
 // PromoteLeadJSONRequestBody defines body for PromoteLead for application/json ContentType.
 type PromoteLeadJSONRequestBody = PromoteLeadRequest
 
+// CreateListJSONRequestBody defines body for CreateList for application/json ContentType.
+type CreateListJSONRequestBody = CreateListRequest
+
+// UpdateListJSONRequestBody defines body for UpdateList for application/json ContentType.
+type UpdateListJSONRequestBody = UpdateListRequest
+
+// AddListMemberJSONRequestBody defines body for AddListMember for application/json ContentType.
+type AddListMemberJSONRequestBody = ListMemberChangeRequest
+
+// RemoveListMemberJSONRequestBody defines body for RemoveListMember for application/json ContentType.
+type RemoveListMemberJSONRequestBody = ListMemberChangeRequest
+
+// SaveMailDraftJSONRequestBody defines body for SaveMailDraft for application/json ContentType.
+type SaveMailDraftJSONRequestBody = MailDraftInput
+
 // SetMyAgentGrantJSONRequestBody defines body for SetMyAgentGrant for application/json ContentType.
 type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
 
@@ -46627,6 +51721,9 @@ type ImportLinkedInConnectionsMultipartRequestBody ImportLinkedInConnectionsMult
 
 // SaveMyLocaleJSONRequestBody defines body for SaveMyLocale for application/json ContentType.
 type SaveMyLocaleJSONRequestBody = SaveMyLocaleRequest
+
+// SaveNotificationPreferenceJSONRequestBody defines body for SaveNotificationPreference for application/json ContentType.
+type SaveNotificationPreferenceJSONRequestBody SaveNotificationPreferenceJSONBody
 
 // SaveMyWorkingHoursJSONRequestBody defines body for SaveMyWorkingHours for application/json ContentType.
 type SaveMyWorkingHoursJSONRequestBody = WorkingHours
@@ -46664,8 +51761,14 @@ type IssuePassportJSONRequestBody = IssuePassportRequest
 // CreatePipelineJSONRequestBody defines body for CreatePipeline for application/json ContentType.
 type CreatePipelineJSONRequestBody = CreatePipelineRequest
 
+// ReorderPipelinesJSONRequestBody defines body for ReorderPipelines for application/json ContentType.
+type ReorderPipelinesJSONRequestBody = PipelineOrderRequest
+
 // UpdatePipelineJSONRequestBody defines body for UpdatePipeline for application/json ContentType.
 type UpdatePipelineJSONRequestBody = UpdatePipelineRequest
+
+// ReorderStagesJSONRequestBody defines body for ReorderStages for application/json ContentType.
+type ReorderStagesJSONRequestBody = StageOrderRequest
 
 // SetControllerParticularsJSONRequestBody defines body for SetControllerParticulars for application/json ContentType.
 type SetControllerParticularsJSONRequestBody = ControllerParticulars
@@ -46718,6 +51821,9 @@ type BookPublicMeetingJSONRequestBody BookPublicMeetingJSONBody
 // SubmitConfirmDetailsJSONRequestBody defines body for SubmitConfirmDetails for application/json ContentType.
 type SubmitConfirmDetailsJSONRequestBody SubmitConfirmDetailsJSONBody
 
+// ChangePublicMeetingInvitationJSONRequestBody defines body for ChangePublicMeetingInvitation for application/json ContentType.
+type ChangePublicMeetingInvitationJSONRequestBody = MeetingInvitationChange
+
 // UpdatePreferencesJSONRequestBody defines body for UpdatePreferences for application/json ContentType.
 type UpdatePreferencesJSONRequestBody UpdatePreferencesJSONBody
 
@@ -46726,6 +51832,9 @@ type PublicStopContactJSONRequestBody PublicStopContactJSONBody
 
 // OneClickUnsubscribeFormdataRequestBody defines body for OneClickUnsubscribe for application/x-www-form-urlencoded ContentType.
 type OneClickUnsubscribeFormdataRequestBody OneClickUnsubscribeFormdataBody
+
+// AcceptPublicMeetingProposalJSONRequestBody defines body for AcceptPublicMeetingProposal for application/json ContentType.
+type AcceptPublicMeetingProposalJSONRequestBody AcceptPublicMeetingProposalJSONBody
 
 // ExchangeDealRoomCredentialJSONRequestBody defines body for ExchangeDealRoomCredential for application/json ContentType.
 type ExchangeDealRoomCredentialJSONRequestBody = DealRoomCredentialRequest
@@ -46751,9 +51860,6 @@ type CreateRecordRoleJSONRequestBody = CreateRecordRoleRequest
 // UpdateRecordRoleJSONRequestBody defines body for UpdateRecordRole for application/json ContentType.
 type UpdateRecordRoleJSONRequestBody = UpdateRecordRoleRequest
 
-// RepairSourceAttributionJSONRequestBody defines body for RepairSourceAttribution for application/json ContentType.
-type RepairSourceAttributionJSONRequestBody = SourceAttributionRequest
-
 // CreateRecordAssignmentJSONRequestBody defines body for CreateRecordAssignment for application/json ContentType.
 type CreateRecordAssignmentJSONRequestBody = CreateRecordAssignmentRequest
 
@@ -46772,6 +51878,12 @@ type CreateRetentionPolicyJSONRequestBody = CreateRetentionPolicyRequest
 // UpdateRetentionPolicyJSONRequestBody defines body for UpdateRetentionPolicy for application/json ContentType.
 type UpdateRetentionPolicyJSONRequestBody = UpdateRetentionPolicyRequest
 
+// LiftLegalHoldJSONRequestBody defines body for LiftLegalHold for application/json ContentType.
+type LiftLegalHoldJSONRequestBody = RetentionOverrideRequest
+
+// PlaceLegalHoldJSONRequestBody defines body for PlaceLegalHold for application/json ContentType.
+type PlaceLegalHoldJSONRequestBody = RetentionOverrideRequest
+
 // PinActivityToFloorJSONRequestBody defines body for PinActivityToFloor for application/json ContentType.
 type PinActivityToFloorJSONRequestBody = RetentionOverrideRequest
 
@@ -46781,11 +51893,29 @@ type ReleaseRestrictedActivityJSONRequestBody = RetentionOverrideRequest
 // UpdateRetentionSettingsJSONRequestBody defines body for UpdateRetentionSettings for application/json ContentType.
 type UpdateRetentionSettingsJSONRequestBody = UpdateRetentionSettingsRequest
 
+// CreateRoleJSONRequestBody defines body for CreateRole for application/json ContentType.
+type CreateRoleJSONRequestBody = CreateRoleRequest
+
+// UpdateRoleJSONRequestBody defines body for UpdateRole for application/json ContentType.
+type UpdateRoleJSONRequestBody = UpdateRoleRequest
+
 // SetRoleObjectGrantJSONRequestBody defines body for SetRoleObjectGrant for application/json ContentType.
 type SetRoleObjectGrantJSONRequestBody = SetRoleObjectGrantRequest
 
 // RescheduleScheduledSendJSONRequestBody defines body for RescheduleScheduledSend for application/json ContentType.
 type RescheduleScheduledSendJSONRequestBody = RescheduleSendRequest
+
+// CreateMeetingInvitationJSONRequestBody defines body for CreateMeetingInvitation for application/json ContentType.
+type CreateMeetingInvitationJSONRequestBody = MeetingInvitationRequest
+
+// ChangeMeetingInvitationJSONRequestBody defines body for ChangeMeetingInvitation for application/json ContentType.
+type ChangeMeetingInvitationJSONRequestBody = MeetingInvitationChange
+
+// PutSchedulingProfileJSONRequestBody defines body for PutSchedulingProfile for application/json ContentType.
+type PutSchedulingProfileJSONRequestBody = SchedulingProfile
+
+// CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
+type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
 
 // CreateSignalJSONRequestBody defines body for CreateSignal for application/json ContentType.
 type CreateSignalJSONRequestBody = CreateSignalRequest
@@ -47303,6 +52433,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
+	}
+
 	if raw, found := object["legal_name"]; found {
 		err = json.Unmarshal(raw, &a.LegalName)
 		if err != nil {
@@ -47572,6 +52710,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
+		}
+	}
+
 	if a.LegalName != nil {
 		object["legal_name"], err = json.Marshal(a.LegalName)
 		if err != nil {
@@ -47766,6 +52911,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "author")
 	}
 
+	if raw, found := object["bought_fields"]; found {
+		err = json.Unmarshal(raw, &a.BoughtFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'bought_fields': %w", err)
+		}
+		delete(object, "bought_fields")
+	}
+
 	if raw, found := object["captured_by"]; found {
 		err = json.Unmarshal(raw, &a.CapturedBy)
 		if err != nil {
@@ -47852,6 +53005,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'last_name': %w", err)
 		}
 		delete(object, "last_name")
+	}
+
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
 	}
 
 	if raw, found := object["merged_into_id"]; found {
@@ -48014,6 +53175,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.BoughtFields != nil {
+		object["bought_fields"], err = json.Marshal(a.BoughtFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'bought_fields': %w", err)
+		}
+	}
+
 	object["captured_by"], err = json.Marshal(a.CapturedBy)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
@@ -48080,6 +53248,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["last_name"], err = json.Marshal(a.LastName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_name': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
 		}
 	}
 
@@ -48796,6 +53971,30 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -48879,6 +54078,27 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	for fieldName, field := range a.AdditionalProperties {
@@ -48987,6 +54207,30 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["title"]; found {
 		err = json.Unmarshal(raw, &a.Title)
 		if err != nil {
@@ -49071,6 +54315,27 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	if a.Title != nil {
@@ -49531,6 +54796,30 @@ func (a *CreateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["stage_id"]; found {
 		err = json.Unmarshal(raw, &a.StageId)
 		if err != nil {
@@ -49662,6 +54951,27 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	object["stage_id"], err = json.Marshal(a.StageId)
@@ -49904,6 +55214,22 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
 	if raw, found := object["source_id"]; found {
 		err = json.Unmarshal(raw, &a.SourceId)
 		if err != nil {
@@ -50007,6 +55333,20 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
 	}
 
 	if a.SourceId != nil {
@@ -50490,6 +55830,30 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["started_at"]; found {
 		err = json.Unmarshal(raw, &a.StartedAt)
 		if err != nil {
@@ -50552,6 +55916,27 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	if a.StartedAt != nil {
@@ -50776,6 +56161,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'last_email': %w", err)
 		}
 		delete(object, "last_email")
+	}
+
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
 	}
 
 	if raw, found := object["lost_reason"]; found {
@@ -51110,6 +56503,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["last_email"], err = json.Marshal(a.LastEmail)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_email': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
 		}
 	}
 
@@ -52322,6 +57722,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
+	}
+
 	if raw, found := object["linkedin_url"]; found {
 		err = json.Unmarshal(raw, &a.LinkedinUrl)
 		if err != nil {
@@ -52662,6 +58070,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
 		}
 	}
 
@@ -53783,6 +59198,14 @@ func (a *Project) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
+	}
+
 	if raw, found := object["masked_fields"]; found {
 		err = json.Unmarshal(raw, &a.MaskedFields)
 		if err != nil {
@@ -53965,6 +59388,13 @@ func (a Project) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
 		}
 	}
 
@@ -56672,6 +62102,184 @@ func (t *ConfirmPage) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsReportCell0 returns the union data inside the ReportCell as a ReportCell0
+func (t ReportCell) AsReportCell0() (ReportCell0, error) {
+	var body ReportCell0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromReportCell0 overwrites any union data inside the ReportCell as the provided ReportCell0
+func (t *ReportCell) FromReportCell0(v ReportCell0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeReportCell0 performs a merge with any union data inside the ReportCell, using the provided ReportCell0
+func (t *ReportCell) MergeReportCell0(v ReportCell0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsReportCell1 returns the union data inside the ReportCell as a ReportCell1
+func (t ReportCell) AsReportCell1() (ReportCell1, error) {
+	var body ReportCell1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromReportCell1 overwrites any union data inside the ReportCell as the provided ReportCell1
+func (t *ReportCell) FromReportCell1(v ReportCell1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeReportCell1 performs a merge with any union data inside the ReportCell, using the provided ReportCell1
+func (t *ReportCell) MergeReportCell1(v ReportCell1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsReportCell2 returns the union data inside the ReportCell as a ReportCell2
+func (t ReportCell) AsReportCell2() (ReportCell2, error) {
+	var body ReportCell2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromReportCell2 overwrites any union data inside the ReportCell as the provided ReportCell2
+func (t *ReportCell) FromReportCell2(v ReportCell2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeReportCell2 performs a merge with any union data inside the ReportCell, using the provided ReportCell2
+func (t *ReportCell) MergeReportCell2(v ReportCell2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ReportCell) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	object := make(map[string]json.RawMessage)
+	if t.union != nil {
+		err = json.Unmarshal(b, &object)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if t.Column != nil {
+		object["column"], err = json.Marshal(t.Column)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'column': %w", err)
+		}
+	}
+
+	if t.EditionRef != nil {
+		object["edition_ref"], err = json.Marshal(t.EditionRef)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'edition_ref': %w", err)
+		}
+	}
+
+	if t.Group != nil {
+		object["group"], err = json.Marshal(t.Group)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'group': %w", err)
+		}
+	}
+
+	if t.MetricRef != nil {
+		object["metric_ref"], err = json.Marshal(t.MetricRef)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'metric_ref': %w", err)
+		}
+	}
+
+	if t.RunId != nil {
+		object["run_id"], err = json.Marshal(t.RunId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'run_id': %w", err)
+		}
+	}
+	b, err = json.Marshal(object)
+	return b, err
+}
+
+func (t *ReportCell) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	if err != nil {
+		return err
+	}
+	object := make(map[string]json.RawMessage)
+	err = json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["column"]; found {
+		err = json.Unmarshal(raw, &t.Column)
+		if err != nil {
+			return fmt.Errorf("error reading 'column': %w", err)
+		}
+	}
+
+	if raw, found := object["edition_ref"]; found {
+		err = json.Unmarshal(raw, &t.EditionRef)
+		if err != nil {
+			return fmt.Errorf("error reading 'edition_ref': %w", err)
+		}
+	}
+
+	if raw, found := object["group"]; found {
+		err = json.Unmarshal(raw, &t.Group)
+		if err != nil {
+			return fmt.Errorf("error reading 'group': %w", err)
+		}
+	}
+
+	if raw, found := object["metric_ref"]; found {
+		err = json.Unmarshal(raw, &t.MetricRef)
+		if err != nil {
+			return fmt.Errorf("error reading 'metric_ref': %w", err)
+		}
+	}
+
+	if raw, found := object["run_id"]; found {
+		err = json.Unmarshal(raw, &t.RunId)
+		if err != nil {
+			return fmt.Errorf("error reading 'run_id': %w", err)
+		}
+	}
+
+	return err
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// List deal acquisition sources, active and retired, in display order.
@@ -56767,21 +62375,30 @@ type ServerInterface interface {
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
+	// Durably pause every report schedule before rollout rollback.
+	// (POST /admin/reporting/pause)
+	PauseReportingSchedules(w http.ResponseWriter, r *http.Request)
 	// Reset an installation that armed the capability to its first-boot state.
 	// (POST /admin/reset-data)
 	ResetData(w http.ResponseWriter, r *http.Request)
 	// The governed tool surface (registry metadata) for the operator UI.
 	// (GET /agent-tools)
 	ListAgentTools(w http.ResponseWriter, r *http.Request)
+	// Remove a model's entry from the price sheet, every effective date of it.
+	// (DELETE /ai-model-rates)
+	DeleteAiModelRate(w http.ResponseWriter, r *http.Request, params DeleteAiModelRateParams)
 	// List current AI model prices (latest per model), or one model's history.
 	// (GET /ai-model-rates)
 	ListAiModelRates(w http.ResponseWriter, r *http.Request, params ListAiModelRatesParams)
 	// Set an AI model price effective today or later (append-forward).
 	// (POST /ai-model-rates)
 	SetAiModelRate(w http.ResponseWriter, r *http.Request)
-	// Enqueue an async model-cost refresh (stages 🟡 proposals).
+	// Retired. Answers 501; use POST /ai-model-rates/refresh.
 	// (POST /ai-model-rates/propose-refresh)
 	ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request)
+	// Re-price the models this installation calls from the providers' own catalogues.
+	// (POST /ai-model-rates/refresh)
+	RefreshAiModelRates(w http.ResponseWriter, r *http.Request)
 	// What one vendor says it serves today (admin/ops).
 	// (GET /ai/available-models/{provider})
 	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams)
@@ -56818,6 +62435,9 @@ type ServerInterface interface {
 	// Store or rotate one vendor's BYOK key (admin/ops).
 	// (PUT /ai/provider-keys/{provider})
 	SetAiProviderKey(w http.ResponseWriter, r *http.Request, provider string)
+	// Ask one vendor whether the stored credential works (admin/ops).
+	// (POST /ai/provider-keys/{provider}/test)
+	TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string)
 	// The tier-to-model binding this installation runs on (admin/ops).
 	// (GET /ai/routing)
 	GetAiRouting(w http.ResponseWriter, r *http.Request)
@@ -56839,24 +62459,108 @@ type ServerInterface interface {
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
 	GetDataCoverage(w http.ResponseWriter, r *http.Request)
+	// Compare reporting editions
+	// (GET /analytics/editions/compare)
+	CompareReportingEditions(w http.ResponseWriter, r *http.Request, params CompareReportingEditionsParams)
+	// Get reporting edition
+	// (GET /analytics/editions/{id})
+	GetReportingEdition(w http.ResponseWriter, r *http.Request, id Id)
+	// Get reporting edition evidence
+	// (GET /analytics/editions/{id}/evidence)
+	GetReportingEditionEvidence(w http.ResponseWriter, r *http.Request, id Id, params GetReportingEditionEvidenceParams)
+	// Export this edition's permitted frozen metrics and chart readings.
+	// (GET /analytics/editions/{id}/export.csv)
+	ExportReportingEdition(w http.ResponseWriter, r *http.Request, id Id)
+	// Evaluate reporting
+	// (GET /analytics/evaluate)
+	EvaluateReporting(w http.ResponseWriter, r *http.Request, params EvaluateReportingParams)
+	// Evaluate reporting
+	// (GET /analytics/evaluate.csv)
+	ExportReportingEvaluation(w http.ResponseWriter, r *http.Request, params ExportReportingEvaluationParams)
+	// Get reporting evidence
+	// (GET /analytics/evidence)
+	GetReportingEvidence(w http.ResponseWriter, r *http.Request, params GetReportingEvidenceParams)
+	// Get reporting execution
+	// (GET /analytics/executions/{id})
+	GetReportingExecution(w http.ResponseWriter, r *http.Request, id Id)
+	// Retry reporting execution
+	// (POST /analytics/executions/{id}/retry)
+	RetryReportingExecution(w http.ResponseWriter, r *http.Request, id Id)
 	// The records one cell of an analytics answer was computed from.
 	// (POST /analytics/explain)
 	ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request)
+	// Get reporting framework
+	// (GET /analytics/framework)
+	GetReportingFramework(w http.ResponseWriter, r *http.Request)
+	// Publish reporting framework
+	// (PUT /analytics/framework)
+	PublishReportingFramework(w http.ResponseWriter, r *http.Request, params PublishReportingFrameworkParams)
+	// Get reporting metrics
+	// (GET /analytics/metrics)
+	GetReportingMetrics(w http.ResponseWriter, r *http.Request)
 	// Answer a question nobody wrote a report for.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
+	// List reporting reports
+	// (GET /analytics/reports)
+	ListReportingReports(w http.ResponseWriter, r *http.Request, params ListReportingReportsParams)
+	// Create reporting report
+	// (POST /analytics/reports)
+	CreateReportingReport(w http.ResponseWriter, r *http.Request)
 	// Resolve a report document's figures for this reader.
 	// (POST /analytics/reports/render)
 	RenderAnalyticsReport(w http.ResponseWriter, r *http.Request)
+	// Archive reporting report
+	// (DELETE /analytics/reports/{id})
+	ArchiveReportingReport(w http.ResponseWriter, r *http.Request, id Id)
+	// Get reporting report
+	// (GET /analytics/reports/{id})
+	GetReportingReport(w http.ResponseWriter, r *http.Request, id Id)
+	// Update reporting report
+	// (PATCH /analytics/reports/{id})
+	UpdateReportingReport(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingReportParams)
+	// List reporting editions
+	// (GET /analytics/reports/{id}/editions)
+	ListReportingEditions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingEditionsParams)
+	// Freeze reporting edition
+	// (POST /analytics/reports/{id}/editions)
+	FreezeReportingEdition(w http.ResponseWriter, r *http.Request, id Id, params FreezeReportingEditionParams)
+	// Evaluate reporting report
+	// (GET /analytics/reports/{id}/evaluation)
+	EvaluateReportingReport(w http.ResponseWriter, r *http.Request, id Id, params EvaluateReportingReportParams)
+	// List reporting executions
+	// (GET /analytics/reports/{id}/executions)
+	ListReportingExecutions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingExecutionsParams)
+	// List reporting schedules
+	// (GET /analytics/reports/{id}/schedules)
+	ListReportingSchedules(w http.ResponseWriter, r *http.Request, id Id)
+	// Create reporting schedule
+	// (POST /analytics/reports/{id}/schedules)
+	CreateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id)
 	// The answer a report sentence points at.
 	// (GET /analytics/runs/{run_id})
 	GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
 	// The records behind one cell of a saved run.
 	// (POST /analytics/runs/{run_id}/cells/explain)
 	ExplainReportRunCell(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
+	// Update reporting schedule
+	// (PATCH /analytics/schedules/{id})
+	UpdateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingScheduleParams)
 	// What questions this caller may ask, and in what words.
 	// (GET /analytics/schema)
 	GetAnalyticsSchema(w http.ResponseWriter, r *http.Request)
+	// List reporting targets
+	// (GET /analytics/targets)
+	ListReportingTargets(w http.ResponseWriter, r *http.Request, params ListReportingTargetsParams)
+	// Create reporting target
+	// (POST /analytics/targets)
+	CreateReportingTarget(w http.ResponseWriter, r *http.Request)
+	// Get reporting target
+	// (GET /analytics/targets/{id})
+	GetReportingTarget(w http.ResponseWriter, r *http.Request, id Id)
+	// Update reporting target
+	// (PATCH /analytics/targets/{id})
+	UpdateReportingTarget(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingTargetParams)
 	// Approve every still-pending member of one bundle.
 	// (POST /approval-bundles/{bundle_id}/approve)
 	ApproveApprovalBundle(w http.ResponseWriter, r *http.Request, bundleId BundleId)
@@ -56962,7 +62666,7 @@ type ServerInterface interface {
 	// Update params or flip status (enable / pause).
 	// (PATCH /automations/{id})
 	UpdateAutomation(w http.ResponseWriter, r *http.Request, id Id, params UpdateAutomationParams)
-	// Dry-run an automation's blast radius (🟢 read; no writes, no sends).
+	// Dry-run an automation's blast radius — a read that never writes, sends, or stages an approval.
 	// (POST /automations/{id}/preview)
 	PreviewAutomation(w http.ResponseWriter, r *http.Request, id Id)
 	// Read-only run history for one automation — successes AND errored/blocked/skipped runs.
@@ -57001,6 +62705,21 @@ type ServerInterface interface {
 	// Take back a snooze — the item returns to the queue immediately.
 	// (POST /brief/items/{itemId}/unsnooze)
 	UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
+	// Apply one change to a selection of records, record by record.
+	// (POST /bulk/execute)
+	ExecuteBulkChange(w http.ResponseWriter, r *http.Request, params ExecuteBulkChangeParams)
+	// Say what one change over a selection of records would do, without doing it.
+	// (POST /bulk/preview)
+	PreviewBulkChange(w http.ResponseWriter, r *http.Request)
+	// Read what one bulk change did, and whether it was undone.
+	// (GET /bulk/{id})
+	GetBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Put back what one bulk change did, record by record.
+	// (POST /bulk/{id}/undo)
+	UndoBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UndoBulkChangeParams)
+	// Say what undoing one bulk change would do, without doing it.
+	// (POST /bulk/{id}/undo/preview)
+	PreviewBulkUndo(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// What the capture pipeline did with your messages in the last 24 hours.
 	// (GET /capture/activity)
 	ListMyCaptureActivity(w http.ResponseWriter, r *http.Request, params ListMyCaptureActivityParams)
@@ -57028,6 +62747,9 @@ type ServerInterface interface {
 	// Withdraw a consumer-mail list entry (admin/ops).
 	// (DELETE /capture/consumer-mail-domains/{id})
 	RemoveConsumerMailDomain(w http.ResponseWriter, r *http.Request, id Id)
+	// Your captured contacts still waiting on a sender decision.
+	// (GET /capture/contacts-awaiting-decision)
+	ListCaptureContactsAwaitingDecision(w http.ResponseWriter, r *http.Request)
 	// Whose mail the caller keeps out of the shared timeline.
 	// (GET /capture/counterparty-holds)
 	ListCaptureCounterpartyHolds(w http.ResponseWriter, r *http.Request)
@@ -57166,6 +62888,9 @@ type ServerInterface interface {
 	// The whole company record page in one round trip — profile, contacts, deals, timeline, tags, approvals, next steps.
 	// (GET /companies/{id}/360)
 	GetCompany360(w http.ResponseWriter, r *http.Request, id Id, params GetCompany360Params)
+	// Who can open this company and who can change it, and why.
+	// (GET /companies/{id}/access)
+	GetCompanyAccess(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyAccessParams)
 	// Ask one of the prepared questions about this account.
 	// (POST /companies/{id}/ask)
 	AskAboutCompany(w http.ResponseWriter, r *http.Request, id Id)
@@ -57367,6 +63092,9 @@ type ServerInterface interface {
 	// Connect (or re-authorize) the calling user's mail/calendar for capture.
 	// (POST /connectors/{provider}/connect)
 	ConnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	// The folders or labels this mailbox has, to pick one to keep out of capture.
+	// (GET /connectors/{provider}/containers)
+	ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// Set the word this connector files what it captures under.
 	// (PUT /connectors/{provider}/context-tag)
 	SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
@@ -57382,7 +63110,7 @@ type ServerInterface interface {
 	// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
 	ListConsentPurposes(w http.ResponseWriter, r *http.Request)
-	// Define a consent purpose. 🟢 admin write.
+	// Define a consent purpose — a human-only admin write.
 	// (POST /consent-purposes)
 	CreateConsentPurpose(w http.ResponseWriter, r *http.Request)
 	// List contacts (live by default; cursor-paginated).
@@ -57409,6 +63137,9 @@ type ServerInterface interface {
 	// The whole contact record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance.
 	// (GET /contacts/{id}/360)
 	GetContact360(w http.ResponseWriter, r *http.Request, id Id, params GetContact360Params)
+	// Who can open this contact and who can change it, and why.
+	// (GET /contacts/{id}/access)
+	GetContactAccess(w http.ResponseWriter, r *http.Request, id Id, params GetContactAccessParams)
 	// The standing relationship brief — who this contact is commercially, what they care about, what changed.
 	// (GET /contacts/{id}/brief)
 	GetContactBrief(w http.ResponseWriter, r *http.Request, id Id)
@@ -57498,7 +63229,7 @@ type ServerInterface interface {
 	GetContactProfileFields(w http.ResponseWriter, r *http.Request, id Id)
 	// Put back the value a newer statement replaced.
 	// (POST /contacts/{id}/profile-fields/{field}/restore)
-	RestoreContactProfileField(w http.ResponseWriter, r *http.Request, id Id, field ContactProfileFieldKey)
+	RestoreContactProfileField(w http.ResponseWriter, r *http.Request, id Id, field ContactProfileFieldKey, params RestoreContactProfileFieldParams)
 	// Share a contact your mailbox created with the rest of the company.
 	// (POST /contacts/{id}/publish)
 	PublishCapturedContact(w http.ResponseWriter, r *http.Request, id Id)
@@ -57631,6 +63362,15 @@ type ServerInterface interface {
 	// Close a thread — the seller's side saying the point is settled.
 	// (POST /deal-rooms/{id}/threads/{threadId}/resolve)
 	ResolveDealRoomThread(w http.ResponseWriter, r *http.Request, id Id, threadId openapi_types.UUID)
+	// Open Deal Scout suggestions the caller may see, newest first.
+	// (GET /deal-suggestions)
+	ListDealSuggestions(w http.ResponseWriter, r *http.Request, params ListDealSuggestionsParams)
+	// Open the suggested deal, with the caller's corrections.
+	// (POST /deal-suggestions/{id}/accept)
+	AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams)
+	// Record that the suggestion is not a deal, for the whole workspace.
+	// (POST /deal-suggestions/{id}/dismiss)
+	DismissDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params DismissDealSuggestionParams)
 	// List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads.
 	// (GET /deals)
 	ListDeals(w http.ResponseWriter, r *http.Request, params ListDealsParams)
@@ -57754,6 +63494,12 @@ type ServerInterface interface {
 	// Answer a finding from the nightly input check.
 	// (POST /forecast/assurance/exceptions/{id}/resolve)
 	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// What a check would find, without recording any of it.
+	// (GET /forecast/assurance/preview)
+	PreviewForecastAssurance(w http.ResponseWriter, r *http.Request)
+	// Run the input check now.
+	// (POST /forecast/assurance/runs)
+	StartForecastAssuranceRun(w http.ResponseWriter, r *http.Request)
 	// What this period's forecast has been called, newest first.
 	// (GET /forecast/calls)
 	ListForecastCalls(w http.ResponseWriter, r *http.Request, params ListForecastCallsParams)
@@ -57769,6 +63515,9 @@ type ServerInterface interface {
 	// The rows behind a shared reading, as CSV.
 	// (GET /forecast/shared/{token}/export.csv)
 	ExportForecastShare(w http.ResponseWriter, r *http.Request, token string)
+	// List the share links you issued that still serve.
+	// (GET /forecast/shares)
+	ListForecastShares(w http.ResponseWriter, r *http.Request)
 	// Issue a link that shows a forecast reading to a colleague.
 	// (POST /forecast/shares)
 	CreateForecastShare(w http.ResponseWriter, r *http.Request)
@@ -57949,9 +63698,54 @@ type ServerInterface interface {
 	// Explain This Score — the weighted-factor decomposition behind a lead's score.
 	// (GET /leads/{id}/score)
 	ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams)
+	// Find the lists this caller may see, by name.
+	// (GET /lists)
+	ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams)
+	// Make a Live List (a saved filter) or a Shortlist (chosen records).
+	// (POST /lists)
+	CreateList(w http.ResponseWriter, r *http.Request)
+	// Archive a list. Its members and history stay, read-only.
+	// (DELETE /lists/{id})
+	ArchiveList(w http.ResponseWriter, r *http.Request, id Id)
+	// Read one list, with the count of its members this caller may see.
+	// (GET /lists/{id})
+	GetList(w http.ResponseWriter, r *http.Request, id Id)
+	// Change a list's name, purpose, filter, sharing, team or steward.
+	// (PATCH /lists/{id})
+	UpdateList(w http.ResponseWriter, r *http.Request, id Id)
+	// Read what changed on a list, newest first.
+	// (GET /lists/{id}/history)
+	ListListHistory(w http.ResponseWriter, r *http.Request, id Id, params ListListHistoryParams)
+	// Page through the members of a list this caller may see.
+	// (GET /lists/{id}/members)
+	ListListMembers(w http.ResponseWriter, r *http.Request, id Id, params ListListMembersParams)
+	// Add one record to a Shortlist, with an optional note on why.
+	// (POST /lists/{id}/members)
+	AddListMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Take one record off a Shortlist, with an optional note on why.
+	// (POST /lists/{id}/members/remove)
+	RemoveListMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Say why a record is, or is not, on a list.
+	// (GET /lists/{id}/members/{recordId}/why)
+	ExplainListMember(w http.ResponseWriter, r *http.Request, id Id, recordId openapi_types.UUID)
+	// Bring an archived list back.
+	// (POST /lists/{id}/restore)
+	RestoreList(w http.ResponseWriter, r *http.Request, id Id)
 	// What the machinery did, what it needs, what it could not finish, and what it is watching.
 	// (GET /magic)
 	GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams)
+	// Every record one done line stands for, with what changed on each and whether it can be taken back.
+	// (GET /magic/lines/{id}/records)
+	GetMagicLineRecords(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetMagicLineRecordsParams)
+	// The caller's own unsent message for one place the composer opens.
+	// (GET /mail-drafts)
+	GetMailDraft(w http.ResponseWriter, r *http.Request, params GetMailDraftParams)
+	// Save the caller's unsent message for one anchor, replacing what was saved before.
+	// (PUT /mail-drafts)
+	SaveMailDraft(w http.ResponseWriter, r *http.Request, params SaveMailDraftParams)
+	// Discard one of the caller's unsent messages.
+	// (DELETE /mail-drafts/{id})
+	DiscardMailDraft(w http.ResponseWriter, r *http.Request, id Id)
 	// Get the current authenticated principal (user or agent).
 	// (GET /me)
 	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
@@ -57994,15 +63788,27 @@ type ServerInterface interface {
 	// Choose the language your own interface is in.
 	// (PUT /me/locale)
 	SaveMyLocale(w http.ResponseWriter, r *http.Request)
+	// How you have asked to be reached, one entry per class of notification.
+	// (GET /me/notification-preferences)
+	ListNotificationPreferences(w http.ResponseWriter, r *http.Request)
+	// Choose where one class of notification reaches you.
+	// (PUT /me/notification-preferences)
+	SaveNotificationPreference(w http.ResponseWriter, r *http.Request)
 	// When you are bookable.
 	// (GET /me/working-hours)
 	GetMyWorkingHours(w http.ResponseWriter, r *http.Request)
 	// Choose the hours and days you are bookable.
 	// (PUT /me/working-hours)
 	SaveMyWorkingHours(w http.ResponseWriter, r *http.Request)
+	// The notification centre — every notice addressed to the acting contact, newest first.
+	// (GET /notices)
+	ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams)
 	// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
 	// (POST /notices)
 	RaiseNotice(w http.ResponseWriter, r *http.Request)
+	// Settle the acting contact's whole notification centre in one act.
+	// (POST /notices/read-all)
+	MarkAllNoticesRead(w http.ResponseWriter, r *http.Request)
 	// Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane.
 	// (POST /notices/{id}/read)
 	MarkNoticeRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -58057,7 +63863,7 @@ type ServerInterface interface {
 	// Render the offer's branded PDF (sets pdf_asset_ref).
 	// (POST /offers/{id}/render)
 	RenderOffer(w http.ResponseWriter, r *http.Request, id Id, params RenderOfferParams)
-	// Send a draft offer (🟡 — leaves the workspace; freezes FX + buyer/issuer snapshot).
+	// Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot).
 	// (POST /offers/{id}/send)
 	SendOffer(w http.ResponseWriter, r *http.Request, id Id, params SendOfferParams)
 	// Continue the scoped company-setup conversation with or without a website read.
@@ -58075,7 +63881,7 @@ type ServerInterface interface {
 	// List partner companies (companies with a partner row), filterable by role/cert status.
 	// (GET /partners)
 	ListPartners(w http.ResponseWriter, r *http.Request, params ListPartnersParams)
-	// List the caller's own Agent Seat Passports (metadata only — no token re-disclosure).
+	// List Agent Seat Passports — the caller's own, or the workspace's for a member administrator (metadata only — no token re-disclosure).
 	// (GET /passports)
 	ListPassports(w http.ResponseWriter, r *http.Request)
 	// Mint an Agent Seat Passport for the calling user's own agent.
@@ -58090,6 +63896,9 @@ type ServerInterface interface {
 	// Create a pipeline.
 	// (POST /pipelines)
 	CreatePipeline(w http.ResponseWriter, r *http.Request, params CreatePipelineParams)
+	// Put the live pipelines in a new order.
+	// (PUT /pipelines/order)
+	ReorderPipelines(w http.ResponseWriter, r *http.Request, params ReorderPipelinesParams)
 	// Retire a pipeline (soft delete; archive is the delete).
 	// (DELETE /pipelines/{id})
 	ArchivePipeline(w http.ResponseWriter, r *http.Request, id Id, params ArchivePipelineParams)
@@ -58102,6 +63911,9 @@ type ServerInterface interface {
 	// Put a retired pipeline back in use.
 	// (POST /pipelines/{id}/restore)
 	RestorePipeline(w http.ResponseWriter, r *http.Request, id Id)
+	// Put a pipeline's stages in a new order.
+	// (PUT /pipelines/{id}/stage-order)
+	ReorderStages(w http.ResponseWriter, r *http.Request, id Id, params ReorderStagesParams)
 	// What this installation says about itself in the messages it sends.
 	// (GET /privacy/controller-particulars)
 	GetControllerParticulars(w http.ResponseWriter, r *http.Request)
@@ -58198,18 +64010,33 @@ type ServerInterface interface {
 	// Delete retained provider claims and identifying run metadata.
 	// (DELETE /provider-connections/{provider}/data)
 	DeleteProviderData(w http.ResponseWriter, r *http.Request, provider Provider)
+	// Read the anchor company's public booking logo.
+	// (GET /public/booking/company-logo)
+	GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request)
 	// Book a meeting from the public page (anonymous) — captures the booker + mandatory consent.
 	// (POST /public/booking/{host_slug})
 	BookPublicMeeting(w http.ResponseWriter, r *http.Request, hostSlug string, params BookPublicMeetingParams)
 	// Free/busy slots for a public booking page (anonymous).
 	// (GET /public/booking/{host_slug}/availability)
 	GetPublicAvailability(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicAvailabilityParams)
+	// Read the host-approved booking page identity and meeting details.
+	// (GET /public/booking/{host_slug}/profile)
+	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string)
 	// What the workspace holds about this contact (anonymous, token-authed).
 	// (GET /public/confirm/{token})
 	GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
 	// Submit corrections and a marketing answer (anonymous, token-authed).
 	// (POST /public/confirm/{token})
 	SubmitConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
+	// Read one invitation using its private management capability.
+	// (GET /public/meeting/{token})
+	GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string)
+	// Change one invitation using its private management capability.
+	// (PATCH /public/meeting/{token})
+	ChangePublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string)
+	// Find alternative times for one existing invitation.
+	// (GET /public/meeting/{token}/availability)
+	GetPublicMeetingAvailability(w http.ResponseWriter, r *http.Request, token string, params GetPublicMeetingAvailabilityParams)
 	// The recipient's per-purpose consent state (anonymous, token-authed).
 	// (GET /public/preferences/{token})
 	GetPreferenceCenter(w http.ResponseWriter, r *http.Request, token string)
@@ -58222,6 +64049,15 @@ type ServerInterface interface {
 	// RFC 8058 one-click unsubscribe (anonymous, token-authed, POST-only).
 	// (POST /public/preferences/{token}/unsubscribe)
 	OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, token string, params OneClickUnsubscribeParams)
+	// Read host-approved personal meeting details without contact data.
+	// (GET /public/proposal/{token})
+	GetPublicMeetingProposal(w http.ResponseWriter, r *http.Request, token string)
+	// Choose one time using a personal proposal's bound recipient.
+	// (POST /public/proposal/{token})
+	AcceptPublicMeetingProposal(w http.ResponseWriter, r *http.Request, token string)
+	// Check current availability for this personal proposal.
+	// (GET /public/proposal/{token}/availability)
+	GetPublicProposalAvailability(w http.ResponseWriter, r *http.Request, token string, params GetPublicProposalAvailabilityParams)
 	// The documents as published, grouped.
 	// (GET /public/rooms/documents)
 	ListBuyerRoomDocuments(w http.ResponseWriter, r *http.Request)
@@ -58270,12 +64106,6 @@ type ServerInterface interface {
 	// Relabel, reorder, re-scope or retire a responsibility role.
 	// (PATCH /record-roles/{id})
 	UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams)
-	// Record who authored imported records in the system they came from.
-	// (POST /records/attribution)
-	RepairSourceAttribution(w http.ResponseWriter, r *http.Request)
-	// Re-derive the interaction graph after a run of attribution repairs.
-	// (POST /records/attribution/rebuild)
-	RebuildAttributionGraph(w http.ResponseWriter, r *http.Request)
 	// The tags on one record, and who put them there.
 	// (GET /records/{entity_type}/{entity_id}/tags)
 	GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
@@ -58327,6 +64157,15 @@ type ServerInterface interface {
 	// Edit a retention policy (admin/ops).
 	// (PATCH /retention-policies/{id})
 	UpdateRetentionPolicy(w http.ResponseWriter, r *http.Request, id Id)
+	// List the records a legal hold is preserving.
+	// (GET /retention/legal-holds)
+	ListLegalHolds(w http.ResponseWriter, r *http.Request, params ListLegalHoldsParams)
+	// Lift a legal hold. Requires a stated reason; audited.
+	// (POST /retention/legal-holds/{entityType}/{recordId}/lift)
+	LiftLegalHold(w http.ResponseWriter, r *http.Request, entityType HeldEntityType, recordId openapi_types.UUID, params LiftLegalHoldParams)
+	// Place a legal hold on a record. Requires a stated reason; audited.
+	// (POST /retention/legal-holds/{entityType}/{recordId}/place)
+	PlaceLegalHold(w http.ResponseWriter, r *http.Request, entityType HeldEntityType, recordId openapi_types.UUID, params PlaceLegalHoldParams)
 	// List the records a statutory retention obligation is holding, and why.
 	// (GET /retention/restrictions)
 	ListRestrictedActivities(w http.ResponseWriter, r *http.Request, params ListRestrictedActivitiesParams)
@@ -58342,12 +64181,24 @@ type ServerInterface interface {
 	// Set the installation's retention posture (admin/ops).
 	// (PATCH /retention/settings)
 	UpdateRetentionSettings(w http.ResponseWriter, r *http.Request)
-	// List the workspace's roles with their object grants. Admin-only, human-only.
+	// List the workspace's roles with their object grants and row scope. Human-only.
 	// (GET /roles)
-	ListRoles(w http.ResponseWriter, r *http.Request)
+	ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams)
+	// Create a role by copying an existing one. Human-only.
+	// (POST /roles)
+	CreateRole(w http.ResponseWriter, r *http.Request)
+	// Rename a role or change its row scope. Human-only.
+	// (PATCH /roles/{key})
+	UpdateRole(w http.ResponseWriter, r *http.Request, key string, params UpdateRoleParams)
+	// Archive a custom role nobody who can sign in holds. Human-only.
+	// (POST /roles/{key}/archive)
+	ArchiveRole(w http.ResponseWriter, r *http.Request, key string)
 	// Set one role's CRUD grant on one RBAC object. Admin-only, human-only.
 	// (PATCH /roles/{key}/objects/{object})
 	SetRoleObjectGrant(w http.ResponseWriter, r *http.Request, key string, object string, params SetRoleObjectGrantParams)
+	// Restore an archived role. Human-only.
+	// (POST /roles/{key}/restore)
+	RestoreRole(w http.ResponseWriter, r *http.Request, key string)
 	// The caller's own messages waiting to be sent.
 	// (GET /scheduled-sends)
 	ListScheduledSends(w http.ResponseWriter, r *http.Request, params ListScheduledSendsParams)
@@ -58360,6 +64211,30 @@ type ServerInterface interface {
 	// Withdraw a scheduled message before it fires.
 	// (POST /scheduled-sends/{id}/cancel)
 	CancelScheduledSend(w http.ResponseWriter, r *http.Request, id Id)
+	// List the current host's connected calendars for scheduling settings.
+	// (GET /scheduling/calendars)
+	GetSchedulingCalendars(w http.ResponseWriter, r *http.Request, params GetSchedulingCalendarsParams)
+	// Reserve a meeting and request a calendar-native invitation.
+	// (POST /scheduling/invitations)
+	CreateMeetingInvitation(w http.ResponseWriter, r *http.Request, params CreateMeetingInvitationParams)
+	// Read invitation delivery and calendar state.
+	// (GET /scheduling/invitations/{id})
+	GetMeetingInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Reschedule, cancel or retry an invitation through its original calendar event.
+	// (PATCH /scheduling/invitations/{id})
+	ChangeMeetingInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Find alternative times for one existing invitation.
+	// (GET /scheduling/invitations/{id}/availability)
+	GetMeetingAvailability(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetMeetingAvailabilityParams)
+	// Read the caller's reusable booking page and scheduling policy.
+	// (GET /scheduling/profile)
+	GetSchedulingProfile(w http.ResponseWriter, r *http.Request)
+	// Configure and activate the caller's booking page.
+	// (PUT /scheduling/profile)
+	PutSchedulingProfile(w http.ResponseWriter, r *http.Request)
+	// Create a personal, expiring invitation without reserving time or sending mail.
+	// (POST /scheduling/proposals)
+	CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams)
 	// Cross-object search (contacts, companies, deals, activities, leads).
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
@@ -58459,10 +64334,10 @@ type ServerInterface interface {
 	// List workspace teams — cursor-paginated. Read-only.
 	// (GET /teams)
 	ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams)
-	// Create a team. Admin only.
+	// Create a team. Needs `team_admin.create`.
 	// (POST /teams)
 	CreateTeam(w http.ResponseWriter, r *http.Request)
-	// Rename, archive or restore a team. Admin only.
+	// Rename, archive or restore a team.
 	// (PATCH /teams/{id})
 	UpdateTeam(w http.ResponseWriter, r *http.Request, id Id)
 	// Take a member off a team. Admin only; idempotent.
@@ -58480,6 +64355,9 @@ type ServerInterface interface {
 	// What a seat with this role and these teams will see and may do.
 	// (GET /users/access-preview)
 	PreviewAccess(w http.ResponseWriter, r *http.Request, params PreviewAccessParams)
+	// The live roles this caller may hand out when inviting or re-roling a member.
+	// (GET /users/assignable-roles)
+	ListAssignableRoles(w http.ResponseWriter, r *http.Request)
 	// Record a colleague who has already left. Admin-only, human-only.
 	// (POST /users/former)
 	CreateFormerMember(w http.ResponseWriter, r *http.Request)
@@ -58645,13 +64523,16 @@ type ServerInterface interface {
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
+	// Which threads one hiding rule is keeping off the queue.
+	// (GET /worklist/hidden/{rule})
+	GetHiddenBacklogRows(w http.ResponseWriter, r *http.Request, rule GetHiddenBacklogRowsParamsRule)
 	// Let the ranking have the row back — the undo behind the pin.
 	// (DELETE /worklist/pins)
 	UnpinWorklistRow(w http.ResponseWriter, r *http.Request, params UnpinWorklistRowParams)
 	// Put a row at the top of your own day, above what the ranking chose.
 	// (PUT /worklist/pins)
 	PinWorklistRow(w http.ResponseWriter, r *http.Request)
-	// How fast the workspace answers, and how much of the queue it puts down.
+	// How fast the workspace answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
 	// (GET /worklist/response)
 	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
 	// One row per teammate — who is carrying what, so a lead can see where to help.
@@ -58849,6 +64730,12 @@ func (_ Unimplemented) GetJobHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Durably pause every report schedule before rollout rollback.
+// (POST /admin/reporting/pause)
+func (_ Unimplemented) PauseReportingSchedules(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Reset an installation that armed the capability to its first-boot state.
 // (POST /admin/reset-data)
 func (_ Unimplemented) ResetData(w http.ResponseWriter, r *http.Request) {
@@ -58858,6 +64745,12 @@ func (_ Unimplemented) ResetData(w http.ResponseWriter, r *http.Request) {
 // The governed tool surface (registry metadata) for the operator UI.
 // (GET /agent-tools)
 func (_ Unimplemented) ListAgentTools(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a model's entry from the price sheet, every effective date of it.
+// (DELETE /ai-model-rates)
+func (_ Unimplemented) DeleteAiModelRate(w http.ResponseWriter, r *http.Request, params DeleteAiModelRateParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58873,9 +64766,15 @@ func (_ Unimplemented) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Enqueue an async model-cost refresh (stages 🟡 proposals).
+// Retired. Answers 501; use POST /ai-model-rates/refresh.
 // (POST /ai-model-rates/propose-refresh)
 func (_ Unimplemented) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Re-price the models this installation calls from the providers' own catalogues.
+// (POST /ai-model-rates/refresh)
+func (_ Unimplemented) RefreshAiModelRates(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58951,6 +64850,12 @@ func (_ Unimplemented) SetAiProviderKey(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Ask one vendor whether the stored credential works (admin/ops).
+// (POST /ai/provider-keys/{provider}/test)
+func (_ Unimplemented) TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The tier-to-model binding this installation runs on (admin/ops).
 // (GET /ai/routing)
 func (_ Unimplemented) GetAiRouting(w http.ResponseWriter, r *http.Request) {
@@ -58993,9 +64898,81 @@ func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Compare reporting editions
+// (GET /analytics/editions/compare)
+func (_ Unimplemented) CompareReportingEditions(w http.ResponseWriter, r *http.Request, params CompareReportingEditionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting edition
+// (GET /analytics/editions/{id})
+func (_ Unimplemented) GetReportingEdition(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting edition evidence
+// (GET /analytics/editions/{id}/evidence)
+func (_ Unimplemented) GetReportingEditionEvidence(w http.ResponseWriter, r *http.Request, id Id, params GetReportingEditionEvidenceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Export this edition's permitted frozen metrics and chart readings.
+// (GET /analytics/editions/{id}/export.csv)
+func (_ Unimplemented) ExportReportingEdition(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Evaluate reporting
+// (GET /analytics/evaluate)
+func (_ Unimplemented) EvaluateReporting(w http.ResponseWriter, r *http.Request, params EvaluateReportingParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Evaluate reporting
+// (GET /analytics/evaluate.csv)
+func (_ Unimplemented) ExportReportingEvaluation(w http.ResponseWriter, r *http.Request, params ExportReportingEvaluationParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting evidence
+// (GET /analytics/evidence)
+func (_ Unimplemented) GetReportingEvidence(w http.ResponseWriter, r *http.Request, params GetReportingEvidenceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting execution
+// (GET /analytics/executions/{id})
+func (_ Unimplemented) GetReportingExecution(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Retry reporting execution
+// (POST /analytics/executions/{id}/retry)
+func (_ Unimplemented) RetryReportingExecution(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The records one cell of an analytics answer was computed from.
 // (POST /analytics/explain)
 func (_ Unimplemented) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting framework
+// (GET /analytics/framework)
+func (_ Unimplemented) GetReportingFramework(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Publish reporting framework
+// (PUT /analytics/framework)
+func (_ Unimplemented) PublishReportingFramework(w http.ResponseWriter, r *http.Request, params PublishReportingFrameworkParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting metrics
+// (GET /analytics/metrics)
+func (_ Unimplemented) GetReportingMetrics(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59005,9 +64982,75 @@ func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List reporting reports
+// (GET /analytics/reports)
+func (_ Unimplemented) ListReportingReports(w http.ResponseWriter, r *http.Request, params ListReportingReportsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create reporting report
+// (POST /analytics/reports)
+func (_ Unimplemented) CreateReportingReport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Resolve a report document's figures for this reader.
 // (POST /analytics/reports/render)
 func (_ Unimplemented) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Archive reporting report
+// (DELETE /analytics/reports/{id})
+func (_ Unimplemented) ArchiveReportingReport(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting report
+// (GET /analytics/reports/{id})
+func (_ Unimplemented) GetReportingReport(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update reporting report
+// (PATCH /analytics/reports/{id})
+func (_ Unimplemented) UpdateReportingReport(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingReportParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List reporting editions
+// (GET /analytics/reports/{id}/editions)
+func (_ Unimplemented) ListReportingEditions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingEditionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Freeze reporting edition
+// (POST /analytics/reports/{id}/editions)
+func (_ Unimplemented) FreezeReportingEdition(w http.ResponseWriter, r *http.Request, id Id, params FreezeReportingEditionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Evaluate reporting report
+// (GET /analytics/reports/{id}/evaluation)
+func (_ Unimplemented) EvaluateReportingReport(w http.ResponseWriter, r *http.Request, id Id, params EvaluateReportingReportParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List reporting executions
+// (GET /analytics/reports/{id}/executions)
+func (_ Unimplemented) ListReportingExecutions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingExecutionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List reporting schedules
+// (GET /analytics/reports/{id}/schedules)
+func (_ Unimplemented) ListReportingSchedules(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create reporting schedule
+// (POST /analytics/reports/{id}/schedules)
+func (_ Unimplemented) CreateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59023,9 +65066,39 @@ func (_ Unimplemented) ExplainReportRunCell(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Update reporting schedule
+// (PATCH /analytics/schedules/{id})
+func (_ Unimplemented) UpdateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingScheduleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What questions this caller may ask, and in what words.
 // (GET /analytics/schema)
 func (_ Unimplemented) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List reporting targets
+// (GET /analytics/targets)
+func (_ Unimplemented) ListReportingTargets(w http.ResponseWriter, r *http.Request, params ListReportingTargetsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create reporting target
+// (POST /analytics/targets)
+func (_ Unimplemented) CreateReportingTarget(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting target
+// (GET /analytics/targets/{id})
+func (_ Unimplemented) GetReportingTarget(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update reporting target
+// (PATCH /analytics/targets/{id})
+func (_ Unimplemented) UpdateReportingTarget(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingTargetParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59239,7 +65312,7 @@ func (_ Unimplemented) UpdateAutomation(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Dry-run an automation's blast radius (🟢 read; no writes, no sends).
+// Dry-run an automation's blast radius — a read that never writes, sends, or stages an approval.
 // (POST /automations/{id}/preview)
 func (_ Unimplemented) PreviewAutomation(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -59317,6 +65390,36 @@ func (_ Unimplemented) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Apply one change to a selection of records, record by record.
+// (POST /bulk/execute)
+func (_ Unimplemented) ExecuteBulkChange(w http.ResponseWriter, r *http.Request, params ExecuteBulkChangeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what one change over a selection of records would do, without doing it.
+// (POST /bulk/preview)
+func (_ Unimplemented) PreviewBulkChange(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read what one bulk change did, and whether it was undone.
+// (GET /bulk/{id})
+func (_ Unimplemented) GetBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put back what one bulk change did, record by record.
+// (POST /bulk/{id}/undo)
+func (_ Unimplemented) UndoBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UndoBulkChangeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what undoing one bulk change would do, without doing it.
+// (POST /bulk/{id}/undo/preview)
+func (_ Unimplemented) PreviewBulkUndo(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What the capture pipeline did with your messages in the last 24 hours.
 // (GET /capture/activity)
 func (_ Unimplemented) ListMyCaptureActivity(w http.ResponseWriter, r *http.Request, params ListMyCaptureActivityParams) {
@@ -59368,6 +65471,12 @@ func (_ Unimplemented) AddConsumerMailDomain(w http.ResponseWriter, r *http.Requ
 // Withdraw a consumer-mail list entry (admin/ops).
 // (DELETE /capture/consumer-mail-domains/{id})
 func (_ Unimplemented) RemoveConsumerMailDomain(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Your captured contacts still waiting on a sender decision.
+// (GET /capture/contacts-awaiting-decision)
+func (_ Unimplemented) ListCaptureContactsAwaitingDecision(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59644,6 +65753,12 @@ func (_ Unimplemented) UpdateCompany(w http.ResponseWriter, r *http.Request, id 
 // The whole company record page in one round trip — profile, contacts, deals, timeline, tags, approvals, next steps.
 // (GET /companies/{id}/360)
 func (_ Unimplemented) GetCompany360(w http.ResponseWriter, r *http.Request, id Id, params GetCompany360Params) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Who can open this company and who can change it, and why.
+// (GET /companies/{id}/access)
+func (_ Unimplemented) GetCompanyAccess(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyAccessParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -60049,6 +66164,12 @@ func (_ Unimplemented) ConnectConnector(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The folders or labels this mailbox has, to pick one to keep out of capture.
+// (GET /connectors/{provider}/containers)
+func (_ Unimplemented) ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Set the word this connector files what it captures under.
 // (PUT /connectors/{provider}/context-tag)
 func (_ Unimplemented) SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
@@ -60079,7 +66200,7 @@ func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Define a consent purpose. 🟢 admin write.
+// Define a consent purpose — a human-only admin write.
 // (POST /consent-purposes)
 func (_ Unimplemented) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -60130,6 +66251,12 @@ func (_ Unimplemented) UpdateContact(w http.ResponseWriter, r *http.Request, id 
 // The whole contact record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance.
 // (GET /contacts/{id}/360)
 func (_ Unimplemented) GetContact360(w http.ResponseWriter, r *http.Request, id Id, params GetContact360Params) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Who can open this contact and who can change it, and why.
+// (GET /contacts/{id}/access)
+func (_ Unimplemented) GetContactAccess(w http.ResponseWriter, r *http.Request, id Id, params GetContactAccessParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -60309,7 +66436,7 @@ func (_ Unimplemented) GetContactProfileFields(w http.ResponseWriter, r *http.Re
 
 // Put back the value a newer statement replaced.
 // (POST /contacts/{id}/profile-fields/{field}/restore)
-func (_ Unimplemented) RestoreContactProfileField(w http.ResponseWriter, r *http.Request, id Id, field ContactProfileFieldKey) {
+func (_ Unimplemented) RestoreContactProfileField(w http.ResponseWriter, r *http.Request, id Id, field ContactProfileFieldKey, params RestoreContactProfileFieldParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -60577,6 +66704,24 @@ func (_ Unimplemented) ResolveDealRoomThread(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Open Deal Scout suggestions the caller may see, newest first.
+// (GET /deal-suggestions)
+func (_ Unimplemented) ListDealSuggestions(w http.ResponseWriter, r *http.Request, params ListDealSuggestionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open the suggested deal, with the caller's corrections.
+// (POST /deal-suggestions/{id}/accept)
+func (_ Unimplemented) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that the suggestion is not a deal, for the whole workspace.
+// (POST /deal-suggestions/{id}/dismiss)
+func (_ Unimplemented) DismissDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params DismissDealSuggestionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads.
 // (GET /deals)
 func (_ Unimplemented) ListDeals(w http.ResponseWriter, r *http.Request, params ListDealsParams) {
@@ -60823,6 +66968,18 @@ func (_ Unimplemented) ResolveInputCheck(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What a check would find, without recording any of it.
+// (GET /forecast/assurance/preview)
+func (_ Unimplemented) PreviewForecastAssurance(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Run the input check now.
+// (POST /forecast/assurance/runs)
+func (_ Unimplemented) StartForecastAssuranceRun(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What this period's forecast has been called, newest first.
 // (GET /forecast/calls)
 func (_ Unimplemented) ListForecastCalls(w http.ResponseWriter, r *http.Request, params ListForecastCallsParams) {
@@ -60850,6 +67007,12 @@ func (_ Unimplemented) OpenForecastShare(w http.ResponseWriter, r *http.Request,
 // The rows behind a shared reading, as CSV.
 // (GET /forecast/shared/{token}/export.csv)
 func (_ Unimplemented) ExportForecastShare(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the share links you issued that still serve.
+// (GET /forecast/shares)
+func (_ Unimplemented) ListForecastShares(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -61213,9 +67376,99 @@ func (_ Unimplemented) ExplainLeadScore(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Find the lists this caller may see, by name.
+// (GET /lists)
+func (_ Unimplemented) ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Make a Live List (a saved filter) or a Shortlist (chosen records).
+// (POST /lists)
+func (_ Unimplemented) CreateList(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Archive a list. Its members and history stay, read-only.
+// (DELETE /lists/{id})
+func (_ Unimplemented) ArchiveList(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read one list, with the count of its members this caller may see.
+// (GET /lists/{id})
+func (_ Unimplemented) GetList(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change a list's name, purpose, filter, sharing, team or steward.
+// (PATCH /lists/{id})
+func (_ Unimplemented) UpdateList(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read what changed on a list, newest first.
+// (GET /lists/{id}/history)
+func (_ Unimplemented) ListListHistory(w http.ResponseWriter, r *http.Request, id Id, params ListListHistoryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Page through the members of a list this caller may see.
+// (GET /lists/{id}/members)
+func (_ Unimplemented) ListListMembers(w http.ResponseWriter, r *http.Request, id Id, params ListListMembersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add one record to a Shortlist, with an optional note on why.
+// (POST /lists/{id}/members)
+func (_ Unimplemented) AddListMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take one record off a Shortlist, with an optional note on why.
+// (POST /lists/{id}/members/remove)
+func (_ Unimplemented) RemoveListMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say why a record is, or is not, on a list.
+// (GET /lists/{id}/members/{recordId}/why)
+func (_ Unimplemented) ExplainListMember(w http.ResponseWriter, r *http.Request, id Id, recordId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Bring an archived list back.
+// (POST /lists/{id}/restore)
+func (_ Unimplemented) RestoreList(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What the machinery did, what it needs, what it could not finish, and what it is watching.
 // (GET /magic)
 func (_ Unimplemented) GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Every record one done line stands for, with what changed on each and whether it can be taken back.
+// (GET /magic/lines/{id}/records)
+func (_ Unimplemented) GetMagicLineRecords(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetMagicLineRecordsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's own unsent message for one place the composer opens.
+// (GET /mail-drafts)
+func (_ Unimplemented) GetMailDraft(w http.ResponseWriter, r *http.Request, params GetMailDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Save the caller's unsent message for one anchor, replacing what was saved before.
+// (PUT /mail-drafts)
+func (_ Unimplemented) SaveMailDraft(w http.ResponseWriter, r *http.Request, params SaveMailDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Discard one of the caller's unsent messages.
+// (DELETE /mail-drafts/{id})
+func (_ Unimplemented) DiscardMailDraft(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -61303,6 +67556,18 @@ func (_ Unimplemented) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// How you have asked to be reached, one entry per class of notification.
+// (GET /me/notification-preferences)
+func (_ Unimplemented) ListNotificationPreferences(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose where one class of notification reaches you.
+// (PUT /me/notification-preferences)
+func (_ Unimplemented) SaveNotificationPreference(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // When you are bookable.
 // (GET /me/working-hours)
 func (_ Unimplemented) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
@@ -61315,9 +67580,21 @@ func (_ Unimplemented) SaveMyWorkingHours(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The notification centre — every notice addressed to the acting contact, newest first.
+// (GET /notices)
+func (_ Unimplemented) ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
 // (POST /notices)
 func (_ Unimplemented) RaiseNotice(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Settle the acting contact's whole notification centre in one act.
+// (POST /notices/read-all)
+func (_ Unimplemented) MarkAllNoticesRead(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -61429,7 +67706,7 @@ func (_ Unimplemented) RenderOffer(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Send a draft offer (🟡 — leaves the workspace; freezes FX + buyer/issuer snapshot).
+// Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot).
 // (POST /offers/{id}/send)
 func (_ Unimplemented) SendOffer(w http.ResponseWriter, r *http.Request, id Id, params SendOfferParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -61465,7 +67742,7 @@ func (_ Unimplemented) ListPartners(w http.ResponseWriter, r *http.Request, para
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the caller's own Agent Seat Passports (metadata only — no token re-disclosure).
+// List Agent Seat Passports — the caller's own, or the workspace's for a member administrator (metadata only — no token re-disclosure).
 // (GET /passports)
 func (_ Unimplemented) ListPassports(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -61495,6 +67772,12 @@ func (_ Unimplemented) CreatePipeline(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Put the live pipelines in a new order.
+// (PUT /pipelines/order)
+func (_ Unimplemented) ReorderPipelines(w http.ResponseWriter, r *http.Request, params ReorderPipelinesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Retire a pipeline (soft delete; archive is the delete).
 // (DELETE /pipelines/{id})
 func (_ Unimplemented) ArchivePipeline(w http.ResponseWriter, r *http.Request, id Id, params ArchivePipelineParams) {
@@ -61516,6 +67799,12 @@ func (_ Unimplemented) UpdatePipeline(w http.ResponseWriter, r *http.Request, id
 // Put a retired pipeline back in use.
 // (POST /pipelines/{id}/restore)
 func (_ Unimplemented) RestorePipeline(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a pipeline's stages in a new order.
+// (PUT /pipelines/{id}/stage-order)
+func (_ Unimplemented) ReorderStages(w http.ResponseWriter, r *http.Request, id Id, params ReorderStagesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -61711,6 +68000,12 @@ func (_ Unimplemented) DeleteProviderData(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read the anchor company's public booking logo.
+// (GET /public/booking/company-logo)
+func (_ Unimplemented) GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Book a meeting from the public page (anonymous) — captures the booker + mandatory consent.
 // (POST /public/booking/{host_slug})
 func (_ Unimplemented) BookPublicMeeting(w http.ResponseWriter, r *http.Request, hostSlug string, params BookPublicMeetingParams) {
@@ -61723,6 +68018,12 @@ func (_ Unimplemented) GetPublicAvailability(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read the host-approved booking page identity and meeting details.
+// (GET /public/booking/{host_slug}/profile)
+func (_ Unimplemented) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What the workspace holds about this contact (anonymous, token-authed).
 // (GET /public/confirm/{token})
 func (_ Unimplemented) GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string) {
@@ -61732,6 +68033,24 @@ func (_ Unimplemented) GetConfirmDetails(w http.ResponseWriter, r *http.Request,
 // Submit corrections and a marketing answer (anonymous, token-authed).
 // (POST /public/confirm/{token})
 func (_ Unimplemented) SubmitConfirmDetails(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read one invitation using its private management capability.
+// (GET /public/meeting/{token})
+func (_ Unimplemented) GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change one invitation using its private management capability.
+// (PATCH /public/meeting/{token})
+func (_ Unimplemented) ChangePublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Find alternative times for one existing invitation.
+// (GET /public/meeting/{token}/availability)
+func (_ Unimplemented) GetPublicMeetingAvailability(w http.ResponseWriter, r *http.Request, token string, params GetPublicMeetingAvailabilityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -61756,6 +68075,24 @@ func (_ Unimplemented) PublicStopContact(w http.ResponseWriter, r *http.Request,
 // RFC 8058 one-click unsubscribe (anonymous, token-authed, POST-only).
 // (POST /public/preferences/{token}/unsubscribe)
 func (_ Unimplemented) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, token string, params OneClickUnsubscribeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read host-approved personal meeting details without contact data.
+// (GET /public/proposal/{token})
+func (_ Unimplemented) GetPublicMeetingProposal(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose one time using a personal proposal's bound recipient.
+// (POST /public/proposal/{token})
+func (_ Unimplemented) AcceptPublicMeetingProposal(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Check current availability for this personal proposal.
+// (GET /public/proposal/{token}/availability)
+func (_ Unimplemented) GetPublicProposalAvailability(w http.ResponseWriter, r *http.Request, token string, params GetPublicProposalAvailabilityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -61852,18 +68189,6 @@ func (_ Unimplemented) CreateRecordRole(w http.ResponseWriter, r *http.Request, 
 // Relabel, reorder, re-scope or retire a responsibility role.
 // (PATCH /record-roles/{id})
 func (_ Unimplemented) UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Record who authored imported records in the system they came from.
-// (POST /records/attribution)
-func (_ Unimplemented) RepairSourceAttribution(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Re-derive the interaction graph after a run of attribution repairs.
-// (POST /records/attribution/rebuild)
-func (_ Unimplemented) RebuildAttributionGraph(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -61969,6 +68294,24 @@ func (_ Unimplemented) UpdateRetentionPolicy(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the records a legal hold is preserving.
+// (GET /retention/legal-holds)
+func (_ Unimplemented) ListLegalHolds(w http.ResponseWriter, r *http.Request, params ListLegalHoldsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Lift a legal hold. Requires a stated reason; audited.
+// (POST /retention/legal-holds/{entityType}/{recordId}/lift)
+func (_ Unimplemented) LiftLegalHold(w http.ResponseWriter, r *http.Request, entityType HeldEntityType, recordId openapi_types.UUID, params LiftLegalHoldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Place a legal hold on a record. Requires a stated reason; audited.
+// (POST /retention/legal-holds/{entityType}/{recordId}/place)
+func (_ Unimplemented) PlaceLegalHold(w http.ResponseWriter, r *http.Request, entityType HeldEntityType, recordId openapi_types.UUID, params PlaceLegalHoldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the records a statutory retention obligation is holding, and why.
 // (GET /retention/restrictions)
 func (_ Unimplemented) ListRestrictedActivities(w http.ResponseWriter, r *http.Request, params ListRestrictedActivitiesParams) {
@@ -61999,15 +68342,39 @@ func (_ Unimplemented) UpdateRetentionSettings(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the workspace's roles with their object grants. Admin-only, human-only.
+// List the workspace's roles with their object grants and row scope. Human-only.
 // (GET /roles)
-func (_ Unimplemented) ListRoles(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a role by copying an existing one. Human-only.
+// (POST /roles)
+func (_ Unimplemented) CreateRole(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rename a role or change its row scope. Human-only.
+// (PATCH /roles/{key})
+func (_ Unimplemented) UpdateRole(w http.ResponseWriter, r *http.Request, key string, params UpdateRoleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Archive a custom role nobody who can sign in holds. Human-only.
+// (POST /roles/{key}/archive)
+func (_ Unimplemented) ArchiveRole(w http.ResponseWriter, r *http.Request, key string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Set one role's CRUD grant on one RBAC object. Admin-only, human-only.
 // (PATCH /roles/{key}/objects/{object})
 func (_ Unimplemented) SetRoleObjectGrant(w http.ResponseWriter, r *http.Request, key string, object string, params SetRoleObjectGrantParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Restore an archived role. Human-only.
+// (POST /roles/{key}/restore)
+func (_ Unimplemented) RestoreRole(w http.ResponseWriter, r *http.Request, key string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62032,6 +68399,54 @@ func (_ Unimplemented) RescheduleScheduledSend(w http.ResponseWriter, r *http.Re
 // Withdraw a scheduled message before it fires.
 // (POST /scheduled-sends/{id}/cancel)
 func (_ Unimplemented) CancelScheduledSend(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the current host's connected calendars for scheduling settings.
+// (GET /scheduling/calendars)
+func (_ Unimplemented) GetSchedulingCalendars(w http.ResponseWriter, r *http.Request, params GetSchedulingCalendarsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reserve a meeting and request a calendar-native invitation.
+// (POST /scheduling/invitations)
+func (_ Unimplemented) CreateMeetingInvitation(w http.ResponseWriter, r *http.Request, params CreateMeetingInvitationParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read invitation delivery and calendar state.
+// (GET /scheduling/invitations/{id})
+func (_ Unimplemented) GetMeetingInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reschedule, cancel or retry an invitation through its original calendar event.
+// (PATCH /scheduling/invitations/{id})
+func (_ Unimplemented) ChangeMeetingInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Find alternative times for one existing invitation.
+// (GET /scheduling/invitations/{id}/availability)
+func (_ Unimplemented) GetMeetingAvailability(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetMeetingAvailabilityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the caller's reusable booking page and scheduling policy.
+// (GET /scheduling/profile)
+func (_ Unimplemented) GetSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Configure and activate the caller's booking page.
+// (PUT /scheduling/profile)
+func (_ Unimplemented) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a personal, expiring invitation without reserving time or sending mail.
+// (POST /scheduling/proposals)
+func (_ Unimplemented) CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62233,13 +68648,13 @@ func (_ Unimplemented) ListTeams(w http.ResponseWriter, r *http.Request, params 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create a team. Admin only.
+// Create a team. Needs `team_admin.create`.
 // (POST /teams)
 func (_ Unimplemented) CreateTeam(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Rename, archive or restore a team. Admin only.
+// Rename, archive or restore a team.
 // (PATCH /teams/{id})
 func (_ Unimplemented) UpdateTeam(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -62272,6 +68687,12 @@ func (_ Unimplemented) InviteUser(w http.ResponseWriter, r *http.Request) {
 // What a seat with this role and these teams will see and may do.
 // (GET /users/access-preview)
 func (_ Unimplemented) PreviewAccess(w http.ResponseWriter, r *http.Request, params PreviewAccessParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The live roles this caller may hand out when inviting or re-roling a member.
+// (GET /users/assignable-roles)
+func (_ Unimplemented) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62605,6 +69026,12 @@ func (_ Unimplemented) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Which threads one hiding rule is keeping off the queue.
+// (GET /worklist/hidden/{rule})
+func (_ Unimplemented) GetHiddenBacklogRows(w http.ResponseWriter, r *http.Request, rule GetHiddenBacklogRowsParamsRule) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Let the ranking have the row back — the undo behind the pin.
 // (DELETE /worklist/pins)
 func (_ Unimplemented) UnpinWorklistRow(w http.ResponseWriter, r *http.Request, params UnpinWorklistRowParams) {
@@ -62617,7 +69044,7 @@ func (_ Unimplemented) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// How fast the workspace answers, and how much of the queue it puts down.
+// How fast the workspace answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
 // (GET /worklist/response)
 func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -63950,8 +70377,6 @@ func (siw *ServerInterfaceWrapper) ReadTranscriptForNextSteps(w http.ResponseWri
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -64083,8 +70508,6 @@ func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseW
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -64160,6 +70583,26 @@ func (siw *ServerInterfaceWrapper) GetJobHealth(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// PauseReportingSchedules operation middleware
+func (siw *ServerInterfaceWrapper) PauseReportingSchedules(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PauseReportingSchedules(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ResetData operation middleware
 func (siw *ServerInterfaceWrapper) ResetData(w http.ResponseWriter, r *http.Request) {
 
@@ -64191,6 +70634,71 @@ func (siw *ServerInterfaceWrapper) ListAgentTools(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAgentTools(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAiModelRate operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAiModelRate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteAiModelRateParams
+
+	// ------------- Required query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "model_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "model_id", r.URL.Query(), &params.ModelId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "lane" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "lane", r.URL.Query(), &params.Lane, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lane"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lane", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAiModelRate(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -64283,6 +70791,26 @@ func (siw *ServerInterfaceWrapper) ProposeAiModelRateRefresh(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ProposeAiModelRateRefresh(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RefreshAiModelRates operation middleware
+func (siw *ServerInterfaceWrapper) RefreshAiModelRates(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RefreshAiModelRates(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -64654,6 +71182,38 @@ func (siw *ServerInterfaceWrapper) SetAiProviderKey(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// TestAiProviderKey operation middleware
+func (siw *ServerInterfaceWrapper) TestAiProviderKey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TestAiProviderKey(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAiRouting operation middleware
 func (siw *ServerInterfaceWrapper) GetAiRouting(w http.ResponseWriter, r *http.Request) {
 
@@ -64791,8 +71351,6 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -64830,8 +71388,74 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
-// ExplainAnalyticsCell operation middleware
-func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
+// CompareReportingEditions operation middleware
+func (siw *ServerInterfaceWrapper) CompareReportingEditions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CompareReportingEditionsParams
+
+	// ------------- Required query parameter "left_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "left_id", r.URL.Query(), &params.LeftId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "left_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "left_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "right_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "right_id", r.URL.Query(), &params.RightId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "right_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "right_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompareReportingEditions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingEdition operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingEdition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
 
 	ctx := r.Context()
 
@@ -64842,7 +71466,967 @@ func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingEdition(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingEditionEvidence operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingEditionEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetReportingEditionEvidenceParams
+
+	// ------------- Required query parameter "metric" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "metric", r.URL.Query(), &params.Metric, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metric"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metric", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "context_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "context_id", r.URL.Query(), &params.ContextId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "context_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "context_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "group_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "group_key", r.URL.Query(), &params.GroupKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "group_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group_key", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "through" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "through", r.URL.Query(), &params.Through, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "through"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "through", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingEditionEvidence(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportReportingEdition operation middleware
+func (siw *ServerInterfaceWrapper) ExportReportingEdition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportReportingEdition(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EvaluateReporting operation middleware
+func (siw *ServerInterfaceWrapper) EvaluateReporting(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params EvaluateReportingParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pipeline_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "start_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_at", r.URL.Query(), &params.StartAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end_at", r.URL.Query(), &params.EndAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target_basis" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target_basis", r.URL.Query(), &params.TargetBasis, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_basis"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_basis", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_window", r.URL.Query(), &params.CloseWindow, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_window", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "metrics" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "metrics", r.URL.Query(), &params.Metrics, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metrics"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metrics", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "blocks" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "blocks", r.URL.Query(), &params.Blocks, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "blocks"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "blocks", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EvaluateReporting(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportReportingEvaluation operation middleware
+func (siw *ServerInterfaceWrapper) ExportReportingEvaluation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ExportReportingEvaluationParams
+
+	// ------------- Required query parameter "evaluation_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "evaluation_key", r.URL.Query(), &params.EvaluationKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "evaluation_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "evaluation_key", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "evaluated_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "evaluated_at", r.URL.Query(), &params.EvaluatedAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "evaluated_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "evaluated_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "framework_revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "framework_revision", r.URL.Query(), &params.FrameworkRevision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "framework_revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "framework_revision", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pipeline_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "start_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_at", r.URL.Query(), &params.StartAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end_at", r.URL.Query(), &params.EndAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target_basis" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target_basis", r.URL.Query(), &params.TargetBasis, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_basis"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_basis", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_window", r.URL.Query(), &params.CloseWindow, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_window", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "metrics" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "metrics", r.URL.Query(), &params.Metrics, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metrics"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metrics", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "blocks" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "blocks", r.URL.Query(), &params.Blocks, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "blocks"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "blocks", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportReportingEvaluation(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingEvidence operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetReportingEvidenceParams
+
+	// ------------- Required query parameter "evaluation_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "evaluation_key", r.URL.Query(), &params.EvaluationKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "evaluation_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "evaluation_key", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "evaluated_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "evaluated_at", r.URL.Query(), &params.EvaluatedAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "evaluated_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "evaluated_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "framework_revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "framework_revision", r.URL.Query(), &params.FrameworkRevision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "framework_revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "framework_revision", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "context_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "context_id", r.URL.Query(), &params.ContextId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "context_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "context_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pipeline_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "start_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_at", r.URL.Query(), &params.StartAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end_at", r.URL.Query(), &params.EndAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target_basis" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target_basis", r.URL.Query(), &params.TargetBasis, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_basis"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_basis", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_window", r.URL.Query(), &params.CloseWindow, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_window", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "metrics" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "metrics", r.URL.Query(), &params.Metrics, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metrics"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metrics", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "blocks" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "blocks", r.URL.Query(), &params.Blocks, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "blocks"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "blocks", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "metric" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "metric", r.URL.Query(), &params.Metric, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metric"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metric", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "group_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "group_key", r.URL.Query(), &params.GroupKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "group_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group_key", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "through" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "through", r.URL.Query(), &params.Through, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "through"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "through", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingEvidence(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingExecution operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingExecution(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingExecution(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetryReportingExecution operation middleware
+func (siw *ServerInterfaceWrapper) RetryReportingExecution(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetryReportingExecution(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainAnalyticsCell operation middleware
+func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExplainAnalyticsCell(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingFramework operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingFramework(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingFramework(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PublishReportingFramework operation middleware
+func (siw *ServerInterfaceWrapper) PublishReportingFramework(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PublishReportingFrameworkParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublishReportingFramework(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingMetrics operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingMetrics(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingMetrics(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -64874,6 +72458,93 @@ func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListReportingReports operation middleware
+func (siw *ServerInterfaceWrapper) ListReportingReports(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReportingReportsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scheduled" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scheduled", r.URL.Query(), &params.Scheduled, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scheduled"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scheduled", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportingReports(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateReportingReport operation middleware
+func (siw *ServerInterfaceWrapper) CreateReportingReport(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateReportingReport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RenderAnalyticsReport operation middleware
 func (siw *ServerInterfaceWrapper) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
 
@@ -64887,6 +72558,434 @@ func (siw *ServerInterfaceWrapper) RenderAnalyticsReport(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RenderAnalyticsReport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveReportingReport operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveReportingReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveReportingReport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingReport operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingReport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateReportingReport operation middleware
+func (siw *ServerInterfaceWrapper) UpdateReportingReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateReportingReportParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateReportingReport(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReportingEditions operation middleware
+func (siw *ServerInterfaceWrapper) ListReportingEditions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReportingEditionsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportingEditions(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FreezeReportingEdition operation middleware
+func (siw *ServerInterfaceWrapper) FreezeReportingEdition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params FreezeReportingEditionParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = IdempotencyKey
+
+	} else {
+		err := fmt.Errorf("Header parameter Idempotency-Key is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "Idempotency-Key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FreezeReportingEdition(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EvaluateReportingReport operation middleware
+func (siw *ServerInterfaceWrapper) EvaluateReportingReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params EvaluateReportingReportParams
+
+	// ------------- Optional query parameter "revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "revision", r.URL.Query(), &params.Revision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "revision", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EvaluateReportingReport(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReportingExecutions operation middleware
+func (siw *ServerInterfaceWrapper) ListReportingExecutions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReportingExecutionsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportingExecutions(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReportingSchedules operation middleware
+func (siw *ServerInterfaceWrapper) ListReportingSchedules(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportingSchedules(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateReportingSchedule operation middleware
+func (siw *ServerInterfaceWrapper) CreateReportingSchedule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateReportingSchedule(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -64912,8 +73011,6 @@ func (siw *ServerInterfaceWrapper) GetReportRun(w http.ResponseWriter, r *http.R
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -64947,8 +73044,6 @@ func (siw *ServerInterfaceWrapper) ExplainReportRunCell(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -64964,8 +73059,174 @@ func (siw *ServerInterfaceWrapper) ExplainReportRunCell(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateReportingSchedule operation middleware
+func (siw *ServerInterfaceWrapper) UpdateReportingSchedule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateReportingScheduleParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateReportingSchedule(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAnalyticsSchema operation middleware
 func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAnalyticsSchema(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReportingTargets operation middleware
+func (siw *ServerInterfaceWrapper) ListReportingTargets(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReportingTargetsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportingTargets(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateReportingTarget operation middleware
+func (siw *ServerInterfaceWrapper) CreateReportingTarget(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateReportingTarget(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingTarget operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingTarget(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
 
 	ctx := r.Context()
 
@@ -64976,7 +73237,67 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAnalyticsSchema(w, r)
+		siw.Handler.GetReportingTarget(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateReportingTarget operation middleware
+func (siw *ServerInterfaceWrapper) UpdateReportingTarget(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateReportingTargetParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateReportingTarget(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -65316,8 +73637,6 @@ func (siw *ServerInterfaceWrapper) ArchiveRecordAssignment(w http.ResponseWriter
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -65349,8 +73668,6 @@ func (siw *ServerInterfaceWrapper) UpdateRecordAssignment(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -65732,8 +74049,6 @@ func (siw *ServerInterfaceWrapper) GetAttention(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -65825,6 +74140,19 @@ func (siw *ServerInterfaceWrapper) ListAuditLog(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "batch_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "batch_id", r.URL.Query(), &params.BatchId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "batch_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "batch_id", Err: err})
 		}
 		return
 	}
@@ -66482,6 +74810,19 @@ func (siw *ServerInterfaceWrapper) GetAvailability(w http.ResponseWriter, r *htt
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetAvailabilityParams
 
+	// ------------- Optional query parameter "reliable" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "reliable", r.URL.Query(), &params.Reliable, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "reliable"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reliable", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "host_user_id" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "host_user_id", r.URL.Query(), &params.HostUserId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
@@ -66640,8 +74981,6 @@ func (siw *ServerInterfaceWrapper) GenerateMorningBrief(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -66696,8 +75035,6 @@ func (siw *ServerInterfaceWrapper) MarkBriefItemActed(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -66729,8 +75066,6 @@ func (siw *ServerInterfaceWrapper) MarkBriefItemDismissed(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -66764,8 +75099,6 @@ func (siw *ServerInterfaceWrapper) SnoozeBriefItem(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -66798,6 +75131,75 @@ func (siw *ServerInterfaceWrapper) UnsnoozeBriefItem(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnsnoozeBriefItem(w, r, itemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExecuteBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) ExecuteBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ExecuteBulkChangeParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExecuteBulkChange(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) PreviewBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -66805,7 +75207,133 @@ func (siw *ServerInterfaceWrapper) UnsnoozeBriefItem(w http.ResponseWriter, r *h
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UnsnoozeBriefItem(w, r, itemId)
+		siw.Handler.PreviewBulkChange(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) GetBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBulkChange(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) UndoBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoBulkChangeParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoBulkChange(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewBulkUndo operation middleware
+func (siw *ServerInterfaceWrapper) PreviewBulkUndo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewBulkUndo(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -67093,6 +75621,26 @@ func (siw *ServerInterfaceWrapper) RemoveConsumerMailDomain(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RemoveConsumerMailDomain(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCaptureContactsAwaitingDecision operation middleware
+func (siw *ServerInterfaceWrapper) ListCaptureContactsAwaitingDecision(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCaptureContactsAwaitingDecision(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -67861,8 +76409,6 @@ func (siw *ServerInterfaceWrapper) ColdStartReadback(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -67882,8 +76428,6 @@ func (siw *ServerInterfaceWrapper) ColdStartReadback(w http.ResponseWriter, r *h
 func (siw *ServerInterfaceWrapper) ColdStartPreview(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -68315,6 +76859,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "list_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "list_id", r.URL.Query(), &params.ListId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "list_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "list_id", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "sort" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -68519,6 +77076,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "id", r.URL.Query(), &params.Id, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		}
 		return
 	}
@@ -68793,6 +77363,69 @@ func (siw *ServerInterfaceWrapper) GetCompany360(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCompany360(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCompanyAccess operation middleware
+func (siw *ServerInterfaceWrapper) GetCompanyAccess(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCompanyAccessParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCompanyAccess(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -71047,8 +79680,6 @@ func (siw *ServerInterfaceWrapper) RequestCompanyVatCheck(w http.ResponseWriter,
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -71080,8 +79711,6 @@ func (siw *ServerInterfaceWrapper) AcknowledgeCompanyView(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -71834,6 +80463,38 @@ func (siw *ServerInterfaceWrapper) ConnectConnector(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ListConnectorContainers operation middleware
+func (siw *ServerInterfaceWrapper) ListConnectorContainers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider CaptureProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListConnectorContainers(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SetConnectorContextTag operation middleware
 func (siw *ServerInterfaceWrapper) SetConnectorContextTag(w http.ResponseWriter, r *http.Request) {
 
@@ -72043,6 +80704,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "list_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "list_id", r.URL.Query(), &params.ListId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "list_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "list_id", Err: err})
 		}
 		return
 	}
@@ -72258,8 +80932,6 @@ func (siw *ServerInterfaceWrapper) QuickCaptureContact(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -72303,8 +80975,6 @@ func (siw *ServerInterfaceWrapper) QuickCaptureContact(w http.ResponseWriter, r 
 func (siw *ServerInterfaceWrapper) ImportVCards(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -72529,6 +81199,69 @@ func (siw *ServerInterfaceWrapper) GetContact360(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetContact360(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetContactAccess operation middleware
+func (siw *ServerInterfaceWrapper) GetContactAccess(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetContactAccessParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetContactAccess(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -73115,8 +81848,6 @@ func (siw *ServerInterfaceWrapper) ApplyContactEmploymentImport(w http.ResponseW
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -73626,8 +82357,24 @@ func (siw *ServerInterfaceWrapper) RestoreContactProfileField(w http.ResponseWri
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreContactProfileFieldParams
+
+	// ------------- Optional query parameter "value_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_key", r.URL.Query(), &params.ValueKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_key", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RestoreContactProfileField(w, r, id, field)
+		siw.Handler.RestoreContactProfileField(w, r, id, field, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -74887,8 +83634,6 @@ func (siw *ServerInterfaceWrapper) ArchiveDealRoom(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -74979,8 +83724,6 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoom(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -75036,8 +83779,6 @@ func (siw *ServerInterfaceWrapper) CloseDealRoom(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -75105,8 +83846,6 @@ func (siw *ServerInterfaceWrapper) AddDealRoomDocument(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -75147,8 +83886,6 @@ func (siw *ServerInterfaceWrapper) RemoveDealRoomDocument(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -75215,8 +83952,6 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoomDocument(w http.ResponseWriter,
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -75272,8 +84007,6 @@ func (siw *ServerInterfaceWrapper) SetDealRoomExpiry(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -75381,8 +84114,6 @@ func (siw *ServerInterfaceWrapper) InviteDealRoomParticipant(w http.ResponseWrit
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -75423,8 +84154,6 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoomParticipant(w http.ResponseWrit
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -75467,8 +84196,6 @@ func (siw *ServerInterfaceWrapper) ResendDealRoomInvitation(w http.ResponseWrite
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -75510,8 +84237,6 @@ func (siw *ServerInterfaceWrapper) RevokeDealRoomParticipant(w http.ResponseWrit
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -75543,8 +84268,6 @@ func (siw *ServerInterfaceWrapper) PauseDealRoom(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -75609,8 +84332,6 @@ func (siw *ServerInterfaceWrapper) ResumeDealRoom(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -75780,14 +84501,215 @@ func (siw *ServerInterfaceWrapper) ResolveDealRoomThread(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResolveDealRoomThread(w, r, id, threadId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDealSuggestions operation middleware
+func (siw *ServerInterfaceWrapper) ListDealSuggestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDealSuggestionsParams
+
+	// ------------- Optional query parameter "company_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "company_id", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pipeline_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "stage_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "stage_id", r.URL.Query(), &params.StageId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "stage_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stage_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDealSuggestions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptDealSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AcceptDealSuggestionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptDealSuggestion(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DismissDealSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) DismissDealSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DismissDealSuggestionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DismissDealSuggestion(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -75836,6 +84758,19 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "list_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "list_id", r.URL.Query(), &params.ListId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "list_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "list_id", Err: err})
 		}
 		return
 	}
@@ -76425,8 +85360,6 @@ func (siw *ServerInterfaceWrapper) AcceptAppliedDealChange(w http.ResponseWriter
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -76858,8 +85791,6 @@ func (siw *ServerInterfaceWrapper) CreateDealOutcomeReview(w http.ResponseWriter
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -76966,8 +85897,6 @@ func (siw *ServerInterfaceWrapper) RevertStageProgression(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -77471,8 +86400,6 @@ func (siw *ServerInterfaceWrapper) BackfillEmploymentImport(w http.ResponseWrite
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -77854,14 +86781,52 @@ func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResolveInputCheck(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewForecastAssurance operation middleware
+func (siw *ServerInterfaceWrapper) PreviewForecastAssurance(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewForecastAssurance(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartForecastAssuranceRun operation middleware
+func (siw *ServerInterfaceWrapper) StartForecastAssuranceRun(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartForecastAssuranceRun(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -77955,8 +86920,6 @@ func (siw *ServerInterfaceWrapper) ListForecastCalls(w http.ResponseWriter, r *h
 func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -78057,8 +87020,6 @@ func (siw *ServerInterfaceWrapper) OpenForecastShare(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -78091,8 +87052,6 @@ func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -78108,12 +87067,30 @@ func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ListForecastShares operation middleware
+func (siw *ServerInterfaceWrapper) ListForecastShares(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListForecastShares(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateForecastShare operation middleware
 func (siw *ServerInterfaceWrapper) CreateForecastShare(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -78146,8 +87123,6 @@ func (siw *ServerInterfaceWrapper) RevokeForecastShare(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -79426,6 +88401,19 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "list_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "list_id", r.URL.Query(), &params.ListId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "list_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "list_id", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "sort" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -79956,8 +88944,6 @@ func (siw *ServerInterfaceWrapper) ListLeadManualSignals(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -79989,8 +88975,6 @@ func (siw *ServerInterfaceWrapper) SetLeadManualSignal(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -80032,8 +89016,6 @@ func (siw *ServerInterfaceWrapper) ClearLeadManualSignal(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -80144,8 +89126,6 @@ func (siw *ServerInterfaceWrapper) PreviewLeadPromotion(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -80177,8 +89157,6 @@ func (siw *ServerInterfaceWrapper) ReopenLead(w http.ResponseWriter, r *http.Req
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -80235,8 +89213,6 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -80295,8 +89271,8 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// GetMagic operation middleware
-func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Request) {
+// ListLists operation middleware
+func (siw *ServerInterfaceWrapper) ListLists(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -80304,6 +89280,479 @@ func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListListsParams
+
+	// ------------- Optional query parameter "entity_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity_type", r.URL.Query(), &params.EntityType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "list_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "list_type", r.URL.Query(), &params.ListType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "list_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "list_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLists(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateList operation middleware
+func (siw *ServerInterfaceWrapper) CreateList(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateList(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveList operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveList(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveList(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetList operation middleware
+func (siw *ServerInterfaceWrapper) GetList(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetList(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateList operation middleware
+func (siw *ServerInterfaceWrapper) UpdateList(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateList(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListListHistory operation middleware
+func (siw *ServerInterfaceWrapper) ListListHistory(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListListHistoryParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListListHistory(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListListMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListListMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListListMembersParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListListMembers(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddListMember operation middleware
+func (siw *ServerInterfaceWrapper) AddListMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddListMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveListMember operation middleware
+func (siw *ServerInterfaceWrapper) RemoveListMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveListMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainListMember operation middleware
+func (siw *ServerInterfaceWrapper) ExplainListMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "recordId" -------------
+	var recordId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "recordId", chi.URLParam(r, "recordId"), &recordId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "recordId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExplainListMember(w, r, id, recordId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreList operation middleware
+func (siw *ServerInterfaceWrapper) RestoreList(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreList(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMagic operation middleware
+func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -80340,6 +89789,211 @@ func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMagic(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMagicLineRecords operation middleware
+func (siw *ServerInterfaceWrapper) GetMagicLineRecords(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMagicLineRecordsParams
+
+	// ------------- Required query parameter "since" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "since", r.URL.Query(), &params.Since, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "since"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "since", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMagicLineRecords(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMailDraft operation middleware
+func (siw *ServerInterfaceWrapper) GetMailDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMailDraftParams
+
+	// ------------- Required query parameter "anchor_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "anchor_type", r.URL.Query(), &params.AnchorType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "anchor_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "anchor_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "anchor_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "anchor_id", r.URL.Query(), &params.AnchorId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "anchor_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "anchor_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMailDraft(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveMailDraft operation middleware
+func (siw *ServerInterfaceWrapper) SaveMailDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SaveMailDraftParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMailDraft(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DiscardMailDraft operation middleware
+func (siw *ServerInterfaceWrapper) DiscardMailDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiscardMailDraft(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -80681,6 +90335,46 @@ func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ListNotificationPreferences operation middleware
+func (siw *ServerInterfaceWrapper) ListNotificationPreferences(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotificationPreferences(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveNotificationPreference operation middleware
+func (siw *ServerInterfaceWrapper) SaveNotificationPreference(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveNotificationPreference(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyWorkingHours operation middleware
 func (siw *ServerInterfaceWrapper) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
 
@@ -80721,12 +90415,62 @@ func (siw *ServerInterfaceWrapper) SaveMyWorkingHours(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// ListNotices operation middleware
+func (siw *ServerInterfaceWrapper) ListNotices(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNoticesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotices(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RaiseNotice operation middleware
 func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -80734,6 +90478,26 @@ func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RaiseNotice(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkAllNoticesRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkAllNoticesRead(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkAllNoticesRead(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -80759,8 +90523,6 @@ func (siw *ServerInterfaceWrapper) MarkNoticeRead(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -81467,8 +91229,6 @@ func (siw *ServerInterfaceWrapper) RegenerateOffer(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -81581,8 +91341,6 @@ func (siw *ServerInterfaceWrapper) RenderOffer(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -81638,8 +91396,6 @@ func (siw *ServerInterfaceWrapper) SendOffer(w http.ResponseWriter, r *http.Requ
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -82078,6 +91834,53 @@ func (siw *ServerInterfaceWrapper) CreatePipeline(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ReorderPipelines operation middleware
+func (siw *ServerInterfaceWrapper) ReorderPipelines(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReorderPipelinesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReorderPipelines(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ArchivePipeline operation middleware
 func (siw *ServerInterfaceWrapper) ArchivePipeline(w http.ResponseWriter, r *http.Request) {
 
@@ -82247,6 +92050,81 @@ func (siw *ServerInterfaceWrapper) RestorePipeline(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RestorePipeline(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReorderStages operation middleware
+func (siw *ServerInterfaceWrapper) ReorderStages(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReorderStagesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReorderStages(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -82959,8 +92837,6 @@ func (siw *ServerInterfaceWrapper) TransferProjectOwnership(w http.ResponseWrite
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -83542,8 +93418,6 @@ func (siw *ServerInterfaceWrapper) CreateProjectHealthAssessment(w http.Response
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -83608,8 +93482,6 @@ func (siw *ServerInterfaceWrapper) CorrectProjectHealthAssessment(w http.Respons
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -84024,6 +93896,20 @@ func (siw *ServerInterfaceWrapper) DeleteProviderData(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// GetPublicBookingCompanyLogo operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicBookingCompanyLogo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // BookPublicMeeting operation middleware
 func (siw *ServerInterfaceWrapper) BookPublicMeeting(w http.ResponseWriter, r *http.Request) {
 
@@ -84142,6 +94028,32 @@ func (siw *ServerInterfaceWrapper) GetPublicAvailability(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetPublicSchedulingProfile operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_slug" -------------
+	var hostSlug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_slug", chi.URLParam(r, "host_slug"), &hostSlug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicSchedulingProfile(w, r, hostSlug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetConfirmDetails operation middleware
 func (siw *ServerInterfaceWrapper) GetConfirmDetails(w http.ResponseWriter, r *http.Request) {
 
@@ -84185,6 +94097,113 @@ func (siw *ServerInterfaceWrapper) SubmitConfirmDetails(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SubmitConfirmDetails(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicMeetingInvitation operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicMeetingInvitation(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ChangePublicMeetingInvitation operation middleware
+func (siw *ServerInterfaceWrapper) ChangePublicMeetingInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ChangePublicMeetingInvitation(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicMeetingAvailability operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicMeetingAvailability(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicMeetingAvailabilityParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicMeetingAvailability(w, r, token, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -84305,6 +94324,113 @@ func (siw *ServerInterfaceWrapper) OneClickUnsubscribe(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.OneClickUnsubscribe(w, r, token, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicMeetingProposal operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicMeetingProposal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicMeetingProposal(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptPublicMeetingProposal operation middleware
+func (siw *ServerInterfaceWrapper) AcceptPublicMeetingProposal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptPublicMeetingProposal(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicProposalAvailability operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicProposalAvailability(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicProposalAvailabilityParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicProposalAvailability(w, r, token, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -84653,8 +94779,6 @@ func (siw *ServerInterfaceWrapper) CreateRecordGrant(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -84710,8 +94834,6 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -84868,46 +94990,6 @@ func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateRecordRole(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// RepairSourceAttribution operation middleware
-func (siw *ServerInterfaceWrapper) RepairSourceAttribution(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RepairSourceAttribution(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// RebuildAttributionGraph operation middleware
-func (siw *ServerInterfaceWrapper) RebuildAttributionGraph(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RebuildAttributionGraph(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -85312,8 +95394,6 @@ func (siw *ServerInterfaceWrapper) CreateRecordAssignment(w http.ResponseWriter,
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -85670,6 +95750,45 @@ func (siw *ServerInterfaceWrapper) ExplainReport(w http.ResponseWriter, r *http.
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ExplainReportParams
 
+	// ------------- Optional query parameter "handle_version" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "handle_version", r.URL.Query(), &params.HandleVersion, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "handle_version"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "handle_version", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "by" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "by", r.URL.Query(), &params.By, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
@@ -85802,6 +95921,188 @@ func (siw *ServerInterfaceWrapper) UpdateRetentionPolicy(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateRetentionPolicy(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLegalHolds operation middleware
+func (siw *ServerInterfaceWrapper) ListLegalHolds(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListLegalHoldsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLegalHolds(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LiftLegalHold operation middleware
+func (siw *ServerInterfaceWrapper) LiftLegalHold(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entityType" -------------
+	var entityType HeldEntityType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entityType", chi.URLParam(r, "entityType"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entityType", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "recordId" -------------
+	var recordId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "recordId", chi.URLParam(r, "recordId"), &recordId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "recordId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params LiftLegalHoldParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LiftLegalHold(w, r, entityType, recordId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PlaceLegalHold operation middleware
+func (siw *ServerInterfaceWrapper) PlaceLegalHold(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entityType" -------------
+	var entityType HeldEntityType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entityType", chi.URLParam(r, "entityType"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entityType", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "recordId" -------------
+	var recordId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "recordId", chi.URLParam(r, "recordId"), &recordId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "recordId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PlaceLegalHoldParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PlaceLegalHold(w, r, entityType, recordId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -86018,6 +96319,45 @@ func (siw *ServerInterfaceWrapper) UpdateRetentionSettings(w http.ResponseWriter
 // ListRoles operation middleware
 func (siw *ServerInterfaceWrapper) ListRoles(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListRolesParams
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRoles(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateRole operation middleware
+func (siw *ServerInterfaceWrapper) CreateRole(w http.ResponseWriter, r *http.Request) {
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -86025,7 +96365,95 @@ func (siw *ServerInterfaceWrapper) ListRoles(w http.ResponseWriter, r *http.Requ
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListRoles(w, r)
+		siw.Handler.CreateRole(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateRole operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", chi.URLParam(r, "key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateRoleParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateRole(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveRole operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", chi.URLParam(r, "key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveRole(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -86100,6 +96528,38 @@ func (siw *ServerInterfaceWrapper) SetRoleObjectGrant(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreRole operation middleware
+func (siw *ServerInterfaceWrapper) RestoreRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", chi.URLParam(r, "key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreRole(w, r, key)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListScheduledSends operation middleware
 func (siw *ServerInterfaceWrapper) ListScheduledSends(w http.ResponseWriter, r *http.Request) {
 
@@ -86107,8 +96567,6 @@ func (siw *ServerInterfaceWrapper) ListScheduledSends(w http.ResponseWriter, r *
 	_ = err
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -86158,8 +96616,6 @@ func (siw *ServerInterfaceWrapper) GetScheduledSend(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -86191,8 +96647,6 @@ func (siw *ServerInterfaceWrapper) RescheduleScheduledSend(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -86250,6 +96704,145 @@ func (siw *ServerInterfaceWrapper) CancelScheduledSend(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelScheduledSend(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSchedulingCalendars operation middleware
+func (siw *ServerInterfaceWrapper) GetSchedulingCalendars(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSchedulingCalendarsParams
+
+	// ------------- Required query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSchedulingCalendars(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateMeetingInvitation operation middleware
+func (siw *ServerInterfaceWrapper) CreateMeetingInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateMeetingInvitationParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateMeetingInvitation(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMeetingInvitation operation middleware
+func (siw *ServerInterfaceWrapper) GetMeetingInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -86257,7 +96850,189 @@ func (siw *ServerInterfaceWrapper) CancelScheduledSend(w http.ResponseWriter, r 
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CancelScheduledSend(w, r, id)
+		siw.Handler.GetMeetingInvitation(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ChangeMeetingInvitation operation middleware
+func (siw *ServerInterfaceWrapper) ChangeMeetingInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ChangeMeetingInvitation(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMeetingAvailability operation middleware
+func (siw *ServerInterfaceWrapper) GetMeetingAvailability(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMeetingAvailabilityParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMeetingAvailability(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSchedulingProfile operation middleware
+func (siw *ServerInterfaceWrapper) GetSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSchedulingProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutSchedulingProfile operation middleware
+func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutSchedulingProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateMeetingProposal operation middleware
+func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateMeetingProposalParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateMeetingProposal(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -86474,8 +97249,6 @@ func (siw *ServerInterfaceWrapper) CreateSignal(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -86531,8 +97304,6 @@ func (siw *ServerInterfaceWrapper) ArchiveSignal(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -86599,8 +97370,6 @@ func (siw *ServerInterfaceWrapper) UpdateSignal(w http.ResponseWriter, r *http.R
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -86710,8 +97479,6 @@ func (siw *ServerInterfaceWrapper) ResolveSignal(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -86837,8 +97604,6 @@ func (siw *ServerInterfaceWrapper) SetTransitionPolicy(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -86894,8 +97659,6 @@ func (siw *ServerInterfaceWrapper) ResumeTransitionPolicy(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -87757,8 +98520,6 @@ func (siw *ServerInterfaceWrapper) RestoreTag(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -88093,6 +98854,19 @@ func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "include_invited" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_invited", r.URL.Query(), &params.IncludeInvited, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_invited"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_invited", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListUsers(w, r, params)
 	}))
@@ -88108,8 +98882,6 @@ func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Requ
 func (siw *ServerInterfaceWrapper) InviteUser(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -88178,12 +98950,30 @@ func (siw *ServerInterfaceWrapper) PreviewAccess(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ListAssignableRoles operation middleware
+func (siw *ServerInterfaceWrapper) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAssignableRoles(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateFormerMember operation middleware
 func (siw *ServerInterfaceWrapper) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -88249,8 +99039,6 @@ func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -88282,8 +99070,6 @@ func (siw *ServerInterfaceWrapper) IssueUserPasswordLink(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -88317,8 +99103,6 @@ func (siw *ServerInterfaceWrapper) ReactivateUser(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -88350,8 +99134,6 @@ func (siw *ServerInterfaceWrapper) ChangeUserRole(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90014,8 +100796,6 @@ func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90047,8 +100827,6 @@ func (siw *ServerInterfaceWrapper) EditWeeklyPlanCommitment(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90082,8 +100860,6 @@ func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90115,8 +100891,6 @@ func (siw *ServerInterfaceWrapper) AnswerWeeklyPlanCommitment(w http.ResponseWri
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90150,8 +100924,6 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseW
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90171,8 +100943,6 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseW
 func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90194,8 +100964,6 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90215,8 +100983,6 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 func (siw *ServerInterfaceWrapper) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90250,8 +101016,6 @@ func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90271,8 +101035,6 @@ func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, 
 func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90296,8 +101058,6 @@ func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, 
 	_ = err
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90337,8 +101097,6 @@ func (siw *ServerInterfaceWrapper) GetTeamWeeklyReview(w http.ResponseWriter, r 
 	_ = err
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90391,8 +101149,6 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	_ = err
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90482,8 +101238,6 @@ func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90503,8 +101257,6 @@ func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *h
 func (siw *ServerInterfaceWrapper) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90526,14 +101278,44 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHiddenBacklog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetHiddenBacklogRows operation middleware
+func (siw *ServerInterfaceWrapper) GetHiddenBacklogRows(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "rule" -------------
+	var rule GetHiddenBacklogRowsParamsRule
+
+	err = runtime.BindStyledParameterWithOptions("simple", "rule", chi.URLParam(r, "rule"), &rule, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rule", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHiddenBacklogRows(w, r, rule)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90623,8 +101405,6 @@ func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90663,8 +101443,6 @@ func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.R
 	_ = err
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90904,10 +101682,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/reporting/pause", wrapper.PauseReportingSchedules)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/admin/reset-data", wrapper.ResetData)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/agent-tools", wrapper.ListAgentTools)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/ai-model-rates", wrapper.DeleteAiModelRate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai-model-rates", wrapper.ListAiModelRates)
@@ -90917,6 +101701,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai-model-rates/propose-refresh", wrapper.ProposeAiModelRateRefresh)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai-model-rates/refresh", wrapper.RefreshAiModelRates)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/available-models/{provider}", wrapper.ListAvailableModels)
@@ -90955,6 +101742,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/ai/provider-keys/{provider}", wrapper.SetAiProviderKey)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/provider-keys/{provider}/test", wrapper.TestAiProviderKey)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/routing", wrapper.GetAiRouting)
 	})
 	r.Group(func(r chi.Router) {
@@ -90976,13 +101766,82 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/editions/compare", wrapper.CompareReportingEditions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/editions/{id}", wrapper.GetReportingEdition)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/editions/{id}/evidence", wrapper.GetReportingEditionEvidence)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/editions/{id}/export.csv", wrapper.ExportReportingEdition)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/evaluate", wrapper.EvaluateReporting)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/evaluate.csv", wrapper.ExportReportingEvaluation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/evidence", wrapper.GetReportingEvidence)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/executions/{id}", wrapper.GetReportingExecution)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/executions/{id}/retry", wrapper.RetryReportingExecution)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/explain", wrapper.ExplainAnalyticsCell)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/framework", wrapper.GetReportingFramework)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/analytics/framework", wrapper.PublishReportingFramework)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/metrics", wrapper.GetReportingMetrics)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports", wrapper.ListReportingReports)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports", wrapper.CreateReportingReport)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/reports/render", wrapper.RenderAnalyticsReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/analytics/reports/{id}", wrapper.ArchiveReportingReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}", wrapper.GetReportingReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/analytics/reports/{id}", wrapper.UpdateReportingReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/editions", wrapper.ListReportingEditions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports/{id}/editions", wrapper.FreezeReportingEdition)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/evaluation", wrapper.EvaluateReportingReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/executions", wrapper.ListReportingExecutions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/schedules", wrapper.ListReportingSchedules)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports/{id}/schedules", wrapper.CreateReportingSchedule)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/runs/{run_id}", wrapper.GetReportRun)
@@ -90991,7 +101850,22 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/analytics/runs/{run_id}/cells/explain", wrapper.ExplainReportRunCell)
 	})
 	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/analytics/schedules/{id}", wrapper.UpdateReportingSchedule)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/schema", wrapper.GetAnalyticsSchema)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/targets", wrapper.ListReportingTargets)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/targets", wrapper.CreateReportingTarget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/targets/{id}", wrapper.GetReportingTarget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/analytics/targets/{id}", wrapper.UpdateReportingTarget)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/approval-bundles/{bundle_id}/approve", wrapper.ApproveApprovalBundle)
@@ -91138,6 +102012,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/brief/items/{itemId}/unsnooze", wrapper.UnsnoozeBriefItem)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/execute", wrapper.ExecuteBulkChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/preview", wrapper.PreviewBulkChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/bulk/{id}", wrapper.GetBulkChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/{id}/undo", wrapper.UndoBulkChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/{id}/undo/preview", wrapper.PreviewBulkUndo)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/activity", wrapper.ListMyCaptureActivity)
 	})
 	r.Group(func(r chi.Router) {
@@ -91163,6 +102052,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/consumer-mail-domains/{id}", wrapper.RemoveConsumerMailDomain)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/contacts-awaiting-decision", wrapper.ListCaptureContactsAwaitingDecision)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/counterparty-holds", wrapper.ListCaptureCounterpartyHolds)
@@ -91301,6 +102193,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/360", wrapper.GetCompany360)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/{id}/access", wrapper.GetCompanyAccess)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/companies/{id}/ask", wrapper.AskAboutCompany)
@@ -91504,6 +102399,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/connectors/{provider}/connect", wrapper.ConnectConnector)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/connectors/{provider}/containers", wrapper.ListConnectorContainers)
+	})
+	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/connectors/{provider}/context-tag", wrapper.SetConnectorContextTag)
 	})
 	r.Group(func(r chi.Router) {
@@ -91544,6 +102442,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/360", wrapper.GetContact360)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/access", wrapper.GetContactAccess)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/brief", wrapper.GetContactBrief)
@@ -91768,6 +102669,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/deal-rooms/{id}/threads/{threadId}/resolve", wrapper.ResolveDealRoomThread)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deal-suggestions", wrapper.ListDealSuggestions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deal-suggestions/{id}/accept", wrapper.AcceptDealSuggestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deal-suggestions/{id}/dismiss", wrapper.DismissDealSuggestion)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals", wrapper.ListDeals)
 	})
 	r.Group(func(r chi.Router) {
@@ -91891,6 +102801,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/resolve", wrapper.ResolveInputCheck)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/assurance/preview", wrapper.PreviewForecastAssurance)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/forecast/assurance/runs", wrapper.StartForecastAssuranceRun)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/calls", wrapper.ListForecastCalls)
 	})
 	r.Group(func(r chi.Router) {
@@ -91904,6 +102820,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/shared/{token}/export.csv", wrapper.ExportForecastShare)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/shares", wrapper.ListForecastShares)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/shares", wrapper.CreateForecastShare)
@@ -92086,7 +103005,52 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/leads/{id}/score", wrapper.ExplainLeadScore)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/lists", wrapper.ListLists)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists", wrapper.CreateList)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/lists/{id}", wrapper.ArchiveList)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/lists/{id}", wrapper.GetList)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/lists/{id}", wrapper.UpdateList)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/lists/{id}/history", wrapper.ListListHistory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/lists/{id}/members", wrapper.ListListMembers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists/{id}/members", wrapper.AddListMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists/{id}/members/remove", wrapper.RemoveListMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/lists/{id}/members/{recordId}/why", wrapper.ExplainListMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists/{id}/restore", wrapper.RestoreList)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/magic", wrapper.GetMagic)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/magic/lines/{id}/records", wrapper.GetMagicLineRecords)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/mail-drafts", wrapper.GetMailDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/mail-drafts", wrapper.SaveMailDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/mail-drafts/{id}", wrapper.DiscardMailDraft)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetCurrentPrincipal)
@@ -92131,13 +103095,25 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/me/locale", wrapper.SaveMyLocale)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/notification-preferences", wrapper.ListNotificationPreferences)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/notification-preferences", wrapper.SaveNotificationPreference)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/working-hours", wrapper.GetMyWorkingHours)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/working-hours", wrapper.SaveMyWorkingHours)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/notices", wrapper.ListNotices)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/notices", wrapper.RaiseNotice)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/notices/read-all", wrapper.MarkAllNoticesRead)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/notices/{id}/read", wrapper.MarkNoticeRead)
@@ -92227,6 +103203,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/pipelines", wrapper.CreatePipeline)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/pipelines/order", wrapper.ReorderPipelines)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/pipelines/{id}", wrapper.ArchivePipeline)
 	})
 	r.Group(func(r chi.Router) {
@@ -92237,6 +103216,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/pipelines/{id}/restore", wrapper.RestorePipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/pipelines/{id}/stage-order", wrapper.ReorderStages)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/privacy/controller-particulars", wrapper.GetControllerParticulars)
@@ -92335,16 +103317,31 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/provider-connections/{provider}/data", wrapper.DeleteProviderData)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/booking/company-logo", wrapper.GetPublicBookingCompanyLogo)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/public/booking/{host_slug}", wrapper.BookPublicMeeting)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/booking/{host_slug}/availability", wrapper.GetPublicAvailability)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/booking/{host_slug}/profile", wrapper.GetPublicSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/confirm/{token}", wrapper.GetConfirmDetails)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/public/confirm/{token}", wrapper.SubmitConfirmDetails)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/meeting/{token}", wrapper.GetPublicMeetingInvitation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/public/meeting/{token}", wrapper.ChangePublicMeetingInvitation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/meeting/{token}/availability", wrapper.GetPublicMeetingAvailability)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/preferences/{token}", wrapper.GetPreferenceCenter)
@@ -92357,6 +103354,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/public/preferences/{token}/unsubscribe", wrapper.OneClickUnsubscribe)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/proposal/{token}", wrapper.GetPublicMeetingProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/proposal/{token}", wrapper.AcceptPublicMeetingProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/proposal/{token}/availability", wrapper.GetPublicProposalAvailability)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/rooms/documents", wrapper.ListBuyerRoomDocuments)
@@ -92405,12 +103411,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/record-roles/{id}", wrapper.UpdateRecordRole)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/records/attribution", wrapper.RepairSourceAttribution)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/records/attribution/rebuild", wrapper.RebuildAttributionGraph)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/tags", wrapper.GetRecordTags)
@@ -92464,6 +103464,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/retention-policies/{id}", wrapper.UpdateRetentionPolicy)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/retention/legal-holds", wrapper.ListLegalHolds)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/retention/legal-holds/{entityType}/{recordId}/lift", wrapper.LiftLegalHold)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/retention/legal-holds/{entityType}/{recordId}/place", wrapper.PlaceLegalHold)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/retention/restrictions", wrapper.ListRestrictedActivities)
 	})
 	r.Group(func(r chi.Router) {
@@ -92482,7 +103491,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/roles", wrapper.ListRoles)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/roles", wrapper.CreateRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/roles/{key}", wrapper.UpdateRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/roles/{key}/archive", wrapper.ArchiveRole)
+	})
+	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/roles/{key}/objects/{object}", wrapper.SetRoleObjectGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/roles/{key}/restore", wrapper.RestoreRole)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduled-sends", wrapper.ListScheduledSends)
@@ -92495,6 +103516,30 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/scheduled-sends/{id}/cancel", wrapper.CancelScheduledSend)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/calendars", wrapper.GetSchedulingCalendars)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduling/invitations", wrapper.CreateMeetingInvitation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/invitations/{id}", wrapper.GetMeetingInvitation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/scheduling/invitations/{id}", wrapper.ChangeMeetingInvitation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/invitations/{id}/availability", wrapper.GetMeetingAvailability)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/profile", wrapper.GetSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/profile", wrapper.PutSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduling/proposals", wrapper.CreateMeetingProposal)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/search", wrapper.Search)
@@ -92615,6 +103660,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/access-preview", wrapper.PreviewAccess)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/assignable-roles", wrapper.ListAssignableRoles)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/former", wrapper.CreateFormerMember)
@@ -92780,6 +103828,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/hidden/{rule}", wrapper.GetHiddenBacklogRows)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/worklist/pins", wrapper.UnpinWorklistRow)

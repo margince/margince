@@ -7,10 +7,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Heading } from "../design-system/heading";
+import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { AccountMenu } from "./account";
 import { meFixture } from "./mefixture";
-import { setThemeChoice, THEME_KEY } from "./theme";
+import { STORAGE_KEYS } from "./storage";
+import { setThemeChoice } from "./theme";
+
+const THEME_KEY = STORAGE_KEYS.theme.name;
 
 // The account block: an avatar in the top bar's trail, and the menu it opens is
 // the product's ONE door into settings and its ONE appearance control — the
@@ -38,11 +43,13 @@ const render = (ui: Parameters<typeof rtlRender>[0]) => {
     defaultOptions: { queries: { retry: false } },
   });
   client.setQueryData(["me"], meFixture());
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      </QueryClientProvider>
+    ),
+  });
 };
 
 // The same shell, with this reader carrying a different display name and the
@@ -81,19 +88,17 @@ const choice = (name: string) => screen.getByRole("radio", { name });
 
 describe("AccountMenu", () => {
   // The rail's chip and the settings page's chip are the SAME contact, so they
-  // are the same colour — and they stay that colour when the display name
-  // changes, because the tint is keyed on the address rather than on the name.
-  it("keys the chip's tone on the address, not the display name", () => {
-    const toneOf = (root: HTMLElement) =>
-      [...(root.querySelector(".avatar")?.classList ?? [])].find((cls) =>
-        cls.startsWith("avatar-t"),
-      );
+  // wear the same mesh — and keep it when the display name changes, because
+  // the mesh is keyed on the address rather than on the name.
+  it("keys the chip's mesh on the address, not the display name", () => {
+    const meshOf = (root: HTMLElement) =>
+      root.querySelector(".avatar-mesh")?.getAttribute("style");
     const { container: named } = renderNamed("Test User");
-    const tone = toneOf(named);
-    expect(tone).toBeTruthy();
+    const mesh = meshOf(named);
+    expect(mesh).toContain("--avatar-hue-a");
     cleanup();
     const { container: renamed } = renderNamed("Renamed Contact");
-    expect(toneOf(renamed)).toBe(tone);
+    expect(meshOf(renamed)).toBe(mesh);
   });
 
   // WCAG 2.5.3: the row prints the contact's name, so a voice user who says the
@@ -250,6 +255,8 @@ describe("AccountMenu", () => {
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("Theme"));
     await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(row("My booking link"));
+    await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("Sign out"));
     // Wrapping, so the walk has no dead end.
     await user.keyboard("{ArrowDown}");
@@ -278,6 +285,31 @@ describe("AccountMenu", () => {
 
     await user.keyboard("{ArrowDown}");
     expect(stops()).toEqual([row("Theme")]);
+  });
+
+  // A dialog raised over the open menu owns Escape: one press closes the
+  // dialog alone, not it and the menu the reader cannot see under it.
+  it("leaves Escape to a dialog raised over it", async () => {
+    const onDialogClose = vi.fn();
+    const page = (dialogOpen: boolean) => (
+      <>
+        <AccountMenu />
+        <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+          <Heading size="large" id="edit">
+            Edit deal
+          </Heading>
+        </Modal>
+      </>
+    );
+    const user = userEvent.setup();
+    const { container, rerender } = render(page(false));
+    await openMenu(user, railTrigger());
+    rerender(page(true));
+
+    await user.keyboard("{Escape}");
+
+    expect(onDialogClose).toHaveBeenCalledOnce();
+    expect(container.querySelector(".accountmenu")).not.toBeNull();
   });
 
   it("hands focus back to the trigger when Escape closes it", async () => {

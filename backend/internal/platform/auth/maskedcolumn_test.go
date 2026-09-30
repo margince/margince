@@ -5,10 +5,12 @@ package auth_test
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -163,5 +165,159 @@ func TestMaskedExpressionSQLIsTheBareExpressionWithoutAMask(t *testing.T) {
 	}
 	if got != fold {
 		t.Errorf("MaskedExpressionSQL = %q, want the expression unchanged", got)
+	}
+}
+
+// Write authority is answerable only where rows carry an owner and can be
+// shared. A product has no owner, so "outside the rows you may write" names no
+// row at all on one — and an unanswerable condition withholds rather than
+// erroring the read, which is the direction that cannot leak.
+func TestMaskedColumnSQLWithholdsWhereWriteAuthorityCannotBeAnswered(t *testing.T) {
+	t.Parallel()
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"product": {Read: true, Update: true}},
+			RowScope: principal.RowScopeTeam,
+			FieldMasks: []principal.FieldMask{{
+				Object: "product", Field: "unit_price_minor", Condition: principal.MaskOutsideWriteAuthority,
+			}},
+		},
+	})
+	got, err := auth.MaskedColumnSQL(ctx, "product", "unit_price_minor", "p", "unit_price_minor",
+		func(any) int { return 1 })
+	if err != nil {
+		t.Fatalf("MaskedColumnSQL: %v", err)
+	}
+	if !strings.HasPrefix(got, "CASE WHEN FALSE THEN") {
+		t.Errorf("MaskedColumnSQL = %q, want the column withheld on every row", got)
+	}
+}
+
+// MaskedFields answers what the mask WITHHOLDS, not how it is configured.
+//
+// Four surfaces ask this question and then decide what to null or leave out —
+// the record read, a filtered export, its preview, and a field's history. Each
+// used to expand the configured name for itself, and only the record read
+// expanded it at all, so a mask on the amount left the ARR and the currency
+// exportable, previewable and readable through an audit diff. Expanding here,
+// where they all ask, is what makes the four agree by construction.
+func TestMaskedFieldsAnswersWithTheWholeGroupAMaskWithholds(t *testing.T) {
+	t.Parallel()
+
+	ctx := maskedActor(principal.FieldMask{Object: fieldmask.Deal, Field: "amount_minor"})
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		t.Fatal("the fixture built no principal")
+	}
+
+	got := auth.MaskedFields(p, fieldmask.Deal, false)
+	for _, field := range []string{"amount_minor", "expected_arr_minor", "currency"} {
+		if !slices.Contains(got, field) {
+			t.Errorf("a mask on the amount answers %v, missing %q — a reader withholding exactly "+
+				"what it is told sends the value", got, field)
+		}
+	}
+	// And the question a sort, a filter or a search predicate asks.
+	masked, err := auth.MasksAnyRowOf(ctx, fieldmask.Deal, "expected_arr_minor")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !masked {
+		t.Error("ordering or filtering by the ARR is allowed under a mask on the amount it " +
+			"is withheld with, and the order alone discloses it")
+	}
+}
+
+// An object this build groups nothing for still withholds what it is told to.
+//
+// The grouping table is not an allowlist: read as one it would answer "nothing
+// is withheld" for every object absent from it, which is every object but the
+// deal — a mask that withholds nothing, and indistinguishable from no mask.
+func TestAMaskOnAnUngroupedObjectStillWithholdsItsField(t *testing.T) {
+	t.Parallel()
+
+	ctx := maskedActor(principal.FieldMask{Object: "company", Field: "legal_name"})
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		t.Fatal("the fixture built no principal")
+	}
+	if got := auth.MaskedFields(p, "company", false); !slices.Equal(got, []string{"legal_name"}) {
+		t.Errorf("a mask on an ungrouped object answered %v, want the field it names", got)
+	}
+}
+
+// The SQL arms match the group too, not the spelling.
+//
+// MaskedColumnSQL, MaskedExpressionSQL and MaskExcludedClause all ask
+// MaskExcludedClause which masks reach one column, and every caller in the tree
+// asks about the amount. Matched by name, a mask configured on the ARR beside
+// it left an aggregate summing figures the reader may not read and a column
+// rendering them — the group closed at the wire and stayed open in SQL.
+func TestTheSQLArmsMatchTheGroupAMaskWithholds(t *testing.T) {
+	t.Parallel()
+
+	ctx := maskedActor(principal.FieldMask{Object: fieldmask.Deal, Field: "expected_arr_minor"})
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+
+	_, masked, err := auth.MaskExcludedClause(ctx, fieldmask.Deal, "amount_minor", "d", arg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !masked {
+		t.Error("a mask on the ARR left the amount unexcluded — an aggregate over it is taken " +
+			"over figures this reader may not read")
+	}
+}
+
+// Who reads every column, and when a conditioned mask lifts.
+//
+// Both arms are easy to assert backwards. An unbounded principal reads
+// everything BY DESIGN, so a fixture that leaves row_scope at `all` and hangs
+// masks off it asserts nothing and passes — which is how a masking test comes
+// out green while covering the opposite of what it claims. The conditioned arm
+// is the mirror: it lifts exactly where the caller could write, and a test
+// asking only the unwritable side never sees it lift at all.
+func TestWhoReadsEveryColumnAndWhenAConditionedMaskLifts(t *testing.T) {
+	t.Parallel()
+
+	masks := []principal.FieldMask{{
+		Object: fieldmask.Deal, Field: "amount_minor",
+		Condition: principal.MaskOutsideWriteAuthority,
+	}}
+
+	bounded, ok := principal.Actor(maskedActor(masks...))
+	if !ok {
+		t.Fatal("the fixture built no principal")
+	}
+	if got := auth.MaskedFields(bounded, fieldmask.Deal, false); len(got) == 0 {
+		t.Error("a row the caller cannot write reported no mask — the condition withholds there")
+	}
+	if got := auth.MaskedFields(bounded, fieldmask.Deal, true); len(got) != 0 {
+		t.Errorf("a row the caller COULD write still reported %v — the condition is what lifts it, "+
+			"and a mask that never lifts is an always-mask wearing the other name", got)
+	}
+
+	unbounded := bounded
+	unbounded.Permissions.RowScope = principal.RowScopeAll
+	if got := auth.MaskedFields(unbounded, fieldmask.Deal, false); len(got) != 0 {
+		t.Errorf("a principal reading every row reported %v; reading every row is reading every "+
+			"column, and every masking fixture built on one asserts nothing", got)
+	}
+}
+
+// With nobody bound to the context, the mask question ERRORS.
+//
+// Every caller of this uses the answer to decide what to withhold, so the one
+// reply it must never give unasked is "no". Returning false with no actor would
+// read as "nothing is masked" at each of them, and a sort, a filter or a search
+// predicate would compile over a column nobody established the caller may read.
+func TestTheMaskQuestionRefusesWhenNobodyIsAsking(t *testing.T) {
+	t.Parallel()
+
+	if _, err := auth.MasksAnyRowOf(context.Background(), fieldmask.Deal, "amount_minor"); err == nil {
+		t.Error("the mask question answered a context with no actor — every caller reads that " +
+			"answer as \"nothing is withheld\"")
 	}
 }

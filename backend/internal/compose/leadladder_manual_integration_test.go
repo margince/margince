@@ -49,7 +49,7 @@ func TestManualMeetingClimbsTheLeadLadder(t *testing.T) {
 	})
 
 	subject := "Kickoff on site"
-	held := crmcontracts.CreateActivityRequestMeetingStatusHeld
+	held := crmcontracts.CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusHeld
 	in, err := activities.LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind:          crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
 		Subject:       &subject,

@@ -70,7 +70,7 @@ func TestApprovingAStagedLinkedInMatchLinksTheConnectionAndWritesTheURL(t *testi
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	staged, err := StageLinkedInMatches(ctx, svc, store)
+	staged, err := StageLinkedInMatches(ctx, e.Pool, svc, store)
 	if err != nil {
 		t.Fatalf("staging: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestARefusedLinkedInMatchIsNeverProposedAgain(t *testing.T) {
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
@@ -129,7 +129,7 @@ func TestARefusedLinkedInMatchIsNeverProposedAgain(t *testing.T) {
 	}
 
 	// The stager runs again, exactly as a re-import or the hourly sweep would.
-	staged, err := StageLinkedInMatches(ctx, svc, store)
+	staged, err := StageLinkedInMatches(ctx, e.Pool, svc, store)
 	if err != nil {
 		t.Fatalf("re-staging: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
@@ -226,7 +226,7 @@ func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 
 	// The refusal is observed by the pass that would have re-proposed, which is
 	// what writes it to the row.
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("re-staging after the refusal: %v", err)
 	}
 	if status := linkedInMatchStatus(t, e); status != "rejected" {
@@ -283,7 +283,7 @@ func TestAContactEditDoesNotCancelAWaitingLinkedInMatch(t *testing.T) {
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 	id := onlyPendingLinkedInMatch(t, e)
@@ -432,7 +432,7 @@ func TestAFailedLinkedInApplyLeavesTheApprovalUnconsumed(t *testing.T) {
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 	approval := onlyPendingLinkedInMatch(t, e)
@@ -498,7 +498,7 @@ func TestRejectingALinkedInMatchMarksTheGhostRowAtTheMomentItIsRejected(t *testi
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 
@@ -547,7 +547,7 @@ func TestThePendingReadExcludesARefusedConnectionThatIsStillThere(t *testing.T) 
 
 	// Through the real reject, which is what a member does.
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
@@ -591,7 +591,7 @@ func TestARefusalDoesNotDiscardASuggestionStagedForSomebodyElse(t *testing.T) {
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 
@@ -619,5 +619,56 @@ func TestARefusalDoesNotDiscardASuggestionStagedForSomebodyElse(t *testing.T) {
 	if contact == nil || *contact != ids.UUID(moved.Id) {
 		t.Errorf("the connection names %v, want the contact it was moved to (%s) — a refusal aimed at "+
 			"one pair discarded another", contact, ids.UUID(moved.Id))
+	}
+}
+
+// A colleague decides the match, and the write still names the STAGER's
+// connection.
+//
+// This kind used to be withheld from every seat but the one whose export
+// produced it. It is not any more — anyone whose row scope reaches the contact
+// and who holds the contact write decides one — and that makes the payload's
+// owner load-bearing in a way it was not while decider and owner were always
+// the same human. Bind the write on the decider instead and this is the test
+// that fails: Rep2 approving Rep1's proposal would look for a connection Rep2
+// does not have, and either write nothing or write against their own.
+func TestAColleagueDecidingAMatchAppliesItToTheStagersConnection(t *testing.T) {
+	e := integration.Setup(t)
+	stager := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	contact := linkedInMatchFixture(stager, t, e)
+
+	store := contacts.NewStore(e.DB())
+	if _, err := store.MatchLinkedInConnections(stager, e.Rep1); err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+	svc := approvalsServiceWithEffects(e.Pool)
+	if staged, err := StageLinkedInMatches(stager, e.Pool, svc, store); err != nil || staged != 1 {
+		t.Fatalf("staging = %d, %v; want the one folded-name match", staged, err)
+	}
+
+	// Rep2: a different human, in the same team, with the same grants. Nothing
+	// about this seat produced the connection.
+	colleague := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
+	id := onlyPendingLinkedInMatch(t, e)
+	if _, err := svc.Decide(colleague, id, true, nil); err != nil {
+		t.Fatalf("a colleague approving the match: %v", err)
+	}
+
+	var owner, matched *ids.UUID
+	var status string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT owner_user_id, matched_contact_id, match_status FROM linkedin_connection
+			 WHERE normalized_name = 'andreas muller'`).Scan(&owner, &matched, &status)
+	}); err != nil {
+		t.Fatalf("reading the outcome: %v", err)
+	}
+	if status != "confirmed" || matched == nil || *matched != contact {
+		t.Fatalf("the connection is %q → %v after a colleague's approval, want confirmed → %s",
+			status, matched, contact)
+	}
+	if owner == nil || *owner != e.Rep1 {
+		t.Errorf("the linked connection belongs to %v, want the member whose export produced it (%s)",
+			owner, e.Rep1)
 	}
 }

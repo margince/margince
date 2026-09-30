@@ -91,7 +91,7 @@ export const Default: Story = { args: { item: pairRow() } };
 // cards STACK — and stacked they are read one after the other rather than
 // against each other, which is why the link counts and the distinguishing line
 // have to carry the comparison on their own. Everything else holds: the
-// question leads, each verb keeps its own card's foot, and "Not the same" is
+// question leads, each verb keeps its own card's foot, and "Not duplicates" is
 // one line on the trailing edge.
 export const TheReviewOnAPhone: Story = {
   ...Default,
@@ -108,7 +108,7 @@ export const TheReviewOnAPhone: Story = {
  * checking is not a colour but whether the pair still reads as two candidates
  * set apart from the verbs under them when the step runs the other way.
  *
- * The second thing to look at is the trailing line: "Not the same" is unfilled
+ * The second thing to look at is the trailing line: "Not duplicates" is unfilled
  * on purpose, and dark is the theme where an unfilled ghost has the least
  * ground to stand on.
  */

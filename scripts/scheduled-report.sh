@@ -166,6 +166,54 @@ elif [[ "${GATE_RESULT:-}" = "success" ]]; then
   resolve "SonarCloud quality gate is not green on main"
 fi
 
+# Two findings again, and the same reason as the perf arm: the job result alone
+# cannot tell "Renovate has stopped" from "the tracker read failed". Filing the
+# first for the second sends somebody to reinstall a GitHub App that was working
+# the whole time. RENOVATE_OUTCOME is set by the script only once it has an
+# answer in hand, so only a MEASURED silence is reported as one.
+if [[ "${RENOVATE_RESULT:-}" = "failure" ]] && [[ "${RENOVATE_OUTCOME:-}" != "quiet" ]]; then
+  report "the Renovate liveness check could not run" "priority: normal,area: ci-tests,bug" \
+"\`check-renovate-liveness.sh\` failed on the scheduled run WITHOUT reaching a
+verdict: $RUN_URL
+
+Renovate is not known to have stopped, and it is not known to be running — the
+check did not get far enough to say. The step separates the two outcomes
+precisely so this issue does not send somebody reinstalling an app that was
+working.
+
+Reproduce with \`GH_TOKEN=\$(gh auth token) REPO=$REPO ./scripts/check-renovate-liveness.sh\`."\
+    || unreported=1
+elif [[ "${RENOVATE_RESULT:-}" = "success" ]] || [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]]; then
+  # A MEASURED SILENCE IS PROOF THE CHECK RAN, which is all this title claims —
+  # so it retracts here as well as on a pass, and the arm below files the
+  # silence under its own title.
+  resolve "the Renovate liveness check could not run"
+fi
+
+if [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]]; then
+  report "Renovate has stopped running against main" "priority: high,area: ci-tests,bug" \
+"The liveness check read \`${RENOVATE_STATUS:-unknown}\` on the scheduled run:
+$RUN_URL
+
+Renovate is the **only** mechanism that adopts a fix for a lockfile-only
+transitive advisory. \`vulnerabilityAlerts\` cannot raise a package that has no
+manifest range, so \`lockFileMaintenance\` is what closes one — and renovate.json
+argues that at length. While the bot is quiet that mechanism is gone, and
+nothing else in this repository will say so: no lane reddens and no pull request
+is blocked.
+
+\`QUIET\` means it ran once and has not acted since. \`NO_DASHBOARD\` means it has
+never run here at all, which is what an installation bound to a previous owner or
+repository name looks like — check the GitHub App installation before looking
+at the config, because a bad \`renovate.json\` files a config-warning issue
+rather than going silent.
+
+The job log names the last act it could find and its date."\
+    || unreported=1
+elif [[ "${RENOVATE_RESULT:-}" = "success" ]]; then
+  resolve "Renovate has stopped running against main"
+fi
+
 if [[ "${LANE_RESULT:-}" = "failure" ]]; then
   report "the backend merge gate is red on main" "priority: critical,area: ci-tests,bug" \
 "\`make check-backend\` failed on the scheduled run of \`main\`: $RUN_URL
@@ -548,10 +596,14 @@ Three things this is NOT, each of which has looked like a regression before:
   QUOTING a record it should quote),
 - a harness fault that leaves the assistant with no tools at all.
 
-The known standing failure is case 6: asked about past account-manager changes,
-the assistant cites the record correctly, quotes the post-mortem note correctly,
-and then repeats the note's wrong month in its own voice. If that is what the
-transcript shows, this issue is the existing finding rather than a new one."\
+There is no standing failure to dismiss this against. Case 6 — asked about past
+account-manager changes, the assistant repeating a note's wrong month in its own
+voice — was the one, and it was fixed: it passes 3 of 3 on \`claude-opus-5\`, this
+lane's default model. So a case 6 failure here is a REGRESSION of that fix and
+the transcript is worth reading closely, not a known finding to be filed away.
+
+Nothing else is standing either. Every scenario in this lane is expected to pass,
+and this issue means one did not."\
     || unreported=1
 elif [[ "${LLM_RESULT:-}" = "success" ]]; then
   resolve "a use case is failing when driven by a real model"
@@ -567,6 +619,12 @@ fi
 # unit somebody can act on — and because a standing "merges are landing unproven"
 # issue would collect every case under one title and be closed once, which is how
 # a recurring finding becomes a stale one.
+#
+# The TITLE still leads with what broke. Six of these fired for one outage and a
+# reader scanning open issues saw six merges rather than one red tree, because
+# the title named the pull request and not the state of main. Keeping the number
+# keeps them one-per-merge; leading with the state is what makes the first one
+# actionable without opening it.
 
 if [[ "${MERGE_VERDICT_RESULT:-}" = "failure" ]]; then
   # TWO findings, two titles. The judge reports a commit no pull request names
@@ -574,8 +632,11 @@ if [[ "${MERGE_VERDICT_RESULT:-}" = "failure" ]]; then
   # would describe a check that never ran — and the two are told apart by
   # exactly the thing the title would otherwise name, the pull request number.
   if [[ -n "${MERGE_VERDICT_PR:-}" ]]; then
-    merge_title="A merge landed on main against a failing verdict (#$MERGE_VERDICT_PR)"
+    merge_title="main is red: \`${MERGE_VERDICT_LANE:-the required check}\` failed on the tree merged by #$MERGE_VERDICT_PR"
   else
+    # NOT "main is red": no verdict ever ran, so this says the tree is
+    # unverified rather than that it is known bad. The two are different facts
+    # and a reader acts on them differently.
     merge_title="A merge landed on main with no pull request behind it"
   fi
   report "$merge_title" "priority: high,area: ci-tests,bug" \

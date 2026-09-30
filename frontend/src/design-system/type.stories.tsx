@@ -20,7 +20,7 @@ import type { CSSProperties } from "react";
  * Flip the theme in the toolbar: nothing here changes size, but the ink does.
  */
 const meta = {
-  title: "Design System/Type",
+  title: "Foundations/Typography",
   parameters: { layout: "centered" },
 } satisfies Meta;
 export default meta;

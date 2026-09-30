@@ -2,6 +2,7 @@ import { useCallback, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Button, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { Heading } from "../design-system/heading";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -175,8 +176,11 @@ function Expiry({ iso }: Readonly<{ iso: string }>) {
 
 function CopyableLink({ url }: Readonly<{ url: string }>) {
   const t = useT();
-  const [copied, setCopied] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
+  const copy = useClipboardCopy(url, {
+    copy: t("users.link.copy"),
+    copied: t("users.link.copied"),
+    remedy: t("users.link.copyFailed"),
+  });
   return (
     <div className="users-link-row">
       {/* Read-only rather than plain text so the admin can still select and
@@ -189,48 +193,13 @@ function CopyableLink({ url }: Readonly<{ url: string }>) {
         aria-label={t("users.link.urlLabel")}
         onFocus={(e) => e.currentTarget.select()}
       />
-      <Button
-        onClick={() => {
-          // navigator.clipboard is UNDEFINED outside a secure context, and a
-          // bare property access would throw synchronously — leaving the admin
-          // with a dead button and no message. That is not an edge case here:
-          // an email-less LAN installation on plain http is the deployment this
-          // whole feature serves, and a bare origin over http is accepted.
-          const clipboard = navigator.clipboard;
-          if (!clipboard) {
-            setCopied(false);
-            setCopyFailed(true);
-            return;
-          }
-          clipboard.writeText(url).then(
-            () => {
-              setCopyFailed(false);
-              setCopied(true);
-            },
-            () => {
-              setCopied(false);
-              setCopyFailed(true);
-            },
-          );
-        }}
-      >
-        {copied ? t("users.link.copied") : t("users.link.copy")}
-      </Button>
-      {/* A clipboard that refused is `danger` here and everywhere else in the
-          product — one fact, one tone. The link itself is fine and on screen in
-          the field beside this, which is exactly why it is a read-only input:
-          selecting it by hand is the way out. The BOX takes the whole line; a
-          notice owns no layout of its own. */}
-      {copyFailed && (
-        <div className="users-formerror">
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("users.link.copyFailedTitle")}
-          >
-            {t("users.link.copyFailed")}
-          </Callout>
-        </div>
+      <Button onClick={copy.copy}>{copy.label}</Button>
+      {/* The link itself is fine and on screen in the field beside this, which
+          is exactly why it is a read-only input: selecting it by hand is the
+          way out. The BOX takes the whole line; a notice owns no layout of its
+          own. */}
+      {copy.notice !== null && (
+        <div className="users-formerror">{copy.notice}</div>
       )}
     </div>
   );

@@ -39,7 +39,7 @@ describe("ProjectLinks", () => {
     expect(screen.queryByText("No projects yet")).toBeNull();
     // The instructional line, not a bare "nothing here": a reader who cannot
     // see any is the reader who needs telling how one appears.
-    expect(screen.getByText(/body of work a deal is about/)).toBeTruthy();
+    expect(screen.getByText(/once it is on a project/)).toBeTruthy();
     // And that line alone. As a pane of its own the section already carries
     // its name in the head, so a heading under it says the same word twice
     // and makes an absence the loudest thing in the column.
@@ -110,8 +110,8 @@ describe("ProjectLinks", () => {
     const user = userEvent.setup();
     draw({
       search: async () => [{ id: "p9", name: "Warehouse rollout" }],
-      // Every real adapter refuses through throwProblem (companyprojects,
-      // contactprojects, projectcompanies all do), so the stand-in refuses the
+      // Every real adapter refuses through throwProblem (companyprojects and
+      // projectcompanies both do), so the stand-in refuses the
       // same way. A plain Error here would be a test supplying its own version
       // of production and proving nothing about it.
       attach: async () => {
@@ -152,7 +152,7 @@ describe("ProjectLinks", () => {
 
     // The confirm's own verb is distinct from the row's, so a reader — and a
     // screen reader — can tell the ask from the act.
-    await user.click(screen.getByRole("button", { name: "Detach it" }));
+    await user.click(screen.getByRole("button", { name: "Detach project" }));
     await waitFor(() => expect(detach).toHaveBeenCalledWith("p1"));
   });
 
@@ -161,7 +161,7 @@ describe("ProjectLinks", () => {
       readOnly: true,
       linked: [{ project_id: "p1", name: "ERP rollout" }],
       detach: async () => undefined,
-      onCreate: () => undefined,
+      create: <button type="button">New project</button>,
     });
     for (const verb of [
       "New project",
@@ -212,7 +212,8 @@ describe("ProjectLinks", () => {
     );
   });
 
-  it("says what it links, so a mirror cannot half-rename itself", () => {
+  it("says what it links, so a mirror cannot half-rename itself", async () => {
+    const user = userEvent.setup();
     render(
       <LocaleProvider initial="en">
         <ProjectLinks
@@ -229,7 +230,8 @@ describe("ProjectLinks", () => {
           words={{
             attach: "Attach company",
             move: "Attach company",
-            detachTitle: "Take this company off?",
+            detachTitle: "Remove company from project?",
+            detachConfirm: "Remove company",
             search: "Search companies by name",
           }}
         />
@@ -240,6 +242,11 @@ describe("ProjectLinks", () => {
     // name, which is what a screen reader announces.
     expect(screen.getByRole("button", { name: "Attach company" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Attach project" })).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Detach Beta Systeme" }),
+    );
+    expect(screen.getByRole("button", { name: "Remove company" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Detach project" })).toBeNull();
   });
 
   // The disclosure this section used to make. A reader who may see a company

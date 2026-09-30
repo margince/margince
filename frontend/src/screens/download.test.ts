@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { downloadBytes, filenameFromDisposition } from "./download";
+import {
+  downloadBytes,
+  downloadFrom,
+  filenameFromDisposition,
+} from "./download";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -73,5 +77,48 @@ describe("downloadBytes", () => {
     // its blob for the document's lifetime, so a screen that exports repeatedly
     // without it keeps every export it has ever made.
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:test");
+  });
+
+  it("has the anchor in the document at the moment it is clicked", () => {
+    // Safari ignores `download` on a detached node and saves NOTHING, with no
+    // error — so this passes everywhere the suite runs while the export it is
+    // about is silently dead in one browser. Asserted at click time rather than
+    // after: the anchor is removed again immediately.
+    Object.defineProperties(URL, {
+      createObjectURL: { configurable: true, value: () => "blob:test" },
+      revokeObjectURL: { configurable: true, value: () => undefined },
+    });
+    let connectedAtClick: boolean | null = null;
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      function connected(this: HTMLAnchorElement) {
+        connectedAtClick = this.isConnected;
+      },
+    );
+
+    downloadBytes("id\n1\n", "contact-export.csv", "text/csv");
+
+    expect(connectedAtClick).toBe(true);
+  });
+});
+
+describe("downloadFrom", () => {
+  it("saves an address the page already holds, and releases nothing", () => {
+    // The href belongs to whoever made it — a preview still drawing the blob it
+    // just saved must not have it revoked out from under the image.
+    const revokeObjectURL = vi.fn();
+    Object.defineProperties(URL, {
+      revokeObjectURL: { configurable: true, value: revokeObjectURL },
+    });
+    let connectedAtClick: boolean | null = null;
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      function connected(this: HTMLAnchorElement) {
+        connectedAtClick = this.isConnected;
+      },
+    );
+
+    downloadFrom("blob:owned-elsewhere", "scan.pdf");
+
+    expect(connectedAtClick).toBe(true);
+    expect(revokeObjectURL).not.toHaveBeenCalled();
   });
 });

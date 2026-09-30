@@ -22,21 +22,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// voiceDemoDraftSystemFor is the same instruction for a call that carries no
-// sample to reply to — only the profile is inside the boundary, so only the
-// profile is named by it.
+// voiceDemoDraftSystemFor is the evaluation's instruction for a call that
+// carries no sample to reply to — only the profile is inside the boundary, so
+// only the profile is named by it. Its length is a status reply's: three facts
+// fill two short paragraphs, and the evaluation's band would ask for padding.
 func voiceDemoDraftSystemFor(fence promptfence.Fence) string {
-	return voiceEvalDraftSystem + "\n" + fence.Rule("profile")
+	return voiceDraftOpening + "\n" +
+		"Length: one or two short paragraphs, roughly 40 to 80 words — a status reply, never padding.\n" +
+		voiceDraftFactsAndShape + "\n" + fence.Rule("profile")
 }
 
 // voiceDemoTask is the scenario a DEMONSTRATION draft answers, for a corpus
 // with nothing to spare for held-out scoring.
 //
-// Plainly hypothetical, and it asks for no particulars: the surface labels
-// what comes back a sample, and inventing a counterparty's actual words to
-// reply to is the one thing every prompt on this path already refuses.
+// Plainly a sample, and it carries its own facts: a voice that leads with a
+// verdict and the facts behind it has nothing to write without some, and the
+// card shows the reply as the member's own writing, so a fact the model made up
+// would read as their claim. Generic on purpose — any member can read it as a
+// sample, whatever their trade.
 const voiceDemoTask = "Write a short reply to a colleague who asked how a piece of work is going and when they can expect it. " +
-	"Invent no names, dates, figures or commitments — write only what could be said without them."
+	"Use these sample facts and no others: the work is the revised proposal for a customer; " +
+	"it is late because the supplier's updated prices arrived a week after they were promised; it will be ready on Friday."
 
 // voiceDemoDraftRequest builds the one request this site sends. Named, rather
 // than inline, for the reason every other site's builder is: the certification

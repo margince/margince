@@ -25,7 +25,7 @@ func TestRegistryRefusesASiteTheContractDoesNotDeclare(t *testing.T) {
 
 func TestRegistryRefusesADuplicateSite(t *testing.T) {
 	r := aitasks.NewRegistry()
-	site := aitasks.Site{Task: ai.TaskRateExtract, Variant: "pricing", Kind: ai.SiteKindOneShot}
+	site := aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "derive", Kind: ai.SiteKindOneShot}
 	r.Register(site)
 	r.Register(site)
 	if err := r.Validate(); err == nil {
@@ -38,7 +38,7 @@ func TestRegistryRefusesADuplicateSite(t *testing.T) {
 // last-one-wins would let the certified prompt be chosen by line order.
 func TestRegistryRefusesASecondCaseOnOneSite(t *testing.T) {
 	r := aitasks.NewRegistry()
-	site := aitasks.Site{Task: ai.TaskRateExtract, Variant: "pricing", Kind: ai.SiteKindOneShot}
+	site := aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "derive", Kind: ai.SiteKindOneShot}
 	r.Register(site)
 	r.BindCase(site, stubCase{site: site})
 	r.BindCase(site, stubCase{site: site})
@@ -47,7 +47,7 @@ func TestRegistryRefusesASecondCaseOnOneSite(t *testing.T) {
 	if err == nil {
 		t.Fatal("a second case bound to one site validated; which case certifies a site is not a matter of registration order")
 	}
-	if !strings.Contains(err.Error(), "rate_extract/pricing has a second certification case bound") {
+	if !strings.Contains(err.Error(), "voice_build/derive has a second certification case bound") {
 		t.Errorf("the error does not name the doubly-bound site: %v", err)
 	}
 }
@@ -57,13 +57,13 @@ func TestRegistryRefusesASecondCaseOnOneSite(t *testing.T) {
 // error pointing at whichever case the reader still expects to be there.
 func TestASecondCaseDoesNotDisplaceTheFirst(t *testing.T) {
 	r := aitasks.NewRegistry()
-	site := aitasks.Site{Task: ai.TaskRateExtract, Variant: "pricing", Kind: ai.SiteKindOneShot}
-	other := aitasks.Site{Task: ai.TaskRateExtract, Variant: "fx", Kind: ai.SiteKindOneShot}
+	site := aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "derive", Kind: ai.SiteKindOneShot}
+	other := aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "eval_draft", Kind: ai.SiteKindOneShot}
 	r.Register(site)
 	r.BindCase(site, stubCase{site: site})
 	r.BindCase(site, stubCase{site: other})
 
-	bound, ok := r.CaseFor(ai.TaskRateExtract, "pricing")
+	bound, ok := r.CaseFor(ai.TaskVoiceBuild, "derive")
 	if !ok {
 		t.Fatal("the site lost its case to the duplicate bind")
 	}
@@ -90,13 +90,13 @@ func TestRegistryRefusesASiteOnAPlannedTask(t *testing.T) {
 
 func TestRegistryRefusesAnIncompleteShippedTask(t *testing.T) {
 	r := aitasks.NewRegistry()
-	// rate_extract declares two sites; register only one.
-	r.Register(aitasks.Site{Task: ai.TaskRateExtract, Variant: "pricing", Kind: ai.SiteKindOneShot})
+	// voice_build declares four sites; register only one.
+	r.Register(aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "derive", Kind: ai.SiteKindOneShot})
 	err := r.Validate()
 	if err == nil {
 		t.Fatal("a partly-registered shipped task validated")
 	}
-	if !strings.Contains(err.Error(), "fx") {
+	if !strings.Contains(err.Error(), "eval_draft") {
 		t.Errorf("error does not name the unregistered site: %v", err)
 	}
 }
@@ -106,20 +106,20 @@ func TestRegistryRefusesAnIncompleteShippedTask(t *testing.T) {
 // the missing binding is named at the same place the missing site is.
 func TestRegistryRefusesAShippedSiteWithNoCase(t *testing.T) {
 	r := aitasks.NewRegistry()
-	pricing := aitasks.Site{Task: ai.TaskRateExtract, Variant: "pricing", Kind: ai.SiteKindOneShot}
-	fx := aitasks.Site{Task: ai.TaskRateExtract, Variant: "fx", Kind: ai.SiteKindOneShot}
-	r.Register(pricing)
-	r.Register(fx)
-	r.BindCase(pricing, stubCase{site: pricing})
+	derive := aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "derive", Kind: ai.SiteKindOneShot}
+	evalDraft := aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "eval_draft", Kind: ai.SiteKindOneShot}
+	r.Register(derive)
+	r.Register(evalDraft)
+	r.BindCase(derive, stubCase{site: derive})
 
 	err := r.Validate()
 	if err == nil {
 		t.Fatal("a shipped site with no certification case validated")
 	}
-	if !strings.Contains(err.Error(), "rate_extract/fx") {
+	if !strings.Contains(err.Error(), "voice_build/eval_draft") {
 		t.Errorf("the error does not name the uncertifiable site: %v", err)
 	}
-	if strings.Contains(err.Error(), "rate_extract/pricing") {
+	if strings.Contains(err.Error(), "voice_build/derive") {
 		t.Errorf("the error complains about a site that has a case: %v", err)
 	}
 }
@@ -156,8 +156,8 @@ func TestRegistryDoesNotDemandACaseForASiteTheContractDeniesExists(t *testing.T)
 // a case claiming a kind the registration denies would have its record filed
 // under a scope this build never registered.
 func TestRegistryRefusesACaseThatClaimsAnotherSiteThanItIsBoundUnder(t *testing.T) {
-	pricing := aitasks.Site{Task: ai.TaskRateExtract, Variant: "pricing", Kind: ai.SiteKindOneShot}
-	fx := aitasks.Site{Task: ai.TaskRateExtract, Variant: "fx", Kind: ai.SiteKindOneShot}
+	derive := aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "derive", Kind: ai.SiteKindOneShot}
+	evalDraft := aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "eval_draft", Kind: ai.SiteKindOneShot}
 
 	for _, tc := range []struct {
 		name    string
@@ -166,21 +166,21 @@ func TestRegistryRefusesACaseThatClaimsAnotherSiteThanItIsBoundUnder(t *testing.
 	}{
 		{
 			"another kind",
-			aitasks.Site{Task: ai.TaskRateExtract, Variant: "fx", Kind: ai.SiteKindMultiTurn},
-			`site rate_extract/fx (kind "one_shot") is bound to a certification case claiming site rate_extract/fx (kind "multi_turn")`,
+			aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "eval_draft", Kind: ai.SiteKindMultiTurn},
+			`site voice_build/eval_draft (kind "one_shot") is bound to a certification case claiming site voice_build/eval_draft (kind "multi_turn")`,
 		},
 		{
 			"another variant",
-			pricing,
-			`site rate_extract/fx (kind "one_shot") is bound to a certification case claiming site rate_extract/pricing (kind "one_shot")`,
+			derive,
+			`site voice_build/eval_draft (kind "one_shot") is bound to a certification case claiming site voice_build/derive (kind "one_shot")`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			r := aitasks.NewRegistry()
-			r.Register(pricing)
-			r.Register(fx)
-			r.BindCase(pricing, stubCase{site: pricing})
-			r.BindCase(fx, stubCase{site: tc.claimed})
+			r.Register(derive)
+			r.Register(evalDraft)
+			r.BindCase(derive, stubCase{site: derive})
+			r.BindCase(evalDraft, stubCase{site: tc.claimed})
 
 			err := r.Validate()
 			if err == nil {
@@ -195,13 +195,13 @@ func TestRegistryRefusesACaseThatClaimsAnotherSiteThanItIsBoundUnder(t *testing.
 
 func TestLookupFindsARegisteredSite(t *testing.T) {
 	r := aitasks.NewRegistry()
-	want := aitasks.Site{Task: ai.TaskRateExtract, Variant: "fx", Kind: ai.SiteKindOneShot}
+	want := aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "eval_draft", Kind: ai.SiteKindOneShot}
 	r.Register(want)
-	got, ok := r.Lookup(ai.TaskRateExtract, "fx")
+	got, ok := r.Lookup(ai.TaskVoiceBuild, "eval_draft")
 	if !ok || got != want {
 		t.Fatalf("Lookup = %+v, %t; want %+v, true", got, ok, want)
 	}
-	if _, ok := r.Lookup(ai.TaskRateExtract, "pricing"); ok {
+	if _, ok := r.Lookup(ai.TaskVoiceBuild, "derive"); ok {
 		t.Error("Lookup found a site that was never registered")
 	}
 }
@@ -216,7 +216,7 @@ func TestAgentLoopCertifiesOneTurnNotTheLoop(t *testing.T) {
 		t.Errorf("CertifiedScope() = %q, want %q — a seeded-window turn is not a loop run", got, aitasks.ScopeSingleTurn)
 	}
 
-	oneShot := aitasks.Site{Task: ai.TaskRateExtract, Variant: "fx", Kind: ai.SiteKindOneShot}
+	oneShot := aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "eval_draft", Kind: ai.SiteKindOneShot}
 	if got := oneShot.CertifiedScope(); got != aitasks.ScopeFullInvocation {
 		t.Errorf("CertifiedScope() = %q, want %q — a one-shot site's whole invocation is one request", got, aitasks.ScopeFullInvocation)
 	}

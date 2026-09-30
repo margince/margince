@@ -11,7 +11,7 @@ export interface components {
          * @description The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, contact/company, lead, activities, consent/privacy, signals, ai voice and identity families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
          * @enum {string}
          */
-        SubscribableEventType: "deal.created" | "deal.owner_changed" | "deal.stage_changed" | "deal.archived" | "deal.updated" | "deal.restored" | "project.created" | "project.updated" | "project.phase_changed" | "project.archived" | "commission.accrued" | "commission.decided" | "contract.created" | "contract.updated" | "contract.status_changed" | "contract.archived" | "deal_room.opened" | "deal_room.updated" | "deal_room.paused" | "deal_room.resumed" | "deal_room.closed" | "deal_room.archived" | "deal_room.participant_invited" | "deal_room.participant_revoked" | "deal_room.participant_credential_reissued" | "deal_room.comment_posted" | "deal_room.thread_resolved" | "deal_room.decision_recorded" | "offer.created" | "offer.sent" | "offer.accepted" | "offer.rejected" | "offer.superseded" | "pipeline.created" | "pipeline.updated" | "pipeline.archived" | "stage.created" | "stage.updated" | "stage.archived" | "contact.created" | "contact.archived" | "contact.merged" | "contact.updated" | "contact.restored" | "conversation_claim.captured" | "conversation_claim.changed" | "company.created" | "company.archived" | "company.merged" | "company.updated" | "lead.created" | "lead.disqualified" | "lead.promoted" | "lead.demoted" | "lead.merged" | "lead.sla_breached" | "lead.updated" | "lead_source.changed" | "lead_disqualify_reason.changed" | "activity.captured" | "activity.archived" | "activity.updated" | "engagement.reply" | "comms.delivery_bounced" | "notice.created" | "user_delivery.changed" | "forecast.created" | "forecast.assurance_created" | "forecast.exception_resolved" | "forecast.snapshot_created" | "forecast.share_issued" | "forecast.share_revoked" | "weekly_plan.updated" | "weekly_plan.help_requested" | "activity.disposition_recorded" | "relationship_nudge.decided" | "notice.read" | "intro_request.created" | "intro_request.decided" | "intro_request.completed" | "intro_request.replied" | "intro_request.closed" | "consent.changed" | "consent.suppressed" | "consent.suppression_lifted" | "consent.override_recorded" | "consent.override_lifted" | "email_signature.changed" | "user_locale.changed" | "user_display_name.changed" | "linkedin_account.changed" | "linkedin_network.imported" | "linkedin_match.decided" | "retention.applied" | "retention.restricted" | "signal.detected" | "signal.resolved" | "voice.profile_created" | "voice.profile_updated" | "voice.profile_archived" | "voice.corpus_changed" | "voice.build_changed" | "voice.version_changed" | "voice.draft_outcome_recorded" | "user.invited" | "user.activated" | "user.password_link_issued" | "user.deactivated" | "user.reactivated" | "role.changed" | "team.changed" | "passport.revoked" | "onboarding.state_changed" | "approval.requested" | "approval.decided" | "coldstart.read_back_proposed" | "coldstart.accepted" | "coldstart.rejected" | "audit.appended";
+        SubscribableEventType: "deal.created" | "deal.owner_changed" | "deal.stage_changed" | "deal.archived" | "deal.updated" | "deal.restored" | "project.created" | "project.updated" | "project.phase_changed" | "project.archived" | "list.created" | "list.updated" | "list.archived" | "list.restored" | "list.member_added" | "list.member_removed" | "commission.accrued" | "commission.decided" | "contract.created" | "contract.updated" | "contract.status_changed" | "contract.archived" | "deal_room.opened" | "deal_room.updated" | "deal_room.paused" | "deal_room.resumed" | "deal_room.closed" | "deal_room.archived" | "deal_room.participant_invited" | "deal_room.participant_revoked" | "deal_room.participant_credential_reissued" | "deal_room.comment_posted" | "deal_room.thread_resolved" | "deal_room.decision_recorded" | "offer.created" | "offer.sent" | "offer.accepted" | "offer.rejected" | "offer.superseded" | "pipeline.created" | "pipeline.updated" | "pipeline.archived" | "stage.created" | "stage.updated" | "stage.archived" | "contact.created" | "contact.archived" | "contact.merged" | "contact.updated" | "contact.restored" | "conversation_claim.captured" | "conversation_claim.changed" | "company.created" | "company.archived" | "company.merged" | "company.updated" | "company.restored" | "lead.created" | "lead.disqualified" | "lead.promoted" | "lead.demoted" | "lead.merged" | "lead.sla_breached" | "lead.updated" | "lead_source.changed" | "lead_disqualify_reason.changed" | "activity.captured" | "activity.archived" | "activity.updated" | "engagement.reply" | "comms.delivery_bounced" | "notice.created" | "user_delivery.changed" | "forecast.created" | "forecast.assurance_created" | "forecast.exception_resolved" | "forecast.snapshot_created" | "forecast.share_issued" | "forecast.share_revoked" | "weekly_plan.updated" | "weekly_plan.help_requested" | "activity.disposition_recorded" | "relationship_nudge.decided" | "notice.read" | "notification.preference_changed" | "intro_request.created" | "intro_request.decided" | "intro_request.completed" | "intro_request.replied" | "intro_request.closed" | "consent.changed" | "consent.suppressed" | "consent.suppression_lifted" | "consent.override_recorded" | "consent.override_lifted" | "email_signature.changed" | "user_locale.changed" | "user_display_name.changed" | "linkedin_account.changed" | "linkedin_network.imported" | "linkedin_match.decided" | "retention.applied" | "retention.restricted" | "signal.detected" | "signal.resolved" | "voice.profile_created" | "voice.profile_updated" | "voice.profile_archived" | "voice.corpus_changed" | "voice.build_changed" | "voice.version_changed" | "voice.draft_outcome_recorded" | "user.invited" | "user.activated" | "user.password_link_issued" | "user.deactivated" | "user.reactivated" | "role.changed" | "team.changed" | "passport.revoked" | "onboarding.state_changed" | "approval.requested" | "approval.decided" | "coldstart.read_back_proposed" | "coldstart.accepted" | "coldstart.rejected" | "audit.appended";
         /** @description Who or what caused the event, as exposed publicly. */
         PublicEventActor: {
             /** @description Actor kind (e.g. human, agent, connector). */
@@ -349,6 +349,35 @@ export interface components {
         };
         /** @description Payload for project.archived — a project was archived. Carries no data. */
         PublicEventProjectArchived: Record<string, never>;
+        /** @description Payload for list.created — somebody made a Live List (list_type dynamic) or a Shortlist (static). Delivered to a subscriber who may find the list by its sharing. */
+        PublicEventListCreated: {
+            /** @description The record type the list holds. */
+            record_type: string;
+            /** @description static or dynamic. */
+            list_type: string;
+            /** @description private, team or workspace. */
+            sharing: string;
+        };
+        /** @description Payload for list.updated — a list's name, purpose, filter, sharing, team or steward changed. The version is the list's new one. */
+        PublicEventListUpdated: {
+            /** Format: int64 */
+            version: number;
+            changed: string[];
+        };
+        /** @description Payload for list.archived — a list was archived. Carries no data. */
+        PublicEventListArchived: Record<string, never>;
+        /** @description Payload for list.restored — an archived list was brought back. Carries no data. */
+        PublicEventListRestored: Record<string, never>;
+        /** @description Payload for list.member_added — a record was added to a Shortlist by hand or in a bulk change. The subject is the RECORD (contact, company, deal, lead or project), so the event reaches only a subscriber who may see that record. It names no list: delivery is decided by the record, and a list its subscriber cannot find must not be named to them. Which list, and the note, stay on the list's history, which is read under the list's own sharing. */
+        PublicEventListMemberAdded: {
+            /** @description chosen or bulk. */
+            reason: string;
+        };
+        /** @description Payload for list.member_removed — a record was taken off a Shortlist by hand or in a bulk change. The subject is the record, as for list.member_added. */
+        PublicEventListMemberRemoved: {
+            /** @description chosen or bulk. */
+            reason: string;
+        };
         /** @description Payload for deal.owner_changed — the deal's owner was reassigned. Emitted instead of (never alongside) deal.updated for the owner_id field (events.md §5.3). */
         PublicEventDealOwnerChanged: {
             /**
@@ -410,7 +439,7 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        /** @description Payload for deal.restored. Never emitted today (no restore path exists for deal); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it. */
+        /** @description Payload for deal.restored — an archived deal was brought back, with the relationships, list memberships and tags its archive took down where they can still come back. Carries no data. */
         PublicEventDealRestored: Record<string, never>;
         /** @description Payload for offer.created — a new Angebot revision was opened (either the first revision, via CreateOffer, or a fresh draft revision minted by RegenerateOffer). */
         PublicEventOfferCreated: {
@@ -433,7 +462,7 @@ export interface components {
             /** @description The principal that created this revision. */
             captured_by: string;
         };
-        /** @description Payload for offer.sent — a draft offer left the workspace. Carries the FX rate frozen at send time (RT-PR-C2) so consumers never need a read-back for the native-currency-to-base conversion. */
+        /** @description Payload for offer.sent — a draft offer moved to `sent` and its commercial terms were frozen. Nothing was delivered to a counterparty: delivery is a separate capability that does not exist yet, so a subscriber must not read this as an offer having reached anybody. Carries the FX rate frozen at send time (RT-PR-C2) so consumers never need a read-back for the native-currency-to-base conversion. */
         PublicEventOfferSent: {
             /**
              * Format: uuid
@@ -532,7 +561,7 @@ export interface components {
             /** @description The pipeline's initial stages, in the order created. */
             stages: components["schemas"]["PublicEventPipelineCreatedStage"][];
         };
-        /** @description Payload for pipeline.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat name/is_default/position patch from UpdatePipeline, or a stage_positions reorder map from UpdateStage when a stage's position changes), so the honest shape is a change-set map rather than a fixed field list. */
+        /** @description Payload for pipeline.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat name/is_default/position patch from UpdatePipeline or reorderPipelines, or a stage_positions reorder map from UpdateStage, reorderStages or a stage removal when stage positions change), so the honest shape is a change-set map rather than a fixed field list. */
         PublicEventPipelineUpdated: {
             /** @description Field name → new value for whatever this update touched (name, is_default, position, or stage_positions). */
             changed_fields: {
@@ -630,7 +659,7 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        /** @description Payload for contact.restored. Never emitted today (no restore path exists for contact); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it. */
+        /** @description Payload for contact.restored — an archived contact was brought back, with the emails, phones, channel identities, relationships, list memberships and tags its archive took down where they can still come back. Carries no data. */
         PublicEventContactRestored: Record<string, never>;
         /** @description Payload for conversation_claim.captured — something promised, asked or decided in a captured conversation was written to the record (ADR-0097 D1). The entity is the CONTACT the claim is about: a subscriber reacting to what a contact said wants the contact, and the claim id rides the payload for the reader that needs the row itself. */
         PublicEventConversationClaimCaptured: {
@@ -672,6 +701,8 @@ export interface components {
         };
         /** @description Payload for company.archived — a company was archived. Carries no data. */
         PublicEventCompanyArchived: Record<string, never>;
+        /** @description Payload for company.restored — an archived company was brought back, with the domains, relationship types, partner programme, relationships, list memberships and tags its archive took down where they can still come back. Carries no data. */
+        PublicEventCompanyRestored: Record<string, never>;
         /** @description Payload for company.merged — two company records collapsed into one (the §1.3 merge); neither company.updated nor company.archived can say this, so it is its own verb. */
         PublicEventCompanyMerged: {
             /**
@@ -1075,6 +1106,11 @@ export interface components {
         PublicEventNoticeRead: {
             /** Format: uuid */
             notice_id: string;
+        };
+        /** @description Payload for notification.preference_changed — one seat decided how a class of notification reaches them (notices/preference.go's SaveNotificationPreference). The entity is that seat. The CLASS is on the wire and the choice is not: what somebody decided about their own interruptions is theirs, and a fan-out carrying the value would tell every subscription owner who had switched their mail off. */
+        PublicEventNotificationPreferenceChanged: {
+            /** @description Which class of notification was decided about (automation, approval_pending, coach). */
+            class: string;
         };
         /** @description Payload for comms.delivery_bounced — the receiving mail system returned a sent message (comms/store.go's RecordBounce). The entity is the sent message's timeline activity. kind separates the two facts a consumer can act on: `hard` — the address does not accept mail and retrying is sending to nobody; `soft` — a temporary refusal (full mailbox, greylisting) that says nothing durable about the address. */
         PublicEventCommsDeliveryBounced: {
@@ -1708,7 +1744,7 @@ type ReadonlyArray<T> = [
 ] extends [
     unknown[]
 ] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
-export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["SubscribableEventType"]> = ["deal.created", "deal.owner_changed", "deal.stage_changed", "deal.archived", "deal.updated", "deal.restored", "project.created", "project.updated", "project.phase_changed", "project.archived", "commission.accrued", "commission.decided", "contract.created", "contract.updated", "contract.status_changed", "contract.archived", "deal_room.opened", "deal_room.updated", "deal_room.paused", "deal_room.resumed", "deal_room.closed", "deal_room.archived", "deal_room.participant_invited", "deal_room.participant_revoked", "deal_room.participant_credential_reissued", "deal_room.comment_posted", "deal_room.thread_resolved", "deal_room.decision_recorded", "offer.created", "offer.sent", "offer.accepted", "offer.rejected", "offer.superseded", "pipeline.created", "pipeline.updated", "pipeline.archived", "stage.created", "stage.updated", "stage.archived", "contact.created", "contact.archived", "contact.merged", "contact.updated", "contact.restored", "conversation_claim.captured", "conversation_claim.changed", "company.created", "company.archived", "company.merged", "company.updated", "lead.created", "lead.disqualified", "lead.promoted", "lead.demoted", "lead.merged", "lead.sla_breached", "lead.updated", "lead_source.changed", "lead_disqualify_reason.changed", "activity.captured", "activity.archived", "activity.updated", "engagement.reply", "comms.delivery_bounced", "notice.created", "user_delivery.changed", "forecast.created", "forecast.assurance_created", "forecast.exception_resolved", "forecast.snapshot_created", "forecast.share_issued", "forecast.share_revoked", "weekly_plan.updated", "weekly_plan.help_requested", "activity.disposition_recorded", "relationship_nudge.decided", "notice.read", "intro_request.created", "intro_request.decided", "intro_request.completed", "intro_request.replied", "intro_request.closed", "consent.changed", "consent.suppressed", "consent.suppression_lifted", "consent.override_recorded", "consent.override_lifted", "email_signature.changed", "user_locale.changed", "user_display_name.changed", "linkedin_account.changed", "linkedin_network.imported", "linkedin_match.decided", "retention.applied", "retention.restricted", "signal.detected", "signal.resolved", "voice.profile_created", "voice.profile_updated", "voice.profile_archived", "voice.corpus_changed", "voice.build_changed", "voice.version_changed", "voice.draft_outcome_recorded", "user.invited", "user.activated", "user.password_link_issued", "user.deactivated", "user.reactivated", "role.changed", "team.changed", "passport.revoked", "onboarding.state_changed", "approval.requested", "approval.decided", "coldstart.read_back_proposed", "coldstart.accepted", "coldstart.rejected", "audit.appended"];
+export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["SubscribableEventType"]> = ["deal.created", "deal.owner_changed", "deal.stage_changed", "deal.archived", "deal.updated", "deal.restored", "project.created", "project.updated", "project.phase_changed", "project.archived", "list.created", "list.updated", "list.archived", "list.restored", "list.member_added", "list.member_removed", "commission.accrued", "commission.decided", "contract.created", "contract.updated", "contract.status_changed", "contract.archived", "deal_room.opened", "deal_room.updated", "deal_room.paused", "deal_room.resumed", "deal_room.closed", "deal_room.archived", "deal_room.participant_invited", "deal_room.participant_revoked", "deal_room.participant_credential_reissued", "deal_room.comment_posted", "deal_room.thread_resolved", "deal_room.decision_recorded", "offer.created", "offer.sent", "offer.accepted", "offer.rejected", "offer.superseded", "pipeline.created", "pipeline.updated", "pipeline.archived", "stage.created", "stage.updated", "stage.archived", "contact.created", "contact.archived", "contact.merged", "contact.updated", "contact.restored", "conversation_claim.captured", "conversation_claim.changed", "company.created", "company.archived", "company.merged", "company.updated", "company.restored", "lead.created", "lead.disqualified", "lead.promoted", "lead.demoted", "lead.merged", "lead.sla_breached", "lead.updated", "lead_source.changed", "lead_disqualify_reason.changed", "activity.captured", "activity.archived", "activity.updated", "engagement.reply", "comms.delivery_bounced", "notice.created", "user_delivery.changed", "forecast.created", "forecast.assurance_created", "forecast.exception_resolved", "forecast.snapshot_created", "forecast.share_issued", "forecast.share_revoked", "weekly_plan.updated", "weekly_plan.help_requested", "activity.disposition_recorded", "relationship_nudge.decided", "notice.read", "notification.preference_changed", "intro_request.created", "intro_request.decided", "intro_request.completed", "intro_request.replied", "intro_request.closed", "consent.changed", "consent.suppressed", "consent.suppression_lifted", "consent.override_recorded", "consent.override_lifted", "email_signature.changed", "user_locale.changed", "user_display_name.changed", "linkedin_account.changed", "linkedin_network.imported", "linkedin_match.decided", "retention.applied", "retention.restricted", "signal.detected", "signal.resolved", "voice.profile_created", "voice.profile_updated", "voice.profile_archived", "voice.corpus_changed", "voice.build_changed", "voice.version_changed", "voice.draft_outcome_recorded", "user.invited", "user.activated", "user.password_link_issued", "user.deactivated", "user.reactivated", "role.changed", "team.changed", "passport.revoked", "onboarding.state_changed", "approval.requested", "approval.decided", "coldstart.read_back_proposed", "coldstart.accepted", "coldstart.rejected", "audit.appended"];
 export const publicEventLeadSourceChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventLeadSourceChanged"]["change"]> = ["created", "updated", "deleted"];
 export const publicEventLeadDisqualifyReasonChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventLeadDisqualifyReasonChanged"]["change"]> = ["created", "updated", "deleted"];
 export const publicEventActivityChangedFieldsMeeting_statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["meeting_status"]> = ["booked", "held", "no_show", "canceled"];

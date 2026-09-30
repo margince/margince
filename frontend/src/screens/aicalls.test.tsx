@@ -1,15 +1,16 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
-import { AiCallsCard } from "./aicalls";
+import { AiCallsCard, useLastCallAt } from "./aicalls";
 
 const summary = {
   id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
   occurred_at: "2026-07-20T10:00:00Z",
+  kind: "completion",
   task: "capture_classify",
   tier: "cheap_cloud",
   provider: "gemini",
@@ -25,6 +26,7 @@ const summary = {
   degraded: true,
   error_sentinel: "provider_unavailable",
   has_payload: true,
+  decision_attempted: false,
 };
 
 // The trace is gated on `ai_diagnostics:read`, which is what `GET /ai/calls`
@@ -36,10 +38,93 @@ const summary = {
 // the server would have served.
 const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 
+const RETRIED = {
+  call: summary,
+  attempts: [
+    {
+      attempt: 1,
+      is_terminal: false,
+      kind: "completion",
+      attempt_reason: "",
+      tokens_in: 100,
+      tokens_out: 0,
+      latency_ms: 400,
+      occurred_at: summary.occurred_at,
+    },
+    {
+      attempt: 2,
+      is_terminal: true,
+      kind: "completion",
+      attempt_reason: "retry_on_5xx",
+      tokens_in: 100,
+      tokens_out: 20,
+      latency_ms: 900,
+      occurred_at: summary.occurred_at,
+    },
+  ],
+};
+
+// A decision model that answered below its floor, and the ladder rung that
+// answered instead. The terminal call is the completion; the decision is an
+// attempt before it, and the reason on the rung says why the walk went on.
+const DECIDED_THEN_FELL_BACK = {
+  call: {
+    ...summary,
+    degraded: false,
+    error_sentinel: null,
+    decision_attempted: true,
+  },
+  attempts: [
+    {
+      attempt: 1,
+      is_terminal: false,
+      kind: "decision",
+      tier: "decide",
+      provider: "jev_compatible",
+      model_id: "jev-classify",
+      attempt_reason: "",
+      decision_choice: "company",
+      decision_confidence: 0.62,
+      tokens_in: 40,
+      tokens_out: 0,
+      latency_ms: 600,
+      occurred_at: summary.occurred_at,
+    },
+    {
+      attempt: 2,
+      is_terminal: true,
+      kind: "completion",
+      tier: "cheap_cloud",
+      attempt_reason: "decision_below_floor",
+      tokens_in: 100,
+      tokens_out: 20,
+      latency_ms: 900,
+      occurred_at: summary.occurred_at,
+    },
+  ],
+};
+
+// A call the decision model answered itself: the terminal row is the decision.
+const DECIDED = {
+  call: {
+    ...summary,
+    kind: "decision",
+    tier: "decide",
+    provider: "jev_compatible",
+    calls_attempted: 1,
+    decision_attempted: true,
+  },
+  attempts: [DECIDED_THEN_FELL_BACK.attempts[0]],
+};
+
 function mount(
   captureEnabled = true,
   withPayload = true,
   allow: GrantSpec = OPERATOR,
+  trace: {
+    call: Record<string, unknown>;
+    attempts: unknown[];
+  } = RETRIED,
 ) {
   const seen: string[] = [];
   vi.stubGlobal(
@@ -57,37 +142,18 @@ function mount(
       }
       const body = path.endsWith(summary.id)
         ? {
-            ...summary,
+            ...trace.call,
             served_identity_source: "response",
             context_scopes: [],
             context_fingerprint: "",
-            attempts: [
-              {
-                attempt: 1,
-                is_terminal: false,
-                attempt_reason: "",
-                tokens_in: 100,
-                tokens_out: 0,
-                latency_ms: 400,
-                occurred_at: summary.occurred_at,
-              },
-              {
-                attempt: 2,
-                is_terminal: true,
-                attempt_reason: "retry_on_5xx",
-                tokens_in: 100,
-                tokens_out: 20,
-                latency_ms: 900,
-                occurred_at: summary.occurred_at,
-              },
-            ],
+            attempts: trace.attempts,
             payload_captured: withPayload,
             payload: withPayload
               ? { request: { system: "safe", messages: [] }, response: "ok" }
               : null,
           }
         : {
-            data: [summary],
+            data: [trace.call],
             page: { has_more: false },
             payload_capture_enabled: captureEnabled,
             tasks: [summary.task],
@@ -110,9 +176,122 @@ function mount(
   return { seen };
 }
 
+// The hook's four answers, read through a component that renders nothing else.
+// A probe rather than a second card: what this file pins is the STATE, and the
+// surface that acts on it is under test beside the card that draws it.
+function LastCallProbe() {
+  const last = useLastCallAt();
+  return (
+    <output>
+      {last.state === "at" ? new Date(last.epochMs).toISOString() : last.state}
+    </output>
+  );
+}
+
+// The same server the card meets, with the trace read answered per case. The
+// probe is mounted alone so nothing else on screen can satisfy a query for it.
+function mountProbe(
+  trace: () => Promise<Response>,
+  allow: GrantSpec = OPERATOR,
+) {
+  const seen: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const path = new URL(
+        input instanceof Request ? input.url : String(input),
+        "https://test",
+      ).pathname;
+      seen.push(path);
+      return path.endsWith("/v1/me")
+        ? new Response(JSON.stringify(meFixture({ allow })), {
+            headers: { "Content-Type": "application/json" },
+          })
+        : trace();
+    }),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <LastCallProbe />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return { seen };
+}
+
+function tracePage(rows: unknown[]) {
+  return async () =>
+    new Response(
+      JSON.stringify({
+        data: rows,
+        page: { has_more: false },
+        tasks: [],
+        payload_capture_enabled: false,
+      }),
+      { headers: { "Content-Type": "application/json" } },
+    );
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+// Four silences, and only one of them is a claim about the INSTALLATION.
+//
+// The withheld case and the answered ones are asserted from one fixture pair on
+// purpose: "withheld" is also what the probe reads while /me is still in
+// flight, so it proves nothing until the same wiring one grant apart reaches an
+// instant.
+it("says the trace is withheld rather than that nothing was ever called", async () => {
+  const { seen } = mountProbe(tracePage([summary]), {
+    automation: ["read", "update"],
+  });
+
+  expect(await screen.findByText("withheld")).toBeTruthy();
+  // And the denial is already known, so the read never fires.
+  expect(seen.some((path) => path.includes("/ai/calls"))).toBe(false);
+});
+
+it("answers with the newest call's instant once the trace has landed", async () => {
+  mountProbe(tracePage([summary]));
+
+  // The instant the newest row carries, parsed — not a zero and not the row
+  // below it.
+  expect(
+    await screen.findByText(new Date(summary.occurred_at).toISOString()),
+  ).toBeTruthy();
+});
+
+it("says nothing is read yet while the trace is still arriving", async () => {
+  // A request that never settles IS the in-flight state, with no clock and
+  // nothing to wait out.
+  const { seen } = mountProbe(() => new Promise<Response>(() => {}));
+
+  await waitFor(() =>
+    expect(seen.some((path) => path.includes("/ai/calls"))).toBe(true),
+  );
+  expect(screen.getByText("unread")).toBeTruthy();
+});
+
+// A failed read is its own answer, for the reason "never" is: only one of the
+// two resolves by waiting, and a caller that could not tell them apart would
+// draw a reading that goes quiet on a broken read.
+it("says the trace read failed rather than that it is still arriving", async () => {
+  mountProbe(async () => new Response("", { status: 500 }));
+
+  await waitFor(() => expect(screen.getByText("failed")).toBeTruthy());
+  expect(screen.queryByText("unread")).toBeNull();
+});
+
+it("says never called only when the trace answered and held no row", async () => {
+  mountProbe(tracePage([]));
+
+  expect(await screen.findByText("never")).toBeTruthy();
 });
 
 it("renders call badges and expands the attempt and payload detail", async () => {
@@ -124,7 +303,7 @@ it("renders call badges and expands the attempt and payload detail", async () =>
   // The disclosure is a real button now, not the row: a `<tr onClick>`
   // could only ever be reached by pointer.
   const toggle = screen.getByRole("button", {
-    name: /show the attempt trail/i,
+    name: /show attempts/i,
   });
   // The chevron is turned by this attribute (aicalls.css), so what the reader
   // sees and what a screen reader hears are one fact rather than two that can
@@ -136,7 +315,7 @@ it("renders call badges and expands the attempt and payload detail", async () =>
   expect(toggle.getAttribute("aria-expanded")).toBe("true");
   expect(await screen.findByText(/retry_on_5xx/)).toBeTruthy();
   expect(screen.getByText("Request payload")).toBeTruthy();
-  expect(screen.getByText("Export as cert scenario")).toBeTruthy();
+  expect(screen.getByText("Export certification scenario")).toBeTruthy();
 });
 
 // The filter is a settings row now: the row draws the label and the Select is
@@ -156,13 +335,13 @@ it("names the task filter from its row, and stacks the trace under its own label
 it("distinguishes capture disabled from a call without payload", async () => {
   mount(false, false);
   await userEvent.click(
-    await screen.findByRole("button", { name: /show the attempt trail/i }),
+    await screen.findByRole("button", { name: /show attempts/i }),
   );
   expect(await screen.findByText(/Payload capture is off/)).toBeTruthy();
   cleanup();
   mount(true, false);
   await userEvent.click(
-    await screen.findByRole("button", { name: /show the attempt trail/i }),
+    await screen.findByRole("button", { name: /show attempts/i }),
   );
   expect(
     await screen.findByText("No payload captured for this call."),
@@ -176,8 +355,116 @@ it("withholds the trace from a principal without the diagnostics read, and asks 
   const { seen } = mount(true, true, { automation: ["read", "update"] });
 
   expect(
-    await screen.findByText(/only an operator can read the per-call trace/i),
+    await screen.findByText(
+      /only an administrator or operations user can read the call trace/i,
+    ),
   ).toBeTruthy();
   expect(screen.getByText("AI call trace")).toBeTruthy();
   expect(seen.some((path) => path.includes("/ai/calls"))).toBe(false);
+});
+
+it("marks a decision call, and names the tier it ran on", async () => {
+  mount(true, true, OPERATOR, DECIDED);
+
+  expect(
+    await screen.findByText("Decision model · jev_compatible/served"),
+  ).toBeTruthy();
+  // The badge on the row is the kind, in words; the tier column above is the
+  // same fact spelled as the lane, and both say it rather than "decide".
+  expect(screen.getAllByText("Decision model").length).toBeGreaterThan(0);
+  expect(screen.queryByText(/\bdecide\b/)).toBeNull();
+});
+
+// The terminal row of a fallback is the completion, so the row reads the
+// logical call's flag rather than its own kind — otherwise a decision model
+// that was asked and overruled is visible only after expanding the call.
+it("marks a call the decision model fell back from on its row, before it is opened", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).toContain("Decision model");
+});
+
+it("leaves the decision mark off a call that never asked a decision model", async () => {
+  mount();
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).not.toContain("Decision model");
+});
+
+it("says why the ladder answered after the decision model, and where it went", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+  await userEvent.click(
+    await screen.findByRole("button", { name: /show attempts/i }),
+  );
+
+  // The fallback rung reads its tier, then the reason in words rather than the
+  // wire code, and no number: the floor is not stored on the call.
+  expect(
+    await screen.findByText(
+      /cheap_cloud · Decision model below its confidence floor/,
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/decision_below_floor/)).toBeNull();
+  // And the decision attempt itself carries the badge, and names the model it
+  // asked: the terminal row's binding is the rung that answered after it.
+  const first = screen.getByText("#1").closest("li");
+  expect(first?.textContent).toContain("Decision model");
+  expect(first?.textContent).toContain("jev_compatible/jev-classify");
+});
+
+// The answer that did not stand is the one a floor is tuned from, so the
+// decision attempt says what it answered even when the ladder answered after.
+it("says what the decision model answered, and at what confidence", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+  await userEvent.click(
+    await screen.findByRole("button", { name: /show attempts/i }),
+  );
+
+  const first = (await screen.findByText("#1")).closest("li");
+  expect(first?.textContent).toContain("answered company at 0.62");
+  const second = screen.getByText("#2").closest("li");
+  expect(second?.textContent).not.toContain("answered");
+});
+
+// The ladder rung a decision model fell back to is the SECOND model asked, not
+// a second try of the first, so the retry count on the row is the ladder's own:
+// the attempts beyond the decision one.
+it("does not count the fall back from a decision model as a retry", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).toContain("Decision model");
+  expect(task.textContent).not.toContain("Retry");
+});
+
+it("counts the ladder's own retries after a decision model fell back", async () => {
+  mount(true, true, OPERATOR, {
+    ...DECIDED_THEN_FELL_BACK,
+    call: { ...DECIDED_THEN_FELL_BACK.call, calls_attempted: 3 },
+  });
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).toContain("Retry ×2");
+});
+
+// An ordinary first attempt and a decision that stood have no reason to run,
+// so the line names its binding and its latency and nothing in between.
+it("leaves the reason out of an attempt that had none", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+  await userEvent.click(
+    await screen.findByRole("button", { name: /show attempts/i }),
+  );
+
+  const first = (await screen.findByText("#1")).closest("li");
+  expect(first?.textContent).toContain("jev_compatible/jev-classify · 600 ms");
+  expect(first?.textContent).not.toContain("—");
 });

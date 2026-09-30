@@ -99,6 +99,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/collections:recordScope":          "the reader row scope over member records, which counts and pages the Shortlist members THIS READER may see, for the list a list change answers with; it changes no member record. A membership change never changes the record it adds or removes either — it needs list authority over the list, and a read probe of the member (EnsureLinkTarget) so a list cannot name a record its curator cannot see",
 	"internal/modules/contacts:recordEmploymentOutcome": "reads the previous COMPANY reference for an audit before-image; it never changes that company. The mutation updates the contact-owned resolution ledger and relationship provenance, after ApplyEmploymentImport holds the writable live CONTACT. A read-only company grant is sufficient to retain its identity in this evidence trail",
 	"internal/modules/deals:readAppliedChangeReviews":   "reads receipt state for the brief and for acceptance; it never mutates a deal. AcceptAppliedChange has already locked and passed EnsureWritable on the deal before using this read to reject stale or superseded changes. The public batch reader must remain available to colleagues with read-only access and reports write authority separately through WriteAuthorityClauseFor",
 
@@ -146,7 +147,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/dealrooms:dealScopeClause":         "the READ spelling of a Deal Room's deal-derived row scope, shared by the single read, the list page and the release page — a room carries no owner of its own, so its visibility IS its deal's. Every path that changes a room resolves it through this read and then calls one of the two deal probes on the same deal — ensureDealWritable (auth.EnsureWritableLive) for anything that hands access out, ensureDealRetractable (auth.EnsureRetractable) for revoking a seat, pausing, closing or ending the room — before writing anything",
 	"internal/modules/commissions:entriesOfVisibleDeals": "the READ spelling of a commission entry's deal-derived row scope, rendered for the ledger page, the summary and the single read through VisibleClause and for the void through RetractableClause. It decides only whether a row may be SEEN: both paths that change one — Decide and ReverseForDeal — resolve the row through one of those two and then take WritableEntriesForDeal (auth.EnsureWritableLive) to approve or pay, or RetractableEntriesForDeal (auth.EnsureRetractable) to void, before writing anything",
 	"internal/modules/projects:transferableProjectIDs":   "the READ half of the bulk owner handover, listing the from-owner's live projects under the same visibility clause the project list renders. Every id it returns has ALREADY passed auth.WritableBy in the same function, and transferProjectOwner then locks and writes only those — a `read` share is enumerated here and dropped before anything is written",
-	"internal/modules/contacts:currentEmployerFrom":      "the employer stamped on every contact a read returns, and the expression the contacts list orders by, flagged only because a mutation hands back the record it wrote. The company is written NOTHING — the probe decides whether this caller may be SHOWN the account their contact works at — and the contact row that IS being changed takes its own authority at the entry: contact:create on the create path, auth.EnsureWritable on the update. Narrowing it to write authority would blank the employer for a reader entitled to see the company but not to change it, which is most readers",
+	"internal/modules/contacts:employerScope":            "the employer stamped on every contact a read returns, and the expression the contacts list orders by, and the bought-employment marks on the same read, flagged only because a mutation hands back the record it wrote. The company is written NOTHING — the probe decides whether this caller may be SHOWN the account their contact works at — and the contact row that IS being changed takes its own authority at the entry: contact:create on the create path, auth.EnsureWritable on the update. Narrowing it to write authority would blank the employer for a reader entitled to see the company but not to change it, which is most readers",
 	"internal/modules/contacts:CompaniesOnProjectTx":     "a READ: it lists the companies on a project and returns them, and every path that CHANGES the edges — SetProjectCompany, RemoveProjectCompany — takes auth.EnsureWritableLive on the project before it writes anything. This clause decides only which companies a reader may be SHOWN, so narrowing it to write authority would hide companies from a reader entitled to see them",
 	"internal/modules/privacy:AssembleSAR":               "an Art. 15 export is a READ, and read authority is the whole of what a read needs. It is flagged only because assembling a SAR records the request it answers; its Art. 17 sibling, which destroys rather than reads, uses auth.EnsureWritableForSubjectRights",
 
@@ -204,6 +205,9 @@ var writeAuthorityProbes = map[string]bool{
 	// before that vocabulary is consulted — a probe missing from this map
 	// produces no site at all, and its callers then read as ungated.
 	"HoldWritableLive": true,
+	// EnsureChangeable is the object grant and the seat ceiling in front of
+	// EnsureWritableLive, recorded here for the same reason.
+	"EnsureChangeable": true,
 }
 
 // recordAuthorityProbes are the single-row probes that answer "may this caller
@@ -212,7 +216,7 @@ var writeAuthorityProbes = map[string]bool{
 // stays in the census rather than dropping out of the gate's sight.
 var recordAuthorityProbes = map[string]bool{
 	"EnsureVisible": true, "EnsureVisibleLive": true, "EnsureVisibleForSubjectRights": true,
-	"VisibleTo": true,
+	"VisibleTo": true, "EnsureReadable": true,
 	// The rendered list predicates. They name their table in a different
 	// argument, which tableArgIndex accounts for.
 	"ScopeClauseFor": true, "VisiblePredicate": true,

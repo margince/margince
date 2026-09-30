@@ -334,7 +334,7 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 			// The other arm, so the rule cannot pass by refusing everything.
 			name: "the same binding with its host",
 			cfg: RoutingConfig{
-				Profile:    ProfileEUHosted,
+				Profile:    ProfileCloudFrontier,
 				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: withHost},
 				Embeddings: EmbeddingsConfig{ProviderConfig: withHost},
 			},

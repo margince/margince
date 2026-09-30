@@ -63,9 +63,11 @@ describe("Waterfall", () => {
       />,
     );
     const [openingBar, newBar] = bars(container);
-    // 100 and 50 against a scale of 130.
-    expect(openingBar.style.height).toBe(`${(100 / 130) * 100}%`);
-    expect(newBar.style.height).toBe(`${(50 / 130) * 100}%`);
+    // The intermediate total reaches 150 before the loss.
+    expect(openingBar.style.height).toBe(`${(100 / 150) * 100}%`);
+    expect(newBar.style.height).toBe(`${(50 / 150) * 100}%`);
+    expect(newBar.style.bottom).toBe(`${(100 / 150) * 100}%`);
+    expect(bars(container)[2].style.bottom).toBe(`${(130 / 150) * 100}%`);
   });
 
   // Direction comes from the sign, not from the caller. A caller free to

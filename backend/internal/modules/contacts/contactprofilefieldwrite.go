@@ -5,14 +5,14 @@ package contacts
 
 // The one writer of contact_profile_field, and the precedence rule it carries.
 //
-// Several passes fill this table — a mail signature, a public search result, a
-// site read, a human's acceptance of a research claim — and a conflict clause
-// chosen per pass makes the value a field holds depend on which pass ran last.
+// Several passes fill this table — a mail signature, a site read, a human's
+// acceptance of a research claim — and each writer's precedence decides whether
+// its value claims an empty field, replaces the one there, or supersedes it.
 //
 // The rule is not "first wins" or "last wins". It is about WHO is writing:
 //
-//   - A DERIVED fill claims an unanswered field and never replaces one. A search
-//     snippet or a scraped page is somebody else's description of this contact,
+//   - A DERIVED fill claims an unanswered field and never replaces one. A
+//     scraped page is somebody else's description of this contact,
 //     and it does not outrank an answer already on the record.
 //   - A HUMAN'S ACCEPTANCE replaces what is there. Somebody read the claim, the
 //     quote behind it and the document it came from, and chose it — that is the
@@ -35,6 +35,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -42,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // contactProfileFieldPrecedence is who is writing, and therefore what happens to a
@@ -71,7 +73,14 @@ const (
 // passes reading one mail cannot take turns overwriting each other. An identical
 // value still advances observed_at — the row then says "still true as of now",
 // which is what stops a late-arriving OLDER statement from winning afterwards.
-func (p contactProfileFieldPrecedence) conflictClause() string {
+//
+// A phone row is keyed by its number, so a value that differs under the same
+// key is the same number spelled differently, never a replacement. When the
+// statement DID replace another number (replacing), the buffer it carries is
+// the undo and wins over whatever the row held, and the date test is dropped:
+// the number list has already decided this statement is the newer one, and a
+// row it could not update would lose the replaced number for good.
+func (p contactProfileFieldPrecedence) conflictClause(replacing bool) string {
 	switch p {
 	case replaceOnAcceptance:
 		// The undo buffer is CLEARED, not carried. A human choosing this value
@@ -89,6 +98,18 @@ func (p contactProfileFieldPrecedence) conflictClause() string {
 		    superseded_captured_by = NULL,
 		    superseded_observed_at = NULL`
 	case supersedeOnNewerObservation:
+		if replacing {
+			return `DO UPDATE SET value = EXCLUDED.value,
+			    evidence_snippet = EXCLUDED.evidence_snippet,
+			    source_ref = EXCLUDED.source_ref,
+			    confidence = EXCLUDED.confidence,
+			    source = EXCLUDED.source,
+			    captured_by = EXCLUDED.captured_by,
+			    observed_at = EXCLUDED.observed_at,
+			    superseded_value = EXCLUDED.superseded_value,
+			    superseded_captured_by = EXCLUDED.superseded_captured_by,
+			    superseded_observed_at = EXCLUDED.superseded_observed_at`
+		}
 		return `DO UPDATE SET value = EXCLUDED.value,
 		    evidence_snippet = EXCLUDED.evidence_snippet,
 		    source_ref = EXCLUDED.source_ref,
@@ -97,15 +118,18 @@ func (p contactProfileFieldPrecedence) conflictClause() string {
 		    captured_by = EXCLUDED.captured_by,
 		    observed_at = EXCLUDED.observed_at,
 		    superseded_value = CASE
-		        WHEN contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
+		        WHEN contact_profile_field.value_key = ''
+		         AND contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
 		        THEN contact_profile_field.value
 		        ELSE contact_profile_field.superseded_value END,
 		    superseded_captured_by = CASE
-		        WHEN contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
+		        WHEN contact_profile_field.value_key = ''
+		         AND contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
 		        THEN contact_profile_field.captured_by
 		        ELSE contact_profile_field.superseded_captured_by END,
 		    superseded_observed_at = CASE
-		        WHEN contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
+		        WHEN contact_profile_field.value_key = ''
+		         AND contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
 		        THEN contact_profile_field.observed_at
 		        ELSE contact_profile_field.superseded_observed_at END
 		  WHERE EXCLUDED.observed_at > contact_profile_field.observed_at`
@@ -146,6 +170,29 @@ type contactProfileFieldRow struct {
 	// leaves no row here to read the old value from. Empty otherwise, and the
 	// conflict clause then keeps what the row itself carried.
 	Superseded string
+	// Replaces is the value this row takes the place of within its field: the
+	// older phone number of its country. That number's own row is removed and
+	// its value, author and date become this row's superseded_*; a number
+	// typed by hand has no row, and the number itself is the buffer. Either
+	// way the undo names the number that was actually replaced and no other.
+	Replaces string
+}
+
+// profileFieldValueKey is what tells two rows of one field apart.
+//
+// A phone is a list, so each number is its own row keyed by its E.164 form —
+// the spelling contact_phone stores, so a number restated in another format
+// lands on its own row rather than beside it. Every other field holds one
+// answer and keys on the empty string, which the table's cardinality check
+// holds.
+func profileFieldValueKey(field, value string) string {
+	if field != fieldPhone {
+		return ""
+	}
+	if parsed, err := values.ParsePhone(value); err == nil {
+		return parsed.String()
+	}
+	return strings.TrimSpace(value)
 }
 
 // writeContactProfileField writes one evidence row and reports whether it landed.
@@ -184,14 +231,28 @@ func writeContactProfileField(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 		}
 		return false, err
 	}
+	valueKey := profileFieldValueKey(row.Field, row.Value)
+	replaces := ""
+	if row.Replaces != "" {
+		replaces = profileFieldValueKey(row.Field, row.Replaces)
+	}
 	tag, err := tx.Exec(ctx, `
+		WITH replaced AS (
+		    DELETE FROM contact_profile_field
+		     WHERE contact_id = $1::uuid AND field = $2::text
+		       AND $12::text <> '' AND value_key = $12::text AND value_key <> $11::text
+		    RETURNING value, captured_by, observed_at)
 		INSERT INTO contact_profile_field
-		  (contact_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by,
-		   observed_at, superseded_value)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, now()), NULLIF($10, ''))
-		ON CONFLICT (contact_id, field) `+precedence.conflictClause(),
+		  (contact_id, field, value_key, value, evidence_snippet, source_ref, confidence, source,
+		   captured_by, observed_at, superseded_value, superseded_captured_by, superseded_observed_at)
+		SELECT $1::uuid, $2::text, $11::text, $3::text, $4::text, $5::text, $6::numeric, $7::text,
+		       $8::text, COALESCE($9::timestamptz, now()),
+		       COALESCE(r.value, NULLIF($10::text, ''), NULLIF($12::text, '')), r.captured_by, r.observed_at
+		  FROM (SELECT 1) AS one LEFT JOIN replaced r ON true
+		ON CONFLICT (contact_id, field, value_key) `+precedence.conflictClause(replaces != ""),
 		contactID, row.Field, row.Value, row.EvidenceSnippet, row.SourceRef,
-		row.Confidence, row.Source, row.CapturedBy, row.ObservedAt, row.Superseded)
+		row.Confidence, row.Source, row.CapturedBy, row.ObservedAt, row.Superseded,
+		valueKey, replaces)
 	if err != nil {
 		return false, fmt.Errorf("contacts: profile field evidence row (%s): %w", row.Field, err)
 	}

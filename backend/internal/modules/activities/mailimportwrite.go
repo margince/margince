@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -21,10 +22,16 @@ import (
 // the addresses instead, and who the message was WITH follows from those and
 // its direction.
 func counterpartyFor(ctx context.Context, tx pgx.Tx, in LogActivityInput) (string, error) {
+	// Folded here as the capture sink folds it: answeredSQL compares the stored
+	// address with the folded sender, so a caller's casing must not decide it.
 	if in.CounterpartyEmail != "" {
-		return in.CounterpartyEmail, nil
+		return correspondence.Fold(in.CounterpartyEmail), nil
 	}
-	return deriveImportedCounterparty(ctx, tx, in)
+	counterparty, err := deriveImportedCounterparty(ctx, tx, in)
+	if err != nil {
+		return "", err
+	}
+	return correspondence.Fold(counterparty), nil
 }
 
 // deriveImportedCounterparty answers who an imported message was with.

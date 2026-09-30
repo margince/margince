@@ -68,7 +68,7 @@ describe("the relationship-strength card", () => {
     mount(strength);
 
     expect(await screen.findByText("Strong")).toBeTruthy();
-    expect(screen.getByText("Score 78/100")).toBeTruthy();
+    expect(screen.getByText("Score 78 of 100")).toBeTruthy();
     // All four, each as a label and a percentage: three of four would be a
     // breakdown that does not add up to the number above it.
     for (const [label, reading] of [
@@ -88,7 +88,7 @@ describe("the relationship-strength card", () => {
     // fields, and one card is not the place to bet the page on that.
     mount({ score: 0, bucket: "none" });
 
-    expect(await screen.findByText("Score 0/100")).toBeTruthy();
+    expect(await screen.findByText("Score 0 of 100")).toBeTruthy();
     expect(screen.getAllByText("0%")).toHaveLength(4);
   });
 

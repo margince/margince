@@ -15,13 +15,14 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // claimShapes are the ways this tree says "this is the only one".
@@ -357,7 +358,7 @@ func (c claim) key() string { return c.path + "#" + c.decl }
 // majority are ordinary English.
 func findClaims(root string) ([]claim, error) {
 	var found []claim
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -387,7 +388,7 @@ func findClaims(root string) ([]claim, error) {
 			// it. `format/zone-by-purpose.test.ts` skips itself likewise.
 			return nil
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, parseErr := gatekit.ParseFile(path, parser.ParseComments)
 		if parseErr != nil {
 			// A source this module cannot parse is not a clean tree, and
 			// skipping it silently is how a gate reads green over code it never

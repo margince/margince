@@ -131,7 +131,7 @@ func opaqueOperands(expr ast.Expr) []ast.Expr {
 // end into the next one's beginning.
 func SQLTextOf(t testing.TB, path string) string {
 	t.Helper()
-	parsed, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	parsed, err := ParseFile(path, 0)
 	if err != nil {
 		t.Errorf("parsing %s: %v", path, err)
 		return ""

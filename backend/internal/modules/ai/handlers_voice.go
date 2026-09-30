@@ -46,6 +46,11 @@ type Handlers struct {
 	// starts honest-unconfigured; the API composition root replaces it from
 	// the same routing decision that builds the model path.
 	publicProfile PublicProfile
+	// refreshRouting and refreshCatalogue are what the price refresh reads: the
+	// bindings that say which models to price, and the broker's list that
+	// prices them. Nil on a role that composed neither, which answers 501.
+	refreshRouting   *RoutingStore
+	refreshCatalogue *ModelCatalogue
 }
 
 // NewHandlers wires the module's stores onto one pool; budget is the

@@ -1,8 +1,9 @@
 # Import purchased employment history
 
-Contact Details offers a change action beside Phone and Email, including empty fields. Open the field, then use **Add phone** or **Add email**. The editor supports multiple entries, types, primary selection and removal. Saves affect that list only. An unrelated concurrent edit is retained; a conflicting edit to the same list requires review.
-
-The Companies section groups employment roles by company. Current, former and unknown are separate states. A missing end date in purchased history does not assert current employment. Month-only dates remain months. Use the role menu's **Edit employment** to correct a role, status or date; blank dates remove incorrect assertions.
+What a user does on the contact — adding phones and emails, reading the
+**Companies** section, **Edit employment** and **Match company** — is in the
+handbook, [records.md](../handbook/records.md). This page is the operator's:
+installation, matching rules, backfill and recovery.
 
 ## Installation and upgrade
 

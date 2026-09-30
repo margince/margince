@@ -1,0 +1,5 @@
+/* The dialog body is a column that stretches its children; this verb keeps its
+   own width instead of spanning the form. */
+.create-view-existing {
+  align-self: flex-start;
+}

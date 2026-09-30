@@ -46,6 +46,31 @@ func (h captureSenderHandlers) ListCaptureSenders(w http.ResponseWriter, r *http
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// ListCaptureContactsAwaitingDecision answers which of the caller's contacts
+// the admin capture-health page counts as waiting on a sender decision.
+func (h captureSenderHandlers) ListCaptureContactsAwaitingDecision(w http.ResponseWriter, r *http.Request) {
+	waiting, err := capture.ContactsAwaitingDecisionFor(r.Context(), h.db)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.CaptureAwaitingContactListResponse{
+		Data: make([]crmcontracts.CaptureAwaitingContact, 0, len(waiting)),
+	}
+	for _, c := range waiting {
+		row := crmcontracts.CaptureAwaitingContact{
+			ContactId:  openapi_types.UUID(c.ContactID),
+			Emails:     c.Emails,
+			CapturedAt: c.CapturedAt.UTC(),
+		}
+		if c.DisplayName != "" {
+			row.DisplayName = &c.DisplayName
+		}
+		out.Data = append(out.Data, row)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // ListHeldThreads answers what the caller's mailbox is withholding.
 //
 // It sits beside the senders list rather than in a file of its own: both are

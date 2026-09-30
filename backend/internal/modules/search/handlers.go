@@ -26,8 +26,13 @@ type Handlers struct {
 // counter, and a nil one leaves every hit's count absent rather than zero.
 // `emailRows` answers the canonical email row behind an activity hit; compose
 // supplies the activities store's own reader, and a nil one leaves every email
-// hit rendering the generic way.
-func NewHandlers(db *database.DB, tagReach TagReachCounter, emailRows EmailSummaryReader) Handlers {
+// hit rendering the generic way. `partnerMarks` answers which companies carry a
+// live partner programme; compose supplies the contacts store's own reader, and
+// a nil one leaves every company hit unmarked rather than marked "no".
+func NewHandlers(
+	db *database.DB, tagReach TagReachCounter,
+	emailRows EmailSummaryReader, partnerMarks PartnerMarker,
+) Handlers {
 	// THE CEILING RIDES THE HANDLE THE CALLER PASSES, and compose passes a
 	// bounded one (server.go). It is not armed here, and that is deliberate:
 	// the ceiling is a statement about who is WAITING, and the same constructor
@@ -39,7 +44,7 @@ func NewHandlers(db *database.DB, tagReach TagReachCounter, emailRows EmailSumma
 	// this surface opens — the lexical ranking, and the vector one through the
 	// retriever. A ceiling armed at a single Query would leave the other lane as
 	// unbounded as it was before anybody thought about it.
-	store := NewStore(db).WithTagReach(tagReach).WithEmailSummaries(emailRows)
+	store := NewStore(db).WithTagReach(tagReach).WithEmailSummaries(emailRows).WithPartnerMarks(partnerMarks)
 	// Embedder is nil, and stays nil: the only thing this retriever serves is
 	// AssembleContext, which walks the context graph and never embeds. The
 	// request-path embed lane compose binds is for the RANKED half, and
@@ -68,12 +73,32 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 		return
 	}
 
-	data := make([]crmcontracts.SearchResult, 0, len(page.Hits))
-	for _, hit := range page.Hits {
+	pageInfo := crmcontracts.PageInfo{HasMore: page.HasMore}
+	if page.NextCursor != "" {
+		pageInfo.NextCursor = &page.NextCursor
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.SearchResponse{Data: wireHits(page.Hits), Page: pageInfo})
+}
+
+// wireHits renders a page of hits as the contract's results.
+//
+// Its own function rather than a loop in the handler, so the one claim the
+// contract makes about every result — that it carries a trust tier, and that
+// the tier is `authoritative` — is a property a test can assert without a
+// database behind it.
+func wireHits(hits []Hit) []crmcontracts.SearchResult {
+	data := make([]crmcontracts.SearchResult, 0, len(hits))
+	for _, hit := range hits {
 		result := crmcontracts.SearchResult{
 			Id:    openapi_types.UUID(hit.ID),
 			Type:  crmcontracts.SearchResultType(hit.Type),
 			Score: ptr(float32(hit.Score)),
+			// Unconditionally, on every hit: this search reads the store the
+			// record lives in, so a hit is never a copy of somebody else's
+			// and there is no case here that could be anything but
+			// authoritative. Leaving it nil would say UNKNOWN, which is a
+			// different and weaker statement than the one we can make.
+			TrustTier: ptr(crmcontracts.SearchResultTrustTierSearchResultTrustTierAuthoritative),
 		}
 		if hit.Title != "" {
 			result.Title = ptr(hit.Title)
@@ -81,25 +106,20 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 		if hit.Snippet != "" {
 			result.Snippet = ptr(hit.Snippet)
 		}
-		// Copied, not aliased: `hit` is the loop's own variable and taking its
-		// address would give every result the last hit's number.
+		// Copied by VALUE, so the response owns what it carries and shares no
+		// pointee with the page it was rendered from.
 		if hit.CarriedBy != nil {
 			result.CarriedBy = ptr(*hit.CarriedBy)
 		}
-		// Same copy, same reason: the address of the loop's own variable would
-		// give every result the last hit's row.
 		if hit.EmailSummary != nil {
 			result.EmailSummary = ptr(*hit.EmailSummary)
 		}
-		// native records are authoritative
-		result.TrustTier = ptr(crmcontracts.SearchResultTrustTierSearchResultTrustTierAuthoritative)
+		if hit.IsPartner != nil {
+			result.IsPartner = ptr(*hit.IsPartner)
+		}
 		data = append(data, result)
 	}
-	pageInfo := crmcontracts.PageInfo{HasMore: page.HasMore}
-	if page.NextCursor != "" {
-		pageInfo.NextCursor = &page.NextCursor
-	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.SearchResponse{Data: data, Page: pageInfo})
+	return data
 }
 
 func ptr[T any](v T) *T { return &v }

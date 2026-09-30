@@ -41,7 +41,11 @@ export function messageBox(label: string): HTMLElement {
   return screen.getByRole("textbox", { name: label });
 }
 
-/** What the editor is showing, as a reader would read it back. */
+/**
+ * What the editor is showing, as a reader would read it back. The editor
+ * writes a value it was handed one effect after that render, so a read of
+ * text the app put there waits on it: `await waitFor(() => ...)`.
+ */
 export function messageText(label: string): string {
   return messageBox(label).textContent ?? "";
 }

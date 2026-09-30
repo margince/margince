@@ -14,7 +14,6 @@ import {
   Button,
   Card,
   Checkbox,
-  DataTable,
   Disclosure,
   EmptyState,
   Field,
@@ -336,7 +335,7 @@ export const BadgeInsideUppercaseParent: Story = {
 };
 
 // The chip is an IDENTIFIER, so the states that matter are the ones where two
-// chips must be told apart or recognised as one record: every size, the tint a
+// chips must be told apart or recognised as one record: every size, the mesh a
 // record keeps on every page, and a name with no space in it.
 export const Avatars: Story = {
   render: () => (
@@ -344,23 +343,23 @@ export const Avatars: Story = {
       <div style={stack}>
         <span className="t-label">The four sizes</span>
         <div style={row}>
-          <Avatar name="Alice Müller" size="sm" />
-          <Avatar name="Alice Müller" size="md" />
-          <Avatar name="Alice Müller" size="lg" />
-          <Avatar name="Alice Müller" size="xl" />
+          <Avatar name="Alice Müller" identity="Alice Müller" size="sm" />
+          <Avatar name="Alice Müller" identity="Alice Müller" size="md" />
+          <Avatar name="Alice Müller" identity="Alice Müller" size="lg" />
+          <Avatar name="Alice Müller" identity="Alice Müller" size="xl" />
         </div>
       </div>
       <div style={stack}>
         <span className="t-label">
-          Six tones, picked from the record and never stored
+          A mesh per record, derived from its key and never stored
         </span>
         <div style={row}>
-          <Avatar name="Alice Müller" />
-          <Avatar name="Bob Schmidt" />
-          <Avatar name="Carol Wagner" />
-          <Avatar name="Voltaq Systems" />
-          <Avatar name="Northwind Handel" />
-          <Avatar name="Dara O'Brien" />
+          <Avatar name="Alice Müller" identity="Alice Müller" />
+          <Avatar name="Bob Schmidt" identity="Bob Schmidt" />
+          <Avatar name="Carol Wagner" identity="Carol Wagner" />
+          <Avatar name="Voltaq Systems" identity="Voltaq Systems" />
+          <Avatar name="Northwind Handel" identity="Northwind Handel" />
+          <Avatar name="Dara O'Brien" identity="Dara O'Brien" />
         </div>
       </div>
       <div style={stack}>
@@ -368,17 +367,16 @@ export const Avatars: Story = {
           The names a monogram rule usually gets wrong
         </span>
         <div style={row}>
-          <Avatar name="jane.doe@example.com" />
-          <Avatar name="Müller" />
-          <Avatar name="van der Berg" />
-          <Avatar name="李" />
-          <Avatar name="Ana-Sofía Ruiz" />
+          <Avatar name="jane.doe@example.com" identity="jane.doe@example.com" />
+          <Avatar name="Müller" identity="Müller" />
+          <Avatar name="van der Berg" identity="van der Berg" />
+          <Avatar name="李" identity="李" />
+          <Avatar name="Ana-Sofía Ruiz" identity="Ana-Sofía Ruiz" />
         </div>
       </div>
       <div style={stack}>
         <span className="t-label">
-          Same record, same colour — keyed on an id, so a rename does not move
-          it
+          Same record, same mesh — keyed on an id, so a rename does not move it
         </span>
         <div style={row}>
           <Avatar identity="company_7f3" name="Voltaq Systems" />
@@ -392,6 +390,7 @@ export const Avatars: Story = {
         <div style={row}>
           <Avatar
             name="Northwind Handel"
+            identity="Northwind Handel"
             size="md"
             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230b7a53'/%3E%3C/svg%3E"
           />
@@ -402,6 +401,7 @@ export const Avatars: Story = {
               request as a story that did not render clean. */}
           <Avatar
             name="Northwind Handel"
+            identity="Northwind Handel"
             size="md"
             src="data:image/png;base64,AAAA"
           />
@@ -415,15 +415,15 @@ export const Avatars: Story = {
         <div style={row}>
           <AvatarStack
             contacts={[
-              { name: "Alice Müller" },
-              { name: "Bob Schmidt" },
-              { name: "Carol Wagner" },
-              { name: "Dara O'Brien" },
-              { name: "Eve Lindqvist" },
-              { name: "Frank Osei" },
+              { name: "Alice Müller", identity: "Alice Müller" },
+              { name: "Bob Schmidt", identity: "Bob Schmidt" },
+              { name: "Carol Wagner", identity: "Carol Wagner" },
+              { name: "Dara O'Brien", identity: "Dara O'Brien" },
+              { name: "Eve Lindqvist", identity: "Eve Lindqvist" },
+              { name: "Frank Osei", identity: "Frank Osei" },
             ]}
           />
-          <Avatar name="Alice Müller" />
+          <Avatar name="Alice Müller" identity="Alice Müller" />
         </div>
       </div>
     </div>
@@ -509,7 +509,7 @@ function FieldStatesColumn() {
             Forgot?
           </button>
         }
-        hint="At least 12 characters."
+        hint="At least 12 characters"
         trailing={reveal.trailing}
       >
         {(control) => (
@@ -524,7 +524,7 @@ function FieldStatesColumn() {
       <Field
         label="New password"
         required
-        error="Too short. Use at least 12 characters."
+        error="Password is too short. Use at least 12 characters."
         trailing={revealShort.trailing}
       >
         {(control) => (
@@ -539,7 +539,7 @@ function FieldStatesColumn() {
       <Field
         label="Confirm"
         required
-        error="These two don't match."
+        error="Passwords do not match."
         hint="Both fields have to say the same thing."
       >
         {(control) => (
@@ -742,7 +742,7 @@ const RECORD_TABS = ["overview", "research", "documents"] as const;
 type RecordTab = (typeof RECORD_TABS)[number];
 const RECORD_TAB_LABELS: Record<RecordTab, string> = {
   overview: "Overview",
-  research: "Data & tools",
+  research: "Data and tools",
   documents: "Documents",
 };
 
@@ -764,89 +764,6 @@ function MarkedTabsDemo() {
 // never the only carrier: the surface it points at states the fact in words.
 export const MarkedOption: Story = {
   render: () => <MarkedTabsDemo />,
-};
-
-type DemoDeal = {
-  id: string;
-  name: string;
-  stage: string;
-  weighted: string;
-};
-
-const DEMO_DEALS: DemoDeal[] = [
-  {
-    id: "dl_1",
-    name: "Globex renewal",
-    stage: "Proposal",
-    weighted: "48,000 EUR",
-  },
-  {
-    id: "dl_2",
-    name: "Initech platform",
-    stage: "Qualify",
-    weighted: "12,500 EUR",
-  },
-  {
-    id: "dl_3",
-    name: "Umbrella expansion",
-    stage: "Negotiation",
-    weighted: "156,000 EUR",
-  },
-];
-
-const DEAL_COLUMNS = [
-  { key: "name", header: "Deal", render: (deal: DemoDeal) => deal.name },
-  {
-    key: "stage",
-    header: "Stage",
-    render: (deal: DemoDeal) => <Badge tone="accent">{deal.stage}</Badge>,
-  },
-  {
-    key: "weighted",
-    header: "Weighted",
-    render: (deal: DemoDeal) => <span className="t-num">{deal.weighted}</span>,
-  },
-];
-
-// onRowClick is what turns a row into a link, so the story has to supply one
-// and show that it fired — a cursor change alone is not evidence.
-function DealTableDemo() {
-  const [opened, setOpened] = useState<DemoDeal | null>(null);
-  return (
-    <div style={stack}>
-      <DataTable
-        label={"Deals"}
-        columns={DEAL_COLUMNS}
-        rows={DEMO_DEALS}
-        rowKey={(deal) => deal.id}
-        onRowClick={setOpened}
-      />
-      <span className="t-caption">
-        {opened
-          ? `Row opened: ${opened.name}`
-          : "Click a row — onRowClick is what makes it a link."}
-      </span>
-    </div>
-  );
-}
-
-// Rows and no rows. The empty table is the state a screen actually reaches
-// first, and it is header-only by design: DataTable never invents a message,
-// so the screen pairs it with an EmptyState of its own.
-export const Tables: Story = {
-  render: () => (
-    <div style={stack}>
-      <DealTableDemo />
-      <SectionHeader title="No rows" />
-      <DataTable
-        label={"Deals"}
-        columns={DEAL_COLUMNS}
-        rows={[]}
-        rowKey={(deal) => deal.id}
-      />
-      <EmptyState>No deals in this pipeline yet.</EmptyState>
-    </div>
-  ),
 };
 
 // OverflowMenu mounts its items only once opened, so the story presses the

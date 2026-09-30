@@ -69,11 +69,22 @@ func (a dealOwnerAuthority) contextFor(ctx context.Context, dealID ids.UUID) (co
 // principal — the sweep's — because owner_id is what chooses the reading
 // authority, and a read that needed the authority to find it could not start.
 func (a dealOwnerAuthority) dealOwner(ctx context.Context, dealID ids.UUID) (ids.UUID, error) {
-	var owner *ids.UUID
+	var owner ids.UUID
 	err := a.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT owner_id FROM deal WHERE id = $1`, dealID).Scan(&owner)
+		var err error
+		owner, err = lockedDealOwner(ctx, tx, dealID)
+		return err
 	})
-	if err != nil {
+	return owner, err
+}
+
+// lockedDealOwner reads the owner and holds it until the caller's transaction
+// ends. A reassignment waits behind the lock, so whatever the caller stages
+// here names the owner that is current when it commits; one that committed
+// first hands its proposals on itself (approvals.FollowDealOwnerInTx).
+func lockedDealOwner(ctx context.Context, tx pgx.Tx, dealID ids.UUID) (ids.UUID, error) {
+	var owner *ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT owner_id FROM deal WHERE id = $1 FOR SHARE`, dealID).Scan(&owner); err != nil {
 		return ids.Nil, fmt.Errorf("compose: deal %s owner: %w", dealID, err)
 	}
 	if owner == nil {

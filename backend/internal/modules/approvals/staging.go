@@ -408,15 +408,15 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	// time in Go is what let the two drift apart before.
 	var expiresAt time.Time
 	if err := tx.QueryRow(ctx,
-		`INSERT INTO approval (id, kind, proposed_by, on_behalf_of, passport_id,
+		`INSERT INTO approval (id, kind, proposed_by, on_behalf_of, passport_id, staged_by_connection,
 			                       target_entity_type, target_entity_id, target_version,
 			                       co_target_entity_type, co_target_entity_id, co_target_version,
 			                       target_label, summary, proposed_change, diff_hash, expires_at,
 			                       bundle_id, evidence)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-			         now() + $16::interval, $17, $18)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+			         now() + $17::interval, $18, $19)
 			 RETURNING expires_at`,
-		id, in.Kind, p.ID, nullUUID(p.OnBehalfOf), nullUUID(p.PassportID),
+		id, in.Kind, p.ID, nullUUID(p.OnBehalfOf), nullUUID(p.PassportID), nullUUID(p.ConnectionID),
 		nullStr(in.TargetType), nullUUID(in.TargetID), in.TargetVersion,
 		nullStr(in.CoTargetType), nullUUID(in.CoTargetID), coTargetVersion,
 		targetLabel(ctx, tx, in.TargetType, in.TargetID),

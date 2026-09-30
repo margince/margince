@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package aicert is the manual-lane AI certification harness's pure-library
-// layer: the scenario corpus format, the §5 verdict math, and the on-disk
+// layer: the scenario corpus format, the verdict math, and the on-disk
 // record format. It has no side effects beyond the file I/O its functions
 // are named for (LoadCorpus, WriteRecord/LoadRecords) — no time.Now, no
 // network, no database — so a certification run is reproducible from a
@@ -88,9 +88,10 @@ func (v JSONValue) MarshalJSON() ([]byte, error) {
 	return v, nil
 }
 
-// Bands are the 0-100 score thresholds a run set is graded against (spec
-// §5): CertifiedMin and DegradedMin gate the median score, Floor gates the
-// worst single run.
+// Bands are the 0-100 score thresholds one scenario's run set is graded
+// against: CertifiedMin and DegradedMin gate the bounds on its mean score, and
+// Floor gates the worst single run for certified and the mean's upper bound
+// for any grade. Verdict states the rule exactly.
 type Bands struct {
 	CertifiedMin int `yaml:"certified_min"`
 	DegradedMin  int `yaml:"degraded_min"`
@@ -133,7 +134,21 @@ type Expectations struct {
 	NearMisses []string `yaml:"near_misses,omitempty"`
 	Bands      Bands    `yaml:"bands"`
 	Caps       Caps     `yaml:"caps,omitempty"`
+	// Judge is judgeNone for a case its mechanical check grades alone, and
+	// JudgeNoneReason says why that check sees everything a judge would. Such a
+	// case carries no rubric and no bands, since nothing would read them. Both
+	// are omitted from the stamp when empty, so a judged case's stamp is the one
+	// it had before they existed.
+	Judge           string `yaml:"judge,omitempty" json:"judge,omitempty"`
+	JudgeNoneReason string `yaml:"judge_none_reason,omitempty" json:"judge_none_reason,omitempty"`
 }
+
+// judgeNone is the one value expect.judge takes: the case is not sent to a judge.
+const judgeNone = "none"
+
+// Judged says a judge grades this case's quality; a case declaring judge: none
+// is graded by its mechanical check alone.
+func (e Expectations) Judged() bool { return e.Judge != judgeNone }
 
 // Scenario is one certification test case, parsed from
 // corpus/<task>/<name>.yaml.
@@ -255,7 +270,36 @@ func validateScenario(sc Scenario, path string, census *aitasks.Registry) error 
 	if sc.SanitizedBy == "" {
 		return fmt.Errorf("aicert: %s: sanitized_by is required — name who reviewed this scenario for sensitive content", path)
 	}
+	if err := validateJudge(sc.Expect, path); err != nil {
+		return err
+	}
+	if !sc.Expect.Judged() {
+		return nil
+	}
 	return validateBands(sc.Expect.Bands, path)
+}
+
+// validateJudge holds a judge-less case to what makes it honest: a reason, an
+// expected answer for the mechanical check to hold the reply to, and no rubric
+// or bands, which would read as graded when nothing grades them.
+func validateJudge(e Expectations, path string) error {
+	switch {
+	case e.Judge != "" && e.Judge != judgeNone:
+		return fmt.Errorf("aicert: %s: expect.judge is %q; leave it out for a judged case, or write %q", path, e.Judge, judgeNone)
+	case e.Judged() && e.JudgeNoneReason != "":
+		return fmt.Errorf("aicert: %s: expect.judge_none_reason is set on a judged case; add `judge: %s` or remove the reason", path, judgeNone)
+	case e.Judged():
+		return nil
+	case strings.TrimSpace(e.JudgeNoneReason) == "":
+		return fmt.Errorf("aicert: %s: judge: %s needs judge_none_reason saying why the mechanical check sees everything a judge would", path, judgeNone)
+	case strings.TrimSpace(e.Rubric) != "":
+		return fmt.Errorf("aicert: %s: judge: %s, yet it carries a rubric nobody reads; move what it demands into the expected answer, or keep the judge", path, judgeNone)
+	case e.Bands != (Bands{}):
+		return fmt.Errorf("aicert: %s: judge: %s, yet it carries quality bands no score is held to; remove them", path, judgeNone)
+	case len(e.Answer) == 0:
+		return fmt.Errorf("aicert: %s: judge: %s with no expect.answer leaves nothing to grade the reply against", path, judgeNone)
+	}
+	return nil
 }
 
 // validateOutcome holds expect.outcome to the four things a certified reply can
@@ -271,7 +315,7 @@ func validateOutcome(outcome, path string) error {
 		aitasks.OutcomeAccepted, aitasks.OutcomeWrongAnswer, aitasks.OutcomeInvalid, aitasks.OutcomeAbstained)
 }
 
-// validateBands enforces the §5 ordering Verdict (score.go) relies on:
+// validateBands enforces the ordering Verdict (score.go) relies on:
 // CertifiedMin ≤ 100 and ≥ 1 (0 means the author omitted `bands:` entirely,
 // which would otherwise auto-Certify every run — every score is a 0-100
 // int, so a zero CertifiedMin is never a real threshold, only a forgotten

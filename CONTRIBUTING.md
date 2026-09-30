@@ -38,7 +38,7 @@ gates apply (below).
 
 ## A working tree in four commands
 
-You need **Go ≥ 1.26**, **Docker**, `golangci-lint`, and Node with pnpm
+You need **Go ≥ 1.27**, **Docker**, `golangci-lint`, and Node with pnpm
 for the frontend half. *Which* pnpm is not yours to pick: `package.json`
 pins it in `packageManager`, and both Corepack and pnpm itself switch to
 that version, so the repository decides rather than the day you installed.

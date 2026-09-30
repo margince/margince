@@ -50,7 +50,7 @@ function RecordHead({
   standing,
   wide,
   compact = false,
-  markShape,
+  identity,
 }: Readonly<{
   name: string;
   avatarSrc?: string | null;
@@ -73,7 +73,7 @@ function RecordHead({
   // One rung under the record scale: the mark at `lg` and the name at the h1
   // rung, for a page whose head shares the fold with the work below it.
   compact?: boolean;
-  markShape: "contact" | "company";
+  identity: string;
 }>) {
   const nameTip = useTruncationTooltip<HTMLHeadingElement>(name);
   return (
@@ -93,9 +93,9 @@ function RecordHead({
           said something that was not true. */}
       <Avatar
         name={name}
+        identity={identity}
         src={avatarSrc}
         size={headMarkSize(wide, compact)}
-        shape={markShape}
       />
       <div className="record-id">
         {/* The record page's name, and the one badge that belongs on ITS
@@ -155,7 +155,7 @@ export function RecordView({
   pulse,
   actions,
   controls,
-  markShape = "contact",
+  identity,
   actionsInline,
   scale = "record",
   standing,
@@ -201,10 +201,9 @@ export function RecordView({
   // which is the company page's layout; a record that passes none keeps the
   // action row under the header.
   controls?: ReactNode;
-  // What KIND of record this is, which decides whether its mark is drawn round
-  // like a face or as a rounded square like a logo. Defaults to `contact`,
-  // which is what every record but a company is.
-  markShape?: "contact" | "company";
+  // The record's own id, which keys its mark: the same key every list row and
+  // card drawing this record passes, so the header wears the same mesh.
+  identity: string;
   // Puts `actions` on the SAME row as the identity block, right-aligned,
   // instead of the default full-width row underneath the header (or the
   // stacked column `controls` produces). An explicit opt-in: every other
@@ -308,7 +307,7 @@ export function RecordView({
       standing={standing}
       wide={headerWide}
       compact={scale === "compact"}
-      markShape={markShape}
+      identity={identity}
     />
   );
   // The strip sits directly under the identity on EVERY record, band or not: a

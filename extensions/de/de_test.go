@@ -68,9 +68,8 @@ func TestNewDeclaresTheGoBDFloors(t *testing.T) {
 // This asserts the DECLARATION and no more, deliberately: a pack states rules
 // and the core evaluates them, and this unit cannot reach the evaluator — it is
 // unexported in internal/modules/consent, and backend cannot import this module
-// back without a cycle. What the engine does with these four is held on the
-// other side, by consent's own tests over conditionsMet, and the two are tied
-// together by gates/deexceptionmirror_test.go.
+// back without a cycle. The engine does not offer the exception today: consent's
+// verdict refuses it outright, whatever conditions a pack declares.
 func TestTheExistingCustomerExceptionCarriesAllFourConditions(t *testing.T) {
 	shipped := New().Messaging
 	if len(shipped) != 1 {

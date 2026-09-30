@@ -37,6 +37,8 @@ func buildCatalog() map[Language]Copy {
 	inviteLines(line)
 	weeklyLines(line)
 	morningLines(line)
+	notificationLines(line)
+	digestLines(line)
 	confirmLines(line)
 
 	return map[Language]Copy{English: *en, German: *de, Vietnamese: *vi}
@@ -74,7 +76,7 @@ func resetLines(line writeLine) {
 		"Đặt lại mật khẩu trong vòng một giờ:")
 	line(func(c *Copy) *string { return &c.ResetIgnore },
 		"If this wasn't you, ignore this email — your password is unchanged.",
-		"Warst du das nicht, ignoriere diese E-Mail — dein Passwort bleibt unverändert.",
+		"Warst du das nicht, ignoriere diese E-Mail. Dein Passwort bleibt unverändert.",
 		"Nếu không phải bạn, hãy bỏ qua email này — mật khẩu của bạn không thay đổi.")
 }
 
@@ -139,8 +141,8 @@ func weeklyFigureLines(line writeLine) {
 		"Bewegt",
 		"Đã chuyển")
 	line(func(c *Copy) *string { return &c.WeeklyDecided },
-		"You decided",
-		"Von dir entschieden",
+		"Proposals decided",
+		"Entschiedene Vorschläge",
 		"Bạn đã quyết")
 	weeklyDecisionLines(line)
 }
@@ -169,8 +171,8 @@ func weeklyDecisionLines(line writeLine) {
 // with the week, and what it carried into the next one.
 func weeklyQueueLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyQueue },
-		"Morning queue",
-		"Morgen-Liste",
+		"Morning brief items",
+		"Einträge im Morgenbericht",
 		"Danh sách buổi sáng")
 	line(func(c *Copy) *string { return &c.WeeklyActed },
 		"acted",
@@ -182,7 +184,7 @@ func weeklyQueueLines(line writeLine) {
 		"đã bỏ qua")
 	line(func(c *Copy) *string { return &c.WeeklyCarried },
 		"Carried over",
-		"Übernommen",
+		"Übertragen",
 		"Chuyển tiếp")
 }
 
@@ -205,7 +207,7 @@ func weeklyMovementLines(line writeLine) {
 func weeklyClosingLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
 		"This week’s commitments",
-		"Zusagen für diese Woche",
+		"Zusagen dieser Woche",
 		"Cam kết tuần này")
 	line(func(c *Copy) *string { return &c.WeeklyFullWeek },
 		"The full week, and the ones before it:",
@@ -253,6 +255,78 @@ func morningLines(line writeLine) {
 		"Mở ngày của bạn:")
 }
 
+// notificationLines is the one notice mailed the moment it is raised: an
+// approval waiting on the colleague who can answer it.
+//
+// It names the READER's part rather than the product's. "An approval is
+// waiting for your decision" is the sentence the Worklist card already makes,
+// and the message exists to carry that sentence out of a tab nobody has open —
+// so a wording about the notification itself would describe the envelope
+// instead of what is in it.
+//
+// The German is INFORMAL, like the reset, invite and brief copy above and
+// unlike the confirm sections below: this message goes to a colleague who works
+// here, and a product that says "du" every morning and "Sie" when a decision is
+// waiting is two voices in one mailbox.
+func notificationLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.NotificationSubject },
+		"Waiting on you: ",
+		"Wartet auf dich: ",
+		"Đang chờ bạn: ")
+	line(func(c *Copy) *string { return &c.NotificationIntro },
+		"An approval is waiting for your decision.",
+		"Eine Freigabe wartet auf deine Entscheidung.",
+		"Một phê duyệt đang chờ bạn quyết định.")
+	line(func(c *Copy) *string { return &c.NotificationOpen },
+		"Open your worklist",
+		"Arbeitsliste öffnen",
+		"Mở danh sách công việc")
+}
+
+// digestLines is the once-a-day batch: what is waiting on a colleague's
+// worklist that they have not opened yet.
+//
+// It names the QUEUE and not the product's own machinery. "Here is what is
+// still waiting on your worklist" is a sentence about the reader's work; "your
+// notification digest is ready" describes the envelope, which is the wording
+// every product reaches for and nobody reads twice.
+//
+// The German is INFORMAL, like the brief and the immediate notice above and
+// unlike the confirm sections below: this goes to a colleague who works here,
+// and a product that says "du" every morning and "Sie" in the daily summary of
+// the same morning is two voices in one mailbox.
+func digestLines(line writeLine) {
+	// NO TIME OF DAY in the subject, and the lane is why. The window closes at
+	// the local morning, but the pass ticks hourly, so a worker that was down
+	// sends that same batch later in the day — and a subject line is the one
+	// part of a message a reader checks against the clock.
+	line(func(c *Copy) *string { return &c.DigestSubject },
+		"What is waiting on your worklist",
+		"Das wartet auf deiner Arbeitsliste",
+		"Những việc đang chờ trong danh sách công việc của bạn")
+	// STILL WAITING, not "since yesterday", and the window is why. The pass
+	// reaches back two local-day labels and skips nothing a reader has left
+	// unread, so a notice nobody has opened is quoted again tomorrow — a
+	// sentence naming a boundary would be false on the second morning and
+	// falser on the third. What is true every morning is that these are
+	// waiting.
+	line(func(c *Copy) *string { return &c.DigestIntro },
+		"Here is what is still waiting on your worklist.",
+		"Das wartet noch auf deiner Arbeitsliste.",
+		"Đây là những gì vẫn đang chờ trong danh sách công việc của bạn.")
+	// THE COUNT LAST IN GERMAN, like the retrospective's tail above: this line
+	// is reached with one, and a German adjective inflects for the count — a
+	// singular beside a plural, which a catalog of flat strings cannot hold.
+	line(func(c *Copy) *string { return &c.DigestAndMore },
+		"…and %d more",
+		"…weitere Einträge: %d",
+		"…và %d mục khác")
+	line(func(c *Copy) *string { return &c.DigestOpen },
+		"Open your worklist:",
+		"Arbeitsliste öffnen:",
+		"Mở danh sách công việc:")
+}
+
 // confirmLines is the copy for messages addressed to a contact the installation
 // holds a record about, rather than to a colleague who works here.
 //
@@ -280,16 +354,16 @@ func confirmAskLines(line writeLine) {
 	// proof can name a published row rather than quoting whatever arrived with
 	// the answer.
 	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
-		"News from time to time, roughly once a month. You decide, and I will hold to it.",
-		"Neuigkeiten ab und zu, etwa einmal im Monat. Sie entscheiden, ich halte mich daran.",
+		"News from time to time, roughly once a month. Your choice is respected.",
+		"Neuigkeiten von Zeit zu Zeit, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
 		"Tin tức thỉnh thoảng, khoảng mỗi tháng một lần. Bạn quyết định, và tôi sẽ tuân theo.")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
-		"Yes, keep me posted",
-		"Ja, halten Sie mich auf dem Laufenden",
+		"Subscribe to news",
+		"Neuigkeiten abonnieren",
 		"Có, hãy gửi tin cho tôi")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingNo },
-		"No thanks, just keep my details correct",
-		"Nein danke, nur meine Daten korrekt halten",
+		"Do not send news",
+		"Keine Neuigkeiten senden",
 		"Không, chỉ cần giữ thông tin của tôi chính xác")
 	// THE DEDICATED SUBSCRIPTION LINK'S OWN QUESTION, which names the purpose
 	// rather than describing a frequency. A grant through that door binds this;
@@ -299,8 +373,8 @@ func confirmAskLines(line writeLine) {
 		"Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
 		"Xác nhận rằng bạn muốn nhận {purpose}.")
 	line(func(c *Copy) *string { return &c.ConfirmSubscriptionConfirm },
-		"Yes, subscribe me",
-		"Ja, ich möchte das Abo",
+		"Confirm subscription",
+		"Abonnement bestätigen",
 		"Có, đăng ký cho tôi")
 }
 
@@ -367,7 +441,7 @@ func confirmConsentLines(line writeLine) {
 		"You asked to hear from us. Confirming below is what turns that into a\n"+
 			"permission we will act on — until you do, we will not write to you about it.",
 		"Sie haben darum gebeten, von uns zu hören. Erst Ihre Bestätigung unten macht\n"+
-			"daraus eine Einwilligung, auf die wir uns stützen — bis dahin schreiben wir\n"+
+			"daraus eine Einwilligung, auf die wir uns stützen. Bis dahin schreiben wir\n"+
 			"Ihnen dazu nicht.",
 		"Quý vị đã yêu cầu nhận tin từ chúng tôi. Việc xác nhận bên dưới mới biến điều đó\n"+
 			"thành sự đồng ý mà chúng tôi dựa vào — cho đến lúc đó, chúng tôi sẽ không\n"+

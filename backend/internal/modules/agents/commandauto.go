@@ -31,6 +31,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -48,19 +49,22 @@ type LogActivityCommand struct {
 // beyond the command's own fields.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewLogActivityCall(cmd LogActivityCommand) GovernedCall {
-	return bind[LogActivityCommand](logActivityResolver{}, cmd)
+func NewLogActivityCall(language baselanguage.Resolver, cmd LogActivityCommand) GovernedCall {
+	return bind[LogActivityCommand](logActivityResolver{language: language}, cmd)
 }
 
-type logActivityResolver struct{}
+type logActivityResolver struct {
+	language baselanguage.Resolver
+}
 
 // Subject names the record TYPE with no id and no pin — the shape every create
 // stages (createResolver, command.go), because there is no row yet for either
 // to describe.
-func (logActivityResolver) Subject(_ context.Context, cmd LogActivityCommand) (StageInfo, error) {
+func (r logActivityResolver) Subject(ctx context.Context, cmd LogActivityCommand) (StageInfo, error) {
+	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType: string(datasource.EntityActivity),
-		Summary:    describeGenericWrite("Log", string(datasource.EntityActivity), cmd.Fields),
+		Summary:    describeGenericWrite(said, fmt.Sprintf(said.logHead, said.noun(string(datasource.EntityActivity))), cmd.Fields),
 	}, nil
 }
 
@@ -85,14 +89,16 @@ type DraftEmailCommand struct {
 // reading the anchor through the record seam.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewDraftEmailCall(records datasource.SystemOfRecordProvider, cmd DraftEmailCommand) GovernedCall {
+func NewDraftEmailCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd DraftEmailCommand) GovernedCall {
 	return bind[DraftEmailCommand](&draftEmailResolver{
-		anchor: anchoredRecord{records: records, entityType: datasource.EntityActivity},
+		language: language,
+		anchor:   anchoredRecord{records: records, entityType: datasource.EntityActivity},
 	}, cmd)
 }
 
 type draftEmailResolver struct {
-	anchor anchoredRecord
+	anchor   anchoredRecord
+	language baselanguage.Resolver
 }
 
 // Subject names the ANCHOR the draft answers, and pins its version: a draft is
@@ -107,7 +113,7 @@ func (r *draftEmailResolver) Subject(ctx context.Context, cmd DraftEmailCommand)
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
-		Summary:       fmt.Sprintf("Draft a reply to activity %s", cmd.ActivityID),
+		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).draftReply, cmd.ActivityID),
 	}, nil
 }
 
@@ -132,9 +138,10 @@ type RelinkActivityCommand struct {
 // for it, wrapped in the destination-tier question every relink door shares.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewRelinkActivityCall(records datasource.SystemOfRecordProvider, cmd RelinkActivityCommand) GovernedCall {
+func NewRelinkActivityCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd RelinkActivityCommand) GovernedCall {
 	return destinationTieredCall{
 		GovernedCall: bind[RelinkActivityCommand](&relinkActivityResolver{
+			language: language,
 			activity: anchoredRecord{records: records, entityType: datasource.EntityActivity},
 		}, cmd),
 		entityType: cmd.EntityType,
@@ -265,6 +272,7 @@ func relinkActivityTier(in mcp.TierResolverInput) mcp.RiskTier {
 
 type relinkActivityResolver struct {
 	activity anchoredRecord
+	language baselanguage.Resolver
 }
 
 // Subject names the ACTIVITY the approval binds to — the row that changes —
@@ -276,12 +284,12 @@ func (r *relinkActivityResolver) Subject(ctx context.Context, cmd RelinkActivity
 	if err != nil {
 		return StageInfo{}, err
 	}
+	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
-		Summary: fmt.Sprintf("Re-associate activity %s to %s %s",
-			cmd.ActivityID, cmd.EntityType, cmd.EntityID),
+		Summary:       fmt.Sprintf(said.relinkActivity, cmd.ActivityID, said.noun(cmd.EntityType), cmd.EntityID),
 	}, nil
 }
 
@@ -333,11 +341,13 @@ type DecideApprovalCommand struct {
 // NewDecideApprovalCall binds one decision to the resolver that speaks it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewDecideApprovalCall(cmd DecideApprovalCommand) GovernedCall {
-	return bind[DecideApprovalCommand](decideApprovalResolver{}, cmd)
+func NewDecideApprovalCall(language baselanguage.Resolver, cmd DecideApprovalCommand) GovernedCall {
+	return bind[DecideApprovalCommand](decideApprovalResolver{language: language}, cmd)
 }
 
-type decideApprovalResolver struct{}
+type decideApprovalResolver struct {
+	language baselanguage.Resolver
+}
 
 // Subject names the decision and NOT a target record, which is the one thing
 // worth saying about it: the row this call acts on is the approval, and an
@@ -345,8 +355,9 @@ type decideApprovalResolver struct{}
 // target named here would be an authority object pointing at an authority
 // object — so the summary carries what a human would need to read and the
 // target stays absent, the way runReportResolver's does for a report key.
-func (decideApprovalResolver) Subject(_ context.Context, cmd DecideApprovalCommand) (StageInfo, error) {
-	return StageInfo{Summary: fmt.Sprintf("%s staged action %s", verdictWord(cmd.Approve), cmd.ApprovalID)}, nil
+func (r decideApprovalResolver) Subject(ctx context.Context, cmd DecideApprovalCommand) (StageInfo, error) {
+	said := summaryIn(ctx, r.language)
+	return StageInfo{Summary: fmt.Sprintf(said.decideApproval, verdictWord(said, cmd.Approve), cmd.ApprovalID)}, nil
 }
 
 // Guards stands down: what may be decided is the approvals engine's own
@@ -367,18 +378,20 @@ type DecideBundleCommand struct {
 // NewDecideBundleCall binds one bundle decision to its resolver.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewDecideBundleCall(cmd DecideBundleCommand) GovernedCall {
-	return bind[DecideBundleCommand](decideBundleResolver{}, cmd)
+func NewDecideBundleCall(language baselanguage.Resolver, cmd DecideBundleCommand) GovernedCall {
+	return bind[DecideBundleCommand](decideBundleResolver{language: language}, cmd)
 }
 
-type decideBundleResolver struct{}
+type decideBundleResolver struct {
+	language baselanguage.Resolver
+}
 
 // Subject names the act, for the reason the single decision's does not name a
 // record: a bundle is a grouping and never a second authority object, so there
 // is nothing here to pin either.
-func (decideBundleResolver) Subject(_ context.Context, cmd DecideBundleCommand) (StageInfo, error) {
-	return StageInfo{Summary: fmt.Sprintf("%s every waiting proposal of act %s",
-		verdictWord(cmd.Approve), cmd.BundleID)}, nil
+func (r decideBundleResolver) Subject(ctx context.Context, cmd DecideBundleCommand) (StageInfo, error) {
+	said := summaryIn(ctx, r.language)
+	return StageInfo{Summary: fmt.Sprintf(said.decideBundle, verdictWord(said, cmd.Approve), cmd.BundleID)}, nil
 }
 
 // Guards stands down for decideApprovalResolver's reason, per member.
@@ -387,11 +400,11 @@ func (decideBundleResolver) Guards(_ context.Context, _ DecideBundleCommand) err
 }
 
 // verdictWord is the one spelling of a verdict in a summary a human reads.
-func verdictWord(approve bool) string {
+func verdictWord(said summaryCopy, approve bool) string {
 	if approve {
-		return "Approve"
+		return said.approveWord
 	}
-	return "Reject"
+	return said.rejectWord
 }
 
 // AnnotateBriefCommand is the overnight pass's findings, staged.
@@ -412,19 +425,21 @@ type AnnotateBriefCommand struct {
 // writes to is the caller's own and the server resolves it.
 //
 //nolint:ireturn // the erased command-and-resolver pair is this constructor's whole product, as every New*Call beside it
-func NewAnnotateBriefCall(cmd AnnotateBriefCommand) GovernedCall {
-	return bind[AnnotateBriefCommand](annotateBriefResolver{}, cmd)
+func NewAnnotateBriefCall(language baselanguage.Resolver, cmd AnnotateBriefCommand) GovernedCall {
+	return bind[AnnotateBriefCommand](annotateBriefResolver{language: language}, cmd)
 }
 
-type annotateBriefResolver struct{}
+type annotateBriefResolver struct {
+	language baselanguage.Resolver
+}
 
 // Subject names the brief as a type with no id, the same shape every create
 // stages: the run is resolved from the acting principal and today's local day,
 // so there is no identifier for a decider to see or to change.
-func (annotateBriefResolver) Subject(_ context.Context, cmd AnnotateBriefCommand) (StageInfo, error) {
+func (r annotateBriefResolver) Subject(ctx context.Context, cmd AnnotateBriefCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: "brief",
-		Summary:    describeAnnotation(cmd),
+		Summary:    describeAnnotation(summaryIn(ctx, r.language), cmd),
 	}, nil
 }
 
@@ -437,15 +452,15 @@ func (annotateBriefResolver) Guards(_ context.Context, _ AnnotateBriefCommand) e
 }
 
 // describeAnnotation says what the pass wrote, in counts.
-func describeAnnotation(cmd AnnotateBriefCommand) string {
+func describeAnnotation(said summaryCopy, cmd AnnotateBriefCommand) string {
 	switch {
 	case cmd.Items == 0 && !cmd.Narrative:
-		return "Record that tonight's pass ran and found nothing to say"
+		return said.annotateNothing
 	case cmd.Items == 0:
-		return "Write a summary of the night onto your morning brief"
+		return said.annotateNarrative
 	case cmd.Narrative:
-		return fmt.Sprintf("Write a summary of the night and %d finding(s) onto your morning brief", cmd.Items)
+		return fmt.Sprintf(said.annotateBoth, cmd.Items)
 	default:
-		return fmt.Sprintf("Write %d finding(s) onto your morning brief", cmd.Items)
+		return fmt.Sprintf(said.annotateFindings, cmd.Items)
 	}
 }

@@ -214,7 +214,7 @@ func TestTheApprovalKeyIsNotCompacted(t *testing.T) {
 //
 // The distinction is real on this surface: an import tool's input schema
 // declares `properties.items` as an array. It is safe because property names
-// are walked in compactSchemaProperties and keywords in compactSchemaShape, so
+// are walked in compaction.properties and keywords in compaction.shape, so
 // the two never see each other's namespace — but "safe by construction" is the
 // kind of claim that wants a case, because the fix for something else could
 // merge those two walks without anybody noticing this.

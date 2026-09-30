@@ -16,12 +16,19 @@ func (h hidingWork) Unanswered(context.Context, time.Time) ([]WaitingCustomer, b
 	return nil, false, nil
 }
 
-func (h hidingWork) Answered(context.Context, time.Time, time.Time) (AnsweredWork, error) {
+func (h hidingWork) Answered(context.Context, time.Time, time.Time, LocalDays) (AnsweredWork, error) {
 	return AnsweredWork{}, nil
 }
 
 func (h hidingWork) Hidden(context.Context, time.Time) (HiddenWork, error) {
 	return HiddenWork(h), nil
+}
+
+// HiddenRows answers nothing: these fixtures drive the counts and the queue,
+// and a double that returned rows would be asserting about a read the test
+// never makes.
+func (h hidingWork) HiddenRows(context.Context, time.Time, string) ([]WaitingCustomer, error) {
+	return nil, nil
 }
 
 // The real constructor with every lane unbound, which is what these cases vary

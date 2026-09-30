@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -50,6 +51,9 @@ import (
 // module transport handler set together covers the full contract
 // surface.
 type Server struct {
+	reportingHandlers
+	reportingExportHandlers
+
 	authHandlers
 	contactsHandlers
 	dealsHandlers
@@ -59,6 +63,7 @@ type Server struct {
 	commissionsHandlers
 	activitiesHandlers
 	approvalsHandlers
+	bulkHandlers
 	searchHandlers
 	consentHandlers
 	directedSendHandlers
@@ -120,7 +125,6 @@ type Server struct {
 	captureCounterpartyHoldHandlers
 	claimHandlers
 	importHandlers
-	attributionHandlers
 	channelHandlers
 	traceHandlers
 	pipelineTraceHandlers
@@ -129,6 +133,7 @@ type Server struct {
 	exportBundleHandlers
 	companyRollupHandlers
 	strengthHandlers
+	recordAccessHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
 	outcomeReviewHandlers
@@ -166,8 +171,9 @@ type Server struct {
 	// because it reads the agents module's run tables without importing a
 	// sibling of its own.
 	aiActivityHandlers
-	// The notices transport: one verb (mark read); the content reaches the
-	// reader on the Worklist's notices lane.
+	// The notices transport: the reader's own centre and the settling of it,
+	// their per-class delivery settings, and one coach raising a notice. The
+	// Worklist's notices lane is the attention half of the same rows.
 	noticesHandlers
 	// Who is responsible for a record, and the administered roles they hold it
 	// under. Its authority is the parent record's own, so it wires no
@@ -187,6 +193,10 @@ type Server struct {
 	analyticsQueryHandlers
 	analyticsContextHandlers
 	assuranceHandlers
+	// The check a human starts: the preview of a first pass, and the pass
+	// itself. In compose because a pass is assembled from the deals and
+	// coverage seams, which assurance owns nothing of.
+	assuranceRunHandlers
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers
@@ -452,6 +462,12 @@ type Server struct {
 	// after it — silently reducing a full wipe to a table sweep, with nothing
 	// failing to say so.
 	resetRuntime ResetRuntime
+
+	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
+	listsEnabled     bool
+	reportingEnabled bool
 }
 
 var _ crmcontracts.ServerInterface = Server{}
+
+type reportingHandlers = reporting.Handlers

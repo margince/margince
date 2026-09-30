@@ -110,9 +110,11 @@ Columns:
 | `annotate_brief` | 🟢 | `write` | — |
 | `apply_tag` | 🟢 | `write` | — |
 | `book_meeting` | 🟢 | `send` | yes |
+| `bulk_update_records` | 🟢 | `write` | — |
+| `invite_meeting` | 🟡 | `send` | yes |
 | `catch_me_up_on` | 🟢 | `read` | — |
+| `change_lists` | 🟢 | `write` | — |
 | `check_availability` | 🟢 | `read` | — |
-| `check_location_support` | 🟢 | `read` | — |
 | `commit_import` | 🟢 | `write` | — |
 | `create_record` | 🟢 / 🟡 | `write` | — |
 | `create_tag` | 🟢 | `write` | — |
@@ -149,6 +151,7 @@ Columns:
 | `read_approval` | 🟢 | `read` | — |
 | `read_import_report` | 🟢 | `read` | — |
 | `read_import_run` | 🟢 | `read` | — |
+| `read_lists` | 🟢 | `read` | — |
 | `read_project_360` | 🟢 | `read` | — |
 | `query_workspace` | 🟢 | `read` | — |
 | `relink_activity` | dynamic | `write` | — |
@@ -159,6 +162,7 @@ Columns:
 | `review_commitments` | 🟢 | `read` | — |
 | `run_analytics_query` | 🟢 | `read` | — |
 | `run_report` | 🟢 | `read` | — |
+| `read_reporting` | 🟢 | `read` | Reporting catalog, metrics, evidence and saved editions; enabled with reporting. |
 | `compose_analytics_report` | 🟢 | `read` | — |
 | `forecast_readings` | 🟢 | `read` | — |
 | `forecast_movement` | 🟢 | `read` | — |
@@ -251,7 +255,7 @@ differ enough to be worth reading:
 | `coldStartReadback`, `coldStartPreview` | They CREATE the company, so there is no record for a record-shaped verb to target. The `enrich` tool keeps the two company routes. |
 | `createRecordGrant`, `revokeRecordGrant` | The grant verbs refuse a non-human principal at redemption, so an agent-staged, human-approved share was refused every time it would have applied. |
 | `renderOffer`, `regenerateOffer` | No tool backs them, and none can today. |
-| `sendOffer` | Human-only until the contract and the implementation agree on what sending an offer does — the description says it leaves the workspace; the code flips status, freezes `fx_rate_to_base` and snapshots buyer/issuer, with no transport (poc-v1#481). |
+| `sendOffer` | It IS the commercial commitment: the revision stops being mutable and its rate to base is fixed from there on. Nothing leaves the installation — sending an offer performs no transport, and delivery to a counterparty is a separate capability that does not exist yet. |
 
 The seven above are core operations; an extension declares the identical
 `x-agent-access: human-only` annotation for the same reason

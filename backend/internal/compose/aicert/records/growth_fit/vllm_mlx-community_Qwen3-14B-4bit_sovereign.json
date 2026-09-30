@@ -1,0 +1,92 @@
+{
+  "task": "growth_fit",
+  "provider": "vllm",
+  "served_model": "mlx-community/Qwen3-14B-4bit",
+  "env_class": "sovereign",
+  "prompt_version": "p50dbbecfac204c7d3eb870fd191496f1",
+  "corpus_version": "v1",
+  "verdict": "not_supported",
+  "runs": 12,
+  "passed": 0,
+  "reliability": 0,
+  "reported_accepted": 0,
+  "reported_wrong_answer": 11,
+  "reported_invalid": 0,
+  "reported_abstained": 1,
+  "certified_scope": "full_invocation",
+  "context_applied": true,
+  "context_scopes": [
+    "offer",
+    "positioning",
+    "proof"
+  ],
+  "judge_score_p50": 57,
+  "judge_score_min": 42,
+  "latency_p50": 119587,
+  "latency_p95": 195164,
+  "mean_tokens": 2812,
+  "mean_tokens_in": 1926,
+  "mean_tokens_out": 886,
+  "mean_cached_tokens": 938,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 0,
+  "judge_served_model": "claude-sonnet-4-6",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "echo",
+  "ran_at": "2026-09-28T19:10:59Z",
+  "scenarios": [
+    {
+      "scenario": "growth_fit_reads_their_facts_against_our_offering",
+      "site": "growth_fit",
+      "stamp": "d002337807c62e9e616efe90a373f832791ed1064ab2ab16150474cb402f388937f6df99f903014467c9cce61e28511ebb9fd0271db1897500f4e861dce6372599a8f235b92b702391046076fbabcbff83904dedd7eb8bb30097882e29de1669",
+      "verdict": "not_supported",
+      "judge_band": "supported_degraded",
+      "runs": 9,
+      "passed": 0,
+      "judge_scores": [
+        65,
+        42,
+        62,
+        72,
+        55,
+        59,
+        54,
+        60,
+        62
+      ],
+      "bands": {
+        "certified_min": 75,
+        "degraded_min": 55,
+        "floor": 45
+      },
+      "reported_accepted": 0,
+      "reported_wrong_answer": 8,
+      "reported_invalid": 0,
+      "reported_abstained": 1
+    },
+    {
+      "scenario": "growth_fit_calls_a_company_outside_our_market_weak",
+      "site": "growth_fit",
+      "stamp": "aada1330e0a60630ed627dadccb6ac6b523ef14b502aa544fa729057ccbd033ccbfeb9c4893c8a7b4c02eba4df2a1165d420fdbc3484ed7659bb5223227b18365cee077a0f1d803f1484a05f844daa7cc1bcbaae3c69c4b9c214d5303e6ac278",
+      "verdict": "not_supported",
+      "judge_band": "not_supported",
+      "runs": 3,
+      "passed": 0,
+      "judge_scores": [
+        42,
+        43,
+        50
+      ],
+      "bands": {
+        "certified_min": 75,
+        "degraded_min": 55,
+        "floor": 45
+      },
+      "reported_accepted": 0,
+      "reported_wrong_answer": 3,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

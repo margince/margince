@@ -4,10 +4,11 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
-import { Button, TextInput } from "../design-system/atoms";
+import { Button, Field, TextInput } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
 import { factsKey } from "./companyfactspanel";
 import "./evidenceverdict.css";
 
@@ -135,7 +136,12 @@ export function factClaim(companyId: string, fact: CompanyFact): EvidenceClaim {
     confirmPath: async () => {
       const { error } = await api.POST(
         "/companies/{id}/facts/{factKey}/confirm",
-        { params: { path: { id: companyId, factKey } } },
+        {
+          params: {
+            path: { id: companyId, factKey },
+            ...ifMatch(requireVersion(fact.version)),
+          },
+        },
       );
       if (error) {
         throwProblem(error);
@@ -143,7 +149,10 @@ export function factClaim(companyId: string, fact: CompanyFact): EvidenceClaim {
     },
     correctPath: async (value) => {
       const { error } = await api.PATCH("/companies/{id}/facts/{factKey}", {
-        params: { path: { id: companyId, factKey } },
+        params: {
+          path: { id: companyId, factKey },
+          ...ifMatch(requireVersion(fact.version)),
+        },
         body: { value },
       });
       if (error) {
@@ -180,18 +189,32 @@ export function EvidenceVerdict({
       queryClient.invalidateQueries({ queryKey: factsKey(companyId) }),
     ]);
   };
+  // The claim travels as a variable rather than through these closures: it
+  // carries the version both verbs pin, so a click running against the
+  // previous render's options would answer for a row the reader never saw.
   const confirm = useMutation({
-    mutationFn: claim.confirmPath,
+    mutationFn: (ruled: EvidenceClaim) => ruled.confirmPath(),
     onSuccess: settle,
   });
   const correct = useMutation({
-    mutationFn: claim.correctPath,
+    mutationFn: (edit: Readonly<{ ruled: EvidenceClaim; value: string }>) =>
+      edit.ruled.correctPath(edit.value),
     onSuccess: async () => {
       setCorrecting(false);
       await settle();
     },
   });
-  const failure = confirm.error ?? correct.error;
+  // Losing the race is the one refusal a precondition creates, and the server
+  // states it as the bare sentinel `version skew` — two words naming a concept
+  // no reader has met. The catalog says what happened and what to do instead.
+  const reasonFor = (failure: Error | null) =>
+    failure === null
+      ? undefined
+      : isVersionSkewOf(failure)
+        ? t("edit.versionSkew")
+        : problemMessageOf(failure, t);
+  const corrected = reasonFor(correct.error);
+  const confirmed = reasonFor(confirm.error);
 
   // Already a human's word. Saying who and when is the whole point — a
   // confirmed value that does not say who confirmed it is no better evidenced
@@ -214,29 +237,30 @@ export function EvidenceVerdict({
   if (correcting) {
     return (
       <span className="evidence-verdict">
-        <TextInput
-          value={draft}
-          aria-label={t("evidence.correctedValue")}
-          onChange={(event) => setDraft(event.target.value)}
-        />
+        <Field
+          label={t("evidence.correctedValue")}
+          labelHidden
+          error={corrected}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+          )}
+        </Field>
         <Button
           disabled={!correct.isPending && draft.trim() === ""}
           pending={correct.isPending}
           busyLabel={t("evidence.saving")}
-          onClick={() => correct.mutate(draft.trim())}
+          onClick={() => correct.mutate({ ruled: claim, value: draft.trim() })}
         >
           {t("evidence.save")}
         </Button>
         <Button onClick={() => setCorrecting(false)}>
           {t("evidence.cancel")}
         </Button>
-        {/* The draft survives a failed save: the field above still holds what
-            was typed, and the refusal names why. */}
-        {failure && (
-          <span role="alert" className="form-error">
-            {failure.message}
-          </span>
-        )}
       </span>
     );
   }
@@ -246,23 +270,21 @@ export function EvidenceVerdict({
       <Button
         pending={confirm.isPending}
         busyLabel={t("evidence.saving")}
-        onClick={() => confirm.mutate()}
+        onClick={() => confirm.mutate(claim)}
       >
         {t("evidence.confirm")}
       </Button>
       <Button
         onClick={() => {
+          // A correction abandoned earlier does not speak for this one.
+          correct.reset();
           setDraft(claim.value);
           setCorrecting(true);
         }}
       >
         {t("evidence.correct")}
       </Button>
-      {failure && (
-        <span role="alert" className="form-error">
-          {failure.message}
-        </span>
-      )}
+      {confirmed && <ErrorLine inline>{confirmed}</ErrorLine>}
     </span>
   );
 }

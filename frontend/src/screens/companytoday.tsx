@@ -104,6 +104,8 @@ export type TodayReading =
       restsOn: readonly Grounding[];
       dimensions: readonly TodayDimension[];
       rows: ReactNode[];
+      // False when a source the rows are read from was withheld.
+      complete: boolean;
       footer?: ReactNode;
       notice?: ReactNode;
     };
@@ -288,6 +290,9 @@ export function useTodayReading({
     suggestions.rows,
     ...manual,
   ];
+  const withheld = TODAY_SOURCES.filter((source) =>
+    omitted(view, source.section),
+  );
   return {
     state: "ready",
     standing,
@@ -295,15 +300,15 @@ export function useTodayReading({
     restsOn: verdict.restsOn,
     dimensions,
     rows,
+    complete: withheld.length === 0,
     footer: briefFooter(
       commitment,
       suggestions.footer,
       scanFoot({ scan, t, plural, locale, recordZone }),
     ),
-    notice:
-      (view.sections_omitted?.length ?? 0) > 0 ? (
-        <TodayWithheld view={view} />
-      ) : undefined,
+    notice: (
+      <WithheldNotice sections={withheld.map((source) => t(source.label))} />
+    ),
   };
 }
 
@@ -462,6 +467,7 @@ export function NeedsList({
       onOpenTasks={onOpenTasks}
       footer={reading.footer}
       notice={reading.notice}
+      complete={reading.complete}
     >
       {reading.rows}
     </TodayPanel>
@@ -613,19 +619,16 @@ function manualMoveRows({
   const meeting = view.next_meeting;
   const rows: ReactNode[] = [];
   // The generic row is dropped when a suggestion already says "answer THIS
-  // message". Both rows say "write to them" and only one of them knows which
-  // conversation — and the generic one picks the account's strongest contact,
-  // who is frequently not the contact waiting on a reply. Two draft rows naming
-  // two different contacts is the account telling a rep two different things.
+  // message": the generic one picks the account's strongest contact, often not
+  // the one waiting on a reply, and two draft rows naming two contacts tell a
+  // rep two different things.
   if (recipient && onDraftTo && !hasDraftReply) {
     rows.push(
       <TodoRow
         key="move:draft"
-        // TodoRow takes a string here, for the avatar it draws. The linked
-        // name goes in `meta` instead: keeping the action phrase separate from
-        // the name is also what stops the label hard-coding English word order
-        // around a React node.
-        who={recipient.full_name}
+        // `who` is plain data for the avatar; the linked name goes in `meta`,
+        // which keeps English word order out of the label.
+        who={{ name: recipient.full_name, identity: recipient.contact_id }}
         title={t("today.draft.new")}
         meta={
           <EntityRef
@@ -659,7 +662,10 @@ function manualMoveRows({
     rows.push(
       <TodoRow
         key="move:meeting"
-        who={meeting.participants[0]?.display_name ?? meeting.subject}
+        who={{
+          name: meeting.participants[0]?.display_name ?? meeting.subject,
+          identity: meeting.participants[0]?.contact_id ?? meeting.activity_id,
+        }}
         title={meeting.subject}
         meta={who}
         verb={{
@@ -686,14 +692,6 @@ const TODAY_SOURCES: ReadonlyArray<{ section: string; label: MessageKey }> = [
   { section: "activities", label: "today.source.activities" },
   { section: "suggestions", label: "today.source.suggestions" },
 ];
-
-function TodayWithheld({ view }: Readonly<{ view: Company360 }>) {
-  const t = useT();
-  const hidden = TODAY_SOURCES.filter((source) =>
-    omitted(view, source.section),
-  );
-  return <WithheldNotice sections={hidden.map((source) => t(source.label))} />;
-}
 
 function whoseMove({
   view,

@@ -41,6 +41,7 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   // an email waiting to be read and released, and "held draft" describes its
   // state in a queue rather than the decision in front of them.
   held_draft: "approval.kind.held_draft",
+  invite_meeting: "approval.kind.invite_meeting",
   book_meeting: "approval.kind.book_meeting",
   coldstart: "approval.kind.coldstart",
   // Not a change to a record — a question about a credential's volume, which is
@@ -59,7 +60,6 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   transcript_proposal: "approval.kind.transcript_proposal",
   stage_progression: "approval.kind.stage_progression",
   fx_rate_proposal: "approval.kind.fx_rate_proposal",
-  ai_model_rate_proposal: "approval.kind.ai_model_rate_proposal",
   disqualify_lead: "approval.kind.disqualify_lead",
   demote_lead: "approval.kind.demote_lead",
   advance_project_phase: "approval.kind.advance_project_phase",

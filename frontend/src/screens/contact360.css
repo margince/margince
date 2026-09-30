@@ -499,7 +499,8 @@
   inset: 0;
 }
 .pe-employment-role,
-.pe-employment-actions {
+.pe-employment-actions,
+.pe-employment-company > .evmark {
   position: relative;
   z-index: 1;
 }
@@ -529,8 +530,12 @@
 
 .pe-employment-company {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+.pe-employment-company > .pe-meta-link {
+  text-align: start;
 }
 
 /* Contacts and open deals, under the company name: a fact about the
@@ -633,10 +638,12 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  /* Room at the end for the dialog's own close, which is drawn over this
-     corner. Without it the title runs under the glyph. The rule in atoms.css
-     that reserves this cannot reach here: it names a dialog's first HEADING,
-     and the heading in this row is a level down inside it. */
+}
+
+/* The space under the title and room for the close drawn over this corner. In a
+   `.drawer-head` the band pays the space and atoms.css pads the heading. */
+:not(.drawer-head) > .pe-drawer-title {
+  margin-bottom: var(--space-3);
   padding-inline-end: calc(var(--controlHeight) + var(--space-4));
 }
 
@@ -688,13 +695,6 @@
 
 .pe-draft-row > :first-child {
   flex: 1;
-}
-
-/* A refusal the rep has to act on — a consent gate, an unsendable mailbox —
-   sits beside the control that produced it rather than replacing the drawer. */
-.pe-send-error {
-  margin: var(--space-2) 0 0;
-  color: var(--dangerText);
 }
 
 /* "Why this draft": the reasoning is a SIBLING of the body, never part of it.
@@ -779,19 +779,6 @@
 
 .pe-brief-section {
   margin-bottom: var(--space-5);
-}
-
-/* The pulse card's facts sit under the relationship line, which is prose —
- * the gap is what separates a reading from the sentence explaining it. */
-.contact-pulse-facts {
-  margin-top: var(--space-3);
-}
-
-/* The one move the thin-record surface offers, spaced off the sentence that
-   explains why it is the move. It carried an inline `marginTop` before, which
-   is a spacing decision hidden where no stylesheet can see it. */
-.thin-log-first {
-  margin-top: var(--space-3);
 }
 
 /* The bought-data panel's heading: the vendor's mark beside its name. Aligned

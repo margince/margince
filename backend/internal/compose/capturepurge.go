@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -53,6 +54,12 @@ type PurgeOutcome struct {
 	Anonymised int `json:"anonymised"`
 	// Preview reports that nothing was actually done.
 	Preview bool `json:"preview"`
+	// Kept says WHY the skipped messages were skipped. Skipped alone tells an
+	// owner that something survived their deletion and not what would have to
+	// change for it to go — and the three reasons answer differently: a hold
+	// lifts when somebody lifts it, a statutory window expires on a date, an
+	// open request closes when it is finished.
+	Kept KeptBreakdown `json:"kept"`
 }
 
 // CapturePurger destroys what one seat's exclusion rule matched.
@@ -132,6 +139,7 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		Skipped:    len(subject.Restricted),
 		Anonymised: len(contacts),
 		Preview:    preview,
+		Kept:       keptBreakdown(subject),
 	}
 	if preview {
 		return outcome, nil
@@ -141,6 +149,21 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		reason = privacy.PurgeWorkspaceRule
 	}
 	if err := p.carryOut(ctx, subject, contacts, actor.UserID, reason); err != nil {
+		return PurgeOutcome{}, err
+	}
+	// AFTER the cascade, deliberately. Written first it would certify a plan
+	// rather than an act: carryOut commits per item, so a run that failed
+	// halfway would leave a receipt claiming everything went. Written here it
+	// records a cascade that finished.
+	//
+	// The residue is the opposite order's: this write can fail after the
+	// destruction committed, and then the purge answers an error with no
+	// summary row. That is the better failure of the two — the per-activity
+	// rows the cascade wrote are still there, so the trail is short a summary
+	// rather than carrying a false one, and a caller told it failed is told
+	// something true. Making neither possible needs a durable pending receipt
+	// finalized after the cascade, which is #6378.
+	if err := p.auditPurgeReceipt(ctx, exclusionID, outcome); err != nil {
 		return PurgeOutcome{}, err
 	}
 	return outcome, nil
@@ -373,9 +396,66 @@ func noSuchRule() error {
 // the rows naming an attachment and left its bytes in the bucket would report
 // mail as gone while it is not, so a role that cannot reach the blobs does not
 // purge at all.
-func capturePurgerFor(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger) *CapturePurger {
+func capturePurgerFor(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger, vault keyvault.Vault) *CapturePurger {
 	if blob == nil {
 		return nil
 	}
-	return NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), blob, log))
+	return NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), blob, log).WithPayloadVault(privacyPayloads(vault)))
+}
+
+// PurgeRemoved acts on the owner deleting a captured message at the provider.
+//
+// The signal is narrow and it is the owner's own: they went to Gmail or Outlook
+// and got rid of a message this CRM had taken a copy of. For mail nobody else
+// has seen, honouring that is the only defensible answer — the product is
+// holding it on their behalf, and it is holding a copy of something they threw
+// away.
+//
+// It is narrow in the other direction too, which is why this does not simply
+// destroy. Three cases keep the message, and each falls out of the selection
+// rather than being special-cased here:
+//
+//   - A colleague also imported it (SharedImports). Their claim is not the
+//     owner's to end, and tidying an inbox must not reach into somebody else's
+//     timeline.
+//   - The statutory floor shields it (Restricted). A Handelsbrief inside its
+//     retention window is a records duty, and inbox housekeeping does not
+//     outrank one.
+//   - An erasure request is still open about it (Restricted, same bucket). The
+//     request has not been answered yet, and destroying the evidence early
+//     would answer it by accident.
+//
+// Either way the outcome is audited: PurgeActivities writes the destruction
+// rows, and a removal that destroyed nothing is logged with what kept it, so
+// "the provider said this was deleted and it is still here" has an answer.
+func (p *CapturePurger) PurgeRemoved(ctx context.Context, seat ids.UUID, sourceSystem, sourceID string) error {
+	var subject capture.PurgeSubject
+	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		var err error
+		subject, err = capture.SelectRemovedPurgeTx(ctx, tx, seat, sourceSystem, sourceID, statutoryFloor())
+		return err
+	}); err != nil {
+		return fmt.Errorf("capture: selecting what a mailbox-side deletion destroys: %w", err)
+	}
+	if subject.Total() == 0 {
+		// Nothing captured under that key, or not by this seat. The ordinary
+		// case: most deleted mail was never captured, and a removal for a
+		// message this product does not hold is not an error to report.
+		return nil
+	}
+	if len(subject.SoleImports) == 0 {
+		slog.InfoContext(ctx, "capture: a mailbox-side deletion left the message standing",
+			"source_system", sourceSystem,
+			"shared_with_colleagues", len(subject.SharedImports),
+			"withheld", len(subject.Restricted))
+		return nil
+	}
+	// No contacts anonymised. One message is not evidence that the CRM knows a
+	// counterparty for no other reason — the owner's exclusion rule is where
+	// that question belongs, because a rule speaks about a correspondent and a
+	// deletion speaks about a single mail.
+	if err := p.carryOut(ctx, subject, nil, seat, privacy.PurgeMailboxDeletion); err != nil {
+		return fmt.Errorf("capture: destroying a message the owner deleted at the provider: %w", err)
+	}
+	return nil
 }

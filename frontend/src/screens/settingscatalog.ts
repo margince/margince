@@ -35,7 +35,7 @@ type RbacAction = components["schemas"]["RbacAction"];
  * to tell them apart: the first is not a destination at all, the second is a
  * destination that explains itself.
  */
-export type SettingsAvailabilityKey = "company_context";
+export type SettingsAvailabilityKey = "embedding_reindex";
 
 /**
  * What a page requires, as a value.
@@ -192,7 +192,6 @@ import {
   allOf,
   always,
   anyOf,
-  available,
   composedUnits,
   destroys,
   flagged,
@@ -250,6 +249,13 @@ export const SETTINGS_PAGES = [
     changes: always,
   },
   {
+    id: "meetings",
+    group: "me",
+    scope: "self",
+    requires: always,
+    changes: always,
+  },
+  {
     id: "voice",
     group: "me",
     scope: "self",
@@ -268,6 +274,15 @@ export const SETTINGS_PAGES = [
     // Passports, connected agents and the autonomy choice are all this reader's.
     changes: always,
   },
+  {
+    id: "notifications",
+    group: "me",
+    scope: "self",
+    requires: always,
+    // Both endpoints read and write the CALLING seat's rows, so there is
+    // nothing here an admin sets for somebody else and no grant to withhold.
+    changes: always,
+  },
   // MIXED, not self: most of its cards are the reader's own, and ConnectorsCard
   // carries the workspace's Telegram bot beside them. A page-level "Only you"
   // over that panel would tell a reader a shared connection is private to them.
@@ -283,15 +298,8 @@ export const SETTINGS_PAGES = [
     requires: always,
     // Acting, not consulting: the mailbox, sender and LinkedIn controls are the
     // reader's own and need no grant, and the mail-sharing row states a value
-    // and offers no control at all.
-    //
-    // The Telegram panel is the exception and it is NOT gated — connectors.tsx
-    // asks no capability question, so its Connect, Edit and Disconnect are
-    // offered to every reader and refused by the server (`channel_connection`
-    // is admin/ops to mutate). That is a pre-existing gap in that card rather
-    // than something this field can fix: `changes` decides which pages reach
-    // the rail, and it cannot withhold one control on a page whose other nine
-    // surfaces are genuinely the reader's.
+    // and offers no control at all. The Telegram panel gates its own verbs on
+    // `channel_connection`, so this field need not withhold the page for it.
     changes: always,
   },
   // MIXED for the same reason as `connections`, one page along:
@@ -313,30 +321,19 @@ export const SETTINGS_PAGES = [
     id: "company",
     group: "company",
     scope: "installation",
-    // The union of what the three cards on it ask for, and each arm is the verb
-    // that card's controls perform.
+    // What the installation and currency cards ask for. `installation_settings`
+    // is asked as the UPDATE: every seeded role reads it for the base currency,
+    // and only admin and ops may change it.
     //
-    // `installation_settings` is asked as the UPDATE, not the read. Every
-    // seeded role reads it — a rep needs the base currency to render a deal —
-    // so the read arm opened the installation's own facts to the whole
-    // workspace. Only admin and ops may change them.
-    //
-    // The company profile is different and stays a write a rep really holds:
-    // `company:update` is hers, and the profile the AI reads is a thing
-    // she legitimately edits. Its second condition is a deployment FLAG rather
-    // than a permission, so the grant ANDs with it — the surface may simply not
-    // exist on this installation.
+    // The company profile adds no arm. The server administers it — read and
+    // write both ask the admin ROLE, which no grant here can spell — so its card
+    // asks the role itself and draws nothing for anyone else on this page.
     requires: anyOf(
       writes("installation_settings", ["update"]),
-      allOf(writes("company"), available("company_context")),
       reads("fx_rate"),
     ),
-    // The three cards, by the verb each performs. InstallationSettingsCard and
-    // FxRatesCard both write; CompanyContextCard asks `useCanUpsert("company")`,
-    // which is create-or-update plus the seat — spelled here as `writes`.
     changes: acts(
       writes("installation_settings", ["update"]),
-      allOf(writes("company"), available("company_context")),
       writes("fx_rate"),
     ),
   },
@@ -415,16 +412,17 @@ export const SETTINGS_PAGES = [
     // which is a read, so it does not make this page the reader's to change.
     changes: acts(writes("team_admin")),
   },
-  // `roles` is NOT here, and its absence is the point.
-  //
-  // The plan gives it a full page — role definitions, row scope, field masks,
-  // extension grants, preview-as-role — and none of that is built. A catalog
-  // entry would put a "Roles & permissions" row in front of every admin and ops
-  // seat, because `role_admin:read` OPENS the page rather than closing it, and
-  // the row would lead to a blank column.
-  //
-  // A destination becomes reachable when it is complete, not when its id is
-  // decided. It joins the table in the change that builds it.
+  {
+    id: "roles",
+    group: "people",
+    scope: "workspace",
+    // `GET /roles` asks `role_admin:read`, and the role list IS the page, so
+    // the read opens it even for a reader who may change nothing.
+    requires: reads("role_admin"),
+    // Create is POST /roles, a rename, row scope or grant edit is update, and
+    // archive and restore are delete (identity/rolelifecycle.go).
+    changes: acts(writes("role_admin"), destroys("role_admin")),
+  },
   {
     id: "seats",
     group: "people",
@@ -621,15 +619,14 @@ export const SETTINGS_PAGES = [
     // processes the installation's text, and `/ai/provider-keys` writes the
     // installation key vault. Both contract summaries say "installation".
     scope: "installation",
-    // Two cards, two grants. The routing and provider-key cards read on
-    // `ai_routing`; `AiHealthCard` reads on `ai_diagnostics` (ai/health.go),
-    // and Models is the ONLY page that renders it. Management is seeded
-    // diagnostics WITHOUT routing, so on the routing grant alone this page was
-    // shut to the one role the health card was widened for.
+    // The routing and provider-key cards read on `ai_routing`; the tiers card's
+    // health and the AI tasks card read on `ai_diagnostics` (ai/health.go), and
+    // on that grant alone the tiers card still answers (ai-routing.tsx
+    // HealthOnly). Management is seeded diagnostics WITHOUT routing.
     requires: anyOf(reads("ai_routing"), reads("ai_diagnostics")),
-    // The routing binding and the provider keys, both on `ai_routing:update`.
-    // AiHealthCard is a read and does not widen this.
-    changes: acts(writes("ai_routing", ["update"])),
+    // Bindings and keys write on `ai_routing:update`, a provider sheet's prices
+    // on the `ai_model_rate` upsert (removal is admitted on update).
+    changes: acts(writes("ai_routing", ["update"]), writes("ai_model_rate")),
   },
   {
     id: "automations",

@@ -3,7 +3,7 @@ import { LocaleProvider } from "../i18n";
 import { EmailText } from "./emailtext";
 
 const meta = {
-  title: "Design System/Email text",
+  title: "Components/Text and data display/Email text",
   component: EmailText,
   decorators: [
     (Story) => (

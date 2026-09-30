@@ -41,7 +41,7 @@ function Lines({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 const meta: Meta<typeof Lines> = {
-  title: "Onboarding/Profile digest lines",
+  title: "Onboarding/Conversation/Profile digest lines",
   component: Lines,
 };
 export default meta;
@@ -66,7 +66,7 @@ export const BeingDecided: Story = {
   render: () => (
     <Lines>
       <DigestLine
-        row={row("offer_summary", "What they sell", "European road freight")}
+        row={row("offer_summary", "Offering", "European road freight")}
         n={2}
         active
       />

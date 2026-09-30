@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Logomark } from "./logomark";
 
 const meta: Meta<typeof Logomark> = {
-  title: "Design System/Logomark",
+  title: "Foundations/Brand",
   component: Logomark,
   parameters: { layout: "padded" },
 };

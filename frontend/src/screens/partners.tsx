@@ -6,6 +6,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { isOption } from "../app/options";
 import { usePageName } from "../app/pagemeta";
 import {
   Button,
@@ -14,11 +15,14 @@ import {
   SectionHeader,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
+import { FieldGuard } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem } from "./common";
+import { SUBMIT_COPY, type SubmitIntent } from "./create";
 import { EntityRef } from "./entityref";
 import {
   type ListPage,
@@ -104,30 +108,6 @@ const STAGE_LABELS: Record<RelationshipStage, MessageKey> = {
   no_fit: "partner.stage.noFit",
 };
 
-function asPartnerRole(value: string): PartnerRole | undefined {
-  return (PARTNER_ROLES as readonly string[]).includes(value)
-    ? (value as PartnerRole)
-    : undefined;
-}
-
-function asCertStatus(value: string): CertStatus | undefined {
-  return (CERT_STATUSES as readonly string[]).includes(value)
-    ? (value as CertStatus)
-    : undefined;
-}
-
-function asMarginTier(value: string): MarginTier | undefined {
-  return (MARGIN_TIERS as readonly string[]).includes(value)
-    ? (value as MarginTier)
-    : undefined;
-}
-
-function asRelationshipStage(value: string): RelationshipStage | undefined {
-  return (RELATIONSHIP_STAGES as readonly string[]).includes(value)
-    ? (value as RelationshipStage)
-    : undefined;
-}
-
 async function fetchPartner(companyId: string): Promise<Partner | null> {
   const { data, error, response } = await api.GET("/companies/{id}/partner", {
     params: { path: { id: companyId } },
@@ -187,13 +167,13 @@ function PartnerForm({
   partner,
   onSaved,
   onCancel,
-  submitLabel,
+  intent,
 }: Readonly<{
   companyId: string;
   partner?: Partner;
   onSaved: () => void;
   onCancel?: () => void;
-  submitLabel: MessageKey;
+  intent: SubmitIntent;
 }>) {
   const t = useT();
   // This form only mounts while editing (PartnerDetail/PartnerTab remount it
@@ -242,10 +222,8 @@ function PartnerForm({
             {...control}
             value={values.partner_role}
             onChange={(value) =>
-              setValues({
-                ...values,
-                partner_role: asPartnerRole(value) ?? values.partner_role,
-              })
+              isOption(value, PARTNER_ROLES) &&
+              setValues({ ...values, partner_role: value })
             }
             options={PARTNER_ROLES.map((role) => ({
               value: role,
@@ -260,10 +238,8 @@ function PartnerForm({
             {...control}
             value={values.cert_status}
             onChange={(value) =>
-              setValues({
-                ...values,
-                cert_status: asCertStatus(value) ?? values.cert_status,
-              })
+              isOption(value, CERT_STATUSES) &&
+              setValues({ ...values, cert_status: value })
             }
             options={CERT_STATUSES.map((status) => ({
               value: status,
@@ -280,9 +256,7 @@ function PartnerForm({
             onChange={(value) =>
               setValues({
                 ...values,
-                margin_tier: value
-                  ? (asMarginTier(value) ?? values.margin_tier)
-                  : "",
+                margin_tier: isOption(value, MARGIN_TIERS) ? value : "",
               })
             }
             // The clearing entry is a real choice, not a placeholder: a tier once
@@ -305,11 +279,8 @@ function PartnerForm({
             {...control}
             value={values.relationship_stage}
             onChange={(value) =>
-              setValues({
-                ...values,
-                relationship_stage:
-                  asRelationshipStage(value) ?? values.relationship_stage,
-              })
+              isOption(value, RELATIONSHIP_STAGES) &&
+              setValues({ ...values, relationship_stage: value })
             }
             options={RELATIONSHIP_STAGES.map((stage) => ({
               value: stage,
@@ -353,18 +324,8 @@ function PartnerForm({
           />
         )}
       </Field>
-      {mutation.isError && (
-        <p style={{ color: "var(--dangerText)" }}>
-          {problemMessageOf(mutation.error, t)}
-        </p>
-      )}
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--gapActions)",
-          justifyContent: "flex-end",
-        }}
-      >
+      <ErrorLine error={mutation.error} />
+      <div className="form-actions">
         {onCancel && (
           <Button type="button" onClick={onCancel}>
             {t("create.cancel")}
@@ -374,12 +335,35 @@ function PartnerForm({
           variant="primary"
           type="submit"
           pending={mutation.isPending}
-          busyLabel={t("create.saving")}
+          busyLabel={t(SUBMIT_COPY[intent].busy)}
         >
-          {t(submitLabel)}
+          {t(SUBMIT_COPY[intent].label)}
         </Button>
       </div>
     </form>
+  );
+}
+
+// Withheld is not empty: a role that may not read the commercial terms gets
+// the tier as null with `masked_fields` naming it, and a row that vanished
+// would say this partner agreed no tier. No row is the truth only when none
+// was agreed.
+function MarginTierRow({ partner }: Readonly<{ partner: Partner }>) {
+  const t = useT();
+  const masked = partner.masked_fields?.includes("margin_tier") ?? false;
+  const tier = partner.margin_tier;
+  if (!masked && !tier) {
+    return null;
+  }
+  return (
+    <>
+      <dt>{t("partner.marginTier")}</dt>
+      <dd>
+        <FieldGuard mode={masked ? "masked" : "visible"}>
+          {tier ? t(MARGIN_TIER_LABELS[tier]) : null}
+        </FieldGuard>
+      </dd>
+    </>
   );
 }
 
@@ -402,7 +386,7 @@ function PartnerDetail({
         <PartnerForm
           companyId={companyId}
           partner={partner}
-          submitLabel="record.save"
+          intent="save"
           onCancel={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);
@@ -432,12 +416,7 @@ function PartnerDetail({
           )}
           <dt>{t("partner.certStatus")}</dt>
           <dd>{t(CERT_LABELS[partner.cert_status])}</dd>
-          {partner.margin_tier && (
-            <>
-              <dt>{t("partner.marginTier")}</dt>
-              <dd>{t(MARGIN_TIER_LABELS[partner.margin_tier])}</dd>
-            </>
-          )}
+          <MarginTierRow partner={partner} />
           <dt>{t("partner.stage")}</dt>
           <dd>{t(STAGE_LABELS[partner.relationship_stage])}</dd>
           {partner.next_step && (
@@ -510,7 +489,7 @@ export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
               <SectionHeader title={t("partner.setup")} />
               <PartnerForm
                 companyId={companyId}
-                submitLabel="create.save"
+                intent="create"
                 onSaved={invalidateAfterSave}
               />
             </PanelBody>
@@ -535,13 +514,15 @@ async function fetchPartnersPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<Partner>> {
+  const role = query.filters.partner_role ?? "";
+  const cert = query.filters.cert_status ?? "";
   const { data, error } = await api.GET("/partners", {
     params: {
       query: {
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
-        partner_role: asPartnerRole(query.filters.partner_role ?? ""),
-        cert_status: asCertStatus(query.filters.cert_status ?? ""),
+        partner_role: isOption(role, PARTNER_ROLES) ? role : undefined,
+        cert_status: isOption(cert, CERT_STATUSES) ? cert : undefined,
       },
     },
   });

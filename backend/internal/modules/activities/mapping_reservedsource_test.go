@@ -191,3 +191,60 @@ func TestActivityLogInputRefusesAQuietAccountReminderIdentity(t *testing.T) {
 		}
 	}
 }
+
+// The importer door admits its own namespace and NOTHING else.
+//
+// Each refusal below is a distinct exploit the door must not open: the three
+// internal identities suppress a reminder, `email` claims the one mail identity
+// every transport shares, and `source` is the value the flip's crash repair
+// reads back to recognize its own rows.
+func TestTheImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
+	namespaced := "mirror:hubspot"
+	in, err := LogActivityInputFromImporter(crmcontracts.CreateActivityRequest{
+		Kind: "email", SourceSystem: &namespaced, SourceId: strPtr("emails:900"),
+	})
+	if err != nil {
+		t.Fatalf("the importer must be able to stamp its own namespace: %v", err)
+	}
+	if in.SourceSystem == nil || *in.SourceSystem != namespaced {
+		t.Fatalf("SourceSystem = %v, want it carried through — it is half the replay key", in.SourceSystem)
+	}
+
+	// The automation engine's names stay refused: they are a different
+	// writer's, and a lead or activity planted under a reminder's replay key
+	// makes the scan read it back as already asked.
+	for _, engines := range []string{
+		provenance.EmailRequestSource,
+		provenance.NoActivityReminderSource,
+		provenance.CheckInCadenceSource,
+	} {
+		planted := engines
+		_, err := LogActivityInputFromImporter(crmcontracts.CreateActivityRequest{
+			Kind: "task", SourceSystem: &planted, SourceId: strPtr("planted"),
+		})
+		var refused *provenance.ReservedError
+		if !errors.As(err, &refused) {
+			t.Errorf("%q: err = %v, want it refused — the importer is not the automation engine", engines, err)
+		}
+	}
+
+	// `email` is the one identity every mail transport shares, and it is
+	// refused outside the admission — for the importer too.
+	mail := connector.EmailSourceSystem
+	var mailRefused *ReservedMailIdentityError
+	if _, err := LogActivityInputFromImporter(crmcontracts.CreateActivityRequest{
+		Kind: "email", SourceSystem: &mail, SourceId: strPtr("msg-1"),
+	}); !errors.As(err, &mailRefused) {
+		t.Errorf("email: err = %v, want the mail identity refused even for the importer", err)
+	}
+
+	// `source` is guarded independently of the admission.
+	var sourceRefused *provenance.ReservedError
+	if _, err := LogActivityInputFromImporter(crmcontracts.CreateActivityRequest{
+		Kind: "note", Source: "mirror:hubspot",
+	}); !errors.As(err, &sourceRefused) {
+		t.Errorf("source: err = %v, want the namespace refused on source", err)
+	} else if sourceRefused.Field != "source" {
+		t.Errorf("refusal names %q, want source", sourceRefused.Field)
+	}
+}

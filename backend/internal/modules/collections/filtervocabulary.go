@@ -67,6 +67,9 @@ type VocabularyField struct {
 	// Options is a picklist's allowed values, so a builder offers them instead of
 	// asking a reader to type one. Empty for every other type.
 	Options []string
+	// Currency is the ISO code a currency field counts minor units of, so a
+	// builder can take an amount in major units. Empty where it is unknown.
+	Currency string
 }
 
 // FilterVocabulary answers every field a NEW filter clause may name for this
@@ -129,6 +132,10 @@ func (s *Store) FilterVocabulary(ctx context.Context, resource string) ([]Vocabu
 	if err != nil {
 		return nil, false, err
 	}
+	baseCurrency, err := s.readableBaseCurrency(ctx, engine.Fields)
+	if err != nil {
+		return nil, false, err
+	}
 	core := segmentEngines[resource].Fields
 	retiredCore := retiredCoreFields[resource]
 	fields := make([]VocabularyField, 0, len(engine.Fields))
@@ -148,6 +155,10 @@ func (s *Store) FilterVocabulary(ctx context.Context, resource string) ([]Vocabu
 		if !isCore && !valuesReadable {
 			options = nil
 		}
+		currency := field.Currency
+		if isCore && field.Type == storekit.FieldCurrency {
+			currency = baseCurrency
+		}
 		fields = append(fields, VocabularyField{
 			Name:       name,
 			Type:       string(field.Type),
@@ -155,6 +166,7 @@ func (s *Store) FilterVocabulary(ctx context.Context, resource string) ([]Vocabu
 			Custom:     !isCore,
 			References: field.References,
 			Options:    options,
+			Currency:   currency,
 		})
 	}
 	// By name, because a map answers a different order every call and a picker
@@ -230,6 +242,10 @@ func wireVocabularyField(f VocabularyField) crmcontracts.FilterVocabularyField {
 		Operators: operators,
 		Options:   optionsOrNil(f.Options),
 		Custom:    f.Custom,
+	}
+	if f.Currency != "" {
+		currency := f.Currency
+		wire.Currency = &currency
 	}
 	// Omitted rather than sent empty for a field that references nothing, because
 	// "" is not a member of the contract's enum: sending it would put a value the

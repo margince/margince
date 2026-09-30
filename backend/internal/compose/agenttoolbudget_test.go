@@ -17,8 +17,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -40,25 +42,26 @@ var updateAgentToolBudget = flag.Bool("update-agent-tool-budget", false,
 const agentToolBudgetCommand = "go test ./internal/compose/ -run TestTheAgentToolBudgetIsPublished -update-agent-tool-budget"
 
 type agentToolBudget struct {
-	Note          string           `json:"note"`
-	PromptCeiling int              `json:"prompt_token_ceiling"`
-	AgentBudget   int              `json:"per_agent_listing_budget"`
-	CatalogFloor  int              `json:"whole_catalog_floor"`
-	Catalog       catalogTotals    `json:"catalog"`
-	Agents        []agentBudgetRow `json:"agents"`
-	ToolCost      []toolCostRow    `json:"tool_cost"`
-	WrongReach    []wrongReachRow  `json:"corpus_wrong_reach"`
-	Corpus        corpusProvenance `json:"corpus"`
+	Note          string `json:"note"`
+	PromptCeiling int    `json:"prompt_token_ceiling"`
+	AgentBudget   int    `json:"per_agent_listing_budget"`
+	// Held names every check that keeps a run's window to its own tools, so
+	// the claim "no run is offered the whole catalog" is published with the
+	// tests that fail when it stops being true.
+	Held       []heldBy         `json:"held_by"`
+	Catalog    catalogTotals    `json:"catalog"`
+	Agents     []agentBudgetRow `json:"agents"`
+	ToolCost   []toolCostRow    `json:"tool_cost"`
+	WrongReach []wrongReachRow  `json:"corpus_wrong_reach"`
+	Corpus     corpusProvenance `json:"corpus"`
 }
 
 type catalogTotals struct {
 	Tools int `json:"tools"`
 	// Frame is what the system prompt costs before any tool is listed. It is
-	// here because a sentence moved OUT of the per-tool schemas and into the
-	// frame is a saving of (tools x sentence) against a cost of (1 x sentence),
-	// and only the first half used to be measured: the catalog floor holds the
-	// LISTING alone, so a frame that grew a paragraph spent it on every run of
-	// every agent with nothing published and no assertion anywhere.
+	// published because a sentence moved OUT of the per-tool schemas and into
+	// the frame saves (tools x sentence) at a cost of (1 x sentence), and the
+	// second half is paid on every run of every agent.
 	Frame  int `json:"system_frame_tokens"`
 	Tokens int `json:"tokens"`
 	Median int `json:"median_tool_tokens"`
@@ -66,10 +69,18 @@ type catalogTotals struct {
 }
 
 type agentBudgetRow struct {
-	Name       string   `json:"name"`
-	Goal       string   `json:"goal"`
-	Tools      []string `json:"tools"`
+	Name  string   `json:"name"`
+	Goal  string   `json:"goal"`
+	Tools []string `json:"tools"`
+	// OfServed is how many tools this build serves, beside Tools, so a row
+	// reads as the share of the catalog its run is offered.
+	OfServed int `json:"of_served_tools"`
+	// Tokens is what every step of this agent's run pays before its
+	// transcript (runner.FixedStepCost), and is what the budget holds.
+	// Listing and StepSchema are its per-tool parts; the frame is the rest.
 	Tokens     int      `json:"tokens"`
+	Listing    int      `json:"listing_tokens"`
+	StepSchema int      `json:"step_schema_tokens"`
 	PercentOf  int      `json:"percent_of_ceiling"`
 	Headroom   int      `json:"headroom_tokens"`
 	Dangling   []string `json:"dangling_cross_references"`
@@ -86,10 +97,29 @@ type wrongReachRow struct {
 	Scenarios int    `json:"scenarios_naming_it_as_the_wrong_reach"`
 }
 
+// heldBy is one check behind the published claim, and what it refuses.
+type heldBy struct {
+	Check   string `json:"check"`
+	Refuses string `json:"refuses"`
+}
+
+// agentWindowHeldBy is the published list of what keeps each run to its own
+// tools. Each entry names a test or code path that exists in this tree;
+// TestTheBudgetPageNamesChecksThatExist fails one that does not.
+var agentWindowHeldBy = []heldBy{
+	{"tools/gen-aitasks validateSiteTools", "an agent_loop site declaring no tools, or tools on any other kind of site"},
+	{"runner.Run / runner.Resume (unscopedJobReason)", "a job carrying no allowlist, before any model call"},
+	{"compose TestEveryAgentSpecNamesRegisteredTools", "an agent attaching every served tool, a tool this build does not serve, or one twice"},
+	{"compose TestEveryRunnerJobBuiltHereCarriesAnAllowlist", "a runner.Job anywhere in compose whose Tools is not an entry's own allowlist"},
+	{"compose TestTheShippedAgentsAreNarrowerThanTheirScopesAllow", "an agent withholding nothing its scopes admit"},
+	{"compose TestEachAgentsToolListingLeavesItsRunRoomInTheWindow", "an agent whose listing outgrows its share of the window"},
+}
+
 type corpusProvenance struct {
-	Scenarios       int      `json:"scenarios"`
-	OfferingCatalog int      `json:"offering_the_whole_catalog"`
-	Skipped         []string `json:"skipped_by_the_scan"`
+	Scenarios int      `json:"scenarios"`
+	Skipped   []string `json:"skipped_by_the_scan"`
+	// Unoffered names each declared near miss its site's run never sees.
+	Unoffered []string `json:"near_misses_not_offered"`
 	// ReadByProse names the scenarios that declare no near misses, so theirs
 	// are still read by the prose fallback. Published because a fallback that
 	// is silent about where it still applies hides the error it is shrinking.
@@ -107,11 +137,30 @@ func TestTheAgentToolBudgetIsPublished(t *testing.T) {
 	syncAgentToolBudget(t, agentToolBudgetPage, renderAgentToolBudgetPage(payload))
 }
 
+// Each agent's row counts what its step pays, not its listing alone: the step
+// schema rides every step beside the listing, and a row without it publishes
+// headroom no run has.
+func TestTheBudgetPageCountsTheStepSchemaInEveryAgentsRow(t *testing.T) {
+	payload := renderAgentToolBudget(t)
+	if len(payload.Agents) == 0 {
+		t.Fatal("the budget declares no agents, so nothing here is measured")
+	}
+	page := string(renderAgentToolBudgetPage(payload))
+	for _, row := range payload.Agents {
+		if row.StepSchema == 0 || row.Tokens < row.Listing+row.StepSchema {
+			t.Errorf("%s: a %d-token step with a %d-token listing and a %d-token step schema — the "+
+				"per-step figure leaves out what rides beside the listing", row.Name, row.Tokens, row.Listing, row.StepSchema)
+		}
+		if cells := fmt.Sprintf("| %d | %d | %d |", row.Listing, row.StepSchema, row.Tokens); !strings.Contains(page, cells) {
+			t.Errorf("%s: the page does not show listing, step schema and per-step cost as %q", row.Name, cells)
+		}
+	}
+}
+
 func renderAgentToolBudget(t *testing.T) agentToolBudget {
 	t.Helper()
 	specs := servedSurface(t).Specs()
-	graph := crossReferences(specs)
-	census, err := readWrongReachCensus(agentLoopCorpusDir, specs)
+	census, err := readWrongReachCensus(agentLoopCorpusDir, specs, scheduledAllowlists())
 	if err != nil {
 		t.Fatalf("reading the certification corpus at %s: %v", agentLoopCorpusDir, err)
 	}
@@ -142,17 +191,20 @@ func renderAgentToolBudget(t *testing.T) agentToolBudget {
 		// registered tool behind it, so a menu that measures small because a
 		// tool went missing fails here instead of publishing the same number
 		// for the opposite reason.
-		attached := specsNamed(t, spec.Tools)
-		tokens := len(runner.ToolListing(attached)) / 4
+		offered := specsNamed(t, spec.Tools)
+		cost := runner.FixedStepCost(offered)
 		rows = append(rows, agentBudgetRow{
 			Name:       spec.Name,
 			Goal:       spec.Goal,
 			Tools:      spec.Tools,
-			Tokens:     tokens,
-			PercentOf:  tokens * 100 / runner.MinimumPromptWindow,
-			Headroom:   budget - tokens,
-			Dangling:   danglingReferences(spec.Tools, graph),
-			Temptation: temptationWeight(spec.Tools, census),
+			OfServed:   len(specs),
+			Tokens:     cost.Tokens,
+			Listing:    cost.Listing,
+			StepSchema: cost.Schema,
+			PercentOf:  cost.Tokens * 100 / runner.MinimumPromptWindow,
+			Headroom:   budget - cost.Tokens,
+			Dangling:   danglingReferences(spec.Tools, crossReferences(runner.AsOffered(offered), specs)),
+			Temptation: temptationWeight(spec.Name, spec.Tools, census),
 		})
 	}
 
@@ -171,7 +223,7 @@ func renderAgentToolBudget(t *testing.T) agentToolBudget {
 		Note:          agentToolBudgetNote,
 		PromptCeiling: runner.MinimumPromptWindow,
 		AgentBudget:   budget,
-		CatalogFloor:  runner.MinimumPromptWindow * wholeCatalogBudgetNumerator / wholeCatalogBudgetDenominator,
+		Held:          agentWindowHeldBy,
 		Catalog: catalogTotals{
 			Tools:  len(specs),
 			Frame:  runner.SystemFrameTokens(),
@@ -183,18 +235,19 @@ func renderAgentToolBudget(t *testing.T) agentToolBudget {
 		ToolCost:   cost,
 		WrongReach: reach,
 		Corpus: corpusProvenance{
-			Scenarios:       census.Scenarios,
-			OfferingCatalog: census.Catalog,
-			Skipped:         census.Skipped,
-			ReadByProse:     census.Heuristic,
+			Scenarios:   census.Scenarios,
+			Skipped:     census.Skipped,
+			Unoffered:   census.Unoffered,
+			ReadByProse: census.Heuristic,
 		},
 	}
 }
 
 const agentToolBudgetNote = "Generated by `" + agentToolBudgetCommand + "`; do not edit by hand. " +
-	"It reports what each SCHEDULED agent's tool listing costs the window it runs in — not the " +
-	"whole served catalog, which no agent is ever offered. Token counts use the ~4-bytes-per-token " +
-	"estimate the window itself estimates with, over the listing the runner's own renderer produces. " +
+	"It reports what each SCHEDULED agent's step costs the window it runs in before its transcript — " +
+	"the frame, the tool listing and the step schema — not the whole served catalog, which no run is " +
+	"ever offered. Token counts use the ~4-bytes-per-token estimate the window itself estimates with, " +
+	"over what the runner's own renderer produces (runner.FixedStepCost). " +
 	"tool_cost rows are NOT additive: each is one tool rendered alone and divided by four, so " +
 	"every row carries its own rounding, while catalog.tokens divides the whole rendered listing once."
 
@@ -244,7 +297,7 @@ func TestTheCrossReferenceScanReadsTheCopyAndNotItsShape(t *testing.T) {
 		{Name: "prep_for_meeting", Description: "Assemble what a contact needs before they walk in."},
 		{Name: "read_record", Description: "Read one record's own stored fields; mentions no other tool."},
 	}
-	graph := crossReferences(specs)
+	graph := crossReferences(specs, specs)
 	if got := graph["catch_me_up_on"]; len(got) != 2 || got[0] != "prep_for_meeting" || got[1] != "read_record" {
 		t.Errorf("the scan read %v from a description naming two tools with no \"Use\" clause", got)
 	}
@@ -266,7 +319,7 @@ func TestTheCrossReferenceScanReadsTheCopyAndNotItsShape(t *testing.T) {
 // scenario would look exactly like one that found nothing to report in it.
 func TestTheWrongReachCensusIsReadFromTheCorpusAndNamesWhatItSkipped(t *testing.T) {
 	specs := servedSurface(t).Specs()
-	census, err := readWrongReachCensus(agentLoopCorpusDir, specs)
+	census, err := readWrongReachCensus(agentLoopCorpusDir, specs, scheduledAllowlists())
 	if err != nil {
 		t.Fatalf("reading the corpus: %v", err)
 	}
@@ -274,8 +327,14 @@ func TestTheWrongReachCensusIsReadFromTheCorpusAndNamesWhatItSkipped(t *testing.
 		t.Fatal("the census read no scenarios — it is looking at the wrong directory, " +
 			"which reads exactly like a corpus with nothing in it")
 	}
-	if census.Catalog == 0 {
-		t.Error("no scenario was seen to offer the whole catalog, though the corpus is built on that shape")
+	for site := range census.BySite {
+		if _, scheduled := scheduledAllowlists()[site]; !scheduled {
+			t.Errorf("scenarios certify site %q, which is not a scheduled agent — the census cannot tell "+
+				"whose menu their near misses tempt", site)
+		}
+	}
+	for _, unoffered := range census.Unoffered {
+		t.Errorf("a near miss names a tool its run is never offered, so it tempts nothing: %s", unoffered)
 	}
 	if len(census.Counts) == 0 {
 		t.Error("no tool was named as a wrong reach in any rubric, so the census is measuring nothing")
@@ -286,10 +345,59 @@ func TestTheWrongReachCensusIsReadFromTheCorpusAndNamesWhatItSkipped(t *testing.
 			t.Errorf("a skipped scenario is recorded as %q, which does not say which file it was", skipped)
 		}
 	}
-	if census.Scenarios < census.Catalog {
-		t.Errorf("the census counted %d scenarios offering the catalog out of %d total",
-			census.Catalog, census.Scenarios)
+}
+
+// scheduledAllowlists is each scheduled agent's tools by name, read through the
+// production resolver the runner service builds its jobs from.
+func scheduledAllowlists() map[string][]string {
+	out := map[string][]string{}
+	for _, spec := range mustScheduledAgents() {
+		out[spec.Name] = spec.Tools
 	}
+	return out
+}
+
+// Every entry of the published "held by" list names something that exists: a
+// test in this package by its function name, or a generator or runner symbol.
+// A list naming a check that was deleted would publish a guarantee nothing gives.
+func TestTheBudgetPageNamesChecksThatExist(t *testing.T) {
+	sources := map[string]string{"compose": ".", "runner": "../modules/agents/runner", "tools/gen-aitasks": "../../tools/gen-aitasks"}
+	for _, held := range agentWindowHeldBy {
+		fields := strings.Fields(held.Check)
+		dir, known := sources[fields[0]]
+		if !known {
+			dir = sources[strings.Split(fields[0], ".")[0]]
+		}
+		symbol := fields[len(fields)-1]
+		symbol = strings.Trim(symbol, "()")
+		if i := strings.LastIndex(symbol, "."); i >= 0 {
+			symbol = symbol[i+1:]
+		}
+		if dir == "" || !symbolDefinedIn(t, dir, symbol) {
+			t.Errorf("the budget page says %q holds the rule, and no %s is defined where it points", held.Check, symbol)
+		}
+	}
+}
+
+// symbolDefinedIn reports whether a func or const of that name is declared in
+// any Go file of the directory.
+func symbolDefinedIn(t *testing.T, dir, symbol string) bool {
+	t.Helper()
+	files, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	if err != nil {
+		t.Fatalf("listing %s: %v", dir, err)
+	}
+	decl := regexp.MustCompile(`(?m)^(func|const|\t)\s*(\([^)]*\)\s*)?` + regexp.QuoteMeta(symbol) + `\b`)
+	for _, file := range files {
+		body, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		if decl.Match(body) {
+			return true
+		}
+	}
+	return false
 }
 
 // The census counts what the scenarios DECLARE, and says which ones it still
@@ -303,7 +411,7 @@ func TestTheWrongReachCensusIsReadFromTheCorpusAndNamesWhatItSkipped(t *testing.
 // back to prose looks measured.
 func TestTheWrongReachCensusReadsWhatTheScenariosDeclare(t *testing.T) {
 	specs := servedSurface(t).Specs()
-	census, err := readWrongReachCensus(agentLoopCorpusDir, specs)
+	census, err := readWrongReachCensus(agentLoopCorpusDir, specs, scheduledAllowlists())
 	if err != nil {
 		t.Fatalf("reading the corpus: %v", err)
 	}
@@ -316,5 +424,83 @@ func TestTheWrongReachCensusReadsWhatTheScenariosDeclare(t *testing.T) {
 	if len(census.Counts) == 0 {
 		t.Error("no near miss was counted at all, so the census is measuring nothing — which is " +
 			"what a renamed key looks like from here")
+	}
+}
+
+// No scheduled agent's listing sends it to a tool its run is not offered.
+//
+// The registry's reading of which tools an Instead names is checked against
+// this file's own scan of the same text over the whole catalog: a reading that
+// recognised fewer names would cut nothing and still leave every listing clean.
+func TestNoScheduledAgentIsSentToAToolItIsNotOffered(t *testing.T) {
+	specs := servedSurface(t).Specs()
+	insteadOnly := make([]mcp.ToolSpec, 0, len(specs))
+	for _, spec := range specs {
+		insteadOnly = append(insteadOnly, mcp.ToolSpec{Name: spec.Name, Description: spec.Instead})
+	}
+	named := crossReferences(insteadOnly, specs)
+	for _, spec := range specs {
+		registry := append([]string(nil), spec.InsteadTools...)
+		sort.Strings(registry)
+		if strings.Join(registry, ",") != strings.Join(named[spec.Name], ",") {
+			t.Errorf("%s: the registry reads its Instead as naming %v; the text names %v",
+				spec.Name, registry, named[spec.Name])
+		}
+	}
+
+	cut := 0
+	for _, agent := range mustScheduledAgents() {
+		offered := specsNamed(t, agent.Tools)
+		listing := runner.ToolListing(runner.AsOffered(offered))
+		held := map[string]bool{}
+		for _, name := range agent.Tools {
+			held[name] = true
+		}
+		for _, spec := range offered {
+			for _, neighbour := range named[spec.Name] {
+				if held[neighbour] {
+					continue
+				}
+				cut++
+				if strings.Contains(listing, spec.Instead) {
+					t.Errorf("%s: %s still tells the run to use %s, which it is not offered",
+						agent.Name, spec.Name, neighbour)
+				}
+				break
+			}
+		}
+	}
+	if cut == 0 {
+		t.Fatal("no shipped agent carries an Instead naming a tool outside its offer, so nothing here saw a cut")
+	}
+}
+
+// insteadPointer is the shape every Instead sentence takes to send a goal to a
+// neighbour: "use" followed by the neighbour's name.
+var insteadPointer = regexp.MustCompile("\\b[Uu]se\\s+`?([a-z][a-z0-9_]{3,})")
+
+// A pointer at a neighbour lives in Instead or nowhere. Only Instead is cut
+// when the neighbour is not offered, so the same sentence left in Purpose or
+// Limits — or a copy whose Spec forgets to wire its Instead — survives into a
+// listing that cannot follow it. A tool offered alone has every Instead cut.
+func TestEveryPointerAtANeighbourIsItsInstead(t *testing.T) {
+	specs := servedSurface(t).Specs()
+	registered := make(map[string]bool, len(specs))
+	for _, spec := range specs {
+		registered[spec.Name] = true
+	}
+	pointers := 0
+	for _, spec := range specs {
+		pointers += len(insteadPointer.FindAllString(spec.Instead, -1))
+		alone := runner.AsOffered([]mcp.ToolSpec{spec})[0]
+		for _, match := range insteadPointer.FindAllStringSubmatch(alone.Description, -1) {
+			if registered[match[1]] && match[1] != spec.Name {
+				t.Errorf("%s: %q points at %s outside its Instead, so a run not offered %s is still sent there",
+					spec.Name, match[0], match[1], match[1])
+			}
+		}
+	}
+	if pointers == 0 {
+		t.Fatal("no Instead in the catalog reads as a pointer, so this scan recognises nothing")
 	}
 }

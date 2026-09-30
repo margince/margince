@@ -30,9 +30,11 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
@@ -58,10 +60,13 @@ const (
 	// every response read (respReadTimeout, 30s in the pinned beta.8) and
 	// CLEARS it afterwards — readResponse defers setReadTimeout(0), which is
 	// SetReadDeadline(time.Time{}). So the read half of what is armed here is
-	// overridden by the first read and gone after it, and the phase as a whole
-	// is bounded by nothing: a server answering every command inside 30s can
-	// keep a pull alive indefinitely. Bounding the phase needs a timer this
-	// package does not have — filed rather than fixed here.
+	// overridden by the first read and gone after it, and it bounds only the
+	// exchanges before that.
+	//
+	// The PHASE is bounded by abortAfter, which closes the connection on the
+	// same duration. A deadline cannot do it — the client clears whatever is
+	// armed — and without it a server answering every command inside its own
+	// 30s keeps a pull alive indefinitely.
 	//
 	// The client owning these deadlines is also why nothing else may set one:
 	// it reads on ONE goroutine, and a read deadline firing closes the
@@ -107,6 +112,11 @@ type Connector struct {
 	// outbound mail they name. Nil keeps the old behaviour: the report is
 	// dropped with the rest of the delivery-system mail.
 	bounces connector.BounceSink
+
+	// schedulePhase is how the abort above is armed; nil is the real clock.
+	// Injectable so a test fires it at a chosen point in the phase rather than
+	// racing one.
+	schedulePhase phaseTimer
 }
 
 // WithBounceSink returns a copy that records delivery reports instead of
@@ -148,8 +158,9 @@ type Stats struct {
 }
 
 var (
-	_ connector.Connector      = (*Connector)(nil)
-	_ connector.AccountLabeler = (*Connector)(nil)
+	_ connector.Connector       = (*Connector)(nil)
+	_ connector.AccountLabeler  = (*Connector)(nil)
+	_ connector.ContainerLister = (*Connector)(nil)
 )
 
 // Credentials is the request payload the transport hands to Authenticate.
@@ -344,4 +355,49 @@ func boundedWindow(requested int) uint32 {
 		return uint32(requested)
 	}
 	return uint32(maxMessagesCap)
+}
+
+// ListContainers returns the account's mailboxes, satisfying
+// connector.ContainerLister.
+//
+// One LIST over the whole account ("*" under the empty reference), because a
+// picker asks about the mailbox somebody keeps private mail in and that is
+// rarely beside the one being captured. The server's own hierarchy delimiter is
+// left in the name: "INBOX/Privat" is what the owner reads in their client, and
+// rewriting it to something tidier would offer a name no rule can match.
+//
+// \Noselect mailboxes are dropped. They are hierarchy nodes rather than places
+// mail sits — a folder that cannot be opened cannot hold a message to exclude —
+// and offering one gives somebody a choice that excludes nothing.
+func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]connector.NamedContainer, error) {
+	var creds Credentials
+	if err := json.Unmarshal(auth, &creds); err != nil {
+		return nil, fmt.Errorf("imap: malformed auth bundle: %w", err)
+	}
+	client, _, err := c.dial(ctx, creds)
+	if err != nil {
+		return nil, err
+	}
+	//craft:ignore swallowed-errors best-effort close of the listing session — the LIST below answered the question
+	defer func() { _ = client.Close() }()
+
+	mailboxes, err := client.List("", "*", nil).Collect()
+	if err != nil {
+		// Joined with ErrUnreachable like every other failed command on this
+		// transport: a LIST that did not answer is the server not answering,
+		// and the caller tells "we could not ask" apart from "no folders".
+		return nil, fmt.Errorf("imap: listing the account's mailboxes: %w",
+			errors.Join(ErrUnreachable, err))
+	}
+	out := make([]connector.NamedContainer, 0, len(mailboxes))
+	for _, m := range mailboxes {
+		if m.Mailbox == "" || slices.Contains(m.Attrs, imap.MailboxAttrNoSelect) {
+			continue
+		}
+		// The id and the name are the SAME string here, and that is the
+		// provider's doing rather than a shortcut: an IMAP mailbox is named by
+		// its path, so there is no opaque token to hide behind a label.
+		out = append(out, connector.NamedContainer{ID: m.Mailbox, Name: m.Mailbox})
+	}
+	return out, nil
 }

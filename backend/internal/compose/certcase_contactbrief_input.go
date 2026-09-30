@@ -106,6 +106,7 @@ const (
 func contactBriefInput(f contactBriefFixture) (contactbrief.Input, map[string]string) {
 	now := time.Date(2026, time.September, 4, 12, 0, 0, 0, time.UTC)
 	in := contactbrief.Input{
+		ID:   ids.NewV7().String(),
 		Name: f.Name, Title: f.Title, Employer: f.Employer,
 		BuyingRole: f.BuyingRole, Strength: f.Strength,
 		SectionsOmitted: f.SectionsOmitted,
@@ -125,7 +126,7 @@ func contactBriefInput(f contactBriefFixture) (contactbrief.Input, map[string]st
 	byLabel := foldFixtureMessages(&in, f, now)
 	for _, claim := range f.Claims {
 		in.Claims = append(in.Claims, contactbrief.ClaimIn{
-			ID: ids.NewV7().String(), Kind: claim.Kind, Body: claim.Body,
+			Kind: claim.Kind, Body: claim.Body,
 			Status: claim.Status, DueAt: claim.DueAt, Quote: claim.Quote,
 			SourceID: byLabel[claim.FromLabel],
 		})
@@ -236,7 +237,7 @@ func refuseUnpreparableBrief(f contactBriefFixture, want contactBriefExpectation
 	// case is one the floor prints, and a refusal that missed it would let a
 	// capitalisation difference hide exactly the silent pass it exists to catch.
 	in, _ := contactBriefInput(f)
-	floor := contactbrief.Prose(contactbrief.Deterministic(ids.NewV7().String(), in))
+	floor := contactbrief.Prose(contactbrief.Deterministic(ids.NewV7().String(), in, "en"))
 	if strings.Contains(strings.ToLower(floor), token) {
 		return fmt.Errorf(
 			"summarize/contact_brief: the token %q is already in the deterministic floor's own prose, so a reply saying nothing would satisfy this scenario",

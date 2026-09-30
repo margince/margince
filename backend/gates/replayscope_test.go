@@ -22,7 +22,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"slices"
@@ -32,6 +31,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // rowScopedResponses maps a contract response schema to the row-scoped record
@@ -45,11 +46,13 @@ import (
 // record contains, so "this table has no owner_id" is never on its own a
 // reason to skip the probe.
 var rowScopedResponses = map[string]expectedTarget{
-	"Contact": {table: "contact", idPath: "id"},
-	"Company": {table: "company", idPath: "id"},
-	"Deal":    {table: "deal", idPath: "id"},
-	"Lead":    {table: "lead", idPath: "id"},
-	"Project": {table: "project", idPath: "id"},
+	"MeetingInvitation":                    {table: "activity", idPath: "id"},
+	"inline:POST /v1/scheduling/proposals": {table: "activity", idPath: "id"},
+	"Contact":                              {table: "contact", idPath: "id"},
+	"Company":                              {table: "company", idPath: "id"},
+	"Deal":                                 {table: "deal", idPath: "id"},
+	"Lead":                                 {table: "lead", idPath: "id"},
+	"Project":                              {table: "project", idPath: "id"},
 	// A contract has no owner column; it is row-scoped through the deal it came
 	// from, falling back to its company (ADR-0109 §8). It still hands back
 	// a record — terms, value, dates — so it is probed like any other.
@@ -57,7 +60,13 @@ var rowScopedResponses = map[string]expectedTarget{
 	// A Deal Room has no owner column either: its visibility IS its deal's. It
 	// hands back a record — title, welcome text, steward, expiry — so it is
 	// probed like any other rather than waved through for lacking an owner.
-	"DealRoom":            {object: "deal_room", moduleProbe: "deal_room", idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
+	"DealRoom": {object: "deal_room", moduleProbe: "deal_room", idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
+	// A Deal Scout suggestion has no owner column: it is visible only to a
+	// reader who may see its company and every piece of its evidence, a rule
+	// the deals store holds. It hands back evidence titles, so it is probed.
+	"DealSuggestion":           {object: "deal", moduleProbe: "deal_suggestion", idPath: "id", rowNote: "a suggestion carries no owner column; its visibility is its company's and its evidence's, so the deals store owns the probe"},
+	"DealSuggestionAcceptance": {object: "deal", moduleProbe: "deal_suggestion", idPath: "suggestion.id", rowNote: "the acceptance hands back the suggestion it decided, probed like DealSuggestion; the deal it opened rides as a companion"},
+
 	"Activity":            {table: "activity", idPath: "id"},
 	"VoiceProfile":        {table: "voice_profile", idPath: "id"},
 	"List":                {table: "list", idPath: "id"},
@@ -93,8 +102,12 @@ var rowScopedResponses = map[string]expectedTarget{
 	"Signal": {table: "signal", idPath: "id"},
 	// Row-scoped through its TARGET, by a rule that lives inside the approvals
 	// module; compose borrows that rule rather than keeping a second copy.
-	"Approval":    {moduleProbe: "approval", pathParam: "id"},
-	"RecordGrant": {tableField: "record_type", idPath: "record_id"},
+	"Approval": {moduleProbe: "approval", pathParam: "id"},
+	// A bulk answer carries no record of its own, but it names every record
+	// the change left alone and why. Only the batch's stored result says which,
+	// so the bulk engine owns the probe.
+	"BulkChangeResult": {moduleProbe: "bulk_batch", idPath: "batch_id"},
+	"RecordGrant":      {tableField: "record_type", idPath: "record_id"},
 	// A health assessment has no owner column: its visibility IS the project it
 	// judges, which the body names as project_id. Probed rather than waved
 	// through, because a replay hands back how a delivery is going — something
@@ -514,7 +527,7 @@ func stringLiteral(t *testing.T, expr ast.Expr) string {
 // it silently.
 func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast.Expr)) {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), replayScopeSource, nil, 0)
+	file, err := gatekit.ParseFile(replayScopeSource, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", replayScopeSource, err)
 	}

@@ -110,6 +110,15 @@ type Handlers struct {
 	// rollout lives in the composition root and identity may not import it —
 	// the same shape as dataResetAvailable above, and for the same reason.
 	companyContextAvailable bool
+	// embedReindexAvailable is whether an embeddings model is bound, so the
+	// reindex routes serve rather than 501. Injected for the same reason.
+	embedReindexAvailable bool
+	// listsAvailable is the installation's lists.enabled.
+	listsAvailable     bool
+	reportingAvailable bool
+	// installationBrand reads the anchor company's name and marks for /me.
+	// Nil omits them (installationbrand.go).
+	installationBrand InstallationBrand
 	// mcpResource is the canonical MCP server URL (public_base_url +
 	// "/mcp"), injected by the composition root from deployment config.
 	// The RFC 9728 protected-resource document advertises this verbatim
@@ -165,19 +174,26 @@ type Handlers struct {
 	firstRunFn func(context.Context) (bool, error)
 }
 
+// oidcPerIPLimiter names the OIDC edge's per-IP ceiling. It is a constant
+// because two constructors build that ceiling — NewHandlers, and
+// WithOIDCProviders for a handler set assembled without it — and in a store
+// the replicas share, the name is the bucket: two spellings would be two
+// ceilings for one edge, each the configured size.
+const oidcPerIPLimiter = "identity/oidc-per-ip"
+
 // NewHandlers builds the identity transport surface over its service.
 func NewHandlers(svc *Service) Handlers {
 	return Handlers{
 		svc:                   svc,
-		loginFailures:         ratelimit.New(10, time.Minute),
-		loginPerIP:            ratelimit.New(30, time.Minute),
-		resetPerEmail:         ratelimit.New(3, time.Hour),
-		resetPerIP:            ratelimit.New(30, time.Hour),
-		changeFailures:        ratelimit.New(10, time.Minute),
-		passwordLinkPerActor:  ratelimit.New(20, time.Hour),
-		passwordLinkPerTarget: ratelimit.New(5, time.Hour),
-		oidcPerIP:             ratelimit.New(30, time.Minute),
-		capabilitiesPerIP:     ratelimit.New(60, time.Minute),
+		loginFailures:         ratelimit.New("identity/login-failures", ratelimit.FailClosed, 10, time.Minute),
+		loginPerIP:            ratelimit.New("identity/login-per-ip", ratelimit.FailClosed, 30, time.Minute),
+		resetPerEmail:         ratelimit.New("identity/reset-per-address", ratelimit.FailClosed, 3, time.Hour),
+		resetPerIP:            ratelimit.New("identity/reset-per-ip", ratelimit.FailClosed, 30, time.Hour),
+		changeFailures:        ratelimit.New("identity/password-change-failures", ratelimit.FailClosed, 10, time.Minute),
+		passwordLinkPerActor:  ratelimit.New("identity/password-link-per-actor", ratelimit.FailClosed, 20, time.Hour),
+		passwordLinkPerTarget: ratelimit.New("identity/password-link-per-target", ratelimit.FailClosed, 5, time.Hour),
+		oidcPerIP:             ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
+		capabilitiesPerIP:     ratelimit.New("identity/capabilities-per-ip", ratelimit.FailClosed, 60, time.Minute),
 	}
 }
 
@@ -289,9 +305,14 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	me, err := h.me(r.Context(), id)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	setSessionCookie(w, session.Token)
 	setDeviceCookie(w, session.DeviceProof)
-	httperr.WriteJSON(w, http.StatusOK, h.meResponse(r.Context(), id))
+	httperr.WriteJSON(w, http.StatusOK, me)
 }
 
 // Logout implements (POST /auth/logout): revoke + clear, idempotent, 204.
@@ -322,8 +343,13 @@ func (h Handlers) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 	// a shared cache that served it to the next caller would hand them someone
 	// else's capabilities, and a stored copy would survive the role change that
 	// revoked them.
+	me, err := h.me(r.Context(), id)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	httperr.WriteJSON(w, http.StatusOK, h.meResponse(r.Context(), id))
+	httperr.WriteJSON(w, http.StatusOK, me)
 }
 
 func setSessionCookie(w http.ResponseWriter, token string) {

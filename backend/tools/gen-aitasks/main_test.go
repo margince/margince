@@ -158,18 +158,24 @@ func TestParseContractAcceptsTheShippedDeclaration(t *testing.T) {
 		t.Errorf("status = %q, want shipped", verdict.Status)
 	}
 
-	// A task is not one prompt: rate_extract has always had two.
-	if got := len(c.Tasks["rate_extract"].Sites); got != 2 {
-		t.Errorf("rate_extract declares %d sites, want 2 (pricing, fx)", got)
+	// A task is not one prompt: voice_build has always had several.
+	if got := len(c.Tasks["voice_build"].Sites); got != 4 {
+		t.Errorf("voice_build declares %d sites, want 4", got)
 	}
 	if got := len(c.Tasks["cold_start"].Sites); got != 4 {
 		t.Errorf("cold_start declares %d sites, want 4", got)
 	}
 
-	// agent_loop is a cumulative tool-fed window, not a request factory.
+	// agent_loop is the engine; every one of its sites is a scheduled agent,
+	// run in a cumulative tool-fed window and attaching its own tools.
 	loop := c.Tasks["agent_loop"].Sites
-	if len(loop) != 1 || loop[0].Kind != "agent_loop" {
-		t.Errorf("agent_loop sites = %+v, want one site of kind agent_loop", loop)
+	if len(loop) == 0 {
+		t.Error("agent_loop declares no sites, so no scheduled agent runs on it")
+	}
+	for _, site := range loop {
+		if site.Kind != "agent_loop" || len(site.Tools) == 0 {
+			t.Errorf("agent_loop site %+v, want kind agent_loop with its own tools", site)
+		}
 	}
 
 	// A bare site name defaults to one_shot.
@@ -471,9 +477,9 @@ tasks:
 	}
 }
 
-// agentContract declares one agent_loop task carrying an `agents:` mapping —
-// the shape ADR-0074 grows to say WHICH TOOLS each scheduled agent attaches.
-// `bar` is the control: a task with no agent_loop site may not declare agents.
+// agentContract declares one agent_loop task whose two sites are two
+// scheduled agents, each attaching its own tools. `bar` is the control: a
+// task with no agent_loop site has no tool listing to attach anything to.
 const agentContract = `
 tiers: [alpha, beta]
 
@@ -485,12 +491,12 @@ tasks:
     on_budget_exhausted: queue
     status: shipped
     sites:
-      - {name: loop, kind: agent_loop}
-    agents:
-      morning_brief:
-        tools: [list_records, read_record]
-      overnight_sweep:
+      - name: overnight_sweep
+        kind: agent_loop
         tools: [list_records, log_activity]
+      - name: morning_brief
+        kind: agent_loop
+        tools: [list_records, read_record]
   bar: {display_name: "Test task bar", ladder: [beta, alpha], execution_mode: interactive, on_budget_exhausted: degrade, status: planned}
 
 degrade_to:
@@ -499,8 +505,8 @@ degrade_to:
 `
 
 // The declaration is only worth having if it reaches the binary, and in an
-// order that does not move between runs: a map has no stable iteration, so the
-// emitted table is walked in sorted name order the way SitesFor's already is.
+// order that does not move between runs: the contract lists the sweep first,
+// and the emitted table is still walked in sorted name order.
 func TestEmitGoProducesTheDeclaredAgentToolAttachment(t *testing.T) {
 	c, err := parseContract([]byte(agentContract))
 	if err != nil {
@@ -519,8 +525,10 @@ func TestEmitGoProducesTheDeclaredAgentToolAttachment(t *testing.T) {
 			t.Errorf("generated source missing %s:\n%s", want, out)
 		}
 	}
-	brief := strings.Index(out, `Name: "morning_brief"`)
-	sweep := strings.Index(out, `Name: "overnight_sweep"`)
+	// Read inside the agent table: the site table above it keeps contract order.
+	_, table, _ := strings.Cut(out, "var taskAgents")
+	brief := strings.Index(table, `Name: "morning_brief"`)
+	sweep := strings.Index(table, `Name: "overnight_sweep"`)
 	if brief < 0 || sweep < 0 || brief > sweep {
 		t.Errorf("agents are not emitted in sorted name order, so the generated file moves between runs")
 	}
@@ -536,9 +544,8 @@ func TestParseContractRefusesAMalformedAgentDeclaration(t *testing.T) {
 		wantErr  string
 	}{
 		{
-			// The allowlist is the whole point of the declaration: an agent
-			// carrying none is read downstream as "no narrowing", which is the
-			// opposite of what declaring it was for.
+			// The allowlist is the whole point of the declaration, and the
+			// runner refuses a job carrying none.
 			name:     "an agent declaring no tools",
 			contract: strings.Replace(agentContract, "tools: [list_records, read_record]", "tools: []", 1),
 			wantErr:  "declares no tools",
@@ -549,24 +556,16 @@ func TestParseContractRefusesAMalformedAgentDeclaration(t *testing.T) {
 			wantErr:  "declares no tools",
 		},
 		{
-			// The absent-by-accident case. Left to the runtime it surfaces as a
-			// panic when the service reads the join at construction.
-			name: "a shipped agent_loop task declaring no agents at all",
+			// Only an agent_loop site runs a tool-fed window, so tools on any
+			// other kind describe a listing that is never assembled.
+			name: "tools on a site that is not an agent_loop",
 			contract: strings.Replace(agentContract,
-				"    agents:\n      morning_brief:\n        tools: [list_records, read_record]\n      overnight_sweep:\n        tools: [list_records, log_activity]\n", "", 1),
-			wantErr: "declares no agents",
-		},
-		{
-			// Only an agent_loop site runs a tool-fed window, so an allowlist
-			// on any other task describes a surface that is never assembled.
-			name: "agents on a task with no agent_loop site",
-			contract: strings.Replace(agentContract,
-				"      - {name: loop, kind: agent_loop}", "      - {name: loop, kind: one_shot}", 1),
-			wantErr: "no agent_loop site",
+				"      - name: morning_brief\n        kind: agent_loop", "      - name: morning_brief\n        kind: one_shot", 1),
+			wantErr: "only an agent_loop site has a tool listing",
 		},
 		{
 			name:     "an agent named outside the identifier rule",
-			contract: strings.Replace(agentContract, "morning_brief:", "Morning-Brief:", 1),
+			contract: strings.Replace(agentContract, "name: morning_brief", "name: Morning-Brief", 1),
 			wantErr:  "must match",
 		},
 		{
@@ -582,6 +581,13 @@ func TestParseContractRefusesAMalformedAgentDeclaration(t *testing.T) {
 			contract: strings.Replace(agentContract, "        tools: [list_records, read_record]", "        tool: [list_records, read_record]", 1),
 			wantErr:  "field tool not found",
 		},
+		{
+			// The retired spelling must not decode into silence: a contract
+			// still carrying agents{} is refused by name.
+			name:     "the retired agents mapping",
+			contract: strings.Replace(agentContract, "  bar: {", "    agents: {x: {tools: [a]}}\n  bar: {", 1),
+			wantErr:  "field agents not found",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := parseContract([]byte(tc.contract))
@@ -592,5 +598,123 @@ func TestParseContractRefusesAMalformedAgentDeclaration(t *testing.T) {
 				t.Errorf("the refusal does not say what is wrong: want it to mention %q, got %v", tc.wantErr, err)
 			}
 		})
+	}
+}
+
+// contractWith declares one task t on a one-tier contract, its mode, budget
+// posture, status and any further fields given by def. A shipped task gets a
+// site so the status rule is satisfied and only the field under test decides.
+func contractWith(def string) string {
+	sites := ""
+	if strings.Contains(def, "status: shipped") {
+		sites = "\n    sites: [only]"
+	}
+	return `tiers: [cheap_cloud]
+degrade_to: {cheap_cloud: cheap_cloud}
+tasks:
+  t:
+    display_name: "Test task t"
+    ladder: [cheap_cloud]
+    ` + def + sites + "\n"
+}
+
+// A decision attempt is a network call before the ladder, and only a
+// background task's deadline has room for it; a planned task has no site for
+// an adapter to answer. Both are refused at generation, by name.
+func TestADecisionTaskMustShipAndRunInTheBackground(t *testing.T) {
+	for name, def := range map[string]string{
+		"interactive": "execution_mode: interactive\n    on_budget_exhausted: degrade\n    status: shipped",
+		"planned":     "execution_mode: background\n    on_budget_exhausted: queue\n    status: planned",
+	} {
+		_, err := parseContract([]byte(contractWith(def + "\n    decision: true")))
+		if err == nil || !strings.Contains(err.Error(), "decision: true needs") {
+			t.Errorf("%s: a decision task must be refused, got %v", name, err)
+		}
+	}
+	shipped := "execution_mode: background\n    on_budget_exhausted: queue\n    status: shipped\n    decision: true"
+	if _, err := parseContract([]byte(contractWith(shipped))); err != nil {
+		t.Errorf("a shipped background task may declare a decision form, got %v", err)
+	}
+}
+
+const decisionContract = `
+tiers: [alpha, beta]
+
+tasks:
+  zed: {display_name: "Test task zed", ladder: [alpha], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only], decision: true}
+  foo: {display_name: "Test task foo", ladder: [alpha, beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only]}
+  abe: {display_name: "Test task abe", ladder: [beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only], decision: true, local_only: true}
+
+degrade_to:
+  beta: alpha
+  alpha: alpha
+`
+
+// The declaration reaches the binary as a map for the call site holding a task
+// and a list for a walk over every one, the list in sorted name order so the
+// generated file does not move between runs. An undeclared task is absent
+// from both, which is what keeps a decision lane off a site nobody adapted.
+func TestTheDecisionTableListsEveryDeclaredTaskInNameOrder(t *testing.T) {
+	c, err := parseContract([]byte(decisionContract))
+	if err != nil {
+		t.Fatalf("parseContract: %v", err)
+	}
+	out, err := emitGo(c, "deadbeef")
+	if err != nil {
+		t.Fatalf("emitGo: %v", err)
+	}
+	for _, want := range []string{
+		"var taskDecisions = map[Task]bool{\n\tTaskAbe: true,\n\tTaskZed: true,\n}",
+		"func TaskDecides(t Task) bool { return taskDecisions[t] }",
+		"var decisionTaskList = []Task{\n\tTaskAbe,\n\tTaskZed,\n}",
+		"func DecisionTasks() []Task { return decisionTaskList }",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("generated source missing %q:\n%s", want, out)
+		}
+	}
+}
+
+// The egress page answers for the decision lane too: a decision task's text
+// can reach the bound decision model, and a local-only one only a local
+// model. A task without the declaration says so.
+func TestTheEgressPageNamesEachTasksDecisionReachAndLocalOnlyDeclaration(t *testing.T) {
+	c, err := parseContract([]byte(decisionContract))
+	if err != nil {
+		t.Fatalf("parseContract: %v", err)
+	}
+	page := string(emitEgressDoc(c))
+	for task, want := range map[string]string{
+		"abe": "| `abe` | `beta` | no | no | yes | only a local decision provider | shipped |",
+		"foo": "| `foo` | `alpha` → `beta` | no | no | no | — | shipped |",
+		"zed": "| `zed` | `alpha` | no | no | no | the bound decision model | shipped |",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the egress row for %s is not %q:\n%s", task, want, page)
+		}
+	}
+}
+
+// A site's thinking level reaches the generated site table, and a site that
+// names none is emitted without one rather than with an empty string that
+// would read as a decision.
+func TestEmitGoCarriesASitesThinkingLevel(t *testing.T) {
+	contract := strings.Replace(minimalContract, "sites: [only]",
+		"sites: [only, {name: talk, kind: multi_turn, thinking: low}]", 1)
+	c, err := parseContract([]byte(contract))
+	if err != nil {
+		t.Fatalf("parseContract: %v", err)
+	}
+	out, err := emitGo(c, "deadbeef")
+	if err != nil {
+		t.Fatalf("emitGo: %v", err)
+	}
+	for _, want := range []string{
+		`{Name: "only", Kind: "one_shot"},`,
+		`{Name: "talk", Kind: "multi_turn", Thinking: "low"},`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("generated source missing %s:\n%s", want, out)
+		}
 	}
 }

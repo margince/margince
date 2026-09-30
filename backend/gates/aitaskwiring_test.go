@@ -35,7 +35,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -150,7 +149,6 @@ func lanesWiredIn(t *testing.T, dir string) map[string]bool {
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
-	fset := token.NewFileSet()
 	var files []*ast.File
 	for _, entry := range entries {
 		name := entry.Name()
@@ -160,7 +158,7 @@ func lanesWiredIn(t *testing.T, dir string) map[string]bool {
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, parseErr := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
+		file, parseErr := gatekit.ParseFile(filepath.Join(dir, name), 0)
 		if parseErr != nil {
 			t.Fatalf("parsing %s: %v", filepath.Join(dir, name), parseErr)
 		}

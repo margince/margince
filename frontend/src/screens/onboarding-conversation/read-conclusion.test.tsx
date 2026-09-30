@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
 import { OnboardingScreen } from "../onboarding";
 
@@ -202,6 +203,10 @@ function stubApi(
         }
         return jsonResponse(snapshot);
       }
+      // GET /company answers only an admin, so the journey's session is one.
+      if (path.endsWith("/me") && request.method === "GET") {
+        return jsonResponse(meFixture());
+      }
       if (path.endsWith("/company") && request.method === "GET") {
         return jsonResponse({ detail: "no company yet" }, 404);
       }
@@ -248,14 +253,14 @@ describe("the read conclusion ordering contract", () => {
     stubApi([midRead, midRead, partialRead]);
     render(<OnboardingScreen />);
     const composer = await screen.findByRole("textbox", {
-      name: /Your website address/,
+      name: /Website address/,
     });
     await userEvent.type(composer, "gradion.com{Enter}");
 
     expect(
       await screen.findByRole(
         "button",
-        { name: "Confirm the profile" },
+        { name: "Confirm profile" },
         {
           timeout: 8000,
         },
@@ -264,19 +269,13 @@ describe("the read conclusion ordering contract", () => {
     expect(screen.queryByText(/I could not read/)).toBeNull();
   }, 20000);
 
-  // The read now runs on its own full-screen stage with no composer, so a
-  // question cannot be asked mid-crawl — the tree's own ob.ai.readFirst rule
-  // already says an answer given before the evidence lands is the wrong answer.
-  // What still has to hold is the part that was genuinely at risk: a long run
-  // whose snapshots keep arriving must converge on the review rather than
-  // stalling as the poll count grows. The rail itself never grows a composer
-  // back — the review's own Continue is the surface's action, not the
-  // rail's.
+  // A long run whose snapshots keep arriving must converge on the review rather
+  // than stall as the poll count grows.
   it("a long multi-snapshot run converges on the review", async () => {
     stubApi([midRead, midRead, midRead, midRead, partialRead]);
     render(<OnboardingScreen />);
     await userEvent.type(
-      await screen.findByRole("textbox", { name: /Your website address/ }),
+      await screen.findByRole("textbox", { name: /Website address/ }),
       "gradion.com{Enter}",
     );
 
@@ -288,7 +287,7 @@ describe("the read conclusion ordering contract", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: "Confirm the profile" },
+        { name: "Confirm profile" },
         {
           timeout: 8000,
         },
@@ -301,14 +300,14 @@ describe("the read conclusion ordering contract", () => {
     stubApi([midRead, 500, partialRead]);
     render(<OnboardingScreen />);
     const composer = await screen.findByRole("textbox", {
-      name: /Your website address/,
+      name: /Website address/,
     });
     await userEvent.type(composer, "gradion.com{Enter}");
 
     expect(
       await screen.findByRole(
         "button",
-        { name: "Confirm the profile" },
+        { name: "Confirm profile" },
         {
           timeout: 8000,
         },
@@ -326,14 +325,14 @@ describe("the read conclusion ordering contract", () => {
     stubApi([midRead, midRead, partialRead], { wizardStateWritable: false });
     render(<OnboardingScreen />);
     await userEvent.type(
-      await screen.findByRole("textbox", { name: /Your website address/ }),
+      await screen.findByRole("textbox", { name: /Website address/ }),
       "gradion.com{Enter}",
     );
 
     expect(
       await screen.findByRole(
         "button",
-        { name: "Confirm the profile" },
+        { name: "Confirm profile" },
         { timeout: 8000 },
       ),
     ).toBeTruthy();

@@ -22,14 +22,14 @@ package gates_test
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -82,7 +82,7 @@ func TestTheTwoResetsPreserveTheSameTables(t *testing.T) {
 // gate reads the declaration the product actually uses rather than a copy.
 func goPreservedTables(t *testing.T) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), datasweepFile, nil, 0)
+	file, err := gatekit.ParseFile(datasweepFile, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", datasweepFile, err)
 	}
@@ -166,7 +166,7 @@ func constantString(t *testing.T, name string) string {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
 			continue
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), "internal/compose/"+entry.Name(), nil, 0)
+		file, err := gatekit.ParseFile("internal/compose/"+entry.Name(), 0)
 		if err != nil {
 			continue
 		}
@@ -212,4 +212,28 @@ func sqlPreservedTables(t *testing.T) []string {
 	}
 	slices.Sort(names)
 	return names
+}
+
+// A weekly review is write-once: uq_weekly_review_user_week with an
+// ON CONFLICT DO NOTHING insert, and the generator's candidate query
+// (compose/weeklyjobs.go) skips a seat that already has a narrated one. Nothing
+// rebuilds one that exists, so clearing the records is the only thing that does
+// — which makes this table's ABSENCE from the preserved set the demo rebuild.
+//
+// Named rather than derived: no property of the schema separates a frozen
+// reading from a record, so a sibling is added deliberately or not at all.
+func TestADerivedWeeklySnapshotDoesNotSurviveARecordsReset(t *testing.T) {
+	t.Parallel()
+
+	const derived = "weekly_review"
+	for _, table := range goPreservedTables(t) {
+		if table == derived {
+			t.Fatalf("%s is preserved across a records reset, but nothing rebuilds one that "+
+				"already exists: the insert is ON CONFLICT DO NOTHING under a unique key, and the "+
+				"worker's candidate query skips a seat that already has a narrated review.\n"+
+				"Preserved, a review generated against the empty installation at boot survives the "+
+				"demo import and reads as a week in which nothing happened — and `make seed-dev` "+
+				"cannot correct it.", derived)
+		}
+	}
 }

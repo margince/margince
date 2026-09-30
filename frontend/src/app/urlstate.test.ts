@@ -1,5 +1,16 @@
+/** @vitest-environment happy-dom */
 import { describe, expect, it } from "vitest";
-import { hashWithParams, NO_URL_PARAMS, parseParams } from "./urlstate";
+import {
+  ASK_PARAM,
+  ASK_QUESTION_PARAM,
+  closeAsk,
+  currentParams,
+  hashWithParams,
+  NO_URL_PARAMS,
+  openAsk,
+  openAsk as openAskDialog,
+  parseParams,
+} from "./urlstate";
 
 const dials = (entries: Record<string, string>) =>
   new Map(Object.entries(entries));
@@ -93,5 +104,46 @@ describe("hashWithParams — the address a set of dials produces", () => {
   it("round-trips whatever it wrote", () => {
     const set = dials({ q: "A&B Ltd", sort: "-created_at", owner_id: "u1" });
     expect(parseParams(hashWithParams("#/companies", set))).toEqual(set);
+  });
+});
+
+// The two dials the Ask dialog rides on. They are TWO because parseParams drops
+// a dial with an empty value — a rule worth keeping, since a filter set to
+// nothing is not a filter — and "open with an empty box" is exactly that shape.
+describe("the Ask dials", () => {
+  it("opens over the address the reader is on, keeping its other dials", () => {
+    window.location.hash = "#/deals?owner_id=u1";
+    openAsk("how long are messages kept");
+    const dials = currentParams();
+    expect(window.location.hash.startsWith("#/deals")).toBe(true);
+    expect(dials.get(ASK_PARAM)).toBe("1");
+    expect(dials.get(ASK_QUESTION_PARAM)).toBe("how long are messages kept");
+    expect(dials.get("owner_id")).toBe("u1");
+  });
+
+  // An empty question must still OPEN it: the palette's own row carries none,
+  // and a dial written empty would not survive the address to say so.
+  it("opens with no question at all", () => {
+    window.location.hash = "#/home";
+    openAskDialog("");
+    expect(currentParams().get(ASK_PARAM)).toBe("1");
+    expect(currentParams().has(ASK_QUESTION_PARAM)).toBe(false);
+  });
+
+  it("drops a question the reader asked before, rather than carrying it", () => {
+    window.location.hash = "#/home";
+    openAsk("first question");
+    openAsk("");
+    expect(currentParams().has(ASK_QUESTION_PARAM)).toBe(false);
+  });
+
+  it("closes both dials and leaves the page's own alone", () => {
+    window.location.hash = "#/deals?owner_id=u1";
+    openAsk("a question");
+    closeAsk();
+    const dials = currentParams();
+    expect(dials.has(ASK_PARAM)).toBe(false);
+    expect(dials.has(ASK_QUESTION_PARAM)).toBe(false);
+    expect(dials.get("owner_id")).toBe("u1");
   });
 });

@@ -21,7 +21,6 @@ package compose
 // here, exactly as one resolved from a website is.
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -94,8 +93,8 @@ func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Reques
 	// writers of one company's mark must never write the same object, or the
 	// stored image and the record's provenance end up describing different
 	// pictures.
-	key := companyLogoKey(ids.From[ids.WorkspaceKind](workspace), company.CompanyID)
-	if err := h.blob.Put(r.Context(), key, bytes.NewReader(png), int64(len(png)), imagenorm.ContentType); err != nil {
+	key, err := contacts.PutLogo(r.Context(), h.blob, companyLogoKey(ids.From[ids.WorkspaceKind](workspace), company.CompanyID), png)
+	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

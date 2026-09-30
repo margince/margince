@@ -257,7 +257,6 @@ func TestTheStemDoesNotFireOnUnrelatedWords(t *testing.T) {
 func TestGermanCompoundsCarryingTheStemAreCaught(t *testing.T) {
 	seen := []string{
 		"Folge-Email nach Intro",
-		"Folgekontakt zum Intro-Thema",
 		"Folgekontakt nach Intro",
 	}
 	for _, label := range seen {

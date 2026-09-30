@@ -95,6 +95,17 @@ func Groups() []Group {
 		// what happened to the proposal, so a wedged extraction must not stop
 		// the measurement that says whether the feature may stay on.
 		{Name: "cg:stage-progression-outcome", Streams: forEntities(approvalStreamEntity)},
+		// Telling the seats that could decide a staged proposal that it is
+		// waiting on them. The APPROVAL stream, where approval.requested
+		// rides.
+		//
+		// Its own group rather than a second handler on the ledger above:
+		// that one counts what has already happened to a card, and this one
+		// is the only thing that puts the card in front of anybody at all. A
+		// wedged measurement must never cost a colleague their notice, and a
+		// backlog of notices must never stall the ledger the launch gate
+		// reads.
+		{Name: "cg:approval-notify", Streams: forEntities(approvalStreamEntity)},
 		// Closing an introduction the contact answered. Its own group because
 		// the evidence is perishable in one direction: `replied` may only be
 		// reached from a captured message, so a lane wedged behind an
@@ -109,10 +120,13 @@ func Groups() []Group {
 		// would be lost permanently while the ask read unanswered.
 		{Name: "cg:intro-advance", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// What the installation owes a contact it obtained without asking them.
-		// Contact stream only: the duty is decided from how the contact was
-		// acquired, and the acquisition row is written in the same transaction
-		// as the contact and the event that announces it.
-		{Name: "cg:notice-case-open", Streams: forEntities(contactStreamEntity)},
+		// The contact stream opens the duty: it is decided from how the contact
+		// was acquired, and the acquisition row is written in the same
+		// transaction as the contact and the event that announces it. The
+		// activity stream settles it: activity.captured is the contact's own
+		// mail arriving after a backfill minted them from our reply, which
+		// answers the unknown source the duty was opened for.
+		{Name: "cg:notice-case-open", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// What happened in a Deal Room, written onto the deal's timeline. Its own
 		// group because a room's traffic is live and conversational while the
 		// projections above are batchy: a backlog of embeddings must not delay the

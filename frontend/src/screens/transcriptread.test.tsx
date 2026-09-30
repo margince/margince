@@ -153,13 +153,11 @@ describe("reading a transcript for its next steps", () => {
 
     // How much was read, so a cited line reads against the size of the whole.
     expect(await screen.findByText("48 lines read")).toBeTruthy();
-    expect(
-      screen.getByText("3 next steps waiting for your review"),
-    ).toBeTruthy();
+    expect(screen.getByText("3 next steps awaiting review")).toBeTruthy();
     // The 🟡 tier is drawn, never spelled as an emoji.
-    expect(screen.getByRole("img", { name: "confirm-first" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "approval first" })).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Open the Worklist" }));
+    await user.click(screen.getByRole("button", { name: "Open Worklist" }));
     expect(window.location.hash).toContain("worklist");
   });
 
@@ -178,10 +176,8 @@ describe("reading a transcript for its next steps", () => {
     expect(screen.getByText("Done")).toBeTruthy();
     // A correct empty answer is not a queue of work: nothing to review, and
     // nowhere to go.
-    expect(
-      screen.queryByRole("button", { name: "Open the Worklist" }),
-    ).toBeNull();
-    expect(screen.queryByRole("img", { name: "confirm-first" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open Worklist" })).toBeNull();
+    expect(screen.queryByRole("img", { name: "approval first" })).toBeNull();
   });
 
   it("explains a reading it could not finish, and never as an empty result", async () => {
@@ -202,13 +198,9 @@ describe("reading a transcript for its next steps", () => {
     expect(screen.getByText("Failed")).toBeTruthy();
     expect(screen.queryByText("Done")).toBeNull();
     expect(
-      screen.queryByText(
-        "Read in full. This conversation states no next steps.",
-      ),
+      screen.queryByText("Transcript read in full. No next steps found."),
     ).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Open the Worklist" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open Worklist" })).toBeNull();
   });
 
   it("falls back to its own words when a terminal reading carries no detail", async () => {
@@ -219,7 +211,7 @@ describe("reading a transcript for its next steps", () => {
     // asserted: a heading alone would pass on a notice that never says nothing
     // was staged.
     expect(
-      await screen.findByText("This transcript could not be read"),
+      await screen.findByText("Transcript could not be read"),
     ).toBeTruthy();
     expect(screen.getByText("Nothing was staged.")).toBeTruthy();
   });
@@ -233,13 +225,9 @@ describe("reading a transcript for its next steps", () => {
     // concerned: no line count, no verdict, no empty-result notice.
     expect(screen.queryByText("0 lines read")).toBeNull();
     expect(
-      screen.queryByText(
-        "Read in full. This conversation states no next steps.",
-      ),
+      screen.queryByText("Transcript read in full. No next steps found."),
     ).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Open the Worklist" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open Worklist" })).toBeNull();
   });
 
   it("shows a reading that finished after the rep navigated away", async () => {
@@ -248,9 +236,7 @@ describe("reading a transcript for its next steps", () => {
 
     // Nobody pressed anything in this tab; the latest read is what makes a
     // finished reading findable at all.
-    expect(
-      await screen.findByText("1 next step waiting for your review"),
-    ).toBeTruthy();
+    expect(await screen.findByText("1 next step awaiting review")).toBeTruthy();
   });
 
   // The defect a rehearsal met: accept the only suggestion, watch the task
@@ -266,9 +252,7 @@ describe("reading a transcript for its next steps", () => {
 
     expect(await screen.findByText("1 suggestion reviewed")).toBeTruthy();
     expect(screen.getByText("1 accepted, 0 declined")).toBeTruthy();
-    expect(
-      screen.queryByText("1 next step waiting for your review"),
-    ).toBeNull();
+    expect(screen.queryByText("1 next step awaiting review")).toBeNull();
   });
 
   it("counts only what is still waiting when some of a batch is decided", async () => {
@@ -282,9 +266,7 @@ describe("reading a transcript for its next steps", () => {
     render(<TranscriptReadCard activityId="a-1" />);
 
     // One of the three is undecided, and that is the number a rep acts on.
-    expect(
-      await screen.findByText("1 next step waiting for your review"),
-    ).toBeTruthy();
+    expect(await screen.findByText("1 next step awaiting review")).toBeTruthy();
   });
 
   it("names a rejected suggestion as declined rather than accepted", async () => {
@@ -307,7 +289,7 @@ describe("reading a transcript for its next steps", () => {
     });
     render(<TranscriptReadCard activityId="a-1" />);
 
-    expect(await screen.findByText("1 expired undecided")).toBeTruthy();
+    expect(await screen.findByText("1 expired without review")).toBeTruthy();
     expect(screen.queryByText(/accepted/)).toBeNull();
     // And not "1 suggestion reviewed" beside it. Counting every staged id as
     // reviewed put the two claims on the card at once, each contradicting the

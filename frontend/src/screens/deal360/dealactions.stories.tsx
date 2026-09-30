@@ -46,7 +46,7 @@ const deal = (over: Partial<Deal> = {}): Deal =>
     stage_id: "st-1",
     status: "open",
     stalled: false,
-    source: "ui",
+    source: "manual",
     version: 1,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
@@ -61,12 +61,14 @@ export default meta;
 
 type Story = StoryObj;
 
+const DEAL_GRANTS: Parameters<typeof meRoute>[0] = {
+  deal: ["read", "update"],
+  activity: ["create"],
+};
+
 const actions = (
   over: Partial<Deal> = {},
-  grants: Parameters<typeof meRoute>[0] = {
-    deal: ["read", "update"],
-    activity: ["create"],
-  },
+  grants: Parameters<typeof meRoute>[0] = DEAL_GRANTS,
   refusedReasonId?: string,
 ) => {
   installFetchStub({ "GET /me": meRoute(grants) });

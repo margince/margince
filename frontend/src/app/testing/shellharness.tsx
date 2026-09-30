@@ -7,6 +7,7 @@ import {
 import { Database, ShieldCheck, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
+import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import type { NavSection } from "../nav";
 
@@ -42,6 +43,30 @@ export const renderWith = (client: QueryClient, ui: ReactNode): RenderResult =>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
+
+/**
+ * The head's stage marker: the house Badge on the attribution row, carrying no
+ * class of its own. Temporary, with app/betabadge.tsx.
+ */
+export const MARKER = ".ws-company .badge";
+
+/**
+ * The `/me` snapshot of a rep — a seat that may not read the company profile —
+ * carrying the installation's brand, which `/me` hands every seat.
+ */
+export const repSeeing = (
+  brand?: components["schemas"]["InstallationBrand"],
+) => ({ roles: ["rep"], teams: [], installation_brand: brand });
+
+/**
+ * A company with both marks. The panel has two widths, and the square mark is
+ * the one drawn at 56px; the wide one stands there when no icon was uploaded.
+ */
+export const TWO_MARKS = {
+  display_name: "Demo GmbH",
+  logo_url: "/v1/companies/55555555-5555-4555-8555-555555555555/logo",
+  logo_icon_url: "/v1/companies/55555555-5555-4555-8555-555555555555/logo/icon",
+};
 
 /** Mount under a client of its own — what a case that reads no cache wants. */
 export const render = (ui: ReactNode): RenderResult =>
@@ -107,7 +132,7 @@ export function fixtureSection(activeId?: string): NavSection {
             children: [
               {
                 id: "deeper",
-                labelKey: "settings.tab.data-model",
+                labelKey: "settings.tab.fields",
                 icon: Database,
               },
             ],

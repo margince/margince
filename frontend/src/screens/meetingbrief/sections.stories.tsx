@@ -9,10 +9,10 @@ import "./meetingbrief.css";
 
 // The brief's nine sections, out of the drawer.
 //
-// The connected drawer's frames (Records/Contact record/Meeting brief) show these
-// inside a Modal, portalled to document.body — which is a fine way to see the
-// drawer and a poor way to see the PANELS: every capture there is the whole
-// sheet at drawer width. These render the same components inline, which is also
+// The connected drawer's frames (meetingbrief.stories.tsx) show these inside a
+// Modal, portalled to document.body — which is a fine way to see the drawer
+// and a poor way to see the PANELS: every capture there is the whole sheet at
+// drawer width. These render the same components inline, which is also
 // what makes them the direct story coverage the render gate asks of each file.
 //
 // The one thing worth reading across the two frames is the TINT. A brief the
@@ -22,7 +22,7 @@ import "./meetingbrief.css";
 // words and a composition would be borrowing it.
 
 const meta: Meta<typeof GoalPanel> = {
-  title: "Records/Contact record/Meeting brief/Sections",
+  title: "Records/Record 360/Meeting brief/Sections",
   component: GoalPanel,
 };
 export default meta;

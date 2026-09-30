@@ -297,9 +297,16 @@ func jaro(a, b string) float64 {
 	return (m/float64(len(ra)) + m/float64(len(rb)) + (m-float64(transpositions)/2)/m) / 3
 }
 
-// contactNameKeySQL is the SQL side of NormalizeContactName. Both sides of the
-// equality arm in fuzzyContact call it, so that comparison cannot fold its two
-// halves with different normalizations of the same name.
+// exactNameKeySQL is the SQL side of the Go exact-name comparison, and BOTH
+// dedupe lanes ask it of both halves of their equality arm, so a comparison
+// cannot fold its two sides with different normalizations of one name.
+//
+// One function because there is one question. NormalizeContactName is
+// normalizeName plus a whitespace collapse, and companyNamesAreTheSame is the
+// same pair — case, accents and spacing folded away, and nothing else. The
+// company lane's legal-suffix key is a DIFFERENT question and is not this one:
+// see CompanyCandidateScore.ExactName for why "Baqend GmbH" and "Baqend Inc"
+// must not fold together.
 //
 // Not a mirror of the Go key — it deliberately is not one. SQL's lower and Go's
 // Unicode full fold are different normalizations, and the arm exists so the lane
@@ -317,7 +324,7 @@ func jaro(a, b string) float64 {
 // which runs this expression against the database over the same pairs the
 // reachability test carries — the arm's own claim, asked of the arm rather than
 // of the query it sits in, where the trigram arm answers first and hides it.
-func contactNameKeySQL(expr string) string {
+func exactNameKeySQL(expr string) string {
 	return storekit.SQLf(
 		`btrim(regexp_replace(replace(f_fold_apostrophes(lower(%s)), 'ς', 'σ'), '\s+', ' ', 'g'))`, expr)
 }

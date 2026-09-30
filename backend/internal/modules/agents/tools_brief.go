@@ -200,6 +200,7 @@ func (t readBrief) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_brief", Title: "Read the morning brief", Version: toolVersionV1,
 		Description:   readBriefCopy.render(),
+		Instead:       readBriefCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getMorningBrief",
 		// No arguments. The brief a caller may read is the one belonging to the
@@ -326,6 +327,7 @@ func (t annotateBrief) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "annotate_brief", Title: "Write findings onto the morning brief", Version: toolVersionV1,
 		Description: annotateBriefCopy.render(),
+		Instead:     annotateBriefCopy.Instead,
 		// Write, because it changes a row a reader reads. TierAutoExecute
 		// because there is nothing here for a human to approve in the moment:
 		// the write is confined to prose on that contact's own brief, it is

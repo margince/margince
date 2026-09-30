@@ -159,12 +159,12 @@ describe("RetentionCard rows", () => {
 
     const suppressed = await findRow("activity/transcript");
     expect(
-      within(suppressed).getByText(/suppressed by retain-only/i),
+      within(suppressed).getByText(/paused by retain-only mode/i),
     ).toBeInTheDocument();
     // Not just a badge: the row states the consequence, because "enabled but
     // inert" is the one thing a reader cannot infer from the other columns.
     expect(
-      within(suppressed).getByText(/will not act until the posture/i),
+      within(suppressed).getByText(/does not act until the mode/i),
     ).toBeInTheDocument();
 
     // Archiving retains, so the posture leaves it alone — and this row must
@@ -172,7 +172,7 @@ describe("RetentionCard rows", () => {
     const acting = await findRow("deal/won");
     expect(within(acting).getByText(/acting nightly/i)).toBeInTheDocument();
     expect(
-      within(acting).queryByText(/suppressed by retain-only/i),
+      within(acting).queryByText(/paused by retain-only mode/i),
     ).not.toBeInTheDocument();
   });
 
@@ -387,7 +387,7 @@ describe("the retain-only posture", () => {
     expect(within(before).getByText(/acting nightly/i)).toBeInTheDocument();
 
     await userEvent.click(
-      await screen.findByRole("switch", { name: /retain-only posture/i }),
+      await screen.findByRole("switch", { name: /retain-only mode/i }),
     );
 
     await waitFor(() => {
@@ -401,7 +401,7 @@ describe("the retain-only posture", () => {
     await waitFor(async () => {
       expect(
         within(await findRow("activity/transcript")).getByText(
-          /suppressed by retain-only/i,
+          /paused by retain-only mode/i,
         ),
       ).toBeInTheDocument();
     });
@@ -412,15 +412,17 @@ describe("the retain-only posture", () => {
     render(<RetentionCard />);
 
     expect(
-      await screen.findByRole("switch", { name: /retain-only posture/i }),
+      await screen.findByRole("switch", { name: /retain-only mode/i }),
     ).toBeDisabled();
     expect(
-      screen.getByText(/only an admin or ops can change retention/i),
+      screen.getByText(
+        /only an administrator or operations user can change retention/i,
+      ),
     ).toBeInTheDocument();
     // A reader still sees WHY a row is inert; only the controls are withheld.
     const row = await findRow("activity/transcript");
     expect(
-      within(row).getByText(/suppressed by retain-only/i),
+      within(row).getByText(/paused by retain-only mode/i),
     ).toBeInTheDocument();
     expect(
       within(row).queryByRole("button", { name: /edit/i }),
@@ -432,12 +434,12 @@ describe("the retain-only posture", () => {
     render(<RetentionCard />);
 
     const posture = await screen.findByRole("switch", {
-      name: /retain-only posture/i,
+      name: /retain-only mode/i,
     });
     // Announced WITH the control rather than printed beside it: a detached
     // paragraph reaches the eye and never the reader who hears only the switch.
     expect(posture).toHaveAccessibleDescription(
-      /only an admin or ops can change retention/i,
+      /only an administrator or operations user can change retention/i,
     );
   });
 
@@ -451,7 +453,7 @@ describe("the retain-only posture", () => {
     render(<RetentionCard />);
 
     const posture = await screen.findByRole("switch", {
-      name: /retain-only posture/i,
+      name: /retain-only mode/i,
     });
     const row = posture.closest(".settingrow");
     expect(row).not.toBeNull();
@@ -501,7 +503,9 @@ describe("the retain-only posture", () => {
     render(<RetentionCard />);
 
     expect(
-      await screen.findByText(/only an admin or ops can see the retention/i),
+      await screen.findByText(
+        /only an administrator or operations user can see retention/i,
+      ),
     ).toBeInTheDocument();
     // Its place, not just its words — the card keeps the heading it has for
     // every other reader.
@@ -564,7 +568,7 @@ describe("authoring a policy", () => {
     await pickOption(
       userEvent.setup(),
       screen.getByRole("combobox", { name: /^action$/i }),
-      "Anonymise",
+      "Anonymize",
     );
     await userEvent.click(
       screen.getByRole("button", { name: /create policy/i }),
@@ -614,7 +618,7 @@ describe("authoring a policy", () => {
     expect(refusal).toHaveTextContent(
       /a policy for this scope already exists/i,
     );
-    expect(refusal).toHaveTextContent(/edit the existing row/i);
+    expect(refusal).toHaveTextContent(/edit the existing policy/i);
     // Never the store's own wording, which names a constraint and a Go
     // sentinel rather than what to do about it.
     expect(refusal).not.toHaveTextContent(/conflict/i);
@@ -700,7 +704,7 @@ describe("deleting a policy", () => {
     // Staged, not sent: the dialog explains that deleting is not pausing.
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent(/nothing in that scope ages out/i);
-    expect(dialog).toHaveTextContent(/turn enabled off instead/i);
+    expect(dialog).toHaveTextContent(/turn off enabled instead/i);
     expect(sent.some((call) => call.key.startsWith("DELETE "))).toBe(false);
 
     await userEvent.click(

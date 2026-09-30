@@ -33,6 +33,8 @@ import (
 	"go/token"
 	"strconv"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -215,7 +217,7 @@ func TestTheClosureMapRefusesWhatItDoesNotKnow(t *testing.T) {
 // parseGateSource reads one file out of the tree this gate walks.
 func parseGateSource(t *testing.T, path string) *ast.File {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ParseComments)
+	file, err := gatekit.ParseFile(path, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

@@ -24,36 +24,29 @@ import (
 // Watcher and Backfiller, so the frozen Connector interface is unchanged and a
 // capture-only provider simply does not implement it.
 //
-// SendEmail MUST be idempotent on msg.MessageID. Job delivery is at-least-once,
-// so a provider that retransmits on a retry mails the recipient twice; a
-// connector whose provider can look up a prior send by RFC822 Message-ID must
-// do so whenever msg.Attempt > 0 and return the existing receipt instead.
+// SendEmail MUST be idempotent on msg.MessageID: job delivery is at-least-once,
+// so a provider that retransmits on a retry mails the recipient twice. A
+// connector able to look up a prior send by Message-ID must do so whenever
+// msg.Attempt > 0 and return the existing receipt.
 //
-// That obligation has a precondition, and an implementation MUST refuse a
-// message that fails it (EmailMessage.Validate) before any provider I/O: an
-// identity the prior-send lookup cannot search for makes the idempotency
-// guarantee unkeepable, and transmitting anyway is the double-send this seam
-// exists to prevent.
+// An implementation MUST refuse a message failing EmailMessage.Validate before
+// any provider I/O: an identity the lookup cannot search for makes that
+// guarantee unkeepable, and sending anyway is the double-send this prevents.
 type EmailSender interface {
 	SendEmail(ctx context.Context, auth Auth, msg EmailMessage) (SendReceipt, error)
 }
 
 // AttachmentCarrier is how a sending connector declares whether it can transmit
-// files (ADR-0086/A131).
+// files.
 //
-// THERE IS NO DEFAULT, and that is the whole design. The obvious way to add
-// attachments — put a files field on the message, teach the mail adapter
-// multipart, let the others ignore it — compiles everywhere and silently
-// transmits the covering text without the file. The sender sees a timeline entry
-// with an attachment chip, because the timeline records what was STAGED; the
-// recipient sees a message referring to a file that is not there; nobody is
-// told. That failure is silent, invisible at the call site, and permanent,
-// because the record of what was sent is now wrong.
+// THERE IS NO DEFAULT, and that is the whole design. A files field the adapters
+// may ignore compiles everywhere and silently sends the covering text without
+// the file: the sender sees an attachment chip, because the timeline records
+// what was STAGED, the recipient sees a reference to a file that is not there,
+// and nobody is told.
 //
-// So a sender that does not implement this seam is treated as carrying nothing,
-// and a staged message with files PARKS rather than going out stripped. An
-// adapter that gains the ability declares it here; one that never had it needs
-// no change and cannot be mistaken for capable.
+// So a sender not implementing this carries nothing, and a staged message with
+// files PARKS rather than going out stripped.
 type AttachmentCarrier interface {
 	// Carriage reports what this connector's provider can carry. A connector
 	// that does not implement this interface carries nothing.
@@ -65,14 +58,11 @@ type AttachmentCarrier interface {
 // the same type, or the bounds a gate checks are two sets that can disagree.
 type Carriage = extension.Carriage
 
-// CarriageOf asks a resolved sender what it can carry.
-//
-// A sender that does not implement AttachmentCarrier answers the ZERO Carriage
-// — carries nothing. That is the no-default rule in one line, and it lives HERE,
-// beside the interface, because three callers now ask it: the send seam that
-// gates a delivery, the registry that publishes the transport directory, and the
-// tests that pin both. A second spelling of this assertion is a second place a
-// silent "presumably it carries" could creep in.
+// CarriageOf asks a resolved sender what it can carry. A sender not implementing
+// AttachmentCarrier answers the ZERO Carriage — the no-default rule in one line,
+// beside the interface because the send seam, the registry and their tests all
+// ask it, and a second spelling is a second place "presumably it carries" creeps
+// in.
 //
 //craft:ignore naked-any the type assertion seam: a sender is whichever connector the resolver or the registry bound
 func CarriageOf(sender any) Carriage {
@@ -147,15 +137,13 @@ type EmailMessage struct {
 	// how a connector knows to run the prior-send lookup the contract requires.
 	Attempt int
 
-	// Files are the attachments this message carries. A connector handed a
-	// non-empty set has already been asked whether it carries attachments — the
-	// dispatcher parks otherwise — so reaching here with files means transmitting
-	// them.
+	// The attachments this message carries. A connector handed a non-empty set
+	// has already been asked whether it carries them, so reaching here means
+	// transmitting them.
 	//
-	// THE INVARIANT, stated where an implementer reads it: no adapter may
-	// transmit a message whose attachment set differs from the one it was
-	// handed. Not a subset, not converted to links, not silently dropped. If it
-	// cannot send all of them it returns an error and the delivery parks.
+	// THE INVARIANT: no adapter may transmit a message whose attachment set
+	// differs from the one it was handed — not a subset, not converted to links,
+	// not dropped. If it cannot send all of them it errors and the delivery parks.
 	Files []OutboundFile
 }
 
@@ -167,32 +155,26 @@ type EmailMessage struct {
 // the copy the provider files back would key onto no activity.
 var ErrInvalidMessageID = errors.New("connector: outbound message carries no usable RFC822 message identity")
 
-// maxMessageIDLen bounds a message identity at a length a header can actually
-// carry. RFC 5322 caps a header line at 998 octets, and this system renders the
-// identity into Message-ID, In-Reply-To and a References chain that holds
-// several of them at once, so the usable ceiling is far below that line limit
-// — 512 is already an order of magnitude above what any provider mints (a
-// Gmail identity is around forty characters). The bound matters because an
-// identity is not only rendered: it is READ BACK out of a provider response of
-// up to 96 MiB and adopted as a natural key, a thread key and a log field. An
-// unbounded "valid" identity is a remote party choosing how many bytes this
-// installation stores per sent message.
+// maxMessageIDLen bounds a message identity at a length a header can carry. RFC
+// 5322 caps a header line at 998 octets and a References chain holds several
+// identities at once, so the usable ceiling is well below that; 512 is already
+// an order of magnitude above what providers mint. The bound matters because an
+// identity is READ BACK from a provider response and adopted as a natural key,
+// a thread key and a log field — unbounded, it is a remote party choosing how
+// many bytes this installation stores per sent message.
 const maxMessageIDLen = 512
 
-// ValidMessageID reports whether id is a usable RFC822 message identity in the
-// UNBRACKETED form this system stores and compares: an addr-spec with exactly
-// one '@', both sides non-empty, no whitespace, angle brackets, or ASCII
-// control character (the connector adds the brackets at the wire), and no
-// longer than a header line can carry. Control characters are rejected
-// wholesale, not just the tab/CR/LF an editor is likely to type: any of them
-// would render a malformed Message-ID header on the wire, and a provider that
-// mangles or strips one on receipt breaks the retry path's rfc822msgid: lookup
-// — the search that stops an at-least-once redelivery from mailing the
-// recipient twice.
+// ValidMessageID reports whether id is a usable RFC822 identity in the
+// UNBRACKETED form this system stores: an addr-spec with exactly one '@', both
+// sides non-empty, no whitespace, brackets or ASCII control character, and no
+// longer than a header line can carry. Control characters are rejected wholesale
+// because any of them renders a malformed header, and a provider that mangles
+// one breaks the retry path's rfc822msgid: lookup — the search that stops a
+// redelivery mailing the recipient twice.
 //
-// It is the ONE spelling of that question, so the identity a send transmits
-// under, the identity a threading header is derived from, and the identity a
-// provider reports back cannot disagree about what counts.
+// The ONE spelling of that question, so the identity a send transmits under, the
+// one a threading header derives from, and the one a provider reports back
+// cannot disagree.
 func ValidMessageID(id string) bool {
 	if len(id) > maxMessageIDLen {
 		return false
@@ -222,38 +204,28 @@ func (m EmailMessage) Validate() error {
 	return nil
 }
 
-// SendReceipt is what the provider confirmed: its own message identity, and
-// the RFC822 identity the transmitted copy actually carries.
+// SendReceipt is what the provider confirmed: its own message identity, and the
+// RFC822 identity the transmitted copy actually carries.
 //
 // The provider's CONVERSATION id is deliberately absent. This system threads on
-// the RFC822 message identity — comms_outbound.thread_key and activity.thread_key
-// both hold a Message-ID derived from References/In-Reply-To, which is what
-// capture keys reply detection on. A provider's own conversation id (Gmail's
-// threadId) lives in a different namespace, joins nothing here, and carrying it
+// the RFC822 identity, which is what capture keys reply detection on; a
+// provider's conversation id lives in another namespace, joins nothing here, and
 // would invite a reader to key on a value no query reads.
 //
-// The RFC822 identity is the opposite case, and the distinction is worth
-// holding onto: it joins everything here. A Message-ID is a REQUEST, not a
-// guarantee — Gmail discards the client's and mints its own — so the identity
-// this system records has to be the one the wire carries, not the one it asked
-// for.
+// A Message-ID is a REQUEST, not a guarantee — Gmail discards the client's and
+// mints its own — so the identity recorded has to be the one the wire carries.
 type SendReceipt struct {
 	ProviderMessageID string
-	// RFC822MessageID is the unbracketed Message-ID on the transmitted copy.
+	// The unbracketed Message-ID on the transmitted copy.
 	//
-	// EMPTY covers two different facts, and they are deliberately not
-	// distinguished HERE. No re-key is OWED — the provider honoured the
-	// identity it was given, or reports none — or no re-key is POSSIBLE,
-	// because the read-back could not be answered. The first is a correct
-	// no-op. The second is a degradation: on a provider that rewrites, the
-	// message stays keyed on an identity the wire does not carry, and its
-	// captured echo lands as a second timeline row.
+	// EMPTY covers two facts, deliberately not distinguished here: no re-key is
+	// OWED (the provider honoured the identity, or reports none), or none is
+	// POSSIBLE (the read-back went unanswered). The second is a degradation — on
+	// a provider that rewrites, the message stays keyed on an identity the wire
+	// does not carry and its captured echo lands as a second timeline row.
 	//
-	// The field stays a plain identity because the alternative is worse at this
-	// seam: a receipt that reported "unknown" would be asking every caller to
-	// carry a recovery path, and the recovery does not belong to the caller.
-	// ProviderMessageID is durable on the delivery, so a later pass can re-ask
-	// the provider for the identity of a message it already accepted — that
-	// pass is the fix for the degradation, and it is not in this change.
+	// It stays a plain identity because a receipt reporting "unknown" would ask
+	// every caller to carry a recovery path that is not theirs. ProviderMessageID
+	// is durable on the delivery, so a later pass can re-ask the provider.
 	RFC822MessageID string
 }

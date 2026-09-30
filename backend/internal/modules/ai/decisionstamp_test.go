@@ -1,0 +1,148 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package ai
+
+import (
+	"testing"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+)
+
+var (
+	// jevLane names a model no committed record certifies, so a test reads the
+	// certification table as empty for it whatever the generated table holds.
+	jevLane = &DecisionsConfig{Provider: providerJevCompatible, Model: "typesafe/jev-uncertified", BaseURL: "https://openrouter.ai/api/alpha/decisions"}
+	// selfHostedLane is a Jev-wire server on this host: local by its endpoint.
+	selfHostedLane = &DecisionsConfig{Provider: providerJevCompatible, Model: "typed-decisions", BaseURL: "http://127.0.0.1:8767/v1/systemone"}
+)
+
+// The local-only cases here all read "" because localOnlyAdmits is currently
+// unconditional (#6396, pending #3351) — this proves decisionSkipFor reads
+// that one shared predicate rather than reimplementing the check, not that a
+// local-only task is unrestricted forever. TestServableLadderReadsTheSame
+// PredicateAsTheDecisionLane (router_test.go) is the ladder's half of the
+// same claim.
+func TestTheDecisionLaneServesEveryTaskButKeepsLocalOnlyDataLocal(t *testing.T) {
+	cases := []struct {
+		name string
+		lane *DecisionsConfig
+		task Task
+		want string
+	}{
+		{"unbound", nil, TaskSiteTriage, DecisionSkipUnbound},
+		{"jev on a cloud task", jevLane, TaskSiteTriage, ""},
+		{"jev on a local-only task", jevLane, TaskCaptureCounterpartyVerdict, ""},
+		{"self-hosted on a local-only task", selfHostedLane, TaskCaptureCounterpartyVerdict, ""},
+	}
+	for _, tc := range cases {
+		if got := decisionSkipFor(tc.lane, tc.task); got != tc.want {
+			t.Errorf("%s: decisionSkipFor = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+	if len(LocalOnlyTasks()) == 0 {
+		t.Fatal("no local-only task declared: the cases above prove nothing")
+	}
+}
+
+func triageRoute(t *testing.T, cfg RoutingConfig, band string) crmcontracts.AiFeatureRoute {
+	t.Helper()
+	for _, row := range FeatureRoutes(cfg, cfg, band) {
+		if row.Task == string(TaskSiteTriage) {
+			return row
+		}
+	}
+	t.Fatal("the preview has no site_triage row")
+	return crmcontracts.AiFeatureRoute{}
+}
+
+func TestTheRoutingPreviewSaysWhyTheDecisionLaneIsSkipped(t *testing.T) {
+	cfg := RoutingConfig{Profile: ProfileCloudFrontier, Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: ProviderFake, Model: "cheap"}, TierPremium: {Provider: ProviderFake, Model: "premium"},
+	}}
+	reason := func(row crmcontracts.AiFeatureRoute) string {
+		if row.DecisionSkipReason == nil {
+			return ""
+		}
+		return *row.DecisionSkipReason
+	}
+
+	unbound := triageRoute(t, cfg, BandNormal)
+	if unbound.DecisionFirst || reason(unbound) != DecisionSkipUnbound || unbound.DecisionCandidate != nil {
+		t.Errorf("unbound lane: first=%v reason=%q candidate=%v", unbound.DecisionFirst, reason(unbound), unbound.DecisionCandidate)
+	}
+
+	cfg.Decisions = jevLane
+	bound := triageRoute(t, cfg, BandNormal)
+	if !bound.DecisionFirst || reason(bound) != "" {
+		t.Errorf("bound lane: first=%v reason=%q", bound.DecisionFirst, reason(bound))
+	}
+	want := crmcontracts.AiRouteCandidate{Tier: "decide", Provider: jevLane.Provider, Model: jevLane.Model, Processing: "cloud_provider"}
+	if bound.DecisionCandidate == nil || *bound.DecisionCandidate != want {
+		t.Errorf("candidate = %v, want %v", bound.DecisionCandidate, want)
+	}
+	if row := triageRoute(t, cfg, BandQueued); row.DecisionFirst {
+		t.Error("a deferred background feature is reported as answered by the lane")
+	}
+
+	cfg.Decisions = selfHostedLane
+	if row := triageRoute(t, cfg, BandNormal); row.DecisionCandidate == nil || row.DecisionCandidate.Processing != "configured_endpoint" {
+		t.Errorf("a local lane's candidate = %v, want configured_endpoint processing", row.DecisionCandidate)
+	}
+	for _, row := range FeatureRoutes(cfg, cfg, BandNormal) {
+		if !TaskDecides(Task(row.Task)) && (row.DecisionFirst || row.DecisionSkipReason != nil || row.DecisionCandidate != nil) {
+			t.Errorf("%s declares no decision form but carries decision fields", row.Task)
+		}
+	}
+}
+
+// A decision model that starts or stops answering a feature first changes which
+// model answers it, so the preview may not read that edit as "unchanged" while
+// every tier binding stays put — it says the decision model moved. When the
+// tier binding moved too, the bigger change is the one reported. A lane that
+// answers nothing either way changes nothing a caller sees.
+func TestTheRoutingPreviewReportsADecisionLaneChangeApartFromAModelChange(t *testing.T) {
+	before := RoutingConfig{Profile: ProfileCloudFrontier, Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: ProviderFake, Model: "cheap"}, TierPremium: {Provider: ProviderFake, Model: "premium"},
+	}}
+	retiered := map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: ProviderFake, Model: "cheap-next"}, TierPremium: {Provider: ProviderFake, Model: "premium-next"},
+	}
+	refallbacked := map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: ProviderFake, Model: "cheap"}, TierPremium: {Provider: ProviderFake, Model: "premium-next"},
+	}
+	anotherModel := &DecisionsConfig{Provider: jevLane.Provider, Model: "typesafe/jev-other", BaseURL: jevLane.BaseURL}
+	with := func(lane *DecisionsConfig, tiers map[Tier]ProviderConfig) RoutingConfig {
+		next := before
+		next.Decisions = lane
+		if tiers != nil {
+			next.Tiers = tiers
+		}
+		return next
+	}
+	cases := []struct {
+		name     string
+		from, to *DecisionsConfig
+		toTiers  map[Tier]ProviderConfig
+		want     string
+	}{
+		{"added", nil, jevLane, nil, "decision_changed"},
+		{"removed", jevLane, nil, nil, "decision_changed"},
+		{"another model", jevLane, anotherModel, nil, "decision_changed"},
+		{"added beside a rebound tier", nil, jevLane, retiered, "model_changed"},
+		{"a rebound fallback alone", nil, nil, refallbacked, "fallback_changed"},
+		{"added beside a rebound fallback", nil, jevLane, refallbacked, "model_changed"},
+		{"the same lane", jevLane, jevLane, nil, "unchanged"},
+	}
+	for _, tc := range cases {
+		var got string
+		for _, row := range compareFeatureRoutes(with(tc.from, nil), with(tc.to, tc.toTiers), BandNormal, BandNormal) {
+			if row.Task == string(TaskSiteTriage) {
+				got = row.Impact
+			}
+		}
+		if got != tc.want {
+			t.Errorf("%s: site_triage impact = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}

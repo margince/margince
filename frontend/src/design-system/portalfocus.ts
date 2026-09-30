@@ -32,9 +32,10 @@ import {
 // What a reader can land on. A CSS selector rather than a rule, but it is read
 // by all three behaviours below and a panel whose first stop and last stop were
 // found by two different selectors would be a panel that lets go of focus at
-// one end and not the other.
+// one end and not the other. A refused control is no stop: `focus()` on it does
+// nothing, so a panel opening on one would leave the reader on the trigger.
 const FOCUSABLE =
-  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+  'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
 /**
  * usePortalPanelFocus gives a portalled panel the focus behaviour it would

@@ -23,7 +23,7 @@ import {
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -67,6 +67,7 @@ import {
 import { ErasureRefusals } from "./privacy.notices";
 import "./privacy.css";
 import { isOption } from "../app/options";
+import { ErrorLine } from "../design-system/errorline";
 
 type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
 type CreateDataSubjectRequest =
@@ -184,11 +185,7 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
           dismissCreateError();
         }}
       />
-      {create.isError && (
-        <p className="purpose-form-error">
-          {problemMessageOf(create.error, t)}
-        </p>
-      )}
+      <ErrorLine error={create.error} />
       <Button
         variant="primary"
         disabled={!key.trim() || !label.trim() || create.isPending}
@@ -252,7 +249,7 @@ export function ConsentPurposesCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.purposesSub")}</p>
+        <PanelIntro>{t("settings.purposesSub")}</PanelIntro>
         <SettingList>
           {/* The registry is the card's subject rather than an answer beside a
               question, so it takes the full width under its naming.
@@ -469,9 +466,7 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
         )}
       </Field>
 
-      {create.isError && (
-        <p className="dsr-error">{problemMessageOf(create.error, t)}</p>
-      )}
+      <ErrorLine error={create.error} />
 
       <Button
         variant="primary"
@@ -810,18 +805,9 @@ function DsrRow({
                 regardless of `terminal`, not only inside the open-case
                 branch below (an assignment failure on a closed request would
                 otherwise be invisible). */}
-            {/* role="alert": this line is the ONLY report that a transition
-                did not land, and `privacy.movedOn` exists precisely to say the
-                click a reader just made changed nothing. Rendered silently it
-                told nobody — the row's badges do not move on a refused write,
-                so a reader who was looking at the buttons saw the same screen
-                either way. The paragraph mounts carrying its message, which is
-                the case an assertive region is for. */}
-            {patchErrorMessage && (
-              <p className="dsr-error" role="alert">
-                {patchErrorMessage}
-              </p>
-            )}
+            {/* Announced, never standing: the row's badges do not move on a
+                refused write, so this line alone says the click changed nothing. */}
+            {patchErrorMessage && <ErrorLine>{patchErrorMessage}</ErrorLine>}
 
             {terminal ? (
               <p>{t("privacy.closed")}</p>
@@ -1173,7 +1159,7 @@ export function PrivacyInboxCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.privacySub")}</p>
+        <PanelIntro>{t("settings.privacySub")}</PanelIntro>
         {/* One card's throw stays inside one card: this body renders a queue
             of subject requests straight off the wire, and without a boundary
             a single malformed row costs the reader the whole tab and the rail

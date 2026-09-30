@@ -108,7 +108,7 @@ it("opens a bundle's effects together from the ranked row", async () => {
   await userEvent.click(
     await screen.findByRole("button", { name: en["worklist.verb.decide"] }),
   );
-  await userEvent.click(await screen.findByText("Show the 2 items"));
+  await userEvent.click(await screen.findByText("Show 2 items"));
   expect(screen.getByText("Second effect")).toBeTruthy();
   expect(writes(calls)).toEqual([]);
 });

@@ -112,7 +112,7 @@ describe("the company record page when its 360 read fails", () => {
       // tell which company they were looking at.
       const heading = await screen.findByRole("heading", { level: 1 });
       expect(heading.textContent).toContain("Brandt Automotive GmbH");
-      expect(screen.queryByText("This view stopped working.")).toBeNull();
+      expect(screen.queryByText("This view stopped working")).toBeNull();
     },
   );
 
@@ -126,7 +126,7 @@ describe("the company record page when its 360 read fails", () => {
 
     await screen.findByRole("heading", { level: 1 });
     const unavailable = await screen.findAllByText(
-      "Could not be loaded — this may not be the whole picture",
+      "Some data did not load, so this section may be incomplete.",
     );
     expect(unavailable.length).toBeGreaterThan(0);
   });

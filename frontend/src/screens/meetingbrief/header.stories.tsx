@@ -19,7 +19,7 @@ import "./meetingbrief.css";
 // string rather than a live clock.
 
 const meta: Meta<typeof BriefHeader> = {
-  title: "Records/Contact record/Meeting brief/Header band",
+  title: "Records/Record 360/Meeting brief/Header band",
   component: BriefHeader,
 };
 export default meta;

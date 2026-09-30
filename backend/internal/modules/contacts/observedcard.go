@@ -13,14 +13,12 @@ package contacts
 import (
 	"context"
 	"net/url"
-	"slices"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // observedCard is one business card, as a dated statement by the contact on it.
@@ -61,52 +59,22 @@ func applyObservedCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 			applied = append(applied, f.name)
 		}
 	}
-	// The numbers first, then ONE evidence line for the number that matters.
-	//
-	// One line because the sidecar holds one row per field, and it is written
-	// after the loop because every number on a card shares the card's date —
-	// a second write inside the loop would lose the supersede clause's
-	// strictly-newer test and leave whichever number happened to be first.
-	//
-	// The number that REPLACED one, where the card replaced any: an undo reads
-	// its value out of this row, so a card stating a new home number and a
-	// replacing work number must not point the undo at the home number and
-	// revive something the reader was not looking at.
-	var evidenceFor string
+	// Every number the card lists, as one statement: each gets its own
+	// evidence line, and a number replaces only the older one of its own
+	// country and type.
+	numbers := make([]observedNumber, 0, len(c.Entry.Phones))
 	for _, phone := range c.Entry.Phones {
-		outcome, err := applyObservedPhone(ctx, tx, contactID, observedPhone{
-			Phone: phone.Value, PhoneType: phone.Kind, SourceRef: c.SourceRef,
-			Source: c.Source, CapturedBy: c.CapturedBy, ObservedAt: c.ObservedAt,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if outcome != observedApplied && outcome != observedReplaced {
-			continue
-		}
-		if !slices.Contains(applied, fieldPhone) {
-			applied = append(applied, fieldPhone)
-		}
-		if evidenceFor == "" || outcome == observedReplaced {
-			// NORMALIZED, the way the number list stores it and the way the
-			// signature path writes this line. The raw card spelling would
-			// match no row, and the undo reads this value back to find the
-			// number it is about.
-			parsed, err := values.ParsePhone(phone.Value)
-			if err != nil {
-				continue
-			}
-			evidenceFor = parsed.String()
-		}
+		numbers = append(numbers, observedNumber{Phone: phone.Value, PhoneType: phone.Kind, Evidence: c.Evidence})
 	}
-	if evidenceFor != "" {
-		if _, err := applyObservedField(ctx, tx, contactID, observedField{
-			Field: fieldPhone, Value: evidenceFor, Evidence: c.Evidence,
-			SourceRef: c.SourceRef, Source: c.Source, CapturedBy: c.CapturedBy,
-			ObservedAt: c.ObservedAt,
-		}); err != nil {
-			return nil, err
-		}
+	landed, err := applyObservedNumbers(ctx, tx, contactID, observedNumbers{
+		Numbers: numbers, SourceRef: c.SourceRef, Source: c.Source,
+		CapturedBy: c.CapturedBy, ObservedAt: c.ObservedAt,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(landed) > 0 {
+		applied = append(applied, fieldPhone)
 	}
 	return applied, nil
 }

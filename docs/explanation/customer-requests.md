@@ -47,12 +47,52 @@ completes it. Dismissing a conversation as not sales removes it from request
 review; a reader's snooze or not-mine decision changes that reader's queue, not
 the obligation for everybody.
 
-Unclassified mail with a captured thread uses reply evidence as a fallback.
-Unthreaded mail needs a request verdict or scheduling/commitment evidence. An
-unclassified message already labelled as scheduling or commitment remains a
-candidate even after a reply, so historical reconciliation can still judge it.
-An unrelated conversation cannot settle it, and unthreaded messages are never
-matched to every other unthreaded message.
+## Whether a reply is still owed
+
+One check answers this for every surface: the needs-reply badge on the
+timeline, the contact page and the agent tools, the waiting lane, request
+review and the response time. It lives in `activities/answered.go`, and
+`backend/gates/answerwalk_test.go` fails a second walk of a thread for our
+reply.
+
+A message that is not a request is answered by any of:
+
+- our reply on the same thread;
+- our mail to the sender with the same subject once reply prefixes (`Re:`,
+  `AW:`, `Antw:`) are stripped. The sender is their address or any live
+  address of their contact, named as the outbound's recipient or on a To/Cc
+  row; a blind copy does not count, and a forward (`Fwd:`, `WG:`) is not an
+  answer. The provider must have filed the mail as sent by us, so a message
+  whose From merely names our mailbox proves nothing;
+- a logged call or a held meeting with the sender's contact. The same with a
+  colleague of theirs does not count.
+
+An answer must be strictly later than the mail: a reply in the same second
+stays owed, because mail carries second precision and nothing else says which
+came first. Evidence off the thread counts only when the whole workspace may
+read it. A colleague's private reply or meeting must not clear another seat's
+row, since the row going quiet would disclose that it exists.
+
+The subject match is used only here. Capture never joins threads on a subject,
+because two "Re: Invoice" mails from two senders are two conversations; the
+address keeps them apart.
+
+Such a message is owed while it is the newest inbound on its thread and
+unanswered, judged or not. A confirmed request stays owed through any of these
+answers until it is settled as described above; an unclassified message
+labelled as scheduling or commitment is kept the same way until the classifier
+reads it.
+
+Two judgements end the obligation, and `/worklist/hidden` counts and lists what
+each one hides: a human marking the conversation not sales, and the classifier's
+`informs_us` verdict. A request a human accepted is never hidden by the verdict.
+Mail from an obvious machine address is owed only as a confirmed request.
+
+The waiting lane is the owed set narrowed by queue rules: the horizon, the
+sales link, colleagues' domains and the reader's own snoozes and not-mine
+choices. Each of those has its own figure in `/worklist/hidden` too, so a
+badge that says a reply is owed and a lane without the row always differ for
+a counted reason.
 
 ## Automatic capture and historical review
 

@@ -241,8 +241,7 @@ export function EmailEntry({
     | { onSelect: () => void; selected: boolean; disabled?: boolean }
     | { onOpen: () => void }
     | { onOpen: undefined; whyNotOpenable: NoOpenReason }
-    | { whyNotOpenable: NoOpenReason }
-  >) {
+    | { whyNotOpenable: NoOpenReason }>) {
   const t = useT();
   const { locale } = useLocale();
   const row = rowFields(summary, t);

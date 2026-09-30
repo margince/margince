@@ -18,7 +18,7 @@ import { DeckStack } from "./decisiondeck.stack";
 // Both themes. The peeked edges are `--aiMed` at low opacity over the page's own
 // ground, which is the pair most likely to vanish on the dark surface.
 const meta: Meta<typeof DeckStack> = {
-  title: "Design System/DecisionDeck stack",
+  title: "Components/AI and provenance/Decision deck/Stack",
   component: DeckStack,
   parameters: { layout: "padded" },
   decorators: [

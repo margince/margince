@@ -87,12 +87,22 @@ func TestASlowToolCallOutlivesTheServersWriteDeadline(t *testing.T) {
 	t.Cleanup(strict.Close)
 	client := strict.Client()
 
-	// Control: the deadline is armed. /healthz extends nothing, so its answer
-	// cannot reach a client here — without this the test would pass just as
-	// happily against a server that has no deadline at all.
-	if resp, err := client.Get(strict.URL + "/healthz"); err == nil {
-		apptest.CloseBody(t, resp)
-		t.Fatalf("GET /healthz answered %d although the server write deadline had expired: the wall under test is not armed", resp.StatusCode)
+	// Control: the server carries the wall, so this test is not passing against
+	// one that never had a deadline to outlive.
+	//
+	// Asserted on the CONFIGURATION, because an expired write deadline only
+	// surfaces to a client when the write would BLOCK — and a small response
+	// does not block, it lands in the socket buffer and returns cleanly. A
+	// probe answering 200 says nothing about whether the wall is armed.
+	//
+	// What the deadline DOES bite is the held tool call below, whose response
+	// is written long after it and is large enough to reach the connection.
+	// That assertion is the test: dropping Unwrap from any wrapper in the /mcp
+	// chain kills the response mid-write.
+	if strict.Config.WriteTimeout != expiredWriteDeadline {
+		t.Fatalf("the strict server's WriteTimeout is %v, not the expired %v this test needs — "+
+			"without it every assertion below holds against a server with no wall at all",
+			strict.Config.WriteTimeout, expiredWriteDeadline)
 	}
 
 	// The thread the draft replies to, and a passport that may draft on it.

@@ -67,7 +67,7 @@ func TestCustomFieldRetire_PreservesColumnAndValues(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
 	created, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "contact", Label: "Preferred greeting", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: "Preferred greeting", Type: customfieldsmod.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestCustomFieldSetOptions_RegeneratesTheCheck(t *testing.T) {
 
 	created, err := svc.Create(ctx, customfieldsmod.FieldSpec{
 		Object: "contact", Label: "Procurement route", Type: customfieldsmod.TypePicklist,
-		Options: []string{"direct", "reseller"}, Source: "ui",
+		Options: []string{"direct", "reseller"}, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -157,13 +157,13 @@ func TestCustomFieldSetOptions_Refusals(t *testing.T) {
 
 	picklist, err := svc.Create(ctx, customfieldsmod.FieldSpec{
 		Object: "contact", Label: "Procurement route", Type: customfieldsmod.TypePicklist,
-		Options: []string{"direct", "reseller"}, Source: "ui",
+		Options: []string{"direct", "reseller"}, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	date, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "contact", Label: "Onboarding date", Type: customfieldsmod.TypeDate, Source: "ui",
+		Object: "contact", Label: "Onboarding date", Type: customfieldsmod.TypeDate, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -207,7 +207,7 @@ func TestCustomFieldList_IncludesRetiredByDefault_AndPagesKeyset(t *testing.T) {
 	var created []ids.UUID
 	for _, label := range []string{"Alpha", "Beta", "Gamma"} {
 		f, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-			Object: "deal", Label: label, Type: customfieldsmod.TypeText, Source: "ui",
+			Object: "deal", Label: label, Type: customfieldsmod.TypeText, Source: "manual",
 		})
 		if err != nil {
 			t.Fatal(err)

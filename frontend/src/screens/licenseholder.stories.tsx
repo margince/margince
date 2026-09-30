@@ -31,7 +31,7 @@ function story(holder: LicenseHolder) {
 }
 
 const meta: Meta<typeof LicenseHolderCard> = {
-  title: "Settings/People/Seats & license/Licensee",
+  title: "Settings/People/Seats and license/Licensee",
   component: LicenseHolderCard,
 };
 export default meta;

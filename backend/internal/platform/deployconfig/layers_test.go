@@ -80,22 +80,16 @@ func TestOnlyTheRunningPosturesOverlayIsRead(t *testing.T) {
 // reading two files and knowing which way each key goes.
 func TestAMappingMergesAndAListReplaces(t *testing.T) {
 	cfg, err := layered(t, runtimeenv.Test,
-		"version: 1\nrates:\n  fx_currencies: [USD, GBP, CHF]\n  model_pricing:\n    gemini: https://base.test/gemini\n    openai: https://base.test/openai\n",
-		"rates:\n  fx_currencies: [SEK]\n  model_pricing:\n    openai: https://overlay.test/openai\n")
+		"version: 1\nrates:\n  fx_source: https://base.test/fx\n  fx_currencies: [USD, GBP, CHF]\n",
+		"rates:\n  fx_currencies: [SEK]\n")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	if got := cfg.Rates.FxCurrencies; len(got) != 1 || got[0] != "SEK" {
 		t.Errorf("fx_currencies = %v; a list the overlay names replaces the base's entirely", got)
 	}
-	want := map[string]string{"gemini": "https://base.test/gemini", "openai": "https://overlay.test/openai"}
-	for k, v := range want {
-		if cfg.Rates.ModelPricing[k] != v {
-			t.Errorf("model_pricing[%s] = %q, want %q", k, cfg.Rates.ModelPricing[k], v)
-		}
-	}
-	if len(cfg.Rates.ModelPricing) != len(want) {
-		t.Errorf("model_pricing = %v; a mapping merges, so the base's untouched keys stay", cfg.Rates.ModelPricing)
+	if got := cfg.Rates.Fx; got != "https://base.test/fx" {
+		t.Errorf("fx_source = %q; a mapping merges, so the base's untouched key stays", got)
 	}
 }
 

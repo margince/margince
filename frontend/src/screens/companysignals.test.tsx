@@ -87,7 +87,7 @@ describe("SignalsSection", () => {
     render(<SignalsSection companyId="o-1" />);
 
     const link = await screen.findByRole("link", {
-      name: "Read the announcement",
+      name: "Read announcement",
     });
     expect(link).toHaveAttribute(
       "href",
@@ -137,7 +137,7 @@ describe("SignalsSection", () => {
 
     // Exactly one link, and it belongs to the row that cited a page.
     const links = await screen.findAllByRole("link", {
-      name: "Read the announcement",
+      name: "Read announcement",
     });
     expect(links).toHaveLength(1);
     const row = links[0].closest(".co-signal-row");
@@ -169,7 +169,7 @@ describe("SignalsSection", () => {
     render(<SignalsSection companyId="o-1" />);
 
     const link = await screen.findByRole("link", {
-      name: "Read the announcement",
+      name: "Read announcement",
     });
     expect(link.getAttribute("href")).toBe(
       "https://brandt.example/news/series-b",
@@ -211,6 +211,6 @@ describe("SignalsSection", () => {
     expect(
       await screen.findByText("Brandt Automotive raises a Series B"),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Read the announcement")).not.toBeInTheDocument();
+    expect(screen.queryByText("Read announcement")).not.toBeInTheDocument();
   });
 });

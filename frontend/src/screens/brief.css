@@ -229,11 +229,6 @@
   margin-top: var(--space-6);
 }
 
-.brief-error {
-  color: var(--dangerText);
-  margin: 0;
-}
-
 /* ── The follow-through ────────────────────────────────────────────────────
  * The panels of the work column, in the order the day decides, and beside
  * them the context rail. The gap between blocks is wider than the gap between
@@ -470,6 +465,84 @@
   }
 }
 
+/* ── The receipt ───────────────────────────────────────────────────────────
+ * Four lanes inside one panel. The spacing is all that lives here: a lane is a
+ * heading, a count and a table, and every one of those draws itself. */
+
+.magic-lane + .magic-lane {
+  margin-top: var(--space-6);
+}
+
+/* The heading and its page count on one line, the way the queue's own bands
+   carry theirs. */
+.magic-lane-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.magic-lane-head > h3 {
+  margin: 0;
+}
+
+.magic-lane-count {
+  margin-left: auto;
+}
+
+/* The two caveats: what could not be read, above the lanes, and what was left
+   out, below them. Both are lists of captions and neither wants a bullet. */
+.magic-withheld,
+.magic-notshown {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+}
+
+.magic-notshown {
+  margin: var(--space-4) 0 0;
+}
+
+/* An opened line: one row per record, its name and its undo on one line, the
+   fields it moved under it as label and old → new. */
+.magic-records {
+  list-style: none;
+  margin: var(--space-3) 0;
+  padding: 0;
+}
+
+.magic-record + .magic-record {
+  margin-top: var(--space-3);
+}
+
+.magic-record-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.magic-changes {
+  margin: var(--space-2) 0 0;
+}
+
+.magic-changes > div {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.magic-changes dd {
+  margin: 0;
+}
+
+/* The three ways to discharge a privacy-notice duty, side by side. */
+.notice-duty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+  margin-top: var(--space-3);
+}
+
 /* ── Folds ────────────────────────────────────────────────────────────────
  * `PageZones` folds the columns; what folds here is the briefing's own scale.
  * A display-size greeting on a phone costs three lines before a reader has
@@ -492,5 +565,18 @@
     flex-wrap: wrap;
     align-items: center;
     padding-top: 0;
+  }
+}
+
+/* The coarse-pointer floor (WCAG 2.2 AA), the way `.stat-card-open` takes it in
+   atoms.css. `max()` for the reason `.btn-federated` gives: a later rise in the
+   shared control height must not be capped by this floor. Declared under
+   `pointer: coarse` and not at a width, because a narrow WINDOW on a desktop is
+   still a mouse — the floor is about what a thumb can hit, not about how much
+   room there is. */
+@media (pointer: coarse) {
+  .rail-count-go,
+  .record-details-toggle {
+    min-height: max(var(--controlHeight), 44px);
   }
 }

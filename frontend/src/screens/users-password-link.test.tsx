@@ -10,7 +10,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
+import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { UsersAdminCard } from "./users-admin";
 
 // The admin-issued set-password link. What matters here is WHEN the action is
@@ -41,6 +43,7 @@ const ROSTER = {
       display_name: "Ada Active",
       status: "active",
       is_agent: false,
+      allowed_actions: ["issue_password_link", "deactivate"],
     },
     {
       id: "u-off",
@@ -48,6 +51,7 @@ const ROSTER = {
       display_name: "Otto Off",
       status: "deactivated",
       is_agent: false,
+      allowed_actions: ["reactivate"],
     },
   ],
   page: { next_cursor: null, has_more: false },
@@ -99,8 +103,22 @@ function backend(opts: {
         201,
       );
     }
+    if (req.url.includes("/users/assignable-roles")) {
+      return jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES });
+    }
+    // The roster drops the link where the installation cannot build one, on
+    // the same posture `admin_password_link` reports.
     if (req.url.includes("/users") && req.method === "GET") {
-      return jsonResponse(ROSTER);
+      return jsonResponse({
+        ...ROSTER,
+        data: ROSTER.data.map((u) => ({
+          ...u,
+          allowed_actions: u.allowed_actions.filter(
+            (action) =>
+              opts.adminPasswordLink || action !== "issue_password_link",
+          ),
+        })),
+      });
     }
     return jsonResponse({ ...ROSTER.data[0], id: "u-new" }, 201);
   });
@@ -108,7 +126,7 @@ function backend(opts: {
 
 // StrictMode is not decoration here. An earlier cut of this screen fired the
 // mint from a mount effect; StrictMode's double mount tore the request's
-// observer down and the dialog hung on "Creating the link…" forever — broken on
+// observer down and the dialog hung on "Creating link…" forever — broken on
 // `make dev`, invisible to a suite that rendered without it. Rendering as the
 // dev server does is what makes that class of defect reachable from a test.
 const render = (ui: ReactNode) => {
@@ -134,7 +152,7 @@ afterEach(() => {
 // whole act ("Invite a member") and the dialog's submit the bare one
 // ("Invite"), which is what keeps the two tellable apart.
 async function openInvite() {
-  await userEvent.click(screen.getByRole("button", { name: /invite a user/i }));
+  await userEvent.click(screen.getByRole("button", { name: /invite user/i }));
   return screen.findByRole("dialog");
 }
 
@@ -235,14 +253,8 @@ describe("admin-issued set-password link", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     await openInvite();
-    await userEvent.type(
-      screen.getByLabelText(/new user's email/i),
-      "newbie@acme.test",
-    );
-    await userEvent.type(
-      screen.getByLabelText(/new user's full name/i),
-      "New Bie",
-    );
+    await userEvent.type(screen.getByLabelText(/^Email/), "newbie@acme.test");
+    await userEvent.type(screen.getByLabelText(/^Full name/), "New Bie");
     await userEvent.click(screen.getByRole("button", { name: /^invite$/i }));
 
     // Without this the admin walks away from a successful invite holding
@@ -264,27 +276,21 @@ describe("admin-issued set-password link", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     await openInvite();
-    await userEvent.type(
-      screen.getByLabelText(/new user's email/i),
-      "newbie@acme.test",
-    );
-    await userEvent.type(
-      screen.getByLabelText(/new user's full name/i),
-      "New Bie",
-    );
+    await userEvent.type(screen.getByLabelText(/^Email/), "newbie@acme.test");
+    await userEvent.type(screen.getByLabelText(/^Full name/), "New Bie");
     await userEvent.click(screen.getByRole("button", { name: /^invite$/i }));
 
     // The member exists but has no way in. Reporting a clean success here is
     // the exact silent failure this feature was built to remove.
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
   });
 
   it("reports a copy failure instead of throwing where the clipboard API is absent", async () => {
     vi.stubGlobal("fetch", backend({ adminPasswordLink: true }));
-    // navigator.clipboard is undefined outside a secure context — and an
-    // email-less installation served over plain http is exactly that.
-    vi.stubGlobal("navigator", { ...navigator, clipboard: undefined });
+    // An email-less installation served over plain http is the deployment this
+    // whole feature serves, and it is exactly the one with no clipboard.
+    stubClipboard("absent");
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
@@ -293,15 +299,13 @@ describe("admin-issued set-password link", () => {
     await userEvent.click(screen.getByRole("button", { name: /copy link/i }));
     // The admin is told to copy by hand rather than left with a dead button:
     // the heading says the copy did not happen, the body says what to do.
-    expect(
-      await screen.findByText(/the link could not be copied/i),
-    ).toBeTruthy();
-    expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
+    expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
+    expect(screen.getByText(/copy it manually/i)).toBeTruthy();
   });
 
   it("recovers from a transport failure instead of hanging on pending", async () => {
     // An HTTP refusal arrives as `error`; only a network failure rejects. An
-    // uncaught rejection leaves the dialog on "Creating the link…" forever,
+    // uncaught rejection leaves the dialog on "Creating link…" forever,
     // with no way to tell a dead connection from a slow server.
     vi.stubGlobal(
       "fetch",
@@ -328,6 +332,9 @@ describe("admin-issued set-password link", () => {
             admin_password_link: true,
           });
         }
+        if (req.url.includes("/users/assignable-roles")) {
+          return jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES });
+        }
         if (req.url.includes("/password-link")) {
           throw new TypeError("Failed to fetch");
         }
@@ -338,8 +345,10 @@ describe("admin-issued set-password link", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     await clickLinkAction();
-    expect(await screen.findByText(/could not reach the server/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy();
+    expect(
+      await screen.findByText(/server could not be reached/i),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
     expect(screen.queryByText(/creating the link/i)).toBeNull();
   });
 
@@ -378,6 +387,9 @@ describe("admin-issued set-password link", () => {
             admin_password_link: true,
           });
         }
+        if (req.url.includes("/users/assignable-roles")) {
+          return jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES });
+        }
         if (req.url.includes("/password-link")) {
           call += 1;
           if (call === 1) {
@@ -407,7 +419,7 @@ describe("admin-issued set-password link", () => {
     // The stale failure lands now. It must change nothing.
     releaseFirst();
     await waitFor(() => expect(call).toBe(2));
-    expect(screen.queryByText(/could not reach the server/i)).toBeNull();
+    expect(screen.queryByText(/server could not be reached/i)).toBeNull();
     expect(
       screen.getByLabelText<HTMLInputElement>("Set-password link").value,
     ).toBe(LINK_URL);
@@ -425,7 +437,7 @@ describe("admin-issued set-password link", () => {
     // The failure is announced, and the way out is offered. Silently closing
     // here would leave an account nobody can sign into and no visible sign of it.
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
     expect(screen.queryByLabelText("Set-password link")).toBeNull();
   });
 });

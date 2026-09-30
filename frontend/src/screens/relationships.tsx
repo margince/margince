@@ -20,7 +20,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { DEAL_COVERAGE_KEY } from "./activitykeys";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import type { CreateField } from "./create";
 import {
   type Candidate,
@@ -29,6 +29,9 @@ import {
 } from "./relationshipcandidates";
 import { KIND_LABELS } from "./relationshipkinds";
 import "./candidatepicker.css";
+import "./common.css";
+import "./relationships.css";
+import { ErrorLine } from "../design-system/errorline";
 
 // The Relationships tab (P-5): the one surface a contact/company 360 renders
 // its relationship edges through (employment, deal stakeholder, partner-of,
@@ -419,12 +422,7 @@ export function AddRelationshipAction({
         {t(copy.add)}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
-        <Heading
-          size="large"
-          id={headingId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t(copy.add)}
         </Heading>
         <div className="form-stack">
@@ -461,12 +459,8 @@ export function AddRelationshipAction({
               setTarget(null);
             }}
           />
-          {searchFailure ? (
-            <p style={{ color: "var(--dangerText)" }}>
-              {problemMessageOf(searchFailure, t)}
-            </p>
-          ) : null}
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          <ErrorLine error={searchFailure} />
+          <ul className="relationships-candidates">
             {candidates.map((candidate) => (
               <li key={candidate.id}>
                 <Button
@@ -499,25 +493,15 @@ export function AddRelationshipAction({
             )}
           </Field>
           {target && (
-            <p style={{ marginBottom: "var(--space-1)" }}>
+            <p className="relationships-confirm">
               {t("rel.addConfirm", {
                 target: target.name,
                 kind: t(KIND_LABELS[kind]),
               })}
             </p>
           )}
-          {mutation.isError && (
-            <p style={{ color: "var(--dangerText)" }}>
-              {problemMessageOf(mutation.error, t)}
-            </p>
-          )}
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--gapActions)",
-              justifyContent: "flex-end",
-            }}
-          >
+          <ErrorLine error={mutation.error} />
+          <div className="form-actions">
             <Button onClick={close} disabled={mutation.isPending}>
               {t("create.cancel")}
             </Button>

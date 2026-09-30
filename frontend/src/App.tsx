@@ -4,13 +4,14 @@ import {
   lazy,
   type ReactNode,
   Suspense,
-  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { AskFromAddress } from "./app/askfromaddress";
+import { isPublicBookingId } from "./app/bookingroute";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
 import { DateFormatsProvider } from "./app/dateformats";
 import {
@@ -53,11 +54,9 @@ import {
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./screens/common";
 import { isContactTab } from "./screens/contacttab";
 import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
-import {
-  OnboardingScreen,
-  useCompany,
-  useOnboardingProgress,
-} from "./screens/onboarding";
+import { useInstallationDescribed } from "./screens/installationcompany";
+import { OnboardingScreen } from "./screens/onboarding";
+import { useJourneyProgress } from "./screens/onboarding-journey";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
 import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
 import { WriteToHost } from "./screens/writeto";
@@ -95,11 +94,6 @@ function routed<T>(factory: () => Promise<T>): () => Promise<T> {
   return factory;
 }
 
-const AskAiScreen = lazy(
-  routed(() =>
-    import("./screens/ai").then((m) => ({ default: m.AskAiScreen })),
-  ),
-);
 const BookingScreen = lazy(
   routed(() =>
     import("./screens/book").then((m) => ({ default: m.BookingScreen })),
@@ -468,16 +462,13 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // make it describe a fraction of what the reader is looking at.
     worklist: ({ id }) => <WorklistRedirect opensOn={id} />,
     analytics: () => <AnalyticsScreen />,
-    ai: () => <AskAiScreen />,
     // The screen resolves its own address, because which entry an address names
     // is the settings IA's question: the admin half lives a segment deeper, and
     // a legacy link to it is answered and rewritten there rather than here.
     settings: (args) => (
       <SettingsScreen route={{ screen: "settings", ...args }} />
     ),
-    // The object rides the URL so a filter surface can be linked to; an
-    // unknown segment falls back to contacts inside the screen rather than
-    // rendering a page with no vocabulary to offer.
+    // The object or library section rides the URL, so each can be linked to.
     filters: ({ id }) => <FiltersScreen id={id} />,
     // No segments: the queue is one page, and a single scheduled message has
     // nothing to show that its row does not already carry.
@@ -498,6 +489,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
       <SearchScreen q={id ? safeDecode(id) : ""} openActivityId={id2} />
     ),
     tags: ({ id }) => <TagResultScreen tagID={id} />,
+    lists: ({ id }) => <FiltersScreen list={id ?? ""} />,
     share: ({ id, id2 }) => <ShareRoute id={id} id2={id2} />,
     onboarding: () => <OnboardingScreen />,
     client: () => <ClientSurfaceScreen />,
@@ -653,14 +645,7 @@ const PUBLIC_SCREENS: ReadonlySet<Screen> = new Set([
   "room",
 ]);
 
-// Screens the onboarding gate must never navigate away from, beyond
-// onboarding itself. The OAuth consent screen carries a single-use,
-// cookie-bound nonce in the hash (armed by GET /oauth/authorize's 302); the
-// gate's navigate() rewrites location.hash, which would destroy that nonce
-// with nothing able to recover it — unlike an ordinary screen, there is no
-// route back once this one is skipped mid-flight. This is a narrow carve-out
-// for a request in flight, not a relaxation of the gate for the screen in
-// general.
+// OAuth consent keeps its cookie-bound, single-use nonce through onboarding.
 const ONBOARDING_GATE_EXEMPT_SCREENS: ReadonlySet<Screen> = new Set([
   "onboarding",
   "oauth-consent",
@@ -686,7 +671,10 @@ export function App() {
       </RaillessFrame>
     );
   }
-  if (PUBLIC_SCREENS.has(route.screen)) {
+  if (
+    PUBLIC_SCREENS.has(route.screen) &&
+    (route.screen !== "book" || isPublicBookingId(route.id))
+  ) {
     return (
       <Shell onOpenSearch={() => undefined}>
         <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
@@ -749,30 +737,6 @@ function UnavailableOrClaimable({
   return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }
 
-// The second half of the onboarding gate, for a DESCRIBED installation: a
-// human whose own journey — voice, mailbox, preferences — is not recorded as
-// finished is walked through it, a member invited later exactly as the
-// creator was. `wanted` is false for a read seat: it cannot write the
-// checkpoint the journey ends on, and a gate with no exit is a trap. It is
-// false for an undescribed installation too, which the first half already
-// gates.
-//
-// A read that FAILED does not gate: the shell renders, and the journey is
-// asked for again on the next load. An unfinished row, or none, does.
-function useJourneyProgress(wanted: boolean): Readonly<{
-  pending: boolean;
-  unfinished: boolean;
-}> {
-  const progress = useOnboardingProgress(wanted);
-  return {
-    pending: wanted && progress.isPending,
-    unfinished:
-      wanted &&
-      progress.isSuccess &&
-      (progress.data === null || progress.data.step !== "complete"),
-  };
-}
-
 // AuthGate: everything behind the session probes GET /v1/me, and the
 // boundary branches on the TYPED failure (§4 of the login spec):
 // 401 → login, network/5xx → connection problem, 503 → installation
@@ -823,10 +787,13 @@ function AuthedApp({
   // Probed only once the session is known good: an unauthenticated /company
   // would 401 and say nothing about onboarding.
   const authed = !me.isPending && !me.isError;
-  const company = useCompany(authed);
-  const described = company.data !== null && company.data !== undefined;
+  const { described, pending: companyPending } =
+    useInstallationDescribed(authed);
   const progress = useJourneyProgress(
-    authed && described && me.data?.authorization?.seat_type === "full",
+    authed,
+    authed &&
+      described === true &&
+      me.data?.authorization?.seat_type === "full",
   );
   // The company's clock, for every record date under this boundary. Read
   // here rather than per screen so all of them agree, and gated on the session
@@ -842,7 +809,7 @@ function AuthedApp({
   useEffect(() => {
     if (
       authed &&
-      company.isSuccess &&
+      described !== undefined &&
       (!described || progress.unfinished) &&
       !ONBOARDING_GATE_EXEMPT_SCREENS.has(route.screen)
     ) {
@@ -852,11 +819,11 @@ function AuthedApp({
       // onboarding by the one key that exists for getting out of things.
       navigateReplacing({ screen: "onboarding", id: "company" });
     }
-  }, [authed, company.isSuccess, described, progress.unfinished, route.screen]);
+  }, [authed, described, progress.unfinished, route.screen]);
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const commands = useBuiltinCommands();
-  usePaletteHotkey(useCallback(() => setPaletteOpen((open) => !open), []));
+  usePaletteHotkey(paletteOpen, setPaletteOpen);
 
   if (me.isPending) {
     return (
@@ -868,10 +835,9 @@ function AuthedApp({
   if (me.isError) {
     const kind =
       me.error instanceof AuthProbeError ? me.error.kind : "connection";
-    // The account is authenticated; what it lacks is a password of its own.
-    // Sending it to the login screen would loop, because the credentials are
-    // correct and using them again lands in the same refusal — so the boundary
-    // renders the one thing that can resolve it.
+    // The account is authenticated but lacks a password of its own. The login
+    // screen would loop, since the same correct credentials meet the same
+    // refusal, so the boundary renders the one thing that can resolve it.
     if (kind === "must-change-password") {
       return (
         <RaillessFrame>
@@ -880,9 +846,10 @@ function AuthedApp({
       );
     }
     if (kind !== "unauthorized") {
+      const retry = () => me.refetch({ cancelRefetch: false });
       return (
         <RaillessFrame>
-          <UnavailableOrClaimable kind={kind} onRetry={() => me.refetch()} />
+          <UnavailableOrClaimable kind={kind} onRetry={retry} />
         </RaillessFrame>
       );
     }
@@ -919,10 +886,10 @@ function AuthedApp({
   // onboarding and OAuth consent among them. A read that FAILS falls through
   // to the shell, where each screen renders its own error state and its own
   // retry; the splash is for waiting, not for having waited.
-  // The progress read joins the splash for the same reason the company read
-  // does: a shell painted before it answers is a landing page the gate then
-  // pulls away from under the reader.
-  if (company.isPending || recordZone.pending || progress.pending) {
+  // The progress and rollout reads join the splash for the same reason the
+  // company read does: a shell painted before they answer is a landing page the
+  // gate then pulls away from under the reader.
+  if (companyPending || recordZone.pending || progress.pending) {
     return (
       <RaillessFrame>
         <AuthSplash />
@@ -945,6 +912,8 @@ function AuthedApp({
           onClose={() => setPaletteOpen(false)}
           commands={commands}
         />
+        {/* Over whatever the reader was doing, not on a screen of its own. */}
+        <AskFromAddress />
       </RecordZoneProvider>
     </DateFormatsProvider>
   );

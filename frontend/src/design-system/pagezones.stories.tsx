@@ -20,7 +20,7 @@ import { Panel, PanelBody } from "./panel";
 // because a fold nobody has a picture of is a fold nobody checks.
 
 const meta: Meta<typeof PageZones> = {
-  title: "Design System/PageZones",
+  title: "Components/Layout and structure/Page zones",
   component: PageZones,
 };
 export default meta;
@@ -28,7 +28,7 @@ export default meta;
 type Story = StoryObj<typeof PageZones>;
 
 const work = (
-  <Panel title="What is happening">
+  <Panel title="Note">
     <PanelBody>
       <p>
         The work column. It takes the largest share of the page at every shape,

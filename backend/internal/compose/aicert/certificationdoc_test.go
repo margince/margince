@@ -20,6 +20,7 @@ package aicert_test
 // without reading.
 
 import (
+	"cmp"
 	"encoding/json"
 	"math"
 	"path/filepath"
@@ -30,13 +31,24 @@ import (
 )
 
 // aiCertDoc is the whole certification surface, in the order the page renders
-// it: totals, then one row per binding, then every shipped site, then the
-// records no site claims.
+// it: totals, then what each preset gives an operator, then one row per
+// binding, then every shipped site, then the records no site claims.
 type aiCertDoc struct {
-	Totals    aiCertTotals      `json:"totals"`
+	Totals aiCertTotals `json:"totals"`
+	// Presets come first because that is the order a reader needs them in: an
+	// operator picks a preset and inherits its models, so "how did this model
+	// do" is a question they can only ask after this field has answered which
+	// models are theirs.
+	Presets []aiCertPreset `json:"presets"`
+	// Families is the same records folded a second way, for a reader who starts
+	// from "can I run Margince on Gemini" and has not yet chosen a preset.
+	Families  []aiCertFamily    `json:"families"`
 	Bindings  []aiCertBinding   `json:"bindings"`
 	Sites     []aiCertSite      `json:"sites"`
 	Unclaimed []aiCertUnclaimed `json:"unclaimed_records"`
+	// Decisions lists the decision records: each a measurement of the decision lane
+	// on one site, which no completion site above claims.
+	Decisions []aiCertDecision `json:"decisions"`
 }
 
 type aiCertTotals struct {
@@ -48,6 +60,8 @@ type aiCertTotals struct {
 	Scenarios        int `json:"scenarios"`
 	Records          int `json:"records"`
 	Bindings         int `json:"bindings"`
+	// SelfJudged counts records graded by the model they measured or its family.
+	SelfJudged int `json:"self_judged_records"`
 }
 
 // aiCertBindingRef is the whole of what a band speaks for. It is a struct
@@ -57,10 +71,16 @@ type aiCertBindingRef struct {
 	Provider string `json:"provider"`
 	Model    string `json:"model"`
 	Env      string `json:"env"`
+	// ThinkingLevel is part of the binding because it changes how the model
+	// answers: a record run at one level is no measurement of another.
+	ThinkingLevel string `json:"thinking_level,omitempty"`
 }
 
-// label is the binding as the page spells it.
-func (b aiCertBindingRef) label() string { return b.Provider + " · " + b.Model + " · " + b.Env }
+// label is the binding as the page spells it, and the key a preset's rung is
+// matched to a record on, so the two agree on the thinking level or not at all.
+func (b aiCertBindingRef) label() string {
+	return aicert.BindingLabel(b.Provider, b.Model, b.Env, b.ThinkingLevel)
+}
 
 // aiCertBinding is one binding folded over every site it measured.
 type aiCertBinding struct {
@@ -116,6 +136,9 @@ type aiCertPick struct {
 type aiCertScenario struct {
 	Name    string `json:"name"`
 	Expects string `json:"expects"`
+	// GradedBy says whether a judge scores the case's quality ("judge") or its
+	// mechanical check grades it alone ("mechanical").
+	GradedBy string `json:"graded_by"`
 	// File is the case, as a path from the repository root, so a reader of the
 	// JSON can open it without knowing where this page sits.
 	File string `json:"file"`
@@ -143,6 +166,15 @@ type aiCertRecord struct {
 	// "which records went stale because the PRODUCT changed" is asking about
 	// prompt_changed, and the prose answer cannot be queried.
 	StaleCause *staleCause `json:"stale_cause,omitempty"`
+	// SiteThinking is the level this site ran at where the contract moved it
+	// off the binding's own, which Binding alone does not say.
+	SiteThinking string `json:"site_thinking,omitempty"`
+}
+
+// siteLabel is the binding as this site ran on it: a site the contract moved
+// off the binding's thinking level is labelled with its own, as the report is.
+func (r aiCertRecord) siteLabel() string {
+	return aicert.BindingLabel(r.Binding.Provider, r.Binding.Model, r.Binding.Env, cmp.Or(r.SiteThinking, r.Binding.ThinkingLevel))
 }
 
 type aiCertOutcomes struct {
@@ -185,6 +217,11 @@ func buildAICertDoc(rows []aicert.ReadinessRow, unclaimed []aicert.Record,
 	doc.Totals = aiCertTotals{
 		Sites: len(doc.Sites), Scenarios: len(corpus), Records: len(records), Bindings: len(doc.Bindings),
 	}
+	for _, rec := range records {
+		if rec.SelfJudged {
+			doc.Totals.SelfJudged++
+		}
+	}
 	for _, site := range doc.Sites {
 		switch site.BestState {
 		case aicert.StatusCurrent:
@@ -214,7 +251,7 @@ func buildAICertSite(siteKey string, taskRows []aicert.ReadinessRow, cases []aic
 	}
 	for _, sc := range cases {
 		site.Scenarios = append(site.Scenarios, aiCertScenario{
-			Name: sc.Name, Expects: sc.Expect.Outcome, File: repoPathOf(sc),
+			Name: sc.Name, Expects: sc.Expect.Outcome, GradedBy: gradedByOf(sc), File: repoPathOf(sc),
 		})
 	}
 	for _, row := range mine {
@@ -242,8 +279,9 @@ func buildAICertRecord(row aicert.ReadinessRow, siteScenarios int) aiCertRecord 
 			Accepted: row.Tally.ReportedAccepted, WrongAnswer: row.Tally.ReportedWrongAnswer,
 			Invalid: row.Tally.ReportedInvalid, Abstained: row.Tally.ReportedAbstained,
 		},
-		StaleReason: row.Standing.Reason(),
-		StaleCause:  staleCauseOf(row.Standing),
+		StaleReason:  row.Standing.Reason(),
+		StaleCause:   staleCauseOf(row.Standing),
+		SiteThinking: row.Record.SiteThinking[row.Site.Variant],
 	}
 	if row.Standing.Total > 0 {
 		measured := row.Standing.Measured
@@ -325,16 +363,28 @@ func bandRank(band string) int {
 // "is this site certified" is asked of the site and answered by whichever
 // binding answers it best.
 func bestStateOf(rows []aicert.ReadinessRow) string {
-	rank := map[string]int{
-		aicert.StatusAbsent: 0, aicert.StatusStale: 1, aicert.StatusPartial: 2, aicert.StatusCurrent: 3,
-	}
 	best := aicert.StatusAbsent
 	for _, row := range rows {
-		if rank[row.Status()] > rank[best] {
+		if aiCertStateRank(row.Status()) > aiCertStateRank(best) {
 			best = row.Status()
 		}
 	}
 	return best
+}
+
+// aiCertStateRank orders the states from the one that claims least to the one
+// that claims most.
+func aiCertStateRank(state string) int {
+	switch state {
+	case aicert.StatusCurrent:
+		return 3
+	case aicert.StatusPartial:
+		return 2
+	case aicert.StatusStale:
+		return 1
+	default:
+		return 0
+	}
 }
 
 // foldAICertBindings groups every certified row by binding, ordered so the
@@ -394,7 +444,7 @@ func countAICertSiteInto(fold *aiCertBinding, row aicert.ReadinessRow) {
 }
 
 func bindingRefOf(rec aicert.Record) aiCertBindingRef {
-	return aiCertBindingRef{Provider: rec.Provider, Model: rec.ServedModel, Env: rec.EnvClass}
+	return aiCertBindingRef{Provider: rec.Provider, Model: rec.ServedModel, Env: rec.EnvClass, ThinkingLevel: rec.ThinkingLevel}
 }
 
 // repoPathOf names a scenario file from the repository root. The loader reads
@@ -494,4 +544,12 @@ func staleCauseOf(s aicert.Standing) *staleCause {
 		}
 	}
 	return &out
+}
+
+// gradedByOf names what grades a case's quality, as the document spells it.
+func gradedByOf(sc aicert.Scenario) string {
+	if sc.Expect.Judged() {
+		return "judge"
+	}
+	return "mechanical"
 }

@@ -389,11 +389,11 @@ func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // lines are identical either way — two copies of one settings read is how one
 // question comes to have two answers that drift.
 //
-// It never fails the caller. A prompt is being built, and the language is the
-// least important thing in it: refusing to extract a meeting's next steps
-// because a settings read timed out trades a whole feature for a formatting
-// preference. On any error the answer is English, which is what these prompts
-// produced before the setting existed.
+// It never fails the caller. A prompt or a shared-record sentence is being
+// built, and the language is the least important thing in it: refusing to
+// extract a meeting's next steps because a settings read timed out trades a
+// whole feature for a formatting preference. On any error the answer is
+// English, which is what these prompts produced before the setting existed.
 //
 // The failure IS logged, and it has to be: this returns a string and nothing
 // else, so a caller has no way to notice a degraded resolve and say so itself.
@@ -411,7 +411,7 @@ func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 		return nil
 	})
 	if err != nil {
-		slog.WarnContext(ctx, "the installation's base language could not be read; this prompt asks for English",
+		slog.WarnContext(ctx, "the installation's base language could not be read; English is used instead",
 			"reason", err)
 		return string(textlang.English)
 	}

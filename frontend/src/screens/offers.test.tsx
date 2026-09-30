@@ -384,9 +384,7 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     stubOffer({ ...baseOffer, line_items: [unpriced] });
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
-    expect(screen.getAllByText("unpriced — excluded from total").length).toBe(
-      2,
-    );
+    expect(screen.getAllByText("unpriced, excluded from total").length).toBe(2);
     expect(screen.queryByText("€0.00")).toBeNull();
   });
 });
@@ -424,7 +422,7 @@ describe("AI disclosure/diff banner (OP-11)", () => {
       ...baseOffer,
       status: "sent",
       ai_generated: true,
-      ai_disclosure: "This offer revision was drafted with AI assistance.",
+      ai_disclosure: "Drafted with AI assistance. Review before sending.",
       diff_from_previous: {
         added: [{ ...existingLine, id: "li-added", description: "Onboarding" }],
         removed: [
@@ -445,11 +443,15 @@ describe("AI disclosure/diff banner (OP-11)", () => {
     await screen.findByText("ANG-2026-0007");
 
     expect(
-      screen.getByText("This offer revision was drafted with AI assistance."),
+      screen.getByText("Drafted with AI assistance. Review before sending."),
     ).toBeTruthy();
-    expect(screen.getByText("1 line(s) added")).toBeTruthy();
-    expect(screen.getByText("1 line(s) removed")).toBeTruthy();
-    expect(screen.getByText("1 line(s) changed")).toBeTruthy();
+    // ONE of each, so the singular is what the summary must say. It said
+    // "1 line(s) added" and this test asserted it verbatim — the defect with a
+    // test holding it in place, which is how the plural pass found the other
+    // four (issue 2964).
+    expect(screen.getByText("1 line added")).toBeTruthy();
+    expect(screen.getByText("1 line removed")).toBeTruthy();
+    expect(screen.getByText("1 line changed")).toBeTruthy();
     expect(screen.getByText("Onboarding")).toBeTruthy();
     expect(screen.getByText("Legacy setup")).toBeTruthy();
     expect(screen.getByText("Consulting hours (revised)")).toBeTruthy();
@@ -466,7 +468,7 @@ describe("AI disclosure/diff banner (OP-11)", () => {
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
     expect(
-      screen.queryByRole("heading", { name: "AI-assisted disclosure" }),
+      screen.queryByRole("heading", { name: "AI-assisted offer" }),
     ).toBeNull();
   });
 });
@@ -480,7 +482,7 @@ describe("regenerate action (OP-11)", () => {
       revision: 3,
       status: "draft",
       ai_generated: true,
-      ai_disclosure: "This offer revision was drafted with AI assistance.",
+      ai_disclosure: "Drafted with AI assistance. Review before sending.",
       diff_from_previous: { added: [], removed: [], changed: [] },
     };
     stubOfferWithRegenerate(
@@ -601,9 +603,11 @@ describe("render PDF action (OP-12)", () => {
     await waitFor(() => expect(calls).toHaveLength(1));
     const unavailable = await screen.findByTestId("pdf-unavailable");
     expect(unavailable).toBeTruthy();
-    // Calm, informational copy — not the red error-banner path every other
-    // action's mutation.isError branch renders.
-    expect(unavailable.style.color).not.toBe("var(--dangerText)");
+    // Calm, informational copy — not the ErrorLine every other action's
+    // failure renders.
+    expect(unavailable.getAttribute("role")).toBeNull();
+    expect(unavailable.classList.contains("t-danger")).toBe(false);
+    expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByText("blobstore not wired")).toBeNull();
     expect(screen.queryByTestId("pdf-link")).toBeNull();
   });

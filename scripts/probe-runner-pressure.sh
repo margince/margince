@@ -31,7 +31,7 @@ interval="${1:-15}"
 # could actually get is the number that separates "loaded" from "out".
 field() {
   local file="$1" key="$2"
-  [ -r "$file" ] || { printf '?'; return; }
+  [[ -r "$file" ]] || { printf '?'; return; }
   awk -v k="$key" '$1 == k":" { print $2; found = 1 } END { if (!found) print "?" }' "$file"
 }
 
@@ -50,7 +50,7 @@ while :; do
   # able to under-report it.
   psi_avg10='?'
   psi_total='?'
-  if [ -r /proc/pressure/memory ]; then
+  if [[ -r /proc/pressure/memory ]]; then
     psi_avg10=$(awk '/^some/ { for (i = 2; i <= NF; i++) if ($i ~ /^avg10=/) { sub("avg10=", "", $i); print $i; exit } }' /proc/pressure/memory)
     psi_total=$(awk '/^some/ { for (i = 2; i <= NF; i++) if ($i ~ /^total=/) { sub("total=", "", $i); print $i; exit } }' /proc/pressure/memory)
   fi

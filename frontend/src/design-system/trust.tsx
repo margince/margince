@@ -1,13 +1,7 @@
-import { ArrowRight, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { usePlural, useT } from "../i18n";
-import { ActionRow } from "./actionrow";
-import { Badge, Button } from "./atoms";
-import { IconAction } from "./iconaction";
-// StagedProposal draws its own provenance — an accepted value keeps the agent's
-// and an edited one becomes human-typed — so the names are imported here as
-// well as re-exported below: a re-export binds nothing in this file's scope.
-import { type Provenance, ProvenanceTag } from "./provenance";
+import { Badge } from "./atoms";
 import "./panel.css"; // StagingCard's box is drawn by the panel-ai family.
 import "./trust.css";
 
@@ -285,162 +279,12 @@ export {
   type SourceAuthor,
 } from "./provenance";
 
-// The universal triad, with ONE of the three a call to action. Accept keeps its
-// word and its fill on the trailing edge; Dismiss and Edit sit on the leading
-// one as glyphs, which is what `IconAction` is for — a trash can and a pencil
-// are verbs a reader already knows, and each still carries its translated name
-// to a pointer and to a screen reader through the one `label`. Three labelled
-// buttons in a flow made a reader read all three before answering, and a staged
-// value is answered card after card.
-export function ApprovalGate({
-  onAccept,
-  onEdit,
-  onDismiss,
-}: Readonly<{
-  onAccept: () => void;
-  onEdit: () => void;
-  onDismiss: () => void;
-}>) {
-  const t = useT();
-  return (
-    <ActionRow
-      className="approval-gate"
-      primary={
-        <Button variant="primary" onClick={onAccept}>
-          {t("trust.accept")}
-        </Button>
-      }
-    >
-      <IconAction
-        label={t("trust.dismiss")}
-        icon={<Trash2 aria-hidden />}
-        onClick={onDismiss}
-      />
-      <IconAction
-        label={t("trust.edit")}
-        icon={<Pencil aria-hidden />}
-        onClick={onEdit}
-      />
-    </ActionRow>
-  );
-}
-
 export function StagingCard({ children }: Readonly<{ children: ReactNode }>) {
   const t = useT();
   return (
     <section className="staging-card" aria-label={t("trust.stagedProposal")}>
       {children}
     </section>
-  );
-}
-
-export type Proposal = {
-  description: string;
-  value: string;
-  agent: string;
-  confidence: ConfidenceLevel;
-  evidence?: Evidence;
-};
-
-export type Resolution =
-  | { outcome: "accepted"; value: string }
-  | { outcome: "edited"; value: string }
-  | { outcome: "dismissed" };
-
-type ProposalState =
-  | { phase: "staged" }
-  | { phase: "editing"; draft: string }
-  | { phase: "resolved"; resolution: Resolution };
-
-// StagedProposal drives one proposal through the triad. It owns only the
-// presentation state machine — persisting the outcome is the caller's job via
-// onResolve (the approvals API, once the screens wire in).
-export function StagedProposal({
-  proposal,
-  onResolve,
-}: Readonly<{
-  proposal: Proposal;
-  onResolve?: (resolution: Resolution) => void;
-}>) {
-  const t = useT();
-  const [state, setState] = useState<ProposalState>({ phase: "staged" });
-
-  const resolve = (resolution: Resolution) => {
-    setState({ phase: "resolved", resolution });
-    onResolve?.(resolution);
-  };
-
-  if (state.phase === "resolved") {
-    const { resolution } = state;
-    if (resolution.outcome === "dismissed") {
-      return <p>{t("trust.dismissed")}</p>;
-    }
-    // Accepted keeps agent provenance; an edit makes the value human-typed.
-    // Either way the original evidence stays attached (§4.4).
-    const provenance: Provenance =
-      resolution.outcome === "edited"
-        ? { kind: "human", self: true }
-        : { kind: "agent", agent: proposal.agent };
-    return (
-      <section className="real-card" aria-label={t("trust.resolvedValue")}>
-        <ProvenanceTag provenance={provenance} />
-        <p style={{ marginTop: "var(--space-2)" }}>
-          {proposal.description}: <strong>{resolution.value}</strong>
-        </p>
-        {proposal.evidence && <EvidenceChip evidence={proposal.evidence} />}
-      </section>
-    );
-  }
-
-  return (
-    <StagingCard>
-      <div
-        style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
-      >
-        <ProvenanceTag provenance={{ kind: "agent", agent: proposal.agent }} />
-        <ConfidenceMeter level={proposal.confidence} />
-      </div>
-      <p style={{ marginTop: "var(--space-2)" }}>
-        {proposal.description}:{" "}
-        <span className="staged-value">{proposal.value}</span>
-      </p>
-      {proposal.evidence && <EvidenceChip evidence={proposal.evidence} />}
-      {state.phase === "editing" ? (
-        // A field and its submit, not a row of verbs that divide: `ActionRow`
-        // says in as many words that a form's submit row is not its shape, and
-        // holding this one apart would put the air of a decision between a
-        // value and the button that commits it.
-        <form
-          className="approval-gate"
-          onSubmit={(event) => {
-            event.preventDefault();
-            resolve({ outcome: "edited", value: state.draft });
-          }}
-        >
-          <input
-            className="staged-edit"
-            aria-label={t("trust.editValue", {
-              description: proposal.description,
-            })}
-            value={state.draft}
-            onChange={(event) =>
-              setState({ phase: "editing", draft: event.target.value })
-            }
-          />
-          <Button type="submit" variant="primary">
-            {t("trust.save")}
-          </Button>
-        </form>
-      ) : (
-        <ApprovalGate
-          onAccept={() =>
-            resolve({ outcome: "accepted", value: proposal.value })
-          }
-          onEdit={() => setState({ phase: "editing", draft: proposal.value })}
-          onDismiss={() => resolve({ outcome: "dismissed" })}
-        />
-      )}
-    </StagingCard>
   );
 }
 

@@ -112,10 +112,10 @@ describe("a thread's card", () => {
     expect(leads).toEqual([
       "Ida Kellerwrote",
       "Yousent to Ida Keller",
-      "Wesent to Ida Keller",
+      "Your teamsent to Ida Keller",
     ]);
     // Their word carries their face; ours carries a send mark, not a
-    // monogram of "We".
+    // monogram of "Your team".
     expect(screen.getByText("IK")).toBeTruthy();
     expect(document.querySelectorAll(".tl-msg-mark")).toHaveLength(2);
   });
@@ -130,14 +130,17 @@ describe("a thread's card", () => {
               id: "m2",
               direction: "inbound",
               counterparts: "Ida Keller, Marc Dubois",
-              counterpartNames: ["Ida Keller", "Marc Dubois"],
+              counterpartContacts: [
+                { key: "p-ida", name: "Ida Keller" },
+                { key: "p-marc", name: "Marc Dubois" },
+              ],
             }),
             entry({
               id: "m1",
               atIso: "2026-07-01T10:00:00Z",
               direction: "inbound",
               counterparts: "Ida Keller",
-              counterpartNames: ["Ida Keller"],
+              counterpartContacts: [{ key: "p-ida", name: "Ida Keller" }],
             }),
           ]),
         ]}

@@ -7,15 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // RateStore is the ai_model_rate price sheet — the fx_rate-style
@@ -61,32 +57,6 @@ func (s *RateStore) RateFor(ctx context.Context, provider, modelID string, day t
 	return rate, nil
 }
 
-// EffectiveModelRateInTx resolves the price in force for one model through a
-// caller-owned transaction — the approval-effect precondition read, which
-// must see the same state the apply writes into. It takes the model's
-// write-identity lock (so no standalone write can commit between this read
-// and the dependent write) and returns the day it sampled: the caller pins
-// its write to that SAME day, so a transaction that crosses UTC midnight
-// fails the append-forward guard instead of overwriting the new day's
-// scheduled row. A nil rate = unpriced, mirroring RateFor. Admin/ops read
-// gate, matching the fx sibling (EffectiveFxRateInTx): the precondition
-// reads must gate identically so the invariant survives a future caller.
-func (s *RateStore) EffectiveModelRateInTx(ctx context.Context, tx pgx.Tx, provider, modelID string) (*ModelRate, time.Time, error) {
-	if err := auth.Require(ctx, "ai_model_rate", principal.ActionRead); err != nil {
-		return nil, time.Time{}, err
-	}
-	provider, modelID = strings.TrimSpace(provider), strings.TrimSpace(modelID)
-	if err := storekit.LockWriteIdentity(ctx, tx, "ai_model_rate", modelRateLockKey(provider, modelID)); err != nil {
-		return nil, time.Time{}, err
-	}
-	asOf := s.todayUTC()
-	rate, err := rateForInTx(ctx, tx, provider, modelID, asOf)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-	return rate, asOf, nil
-}
-
 func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day time.Time) (*ModelRate, error) {
 	var rate ModelRate
 	err := tx.QueryRow(ctx, `
@@ -115,7 +85,8 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 // LATERAL join picks each row's as-of-date rate (RateFor's same
 // resolution, inlined so the whole window prices in one query instead of
 // one round-trip per call), the four-bucket arithmetic mirrors PriceCall
-// exactly (same floor, same truncating /1000000), and GROUP BY the
+// exactly (same floor, same zero-cache-price fallback to the input rate, same
+// truncating /1000000), and GROUP BY the
 // call's UTC calendar day + task + tier rolls the window up to exactly
 // AIRT-WIRE-1's /ai/usage grain — one report line per wire row, so the
 // handler attaches each line to its one matching (day, task, tier) row
@@ -144,8 +115,8 @@ func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCo
 			      WHEN ac.cache_hit OR (ac.tokens_in = 0 AND ac.tokens_out = 0) THEN 0
 			      WHEN r.id IS NULL THEN 0
 			      ELSE (GREATEST(ac.tokens_in - ac.cached_tokens - ac.cache_write_tokens, 0) * r.input_per_mtok_microusd
-			           + ac.cached_tokens * r.cache_read_per_mtok_microusd
-			           + ac.cache_write_tokens * r.cache_write_per_mtok_microusd
+			           + ac.cached_tokens * COALESCE(NULLIF(r.cache_read_per_mtok_microusd, 0), r.input_per_mtok_microusd)
+			           + ac.cache_write_tokens * COALESCE(NULLIF(r.cache_write_per_mtok_microusd, 0), r.input_per_mtok_microusd)
 			           + ac.tokens_out * r.output_per_mtok_microusd) / 1000000
 			    END
 			  ), 0) AS cost_microusd,

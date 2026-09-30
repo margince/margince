@@ -149,7 +149,7 @@ function Offer({
 }
 
 const meta: Meta = {
-  title: "Patterns/Compose draft context",
+  title: "Patterns/Compose mail/Draft context",
 };
 export default meta;
 

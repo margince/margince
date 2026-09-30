@@ -118,7 +118,7 @@ it("warns about urgent work beyond the loaded page using server urgency facts", 
       state="ready"
     />,
   );
-  expect(screen.getByText("3 more urgent items in the queue")).toBeTruthy();
+  expect(screen.getByText("3 more urgent items in the Worklist")).toBeTruthy();
 });
 
 it("shows dates and does not repeat the ranking comparator", () => {
@@ -129,7 +129,7 @@ it("shows dates and does not repeat the ranking comparator", () => {
   };
   render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
   expect(screen.getByText(/due 09\/06\/2026/)).toBeTruthy();
-  expect(screen.queryByText("Why it is here")).toBeNull();
+  expect(screen.queryByText("Why this is here")).toBeNull();
   expect(screen.queryByText(/Above the next/)).toBeNull();
 });
 

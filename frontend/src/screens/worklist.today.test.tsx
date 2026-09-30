@@ -267,7 +267,6 @@ describe("a clear day says whose it is", () => {
 
 describe("a task is finished where the reader is standing", () => {
   it("submits once however fast the reader presses", async () => {
-    const user = userEvent.setup();
     let release: ((value: Response) => void) | undefined;
     const response = new Promise<Response>((resolve) => {
       release = resolve;
@@ -303,8 +302,14 @@ describe("a task is finished where the reader is standing", () => {
 
     const done = await screen.findByRole("button", { name: "Done" });
     try {
-      await user.click(done);
-      await user.click(done);
+      // Both presses in ONE task, with no render between them. Awaiting each
+      // press apart lets the first write's `pending` reach the button, which
+      // is the easy half of the guard and the half that was never at risk:
+      // what a blocked main thread produces is two presses arriving before
+      // anything the first one started has been drawn.
+      done.click();
+      done.click();
+      await waitFor(() => expect(patches).toBeGreaterThan(0));
       expect(patches).toBe(1);
     } finally {
       completed = true;

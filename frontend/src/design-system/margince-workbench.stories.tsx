@@ -107,11 +107,11 @@ const RUNTIME_LABELS: WorkbenchRuntimeLabels = {
   latency: "Model latency",
   estimatedCost: "Estimated provider cost",
   partial: "Partial · unpriced usage exists",
-  awaiting: "Shown after my first model call",
+  awaiting: "Shown after the first model call",
   unavailable: "Not available yet",
-  chip: "What is answering, and what it costs",
-  answering: "What is answering right now",
-  scope: "This run only. The full log is in Settings → AI.",
+  chip: "Active model and cost",
+  answering: "Active model",
+  scope: "This run only. The full log is in Settings under AI.",
   tokensShort: "tok",
 };
 
@@ -157,9 +157,9 @@ function Artifact() {
 // them is the `variant` prop itself.
 const BASE = {
   state: "working",
-  eyebrow: "Hi, I'm Margince",
-  title: "Your company research AI",
-  status: "I'm ready to research",
+  eyebrow: "Margince",
+  title: "Company research AI",
+  status: "Ready to research",
   configured: "deepseek-chat · llama3.1:8b",
   configuredSummary: "2 models, split between cloud and local",
   locale: "en",
@@ -235,9 +235,8 @@ export const RailWithoutContact: Story = {
  * The split variant, for comparison.
  *
  * The conversation takes the wider column and the artifact is a reference
- * dossier beside it, so the chrome re-orders: the numbered step list runs above
- * the brand line rather than as a progress bar under it, and the transparency
- * chip rides in the header instead of a footer bar.
+ * dossier beside it, so the chrome re-orders: no progress bar, and the
+ * transparency chip rides in the header instead of a footer bar.
  *
  * `contact` is deliberately passed and deliberately not drawn — the foot row is
  * rail-only, and a story that omitted the prop here would leave that a claim in

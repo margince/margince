@@ -136,6 +136,8 @@ type StubOptions = {
    * repeats): the restore fetch first, then the resumed poll. */
   reads?: CompanySiteRead[];
   proposal?: Proposal;
+  /** GET /me roles; an admin unless the case says otherwise. */
+  roles?: string[];
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -298,10 +300,10 @@ function stubApi(options: StubOptions = {}) {
       if (path.endsWith("/connectors") && request.method === "GET") {
         return jsonResponse({ data: [] });
       }
-      // No grants: the reporting basis is an admin's to change, and these
-      // fixtures never claim to be one.
+      // No grants, so the reporting basis stays unchangeable. The role is
+      // admin, meFixture's default, unless a case names another.
       if (path.endsWith("/me") && request.method === "GET") {
-        return jsonResponse(meFixture({ allow: {} }));
+        return jsonResponse(meFixture({ allow: {}, roles: options.roles }));
       }
       throw new Error(`unstubbed request: ${request.method} ${request.url}`);
     }),
@@ -342,7 +344,7 @@ describe("restore into the conversational shell", () => {
     stubApi();
     render(<OnboardingScreen />);
 
-    expect(await screen.findByLabelText(/Your website address/)).toBeTruthy();
+    expect(await screen.findByLabelText(/Website address/)).toBeTruthy();
     expect(screen.queryByText(/Welcome back/)).toBeNull();
   });
 
@@ -359,7 +361,7 @@ describe("restore into the conversational shell", () => {
     // say so in the transcript ("Welcome back...", "Your company profile
     // for Gradion is confirmed.") is gone along with the transcript itself
     // — this heading is what proves the restore landed correctly now.
-    expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
+    expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
   });
 
   it("a corpus already on the server resumes collecting", async () => {
@@ -387,7 +389,7 @@ describe("restore into the conversational shell", () => {
     });
     render(<OnboardingScreen />);
 
-    expect(await screen.findByText("Connect your accounts.")).toBeTruthy();
+    expect(await screen.findByText("Connect your accounts")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Google/ })).toBeTruthy();
     // Microsoft is a live OAuth path now — the chip opens the same connect
     // panel Google does, no "Soon" placeholder. It starts disabled until the
@@ -403,7 +405,35 @@ describe("restore into the conversational shell", () => {
 
     // Straight to the collect scene: no company act, no invite, no basis —
     // those were the creator's, and the voice probe feeds the corpus meter.
-    expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
+    expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
+    expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(1);
+  });
+
+  // A seat that is not an admin may not read the company, and it is only ever
+  // invited into a described installation, so its journey needs no answer.
+  it("a non-admin with no row begins at the voice act without asking for the company", async () => {
+    const calls = stubApi({ state: null, roles: ["rep"] });
+    render(<OnboardingScreen />);
+
+    expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
+    const companyReads = calls.filter((request) =>
+      new URL(request.url).pathname.endsWith("/company"),
+    );
+    expect(companyReads).toHaveLength(0);
+  });
+
+  // A demoted admin keeps its creator row, open on the company act. Saving
+  // that act is admin-only, so the seat resumes its own journey instead.
+  it("a non-admin with a creator row left on the company act begins at the voice act", async () => {
+    const calls = stubApi({
+      state: stateRow({ step: "confirm", site_read_id: READ_ID }),
+      reads: [readRow("ready")],
+      roles: ["rep"],
+    });
+    render(<OnboardingScreen />);
+
+    expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
+    expect(screen.queryByLabelText(/Website address/)).toBeNull();
     expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(1);
   });
 
@@ -416,16 +446,16 @@ describe("restore into the conversational shell", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Will you be working in Margince yourself?",
+        name: "Will you work in Margince yourself?",
       }),
     ).toBeTruthy();
     // Both answers are on the page, and reopening the question records
     // nothing: the row already says "invite".
     expect(
-      screen.getByRole("radio", { name: /Yes, I'll work in Margince/ }),
+      screen.getByRole("radio", { name: /Yes, I will work in Margince/ }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("radio", { name: /No, I'm only setting it up/ }),
+      screen.getByRole("radio", { name: /No, I am only setting it up/ }),
     ).toBeTruthy();
     expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(0);
   });
@@ -438,7 +468,9 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     await userEvent.click(
-      await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
+      await screen.findByRole("radio", {
+        name: /Yes, I will work in Margince/,
+      }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
 
@@ -463,11 +495,11 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     await userEvent.click(
-      await screen.findByRole("radio", { name: /No, I'm only setting it up/ }),
+      await screen.findByRole("radio", { name: /No, I am only setting it up/ }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(await screen.findByText("Invite the first user.")).toBeTruthy();
+    expect(await screen.findByText("Invite the first user")).toBeTruthy();
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
     });
@@ -506,7 +538,7 @@ describe("restore into the conversational shell", () => {
     expect(body.step).toBe("complete");
     // The handoff scene has the surface.
     await waitFor(() =>
-      expect(screen.queryByText("Invite the first user.")).toBeNull(),
+      expect(screen.queryByText("Invite the first user")).toBeNull(),
     );
   });
 
@@ -519,7 +551,7 @@ describe("restore into the conversational shell", () => {
     });
     render(<OnboardingScreen />);
 
-    expect(await screen.findByText("Connect your accounts.")).toBeTruthy();
+    expect(await screen.findByText("Connect your accounts")).toBeTruthy();
   });
 
   // Leaving the voice act lands directly on the merged connect screen — mail
@@ -537,7 +569,7 @@ describe("restore into the conversational shell", () => {
       await screen.findByRole("button", { name: "Continue" }),
     );
 
-    expect(await screen.findByText("Connect your accounts.")).toBeTruthy();
+    expect(await screen.findByText("Connect your accounts")).toBeTruthy();
     // The LinkedIn card is on this same screen, unopened until asked for.
     expect(
       screen.queryByRole("button", { name: "Skip LinkedIn for now" }),
@@ -601,7 +633,7 @@ describe("reload adoption of a persisted read", () => {
     // narrate into no longer renders at all — the deck's own heading is
     // what proves the reload landed on the review.
     expect(
-      await screen.findByRole("button", { name: "Confirm the profile" }),
+      await screen.findByRole("button", { name: "Confirm profile" }),
     ).toBeTruthy();
   });
 
@@ -653,7 +685,7 @@ describe("reload adoption of a persisted read", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
 
     expect(
-      await screen.findByRole("button", { name: "Confirm the profile" }),
+      await screen.findByRole("button", { name: "Confirm profile" }),
     ).toBeTruthy();
   });
 
@@ -675,7 +707,7 @@ describe("reload adoption of a persisted read", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: "Confirm the profile" },
+        { name: "Confirm profile" },
         {
           timeout: 8000,
         },
@@ -694,7 +726,7 @@ describe("reload adoption of a persisted read", () => {
       await screen.findByText(/My earlier read of gradion\.com did not finish/),
     ).toBeTruthy();
     expect(
-      await screen.findByRole("textbox", { name: /Your website address/ }),
+      await screen.findByRole("textbox", { name: /Website address/ }),
     ).toBeTruthy();
     expect(screen.queryByText(/Continue/)).toBeNull();
   });
@@ -732,7 +764,9 @@ describe("finishing the connect act", () => {
 
     // The write failed: the failure is said out loud, nothing moved on.
     expect(
-      await screen.findByText(/I could not record the finish\. Try again\./),
+      await screen.findByText(
+        /I could not save the setup completion\. Retry\./,
+      ),
     ).toBeTruthy();
     expect(window.location.hash).toBe("");
 

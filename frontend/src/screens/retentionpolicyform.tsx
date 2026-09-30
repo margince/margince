@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
@@ -187,11 +188,7 @@ export function RetentionPolicyForm({
         }}
       />
 
-      {errorMessage && (
-        <p className="retention-error" role="alert">
-          {errorMessage}
-        </p>
-      )}
+      {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
 
       <Button
         variant="primary"

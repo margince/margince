@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import { UsersAdminCard } from "./users-admin";
 
@@ -102,6 +103,8 @@ function story(
           admin_password_link: passwordLinks,
         }),
       "GET /users": () => jsonResponse({ data: users }),
+      "GET /users/assignable-roles": () =>
+        jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
     });
     return (
       <StoryProviders>

@@ -22,7 +22,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -290,7 +289,7 @@ func goPackagesUnder(t *testing.T, root string) []goPackage {
 			strings.HasSuffix(path, "_test.go") || strings.Contains(path, "/internal/contracts/") {
 			return err
 		}
-		parsed, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		parsed, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			return parseErr
 		}

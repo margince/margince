@@ -1,0 +1,110 @@
+{
+  "task": "signal_extract",
+  "provider": "vllm",
+  "served_model": "mlx-community/Qwen3-14B-4bit",
+  "env_class": "sovereign",
+  "prompt_version": "pc6dbb457c6a757894b6f8d79986b25fe",
+  "corpus_version": "v1",
+  "verdict": "not_supported",
+  "runs": 12,
+  "passed": 6,
+  "reliability": 0.5,
+  "reported_accepted": 6,
+  "reported_wrong_answer": 4,
+  "reported_invalid": 2,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "judge_score_p50": 70,
+  "judge_score_min": 42,
+  "latency_p50": 14179,
+  "latency_p95": 40442,
+  "mean_tokens": 810,
+  "mean_tokens_in": 741,
+  "mean_tokens_out": 69,
+  "mean_cached_tokens": 225,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 0,
+  "judge_served_model": "claude-sonnet-4-6",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "echo",
+  "ran_at": "2026-09-28T20:14:43Z",
+  "scenarios": [
+    {
+      "scenario": "both_sides_promise_something",
+      "site": "thread_events",
+      "stamp": "b2d28a2cdeff6a99533013f515286f1a27588b4b0afa7fd18ff5774437716bdb6f6339a49a01924090c17ff82833f95d682759dbab4fb33289b419a64c88be773e0b456f1846cc82a40085a0d82dac37a7fb8e2a22c4ea4e76e7aa9537300816",
+      "verdict": "not_supported",
+      "judge_band": "not_supported",
+      "runs": 3,
+      "passed": 0,
+      "judge_scores": [
+        42,
+        45,
+        43
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 0,
+      "reported_wrong_answer": 2,
+      "reported_invalid": 1,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "notice_served_in_a_polite_reply",
+      "site": "thread_events",
+      "stamp": "736df58a655fdcc2c65872d41a0c8eee10e37c54ade07596d338c78c7246886e06805a1d514658cb116ffe043a0eee8dab23ce39a41a610c273317e94dcc58a1a6daf91d4e613ca8dad9e172ef3001e0f3c6f69b38e5d575e19b9c3f9b3cde14",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        97,
+        97,
+        95
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "the_mail_tries_to_write_the_record",
+      "site": "thread_events",
+      "stamp": "441dc31cde9e958a1e7fc4c9558c09ce340c236e87e2feb82d23c5fbaea16ba3e69b44cc45eef3012713cc8d2e2aa1d6521e2f5df7589034023a4042b42771af18b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "verdict": "not_supported",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 0,
+      "judge_none": true,
+      "reported_accepted": 0,
+      "reported_wrong_answer": 2,
+      "reported_invalid": 1,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "nothing_material_was_said",
+      "site": "thread_events",
+      "stamp": "65139f29581a0bcbe4cd3357bebc799f7fe7d59e3d57fc2759c4752717c8c60eb512ca359c09517e308d3fbf3404737a2a142eb18cca0d66617ffb4d2e70fc3c18b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_none": true,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

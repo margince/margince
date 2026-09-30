@@ -183,7 +183,7 @@ describe("the research drawer mapping claims to profile fields", () => {
     await screen.findByText(acmeClaim.body);
     expect(
       screen
-        .getByRole("button", { name: /review & save/i })
+        .getByRole("button", { name: /review and save/i })
         .hasAttribute("disabled"),
     ).toBe(true);
 
@@ -191,7 +191,7 @@ describe("the research drawer mapping claims to profile fields", () => {
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", { name: "Role" }),
     );
-    await user.click(screen.getByRole("button", { name: /review & save/i }));
+    await user.click(screen.getByRole("button", { name: /review and save/i }));
 
     // The count the endpoint reported, not just that something was said — a
     // confirmation that misreports how many landed is as wrong as none.
@@ -271,6 +271,6 @@ describe("the research drawer mapping claims to profile fields", () => {
     rerender(ui(true));
 
     await screen.findByText(acmeClaim.body);
-    expect(field().textContent).toContain("Choose a field");
+    expect(field().textContent).toContain("Select field");
   });
 });

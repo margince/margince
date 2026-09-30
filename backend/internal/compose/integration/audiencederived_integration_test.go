@@ -511,7 +511,7 @@ func TestNarrowingLeavesAFieldAContactRestored(t *testing.T) {
 	}
 	// The contact presses undo, through the store that serves that press.
 	if err := contacts.NewStore(e.DB()).RestoreProfileField(
-		contactWriter(e), ids.From[ids.ContactKind](contact), "title"); err != nil {
+		contactWriter(e), ids.From[ids.ContactKind](contact), "title", ""); err != nil {
 		t.Fatalf("restoring the field: %v", err)
 	}
 
@@ -548,7 +548,7 @@ func TestNarrowingLeavesAFieldAContactCorrected(t *testing.T) {
 	if _, err := e.Owner.Exec(ctx, `
 		INSERT INTO ai_feedback (subject_type, subject_id, claim_kind, claim_key, verdict, corrected_value, captured_by, source)
 		VALUES ('contact', $1, 'profile_field',
-		        encode(sha256(('profile_field:title')::bytea), 'hex'), 'corrected', 'Justiziarin', 'human:someone', 'ui')`,
+		        encode(sha256(('profile_field:title')::bytea), 'hex'), 'corrected', 'Justiziarin', 'human:someone', 'manual')`,
 		contact); err != nil {
 		t.Fatal(err)
 	}
@@ -613,8 +613,9 @@ func seedSignatureField(t *testing.T, e *SearchEnv, contact, activity ids.UUID, 
 	t.Helper()
 	if _, err := e.Owner.Exec(context.Background(), `
 		INSERT INTO contact_profile_field
-		       (contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
-		VALUES ($1, $2, $3, 'aus der Signatur', 'activity:'||$4, 'capture_enrich', 'system:enrich')`,
+		       (contact_id, field, value_key, value, evidence_snippet, source_ref, source, captured_by)
+		VALUES ($1, $2, CASE WHEN $2 = 'phone' THEN $3 ELSE '' END, $3,
+		        'aus der Signatur', 'activity:'||$4, 'capture_enrich', 'system:enrich')`,
 		contact, field, value, activity.String()); err != nil {
 		t.Fatalf("seeding a signature-derived field: %v", err)
 	}

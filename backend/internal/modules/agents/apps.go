@@ -236,12 +236,10 @@ func visibilityOrBoth(declared []string) []string {
 // resourceUIWire is one view's `_meta.ui` as a host reads it before it builds
 // the sandbox.
 type resourceUIWire struct {
-	CSP resourceCSPWire `json:"csp"`
-	// Permissions is OMITTED when the view asks for none, and carries one
-	// member per permission it does ask for — see requestedPermissions for why
-	// the wire shape is a set of present keys rather than a flag per permission.
-	Permissions map[string]emptyObject `json:"permissions,omitempty"`
-	Domain      string                 `json:"domain,omitempty"`
+	// No `permissions` member: the extension reads a permission member's
+	// PRESENCE as the request, so a view asking for none omits it.
+	CSP    resourceCSPWire `json:"csp"`
+	Domain string          `json:"domain,omitempty"`
 	//nolint:tagliatelle // prefersBorder is the extension's wire member, camelCase by the specification
 	PrefersBorder bool `json:"prefersBorder,omitempty"`
 }
@@ -258,42 +256,6 @@ type resourceCSPWire struct {
 	FrameDomains []string `json:"frameDomains"`
 	//nolint:tagliatelle // as above
 	BaseURIDomains []string `json:"baseUriDomains"`
-}
-
-// emptyObject is the extension's spelling for "this permission is requested":
-// the member's PRESENCE is the request, and its value is an empty object.
-type emptyObject struct{}
-
-// requestedPermissions renders the permissions a view asks for, as the extension
-// spells them — one member per request, valued `{}`, and no member at all for a
-// permission it does not want.
-//
-// THE SHAPE IS NOT A FLAG PER PERMISSION, and getting this wrong is the reverse
-// of the intended meaning rather than a cosmetic difference. The extension
-// declares them as optional object members (`camera?: {}`), so a host reads
-// PRESENCE as the request. A struct of booleans marshals every key on every
-// view, which means a view asking for nothing would present four requested
-// permissions to any host that reads presence — the widest possible sandbox,
-// emitted by the code whose comment says it asks for none.
-//
-// Returning nil for a view that wants nothing is what lets the member be omitted
-// entirely, which is the only unambiguous way to say "none".
-func requestedPermissions(p mcp.ResourcePermissions) map[string]emptyObject {
-	requested := map[string]emptyObject{}
-	for member, asked := range map[string]bool{
-		"camera":         p.Camera,
-		"microphone":     p.Microphone,
-		"geolocation":    p.Geolocation,
-		"clipboardWrite": p.ClipboardWrite,
-	} {
-		if asked {
-			requested[member] = emptyObject{}
-		}
-	}
-	if len(requested) == 0 {
-		return nil
-	}
-	return requested
 }
 
 // resourceUIMeta renders a view's own declaration, and answers nil for an
@@ -313,7 +275,6 @@ func resourceUIMeta(resource mcp.Resource) *resourceUIWire {
 			FrameDomains:    closedList(resource.UI.CSP.FrameDomains),
 			BaseURIDomains:  closedList(resource.UI.CSP.BaseURIDomains),
 		},
-		Permissions:   requestedPermissions(resource.UI.Permissions),
 		Domain:        resource.UI.Domain,
 		PrefersBorder: resource.UI.PrefersBorder,
 	}

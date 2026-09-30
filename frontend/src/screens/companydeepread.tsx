@@ -14,14 +14,16 @@ import type { components } from "../api/schema";
 import { watchStartedAiRun } from "../app/ai-activity";
 import { navigate } from "../app/router";
 import { Badge, Button, Skeleton } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { AutonomyDot } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { factsKey } from "./companyfactspanel";
+import "./companydeepread.css";
 import { type ConfiguredStopReason, stopIsConfigured } from "./sitereadkind";
 
 type SiteReadReport = components["schemas"]["SiteReadReport"];
@@ -168,7 +170,7 @@ function SiteReadDeferral({ report }: Readonly<{ report: SiteReadReport }>) {
     return null;
   }
   return (
-    <p className="t-caption" style={{ margin: "var(--space-2) 0 0" }}>
+    <p className="t-caption companydeepread-note">
       {report.status_detail}
       {report.next_attempt_at && (
         <>
@@ -246,26 +248,14 @@ function SiteReadPanel({
     return <Skeleton width="60%" />;
   }
   if (reportQuery.isError) {
-    return (
-      <p style={{ color: "var(--dangerText)" }}>
-        {problemMessageOf(reportQuery.error, t)}
-      </p>
-    );
+    return <ErrorLine error={reportQuery.error} />;
   }
 
   const report = reportQuery.data;
 
   return (
-    <div style={{ marginTop: "var(--space-3)" }}>
-      <p
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          flexWrap: "wrap",
-          margin: 0,
-        }}
-      >
+    <div className="companydeepread-report">
+      <p className="companydeepread-line">
         <Badge tone={report.status === "failed" ? "danger" : undefined}>
           {t(statusLabelOf(report))}
         </Badge>
@@ -290,7 +280,7 @@ function SiteReadPanel({
           read had gone wrong when it had done exactly what it was configured
           to do. */}
       {report.stopped_reason && !stopIsConfigured(report.stopped_reason) && (
-        <p style={{ margin: "var(--space-2) 0 0" }}>
+        <p className="companydeepread-note">
           <Badge tone="warning">
             {t("deepread.stoppedEarly", {
               reason: t(SITE_READ_STOP_LABELS[report.stopped_reason]),
@@ -299,15 +289,7 @@ function SiteReadPanel({
         </p>
       )}
       {terminal && report.proposal_ids.length > 0 && (
-        <p
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-            flexWrap: "wrap",
-            margin: "var(--space-3) 0 0",
-          }}
-        >
+        <p className="companydeepread-line companydeepread-proposals">
           <AutonomyDot tier="confirm" />
           <span className="t-caption">
             {plural("deepread.proposals", report.proposal_ids.length, {
@@ -442,11 +424,7 @@ export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
             says nothing is written until a contact accepts it. Drawn only while
             the panel is still an offer — see `offering`. */}
         {offering && <p className="t-sub">{t("deepread.sub")}</p>}
-        {start.isError && (
-          <p style={{ color: "var(--dangerText)" }}>
-            {problemMessageOf(start.error, t)}
-          </p>
-        )}
+        <ErrorLine error={start.error} />
         {shownReadId && (
           <SiteReadPanel companyId={companyId} readId={shownReadId} />
         )}

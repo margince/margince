@@ -4,6 +4,7 @@
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button, Skeleton } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -128,9 +129,7 @@ export function OnboardingBackread({
     // is unaffected, so the honest answer is the missing view plus the exit.
     return status.isError ? (
       <section className="ob-backread">
-        <p className="ob-backread-problem" role="alert">
-          {t("backfill.statusUnavailable")}
-        </p>
+        <ErrorLine>{t("backfill.statusUnavailable")}</ErrorLine>
         <div className="ob-backread-acts">
           {/* Every exit from this surface waits on `disabled`: a decision
               about the mailbox still being written (the posture) needs this
@@ -251,9 +250,9 @@ function BackreadSetup({
         </Button>
       </div>
       {startProblem !== null && (
-        <p className="ob-backread-problem" role="alert">
+        <ErrorLine>
           {t("ob.backread.startFailed", { detail: startProblem })}
-        </p>
+        </ErrorLine>
       )}
     </section>
   );
@@ -312,9 +311,9 @@ function BackreadScope({
         <p className="t-caption">{t("backfill.costFloorNote")}</p>
       )}
       {problem !== null && (
-        <p className="ob-backread-problem" role="alert">
+        <ErrorLine>
           {t("ob.backread.estimateFailed", { detail: problem })}
-        </p>
+        </ErrorLine>
       )}
     </div>
   );
@@ -365,9 +364,9 @@ function BackreadRun({
       <BackreadTallies counts={run.counts} />
       <BackreadOutcome run={run} />
       {cancelProblem !== null && (
-        <p className="ob-backread-problem" role="alert">
+        <ErrorLine>
           {t("ob.backread.cancelFailed", { detail: cancelProblem })}
-        </p>
+        </ErrorLine>
       )}
       <div className="ob-backread-acts">
         <Button variant="primary" disabled={held} onClick={() => onDone()}>
@@ -473,11 +472,11 @@ function BackreadOutcome({ run }: Readonly<{ run: BackfillStatus }>) {
       return <p>{t("ob.backread.doneNote")}</p>;
     case "error":
       return (
-        <p className="ob-backread-problem" role="alert">
+        <ErrorLine>
           {t("ob.backread.failed", {
             detail: t(errorClassKey(run.last_error_class)),
           })}
-        </p>
+        </ErrorLine>
       );
     case "cancelled": {
       // "Nothing was written" is only true of a cancel that landed before any

@@ -3,7 +3,7 @@
 Scoped to this directory. The root [AGENTS.md](../AGENTS.md) still governs
 everything else: the branch/PR loop, the license header, the commit rules. (The
 `CLAUDE.md` beside it is a one-line import of that file, not a second rulebook.)
-Three things are frontend-only and none has a gate that will catch it for
+Four things are frontend-only and none has a gate that will catch it for
 you, so they are written down here.
 
 `craft static` sweeps the Go trees only. No `*.test.tsx` in this repo is in
@@ -76,6 +76,13 @@ Why, plus the token table and `ProvenanceTag`, the rule at its smallest:
 holds that colours come from tokens; nothing can tell you the token you picked
 means the wrong thing.
 
+## Copy follows the style pages
+
+English catalog text follows [`docs/reference/ui-copy-style.md`](../docs/reference/ui-copy-style.md);
+German adds [`ui-copy-style-de.md`](../docs/reference/ui-copy-style-de.md). `copy-style.test.ts`
+and `copy-style-de.test.ts` hold only the mechanical rules; tone, vocabulary,
+length and message shape are yours to check before you add or change a value.
+
 ## A test may not depend on how busy the machine is
 
 The frontend suite has produced two distinct flake families, and reading them
@@ -140,9 +147,9 @@ When writing or touching a screen test:
   is timer-driven.
 - If a test only passes because it got the machine to itself, it is not a test
   yet. Prove it: run the file alone and inside `make fe-unit`, and compare.
-- Test files split at 1000 lines, the same ceiling the Go test trees hold. Some
-  already are and nothing enforces it (#3232); `find src -name '*.test.tsx' |
-  xargs wc -l | sort -rn` lists them. Do not grow one that is over.
+- Test files split at 1000 lines, the same ceiling the Go test trees hold.
+  `make fe-file-length` enforces it with a ratchet: one already over carries its
+  frozen count in `scripts/fe-file-length-waivers.txt` and may only shrink.
 
 ## Storybook is documentation, and it goes stale silently
 

@@ -39,13 +39,13 @@ describe("CallCard's title override", () => {
       <StoryProviders>
         <CallCard
           name="Aurora GmbH"
-          title="Account brief"
+          title="Company brief"
           titleAction={<span>Last update 3 Sept</span>}
           standing={{ label: "Strong", tone: "calm" }}
         />
       </StoryProviders>,
     );
-    expect(screen.getByText("Account brief")).toBeTruthy();
+    expect(screen.getByText("Company brief")).toBeTruthy();
     expect(screen.getByText("Last update 3 Sept")).toBeTruthy();
     // The kit's own subject line ("Aurora GmbH · 360") and its mark are gone:
     // the panel's own ai tone and the titleAction beside the title carry the

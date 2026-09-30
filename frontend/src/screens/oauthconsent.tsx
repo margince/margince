@@ -11,6 +11,7 @@ import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem, useMe } from "./common";
+import "./oauthconsent.css";
 
 // The human hands an agent their own authority here — the one screen where
 // that decision is made, and the only one: the api serves no HTML, so there is
@@ -147,14 +148,7 @@ function ConsentSelector({
       <Heading size="xlarge">{t("consent.title")}</Heading>
       <p>{t("consent.asks", { client: data.client_name })}</p>
       <RedirectDisclosure redirectURI={params.get("redirect_uri") ?? ""} />
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-2)",
-          margin: "var(--space-3) 0",
-        }}
-      >
+      <div className="oauthconsent-scopes">
         {data.scopes.map((scope) => (
           <Checkbox
             key={scope}
@@ -173,15 +167,7 @@ function ConsentSelector({
       </div>
       <p className="t-caption">{t("consent.ceiling")}</p>
       {data.offline && <p>{t("consent.offline")}</p>}
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-2)",
-          marginTop: "var(--space-3)",
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
+      <div className="oauthconsent-verbs">
         <form method="post" action="/oauth/authorize">
           <HiddenAuthorizeFields params={params} consent={consent} />
           <input type="hidden" name="scopes" value={scopeList} />

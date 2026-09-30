@@ -24,13 +24,16 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEveryGrantFundsTheToolsItsAgentDeclares(t *testing.T) {
@@ -93,29 +96,36 @@ func grantedScopes(t *testing.T) map[string]map[string]bool {
 }
 
 // agentToolLists reads each scheduled agent's declared tools from the contract
-// that owns them.
+// that owns them: every agent_loop site is one agent, and its tools are the
+// site's own. Decoded rather than scraped, so a reshaped contract fails to
+// parse instead of matching nothing.
 func agentToolLists(t *testing.T) map[string][]string {
 	t.Helper()
-	src := readFile(t, filepath.Join("api", "ai-tasks.yaml"))
-	body := between(src, "      morning_brief:", "    company_context:")
+	var contract struct {
+		Tasks map[string]struct {
+			Sites []yaml.Node `yaml:"sites"`
+		} `yaml:"tasks"`
+	}
+	if err := yaml.Unmarshal([]byte(readFile(t, filepath.Join("api", "ai-tasks.yaml"))), &contract); err != nil {
+		t.Fatalf("parsing api/ai-tasks.yaml: %v", err)
+	}
 	out := map[string][]string{}
-	var current string
-	for _, line := range strings.Split("      morning_brief:"+body, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if name := strings.TrimSuffix(trimmed, ":"); name != trimmed && !strings.Contains(trimmed, " ") {
-			current = name
-			continue
-		}
-		if current == "" {
-			continue
-		}
-		// `tools: [a, b,` and its continuation lines both contribute names.
-		if idx := strings.Index(trimmed, "tools:"); idx >= 0 {
-			trimmed = trimmed[idx+len("tools:"):]
-		}
-		for _, raw := range strings.Split(strings.Trim(trimmed, "[]"), ",") {
-			if name := strings.TrimSpace(raw); name != "" && !strings.Contains(name, ":") {
-				out[current] = append(out[current], strings.Trim(name, "[]"))
+	for _, task := range contract.Tasks {
+		for _, node := range task.Sites {
+			var site struct {
+				Name  string   `yaml:"name"`
+				Kind  string   `yaml:"kind"`
+				Tools []string `yaml:"tools"`
+			}
+			// A bare-string site is a one_shot, which attaches no tools.
+			if node.Kind != yaml.MappingNode {
+				continue
+			}
+			if err := node.Decode(&site); err != nil {
+				t.Fatalf("decoding a site of api/ai-tasks.yaml: %v", err)
+			}
+			if site.Kind == "agent_loop" {
+				out[site.Name] = site.Tools
 			}
 		}
 	}
@@ -132,12 +142,11 @@ func toolScopes(t *testing.T) map[string]string {
 	if err != nil {
 		t.Fatalf("reading the agents package: %v", err)
 	}
-	fset := token.NewFileSet()
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
 			continue
 		}
-		parsed, err := parser.ParseFile(fset, filepath.Join(dir, e.Name()), nil, parser.SkipObjectResolution)
+		parsed, err := gatekit.ParseFile(filepath.Join(dir, e.Name()), parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", e.Name(), err)
 		}
@@ -198,13 +207,18 @@ func between(src, from, to string) string {
 	return rest
 }
 
-// sortedKeys is the set's keys in a stable order.
+// sortedKeys is a map's keys in a stable order.
 //
-// It really does sort now. Both callers put the result in a FAILURE MESSAGE,
-// and map iteration order is randomised per run — so the same finding read
-// differently every time, which is how somebody comparing two runs concludes
-// the tree moved when only the map did.
-func sortedKeys(set map[string]bool) []string {
+// Every caller puts the result in a FAILURE MESSAGE, and Go randomises map
+// iteration per run — so without this the same finding reads differently every
+// time, and somebody comparing two runs of one tree concludes the tree moved
+// when only the map did.
+//
+// Generic in the VALUE because the callers disagree about it and agree about
+// this: a set of names, a name→route mapping, a name→version pin. One helper
+// rather than one per value type, so a caller with a new one reaches for this
+// instead of adding a fourth spelling of "sort a map's keys".
+func sortedKeys[V any](set map[string]V) []string {
 	out := make([]string, 0, len(set))
 	for k := range set {
 		out = append(out, k)

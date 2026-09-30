@@ -52,9 +52,9 @@ var ErrNoRows = errors.New("extension: the query matched no rows")
 // MISTAKES: it makes the query that reaches past a unit's own tables, the
 // forgotten scope, the retained handle into a loud failure instead of a silent
 // one. None of it is a sandbox against a hostile unit, and running an untrusted
-// unit in a composed build is outside what this design supports. Issue #628 (a
-// per-unit database role) is the first change that would move any part of this
-// from convention to enforcement, and even that bounds only the database.
+// unit in a composed build is outside what this design supports. A per-unit
+// database role is the first change that would move any part of this from
+// convention to enforcement, and even that bounds only the database.
 //
 // The core constructs it and knows which unit it is invoking, which is why
 // nothing here takes a unit name or re-scopes to one — a handler holds
@@ -203,10 +203,9 @@ type Caller struct {
 // over things the core must keep (the connection's lifetime, its GUCs, its
 // prepared-statement cache).
 //
-// The SQL is the extension's own, and nothing here parses or rewrites it: a
-// wall made of statement inspection is a wall made of guesses. The wall is the
-// DATABASE's, and this is where the tier's threat model (see Runtime) has to be
-// stated concretely, because the honest answer differs by reader.
+// The SQL is the extension's own, and nothing here parses or rewrites it: a wall
+// made of statement inspection is a wall made of guesses. The wall is the
+// DATABASE's, and Runtime's threat model has to be stated concretely here.
 //
 // THERE IS NO TENANT WALL HERE, and the honest reason is that there is nothing
 // left for one to separate. An installation holds exactly one workspace —
@@ -234,10 +233,10 @@ type Caller struct {
 //     transaction.
 //
 // All three are the same missing thing — a per-unit database ROLE, which would
-// bound a unit by grant rather than by convention, tracked as issue #628 — and
-// all three are inside the trusted-unit threat model above. Read that issue as
-// grant containment on its own argument; the tenant isolation it was once also
-// expected to carry is not a property this schema has to lose. A static gate does
+// bound a unit by grant rather than by convention — and all three are inside the
+// trusted-unit threat model above. That role is grant containment on its own
+// argument; the tenant isolation it was once expected to also carry is not a
+// property this schema has to lose. A static gate does
 // refuse the first two where it can SEE them —
 // backend/gates/extensionsqlscope_test.go reads the SQL a unit's source spells
 // out and holds it to that unit's own ext_<name>_* tables — but a scanner is

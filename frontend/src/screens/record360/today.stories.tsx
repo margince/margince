@@ -29,7 +29,7 @@ import { FoundMove, TodayPanel, TodoRow } from "./today";
 // move's verbs sit under its claim rather than beside it.
 
 const meta: Meta<typeof TodayPanel> = {
-  title: "Records/Record reading/What needs you",
+  title: "Records/Record 360/What needs you",
   component: TodayPanel,
   parameters: { layout: "padded" },
 };
@@ -91,7 +91,7 @@ function Pane({
           />
           {/* The agent's own verb: it writes the draft, so the chip is tinted. */}
           <TodoRow
-            who="Lena Fischer"
+            who={{ name: "Lena Fischer", identity: "contact-lena" }}
             title={taskTitle}
             meta="Lena Fischer · promised 05/08"
             due={{ label: "19 days late", tone: "danger" }}
@@ -100,7 +100,7 @@ function Pane({
           {/* The same row shape for a commitment nobody automated: the verb
               opens the record and the hue stays out of it. */}
           <TodoRow
-            who="Tomas Beck"
+            who={{ name: "Tomas Beck", identity: "contact-tomas" }}
             title="Confirm the depot slot with facilities"
             meta="Tomas Beck · due 12/08"
             due={{ label: "in 3 days" }}
@@ -123,7 +123,7 @@ export const FoundAndOwedDark: Story = {
 // qualifies the authorship claim — read against WHAT — so it sits beside
 // "Margince suggests" rather than over the ask, which is the move itself.
 export const FoundMoveWithKicker: Story = {
-  render: () => <Pane kicker="Promise overdue" />,
+  render: () => <Pane kicker="Commitment overdue" />,
 };
 
 // The pane at phone measure, and the only story where the move's verbs sit

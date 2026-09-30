@@ -174,9 +174,9 @@ describe("RecordPicker", () => {
     // reader gets is the shared one, and the candidate list is emptied either
     // way, which is the part this spec has always been about.
     await waitFor(() =>
-      expect(
-        screen.getByText("The request failed. No cause reported."),
-      ).toBeTruthy(),
+      expect(screen.getByRole("alert").textContent).toBe(
+        "The request failed. No cause reported.",
+      ),
     );
     expect(screen.queryByText("search down")).toBeNull();
     expect(screen.queryByText("Anna Weber")).toBeNull();

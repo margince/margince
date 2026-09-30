@@ -55,27 +55,43 @@ func (s *Store) ArchiveContact(
 	}
 	var out crmcontracts.Contact
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, "contact", id.UUID); err != nil {
-			return err
-		}
-		// The precondition, under the row lock the write takes: a caller that
-		// asked for this write only while nobody had touched the record gets
-		// that answered HERE rather than in a read that already committed.
-		if err := refuseIfHumanTouched(ctx, tx, "contact", id.UUID, options); err != nil {
-			return err
-		}
-		// A liveness probe, not a wire read — no custom columns needed.
-		if _, err := readContact(ctx, tx, id, storekit.LiveOnly, nil); err != nil {
-			return err
-		}
-
-		if err := archiveContactRows(ctx, tx, id, time.Now().UTC(), ifVersion); err != nil {
+		if err := archiveContactInTx(ctx, tx, id, ifVersion, options); err != nil {
 			return err
 		}
 		out, err = readContact(ctx, tx, id, storekit.IncludeArchived, active)
 		return err
 	})
 	return out, err
+}
+
+// ArchiveContactTx is ArchiveContact on the caller's transaction, for a bulk
+// change that archives many contacts in one commit. It asks every gate
+// ArchiveContact asks and answers nothing: the caller already knows which row
+// it archived.
+func (s *Store) ArchiveContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64) error {
+	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
+		return err
+	}
+	return archiveContactInTx(ctx, tx, id, ifVersion, writeOptions{})
+}
+
+// archiveContactInTx is the archive itself, behind the object gate its callers
+// ask: the row's write check, the caller's precondition, and the cascade.
+func archiveContactInTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, options writeOptions) error {
+	if err := auth.EnsureWritable(ctx, tx, "contact", id.UUID); err != nil {
+		return err
+	}
+	// The precondition, under the row lock the write takes: a caller that
+	// asked for this write only while nobody had touched the record gets
+	// that answered HERE rather than in a read that already committed.
+	if err := refuseIfHumanTouched(ctx, tx, "contact", id.UUID, options); err != nil {
+		return err
+	}
+	// A liveness probe, not a wire read — no custom columns needed.
+	if _, err := readContact(ctx, tx, id, storekit.LiveOnly, nil); err != nil {
+		return err
+	}
+	return archiveContactRows(ctx, tx, id, time.Now().UTC(), ifVersion)
 }
 
 // archiveContactRows retires a contact and its satellites and lands the write
@@ -98,31 +114,40 @@ func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now ti
 	if err := p.ApplyGuarded(ctx, tx, "contact", id.UUID, ifVersion); err != nil {
 		return err
 	}
-	for _, stmt := range []string{
-		`UPDATE contact_email SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL`,
-		`UPDATE contact_phone SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL`,
+	// Every row the cascade retires or deletes is recorded on the archive's
+	// audit row, which is what an un-archive reads to put it back.
+	var cascade storekit.ArchiveCascade
+	for _, retire := range []struct{ table, statement string }{
+		{tableContactEmail, `UPDATE contact_email SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL RETURNING id`},
+		{tableContactPhone, `UPDATE contact_phone SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL RETURNING id`},
 		// A live channel identity under an archived Contact would keep
 		// resolving inbound messages onto a record that has been
 		// soft-deleted; archived, the next message starts a fresh one.
-		`UPDATE contact_channel_identity SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL`,
-		`UPDATE relationship SET archived_at = $2 WHERE (contact_id = $1 OR counterparty_contact_id = $1) AND archived_at IS NULL`,
+		{"contact_channel_identity", `UPDATE contact_channel_identity SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL RETURNING id`},
+		{tableRelationship, `UPDATE relationship SET archived_at = $2 WHERE (contact_id = $1 OR counterparty_contact_id = $1) AND archived_at IS NULL RETURNING id`},
 	} {
-		if _, err := tx.Exec(ctx, stmt, id, now); err != nil {
+		if err := cascade.Retire(ctx, tx, retire.table, retire.statement, id, now); err != nil {
 			return err
 		}
 	}
 	// Polymorphic membership/tag rows have no archived_at; the §1.10
 	// cleanup rule removes them with the entity.
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM list_member WHERE entity_type = 'contact' AND entity_id = $1`, id); err != nil {
+	if err := cascade.DropMemberships(ctx, tx,
+		`WITH gone AS (
+			DELETE FROM list_member WHERE entity_type = 'contact' AND entity_id = @record
+			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
+		logged AS (
+			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
+			SELECT list_id, entity_type, entity_id, 'removed', 'record_archived', @actor FROM gone)
+		SELECT list_id, added_by, created_at, note FROM gone`, id.UUID); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM taggable WHERE entity_type = 'contact' AND entity_id = $1`, id); err != nil {
+	if err := cascade.DropTags(ctx, tx,
+		`DELETE FROM taggable WHERE entity_type = 'contact' AND entity_id = $1 RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, id.UUID); err != nil {
 		return err
 	}
 
-	auditID, err := storekit.Audit(ctx, tx, "archive", "contact", id.UUID, nil, nil)
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "contact", id.UUID, nil, nil, cascade.Evidence())
 	if err != nil {
 		return err
 	}

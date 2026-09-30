@@ -52,35 +52,11 @@
   margin: var(--space-4) 0 0;
 }
 
-/* A Card drew its descriptive line in the header, under the title. Panel's
-   header is a fixed-height band with room for a title and one control, so that
-   line moves into the body — where it is the first thing read, above the form
-   or the rows it describes, and it pays for its own interval to them.
-
-   Seventy panels across twenty screens carry this line, which makes it a
-   primitive stranded in a screen sheet rather than a screen's caption — the
-   design system is where it belongs, as Panel's own intro line. */
-p.settings-panel-sub {
-  margin-bottom: var(--space-4);
-}
-
-/* Inside a container that owns its intervals, the description's own margin ADDS
-   to the container's gap rather than collapsing into it — the same arithmetic
-   `.settings-stack > .section-header` above spells out. A `.form-stack` body
-   therefore measured 28px from the description to its rows where a plain body
-   measures 16, which is two rhythms for one relationship across cards that sit
-   next to each other. What is left here is the difference, so both spellings
-   land on the same 16. */
-.form-stack > p.settings-panel-sub {
-  margin-bottom: calc(var(--space-4) - var(--space-3));
-}
-
 /* A notice and the verb that commits an unsaved change, standing below the rows
    they belong to. It is the card's own band rather than one more row: an unsaved
    flip is a state of the whole card, and a callout in a row's control column
-   reads as that row's answer. The interval is here for the same reason
-   `.settings-panel-sub`'s is — `SettingList` owns the gaps BETWEEN rows and
-   nothing above or below itself. */
+   reads as that row's answer. The interval is here because `SettingList` owns
+   the gaps BETWEEN rows and nothing above or below itself. */
 .settings-panel-commit {
   display: flex;
   flex-direction: column;
@@ -169,74 +145,6 @@ p.settings-panel-sub {
   text-decoration: line-through;
 }
 
-/* PipelinesCard. One pipeline per stacked SettingRow: its name is the row's
-   label, and under it the standing badge, the verbs, and the stage ladder.
-   A standing badge plus two verbs is wider than a phone, so the strip wraps —
-   an unwrapped one ran past the panel's edge and clipped the last verb away. */
-.pipeline-standing {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-.stage-rows {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-/* The four tracks of one stage: the name, its semantic badge, the win
-   probability, the edit verb. Fixed tracks for the three short ones so a column
-   of stages lines up. */
-.stage-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 88px 56px auto;
-  gap: var(--space-2);
-  align-items: center;
-}
-/* The stage's two verbs, side by side at the end of its row. A grid cell, so
-   they need a line of their own rather than each becoming a track. */
-.stage-verbs {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-/* A stage name is free text nobody promised would be short. Without this it
-   could not break, so at any width where the fixed tracks and the Edit button
-   leave it ~60px it painted straight over the badge beside it. */
-.stage-name {
-  overflow-wrap: anywhere;
-}
-/* The badge sits at the start of its fixed track at its own width. A grid cell
-   stretches its child by default, and a pill stretched to the width of the
-   longest semantic label reads as a bar rather than a tag. */
-.stage-row > .badge {
-  justify-self: start;
-}
-/* On a phone the three fixed tracks plus the verb ARE the width, and the name
-   has nothing left. So the row becomes two lines: the name across the top, the
-   readings and the verb under it. */
-@media (max-width: 560px) {
-  .stage-row {
-    grid-template-columns: auto auto 1fr;
-  }
-  .stage-name {
-    grid-column: 1 / -1;
-  }
-  /* The verb takes the end of its own line at its own width — the 1fr track is
-     there to push it there, not to stretch it across the row. */
-  .stage-row > :last-child {
-    justify-self: end;
-  }
-}
-
-/* The exit criteria hang UNDER their stage's four tracks, so they span every
-   one of them — a criteria list placed in a single cell would be squeezed into
-   whichever track it landed in. */
-.stage-criteria {
-  grid-column: 1 / -1;
-}
 .criterion-rows {
   list-style: none;
   display: flex;
@@ -263,8 +171,8 @@ p.settings-panel-sub {
   align-items: center;
   gap: var(--space-2);
 }
-/* Same reasoning as .stage-row's phone case: the fixed vocabulary and the
-   verbs are the width, so the label takes a line of its own. */
+/* On a phone the fixed vocabulary and the verbs are the width, so the label
+   takes a line of its own. */
 @media (max-width: 560px) {
   .criterion-row {
     grid-template-columns: auto auto 1fr;

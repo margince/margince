@@ -163,7 +163,7 @@ export function CompanyActArtifact(props: CompanyActArtifactProps) {
   }, [highlight]);
 
   return (
-    <div className="mw-review ob-conv-artifact" ref={container}>
+    <div className="ob-conv-artifact" ref={container}>
       {/* A scene owns its own headline (the prototype's one-surface rule);
           the generic dossier heading would be a second voice above it. */}
       {(props.review == null || props.mode !== "dossier") && (

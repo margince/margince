@@ -81,7 +81,7 @@ function ContractsCard() {
 }
 
 const meta: Meta = {
-  title: "Records/Project/Contracts",
+  title: "Records/Project 360/Contracts",
   parameters: { layout: "padded" },
 };
 export default meta;

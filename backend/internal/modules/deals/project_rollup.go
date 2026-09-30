@@ -6,9 +6,10 @@ package deals
 // The money a project's deals add up to, for the project page header.
 //
 // It lives with the deals rather than with the project: every figure here is
-// read from the deal table under the caller's DEAL row scope, and priced in the
-// installation's base currency, which is this module's Installation seam.
-// modules/projects consumes it through a port compose injects.
+// read from the deal table under the caller's DEAL row scope and the field
+// masks that withhold its money, and priced in the installation's base
+// currency, which is this module's Installation seam. modules/projects
+// consumes it through a port compose injects.
 
 import (
 	"context"
@@ -43,9 +44,9 @@ type ProjectDealTotals struct {
 }
 
 // ProjectDealTotalsTx sums the open and the won deals of a project over the
-// caller's deal row scope, inside a caller-opened transaction. A total that
-// counted a deal the caller's list would not show discloses that deal
-// through arithmetic, which is why the scope clause is here and not only on
+// caller's deal row scope and field masks, inside a caller-opened transaction.
+// A total that counted a deal the caller's list would not show discloses that
+// deal through arithmetic, which is why the narrowing is here and not only on
 // the list.
 func (s *Store) ProjectDealTotalsTx(ctx context.Context, tx pgx.Tx, id ids.ProjectID) (ProjectDealTotals, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
@@ -65,6 +66,19 @@ func (s *Store) ProjectDealTotalsTx(ctx context.Context, tx pgx.Tx, id ids.Proje
 	}
 	if scope != "" {
 		where = append(where, scope)
+	}
+	// A total is the one place a withheld figure reappears whole, and a project
+	// carrying one deal makes the total that deal's amount. So a deal whose
+	// money this caller reads as masked is outside the row set, the way the
+	// projects report excludes it from the same two measures. It belongs to the
+	// row set rather than to either sum because every figure this statement
+	// answers is that money: a count would need its own unmasked filter.
+	priceable, masked, err := auth.MaskExcludedClause(ctx, maskObject, dealAmountField, "d", arg)
+	if err != nil {
+		return ProjectDealTotals{}, err
+	}
+	if masked {
+		where = append(where, priceable)
 	}
 	totals := ProjectDealTotals{Currency: base}
 	// An ungrouped aggregate answers exactly one row whatever it counted, so

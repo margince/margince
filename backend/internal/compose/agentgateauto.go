@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -80,6 +81,10 @@ func runAutoExecuted(w http.ResponseWriter, r *http.Request, next http.Handler, 
 	// The CALL itself has been charged exactly once by the time this runs — at
 	// the door for a plain admission, at the redemption above for a call that
 	// asserted one — so nothing charges it here.
+	//
+	// A bulk change says how many records it changed on the tally, and the
+	// effect is charged at that count rather than as one act.
+	r = r.WithContext(agentvolume.WithEffectTally(r.Context()))
 	performed := &effectRecorder{ResponseWriter: w}
 	metered := &servedMeter{ResponseWriter: performed, r: r, reg: outcome.registry, mayRefuse: theEffectAlreadyLanded}
 	if !redeemed && reachesTheHumanOwnedSplit(outcome.pol) {

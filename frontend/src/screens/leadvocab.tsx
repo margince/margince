@@ -6,13 +6,14 @@ import { isOption } from "../app/options";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import {
@@ -180,6 +181,7 @@ function LeadSourceRow({
   onRemove: () => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const count = source.lead_count ?? 0;
   const builtIn = source.system === true;
@@ -231,7 +233,7 @@ function LeadSourceRow({
               title={
                 builtIn
                   ? t("leadSources.builtInKept")
-                  : t("leadSources.inUse", {
+                  : plural("leadSources.inUse", count, {
                       count: formatNumber(count, locale),
                     })
               }
@@ -276,7 +278,7 @@ function AddSourceDialog({
           );
         }}
       >
-        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+        <Heading size="large" className="t-h3" id={titleId}>
           {t("leadSources.newLabel")}
         </Heading>
         {create.isError && (
@@ -402,13 +404,11 @@ export function LeadSourcesCard() {
         )
       }
     >
-      {/* No `form-stack` on the body: the description already pays for its own
-          interval to the rows (`.settings-panel-sub`), and a stack's gap on top
-          of that margin — margins do not collapse in a flex container — put 28px
-          under a line every other settings card sets 16px below. The blocks that
-          are NOT rows take their interval from `.lead-vocab-notices`. */}
+      {/* No `form-stack` on the body: `PanelIntro` owns the interval down to
+          the rows, and the blocks that are NOT rows take theirs from
+          `.lead-vocab-notices`. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("leadSources.sub")}</p>
+        <PanelIntro>{t("leadSources.sub")}</PanelIntro>
         <SettingList>
           {/* The sources are the SUBJECT of this card rather than an answer to
               a question beside them, so they take the row's full width. */}
@@ -587,6 +587,7 @@ function useReasonMutations() {
 
 export function LeadDisqualifyReasonsCard() {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const canCreate = useCanWrite("custom_field", "create");
   const canEdit = useCanWrite("custom_field", "update");
@@ -602,7 +603,7 @@ export function LeadDisqualifyReasonsCard() {
     <Panel title={t("leadReasons.title")}>
       {/* Plain body, for the reason the sources card above carries in full. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("leadReasons.sub")}</p>
+        <PanelIntro>{t("leadReasons.sub")}</PanelIntro>
         <SettingList>
           {/* The reasons are the subject of this card, so they take the row's
               full width — the same shape the sources list above takes, which is
@@ -670,7 +671,7 @@ export function LeadDisqualifyReasonsCard() {
                                   title={
                                     builtIn
                                       ? t("leadSources.builtInKept")
-                                      : t("leadReasons.inUse", {
+                                      : plural("leadReasons.inUse", count, {
                                           count: formatNumber(count, locale),
                                         })
                                   }
@@ -773,7 +774,7 @@ export function LeadHandlingCard() {
     <Panel title={t("leadHandling.title")}>
       {/* Plain body, for the reason the sources card carries in full. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("leadHandling.sub")}</p>
+        <PanelIntro>{t("leadHandling.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("leadHandling.title")}>
           {(settings) => {
             const shown =
@@ -865,20 +866,7 @@ export function LeadHandlingCard() {
                           }
                         }}
                       />
-                      {targetError !== null && (
-                        // `.field-error` is the catalog's spelling of "why
-                        // this value was refused" — same ink, same size, same
-                        // `role="alert"` as the one `Field` renders, so a
-                        // refusal in a row reads exactly like a refusal in a
-                        // form.
-                        <p
-                          className="field-error lead-handling-error"
-                          id={targetErrorId}
-                          role="alert"
-                        >
-                          {targetError}
-                        </p>
-                      )}
+                      <ErrorLine id={targetErrorId}>{targetError}</ErrorLine>
                     </div>
                   )}
                 />

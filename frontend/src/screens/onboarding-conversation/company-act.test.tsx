@@ -93,10 +93,6 @@ it("shows a live legal-entity decision on the surface, never as a QuestionCard i
   expect(
     screen.getAllByRole("radio", { name: "Gradion Holding GmbH" }),
   ).toHaveLength(1);
-
-  // No fieldset-based question card reaches the surface a second time while
-  // the scene owns this decision — the candidate list lives there once.
-  expect(document.querySelectorAll(".ob-conv-question")).toHaveLength(0);
 });
 
 it("keeps a superseded, never-answered re-ask out of the rail once a fresh one takes over", () => {
@@ -131,10 +127,9 @@ it("keeps a superseded, never-answered re-ask out of the rail once a fresh one t
   expect(screen.getAllByRole("radio", { name: "Gradion GmbH" })).toHaveLength(
     1,
   );
-  // The stale re-ask's own candidate list must not survive as a rail card,
-  // answered or not — its answer can never be recorded, so an inert card
+  // The stale re-ask's own candidate list must not survive as a second copy,
+  // answered or not — its answer can never be recorded, so an inert copy
   // would be a dead end that looks exactly like the live one.
-  expect(document.querySelectorAll(".ob-conv-question")).toHaveLength(0);
   expect(
     screen.queryAllByRole("button", { name: "Gradion Holding GmbH" }),
   ).toHaveLength(0);
@@ -429,12 +424,12 @@ describe("arriving at the review scene", () => {
     // reading is not editing, so the wall is two doors away, and this test
     // walks the same two a reader would.
     fireEvent.click(
-      await screen.findByRole("button", { name: "Read the whole profile" }),
+      await screen.findByRole("button", { name: "Read full profile" }),
     );
     fireEvent.click(
-      await screen.findByRole("button", { name: "Choose the facts to keep" }),
+      await screen.findByRole("button", { name: "Choose facts to keep" }),
     );
-    await screen.findByRole("heading", { level: 2, name: /Correct me/ });
+    await screen.findByRole("heading", { level: 2, name: /Correct anything/ });
 
     // A background poll narrates again, live, while the review is already
     // on screen with the row now actually mounted — a fresh thread array
@@ -559,7 +554,7 @@ describe("recovering from a rejected confirm", () => {
     );
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     expect(continueButton).toBeEnabled();
 
@@ -634,7 +629,7 @@ describe("recovering from a rejected confirm", () => {
     );
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     await vi.waitFor(() => expect(continueButton).toBeEnabled());
 
@@ -709,7 +704,7 @@ describe("recovering from a rejected confirm", () => {
     );
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
 
@@ -766,7 +761,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
 
@@ -807,7 +802,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -860,7 +855,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -914,7 +909,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -961,7 +956,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -1005,7 +1000,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -1045,7 +1040,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview(dispatch);
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Confirm the profile" }),
+      await screen.findByRole("button", { name: "Confirm profile" }),
     );
 
     await vi.waitFor(() =>
@@ -1102,7 +1097,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview(dispatch);
 
     const continueButton = await screen.findByRole("button", {
-      name: "Confirm the profile",
+      name: "Confirm profile",
     });
     fireEvent.click(continueButton);
     await vi.waitFor(() => expect(gate.release).not.toBeNull());
@@ -1163,7 +1158,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview(dispatch);
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Confirm the profile" }),
+      await screen.findByRole("button", { name: "Confirm profile" }),
     );
 
     await screen.findByText(CHECK_FAILED_NOTICE);

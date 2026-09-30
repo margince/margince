@@ -168,6 +168,10 @@ func TestAPersonalVerdictRetractsAContactAMachinePromoted(t *testing.T) {
 		t.Fatalf("the retracted contact is still %q-visible: an archived record is still "+
 			"listable by colleagues who ask for archived ones, so it has to be narrowed too", got)
 	}
+	if reason := e.WsScalar(t, `SELECT coalesce(narrowing_reason, '') FROM contact WHERE id = $1`,
+		contactID); reason != "confidentiality_hold" {
+		t.Errorf("the retraction narrowed the contact recording %q, want confidentiality_hold", reason)
+	}
 }
 
 // A record a human PUBLISHED is theirs, exactly as an edited one is. The

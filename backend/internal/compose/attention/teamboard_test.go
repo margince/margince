@@ -10,6 +10,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -50,12 +51,18 @@ func (w waitingSaying) Unanswered(context.Context, time.Time) ([]WaitingCustomer
 // Nothing measured: these tests are about which rows the queue carries, and a
 // fake answering a response time would let a projection defect read as a
 // timing figure.
-func (w waitingSaying) Answered(context.Context, time.Time, time.Time) (AnsweredWork, error) {
+func (w waitingSaying) Answered(context.Context, time.Time, time.Time, LocalDays) (AnsweredWork, error) {
 	return AnsweredWork{}, nil
 }
 
 func (w waitingSaying) Hidden(context.Context, time.Time) (HiddenWork, error) {
 	return HiddenWork{Shown: len(w.rows)}, nil
+}
+
+// HiddenRows answers nothing: this fixture drives the team board, and a double
+// that returned rows would be asserting about a read the test never makes.
+func (w waitingSaying) HiddenRows(context.Context, time.Time, string) ([]WaitingCustomer, error) {
+	return nil, nil
 }
 
 // overdueSaying is the counting reader over a fixed tally.
@@ -65,10 +72,27 @@ func (o overdueSaying) OverduePerAssignee(context.Context, time.Time) (map[ids.U
 	return map[ids.UUID]int(o), nil
 }
 
+// boardService binds EVERY counting source, empty, and a case that cares about
+// one replaces it. The board refuses an unbound source outright — a required
+// column cannot draw absence, so a zero would read as a clear team — which
+// means a helper leaving one nil would make every case here a test of that
+// refusal rather than of the column it is about.
 func boardService(members ...TeamMember) *Service {
+	return boardServiceOver(roster(members))
+}
+
+// boardServiceOver is the same for a membership reader that is not a plain
+// roster — a cut one, or a lead-tier fixture. One place binds the sources, so a
+// fifth column added to the board does not leave a caller here reading as a
+// composition that dropped it.
+func boardServiceOver(teammates Teammates) *Service {
 	return &Service{
-		teammates: roster(members),
-		now:       func() time.Time { return boardInstant },
+		teammates:   teammates,
+		waiting:     waitingSaying{},
+		overdueLoad: overdueSaying{},
+		atRisk:      stubAtRisk{},
+		promiseLoad: &promisesSaying{per: map[ids.UUID]int{}},
+		now:         func() time.Time { return boardInstant },
 	}
 }
 
@@ -264,10 +288,7 @@ func TestTheAtRiskLanesOwnCutFlagDecidesRatherThanItsRowCount(t *testing.T) {
 func TestATeamLargerThanTheRosterCapIsReportedAsTruncated(t *testing.T) {
 	t.Parallel()
 
-	svc := &Service{
-		teammates: rosterCutAt{},
-		now:       func() time.Time { return boardInstant },
-	}
+	svc := boardServiceOver(rosterCutAt{})
 	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
 	if err != nil {
 		t.Fatalf("the board refused a team-scoped reader: %v", err)
@@ -446,20 +467,46 @@ func TestTheBoardAsksAboutItsOwnRosterAndNoOneElse(t *testing.T) {
 	}
 }
 
-// An UNBOUND promise source leaves every count at zero, which is what the
-// contract now says: claims have a writer on every installation, so production
-// always binds this reader. Unbound is a test shape, not a deployment.
-func TestAnUnboundPromiseSourceLeavesTheColumnAtZero(t *testing.T) {
+// An UNBOUND source refuses the board rather than drawing a column of zeros.
+//
+// Every count on this board is `required` in the contract, so there is no way to
+// draw absence: an unbound reader's column arrives as zero, and zero is the
+// answer "they are clear". A source dropped from the composition would tell a
+// lead their team is up to date — the one thing this surface exists to stop
+// getting wrong, and the same reasoning the failing-source cases below follow.
+//
+// Derived from the four sources rather than written out once per column, so a
+// fifth added to the board without its guard fails here.
+func TestAnUnboundSourceRefusesRatherThanDrawingAColumnOfZeros(t *testing.T) {
 	t.Parallel()
 
-	svc := boardService(TeamMember{UserID: theReader, DisplayName: "Aa Reader"})
-
-	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
-	if err != nil {
-		t.Fatalf("the board refused a team-scoped reader: %v", err)
+	unbind := map[string]func(*Service){
+		"waiting":      func(s *Service) { s.waiting = nil },
+		"overdue":      func(s *Service) { s.overdueLoad = nil },
+		"at_risk":      func(s *Service) { s.atRisk = nil },
+		"promises_due": func(s *Service) { s.promiseLoad = nil },
 	}
-	if got := board.Members[0].Counts.PromisesDue; got != 0 {
-		t.Fatalf("an unread source drew %d, wanted 0", got)
+	full := boardService(TeamMember{UserID: theReader, DisplayName: "Aa Reader"})
+	if got := full.UnboundBoardSources(); len(got) > 0 {
+		t.Fatalf("the fully bound fixture reports %v unbound — every case below would pass "+
+			"on the wrong refusal", got)
+	}
+	for column, drop := range unbind {
+		t.Run(column, func(t *testing.T) {
+			t.Parallel()
+
+			svc := boardService(TeamMember{UserID: theReader, DisplayName: "Aa Reader"})
+			drop(svc)
+
+			_, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
+			if err == nil {
+				t.Fatal("the board was served with a source the composition never bound")
+			}
+			if !strings.Contains(err.Error(), column) {
+				t.Errorf("refusing an unbound %s reader said %q — a reader has to be told "+
+					"which column went missing", column, err)
+			}
+		})
 	}
 }
 

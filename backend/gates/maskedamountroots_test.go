@@ -47,6 +47,10 @@ var outsideInternal = gatekit.Waive(map[string]string{})
 func TestNoDealAmountStatementLivesWhereTheCensusCannotSeeIt(t *testing.T) {
 	t.Parallel()
 
+	// The same subject the census sweeps with, asked of the same derivation
+	// rather than spelled again — a second spelling here is how this gate would
+	// come to guard a narrower column set than the census it exists to bound.
+	columns := dealMaskedColumns(t)
 	roots := moduleRootsBesideInternal(t)
 	// A walk that found no root is a walk that agrees with everything.
 	if len(roots) == 0 {
@@ -73,11 +77,7 @@ func TestNoDealAmountStatementLivesWhereTheCensusCannotSeeIt(t *testing.T) {
 			if readErr != nil {
 				return readErr
 			}
-			// The same column pattern the census uses, read off the same
-			// variable rather than spelled again — a second spelling here is
-			// how this gate would come to guard a narrower column set than the
-			// census it exists to bound.
-			if dealAmountColumn.Match(body) && !outsideInternal.Waived(t, filepath.ToSlash(path)) {
+			if columns.Match(body) && !outsideInternal.Waived(t, filepath.ToSlash(path)) {
 				offenders = append(offenders, filepath.ToSlash(path))
 			}
 			return nil

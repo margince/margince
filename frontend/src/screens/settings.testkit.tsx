@@ -268,9 +268,9 @@ export const IDLE_JOB_HEALTH = {
   recent_failures: [],
 };
 
-// The nav, driven by exactly the two things the catalog composes: the grant map
-// /me carries, and the company-context rollout flag beside it. Every other
-// endpoint answers empty, so a failure here can only be about visibility.
+// The nav, driven by what /me carries: the grant map and the deployment facts
+// beside it. Every other endpoint answers empty, so a failure here can only be
+// about visibility.
 export function settingsNavBackend(opts: {
   roles: string[];
   allow?: GrantSpec;
@@ -279,10 +279,6 @@ export function settingsNavBackend(opts: {
   // expect the nav not to narrow.
   seat?: "full" | "read";
   companyReadEnabled?: boolean;
-  // A server that predates `settings_availability` answers /me without it.
-  // The catalog has to read that as "the surface does not exist" rather than
-  // as permission, so a case can ask for the field to be absent entirely.
-  omitAvailability?: true;
   // Whether this DEPLOYMENT permits a data reset. The compiled default is false
   // everywhere, so the reset page is absent unless a case arms it — which is
   // the behaviour, not a fixture convenience: the page needs the grant AND the
@@ -296,9 +292,9 @@ export function settingsNavBackend(opts: {
         roles: opts.roles,
         seat: opts.seat ?? "full",
         allow: opts.allow ?? {},
-        settingsAvailability: opts.omitAvailability
-          ? null
-          : { company_context: opts.companyReadEnabled ?? false },
+        settingsAvailability: {
+          company_context: opts.companyReadEnabled ?? false,
+        },
       });
       return jsonResponse({
         ...me,

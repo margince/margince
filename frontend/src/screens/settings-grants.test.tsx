@@ -210,8 +210,10 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
+    // The role read that completes the card is also the whole gate on the
+    // role editor, so that page opens beside it.
     await waitFor(() =>
-      expect(offeredPages()).toEqual(floorPlus("extensions")),
+      expect(offeredPages()).toEqual(floorPlus("roles", "extensions")),
     );
     cleanup();
 
@@ -331,17 +333,18 @@ describe("the grant that opens one settings page", () => {
 
   it("opens both AI diagnostics pages for a lone ai_diagnostics read", async () => {
     // `ai_diagnostics` is the object the server moved these reads onto, and
-    // `AiUsageCard`, `AiCallsCard` and `AiHealthCard` all ask for it now. They
-    // used to ask `automation:update` — a write verb guarding a GET, from when
-    // the runtime's spend was operator information.
+    // `AiUsageCard`, `AiCallsCard` and the health column of the Model tiers
+    // card all ask for it now. They used to ask `automation:update` — a write
+    // verb guarding a GET, from when the runtime's spend was operator
+    // information.
     //
-    // One grant opens two pages, which is what makes granting it alone worth
+    // One grant opens the pages, which is what makes granting it alone worth
     // asserting: a Model calls wired to some other object would be invisible
     // here and everywhere else.
     //
-    // THREE pages, not two: `AiHealthCard` reads on this object too and Models
-    // is the only page that renders it, so a Models shut on `ai_routing` alone
-    // put that card behind a door its own reader could not open. Management is
+    // THREE pages, not two: the Model tiers card answers this read with the
+    // lanes' health alone, so a Models shut on `ai_routing` alone put that
+    // reading behind a door its own reader could not open. Management is
     // seeded diagnostics WITHOUT routing, which is exactly that reader.
     vi.stubGlobal(
       "fetch",
@@ -480,95 +483,21 @@ describe("the grant that opens one settings page", () => {
     await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
   });
 
-  // THE LICENSING SEAT, which is a THIRD axis and gates none of this: the server
-  // clamps a read seat on the HTTP method, so it still READS every page behind
-  // these rows. A principal on a read seat therefore reaches the level
-  // undiminished, and the withheld things inside are the write controls.
-  //
-  // Named as its own case because folding it into the requirements is the
-  // regression this rule exists to prevent: measured against the live API, the
-  // write-shaped predicates hid a read seat from eight of the eleven entries the
-  // server answers 200 on — three of which (products, offer templates, custom
-  // fields) were ungated routes of their own before the merge.
-
-  it("shows Company profile to an admin holding the company read once the company rollout flag is on", async () => {
+  it("withholds Company profile from a company writer while the rollout is on", async () => {
+    // The profile is administered: the server asks the admin role for it, so
+    // a rep's `company` writes carry her onto no page, and the rollout saying
+    // the surface exists does not change whose it is.
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({
-        roles: ["admin"],
-        allow: { ...readOn("company"), company: ["read", "update"] },
+        roles: ["rep"],
+        allow: {
+          company: ["create", "read", "update"],
+          // The witness, so the absence below is asserted against a
+          // RESOLVED snapshot rather than the loading render.
+          pipeline: ["read"],
+        },
         companyReadEnabled: true,
-      }),
-    );
-    renderHome();
-    expect(
-      await screen.findByRole("link", { name: labelOf("company") }),
-    ).toBeTruthy();
-  });
-
-  it("withholds Company profile from that same admin while the rollout flag is off", async () => {
-    // The flag is a deployment posture, not a permission, so it ANDs with the
-    // grant beside it: the company profile may simply not exist on this
-    // installation.
-    //
-    // This used to assert two moments — the nav composed while the flag was
-    // still in flight, then again once it answered — because the fact arrived
-    // over its own request and a row could appear and then vanish. It rides /me
-    // now, so there is no in-flight window to hold open: the nav cannot render
-    // before the snapshot it reads. The race is gone rather than untested, which
-    // is why the second moment went with it.
-    //
-    // The company WRITE is the only term of Company profile's requirement
-    // this fixture grants, which is what leaves the flag decisive. Granting the
-    // read alone would hide the page whatever the flag said, and the case would
-    // pass while proving nothing about the flag.
-    vi.stubGlobal(
-      "fetch",
-      settingsNavBackend({
-        roles: ["admin"],
-        allow: {
-          ...readOn("company"),
-          company: ["read", "update"],
-          // The witness, so the absence below is asserted against a
-          // RESOLVED snapshot rather than the loading render.
-          pipeline: ["read"],
-        },
-        companyReadEnabled: false,
-      }),
-    );
-    renderHome();
-
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
-    expect(screen.queryByRole("link", { name: labelOf("company") })).toBeNull();
-  });
-
-  it("withholds Company profile when /me carries no availability at all", async () => {
-    // The absent case, which is a DIFFERENT fact from the flag reading false: a
-    // server older than `settings_availability` answers /me without the object,
-    // and a browser holding a cached snapshot from before the field shipped does
-    // the same. Both are states a running deployment reaches during a rollout,
-    // and neither says the company profile exists.
-    //
-    // Without this case the catalog's `?? false` is unheld — flipping it to
-    // `?? true` passes every other test in this file, because they all supply
-    // the field. What that flip ships is a page offered on an installation that
-    // may not have the surface, which is the one direction a deployment fact
-    // must not fail.
-    vi.stubGlobal(
-      "fetch",
-      settingsNavBackend({
-        roles: ["admin"],
-        // The write, for the same reason the case above takes it: on the read
-        // alone the page is shut anyway and the absent-availability arm this
-        // case exists to hold would never be reached.
-        allow: {
-          ...readOn("company"),
-          company: ["read", "update"],
-          // The witness, so the absence below is asserted against a
-          // RESOLVED snapshot rather than the loading render.
-          pipeline: ["read"],
-        },
-        omitAvailability: true,
       }),
     );
     renderHome();

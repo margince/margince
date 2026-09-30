@@ -43,3 +43,5 @@ e3f137e00f6409dbbaa0e805d01f745c1c6feb94 9be587d2f86d1ab30eac64d5819338629ddf23e
 41b8f2ae94d71705d00374e8d3fbcf6c082b2b6f 0ce4c55952a2994e94f0ae0fa57318914cc8e0b1 ratified-1065-a-booking-belongs-to-at-least-one-record
 a5f0633da0c9bcb048f592cef53e3bced9583c4e e5a82786d1b7231e23936099e6305e7b9244be81 ratified-the-app-reads-from-its-own-tables-overlay-mode-retired
 5e7322a19add0abe471ee81d480f4931a57aaa65 09f13f8289b92ae1b235888e670839824759dacd ratified-the-meeting-plans-arc-is-the-companys-not-an-accounts
+1d7448f3de2934dbf0ab69e439bed34ada5674d3 d04a70d48f07598243b3381a1ac4196f5004edc6 ratified-4744-a-role-is-a-row-the-closed-role-enums-become-a-checked-key
+44c4f0a9db33142a6b457a9c9ad0b7df84f51429 d8503b30e4b216b292d235d74278b9a2cb24d92b ratified-6208-the-author-arrives-with-the-record

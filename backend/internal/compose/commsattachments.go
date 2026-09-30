@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -60,25 +61,14 @@ func (a commsAttachments) senderCtx(ctx context.Context, userID ids.UserID) (con
 	if !ok {
 		return nil, "", errors.New("comms: rechecking a delivery's attachments outside workspace context")
 	}
-	rbac, err := a.authority.EffectiveRBAC(ctx, ws, userID.UUID)
+	sender, err := authz.MemberPrincipal(ctx, a.authority, ws, userID.UUID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, "the sender's account is no longer active, so its right to send these files cannot be confirmed", nil
 	}
 	if err != nil {
-		return nil, "", fmt.Errorf("comms: reading the sender's grants: %w", err)
+		return nil, "", fmt.Errorf("comms: reading the sender's authority: %w", err)
 	}
-	seat, err := a.authority.SeatType(ctx, ws, userID.UUID)
-	if err != nil {
-		return nil, "", fmt.Errorf("comms: reading the sender's seat: %w", err)
-	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "human:" + userID.String(),
-		UserID:      userID.UUID,
-		TeamIDs:     rbac.TeamIDs,
-		SeatType:    seat,
-		Permissions: rbac.Permissions,
-	}), "", nil
+	return principal.WithActor(ctx, sender), "", nil
 }
 
 // EnsureTransmittable asks, per file, the question that can change between

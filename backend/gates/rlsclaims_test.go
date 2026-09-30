@@ -126,6 +126,10 @@ func TestNoGoSourceClaimsRLSStillScopesARead(t *testing.T) {
 				return err
 			}
 			checked++
+			// Every spelling rlsClaim matches contains "rls".
+			if !mayHoldFolded(string(b), "rls") {
+				return nil
+			}
 			for i, line := range strings.Split(string(b), "\n") {
 				if rlsClaim.MatchString(line) {
 					claims = append(claims, filepath.ToSlash(path)+":"+strconv.Itoa(i+1)+": "+strings.TrimSpace(line))

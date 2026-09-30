@@ -108,14 +108,14 @@ afterEach(() => {
 it("invites an assignment on a record that has none", async () => {
   stubFetch([]);
   render(<RecordTeam recordType="deal" recordId={RECORD_ID} />);
-  expect(await screen.findByText(/Nobody is assigned yet/)).toBeTruthy();
+  expect(await screen.findByText(/No one is assigned yet/)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();
 });
 
 it("draws no panel of its own when a section already names it", async () => {
   stubFetch([]);
   render(<RecordTeam recordType="company" recordId={RECORD_ID} bare />);
-  expect(await screen.findByText(/Nobody is assigned yet/)).toBeTruthy();
+  expect(await screen.findByText(/No one is assigned yet/)).toBeTruthy();
   // The company rail is one pane of headed slices and names this one itself;
   // a second heading and a titled region inside it would be a card in a card.
   expect(screen.queryByRole("heading", { name: "Responsible" })).toBeNull();
@@ -148,7 +148,7 @@ it("ends a responsibility through the row's own verb", async () => {
   stubFetch([ROW], { onDelete: (id) => deleted.push(id) });
   render(<RecordTeam recordType="deal" recordId={RECORD_ID} />);
   const remove = await screen.findByRole("button", {
-    name: "End this responsibility: Mara Feld",
+    name: "Remove assignee: Mara Feld",
   });
   await userEvent.click(remove);
   expect(deleted).toEqual(["a1"]);
@@ -159,11 +159,11 @@ it("names the row in each verb, so one of four is tellable from the rest", async
   render(<RecordTeam recordType="deal" recordId={RECORD_ID} />);
   expect(
     await screen.findByRole("button", {
-      name: "Change who holds this: Mara Feld",
+      name: "Change assignee: Mara Feld",
     }),
   ).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Change who holds this: Jonas Reed" }),
+    screen.getByRole("button", { name: "Change assignee: Jonas Reed" }),
   ).toBeTruthy();
 });
 
@@ -171,7 +171,7 @@ it("says so when ending a responsibility is refused", async () => {
   stubFetch([ROW], { failDelete: true });
   render(<RecordTeam recordType="deal" recordId={RECORD_ID} />);
   const remove = await screen.findByRole("button", {
-    name: "End this responsibility: Mara Feld",
+    name: "Remove assignee: Mara Feld",
   });
   await userEvent.click(remove);
   // The button re-enables either way, so a refusal that said nothing would

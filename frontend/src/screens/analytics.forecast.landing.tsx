@@ -1,7 +1,8 @@
 import type { components } from "../api/schema";
 import { EmptyState, StatCard } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { formatMoneyOrAbsent, formatNumber } from "../format/format";
+import { formatMoneyCompact, formatNumber } from "../format/format";
+import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useT } from "../i18n";
 
 type Readings = components["schemas"]["ForecastReadings"];
@@ -12,7 +13,7 @@ type Sufficiency = NonNullable<Readings["sufficiency"]>;
 //
 // The server sends basis points so it chooses no rounding for its clients; a
 // reader comparing coverage across periods wants whole numbers, and a tenth of
-// a percent of pipeline coverage is precision nobody acts on.
+// a percent of coverage is precision nobody acts on.
 const BASIS_POINTS_PER_PERCENT = 100;
 
 // Where the period lands, and the two halves that make it.
@@ -26,12 +27,27 @@ export function LandingCard({
   locale,
 }: Readonly<{ landing: Landing; currency: string; locale: Locale }>) {
   const t = useT();
-  const money = (minor: number) => formatMoneyOrAbsent(minor, currency, locale);
+  // Compact, because a slot of a strip is about a hundred points wide and a
+  // full amount clips there — and a WORD where the pair cannot be said as money
+  // at all, because a slot compared across a row must not answer with a glyph.
+  const money = (minor: number) =>
+    formatMoneyOrWord(
+      minor,
+      currency,
+      locale,
+      t("format.notForecast"),
+      formatMoneyCompact,
+    );
 
   // A call REPLACES the projection rather than adding to what is won, so the
   // two cases get different sentences. One sentence with a swapped number
   // would tell a reader the call was the remainder, which is the misreading
   // this whole shape exists to prevent.
+  //
+  // ONE label over both, with the measure leading the detail: "Landing" is the
+  // reading, and which measure produced it qualifies the reading the way a
+  // basis does. A label that changed with the measure made one figure read as
+  // two different readings between two periods.
   const detail =
     landing.measure === "manager_call"
       ? t("forecast.landingFromCall", { won: money(landing.won_minor) })
@@ -43,6 +59,10 @@ export function LandingCard({
   return (
     <>
       <StatCard
+        // The strip these two sit at the end of folds to rows on a phone, and
+        // the fold is the ROW's: a slot that did not declare it would keep its
+        // box while its neighbours lost theirs.
+        narrow="row"
         label={t("forecast.landing")}
         value={money(landing.amount_minor)}
         detail={detail}
@@ -63,11 +83,11 @@ export function LandingCard({
   );
 }
 
-// Whether the open pipeline supports the reference landing.
+// Whether the open deals support the reference landing.
 //
 // An absence renders as a SENTENCE and no figure. Drawing zeroes beside "no
-// basis" would read as a fully covered pipeline, which is the opposite of what
-// an absence means.
+// basis" would read as a fully covered book, which is the opposite of what an
+// absence means.
 export function SufficiencyCard({
   sufficiency,
   currency,
@@ -101,24 +121,44 @@ export function SufficiencyCard({
     return null;
   }
 
-  const money = (minor: number) => formatMoneyOrAbsent(minor, currency, locale);
+  // Compact, because a slot of a strip is about a hundred points wide and a
+  // full amount clips there — and a WORD where the pair cannot be said as money
+  // at all, because a slot compared across a row must not answer with a glyph.
+  const money = (minor: number) =>
+    formatMoneyOrWord(
+      minor,
+      currency,
+      locale,
+      t("format.notForecast"),
+      formatMoneyCompact,
+    );
   const percent = Math.round(coverage / BASIS_POINTS_PER_PERCENT);
 
   return (
     <StatCard
+      narrow="row"
       label={t("forecast.pipelineNeeded")}
       value={money(needed)}
-      detail={[
-        t("forecast.coverage", { percent: formatNumber(percent, locale) }),
-        t("forecast.pipelineNeededDetail", {
-          current: money(current),
-          needed: money(needed),
-          reference: money(reference),
-        }),
-        t(`forecast.pipelineBasis.${sufficiency.basis}`),
-      ].join(" ")}
-      // The bar is the share of what this needs that the pipeline actually
-      // holds, clamped at the track: a book at three times its requirement
+      // TWO lines and no more: the share, then the two figures it was drawn
+      // from. The need itself is already the value above, and WHICH measure the
+      // reference came from is the card's receipt — a fragment of it here cost
+      // the line a third row, which the clamp then took away in German.
+      detail={
+        <>
+          <span>
+            {t("forecast.coverage", { percent: formatNumber(percent, locale) })}
+          </span>
+          <span>
+            {t("forecast.pipelineNeededDetail", {
+              open: money(current),
+              landing: money(reference),
+            })}
+          </span>
+        </>
+      }
+      basis={<p>{t(`forecast.pipelineBasisWhy.${sufficiency.basis}`)}</p>}
+      // The bar is the share of what this needs that the open deals actually
+      // hold, clamped at the track: a book at three times its requirement
       // would otherwise draw a bar three times the width of its own card.
       meter={{ filled: Math.min(current, needed), total: needed }}
     />

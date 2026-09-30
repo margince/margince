@@ -20,6 +20,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
@@ -92,6 +93,7 @@ import { sourcePickOptions, useLeadSources } from "./leadsources";
 export { promoteEligible, scoreTone } from "./leadpresentation";
 export { terminalBadge } from "./leadstanding";
 
+import { AddToShortlistAction } from "./addtoshortlist";
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
 
 export { LeadsScreen } from "./leads.list";
@@ -222,7 +224,7 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
     return <span>{t("lead.scoreLoading")}</span>;
   }
   if (explain.isError) {
-    return <span>{problemMessageOf(explain.error, t)}</span>;
+    return <ErrorLine error={explain.error} />;
   }
   const current = explain.data?.current;
   if (!explain.data?.explained || !current) {
@@ -1250,19 +1252,17 @@ function LeadActions({
           square the only row a reader has to hover to identify.
 
           A terminal lead keeps these controls, DISABLED with the reason
-          (STATE-4a): the reason is the information, and hiding the control
-          hides a fact the reader needs. Both closures reach this page — a
-          disqualified lead and, since ADR-0119/A170, a promoted one — and the
-          band above names which, so these controls point at that one
-          sentence rather than guessing at it. The band is also WHY the
-          sentence is passed in rather than minted here: a reason living in
-          the panel would not exist until the menu was first opened. */}
+          (STATE-4a): hiding the control hides a fact the reader needs. Both
+          closures reach this page — disqualified and promoted — and the band
+          above names which. The sentence is passed in because a reason minted
+          in the panel would not exist until the menu was first opened. */}
       <OverflowMenu label={t("record.moreActions")}>
         <ShareAction
           recordType="lead"
           recordId={lead.id}
           disabledReasonId={refusedReasonId}
         />
+        <AddToShortlistAction entityType="lead" entityId={lead.id} />
         {/* Last: it is the one verb here a reader cannot walk back from
                 the header, so it does not sit where a pointer sliding down
                 the list reaches it on the way to something routine. It asks
@@ -1408,7 +1408,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         }
         asideOpen={details.open}
         name={leadIdentityName(lead) || t("lead.unnamed")}
-        avatarSrc={null}
+        identity={lead.id}
         // The role and the company, on the name's own line: the contact
         // page's register for the same two facts (ContactSubtitle). A lead
         // carries no company FK, so unlike the contact's this is never a link.

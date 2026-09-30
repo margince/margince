@@ -50,3 +50,56 @@ describe("a glyph verb that needs a second sentence", () => {
     expect(control.getAttribute("aria-describedby")).toBeNull();
   });
 });
+
+// The one-line box is the HOST's, so the square keeps its size while the line
+// it joins keeps its height; a verb in a row of verbs keeps its own box.
+describe("a glyph verb inside a line of text", () => {
+  it("draws its host as the one-line box only when inline", () => {
+    render(
+      <>
+        <IconAction
+          inline
+          label="Explain"
+          icon={<span aria-hidden="true">i</span>}
+        />
+        <IconAction label="Pin" icon={<span aria-hidden="true">*</span>} />
+      </>,
+    );
+    const host = (name: string) =>
+      screen.getByRole("button", { name }).parentElement;
+    expect(host("Explain")?.classList.contains("icon-action-inline")).toBe(
+      true,
+    );
+    expect(host("Pin")?.classList.contains("icon-action-inline")).toBe(false);
+  });
+});
+
+// A glyph that opens a region says so as a disclosure: that something appeared
+// and which region it was. `pressed` would claim a setting that stays on.
+describe("a glyph verb that opens a region", () => {
+  it("draws its state as expanded and names the region it controls", () => {
+    render(
+      <>
+        <IconAction
+          label="Explain this number"
+          icon={<span aria-hidden="true">i</span>}
+          disclosure={{ expanded: true, controls: "derivation" }}
+        />
+        <div id="derivation" />
+      </>,
+    );
+    const control = screen.getByRole("button", { name: "Explain this number" });
+    expect(control.getAttribute("aria-expanded")).toBe("true");
+    expect(control.getAttribute("aria-controls")).toBe("derivation");
+    expect(control.hasAttribute("aria-pressed")).toBe(false);
+  });
+
+  it("claims no disclosure where the caller named none", () => {
+    render(
+      <IconAction label="Call" icon={<span aria-hidden="true">c</span>} />,
+    );
+    const control = screen.getByRole("button", { name: "Call" });
+    expect(control.hasAttribute("aria-expanded")).toBe(false);
+    expect(control.hasAttribute("aria-controls")).toBe(false);
+  });
+});

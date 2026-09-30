@@ -79,6 +79,7 @@ var graphScopes = []string{"offline_access", "User.Read", "Mail.Read", graph.Sen
 // workspace's own, edited in the settings surface and read per transaction, so
 // a correction takes effect on the next message instead of the next restart.
 type CaptureConfig struct {
+	bookingVault       keyvault.Vault
 	TransactionalExtra []string // capture.transactional_extra (CAP-PARAM-6 infra eSLDs)
 	TransactionalNever []string // capture.transactional_never (CAP-PARAM-6 allowlist)
 	// TracePayloads is capture.trace_payloads, already resolved against its
@@ -98,6 +99,11 @@ type CaptureConfig struct {
 	//
 	// Held by: TestOnlyTheResolverReadsTheTracePayloadsField (backend/internal/platform/deployconfig/capture_test.go)
 	TracePayloads bool
+	// MaxBackfillMonths caps how far back a mailbox import may reach, already
+	// resolved against its default by CaptureConfigFromDeploy. Zero is no cap,
+	// which is both the shipped behaviour and what the zero-value
+	// constructions below mean.
+	MaxBackfillMonths int
 	// Logger carries the process logger to the post-commit steps the Sink
 	// drives, where a fault is reported rather than returned (nothing may fail
 	// a capture). Nil falls back to the default logger — the site_lead accept
@@ -140,6 +146,15 @@ func WithCaptureConfig(cfg CaptureConfig) Option {
 	return func(s *Server, _ *pgxpool.Pool) { s.captureConfig = cfg }
 }
 
+// WarnStaleRates says once, at boot, which `rates:` settings the file still
+// carries and nothing acts on. Both roles call it: the api serves the request
+// the operator believed the key governed, and the worker used to run the job.
+func WarnStaleRates(r deployconfig.RatesConfig, log *slog.Logger) {
+	for _, warning := range r.Warnings() {
+		log.Warn("rates configuration: " + warning)
+	}
+}
+
 // CaptureConfigFromDeploy maps the deployment's `capture:` block onto the
 // compose suppression config the Sink gates read (CAP-PARAM-6, ADR-0072).
 //
@@ -155,6 +170,7 @@ func CaptureConfigFromDeploy(c deployconfig.Capture, log *slog.Logger) CaptureCo
 		TransactionalExtra: c.TransactionalExtra,
 		TransactionalNever: c.TransactionalNever,
 		TracePayloads:      c.TracesPayloads(),
+		MaxBackfillMonths:  c.BackfillCeiling(),
 		Logger:             log,
 	}
 }
@@ -172,8 +188,13 @@ func CaptureConfigFromDeploy(c deployconfig.Capture, log *slog.Logger) CaptureCo
 // that takes it that way — asking which transports this binary compiled in is a
 // question about the binary, not about any database.
 func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureConfig) *capture.Registry {
+	cfg.bookingVault = vault
 	db := InstallationDB(pool)
 	r := capture.NewRegistry(db, newCaptureSink(pool, cfg), identity.NewService(pool), vault).
+		// How far back this installation lets a mailbox import reach. Zero
+		// leaves the product's own ceiling, which is what an enumerate-only
+		// construction and every deployment that has not set one get.
+		WithMaxBackfillMonths(cfg.MaxBackfillMonths).
 		// The digest's projects section is answered here because its reads
 		// span the deals module's tables (digestprojects.go).
 		WithDigestProjects(digestProjectsSource)
@@ -234,16 +255,34 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	ensurer := contactsEnsurer{
 		store:  newCounterpartyStore(pool),
+		pool:   pool,
 		triage: newDomainTriageTrigger(pool, cfg.logger()),
 		log:    cfg.logger(),
 	}
+	// Acting on a message the owner deleted at the provider destroys attachment
+	// BLOBS with the rows that name them, so it is composed from the store for
+	// the reason WithBlobstore builds the purge from it: a role that keeps no
+	// objects has no destruction, which is honest — destroying the rows and
+	// leaving the files would report mail as gone while its attachments sat in
+	// the bucket.
+	//
+	// Nil is therefore a sink that captures mail and acts on no deletions, and
+	// that is what the enumerate-only constructions get (CaptureConfig{} with no
+	// store). Asking which transports a binary compiled in must not hand
+	// anything the power to destroy mail.
+	var purgeRemoved capture.MessagePurger
+	if purger := capturePurgerFor(pool, cfg.Blob, cfg.logger(), cfg.bookingVault); purger != nil {
+		purgeRemoved = purger.PurgeRemoved
+	}
 	return capture.NewSink(InstallationDB(pool)).
+		WithMessagePurger(purgeRemoved).
 		// The files a captured message carried, written by the module that owns
 		// the attachment table. Built here, from the store, so every role that
 		// composes a sink gets the same one — the worker runs mail capture and
 		// never sees the api's options.
 		WithFileKeeper(capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
 		WithStager(mergeStager{svc: approvals.NewService(InstallationDB(pool))}).
+		WithBaseLanguage(installationLanguage(pool)).
 		// The ADR-0063 auto-create pipeline: every captured mail ensures
 		// its counterparty exists, through the contacts module's ONE dedupe
 		// chokepoint — composed here so capture never imports contacts. The
@@ -287,7 +326,16 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// Without it a cancelled meeting stays on the timeline as booked: the
 		// provider stops listing an event once it is off, so the pull that
 		// carries the cancellation is the only one that will ever mention it.
-		WithMeetingCloser(activities.CancelCapturedMeetingTx).
+		WithMeetingCloser(
+			// The standing check replayClaimIsProvenTx already applies for a
+			// replay. Without it a connection stating another seat's event id
+			// closes that seat's meeting: admitCalendarVerb binds the key to the
+			// acting connector, never to the calendar it came off.
+			activities.CancelCapturedMeetingFor(capture.SeatHoldsActivityTx),
+			activities.CancelMeetingByIDTx,
+		).
+		WithMeetingMover(activities.MoveCapturedMeetingFor(capture.SeatHoldsActivityTx)).
+		WithCalendarInvitations(resolveCapturedInvitation).
 		// Writing a connector's own reading of a message over a row an importer
 		// ASSERTED. From the module that owns `activity`, for the reason every
 		// seam above travels this way.
@@ -325,6 +373,10 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 			activities.ResolveBindableIdentityProving(capture.ProvedUnambiguouslyTx),
 			activities.ClaimIdentity,
 		).
+		// One conversation under one thread key, however a mail program
+		// shortened the References chain and whichever door filed each
+		// message (threadmerge.go).
+		WithThreadJoin(threadJoiner()).
 		// The 24-hour trace's payload posture. It rides the Sink because the
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.

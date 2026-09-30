@@ -59,6 +59,7 @@ function Record() {
   const details = usePageAside();
   return (
     <RecordView
+      identity="r-1"
       name="Brandt Automotive GmbH"
       zone="UTC"
       tabs={
@@ -74,7 +75,7 @@ function Record() {
       asideOpen={details.open}
     >
       <Panel title={en["co.commercial.title"]}>
-        <PanelBody>{en["co.work.noDeals"]}</PanelBody>
+        <PanelBody>{en["co.deals.empty"]}</PanelBody>
       </Panel>
     </RecordView>
   );
@@ -85,6 +86,7 @@ function Record() {
 function PlainRecord() {
   return (
     <RecordView
+      identity="r-1"
       name="Brandt Automotive GmbH"
       zone="UTC"
       tabs={
@@ -98,7 +100,7 @@ function PlainRecord() {
       }
     >
       <Panel title={en["co.commercial.title"]}>
-        <PanelBody>{en["co.work.noDeals"]}</PanelBody>
+        <PanelBody>{en["co.deals.empty"]}</PanelBody>
       </Panel>
     </RecordView>
   );
@@ -166,7 +168,7 @@ function ControlledQueue() {
         <PageAsideToggle
           controlled={{
             open,
-            labels: { show: "Show work queue", hide: "Hide work queue" },
+            labels: { show: "Show Worklist", hide: "Hide Worklist" },
             onToggle: () => setOpen(!open),
           }}
         />
@@ -178,11 +180,11 @@ export const WorkQueueControl: Story = {
   render: () => <ControlledQueue />,
   play: async ({ canvasElement }) => {
     const toggle = within(canvasElement).getByRole("button", {
-      name: "Show work queue",
+      name: "Show Worklist",
     });
     await userEvent.click(toggle);
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
-    await expect(toggle).toHaveAccessibleName("Hide work queue");
+    await expect(toggle).toHaveAccessibleName("Hide Worklist");
   },
 };
 

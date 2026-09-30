@@ -13,7 +13,6 @@ package compose
 // the floor that makes a missing logo invisible instead of broken.
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -311,14 +310,17 @@ func (w *siteDeepReadWorker) resolveLogo(ctx context.Context, args SiteDeepReadA
 // over at all.
 func (w *siteDeepReadWorker) storeResolvedLogo(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, logo resolvedLogo) string {
 	wsID := ids.From[ids.WorkspaceKind](args.Workspace)
-	key := siteReadLogoKey(wsID, args.SiteReadID)
+	base := siteReadLogoKey(wsID, args.SiteReadID)
 	if claim.CompanyID != nil {
-		key = companyLogoKey(wsID, ids.From[ids.CompanyKind](*claim.CompanyID))
+		base = companyLogoKey(wsID, ids.From[ids.CompanyKind](*claim.CompanyID))
 	}
-	if err := w.blob.Put(ctx, key, bytes.NewReader(logo.PNG), int64(len(logo.PNG)), imagenorm.ContentType); err != nil {
+	key, err := contacts.PutLogo(ctx, w.blob, base, logo.PNG)
+	if err != nil {
 		// A failed Put can still have left a partial object, and no row names
 		// this key, so collecting it is unambiguously safe.
-		w.reclaimLogoObject(ctx, args.SiteReadID, &key)
+		if key != "" {
+			w.reclaimLogoObject(ctx, args.SiteReadID, &key)
+		}
 		w.log.WarnContext(ctx, "storing the resolved logo failed",
 			"read", args.SiteReadID.String(), "source", logo.SourceURL, "err", err)
 		return ""

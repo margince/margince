@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { previewMediaType } from "../design-system/filechip";
 import { useFilePreview } from "../design-system/filepreview";
 import { useT } from "../i18n";
@@ -16,7 +17,7 @@ import {
   retireOnRefusal,
   SessionRefusedError,
 } from "./buyerroomsession";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { QueryStates, throwProblem } from "./common";
 import { DOCUMENT_GROUPS } from "./dealroomdocuments";
 import { type BoardDocument, DocumentBoard } from "./dealroomthreads";
 import { downloadBytes } from "./download";
@@ -122,9 +123,7 @@ function BuyerDocumentVerbs({
         <Download aria-hidden />
         {t("buyer.docs.downloadShort")}
       </Button>
-      {download.isError ? (
-        <p className="t-danger">{problemMessageOf(download.error, t)}</p>
-      ) : null}
+      <ErrorLine error={download.error} />
     </div>
   );
 }

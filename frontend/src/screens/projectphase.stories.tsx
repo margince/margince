@@ -31,7 +31,7 @@ function phase(children: ReactNode) {
 }
 
 const meta: Meta<typeof PhaseStepper> = {
-  title: "Records/Project/Phase",
+  title: "Records/Project 360/Phase",
   component: PhaseStepper,
   parameters: { layout: "padded" },
 };

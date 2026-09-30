@@ -75,6 +75,9 @@ type Props = {
   maskedFields?: readonly string[];
   renderValues?: Readonly<Record<string, ReactNode>>;
   links?: Readonly<Record<string, { href: string; label: string }>>;
+  // A provenance mark per field, drawn BESIDE a resting scalar value: the value
+  // is the inline-edit button, and a mark nested in it would be a second one.
+  marks?: Readonly<Record<string, ReactNode>>;
   readOnlyFields?: Readonly<Record<string, string>>;
   save: RecordFieldSave;
   resolveExisting?: (code: string, id: string) => Route;
@@ -249,6 +252,7 @@ function RecordField({
       field={field}
       valueRef={target}
       link={props.links?.[field.key]}
+      mark={props.marks?.[field.key]}
       label={label}
       values={values}
       canEdit={canEdit}
@@ -305,6 +309,7 @@ function RecordScalarField({
   field,
   valueRef,
   link,
+  mark,
   label,
   values,
   canEdit,
@@ -317,6 +322,7 @@ function RecordScalarField({
   field: CreateField;
   valueRef: ReturnType<typeof useDetailsFieldTarget>;
   link?: { href: string; label: string };
+  mark?: ReactNode;
   label: string;
   values: Record<string, string>;
   canEdit: boolean;
@@ -371,6 +377,7 @@ function RecordScalarField({
       {link && !editing && (
         <OffsiteLink href={link.href}>{link.label}</OffsiteLink>
       )}
+      {!editing && mark}
     </FieldRow>
   );
 }
@@ -437,7 +444,7 @@ function RecordFieldForm({
           else onSubmit(submitted, submittedRows);
         }}
         onClose={onClose}
-        submitLabelKey="record.save"
+        intent="save"
       />
     </div>
   );

@@ -39,11 +39,12 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -102,14 +103,13 @@ var (
 func TestOneAnswerToWhichAddressAContactIsKnownBy(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
 	var ordered, unfiltered []string
 	judged := 0
 	for _, path := range handWrittenGoSources(t) {
 		if at := filepath.ToSlash(path); at == reachableOrderOwner || at == reachableOrderProbes {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, err := gatekit.ParseFile(path, parser.ParseComments)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

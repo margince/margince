@@ -101,10 +101,9 @@ func TestMoneyConvertsToTheBaseCurrencyInOnePlace(t *testing.T) {
 	// The WHOLE tree, walked directly rather than through a Scope: a second
 	// conversion is only interesting where nobody thought to look, and the
 	// roots a gate names are exactly where it did.
-	fset := token.NewFileSet()
 	for _, path := range handWrittenGoSources(t) {
 		where := filepath.ToSlash(path)
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -331,7 +330,7 @@ func TestTheDetectorSeesEachShapeAConversionIsWrittenIn(t *testing.T) {
 	} {
 		t.Run(probe.what, func(t *testing.T) {
 			t.Parallel()
-			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", probe.src, parser.ParseComments)
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", probe.src, parser.ParseComments)
 			if err != nil {
 				t.Fatalf("parsing the probe: %v", err)
 			}

@@ -59,10 +59,12 @@ function rooms(list: readonly DealRoom[], cut = false): RouteMap {
   };
 }
 
+const ROOM_GRANTS: GrantSpec = { deal_room: ["read", "update"] };
+
 function card(
   routes: RouteMap,
   seat: { roles?: string[]; seat?: "full" | "read" } = {},
-  allow: GrantSpec = { deal_room: ["read", "update"] },
+  allow: GrantSpec = ROOM_GRANTS,
 ) {
   return () => {
     stubWithSession(routes, allow, seat);
@@ -75,7 +77,7 @@ function card(
 }
 
 const meta: Meta<typeof ContactDealRooms> = {
-  title: "Records/Contact record/Deal rooms",
+  title: "Records/Contact 360/Deal rooms",
   component: ContactDealRooms,
   parameters: { layout: "padded" },
 };

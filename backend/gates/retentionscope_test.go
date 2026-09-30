@@ -7,12 +7,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // retentionScopeBuilder is the fixture whose reach these gates bound,
@@ -48,7 +48,7 @@ const (
 
 func TestRetentionPassCtxOnlyDrivesTheRetentionPass(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	references := 0
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -57,7 +57,7 @@ func TestRetentionPassCtxOnlyDrivesTheRetentionPass(t *testing.T) {
 		if d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return nil
 		}
-		file, perr := parser.ParseFile(fset, path, nil, 0)
+		file, perr := gatekit.ParseFile(path, 0)
 		if perr != nil {
 			return perr
 		}
@@ -122,7 +122,7 @@ func TestRetentionPassCtxOnlyDrivesTheRetentionPass(t *testing.T) {
 // retention engine.
 func TestTheRetentionScopeSinkIsTheOneTheGateMeans(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	var found []string
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -131,7 +131,7 @@ func TestTheRetentionScopeSinkIsTheOneTheGateMeans(t *testing.T) {
 		if d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return nil
 		}
-		file, perr := parser.ParseFile(fset, path, nil, 0)
+		file, perr := gatekit.ParseFile(path, 0)
 		if perr != nil {
 			return perr
 		}

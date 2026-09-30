@@ -13,6 +13,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -21,7 +22,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Wordmark } from "./auth";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 
 // The buyer's page around its documents: the ground and the product's mark,
 // the screens a dead or lapsed link lands on, the hero the seller wrote, and
@@ -43,17 +44,17 @@ export function BuyerFrame({
 
 // The one thing on the buyer's page that is ours rather than the seller's:
 // the product's mark, closing the column, saying what is serving the room.
-function PoweredBy() {
+export function PoweredBy({
+  className = "buyer-powered",
+  markClassName = "buyer-powered-mark",
+}: Readonly<{ className?: string; markClassName?: string }>) {
   const t = useT();
   return (
-    <span className="buyer-powered">
+    <span className={className}>
       <span className="t-caption" aria-hidden>
         {t("buyer.poweredBy")}
       </span>
-      <Wordmark
-        alt={t("buyer.poweredByMargince")}
-        className="buyer-powered-mark"
-      />
+      <Wordmark alt={t("buyer.poweredByMargince")} className={markClassName} />
     </span>
   );
 }
@@ -126,9 +127,7 @@ export function LinkRequest() {
         <Mail aria-hidden />
         {t("buyer.requestLink")}
       </Button>
-      {request.isError ? (
-        <p className="t-danger">{problemMessageOf(request.error, t)}</p>
-      ) : null}
+      <ErrorLine error={request.error} />
     </form>
   );
 }
@@ -213,7 +212,10 @@ export function ContactCard({
     <Panel>
       <PanelBody>
         <div className="buyer-contact">
-          {stewardName ? <Avatar name={stewardName} size="md" /> : null}
+          {/* A buyer is sent no seat ids, so the steward's name is the key. */}
+          {stewardName ? (
+            <Avatar name={stewardName} identity={stewardName} size="md" />
+          ) : null}
           <div className="buyer-contact-id">
             <Eyebrow as="span">{t("buyer.contactEyebrow")}</Eyebrow>
             {stewardName ? <p className="t-h3">{stewardName}</p> : null}

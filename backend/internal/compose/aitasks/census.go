@@ -363,6 +363,24 @@ func ScopeOf(f CaseFactory) string {
 	return f.Site().CertifiedScope()
 }
 
+// CheckerSpecCase is the declaration a case makes when the answer its
+// scenarios expect is its checker's specification rather than a reading of a
+// correct reply: the phrases a draft must not use, a stylometric floor, a token
+// saying a draft was written at all. A grader handed one as the reference reads
+// a list of banned phrases as the answer to aim for. A case that declares
+// nothing expects a reference reading.
+type CheckerSpecCase interface {
+	CaseFactory
+	ExpectsCheckerSpec() bool
+}
+
+// ExpectsReferenceAnswer reports whether a grader may be shown the scenario's
+// expected answer as the reading a correct reply gives.
+func ExpectsReferenceAnswer(f CaseFactory) bool {
+	spec, declared := f.(CheckerSpecCase)
+	return !declared || !spec.ExpectsCheckerSpec()
+}
+
 // Scopes reports the certified scope of every bound case, keyed by site. A
 // reader that has only the census — the readiness report, before any record
 // exists — needs it to say what the MOST a run could cover is, and the site

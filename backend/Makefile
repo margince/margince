@@ -102,9 +102,15 @@ GOWORK_ROOT := GOWORK=$(abspath ../go.work)
 # two cannot drift apart.
 UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
 
+# TEST_EXEC=<wrapper> runs every cached test binary through a `go test -exec`
+# wrapper, uncached. cache-warm sets it to scripts/testlog-exec.sh, which logs
+# what each package read, and backend/tools/check-test-inputs judges the logs:
+# the census over the same packages the cached pass replays.
+TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
+
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc help check build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
+.PHONY: perfdoc help check build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -137,7 +143,7 @@ check: ## The merge gate: everything a PR must pass
 	$(MAKE) build
 	@bash ../scripts/phase-timer.sh stop
 	@bash ../scripts/phase-timer.sh start "backend: vet/lint/arch-lint/test/test-extensions (-j4)"
-	$(MAKE) -j4 vet lint arch-lint test test-extensions
+	$(MAKE) -j4 test lint vet arch-lint test-extensions
 	@bash ../scripts/phase-timer.sh stop
 	@bash ../scripts/phase-timer.sh start "backend: contract drift"
 	$(MAKE) drift
@@ -171,7 +177,7 @@ test-extensions: composition ## Every enabled extension's own test lane (each un
 			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test -coverprofile="$$tmp" -coverpkg=./... ./...); \
 			if [ -s "$$out" ]; then tail -n +2 "$$tmp" >> "$$out"; else cp "$$tmp" "$$out"; fi; \
 		else \
-			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test ./...); \
+			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) ./...); \
 		fi; \
 	done; \
 	[ "$$found" = "1" ] || echo "test-extensions: no enabled Go extensions"
@@ -206,7 +212,12 @@ vet: composition ## Run go vet over every package, untagged (composed workspace)
 	# is excluded there and read here and nowhere else.
 	$(GOWORK_COMPOSED) $(GO) vet ./...
 
-test: composition ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached
+# The two passes are separate targets so `-j4` runs them side by side: the
+# uncached gates package is the longest single leg of the gate, and queued
+# behind the cached pass it put that pass's whole wall time on the critical path.
+test: test-uncached test-cached ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached
+
+test-cached: composition
 	# ./... covers UNCACHED_TEST_PKGS too, and the result it computes for them
 	# is thrown away by the uncached pass seconds later. That wasted pass was
 	# the single biggest line in the gate: 316 s of a 648 s check-backend, all
@@ -231,11 +242,13 @@ test: composition ## Unit tests — every package exactly once, UNCACHED_TEST_PK
 	    exit 1; \
 	  fi; \
 	  echo "go test: $$(printf '%s\n' "$$cached" | wc -l | tr -d ' ') cached packages + $$want uncached"; \
-	  $(GOWORK_COMPOSED) $(GO) test $$cached
+	  $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $$cached
 	# The tool chain is its own module, so ./... above never reaches it —
 	# its tests (generator determinism, scaffold behavior) run here or
 	# nowhere.
-	$(GOWORK_COMPOSED) $(GO) test ./tools/...
+	$(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) ./tools/...
+
+test-uncached: composition
 	# Uncached, for the reason UNCACHED_TEST_PKGS is declared: their subjects
 	# are files outside the package, so a green here can otherwise be replayed
 	# over a tree that has since changed. Verified once from the other end —
@@ -271,16 +284,29 @@ e2e-siteread: composition ## Deep-read quality floor vs the real gradion.com (pa
 # else's, and the record names the model it measured.
 #
 # JUDGE is a SECOND model on purpose: one grading itself is certified by
-# construction, so the run refuses the two being equal before paying for a call.
-# BASE_URL carries a broker host — openai_compatible fails closed without one —
-# and a native vendor leaves it empty.
+# construction. ONE judge grades every task of a run — a judge swap flips
+# verdicts on the same candidate — and a task whose candidate is the judge is
+# refused before the first paid call. The default is claude-sonnet-4-6 through
+# `claude -p` on a Claude Code subscription (CLAUDE_CODE_OAUTH_TOKEN), which
+# costs nothing per run; a run certifying a Claude candidate names another judge.
+# The defaults sit on the exported names, so an operator's environment wins;
+# JUDGE* default to those and override both, and `?=` keeps an explicit empty one
+# empty. An openai_compatible judge fails closed without a broker host: it gets
+# the OpenRouter host only when neither BASE_URL nor MARGINCE_AICERT_BASE_URL is
+# set, and otherwise the lane hands it the candidate's broker. A native vendor
+# judge, and a claude_cli one (the CLI dials its own host), leaves it empty.
+AICERT_DEFAULT_JUDGE           := claude_cli:claude-sonnet-4-6
 MARGINCE_AICERT_ROUTING        ?=
 MARGINCE_AICERT_MODEL          ?=
 MARGINCE_AICERT_BASE_URL       ?=
-MARGINCE_AICERT_JUDGE_MODEL    ?=
-MARGINCE_AICERT_JUDGE_BASE_URL ?=
-MARGINCE_AICERT_PROFILE        ?= eu_hosted
+MARGINCE_AICERT_JUDGE_MODEL    ?= $(AICERT_DEFAULT_JUDGE)
+MARGINCE_AICERT_JUDGE_BASE_URL ?= $(if $(filter openai_compatible:%,$(JUDGE)),$(if $(BASE_URL)$(MARGINCE_AICERT_BASE_URL),,https://openrouter.ai/api))
+JUDGE                          ?= $(MARGINCE_AICERT_JUDGE_MODEL)
+JUDGE_BASE_URL                 ?= $(MARGINCE_AICERT_JUDGE_BASE_URL)
+MARGINCE_AICERT_PROFILE        ?= cloud_frontier
 MARGINCE_AICERT_UPSTREAM       ?=
+MARGINCE_AICERT_JUDGE_UPSTREAM ?=
+JUDGE_UPSTREAM                 ?= $(MARGINCE_AICERT_JUDGE_UPSTREAM)
 
 # TRACE names a directory for the payload trace — every candidate and judge
 # call's post-stripper request+response (the ai_call_payload shape), dumped to
@@ -328,19 +354,25 @@ AICERT_TIMEOUT ?= 90m
 # the profile is the FILE's own and PROFILE= is ignored, because the profile is
 # part of a record's identity and is enforced against the provider.
 #
-# JUDGE= stays required and is NEVER resolved from the routing. cert_judge is
+# JUDGE= is NEVER resolved from the routing. cert_judge is
 # itself a task and leads at premium, so a config binding claude-haiku-4.5 there
 # makes the grader collide with every premium-led candidate — the run checks that
 # for every resolved task up front rather than failing mid-corpus after paying.
-e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. JUDGE=prov:model always required. BYOK key auto-loaded from .env.local. TASK=x RUNS=3 BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' PROFILE=eu_hosted (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
+#
+# Cost ceiling: the judge grades a run once, again within 10 points of a band or
+# anywhere below the floor plus 10, and a third time when those two differ by more
+# than 5 — about 1.4 calls a run, more on a model that scores low. A
+# borderline scenario extends from 3 runs to at most 9, so one scenario costs at
+# most 9 candidate and 27 judge calls; a settled one 3 runs and about 4.
+e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-4-6 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
 	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \
 	  MARGINCE_AICERT_BASE_URL=$(if $(BASE_URL),$(BASE_URL),$(MARGINCE_AICERT_BASE_URL)) \
-	  MARGINCE_AICERT_JUDGE_MODEL=$(if $(JUDGE),$(JUDGE),$(MARGINCE_AICERT_JUDGE_MODEL)) \
-	  MARGINCE_AICERT_JUDGE_BASE_URL=$(if $(JUDGE_BASE_URL),$(JUDGE_BASE_URL),$(MARGINCE_AICERT_JUDGE_BASE_URL)) \
+	  MARGINCE_AICERT_JUDGE_MODEL=$(JUDGE) MARGINCE_AICERT_JUDGE_BASE_URL=$(JUDGE_BASE_URL) \
 	  MARGINCE_AICERT_PROFILE=$(if $(PROFILE),$(PROFILE),$(MARGINCE_AICERT_PROFILE)) \
 	  MARGINCE_AICERT_UPSTREAM='$(if $(UPSTREAM),$(UPSTREAM),$(MARGINCE_AICERT_UPSTREAM))' \
+	  MARGINCE_AICERT_JUDGE_UPSTREAM='$(JUDGE_UPSTREAM)' \
 	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" \
 	  $(GOWORK_COMPOSED) $(GO) test -tags e2e_llm ./internal/compose/aicert/ -run TestE2ECertify -v -count=1 -timeout $(AICERT_TIMEOUT)
 
@@ -361,6 +393,32 @@ e2e-ai-report: ## Print the certification readiness report — every shipped sit
 ai-probe: composition ## Probe one AI task site against real input (free except `run`, which calls a model). BYOK key auto-loaded from .env.local. ARGS='list' | ARGS='scaffold <task>/<variant>' | ARGS='fetch <url>' | ARGS='run --site <task>/<variant> --fixture f.json --model provider:model'
 	$(LOAD_ENV_LOCAL) $(GOWORK_COMPOSED) $(GO) run ./cmd/worker aitask $(ARGS) \
 	  --corpus $(CURDIR)/internal/compose/aicert/corpus --work-dir $(CURDIR)/../.tmp/aitask
+
+# ai-eval answers the question ai-probe cannot: not "how does the model handle
+# these passages" but "which passages does retrieval hand it in the first place".
+# It ranks the handbook this binary ships — the production chunker at its real
+# width, a real embed lane, and the same floor and limit the SQL path uses — and
+# writes the fixture `ai-probe ARGS='run …'` then grades. That pairing is the
+# point: a scenario whose passages were typed by hand grades the model on input
+# production never sends.
+#
+# It needs a model because ranking a question against a corpus embedded by a
+# different binding measures nothing; it needs no database, because the corpus is
+# in the binary. Vectors are cached under .tmp/aitask by content hash, so the
+# second run over an unchanged handbook embeds the question and nothing else.
+# $$AIEVAL_Q rather than $(Q). make substitutes its own variables into the recipe
+# before any shell sees it, so a question carrying an apostrophe — "what's a won
+# deal", which is how anyone asks it — would close the quote and leave the shell
+# parsing the rest of the sentence as a command. migrate-create takes this route
+# for the same reason.
+ai-eval: export AIEVAL_Q := $(Q)
+ai-eval: export AIEVAL_MODEL := $(MODEL)
+ai-eval: export AIEVAL_PAGE := $(PAGE)
+ai-eval: composition ## Rank the shipped handbook for one question and capture what a corpus_ask run would be handed (embeds; cached after the first run). Q='how can I create a project' MODEL=provider:model PAGE=records.md ARGS='--floor 0.3'
+	$(LOAD_ENV_LOCAL) $(GOWORK_COMPOSED) $(GO) run ./cmd/worker aitask retrieve \
+	  --question "$$AIEVAL_Q" --model "$$AIEVAL_MODEL" \
+	  $(if $(PAGE),--page "$$AIEVAL_PAGE",) $(ARGS) \
+	  --work-dir $(CURDIR)/../.tmp/aitask
 
 # Composed for the same reason as migrate: build_template shells out to
 # cmd/migrate, and a template built from the vanilla stub carries no
@@ -599,6 +657,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-jobs -contract api/jobs.yaml \
 		-out-specs internal/platform/jobs/specs_gen.go \
 		-out-kinds internal/compose/jobkinds_gen.go
+	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go
 
 drift: gen perfdoc ## Fail when a committed generated file drifted from what its generator produces
 	# gen regenerates the committed per-unit manifests too (via composition);
@@ -661,7 +720,15 @@ gen-workflow: ## Scaffold a new workflow.Handler: make gen-workflow NAME=flag_id
 # upgrade could change findings between two runs of the same commit).
 # govulncheck's module is golang.org/x/vuln; the binary installs from the
 # cmd/ subpath — resolve-gate-tool takes both.
-GOVULNCHECK_VERSION ?= v1.1.4
+#
+# The pin also tracks the TOOLCHAIN, not only the tool: govulncheck builds SSA
+# over the standard library it scans against, so a release whose x/tools
+# predates a language change panics on the stdlib source rather than reporting
+# anything. v1.1.4 did exactly that on go1.27 — `unexpected expr:
+# *ast.KeyValueExpr`, and only on linux, because the file carrying the new
+# syntax is linux-only and a darwin run never parsed it. A toolchain bump has to
+# re-check this pin.
+GOVULNCHECK_VERSION ?= v1.7.0
 GOVULNCHECK ?= $(call resolve-gate-tool,govulncheck,golang\.org/x/vuln,$(GOVULNCHECK_VERSION),golang.org/x/vuln/cmd/govulncheck)
 vuln: ## Scan dependencies for known vulnerabilities (govulncheck)
 	$(GOVULNCHECK) ./...
@@ -675,7 +742,7 @@ vuln: ## Scan dependencies for known vulnerabilities (govulncheck)
 # `go run`, so those installs just pre-warm the module cache (and give the
 # binaries a PATH home for direct use). Installs are unconditional: a cached
 # binary at a different version must be overwritten, or the pin doesn't bind.
-GOLANGCI_LINT_VERSION ?= v2.12.2
+GOLANGCI_LINT_VERSION ?= v2.13.0
 # The contract-breaking gate (scripts/check-contract-breaking.sh) runs oasdiff
 # via pinned `go run`, so this install is a convenience binary for direct use —
 # keep the version identical to the pin in that script; bump both together.

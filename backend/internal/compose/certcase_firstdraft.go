@@ -29,7 +29,7 @@ import (
 const firstDraftSite = "draft_reply/first"
 
 // firstDraftCases serves the message that opens a conversation.
-type firstDraftCases struct{}
+type firstDraftCases struct{ checkerSpecAnswer }
 
 func (firstDraftCases) Site() aitasks.Site {
 	return aitasks.Site{

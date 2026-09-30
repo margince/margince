@@ -261,7 +261,7 @@ var (
 		"fp16", "bf16", "fp32", "unknown",
 	}
 	// The effort levels the broker accepts, hardest first.
-	reasoningEfforts = []string{"max", "xhigh", "high", "medium", "low", "minimal", "none"}
+	reasoningEfforts = []string{effortMax, effortXHigh, effortHigh, effortMedium, effortLow, effortMinimal, effortNone}
 )
 
 // Validate refuses a preference the broker would silently ignore.
@@ -334,17 +334,25 @@ func (r *OpenRouterRouting) Validate() error {
 // happens there, and no embedding model is served at fp4-versus-bf16 stakes.
 func (cfg *RoutingConfig) applyUpstreamDefaults() {
 	for tier, binding := range cfg.Tiers {
-		if binding.Routing != nil || !upstreamPreferencesApply(binding) {
-			continue
-		}
-		binding.Routing = DefaultOpenRouterRouting()
+		binding.Routing = UpstreamPreferencesFor(binding)
 		cfg.Tiers[tier] = binding
 	}
 }
 
-// upstreamPreferencesApply reports whether a binding is the broker case that
+// UpstreamPreferencesFor is the upstream preferences a binding is served under:
+// its own declaration, the product default for an undeclared broker binding, and
+// nil for a binding no preference reaches. Exported so the certification lane
+// records what this rule applied rather than a copy of it.
+func UpstreamPreferencesFor(binding ProviderConfig) *OpenRouterRouting {
+	if binding.Routing != nil || !UpstreamPreferencesApply(binding) {
+		return binding.Routing
+	}
+	return DefaultOpenRouterRouting()
+}
+
+// UpstreamPreferencesApply reports whether a binding is the broker case that
 // upstream-selection preferences describe.
-func upstreamPreferencesApply(binding ProviderConfig) bool {
+func UpstreamPreferencesApply(binding ProviderConfig) bool {
 	return binding.Provider == providerOpenAICompatible && IsOpenRouterHost(binding.BaseURL)
 }
 
@@ -371,6 +379,33 @@ func validateUpstreamPreferences(tier string, binding ProviderConfig) error {
 	}
 	if err := binding.Routing.Validate(); err != nil {
 		return fmt.Errorf("%w (tier %s)", err, tier)
+	}
+	return nil
+}
+
+// validateEmbeddingsRouting admits on the embeddings lane only the preferences
+// that say WHICH hosts may read the text: `only`, `ignore` and
+// `allow_fallbacks`. The lane embeds the same text the chat tiers send, so a
+// residency pin that the chat tiers carry and the embeddings lane could not
+// would leave the one lane that sees every document free to leave the region.
+// The rest bound a completion's tail or its thinking, and an embedding is one
+// forward pass with neither — written there, they would be sent and ignored.
+func validateEmbeddingsRouting(binding ProviderConfig) error {
+	r := binding.Routing
+	if r == nil {
+		return nil
+	}
+	if err := validateUpstreamPreferences(string(TierEmbedLane), binding); err != nil {
+		return err
+	}
+	// An allowlist, not a list of what is refused: a preference added to
+	// OpenRouterRouting later is refused here until somebody decides it belongs,
+	// which is what the generated schema's additionalProperties:false says too.
+	rest := *r
+	rest.Only, rest.Ignore, rest.AllowFallbacks = nil, nil, nil
+	if !rest.IsEmpty() {
+		return fmt.Errorf("ai: routing config: the embeddings lane takes only `only`, `ignore` and `allow_fallbacks` — " +
+			"they say which hosts may read the text; the other preferences bound a completion, and an embedding is one forward pass")
 	}
 	return nil
 }

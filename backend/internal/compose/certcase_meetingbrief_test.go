@@ -182,9 +182,17 @@ func TestTheMeetingBriefCaseRefusesScenariosThatMeasureNothing(t *testing.T) {
 			want:     "does not appear in the message it names",
 		},
 		{
+			// The sections prompt carries subjects, never bodies, so a token only
+			// the cited message's body says is one no reply could ground.
+			name:     "a token only a message body says never reaches the sections prompt",
+			fixture:  planFixture,
+			expected: planExpectation,
+			want:     "not in the summary the sections prompt is sent",
+		},
+		{
 			name:     "a fixture of the wrong shape",
 			fixture:  `["not an object"]`,
-			expected: planExpectation,
+			expected: briefExpectation,
 			want:     "not the shape this site takes",
 		},
 		{
@@ -207,11 +215,15 @@ func TestTheMeetingBriefCaseRefusesScenariosThatMeasureNothing(t *testing.T) {
 	}
 }
 
+// briefExpectation names the cited thread by its subject, the one part of it
+// the sections prompt is sent.
+const briefExpectation = `{"cites_label":"wish_list","names_token":"requirements"}`
+
 // A scenario the corpus actually carries must prepare, or the gate beside this
 // one would be refusing every real run.
 func TestTheMeetingBriefCasePreparesARealScenario(t *testing.T) {
 	t.Parallel()
-	prepared, err := meetingBriefCases{}.Prepare(json.RawMessage(planFixture), json.RawMessage(planExpectation))
+	prepared, err := meetingBriefCases{}.Prepare(json.RawMessage(planFixture), json.RawMessage(briefExpectation))
 	if err != nil {
 		t.Fatalf("preparing a scenario the corpus carries: %v", err)
 	}

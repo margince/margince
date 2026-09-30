@@ -30,7 +30,6 @@ import {
   Webhook,
   Wrench,
 } from "lucide-react";
-import { useCan, useHoldsAdminRole } from "../app/capability";
 import { unitsForSecretScope } from "../app/extensions";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../app/nav";
 import type { Route } from "../app/router";
@@ -109,12 +108,6 @@ import { SettingsSearchBox } from "./settingssearchbox";
 // column, the control constrains itself (`.settingrow-measure`, and each
 // surface's own field widths) — that is a property of the control, which knows
 // how wide it wants to be, not of the page, which does not.
-// Exported for the nav suite, which derives its expected label list from THIS
-// register rather than restating it. A restated list is a second source of truth
-// that nothing updates: the copy in the test omitted `license` for as long as
-// that entry existed, so a fully wired fourteenth tab — register, predicate,
-// content, sidebar deep link, two locales — was invisible to every assertion in
-// the file, including the two that claim to check the whole level.
 // The two audience groups the rail renders, in order. Beside the register they
 // group, so a group added to one is visible from the other.
 
@@ -141,12 +134,7 @@ export const SETTINGS_TABS = [
   group: "you" | "admin";
 }[];
 
-// Exported alongside the register: a caller that needs the label for an entry
-// builds the key from this, and `settings.tab.${SettingsTabId}` is then a
-// literal union TypeScript can check against MessageKey — no assertion, so a
-// typo is a compile error rather than a lookup that silently falls back to the
-// raw key and lets a test validate a label that does not exist.
-export type SettingsTabId = (typeof SETTINGS_TABS)[number]["id"];
+type SettingsTabId = (typeof SETTINGS_TABS)[number]["id"];
 
 // Exported for the placement gate below the register: a settings card that
 // configures the INSTALLATION has to sit on an admin entry, and the only way to
@@ -157,216 +145,6 @@ export const ADMIN_SEGMENT = "admin";
 // The route this screen answers, named once: the shell mounts the settings level
 // by matching it, and the section published below declares it.
 export const SETTINGS_SCREEN = "settings";
-
-type AdminTabId = Extract<
-  (typeof SETTINGS_TABS)[number],
-  { group: "admin" }
->["id"];
-
-// Which Company entries this principal can use, one answer per entry, each
-// asking for the grant the cards on it ask for. The nav then describes the seat
-// instead of the role name it was assigned: a principal granted product writes by
-// an edited role reaches the data model, and nobody is offered a page whose every
-// card would refuse them.
-//
-// TWO GATES, and they answer different questions.
-//
-// The SEAT decides whether this half of settings exists for the reader at all:
-// installation posture is an operator's work, so `admin` and `ops` reach it and
-// nobody else does. That is a product decision about who configures an
-// installation, not a claim about what the server would answer — and it is worth
-// being precise about the difference, because the server has NOT changed: `GET
-// /users`, the automations read and the consent registry still answer 200 to
-// every authenticated seat. A REST or MCP caller holding a rep's passport reads
-// them exactly as before. What this gate scopes is the product's own navigation.
-//
-// The GRANT then decides whether a page an operator may open has anything in it,
-// and OPENING AN ENTRY IS A READ — so every predicate below asks for a READ
-// grant. They asked for write grants once, because each was written to answer
-// "can you USE this", and the cost was measured against the live API: a
-// read-only seat was hidden from eight of eleven entries the server answers 200
-// on, including three surfaces (products, offer templates, custom fields) that
-// were ungated routes of their own before the merge. Within the section that
-// lesson still holds in full: the entry opens if the principal may READ any part
-// of it, and the write affordances inside say for themselves who may use them.
-//
-// A read grant is not a formality even where every seeded role holds it. The
-// predicate asks the live grant, so a role edited to drop `custom_field:read`
-// loses the Data model row — which `true` could never express, and which is the
-// difference between a predicate that happens to be satisfied and no predicate.
-//
-// A merged entry takes the UNION of what its parts asked for, never the
-// intersection: an entry that opened before this change must still open, or a
-// restructure quietly becomes a permission change. Where a part is narrower than
-// its page, that part gates itself inside — and a part withheld by a PERMISSION
-// says so rather than vanishing (design-system/README.md).
-//
-// The licensing seat is deliberately not folded in (see capability.ts): a read
-// seat still reads the pages behind these entries.
-//
-// EVERY predicate is evaluated here, unconditionally, before anything composes
-// them. The number of hooks a render runs must not depend on which grants came
-// back — so the `||` sits on the results, never around the calls, and no hook
-// may move into the filter over the tab list.
-/**
- * Which Company entries this principal may open.
- *
- * Exported because the command palette must answer the SAME question: it offers a
- * shortcut to two of these entries, and a shortcut that lands on the Account
- * fallback is a command that lied. One predicate map, two readers.
- *
- * Both readers now resolve one cached snapshot, so they cannot disagree about
- * which pages exist. They could before: the rail probed the company-context
- * rollout over the network and the palette deliberately did not, which made
- * General reachable from one and absent from the other for a caller whose only
- * readable part of that page was the company profile.
- */
-export function useSettingsEntryVisibility(): Readonly<
-  Record<AdminTabId, boolean>
-> {
-  // Read off /me rather than probed. The company-context capabilities endpoint
-  // is a screen's own hook, and importing it here dragged twenty-two imports
-  // into a module whose whole reason for existing is to stay light. The same
-  // fact rides /me as settings_availability.company_context, computed from the
-  // rollout the endpoints themselves gate on.
-  //
-  // It also removes the reason probeCompanyFlag existed. The palette passed
-  // false to avoid spending a request per session on a question it never asked;
-  // there is no request now, so both callers read one cached snapshot and can no
-  // longer disagree about which pages exist.
-  const availability = useMe().data?.settings_availability;
-  const companyContext = availability?.company_context ?? false;
-  const pipeline = useCan("pipeline", "read");
-  const product = useCan("product", "read");
-  const offerTemplate = useCan("offer_template", "read");
-  const knowledgeCorpus = useCan("knowledge_corpus", "read");
-  const customField = useCan("custom_field", "read");
-  const tag = useCan("tag", "read");
-  const fxRate = useCan("fx_rate", "read");
-  const aiModelRate = useCan("ai_model_rate", "read");
-  const embeddingReindex = useCan("embedding_reindex", "read");
-  const company = useCan("company", "read");
-  const installation = useCan("installation_settings", "read");
-  const captureSettings = useCan("capture_settings", "read");
-  const licenseRead = useCan("license", "read");
-  const automation = useCan("automation", "read");
-  const webhook = useCan("webhook_subscription", "read");
-  // The consent registry's server gate, which is not a role and not "any member":
-  // consent/store.go's ListPurposes calls auth.Require(ctx, "contact", read).
-  const contact = useCan("contact", "read");
-  // The one predicate below that is a ROLE rather than a grant. `GET /admin/reset-data`
-  // and the job-health read are gated on the literal admin role server-side and no
-  // RBAC object describes them — a `role` object would encode a constant, and an
-  // admin who revoked their own grant on it could never restore it (capability.ts).
-  // Everything else above is a `read`, because opening a page is reading it.
-  const isAdmin = useHoldsAdminRole();
-  // Each entry's own read predicate, and the whole answer. There is no second
-  // gate above these: a reader reaches an entry when they hold what it asks
-  // for, which is the same question the SERVER answers on every route behind
-  // it. The seat check that used to sit here returned false for every one of
-  // these entries unless the reader held `admin` or `ops`, so a seat holding
-  // `pipeline:read` — which every seeded role holds — was shown nothing while
-  // the API answered it 200. That is the client disagreeing with the authority,
-  // and the disagreement was invisible: the page was absent rather than
-  // refused. What an entry offers once opened is still each card's own
-  // question, and the cards ask their own writes.
-  const granted = {
-    // The company, its profile and its currency table are one entry now, so
-    // the predicate is the union of what they each asked for. Each is gated on
-    // the SAME live grant the card inside asks for rather than on a role name:
-    // deriving it from admin/ops would disagree with the cards in both
-    // directions — an admin whose installation_settings grant was removed would
-    // get a page of disabled fields, and a principal holding the grant under an
-    // edited role could not reach the surface they may use.
-    //
-    // The company profile carries a second condition that is a rollout FLAG
-    // rather than a permission, so its grant ANDs with it: PUT /company is gated
-    // on company writes, and the flag says whether the surface exists on
-    // this installation at all.
-    general: installation || (company && companyContext) || fxRate,
-    // The member roster, the roles on it, and what a role may reach. No RBAC
-    // object describes identity administration and none can — a `role` object
-    // would encode a constant, and an admin who revoked their own grant on it
-    // could never restore it (capability.ts) — so the server gates the VERBS on
-    // the role directly and serves the roster itself to anyone signed in.
-    //
-    // `true` matches that: `GET /users` answers 200 to any authenticated
-    // principal, and "who is on my team" is not an admin's private question.
-    // The same handler decides what the answer CONTAINS — role keys and the
-    // inactive view are an admin's, everyone else gets the active roster the
-    // share and assignee pickers already show them (handlers_roster.go).
-    //
-    // The invite form and every role control below withhold themselves on their
-    // own authority, so a reader without them sees the roster and none of the
-    // controls.
-    users: true,
-    // `GET /extensions` is admin-only server-side, so the entry follows the
-    // role rather than a grant: any reader who is not an admin would open a
-    // page whose only read answers 403.
-    extensions: isAdmin,
-    capture: captureSettings,
-    // The installation's own outside wiring — the shared provider credential
-    // and the outbound subscriptions. The webhook read opens it, and the
-    // provider card carries no grant of its own because the server answers for
-    // it.
-    //
-    // The composed units are the third card, and they open the entry on their
-    // own PRESENCE rather than on a grant: this page is the only place a
-    // workspace-scoped unit is offered at all — it has no rail row and the
-    // palette never carried one — so a role holding no read would lose the
-    // unit itself, not merely the cards above it. Presence is the honest
-    // predicate because the card asks for no grant; the unit's own screen is
-    // what refuses, on the object it declares.
-    integrations: webhook || unitsForSecretScope("workspace").length > 0,
-    // Everything that defines the shape a record takes: the field editor, the
-    // pipeline designer, the product list, the offer templates. Any one of their
-    // reads opens the page; the authoring controls inside each ask for their own
-    // write.
-    // Tags joined this entry, so the union widens: a seat holding `tag:read`
-    // and none of the other three must still find the vocabulary. A merged
-    // entry takes the union of what its parts ask for, never the intersection.
-    "data-model": customField || pipeline || product || offerTemplate || tag,
-    // The automations the installation runs, what it spent, and what it charges
-    // per model. The automations read is the one every seeded role holds, and it
-    // is what keeps this page reachable for manager, rep and read_only — the
-    // server answers their automations read 200, and the editor was a route of
-    // its own before this page absorbed it.
-    ai: automation || aiModelRate,
-    // The consent purpose registry, the retention ladder, the subject-request
-    // queue and the audit trail. `consent_config` is a governed object upstream and
-    // absent from the shipped RBAC vocabulary, so there is no grant NAMED for the
-    // registry — but the server does not gate it on a role either: ListPurposes
-    // demands `contact:read`, so that is the grant to ask for, and asking it is what
-    // keeps this from being `true` standing in for a permission. Every seeded role
-    // holds it, and a role edited to drop it would otherwise reach a page of four
-    // refusals. The three surfaces below the registry are narrower and each says so.
-    privacy: contact,
-    // The document sets a contact can ask questions of, and the files in them.
-    // `knowledge_corpus:read` is the ASK, and the RBAC migration grants it to
-    // every seeded role — so this entry opens for a manager or a rep, and the
-    // card inside shows them the sets with no verbs. That is deliberate and is
-    // the same shape as the automations read on `ai` above: a page that lists
-    // what a reader may ask is not an administrator's page merely because
-    // creating one is.
-    knowledge: knowledgeCorpus,
-    // The operational verbs, and the one entry that genuinely narrows. The reindex
-    // read is admin/ops; job health and the danger zone are admin-ONLY (the server
-    // spells both with RequireAdmin), so an ops seat reaches this page for the
-    // reindex and finds the other two withheld. Nobody below ops has anything to
-    // read here at all. The reindex is an ordinary grant an edited role can hold, so
-    // the entry opens on either and the cards inside decide.
-    // What the license grants and how much of it is used. Admin/ops-only, read
-    // included — the narrowest predicate on the rail beside Maintenance's,
-    // because a seat meter is the installation's commercial standing and a rep
-    // reads their own seat elsewhere (UC-ADMIN-03 F1). A live grant rather than a
-    // role name, like every other entry here: an ops principal whose license read
-    // was removed by an edited role loses the row, which is the difference
-    // between asking the grant and asking who somebody is.
-    license: licenseRead,
-    maintenance: isAdmin || embeddingReindex,
-  } satisfies Readonly<Record<AdminTabId, boolean>>;
-  return granted;
-}
 
 /**
  * Which entry an address names, and whether that address is the current one.
@@ -408,8 +186,8 @@ export function settingsRouteTab(route: Route): {
     // Only an ADMIN entry answers under the admin segment. A personal id here
     // resolves to nothing rather than to its page: the page already has an
     // address, and serving it under a second one puts a spelling in circulation
-    // that nothing mints and nothing rewrites. Unresolved, it falls back like any
-    // other address the register does not answer.
+    // that nothing mints and nothing rewrites. Unresolved, it meets the boundary
+    // like any other address the register does not answer.
     const deep = SETTINGS_TABS.find((candidate) => candidate.id === route.id2);
     return {
       tab: deep?.group === "admin" ? deep.id : undefined,
@@ -434,32 +212,13 @@ export function settingsRouteTab(route: Route): {
  * would eventually not bother.
  *
  * An id no entry answers keeps the shallow shape: it is the address a reader
- * typed, and `useVisibleSettingsTabs` is what decides what it lands on.
+ * typed, and `SettingsScreen` answers it with the boundary rather than a page.
  */
 export function settingsAddress(tab?: string): Route {
   const entry = SETTINGS_TABS.find((candidate) => candidate.id === tab);
   return entry?.group === "admin"
     ? { screen: SETTINGS_SCREEN, id: ADMIN_SEGMENT, id2: entry.id }
     : { screen: SETTINGS_SCREEN, id: tab };
-}
-
-// Which tabs this principal may use, and which of them the route selects. The
-// nav in the sidebar and the content on the page both read this, so the two
-// cannot disagree about what is current — including on the fallback below.
-// Exported for SettingsScreen, which lives beside the cards and still has to
-// resolve which entry an address lands on.
-export function useVisibleSettingsTabs(tab?: string) {
-  const adminTabVisible = useSettingsEntryVisibility();
-  const tabs = SETTINGS_TABS.filter(
-    (entry) => entry.group !== "admin" || adminTabVisible[entry.id],
-  );
-  // Unknown / absent id (or one this principal cannot see) falls back to the
-  // first visible tab — a stale deep-link lands on Account, never a blank
-  // screen. A rep who follows somebody's link to an admin page lands there too,
-  // silently: the section is absent for them, and a page announcing that it
-  // exists but is not theirs would be the one thing an absent section is chosen
-  // to avoid saying.
-  return { tabs, active: tabs.find((entry) => entry.id === tab) ?? tabs[0] };
 }
 
 /**

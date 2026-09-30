@@ -3,6 +3,7 @@ import type { ChangeEvent, ReactNode, RefObject } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { Button, Disclosure, Radio } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { MarginceCoreScene } from "../../design-system/margince-core";
 import { usePrefersReducedMotion } from "../../design-system/motion";
 import { formatNumber } from "../../format/format";
@@ -339,11 +340,7 @@ export function VoiceCollectScene({
             </section>
           )}
 
-          {startError !== null && (
-            <p className="mw-send-error" role="alert">
-              {startError}
-            </p>
-          )}
+          <ErrorLine>{startError}</ErrorLine>
         </div>
         <VoiceDistillPanel manifest={manifest} summary={summary} />
       </div>
@@ -491,10 +488,9 @@ export function VoiceBuildScene({
             progress={progress}
             feed={false}
           />
-          {/* Decorative: the stage checklist beside it and the rail's own log
-              (role="log" in ConversationThread) already carry the build's
-              progress in words, so the crawling digits stay out of the a11y
-              tree instead of being announced on every tick. */}
+          {/* Decorative: the stage checklist beside it already carries the
+              build's progress in words, so the crawling digits stay out of the
+              a11y tree instead of being announced on every tick. */}
           <span className="ob-voice-orb-pct" aria-hidden>
             {formatNumber(Math.round(progress * 100), locale)}
             <small>%</small>

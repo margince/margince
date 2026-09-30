@@ -106,7 +106,7 @@ function part(node: React.ReactNode, routes: RouteMap = RAIL_ROUTES) {
 }
 
 const meta: Meta = {
-  title: "Shell/Home parts",
+  title: "Shell/Home/Parts",
 };
 export default meta;
 type Story = StoryObj;
@@ -299,8 +299,8 @@ export const ReadingsCapped: Story = {
 // edge, one hairline between, and no boxes at all. Two-up it was five 190px
 // cards and 600px of readings before a reader reached the day's own work. The
 // shape belongs to `StatStrip` and keys off the slots declaring
-// `narrow="row"`, so no other strip in the product folds this way —
-// `Design System/StatStrip` has both side by side.
+// `narrow="row"`, which the record strips now declare too —
+// `Components/Text and data display/Stat strip` has both side by side.
 export const ReadingsOnAPhone: Story = {
   globals: { viewport: { value: "phone" } },
   render: part(
@@ -325,6 +325,27 @@ export const ReadingsQuiet: Story = {
       day={readingsDay({ buyer_replies: 0, prospecting: 0 }, [])}
     />,
   ),
+};
+
+/** A day whose calendar, lead and decision sources all refused to answer. */
+function unreadableDay() {
+  const day = readingsDay({ prospecting: 2, review: 0 }, [], [], { urgent: 0 });
+  day.sources_unavailable = [
+    { source: "meeting", reason: "failed", category: "meetings" },
+    { source: "lead_response", reason: "failed", category: "leads" },
+    { source: "decision", reason: "failed", category: "decisions" },
+  ];
+  return day;
+}
+
+// A morning whose sources went missing, and the plate says WHICH. Each slot
+// that could not be counted carries the same figure — "Not counted" — over a
+// reason of its own: the calendar, the lead source, the decision source. Four
+// identical lines would leave a reader nowhere to go and look. The slot with no
+// figure also drops its basis line, because a basis says what a figure was
+// taken over and there was no figure to take.
+export const ReadingsUnreadable: Story = {
+  render: part(<BriefReadingsStrip day={unreadableDay()} />),
 };
 
 // ── The week ahead ──────────────────────────────────────────────────────────
@@ -407,15 +428,15 @@ const TEAM_ROUTES: RouteMap = {
 // A lead's Monday: the headline against the bar it measured, the coverage, the
 // team's landing, and the agenda in the order the conversation should take.
 export const TeamWeekly: Story = {
-  render: part(<TeamWeeklyPanel offered />, TEAM_ROUTES),
+  render: part(<TeamWeeklyPanel reach="every_team" />, TEAM_ROUTES),
 };
 
-// The reader may open the picker and not the week behind it: a row scope that
-// reaches only their own rows. The panel says which absence this is, because a
-// lead refused and a team whose first week has not closed are different facts
-// and the blank space is identical.
+// The reader may open the picker and not the week behind it: the server refused
+// the week. The panel says which absence this is, because a reader refused and
+// a team whose first week has not closed are different facts and the blank
+// space is identical.
 export const TeamWeeklyForbidden: Story = {
-  render: part(<TeamWeeklyPanel offered />, {
+  render: part(<TeamWeeklyPanel reach="every_team" />, {
     ...TEAM_ROUTES,
     "GET /weekly-reviews/team": () =>
       jsonResponse({ title: "Forbidden", code: "forbidden" }, 403),

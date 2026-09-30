@@ -51,11 +51,13 @@ const (
 
 // NewSnapshot is one frozen set of readings and the rows behind it.
 type NewSnapshot struct {
-	Period       Period
-	Scope        Scope
-	Trigger      string
-	BaseCurrency string
-	Readings     Readings
+	PipelineID            *ids.UUID
+	PopulationFingerprint string
+	Period                Period
+	Scope                 Scope
+	Trigger               string
+	BaseCurrency          string
+	Readings              Readings
 	// TakenAt is the instant the readings describe. Passed rather than read
 	// from a clock here so a snapshot and the readings inside it cannot be
 	// stamped microseconds apart, which is what makes a daily arbiter fire on
@@ -88,31 +90,9 @@ func (s *Store) TakeSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot) (id
 		return ids.Nil, err
 	}
 
-	var id ids.UUID
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO forecast_snapshot
-		    (period_start, period_end, scope_kind, scope_id, taken_at, local_day,
-		     trigger, definition_version, base_currency,
-		     won_minor, evidence_minor, best_case_minor, open_minor, weighted_minor,
-		     eligible_count, priced_count, confirmed_date_count, fx_missing_count,
-		     call_id, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-		        $15, $16, $17, $18, $19, $20)
-		RETURNING id`,
-		in.Period.StartDate, in.Period.EndDate, in.Scope.Kind, in.Scope.ID,
-		in.TakenAt,
-		// The local day the snapshot was taken on, in the installation's own
-		// zone — the same conversion every reading goes through. Derived from
-		// TakenAt rather than read from a clock, so the row the daily arbiter
-		// sees is the row this snapshot actually describes.
-		in.Period.LocalDay(in.TakenAt),
-		in.Trigger, DefinitionVersion, in.BaseCurrency,
-		in.Readings.WonMinor, in.Readings.EvidenceMinor, in.Readings.BestCaseMinor,
-		in.Readings.OpenMinor, in.Readings.WeightedMinor,
-		in.Readings.EligibleCount, in.Readings.PricedCount,
-		in.Readings.ConfirmedDateCount, in.Readings.FxMissingCount,
-		in.CallID, capturedBy).Scan(&id); err != nil {
-		return ids.Nil, fmt.Errorf("forecasting: writing the snapshot: %w", err)
+	id, err := s.insertSnapshot(ctx, tx, in, capturedBy)
+	if err != nil {
+		return ids.Nil, err
 	}
 
 	if err := s.writeContributions(ctx, tx, id, in.Readings.Contributions, capturedBy); err != nil {

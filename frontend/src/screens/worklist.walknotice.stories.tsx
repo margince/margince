@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryProviders } from "./story-utils";
-import { WalkNotice } from "./worklist.walknotice";
+import { LoadMoreOfTheDay, WalkNotice } from "./worklist.walknotice";
 
 // What has happened to a walk since the reader started it. An OFFER, not an
 // error: the day on screen is still correct, it is simply no longer complete,
@@ -65,6 +65,16 @@ export const ArrivedAndLeft: Story = {
         walk={{ ...walk({ new_available: 3 }), changed_since_snapshot: 2 }}
         onRefresh={() => undefined}
       />
+    </StoryProviders>
+  ),
+};
+
+/** The way ON through the walk: one control for the whole day, with the caption
+ *  naming both panels its rows may land in, and the line a refused page adds. */
+export const LoadMoreRefused: Story = {
+  render: () => (
+    <StoryProviders>
+      <LoadMoreOfTheDay pending={false} failed onMore={() => undefined} />
     </StoryProviders>
   ),
 };

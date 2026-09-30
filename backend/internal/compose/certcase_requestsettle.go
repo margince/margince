@@ -55,7 +55,14 @@ type settleFixtureMessage struct {
 type settleExpectation struct {
 	Verdict string `json:"verdict"`
 	// RemainingNames is a phrase the still_owed answer has to contain, lowered
-	// before comparison. Empty asserts nothing about the wording — the verdict
+	// before comparison.
+	//
+	// Several renderings may be separated by "|", and any one satisfies it: the
+	// thing owed has more than one honest name, and a single token pinned a
+	// language with it — this phrase is our own note to ourselves, and the
+	// models write it in the thread's language as readily as the installation's.
+	//
+	// Empty asserts nothing about the wording — the verdict
 	// alone is the claim — which is what a settled or unsure case wants.
 	RemainingNames string `json:"remaining_names,omitempty"`
 }
@@ -265,11 +272,26 @@ func (c *requestSettleCase) faults(payload settlePayload) []string {
 		if expectation.RemainingNames == "" {
 			continue
 		}
-		if !strings.Contains(strings.ToLower(answer.Remaining), strings.ToLower(expectation.RemainingNames)) {
+		if !remainingNamesIt(answer.Remaining, expectation.RemainingNames) {
 			faults = append(faults, fmt.Sprintf(
 				"conversation %d is owed %q, which does not name %q",
 				i+1, answer.Remaining, expectation.RemainingNames))
 		}
 	}
 	return faults
+}
+
+// remainingNamesIt reports whether the model's remaining phrase names the thing
+// the scenario says is owed, under any of the renderings it accepts.
+//
+// Held by: TestRemainingMayBeNamedInSeveralRenderings (internal/compose/certcase_requestsettle_test.go)
+func remainingNamesIt(remaining, accepted string) bool {
+	lowered := strings.ToLower(remaining)
+	for _, rendering := range strings.Split(accepted, "|") {
+		rendering = strings.TrimSpace(rendering)
+		if rendering != "" && strings.Contains(lowered, strings.ToLower(rendering)) {
+			return true
+		}
+	}
+	return false
 }

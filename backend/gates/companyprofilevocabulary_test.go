@@ -44,13 +44,14 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // theProfileVocabulary is the column whose CHECK this gate treats as the
@@ -175,7 +176,7 @@ func TestTheCompanyProfileVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 // ignored rather than guessed at.
 func stringValuesOfDecl(t *testing.T, file, decl string, known map[string]string) map[string]bool {
 	t.Helper()
-	parsed, err := parser.ParseFile(token.NewFileSet(), filepath.Clean(file), nil, 0)
+	parsed, err := gatekit.ParseFile(filepath.Clean(file), 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", file, err)
 	}
@@ -213,7 +214,7 @@ func stringValuesOfDecl(t *testing.T, file, decl string, known map[string]string
 // identifier used in a mirror resolves to what it stands for.
 func constValuesIn(t *testing.T, file string) map[string]string {
 	t.Helper()
-	parsed, err := parser.ParseFile(token.NewFileSet(), filepath.Clean(file), nil, 0)
+	parsed, err := gatekit.ParseFile(filepath.Clean(file), 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", file, err)
 	}
@@ -379,7 +380,7 @@ var profileFieldEnumRoster = map[string]string{
 // failing it.
 func profileFieldEnums(t *testing.T, file string) map[string]map[string]bool {
 	t.Helper()
-	parsed, err := parser.ParseFile(token.NewFileSet(), filepath.Clean(file), nil, 0)
+	parsed, err := gatekit.ParseFile(filepath.Clean(file), 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", file, err)
 	}

@@ -438,6 +438,17 @@ func taskProbeRouting(modelSpec string, task ai.Task) (ai.RoutingConfig, string,
 	return cfg, "model override " + modelSpec, nil
 }
 
+// parseModelSpec reads the `provider:model` spelling every debug lane's --model
+// takes. One reader, so the chat lanes and the embed lane cannot come to
+// disagree about what a model override looks like.
+func parseModelSpec(modelSpec string) (ai.ProviderConfig, error) {
+	provider, modelName, found := strings.Cut(modelSpec, ":")
+	if !found || provider == "" || modelName == "" {
+		return ai.ProviderConfig{}, fmt.Errorf("--model wants provider:model (e.g. anthropic:claude-sonnet-4-6), got %q", modelSpec)
+	}
+	return ai.ProviderConfig{Provider: provider, Model: modelName}, nil
+}
+
 // pinnedModelRouting turns a provider:model override into a routing config
 // binding the override to every tier the named tasks can actually ask for.
 //
@@ -452,11 +463,10 @@ func taskProbeRouting(modelSpec string, task ai.Task) (ai.RoutingConfig, string,
 // it is parsed and validated once: two copies would let `worker siteread` and
 // `worker aitask` disagree about what `--model` means.
 func pinnedModelRouting(modelSpec string, tasks ...ai.Task) (ai.RoutingConfig, error) {
-	provider, modelName, found := strings.Cut(modelSpec, ":")
-	if !found || provider == "" || modelName == "" {
-		return ai.RoutingConfig{}, fmt.Errorf("--model wants provider:model (e.g. anthropic:claude-sonnet-4-6), got %q", modelSpec)
+	binding, err := parseModelSpec(modelSpec)
+	if err != nil {
+		return ai.RoutingConfig{}, err
 	}
-	binding := ai.ProviderConfig{Provider: provider, Model: modelName}
 	tiers := map[ai.Tier]ai.ProviderConfig{}
 	for _, task := range tasks {
 		for _, tier := range ai.TaskLadder(task) {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { toBoardDeal } from "./boarddeal";
-import type { CompanyNaming } from "./deals";
+import type { CompanyNaming } from "./dealcompanymarks";
 
 type Deal = components["schemas"]["Deal"];
 

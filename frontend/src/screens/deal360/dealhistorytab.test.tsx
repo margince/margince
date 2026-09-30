@@ -114,7 +114,7 @@ describe("DealHistoryTab", () => {
     withProviders(<DealHistoryTab deal={DEAL} onOpenEmail={() => {}} />);
 
     expect(
-      await screen.findByText("Nothing has been logged on this deal yet."),
+      await screen.findByText("No activity on this deal yet."),
     ).toBeTruthy();
   });
 });

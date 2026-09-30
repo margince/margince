@@ -60,7 +60,7 @@ const ROUTES: RouteMap = {
 };
 
 const meta: Meta<typeof DecisionsSection> = {
-  title: "Shell/Home decisions",
+  title: "Shell/Home/Decisions",
   component: DecisionsSection,
   parameters: { layout: "padded" },
   decorators: [
@@ -107,7 +107,7 @@ export const RowOpen: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const triggers = await canvas.findAllByRole("button", {
-      name: "What is being proposed",
+      name: "Proposal",
     });
     await userEvent.click(triggers[0]);
   },
@@ -120,7 +120,7 @@ export const OtherAnswers: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const menus = await canvas.findAllByRole("button", {
-      name: "Other answers",
+      name: "More options",
     });
     await userEvent.click(menus[0]);
   },

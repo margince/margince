@@ -9,11 +9,12 @@ import { ifMatch, requireVersion } from "../api/version";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { RefusalLine, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
 import { contractTermsBody, renewDraftOf } from "./contracttermsbody";
 import { ContractTermsFields } from "./contracttermsfields";
@@ -187,7 +188,7 @@ export function ContractRenewModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t("contracts.renew.title")}
       </Heading>
       <p>{t("contracts.renew.hint")}</p>
@@ -228,7 +229,7 @@ export function ContractRenewModal({
         </Field>
       )}
 
-      {renew.error && <RefusalLine error={renew.error} />}
+      <ErrorLine error={renew.error} />
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
@@ -315,7 +316,7 @@ export function ContractStatusModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t("contracts.statusChange.title")}
       </Heading>
 
@@ -333,7 +334,7 @@ export function ContractStatusModal({
         )}
       </Field>
 
-      {assert.error && <RefusalLine error={assert.error} />}
+      <ErrorLine error={assert.error} />
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
@@ -445,7 +446,7 @@ export function ContractCancelModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t("contracts.cancel.title")}
       </Heading>
       <p>{t("contracts.cancel.hint")}</p>
@@ -476,7 +477,7 @@ export function ContractCancelModal({
         )}
       </Field>
 
-      {cancel.error && <RefusalLine error={cancel.error} />}
+      <ErrorLine error={cancel.error} />
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>

@@ -34,6 +34,10 @@ type openRouterModel struct {
 	Pricing       struct {
 		Prompt     string `json:"prompt"`
 		Completion string `json:"completion"`
+		// CacheRead and CacheWrite are absent for a model the vendor does not
+		// cache; the rate refresh files that as a price of zero.
+		CacheRead  string `json:"input_cache_read"`
+		CacheWrite string `json:"input_cache_write"`
 	} `json:"pricing"`
 	Benchmarks struct {
 		ArtificialAnalysis struct {
@@ -173,6 +177,12 @@ func toFullModel(m openRouterModel) AvailableModel {
 	}
 	if v, ok := tokenPriceToUsdPerMTok(m.Pricing.Completion); ok {
 		out.OutputPerMtok = &v
+	}
+	if v, ok := tokenPriceToUsdPerMTok(m.Pricing.CacheRead); ok {
+		out.CacheReadPerMtok = &v
+	}
+	if v, ok := tokenPriceToUsdPerMTok(m.Pricing.CacheWrite); ok {
+		out.CacheWritePerMtok = &v
 	}
 	return out
 }

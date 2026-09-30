@@ -4,7 +4,9 @@
 import type { ReactNode } from "react";
 import { EmptyState } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { formatNumber } from "../format/format";
+import type { Locale, PluralBase, PluralTranslator } from "../i18n";
 import { QueryGate, type QueryLike, useMe } from "./common";
 
 // The shell every Settings → System health card wears.
@@ -74,7 +76,7 @@ export function HealthCard<Data>({
   return (
     <Panel title={title} footer={report && footer(report)}>
       <PanelBody>
-        <p className="settings-panel-sub">{sub}</p>
+        <PanelIntro>{sub}</PanelIntro>
         {/* One card's throw stays inside one card. These bodies derive every
             line from a payload a background system writes, so they have more
             ways to give out than the panels beside them — and without a
@@ -84,4 +86,30 @@ export function HealthCard<Data>({
       </PanelBody>
     </Panel>
   );
+}
+
+// How long the oldest item in a queue has waited, in the largest whole unit: a
+// job on the job card, a contact or a meeting on the capture card. `format.ts`'s
+// formatDuration cannot answer this: it floors anything under an hour to "0 hr",
+// and a queue that jammed five minutes ago is the reading an operator opens for.
+// A count of one takes the singular key, the house `.one`/`.other` pattern — a
+// queue that jammed sixty-one minutes ago read "waited 1 hours".
+export function formatWaitedFor(
+  seconds: number,
+  plural: PluralTranslator,
+  locale: Locale,
+): string {
+  const [unit, count] =
+    seconds >= 86_400
+      ? (["Days", Math.floor(seconds / 86_400)] as const)
+      : seconds >= 3_600
+        ? (["Hours", Math.floor(seconds / 3_600)] as const)
+        : seconds >= 60
+          ? (["Minutes", Math.floor(seconds / 60)] as const)
+          : (["Seconds", seconds] as const);
+  // Annotated so an unknown unit is a compile error rather than a base the
+  // catalog silently echoes back. Which FORM the base takes is the plural
+  // helper's business, not this function's.
+  const base: PluralBase = `jobs.waited${unit}`;
+  return plural(base, count, { count: formatNumber(count, locale) });
 }

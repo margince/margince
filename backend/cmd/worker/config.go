@@ -22,19 +22,19 @@ import (
 
 // workerConfig is the parsed boot configuration of the worker process.
 type workerConfig struct {
-	dsn           string
-	configPath    string
-	publicBaseURL string
-	captureConfig compose.CaptureConfig
+	dsn              string
+	configPath       string
+	publicBaseURL    string
+	reportingEnabled bool
+	captureConfig    compose.CaptureConfig
 	// allowDataReset is operations.allow_data_reset: whether this installation
 	// armed the destructive reset at all. The worker's only stake is the cache
 	// flush it subscribes to, which exists solely to serve that reset — so an
 	// installation that never armed it holds no subscriber either.
-	allowDataReset    bool
-	ratesFx           string
-	ratesCurrencies   []string
-	ratesModelPricing map[string]string
-	redisAddr         string
+	allowDataReset  bool
+	ratesFx         string
+	ratesCurrencies []string
+	redisAddr       string
 	// redisPassword is the bus credential, empty where the instance requires
 	// none. The bus carries job payloads and therefore CRM data, so an
 	// instance reachable by anything but this deployment has to require one —

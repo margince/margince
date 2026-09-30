@@ -337,7 +337,7 @@ export function AddDocumentDialog({
 
   return (
     <Modal open={open} onClose={closeAndClear} labelledBy={titleId}>
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t("docs.add.title")}
       </Heading>
 

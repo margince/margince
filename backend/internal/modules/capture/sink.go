@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -41,6 +42,9 @@ type Sink struct {
 	// a ladder that files without classifying is the one outcome this must
 	// never reach.
 	stampProject StampProjectCorrespondence
+	// purgeRemoved acts on a message the provider says the owner deleted. Nil
+	// captures mail and acts on no deletions.
+	purgeRemoved MessagePurger
 	// tracePayloads is the deployment's capture.trace_payloads posture: with it
 	// on, the 24-hour trace keeps each message's sender and subject. Off is the
 	// default and the only value a member can cause.
@@ -56,6 +60,14 @@ type Sink struct {
 	// off by its organizer, or declined by the seat whose calendar it is. Nil
 	// captures meetings and cancels none.
 	cancelMeeting MeetingCloser
+	// cancelMeetingByID closes the meeting a cancelled event's cross-door
+	// identity resolved to, when nothing was captured under its natural key.
+	// Nil cancels by natural key alone.
+	cancelMeetingByID MeetingCloserByID
+	// moveMeeting moves a captured meeting the calendar rescheduled. Nil never
+	// moves one.
+	moveMeeting       MeetingMover
+	resolveInvitation CalendarInvitationResolver
 	// takeOverAsserted writes this connector's reading of a message over a row
 	// an importer asserted. Nil leaves an asserted incumbent alone, which is
 	// the behaviour that predates the take-over.
@@ -68,7 +80,13 @@ type Sink struct {
 	meetingIdentityKind string
 	meetingIdentityKey  MeetingIdentityKeyer
 	resolveIdentity     IdentityResolver
-	claimIdentity       IdentityClaimer
+	// threadJoin merges the threads one email's reply links reach
+	// (threadjoin.go). Zero threads on the References root alone.
+	threadJoin    ThreadJoiner
+	claimIdentity IdentityClaimer
+	// language is the installation's base language a staged merge's summary is
+	// written in; nil writes English.
+	language baselanguage.Resolver
 }
 
 // fieldSourceSystem / fieldSourceID are the shared system_log detail keys for
@@ -158,7 +176,10 @@ var _ connector.Sink = (*Sink)(nil)
 // replace. Nothing but the integration lane would notice.
 //
 // This line is what makes that a compile error instead.
-var _ connector.MeetingCanceller = (*Sink)(nil)
+var (
+	_ connector.MeetingCanceller = (*Sink)(nil)
+	_ connector.MessageRemover   = (*Sink)(nil)
+)
 
 // Upsert lands one normalized record: raw original + domain row +
 // audit + captured event, one transaction, idempotent on the natural
@@ -206,9 +227,15 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			return nil
 		}
 
-		if err := storeRawCapture(ctx, tx, rec); err != nil {
+		// Stamped back onto the record, so the activity below can name the
+		// original it was read from and a purge can follow the link instead of
+		// joining on two writers' keys and hoping they agree. rec is a value
+		// copy; this settles it for every reader downstream of here.
+		storedOriginal, err := storeRawCapture(ctx, tx, rec)
+		if err != nil {
 			return err
 		}
+		rec.StoredOriginal = storedOriginal
 
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
@@ -272,7 +299,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			TargetType:     "lead",
 			TargetID:       dedupeHit.UUID,
 			ProposedChange: dedupeFields,
-			Summary:        fmt.Sprintf("Captured %s/%s duplicates an existing lead", rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID),
+			Summary:        s.duplicateLeadSummary(ctx, rec.NaturalKey),
 		}); err != nil {
 			return datasource.EntityRef{}, fmt.Errorf("capture: staging the dedupe merge: %w", err)
 		}

@@ -278,7 +278,7 @@ func TestWriteFallsBackRatherThanFailing(t *testing.T) {
 // The deterministic floor states what is on the page and nothing else — no
 // inferred cause, no suggested next move.
 func TestDeterministicNamesTheStalledDealAndTheLastTouch(t *testing.T) {
-	sentences := Deterministic(briefCompanyID, inputFixture())
+	sentences := Deterministic(briefCompanyID, inputFixture(), "en")
 	var all strings.Builder
 	for _, sentence := range sentences {
 		all.WriteString(sentence.Text)
@@ -380,7 +380,7 @@ func TestDeterministicClosesWithWhatTheCompanyIs(t *testing.T) {
 			{Field: "icp", Value: "Shop operators and agencies"},
 		},
 	}
-	sentences := Deterministic("company-1", in)
+	sentences := Deterministic("company-1", in, "en")
 	if len(sentences) < 3 {
 		t.Fatalf("sentences = %+v, want the identity line plus both profile lines", sentences)
 	}
@@ -401,9 +401,9 @@ func TestDeterministicClosesWithWhatTheCompanyIs(t *testing.T) {
 
 // A profile the page has not gathered yet is not a gap to apologize for.
 func TestDeterministicSaysNothingAboutACompanyItKnowsNothingAbout(t *testing.T) {
-	for _, sentence := range Deterministic("company-1", Input{Name: "Acme"}) {
-		for _, label := range profileLabels {
-			if strings.Contains(sentence.Text, label) {
+	for _, sentence := range Deterministic("company-1", Input{Name: "Acme"}, "en") {
+		for _, label := range floor.ProfileLabels {
+			if strings.Contains(sentence.Text, label.in(textlang.English)) {
 				t.Errorf("sentence %q talks about the company with no profile to talk from", sentence.Text)
 			}
 		}
@@ -417,7 +417,7 @@ func TestDeterministicKeepsTheCompanyHalfShort(t *testing.T) {
 		in.Profile = append(in.Profile, ProfileIn{Field: field, Value: "something about " + field})
 	}
 	var profileLines int
-	for _, sentence := range Deterministic("company-1", in) {
+	for _, sentence := range Deterministic("company-1", in, "en") {
 		if strings.HasPrefix(sentence.Text, "What ") ||
 			strings.HasPrefix(sentence.Text, "Who ") ||
 			strings.HasPrefix(sentence.Text, "How ") {
@@ -568,7 +568,7 @@ func TestQuotedCompanyLinesKeepTheAuthorsOwnTerminator(t *testing.T) {
 		{Field: "offer_summary", Value: "Wer braucht das?"},
 		{Field: "icp", Value: "Mittelstand"},
 	}
-	lines := profileLines(in, accountEvidence(briefCompanyID))
+	lines := profileLines(in, accountEvidence(briefCompanyID), companyPhrasesFor("en"))
 	if len(lines) != 2 {
 		t.Fatalf("lines = %+v, want both statements", lines)
 	}

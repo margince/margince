@@ -23,23 +23,8 @@ fixture:
 expect:
   outcome: accepted
   answer: explicitly_confidential
-  rubric: >
-    A partner thread whose own text asks for confidence: a countersigned mutual
-    NDA attached, "please treat as confidential" in the subject, and an explicit
-    request to keep the unreleased roadmap in a small circle. This kind exists
-    for exactly this — the message itself, not its topic, is what holds it.
-    "explicitly_confidential" scores high. Any other HOLDING kind scores in the
-    middle rather than low: the thread stays private, which is the outcome that
-    matters, and the label is the lesser question. "ordinary" is the failure this
-    scenario exists to catch and scores zero at any confidence — the sender asked
-    in writing for this not to be spread, and opening it breaks an obligation the
-    company signed rather than merely a preference.
-    The trap runs the other way from most of this corpus: the underlying subject
-    IS ordinary commercial partner traffic — a roadmap alignment with a customer,
-    the kind of thread colleagues should normally see — so a classifier reading
-    only the topic and ignoring the request answers "ordinary" and is wrong for a
-    reason no amount of topic modelling would catch.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The rubric
+    only ranked the other kinds by the harm each does, which the check fails
+    outright.

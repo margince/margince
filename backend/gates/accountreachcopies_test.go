@@ -27,11 +27,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/printer"
 	"go/token"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // accountReachFiles are the two files that spell the walk.
@@ -84,8 +85,8 @@ func TestTheAccountReachWalkIsOneAnswer(t *testing.T) {
 // constText answers the string literal a named package-level constant holds.
 func constText(t *testing.T, file, name string) (string, bool) {
 	t.Helper()
-	fset := token.NewFileSet()
-	parsed, err := parser.ParseFile(fset, file, nil, 0)
+	fset := gatekit.SourceFileSet()
+	parsed, err := gatekit.ParseFile(file, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", file, err)
 	}

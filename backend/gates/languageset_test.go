@@ -18,7 +18,8 @@ package gates
 // them fail together: add a language to the Go list without widening the
 // contract and the enum stops admitting a value the server now accepts, which
 // is a 422 nobody can explain. The frontend's third copy is checked by its own
-// suite; this holds the two halves a Go change can break.
+// suite and, against this list, by localedoc_test.go; this holds the two halves
+// a Go change can break.
 
 import (
 	"os"

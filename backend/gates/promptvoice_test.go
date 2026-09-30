@@ -50,7 +50,8 @@ import (
 // passing, no longer about anything.
 var voiceRuleHeading = promptvoice.Heading
 
-// voiceWaiverPrefix marks a request whose output no contact reads as prose.
+// voiceWaiverPrefix marks a request whose output no contact reads as prose, or
+// whose task the voice's lines would contradict.
 //
 // Deliberately NOT the language gate's prefix. The first version of this gate
 // reused everyManyRequest's waiver walk, which matched //promptlang:exempt
@@ -74,7 +75,8 @@ func TestEveryPromptEitherSpeaksInTheOneVoiceOrSaysWhyNot(t *testing.T) {
 		}
 		t.Errorf("%s builds a model.Request that neither composes the shared voice nor waives it. "+
 			"If a reader reads its output as prose, compose promptvoice.Rule into the System prompt; "+
-			"if the reply is data — an enum, a number, a field copied out of a document — mark it %s <reason>",
+			"if the reply is data — an enum, a number, a field copied out of a document — or the voice's lines "+
+			"contradict the task, mark it %s <reason>",
 			site.where, voiceWaiverPrefix)
 	}
 }

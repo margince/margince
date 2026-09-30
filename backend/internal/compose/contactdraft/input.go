@@ -55,6 +55,11 @@ type Input struct {
 	// one field they typed, and the one field not fenced.
 	Intent string `json:"intent,omitempty"`
 
+	// RewriteOf is the draft on the composer's screen; empty is a first draft.
+	// FENCED, unlike Intent: the rep may have typed it and may equally have
+	// pasted a paragraph a contact sent them, and the field cannot tell.
+	RewriteOf string `json:"rewrite_of,omitempty"`
+
 	// Envelope is the correspondence this draft is written into: its language,
 	// how long it has been silent, the current time and who is signing it.
 	// Server-derived, never read out of the counterparty's own text.
@@ -128,9 +133,10 @@ type DealIn struct {
 	CloseDate   string `json:"close_date,omitempty"`
 }
 
-// ProjectIn is the body of work the message is about.
+// ProjectIn is the body of work the message is about. It carries no id: a
+// project is not a record a reason may cite, and an id the grounding filter
+// refuses only invites a citation it drops.
 type ProjectIn struct {
-	ID   string `json:"id"`
 	Name string `json:"name"`
 	// Key is the handle a human writes in a subject line, when the project
 	// has one.
@@ -165,9 +171,9 @@ func (d DealIn) MarshalJSON() ([]byte, error) {
 
 // ClaimIn is one thing this contact said. The kind rides along because "she
 // objected to X" and "she asked for X" are opposite claims about the same
-// sentence, and the body alone loses which one it was.
+// sentence, and the body alone loses which one it was. It is cited by the
+// activity it was read from (SourceID), so it carries no id of its own.
 type ClaimIn struct {
-	ID   string `json:"id"`
 	Kind string `json:"kind"`
 	Body string `json:"body"`
 	// Due is when this was promised for, RFC3339, empty when nothing was

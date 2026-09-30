@@ -20,12 +20,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -106,8 +106,7 @@ func sourceOfGateSubject(t *testing.T, path string) string {
 // Both are what the caller compares, and neither needs the type checker.
 func namedMapLiteralKeys(t *testing.T, file, name string) map[string]bool {
 	t.Helper()
-	fset := token.NewFileSet()
-	parsed, err := parser.ParseFile(fset, file, nil, 0)
+	parsed, err := gatekit.ParseFile(file, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", file, err)
 	}

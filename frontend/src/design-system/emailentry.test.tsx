@@ -622,7 +622,7 @@ describe("EmailDetail", () => {
     );
     // An empty list would read as "nobody was blind-copied", which is a
     // different fact from "you may not see who was".
-    await screen.findByText(/blind-copied and are not shown to you/);
+    await screen.findByText(/blind-copied and are not shown\./);
   });
 
   it("withholds a message the reader is outside the audience of", async () => {

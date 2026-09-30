@@ -6,31 +6,35 @@ import { AvatarStack } from "./avatarstack";
 
 // A committee of contacts as overlapping monograms, folding into a "+N" once
 // the group runs past `max`.
-const meta: Meta<typeof AvatarStack> = {
-  title: "Design System/AvatarStack",
+const meta = {
+  title: "Components/Images and icons/Avatar stack",
   component: AvatarStack,
   parameters: { layout: "padded" },
-};
+} satisfies Meta<typeof AvatarStack>;
 export default meta;
 
-type Story = StoryObj<typeof AvatarStack>;
+// Typed off `meta`, so every face must carry its required `identity`.
+type Story = StoryObj<typeof meta>;
 
 export const FewContacts: Story = {
   args: {
-    contacts: [{ name: "Alex Rivera" }, { name: "Sam Okafor" }],
+    contacts: [
+      { name: "Alex Rivera", identity: "Alex Rivera" },
+      { name: "Sam Okafor", identity: "Sam Okafor" },
+    ],
   },
 };
 
 export const OverTheMax: Story = {
   args: {
     contacts: [
-      { name: "Alex Rivera" },
-      { name: "Sam Okafor" },
-      { name: "Priya Nair" },
-      { name: "Jordan Blake" },
-      { name: "Casey Lund" },
-      { name: "Mira Vance" },
-      { name: "Theo Marsh" },
+      { name: "Alex Rivera", identity: "Alex Rivera" },
+      { name: "Sam Okafor", identity: "Sam Okafor" },
+      { name: "Priya Nair", identity: "Priya Nair" },
+      { name: "Jordan Blake", identity: "Jordan Blake" },
+      { name: "Casey Lund", identity: "Casey Lund" },
+      { name: "Mira Vance", identity: "Mira Vance" },
+      { name: "Theo Marsh", identity: "Theo Marsh" },
     ],
     max: 5,
   },

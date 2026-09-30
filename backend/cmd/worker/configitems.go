@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/platform/websearchhttp"
 )
 
 // workerPublic names the flag-bound variables whose values are safe to echo;
@@ -44,7 +43,6 @@ func workerConfigItems(fs *flag.FlagSet, env *cliflags.Env) (*config.Registry, e
 		env.Items(fs, config.RoleWorker, workerPublic),
 		blobstore.ConfigItems(),
 		keyvault.ConfigItems(),
-		websearchhttp.ConfigItems(),
 		ai.ConfigItems(),
 		deployconfig.ConfigItems(),
 		workerUnflaggedItems(),

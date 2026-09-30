@@ -53,6 +53,9 @@ func (s *Store) CreatePipeline(ctx context.Context, in CreatePipelineInput) (crm
 // atomic bootstrap seeds defaults in the same transaction that mints the
 // workspace (C5), so a seed failure rolls the whole tenant back.
 func createPipelineTx(ctx context.Context, tx pgx.Tx, in CreatePipelineInput) (crmcontracts.Pipeline, error) {
+	if err := checkNewLadder(in.Stages); err != nil {
+		return crmcontracts.Pipeline{}, err
+	}
 	id := ids.New[ids.PipelineKind]()
 	_, err := tx.Exec(ctx,
 		`INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, $2, $3, $4)`,
@@ -107,7 +110,7 @@ func (s *Store) GetPipeline(ctx context.Context, id ids.PipelineID) (crmcontract
 	}
 	var out crmcontracts.Pipeline
 	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = readPipeline(ctx, tx, id)
+		out, err = ReadPipelineTx(ctx, tx, id)
 		return err
 	})
 	return out, err
@@ -130,44 +133,48 @@ func (s *Store) ListPipelines(ctx context.Context, archived storekit.ArchivedFil
 	if err := auth.Require(ctx, "pipeline", principal.ActionRead); err != nil {
 		return nil, err
 	}
+	var out []crmcontracts.Pipeline
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
+		out, err = listPipelinesTx(ctx, tx, archived)
+		return err
+	})
+	return out, err
+}
+
+// listPipelinesTx is the catalog read inside a caller's transaction, so a write
+// that reorders the catalog answers with what it committed.
+func listPipelinesTx(ctx context.Context, tx pgx.Tx, archived storekit.ArchivedFilter) ([]crmcontracts.Pipeline, error) {
 	archivedFilter := ""
 	if archived == storekit.LiveOnly {
 		archivedFilter = liveRowsClause
 	}
-	var out []crmcontracts.Pipeline
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx,
-			`SELECT id FROM pipeline WHERE `+whereSeed+archivedFilter+` ORDER BY position, created_at`)
-		if err != nil {
-			return err
-		}
-		var pipelineIDs []ids.PipelineID
-		for rows.Next() {
-			var id ids.PipelineID
-			if err := rows.Scan(&id); err != nil {
-				rows.Close()
-				return err
-			}
-			pipelineIDs = append(pipelineIDs, id)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return err
-		}
-
-		for _, id := range pipelineIDs {
-			p, err := readPipelineWith(ctx, tx, id, archived)
-			if err != nil {
-				return err
-			}
-			out = append(out, p)
-		}
-		return nil
-	})
-	if out == nil {
-		out = []crmcontracts.Pipeline{}
+	rows, err := tx.Query(ctx,
+		`SELECT id FROM pipeline WHERE `+whereSeed+archivedFilter+` ORDER BY position, created_at`)
+	if err != nil {
+		return nil, err
 	}
-	return out, err
+	var pipelineIDs []ids.PipelineID
+	for rows.Next() {
+		var id ids.PipelineID
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		pipelineIDs = append(pipelineIDs, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	out := []crmcontracts.Pipeline{}
+	for _, id := range pipelineIDs {
+		p, err := readPipelineWith(ctx, tx, id, archived)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, nil
 }
 
 // DefaultPipeline returns the workspace's seeded default.
@@ -194,6 +201,14 @@ func (s *Store) DefaultPipeline(ctx context.Context) (crmcontracts.Pipeline, err
 
 // readPipeline is the single-row read every live-only caller uses: a
 // pipeline that has been archived reads as missing.
+// ReadPipelineTx shares the authorized live catalog read with transactional reporting.
+func ReadPipelineTx(ctx context.Context, tx pgx.Tx, id ids.PipelineID) (crmcontracts.Pipeline, error) {
+	if err := auth.Require(ctx, "pipeline", principal.ActionRead); err != nil {
+		return crmcontracts.Pipeline{}, err
+	}
+	return readPipeline(ctx, tx, id)
+}
+
 func readPipeline(ctx context.Context, tx pgx.Tx, id ids.PipelineID) (crmcontracts.Pipeline, error) {
 	return readPipelineWith(ctx, tx, id, storekit.LiveOnly)
 }
@@ -256,10 +271,10 @@ func readPipelineWith(
 
 // defaultStages is the seeded pipeline shape a fresh workspace gets.
 var defaultStages = []StageInput{
-	{Name: "Qualified", Position: 1, Semantic: "open", WinProbability: 10},
-	{Name: "Discovery", Position: 2, Semantic: "open", WinProbability: 25},
-	{Name: "Proposal", Position: 3, Semantic: "open", WinProbability: 50},
-	{Name: "Negotiation", Position: 4, Semantic: "open", WinProbability: 75},
+	{Name: "Qualified", Position: 1, Semantic: string(DealOpen), WinProbability: 10},
+	{Name: "Discovery", Position: 2, Semantic: string(DealOpen), WinProbability: 25},
+	{Name: "Proposal", Position: 3, Semantic: string(DealOpen), WinProbability: 50},
+	{Name: "Negotiation", Position: 4, Semantic: string(DealOpen), WinProbability: 75},
 	{Name: "Won", Position: 5, Semantic: "won", WinProbability: 100},
 	{Name: "Lost", Position: 6, Semantic: "lost", WinProbability: 0},
 }
@@ -304,7 +319,7 @@ func (s *Store) SeedPipelineTx(ctx context.Context, tx pgx.Tx, name string, open
 	stages := make([]StageInput, 0, len(open)+2)
 	for i, st := range open {
 		stages = append(stages, StageInput{
-			Name: st.Name, Position: i + 1, Semantic: "open", WinProbability: st.WinProbability,
+			Name: st.Name, Position: i + 1, Semantic: string(DealOpen), WinProbability: st.WinProbability,
 		})
 	}
 	stages = append(

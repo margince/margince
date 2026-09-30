@@ -145,7 +145,6 @@ var namesNoSubject = gatekit.Waive(map[string]string{
 	"internal/compose/briefs/briefl2.go:askModel":               "the call ranks a queue against each other; it is about the ordering rather than about any one item in it",
 	"internal/compose/corpusask.go:askCorpusLane":               "passages retrieved from across the workspace's documents, which is several records by construction",
 	"internal/compose/fxrefresh.go:extract":                     "a published exchange-rate page. No record, and no personal data to erase",
-	"internal/compose/modelraterefresh.go:extract":              "a published model-pricing page. No record, and no personal data to erase",
 	"internal/compose/sitereaddebug.go:CompleteValidated":       "a recording WRAPPER rather than a site: it forwards the caller's context unchanged, so whatever subject the caller named travels through it",
 	"internal/compose/sitereaddebug.go:debugTriage":             "the operator debug lane, run against a URL before any record is chosen",
 	"internal/compose/voicebuilddemo.go:demonstrationDraft":     "a member's own writing, read to build their voice profile. The subject is that profile, which is not a record the citation's vocabulary names",
@@ -243,7 +242,8 @@ func assertWitnessNamesASubject(t *testing.T, site string, claim subjectClaim) {
 	}
 }
 
-// askSites walks the compose tier for calls to ai.Ask and reports each as
+// askSites walks the compose tier for calls to ai.Ask or ai.Decide (a decision
+// site's call, which asks the ladder when no decision stands) and reports each as
 // "<path>:<enclosing function>".
 //
 // Derived from the tree rather than listed, for the reason every census here
@@ -277,6 +277,9 @@ func askSites(t *testing.T) []string {
 	return sites
 }
 
+// modelCallEntries are the ai package's site-facing model calls.
+var modelCallEntries = map[string]bool{"Ask": true, "Decide": true}
+
 // callsAsk reports whether this declaration makes the model call itself.
 func callsAsk(fn *ast.FuncDecl) bool {
 	found := false
@@ -286,7 +289,7 @@ func callsAsk(fn *ast.FuncDecl) bool {
 			return true
 		}
 		sel, isSel := call.Fun.(*ast.SelectorExpr)
-		if !isSel || sel.Sel.Name != "Ask" {
+		if !isSel || !modelCallEntries[sel.Sel.Name] {
 			return true
 		}
 		if pkg, isIdent := sel.X.(*ast.Ident); isIdent && pkg.Name == "ai" {

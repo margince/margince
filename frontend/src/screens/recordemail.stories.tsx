@@ -11,8 +11,8 @@ import { EmailVerb, RecordEmailAside, RecordEmailVerb } from "./recordemail";
 
 // The box has exactly two states and always offers to write. Both are here, so
 // the difference between them can be judged without arranging a caller that
-// knows a thread is owed. dealemail.stories.tsx covers the deal-specific
-// wording; this is the generic box a contact or lead page mounts unstyled.
+// knows a thread is owed. Only the deal page mounts the box, through
+// dealemail.tsx; the header verbs below are what every record page shares.
 //
 // The header VERB is here too, and it is the same write on a different shape: a
 // square whose envelope is its whole label. Judging it needs the neighbours it
@@ -21,7 +21,7 @@ import { EmailVerb, RecordEmailAside, RecordEmailVerb } from "./recordemail";
 // the one the page is for, and whether the refused one still says why.
 
 const meta: Meta<typeof RecordEmailAside> = {
-  title: "Records/Email box",
+  title: "Records/Record 360/Email box",
   component: RecordEmailAside,
   parameters: { layout: "padded" },
 };

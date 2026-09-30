@@ -88,10 +88,8 @@ import (
 func (s *Store) CarryOverridesTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error {
 	// GATED HERE TOO, exactly as CarryStopsTx is and for the same reason: this
 	// is exported and takes a transaction it does not own, so anything holding
-	// a consent store could call it directly, and the point of the gate is
-	// only to keep a caller with NO merging grant at all from writing overrides
-	// through a seam meant for merges.
-	if err := admitAMergingCaller(ctx); err != nil {
+	// a consent store could call it directly. See admitACarry.
+	if err := admitACarry(ctx, tx, from, to); err != nil {
 		return err
 	}
 	// LOCKED, on both sides, before the read below — the same call

@@ -2,16 +2,19 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import { Badge, DataTable, EmptyState, StatCard } from "../design-system/atoms";
+import { Badge, EmptyState, StatCard } from "../design-system/atoms";
+import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
+import { Row } from "../design-system/stack";
 import { StatStrip } from "../design-system/statstrip";
 import { stable } from "../format/collate";
-import { formatMoney, INTL_LOCALE } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
 import { QueryGate, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
+import "./partnercommissions.css";
 
 // What a partner has earned, on the partner's own company page.
 //
@@ -86,19 +89,22 @@ async function fetchPartnerCommissions(
  */
 export function outstandingByCurrency(
   entries: CommissionEntry[],
-): Array<{ currency: string; amountMinor: number }> {
-  const totals = new Map<string, number>();
+): Array<{ currency: string; amountMinor: number; entryCount: number }> {
+  const totals = new Map<string, { amountMinor: number; entryCount: number }>();
   for (const entry of entries) {
     if (entry.status !== "accrued" && entry.status !== "approved") {
       continue;
     }
-    totals.set(
-      entry.currency,
-      (totals.get(entry.currency) ?? 0) + entry.amount_minor,
-    );
+    const running = totals.get(entry.currency);
+    // The COUNT travels with the sum, because the card states both and a second
+    // pass over the same rows to find it is a second answer to one question.
+    totals.set(entry.currency, {
+      amountMinor: (running?.amountMinor ?? 0) + entry.amount_minor,
+      entryCount: (running?.entryCount ?? 0) + 1,
+    });
   }
   return [...totals.entries()]
-    .map(([currency, amountMinor]) => ({ currency, amountMinor }))
+    .map(([currency, total]) => ({ currency, ...total }))
     .sort((a, b) => stable(a.currency, b.currency));
 }
 
@@ -129,6 +135,10 @@ export function PartnerCommissions({
             </PanelBody>
           ) : (
             <PanelBody>
+              {/* What this ledger is and is not: it records decisions, and the
+                  money leaves through the finance system. On the panel, because
+                  it is true of every row and every total under it. */}
+              <p className="t-sub">{t("commission.decide.settledElsewhere")}</p>
               <OutstandingStrip entries={entries} locale={locale} />
               <CommissionLedger
                 entries={entries}
@@ -156,6 +166,7 @@ function OutstandingStrip({
   locale,
 }: Readonly<{ entries: CommissionEntry[]; locale: Locale }>) {
   const t = useT();
+  const plural = usePlural();
   const outstanding = outstandingByCurrency(entries);
   if (outstanding.length === 0) {
     return null;
@@ -163,15 +174,28 @@ function OutstandingStrip({
   return (
     <div
       data-testid="commission-outstanding"
-      style={{ marginBottom: "var(--space-4)" }}
+      className="partnercommissions-outstanding"
     >
       <StatStrip>
-        {outstanding.map(({ currency, amountMinor }) => (
+        {outstanding.map(({ currency, amountMinor, entryCount }) => (
           <StatCard
             key={currency}
+            // A partner owed in two currencies is two slots, and on a phone
+            // they read as rows rather than as two clipped boxes.
+            narrow="row"
             label={t("commission.outstanding")}
+            // In FULL, never compact. This is money somebody is OWED: the
+            // compact form carries no fraction below ten thousand, so forty
+            // cents outstanding would read "€0" — a partner told they are owed
+            // nothing. The aggregates of deal value elsewhere abbreviate for
+            // width; a balance does not.
             value={formatMoney(amountMinor, currency, locale)}
-            detail={t("commission.decide.settledElsewhere")}
+            // What the figure is made of. Where paying happens is true of the
+            // whole panel rather than of this one currency's total, so it is
+            // said once above the readings instead of on each of them.
+            detail={plural("commission.outstandingDetail", entryCount, {
+              count: formatNumber(entryCount, locale),
+            })}
           />
         ))}
       </StatStrip>
@@ -271,7 +295,7 @@ function CommissionLedger({
                 );
               }
               return (
-                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                <Row gap="2" wrap={false}>
                   {decisions.map((decision) => (
                     <CommissionDecision
                       key={decision}
@@ -280,7 +304,7 @@ function CommissionLedger({
                       companyId={companyId}
                     />
                   ))}
-                </div>
+                </Row>
               );
             },
           },

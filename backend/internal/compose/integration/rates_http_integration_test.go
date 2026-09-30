@@ -13,6 +13,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -136,5 +137,56 @@ func TestAiModelRatesOverHTTP(t *testing.T) {
 		"effective_date": past,
 	}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("past-date POST /ai-model-rates → %d, want 422", status)
+	}
+}
+
+// DELETE /ai-model-rates over the wire: the key rides as query parameters (a
+// model id carries slashes), the entry answers 204 once and 404 after, a
+// blank half of the key is a 422, and an agent bearer is refused before the
+// handler looks at the sheet.
+func TestDeleteAiModelRateOverHTTP(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	today := time.Now().UTC().Format("2006-01-02")
+	if status := e.Call(t, "POST", "/v1/ai-model-rates", map[string]any{
+		"provider": "openai_compatible", "model_id": "~typesafe/jev-latest",
+		"input_per_mtok": "1", "output_per_mtok": "1",
+		"cache_read_per_mtok": "0", "cache_write_per_mtok": "0",
+		"effective_date": today,
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("POST /ai-model-rates → %d, want 201", status)
+	}
+	entry := "/v1/ai-model-rates?provider=openai_compatible&model_id=" + url.QueryEscape("~typesafe/jev-latest") + "&lane=chat"
+
+	var minted struct {
+		Token string `json:"token"`
+	}
+	if status := e.Call(t, "POST", "/v1/passports", map[string]any{
+		"label": "price sheet probe", "scopes": []string{"read", "write"},
+	}, nil, &minted); status != http.StatusCreated {
+		t.Fatalf("issue passport → %d", status)
+	}
+	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
+	if status := e.Call(t, "DELETE", entry, nil, bearer, nil); status != http.StatusForbidden {
+		t.Fatalf("agent DELETE /ai-model-rates → %d, want 403 (human-only)", status)
+	}
+
+	if status := e.Call(t, "DELETE", "/v1/ai-model-rates?provider=openai_compatible&model_id=&lane=chat", nil, nil, nil); status != http.StatusUnprocessableEntity {
+		t.Fatalf("blank model_id DELETE /ai-model-rates → %d, want 422", status)
+	}
+	if status := e.Call(t, "DELETE", entry, nil, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("DELETE /ai-model-rates → %d, want 204", status)
+	}
+	if status := e.Call(t, "DELETE", entry, nil, nil, nil); status != http.StatusNotFound {
+		t.Fatalf("second DELETE /ai-model-rates → %d, want 404", status)
+	}
+	var list aiModelRateListDTO
+	if status := e.Call(t, "GET", "/v1/ai-model-rates", nil, nil, &list); status != http.StatusOK {
+		t.Fatalf("GET /ai-model-rates → %d, want 200", status)
+	}
+	for _, row := range list.Data {
+		if row.ModelID == "~typesafe/jev-latest" {
+			t.Fatalf("the removed entry is still listed: %+v", row)
+		}
 	}
 }

@@ -18,10 +18,10 @@ import {
 // fetch stub those cards read through, so the render is deterministic and
 // network-free — the same fixture shapes the settings.test.tsx cases use.
 //
-// A company entry is only reachable when the principal holds what its
-// cards ask for, and SettingsScreen falls back to Account for anything else. So
-// a story about such an entry has to name its grants: `me({...})` builds the
-// /me body that opens the entry the story is capturing.
+// A company entry is only reachable when the principal holds what its cards
+// ask for, and SettingsScreen shows the access boundary for anything else. So a
+// story about such an entry has to name its grants: `me({...})` builds the /me
+// body that opens the entry the story is capturing.
 
 const me =
   (allow: GrantSpec = {}) =>
@@ -74,7 +74,7 @@ const tools = () =>
       },
       {
         name: "send_email",
-        title: "Send an email",
+        title: "Send email",
         description:
           'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
         required_scope: "send",
@@ -94,83 +94,6 @@ const connectorOn = () =>
 
 const connectorOff = () =>
   jsonResponse({ title: "no MCP connector on this installation" }, 404);
-
-// Attribution names the CONTACT and says a machine did the typing second
-// (PD-002), so the fixture carries the resolved names the read path returns and
-// spells actor_id the way storekit stamps it — "human:<uuid>", not a bare id.
-// A fixture that skipped the prefix is what let the "You" branch look covered
-// while being unreachable in the product.
-const auditLog = () =>
-  jsonResponse({
-    data: [
-      {
-        id: "a1",
-        occurred_at: "2026-07-10T14:09:00Z",
-        actor_type: "human",
-        actor_id: "human:u-mor",
-        actor_name: "Ada Mortensen",
-        action: "create",
-        entity_type: "custom_field",
-        entity_id: "cf-1",
-      },
-      {
-        id: "a2",
-        occurred_at: "2026-07-10T09:41:00Z",
-        actor_type: "human",
-        actor_id: "human:u-lars",
-        actor_name: "Lars Vogt",
-        action: "update",
-        entity_type: "deal",
-        entity_id: "d-1",
-      },
-      {
-        // An agent under a human's authority reads as that human, qualified.
-        id: "a3",
-        occurred_at: "2026-07-10T08:12:00Z",
-        actor_type: "agent",
-        actor_id: "agent:01a01740-c9c2-736d-a0b6-d3e3dcb13111",
-        passport_id: "01a01740-c9c2-736d-a0b6-d3e3dcb13999",
-        on_behalf_of: "u-lars",
-        on_behalf_of_name: "Lars Vogt",
-        action: "update",
-        entity_type: "deal",
-        entity_id: "d-1",
-      },
-      {
-        // A grant was presented and no human resolved behind it: a gap, and it
-        // says so rather than reading as "System".
-        id: "a4",
-        occurred_at: "2026-07-10T07:30:00Z",
-        actor_type: "agent",
-        actor_id: "agent:scheduled_send",
-        passport_id: "01a01740-c9c2-736d-a0b6-d3e3dcb13aaa",
-        action: "send_email",
-        entity_type: "activity",
-        entity_id: "ac-1",
-      },
-      {
-        // No grant presented — a background pass nobody's context ran. Not a
-        // gap, so it shows what acted and claims no missing authority.
-        id: "a5",
-        occurred_at: "2026-07-10T06:00:00Z",
-        actor_type: "agent",
-        actor_id: "agent:company_name_promotion",
-        action: "update",
-        entity_type: "company",
-        entity_id: "o-1",
-      },
-      {
-        id: "a6",
-        occurred_at: "2026-07-10T05:00:00Z",
-        actor_type: "system",
-        actor_id: "system",
-        action: "erase",
-        entity_type: "contact",
-        entity_id: "p-9",
-      },
-    ],
-    page: { next_cursor: null, has_more: false },
-  });
 
 // The Account tab's bookability card indexes its own answer, so a tab story
 // that leaves this endpoint unrouted takes the WHOLE SCREEN down: the fallback
@@ -388,7 +311,7 @@ export const AgentToolConsoleDark: Story = {
 //
 // The custom_field READ is what opens the entry — opening a page is reading it,
 // and `meFixture` grants only the verbs named here. A write-only fixture reaches
-// no entry at all and the story silently captures the Account fallback instead,
+// no entry at all and the story silently captures the access boundary instead,
 // which is exactly what it did: nothing asserts on a story, so the gates stayed
 // green while the picture was of the wrong page. The writes stay so the builder
 // and the row actions render.
@@ -398,24 +321,21 @@ export const DataModelTab: Story = {
   }),
 };
 
-// The consent registry and the audit trail on one page: the trail is what proves
-// the surfaces above it were honoured, so it moved here from a tab of its own.
+// The consent registry, the retention ladder and the subject-request queue. The
+// audit trail that proves them honoured is its own page.
 export const PrivacyTab: Story = {
-  // `contact:read` is what opens this entry — the consent registry is gated on it
-  // server-side (consent/store.go), not on a role. Without it the entry is not
-  // visible, useVisibleSettingsTabs falls back to Account, and this story
-  // captured the Account tab: byte-identical to AccountTab, under the name of a
-  // page it never rendered. The comment two stories up describes this exact
-  // failure; it happened again here.
+  // `contact` AND `consent_config` open this entry: the registry reads through
+  // `contact` server-side (consent/store.go), and every seat holds that alone.
+  // Without the pair `SettingsScreen` answers the address with the access
+  // boundary, and the story captures the refusal under the name of a page it
+  // never rendered — the failure the comment two stories up describes.
   render: tab("privacy", {
-    "GET /me": me({ contact: ["read"] }),
-    "GET /audit-log": auditLog,
+    "GET /me": me({ contact: ["read"], consent_config: ["read"] }),
   }),
 };
 
 const privacyRoutes = {
-  "GET /me": me({ contact: ["read"] }),
-  "GET /audit-log": auditLog,
+  "GET /me": me({ contact: ["read"], consent_config: ["read"] }),
 };
 
 // A whole settings PAGE at 390px, which is the thing only this file can show —
@@ -466,38 +386,79 @@ export const MaintenanceDangerZone: Story = {
 // PipelinesCard (D-8, on the Data model entry) reads GET /me (roles →
 // pipeline grant) and GET /pipelines. Rendered directly here so
 // the admin write affordances vs the rep read-only state each get a story.
+// Several pipelines, because telling them apart is what the catalog is for: a
+// default, two more in use of different lengths, and one retired.
+function fixtureStage(
+  pipelineId: string,
+  n: number,
+  name: string,
+  semantic: "open" | "won" | "lost",
+  winProbability: number,
+) {
+  return {
+    id: `${pipelineId}-s${n}`,
+    pipeline_id: pipelineId,
+    name,
+    position: n,
+    semantic,
+    win_probability: winProbability,
+  };
+}
 const pipelinesFixture = {
   data: [
     {
       id: "pl",
       name: "Sales",
       is_default: true,
-      position: 0,
+      position: 1,
+      version: 3,
       stages: [
-        {
-          id: "s1",
-          pipeline_id: "pl",
-          name: "Qualify",
-          position: 1,
-          semantic: "open",
-          win_probability: 20,
-        },
-        {
-          id: "s2",
-          pipeline_id: "pl",
-          name: "Proposal",
-          position: 2,
-          semantic: "open",
-          win_probability: 50,
-        },
-        {
-          id: "s3",
-          pipeline_id: "pl",
-          name: "Won",
-          position: 3,
-          semantic: "won",
-          win_probability: 100,
-        },
+        fixtureStage("pl", 1, "Qualify", "open", 20),
+        fixtureStage("pl", 2, "Proposal", "open", 50),
+        fixtureStage("pl", 3, "Won", "won", 100),
+        fixtureStage("pl", 4, "Lost", "lost", 0),
+      ],
+    },
+    {
+      id: "pl-ent",
+      name: "Enterprise",
+      is_default: false,
+      position: 2,
+      version: 5,
+      stages: [
+        fixtureStage("pl-ent", 1, "Qualified", "open", 5),
+        fixtureStage("pl-ent", 2, "Technical validation", "open", 30),
+        fixtureStage("pl-ent", 3, "Business case", "open", 45),
+        fixtureStage("pl-ent", 4, "Procurement", "open", 75),
+        fixtureStage("pl-ent", 5, "Legal review", "open", 90),
+        fixtureStage("pl-ent", 6, "Won", "won", 100),
+        fixtureStage("pl-ent", 7, "Lost", "lost", 0),
+      ],
+    },
+    {
+      id: "pl-renew",
+      name: "Renewals",
+      is_default: false,
+      position: 3,
+      version: 2,
+      stages: [
+        fixtureStage("pl-renew", 1, "Upcoming", "open", 40),
+        fixtureStage("pl-renew", 2, "Terms sent", "open", 80),
+        fixtureStage("pl-renew", 3, "Renewed", "won", 100),
+        fixtureStage("pl-renew", 4, "Churned", "lost", 0),
+      ],
+    },
+    {
+      id: "pl-old",
+      name: "Events 2025",
+      is_default: false,
+      position: 4,
+      version: 7,
+      archived_at: "2026-03-01T00:00:00Z",
+      stages: [
+        fixtureStage("pl-old", 1, "Meeting booked", "open", 40),
+        fixtureStage("pl-old", 2, "Won", "won", 100),
+        fixtureStage("pl-old", 3, "Lost", "lost", 0),
       ],
     },
   ],
@@ -535,26 +496,23 @@ export const PipelinesReadOnly: Story = {
   render: pipelinesCard({ pipeline: ["read"] }),
 };
 
-// The narrow render of the one rule in settings.css that has its own breakpoint.
-// A `.stage-row` is four tracks of which three are fixed — an 88px semantic
-// badge, a 56px win probability, and the Edit verb — so on a phone the fixed
-// tracks ARE the width and the stage name has nothing left; under 560px the row
-// becomes two lines instead. Nothing has ever drawn it below 1024px. The ladder
-// is what makes this the right story on this page: the four other data-model
-// cards answer their list routes from the stub's empty-page fallback, so a
-// page-level narrow story here would picture three empty states and a heading.
+// The narrow render of the ladder's own breakpoint. A `.stage-row` carries a
+// fixed step and odds track beside the verbs, so on a phone those ARE the width
+// and the stage name has nothing left; under 560px the verbs take a line of
+// their own instead. The ladder is what makes this the right story on this
+// page: the other cards answer their list routes from the stub's empty-page
+// fallback, so a page-level narrow story would picture empty states and a head.
 export const PipelinesAdminPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),
 };
 
-// And the dark render of the same ladder, which is the densest real content the
-// data model page has: three stage names, the Open/Won semantic badges beside the
-// pipeline's own Default badge, three `.t-num` win probabilities, the row verbs,
-// and no hairline between rows at all. What it watches is whether Open and Won
-// stay distinguishable from each other and from the row behind them once the
-// ground goes dark — a badge is tinted text on a tinted surface, and both move.
+// And the dark render of the same page, the densest real content it has: the
+// catalog's compact strips, the open ladder's shading, the Won and Lost plates
+// beside the Default badge, and the `.t-num` odds. What it watches is whether the
+// outcome plates stay distinguishable from each other and from the rows behind
+// them once the ground goes dark: each is tinted text on a tinted surface.
 export const PipelinesAdminDark: Story = {
   globals: { theme: "dark" },
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),

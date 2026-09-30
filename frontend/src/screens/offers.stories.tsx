@@ -8,7 +8,7 @@ import {
 } from "./story-utils";
 
 const meta: Meta = {
-  title: "Records/Offers",
+  title: "Records/Offers/Page",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -136,8 +136,7 @@ export const RegeneratedWithAiDisclosure: Story = {
           revision: 3,
           status: "draft",
           ai_generated: true,
-          ai_disclosure:
-            "This offer revision was drafted by an AI assistant from the linked signal; review before sending.",
+          ai_disclosure: "Drafted with AI assistance. Review before sending.",
           diff_from_previous: {
             added: [
               {

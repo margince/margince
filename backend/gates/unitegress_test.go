@@ -33,7 +33,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
@@ -80,7 +79,7 @@ func TestNoUnitDialsAroundTheInstallationsEgressPolicy(t *testing.T) {
 			if entry.IsDir() || !strings.HasSuffix(path, ".go") {
 				return nil
 			}
-			file, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+			file, parseErr := gatekit.ParseFile(path, 0)
 			if parseErr != nil {
 				return parseErr
 			}

@@ -111,7 +111,7 @@ describe("the three answers a reading can give", () => {
     expect(await screen.findByText(/reading this file/i)).toBeTruthy();
     // The distinction under test: a running reading must not be describable as
     // a document that states nothing.
-    expect(screen.queryByText(/states none of the deal fields/i)).toBeNull();
+    expect(screen.queryByText(/found none of the deal fields/i)).toBeNull();
   });
 
   it("offers a fresh read of a reading whose worker died, where it showed reading", async () => {
@@ -123,14 +123,14 @@ describe("the three answers a reading can give", () => {
       omitted: [],
     });
     show();
-    expect(await screen.findByText(/taken unusually long/i)).toBeTruthy();
+    expect(await screen.findByText(/taking unusually long/i)).toBeTruthy();
     // A stalled reading is not a reading in progress: the line that says the
     // file is being read would keep a rep waiting on a worker that is gone.
     expect(screen.queryByText("Reading this file…")).toBeNull();
     // The button is the only way back — the server re-arms the reading on
     // this request — so the press has to reach it.
     await userEvent.click(
-      screen.getByRole("button", { name: /try reading it again/i }),
+      screen.getByRole("button", { name: /^read again$/i }),
     );
     await waitFor(() => {
       expect(
@@ -148,7 +148,9 @@ describe("the three answers a reading can give", () => {
         "this document states none of the deal fields clearly enough to offer one",
     });
     show();
-    expect(await screen.findByText(/^AI read this file and it/i)).toBeTruthy();
+    expect(
+      await screen.findByText(/^AI read this file and found/i),
+    ).toBeTruthy();
     // The reading's own words, alongside the panel's: an empty result that does
     // not explain itself reads as a broken feature.
     expect(screen.getByText(/clearly enough to offer one/i)).toBeTruthy();
@@ -169,9 +171,7 @@ describe("the three answers a reading can give", () => {
     expect(await screen.findByText(/could not be read/i)).toBeTruthy();
     // The reason is the product: "it failed" tells a rep nothing to act on.
     expect(screen.getByText(/cannot read a image\/tiff/i)).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: /try reading it again/i }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^read again$/i })).toBeTruthy();
   });
 });
 
@@ -179,7 +179,7 @@ describe("what a grounded reading offers", () => {
   it("names the count, shows each value, and says what was omitted and why", async () => {
     serve(GROUNDED);
     show();
-    expect(await screen.findByText(/2 fields it can ground/i)).toBeTruthy();
+    expect(await screen.findByText(/2 fields with evidence/i)).toBeTruthy();
     // MONEY, not the minor units it is stored in. "14850000" under a label
     // reading "Amount", beside a snippet quoting "EUR 148,500.00", is two
     // renderings of one number disagreeing a hundredfold — in the one place a
@@ -245,7 +245,7 @@ describe("what a grounded reading offers", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /dismiss/i }),
     );
-    expect(await screen.findByText(/nothing was written/i)).toBeTruthy();
+    expect(await screen.findByText(/nothing was saved/i)).toBeTruthy();
     expect(calls.some((c) => c.method === "POST")).toBe(false);
   });
 
@@ -280,7 +280,7 @@ describe("what a grounded reading offers", () => {
   it("offers no accept to a reader who may not write the deal", async () => {
     serve(GROUNDED);
     show(false);
-    expect(await screen.findByText(/2 fields it can ground/i)).toBeTruthy();
+    expect(await screen.findByText(/2 fields with evidence/i)).toBeTruthy();
     // The values and their evidence still render: seeing what a document says is
     // not the same authority as writing it onto a record.
     expect(screen.getByText(/148,500\.00/)).toBeTruthy();

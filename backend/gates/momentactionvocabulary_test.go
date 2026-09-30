@@ -21,13 +21,14 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"sort"
 	"strings"
 	"testing"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -105,7 +106,7 @@ func momentActionKindEnum(t *testing.T) []string {
 // had quietly answered false for the log form.
 func momentActionClassification(t *testing.T) (kinds map[string]bool, writing int) {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), momentActionSource, nil, 0)
+	file, err := gatekit.ParseFile(momentActionSource, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", momentActionSource, err)
 	}

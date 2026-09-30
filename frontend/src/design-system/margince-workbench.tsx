@@ -2,10 +2,10 @@ import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { formatNumber, INTL_LOCALE, ordinalNumber } from "../format/format";
-import { type Locale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import { formatNumber, INTL_LOCALE } from "../format/format";
+import type { Locale } from "../i18n";
 import { Avatar } from "./atoms";
+import { coveredByDialog } from "./dialogfocus";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
 import "./margince-workbench.css";
 import { Heading } from "./heading";
@@ -71,6 +71,7 @@ export function MarginceWorkbench({
   locale: Locale;
   runtime?: AiRunSummary;
   runtimeLabels: WorkbenchRuntimeLabels;
+  /** Rail only: the journey's stops, drawn as the progress line. */
   steps?: readonly WorkbenchStep[];
   children: ReactNode;
   artifact?: ReactNode;
@@ -91,8 +92,8 @@ export function MarginceWorkbench({
   contact?: Readonly<{
     name: string;
     detail: string;
-    /** What the chip's tint is keyed on — see `Avatar.identity`. */
-    identity?: string;
+    /** The seat's user id, which keys the chip — see `Avatar.identity`. */
+    identity: string;
   }>;
   /**
    * Rail only: a control at the right-hand end of the contact row. The rail has
@@ -133,17 +134,9 @@ export function MarginceWorkbench({
       )}
     </header>
   );
-  // At rail width five numbered stops wrap into a ragged second line, so the
-  // rail states the journey the way a progress bar does: one sentence naming
-  // where you are, and a segment per stop. The full list stays the split
-  // variant's, where it has the width to be one row.
   const stepRail =
-    steps && steps.length > 0 ? (
-      rail ? (
-        <StepProgress steps={steps} label={stepLabel} />
-      ) : (
-        <StepRail steps={steps} />
-      )
+    rail && steps && steps.length > 0 ? (
+      <StepProgress steps={steps} label={stepLabel} />
     ) : null;
   return (
     <div className={`mw-shell${rail ? " is-rail" : ""}`}>
@@ -177,10 +170,7 @@ export function MarginceWorkbench({
               {stepRail}
             </>
           ) : (
-            <>
-              {stepRail}
-              {brand}
-            </>
+            brand
           )}
           {children}
           {/* The row survives an unresolved identity so its control does not
@@ -189,12 +179,9 @@ export function MarginceWorkbench({
             <div className="mw-contact">
               {contact && (
                 <>
-                  {/* The design system's chip, not a second one. This was a
-                      hand-rolled span taking ONE letter and a hard-coded
-                      `--mono0Fill`, so every reader was the same colour and a
-                      different letter count from the same contact's chip in the
-                      transcript three columns away — which that transcript's
-                      own comment claims it matches. */}
+                  {/* The design system's chip, not a second one: a
+                      hand-rolled chip drew every reader alike and disagreed
+                      with the same contact's chip in the transcript. */}
                   <Avatar identity={contact.identity} name={contact.name} />
                   <span className="mw-contact-id">
                     <b>{contact.name}</b>
@@ -216,42 +203,6 @@ export function MarginceWorkbench({
         {artifact && <div className="mw-artifact">{artifact}</div>}
       </div>
     </div>
-  );
-}
-
-// Each stop's state is a claim about the journey, and on screen only colour
-// carries it — so it is also said in words for anyone who cannot see the
-// colour. The vocabulary is the journey's own, shared with the live panel, so
-// the rail and the panel cannot describe the same step two different ways.
-const STEP_STATE_WORD: Readonly<Record<WorkbenchStep["state"], MessageKey>> = {
-  done: "ob.live.stateDone",
-  now: "ob.live.stateNow",
-  todo: "ob.live.stateWaiting",
-};
-
-// The rail states where the journey is without claiming a step is reachable:
-// a `todo` stop is inert text, never a link, because the machine — not the
-// rail — decides what comes next.
-function StepRail({ steps }: Readonly<{ steps: readonly WorkbenchStep[] }>) {
-  const t = useT();
-  return (
-    // The explicit role survives `list-style: none`, which Safari otherwise
-    // treats as a licence to drop list semantics — and position in the list is
-    // the only thing telling a screen reader this is stop two of five.
-    // biome-ignore lint/a11y/noRedundantRoles: the role is what keeps the list a list in Safari/VoiceOver once the bullets are styled off.
-    <ol className="mw-steps" role="list">
-      {steps.map((step, index) => (
-        <li
-          key={step.label}
-          className={`mw-step t-eyebrow is-${step.state}`}
-          aria-current={step.state === "now" ? "step" : undefined}
-        >
-          <b aria-hidden>{ordinalNumber(index + 1)}</b>
-          {step.label}
-          <span className="sr-only">{t(STEP_STATE_WORD[step.state])}</span>
-        </li>
-      ))}
-    </ol>
   );
 }
 
@@ -345,10 +296,9 @@ export function AiRuntimeChip({
     };
   }, []);
 
-  // An open popover has to close on Escape and on a click elsewhere, or it
-  // becomes a panel the reader cannot dismiss without guessing. Bound to `open`
-  // rather than to `pinned`: a popover held open by keyboard focus is exactly
-  // the one whose reader has no pointer to move away.
+  // An open popover closes on Escape and on a click elsewhere, or a reader
+  // cannot dismiss it without guessing. Keyed on `open`, not `pinned`: the
+  // popover focus holds open is the one whose reader has no pointer to move.
   useEffect(() => {
     if (!open) {
       return;
@@ -358,7 +308,7 @@ export function AiRuntimeChip({
       setDismissed(true);
     };
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !coveredByDialog(wrapper.current)) {
         close();
       }
     }

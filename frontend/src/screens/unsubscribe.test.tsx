@@ -172,7 +172,7 @@ describe("UnsubscribeScreen", () => {
     stubEdge();
     render(<UnsubscribeScreen token="tok-123" purpose="transactional" />);
     expect(
-      await screen.findByText(/can't be switched off/i),
+      await screen.findByText(/cannot be switched off/i),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /unsubscribe from these emails/i }),
@@ -201,7 +201,7 @@ describe("UnsubscribeScreen", () => {
     // And no retry, which would invite hammering a read that will never
     // succeed for this credential.
     expect(
-      screen.queryByRole("button", { name: /try again/i }),
+      screen.queryByRole("button", { name: /retry/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -239,9 +239,7 @@ describe("UnsubscribeScreen", () => {
       <UnsubscribeScreen token="tok-123" purpose="business_correspondence" />,
     );
     expect(await screen.findByText(/too many/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /try again/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
   });
 
   // A purpose the catalog does not carry must not read as a broken page.
@@ -249,7 +247,7 @@ describe("UnsubscribeScreen", () => {
     stubEdge();
     render(<UnsubscribeScreen token="tok-123" purpose="no_such_purpose" />);
     expect(
-      await screen.findByRole("heading", { name: /names nothing we send/i }),
+      await screen.findByRole("heading", { name: /matches no email type/i }),
     ).toBeInTheDocument();
     // The way on is the point of the page, so the link is asserted too.
     expect(screen.getByText(/open your preferences/i)).toBeInTheDocument();

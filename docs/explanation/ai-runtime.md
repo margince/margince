@@ -116,6 +116,7 @@ Per task:
 | `status` | `shipped` \| `planned` | whether the task exists in this build. `shipped` obliges every site to be registered, cased and covered by a scenario; `planned` forbids a site, a scenario and a record. This is what stops an unimplemented task presenting as certified. |
 | `sites` | list | the named invocation sites. A bare string is a site of kind `one_shot`; `{name: x, kind: y}` declares another kind. |
 | `sites[].kind` | `one_shot` \| `multi_turn` \| `agent_loop` | how the model is invoked, and therefore how much of the site one certification run can cover. A closed set: a new kind is a code-and-test change, because each needs a certification strategy that can actually run it. |
+| `sites[].tools` | tool names, on an `agent_loop` site only | `agent_loop` is the engine and each of its sites is one scheduled agent; this is the only set of tools that run is offered. Required and non-empty — the runner refuses a job with none — and never the whole served catalog, which compose's `TestEveryAgentSpecNamesRegisteredTools` fails. |
 | `no_payload` | `true` (or absent) | content from this task must **never** reach `ai_call_payload`, whatever the deployment's capture posture says. A parsed field precisely so a data-protection control is not load-bearing prose in a `doc:` string. |
 | `company_context` | `none` \| `{scopes, token_budget, conditional}` | the bounded company-profile block this task's prompts may carry. **Not optional** — an absent policy is a build error, never a runtime default. |
 | `company_context.scopes` | any of `identity`, `positioning`, `sales`, `offer`, `market`, `proof`, `administrative` | which bounded views of the company profile may be injected. That declaration order is also the wire and fingerprint order, so re-ordering a selection cannot make it hash differently. |
@@ -149,7 +150,7 @@ running one is rebound under Settings → AI or through `PUT /v1/ai/routing`. Th
 shape below is that binding's.
 
 ```yaml
-profile: eu_hosted            # WHERE inference may run (the egress posture)
+profile: cloud_frontier       # WHERE inference may run (the egress posture)
 tiers:
   local_small: {provider: ollama,  model: gemma3}
   cheap_cloud: {provider: gemini,  model: gemini-2.5-flash}
@@ -158,9 +159,11 @@ embeddings:    {provider: gemini}
 ```
 
 - **`profile`** is the §4 location ladder — the privacy choice of *where* the
-  model runs: `eu_hosted` (partner-operated EU inference, the default),
-  `sovereign` (zero egress by construction), and so on. It constrains, it never
-  leaks.
+  model runs: `eu_hosted` (partner-operated EU inference), `sovereign` (zero
+  egress by construction), `cloud_frontier` (a vendor's cloud, wherever it
+  serves). It constrains, it never leaks: under `eu_hosted` a lane on the
+  OpenRouter broker must pin EU-region hosts with `routing: {only: [...]}`, or
+  the config is refused, because an unpinned broker serves from any region.
 - **No key ever lives in the binding.** A provider names only itself, and a stray
   `api_key:` is a *boot error* rather than a convenience. Where the key comes from
   depends on who is asking: a served installation resolves it from the **key
@@ -322,6 +325,46 @@ can update it, `management` can read it, nobody else sees it) — separate from
 (the provider binding itself), so a custom role can hold any subset of the
 three. Full matrix: [reference/rbac-matrix.md](../reference/rbac-matrix.md).
 
+## The decision lane
+
+A **decision model** answers a typed question about a structured JSON `state`
+with calibrated probabilities instead of generated text. A task whose contract
+says `decision: true` (today `site_triage` and the two capture verdicts) has a
+second form of each site: a question and one criterion per label, built from the
+same inputs as its prompt (see [ai-prompts.md](../reference/ai-prompts.md)).
+
+The routing config may bind **one** `decisions:` lane beside `embeddings:`, with
+the same `provider` / `model` / `base_url` shape. Unbound, every call is exactly
+the ladder's. Bound, `Router.Decide` asks the lane first, inside the same
+logical call and rail entry, and falls back to the task's own ladder and prompt
+unless every check passes, in this order:
+
+1. **Local-only stays local** — nominally. `localOnlyAdmits`
+   (`internal/modules/ai/localonly.go`) is the one predicate this lane and the
+   ladder's `servableLadder` both read, unconditional today: #6396 reverted
+   the ladder's narrowing pending #3351, and the lane follows suit.
+2. **The answer stands.** The state is secret-stripped and capped at 48,000
+   bytes, the call has 15 seconds, and the answer must clear the **site's
+   own** floor (the one its LLM path applies).
+
+No certification row is required — only the two checks above. [Certifying a
+site](../how-to/certify-a-decision-site.md) is advisory only, a measured
+record an operator trusts it by, never something `Router.Decide` reads. A
+fallback leaves its reason on the ladder's first attempt:
+`decision_local_only`, `decision_state_too_large`, `decision_error`,
+`decision_off_enum` or `decision_below_floor`. A decision attempt is its own
+`ai_call` row (`kind = decision`, tier `decide`), priced on the `decisions`
+rate lane, keeping its answer (`decision_choice`, `decision_confidence`)
+whether or not it stood — floors are tuned from real fallbacks, `no_payload`
+tasks included. `GET /v1/ai/usage` counts `decisions` per call.
+
+Two providers speak the one wire, `base_url` being the full endpoint: `jev`,
+TypeSafe's own API, and `jev_compatible`, any Jev-wire server — OpenRouter
+([openrouter.md](../reference/openrouter.md#11-the-decisions-endpoint)) or a
+self-hosted Kev, Laya or LiteLLM. `sovereign` refuses `jev` and holds
+`jev_compatible` to its endpoint rule; `eu_hosted` refuses `jev` and an
+OpenRouter endpoint. See [configuration.md](../reference/configuration.md).
+
 ## The one gate — `ai.Router`
 
 Every call converges on the Router (`internal/modules/ai`). In one pass it:
@@ -401,7 +444,9 @@ model-call hot path.
   `(provider, model, effective_date)` — keyed on the *concrete model that
   served*, not the tier, so rebinding a tier keeps its rates. Each row is four
   integer
-  **micro-USD-per-MTok** prices: input, cache-read, cache-write, output. Lookup
+  **micro-USD-per-MTok** prices: input, cache-read, cache-write, output. A cache
+  price of `0` means the vendor publishes none — no discount, no surcharge — so
+  those tokens price at the input rate rather than as free. Lookup
   works like `fx_rate` — the latest row dated on or before the call's day wins,
   and a price change is a *new* row, never an edit. Local providers get explicit
   all-zero rows, so a local call prices as an honest `0`. **Unpriced ≠ free:** a
@@ -417,8 +462,7 @@ model-call hot path.
 - **The pre-flight estimate (`compose/costestimate`).** The same estimate told as one
   end-to-end story — the consent screen, the scope count, and the spend that lands after the
   import finishes — is [mail-history-import.md](mail-history-import.md); the formula is here.
-  Before a backfill runs,
-  the preview estimates its cost as `Σ per-task (per-unit cost × expected units)`:
+  Before a backfill runs, the preview estimates its cost as `Σ per-task (per-unit cost × expected units)`:
   - **Per-unit cost** comes from the last 7 days of `ai_call` history, grouped
     into `(task, tier, provider, model)` slices. Each slice is priced at whichever
     model *will* serve it now: the model that served it if that's still bound,
@@ -533,7 +577,7 @@ One YAML file per scenario under
 | `expect.outcome` | yes | which of `accepted` / `wrong_answer` / `invalid` / `abstained` the site's validator must report. Nothing privileges `accepted` — that is what lets a scenario whose right answer is *silence* exist. |
 | `expect.answer` | when the outcome asserts content | the answer itself, **in that site's own vocabulary** — a bare token, a list, a map, a `{min,max}` band. There is no common shape, because what separates a right answer from a wrong one differs per site. |
 | `expect.rubric` | when quality is scored | what the grader is told to weigh. It may only ask for what the site's reply envelope can carry: a rubric scoring a field the schema cannot hold measures nothing and can only mark a correct reply down. |
-| `expect.bands` | yes | `certified_min` / `degraded_min` / `floor` — the 1–100 score gates the run's median and minimum are folded against. Omitting the block is refused rather than defaulted, since a missing gate would silently pass everything. |
+| `expect.bands` | yes | `certified_min` / `degraded_min` / `floor` — the 0–100 bars this scenario's judge scores are measured against: the pooled margin above `certified_min` or `degraded_min`, and the veto and floor on its own upper bound. Omitting the block is refused rather than defaulted, since a missing gate would silently pass everything. |
 | `expect.caps` | optional | the run's resource ceilings, breached exactly like a failed structural check — never silently. `max_tokens` budgets the model's **answer** alone: not the fixed input the model cannot shrink, and not a reasoning model's internal thinking, so a rich-input scenario with a tight output cap tests drafting within budget rather than prompt size. `p95_latency_ms` judges **cloud-served candidates only**, since a same-host engine's latency is a fact about the hardware. Both are read off the run's **pooled** calls — a site that answers in three requests spent all three. |
 
 Full walkthrough:
@@ -549,9 +593,10 @@ writing the case that certifies one:
 | Task contract (tasks, tiers, ladders, budget posture, status/sites/context/cost unit) | `backend/api/ai-tasks.yaml` → `tasks_gen.go` (via `tools/gen-aitasks`, `make gen`) |
 | Invocation-site census (which sites this build ships, and the case certifying each) | `internal/compose/aitaskregistry.go` (`NewTaskCensus`) · `internal/compose/aitasks` |
 | Runtime binding (tier → provider/model, profile) | the `ai.routing` setting — seeded from `seeds.ai_routing`, changed under Settings → AI. Shape declared under `$defs.aiRouting` in `config/margince.schema.json` |
-| BYOK keys | the key vault, set under Settings → AI → Model provider keys. The conventional environment variables (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`) are read once, to seal a key into the vault on first boot |
+| BYOK keys | the key vault, set under Settings → AI → Model provider keys. The conventional environment variables (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `TYPESAFE_API_KEY`, `JEV_COMPATIBLE_API_KEY`) are read once, to seal a key into the vault on first boot |
 | The gate | `internal/modules/ai` — `ai.Router` / `ai.NewLocalRouter`; `--ai-fake` flag |
-| Providers | `anthropic`, `openai`, `gemini` (native) · `ollama`, `vllm`, `openai_compatible` · `fake` |
+| Decision lane | `decisions:` in the routing setting · `Router.Decide` (`decideroute.go`) · certified rows in `decisioncert_gen.go` |
+| Providers | `anthropic`, `openai`, `gemini` (native) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `jev`, `jev_compatible` (`providerregistry.go`) |
 | Tracing | `ai_call` / `ai_call_payload` / `ai_call_config` (migrations `0088`, `0089`, `0100`, `0102`) |
 | Cost rates | `ai_model_rate` (per provider/model, effective-dated, micro-USD) · seeded by `SeedModelRates` |
 | Pricer (actuals) | `PriceCall` + `RateStore` (`internal/modules/ai`) → `/ai/usage` `cost_est_minor` |

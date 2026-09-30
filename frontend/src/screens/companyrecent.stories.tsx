@@ -6,7 +6,7 @@ import type { components } from "../api/schema";
 import { CompanyRecentList } from "./companyrecent";
 import { StoryProviders } from "./story-utils";
 
-// "What happened lately" (co360's own row-per-exchange reading): the deal a
+// "Recent activity" (co360's own row-per-exchange reading): the deal a
 // row is ABOUT, named when `nameOf` can resolve it and left the honest
 // unnamed phrase when it cannot. The neutral kind chip never borrows the
 // AI-provenance indigo for a human's own correspondence.

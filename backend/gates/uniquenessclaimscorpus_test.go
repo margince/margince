@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"maps"
 	"os"
@@ -28,6 +27,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // gateIdentifiers are the top-level declarations that make a file part of this
@@ -61,7 +62,7 @@ func TestOnlyTheGatesOwnSourcesAreExemptFromTheSweep(t *testing.T) {
 			len(gateFiles), exemptGateFiles)
 	}
 	for _, path := range slices.Sorted(maps.Keys(gateFiles)) {
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+		file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 		if err != nil {
 			t.Errorf("%s is exempt from the sweep and cannot be parsed: %v — an exemption naming "+
 				"a file that is not there skips nothing and hides a rename", path, err)
@@ -289,7 +290,7 @@ func TestTheTwoDoorsAreJudgedRatherThanTrusted(t *testing.T) {
 		{"using but not declaring it", "package p\n\nfunc use() { _ = claimShapes }\n", false},
 		{"an ordinary source", "package p\n\nfunc Total(rows []int) int { return len(rows) }\n", false},
 	} {
-		file, err := parser.ParseFile(token.NewFileSet(), "probe.go", c.source, parser.SkipObjectResolution)
+		file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", c.source, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing the %q probe: %v", c.name, err)
 		}

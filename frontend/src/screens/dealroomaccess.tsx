@@ -12,10 +12,11 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
+import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDateAbbrev, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { IssuedNotice } from "./dealroomaccess.notices";
@@ -174,7 +175,7 @@ export function DealRoomAccess({
 // "0 documents" reads as a judgement about the buyer, and the honest state
 // early in a room's life is simply that there is nothing to report yet.
 function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
-  const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const downloads = participant.download_count ?? 0;
   if (downloads === 0) {
@@ -183,7 +184,9 @@ function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
   const titles = participant.documents_downloaded ?? [];
   return (
     <p className="t-caption">
-      {t("access.downloads", { count: formatNumber(downloads, locale) })}
+      {plural("access.downloads", downloads, {
+        count: formatNumber(downloads, locale),
+      })}
       {titles.length > 0 ? ` · ${titles.join(", ")}` : ""}
     </p>
   );
@@ -281,16 +284,12 @@ function ParticipantRow({
 // a rep most needs to know and will otherwise learn from a locked-out buyer.
 function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
   const t = useT();
-  const [copied, setCopied] = useState<"done" | "failed" | null>(null);
   const link = buyerLink(issued.credential);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied("done");
-    } catch {
-      setCopied("failed");
-    }
-  };
+  const copy = useClipboardCopy(link, {
+    copy: t("access.issued.copy"),
+    copied: t("access.issued.copied"),
+    remedy: t("access.issued.copyFailed"),
+  });
   return (
     <div className="access-issued">
       <IssuedNotice queued={issued.queued} email={issued.participant.email} />
@@ -298,16 +297,15 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
         {(control) => <TextInput {...control} readOnly value={link} />}
       </Field>
       <div className="card-actions">
-        <Button onClick={copy}>
+        <Button onClick={copy.copy}>
           <Copy aria-hidden />
-          {copied === "done"
-            ? t("access.issued.copied")
-            : t("access.issued.copy")}
+          {copy.label}
         </Button>
-        {copied === "failed" ? (
-          <span className="t-danger">{t("access.issued.copyFailed")}</span>
-        ) : null}
       </div>
+      {/* Below the row rather than inside it: the actions band lays controls
+          out side by side, and a notice squeezed in beside the button it is
+          about loses the line it needs to say what to do instead. */}
+      {copy.notice}
       <p className="t-caption">{t("access.issued.oneTime")}</p>
     </div>
   );
@@ -336,7 +334,7 @@ function InviteDialog({
           full_name: input.name,
           email: input.email,
           capability: input.capability,
-          source: "ui",
+          source: "manual",
         },
       });
       if (error) {

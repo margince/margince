@@ -425,7 +425,7 @@ describe("reopening the drawer after access was withdrawn", () => {
     await waitFor(() =>
       expect(screen.queryByText("The signed contract")).toBeNull(),
     );
-    expect(screen.getByText("Opening the message")).toBeTruthy();
+    expect(screen.getByText("Loading message…")).toBeTruthy();
 
     // And when the answer is a refusal, it stays off the screen.
     release(

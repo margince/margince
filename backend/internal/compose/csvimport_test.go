@@ -31,87 +31,97 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 	// set: an exemption matching nothing would otherwise sit on ratifying a
 	// target that no longer exists.
 	defer nonFieldTargets.AssertAllMatched(t)
+	defer createOnlyTargets.AssertAllMatched(t)
 	for object, build := range map[string]func(map[string]string) (created, patched map[string]bool){
 		migration.ObjectLead: func(fields map[string]string) (map[string]bool, map[string]bool) {
 			in := leadCreateFrom(fields, "import:csv", "ext-1", "src")
 			up := leadUpdateFrom(fields)
-			return map[string]bool{
-					"full_name":    in.FullName != nil,
-					"email":        in.Email != nil,
-					"title":        in.Title != nil,
-					"company_name": in.CompanyName != nil,
-				}, map[string]bool{
-					"full_name":    up.FullName != nil,
-					"email":        up.Email != nil,
-					"title":        up.Title != nil,
-					"company_name": up.CompanyName != nil,
-				}
+			created := map[string]bool{
+				"full_name":    in.FullName != nil,
+				"email":        in.Email != nil,
+				"title":        in.Title != nil,
+				"company_name": in.CompanyName != nil,
+				"author":       in.Author.AuthorName != nil,
+			}
+			patched := map[string]bool{
+				"full_name":    up.FullName != nil,
+				"email":        up.Email != nil,
+				"title":        up.Title != nil,
+				"company_name": up.CompanyName != nil,
+			}
+			return created, patched
 		},
 		migration.ObjectCompany: func(fields map[string]string) (map[string]bool, map[string]bool) {
 			in := companyCreateFrom(fields, "src")
 			up := companyUpdateFrom(fields)
-			return map[string]bool{
-					"display_name":        in.DisplayName != "",
-					"legal_name":          in.LegalName != nil,
-					"industry":            in.Industry != nil,
-					"size_band":           in.SizeBand != nil,
-					"description":         in.Description != nil,
-					"domain":              len(in.Domains) > 0,
-					"address.line1":       in.Address != nil && in.Address.Line1 != nil,
-					"address.line2":       in.Address != nil && in.Address.Line2 != nil,
-					"address.city":        in.Address != nil && in.Address.City != nil,
-					"address.region":      in.Address != nil && in.Address.Region != nil,
-					"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
-					"address.country":     in.Address != nil && in.Address.Country != nil,
-				}, map[string]bool{
-					"display_name": up.DisplayName != nil,
-					"legal_name":   up.LegalName != nil,
-					"industry":     up.Industry != nil,
-					"size_band":    up.SizeBand != nil,
-					"description":  up.Description != nil,
-					// The replace-set behind a pointer: non-nil means the file
-					// carried a domain column, and only then is the stored set
-					// rewritten.
-					"domain":              up.Domains != nil && len(*up.Domains) > 0,
-					"address.line1":       up.Address != nil && up.Address.Line1 != nil,
-					"address.line2":       up.Address != nil && up.Address.Line2 != nil,
-					"address.city":        up.Address != nil && up.Address.City != nil,
-					"address.region":      up.Address != nil && up.Address.Region != nil,
-					"address.postal_code": up.Address != nil && up.Address.PostalCode != nil,
-					"address.country":     up.Address != nil && up.Address.Country != nil,
-				}
+			created := map[string]bool{
+				"display_name":        in.DisplayName != "",
+				"legal_name":          in.LegalName != nil,
+				"industry":            in.Industry != nil,
+				"size_band":           in.SizeBand != nil,
+				"description":         in.Description != nil,
+				"domain":              len(in.Domains) > 0,
+				"author":              in.Author.AuthorName != nil,
+				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
+				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
+				"address.city":        in.Address != nil && in.Address.City != nil,
+				"address.region":      in.Address != nil && in.Address.Region != nil,
+				"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
+				"address.country":     in.Address != nil && in.Address.Country != nil,
+			}
+			patched := map[string]bool{
+				"display_name": up.DisplayName != nil,
+				"legal_name":   up.LegalName != nil,
+				"industry":     up.Industry != nil,
+				"size_band":    up.SizeBand != nil,
+				"description":  up.Description != nil,
+				// The replace-set behind a pointer: non-nil means the file
+				// carried a domain column, and only then is the stored set
+				// rewritten.
+				"domain":              up.Domains != nil && len(*up.Domains) > 0,
+				"address.line1":       up.Address != nil && up.Address.Line1 != nil,
+				"address.line2":       up.Address != nil && up.Address.Line2 != nil,
+				"address.city":        up.Address != nil && up.Address.City != nil,
+				"address.region":      up.Address != nil && up.Address.Region != nil,
+				"address.postal_code": up.Address != nil && up.Address.PostalCode != nil,
+				"address.country":     up.Address != nil && up.Address.Country != nil,
+			}
+			return created, patched
 		},
 		migration.ObjectContact: func(fields map[string]string) (map[string]bool, map[string]bool) {
 			in := contactCreateFrom(fields, "src")
 			up := contactUpdateFrom(fields)
-			return map[string]bool{
-					"full_name":           in.FullName != "",
-					"first_name":          in.FirstName != nil,
-					"last_name":           in.LastName != nil,
-					"title":               in.Title != nil,
-					"email":               len(in.Emails) > 0,
-					"address.line1":       in.Address != nil && in.Address.Line1 != nil,
-					"address.line2":       in.Address != nil && in.Address.Line2 != nil,
-					"address.city":        in.Address != nil && in.Address.City != nil,
-					"address.region":      in.Address != nil && in.Address.Region != nil,
-					"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
-					"address.country":     in.Address != nil && in.Address.Country != nil,
-				}, map[string]bool{
-					"full_name":  up.FullName != nil,
-					"first_name": up.FirstName != nil,
-					"last_name":  up.LastName != nil,
-					"title":      up.Title != nil,
-					// The half that did not exist before this object did: a
-					// contact's emails are child rows, and the patch input
-					// carried no member for them at all.
-					"email":               len(up.Emails) > 0,
-					"address.line1":       up.Address != nil && up.Address.Line1 != nil,
-					"address.line2":       up.Address != nil && up.Address.Line2 != nil,
-					"address.city":        up.Address != nil && up.Address.City != nil,
-					"address.region":      up.Address != nil && up.Address.Region != nil,
-					"address.postal_code": up.Address != nil && up.Address.PostalCode != nil,
-					"address.country":     up.Address != nil && up.Address.Country != nil,
-				}
+			created := map[string]bool{
+				"full_name":           in.FullName != "",
+				"first_name":          in.FirstName != nil,
+				"last_name":           in.LastName != nil,
+				"title":               in.Title != nil,
+				"email":               len(in.Emails) > 0,
+				"author":              in.Author.AuthorName != nil,
+				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
+				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
+				"address.city":        in.Address != nil && in.Address.City != nil,
+				"address.region":      in.Address != nil && in.Address.Region != nil,
+				"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
+				"address.country":     in.Address != nil && in.Address.Country != nil,
+			}
+			patched := map[string]bool{
+				"full_name":  up.FullName != nil,
+				"first_name": up.FirstName != nil,
+				"last_name":  up.LastName != nil,
+				"title":      up.Title != nil,
+				// The half that did not exist before this object did: a
+				// contact's emails are child rows, and the patch input
+				// carried no member for them at all.
+				"email":               len(up.Emails) > 0,
+				"address.line1":       up.Address != nil && up.Address.Line1 != nil,
+				"address.line2":       up.Address != nil && up.Address.Line2 != nil,
+				"address.city":        up.Address != nil && up.Address.City != nil,
+				"address.region":      up.Address != nil && up.Address.Region != nil,
+				"address.postal_code": up.Address != nil && up.Address.PostalCode != nil,
+				"address.country":     up.Address != nil && up.Address.Country != nil,
+			}
+			return created, patched
 		},
 	} {
 		t.Run(object, func(t *testing.T) {
@@ -131,6 +141,10 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 					// and reaching neither input on purpose. Naming the reason here
 					// is what stops a future target being exempted by accident —
 					// a target with no entry is held to the rule.
+					continue
+				}
+				if createOnlyTargets.Waived(t, target) {
+					assertCreateOnlyTarget(t, object, target, created, patched)
 					continue
 				}
 				if !created[target] {
@@ -218,6 +232,45 @@ func TestMappingFromRefusesATargetTheObjectDoesNotHave(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("an unknown target was accepted; the run would fail at the first row instead")
+	}
+}
+
+// The other half of a mapping entry. An unknown TARGET is refused above; an
+// unknown COLUMN was accepted, and the row builder then dropped it — so the
+// field it named imported empty on every row while the preview reported clean
+// creates and the commit landed them.
+func TestMappingRefusesAColumnTheFileDoesNotCarry(t *testing.T) {
+	err := mappingNamesTheFilesColumns(
+		map[string]string{"Company": "display_name", "Firma": "legal_name"},
+		[]string{"Company", "Website"})
+	if err == nil {
+		t.Fatal("a column the file does not carry was accepted; every row would import that field empty")
+	}
+	// The name to correct, and the names it could have been. A caller driving
+	// this over MCP cannot open the file to read its header the way a screen
+	// can, so a refusal that named neither would be a dead end.
+	for _, name := range []string{"Firma", "Company", "Website"} {
+		if !strings.Contains(err.Error(), name) {
+			t.Errorf("the refusal does not name %q, so the caller cannot act on it: %v", name, err)
+		}
+	}
+}
+
+// Compared exactly as the file spells it, because that is how the row builder
+// looks a column up (CSVSource.rowFrom). A check that folded case or trimmed
+// would accept a name the walk then misses, which is the defect it exists to
+// catch rather than a convenience to add.
+func TestMappingComparesColumnsTheWayTheRowBuilderDoes(t *testing.T) {
+	header := []string{"Company", "Employee Count"}
+
+	if err := mappingNamesTheFilesColumns(map[string]string{
+		"Company": "display_name", "Employee Count": "size_band",
+	}, header); err != nil {
+		t.Fatalf("a mapping naming this file's own columns was refused: %v", err)
+	}
+	if err := mappingNamesTheFilesColumns(
+		map[string]string{"company": "display_name"}, header); err == nil {
+		t.Fatal("a differently-cased column was accepted; the row builder would not find it")
 	}
 }
 
@@ -495,6 +548,27 @@ var nonFieldTargets = gatekit.Waive(map[string]string{
 	csvTargetID:     "names the RECORD the row is — a selector, not a value",
 	csvEmployerName: "names an EDGE from the record to a company — written as a relationship, not a column",
 })
+
+// createOnlyTargets are columns the import writes when it creates a record and
+// never on a re-import's update. Held apart from nonFieldTargets, whose members
+// reach NEITHER input: filing a create-only target there would hide it being
+// dropped on create.
+var createOnlyTargets = gatekit.Waive(map[string]string{
+	csvTargetAuthor: "who wrote the record where it came from is fixed when it lands; a later file does not rewrite it",
+})
+
+func assertCreateOnlyTarget(t *testing.T, object, target string, created, patched map[string]bool) {
+	t.Helper()
+	if !isCreateOnlyTarget(target) {
+		t.Errorf("%s: %q is create-only here but the import's own isCreateOnlyTarget does not say so, so a re-import diffs it", object, target)
+	}
+	if !created[target] {
+		t.Errorf("%s: target %q is advertised but never reaches the create input", object, target)
+	}
+	if patched[target] {
+		t.Errorf("%s: target %q reached the update input — a re-import would rewrite who wrote the record", object, target)
+	}
+}
 
 // assertNonFieldTarget holds one exemption to what it promises: accepted as a
 // column, and reaching neither write input.

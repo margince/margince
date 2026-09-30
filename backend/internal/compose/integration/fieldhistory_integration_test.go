@@ -280,7 +280,7 @@ func TestFieldHistoryForActivityDispatchesToLinkWalkVisibility(t *testing.T) {
 	admin := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 
 	activity, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
-		Kind: "note", Subject: strPtr("Pricing call"), Source: "manual",
+		Kind: "note", Subject: StrPtr("Pricing call"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: myContact}},
 	})
 	if err != nil {
@@ -387,7 +387,7 @@ func TestFieldHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 	leadID := seedLead(t, e, "Selma Subject", twinEmail, nil)
 
 	activity, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Subject: strPtr("Call with Selma"), Source: "manual",
+		Kind: "note", Subject: StrPtr("Call with Selma"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
 	})
 	if err != nil {
@@ -475,6 +475,7 @@ func TestFieldHistoryExcludesRetentionArchiveMeta(t *testing.T) {
 	_, _, staleDeal, _ := seedOverAgeRecords(t, e)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("retention pass: %v", err)
 	}

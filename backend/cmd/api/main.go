@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 )
 
 func main() {
@@ -105,6 +106,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// not a capture.* tuning knob, so it is set here rather than folded into
 	// CaptureConfigFromDeploy's own deployconfig.Capture-scoped contract.
 	captureCfg := compose.CaptureConfigFromDeploy(deployCfg.Capture, logger)
+	compose.WarnStaleRates(deployCfg.Rates, logger)
 	captureCfg.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
@@ -114,6 +116,13 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 
 	rdb, closeRedis := sharedRedisClient(cfg, logger)
 	defer closeRedis()
+
+	// Every ceiling this role serves counts in that one Redis from here on, so
+	// N replicas enforce ONE limit rather than N. Before the surfaces are
+	// built, not because construction order matters — the registry reaches
+	// limiters made either side of this line — but because the line belongs
+	// where the client it shares is opened.
+	ratelimit.ShareProcess(rdb)
 
 	surfaceOpts, resetLane, err := declaredSurfaceOptions(ctx, cfg, deployCfg, pool, schemaPool, vault, rdb, logger, stdout)
 	if err != nil {
@@ -147,6 +156,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	opts = append(opts, modelOpts...)
 	opts = append(opts, compose.WithCompanyContextRollout(string(deployCfg.CompanyContext.EffectiveRollout())))
+	opts = append(opts, compose.WithListsEnabled(deployCfg.Lists.Enabled), compose.WithReportingEnabled(deployCfg.Analytics.PerformanceEnabled))
 
 	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, deployCfg, logger)
 	if err != nil {

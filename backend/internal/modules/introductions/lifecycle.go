@@ -11,9 +11,10 @@ package introductions
 
 import "github.com/margince/margince/backend/internal/shared/apperrors"
 
-// auditedField is the one field an ask's audit rows carry a before and after
-// image of. Every transition changes exactly this and nothing else, so a
-// reader comparing two audit rows is always comparing statuses.
+// auditedField is the one field an ask's transition rows carry a before and
+// after image of. Every transition changes exactly this and nothing else, so a
+// reader comparing two of them is always comparing statuses. The one other
+// write, a merge re-homing the ask, audits the two contact columns instead.
 const auditedField = "status"
 
 // Status is where an ask stands.

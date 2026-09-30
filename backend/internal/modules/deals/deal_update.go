@@ -116,6 +116,12 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
 		return crmcontracts.Deal{}, err
 	}
+	// Locked before `current` is read: the patch and the owner hand-over are
+	// built from it, and a concurrent reassignment committing in between would
+	// hand the cards on from an owner the deal no longer has.
+	if _, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly); err != nil {
+		return crmcontracts.Deal{}, err
+	}
 	// current reads WITH active columns so the patch's audit before-image
 	// carries the honest pre-update cf values.
 	current, err := readDeal(ctx, tx, id, storekit.LiveOnly, active)
@@ -149,9 +155,27 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	if err := recordDealUpdate(ctx, tx, id, current, in, p); err != nil {
 		return crmcontracts.Deal{}, err
 	}
+	if err := s.followPatchedOwner(ctx, tx, id, current, in, p); err != nil {
+		return crmcontracts.Deal{}, err
+	}
 	out, err := readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("read updated deal: %w", err)
 	}
 	return out, nil
+}
+
+// followPatchedOwner hands the pending proposals on when this update set or
+// cleared the owner.
+func (s *Store) followPatchedOwner(ctx context.Context, tx pgx.Tx, id ids.DealID,
+	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch,
+) error {
+	if _, touched := p.After()[ownerColumn]; !touched {
+		return nil
+	}
+	var to *ids.UUID
+	if in.OwnerID != nil {
+		to = &in.OwnerID.UUID
+	}
+	return s.followOwnerChange(ctx, tx, id.UUID, current.OwnerId, to)
 }

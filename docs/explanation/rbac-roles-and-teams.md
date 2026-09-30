@@ -37,7 +37,7 @@ workspace. Its `permissions` JSONB holds two things:
   [reference/rbac-matrix.md](../reference/rbac-matrix.md).
 - **`row_scope`** — `own` | `team` | `all` (see below).
 
-A fresh workspace is seeded with five **system roles** (`is_system = true`), whose exact grants are
+A fresh workspace is seeded with six **system roles** (`is_system = true`), whose exact grants are
 compiled in and are the source of truth — do not transcribe the full matrix elsewhere, it will
 drift. Read it in **`backend/internal/modules/identity/internal/policy/policy.go`** (`defaults`), or
 cell by cell in [reference/rbac-matrix.md](../reference/rbac-matrix.md), which is rendered from those
@@ -46,6 +46,7 @@ same values by a test and so cannot drift from them. The shape:
 | Role | Posture | Row scope |
 |---|---|---|
 | `admin` | Full CRUD on everything (config included). | `all` |
+| `management` | The `manager` object grid, over every row: the sales leader. | `all` |
 | `ops` | Same CRUD reach as admin — the operations counterpart. | `all` |
 | `manager` | CRUD on records; **read-only** on most config (pipeline, automation, custom_field); **no access at all** to the admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`). | `team` |
 | `rep` | Create/read/update records (delete only where it's routine, e.g. disqualify a lead); **read-only** on config. | `own` |
@@ -64,7 +65,9 @@ Two things surprise contacts:
   is why a `rep` gets `pipeline.read: permission denied`-adjacent behaviour only when they have **no
   role at all** — with the `rep` role they *can* read pipelines; they just can't edit them.
 
-Custom roles are additive on the same shape. When a user holds several roles, permissions **merge to
+Custom roles are additive on the same shape. An admin makes one in **Settings → Roles and
+permissions** by copying an existing role, then renames it, moves its row scope and switches its
+object grants there; archiving takes it out of use while nobody who can sign in holds it. When a user holds several roles, permissions **merge to
 the widest** held (object grants union; row scope takes the widest — `all` > `team` > `own`); see
 `policy.Merge`.
 
@@ -214,10 +217,17 @@ A **team** (`team` table) is a named group; **`team_membership`** joins users to
 1. **They are a share target**, and this is now the primary job. A record grant can name a team
    instead of a contact, so everyone in it — present and future members — gets the widened access.
    Sharing with a group is one act rather than one per member.
-2. **They resolve `row_scope: team`** for a role that carries it. No seeded role does any more:
-   putting a rep in a team does not by itself let them edit that team's records. An operator who
+2. **They resolve `row_scope: team`** for a role that carries it. Of the seeded roles only
+   `manager` does: putting a rep in a team does not by itself let them edit that team's records. An operator who
    wants standing write access among colleagues authors a custom role at `team` scope, and the
    predicate still renders the arm for it.
+
+**Only a literal admin changes who is on a team**: adding or removing a member, archiving or
+restoring the team, or inviting a member onto one (`identity/teams.go`,
+`refuseTeamMembershipUnlessAdmin`, 403 `team_membership_requires_admin`). Membership widens or
+ends a member's team reach and decides who leads and coaches them, which is role authority, and
+`team_admin` is not. A holder of `team_admin` creates and renames teams; neither changes anybody's
+reach.
 
 Teams do **not** carry their own permissions — a team is not a role. (A role *assignment* can be
 scoped to a team, but the grants still come from the role.)
@@ -225,15 +235,28 @@ scoped to a team, but the grants still come from the role.)
 3. **They answer "may I speak into this colleague's work?"** — a question row scope cannot answer,
    because it is not about which rows may be read. Two surfaces ask it: raising a coaching notice
    into somebody's Worklist, and the coaching layer on their meeting brief. Both ask it the same
-   way and in the same order — `auth.RequireCoach` for the SEAT (a human holding `admin`,
-   `management` or `manager`; `rep` is excluded deliberately, or a rep on a team would coach their
-   teammates), then a live shared team for the EDGE, through one membership seam so the two cannot
+   way and in the same order — `auth.RequireCoach` for the SEAT (a human holding
+   `team_lead.create`, seeded to `admin`, `management` and `manager`; `rep` holds nothing on it
+   deliberately, or a rep on a team would coach their teammates), then a live shared team for the
+   EDGE, through one membership seam so the two cannot
    drift. Membership resolves through `team_membership` and live teams only; the parent hierarchy
    is not walked, matching row scope.
 
    Neither surface WIDENS what the asker may read. The coaching layer on a meeting brief attaches
    to the brief that lead would have got anyway — a lead and their rep still see two differently
    scoped briefs of one meeting, because every read here is caller-scoped.
+
+4. **They answer "may I read this team's coaching week?"** — the frozen week that names each
+   member with a verdict their lead is meant to raise. Row scope does not answer it: a `read_only`
+   seat reaches every record and leads nobody. `auth.TeamWeekReachOf` answers it once, for both
+   `GET /weekly-reviews/team` and the Worklist's `team_week` field, which is what Home offers the
+   week on, so Home never offers a week the server refuses. The Worklist's `team` scope is the
+   team's live work and stays on row scope. Every arm needs `deal.read`, because the week carries
+   deal totals. A seat holding `team_oversight.read` (seeded to `admin` and `management`) opens
+   every team. A human seat holding `team_lead.read` opens a team it is a live member of —
+   `team_membership` records who is on a team, not who leads it, so the `team_lead` grant is what
+   says "lead". Because it is a grant, a custom role can lead a team. Every other seat, and every own-scoped seat, is refused with 403. A lead
+   asking about a team they are not on gets 404, so a team id cannot be probed for existence.
 
 ## A user with no role sees nothing
 

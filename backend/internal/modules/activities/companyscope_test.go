@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -260,21 +261,34 @@ func TestTheWaitingQueryReturnsOneRowPerMessage(t *testing.T) {
 	}
 }
 
-// Ties are broken by id. Mail carries second precision, so two messages in one
-// thread sharing a timestamp are ordinary — and without the tie-break both
-// halves of "newest inbound, no later outbound" are wrong at once.
+// Mail carries second precision, so two messages in one thread sharing a
+// timestamp are ordinary. The newest-inbound walk breaks the tie by id, or two
+// equal-second inbounds would both be the wait. An answer never does: an id
+// says when a row was captured, not which message came first, so an answer
+// must be strictly later and a tie stays owed.
 func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
-	if strings.Count(waitingRepliesSQL+unansweredConversationSQL("$%[1]d"), ".id) > (a.occurred_at, a.id)") != 2 {
-		t.Fatal("the waiting query compares timestamps alone, so equal-second messages answer wrongly")
+	if strings.Count(waitingRepliesSQL, "newer.id) > (a.occurred_at, a.id)") == 0 {
+		t.Fatal("the newest-inbound walk no longer breaks equal-second ties by id")
+	}
+	answers := answeredSQL("a", "$1")
+	if strings.Contains(answers, ".id) > (a.occurred_at, a.id)") {
+		t.Fatal("an answer is ordered by id, so capture order decides whether a same-second reply answered")
+	}
+	if regexp.MustCompile(`occurred_at\s*>=\s*a\.occurred_at`).MatchString(answers) {
+		t.Fatal("an answer at the same second as the message counts as later")
 	}
 }
 
-// The anti-joins are bounded by the read instant, so the answer is a snapshot.
-// Mail carries the sender's own Date header: a message dated in the future must
-// not suppress a thread that is genuinely waiting now.
+// Every later row the query reads is bounded by the read instant, so the answer
+// is a snapshot. Mail carries the sender's own Date header: a message dated in
+// the future must not suppress a thread that is genuinely waiting now.
 func TestTheWaitingQueryIsBoundedByTheReadInstant(t *testing.T) {
-	if strings.Count(waitingRepliesSQL+unansweredConversationSQL("$%[1]d"), "occurred_at <= $%[1]d") != 3 {
-		t.Fatal("a future-dated message can suppress a thread that is waiting now")
+	later := strings.Count(waitingRepliesSQL, ".id) > (a.occurred_at, a.id)") +
+		strings.Count(waitingRepliesSQL, ".occurred_at > a.occurred_at")
+	bounded := strings.Count(waitingRepliesSQL, "occurred_at <= $%[1]d")
+	if later == 0 || bounded <= later {
+		t.Fatalf("%d later-row comparisons but only %d bounds beyond the message's own: "+
+			"a future-dated message can suppress a thread that is waiting now", later, bounded)
 	}
 }
 
@@ -287,21 +301,23 @@ func TestTheWaitingQueryIsBoundedByTheReadInstant(t *testing.T) {
 // disposition anti-join — a third, correct medium match — failed it for being
 // new. What matters is that no comparison of thread keys stands alone.
 func TestTheWaitingQueryMatchesWithinOneMedium(t *testing.T) {
-	matches := strings.Count(waitingRepliesSQL, "thread_key = a.thread_key")
-	if matches == 0 {
+	matches := regexp.MustCompile(`(\w+)\.thread_key = a\.thread_key`).FindAllStringSubmatch(waitingRepliesSQL, -1)
+	if len(matches) == 0 {
 		t.Fatal("no thread match found — this gate is reading the wrong query")
 	}
-	if got := strings.Count(waitingRepliesSQL, "kind = a.kind"); got != matches {
-		t.Fatalf("%d thread match(es) but %d carry the medium: one matches across media", matches, got)
-	}
-	// The provider is compared two ways for one reason: the reply anti-joins
-	// NULL-match it, because two mail rows both having no provider is a genuine
-	// match; the disposition join coalesces it to '' instead, because a
-	// PRIMARY KEY cannot hold two NULLs as one row.
-	providers := strings.Count(waitingRepliesSQL, "channel_provider IS NOT DISTINCT FROM a.channel_provider") +
-		strings.Count(waitingRepliesSQL, "channel_provider = coalesce(a.channel_provider, '')")
-	if providers != matches {
-		t.Fatalf("%d thread match(es) but %d carry the provider: one matches across channels", matches, providers)
+	for _, match := range matches {
+		alias := match[1]
+		if !strings.Contains(waitingRepliesSQL, alias+".kind = a.kind") {
+			t.Errorf("%s matches the thread key without the medium", alias)
+		}
+		// The provider is compared two ways for one reason: the reply walks
+		// NULL-match it, because two mail rows both having no provider is a
+		// genuine match; the disposition join coalesces it to '' instead,
+		// because a PRIMARY KEY cannot hold two NULLs as one row.
+		if !strings.Contains(waitingRepliesSQL, alias+".channel_provider IS NOT DISTINCT FROM a.channel_provider") &&
+			!strings.Contains(waitingRepliesSQL, alias+".channel_provider = coalesce(a.channel_provider, '')") {
+			t.Errorf("%s matches the thread key without the provider: one matches across channels", alias)
+		}
 	}
 }
 
@@ -334,61 +350,26 @@ func TestTheWaitingQueryNeverNullMatchesThreadKeys(t *testing.T) {
 	}
 }
 
-// Only the waiting family admits threadless mail.
+// The obligation admits threadless mail; request review does not.
 //
-// The split is the whole safety argument, so it is held rather than
-// remembered. The waiting queue applies the machine-sender and colleague rules
-// above its scan cap, so a threadless notification is dropped before anybody sees it. The
-// deal card applies neither — dealstatus/move.go takes the first email in the
-// list and offers it as the reply somebody owes — so the wider reading there
-// turns a hand-logged note into a standing obligation on the deal.
-//
-// Asked of the narrow function rather than of its callers: the default is what
-// a new caller gets, and the default must be the safe one.
-func TestOnlyTheWaitingFamilyAdmitsThreadlessMail(t *testing.T) {
-	if strings.Contains(unansweredConversationSQL("$1"), "a.thread_key IS NULL") {
-		t.Fatal("the default conversation predicate admits threadless mail, so the deal " +
-			"card offers a hand-logged note as a reply somebody owes")
+// The waiting queue applies the machine-sender and colleague rules above its
+// scan cap, so a threadless notification is dropped before anybody sees it.
+// The deal card reads request review and applies neither, so there a
+// threadless unjudged row would turn a hand-logged note into a standing
+// obligation on the deal.
+func TestOnlyTheObligationAdmitsThreadlessMail(t *testing.T) {
+	if strings.Contains(owedSQL("$1", neverRelaxed, neverRelaxed), "a.thread_key IS NOT NULL") {
+		t.Fatal("the obligation asks a message for a thread key, so a customer's threadless " +
+			"mail cannot be judged and stays invisible")
 	}
-	if !strings.Contains(unansweredConversationAdmittingThreadless("$1"), "a.thread_key IS NULL") {
-		t.Fatal("the waiting queue's predicate no longer admits threadless mail, so a " +
-			"customer's unanswered message cannot be judged and stays invisible")
+	if !strings.Contains(reviewableRequestSQL("$1"), "a.thread_key IS NOT NULL AND NOT") {
+		t.Fatal("request review admits unjudged threadless mail without a sender rule in front of it")
 	}
-	// Request review is the deal card's read; it must take the narrow form.
-	if strings.Contains(reviewableRequestSQL("$1"), "a.thread_key IS NULL") {
-		t.Fatal("request review admits threadless mail without a sender rule in front of it")
+	// Every reader of the waiting query asks the same obligation, because the
+	// query carries it rather than taking it from its caller.
+	if !strings.Contains(waitingRepliesSQL, owedSQL("$%[1]d", "%[12]s", "%[18]s")) {
+		t.Fatal("the waiting query no longer carries owedSQL, so the lane and the badge can disagree")
 	}
-	// And the queue itself must actually ASK the wider question. Checking the
-	// two functions alone passes while every caller uses the narrow one, which
-	// is the shape this defect already had: the predicate was right and the
-	// row still never arrived.
-	if !strings.Contains(waitingRepliesSQL, "%[18]s") {
-		t.Fatal("the waiting query no longer takes the conversation predicate in slot 18 — " +
-			"this gate is reading for a slot that moved, so it can no longer tell which form the queue asks")
-	}
-	for _, caller := range []struct{ name, source string }{
-		{"waiting.go", waitingCallerSource(t, "waiting.go")},
-		{"waitingrecordscope.go", waitingCallerSource(t, "waitingrecordscope.go")},
-		{"hiddenbacklog.go", waitingCallerSource(t, "hiddenbacklog.go")},
-	} {
-		if !strings.Contains(caller.source, "unansweredConversationAdmittingThreadless(") {
-			t.Errorf("%s composes the waiting query with the narrow predicate, so a "+
-				"threadless customer mail never reaches the queue that would judge it", caller.name)
-		}
-	}
-}
-
-// waitingCallerSource reads one file of this package so the gate above can ask
-// which predicate it composes. Read from source because the composition is a
-// function CALL: the resulting SQL is identical either way apart from the one
-// clause, so a string check over the built query cannot tell the callers apart.
-func waitingCallerSource(t *testing.T, name string) string {
-	t.Helper()
-	body, err := os.ReadFile(name)
-	if err != nil {
-		t.Fatalf("reading %s to see which predicate it composes: %v", name, err)
-	}
-	return string(body)
 }
 
 // A threadless message reaches the rules that judge it.

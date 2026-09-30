@@ -282,6 +282,45 @@ type Copy struct {
 	// heading over an empty list reads as a message that failed to render.
 	MorningQuiet   string
 	MorningOpenDay string
+
+	// The one notice that leaves the product: a decision waiting on a
+	// colleague, mailed because they asked for that class by mail.
+	//
+	// Shorter than either digest, and deliberately so. It carries no counts and
+	// no ranking — the notice's own line is the whole of what it has to say —
+	// because it arrives the moment the decision is staged rather than on a
+	// schedule, and a reader opening it is deciding whether to switch tabs now.
+	//
+	// NotificationSubject is a PREFIX the notice's own subject follows, the
+	// shape the two digests take: the subject is what tells two of these apart
+	// in a list, and what it names has to be the thing waiting rather than the
+	// message.
+	NotificationSubject string
+	NotificationIntro   string
+	NotificationOpen    string
+
+	// The morning notification digest: the same queue as the line above, for a
+	// colleague who asked to hear about a class once a day rather than each time
+	// it moves.
+	//
+	// DigestSubject is a NAME the count follows in brackets, not a prefix a
+	// record's title completes: a batch is about five things, and putting one of
+	// them in the subject would make the message look like it is about that one.
+	//
+	// DigestAndMore is the "%d more" tail, and it counts everything the body did
+	// not print — the lines that did not fit and the ones the reader's own scope
+	// withheld, together.
+	//
+	// ONE number rather than two, and what that buys is not secrecy: see
+	// digestLines in compose/notificationdigestrender.go for what the count does
+	// and does not disclose. It is that a second number would be a second thing
+	// to keep true, and it would tell this reader only which of their OWN
+	// waiting notices had its subject withheld — a set their notification centre
+	// already shows them in full.
+	DigestSubject string
+	DigestIntro   string
+	DigestAndMore string
+	DigestOpen    string
 }
 
 // OneLine collapses any run of line breaks and other control separators into

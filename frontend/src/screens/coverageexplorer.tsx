@@ -9,6 +9,7 @@ import {
   Skeleton,
   TableScroll,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { forReader } from "../format/collate";
 import { formatNumber } from "../format/format";
@@ -123,9 +124,7 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
   // A failed read is unavailable, never "nobody is connected": the two call for
   // opposite next moves and only a read that succeeded can make the second claim.
   if (query.isError || !graph) {
-    return (
-      <p className="surfacestate-withheld">{t("co.section.unavailable")}</p>
-    );
+    return <ErrorLine>{t("co.section.unavailable")}</ErrorLine>;
   }
   if (colleagues.length === 0) {
     return (

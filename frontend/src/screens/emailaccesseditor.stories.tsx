@@ -26,7 +26,7 @@ type EmailPresentation = components["schemas"]["EmailPresentation"];
 type EmailAccess = components["schemas"]["EmailAccess"];
 
 const meta: Meta = {
-  title: "Records/Email box/Message access",
+  title: "Records/Record 360/Message access",
   parameters: { layout: "padded" },
 };
 export default meta;

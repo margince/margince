@@ -169,10 +169,22 @@ func (s *Store) DeleteProviderData(ctx context.Context, name string) error {
 				return fmt.Errorf("integrations: deleting provider claims: %w", err)
 			}
 		}
-		// The run rows stay as the spend ledger, but they must stop naming
-		// anybody: a row saying "we bought data about this contact on this
-		// date" is data about that contact, and leaving it while deleting the
-		// values would be a scrub in name only.
+		// The run rows stay as the spend ledger, but a run whose values are
+		// gone must stop naming anybody: a row saying "we bought data about
+		// this contact on this date" is data about that contact, and leaving
+		// it while deleting the values would be a scrub in name only.
+		//
+		// A run whose values are NOT gone keeps naming its subject, and that is
+		// the whole point of the NOT EXISTS. The revert above skips a subject
+		// the caller has no write authority over, leaving the bought values on
+		// the record; the run naming that contact is then the only map back to
+		// them, so scrubbing it turns "not cleared yet" into "never clearable"
+		// on the success path. The audit's records_not_cleared count and the
+		// ledger now say the same thing. The two erasure paths carry no such
+		// clause and must not grow one: each deletes every marker for its
+		// subject in the same transaction first, so there is never a surviving
+		// marker for their scrub to orphan, and an erasure that spared a run
+		// would be an erasure that did not erase.
 		//
 		// The SET clause is storekit's because the Art. 17 erasure performs
 		// the same scrub, and the two drifted once — six columns here, two
@@ -180,7 +192,9 @@ func (s *Store) DeleteProviderData(ctx context.Context, name string) error {
 		// toggle did. The statement stays local: the fitness gates that prove
 		// erasure reaches a table read the erasing package's own source.
 		if _, err := tx.Exec(ctx,
-			`UPDATE provider_run SET`+storekit.ScrubProviderRunColumns+` WHERE provider = $1`,
+			`UPDATE provider_run r SET`+storekit.ScrubProviderRunColumns+`
+			  WHERE r.provider = $1
+			    AND NOT EXISTS (SELECT 1 FROM provider_applied_field f WHERE f.run_id = r.id)`,
 			name); err != nil {
 			return fmt.Errorf("integrations: scrubbing run metadata: %w", err)
 		}

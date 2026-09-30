@@ -112,7 +112,7 @@ func TestEveryConfirmationRequiredToolHasADecisionGrantMapping(t *testing.T) {
 	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil)
 	// A nil brief reader is a legal wiring: this walk reads Specs() only, and
 	// the tool answers the assembled picture when no brief seam is bound.
-	agents.RegisterIntentTools(registry, stubRetriever{}, nil)
+	agents.RegisterIntentTools(registry, stubRetriever{}, nil, nil)
 	agents.RegisterCommsTools(registry, stubComms{}, stubSoR{})
 
 	for _, spec := range registry.Specs() {

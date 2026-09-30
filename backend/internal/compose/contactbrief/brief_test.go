@@ -41,7 +41,7 @@ func inputFixture() Input {
 		},
 		Changes: []ChangeIn{{Kind: "replied_after_gap", At: "2026-08-29T08:10:00Z", Days: 34}},
 		Claims: []ClaimIn{{
-			ID: "c-1", Kind: "objection", Body: "One listed sub-processor blocks legal sign-off.",
+			Kind: "objection", Body: "One listed sub-processor blocks legal sign-off.",
 			Status: "open", Quote: "we cannot go ahead while the analytics vendor is on it",
 			SourceID: objectionID,
 		}},

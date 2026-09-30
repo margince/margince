@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { setThemeChoice, THEME_KEY } from "./theme";
+import { removeStored, STORAGE_KEYS } from "./storage";
+import { setThemeChoice } from "./theme";
 
 /**
  * Put the theme back to what a first-time visitor meets: no choice recorded,
@@ -23,5 +24,5 @@ import { setThemeChoice, THEME_KEY } from "./theme";
  */
 export function resetTheme(): void {
   setThemeChoice("system");
-  window.localStorage.removeItem(THEME_KEY);
+  removeStored(STORAGE_KEYS.theme);
 }

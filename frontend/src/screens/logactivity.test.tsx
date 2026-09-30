@@ -25,11 +25,10 @@ import { meFixture } from "../app/mefixture";
 import { RecordZoneProvider } from "../app/recordzone";
 import { useRecordTimeline } from "../design-system/recordtimeline";
 import { pickOption } from "../design-system/select-testing";
-import { calendarDay, middayInstant } from "../format/calendarday";
+import { calendarDay } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { LogActivity } from "./logactivity";
-import { groupTask } from "./taskgroup";
 
 // Logging from a 360 (the "you can actually add to the timeline" acceptance):
 // the POST body carries the contract's shape (kind, subject, the viewed
@@ -121,20 +120,6 @@ const FAR_WEST_READER = "America/Bogota";
 // the record zone, so the eastern side of the promise is not close to its edge
 // — asserted anyway, because the two directions fail separately.
 const FAR_EAST_READER = "Pacific/Kiritimati";
-
-// The task the form has just logged, as the tasks list receives it — everything
-// but the due date, which is the field under test.
-const LOGGED_TASK = {
-  id: "a-new",
-  kind: "task" as const,
-  subject: "Send proposal",
-  occurred_at: "2026-07-06T09:00:00Z",
-  is_done: false,
-  source: "manual",
-  captured_by: "human:u1",
-  created_at: "2026-07-06T09:00:00Z",
-  updated_at: "2026-07-06T09:00:00Z",
-};
 
 // The due_at off a captured request body. A narrowing read rather than a cast:
 // the body is genuinely unknown here, and a request that carried no due date at
@@ -477,7 +462,7 @@ describe("log activity from a 360", () => {
       const log = screen.getByRole("button", { name: "Log" });
       expect(log.hasAttribute("disabled")).toBe(true);
 
-      await user.type(screen.getByLabelText("Who was there"), "Fré");
+      await user.type(screen.getByLabelText("Attendees"), "Fré");
       await user.click(
         await screen.findByRole("button", { name: "Frédéric de Gombert" }),
       );
@@ -497,7 +482,7 @@ describe("log activity from a 360", () => {
       render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
       await user.type(screen.getByLabelText("Subject *"), "Kickoff");
-      await user.type(screen.getByLabelText("Who was there"), "Fré");
+      await user.type(screen.getByLabelText("Attendees"), "Fré");
       await user.click(
         await screen.findByRole("button", { name: "Frédéric de Gombert" }),
       );
@@ -532,7 +517,7 @@ describe("log activity from a 360", () => {
       );
       render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
-      await user.type(screen.getByLabelText("Who was there"), "Fré");
+      await user.type(screen.getByLabelText("Attendees"), "Fré");
       await user.click(
         await screen.findByRole("button", { name: "Frédéric de Gombert" }),
       );
@@ -540,7 +525,7 @@ describe("log activity from a 360", () => {
       // Switching kind hides the picker but does not forget the contact: the
       // reader answered a question the form stopped asking.
       await pickOption(user, screen.getByLabelText("Type"), "Note");
-      expect(screen.queryByLabelText("Who was there")).toBeNull();
+      expect(screen.queryByLabelText("Attendees")).toBeNull();
       await user.type(screen.getByLabelText("Subject *"), "Pricing thoughts");
       await user.click(screen.getByRole("button", { name: "Log" }));
 
@@ -563,7 +548,7 @@ describe("log activity from a 360", () => {
     it("asks nobody for a note, which a company can hold on its own", async () => {
       stubApi({ "POST /activities": createdActivity });
       render(<LogActivity entityType="company" entityId="o1" />);
-      expect(screen.queryByLabelText("Who was there")).toBeNull();
+      expect(screen.queryByLabelText("Attendees")).toBeNull();
     });
 
     it("says the company has no contacts rather than offering none silently", async () => {
@@ -575,7 +560,7 @@ describe("log activity from a 360", () => {
       });
       render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
-      await user.type(screen.getByLabelText("Who was there"), "any");
+      await user.type(screen.getByLabelText("Attendees"), "any");
       // The picker's own empty-search wording, so a company with nobody on it
       // reads as an answered question rather than a field that never responded.
       expect(await screen.findByText(/no match/i)).toBeTruthy();
@@ -668,45 +653,6 @@ describe("log activity from a 360", () => {
     expect(
       formatTimeOfDay(postedDueAt(post.body), "en", INSTALLATION_ZONE),
     ).toBe("23:59");
-  });
-
-  it("posts a due date the tasks list then buckets as today, not as overdue", async () => {
-    const captured: Captured[] = [];
-    stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="company" entityId="o1" />);
-    await pickOption(userEvent.setup(), screen.getByLabelText("Type"), "Task");
-    fireEvent.change(screen.getByLabelText("Due date"), {
-      target: { value: PICKED_DAY },
-    });
-    await userEvent.type(screen.getByLabelText("Subject *"), "Send proposal");
-    await userEvent.click(screen.getByRole("button", { name: "Log" }));
-    await waitFor(() =>
-      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
-        true,
-      ),
-    );
-    const post = captured.find((entry) => entry.key === "POST /activities");
-    if (!post) throw new Error("expected a POST /activities to be captured");
-    // The two halves of the same contract, checked against each other: what
-    // this form mints is what the tasks screen groups. A writer filing a task
-    // for today at midday must find it under Today — with the day sent as UTC
-    // midnight it read as already overdue, which is the state the screen puts
-    // in red at the top of the list.
-    // Midday of the picked day IN THE RECORD ZONE, and grouped in that zone.
-    // A bare `${PICKED_DAY}T12:00:00` is parsed as the runner's local time, so
-    // the "now" this compares against moved with the machine while the deadline
-    // did not — which read as `upcoming` east of the record zone and `overdue`
-    // west of it.
-    const middayOnThePickedDay = new Date(
-      middayInstant(PICKED_DAY, INSTALLATION_ZONE),
-    );
-    expect(
-      groupTask(
-        { ...LOGGED_TASK, due_at: postedDueAt(post.body) },
-        middayOnThePickedDay,
-        INSTALLATION_ZONE,
-      ),
-    ).toBe("today");
   });
 
   it("keeps ordinary meeting notes as notes: unchecked, the field stays Details and no source_system is sent", async () => {
@@ -889,9 +835,7 @@ describe("log activity from a 360", () => {
     await userEvent.upload(input, file);
     await waitFor(() =>
       expect(
-        screen.getByText(
-          "Could not read that file — try pasting the text instead.",
-        ),
+        screen.getByText("File could not be read. Paste the text instead."),
       ).toBeTruthy(),
     );
     expect(

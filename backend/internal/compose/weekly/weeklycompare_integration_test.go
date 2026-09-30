@@ -134,18 +134,13 @@ func TestThePriorWeekIsTheLastOneWritten(t *testing.T) {
 			*recent.PriorReviewID, older.ID)
 	}
 
-	// And a reader gets that week's own frozen figures beside this one's.
+	// Legacy snapshots keep the history link but cannot support a numeric delta.
 	read, err := e.engine.LatestReview(e.repCtx, &recent.LocalWeekStart)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if read.Prior == nil {
-		t.Fatal("the review was served with no prior week to compare against")
-	}
-	if !read.Prior.LocalWeekStart.Equal(older.LocalWeekStart) {
-		t.Errorf("the comparison names the week of %s, want %s",
-			read.Prior.LocalWeekStart.Format(time.DateOnly),
-			older.LocalWeekStart.Format(time.DateOnly))
+	if read.Prior != nil {
+		t.Fatal("legacy or non-adjacent periods produced a comparison")
 	}
 }
 

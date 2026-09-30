@@ -194,3 +194,20 @@ func TestOnlyTheResolverReadsTheTracePayloadsField(t *testing.T) {
 			"answer false for a file that never set the key", o)
 	}
 }
+
+// An operator who said nothing about the backfill ceiling gets none, which is
+// the behaviour every deployment already has.
+func TestBackfillCeilingDefaultsToNoCap(t *testing.T) {
+	t.Parallel()
+	if got := (Capture{}).BackfillCeiling(); got != 0 {
+		t.Errorf("an absent max_backfill_months resolved to %d, want 0 (no cap)", got)
+	}
+}
+
+func TestBackfillCeilingReadsTheOperatorsNumber(t *testing.T) {
+	t.Parallel()
+	months := 24
+	if got := (Capture{MaxBackfillMonths: &months}).BackfillCeiling(); got != 24 {
+		t.Errorf("BackfillCeiling = %d, want 24", got)
+	}
+}

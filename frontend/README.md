@@ -101,8 +101,8 @@ default.
   when. One mark is open across the page at a time, for pointer and keyboard
   alike. It replaces the stack of three chips that used to sit under every value;
   the older primitives (EvidenceChip, ConfidenceMeter, ProvenanceTag) now live
-  INSIDE the mark and on the staging surfaces (StagingCard, ApprovalGate,
-  StagedProposal) — never stacked under a field again. The migration is real but
+  INSIDE the mark and on the staging surface (StagingCard) — never stacked
+  under a field again. The migration is real but
   partial: the company record page consumes the mark today while the other record
   screens still render the older primitives directly. Then the **Margince Core**
   (`margince-core*`, WDS-CORE-1..4 — one primitive, a closed five-state
@@ -155,28 +155,21 @@ default.
    must come from the i18n catalogs (TS AST walk).
 5. No emoji glyphs in source strings — Lucide only; the 🟢/🟡 autonomy
    semantics render through the `.dot` token component.
-6. No service worker ships, and nothing registers one.
+6. One service worker ships, and only `src/app/pwa.ts` registers it. It
+   answers nothing from Cache Storage but the offline page, for a navigation
+   the network could not make, and that page's own script
+   ([pwa.md](../docs/explanation/pwa.md)).
 7. WCAG 2.2 AA (axe) in the e2e lane. The perceived-perf budget is not
    here: `make bench-mobile` samples it, because one wall-clock reading on a
    shared runner measures the runner.
 8. The unauthenticated surface at 390px / 320px / 200% zoom (ADR-0076): no
-   horizontal scroll, the primary action reachable, the identity region whole
-   wherever it is shown at all, the task region above it below 960px, one h1 and
-   it is the task, the Core out of the a11y tree, and axe. The rest of the §3.8
-   sweep walks authenticated routes only, so login had never been measured at any
-   width — the first run of this found a contrast defect in the field labels.
-
-   **One deliberate departure, at phone width.** Below 561px the surface is the
-   task alone: the identity region is dropped whole — the sphere, the limits and
-   the AI's own sentence — because on a phone the form is the only thing the
-   screen is for (founder ruling, 2026-08-07). So this surface does NOT disclose
-   the AI at that width, which ADR-0076 Decision 1 asks for at every width. It is
-   a departure rather than a defect: stated in `src/screens/auth.css` beside the
-   rule that makes it, pinned in both directions by `e2e/ac.spec.ts` so it cannot
-   drift back, and owed upstream for the spec to reconcile (issue #562). Every
-   wider layout makes the disclosure in full. Where the region IS shown it shows
-   all of itself — no limit dropped to fit, which is the rule this replaced a
-   `display: none` sweep to get.
+   horizontal scroll, the primary action inside the viewport with a 44px
+   target (rounded), the identity region whole at every width — every row
+   present, visible and taller than zero — and above the task on screen while
+   the task stays first in the DOM, one h1 and it is the greeting, the Core out
+   of the a11y tree, and axe. The rest of the §3.8 sweep walks authenticated
+   routes only, so login had never been measured at any width — the first run
+   of this found a contrast defect in the field labels.
 
 ## Working agreements
 

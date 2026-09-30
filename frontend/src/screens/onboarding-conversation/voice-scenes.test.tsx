@@ -46,7 +46,7 @@ function resultVersion(
     model_provider: "routed",
     model_name: "gemini-3.1-flash-lite",
     builder_version: "voicebuilder/1",
-    source: "ui",
+    source: "manual",
     captured_by: "agent:voice-builder",
     evaluation: {
       held_out_prompts: 5,
@@ -147,7 +147,7 @@ describe("VoiceCollectScene", () => {
       screen.getByRole("button", { name: "Paste text instead" }),
     );
     const add = screen.getByRole("button", {
-      name: "Yes, add it to my corpus.",
+      name: "Add to writing samples",
     });
     expect(add).toBeDisabled();
 
@@ -174,9 +174,7 @@ describe("VoiceCollectScene", () => {
       screen.getByLabelText("Paste the text you wrote here"),
       "Something",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "No, discard it." }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
 
     expect(onAddPaste).not.toHaveBeenCalled();
     expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();
@@ -228,7 +226,7 @@ describe("the collect scene's distilling panel", () => {
     expect(panel).not.toBeNull();
     // Decorative: the same numbers stand in the meter as real text.
     expect(panel?.getAttribute("aria-hidden")).toBe("true");
-    expect(panel?.textContent).toContain("Distilling");
+    expect(panel?.textContent).toContain("Analyzing");
     expect(panel?.textContent).toContain(
       "We should move the kickoff to Thursday",
     );
@@ -267,7 +265,7 @@ describe("the collect scene's corpus floor meter", () => {
       screen.getByRole("button", { name: "Build my voice profile" }),
     );
     expect(onBuild).not.toHaveBeenCalled();
-    expect(document.querySelector(".ob-stage-note")?.textContent).toContain(
+    expect((await screen.findByRole("alert")).textContent).toContain(
       `${VOICE_MIN_WORDS}`,
     );
     expect(
@@ -311,7 +309,7 @@ describe("the collect scene's corpus floor meter", () => {
       </LocaleProvider>,
     );
 
-    const ready = `${VOICE_MIN_WORDS} words — enough to build. More still sharpens it.`;
+    const ready = `${VOICE_MIN_WORDS} words: enough to build. More words improve it.`;
     expect(document.querySelector(".ob-voice-meter-line")?.textContent).toBe(
       ready,
     );
@@ -480,7 +478,7 @@ describe("VoiceResultScene", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Not quite me — add more writing" }),
+      screen.getByRole("button", { name: "Not quite me: add more writing" }),
     );
     expect(onRevise).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByRole("button", { name: "That is me" }));

@@ -38,8 +38,10 @@ expect:
   rubric: >
     Score whether the message reads as one colleague asking another for a
     favour: short, direct, no sales register and no pleasantries stacked on the
-    front. It must name the colleague and the contact, and say what the
-    introduction is for. Penalise heavily any characterisation of the
+    front. It must name the colleague and the contact — with the contact's title
+    and company, which are given — and say what the introduction is for. Saying
+    the two have been in touch, as "developing" and last in August, is what the
+    prompt asks for; nothing warmer is. Penalise heavily any characterisation of the
     relationship beyond what the facts state — the input says "developing" and
     a date, so warmth beyond that is invented about a contact the reader will
     speak to next week. Penalise writing the introduction itself, or addressing

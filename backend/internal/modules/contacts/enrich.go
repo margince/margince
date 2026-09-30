@@ -64,6 +64,20 @@ func (s *Store) EnrichTargetURL(ctx context.Context, companyID ids.CompanyID) (s
 // company.updated event; captured_by is the executing principal
 // (agent:scrape), source is site_read.
 func (s *Store) ApplyEnrichment(ctx context.Context, companyID ids.CompanyID, in ApplyColdStartProfileInput) error {
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		return s.ApplyEnrichmentTx(ctx, tx, companyID, in)
+	})
+}
+
+// ApplyEnrichmentTx is ApplyEnrichment inside a transaction the CALLER owns,
+// so an approved enrichment can be redeemed and applied as one commit.
+//
+// The pooled twin above is the only other caller. Redeeming in a separate
+// transaction spends the approval before this write runs, and a write that
+// then fails leaves the approval consumed with the change lost and no path
+// back: Decide refuses a second decision, Redeem refuses a second redemption,
+// and nothing else drives the effect.
+func (s *Store) ApplyEnrichmentTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, in ApplyColdStartProfileInput) error {
 	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
 		return err
 	}
@@ -75,60 +89,58 @@ func (s *Store) ApplyEnrichment(ctx context.Context, companyID ids.CompanyID, in
 		return errors.New("contacts: an accepted enrichment carries no fields")
 	}
 
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		wsID := workspaceID(ctx)
-		// The target is a KNOWN row — an enrichment never creates or resolves
-		// by domain. Row-scope is re-checked here so a leaked company id buys
-		// nothing (existence-hiding 404).
-		//
-		// LIVE, not merely visible: the proposal is staged and approved later,
-		// so the company can be archived between the scrape and this apply.
-		// EnsureWritableLive says why that is the write's own obligation.
-		if err := auth.EnsureWritableLive(ctx, tx, "company", companyID.UUID); err != nil {
+	wsID := workspaceID(ctx)
+	// The target is a KNOWN row — an enrichment never creates or resolves
+	// by domain. Row-scope is re-checked here so a leaked company id buys
+	// nothing (existence-hiding 404).
+	//
+	// LIVE, not merely visible: the proposal is staged and approved later,
+	// so the company can be archived between the scrape and this apply.
+	// EnsureWritableLive says why that is the write's own obligation.
+	if err := auth.EnsureWritableLive(ctx, tx, "company", companyID.UUID); err != nil {
+		return err
+	}
+	// The name lock before the row lock the image read takes, and only when a
+	// name is coming — the ordering readColdStartColumnImages names as its
+	// caller's obligation, and the one every other writer of an
+	// company name follows. Taken the other way round, an enrichment
+	// carrying a legal name deadlocks against a human rename.
+	if carriesCompanyName(in.Fields) {
+		if err := lockCompanyNameWrites(ctx, tx); err != nil {
 			return err
 		}
-		// The name lock before the row lock the image read takes, and only when a
-		// name is coming — the ordering readColdStartColumnImages names as its
-		// caller's obligation, and the one every other writer of an
-		// company name follows. Taken the other way round, an enrichment
-		// carrying a legal name deadlocks against a human rename.
-		if carriesCompanyName(in.Fields) {
-			if err := lockCompanyNameWrites(ctx, tx); err != nil {
-				return err
-			}
-		}
-		before, err := readColdStartColumnImages(ctx, tx, companyID)
-		if err != nil {
-			return err
-		}
-		applied, err := applyEvidenceFields(ctx, tx, wsID, companyID, by, in.Fields)
-		if err != nil {
-			return err
-		}
-		after, err := readColdStartColumnImages(ctx, tx, companyID)
-		if err != nil {
-			return err
-		}
-		before, after = storekit.ChangedColumns(before, after)
-		// before/after carry the RECORD's own column images and nothing else.
-		// The operation's metadata rides audit_log.evidence, which is the column
-		// for it: anything placed in the images is projected by field history as
-		// a change to a field of that name (storekit.AuditWithEvidence).
-		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "company", companyID.UUID, before, after, map[string]any{
-			auditKeySource: companySourceSiteRead, auditKeySourceURL: in.SourceURL, auditKeyFields: applied,
-		})
-		if err != nil {
-			return fmt.Errorf("audit enrichment apply: %w", err)
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, crmcontracts.PublicEventCompanyUpdated{
-			ChangedFields: map[string]any{
-				eventKeyDelta: applied, auditKeySource: companySourceSiteRead, auditKeySourceURL: in.SourceURL,
-			},
-		}); err != nil {
-			return fmt.Errorf("emit company.updated: %w", err)
-		}
-		return nil
+	}
+	before, err := readColdStartColumnImages(ctx, tx, companyID)
+	if err != nil {
+		return err
+	}
+	applied, err := applyEvidenceFields(ctx, tx, wsID, companyID, by, in.Fields)
+	if err != nil {
+		return err
+	}
+	after, err := readColdStartColumnImages(ctx, tx, companyID)
+	if err != nil {
+		return err
+	}
+	before, after = storekit.ChangedColumns(before, after)
+	// before/after carry the RECORD's own column images and nothing else.
+	// The operation's metadata rides audit_log.evidence, which is the column
+	// for it: anything placed in the images is projected by field history as
+	// a change to a field of that name (storekit.AuditWithEvidence).
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "company", companyID.UUID, before, after, map[string]any{
+		auditKeySource: companySourceSiteRead, auditKeySourceURL: in.SourceURL, auditKeyFields: applied,
 	})
+	if err != nil {
+		return fmt.Errorf("audit enrichment apply: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, crmcontracts.PublicEventCompanyUpdated{
+		ChangedFields: map[string]any{
+			eventKeyDelta: applied, auditKeySource: companySourceSiteRead, auditKeySourceURL: in.SourceURL,
+		},
+	}); err != nil {
+		return fmt.Errorf("emit company.updated: %w", err)
+	}
+	return nil
 }
 
 // UnmarshalEnrichment decodes a staged enrichment proposal — the company id plus

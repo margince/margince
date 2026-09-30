@@ -22,7 +22,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"regexp"
 	"strconv"
@@ -71,8 +70,7 @@ func withoutComments(literal string) string {
 // write-target and read-target scans run over these.
 func sqlLiterals(t *testing.T, path string) []string {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}
@@ -99,6 +97,7 @@ func sqlLiterals(t *testing.T, path string) []string {
 // sweep satisfy "Art. 17 reaches this table" is exactly the confusion this test
 // exists to prevent.
 var erasureCascadeFiles = []string{
+	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/erasure.go",
 	// The subject's TIMELINE and everything derived from it — split out of
 	// erasure.go when that file crossed the size cap. It is the same Art. 17
@@ -123,6 +122,9 @@ var erasureCascadeFiles = []string{
 	"internal/modules/privacy/erasure_leadtwins.go",
 	"internal/modules/privacy/erasure_payloads.go",
 	"internal/modules/privacy/erasure_channels.go",
+	// The drafts a rep started to the subject and never sent. Same Art. 17
+	// transaction; its own file because the table is not the eraser's own.
+	"internal/modules/privacy/maildrafts.go",
 	// The live capabilities over the subject's consent record — the
 	// preference-center token and the double-opt-in token. Split out of
 	// erasure.go for the same size reason as the timeline, and named here for
@@ -146,6 +148,12 @@ var erasureCascadeFiles = []string{
 	// The readings of the transcripts the timeline scrub just emptied — same
 	// transaction, its own file for the same both-engines reason.
 	"internal/modules/privacy/transcriptreadings.go",
+	// What was read out of the subject's conversations as promised, asked or
+	// decided, each row carrying the sentence it was read from. Same Art. 17
+	// transaction, its own file for the same both-engines reason — and named
+	// here so conversation_claim cannot look uncovered the moment its purge
+	// moves file.
+	"internal/modules/privacy/erasure_claims.go",
 	"internal/modules/privacy/deliveries.go",
 	// The subject's RESTRICTION record and the deal-room seats their address
 	// holds. Both are executed by EraseContact's own transaction and both write
@@ -203,6 +211,7 @@ var reachedButNotCascade = gatekit.Waive(map[string]string{
 // failure mode a glob buys here, and it is the one with no failing assertion
 // to notice it.
 var retentionSweepFiles = []string{
+	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/retention.go",
 	"internal/modules/privacy/retentionai.go",
 	"internal/modules/privacy/retention_graph.go",
@@ -232,6 +241,12 @@ var retentionSweepFiles = []string{
 	// two through one registry reports the lift as a violation of a rule it was
 	// never under.
 	"internal/modules/privacy/activitycontenterasure.go",
+	// The live capabilities over an anonymized subject's consent record — the
+	// two grant tokens, the confirm-details link and what came back through it.
+	// They left retentionactions.go when it crossed the length cap, and this
+	// list is what would otherwise have reported the sweep as having stopped
+	// deleting them.
+	"internal/modules/privacy/retentionconsent.go",
 }
 
 // sqlStatements splits one Go string literal into the statements it holds. A
@@ -550,8 +565,7 @@ func unreadableWriteOn(statements []string, assembledFragment string) string {
 // node is the only place the fact that more follows is written down.
 func assembledSweepTargets(t *testing.T, path string) map[string]string {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}

@@ -3,6 +3,7 @@
 
 import type { Dispatch } from "react";
 import { useState } from "react";
+import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { useMe } from "../common";
 import { EMPTY_DRAFT } from "../onboarding";
@@ -106,9 +107,7 @@ export function TeamAct({ state, dispatch, persist }: TeamActProps) {
           stillNeeded={(why) => why.join(" ")}
           note={
             finishFailed ? (
-              <p className="ob-stage-note" role="alert">
-                {t("ob.conv.team.persistFailed")}
-              </p>
+              <ErrorLine inline>{t("ob.conv.team.persistFailed")}</ErrorLine>
             ) : undefined
           }
           onGo={() => void finish()}

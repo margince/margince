@@ -132,6 +132,16 @@ func TestOneOccurrenceIsOneIdentityHoweverItsStartIsSpelled(t *testing.T) {
 	}
 }
 
+// An all-day occurrence stated as a date meets the same occurrence stated as
+// that date's midnight. The capture door states an all-day event by its date;
+// an importer such as HubSpot states the midnight.
+func TestAnAllDayDateIsItsMidnight(t *testing.T) {
+	const series = "series-42@google.com"
+	if date, midnight := MeetingIdentityKey(series, "2026-07-19"), MeetingIdentityKey(series, "2026-07-19T00:00:00Z"); date != midnight {
+		t.Fatalf("the date keyed as %q and its midnight as %q, want one identity", date, midnight)
+	}
+}
+
 // Two occurrences of one series are two meetings.
 //
 // A weekly call is one iCal UID and fifty-two meetings, so keying on the series

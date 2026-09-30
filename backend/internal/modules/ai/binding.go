@@ -48,6 +48,9 @@ type binding struct {
 	// into that digest would regenerate every stored brief in the installation
 	// through paid models on every key rotation.
 	credentialVersion string
+	// decisions is the bound decisions lane, nil when the config binds none —
+	// the state in which Decide is exactly CompleteStructured.
+	decisions *decisionLane
 	// generation identifies THIS binding among the ones this Router has
 	// served, and it is what the result cache scopes its entries to. It is
 	// deliberately not derived from the config: rebinding to an identical
@@ -68,16 +71,20 @@ func (r *Router) binding() *binding {
 	return &binding{}
 }
 
-// withConfigSnapshot returns the binding with its ai_call_config dimension row
-// and embed width stamped on — the one place that keeps both in sync, since the
-// snapshot's provider_params must name the SAME width Embed defaults an unset
-// request to. Pure: EnsureConfig plants the row lazily, once per flush.
-// Takes the CONFIG rather than the two values it needs, so a third thing the
+// withConfig returns the binding with everything it carries from the config
+// stamped on: the decisions lane, the ai_call_config dimension row and the
+// embed width — the one place that keeps them in sync, since the snapshot's
+// provider_params must name the SAME width Embed defaults an unset request to.
+// Pure: EnsureConfig plants the row lazily, once per flush.
+// Takes the CONFIG rather than the values it needs, so a further thing the
 // binding must carry from it cannot be added at one construction site and
 // forgotten at the other two. credentialVersion was exactly that: three sites
 // stamped the snapshot, and a version threaded through only one of them left
-// the boot-built Router unable to notice a rotated key.
-func (b binding) withConfigSnapshot(cfg RoutingConfig) binding {
+// the boot-built Router unable to notice a rotated key. The lane is the one
+// value taken separately, because building it can fail and the DB-less router
+// may stand a fake in for it; every site must still hand one over.
+func (b binding) withConfig(cfg RoutingConfig, decisions *decisionLane) binding {
+	b.decisions = decisions
 	// ParseRouting defaults 0→defaultEmbedDimensions, but a programmatic
 	// RoutingConfig built without it (a hand-assembled test fixture) reaches
 	// construction with Dimensions still 0 — default here too so a bound embed
@@ -113,10 +120,14 @@ func (r *Router) Rebind(cfg RoutingConfig) error {
 	if err != nil {
 		return err
 	}
+	decisions, err := cfg.buildDecisionLane()
+	if err != nil {
+		return err
+	}
 	next := binding{
 		clients: clients, embedder: embedder,
 		profile: cfg.Profile, routeMeta: embedInclusiveMeta(cfg),
-	}.withConfigSnapshot(cfg)
+	}.withConfig(cfg, decisions)
 	r.install(next)
 	r.cache.clear()
 	return nil

@@ -25,10 +25,7 @@ async function fillValid(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/company name/i), "Acme");
   await user.type(screen.getByLabelText(/your name/i), "Ops");
   await user.type(screen.getByLabelText(/your email/i), "ops@acme.test");
-  await user.type(
-    screen.getByLabelText(/choose a password/i),
-    "a bootstrap password!",
-  );
+  await user.type(screen.getByLabelText(/^Password/), "a bootstrap password!");
 }
 
 afterEach(() => {
@@ -53,13 +50,13 @@ describe("SetupClaimScreen", () => {
     await user.type(screen.getByLabelText(/company name/i), "Acme");
     await user.type(screen.getByLabelText(/your name/i), "Ops");
     await user.type(screen.getByLabelText(/your email/i), "ops@acme.test");
-    await user.type(screen.getByLabelText(/choose a password/i), "short");
+    await user.type(screen.getByLabelText(/^Password/), "short");
 
     // The button is the gate, and the hint says why — a form that lets you
     // press submit and then reports a 422 has wasted the round trip and the
     // contact's attention.
     expect(
-      screen.getByRole("button", { name: /create the company/i }),
+      screen.getByRole("button", { name: /create company/i }),
     ).toBeDisabled();
     expect(screen.getByText(/at least 12 characters/i)).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -73,9 +70,7 @@ describe("SetupClaimScreen", () => {
     const onClaimed = renderClaim();
 
     await fillValid(user);
-    await user.click(
-      screen.getByRole("button", { name: /create the company/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /create company/i }));
 
     await waitFor(() => expect(onClaimed).toHaveBeenCalledOnce());
     const [, init] = vi.mocked(globalThis.fetch).mock.calls[0];
@@ -94,11 +89,9 @@ describe("SetupClaimScreen", () => {
     );
     renderClaim();
     await fillValid(user);
-    await user.click(
-      screen.getByRole("button", { name: /create the company/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /create company/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /setup token isn't valid/i,
+      /setup token is not valid/i,
     );
   });
 
@@ -109,9 +102,7 @@ describe("SetupClaimScreen", () => {
     );
     renderClaim();
     await fillValid(user);
-    await user.click(
-      screen.getByRole("button", { name: /create the company/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /create company/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       /already has a company/i,
     );
@@ -124,14 +115,12 @@ describe("SetupClaimScreen", () => {
     );
     renderClaim();
     await fillValid(user);
-    await user.click(
-      screen.getByRole("button", { name: /create the company/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /create company/i }));
     const alert = await screen.findByRole("alert");
     // Telling someone to check fields that are already correct sends them
     // hunting for a mistake they did not make.
     expect(alert).toHaveTextContent(/nothing was created/i);
-    expect(alert).not.toHaveTextContent(/needs fixing/i);
+    expect(alert).not.toHaveTextContent(/fields are invalid/i);
   });
 
   it("does not hand back to the boundary when the claim was refused", async () => {
@@ -141,9 +130,7 @@ describe("SetupClaimScreen", () => {
     );
     const onClaimed = renderClaim();
     await fillValid(user);
-    await user.click(
-      screen.getByRole("button", { name: /create the company/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /create company/i }));
     await screen.findByRole("alert");
     expect(onClaimed).not.toHaveBeenCalled();
   });

@@ -13,10 +13,12 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { locationDouble } from "../testing/locationdouble";
+import { useMe } from "./common";
 import { ConnectorsCard } from "./connectors";
-import { installFetchStub } from "./story-utils";
+import { type RouteMap, stubWithSession } from "./story-utils";
 
 // The connected-inboxes card makes the onboarding promise ("disconnect in one
 // click", "manage in Settings") real. It renders server facts only, and a
@@ -87,6 +89,10 @@ type StubOpts = {
   connect?: { authorize_url?: string } | { status: number };
   /** The messaging-channel roster the Telegram panel reads. */
   channels?: ChannelConnection[];
+  /** Answer GET /channel-connections with the 503 of a deployment without channels. */
+  channelsNotConfigured?: boolean;
+  /** The session GET /me answers; unset, an admin holding no object grants. */
+  me?: components["schemas"]["MeResponse"];
   /** The installation's outward address, as GET /connectors reports it. */
   publicOrigin?: {
     origin: string;
@@ -117,7 +123,16 @@ function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
       // only, so an empty roster is the honest default rather than a
       // fixture every one of them would otherwise have to repeat.
       if (path.endsWith("/channel-connections") && request.method === "GET") {
+        if (opts.channelsNotConfigured) {
+          return jsonResponse(
+            { code: "channel_connections_not_configured" },
+            503,
+          );
+        }
         return jsonResponse({ data: opts.channels ?? [] });
+      }
+      if (path.endsWith("/me") && request.method === "GET") {
+        return jsonResponse(opts.me ?? meFixture({}));
       }
       if (path.endsWith("/connect") && request.method === "POST") {
         const c = opts.connect ?? {
@@ -153,6 +168,17 @@ function render(ui: ReactNode) {
   );
 }
 
+// The mail-half cases are about no grant: the session is an admin holding none.
+function stubMailRoutes(routes: RouteMap) {
+  stubWithSession(routes, {});
+}
+
+// Shares the card's cache entry, so it appears only once the grants it reads
+// have arrived.
+function SessionSettled() {
+  return useMe().isSuccess ? <span>session settled</span> : null;
+}
+
 function requestsTo(calls: Request[], suffix: string, method: string) {
   return calls.filter(
     (r) => new URL(r.url).pathname.endsWith(suffix) && r.method === method,
@@ -165,9 +191,9 @@ function requestsTo(calls: Request[], suffix: string, method: string) {
 // a pick therefore opens the dialog first and scopes its queries to it.
 async function openAddDialog() {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Connect an account" }),
+    await screen.findByRole("button", { name: "Add connector" }),
   );
-  return screen.getByRole("dialog", { name: "Add a connection" });
+  return screen.getByRole("dialog", { name: "Add connector" });
 }
 
 beforeEach(() => {
@@ -279,9 +305,7 @@ describe("the connected-inboxes card", () => {
       within(row).getByText(/No mailbox or calendar is connected yet/),
     ).toBeTruthy();
     expect(row.closest(".settinglist")).not.toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Connect an account" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add connector" })).toBeTruthy();
   });
 
   it("offers every provider from the dialog when nothing is connected", async () => {
@@ -311,11 +335,9 @@ describe("the connected-inboxes card", () => {
     // The chooser gives way rather than stacking behind the form: two overlays
     // deep, Escape and the focus restore both answer to the wrong layer.
     expect(
-      await screen.findByRole("dialog", { name: "Connect an IMAP mailbox" }),
+      await screen.findByRole("dialog", { name: "Connect IMAP mailbox" }),
     ).toBeTruthy();
-    expect(
-      screen.queryByRole("dialog", { name: "Add a connection" }),
-    ).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Add connector" })).toBeNull();
   });
 
   it("offers reconnect only for a connection that needs re-auth", async () => {
@@ -328,9 +350,7 @@ describe("the connected-inboxes card", () => {
   it("says a Gmail mailbox cannot send before the rep discovers it at send time", async () => {
     stubApi([gmailNoSendGrant]);
     render(<ConnectorsCard />);
-    expect(
-      await screen.findByText("Capturing only — cannot send"),
-    ).toBeTruthy();
+    expect(await screen.findByText("Capture only, no sending")).toBeTruthy();
     expect(
       screen.getByText(/Reconnect this mailbox to send from it/),
     ).toBeTruthy();
@@ -342,7 +362,7 @@ describe("the connected-inboxes card", () => {
     stubApi([gmailConnected]);
     render(<ConnectorsCard />);
     expect(await screen.findByText("Capturing")).toBeTruthy();
-    expect(screen.queryByText("Capturing only — cannot send")).toBeNull();
+    expect(screen.queryByText("Capture only, no sending")).toBeNull();
     expect(screen.queryByRole("button", { name: /Reconnect/ })).toBeNull();
   });
 
@@ -350,13 +370,13 @@ describe("the connected-inboxes card", () => {
     stubApi([imapConnected]);
     render(<ConnectorsCard />);
     expect(await screen.findByText("IMAP mailbox")).toBeTruthy();
-    expect(screen.queryByText("Capturing only — cannot send")).toBeNull();
+    expect(screen.queryByText("Capture only, no sending")).toBeNull();
   });
 
   it("shows an honest waiting line for a connection that has never synced", async () => {
     stubApi([{ ...gmailConnected, last_synced_at: null }]);
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/Waiting for the first sync/)).toBeTruthy();
+    expect(await screen.findByText(/Awaiting first sync/)).toBeTruthy();
   });
 
   it("surfaces a load failure without crashing the card", async () => {
@@ -364,7 +384,7 @@ describe("the connected-inboxes card", () => {
     render(<ConnectorsCard />);
     // The card's own claim as the heading, the server's cause under it: both,
     // because the heading alone says nothing about why.
-    expect(await screen.findByText(/Couldn't load/)).toBeTruthy();
+    expect(await screen.findByText(/Could not load connectors/)).toBeTruthy();
     expect(await screen.findByText(/boom/)).toBeTruthy();
   });
 
@@ -410,7 +430,7 @@ describe("the connected-inboxes card", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /Reconnect/ }),
     );
-    expect(await screen.findByText("Connect an IMAP mailbox")).toBeTruthy();
+    expect(await screen.findByText("Connect IMAP mailbox")).toBeTruthy();
   });
 
   it("surfaces a failed reconnect instead of redirecting", async () => {
@@ -457,10 +477,10 @@ describe("the connected-inboxes card", () => {
 
 // The richer per-row health line (account_label, next_sync_due_at,
 // watch_expires_at, the error-class sentence) and the 501 calm state, all
-// exercised through the real installFetchStub route-map shape.
+// exercised through the real story-utils route-map shape.
 describe("the connected-inboxes card's richer health line", () => {
   it("shows the account label beside the provider name", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () =>
         jsonResponse({
           data: [{ ...gmailConnected, account_label: "lars@example.de" }],
@@ -471,7 +491,7 @@ describe("the connected-inboxes card's richer health line", () => {
   });
 
   it("reads a null watch_expires_at as polled, never as expired", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () =>
         jsonResponse({
           data: [
@@ -485,7 +505,7 @@ describe("the connected-inboxes card's richer health line", () => {
   });
 
   it("renders a push renewal deadline when watch_expires_at is set", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () =>
         jsonResponse({
           data: [
@@ -498,30 +518,32 @@ describe("the connected-inboxes card's richer health line", () => {
   });
 
   it("renders the error-class sentence for a reauth_required connection", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () =>
         jsonResponse({
           data: [{ ...gmailStale, last_sync_error_class: "auth" }],
         }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/rejected our credentials/i)).toBeTruthy();
+    expect(
+      await screen.findByText(/rejected the stored credentials/i),
+    ).toBeTruthy();
   });
 
   it("renders the 501 not-configured response as a calm state, not an error", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ code: "not_implemented" }, 501),
     });
     render(<ConnectorsCard />);
     expect(
-      await screen.findByText(/isn't configured in this deployment/i),
+      await screen.findByText(/is not configured on this installation/i),
     ).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByText(/couldn't load/i)).toBeNull();
   });
 
   it("shows the updated disconnect copy naming credential deletion and Google's own access list", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [gmailConnected] }),
     });
     render(<ConnectorsCard />);
@@ -529,13 +551,13 @@ describe("the connected-inboxes card's richer health line", () => {
       await screen.findByRole("button", { name: /^Disconnect$/ }),
     );
     expect(
-      await screen.findByText(/delete the credential we stored/i),
+      await screen.findByText(/deletes the stored credential/i),
     ).toBeTruthy();
     expect(screen.getByText(/Google may still list Margince/i)).toBeTruthy();
   });
 
   it("omits the vendor-access note for an IMAP disconnect (no upstream grant)", async () => {
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () =>
         jsonResponse({ data: [{ ...gmailConnected, provider: "imap" }] }),
     });
@@ -544,7 +566,7 @@ describe("the connected-inboxes card's richer health line", () => {
       await screen.findByRole("button", { name: /^Disconnect$/ }),
     );
     expect(
-      await screen.findByText(/delete the credential we stored/i),
+      await screen.findByText(/deletes the stored credential/i),
     ).toBeTruthy();
     expect(screen.queryByText(/Google may still list Margince/i)).toBeNull();
   });
@@ -558,22 +580,26 @@ describe("the connected-inboxes card's richer health line", () => {
 describe("the OAuth return outcome", () => {
   it("renders an honest denial note when the user declined access", async () => {
     globalThis.location.hash = "#/settings/connections/denied";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/you declined access/i)).toBeTruthy();
-    expect(screen.queryByText(/couldn't be completed/i)).toBeNull();
+    expect(
+      await screen.findByText(/Access was declined, so nothing/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
   });
 
   it("renders an honest failure note when the connection could not complete", async () => {
     globalThis.location.hash = "#/settings/connections/error";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/couldn't be completed/i)).toBeTruthy();
-    expect(screen.queryByText(/you declined access/i)).toBeNull();
+    expect(
+      await screen.findByText(/connection could not be completed/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Access was declined, so nothing/i)).toBeNull();
   });
 
   // A permanent failure must not tell the reader to try again: the provider's
@@ -581,41 +607,43 @@ describe("the OAuth return outcome", () => {
   // change that.
   it("names the remedy when the provider's API is not enabled here", async () => {
     globalThis.location.hash = "#/settings/connections/misconfigured";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
     expect(
-      await screen.findByText(/administrator needs to enable it/i),
+      await screen.findByText(/administrator must enable it/i),
     ).toBeTruthy();
-    expect(screen.queryByText(/couldn't be completed/i)).toBeNull();
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
   });
 
   it("tells the reader to accept every permission when the provider declined", async () => {
     globalThis.location.hash = "#/settings/connections/rejected";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/accept every permission/i)).toBeTruthy();
+    expect(
+      await screen.findByText(/Accept every requested permission/i),
+    ).toBeTruthy();
     // The generic "couldn't be completed — please try again" must not also show.
-    expect(screen.queryByText(/couldn't be completed/i)).toBeNull();
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
   });
 
   it("renders a brief success note on ok — never an error", async () => {
     globalThis.location.hash = "#/settings/connections/ok";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [gmailConnected] }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/mailbox is now capturing/i)).toBeTruthy();
-    expect(screen.queryByText(/couldn't be completed/i)).toBeNull();
-    expect(screen.queryByText(/you declined access/i)).toBeNull();
+    expect(await screen.findByText(/mailbox is capturing/i)).toBeTruthy();
+    expect(screen.queryByText(/connection could not be completed/i)).toBeNull();
+    expect(screen.queryByText(/Access was declined, so nothing/i)).toBeNull();
   });
 
   it("renders no outcome note when the route carries none", async () => {
     globalThis.location.hash = "#/settings/connections";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
@@ -625,17 +653,17 @@ describe("the OAuth return outcome", () => {
 
   it("dismisses the note and clears it", async () => {
     globalThis.location.hash = "#/settings/connections/denied";
-    installFetchStub({
+    stubMailRoutes({
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
     render(<ConnectorsCard />);
-    await screen.findByText(/you declined access/i);
+    await screen.findByText(/Access was declined, so nothing/i);
     await userEvent.click(screen.getByRole("button", { name: /dismiss/i }));
-    expect(screen.queryByText(/you declined access/i)).toBeNull();
+    expect(screen.queryByText(/Access was declined, so nothing/i)).toBeNull();
   });
 });
 
-// The "Add a connection" affordance (Task 1): one verb in the card's header
+// The "Add connector" affordance (Task 1): one verb in the card's header
 // opens a dialog listing the providers still addable, each with the sentence
 // its choice needs. An OAuth pick connects+redirects, IMAP hands over to the
 // inline form, and a 501 from a specific provider's connect renders an honest
@@ -687,7 +715,7 @@ describe("add a connection", () => {
     );
     expect(
       await within(dialog).findByText(
-        "Outlook isn't configured in this deployment.",
+        "Outlook is not configured on this installation.",
       ),
     ).toBeTruthy();
   });
@@ -736,9 +764,7 @@ describe("add a connection", () => {
     ]);
     render(<ConnectorsCard />);
     await screen.findByText("Google Calendar"); // a roster row label
-    expect(
-      screen.queryByRole("button", { name: "Connect an account" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add connector" })).toBeNull();
   });
 });
 
@@ -762,9 +788,12 @@ describe("the Telegram connector panel", () => {
     channelLabel: "acme_support_bot",
     status: "pending",
   };
+  const botManager = meFixture({
+    allow: { channel_connection: ["read", "create", "update", "delete"] },
+  });
 
   it("lists every connected bot, each with its own Disconnect", async () => {
-    stubApi([], { channels: [salesBot, supportBot] });
+    stubApi([], { channels: [salesBot, supportBot], me: botManager });
     render(<ConnectorsCard />);
 
     // One SettingRow per bot: the roster is a list of decisions now, so a bot
@@ -784,7 +813,7 @@ describe("the Telegram connector panel", () => {
   });
 
   it("opens the replace-token form on the bot whose row was clicked", async () => {
-    stubApi([], { channels: [salesBot, supportBot] });
+    stubApi([], { channels: [salesBot, supportBot], me: botManager });
     render(<ConnectorsCard />);
 
     const rows = await screen.findAllByTestId("telegram-connection");
@@ -795,6 +824,105 @@ describe("the Telegram connector panel", () => {
     // observable proof it bound to that row and not to the first.
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText(/^Pending/)).toBeTruthy();
+  });
+
+  const readOnlyNote =
+    "Only an administrator or operations user can connect or change the bot.";
+
+  it("offers the connect verb to a reader who holds channel_connection:create", async () => {
+    stubApi([], {
+      me: meFixture({ allow: { channel_connection: ["read", "create"] } }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByTestId("telegram-connect")).toBeTruthy();
+    expect(screen.queryByText(readOnlyNote)).toBeNull();
+  });
+
+  // The seeded rep reads the bot and may change none of it: three buttons the
+  // server would refuse are withheld, and the line says who can act instead.
+  it("gives a reader without write grants the roster and the reason, no verbs", async () => {
+    stubApi([], {
+      channels: [salesBot],
+      me: meFixture({
+        roles: ["rep"],
+        allow: { channel_connection: ["read"] },
+      }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByText(readOnlyNote)).toBeTruthy();
+    const row = screen.getByTestId("telegram-connection");
+    expect(within(row).getByText("@acme_sales_bot")).toBeTruthy();
+    expect(within(row).queryByRole("button")).toBeNull();
+    expect(row.querySelector(".connector-actions")).toBeNull();
+  });
+
+  it("withholds Connect on an empty roster from a reader without channel_connection:create", async () => {
+    stubApi([], {
+      me: meFixture({
+        roles: ["rep"],
+        allow: { channel_connection: ["read"] },
+      }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByText(readOnlyNote)).toBeTruthy();
+    expect(screen.queryByTestId("telegram-connect")).toBeNull();
+  });
+
+  it("withholds every verb from a read seat even when the role grants them", async () => {
+    stubApi([], {
+      channels: [salesBot],
+      me: meFixture({
+        seat: "read",
+        allow: { channel_connection: ["read", "create", "update", "delete"] },
+      }),
+    });
+    render(<ConnectorsCard />);
+    expect(await screen.findByText(readOnlyNote)).toBeTruthy();
+    expect(
+      within(screen.getByTestId("telegram-connection")).queryByRole("button"),
+    ).toBeNull();
+  });
+
+  it("gates each row verb on its own grant", async () => {
+    stubApi([], {
+      channels: [salesBot],
+      me: meFixture({ allow: { channel_connection: ["read", "update"] } }),
+    });
+    render(<ConnectorsCard />);
+    const row = await screen.findByTestId("telegram-connection");
+    expect(
+      await within(row).findByRole("button", { name: "Replace token" }),
+    ).toBeTruthy();
+    expect(
+      within(row).queryByRole("button", { name: "Disconnect" }),
+    ).toBeNull();
+    expect(screen.queryByText(readOnlyNote)).toBeNull();
+  });
+
+  // No channels on this deployment withholds the verbs from an admin too, so
+  // the seat is not the reason and the read-only line would misdirect a rep.
+  it("lets the not-configured notice speak alone when neither applies", async () => {
+    stubApi([], {
+      channelsNotConfigured: true,
+      me: meFixture({
+        roles: ["rep"],
+        allow: { channel_connection: ["read"] },
+      }),
+    });
+    render(
+      <>
+        <ConnectorsCard />
+        <SessionSettled />
+      </>,
+    );
+    expect(
+      await screen.findByText(
+        "Messaging channels are not configured on this installation.",
+      ),
+    ).toBeTruthy();
+    // Absence proves nothing while /me is in flight, when every grant is false.
+    await screen.findByText("session settled");
+    expect(screen.queryByText(readOnlyNote)).toBeNull();
   });
   // The address this installation puts in emailed links, on the card that
   // already asks whether it can reach the outside world.
@@ -815,7 +943,7 @@ describe("the Telegram connector panel", () => {
 
     const row = await screen.findByTestId("public-origin");
     expect(within(row).getByText("https://crm.example.com")).toBeTruthy();
-    expect(within(row).getByText("Answering")).toBeTruthy();
+    expect(within(row).getByText("Reachable")).toBeTruthy();
   });
 
   it("says so when the address does not answer", async () => {
@@ -825,7 +953,7 @@ describe("the Telegram connector panel", () => {
     render(<ConnectorsCard />);
     expect(
       within(await screen.findByTestId("public-origin")).getByText(
-        "Not answering",
+        "Unreachable",
       ),
     ).toBeTruthy();
   });
@@ -838,7 +966,7 @@ describe("the Telegram connector panel", () => {
     render(<ConnectorsCard />);
     expect(
       within(await screen.findByTestId("public-origin")).getByText(
-        "Not checked yet",
+        "Not checked",
       ),
     ).toBeTruthy();
   });
@@ -849,4 +977,11 @@ describe("the Telegram connector panel", () => {
     render(<ConnectorsCard />);
     expect(screen.queryByTestId("public-origin")).toBeNull();
   });
+});
+
+it("offers reconnect for a healthy read-only calendar", async () => {
+  stubApi([gcalConnected]);
+  render(<ConnectorsCard />);
+  expect(await screen.findByText("Read-only calendar")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Reconnect" })).toBeEnabled();
 });

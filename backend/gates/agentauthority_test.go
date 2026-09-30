@@ -32,8 +32,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -109,7 +107,6 @@ func TestEveryAgentPrincipalNamesItsHumanOrSaysWhyNot(t *testing.T) {
 	t.Parallel()
 	defer agentsWithNoHumanAuthority.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
 	built := 0
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform", "cmd"} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -118,7 +115,7 @@ func TestEveryAgentPrincipalNamesItsHumanOrSaysWhyNot(t *testing.T) {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, parseErr := parser.ParseFile(fset, path, nil, 0)
+			file, parseErr := gatekit.ParseFile(path, 0)
 			if parseErr != nil {
 				return parseErr
 			}

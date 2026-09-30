@@ -3,16 +3,16 @@ import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useCan } from "../../app/capability";
 import type { MarginceCoreState } from "../../design-system/margince-core";
 import { AiRuntimeChip } from "../../design-system/margince-workbench";
 import {
   OnboardingStage,
   type StageProgress,
 } from "../../design-system/onboarding-stage";
-import { useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
 import { throwProblem } from "../common";
 import { loadWizardState } from "../onboarding";
-import { configuredModelLabel } from "../onboarding-read";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";
 
@@ -20,17 +20,36 @@ import { isDetour, railStops, stopState } from "./rail";
 // board, the rail. Acts supply only what differs — the question, the scene that
 // answers it, and the way onward.
 //
-// ONE ROOM, NOT TWO PANES. This shell used to be MarginceWorkbench: a chat rail
-// on the left and a live artifact pane on the right. Onboarding is one question
-// at a time on one stage, and the two organising ideas cannot both be true on
-// the same screen — a reader crossing from the gate into the journey walked out
-// of one room and into another halfway through a single setup. The workbench
-// stays in the design system, for the product after setup, which is where its
-// conversation and its artifact both belong.
+// Not MarginceWorkbench's chat rail beside an artifact pane: a reader crossing
+// from the gate into the journey would change rooms halfway through one setup.
 
 type AiRunSummary = components["schemas"]["AiRunSummary"];
 type AiProfile = components["schemas"]["AiProfile"];
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
+
+const tierKeys = {
+  local_small: "ob.ai.tier.localSmall",
+  cheap_cloud: "ob.ai.tier.cheapCloud",
+  premium: "ob.ai.tier.premium",
+  frontier: "ob.ai.tier.frontier",
+  local_large: "ob.ai.tier.localLarge",
+} as const;
+
+export function configuredModelLabel(
+  profile: AiProfile | undefined,
+  unavailable: string,
+  t: Translator,
+) {
+  const configured = profile?.configured_models
+    ?.map(
+      (binding) =>
+        `${binding.provider}/${binding.model} · ${t(tierKeys[binding.tier])}`,
+    )
+    .filter((binding, index, all) => binding && all.indexOf(binding) === index);
+  if (configured?.length) return configured.join(" + ");
+  if (profile?.providers?.length) return profile.providers.join(" + ");
+  return unavailable;
+}
 
 // The detailed AI profile, and the label every onboarding surface names the
 // configured model with. One hook so the gate, the read theatre and the
@@ -38,8 +57,12 @@ type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 // cache entry, so naming it in three places still costs one request.
 export function useConfiguredModel(): string {
   const t = useT();
+  // GET /ai/profile is gated on automation:update server-side, so a rep's
+  // journey skips the read and names no model rather than drawing a 403.
+  const canReadProfile = useCan("automation", "update");
   const profile = useQuery({
     queryKey: ["ai-profile"],
+    enabled: canReadProfile,
     queryFn: async (): Promise<AiProfile> => {
       const { data, error } = await api.GET("/ai/profile");
       if (error) {

@@ -266,6 +266,31 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     expect(await screen.findByText("csv import")).toBeInTheDocument();
   });
 
+  // A deal somebody wrote in the system it was imported from. An import runs as
+  // ONE administrator, so `captured_by` names that seat on every row it wrote —
+  // true, and useless as a statement about authorship. The author field is the
+  // one that knows, and the tag has to prefer it.
+  it("names who wrote an imported deal there, not the seat that ran the import", () => {
+    show(
+      <DealIdentityFacts
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          source: "hubspot",
+          captured_by: "human:u-importer",
+          author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(
+      screen.getByText("Logged in HubSpot by Mutaz Suleiman"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Typed by/)).not.toBeInTheDocument();
+  });
+
   it("says which partner brought the deal, sourced or influenced", () => {
     show(
       <DealIdentityFacts
@@ -341,7 +366,7 @@ describe("the close date says how much it is worth believing", () => {
   });
 
   it("counts the days a deal is already past, in the reader's own plural", () => {
-    // The arm nothing read back: a date behind us. "1 days past the date" is
+    // The arm nothing read back: a date behind us. "1 days overdue" is
     // the wording a catalogue that spells the plural once produces on the one
     // day a rep is most likely to be looking.
     show(
@@ -351,7 +376,7 @@ describe("the close date says how much it is worth believing", () => {
         locale="en"
       />,
     );
-    expect(screen.getByText("1 day past the date")).toBeInTheDocument();
+    expect(screen.getByText("1 day overdue")).toBeInTheDocument();
   });
 
   // The cell stays where a date is missing: when a deal lands is a question

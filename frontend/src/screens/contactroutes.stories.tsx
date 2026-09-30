@@ -101,7 +101,7 @@ function card(payload: ContactGraph, skipLead: boolean) {
 }
 
 const meta: Meta<typeof RoutesPanel> = {
-  title: "Records/Contact network/Ways in",
+  title: "Records/Contact 360/Network/Ways in",
   component: RoutesPanel,
   parameters: { layout: "padded" },
 };
@@ -113,7 +113,7 @@ type Story = StoryObj<typeof RoutesPanel>;
 export const WaysIn: Story = { render: card(graph(routes), false) };
 
 /**
- * "Other ways in": the caller has drawn the recommendation as its own lead, so
+ * "Other routes": the caller has drawn the recommendation as its own lead, so
  * this pane holds the alternatives and says so in its title.
  */
 export const OtherWaysIn: Story = { render: card(graph(routes), true) };

@@ -144,7 +144,7 @@ func (g *LinkedInMatchGen) matchContact(ctx context.Context, workspace, contact 
 			// matched. A suggestion the matcher writes and nobody is asked
 			// about is a suggestion that does not exist: the ghost row carries
 			// only the outcome, and the pending question lives in the approval.
-			staged, err := StageLinkedInMatchesForContact(ownerCtx, g.approvals, g.store, contact)
+			staged, err := StageLinkedInMatchesForContact(ownerCtx, g.pool, g.approvals, g.store, contact)
 			if err != nil {
 				return err
 			}
@@ -179,7 +179,7 @@ func (g *LinkedInMatchGen) matchWorkspace(ctx context.Context, workspace ids.UUI
 			// ghosts belonging to many different contacts at once, so there is
 			// no narrower read that would still be complete — unlike the
 			// contact arm, where the arrival names its own scope.
-			staged, err := StageLinkedInMatches(ownerCtx, g.approvals, g.store)
+			staged, err := StageLinkedInMatches(ownerCtx, g.pool, g.approvals, g.store)
 			if err != nil {
 				return err
 			}

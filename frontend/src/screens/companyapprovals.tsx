@@ -1,8 +1,10 @@
 import { useId } from "react";
 import type { components } from "../api/schema";
 import { Button, EmptyState, Modal, Skeleton } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
+import { Stack } from "../design-system/stack";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { approvalKindLabel } from "./approvalkind";
@@ -98,38 +100,40 @@ export function CompanyApprovalsPanel({
       <Heading size="large" id={titleId} className="t-h2 modal-title">
         {t("co.decisions.title")}
       </Heading>
-      {sink.decidedNote}
-      {query.isPending && approvals.length === 0 && (
-        <Skeleton width="100%" height={64} />
-      )}
-      {query.isError && (
-        <p className="surfacestate-withheld">{t("co.section.unavailable")}</p>
-      )}
-      {/* "Nothing is waiting" is a FACT, and only a read that succeeded knows
-          it. A failed read that falls back to an empty 360 page would
-          otherwise print the refusal and the fact together, which are two
-          different answers to the same question. */}
-      {!query.isPending && !query.isError && groups.length === 0 && (
-        <EmptyState>{t("co.decisions.empty")}</EmptyState>
-      )}
-      {groups.map((group) => (
-        <section key={group.kind} className="co-part">
-          <Eyebrow as="h3">
-            {t("co.decisions.group", {
-              count: formatNumber(group.approvals.length, locale),
-              kind: approvalKindLabel(group.kind, t),
-            })}
-          </Eyebrow>
-          {group.approvals.map((approval) => (
-            <ApprovalRow
-              key={approval.id}
-              approval={approval}
-              onAlreadyDecided={sink.onAlreadyDecided}
-              extraInvalidateKeys={extraInvalidateKeys}
-            />
-          ))}
-        </section>
-      ))}
+      {/* One step between everything under the title: a note, the wait, a
+          failure and the groups stand as separate lines, never flush. */}
+      <Stack gap="3">
+        {sink.decidedNote}
+        {query.isPending && approvals.length === 0 && (
+          <Skeleton width="100%" height={64} />
+        )}
+        {query.isError && <ErrorLine>{t("co.section.unavailable")}</ErrorLine>}
+        {/* "Nothing is waiting" is a FACT, and only a read that succeeded knows
+            it. A failed read that falls back to an empty 360 page would
+            otherwise print the refusal and the fact together, which are two
+            different answers to the same question. */}
+        {!query.isPending && !query.isError && groups.length === 0 && (
+          <EmptyState>{t("co.decisions.empty")}</EmptyState>
+        )}
+        {groups.map((group) => (
+          <section key={group.kind}>
+            <Eyebrow as="h3">
+              {t("co.decisions.group", {
+                count: formatNumber(group.approvals.length, locale),
+                kind: approvalKindLabel(group.kind, t),
+              })}
+            </Eyebrow>
+            {group.approvals.map((approval) => (
+              <ApprovalRow
+                key={approval.id}
+                approval={approval}
+                onAlreadyDecided={sink.onAlreadyDecided}
+                extraInvalidateKeys={extraInvalidateKeys}
+              />
+            ))}
+          </section>
+        ))}
+      </Stack>
     </Modal>
   );
 }

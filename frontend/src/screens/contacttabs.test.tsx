@@ -210,7 +210,7 @@ describe("the timeline tab", () => {
     const user = userEvent.setup();
     withProviders(<ContactTimelineTab contactId="p-1" view={view} />);
 
-    await user.click(screen.getByRole("button", { name: "Conversations" }));
+    await user.click(screen.getByRole("button", { name: "Threads" }));
 
     // Waited on the settled cut rather than asserted straight after the press:
     // the mail is on screen under BOTH cuts, so what says the cut took is the
@@ -230,7 +230,7 @@ describe("the timeline tab", () => {
     const user = userEvent.setup();
     withProviders(<ContactTimelineTab contactId="p-1" view={view} />);
 
-    await user.click(screen.getByRole("button", { name: "Conversations" }));
+    await user.click(screen.getByRole("button", { name: "Threads" }));
     await user.click(screen.getByLabelText("Activity kind"));
 
     const listbox = await screen.findByRole("listbox");
@@ -249,7 +249,7 @@ describe("the timeline tab", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={view} />);
 
     await pickOption(user, screen.getByLabelText("Activity kind"), "Meetings");
-    await user.click(screen.getByRole("button", { name: "Conversations" }));
+    await user.click(screen.getByRole("button", { name: "Threads" }));
 
     await waitFor(() =>
       expect(screen.getByLabelText("Activity kind").textContent).toContain(
@@ -261,9 +261,7 @@ describe("the timeline tab", () => {
   it("says the section is withheld rather than drawing it empty", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={withheld} />);
     expect(screen.queryByText(/Nothing has been logged/)).toBeNull();
-    expect(
-      screen.getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
+    expect(screen.getByText("Hidden for your role")).toBeTruthy();
   });
 
   // The same obligation on the new cut, which reads that same withheld
@@ -274,12 +272,10 @@ describe("the timeline tab", () => {
     const user = userEvent.setup();
     withProviders(<ContactTimelineTab contactId="p-1" view={withheld} />);
 
-    await user.click(screen.getByRole("button", { name: "Conversations" }));
+    await user.click(screen.getByRole("button", { name: "Threads" }));
 
     expect(screen.queryByText(/No conversations with them yet/)).toBeNull();
-    expect(
-      screen.getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
+    expect(screen.getByText("Hidden for your role")).toBeTruthy();
   });
 });
 
@@ -336,7 +332,7 @@ describe("the deals tab", () => {
     expect(screen.getByText("Sam Ops")).toBeTruthy();
     expect(screen.getByText("Champion")).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "Open deal & buying role" }),
+      screen.queryByRole("heading", { name: "Open deal and buying role" }),
     ).toBeNull();
   });
 
@@ -414,6 +410,79 @@ describe("the deals tab", () => {
     await screen.findByText("Fleet renewal 2026");
     expect(screen.queryByRole("button", { name: "Add to a deal" })).toBeNull();
   });
+
+  // The contact's own door into the rooms they sit in: an admin removing
+  // somebody who left the buyer knows the name, not the deals.
+  const withAddress: Contact360 = {
+    ...view,
+    contact: {
+      ...view.contact,
+      emails: [
+        {
+          id: "e-1",
+          email: "dana@buyer.example",
+          email_type: "work",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+      ],
+    },
+  };
+  const ROOM = {
+    id: "room-1",
+    deal_id: "d-1",
+    title: "Fleet renewal room",
+    state: "live",
+    ...CAPTURED,
+  } satisfies components["schemas"]["DealRoom"];
+
+  it("lists the Deal Rooms the contact can still enter, and opens one", async () => {
+    stubWithSession(
+      {
+        "GET /deals/d-1": () => jsonResponse(DEAL_D1),
+        "GET /deal-rooms": () =>
+          jsonResponse({
+            data: [ROOM],
+            page: { has_more: false, next_cursor: null },
+          }),
+      },
+      { deal_room: ["read"] },
+    );
+    const user = userEvent.setup();
+    withProviders(<ContactDealsTab view={withAddress} />);
+
+    const panel = (await screen.findByText("Fleet renewal room")).closest(
+      ".panel",
+    );
+    expect(panel).not.toBeNull();
+    await user.click(
+      within(panel as HTMLElement).getByRole("button", { name: "Open" }),
+    );
+    await waitFor(() => expect(window.location.hash).toBe("#/deals/d-1/room"));
+  });
+
+  it("asks for no rooms from a reader without the room grant", async () => {
+    let asked = false;
+    stubWithSession(
+      {
+        "GET /deals/d-1": () => jsonResponse(DEAL_D1),
+        "GET /deal-rooms": () => {
+          asked = true;
+          return jsonResponse({ data: [ROOM], page: { has_more: false } });
+        },
+      },
+      { relationship: ["create"] },
+    );
+    withProviders(<ContactDealsTab view={withAddress} />);
+
+    // Awaited through a control the grant probe draws, so the absence below
+    // is read after the probe has answered rather than before it ran.
+    await screen.findByRole("button", { name: "Add to a deal" });
+    expect(screen.queryByText("Fleet renewal room")).toBeNull();
+    expect(asked).toBe(false);
+  });
 });
 
 describe("the meetings tab", () => {
@@ -442,7 +511,7 @@ describe("the meetings tab", () => {
         onBriefMeeting={(id) => briefed.push(id)}
       />,
     );
-    const actions = screen.getAllByRole("button", { name: "Brief me" });
+    const actions = screen.getAllByRole("button", { name: "Prepare brief" });
     expect(actions.length).toBe(2);
     await userEvent.setup().click(actions[0]);
     expect(briefed.length).toBe(1);
@@ -476,14 +545,14 @@ describe("the meetings tab", () => {
     // verb. Asserting the subject would be wrong: a withheld row redacts it,
     // which is the whole point of the state.
     expect(screen.queryByText(/Nothing logged/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Brief me" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Prepare brief" })).toBeNull();
   });
 
   it("offers no brief when the surface cannot open one", () => {
     // Without the callback the verb would be a button that does nothing, which
     // teaches a reader the feature is broken rather than absent.
     withProviders(<ContactMeetingsTab view={view} />);
-    expect(screen.queryByRole("button", { name: "Brief me" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Prepare brief" })).toBeNull();
   });
 
   it("names the meeting the reader picked, not the soonest one", async () => {
@@ -496,7 +565,7 @@ describe("the meetings tab", () => {
         onBriefMeeting={(id) => briefed.push(id)}
       />,
     );
-    const actions = screen.getAllByRole("button", { name: "Brief me" });
+    const actions = screen.getAllByRole("button", { name: "Prepare brief" });
     // The booked meeting leads the tab; the held one follows it.
     await userEvent.setup().click(actions[1]);
     expect(briefed).toEqual(["a-2"]);

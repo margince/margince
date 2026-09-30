@@ -42,6 +42,9 @@ export type ReportsStubOpts = {
   // only one of the three fields passes against it, and the caption then
   // renders with an undefined zone.
   partialFrame?: boolean;
+  // The base currency results carry, read per request so a suite can change
+  // it between two runs of one report, as a reconfigured installation does.
+  baseCurrency?: string;
   stageRows?: Record<string, unknown>[];
   forecastRows?: Record<string, unknown>[];
   companyRows?: Record<string, unknown>[];
@@ -119,8 +122,8 @@ function coverageAnswer(opts: ReportsStubOpts) {
 function contextAnswer(opts: ReportsStubOpts) {
   return (
     opts.context ?? {
-      default_scope: { kind: "workspace", label: "Whole workspace" },
-      allowed_scopes: [{ kind: "workspace", label: "Whole workspace" }],
+      default_scope: { kind: "workspace", label: "Whole company" },
+      allowed_scopes: [{ kind: "workspace", label: "Whole company" }],
       capabilities: {
         view_manager_forecast: true,
         submit_manager_forecast: true,
@@ -166,7 +169,7 @@ function reportAnswer(key: string, opts: ReportsStubOpts) {
     ? {}
     : {
         timezone: "Europe/Berlin",
-        base_currency: "EUR",
+        base_currency: opts.baseCurrency ?? "EUR",
         fiscal_year_start_month: 1,
       };
   return {

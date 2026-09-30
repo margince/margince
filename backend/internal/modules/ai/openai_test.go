@@ -83,7 +83,7 @@ func TestOpenAICompleteMapsResponsesAPIUsageAndReasoning(t *testing.T) {
 	}
 }
 
-func TestOpenAISendsStrictJSONSchemaUnderTextFormat(t *testing.T) {
+func TestOpenAISendsTheJSONSchemaUnderTextFormat(t *testing.T) {
 	schema := json.RawMessage(`{"type":"object","properties":{"ok":{"type":"boolean"}}}`)
 	var body []byte
 	client := newOpenAIForTest(t, func(w http.ResponseWriter, r *http.Request) {
@@ -109,8 +109,13 @@ func TestOpenAISendsStrictJSONSchemaUnderTextFormat(t *testing.T) {
 	if err := json.Unmarshal(body, &wire); err != nil {
 		t.Fatal(err)
 	}
-	if wire.Text.Format.Type != "json_schema" || wire.Text.Format.Name == "" || !wire.Text.Format.Strict {
+	if wire.Text.Format.Type != "json_schema" || wire.Text.Format.Name == "" {
 		t.Fatalf("text.format shape wrong: %+v", wire.Text.Format)
+	}
+	// This schema leaves its object open, which OpenAI's strict mode refuses
+	// with an error, so it goes unenforced rather than failing the call.
+	if wire.Text.Format.Strict {
+		t.Fatalf("an open schema was sent strict: %+v", wire.Text.Format)
 	}
 	if !bytes.Equal(bytes.TrimSpace(wire.Text.Format.Schema), bytes.TrimSpace(schema)) {
 		t.Fatalf("schema not verbatim: %s", wire.Text.Format.Schema)
@@ -318,16 +323,17 @@ func TestOpenAIWirePinsStoreFalse(t *testing.T) {
 	}
 }
 
-// A failed or incomplete terminal status must never read as a clean answer —
-// the caller would treat a content-filter abort or a max-token truncation as
-// the model's full reply.
+// A failed or filtered terminal status must never read as a clean answer —
+// the caller would treat a content-filter abort as the model's full reply. A
+// max_output_tokens stop is not one: finishreasonparity_test.go holds it to a
+// truncated Response.
 func TestOpenAICompleteNonCompletedStatusIsAnError(t *testing.T) {
 	cases := map[string]struct {
 		body string
 		want string
 	}{
 		"failed":     {`{"id":"r","status":"failed","error":{"code":"server_error","message":"boom"}}`, "server_error"},
-		"incomplete": {`{"id":"r","status":"incomplete","incomplete_details":{"reason":"max_output_tokens"}}`, "max_output_tokens"},
+		"incomplete": {`{"id":"r","status":"incomplete","incomplete_details":{"reason":"content_filter"}}`, "content_filter"},
 		"missing":    {`{"id":"r","output":[{"type":"message","content":[{"type":"output_text","text":"ok"}]}]}`, "no terminal status"},
 	}
 	for name, tc := range cases {

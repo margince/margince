@@ -6,35 +6,22 @@ import {
   SegmentedControl,
   Textarea,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
+import { trimServerSpace } from "../format/servertrim";
 import { useT } from "../i18n";
-import { RefusalLine } from "./common";
 import {
   type ProjectHealthState,
   useCorrectProjectHealth,
   useRecordProjectHealth,
 } from "./projecthealth.queries";
+import "./common.css";
 
 const STATES: readonly ProjectHealthState[] = [
   "on_track",
   "at_risk",
   "off_track",
 ];
-
-/**
- * Trim the way the SERVER trims, so the form and the save agree on what counts
- * as an empty note.
- *
- * Go's `strings.TrimSpace` cuts every Unicode space character. JavaScript's
- * `String.prototype.trim` cuts almost the same set and leaves U+0085 (NEXT
- * LINE) standing. A note holding only that character therefore satisfied this
- * form's "a note is present" check and was refused by the server as missing —
- * the exact failure the check exists to prevent, reached through the one
- * character nobody would think to look for.
- */
-function serverTrim(value: string): string {
-  return value.replace(/^[\s\u0085]+|[\s\u0085]+$/gu, "");
-}
 
 /**
  * Recording how the delivery is going, or correcting a reading that was wrong.
@@ -100,7 +87,7 @@ export function ProjectHealthModal({
     resetCorrect();
   }, [open, correcting, resetRecord, resetCorrect]);
 
-  const trimmed = serverTrim(note);
+  const trimmed = trimServerSpace(note);
   // The server's own rule, stated here rather than discovered through a 422.
   const noteMissing = state !== "on_track" && trimmed === "";
 
@@ -126,12 +113,7 @@ export function ProjectHealthModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {correcting
           ? t("projectHealth.correctTitle")
           : t("projectHealth.recordTitle")}
@@ -170,7 +152,7 @@ export function ProjectHealthModal({
         {correcting && (
           <p className="t-caption">{t("projectHealth.correctionNote")}</p>
         )}
-        {write.isError && <RefusalLine error={write.error} />}
+        <ErrorLine error={write.error} />
         <div className="actions">
           <Button variant="ghost" onClick={onClose} disabled={write.isPending}>
             {t("deals.cancel")}

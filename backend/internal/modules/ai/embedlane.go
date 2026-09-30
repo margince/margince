@@ -8,11 +8,18 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
+
+// ErrEmbedLaneFailed marks the embed lane's provider failing to answer. The lane
+// has no ladder, so ErrAllTiersFailed never marks its outage; without this a
+// caller waiting on an embedding cannot tell the provider being down from its
+// own fault.
+var ErrEmbedLaneFailed = errors.New("ai: the embed lane did not answer")
 
 // Embed routes the embedding lane. Inputs are stripped before egress —
 // the EmbedRequest carries no per-request hook, so the router is the
@@ -88,7 +95,7 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 	lc.append(trace)
 	r.flushDetached(ctx, b, lc)
 	if err != nil {
-		return model.Embeddings{}, err
+		return model.Embeddings{}, fmt.Errorf("%w: %w", ErrEmbedLaneFailed, err)
 	}
 	// The embed lane spends the workspace budget like any other call, so it
 	// spends the agent's share of it too. A retrieval-heavy agent whose

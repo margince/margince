@@ -38,7 +38,6 @@ export const SCREENS = [
   "projects",
   "worklist",
   "analytics",
-  "ai",
   "settings",
   "filters",
   "scheduled",
@@ -48,6 +47,8 @@ export const SCREENS = [
   // A tag has a page of its own: the records carrying one word, grouped by
   // type. Every tag pill in the product links here.
   "tags",
+  // One Live List or Shortlist, opened from the lists library.
+  "lists",
   "onboarding",
   // reach:external the extension's own chrome, opened by the client rather than
   // from anywhere in this app.
@@ -203,7 +204,6 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   // #/analytics/<section> — the picker chooses a view of one screen, so
   // switching sections re-renders the panel instead of throwing the screen away.
   analytics: 1,
-  ai: WHOLE_ADDRESS,
   // Not a tab, however much the sidebar looks like one: every settings entry is
   // its own page, and the admin half is a segment deeper.
   settings: WHOLE_ADDRESS,
@@ -215,6 +215,7 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   // keys it, so opening a second word starts a fresh read rather than showing
   // the first one's counts under the second one's name.
   tags: WHOLE_ADDRESS,
+  lists: WHOLE_ADDRESS,
   share: WHOLE_ADDRESS,
   onboarding: WHOLE_ADDRESS,
   client: WHOLE_ADDRESS,

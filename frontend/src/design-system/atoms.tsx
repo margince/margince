@@ -12,7 +12,6 @@ import {
   type ElementType,
   type FormEventHandler,
   type InputHTMLAttributes,
-  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type RefObject,
   useEffect,
@@ -25,8 +24,10 @@ import { createPortal } from "react-dom";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
-import { useDialogFocus } from "./dialogfocus";
+import { meshOf, meshStyle } from "./avatarmesh";
+import { coveredByDialog, useDialogFocus } from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
+import { swallowWhileBusy, useSinglePress } from "./presslatch";
 import "./atoms.css";
 import "./evidencemark.css";
 
@@ -82,20 +83,6 @@ export function BusyMark({ className }: Readonly<{ className?: string }>) {
       aria-hidden="true"
     />
   );
-}
-
-// A press that lands on a control already waiting for its own answer. Both
-// halves are load bearing: `preventDefault` is what stops a `type="submit"`
-// button posting the form a second time (a plain early return does not — the
-// browser submits on the click, not on the handler), and `stopPropagation`
-// stops a clickable row underneath treating the press as a click on itself.
-//
-// Aliased on import because this file also uses the DOM's own `MouseEvent`,
-// for the document-level listener `OverflowMenu` attaches; the unaliased React
-// type shadows it and that listener stops compiling.
-function swallowWhileBusy(event: ReactMouseEvent<HTMLButtonElement>) {
-  event.preventDefault();
-  event.stopPropagation();
 }
 
 export function Button({
@@ -211,6 +198,7 @@ export function Button({
 }) {
   const ownReasonId = useId();
   const busyLabelId = useId();
+  const singlePress = useSinglePress();
   const classes = [
     "btn",
     `btn-${variant}`,
@@ -264,7 +252,7 @@ export function Button({
       aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
       aria-describedby={describedBy}
-      onClick={busy ? swallowWhileBusy : onClick}
+      onClick={busy ? swallowWhileBusy : singlePress(onClick)}
     >
       {busy && <BusyMark />}
       {/* The children stay, ALWAYS. An icon-only control has no room for two
@@ -434,11 +422,6 @@ export function Badge({
   );
 }
 
-// AVATAR_TONES are the monogram backgrounds, all token-driven. The colour
-// is picked from the record, not stored, so the same record looks the same on
-// every screen and in every session without a round trip.
-const AVATAR_TONES = 6;
-
 /**
  * The initials a chip falls back to.
  *
@@ -463,17 +446,15 @@ export function Avatar({
   identity,
   src,
   size = "sm",
-  shape = "contact",
 }: Readonly<{
   name: string;
   /**
-   * What the tint is derived FROM, when that is not the displayed name — a
-   * record id, an address, anything stable for the life of the record. The
-   * name is the fallback and it is a poor key: renaming a contact or a company
-   * silently moves them to a different colour on every screen at once, which
-   * reads as a different record rather than as a rename.
+   * The record's own id — a company's, a contact's, a seat's user id: two
+   * surfaces keying one record on different strings draw it in two colours. A
+   * site with no id passes the name and says why; an empty key (a payload
+   * missing its id) falls back to the name, not to one colour for all.
    */
-  identity?: string;
+  identity: string;
   // A resolved logo to render instead of the monogram. The monogram is the
   // floor, not the fallback of last resort: it is what shows while the image
   // loads, if it fails to load, and whenever no logo resolved — so a company
@@ -486,15 +467,6 @@ export function Avatar({
    * brings its chips down from its own sheet, density being its decision.
    */
   size?: "sm" | "md" | "lg" | "xl";
-  /**
-   * What KIND of thing this chip stands for, which decides its shape.
-   *
-   * A contact is round, the way a face is drawn everywhere; a company is
-   * a rounded square, the way a logo is. The distinction is not decoration —
-   * on a page carrying both, the shape is what tells a reader whether a chip
-   * is a company or somebody at it before they have read a word of it.
-   */
-  shape?: "contact" | "company";
 }>) {
   // An image that fails to load falls back to the monogram for the rest of
   // this mount. Keyed by src so a record whose logo changes gets a fresh try
@@ -513,31 +485,25 @@ export function Avatar({
   // simply empty.
   const painted = Boolean(src) && paintedSrc === src && !broken;
   const initials = monogramOf(name);
-  // A small sum over the code points: stable across sessions and locales, and
-  // the spread only has to be even enough that neighbouring records in a list
-  // rarely collide.
-  //
-  // The tint is UNCONDITIONAL. It used to be opt-in, and the result was that a
-  // company was tinted in the list it was found in and a neutral accent chip on
-  // the record page that list opened — the same company, two colours, one
-  // click apart. A chip that identifies a record on one screen and not on the
-  // next identifies nothing.
-  let tone = 0;
-  for (const char of identity ?? name) {
-    tone = (tone + (char.codePointAt(0) ?? 0)) % AVATAR_TONES;
-  }
-  const classes = ["avatar", `avatar-t${tone}`, `avatar-${size}`];
-  if (shape === "company") classes.push("avatar-company");
-  if (src && !broken) classes.push("avatar-has-logo");
-  if (painted) classes.push("avatar-painted");
+  // A chip with a live logo draws no mesh at any moment: the initials wait on
+  // a neutral ground, and only a logo that FAILED falls back to the mesh.
+  const logo = Boolean(src) && !broken;
+  const classes = [
+    "avatar",
+    logo ? "avatar-has-logo" : "avatar-mesh",
+    `avatar-${size}`,
+  ];
   return (
-    <span className={classes.join(" ")}>
-      {src && !broken ? (
+    <span
+      className={classes.join(" ")}
+      style={logo ? undefined : meshStyle(meshOf(identity || name))}
+    >
+      {logo ? (
         // The monogram stays underneath: it is what the chip shows until the
         // image paints, and what is left if the image never does.
         <img
           className="avatar-img"
-          src={src}
+          src={src ?? undefined}
           alt=""
           loading="lazy"
           onError={setBroken}
@@ -698,6 +664,7 @@ export type FieldControl = Readonly<{
  */
 export function Field({
   label,
+  labelHidden,
   labelEnd,
   hint,
   hintLive,
@@ -712,6 +679,9 @@ export function Field({
   // read from somewhere carries its provenance in the label row — a confidence
   // meter and a source chip beside the name.
   label: ReactNode;
+  /** The label for assistive tech alone, where the layout already names the
+   *  field: an inline editor opened in place of the value it edits. */
+  labelHidden?: boolean;
   /**
    * What sits at the far end of the label's own line — the "Forgot?" link
    * beside a password, a unit beside an amount. It belongs to the label ROW
@@ -778,18 +748,19 @@ export function Field({
     "aria-describedby": describedBy,
     "aria-invalid": error ? true : undefined,
   });
+  const labelClass = labelHidden ? "sr-only" : "t-label";
   return (
     <div className={["field", className ?? ""].filter(Boolean).join(" ")}>
       {labelEnd ? (
         <span className="field-label-row">
-          <label className="t-label" htmlFor={id}>
+          <label className={labelClass} htmlFor={id}>
             {label}
             {required && <span aria-hidden> *</span>}
           </label>
           {labelEnd}
         </span>
       ) : (
-        <label className="t-label" htmlFor={id}>
+        <label className={labelClass} htmlFor={id}>
           {label}
           {required && <span aria-hidden> *</span>}
         </label>
@@ -1340,48 +1311,6 @@ export function TableScroll({
   );
 }
 
-export function DataTable<Row>({
-  columns,
-  rows,
-  rowKey,
-  onRowClick,
-  label,
-}: Readonly<{
-  columns: { key: string; header: string; render: (row: Row) => ReactNode }[];
-  rows: Row[];
-  rowKey: (row: Row) => string;
-  onRowClick?: (row: Row) => void;
-  /** What the scroll region is called once the table is wider than its box. */
-  label: string;
-}>) {
-  return (
-    <TableScroll label={label}>
-      <table className="table">
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key}>{column.header}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={rowKey(row)}
-              className={onRowClick ? "rowlink" : undefined}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-            >
-              {columns.map((column) => (
-                <td key={column.key}>{column.render(row)}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </TableScroll>
-  );
-}
-
 /**
  * Disclosure is a section the reader opens when they want it.
  *
@@ -1425,7 +1354,7 @@ function isSetting(item: Element): boolean {
 // The children are the caller's own action components (each opening its own
 // confirm flow), so the menu owns only the disclosure: it closes on Escape, on
 // a click outside, and on an item being chosen — with the two exceptions
-// `isSetting` and the `.overlay` test below name, an item that SETS rather than
+// `isSetting` and `coveredByDialog` below name, an item that SETS rather than
 // does, and one that put a dialog up which now owns the screen and the focus.
 //
 // The children are not rendered until the menu is first opened. They are
@@ -1485,10 +1414,10 @@ export function OverflowMenu({
   // strand the reader on <body>. Which of the two happened is not knowable
   // while the item's own handler is running: the dialog is not in the document
   // until React has committed the state that handler set. So the press records
-  // that it happened, and this effect — after that commit — reads the same
-  // `.overlay` the Escape handler reads and answers accordingly.
+  // that it happened, and this effect — after that commit — asks the same
+  // `coveredByDialog` the Escape handler asks and answers accordingly.
   useEffect(() => {
-    if (chosen === 0 || document.querySelector(".overlay")) {
+    if (chosen === 0 || coveredByDialog(trigger.current)) {
       return;
     }
     setOpen(false);
@@ -1526,7 +1455,7 @@ export function OverflowMenu({
       // both layers on one keypress would take the reader back past the menu
       // they were choosing from, and they would have to reopen it to pick
       // something else.
-      if (document.querySelector(".overlay")) {
+      if (coveredByDialog(trigger.current)) {
         return;
       }
       setOpen(false);

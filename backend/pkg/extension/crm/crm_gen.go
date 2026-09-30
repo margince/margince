@@ -64,6 +64,36 @@ func (e ActivityDirection) Valid() bool {
 	}
 }
 
+// Defines values for ActivityInvitationStatus.
+const (
+	ActivityInvitationStatusCanceled       ActivityInvitationStatus = "canceled"
+	ActivityInvitationStatusCanceling      ActivityInvitationStatus = "canceling"
+	ActivityInvitationStatusConfirmed      ActivityInvitationStatus = "confirmed"
+	ActivityInvitationStatusNeedsAttention ActivityInvitationStatus = "needs_attention"
+	ActivityInvitationStatusPending        ActivityInvitationStatus = "pending"
+	ActivityInvitationStatusRescheduling   ActivityInvitationStatus = "rescheduling"
+)
+
+// Valid indicates whether the value is a known member of the ActivityInvitationStatus enum.
+func (e ActivityInvitationStatus) Valid() bool {
+	switch e {
+	case ActivityInvitationStatusCanceled:
+		return true
+	case ActivityInvitationStatusCanceling:
+		return true
+	case ActivityInvitationStatusConfirmed:
+		return true
+	case ActivityInvitationStatusNeedsAttention:
+		return true
+	case ActivityInvitationStatusPending:
+		return true
+	case ActivityInvitationStatusRescheduling:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityKind.
 const (
 	ActivityKindCall    ActivityKind = "call"
@@ -397,7 +427,7 @@ type Activity struct {
 	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
 	AudienceReason *string `json:"audience_reason,omitempty"`
 
-	// Author Who wrote this where it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
+	// Author Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
 	// WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
 	Author *SourceAuthor `json:"author,omitempty"`
@@ -437,6 +467,9 @@ type Activity struct {
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *string `json:"host_user_id,omitempty"`
 	Id         string  `json:"id"`
+
+	// InvitationStatus Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
+	InvitationStatus *ActivityInvitationStatus `json:"invitation_status,omitempty"`
 
 	// IsDone Task only.
 	IsDone *bool        `json:"is_done,omitempty"`
@@ -488,6 +521,9 @@ type ActivityContentState string
 
 // ActivityDirection inbound/outbound for email/call; null for note/task.
 type ActivityDirection string
+
+// ActivityInvitationStatus Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
+type ActivityInvitationStatus string
 
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string
@@ -564,9 +600,15 @@ type CreateActivityRequest struct {
 	// RfcMessageId This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated.
 	RfcMessageId *string `json:"rfc_message_id,omitempty"`
 	Source       string  `json:"source"`
-	SourceId     *string `json:"source_id,omitempty"`
-	SourceSystem *string `json:"source_system,omitempty"`
-	Subject      *string `json:"subject,omitempty"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *string `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
+	SourceId         *string `json:"source_id,omitempty"`
+	SourceSystem     *string `json:"source_system,omitempty"`
+	Subject          *string `json:"subject,omitempty"`
 
 	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread.
 	ThreadKey *string `json:"thread_key,omitempty"`
@@ -758,5 +800,6 @@ type SourceAuthor struct {
 	UserId *string `json:"user_id,omitempty"`
 
 	// Via Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
+	// An import writes its rows inside a reserved `mirror:` namespace, which is machinery for the replay key and is never what a reader should see. The prefix is stripped here: a row stored as `mirror:hubspot` reads `hubspot`.
 	Via *string `json:"via,omitempty"`
 }

@@ -75,22 +75,83 @@ func getListBody(
 	//craft:ignore swallowed-errors best-effort close on a body we have finished with
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		// The status and nothing else. A vendor's error body on this endpoint is
-		// frequently HTML from a proxy, and echoing it into a log is how a
-		// request — or a key in a redirected URL — ends up in one.
-		return nil, fmt.Errorf("ai: %s: listing models: http %d", vendor, resp.StatusCode)
+		// The status and one structured code, never the body's words. A
+		// vendor's error body on this endpoint is frequently HTML from a proxy,
+		// and echoing it into a log is how a request — or a key in a redirected
+		// URL — ends up in one.
+		return nil, &listStatusError{vendor: vendor, status: resp.StatusCode, reason: errorInfoReason(resp.Body)}
 	}
 	// Bounded, so a vendor cannot stream an unbounded body into memory on a read
-	// nobody is metering.
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, listBodyLimit))
+	// nobody is metering, and refused past the bound rather than cut: a cut list
+	// decodes as a shorter one only by luck.
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, listBodyLimit+1))
 	if err != nil {
 		return nil, fmt.Errorf("ai: %s: reading model list: %w", vendor, err)
+	}
+	if len(raw) > listBodyLimit {
+		return nil, fmt.Errorf("ai: %s: the model list is larger than %d MiB and was not read", vendor, listBodyLimit>>20)
 	}
 	return raw, nil
 }
 
-// listBodyLimit bounds one vendor's list response. A broker's full catalog with
-// per-model metadata is comfortably under a megabyte; four is headroom, not an
+// listStatusError is a vendor that answered its list endpoint with something
+// other than 200. Typed so a caller can tell a refused credential from a
+// throttled one; the status is all it carries, for the reason getListBody
+// drops the body.
+type listStatusError struct {
+	vendor string
+	status int
+	// reason is the google.rpc ErrorInfo code a Google API names its failure
+	// with (API_KEY_INVALID), or empty. A closed upper-case code, never text.
+	reason string
+}
+
+// errorInfoLimit bounds the error body read for its code.
+const errorInfoLimit = 16 << 10
+
+// errorInfoReason reads the one structured field Google APIs put on a
+// failure: `error.details[].reason`. Anything that is not that shape — a
+// proxy's HTML, another vendor's envelope — reads as no code.
+func errorInfoReason(body io.Reader) string {
+	var envelope struct {
+		Error struct {
+			Details []struct {
+				Reason string `json:"reason"`
+			} `json:"details"`
+		} `json:"error"`
+	}
+	raw, err := io.ReadAll(io.LimitReader(body, errorInfoLimit))
+	if err != nil || json.Unmarshal(raw, &envelope) != nil {
+		return ""
+	}
+	for _, d := range envelope.Error.Details {
+		if isErrorCode(d.Reason) {
+			return d.Reason
+		}
+	}
+	return ""
+}
+
+// isErrorCode admits an UPPER_SNAKE code and nothing else, so a field a proxy
+// filled with prose cannot carry it into a log.
+func isErrorCode(s string) bool {
+	if s == "" || len(s) > 64 {
+		return false
+	}
+	for _, r := range s {
+		if (r < 'A' || r > 'Z') && r != '_' && (r < '0' || r > '9') {
+			return false
+		}
+	}
+	return true
+}
+
+func (e *listStatusError) Error() string {
+	return fmt.Sprintf("ai: %s: listing models: http %d", e.vendor, e.status)
+}
+
+// listBodyLimit bounds one vendor's list response. OpenRouter's full catalog
+// with per-model metadata is under a megabyte; four is headroom, not an
 // invitation.
 const listBodyLimit = 4 << 20
 
@@ -215,6 +276,10 @@ func openAIWireModels(
 
 // ---- gemini ----
 
+// geminiListVendor names Gemini on its list errors, which the key test reads:
+// Gemini refuses a bad key with 400 where every other vendor says 401.
+const geminiListVendor = "gemini"
+
 // ListModels reports GET /v1beta/models, the one vendor list that says what
 // each model is FOR: `supportedGenerationMethods` names `embedContent` for an
 // embedder and `generateContent` for a chat model, so the embeddings lane can
@@ -239,7 +304,7 @@ func (c *geminiClient) ListModels(ctx context.Context) ([]model.Info, error) {
 		if pageToken != "" {
 			endpoint += "&pageToken=" + url.QueryEscape(pageToken)
 		}
-		raw, err := getListBody(ctx, c.http, "gemini", endpoint, func(r *http.Request) {
+		raw, err := getListBody(ctx, c.http, geminiListVendor, endpoint, func(r *http.Request) {
 			r.Header.Set("x-goog-api-key", c.apiKey)
 		})
 		if err != nil {

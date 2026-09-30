@@ -269,19 +269,21 @@ function useOpenTaskRows(
     "user",
     tasks.some((task) => Boolean(task.assignee_id)),
   );
-  const nameOf = (userId: string | null | undefined): string | undefined => {
+  const assigneeOf = (userId: string | null | undefined) => {
     if (!userId) {
       return undefined;
     }
     const entry = roster.data?.find((candidate) => candidate.id === userId);
-    return entry && "display_name" in entry ? entry.display_name : undefined;
+    return entry && "display_name" in entry
+      ? { name: entry.display_name, identity: userId }
+      : undefined;
   };
   const asOf = Date.parse(view.as_of);
   return {
     rows: tasks.slice(0, OPEN_TASKS_SHOWN).map((task) => (
       <TodoRow
         key={task.id}
-        who={nameOf(task.assignee_id)}
+        who={assigneeOf(task.assignee_id)}
         title={task.subject ?? t("task.untitled")}
         due={taskDue(task, asOf, t, locale, zone)}
         action={

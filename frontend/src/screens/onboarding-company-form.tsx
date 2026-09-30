@@ -16,7 +16,7 @@ import {
   ProvenanceTag,
 } from "../design-system/trust";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { coldFieldLabel } from "./common";
 import {
   type CompanyDraft,
@@ -67,7 +67,9 @@ export function CompanyStep({
   embedded?: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
+  const pagesRead = read ? (read.pages_read ?? read.pages.length) : 0;
   // The contract ceiling on `selected_fact_keys` is the selection model's to
   // enforce, wherever a fact is picked: this form's cards and the fact table's
   // checkboxes write the same key list, so they refuse on the same terms.
@@ -93,31 +95,22 @@ export function CompanyStep({
         <ShieldCheck aria-hidden />
         <span>
           {read
-            ? t("ob.confirmWebsite", {
-                count: formatNumber(
-                  read.pages_read ?? read.pages.length,
-                  locale,
-                ),
+            ? plural("ob.confirmWebsite", pagesRead, {
+                count: formatNumber(pagesRead, locale),
               })
             : t("ob.confirmManual")}
         </span>
       </div>
 
       {saved && (
-        <p className="ob-sub" style={{ margin: "14px 0 0" }}>
-          <CheckCircle2
-            aria-hidden
-            style={{ width: 14, height: 14, verticalAlign: "-2px" }}
-          />{" "}
+        <p className="ob-sub ob-companyform-saved">
+          <CheckCircle2 aria-hidden className="ob-companyform-savedmark" />{" "}
           {t("ob.s1.savedNote")}
         </p>
       )}
 
       {saveError && (
-        <div
-          className="readfail warning"
-          style={{ marginTop: "var(--space-3)" }}
-        >
+        <div className="readfail warning ob-companyform-savefail">
           <span className="rfi">
             <Circle aria-hidden />
           </span>
@@ -129,7 +122,7 @@ export function CompanyStep({
       )}
 
       {missingRequired.length > 0 && (
-        <div className="urlnote err" style={{ marginTop: "var(--space-3)" }}>
+        <div className="urlnote err">
           <Circle aria-hidden />{" "}
           {t("ob.s1.requiredMissing", {
             fields: missingRequired

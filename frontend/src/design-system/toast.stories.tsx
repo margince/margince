@@ -42,7 +42,7 @@ import {
  * than no Undo, because the reader stops looking for the real way back.
  */
 const meta: Meta<typeof ToastRegion> = {
-  title: "Design System/Toast",
+  title: "Components/Messaging/Toast",
   component: ToastRegion,
   parameters: { layout: "padded" },
   decorators: [

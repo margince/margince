@@ -79,7 +79,7 @@ function panel(
 }
 
 const meta: Meta<typeof ConfirmSubmissionsPanel> = {
-  title: "Settings/Governance/Privacy & retention/Corrections",
+  title: "Settings/Governance/Privacy and retention/Corrections",
   component: ConfirmSubmissionsPanel,
   parameters: { layout: "padded" },
 };

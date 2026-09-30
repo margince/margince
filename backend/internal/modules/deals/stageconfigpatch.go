@@ -58,7 +58,7 @@ func pipelineUpdatePatch(current pipelineConfig, in UpdatePipelineInput) *storek
 		patch.Set("is_default", current.isDefault, *in.IsDefault)
 	}
 	if in.Position != nil {
-		patch.Set("position", current.position, *in.Position)
+		patch.Set(positionField, current.position, *in.Position)
 	}
 	return patch
 }
@@ -88,21 +88,41 @@ func readStageConfig(ctx context.Context, tx pgx.Tx, id ids.StageID) (stageConfi
 	return current, nil
 }
 
+// terminalWinProbability is the odds the stage_terminal_prob CHECK pins a won
+// or lost stage to, and false for an open stage, whose odds are the caller's.
+// Every writer of a stage's odds reads it here, so a terminal stage outranks
+// whatever the caller sent the same way on create and on update.
+func terminalWinProbability(semantic string) (int, bool) {
+	switch StageSemantic(semantic) {
+	case SemanticWon:
+		return 100, true
+	case SemanticLost:
+		return 0, true
+	}
+	return 0, false
+}
+
+// stageProbability is the win probability a new stage is written with: a
+// terminal stage's pinned odds, else the caller's, else 0.
+func stageProbability(semantic string, given *int) int {
+	if pinned, ok := terminalWinProbability(semantic); ok {
+		return pinned
+	}
+	if given != nil {
+		return *given
+	}
+	return 0
+}
+
 // committedWinProbability resolves the win_probability an update actually
-// commits, or nil when it leaves the column where it was. A terminal semantic
-// forces the value and outranks whatever the caller sent — the stage_terminal_prob
-// CHECK. Resolving it here and binding it as a plain value, rather than deriving
-// it again inside the UPDATE, is what lets the row, the audit after-image and the
-// published payload all report the number that was actually stored.
+// commits, or nil when it leaves the column where it was. Resolving it here and
+// binding it as a plain value, rather than deriving it again inside the UPDATE,
+// is what lets the row, the audit after-image and the published payload all
+// report the number that was actually stored.
 func committedWinProbability(in UpdateStageInput) *int {
 	if in.Semantic != nil {
-		switch StageSemantic(*in.Semantic) {
-		case SemanticWon:
-			won := 100
-			return &won
-		case SemanticLost:
-			lost := 0
-			return &lost
+		if pinned, ok := terminalWinProbability(*in.Semantic); ok {
+			return &pinned
 		}
 	}
 	return in.WinProbability
@@ -116,7 +136,7 @@ func stageUpdatePatch(current stageConfig, in UpdateStageInput) *storekit.Patch 
 		patch.Set("name", current.name, *in.Name)
 	}
 	if in.Position != nil {
-		patch.Set("position", current.position, *in.Position)
+		patch.Set(positionField, current.position, *in.Position)
 	}
 	if in.Semantic != nil {
 		patch.Set(stageSemanticField, current.semantic, *in.Semantic)

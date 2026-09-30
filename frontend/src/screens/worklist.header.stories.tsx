@@ -2,9 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { components } from "../api/schema";
 import { jsonResponse, StoryProviders } from "./story-utils";
 import { WorklistHeader } from "./worklist.header";
 import type { Worklist, WorklistScope } from "./worklist.queries";
+
+type WorklistBuckets = components["schemas"]["WorklistBuckets"];
 
 // The head of the day, in the three shapes a seat can give it.
 //
@@ -39,13 +42,23 @@ const roster = {
 
 // A day with more behind it than the page is showing, which is what puts the
 // completeness caption under the pills. Ten weighed, eight on screen.
-function day(scopes: readonly WorklistScope[]): Worklist {
+function day(
+  scopes: readonly WorklistScope[],
+  buckets?: WorklistBuckets,
+): Worklist {
   return {
     as_of: "2026-09-02T09:00:00Z",
     scope: "mine",
     scope_options: [...scopes],
     queue: [],
-    summary: { urgent: 2, due: 3, in_play: 1, lower_priority: 4, total: 10 },
+    summary: {
+      urgent: 2,
+      due: 3,
+      in_play: 1,
+      lower_priority: 4,
+      total: 10,
+      buckets,
+    },
     sources_unavailable: [],
     reach: [],
     counts: [],
@@ -61,13 +74,17 @@ function day(scopes: readonly WorklistScope[]): Worklist {
   };
 }
 
-function frame(scopes: readonly WorklistScope[], owner = "") {
+function frame(
+  scopes: readonly WorklistScope[],
+  owner = "",
+  buckets?: WorklistBuckets,
+) {
   globalThis.fetch = (async (): Promise<Response> =>
     jsonResponse(roster)) as typeof fetch;
   return (
     <StoryProviders>
       <WorklistHeader
-        day={day(scopes)}
+        day={day(scopes, buckets)}
         loaded={8}
         scope="mine"
         filter="all"
@@ -116,4 +133,12 @@ export const AColleaguesDay: Story = {
 export const BothDialsDark: Story = {
   globals: { theme: "dark" },
   render: () => frame(["mine", "unassigned", "team", "all"]),
+};
+
+/** A server that sends the partition: the sentence names the two panels by
+ *  their headings, Today and To review. A half with nothing in it still prints
+ *  its zero, so the line keeps its shape from day to day. */
+export const TheSplit: Story = {
+  render: () =>
+    frame(["mine"], "", { urgent: 0, due_today: 3, planned: 9, review: 0 }),
 };

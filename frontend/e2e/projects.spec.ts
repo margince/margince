@@ -68,7 +68,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await expect(current).toHaveText("Initiative");
   // The phase history lives in the details column, which is open on arrival,
   // so the birth row is on screen without a press.
-  await expect(page.getByText("Gestartet in Initiative")).toBeVisible();
+  await expect(
+    page.getByText("Gestartet in der Phase „Initiative“"),
+  ).toBeVisible();
   await expect(
     page.getByText("Unter diesem Projekt ist noch nichts abgelegt", {
       exact: false,
@@ -77,7 +79,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
 
   // 2. Attach through the company/project group in the deal's Details pane.
   await page.goto("/#/deals/d-fleet");
-  await page.getByRole("button", { name: "Firma ändern", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Unternehmen ändern", exact: true })
+    .click();
   await choose(
     page,
     page.getByRole("combobox", { name: "Projekt", exact: true }),
@@ -158,7 +162,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     .getByRole("group", { name: "Phase" })
     .getByRole("button", { name: "Won" })
     .click();
-  await expect(page.getByText("Nach Won verschieben?")).toBeVisible();
+  await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
   // The first confirm is refused: no contract is on the deal, so the server
   // answers win_evidence_required and the dialog stays open asking how it was
   // won. Only the answered second confirm is the win.
@@ -202,7 +206,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await relink.click();
   await dialog
     .getByRole("searchbox", {
-      name: "Kontakt, Firma, Deal, Lead oder Projekt suchen",
+      name: "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",
     })
     .fill("Brandt ERP");
   await dialog.getByRole("button", { name: "Brandt ERP" }).click();

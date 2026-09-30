@@ -17,12 +17,13 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // assuranceDir is where the rules live, relative to this package — gates run
@@ -71,7 +72,6 @@ func assuranceSources(t *testing.T) (declared []string, tests []string) {
 	if err != nil {
 		t.Fatalf("reading the assurance package: %v", err)
 	}
-	fset := token.NewFileSet()
 	for _, entry := range entries {
 		name := entry.Name()
 		if !strings.HasSuffix(name, ".go") {
@@ -86,7 +86,7 @@ func assuranceSources(t *testing.T) (declared []string, tests []string) {
 			tests = append(tests, string(body))
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", name, err)
 		}

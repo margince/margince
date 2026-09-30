@@ -13,6 +13,7 @@ import {
   useState,
 } from "react";
 import { useT } from "../i18n";
+import { downloadFrom } from "../screens/download";
 import { EmptyState, Modal, PendingBody } from "./atoms";
 import { IconAction } from "./iconaction";
 import "./filepreview.css";
@@ -261,17 +262,12 @@ function printing(frame: HTMLIFrameElement | null) {
  * URL the stage is drawing, which is the same bytes under the same name.
  */
 function save(file: PreviewFile, object: PreviewObject) {
-  const link = document.createElement("a");
-  link.href =
+  downloadFrom(
     file.bearer !== undefined && object.status === "ready"
       ? object.url
-      : file.href;
-  link.download = file.filename;
-  // In the document before the click: Safari ignores `download` on a node that
-  // is not in one, and saves nothing at all.
-  document.body.append(link);
-  link.click();
-  link.remove();
+      : file.href,
+    file.filename,
+  );
 }
 
 type PreviewObject =

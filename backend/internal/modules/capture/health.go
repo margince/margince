@@ -67,10 +67,10 @@ type Concern struct {
 // The human-only arm lives in Connections, whose refusal is the permission
 // sentinel the attention feed renders as a withheld lane.
 //
-// This read must stay within what Connections itself reads: the attention
-// seam composes the registry with no sink, no authority and no vault, so a
-// concern derived from anything beyond the connection tables would be a nil
-// dereference on the feed's request path.
+// This read must stay within what Connections itself reads: a health caller
+// composes the registry with no sink, no authority and no vault, so a concern
+// derived from anything beyond the connection tables would be a nil
+// dereference on that caller's request path.
 func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
 	views, err := r.Connections(ctx)
 	if err != nil {

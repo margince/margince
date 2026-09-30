@@ -860,45 +860,86 @@ func TestWinLossFiltersToOneLostReason(t *testing.T) {
 	}
 }
 
-// win-loss keeps the caller's own/team lens (owner_id is both a dimension
-// and a filter here, over an identity table with no other narrowing — a
-// wider population would let a rep pull a named colleague's exact win/loss
-// revenue by filtering to their id). An unowned won deal — one nobody has
-// claimed — must still count toward a team manager's own managed-teams
-// population, the same unowned-row fix every report in this cluster takes.
-func TestWinLossCountsAnUnownedWonDealForATeamManager(t *testing.T) {
+// win-loss measures every deal the reader may see: how the business closes,
+// not how the asker does. An unowned win counts for a team manager like any
+// other, and so does a win by a seat outside their teams.
+func TestWinLossCountsEveryReadableWonDealForATeamManager(t *testing.T) {
 	e := setupForecast(t)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, status, closed_at, lost_reason, fx_rate_to_base, source, captured_by)
 		VALUES ($1, 'Unowned win', $2, $3, 50000, 'EUR', 'won', '2026-01-15T10:00:00Z'::timestamptz, NULL, 1.0, 'manual', 'human:x')`,
 		e.pipeline, e.stages[60])
+	seedClosedWin(t, e, "Team2 win", e.Rep3, 90000)
 
 	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
 	result := e.runReport(manager, t, "win-loss",
 		`{"group_by":["status"],"aggregates":[{"fn":"count","as":"deals"}]}`)
-	if len(result.Rows) == 0 {
-		t.Fatal("a Team1 manager read no won/lost deals, want the unowned win " +
-			"to still count toward their own managed-teams population")
+	if len(result.Rows) != 1 || wireInt(t, result.Rows[0], "deals") != 2 {
+		t.Fatalf("a Team1 manager read %+v, want one won row counting 2 — the unowned "+
+			"win and Rep3's, whose team is not theirs", result.Rows)
+	}
+	if result.PopulationNarrowed != nil {
+		t.Errorf("population_narrowed = %q on a plan that names no owner", *result.PopulationNarrowed)
 	}
 }
 
-// A rep must not be able to pull a NAMED colleague's exact win/loss revenue
-// by filtering win-loss to their owner_id — `deal` is an identity table
-// (row scope renders unconditionally TRUE), so the population clause is the
-// ONLY thing standing between "my own closed deals" and "anyone's, on
-// request." Filtering to a colleague's id must answer empty, the same as
-// filtering deals-by-stage does.
-func TestWinLossFilteredToAColleaguesOwnerIDAnswersEmptyForARep(t *testing.T) {
+// A rep naming a colleague's owner_id is refused. `deal` is an identity
+// table, so on an install-wide report nothing else stands between a rep and
+// that colleague's exact closed revenue, and an empty answer would read as
+// "they sold nothing".
+func TestWinLossFilteredToAColleaguesOwnerIDIsRefusedForARep(t *testing.T) {
 	e := setupForecast(t)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, status, closed_at, lost_reason, fx_rate_to_base, source, captured_by)
-		VALUES ($1, 'Colleague win', $2, $3, $4, 90000, 'EUR', 'won', '2026-01-15T10:00:00Z'::timestamptz, NULL, 1.0, 'manual', 'human:x')`,
-		e.pipeline, e.stages[60], e.Rep3)
+	seedClosedWin(t, e, "Colleague win", e.Rep3, 90000)
 
 	rep := e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn)
-	result := e.runReport(rep, t, "win-loss",
+	status, body := e.runReportStatus(rep, t, "win-loss",
 		fmt.Sprintf(`{"filters":{"owner_id":%q},"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}]}`,
 			e.Rep3.String()))
-	if len(result.Rows) != 0 {
-		t.Fatalf("a rep filtering to a named colleague's owner_id answered %+v, "+
-			"want no rows — this is the exact revenue leak the population narrowing must block", result.Rows)
+	if status != http.StatusForbidden {
+		t.Fatalf("a rep filtering to a colleague's owner_id got %d %s, want 403", status, body)
 	}
+	if strings.Contains(body, "90000") {
+		t.Errorf("the refusal carries the colleague's revenue: %s", body)
+	}
+}
+
+// A team manager may measure their teammates, the same answer an explicit
+// owner scope naming one gives.
+func TestWinLossFilteredToATeammateAnswersForTheirManager(t *testing.T) {
+	e := setupForecast(t)
+	seedClosedWin(t, e, "Teammate win", e.Rep1, 70000)
+	seedClosedWin(t, e, "Other team win", e.Rep3, 90000)
+
+	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
+	result := e.runReport(manager, t, "win-loss",
+		fmt.Sprintf(`{"filters":{"owner_id":%q},"aggregates":[{"fn":"sum","field":"amount_minor","as":"won"}]}`,
+			e.Rep1.String()))
+	if len(result.Rows) != 1 || wireInt(t, result.Rows[0], "won") != 70000 {
+		t.Fatalf("a Team1 manager filtering to Rep1 read %+v, want Rep1's 70000", result.Rows)
+	}
+
+	status, body := e.runReportStatus(manager, t, "win-loss",
+		fmt.Sprintf(`{"filters":{"owner_id":%q}}`, e.Rep3.String()))
+	if status != http.StatusForbidden {
+		t.Errorf("a Team1 manager filtering to Team2's Rep3 got %d %s, want 403", status, body)
+	}
+}
+
+// An all-scope seat may measure anyone.
+func TestWinLossFilteredToAnyOwnerAnswersForAnAllScopeSeat(t *testing.T) {
+	e := setupForecast(t)
+	seedClosedWin(t, e, "Rep3 win", e.Rep3, 90000)
+
+	result := e.runReport(e.Admin(), t, "win-loss",
+		fmt.Sprintf(`{"filters":{"owner_id":%q},"aggregates":[{"fn":"sum","field":"amount_minor","as":"won"}]}`,
+			e.Rep3.String()))
+	if len(result.Rows) != 1 || wireInt(t, result.Rows[0], "won") != 90000 {
+		t.Fatalf("an admin filtering to Rep3 read %+v, want Rep3's 90000", result.Rows)
+	}
+}
+
+func seedClosedWin(t *testing.T, e *forecastEnv, name string, owner ids.UUID, amountMinor int64) {
+	t.Helper()
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, status, closed_at, lost_reason, fx_rate_to_base, source, captured_by)
+		VALUES ($1, $2, $3, $4, $5, $6, 'EUR', 'won', '2026-01-15T10:00:00Z'::timestamptz, NULL, 1.0, 'manual', 'human:x')`,
+		name, e.pipeline, e.stages[60], owner, amountMinor)
 }

@@ -43,12 +43,13 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { useMeetingOutcome } from "./taskactions";
 import { worklistKey } from "./worklist.queries";
 
@@ -216,11 +217,7 @@ function MeetingOutcomeDialog({
       {meeting.isPending && (
         <p className="t-caption">{t("worklist.verb.meetingReading")}</p>
       )}
-      {meeting.isError && (
-        <p className="t-caption form-error">
-          {problemMessageOf(meeting.error, t)}
-        </p>
-      )}
+      <ErrorLine error={meeting.error} />
       {draft && (
         <form
           className="form-stack"
@@ -300,11 +297,7 @@ function MeetingOutcomeDialog({
               />
             )}
           </Field>
-          {save.isError && (
-            <p className="t-caption form-error">
-              {problemMessageOf(save.error, t)}
-            </p>
-          )}
+          <ErrorLine error={save.error} />
           <div className="form-actions">
             <Button variant="ghost" type="button" onClick={onClose}>
               {t("common.close")}

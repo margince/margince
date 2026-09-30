@@ -16,9 +16,11 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -96,7 +98,7 @@ func (mintingCase) Evaluate(aitasks.Trace) aitasks.Outcome {
 // which reads as invention on every correct reply.
 func TestTheJudgeIsShownTheTurnTheCandidateWasGiven(t *testing.T) {
 	candidateFake := ai.NewFakeClient().Script("the widget is blue and durable")
-	judgeFake := ai.NewFakeClient().Script(scoreJSON(90))
+	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
 
 	factory := &mintingCases{}
 	census := aitasks.NewRegistry()
@@ -109,13 +111,14 @@ func TestTheJudgeIsShownTheTurnTheCandidateWasGiven(t *testing.T) {
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
+			maxRuns:       1,
 		}); err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}
 
 	judgeCalls := judgeFake.Calls()
 	if len(judgeCalls) != 1 {
-		t.Fatalf("the judge was called %d times, want the one call this single run scores", len(judgeCalls))
+		t.Fatalf("the judge was called %d times, want the one opinion a clear score is taken on", len(judgeCalls))
 	}
 	minted := factory.lastMinted(t)
 	if !strings.Contains(string(judgeCalls[0].Payload), minted) {
@@ -139,18 +142,19 @@ func TestCandidateAskIsTheFirstRequestsUserTurns(t *testing.T) {
 		}
 	})
 
-	t.Run("every user turn of it, and no assistant turn", func(t *testing.T) {
+	t.Run("every turn of it, a seeded assistant turn labelled as history", func(t *testing.T) {
 		trace := aitasks.Trace{Requests: []model.Request{{Messages: []model.Message{
-			{Role: roleUser, Content: "context block"},
-			{Role: "assistant", Content: "a turn the model itself wrote"},
+			{Role: roleUser, Content: "Where are we with onboarding?"},
+			{Role: "assistant", Content: "The profile is confirmed."},
 			{Role: roleUser, Content: "the question"},
 		}}}}
 		ask, err := candidateAsk(trace)
 		if err != nil {
 			t.Fatalf("candidateAsk: %v", err)
 		}
-		if ask != "context block\n\nthe question" {
-			t.Fatalf("candidateAsk = %q, want both user turns and neither the assistant's", ask)
+		want := "Where are we with onboarding?\n\n" + seededAssistantLabel + "The profile is confirmed.\n\nthe question"
+		if ask != want {
+			t.Fatalf("candidateAsk = %q, want %q", ask, want)
 		}
 	})
 }
@@ -170,4 +174,130 @@ func TestCandidateAskRefusesATraceThatAskedNothing(t *testing.T) {
 			t.Fatal("want an error for a first request that asks nothing")
 		}
 	})
+}
+
+// A grader shown neither the product rules nor the reference answer floored
+// behaviour the site's prompt explicitly permits and invented fields the schema
+// never asked for. Both reach the judge call a run actually makes.
+func TestTheJudgeIsShownTheProductRulesAndTheExpectedAnswer(t *testing.T) {
+	const expected = "a durable blue widget"
+	candidateFake := ai.NewFakeClient().Script("the widget is " + expected)
+	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
+
+	sc := testScenario("basic", wideBands)
+	sc.Expect.Answer = JSONValue(`"` + expected + `"`)
+	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
+			maxRuns:       1,
+		}); err != nil {
+		t.Fatalf("certifyTask: %v", err)
+	}
+
+	judgeCalls := judgeFake.Calls()
+	if len(judgeCalls) != 1 {
+		t.Fatalf("the judge was called %d times, want the one opinion a clear score is taken on", len(judgeCalls))
+	}
+	payload := string(judgeCalls[0].Payload)
+	for what, want := range map[string]string{
+		"the widget site's system prompt": "Describe the subject in one sentence.",
+		"the scenario's expected answer":  expected,
+	} {
+		if !strings.Contains(payload, want) {
+			t.Errorf("the grader was never shown %s (%q):\n%s", what, want, payload)
+		}
+	}
+}
+
+// checkerSpecCases is the widget case declaring its expected answer a checker's
+// specification, the shape the draft and weekly-review sites have.
+type checkerSpecCases struct{ widgetCases }
+
+func (checkerSpecCases) ExpectsCheckerSpec() bool { return true }
+
+// A draft site's expected answer lists the phrases a reply must NOT use. Shown
+// as the reference reading, it tells the grader to reward exactly those, so a
+// site that declares its answer a checker's specification keeps it out of the
+// grader's turn — while the product rules still reach it.
+func TestACheckerSpecNeverReachesTheGrader(t *testing.T) {
+	const banned = "a close personal friend of yours"
+	candidateFake := ai.NewFakeClient().Script("the widget is " + banned)
+	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
+	census := aitasks.NewRegistry()
+	census.Register(widgetSite())
+	census.BindCase(widgetSite(), checkerSpecCases{widgetCases{site: widgetSite()}})
+
+	sc := testScenario("banned_phrases", wideBands)
+	sc.Expect.Answer = JSONValue(`"` + banned + `"`)
+	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, census,
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
+			maxRuns:       1,
+		}); err != nil {
+		t.Fatalf("certifyTask: %v", err)
+	}
+
+	judgeCalls := judgeFake.Calls()
+	if len(judgeCalls) != 1 {
+		t.Fatalf("the judge was called %d times, want the one opinion a clear score is taken on", len(judgeCalls))
+	}
+	payload := string(judgeCalls[0].Payload)
+	if strings.Contains(payload, "Expected answer") {
+		t.Errorf("the grader was shown a checker's specification as the expected answer:\n%s", payload)
+	}
+	if !strings.Contains(payload, "Describe the subject in one sentence.") {
+		t.Errorf("the grader lost the product rules along with the checker spec:\n%s", payload)
+	}
+}
+
+// The stamp digests the grading call a run makes, so it too leaves a checker's
+// specification out, and editing one does not move the grader's half.
+func TestTheGraderDigestIgnoresACheckerSpec(t *testing.T) {
+	census := aitasks.NewRegistry()
+	census.Register(widgetSite())
+	census.BindCase(widgetSite(), checkerSpecCases{widgetCases{site: widgetSite()}})
+	sc := testScenario("banned_phrases", wideBands)
+	candidate := model.Request{
+		System:   "Describe the subject in one sentence.",
+		Messages: []model.Message{{Role: roleUser, Content: "a widget"}},
+	}
+	base, err := graderRequestDigest(asGraded(sc, census), candidate)
+	if err != nil {
+		t.Fatalf("graderRequestDigest: %v", err)
+	}
+	respecified := sc
+	respecified.Expect.Answer = JSONValue(`"another banned phrase"`)
+	if got, err := graderRequestDigest(asGraded(respecified, census), candidate); err != nil || got != base {
+		t.Errorf("a changed checker spec moved the grader digest (err %v) — the grader reads a spec it is never sent", err)
+	}
+}
+
+// The rules and the reference answer are fenced like the rest of the scenario:
+// the rules carry the fixture inside the candidate site's own markers.
+func TestGraderInputFencesTheRulesAndTheExpectedAnswer(t *testing.T) {
+	sc := testScenario("basic", wideBands)
+	trace := aitasks.Trace{Requests: []model.Request{{
+		System:   "You may say they suggested the introduction.",
+		Messages: []model.Message{{Role: roleUser, Content: widgetAsk}},
+	}}}
+	in, err := graderInput(sc, trace, gradedOutput)
+	if err != nil {
+		t.Fatalf("graderInput: %v", err)
+	}
+	req := compose.JudgeRequest(in)
+	marker, declared := promptfence.MarkerIn(req.System)
+	if !declared {
+		t.Fatalf("the grader's system prompt declares no data boundary: %q", req.System)
+	}
+	turn := req.Messages[0].Content
+	for _, untrusted := range []string{trace.Requests[0].System, string(sc.Expect.Answer)} {
+		fenced := "<" + marker + ">" + untrusted + "</" + marker + ">"
+		if !strings.Contains(turn, fenced) {
+			t.Errorf("%q is not inside this call's boundary:\n%s", untrusted, turn)
+		}
+	}
 }

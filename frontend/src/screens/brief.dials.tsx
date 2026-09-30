@@ -9,6 +9,7 @@ import {
   type BriefView,
   SCOPES,
   scopesFor,
+  type TeamOffers,
   VIEWS,
 } from "./brief.view";
 
@@ -26,8 +27,8 @@ export function BriefDials({
   onChange,
 }: Readonly<{
   address: BriefAddress;
-  /** Whether this reader's row scope reaches a team, off the worklist read. */
-  offered: boolean;
+  /** Which views have a team surface for this reader, off the worklist read. */
+  offered: TeamOffers;
   onChange: (next: BriefAddress) => void;
 }>) {
   const t = useT();

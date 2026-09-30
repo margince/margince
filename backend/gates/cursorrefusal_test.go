@@ -28,7 +28,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
@@ -98,7 +97,6 @@ func refusalFiles(t *testing.T) []refusalFile {
 	t.Helper()
 	byDir := map[string][]*ast.File{}
 	paths := map[*ast.File]string{}
-	fset := token.NewFileSet()
 	for _, root := range refusalSurfaceRoots {
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
@@ -114,7 +112,7 @@ func refusalFiles(t *testing.T) []refusalFile {
 				strings.HasSuffix(path, "_gen.go") {
 				return nil
 			}
-			parsed, parseErr := parser.ParseFile(fset, path, nil, 0)
+			parsed, parseErr := gatekit.ParseFile(path, 0)
 			if parseErr != nil {
 				return parseErr
 			}

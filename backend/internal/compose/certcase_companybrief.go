@@ -27,10 +27,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/companybrief"
+	"github.com/margince/margince/backend/internal/compose/contactbrief"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -65,7 +68,10 @@ type companyBriefActFixture struct {
 	Label   string `json:"label"`
 	Kind    string `json:"kind"`
 	Subject string `json:"subject"`
-	At      string `json:"at"`
+	// Direction is the contract's, or empty for a row that records none; the
+	// fold turns it into the speaker through the site's own function.
+	Direction string `json:"direction"`
+	At        string `json:"at"`
 }
 
 type companyBriefCases struct{}
@@ -103,17 +109,45 @@ func (companyBriefCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pre
 		request: func(in companybrief.Input) model.Request {
 			return companybrief.BriefRequest(in, string(textlang.English))
 		},
-		in: in, companyID: ids.NewV7().String(), label: label, expected: want,
+		// One id, from the Input: the model is shown in.ID and the filter is
+		// given companyID, and those being two values was the defect.
+		parse: parseSectionedBrief,
+		in:    in, companyID: in.ID, label: label, expected: want,
 	}, nil
+}
+
+// parseSectionedBrief is the company_brief site's reader: production's
+// ParseBriefSections, with the surviving sentences lifted out of their sections
+// so one Evaluate serves both of this struct's sites.
+//
+// Flattening loses which section a sentence was in, and nothing here asks: the
+// scenario's expectation is which RECORDS the brief cited, and a section is a
+// place rather than a claim.
+func parseSectionedBrief(text, companyID string, in companybrief.Input) ([]companybrief.Sentence, error) {
+	sections, err := companybrief.ParseBriefSections(text, companyID, in)
+	if err != nil {
+		return nil, err
+	}
+	var out []companybrief.Sentence
+	for _, section := range sections {
+		out = append(out, section.Sentences...)
+	}
+	return out, nil
 }
 
 // companyBriefInput builds the production input, minting one id per labelled
 // record so no id in the reply can have come from the corpus.
 func companyBriefInput(f companyBriefFixture) (companybrief.Input, map[string]string, error) {
 	in := companybrief.Input{
+		ID:   ids.NewV7().String(),
 		Name: f.Name, Industry: f.Industry,
 		Strength: f.Strength, ContactCount: f.Contacts,
 		SectionsOmitted: f.SectionsOmitted,
+	}
+	// A reader who can see deals is sent the 360's lost count, as foldDeals
+	// sends it; none of these accounts has lost one.
+	if !slices.Contains(f.SectionsOmitted, string(crmcontracts.Company360SectionsOmittedDeals)) {
+		in.LostCount = new(0)
 	}
 	// label maps a corpus label to the id minted for it, so Evaluate can ask
 	// "did the brief cite the stalled deal" without the corpus ever naming
@@ -136,9 +170,16 @@ func companyBriefInput(f companyBriefFixture) (companybrief.Input, map[string]st
 		}
 		id := ids.NewV7().String()
 		label[act.Label] = id
-		in.Recent = append(in.Recent, companybrief.ActIn{
-			ID: id, Kind: act.Kind, Subject: act.Subject, At: act.At,
-		})
+		folded := companybrief.ActIn{ID: id, Kind: act.Kind, Subject: act.Subject, At: act.At}
+		if act.Direction != "" {
+			direction := crmcontracts.ActivityDirection(act.Direction)
+			if !direction.Valid() {
+				return in, nil, fmt.Errorf("activity %q has direction %q, which the contract does not carry",
+					act.Label, act.Direction)
+			}
+			folded.Speaker = contactbrief.SpeakerFor(direction)
+		}
+		in.Recent = append(in.Recent, folded)
 	}
 	return in, label, nil
 }
@@ -184,8 +225,13 @@ type companyBriefCase struct {
 	request   func(companybrief.Input) model.Request
 	in        companybrief.Input
 	companyID string
-	label     map[string]string
-	expected  []string
+	// parse reads the shape `request` asked for. The two are ONE decision: this
+	// struct serves company_brief (sectioned) and company_ask (flat sentences),
+	// and a single shared parser silently read nil sentences out of every
+	// sectioned reply — so the site could not fail, it could only abstain.
+	parse    func(text, companyID string, in companybrief.Input) ([]companybrief.Sentence, error)
+	label    map[string]string
+	expected []string
 }
 
 // Run issues the one request this site sends, through the production
@@ -205,7 +251,7 @@ func (c *companyBriefCase) Run(ctx context.Context, completer aitasks.Completer)
 // surviving sentences cite the records the scenario says a correct brief is
 // about.
 func (c *companyBriefCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	sentences, err := companybrief.ParseBrief(trace.Output, c.companyID, c.in)
+	sentences, err := c.parse(trace.Output, c.companyID, c.in)
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
@@ -224,12 +270,7 @@ func (c *companyBriefCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			cited[evidence.EntityID] = true
 		}
 	}
-	var missing []string
-	for _, name := range c.expected {
-		if !cited[c.label[name]] {
-			missing = append(missing, name)
-		}
-	}
+	missing := uncitedExpectations(c.expected, c.label, cited)
 	if len(missing) > 0 {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,

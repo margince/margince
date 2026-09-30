@@ -30,27 +30,8 @@ fixture:
 expect:
   outcome: accepted
   answer: personal
-  rubric: >
-    A consumer mobile-phone bill for the mailbox owner, forwarded from his work
-    address to an expense-capture address so the cost can be reimbursed. The
-    subject carries his home street address and the body names his customer
-    number and a direct-debit from his own account.
-    This is the owner's household, not the company's trade. Forwarding a private
-    bill through a work mailbox does not make it company business, and neither
-    does claiming the money back: what the money is FOR decides, not who
-    forwards it. "personal" scores high.
-    "ordinary" is the failure this scenario exists to catch and scores zero at
-    any confidence. It publishes a founder's home address and his private
-    telephone account to every colleague in a shared CRM, silently, with nothing
-    on the screen saying it happened. Other holding kinds score in the middle:
-    they are wrong, but wrong in the direction that costs one click.
-    Note the trap. Every surface signal here reads like ordinary trade — an
-    invoice, an amount, a due date, a customer number, a supplier writing to a
-    company address, and both ends of the forward inside the company's own
-    domain, so there is no external private counterparty to notice. A classifier
-    keying on the FORM of the mail rather than on whose life it belongs to
-    answers "ordinary".
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The rubric
+    only ranked the other kinds by the harm each does, which the check fails
+    outright.

@@ -103,7 +103,7 @@ func (n scheduledSendHeldNotifier) NotifyHeldInTx(ctx context.Context, tx pgx.Tx
 		ProposedChange: proposal,
 		DiffHash:       hex.EncodeToString(digest[:]),
 		TargetType:     heldScheduledSendTarget,
-		Summary:        heldSummary(in),
+		Summary:        heldSummary(approvalSummaryCopyIn(ctx, tx), in),
 		JoinPending:    true,
 		Identity:       identity,
 	})
@@ -156,26 +156,26 @@ func (n scheduledSendHeldNotifier) pendingCardsFor(ctx context.Context, tx pgx.T
 
 // heldSummary is the line a rep reads at a glance. "A scheduled send was held"
 // tells them nothing they can act on, so it names the message and what stopped it.
-func heldSummary(in activities.HeldNotice) string {
-	return fmt.Sprintf("%q was not sent: %s", in.Subject, heldReasonText(in.Reason))
+func heldSummary(said approvalSummaryCopy, in activities.HeldNotice) string {
+	return fmt.Sprintf(said.heldNotSent, in.Subject, heldReasonText(said, in.Reason))
 }
 
 // heldReasonText renders a hold reason as the sentence a rep needs. The codes are
 // the durable record; this is the half a human reads.
-func heldReasonText(reason string) string {
+func heldReasonText(said approvalSummaryCopy, reason string) string {
 	switch reason {
 	case activities.HeldConsentWithdrawn:
-		return "a recipient withdrew consent for this purpose after it was scheduled"
+		return said.heldConsentWithdrawn
 	case activities.HeldSenderInactive:
-		return "the sending account or its mailbox is no longer active"
+		return said.heldSenderInactive
 	case activities.HeldPassportRevoked:
-		return "the agent credential it was scheduled under has been revoked or expired — your account is fine, so send it yourself if it should still go"
+		return said.heldPassportRevoked
 	case activities.HeldMissedWindow:
-		return "its moment passed while nothing was running, and it is too late to be the message that was written"
+		return said.heldMissedWindow
 	case activities.HeldTimerExhausted:
-		return "the job that wakes it ran out of attempts"
+		return said.heldTimerExhausted
 	case activities.HeldSendRefused:
-		return "a gate refused it at send time"
+		return said.heldSendRefused
 	}
 	// An unknown code still reaches the rep: a held message with no explanation
 	// is worse than an unpolished one.

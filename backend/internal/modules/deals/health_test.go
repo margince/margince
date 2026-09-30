@@ -115,8 +115,17 @@ func TestRecencyScoreBandEdges(t *testing.T) {
 		days float64
 		want float64
 	}{
-		{0, 1.0}, {3, 1.0}, {3.001, 0.8}, {7, 0.8}, {7.001, 0.6}, {14, 0.6},
-		{14.001, 0.4}, {30, 0.4}, {30.001, 0.2}, {60, 0.2}, {60.001, 0.0},
+		{0, 1.0},
+		{3, 1.0},
+		{3.001, 0.8},
+		{7, 0.8},
+		{7.001, 0.6},
+		{14, 0.6},
+		{14.001, 0.4},
+		{30, 0.4},
+		{30.001, 0.2},
+		{60, 0.2},
+		{60.001, 0.0},
 	} {
 		if got := recencyScore(daysAgoPtr(tc.days), now); got != tc.want {
 			t.Errorf("recency at %g days = %f, want %f", tc.days, got, tc.want)
@@ -129,8 +138,13 @@ func TestVelocityScoreBands(t *testing.T) {
 		age, expected float64
 		want          float64
 	}{
-		{0, 14, 1.0}, {14, 14, 1.0}, {14.001, 14, 0.6}, {21, 14, 0.6},
-		{21.001, 14, 0.3}, {28, 14, 0.3}, {28.001, 14, 0.0},
+		{0, 14, 1.0},
+		{14, 14, 1.0},
+		{14.001, 14, 0.6},
+		{21, 14, 0.6},
+		{21.001, 14, 0.3},
+		{28, 14, 0.3},
+		{28.001, 14, 0.0},
 	} {
 		if got := velocityScore(tc.age, tc.expected); got != tc.want {
 			t.Errorf("velocity at age %g / expected %g = %f, want %f", tc.age, tc.expected, got, tc.want)

@@ -26,11 +26,11 @@ const READING = "77777777-7777-7777-7777-777777777701";
 // a play that names what it expects; a rejecting play is a failure the render
 // gate reports, which is what makes these stories worth their green.
 const meta: Meta<typeof ProjectHealthModal> = {
-  title: "Records/Project/Record a reading",
+  title: "Records/Project 360/Record a reading",
   component: ProjectHealthModal,
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await dialog.findByText("What is happening");
+    await dialog.findByText("Note");
   },
 };
 export default meta;
@@ -89,7 +89,7 @@ export const OffTrackWithNoNoteYet: Story = {
       await dialog.findByRole("button", { name: "Off track" }),
     );
     await dialog.findByText(
-      "Say what is wrong, so whoever looks next does not have to guess.",
+      "Describe the problem so the next reader has the context.",
     );
   },
 };

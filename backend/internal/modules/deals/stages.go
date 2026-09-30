@@ -38,6 +38,11 @@ func (s *Store) UpdatePipeline(ctx context.Context, id ids.PipelineID, in Update
 	}
 	var out crmcontracts.Pipeline
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if in.IsDefault != nil && *in.IsDefault {
+			if err := lockPromotion(ctx, tx, id); err != nil {
+				return err
+			}
+		}
 		// The row lock makes the read below and the update one race-free unit.
 		lock, err := storekit.LockRow(ctx, tx, "pipeline", id.UUID, storekit.LiveOnly)
 		if err != nil {
@@ -114,25 +119,17 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 	if _, err := ParseStageSemantic(in.Semantic); err != nil {
 		return crmcontracts.Stage{}, err
 	}
-	// The terminal-probability rule (won=100, lost=0) is a DDL CHECK;
-	// filling the canonical value here turns an omitted probability into
-	// the right one instead of a 500.
-	probability := 0
-	if in.WinProbability != nil {
-		probability = *in.WinProbability
-	} else if StageSemantic(in.Semantic) == SemanticWon {
-		probability = 100
+	if err := checkStagePosition(in.Position); err != nil {
+		return crmcontracts.Stage{}, err
 	}
+	probability := stageProbability(in.Semantic, in.WinProbability)
 	var out crmcontracts.Stage
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		var exists bool
-		if err := tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM pipeline WHERE id = $1 AND archived_at IS NULL)`,
-			in.PipelineID).Scan(&exists); err != nil {
-			return fmt.Errorf("resolve pipeline: %w", err)
-		}
-		if !exists {
-			return apperrors.ErrNotFound
+		// The pipeline row before the insert, as every ladder write takes it: a
+		// reorder holding it would otherwise wait on this insert's position
+		// while this insert waited on the pipeline.
+		if err := lockLadder(ctx, tx, in.PipelineID); err != nil {
+			return err
 		}
 		var stageID ids.StageID
 		err := tx.QueryRow(ctx, `
@@ -146,6 +143,9 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 			}
 			return fmt.Errorf("insert stage: %w", err)
 		}
+		if err := markLadderChanged(ctx, tx, in.PipelineID); err != nil {
+			return err
+		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil, map[string]any{
 			"pipeline_id": in.PipelineID, "name": in.Name, stageSemanticField: in.Semantic,
 		})
@@ -154,6 +154,11 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 		}
 		if err := storekit.EmitEvent(ctx, tx, auditID, stageID.UUID, stageCreatedPayload(in.PipelineID, in.Name, in.Position, in.Semantic, probability)); err != nil {
 			return fmt.Errorf("emit stage.created: %w", err)
+		}
+		// An open stage created at the end of the ladder lands after the closing
+		// pair; it goes in front of them here rather than by a second request.
+		if err := putOpenFirst(ctx, tx, auditID, in.PipelineID); err != nil {
+			return err
 		}
 		if out, err = readStage(ctx, tx, stageID, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("read created stage: %w", err)
@@ -247,6 +252,11 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 	if err := auth.Require(ctx, "pipeline", principal.ActionUpdate); err != nil {
 		return crmcontracts.Stage{}, err
 	}
+	if in.Position != nil {
+		if err := checkStagePosition(*in.Position); err != nil {
+			return crmcontracts.Stage{}, err
+		}
+	}
 	var out crmcontracts.Stage
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		// The pipeline row first, then the stage's own: a reorder and a
@@ -278,7 +288,11 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		// An update naming no field changes nothing, and an audit row for it
 		// would record a transition that never happened.
 		if patch := stageUpdatePatch(current, in); !patch.Empty() {
-			if err := writeStageUpdate(ctx, tx, lock, id, pipelineID, patch, in); err != nil {
+			auditID, err := writeStageUpdate(ctx, tx, lock, id, pipelineID, patch, in)
+			if err != nil {
+				return err
+			}
+			if err := holdLadderShape(ctx, tx, auditID, pipelineID, current, in); err != nil {
 				return err
 			}
 		}
@@ -291,20 +305,20 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 }
 
 // writeStageUpdate commits the patch, its audit row and the events this save
-// earned. The audit images come from the patch, so `before` holds what each
+// earned, answering the audit row id later facts of the same write ride. The audit images come from the patch, so `before` holds what each
 // touched column really held and neither image mentions a column left alone.
 func writeStageUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 	id ids.StageID, pipelineID ids.PipelineID, patch *storekit.Patch, in UpdateStageInput,
-) error {
+) (ids.UUID, error) {
 	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
 		if storekit.IsUniqueViolation(err) {
-			return apperrors.ErrConflict
+			return ids.UUID{}, apperrors.ErrConflict
 		}
-		return fmt.Errorf("update stage: %w", err)
+		return ids.UUID{}, fmt.Errorf("update stage: %w", err)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "stage", id.UUID, patch.Before(), patch.After())
 	if err != nil {
-		return fmt.Errorf("audit stage update: %w", err)
+		return ids.UUID{}, fmt.Errorf("audit stage update: %w", err)
 	}
 	// A reorder is a pipeline-level fact (pipeline.updated with the
 	// position delta); a name/semantic/probability edit is a stage-level
@@ -316,17 +330,17 @@ func writeStageUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 	// subscribers.
 	if in.Position != nil {
 		if err := storekit.EmitEvent(ctx, tx, auditID, pipelineID.UUID, crmcontracts.PublicEventPipelineUpdated{
-			ChangedFields: map[string]any{"stage_positions": map[string]any{id.String(): *in.Position}},
+			ChangedFields: map[string]any{stagePositionsField: map[string]any{id.String(): *in.Position}},
 		}); err != nil {
-			return fmt.Errorf("emit pipeline reorder: %w", err)
+			return ids.UUID{}, fmt.Errorf("emit pipeline reorder: %w", err)
 		}
 	}
 	if in.Name != nil || in.Semantic != nil || in.WinProbability != nil {
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, stageUpdatedPayload(pipelineID, in)); err != nil {
-			return fmt.Errorf("emit stage update: %w", err)
+			return ids.UUID{}, fmt.Errorf("emit stage update: %w", err)
 		}
 	}
-	return nil
+	return auditID, nil
 }
 
 // stageUpdatedPayload builds the stage.updated wire payload from

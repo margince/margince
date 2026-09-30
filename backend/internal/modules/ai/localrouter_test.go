@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -164,5 +165,76 @@ func TestNewLocalRouterWithMonthlyBudgetIsLive(t *testing.T) {
 	}
 	if !errors.Is(err, ErrBudgetDeferred) && !strings.Contains(err.Error(), "no bound tier") {
 		t.Fatalf("want a budget-band effect (queue or honest degrade), got %v", err)
+	}
+}
+
+// A DB-less router serves a broker binding the way production would: the
+// certification lane and the debug tools build their config by struct literal
+// rather than through ParseRouting, and a binding that skipped the upstream
+// default was served by whichever host the broker's price weighting picked —
+// fp4 hosts, and hosts that cannot honour response_format at all.
+func TestALocalRouterSendsTheBrokerDefaultsProductionWould(t *testing.T) {
+	t.Parallel()
+	for name, binding := range map[string]ProviderConfig{
+		"a judge binding":    {Provider: providerOpenAICompatible, Model: "openai/gpt-oss-120b", BaseURL: "https://openrouter.ai/api"},
+		"a MODEL= candidate": {Provider: providerOpenAICompatible, Model: "z-ai/glm-5.2", BaseURL: "https://openrouter.ai/api"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			tiers := map[Tier]ProviderConfig{}
+			for _, tier := range AllTiers() {
+				tiers[tier] = binding
+			}
+			cfg := RoutingConfig{
+				Profile: ProfileCloudFrontier, Tiers: tiers,
+				Embeddings: EmbeddingsConfig{ProviderConfig: binding},
+			}.WithKeys(allCloudKeys())
+			router, err := NewLocalRouter(cfg)
+			if err != nil {
+				t.Fatalf("building the router: %v", err)
+			}
+			for tier, client := range router.binding().clients {
+				compat, ok := client.(*openAICompatClient)
+				if !ok {
+					t.Fatalf("tier %s is served by %T, want the OpenAI-wire adapter", tier, client)
+				}
+				wire := compat.chatWire(model.Request{ResponseSchema: []byte(`{"type":"object"}`)}, false)
+				if wire.Provider == nil || wire.Provider.RequireParameters == nil || !*wire.Provider.RequireParameters {
+					t.Errorf("tier %s: the wire carries no require_parameters, so a host without response_format can serve it: %+v", tier, wire.Provider)
+					continue
+				}
+				if !slices.Equal(wire.Provider.Quantizations, DefaultOpenRouterRouting().Quantizations) {
+					t.Errorf("tier %s: quantizations = %v, want the production filter %v",
+						tier, wire.Provider.Quantizations, DefaultOpenRouterRouting().Quantizations)
+				}
+			}
+		})
+	}
+}
+
+// A provider with no adapter is refused, unless the caller hands the DB-less
+// router the client that serves it — which then serves every tier and the
+// embed lane bound to it, under the provider's own name in the trace.
+func TestNewLocalRouterServesAHarnessProviderWithTheCallersClient(t *testing.T) {
+	cfg := RoutingConfig{
+		Profile:    ProfileCloudFrontier,
+		Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: "harness_cli", Model: "m"}},
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: "harness_cli", Model: "m"}},
+	}
+	if _, err := NewLocalRouter(cfg); err == nil || !strings.Contains(err.Error(), "unknown provider") {
+		t.Fatalf("err = %v, want a provider with no adapter refused", err)
+	}
+	stub := NewFakeClient().Script("served by the harness")
+	store := &memCallStore{}
+	r, err := NewLocalRouter(cfg, WithHarnessClient("harness_cli", stub), WithCallStore(store), WithoutResultCache())
+	if err != nil {
+		t.Fatalf("a harness-served binding could not be built: %v", err)
+	}
+	resp, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "hi"}}})
+	if err != nil || resp.Text != "served by the harness" {
+		t.Fatalf("resp = %q, err = %v, want the harness client's answer", resp.Text, err)
+	}
+	if len(store.calls) != 1 || store.calls[0].Provider != "harness_cli" {
+		t.Errorf("calls = %+v, want one traced under harness_cli", store.calls)
 	}
 }

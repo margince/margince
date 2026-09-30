@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
 import { RefreshFromSources } from "./rate-refresh";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -76,7 +76,7 @@ function Band() {
       actions={<RefreshFromSources path="/fx-rates/propose-refresh" />}
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.rates.fxIntro")}</p>
+        <PanelIntro>{t("settings.rates.fxIntro")}</PanelIntro>
       </PanelBody>
     </Panel>
   );

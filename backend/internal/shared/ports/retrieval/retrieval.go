@@ -11,6 +11,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -31,6 +32,35 @@ type Query struct {
 	Text        string
 	EntityTypes []datasource.EntityType
 	Limit       int
+	// Within bounds both lanes to these records; nil bounds nothing, and an
+	// empty non-nil set finds nothing rather than everything.
+	Within []ids.UUID
+}
+
+// Classifier judges every member of a bounded record set against one text.
+//
+// A ranked Search is the top of an ordering and never says what it left out;
+// a classification answers for each record it was handed, which is what a
+// claim about how many records match needs.
+type Classifier interface {
+	Classify(ctx context.Context, q ClassifyQuery) (Classification, error)
+}
+
+// ClassifyQuery is one text judged against records of one type.
+type ClassifyQuery struct {
+	Text       string
+	EntityType datasource.EntityType
+	Within     []ids.UUID
+}
+
+// Classification partitions ClassifyQuery.Within: every id lands in exactly
+// one of the three.
+type Classification struct {
+	Matched   []ids.UUID
+	Unmatched []ids.UUID
+	// Unjudged were not judged either way: the record carries no searchable
+	// text, or the search cannot reach it for this caller.
+	Unjudged []ids.UUID
 }
 
 // Result is one ranked page and what kind of ranking produced it.

@@ -5,14 +5,19 @@
 # can be named, diffed and reused. Copy the `seeds` block into your own
 # config/margince.yaml, or point a certification run at this file:
 #
-#     make e2e-ai ROUTING=config/presets/gemini_cloud.yaml JUDGE=...
+#     make e2e-ai ROUTING=config/presets/gemini_cloud.yaml
+#
+# The default judge (openai_compatible:openai/gpt-oss-120b, so
+# OPENAI_COMPATIBLE_API_KEY too) is off this preset, so one judge grades it all.
 #
 # Needs GEMINI_API_KEY and nothing else. Not loaded automatically — see README.md.
 version: 1
 
 seeds:
   ai_routing:
-    profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+    # cloud_frontier, not eu_hosted: the Gemini Developer API states no EU
+    # processing region, so nothing here keeps text in the EU.
+    profile: cloud_frontier     # eu_hosted | sovereign | cloud_frontier
     tiers:
       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
@@ -28,3 +33,14 @@ seeds:
       provider: gemini
       model: gemini-embedding-001
       dimensions: 1536
+    # The decision model, opt-in: uncomment ONE block to have a decision site
+    # asked a decision model before its ladder. Through OpenRouter,
+    # JEV_COMPATIBLE_API_KEY takes your OpenRouter key:
+    # decisions:
+    #   provider: jev_compatible
+    #   model: typesafe/jev-1.13
+    #   base_url: https://openrouter.ai/api/alpha/decisions
+    # Or TypeSafe's own API, keyed by TYPESAFE_API_KEY:
+    # decisions:
+    #   provider: jev
+    #   model: jev-1.13.0

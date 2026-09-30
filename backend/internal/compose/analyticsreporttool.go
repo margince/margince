@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/reportdoc"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 )
 
 // analyticsReportComposer renders a composed document for the tool surface.
@@ -31,8 +32,12 @@ import (
 // it: a figure a contact may not see is a figure a model asking on their behalf
 // may not see either, and a tool that floored differently would be a second
 // answer to what a reader is allowed to be told.
-func analyticsReportComposer(pool *pgxpool.Pool, floor analyticsquery.Floor) agents.AnalyticsReportComposer {
-	store := forecasting.NewStore(InstallationDB(pool))
+func analyticsReportComposer(pool *pgxpool.Pool, floor analyticsquery.Floor, reportingEnabled bool) agents.AnalyticsReportComposer {
+	db := InstallationDB(pool)
+	var metrics *reporting.Service
+	if reportingEnabled {
+		metrics = newReportingService(pool, time.Now)
+	}
 	return func(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 		var doc reportdoc.Document
 		if err := json.Unmarshal(in, &doc); err != nil {
@@ -46,9 +51,9 @@ func analyticsReportComposer(pool *pgxpool.Pool, floor analyticsquery.Floor) age
 		}
 
 		var blocks []RenderedBlock
-		if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		if err := db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 			var err error
-			blocks, err = RenderReport(ctx, tx, doc, floor)
+			blocks, err = RenderReport(ctx, tx, doc, floor, metrics)
 			return err
 		}); err != nil {
 			return nil, err

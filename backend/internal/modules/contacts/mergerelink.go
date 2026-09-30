@@ -65,7 +65,9 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	// merged-away copy claims a field the survivor has not answered and never
 	// replaces one — and the conflict target NAMES the uniqueness it relies
 	// on, so a future constraint on this table cannot silently start swallowing
-	// a different collision here.
+	// a different collision here. A phone's unit is the number, so the
+	// merged-away numbers' evidence joins the survivor's, as their rows in
+	// contact_phone do above.
 	// observed_at and the superseded_* buffer travel WITH the row. Re-homing is
 	// not a new statement, and letting the column take its default would date a
 	// two-year-old signature as today — the merged copy would then outrank the
@@ -73,12 +75,12 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	// nobody can put back.
 	if _, err = tx.Exec(ctx, `
 		INSERT INTO contact_profile_field
-		  (contact_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by,
-		   observed_at, superseded_value, superseded_captured_by, superseded_observed_at)
-		SELECT $2, field, value, evidence_snippet, source_ref, confidence, source, captured_by,
-		       observed_at, superseded_value, superseded_captured_by, superseded_observed_at
+		  (contact_id, field, value_key, value, evidence_snippet, source_ref, confidence, source,
+		   captured_by, observed_at, superseded_value, superseded_captured_by, superseded_observed_at)
+		SELECT $2, field, value_key, value, evidence_snippet, source_ref, confidence, source,
+		       captured_by, observed_at, superseded_value, superseded_captured_by, superseded_observed_at
 		  FROM contact_profile_field WHERE contact_id = $1
-		ON CONFLICT (contact_id, field) DO NOTHING`, sourceID.UUID, targetID.UUID); err != nil {
+		ON CONFLICT (contact_id, field, value_key) DO NOTHING`, sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink enrichment fields: %w", err)
 	}
 	if _, err = tx.Exec(ctx,

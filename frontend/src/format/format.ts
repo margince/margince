@@ -1,6 +1,7 @@
 import type { Locale, Translator } from "../i18n";
 import { middayInstant } from "./calendarday";
 import { minorUnitDigits, toMajorUnits } from "./minorunits";
+import { formatMoneyOrWord } from "./moneyword";
 import {
   dateTimePreferences,
   formatPreferredDate,
@@ -73,10 +74,15 @@ export function formatMoneyOrAbsent(
   currency: string | null | undefined,
   locale: Locale,
 ): string {
-  if (amountMinor == null || !currency) {
-    return MONEY_ABSENT;
-  }
-  return formatMoney(amountMinor, currency, locale);
+  // The dash is one WORD for the absence among several, so both spellings run
+  // on one guard rather than agreeing twice about what "no money here" means.
+  return formatMoneyOrWord(
+    amountMinor,
+    currency,
+    locale,
+    MONEY_ABSENT,
+    formatMoney,
+  );
 }
 
 /**
@@ -184,12 +190,6 @@ export function formatFinePercent(fraction: number, locale: Locale): string {
   }).format(fraction);
 }
 
-export function formatRate(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
-    maximumFractionDigits: 10,
-  }).format(value);
-}
-
 /** A month number has no viewer timezone. UTC keeps Intl's scaffolding in the same month. */
 export function monthName(month: number, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
@@ -247,7 +247,7 @@ export function formatNumber(value: number, locale: Locale): string {
  *
  * Whole numbers only, because what this labels is progress — a ring, a chip —
  * where "41.7%" claims a precision a count of scanned messages does not have.
- * A rate that carries a real fraction is `formatRate`'s job.
+ * A rate that carries a real fraction is `formatFinePercent`'s job.
  */
 export function formatPercent(fraction: number, locale: Locale): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
@@ -651,20 +651,3 @@ export function hourInZone(instant: Date, zone: string): number {
   }).format(instant);
   return Number.parseInt(hour, 10);
 }
-
-// FX lineage (ADR-0004): a converted figure ships with its contributing rows
-// from the query-plan IR. The UI consumes base_value_minor VERBATIM — it
-// never multiplies native × rate and never fetches a rate.
-export type FxLineageRow = {
-  label: string;
-  nativeAmountMinor: number;
-  nativeCurrency: string;
-  rate: number;
-  rateDate: string;
-};
-
-export type ExplainedMoney = {
-  baseValueMinor: number;
-  baseCurrency: string;
-  rows: FxLineageRow[];
-};

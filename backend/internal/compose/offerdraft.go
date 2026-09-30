@@ -47,6 +47,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -365,7 +366,8 @@ func renderCatalogBlock(products []crmcontracts.Product) string {
 
 // groundOfferLines is the no-guess gate: an accepted candidate must carry
 // a non-empty description, a source_id that names a REAL context item,
-// and an evidence_snippet that is VERBATIM within THAT item's own text —
+// and an evidence_snippet that is VERBATIM within THAT item's own text, up to
+// whitespace (claims.Quoted: a quote spanning a line break is still verbatim) —
 // mirrors enrichextract.go's gateEvidence, strengthened to tie the
 // citation to the specific source it claims rather than any text
 // anywhere in the assembled context (there are many sources here, unlike
@@ -390,7 +392,7 @@ func (d offerDrafter) groundOfferLines(ctx context.Context, candidates []offerLi
 			continue
 		}
 		sourceText, known := bySource[sourceID]
-		if !known || !strings.Contains(sourceText, snippet) {
+		if !known || !claims.Quoted(sourceText, snippet) {
 			continue // ungrounded: the model cited a source that does not say this — drop it, never fabricate
 		}
 		// Quantity must be a store-valid decimal AND strictly positive — a

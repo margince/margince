@@ -183,7 +183,7 @@ describe("the two readings the card draws as shapes", () => {
       open_balance: { amount_minor: 400_000, currency: "EUR" },
       overdue: { amount_minor: 100_000, currency: "EUR" },
     });
-    expect(await screen.findByText("25% of everything open.")).toBeTruthy();
+    expect(await screen.findByText("25% of open balance.")).toBeTruthy();
     expect(screen.getByText("Overdue €1,000.00")).toBeTruthy();
     expect(screen.getByText("Open €4,000.00")).toBeTruthy();
     const meter = screen.getByLabelText("Overdue share of the open balance");
@@ -199,7 +199,7 @@ describe("the two readings the card draws as shapes", () => {
     });
     expect(
       await screen.findByText(
-        "25% of everything open. Typically 26 days after due.",
+        "25% of open balance. Typically 26 days after due.",
       ),
     ).toBeTruthy();
   });
@@ -239,5 +239,26 @@ describe("the two readings the card draws as shapes", () => {
     expect(
       screen.queryByLabelText("Overdue share of the open balance"),
     ).toBeNull();
+  });
+});
+
+// Nothing in the product writes a finance connection, so an offer to make one
+// is a button that does nothing when pressed.
+describe("the card offers no way to connect a source it cannot connect", () => {
+  it("draws no connect action beside figures that name no source", async () => {
+    const { provider: _unnamed, ...figuresWithoutSource } = CONNECTED;
+    stub(figuresWithoutSource);
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
+    expect(await screen.findByText("€186,420.00")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /connect/i })).toBeNull();
+  });
+
+  it("says no source is connected without offering to connect one", async () => {
+    stub({ company_id: "o-1", state: "no_connection" });
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
+    expect(
+      await screen.findByText(/No accounting system connected/),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /connect/i })).toBeNull();
   });
 });

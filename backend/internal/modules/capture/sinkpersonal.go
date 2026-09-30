@@ -44,10 +44,10 @@ import (
 // The message itself commits and keeps its audience. A personal thread is
 // already held to the contacts on it, and refusing the record is not a reason to
 // lose the mail.
-func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
+func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, string, error) {
 	user := actorUserID(ctx)
 	if user == ids.Nil || rec.ThreadKey == "" {
-		return false, nil
+		return false, "", nil
 	}
 	var status, kind string
 	var seen []string
@@ -58,12 +58,12 @@ func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedR
 			// No verdict yet. The thread may still turn out to be personal, and
 			// the sweep that runs after the classifier answers is what catches
 			// the contact this pass creates — see the compose seam.
-			return false, nil
+			return false, "", nil
 		}
-		return false, fmt.Errorf("capture: reading whether this thread is private: %w", err)
+		return false, "", fmt.Errorf("capture: reading whether this thread is private: %w", err)
 	}
 	if kind != ThreadKindPersonal {
-		return false, nil
+		return false, "", nil
 	}
 	// Bound to the addresses the classifier actually SAW, exactly as an opening
 	// verdict is (senderWasSeen, verdictinherit.go). thread_key is the message's
@@ -76,12 +76,16 @@ func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedR
 	// A party the verdict never saw is not in the conversation it judged, and
 	// the ordinary ladder decides about them.
 	if !senderWasSeen(rec, seen) {
-		return false, nil
+		return false, "", nil
 	}
 	// held_by_owner is the seat's own hand: they marked the conversation
 	// private, which is a stronger statement than the classifier's and says the
 	// same thing about whether its author is a business contact.
-	return status == VerdictHeld || status == VerdictHeldByOwner, nil
+	// The STATUS travels with the answer, because the two are different acts:
+	// held is the classifier's reading and held_by_owner is the seat saying so
+	// by hand. Anything recording why a message was treated as private must be
+	// able to name which, and a caller handed only a bool would have to guess.
+	return status == VerdictHeld || status == VerdictHeldByOwner, status, nil
 }
 
 // PrivateThreadContact names one contact a personal verdict has just orphaned:

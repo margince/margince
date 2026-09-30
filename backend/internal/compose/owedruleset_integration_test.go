@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/owedverdict"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -73,8 +74,8 @@ func TestAVerdictUnderAnOlderRulesetIsJudgedAgain(t *testing.T) {
 	if got == nil || *got != activities.OwedVerdictAsksUs {
 		t.Fatalf("verdict = %v, want the message re-judged as %q", got, activities.OwedVerdictAsksUs)
 	}
-	if ruleset := rulesetOf(t, e, activity); ruleset != owedRuleset {
-		t.Errorf("ruleset = %q, want the rules that judged it now, %q", ruleset, owedRuleset)
+	if ruleset := rulesetOf(t, e, activity); ruleset != owedverdict.Ruleset {
+		t.Errorf("ruleset = %q, want the rules that judged it now, %q", ruleset, owedverdict.Ruleset)
 	}
 }
 
@@ -85,7 +86,7 @@ func TestAVerdictUnderAnOlderRulesetIsJudgedAgain(t *testing.T) {
 func TestAVerdictUnderTheCurrentRulesetIsLeftAlone(t *testing.T) {
 	e := integration.Setup(t)
 	activity := seedWaitingMail(t, e, "Already judged by this build")
-	stampVerdict(t, e, activity, activities.OwedVerdictInformsUs, owedRuleset)
+	stampVerdict(t, e, activity, activities.OwedVerdictInformsUs, owedverdict.Ruleset)
 
 	brain := &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: 0.95}
 	runOwedWorker(t, e, brain)

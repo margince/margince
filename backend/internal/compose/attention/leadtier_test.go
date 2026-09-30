@@ -17,7 +17,6 @@ package attention
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -40,6 +39,10 @@ func leadReadings() []struct {
 			_, err := s.HiddenBacklog(ctx)
 			return err
 		}},
+		{"the hidden-backlog rows", func(s *Service, ctx context.Context) error {
+			_, err := s.HiddenBacklogRows(ctx, "set_aside")
+			return err
+		}},
 		{"the response metrics", func(s *Service, ctx context.Context) error {
 			_, err := s.ResponseMetrics(ctx, 0)
 			return err
@@ -55,10 +58,7 @@ func leadReadings() []struct {
 // only have come from the tier check, and a missing check reads as a 200
 // carrying reassuring zeros rather than as a crash.
 func tierService() *Service {
-	return &Service{
-		teammates: roster([]TeamMember{{UserID: theReader, DisplayName: "the reader"}}),
-		now:       func() time.Time { return boardInstant },
-	}
+	return boardService(TeamMember{UserID: theReader, DisplayName: "the reader"})
 }
 
 // aLead is a reader admitted to all three readings, for the tests whose subject

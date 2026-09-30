@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/weekly/learnings"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -33,6 +34,7 @@ import (
 
 // Review is one rep's week, as it was measured.
 type Review struct {
+	NumericSummary *crmcontracts.WeeklyNumericSummary
 	ID             ids.UUID
 	UserID         ids.UUID
 	LocalWeekStart time.Time
@@ -175,7 +177,8 @@ const (
 
 // Engine assembles and reads weekly reviews.
 type Engine struct {
-	pool *pgxpool.Pool
+	numeric NumericWeek
+	pool    *pgxpool.Pool
 	// plan settles the rep's week-ahead and reports what it came to. Nil where
 	// no plan module is bound — the review then counts no commitments rather
 	// than failing, because a retrospective is still worth having without one.

@@ -73,7 +73,7 @@ function Section({ data }: Readonly<{ data: View }>) {
 }
 
 const meta: Meta = {
-  title: "Records/Company rail/Projects",
+  title: "Records/Company 360/Rail/Projects",
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -254,7 +254,7 @@ func TestARecordValueCannotOpenAParagraphInTheTemplate(t *testing.T) {
 func TestTheIntroPromptAsksForTheNamesTheCheckerRequires(t *testing.T) {
 	t.Parallel()
 	for _, required := range []string{
-		"Address the colleague by name: open with their first name",
+		"Open with a greeting line naming the colleague by first name",
 		"name the contact you want to meet in full",
 		`Write a short subject line in the "subject" field, naming the contact you want to meet`,
 	} {
