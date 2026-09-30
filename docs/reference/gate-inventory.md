@@ -405,6 +405,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |
 | `automationtarget_test.go` | H2 | An automation action targets the record its trigger fired on. |
 | `backfillledgerlock_test.go` | H2 | A transaction that writes the backfill creation ledger locks the run row first. |
+| `bare5xx_test.go` | H2 | A 5xx the api sends carries a problem body, or it says which surface it is on. |
 | `bindableidentityonce_test.go` | H2 | Who may bind an arrival to the activity already holding its identity is decided in ONE place: activities.bindableIdentityUnder, which both exported entry points delegate to. |
 | `calendarday_test.go` | H2 | A calendar day is one derivation, and this is the census that keeps it one. |
 | `calendarverbseat_test.go` | H2 | A calendar verb acting on a row it found by the provider's event id proves the acting seat holds that row. |
