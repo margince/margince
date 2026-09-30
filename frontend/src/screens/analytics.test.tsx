@@ -3,19 +3,17 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { formatMoney, MONEY_ABSENT } from "../format/format";
+import {
+  formatMoney,
+  formatMoneyCompact,
+  MONEY_ABSENT,
+} from "../format/format";
 import { en } from "../i18n/en";
 import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
 type Stage = components["schemas"]["Stage"];
 
-import {
-  AnalyticsScreen,
-  buildStageAggregates,
-  derivationCellCurrency,
-  derivationColumns,
-  parseDerivationQuery,
-} from "./analytics";
+import { AnalyticsScreen, buildStageAggregates } from "./analytics";
 import { sectionFromAddress } from "./analytics.address";
 
 // D2 acceptance: a report picker over deals-by-stage (unchanged), forecast
@@ -34,7 +32,7 @@ afterEach(() => {
 async function openPipeline() {
   await userEvent
     .setup()
-    .click(await screen.findByRole("button", { name: "Pipeline" }));
+    .click(await screen.findByRole("button", { name: "Deals" }));
 }
 
 async function openPerformance() {
@@ -84,7 +82,7 @@ describe("the delivery section", () => {
     expect(link.getAttribute("href")).toBe("#/projects/p1");
     // Nothing quiet is the good answer, said in words.
     expect(
-      screen.getByText("No delivering project has gone quiet."),
+      screen.getByText("No project in delivery has gone quiet."),
     ).toBeTruthy();
     // An empty plan takes the report's own declared defaults server-side.
     const phase = bodies.find((sent) => sent.key === "projects-by-phase");
@@ -118,7 +116,7 @@ describe("the delivery section", () => {
     expect(screen.queryByText("2026-08-20T09:00:00Z")).toBeNull();
     // A young install's other two cards say so in words.
     expect(
-      (await screen.findAllByText("No projects yet — a won deal opens one."))
+      (await screen.findAllByText("No projects yet. A won deal creates one."))
         .length,
     ).toBe(2);
   });
@@ -152,11 +150,9 @@ describe("the data coverage section", () => {
       .click(await screen.findByRole("button", { name: "Data coverage" }));
     expect(await screen.findByText("Checked")).toBeTruthy();
     // The source column speaks the reader's words, not the wire's.
-    expect(screen.getByText("the mailbox")).toBeTruthy();
+    expect(screen.getByText("mailbox")).toBeTruthy();
     // An unconnected source is a decision, not a repair — its words say so.
-    expect(
-      screen.getByText("Not connected — nothing to fix, something to decide"),
-    ).toBeTruthy();
+    expect(screen.getByText("Not connected")).toBeTruthy();
     // Only the read source carries a date; the unread one shows absence.
     expect(screen.getByText("—")).toBeTruthy();
   });
@@ -169,7 +165,7 @@ describe("the data coverage section", () => {
       .click(await screen.findByRole("button", { name: "Data coverage" }));
     expect(
       await screen.findByText(
-        "No check has run yet. A fresh installation has not been looked at — different from one that was looked at and found healthy.",
+        "No check has run yet. An unchecked installation is not the same as a healthy one.",
       ),
     ).toBeTruthy();
   });
@@ -178,7 +174,7 @@ describe("the data coverage section", () => {
     const fetch = reportsStub({ coverage: { status: 403 } });
     vi.stubGlobal("fetch", fetch);
     render(<AnalyticsScreen />);
-    await screen.findByRole("button", { name: "Pipeline" });
+    await screen.findByRole("button", { name: "Deals" });
     await waitFor(() =>
       expect(
         screen.queryByRole("button", { name: "Data coverage" }),
@@ -216,9 +212,7 @@ describe("the my-outcomes section", () => {
 
     // The meetings card states current standing, not a funnel.
     expect(
-      await screen.findByText(
-        "Meetings you host, by where each stands today — a held meeting no longer counts as booked.",
-      ),
+      await screen.findByText(en["analytics.meetingsAsTheyStand"]),
     ).toBeTruthy();
     expect(screen.getByText("Held")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
@@ -253,9 +247,7 @@ describe("the my-outcomes section", () => {
     try {
       render(<AnalyticsScreen />);
       expect(
-        await screen.findByText(
-          "This view answers for one seat. Your lens covers more than your own records, so the wider sections carry your numbers.",
-        ),
+        await screen.findByText(en["analytics.outcomesOwnLensOnly"]),
       ).toBeTruthy();
       // And it fetched nothing: numbers under this heading would have
       // measured the default population, not the contact.
@@ -292,10 +284,10 @@ describe("the my-outcomes section", () => {
       const doors = screen.getAllByRole("button", { name: "Open" });
       expect(doors).toHaveLength(2);
       expect([
-        screen.getByRole("button", { name: "Open", description: "Deals" }),
+        screen.getByRole("button", { name: "Open", description: "Open deals" }),
         screen.getByRole("button", {
           name: "Open",
-          description: "Value (EUR)",
+          description: "Deal value · EUR",
         }),
       ]).toEqual(doors);
 
@@ -309,7 +301,7 @@ describe("the my-outcomes section", () => {
   it("hides the tab when the lens covers more than one seat", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);
-    await screen.findByRole("button", { name: "Pipeline" });
+    await screen.findByRole("button", { name: "Deals" });
     expect(screen.queryByRole("button", { name: "My outcomes" })).toBeNull();
   });
 });
@@ -349,13 +341,13 @@ describe("the performance section", () => {
     // The value arrives converted; the screen only formats it.
     expect(screen.getByText(formatMoney(500000, "EUR", "en"))).toBeTruthy();
     // Durations are the server's medians, never a quotient made here.
-    expect(screen.getByText("21 days")).toBeTruthy();
+    expect(screen.getByText("21 d")).toBeTruthy();
     // A withheld percentile is words, not a zero and not a dash: below the
     // sample floor the engine answers null, and the cell says why.
-    expect(screen.getByText("Too few to say")).toBeTruthy();
+    expect(screen.getByText("Too few deals")).toBeTruthy();
     // The stage-age card names the stage from the pipeline, not by UUID.
     expect(screen.getByText("Qualify")).toBeTruthy();
-    expect(screen.getByText("12 days")).toBeTruthy();
+    expect(screen.getByText("12 d")).toBeTruthy();
   });
 
   it("asks the server for the vocabulary it renders, computing nothing", async () => {
@@ -410,9 +402,7 @@ describe("AnalyticsScreen", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
     await waitFor(() => expect(screen.getByText("Commit")).toBeTruthy());
     expect(
       bodies.some(
@@ -457,9 +447,7 @@ describe("AnalyticsScreen", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
     await waitFor(() => expect(screen.getByText("Slipped")).toBeTruthy());
   });
 
@@ -513,9 +501,7 @@ describe("AnalyticsScreen", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
     await waitFor(() => expect(screen.getByText("o1")).toBeTruthy());
   });
 
@@ -526,7 +512,7 @@ describe("AnalyticsScreen", () => {
   // proves the link appears would pass a version that always draws it.
   describe("a count opens exactly the deals it counted", () => {
     const openPipelineTab = async () =>
-      userEvent.click(await screen.findByRole("button", { name: "Pipeline" }));
+      userEvent.click(await screen.findByRole("button", { name: "Deals" }));
 
     it("addresses a company trading in one currency, and says the deals are open", async () => {
       vi.stubGlobal(
@@ -579,103 +565,6 @@ describe("AnalyticsScreen", () => {
       expect(screen.queryByRole("link", { name: "4" })).toBeNull();
       expect(screen.queryByRole("link", { name: "3" })).toBeNull();
     });
-  });
-
-  it("explain fetches the derivation and renders source rows, not raw JSON", async () => {
-    const derivationUrls: string[] = [];
-    vi.stubGlobal(
-      "fetch",
-      reportsStub({
-        onDerivation: (u) => derivationUrls.push(u),
-        derivation: {
-          report: "deals-by-stage",
-          definition: "Sum over open deals",
-          plan: {},
-          columns: ["name"],
-          rows: [{ name: "Fleet retrofit" }],
-        },
-      }),
-    );
-    render(<AnalyticsScreen />);
-    await openPipeline();
-    // The FIRST card's explain. Pipeline draws three reports and each carries
-    // its own control, so a query that matched one of them would have been
-    // matching whichever happened to render first.
-    const explains = await screen.findAllByRole("button", { name: /Explain/ });
-    await userEvent.click(explains[0]);
-    await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
-    );
-    expect(screen.queryByText(/"plan":/)).toBeNull();
-    // The equality predicate from derivation_url must survive to the request —
-    // by/agg alone would explain the wrong slice.
-    expect(derivationUrls[0]).toContain("stage_id=pl-s1");
-    expect(derivationUrls[0]).toContain("by=stage_id");
-  });
-
-  // A link minted before the handle carried an instant. The figures were
-  // recomputed at a NEW moment, so a rate sheet effective in between makes them
-  // disagree with the number they explain — and this is opened by someone
-  // checking a figure they already doubt.
-  it("says the figures were recalculated when the link pinned no instant", async () => {
-    vi.stubGlobal(
-      "fetch",
-      reportsStub({
-        derivation: {
-          report: "deals-by-stage",
-          definition: "Sum over open deals",
-          plan: {},
-          columns: ["name"],
-          rows: [{ name: "Fleet retrofit" }],
-          as_of_pinned: false,
-        },
-      }),
-    );
-    render(<AnalyticsScreen />);
-    await openPipeline();
-    const explains = await screen.findAllByRole("button", { name: /Explain/ });
-    await userEvent.click(explains[0]);
-    expect(await screen.findByText(en["explain.mayHaveMoved"])).toBeTruthy();
-    // The rows are still shown: saying they were recomputed is the fix,
-    // withholding them is not.
-    expect(screen.getByText("Fleet retrofit")).toBeTruthy();
-  });
-
-  // The ordinary case says nothing, because a caveat on every drill-through is
-  // a caveat nobody reads.
-  it("stays silent when the link pinned the headline's instant", async () => {
-    vi.stubGlobal(
-      "fetch",
-      reportsStub({
-        derivation: {
-          report: "deals-by-stage",
-          definition: "Sum over open deals",
-          plan: {},
-          columns: ["name"],
-          rows: [{ name: "Fleet retrofit" }],
-          as_of_pinned: true,
-        },
-      }),
-    );
-    render(<AnalyticsScreen />);
-    await openPipeline();
-    const explains = await screen.findAllByRole("button", { name: /Explain/ });
-    await userEvent.click(explains[0]);
-    await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
-    );
-    expect(screen.queryByText(en["explain.mayHaveMoved"])).toBeNull();
-  });
-});
-
-describe("parseDerivationQuery", () => {
-  it("pulls by/agg + predicate params from a derivation_url", () => {
-    const q = parseDerivationQuery(
-      "/v1/reports/deals-by-stage/derivation?by=stage_id&agg=sum:amount_minor:raw&stage_id=s1",
-    );
-    expect(q.by).toEqual(["stage_id"]);
-    expect(q.agg).toEqual(["sum:amount_minor:raw"]);
-    expect(q.stage_id).toBe("s1");
   });
 });
 
@@ -830,7 +719,7 @@ describe("reports never sum money across currencies", () => {
   it("renders a forecast category with no deals as absent rather than as zero euros", async () => {
     vi.stubGlobal("fetch", reportsStub({ forecastRows: [] }));
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
     await waitFor(() =>
       expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0),
     );
@@ -1009,15 +898,15 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
 
     expect(
-      await screen.findByText(formatMoney(202_720_000, "EUR", "en")),
+      await screen.findByText(formatMoneyCompact(202_720_000, "EUR", "en")),
     ).toBeTruthy();
     // And never folded into a named category: the two totals added together
     // is the number that must NOT appear anywhere.
     expect(
-      screen.queryByText(formatMoney(261_580_000, "EUR", "en")),
+      screen.queryByText(formatMoneyCompact(261_580_000, "EUR", "en")),
     ).toBeNull();
   });
 
@@ -1052,13 +941,12 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
 
-    // Both categories, both figures, all in the one base currency.
-    expect(
-      await screen.findByText(formatMoney(2_500_000, "EUR", "en")),
-    ).toBeTruthy();
-    expect(screen.getByText(formatMoney(920_000, "EUR", "en"))).toBeTruthy();
+    // Both categories, both figures, in the one base currency and compact.
+    const compact = (minor: number) => formatMoneyCompact(minor, "EUR", "en");
+    expect(await screen.findByText(compact(2_500_000))).toBeTruthy();
+    expect(screen.getByText(compact(920_000))).toBeTruthy();
 
     // The plan asks for converted money and does NOT group by currency: those
     // two go together, and a request that changed one without the other would
@@ -1097,18 +985,22 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
 
     expect(
-      await screen.findByText(formatMoney(2_500_000, "EUR", "en")),
+      await screen.findByText(formatMoneyCompact(2_500_000, "EUR", "en")),
     ).toBeTruthy();
-    // The count rides on the tile's second line beside the weighted figure.
-    expect(screen.getByText((text) => text.includes("Deals: 2"))).toBeTruthy();
-    // The priced count reaches the screen too (margince#4201) — without it
-    // the €2,500,000 total reads as covering both deals when it covers one.
-    expect(
-      screen.getByText((text) => text.includes("1 of 2 priced")),
-    ).toBeTruthy();
+    // FRAGMENTS on the tile's second line, never "Label: value" pairs — a
+    // caption is read as one sentence about the figure above it. Where the
+    // money covers every deal the count says so plainly; here it does not, so
+    // the count states the GAP, without which the total reads as covering both
+    // deals when it covers one.
+    const [detail] = screen.getAllByText((text) =>
+      text.includes("weighted · "),
+    );
+    expect(detail.textContent).toBe(
+      `${formatMoneyCompact(250_000, "EUR", "en")} weighted · 1 of 2 priced`,
+    );
   });
 
   // An installation whose deals are all categorised should not be shown an empty
@@ -1129,9 +1021,11 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
     await waitFor(() =>
-      expect(screen.getByText(formatMoney(1000, "EUR", "en"))).toBeTruthy(),
+      expect(
+        screen.getByText(formatMoneyCompact(1000, "EUR", "en")),
+      ).toBeTruthy(),
     );
     expect(screen.queryByText("No category yet")).toBeNull();
   });
@@ -1210,7 +1104,7 @@ describe("the report frame", () => {
     render(<AnalyticsScreen />);
     await openPipeline();
 
-    expect(await screen.findByText(/each converted into EUR/)).toBeTruthy();
+    expect(await screen.findByText(/converted to EUR/)).toBeTruthy();
   });
 
   // A server mid-upgrade sends a partial frame. Naming one of the two would be
@@ -1227,76 +1121,5 @@ describe("the report frame", () => {
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
     expect(screen.queryByText(/Europe\/Berlin/)).toBeNull();
     expect(screen.queryByText(/As of/)).toBeNull();
-  });
-});
-
-// A drill-through row carries money in two different currencies at once, and
-// which one a cell is written in depends on the COLUMN.
-//
-// `pipeline-current` converts server-side and exposes `amount_base_minor`, in
-// the installation's base currency. The forecast does not convert: it exposes
-// the deal's own `amount_minor` with the currency it was written in on the
-// same row. Formatting both against the base currency puts a euro sign on a
-// dollar deal — a wrong number wearing a right-looking symbol, which is the
-// misreading the whole renderer exists to prevent.
-describe("drill-through money", () => {
-  it("writes a converted measure in the base currency", () => {
-    const row = { amount_base_minor: 500000, currency: "USD" };
-    expect(derivationCellCurrency("amount_base_minor", row, "EUR")).toBe("EUR");
-  });
-
-  it("writes an unconverted measure in the deal's own currency", () => {
-    const row = { amount_minor: 500000, currency: "USD" };
-    expect(derivationCellCurrency("amount_minor", row, "EUR")).toBe("USD");
-  });
-
-  // A row that names no currency has nothing to write the figure in. Falling
-  // back to the base currency would be a guess presented as a fact.
-  it("names no currency for an unconverted measure on a row without one", () => {
-    expect(derivationCellCurrency("amount_minor", {}, "EUR")).toBeNull();
-    expect(
-      derivationCellCurrency("amount_minor", { currency: "" }, "EUR"),
-    ).toBeNull();
-  });
-});
-
-// The id is noise beside a name — but only when every row HAS one. Labelling
-// is per row, so a reader who may not read one record gets a label column
-// with a gap in it.
-describe("drill-through columns", () => {
-  const derivation = (columns: string[], rows: Record<string, unknown>[]) =>
-    ({ columns, rows }) as unknown as Parameters<typeof derivationColumns>[0];
-
-  it("drops the id once every row is named", () => {
-    expect(
-      derivationColumns(
-        derivation(
-          ["id", "label", "amount_minor"],
-          [
-            { id: "a", label: "Acme" },
-            { id: "b", label: "Globex" },
-          ],
-        ),
-      ),
-    ).toEqual(["label", "amount_minor"]);
-  });
-
-  // The row whose name was withheld is the one a reader can least account
-  // for. Dropping the id here would leave it showing a blank and nothing else.
-  it("keeps the id when any row's name was withheld", () => {
-    expect(
-      derivationColumns(
-        derivation(
-          ["id", "label", "amount_minor"],
-          [{ id: "a", label: "Acme" }, { id: "b" }],
-        ),
-      ),
-    ).toEqual(["id", "label", "amount_minor"]);
-  });
-
-  it("keeps the id when no row could be named", () => {
-    expect(
-      derivationColumns(derivation(["id", "amount_minor"], [{ id: "a" }])),
-    ).toEqual(["id", "amount_minor"]);
   });
 });

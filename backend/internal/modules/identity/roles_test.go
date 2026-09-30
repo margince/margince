@@ -11,10 +11,12 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The one that matters most, and the reason storedGrant exists at all: what the
@@ -145,5 +147,64 @@ func TestWireRoleCarriesTheStoredGrantsAndNeverANullMap(t *testing.T) {
 	// A role with no grants maps to `{}`, not `null` — see decodeRoleObjects.
 	if empty := wireRole(roleRow{Key: "k"}).Objects; empty == nil {
 		t.Error("a role with no grants wired a nil objects map")
+	}
+}
+
+// Each role-editor conflict answers 409 with its own code, so a client can say
+// which one happened and what to do next.
+func TestTheRoleEditorConflictsCarryDistinctCodes(t *testing.T) {
+	for cause, want := range map[error]string{
+		errRoleNameTaken:  "role_name_taken",
+		errSystemRole:     "system_role",
+		errRoleInUse:      "role_in_use",
+		errAdminRoleFloor: "admin_role_floor",
+	} {
+		var detailed *httperr.DetailedError
+		if !errors.As(roleEditRefusal(cause), &detailed) {
+			t.Errorf("%v: not rendered with a code", cause)
+			continue
+		}
+		if detailed.Status != http.StatusConflict || detailed.Code != want {
+			t.Errorf("%v: %d/%q, want 409/%q", cause, detailed.Status, detailed.Code, want)
+		}
+	}
+	// Widening is a permission, not a conflict: the same write succeeds for an
+	// admin, so the refusal is 403 with its own code.
+	var widening *httperr.DetailedError
+	if !errors.As(roleEditRefusal(errWideningRequiresAdmin), &widening) ||
+		widening.Status != http.StatusForbidden || widening.Code != "widening_requires_admin" {
+		t.Errorf("widening by a non-admin rendered as %+v, want 403/widening_requires_admin", widening)
+	}
+	var archived *httperr.DetailedError
+	if !errors.As(archivedRoleRefusal(errArchivedRoleHeld), &archived) ||
+		archived.Status != http.StatusConflict || archived.Code != "archived_role_held" {
+		t.Errorf("an archived role held rendered as %+v, want 409/archived_role_held", archived)
+	}
+	other := errors.New("connection reset")
+	if got := roleEditRefusal(other); !errors.Is(got, other) {
+		t.Errorf("an unrelated error was rewritten to %v", got)
+	}
+}
+
+// The wire carries the row scope and the archive stamp, or an editor cannot
+// show either.
+func TestWireRoleCarriesRowScopeAndArchivedAt(t *testing.T) {
+	archived := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	wire := wireRole(roleRow{Key: "custom_x", RowScope: principal.RowScopeTeam, ArchivedAt: &archived})
+	if wire.RowScope != "team" || wire.ArchivedAt == nil || !wire.ArchivedAt.Equal(archived) {
+		t.Errorf("wire = scope %q archived %v, want team and %v", wire.RowScope, wire.ArchivedAt, archived)
+	}
+}
+
+// Only the verbs a write turns on are what the caller must hold; narrowing
+// asks nothing of them.
+func TestGrantAddedIsOnlyTheVerbsTurnedOn(t *testing.T) {
+	before := storedGrant{Read: true, Delete: true}
+	after := storedGrant{Read: true, Create: true}
+	if got := grantAdded(before, after); got != (storedGrant{Create: true}) {
+		t.Errorf("added = %+v, want create only", got)
+	}
+	if got := grantAdded(before, storedGrant{}); got != (storedGrant{}) {
+		t.Errorf("revoking everything added %+v", got)
 	}
 }

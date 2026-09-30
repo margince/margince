@@ -70,7 +70,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
     // It used to render Account and rewrite the URL to match, which left a
     // reader with no way to tell a shared link had gone somewhere else.
     expect(
-      await screen.findByText(/this settings page is not yours to open/i),
+      await screen.findByText(/no access to this settings page/i),
     ).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Your account" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Webhooks" })).toBeNull();
@@ -99,9 +99,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
     expect(
       screen.getByRole("heading", { name: "LinkedIn connections" }),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "Where your network reaches" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Network reach" })).toBeTruthy();
     // And nothing workspace-wide: a key everybody spends from and the
     // subscriptions everybody's writes fire.
     for (const heading of ["Contact data", "Webhooks"]) {
@@ -122,7 +120,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
     for (const heading of [
       "Connected mailboxes and calendars",
       "LinkedIn connections",
-      "Where your network reaches",
+      "Network reach",
     ]) {
       expect(screen.queryByRole("heading", { name: heading })).toBeNull();
     }

@@ -8,7 +8,9 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { selectorList } from "../../scripts/lib/css-rules";
 import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
+import { withoutComments } from "../testing/css";
 
 // The two source-wide design gates from B-EP09.1, derived from the tree so a
 // new file is enrolled the moment it exists:
@@ -355,19 +357,6 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 
-  // No service worker, in both halves: no script to install and no call that
-  // would install one. The previous worker cached the app shell cache-first
-  // under a cache name that never changed between builds, so a browser that
-  // loaded the app once kept serving that build's index.html — and the
-  // content-hashed bundle it named — past every deploy after it. A worker is
-  // the only thing that can answer a request from Cache Storage, so the honest
-  // gate is that the app ships none.
-  it("ships no service worker, and registers none", () => {
-    expect(existsSync(join(frontendRoot, "public", "sw.js"))).toBe(false);
-    const main = readFileSync(join(frontendRoot, "src", "main.tsx"), "utf8");
-    expect(main).not.toMatch(/serviceWorker\.register\(/);
-  });
-
   it("the web-app manifest is valid and complete for installability", () => {
     const manifest = JSON.parse(
       readFileSync(
@@ -381,45 +370,6 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     expect(manifest.icons.length).toBeGreaterThanOrEqual(1);
   });
 
-  // One stylesheet per class namespace.
-  //
-  // Two sheets declaring the same class collide at equal specificity, and the
-  // winner is whichever one the bundler injected last — an ordering no source
-  // file states and no import expresses. So one sheet's `margin: 4px` silently
-  // beats the other's `margin: 20px`, and the symptom surfaces as spacing that is
-  // wrong on one screen and right on its sibling.
-  //
-  // Unreadable by inspection: a duplicate declaration is not a syntax error and
-  // both files are correct on their own. Hence a gate over the tree rather than a
-  // rule someone has to remember while editing either sheet.
-  it("declares each screen's class namespace in exactly one stylesheet", () => {
-    const namespaces = [{ prefix: "auth-", home: "screens/auth.css" }];
-    const violations: string[] = [];
-    for (const file of files) {
-      if (!file.endsWith(".css")) {
-        continue;
-      }
-      const path = relative(frontendRoot, file).replace(/\\/g, "/");
-      const text = readFileSync(file, "utf8");
-      // Selectors only: a `.auth-shell` inside a comment is a cross-reference,
-      // which is exactly how the two onboarding sheets cite this surface.
-      const declarations = text.replace(/\/\*[\s\S]*?\*\//g, "");
-      for (const { prefix, home } of namespaces) {
-        if (path.endsWith(home)) {
-          continue;
-        }
-        for (const [selector] of declarations.matchAll(
-          new RegExp(`\\.${prefix}[\\w-]+`, "g"),
-        )) {
-          violations.push(
-            `${path}: declares ${selector} — the ${prefix}* namespace belongs to ${home}`,
-          );
-        }
-      }
-    }
-    expect(violations, violations.join("\n")).toEqual([]);
-  });
-
   // One spelling of the button. `Button` (design-system/atoms.tsx) is what
   // emits `btn` — a `className` that spells the base class itself is a
   // hand-rolled copy of it, and a copy is frozen at the day it was written: the
@@ -430,7 +380,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   // The rule is deliberately narrow so it states its own exception. It matches
   // the `btn` BASE token only — a `.btn-*` modifier in a STYLESHEET is how the
   // variants are declared, and a component class that merely ends in `btn`
-  // (`iconbtn`, `lt-btn`) is a different control. And it matches every element
+  // (`iconbtn`) is a different control. And it matches every element
   // EXCEPT an anchor: `Button` renders a `<button>`, so a link that looks like
   // a button (screens/client.tsx's "create a lead" href) has no component to
   // reach for and is legitimately styled by hand.
@@ -497,9 +447,9 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   // spares an element that declares a role `Card` cannot express: the component
   // admits `role="status"` and nothing else, on purpose — a card must not be
   // able to claim it is a modal — so a surface that has to announce itself as a
-  // `dialog` or a `note` (design-system/explain.tsx's popover) has no component
-  // to reach for. Such a surface says so in-source where it does it. The exemption reads the role's LITERAL
-  // value and compares it exactly to `status`. A role the source computes
+  // `dialog` or a `note` has no component to reach for. Such a surface says so
+  // in-source where it does it. The exemption reads the role's LITERAL value
+  // and compares it exactly to `status`. A role the source computes
   // (`role={role}`) is NOT an exemption: the gate cannot know what it evaluates
   // to, so it asks rather than assumes — an unreadable role that waved the card
   // through would be the one surface nobody was checking.
@@ -663,8 +613,9 @@ const cssFiles = files.filter((file) => file.endsWith(".css"));
  * keeps formatted.
  */
 function reducedMotionRules(
-  text: string,
+  source: string,
 ): { selector: string; property: string; endsAt: number }[] {
+  const text = withoutComments(source);
   const out: { selector: string; property: string; endsAt: number }[] = [];
   const opener = /@media[^{]*prefers-reduced-motion:\s*reduce[^{]*\{/g;
   for (let match = opener.exec(text); match; match = opener.exec(text)) {
@@ -680,11 +631,9 @@ function reducedMotionRules(
     const body = text.slice(start, index - 1);
     const rule = /([^{}]+)\{([^{}]*)\}/g;
     for (let inner = rule.exec(body); inner; inner = rule.exec(body)) {
-      const selectors = inner[1]
-        .replace(/\/\*[\s\S]*?\*\//g, "")
-        .split(",")
-        .map((one) => one.trim().replace(/\s+/g, " "))
-        .filter(Boolean);
+      const selectors = selectorList(inner[1]).map((one) =>
+        one.replace(/\s+/g, " "),
+      );
       const properties = inner[2]
         .split(";")
         .map((line) => line.split(":")[0].trim())
@@ -736,13 +685,11 @@ function plainRules(
 ): { selector: string; body: string; at: number }[] {
   const out: { selector: string; body: string; at: number }[] = [];
   const rule = /([^{}]+)\{([^{}]*)\}/g;
-  const flat = withoutAtRuleBlocks(text);
+  const flat = withoutAtRuleBlocks(withoutComments(text));
   for (let match = rule.exec(flat); match; match = rule.exec(flat)) {
-    const selectors = match[1]
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .split(",")
-      .map((one) => one.trim().replace(/\s+/g, " "))
-      .filter(Boolean);
+    const selectors = selectorList(match[1]).map((one) =>
+      one.replace(/\s+/g, " "),
+    );
     for (const selector of selectors) {
       out.push({ selector, body: match[2], at: match.index });
     }

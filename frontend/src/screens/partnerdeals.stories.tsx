@@ -14,7 +14,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // what this reader is allowed to know.
 
 const meta: Meta = {
-  title: "Records/Partner/Sourced deals",
+  title: "Records/Company 360/Partner tab/Sourced deals",
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
+import { readStored, STORAGE_KEYS, writeStored } from "../app/storage";
 import { currentParams, useUrlParams } from "../app/urlstate";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -219,11 +220,6 @@ export function LeadsScreen() {
   );
 }
 
-// The segregation notice (AC-leads-1), said once under the header and
-// dismissible per browser: it explains a rule, and a rule read once stays
-// read.
-const SEGREGATION_NOTE_KEY = "margince.leads.segregationNoteDismissed";
-
 // The queue's own dial: board or table. Not a wire parameter, because /leads
 // takes neither — it decides how the same rows are drawn.
 const LEAD_VIEW_PARAM = "view";
@@ -257,8 +253,10 @@ function LeadsWorkbench({
     // back to a table.
     screenDials: LEAD_SCREEN_DIALS,
   });
+  // The segregation notice, said once under the header: it explains a rule,
+  // and a rule read once stays read until its reader signs out.
   const [noteDismissed, setNoteDismissed] = useState(
-    () => window.localStorage.getItem(SEGREGATION_NOTE_KEY) === "1",
+    () => readStored(STORAGE_KEYS.segregationNoteDismissed) === "1",
   );
   // What the last bulk write did to a row the current view then stopped
   // showing — a successful assign out of "Mine" must never look like nothing
@@ -306,7 +304,7 @@ function LeadsWorkbench({
           dismiss={{
             label: t("lead.segregationDismiss"),
             onDismiss: () => {
-              window.localStorage.setItem(SEGREGATION_NOTE_KEY, "1");
+              writeStored(STORAGE_KEYS.segregationNoteDismissed, "1");
               setNoteDismissed(true);
             },
           }}
@@ -411,13 +409,7 @@ function LeadsWorkbench({
             header: t("lead.status"),
             sort: "status",
             cell: (lead: Lead) => (
-              <span
-                style={{
-                  display: "inline-flex",
-                  gap: "var(--space-1)",
-                  alignItems: "center",
-                }}
-              >
+              <span className="lead-status-cell">
                 <StatusBadge status={lead.status} />
                 <SlaBadge state={lead.sla_state} />
               </span>
@@ -612,22 +604,20 @@ function LeadsWorkbench({
         // carried `leads` in the saved-view vocabulary all along.
         dataViews={savedViews}
         tools={
-          <>
-            {/* Board or table is how the SAME rows are drawn, so it belongs
-                with the drawing dials rather than above the surface — the
-                slot the deals screen's pipeline picker already uses. */}
-            <SegmentedControl
-              options={["table", "board"] as const}
-              value={view}
-              onChange={setView}
-              labels={{
-                table: t("deals.viewTable"),
-                board: t("deals.viewBoard"),
-              }}
-            />
-            <SaveViewAction resource="leads" query={state.query} />
-          </>
+          // Board or table is how the SAME rows are drawn, so it belongs with
+          // the drawing dials rather than above the surface — the slot the
+          // deals screen's pipeline picker already uses.
+          <SegmentedControl
+            options={["table", "board"] as const}
+            value={view}
+            onChange={setView}
+            labels={{
+              table: t("deals.viewTable"),
+              board: t("deals.viewBoard"),
+            }}
+          />
         }
+        saveView={<SaveViewAction resource="leads" query={state.query} />}
       />
     </>
   );

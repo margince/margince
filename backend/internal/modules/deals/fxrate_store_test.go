@@ -118,11 +118,12 @@ func TestEveryUninjectedInstallationSeamRefuses(t *testing.T) {
 	for i := range inst.NumField() {
 		field := inst.Type().Field(i).Name
 		t.Run(field, func(t *testing.T) {
-			// Six seam shapes live on this struct: the InstallationValue
+			// Seven seam shapes live on this struct: the InstallationValue
 			// readers, StampCorrespondence, which writes, EnsurePartner,
 			// which refuses an attribution, EnsureContractsShareCompany, which
-			// refuses a company move, and the two project seams —
-			// EnsureProjectAttachable and StartDeliveryForWonDeal. Each must refuse
+			// refuses a company move, the two project seams —
+			// EnsureProjectAttachable and StartDeliveryForWonDeal — and
+			// FollowOwner, which hands proposals on. Each must refuse
 			// when un-injected, so the test calls whichever this field is
 			// rather than asserting one shape and skipping the other — a
 			// skipped field is a seam nobody proved fails closed.
@@ -158,6 +159,11 @@ func TestEveryUninjectedInstallationSeamRefuses(t *testing.T) {
 					t.Fatalf("%s is nil after orRefusing; an un-injected seam must refuse, not panic", field)
 				}
 				err = seam(context.Background(), nil, ids.DealID{}, "")
+			case FollowOwner:
+				if seam == nil {
+					t.Fatalf("%s is nil after orRefusing; an un-injected seam must refuse, not panic", field)
+				}
+				err = seam(context.Background(), nil, ids.UUID{}, nil, nil)
 			default:
 				t.Fatalf("%s is neither seam shape; teach this test how to call it", field)
 			}

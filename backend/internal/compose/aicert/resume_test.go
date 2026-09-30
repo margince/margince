@@ -46,7 +46,7 @@ const testRepeats = 3
 // exercise the replay it came to test.
 func withJournal(t *testing.T, dir string, now time.Time, fn func(*runJournal)) {
 	t.Helper()
-	j, err := openRunJournal(context.Background(), dir, testJudgeBinding, ai.ProfileEUHosted, now, quietLogger())
+	j, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, now, quietLogger())
 	if err != nil {
 		t.Fatalf("openRunJournal: %v", err)
 	}
@@ -64,7 +64,7 @@ func replayable(t *testing.T, dir string, now time.Time, sc Scenario, candidate 
 	t.Helper()
 	var ok bool
 	withJournal(t, dir, now, func(j *runJournal) {
-		_, ok = j.forTask(ai.TaskSummarize, candidate).lookup(sc, stampFor(t, sc), 1)
+		_, ok = j.forTask(ai.TaskSummarize, candidate, testJudgeBinding).lookup(sc, stampFor(t, sc), 1)
 	})
 	return ok
 }
@@ -83,18 +83,19 @@ func certifyOnce(t *testing.T, dir string, sc Scenario, candidate, judge *ai.Fak
 			testCandidateBinding, testJudgeBinding, ai.ProfileEUHosted, testRepeats, quietLogger(), &certifyHooks{
 				candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 				judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
-				journal:       j.forTask(ai.TaskSummarize, testCandidateBinding),
+				journal:       j.forTask(ai.TaskSummarize, testCandidateBinding, testJudgeBinding),
 			})
 	})
 	return rec, err
 }
 
-// answeringFakes are a candidate and judge that certify every run.
+// answeringFakes are a candidate and judge that certify every run a case can
+// reach, its adaptive extensions included.
 func answeringFakes() (*ai.FakeClient, *ai.FakeClient) {
 	candidate, judge := ai.NewFakeClient(), ai.NewFakeClient()
-	for range testRepeats {
+	for range adaptiveMaxRuns {
 		candidate.Script(containsWidget)
-		judge.Script(scoreJSON(90))
+		judge.Script(opinionsOf(90, 1)...)
 	}
 	return candidate, judge
 }
@@ -105,7 +106,7 @@ func answeringFakes() (*ai.FakeClient, *ai.FakeClient) {
 func refusingFakes(t *testing.T) (*ai.FakeClient, *ai.FakeClient) {
 	t.Helper()
 	var steps []ai.FakeStep
-	for range ladderRungs(t) * runAttempts * testRepeats {
+	for range ladderRungs(t) * runAttempts * adaptiveMaxRuns {
 		steps = append(steps, ai.FakeStep{Err: errDroppedConnection})
 	}
 	return ai.NewFakeClient().ScriptSteps(steps...), ai.NewFakeClient().ScriptSteps(steps...)
@@ -119,6 +120,10 @@ func TestAJournaledRunIsReplayedInsteadOfPaidForAgain(t *testing.T) {
 	first, err := certifyOnce(t, dir, sc, candidate, judge)
 	if err != nil {
 		t.Fatalf("first certification: %v", err)
+	}
+	if first.Runs != adaptiveMaxRuns {
+		t.Fatalf("the first certification made %d runs, want its case extended to %d — the replay below must cover the extensions too",
+			first.Runs, adaptiveMaxRuns)
 	}
 
 	// Nothing here can answer. Every run of this record must come off the
@@ -224,7 +229,7 @@ func TestAJournalEndingMidLineKeepsTheRunsBeforeIt(t *testing.T) {
 	}
 }
 
-func TestCompactionKeepsAnotherJudgesLiveRuns(t *testing.T) {
+func TestAJournaledRunIsNotReplayedForADifferentJudge(t *testing.T) {
 	dir := t.TempDir()
 	sc := testScenario("basic", wideBands)
 	candidate, judge := answeringFakes()
@@ -232,23 +237,19 @@ func TestCompactionKeepsAnotherJudgesLiveRuns(t *testing.T) {
 		t.Fatalf("first certification: %v", err)
 	}
 
-	// A run on a different grader compacts the file. Those lines are somebody
-	// else's still-good measurement, not this run's to throw away.
-	otherJudge, err := openRunJournal(context.Background(), dir,
-		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "a-different-judge"}, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
-	if err != nil {
-		t.Fatalf("openRunJournal on another judge: %v", err)
-	}
-	_, replayed := otherJudge.forTask(ai.TaskSummarize, testCandidateBinding).lookup(sc, stampFor(t, sc), 1)
-	if cerr := otherJudge.close(); cerr != nil {
-		t.Fatalf("closing the other judge's journal: %v", cerr)
-	}
+	// A run under another judge asks for its own judge's runs. These are
+	// somebody else's still-good measurement: not offered, and not discarded.
+	var replayed bool
+	withJournal(t, dir, fixedResumeNow, func(j *runJournal) {
+		otherJudge := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "a-different-judge"}
+		_, replayed = j.forTask(ai.TaskSummarize, testCandidateBinding, otherJudge).lookup(sc, stampFor(t, sc), 1)
+	})
 	if replayed {
 		t.Fatal("a run graded by one judge was offered as a replay to another")
 	}
 
 	if !replayable(t, dir, fixedResumeNow, sc, testCandidateBinding) {
-		t.Fatal("compaction under another judge deleted this one's live runs")
+		t.Fatal("a run under another judge deleted this one's live runs")
 	}
 }
 
@@ -294,11 +295,12 @@ func TestAJournaledRunCarriesEveryFieldOfARunOutcome(t *testing.T) {
 		RunResult: RunResult{
 			Output: "the widget is blue", Outcome: "accepted", LatencyMS: 1234,
 			TokensIn: 11, TokensOut: 22, CachedTokens: 33, CacheWriteTokens: 44,
-			Degraded: true, HardPass: true, Score: 87,
+			Degraded: true, HardPass: true, Score: 87, Ungraded: true, JudgeScores: []int{12, 87, 90},
+			Withheld: "SAFETY", Abandoned: true,
 		},
 		Provider: "openai_compatible", ServedModel: "z-ai/glm-5.2",
 		ServedIdentitySource: "provider_reported", JudgeServedModel: "claude-haiku-4.5",
-		CertifiedScope: "full_invocation", JudgeDegraded: true,
+		CertifiedScope: "full_invocation", JudgeDegraded: true, ContextApplied: true,
 	}
 	assertNoZeroField(t, reflect.ValueOf(want), "runOutcome")
 
@@ -387,11 +389,11 @@ func TestAJournaledRunIsNotReplayedUnderADifferentProfile(t *testing.T) {
 	// measured under one may never stand in for a run under another. Getting
 	// this wrong does not cost a re-run; it publishes a certification of an
 	// environment class nobody exercised.
-	other, err := openRunJournal(context.Background(), dir, testJudgeBinding, ai.ProfileCloudFrontier, fixedResumeNow, quietLogger())
+	other, err := openRunJournal(context.Background(), dir, ai.ProfileCloudFrontier, fixedResumeNow, quietLogger())
 	if err != nil {
 		t.Fatalf("openRunJournal under another profile: %v", err)
 	}
-	_, replayed := other.forTask(ai.TaskSummarize, testCandidateBinding).lookup(sc, stampFor(t, sc), 1)
+	_, replayed := other.forTask(ai.TaskSummarize, testCandidateBinding, testJudgeBinding).lookup(sc, stampFor(t, sc), 1)
 	if cerr := other.close(); cerr != nil {
 		t.Fatalf("closing the other profile's journal: %v", cerr)
 	}
@@ -451,10 +453,10 @@ func TestAReplayedRunStillMeetsTheDegradeGate(t *testing.T) {
 // less than the append was filed under replays a run nobody asked for.
 func TestALookupAndAJournaledLineAgreeOnTheirKey(t *testing.T) {
 	line := journaledRun{
-		Candidate: "fake|candidate", Task: string(ai.TaskSummarize),
+		Candidate: "fake|candidate", Judge: "fake|judge", Task: string(ai.TaskSummarize),
 		Scenario: "basic", Stamp: "stamp-a", Run: 2,
 	}
-	view := taskJournal{j: &runJournal{}, task: ai.TaskSummarize, candidate: line.Candidate}
+	view := taskJournal{j: &runJournal{}, task: ai.TaskSummarize, candidate: line.Candidate, judge: line.Judge}
 	view.j.loaded = map[resumeKey]runOutcome{keyOf(line): {RunResult: RunResult{Score: 42}}}
 
 	got, ok := view.lookup(Scenario{Name: line.Scenario}, line.Stamp, line.Run)
@@ -489,7 +491,7 @@ func TestAJournaledRunIsNotReplayedByADifferentBinary(t *testing.T) {
 
 func TestASecondRunIsRefusedTheResumeDirectoryRatherThanDestroyingIt(t *testing.T) {
 	dir := t.TempDir()
-	first, err := openRunJournal(context.Background(), dir, testJudgeBinding, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
+	first, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
 	if err != nil {
 		t.Fatalf("openRunJournal: %v", err)
 	}
@@ -504,7 +506,7 @@ func TestASecondRunIsRefusedTheResumeDirectoryRatherThanDestroyingIt(t *testing.
 	// compaction renames a fresh file over the first's, leaving the first
 	// appending into an unlinked inode — every run it journals from then on is
 	// written where nobody will read it, silently.
-	_, second := openRunJournal(context.Background(), dir, testJudgeBinding, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
+	_, second := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
 	if second == nil {
 		t.Fatal("a second run took the same resume directory — the first's journal is now write-only garbage")
 	}
@@ -515,7 +517,7 @@ func TestASecondRunIsRefusedTheResumeDirectoryRatherThanDestroyingIt(t *testing.
 
 func TestTheResumeDirectoryIsReleasedForTheNextRun(t *testing.T) {
 	dir := t.TempDir()
-	first, err := openRunJournal(context.Background(), dir, testJudgeBinding, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
+	first, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
 	if err != nil {
 		t.Fatalf("openRunJournal: %v", err)
 	}
@@ -524,7 +526,7 @@ func TestTheResumeDirectoryIsReleasedForTheNextRun(t *testing.T) {
 	}
 	// A claim that outlived its run would make resuming a one-shot feature and
 	// send every later run to the manual-cleanup message.
-	second, err := openRunJournal(context.Background(), dir, testJudgeBinding, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
+	second, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
 	if err != nil {
 		t.Fatalf("the resume directory was not released by the run that closed it: %v", err)
 	}
@@ -567,4 +569,39 @@ func stampFor(t *testing.T, sc Scenario) string {
 		t.Fatalf("ScenarioStamps: %v", err)
 	}
 	return stamps[sc.Name]
+}
+
+// Upstream preferences decide which host serves a broker binding, and two hosts
+// at different precision are two measurements. A binding's key therefore carries
+// the preferences it is SERVED under, so the product default and the same block
+// spelled out are one key, and any other block is another.
+func TestAJournaledRunIsNotReplayedUnderOtherUpstreamPreferences(t *testing.T) {
+	broker := ai.ProviderConfig{Provider: "openai_compatible", Model: "z-ai/glm-5.2", BaseURL: "https://openrouter.ai/api"}
+	pinned := broker
+	pinned.Routing = &ai.OpenRouterRouting{Only: []string{"deepinfra"}}
+	ownRouting := broker
+	ownRouting.Routing = &ai.OpenRouterRouting{}
+	spelledDefault := broker
+	spelledDefault.Routing = ai.DefaultOpenRouterRouting()
+
+	for name, other := range map[string]ai.ProviderConfig{"a pinned host": pinned, "the broker's own routing": ownRouting} {
+		if bindingKey(other) == bindingKey(broker) {
+			t.Errorf("a binding served under %s shares a journal key with the product default", name)
+		}
+	}
+	if bindingKey(spelledDefault) != bindingKey(broker) {
+		t.Error("the product default spelled out keys apart from the same default inherited — one upstream, two keys")
+	}
+}
+
+// A thinking level changes how a model answers, so a run at one level is never
+// replayed as a run at another, nor as the adapter's default.
+func TestAJournaledRunIsNotReplayedAtAnotherThinkingLevel(t *testing.T) {
+	lite := ai.ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
+	low, high := lite, lite
+	low.ThinkingLevel, high.ThinkingLevel = "low", "high"
+	keys := map[string]string{bindingKey(lite): "default", bindingKey(low): "low", bindingKey(high): "high"}
+	if len(keys) != 3 {
+		t.Errorf("three thinking levels rendered %d journal keys: %v", len(keys), keys)
+	}
 }

@@ -18,7 +18,6 @@ package identity
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -85,6 +84,9 @@ func (s *Service) CreateFormerMember(ctx context.Context, actor Identity, in For
 	if err != nil {
 		return ids.UserID{}, err
 	}
+	if err := s.refuseUntilDescribed(ctx); err != nil {
+		return ids.UserID{}, err
+	}
 	role := in.Role
 	if role == "" {
 		role = defaultFormerRole
@@ -92,20 +94,15 @@ func (s *Service) CreateFormerMember(ctx context.Context, actor Identity, in For
 	ctx = actorCtx(ctx, actor)
 	var newUserID ids.UserID
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var roleID ids.UUID
-		roleErr := tx.QueryRow(ctx, `SELECT id FROM role WHERE key = $1`, role).Scan(&roleID)
-		if errors.Is(roleErr, pgx.ErrNoRows) {
-			return errUnknownRole
-		}
-		if roleErr != nil {
-			return roleErr
-		}
-		// After the lookup so an unknown key still answers errUnknownRole, and
-		// before the insert so no row exists if the ceiling refuses. The seat
+		// Before the insert so no row exists if the ceiling refuses. The seat
 		// cannot sign in today, but it can be REACTIVATED — at which point it
 		// carries whatever role this call granted, so handing one out here is
 		// handing one out.
-		if err := refuseUnlessCallerMayAssign(ctx, tx, actor, role); err != nil {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		roleID, err := roleForAssignment(ctx, tx, actor, role, nil)
+		if err != nil {
 			return err
 		}
 		insErr := tx.QueryRow(ctx,
@@ -134,7 +131,7 @@ func (s *Service) CreateFormerMember(ctx context.Context, actor Identity, in For
 		if in.Source != "" {
 			after["source"] = in.Source
 		}
-		_, err := storekit.Audit(ctx, tx, "create", "user", newUserID.UUID, nil, after)
+		_, err = storekit.Audit(ctx, tx, "create", "user", newUserID.UUID, nil, after)
 		return err
 	})
 	if err != nil {

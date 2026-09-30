@@ -4,6 +4,7 @@
 package provenance
 
 import (
+	"slices"
 	"sort"
 	"strings"
 )
@@ -71,7 +72,19 @@ func ReservedSourceSystem(sourceSystem string) bool {
 // TestTheSystemPrincipalDoesNotUnlockTheImporterNamespace
 // (backend/internal/modules/activities/provider_reminderidentity_test.go)
 func EngineReminderSource(sourceSystem string) bool {
-	return sourceSystem == NoActivityReminderSource || sourceSystem == CheckInCadenceSource
+	return slices.Contains(EngineReminderSources(), sourceSystem)
+}
+
+// ReminderAnchorSeparator sits between a quiet-account reminder's identity and
+// its anchor (the last genuine touch, RFC 3339 in UTC) in the reminder's
+// source_id. The automation engine writes the key with it and the activities
+// resolver reads the anchor back with it.
+const ReminderAnchorSeparator = ":anchor:"
+
+// EngineReminderSources lists the quiet-account reminder identities, for a
+// query that selects the reminders themselves.
+func EngineReminderSources() []string {
+	return []string{NoActivityReminderSource, CheckInCadenceSource}
 }
 
 // InternalSourceSystems lists the exact reserved identities, sorted. It is the
@@ -109,6 +122,64 @@ func (e *ReservedError) Error() string {
 // read this rather than each module restating it.
 func (e *ReservedError) FieldFault() (field, code, message string) {
 	return e.Field, "reserved_source_system", e.Error()
+}
+
+// ImporterNamespace reports whether a source system sits in the importer's
+// prefix, and nothing else.
+//
+// Narrower than ReservedSourceSystem on purpose: that one also holds the three
+// exact internal identities, which no import may spell. The door that admits a
+// declared importer asks this, so admitting an importer never admits
+// email_request, no_activity_reminder or check_in_cadence.
+func ImporterNamespace(sourceSystem string) bool {
+	return strings.HasPrefix(sourceSystem, ReservedSourceSystemPrefix)
+}
+
+// DisplaySourceSystem renders a source system for a reader.
+//
+// author.via is set verbatim from the column, so an imported row would
+// otherwise read "Logged in mirror:hubspot by …". The prefix is machinery for
+// the replay key, not something a reader should ever see.
+func DisplaySourceSystem(sourceSystem string) string {
+	return strings.TrimPrefix(sourceSystem, ReservedSourceSystemPrefix)
+}
+
+// DisplayVia is DisplaySourceSystem over the nullable column, for the four
+// record reads that project author.via straight out of it.
+//
+// Here rather than four identical locals in four modules: the stripping rule
+// belongs to the namespace, and a fifth read added later gets it by calling
+// this rather than by remembering that it exists.
+func DisplayVia(sourceSystem *string) *string {
+	if sourceSystem == nil {
+		return nil
+	}
+	shown := DisplaySourceSystem(*sourceSystem)
+	return &shown
+}
+
+// RefuseWire guards BOTH provenance fields a create wire can carry, in one
+// statement so a mapper spends one line rather than two `if err != nil` blocks.
+//
+// source_system is checked first because it is the field the reserved
+// namespace is actually keyed on; a caller sending both reserved values hears
+// about that one.
+func RefuseWire(source string, sourceSystem *string) error {
+	return RefuseWireAdmitting(source, sourceSystem, false)
+}
+
+// RefuseWireAdmitting is RefuseWire with the declared importer's door: when
+// importer is true, a source_system inside the mirror: namespace passes. The
+// three exact internal identities stay refused for the importer too, and
+// `source` is nobody's to forge. Whether the caller IS a declared importer is
+// decided at the HTTP handler (auth.DeclaredImporter) and nowhere else.
+func RefuseWireAdmitting(source string, sourceSystem *string, importer bool) error {
+	if sourceSystem != nil && (!importer || !ImporterNamespace(*sourceSystem)) {
+		if err := Refuse("source_system", *sourceSystem); err != nil {
+			return err
+		}
+	}
+	return Refuse("source", source)
 }
 
 // Refuse guards ONE provenance field on a create wire. The flip stamps

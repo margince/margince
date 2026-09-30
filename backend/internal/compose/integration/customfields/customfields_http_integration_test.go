@@ -210,7 +210,7 @@ func TestTheCustomFieldTableIsOrderedByTheSortItIsAsked(t *testing.T) {
 	e := schemaWiredEnv(t)
 	for _, label := range []string{"Gamma", "Alpha", "Beta"} {
 		status, _, problem := createCustomField(t, e, integration.AnyMap{
-			"object": "contact", "label": label, "type": "text", "source": "ui",
+			"object": "contact", "label": label, "type": "text", "source": "manual",
 		})
 		if status != http.StatusCreated {
 			t.Fatalf("seeding %q = %d %+v", label, status, problem)
@@ -248,7 +248,7 @@ func TestASortedCustomFieldPageContinuesInItsOwnOrder(t *testing.T) {
 	e := schemaWiredEnv(t)
 	for _, label := range []string{"Gamma", "Alpha", "Beta"} {
 		if status, _, problem := createCustomField(t, e, integration.AnyMap{
-			"object": "contact", "label": label, "type": "text", "source": "ui",
+			"object": "contact", "label": label, "type": "text", "source": "manual",
 		}); status != http.StatusCreated {
 			t.Fatalf("seeding %q = %d %+v", label, status, problem)
 		}

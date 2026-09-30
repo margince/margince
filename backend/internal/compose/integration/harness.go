@@ -136,6 +136,8 @@ func Setup(t *testing.T) *Env {
 		}
 	}
 
+	seedSystemRoleRows(ctx, t, owner)
+
 	// Shared across the package's tests, and deliberately not closed here — see
 	// testdb.Pool for why the connections, not the pool object, are the cost.
 	pool, err := testdb.Pool(ctx, appDSN)
@@ -144,7 +146,7 @@ func Setup(t *testing.T) *Env {
 	}
 	// Registered here, before the test adds any cleanup of its own, so it runs
 	// last and sees a package that has genuinely stopped.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	e.Pool = pool
 	e.Contacts = contacts.NewStore(harnessDB(pool, e.WS))
 	e.Deals = deals.NewStore(harnessDB(pool, e.WS), installseam.Deals())
@@ -241,6 +243,22 @@ func (e *Env) As(user ids.UUID, teams []ids.UUID, perms principal.Permissions) c
 // creates without naming an owner is stamped with this id, and the owner
 // column is a foreign key into app_user.
 func (e *Env) Admin() context.Context { return e.As(e.AdminUser, nil, AdminPerms) }
+
+// PartnerSeat is the seat the partner seeds write as. The harness's AdminPerms
+// deliberately carries no `partner` grant, so a suite borrowing its own context
+// to seed one would grow a permission it is not testing.
+func (e *Env) PartnerSeat() context.Context {
+	return e.As(e.AdminUser, nil, principal.Permissions{
+		RoleKeys: []string{"admin"},
+		Objects: map[string]principal.ObjectGrant{
+			"partner": {Create: true, Read: true, Update: true},
+			// Becoming a partner also stamps the company's relationship
+			// types, so the seat needs the company as well as the programme.
+			objCompany: {Read: true, Update: true},
+		},
+		RowScope: principal.RowScopeAll,
+	})
+}
 
 // AutomationCtx binds the principal a workflow firing stages under: the system
 // actor, acting on behalf of the automation's owner.

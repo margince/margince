@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -70,18 +71,28 @@ func (t runReport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "run_report", Title: "Run a report", Version: toolVersionV1,
 		Description:   runReportCopy.render(),
+		Instead:       runReportCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "runReport",
 		InputSchema: schema(`{"type":"object","required":["report"],"properties":{
 			"report":` + reportProperty(t.catalog) + `,
-			"filters":{"type":"object","description":"Equality predicates keyed by this report's filter names — {\"owner_id\":\"<uuid>\"}. A key outside the report's list is refused."},
-			"group_by":{"type":"array","items":{"type":"string"},"description":"Dimension names from this report's list. Omit for the report's own default grouping."},
+            "scope":` + string(schemaFor[crmcontracts.ReportScope]()) + `,
+			"filters":{"type":"object","description":"Equality predicates using this report's published filter names."},
+			"group_by":{"type":"array","items":{"type":"string"},"description":"Published dimension names; omit for default grouping."},
 			"aggregates":{"type":"array","items":{"type":"object","required":["fn"],"properties":{
 				"fn":` + aggregateFunctionProperty(t.plan.Functions) + `,
 				"field":{"type":"string","description":"A measure name from this report's list. Omit only with fn=count."},
 				"as":{"type":"string","description":"Output column name for this aggregate"}},"additionalProperties":false},
 				"description":"Omit for the report's own default aggregates."}},
 			"additionalProperties":false}`),
+		// Unkeyed rather than keyed by the union of every report's filter
+		// names: those names are the published vocabulary's, and reciting them
+		// here costs more than one tool's share of an agent's window
+		// (TestNoSingleToolTakesMoreOfTheWindowThanItsShare), the limit that
+		// keeps the plan vocabularies out of this schema too.
+		UnkeyedArguments: map[string]string{
+			"$.filters": "filters is keyed by the named report's own filter names, published in its vocabulary",
+		},
 		OutputSchema: schemaFor[RunReportResult](),
 	}
 }

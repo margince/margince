@@ -1,0 +1,126 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package ai
+
+import (
+	"slices"
+	"testing"
+)
+
+// A lane written back with no preferences keeps the stored ones only when it is
+// still the same binding, and a lane that states its own keeps what it stated.
+func TestAWriteKeepsTheStoredUpstreamOfTheSameBindingOnly(t *testing.T) {
+	t.Parallel()
+	const broker = "https://openrouter.ai/api"
+	eu := &OpenRouterRouting{Only: []string{"mistral/eu"}}
+	stored := RoutingConfig{
+		Tiers: map[Tier]ProviderConfig{
+			TierPremium:    {Provider: providerOpenAICompatible, Model: "m", BaseURL: broker, Routing: eu},
+			TierCheapCloud: {Provider: providerOpenAICompatible, Model: "m", BaseURL: broker, Routing: eu},
+			TierFrontier:   {Provider: providerOpenAICompatible, Model: "m", BaseURL: broker, Routing: eu},
+		},
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerOpenAICompatible, Model: "e", BaseURL: broker, Routing: eu}},
+	}
+	own := &OpenRouterRouting{Only: []string{"nebius/eu-north1"}}
+	next := RoutingConfig{
+		Tiers: map[Tier]ProviderConfig{
+			TierPremium:    {Provider: providerOpenAICompatible, Model: "m", BaseURL: broker},
+			TierCheapCloud: {Provider: providerOpenAICompatible, Model: "other", BaseURL: broker},
+			TierFrontier:   {Provider: providerOpenAICompatible, Model: "m", BaseURL: broker, Routing: own},
+			TierLocalSmall: {Provider: providerOpenAICompatible, Model: "m", BaseURL: broker},
+		},
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerOpenAICompatible, Model: "e", BaseURL: broker}},
+	}
+
+	got := next.keepingStoredUpstream(stored)
+
+	if r := got.Tiers[TierPremium].Routing; r == nil || !slices.Equal(r.Only, eu.Only) {
+		t.Errorf("premium = %+v, want the stored pin kept on the unchanged binding", r)
+	}
+	if r := got.Embeddings.Routing; r == nil || !slices.Equal(r.Only, eu.Only) {
+		t.Errorf("embeddings = %+v, want the stored pin kept on the unchanged binding", r)
+	}
+	if r := got.Tiers[TierCheapCloud].Routing; r != nil {
+		t.Errorf("cheap_cloud = %+v, want nothing carried onto a lane re-pointed at another model", r)
+	}
+	if r := got.Tiers[TierFrontier].Routing; r != own {
+		t.Errorf("frontier = %+v, want the preferences the write itself stated", r)
+	}
+	if r := got.Tiers[TierLocalSmall].Routing; r != nil {
+		t.Errorf("local_small = %+v, want nothing: no lane of that name was stored", r)
+	}
+	if next.Tiers[TierPremium].Routing != nil {
+		t.Error("the caller's own tier map was written through; the carry must work on a copy")
+	}
+}
+
+// The endpoint is matched as an endpoint, not as a string: a trailing slash or
+// an upper-case host is the same broker and keeps the lane's pin, while a
+// different path on that host is a different endpoint and does not.
+func TestAWriteKeepsTheStoredUpstreamAcrossSpellingsOfOneEndpoint(t *testing.T) {
+	t.Parallel()
+	eu := &OpenRouterRouting{Only: []string{"mistral/eu"}}
+	stored := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierPremium: {Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://openrouter.ai/api", Routing: eu},
+	}}
+	for _, tc := range []struct {
+		baseURL string
+		keeps   bool
+	}{
+		{"https://openrouter.ai/api/", true},
+		{"HTTPS://OpenRouter.AI/api", true},
+		{" https://openrouter.ai/api// ", true},
+		{"https://openrouter.ai/api/v2", false},
+		{"https://openrouter.ai.example/api", false},
+	} {
+		next := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+			TierPremium: {Provider: providerOpenAICompatible, Model: "m", BaseURL: tc.baseURL},
+		}}
+		got := next.keepingStoredUpstream(stored).Tiers[TierPremium].Routing
+		if kept := got != nil && slices.Equal(got.Only, eu.Only); kept != tc.keeps {
+			t.Errorf("base_url %q: pin kept = %v, want %v", tc.baseURL, kept, tc.keeps)
+		}
+	}
+}
+
+// A thinking level is carried the way a pin is: kept on the same binding written
+// back without one, dropped on a re-pointed lane, never over one the write states.
+func TestAWriteKeepsTheStoredThinkingLevelOfTheSameBindingOnly(t *testing.T) {
+	t.Parallel()
+	lite := ProviderConfig{Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: "low"}
+	stored := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierCheapCloud: lite, TierLocalSmall: lite, TierPremium: lite}}
+	next := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: providerGemini, Model: "gemini-3.1-flash-lite"},
+		TierLocalSmall: {Provider: providerGemini, Model: "gemini-3.5-flash"},
+		TierPremium:    {Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: "medium"},
+	}}
+
+	got := next.keepingStoredUpstream(stored)
+
+	for tier, want := range map[Tier]string{TierCheapCloud: "low", TierLocalSmall: "", TierPremium: "medium"} {
+		if level := got.Tiers[tier].ThinkingLevel; level != want {
+			t.Errorf("%s: thinking_level = %q, want %q", tier, level, want)
+		}
+	}
+}
+
+// `default` is the clear: the stored level goes, on the same binding and on a
+// re-pointed one alike, and the word itself is never kept.
+func TestAWriteOfTheDefaultThinkingLevelClearsTheStoredOne(t *testing.T) {
+	t.Parallel()
+	lite := ProviderConfig{Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: "low"}
+	stored := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierCheapCloud: lite, TierPremium: lite}}
+	next := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: providerGemini, Model: "gemini-3.1-flash-lite", ThinkingLevel: thinkingLevelDefault},
+		TierPremium:    {Provider: providerGemini, Model: "gemini-3.5-flash", ThinkingLevel: thinkingLevelDefault},
+	}}
+
+	got := next.keepingStoredUpstream(stored)
+
+	for tier, binding := range got.Tiers {
+		if binding.ThinkingLevel != "" {
+			t.Errorf("%s: thinking_level = %q after a write of default, want none", tier, binding.ThinkingLevel)
+		}
+	}
+}

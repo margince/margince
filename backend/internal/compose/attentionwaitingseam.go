@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -27,18 +28,26 @@ import (
 // live there; nothing about who may see what is decided here.
 type attentionWaiting struct {
 	store *activities.Store
+	// deals answers the same-day next-step figure /worklist/response carries
+	// beside the waiting work's own two.
+	deals *deals.Store
 	now   attention.Clock
 }
 
 // The instant comes from the caller so the whole read is one snapshot. Asking
 // the clock again here would let the anti-joins judge against a moment the rest
 // of the day was not read at.
-// Answered asks the module how fast it replied over a window. A pass-through,
-// like Hidden: the median and the counts are SQL and belong beside the query.
+// Answered asks the modules how fast the workspace replied over a window, and
+// how often an at-risk deal got its next step the same day. Pass-throughs, like
+// Hidden: every figure is SQL and belongs beside its query.
 func (w attentionWaiting) Answered(
-	ctx context.Context, from, to time.Time,
+	ctx context.Context, from, to time.Time, days attention.LocalDays,
 ) (attention.AnsweredWork, error) {
 	got, err := w.store.ResponseWindow(ctx, from, to)
+	if err != nil {
+		return attention.AnsweredWork{}, err
+	}
+	steps, err := w.deals.SameDayNextSteps(ctx, days.First, days.End)
 	if err != nil {
 		return attention.AnsweredWork{}, err
 	}
@@ -47,12 +56,16 @@ func (w attentionWaiting) Answered(
 		MedianMinutes:    got.MedianMinutes,
 		Disposed:         got.Disposed,
 		DisposedNotSales: got.DisposedNotSales,
+		AtRiskWithheld:   steps.Withheld,
+		AtRiskJudged:     steps.Judged,
+		AtRiskBooked:     steps.Booked,
+		RecordedSince:    steps.RecordedSince,
 	}, nil
 }
 
 // Hidden asks the module what its own hiding rules are keeping off the queue.
 //
-// A pass-through: the arithmetic is five reads of the eligibility query and
+// A pass-through: the arithmetic is one read of the eligibility query per rule and
 // belongs beside that query, not here. What this seam does is what every seam
 // here does — carry the answer across in compose's own vocabulary.
 func (w attentionWaiting) Hidden(
@@ -69,6 +82,7 @@ func (w attentionWaiting) Hidden(
 		PastHorizon: got.PastHorizon,
 		Unlinked:    got.Unlinked,
 		Colleagues:  got.Colleagues,
+		InformsUs:   got.InformsUs,
 		Truncated:   got.Truncated,
 	}, nil
 }
@@ -76,22 +90,27 @@ func (w attentionWaiting) Hidden(
 func (w attentionWaiting) Unanswered(
 	ctx context.Context, asOf time.Time,
 ) ([]attention.WaitingCustomer, bool, error) {
-	rows, err := w.store.WaitingReplies(ctx, asOf)
+	kept, cut, err := w.waitingPages(ctx, asOf)
 	if err != nil {
 		return nil, false, err
 	}
-	// Asked of what the STORE returned, before keepWaitingCustomers runs.
-	//
-	// That filter drops machine senders and folds duplicate threads, so what it
-	// returns is smaller than what was read — and a caller comparing the
-	// SURVIVORS against the scan bound would read a full scan whose survivors
-	// are few as a complete one. This is the only place both numbers exist.
-	cut := len(rows) >= activities.WaitingScanCap
-	kept := keepWaitingCustomers(rows)
 	summaries, err := w.emailRows(ctx, kept)
 	if err != nil {
 		return nil, false, err
 	}
+	return w.asWaitingCustomers(kept, summaries), cut, nil
+}
+
+// asWaitingCustomers carries the module's rows across in the queue's
+// vocabulary.
+//
+// Shared by Unanswered and HiddenRows rather than written twice: both answer
+// with the same card, and the translation below — which verdict word changes a
+// ranking, when a summary is withheld — is the part that would go quietly
+// wrong in a second copy.
+func (w attentionWaiting) asWaitingCustomers(
+	kept []activities.WaitingReply, summaries map[ids.UUID]crmcontracts.EmailSummary,
+) []attention.WaitingCustomer {
 	out := make([]attention.WaitingCustomer, 0, len(kept))
 	for _, row := range kept {
 		// Nil when this wait is not an email, or is one whose content the
@@ -124,7 +143,82 @@ func (w attentionWaiting) Unanswered(
 			OwnerID:           row.OwnerID,
 		})
 	}
-	return out, cut, nil
+	return out
+}
+
+// HiddenRows names the threads one hiding rule is keeping off this reader's
+// page.
+//
+// A pass-through like Hidden: the difference between the relaxed and strict
+// reads is the module's arithmetic, and belongs beside the query it differences.
+func (w attentionWaiting) HiddenRows(
+	ctx context.Context, asOf time.Time, rule string,
+) ([]attention.WaitingCustomer, error) {
+	kept, err := w.store.HiddenWaitingRows(ctx, asOf, activities.HiddenRule(rule))
+	if err != nil {
+		return nil, err
+	}
+	summaries, err := w.emailRows(ctx, kept)
+	if err != nil {
+		return nil, err
+	}
+	return w.asWaitingCustomers(kept, summaries), nil
+}
+
+// waitingRefillRounds bounds how many pages one assembly will read.
+//
+// Three, not "until enough": each page is a full scan of the waiting predicate,
+// and a workspace whose recent mail is ENTIRELY machine would otherwise walk
+// its whole history to fill a queue that has nothing to show. Three pages is
+// six hundred rows, which is past any flood a real installation produces and
+// still one read of bounded cost.
+const waitingRefillRounds = 3
+
+// waitingPages reads waiting rows until enough survive the filter, the scan
+// runs out, or the round ceiling is reached. It answers what survived and
+// whether anything was left unread.
+//
+// The refill exists because the filter runs AFTER the scan cap. The store's own
+// machine rule is a coarse subset — six patterns against an address — while
+// keepWaitingCustomers asks capture.IsMachineAddress, which reads a registrable
+// domain against the transactional baseline. An address like hello@sendgrid.net
+// matches none of the six, fills a slot under the cap, and is discarded here.
+// Two hundred of those and a genuinely waiting customer never appears at all.
+//
+// `cut` still means what it meant: something was left unread. It is now true
+// only when the LAST page was also full, so a refill that reached the end of
+// the matching rows reports a complete scan rather than inheriting the first
+// page's truncation.
+func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time) ([]activities.WaitingReply, bool, error) {
+	var kept []activities.WaitingReply
+	var before time.Time
+	cut := false
+	for round := 0; round < waitingRefillRounds; round++ {
+		rows, err := w.store.WaitingRepliesBefore(ctx, asOf, before)
+		if err != nil {
+			return nil, false, err
+		}
+		// Asked of what the STORE returned, before keepWaitingCustomers runs.
+		//
+		// That filter drops machine senders and folds duplicate threads, so
+		// what it returns is smaller than what was read — and a caller
+		// comparing the SURVIVORS against the scan bound would read a full
+		// scan whose survivors are few as a complete one. This is the only
+		// place both numbers exist.
+		cut = len(rows) >= activities.WaitingScanCap
+		kept = append(kept, keepWaitingCustomers(rows)...)
+		if !cut || len(kept) >= activities.WaitingScanCap {
+			break
+		}
+		// The page is ordered newest first, so the oldest row on it is where
+		// the next page starts.
+		before = rows[len(rows)-1].OccurredAt
+	}
+	// Folded across pages as well as within one: two mails with the same sender
+	// and subject are one conversation whichever page each arrived on, and a
+	// per-page fold would let the refill reintroduce what the first page
+	// already collapsed.
+	return keepWaitingCustomers(kept), cut, nil
 }
 
 // keepWaitingCustomers removes repetitive incidental mail. Confirmed requests

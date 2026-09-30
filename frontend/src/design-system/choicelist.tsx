@@ -54,6 +54,11 @@ export type Choice<Value extends string> = Readonly<{
    * carrier of which option is which.
    */
   mark?: ReactNode;
+  /**
+   * Refuses this one answer while the others stay open. Its `description` says
+   * why: a greyed answer with no reason is a question the reader cannot act on.
+   */
+  disabled?: boolean;
 }>;
 
 export function ChoiceList<Value extends string>({
@@ -131,7 +136,7 @@ export function ChoiceList<Value extends string>({
           name={name}
           value={choice.value}
           checked={choice.value === value}
-          disabled={disabled}
+          disabled={disabled || choice.disabled}
           onChange={() => onChange(choice.value)}
           label={
             <span className="choicelist-text">

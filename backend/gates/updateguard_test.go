@@ -21,7 +21,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"os"
@@ -119,6 +118,9 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:RestoreContactTx":     "the un-archive restores each child row its archive retired by id, and each statement is its own CAS: it matches only while archived_at still holds the archive's own stamp, and TryInSavepoint reads RowsAffected to report a row that moved as left behind. The contact row itself rides ApplyGuardedIn with the caller's version, under the FOR UPDATE the shape's Lock took first",
+	"internal/modules/contacts:RestoreCompanyTx":     "the company twin of RestoreContactTx: every child restore is a CAS on the archive's stamp with RowsAffected read, under the company row's FOR UPDATE and guarded patch",
+	"internal/modules/deals:RestoreDealTx":           "the deal twin of RestoreContactTx: each relationship restore is a CAS on the archive's stamp with RowsAffected read, under the deal row's FOR UPDATE and guarded patch",
 	"internal/modules/contacts:touchRevertedContact": "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE from the top of its transaction — LockRow with IncludeArchived, because the contact may be archived — so the guard is the caller's lock rather than a second one here; re-taking it would be the liveness refusal this function exists to avoid",
 	// Both hold the row FOR UPDATE before this UPDATE runs, through
 	// lockActivityForWrite (retentionhold.go) rather than a direct
@@ -158,6 +160,8 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// write is conditioned on reversed_at IS NULL on top of that — so a second
 	// caller gets ErrNoRows and treats it as the decline it is. One reversal
 	// counted twice would double the safety rate that governs the transition.
+	"internal/modules/deals:markLadderChanged":         "runs only under its callers' lock on the same pipeline row — lockLadder (FOR NO KEY UPDATE), one hop past what this witness's AST walk follows — and the write is the version bump itself, which no version could guard",
+	"internal/modules/deals:movePipeline":              "runs only inside ReorderPipelines, under lockCatalog's FOR UPDATE on every live pipeline, taken in id order before any move",
 	"internal/modules/deals:markMoveReversed":          "the caller holds the row (FOR UPDATE) and the write is conditioned on reversed_at IS NULL; ErrNoRows means somebody reversed it first, which is a decline rather than a failure",
 	"internal/modules/deals:suspendTransitionPolicyTx": "conditioned on suspended_at IS NULL; ErrNoRows means a concurrent pass suspended it first and that reason stands",
 	"internal/modules/deals:ResumeTransitionPolicy":    "conditioned on suspended_at IS NOT NULL; ErrNoRows means a concurrent caller already cleared it",
@@ -198,7 +202,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// already locked by the patch that changed the address.
 	"internal/modules/contacts:recordGeocodeAfter":  "guarded by a re-read rather than a version: the transaction rebuilds the address hash from the live columns and writes nothing unless it still matches what was resolved (addressHashInTx). That is a stronger check than a version pin here — a version would refuse a write whose address is unchanged but whose row was touched for some unrelated reason, and accept one whose address moved without bumping it",
 	"internal/modules/automation:Archive":           "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
-	"internal/modules/collections:ArchiveList":      "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/collections:ArchiveSavedView": "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/collections:ArchiveTag":       "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/deals:ArchiveProduct":         "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the response",
@@ -233,6 +236,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:anonymizeLeadTwins":         "terminal absolute write: the same erasure statement as anonymizeSubjectRows, extracted for length — it overwrites the lead twin's PII columns regardless of concurrent state, by design",
 	"internal/modules/privacy:archiveActivity":            "terminal absolute write: the retention sweep archives an over-age activity regardless of concurrent state, by design — a concurrent edit does not make the record younger",
 	"internal/modules/privacy:archiveDeal":                "terminal absolute write: the retention sweep archives an over-age lost/won deal regardless of concurrent state, by design",
+	"internal/modules/privacy:archiveLead":                "terminal absolute write: the retention sweep archives an over-age unconverted lead regardless of concurrent state, by design; archived_at IS NULL keeps a second pass from restamping it",
 	"internal/modules/privacy:eraseActivityContent":       "terminal absolute write: the sweep's activity/erase action empties the body and stamps the tombstone subject regardless of concurrent state, by design",
 	"internal/modules/privacy:anonymizeContactRecord":     "terminal absolute write: the sweep's contact/anonymize action overwrites the PII columns regardless of concurrent state, by design",
 
@@ -724,7 +728,7 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 	t.Parallel()
 	defer unguardedByIDUpdates.AssertAllMatched(t)
 	versioned := versionedTables(t)
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	constCache := map[string]map[string]string{}
 	heldCache := map[string]map[string][]string{}
 	judged := 0
@@ -735,7 +739,7 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(fset, path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}

@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func TestFailureStatusCodeClassifiesErrorFamilies(t *testing.T) {
@@ -33,6 +34,18 @@ func TestFailureStatusCodeClassifiesErrorFamilies(t *testing.T) {
 			fmt.Errorf("voice build model call: %w: %w: voice build returned invalid JSON: unexpected end",
 				ai.ErrUnconfiguredModel, ai.ErrOutputRejected),
 			"model_unavailable",
+		},
+		// A provider that declined is a model lane with no answer to give, not
+		// an answer that failed to parse, so it is never invalid_output.
+		"the provider withheld the answer": {
+			fmt.Errorf("voice build model call: ai: gemini: answer withheld: SAFETY: %w", model.ErrOutputWithheld),
+			"model_unavailable",
+		},
+		// A request the provider refused is our defect, however its words read:
+		// "output" in the vendor's sentence must not make it the model's fault.
+		"the provider rejected the request": {
+			fmt.Errorf("voice build model call: %w: max_output_tokens exceeds the model limit (http 400)", model.ErrRequestRejected),
+			"internal",
 		},
 	}
 	for name, tc := range cases {

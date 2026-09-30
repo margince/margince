@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -130,11 +131,19 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 // returning an error about the effect, and replacing it with a bookkeeping
 // error would tell the human who approved the row the wrong thing about what
 // went wrong.
+// failureMarkTimeout bounds the detached failure mark: one UPDATE against one
+// row, so it is a ceiling on a stuck database. Long rather than tight for the
+// same reason the detach exists — a mark that arrives late still tells the
+// human who approved the row what happened, and one abandoned after a second
+// tells them nothing at all.
+const failureMarkTimeout = 30 * time.Second
+
 func (s *Service) recordEffectFailure(ctx context.Context, id ids.ApprovalID, reader string, cause error) error {
 	// Detached from the request's cancellation: an effect that failed BECAUSE
 	// the request was cancelled or timed out is exactly a failure this mark
 	// exists to keep, and writing it through the dead context would lose it.
-	ctx = context.WithoutCancel(ctx)
+	ctx, release := context.WithTimeout(context.WithoutCancel(ctx), failureMarkTimeout)
+	defer release()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The IS NULL arm is the CAS: two failures racing on one row keep the
 		// FIRST mark, because that is the one whose timestamp says when the

@@ -19,6 +19,10 @@ package compose
 // in plain words, then the body's own fields and values. The values are
 // agent-authored, so approvals.StageInTx sanitizes whatever lands here — this
 // file decides WHAT to say, that one decides what may be rendered.
+//
+// The words around the values follow the installation's base language
+// (approvalsummarycopy.go); the field names and values are the call's own and
+// pass through untranslated.
 
 import (
 	"encoding/json"
@@ -28,6 +32,8 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/margince/margince/backend/internal/modules/agents"
 )
 
 // summaryFieldLimit bounds how many body fields a summary enumerates. A
@@ -51,16 +57,16 @@ const summaryValueLimit = 48
 // from it, and the operationId is the contract's word, not theirs. The tool
 // verb and the record type are already on the policy, and together they are the
 // sentence.
-func restSummary(pol agentPolicy, r *http.Request, body []byte) string {
-	head := actPhrase(pol, r.Method, r.URL.Path)
-	fields := summaryFields(body)
+func restSummary(said approvalSummaryCopy, pol agentPolicy, r *http.Request, body []byte) string {
+	head := actPhrase(said, pol, r.Method, r.URL.Path)
+	fields := summaryFields(said, body)
 	// A CREATE is routed by its parent — createOffer posts under the deal the
 	// offer would belong to — and the parent appears nowhere in the body. The
 	// old head carried it by accident, inside the path; naming it is what keeps
 	// an approver able to tell which deal they are pricing.
 	if pol.Tool == toolCreateRecord {
 		if parent := createdUnder(r); parent != "" {
-			fields = append([]string{"under=" + parent}, fields...)
+			fields = append([]string{said.createdUnder + "=" + parent}, fields...)
 		}
 	}
 	if len(fields) == 0 {
@@ -91,12 +97,14 @@ func createdUnder(r *http.Request) string {
 	return ""
 }
 
-// actPhrase names the act in words: "Update a deal", "Send an email".
+// actPhrase names the act in words: "Update a deal", "Send an email". A word
+// the language's vocabulary lacks reads as the English wire verb instead.
 //
 // Falls back to the operation and its path when the policy declares no tool —
 // a route with no verb has nothing better to say, and the old shape is at least
 // unambiguous to whoever has to debug it.
-func actPhrase(pol agentPolicy, method, path string) string {
+func actPhrase(said approvalSummaryCopy, pol agentPolicy, method, path string) string {
+	acts := said.acts
 	if pol.Tool == "" {
 		return fmt.Sprintf("%s (%s %s)", pol.Op, method, path)
 	}
@@ -105,7 +113,7 @@ func actPhrase(pol agentPolicy, method, path string) string {
 	// is both retiring the field and changing what it offers. The verb cannot
 	// distinguish them — only the operation can, so where one is named here it
 	// wins.
-	if phrase, named := opPhrases[pol.Op]; named {
+	if phrase, named := acts.operations[pol.Op]; named {
 		return phrase
 	}
 	verb := strings.ReplaceAll(pol.Tool, "_", " ")
@@ -114,15 +122,19 @@ func actPhrase(pol agentPolicy, method, path string) string {
 	// its own object — "send email" told against `activity` would read as
 	// "Send email: activity", which is worse than the verb alone.
 	if pol.RecordType == "" || !genericVerbs[pol.Tool] {
+		if phrase, known := acts.verbs[pol.Tool]; known {
+			return phrase
+		}
 		return upperFirst(verb)
 	}
-	return fmt.Sprintf("%s %s", upperFirst(verb), recordNoun(pol.RecordType))
-}
-
-// recordNoun is the record type as a reader says it: the wire spells
-// `deal_room`, a contact says "deal room".
-func recordNoun(record agentRecordType) string {
-	return strings.ReplaceAll(string(record), "_", " ")
+	// The record noun is the tool door's own (agents.RecordNoun), so a translated
+	// card names a record type as the tool door does; English alone differs, the
+	// tool door printing the wire type and this door reading it aloud.
+	noun := agents.RecordNoun(said.lang, string(pol.RecordType))
+	if frame, framed := acts.recordFrames[pol.Tool]; framed {
+		return fmt.Sprintf(frame, noun)
+	}
+	return fmt.Sprintf("%s %s", upperFirst(verb), noun)
 }
 
 // opPhrases names the acts whose VERB is not enough to tell them apart.
@@ -196,7 +208,7 @@ func upperFirst(phrase string) string {
 // two renderings of the same call read the same way. A nested object or
 // array is named and counted rather than expanded: the inbox is a summary,
 // and proposed_change carries the whole envelope for anyone who wants it.
-func summaryFields(body []byte) []string {
+func summaryFields(said approvalSummaryCopy, body []byte) []string {
 	var payload map[string]json.RawMessage
 	if len(strings.TrimSpace(string(body))) == 0 || json.Unmarshal(body, &payload) != nil {
 		return nil
@@ -210,17 +222,17 @@ func summaryFields(body []byte) []string {
 	rendered := make([]string, 0, len(keys))
 	for _, key := range keys {
 		if len(rendered) == summaryFieldLimit {
-			rendered = append(rendered, fmt.Sprintf("+%d more", len(keys)-summaryFieldLimit))
+			rendered = append(rendered, fmt.Sprintf(agents.MoreFields(said.lang), len(keys)-summaryFieldLimit))
 			break
 		}
-		rendered = append(rendered, key+"="+summaryValue(payload[key]))
+		rendered = append(rendered, key+"="+summaryValue(said, payload[key]))
 	}
 	return rendered
 }
 
 // summaryValue renders one JSON value for a human. Strings lose their quotes
 // (the reader wants the name, not its encoding) and everything is bounded.
-func summaryValue(raw json.RawMessage) string {
+func summaryValue(said approvalSummaryCopy, raw json.RawMessage) string {
 	// null is recognized BEFORE the string probe, because unmarshaling null
 	// into a plain string SUCCEEDS and leaves it empty (encoding/json: null
 	// into a non-nullable type "has no effect and produces no error"). Left to
@@ -240,7 +252,7 @@ func summaryValue(raw json.RawMessage) string {
 	}
 	var obj map[string]json.RawMessage
 	if json.Unmarshal(raw, &obj) == nil {
-		return fmt.Sprintf("{%d fields}", len(obj))
+		return fmt.Sprintf(said.nestedFields, len(obj))
 	}
 	return truncateValue(string(raw)) // numbers, booleans, null
 }

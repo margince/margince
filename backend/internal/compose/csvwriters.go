@@ -8,13 +8,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -55,9 +58,12 @@ type csvWriters struct {
 	// rebuilds it lazily through lookup, which falls back to the engine-owned
 	// identity map.
 	nativeIDs map[string]ids.UUID
-	// employers is the normalized company-name index, built once per run by
-	// employerIndex and nil until the first row needs it.
+	// employers caches one answer per folded company name the FILE names, so a
+	// file naming one employer on every row asks the database once. Nil until
+	// the first row needs it; bounded by the file, never by the estate.
 	employers map[string]employerCandidate
+	// authors caches the seat each author cell resolves to, per run.
+	authors authorSeats
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
 	// no "updated" member — the frozen-source model it was built for had no
 	// such outcome — so the count rides here and the report reads it.
@@ -84,8 +90,11 @@ func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.Ru
 		settled = *mapping
 	}
 	return &csvWriters{
-		pool:        db.Pool(),
-		contacts:    contacts.NewStore(db),
+		pool: db.Pool(),
+		// An imported contact can take a lead over, which carries the lead's
+		// stops and consent links (see newCounterpartyStore).
+		contacts: contacts.NewStore(db).WithStopCarrier(consent.NewStore(db)).
+			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)),
 		tags:        collections.NewStore(db),
 		identities:  migration.NewRunStore(db),
 		runID:       runID,
@@ -97,6 +106,7 @@ func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.Ru
 		// commit over a word.
 		contextTag: parseContextTag(settled.ContextTag),
 		nativeIDs:  map[string]ids.UUID{},
+		authors:    authorSeats{},
 	}
 }
 
@@ -399,6 +409,9 @@ var errImportReplayed = errors.New("import: the record replayed under its natura
 func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
 	in := leadCreateFrom(textFields(row.Fields), csvSourceSystem(), row.ExternalID, w.provenanceOf(row.ExternalID))
 	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
+			return ids.UUID{}, err
+		}
 		lead, created, err := w.contacts.CreateLeadTx(ctx, tx, in)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating lead %s: %w", row.ExternalID, err)
@@ -428,6 +441,9 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migr
 		return migration.EnsureResult{Skipped: true, SkipReason: "the mapped display_name is empty, so the row names no company"}, nil
 	}
 	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
+			return ids.UUID{}, err
+		}
 		company, err := w.contacts.CreateCompanyTx(ctx, tx, in)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating company %s: %w", row.ExternalID, err)

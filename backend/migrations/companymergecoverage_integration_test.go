@@ -57,6 +57,7 @@ var mergePathFiles = []string{
 // declared. gatekit reports an entry that stops matching, so a waiver added
 // here cannot quietly outlive the column it was written for.
 var companyFKsTheMergeLeaves = gatekit.Waive(map[string]string{
+	"deal_suggestion.company_id":      "a suggestion is Deal Scout's reading of ONE company's evidence, fingerprinted over that company's id and held to one open suggestion per company, so a moved row could collide with the survivor's own and would hash differently from anything the survivor is offered. The merge archives the retired company instead, which the next scout pass reads as a suggestion that no longer stands (superseded); the evidence the merge relinks raises the survivor's own suggestion",
 	"suggestion_dismissal.company_id": "a dismissal is keyed by a fingerprint computed over the company's OWN id, so a row moved onto the survivor would hash differently from anything the survivor is ever offered and could never match again. The merge retires them with the company instead of moving rows that cannot work; a reader may be offered the equivalent suggestion about the survivor once, and dismissing it again sticks. Re-deriving the fingerprints belongs to the suggestion engine that defines them",
 })
 

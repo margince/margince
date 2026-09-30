@@ -10,22 +10,13 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { TimezoneSelect } from "../design-system/timezoneselect";
 import { useToast } from "../design-system/toast";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-
-// When this reader is bookable, and on whose clock.
-//
-// Personal, and the card says so: an admin does not set a colleague's working
-// hours, which is why this sits on the account tab with no role gate and no
-// refusal copy. One range and a set of days — the two shapes that prompted it
-// (8-18 Monday to Saturday, 9-13 Monday to Thursday) are both that, and per-day
-// hours can be added later without redoing this.
-//
-// docs/explanation/scheduling.md is the design.
 
 type WorkingHours = components["schemas"]["WorkingHours"];
 
@@ -55,9 +46,10 @@ function dayLabelKey(day: (typeof WEEK)[number]): MessageKey {
   }
 }
 
-export function useWorkingHours() {
+export function useWorkingHours(refreshOnReturn = false) {
   return useQuery({
     queryKey: ["working-hours"],
+    refetchOnWindowFocus: refreshOnReturn ? "always" : false,
     queryFn: async () => {
       const { data, error, response } = await api.GET("/me/working-hours");
       if (error || !response.ok) {
@@ -103,13 +95,13 @@ export function WorkingHoursCard() {
   return (
     <Panel title={t("workingHours.title")}>
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("workingHours.sub")}</p>
+        <PanelIntro>{t("workingHours.sub")}</PanelIntro>
         <QueryGate pendingLabel={t("workingHours.title")} query={query}>
           {(answer) =>
             // Checked, not asserted. The field is contract-required, but a body
             // that lost it hands over `undefined` anyway — and this card sits
             // on the settings screen, so dereferencing it took the whole
-            // ACCOUNT PAGE down over one window nobody could edit. The same
+            // settings page down over one window nobody could edit. The same
             // reading the sign-in methods card documents for its own list.
             answer.working_hours ? (
               <WorkingHoursForm
@@ -136,10 +128,8 @@ function WorkingHoursForm({
   const [start, setStart] = useState(hours.start_time);
   const [end, setEnd] = useState(hours.end_time);
   const [days, setDays] = useState<readonly number[]>(hours.days);
-  // The zone this browser is in, offered when the reader has chosen none. A
-  // contact confirming where they are is a better first write than a contact
-  // typing an IANA name, and the server stores whatever is confirmed.
-  const [zone, setZone] = useState(chosen ? hours.timezone : viewerZone());
+  const [zone, setZone] = useState(hours.timezone);
+  const browserZone = viewerZone();
   const [narrowed, setNarrowed] = useState(false);
 
   const save = useMutation({
@@ -153,8 +143,11 @@ function WorkingHoursForm({
       }
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.setQueryData(["working-hours"], data);
+      await queryClient.invalidateQueries({
+        queryKey: ["reliable-availability"],
+      });
       toast.show(t("settings.saved"));
     },
   });
@@ -224,13 +217,14 @@ function WorkingHoursForm({
         hint={t("workingHours.timezoneHelp")}
       >
         {(control) => (
-          <TextInput
-            {...control}
-            value={zone}
-            onChange={(event) => setZone(event.target.value)}
-          />
+          <TimezoneSelect {...control} value={zone} onChange={setZone} />
         )}
       </Field>
+      {!chosen && browserZone !== zone && (
+        <p className="t-caption">
+          {t("workingHours.browserZone", { zone: browserZone })}
+        </p>
+      )}
       <Button onClick={submit} disabled={save.isPending}>
         {t("workingHours.save")}
       </Button>

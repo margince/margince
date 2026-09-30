@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // extObject is an extension-shaped object registered for the duration of one
@@ -180,13 +181,15 @@ func TestSettingAGrantWritesAnAuditRowNamingTheActorAndBothImages(t *testing.T) 
 	}
 }
 
-// The read: every seeded role, sorted, with is_system set and the grant map
-// populated. Admin-only, and a non-admin is refused before any row is read.
+// The read: every seeded role and a custom one, sorted, with is_system set and
+// the grant map populated. A seat without role_admin is refused before any row
+// is read.
 func TestListRolesReturnsEverySeededRoleAndRefusesANonAdmin(t *testing.T) {
 	e := setupRevocationEnv(t, "role-list")
 	ctx := e.wsCtx(e.admin)
+	custom := e.customRole(t, "Account managers", "rep", nil)
 
-	rows, err := e.svc.ListRoles(ctx, e.admin)
+	rows, err := e.svc.ListRoles(ctx, e.admin, false)
 	if err != nil {
 		t.Fatalf("ListRoles: %v", err)
 	}
@@ -207,6 +210,9 @@ func TestListRolesReturnsEverySeededRoleAndRefusesANonAdmin(t *testing.T) {
 			t.Errorf("role %q came back with no grants; the seeded document lists every core object", key)
 		}
 	}
+	if row, ok := byKey[custom]; !ok || row.IsSystem || row.RowScope != principal.RowScopeOwn {
+		t.Errorf("the custom role reads %+v (listed %v), want listed, not system, at rep's own scope", row, ok)
+	}
 	// Sorted by key so a re-render never reshuffles the editor.
 	for i := 1; i < len(rows); i++ {
 		if rows[i-1].Key > rows[i].Key {
@@ -216,7 +222,7 @@ func TestListRolesReturnsEverySeededRoleAndRefusesANonAdmin(t *testing.T) {
 
 	// e.member holds no admin role: the refusal is the caller's standing, taken
 	// before the query runs.
-	if _, err := e.svc.ListRoles(e.wsCtx(e.member), e.member); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.svc.ListRoles(e.wsCtx(e.member), e.member, false); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a non-admin read the role directory: err = %v", err)
 	}
 }
@@ -311,7 +317,7 @@ func TestASecondAdminWritingFromAStaleReadIsRefusedRatherThanClobbering(t *testi
 	ctx := e.wsCtx(e.admin)
 
 	// Both admins load the screen.
-	roles, err := e.svc.ListRoles(ctx, e.admin)
+	roles, err := e.svc.ListRoles(ctx, e.admin, false)
 	if err != nil {
 		t.Fatalf("ListRoles: %v", err)
 	}
@@ -343,7 +349,7 @@ func TestASecondAdminWritingFromAStaleReadIsRefusedRatherThanClobbering(t *testi
 
 	// And it wrote nothing: the object the stale write named is untouched, and
 	// the first admin's grant survives.
-	after, err := e.svc.ListRoles(ctx, e.admin)
+	after, err := e.svc.ListRoles(ctx, e.admin, false)
 	if err != nil {
 		t.Fatalf("ListRoles after: %v", err)
 	}

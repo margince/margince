@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { FiltersScreen } from "./filters";
+import { listsMe, liveList, shortlist } from "./lists.fixtures";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The screen reads four routes and no session probe: the vocabulary for the
@@ -115,8 +116,11 @@ const SAVED_VIEWS = {
   page: { next_cursor: null, has_more: false },
 };
 
+// The builder stories draw the screen as it is with lists switched off: the
+// builder alone, without the library's section control above it.
 function routes(): void {
   installFetchStub({
+    "GET /me": listsMe(false),
     "GET /filters/vocabulary": () => jsonResponse(CONTACT_VOCAB),
     "POST /filters/preview": () => jsonResponse(PREVIEW),
     "GET /views": () => jsonResponse(SAVED_VIEWS),
@@ -162,7 +166,7 @@ export const LoadedFromASavedView: Story = {
     // are therefore found through the document, not the story's root.
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Load a saved filter" }),
+      await canvas.findByRole("button", { name: "Load saved filter" }),
     );
     await userEvent.click(
       await page.findByRole("button", { name: "Gold tier in Berlin" }),
@@ -200,6 +204,7 @@ export const PreviewRefusedToAReadSeat: Story = {
   // retry land in the results card, which is the only row wide enough for both.
   render: () => {
     installFetchStub({
+      "GET /me": listsMe(false),
       "GET /filters/vocabulary": () => jsonResponse(CONTACT_VOCAB),
       "GET /views": () => jsonResponse(SAVED_VIEWS),
       "POST /filters/preview": () =>
@@ -242,5 +247,22 @@ export const WithAClause: Story = {
     );
     await userEvent.type(canvas.getByLabelText("Value"), "Berlin");
     await canvas.findByText("3 contacts match");
+  },
+};
+
+// With lists switched on the destination becomes the library: the reader's
+// views, the shared views, and the builder a Live List is saved from. This is
+// the Shared views section.
+export const SharedViewsLibrary: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () =>
+        jsonResponse({
+          data: [liveList, shortlist],
+          page: { has_more: false },
+        }),
+    });
+    return <FiltersScreen id="lists" />;
   },
 };

@@ -6,6 +6,7 @@ package ai
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -94,9 +95,9 @@ func newJSONServer(t *testing.T, body string) string {
 	return srv.URL
 }
 
-// vLLM emits its error at the TOP level ({"object":"error",type,message}), not
-// under OpenAI's nested {"error":{…}} — the operator must still see the
-// message, not a bare "http 400".
+// Older vLLM releases emit the error at the TOP level
+// ({"object":"error",type,message}), not under OpenAI's nested {"error":{…}} —
+// the operator must still see the message, not a bare "http 400".
 func TestOpenAICompatErrorDecodesVLLMTopLevelShape(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -107,6 +108,23 @@ func TestOpenAICompatErrorDecodesVLLMTopLevelShape(t *testing.T) {
 	_, err := client.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
 	if err == nil || !strings.Contains(err.Error(), "dimensions is not supported") || !strings.Contains(err.Error(), "BadRequestError") {
 		t.Fatalf("want vLLM's top-level type+message, got %v", err)
+	}
+}
+
+// vLLM 0.30 answers in OpenAI's nested shape with the HTTP status as a NUMERIC
+// code. The body is the one it returned for an output budget above the
+// server's --max-model-len; the numeric code must not cost the operator the
+// sentence that names the flag.
+func TestOpenAICompatErrorDecodesCurrentVLLMNestedShape(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":{"message":"max_tokens=10000000 cannot be greater than max_model_len=max_total_tokens=40960. Please request fewer output tokens.","type":"BadRequestError","param":"max_tokens","code":400}}`))
+	}))
+	defer srv.Close()
+	client := &openAICompatClient{http: &http.Client{}, baseURL: srv.URL, localOnly: true, defaultModel: "m"}
+	_, err := client.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
+	if err == nil || !strings.Contains(err.Error(), "max_model_len") || !strings.Contains(err.Error(), "BadRequestError") {
+		t.Fatalf("want vLLM's nested type+message, got %v", err)
 	}
 }
 
@@ -298,5 +316,38 @@ func TestOpenAICompatErrorRedactsTheTypeAsWellAsTheMessage(t *testing.T) {
 		if strings.Contains(err.Error(), secret) {
 			t.Errorf("the error carries %q from a remote field: %v", secret, err)
 		}
+	}
+}
+
+// A broker that loses its upstream after sending 200 says so in the body, with
+// finish_reason "error": the partial text is not an answer, and the failure is
+// one the ladder may walk past, not a verdict about the content.
+func TestOpenAICompatAMidAnswerFailureIsAFailureNotAnAnswer(t *testing.T) {
+	for name, body := range map[string]string{
+		"finish_reason error": `{"model":"m","choices":[{"finish_reason":"error","message":{"content":"par"}}]}`,
+		"an error on the choice": `{"model":"m","choices":[{"finish_reason":"stop","error":{"code":502,"message":"upstream went away"},` +
+			`"message":{"content":"par"}}]}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			c := &openAICompatClient{http: &http.Client{}, defaultModel: "m", baseURL: newJSONServer(t, body)}
+			resp, err := c.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "hi"}}})
+			if err == nil {
+				t.Fatalf("a failed generation came back as the answer %q", resp.Text)
+			}
+			if errors.Is(err, model.ErrOutputWithheld) || errors.Is(err, model.ErrRequestRejected) {
+				t.Errorf("an upstream failure was classified as an outcome: %v", err)
+			}
+		})
+	}
+}
+
+// The upstream's own terminal names a withheld answer in the trace, because the
+// broker's normalized content_filter says nothing about which filter fired.
+func TestOpenAICompatNamesTheUpstreamsOwnWithholdingTerminal(t *testing.T) {
+	c := &openAICompatClient{http: &http.Client{}, defaultModel: "m", baseURL: newJSONServer(t,
+		`{"model":"m","choices":[{"finish_reason":"content_filter","native_finish_reason":"SAFETY","message":{"content":""}}]}`)}
+	_, err := c.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "hi"}}})
+	if got := finishReasonFor("", err); got != "SAFETY" {
+		t.Errorf("finish reason = %q, want the upstream's SAFETY: %v", got, err)
 	}
 }

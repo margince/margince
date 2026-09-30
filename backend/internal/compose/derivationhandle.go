@@ -18,6 +18,9 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // derivationURL mints the handle for one aggregate row (or, with a nil
@@ -89,6 +92,30 @@ func parseDerivationQuery(values url.Values) (derivationQuery, error) {
 	q := derivationQuery{Predicates: map[string]string{}, Unset: map[string]bool{}}
 	for key, vals := range values {
 		switch key {
+		case reportingHandleVersion:
+			if len(vals) != 1 || vals[0] != "2" {
+				return derivationQuery{}, apperrors.ErrInvalidArgument
+			}
+		case reportingScopeKind:
+			if len(vals) != 1 {
+				return derivationQuery{}, apperrors.ErrInvalidArgument
+			}
+			if q.Scope == nil {
+				q.Scope = &RequestedScope{}
+			}
+			q.Scope.Kind = vals[0]
+		case "scope_id":
+			if len(vals) != 1 {
+				return derivationQuery{}, apperrors.ErrInvalidArgument
+			}
+			id, err := ids.Parse(vals[0])
+			if err != nil {
+				return derivationQuery{}, apperrors.ErrInvalidArgument
+			}
+			if q.Scope == nil {
+				q.Scope = &RequestedScope{}
+			}
+			q.Scope.ID = &id
 		case "by":
 			q.GroupBy = append(q.GroupBy, vals...)
 		case nullPredicateKey:
@@ -152,4 +179,16 @@ func parseHandleAggregates(vals []string) ([]reportAggregate, error) {
 		out = append(out, reportAggregate{Fn: parts[0], Field: parts[1], As: parts[2]})
 	}
 	return out, nil
+}
+
+func scopedDerivationURL(report string, filters map[string]any, groupBy []string, aggregates []reportAggregate, row map[string]any, asOf time.Time, scope *RequestedScope) string {
+	base := derivationURL(report, filters, groupBy, aggregates, row, asOf)
+	if scope == nil {
+		return base
+	}
+	values := url.Values{reportingHandleVersion: {"2"}, reportingScopeKind: {scope.Kind}}
+	if scope.ID != nil {
+		values.Set("scope_id", scope.ID.String())
+	}
+	return base + "&" + values.Encode()
 }

@@ -43,7 +43,6 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -345,7 +344,7 @@ func (c callIndex) literalsAt(fn string, at int) ([]*ast.CompositeLit, bool) {
 func callsWithin(t *testing.T, dir string) callIndex {
 	t.Helper()
 	index := callIndex{calls: map[string][]*ast.CallExpr{}, returns: map[string][]*ast.CompositeLit{}}
-	for _, file := range parsePackageDir(t, token.NewFileSet(), dir) {
+	for _, file := range parsePackageDir(t, gatekit.SourceFileSet(), dir) {
 		ast.Inspect(file, func(n ast.Node) bool {
 			if call, isCall := n.(*ast.CallExpr); isCall {
 				if name, isPlain := call.Fun.(*ast.Ident); isPlain {
@@ -423,7 +422,7 @@ func isNilExpr(expr ast.Expr) bool {
 // underneath it.
 func fieldHistoryProjection(t *testing.T) (actions, entities map[string]bool) {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	files := parsePackageDir(t, fset, "internal/modules/privacy")
 	consts := stringConsts(t, fset, files)
 	return projectionSetKeys(t, files, consts, "fieldHistoryProjectedActions"),
@@ -479,12 +478,11 @@ func readProjectionKeys(t *testing.T, expr ast.Expr, consts map[string]string, w
 	}
 }
 
-// tsLabelEntry reads one `["key", "message.key"]` pair out of a TypeScript Map.
-var tsLabelEntry = regexp.MustCompile(`\[\s*"([a-z0-9_]+)"\s*,`)
-
-// tsLabelComment strips comments before the entries are read: a line MENTIONING
-// a key would otherwise keep this gate green after the real entry was deleted.
-var tsLabelComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
+// tsLabelEntry reads one `["key", "message.key"]` pair out of a TypeScript Map,
+// in either quote style, so an entry written the other way cannot vanish from a
+// census. Comments are stripped first (tsComment): a line MENTIONING a key would
+// otherwise keep a gate green after the real entry was deleted.
+var tsLabelEntry = regexp.MustCompile(`\[\s*["']([a-z0-9_]+)["']\s*,`)
 
 // historyLabelMaps reads both label maps out of the screen module.
 func historyLabelMaps(t *testing.T) (contract, synthetic map[string]bool) {
@@ -493,26 +491,27 @@ func historyLabelMaps(t *testing.T) (contract, synthetic map[string]bool) {
 	if err != nil {
 		t.Fatalf("reading the history label maps: %v", err)
 	}
-	return tsMapKeys(t, string(source), contractLabelMap), tsMapKeys(t, string(source), syntheticLabelMap)
+	return tsMapKeys(t, historyLabelSource, string(source), contractLabelMap),
+		tsMapKeys(t, historyLabelSource, string(source), syntheticLabelMap)
 }
 
-// tsMapKeys reads one named Map literal's keys.
-func tsMapKeys(t *testing.T, source, marker string) map[string]bool {
+// tsMapKeys reads the keys of the Map literal opened by marker in path's source.
+func tsMapKeys(t *testing.T, path, source, marker string) map[string]bool {
 	t.Helper()
 	start := indexAfter(source, marker)
 	if start < 0 {
-		t.Fatalf("%s no longer declares %s — this gate is reading a shape that is gone", historyLabelSource, marker)
+		t.Fatalf("%s no longer declares %s — this gate is reading a shape that is gone", path, marker)
 	}
 	end := indexAfter(source[start:], "]);")
 	if end < 0 {
-		t.Fatalf("%s's %s literal is unterminated", historyLabelSource, marker)
+		t.Fatalf("%s's %s literal is unterminated", path, marker)
 	}
 	keys := map[string]bool{}
-	for _, match := range tsLabelEntry.FindAllStringSubmatch(tsLabelComment.ReplaceAllString(source[start:start+end], " "), -1) {
+	for _, match := range tsLabelEntry.FindAllStringSubmatch(tsComment.ReplaceAllString(source[start:start+end], " "), -1) {
 		keys[match[1]] = true
 	}
 	if len(keys) == 0 {
-		t.Fatalf("%s's %s literal reads as empty, so every writer's key would look unlabelled", historyLabelSource, marker)
+		t.Fatalf("%s's %s literal reads as empty, so every key would look unlabelled", path, marker)
 	}
 	return keys
 }

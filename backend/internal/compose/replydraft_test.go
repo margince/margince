@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -64,12 +65,24 @@ func TestReplyDraftShapeRejectsUnsafeOrEmptyOutput(t *testing.T) {
 		"header break":  `{"subject":"Hello\nBcc: x@example.test","body":"Hello"}`,
 		"empty body":    `{"subject":"Hello","body":""}`,
 		"not json":      `hello`,
+		// The validator's bounds, one past each.
+		"subject past its line limit": `{"subject":"` + strings.Repeat("s", replyDraftSubjectMaxRunes+1) + `","body":"Hello"}`,
+		"body past its bound":         `{"subject":"Hello","body":"` + strings.Repeat("b", replyDraftBodyMaxRunes+1) + `"}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			if err := replyDraftShapeValid(output); err == nil {
 				t.Fatalf("replyDraftShapeValid(%q) = nil", output)
 			}
 		})
+	}
+}
+
+// The bounds are inclusive: a draft at exactly each limit is a draft.
+func TestReplyDraftShapeAcceptsADraftAtEachBound(t *testing.T) {
+	output := `{"subject":"` + strings.Repeat("s", replyDraftSubjectMaxRunes) +
+		`","body":"` + strings.Repeat("b", replyDraftBodyMaxRunes) + `"}`
+	if err := replyDraftShapeValid(output); err != nil {
+		t.Fatalf("a draft at both bounds was refused: %v", err)
 	}
 }
 
@@ -426,5 +439,21 @@ func TestAFailedVoiceCriticRetryIsLoggedAndTheFirstDraftStands(t *testing.T) {
 	}
 	if len(brain.requests) != 3 {
 		t.Errorf("calls = %d, want voice + failed retry + plain", len(brain.requests))
+	}
+}
+
+// A retry that did not clear its rule is logged with the rule's severity and
+// with which draft the loop went on to serve, so an operator can tell a false
+// claim that shipped from a phrasing tic that did.
+func TestARetryThatDidNotClearNamesTheDraftItServed(t *testing.T) {
+	for served, want := range map[bool]string{true: "served=retry", false: "served=first"} {
+		var logged bytes.Buffer
+		retryLog := draftRetryLog{log: slog.New(slog.NewTextHandler(&logged, nil))}
+		retryLog.RetryDidNotClear(context.Background(), draftcheck.RuleInventedRelationship, "as discussed", 1, served)
+		line := logged.String()
+		if !strings.Contains(line, want) || !strings.Contains(line, "rule=invented-relationship") ||
+			!strings.Contains(line, `phrase="as discussed"`) {
+			t.Errorf("served=%v logged %q, want %s with the rule and phrase", served, line, want)
+		}
 	}
 }

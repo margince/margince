@@ -8,7 +8,7 @@ import { Eyebrow } from "./eyebrow";
 // The micro-label above the thing it names, in the one spelling: 11px,
 // semibold, uppercase, tracked open, meta colour.
 const meta: Meta<typeof Eyebrow> = {
-  title: "Design System/Eyebrow",
+  title: "Components/Text and data display/Eyebrow",
   component: Eyebrow,
   parameters: { layout: "padded" },
   decorators: [

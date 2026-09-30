@@ -99,7 +99,7 @@ function Column({ data }: Readonly<{ data: Company360 }>) {
 }
 
 const meta: Meta = {
-  title: "Records/Company record/Moment fallback verbs",
+  title: "Records/Company 360/Moment fallback verbs",
   parameters: { layout: "padded" },
 };
 export default meta;

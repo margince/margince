@@ -298,7 +298,7 @@ export const LongSubjects: Story = {
 };
 
 const meta: Meta<typeof RecordSpine> = {
-  title: "Records/Company 360/Spine",
+  title: "Records/Record 360/Spine",
   component: RecordSpine,
 };
 export default meta;

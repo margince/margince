@@ -4,8 +4,9 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
   problemCodeOf,
@@ -19,6 +20,7 @@ import {
   useInstallationSetup,
   usePlatformDeclined,
 } from "../installation-setup";
+import { storeCompany } from "../installationcompany";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import {
   changeDraftField,
@@ -28,7 +30,6 @@ import {
   normalizeUrl,
 } from "../onboarding";
 import { OnboardingGate } from "../onboarding-gate";
-import type { SuggestedCompanyChange } from "../onboarding-read";
 import type {
   ArtifactMode,
   ConfirmRefusal,
@@ -61,6 +62,7 @@ import { gateNoticeFor } from "./gate-notice";
 import { presenceFor } from "./presence";
 import { ProfileDigest } from "./profile-digest";
 import { deckCards, ReviewDeck } from "./review-deck";
+import type { SuggestedCompanyChange } from "./use-clarify-answers";
 import { useClarifyAnswers } from "./use-clarify-answers";
 import { safeStartError, useCompanyRead } from "./use-company-read";
 import type { WizardPersistInput } from "./use-wizard-state";
@@ -154,6 +156,7 @@ export function CompanyAct({
   adoptedRead = null,
 }: CompanyActProps) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   // The gate greets by name, and uses the whole display_name rather than a
@@ -380,8 +383,7 @@ export function CompanyAct({
   // transition can never drift between the two callers.
   const finishConfirm = useCallback(
     (profileData: CompanyProfile) => {
-      // The shell's onboarding gate reads the same ["company"] cache entry.
-      queryClient.setQueryData(["company"], profileData);
+      storeCompany(queryClient, profileData);
       // Checkpoint the confirmed company so the classic coordinator resumes
       // at the right step and role if the user switches shells.
       void persist({
@@ -911,27 +913,26 @@ export function CompanyAct({
   // The confirm stop, as a deck by default and as the whole profile on ask.
   //
   // The deck is the front door because the read already knows which fields it
-  // could not settle, and putting the other hundred on screen beside them asked
-  // a reader to find six answers inside a wall. The wall is still HERE, one
-  // press away: it is where a field is edited freely and a fact is unticked,
-  // and the server wants both of those from somewhere.
+  // could not settle, and the other hundred on screen beside them asked a
+  // reader to find six answers inside a wall. The wall is still HERE, one press
+  // away: it is where a field is edited freely and a fact is unticked.
   const cards = deckCards(blocking, advisory);
   // The same mapping over EVERY row, so the deck can still draw the card it is
   // standing on after that field stops being outstanding. Built from `allRows`
-  // rather than kept as a copy: what the reader types has to reach the control
-  // it was typed into.
+  // rather than a copy, so what the reader types reaches the control it is in.
   const cardOf = (field: CompanyFieldName) =>
     deckCards(
       allRows.filter((row) => row.field === field),
       [],
     )[0];
-  // The mark at the head of the record, for both of its faces: the site the
-  // read ran on, and the logo it resolved from there when it found one.
-  // Undefined before a read exists, and the digest draws the monogram.
+  // The mark at the head of the record: the site the read ran on, the logo it
+  // resolved there, and the company once one exists (a re-run of setup), whose
+  // id keys it. Undefined before a read, and the digest draws the monogram.
+  const companyId = profile?.company_id;
   const identity =
     read === null
       ? undefined
-      : { rootUrl: read.root_url, logoUrl: read.logo_url };
+      : { rootUrl: read.root_url, logoUrl: read.logo_url, companyId };
   const reviewScene =
     state.phase === "co.review" && reviewProposal ? (
       artifactMode === "dossier" ? (
@@ -1004,10 +1005,9 @@ export function CompanyAct({
           <Button variant="ghost" onClick={() => setArtifactMode("record")}>
             {t("ob.digest.pickFacts")}
           </Button>
-          {/* One Save for every line corrected in place, and only once one
-              has been: the deck's own Confirm is the way onward for a reader
-              who changed nothing, and a second button saying the same thing
-              beside an untouched record would be a choice with no difference. */}
+          {/* One Save for every corrected line, shown only once one is: an
+              untouched record already has the deck's Confirm, and a second
+              button saying the same would be a choice with no difference. */}
           {draft.edited.size > 0 && (
             <WayOnward
               label={t("ob.digest.saveChanges")}
@@ -1020,7 +1020,7 @@ export function CompanyAct({
               }
               note={
                 <p className="ob-stage-hint">
-                  {t("ob.digest.changed", {
+                  {plural("ob.digest.changed", draft.edited.size, {
                     count: formatNumber(draft.edited.size, locale),
                   })}
                 </p>
@@ -1035,6 +1035,7 @@ export function CompanyAct({
             {t("ob.deck.backToRecord")}
           </Button>
           <CompanyConfirmCard
+            companyId={companyId}
             proposal={reviewProposal}
             draft={draft}
             answers={clarify.answers}
@@ -1094,25 +1095,24 @@ export function CompanyAct({
         />
       }
       {/* The list of what still wants an answer is NOT here: the deck IS that
-          list, met one card at a time and counted in its own tray. Printing it
-          again underneath was the same outstanding work said twice, in a flat
-          order the reader was not being walked through. A failure that needs a
-          retry has no such home, so those stay. */}
+          list, met one card at a time and counted in its own tray, and a list
+          underneath says the same work twice in an order nobody walks. A
+          failure that needs a retry has no such home, so those stay. */}
       {startRead.isError && (
-        <p className="ob-conv-notice" role="alert">
+        <ErrorLine>
           {t("ob.gate.startFailed", {
             detail: safeStartError(startRead.error, t),
           })}
-        </p>
+        </ErrorLine>
       )}
       {clarify.failure && (
-        <p className="ob-conv-notice" role="alert">
+        <ErrorLine>
           {clarify.failure.kind === "request"
             ? t("ob.conv.clarify.applyFailed", {
                 detail: clarify.failure.detail,
               })
             : t("ob.conv.clarify.applyMissing")}
-        </p>
+        </ErrorLine>
       )}
     </ConversationWorkbench>
   );

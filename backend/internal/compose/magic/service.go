@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // LastBrief answers when the acting rep's overnight run last read the records.
@@ -33,16 +34,22 @@ type LastBrief interface {
 type Service struct {
 	pool  *pgxpool.Pool
 	brief LastBrief
-	// troubled is OPTIONAL: unbound, the could-not-complete lane reports the
-	// approvals half alone rather than refusing the page. An installation that
-	// runs no automations has nothing to say there, and a lane that failed
-	// because a seam was not wired would look exactly like one with nothing in
-	// it.
+	// troubled is OPTIONAL: unbound, the could-not-complete lane is empty rather
+	// than the page refusing. An installation that runs no automations has
+	// nothing to say there, and a lane that failed because a seam was not wired
+	// would look exactly like one with nothing in it.
 	troubled TroubledRuns
 	// undo is OPTIONAL for the same reason: unbound, every done line reads
 	// not-undoable with a stated reason rather than the page refusing.
 	undo UndoJudge
-	now  func() time.Time
+	// sources is OPTIONAL for the same reason: unbound, the watching lane is
+	// empty rather than the page refusing. An installation that captures from
+	// nothing has no source health to report.
+	sources SourceHealth
+	// pending is OPTIONAL for the same reason: unbound, the needs-you lane is
+	// empty rather than the page refusing.
+	pending PendingDecisions
+	now     func() time.Time
 }
 
 // NewService binds the read.
@@ -111,46 +118,106 @@ func (s *Service) Read(
 		if err != nil {
 			return err
 		}
-		receipt.Done = linesOf(entries, limit)
+		lines, housekeeping := linesOf(entries, limit)
 		// Asked after the lines are drawn and inside the page's own
 		// transaction: the judge reads the record each line names, and a
 		// second connection inside this one can deadlock against a lock it
 		// holds.
-		if err := s.judgeUndoOn(ctx, tx, receipt.Done); err != nil {
+		if err := s.judgeUndoOn(ctx, tx, lines); err != nil {
 			return err
 		}
-		receipt.NotShown = notShownOf(notShown)
-		failed, refused, err := s.couldNotComplete(ctx, from, limit)
+		// A line standing for many records has no single way back: the judge
+		// read one of its rows, and its answer about that row is not an answer
+		// about the rest. The line says nothing rather than something untrue.
+		for i := range lines {
+			if lines[i].Count != nil && *lines[i].Count > 1 {
+				lines[i].Undo = nil
+				continue
+			}
+			if lines[i].Entity != nil {
+				if err := attachVersion(ctx, tx, lines[i].Undo, lines[i].Entity.Type, ids.UUID(lines[i].Entity.Id)); err != nil {
+					return err
+				}
+			}
+		}
+		// Retention, as counts beside the records' own lines; it names no
+		// record, so it has nothing for the undo judge to read.
+		retention, err := retentionSince(ctx, tx, from)
 		if err != nil {
 			return err
 		}
-		receipt.CouldNotComplete = failed
-		if refused != nil {
-			receipt.SourcesUnavailable = append(receipt.SourcesUnavailable, *refused)
+		receipt.Done = mergeNewestFirst(retention, lines, limit)
+		if housekeeping > 0 {
+			notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnadmittedAction)] += housekeeping
 		}
-		// THE TOTALS COUNT WHAT IS DRAWN, and say so by being derived from the
-		// drawn lines rather than from the fetch behind them.
-		//
-		// An earlier version used len(entries), which is neither the page nor
-		// the window: each of the six arms applies the same LIMIT separately, so
-		// a bound of 100 could fetch 600 rows and report that as the total while
-		// the page held 100. A figure wrong in both directions is worse than no
-		// figure, because a client draws "5 of 23" from it and the 23 means
-		// nothing.
-		//
-		// A true window count needs its own COUNT per arm without the bound.
-		// That arrives with the cursor, which is the thing that makes a window
-		// total worth having; until then the honest claim is the smaller one.
-		receipt.Totals = crmcontracts.MagicTotals{
-			Done:             len(receipt.Done),
-			CouldNotComplete: len(failed),
-		}
+		receipt.NotShown = notShownOf(notShown)
 		return nil
 	})
 	if err != nil {
 		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
 	}
+	// THE OTHER THREE LANES READ OUTSIDE THAT TRANSACTION, and must.
+	//
+	// Each reaches its module through a seam that opens its own connection. Run
+	// inside the page's transaction they would hold one while acquiring a
+	// second, which at concurrency equal to the pool size is every request
+	// holding what the next one waits for. Only the done lane needs the page's
+	// snapshot, because only its undo judge reads the records its lines name.
+	if err := s.gatherSeamLanes(ctx, &receipt, from, limit); err != nil {
+		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
+	}
+	// THE TOTALS COUNT WHAT IS DRAWN, and say so by being derived from the
+	// drawn lines rather than from the fetch behind them. The fetch is neither
+	// the page nor the window: each of the six arms applies the same LIMIT
+	// separately, so a bound of 100 can pull 600 rows while the page holds 100,
+	// and a client drawing "5 of 23" from that reads a 23 that means nothing.
+	//
+	// A true window count needs its own COUNT per arm without the bound. That
+	// arrives with the cursor, which is the thing that makes a window total
+	// worth having; until then the honest claim is the smaller one.
+	receipt.Totals = crmcontracts.MagicTotals{
+		Done:             len(receipt.Done),
+		NeedsYou:         len(receipt.NeedsYou),
+		CouldNotComplete: len(receipt.CouldNotComplete),
+		Watching:         len(receipt.Watching),
+	}
 	return receipt, nil
+}
+
+// gatherSeamLanes fills the three lanes that come from a module rather than
+// from this page's own query, and names every source that refused.
+//
+// A refusal is COLLECTED, never short-circuited: one withheld lane must not
+// hide another, or an administrator who lost two grants is told about one.
+func (s *Service) gatherSeamLanes(
+	ctx context.Context, receipt *crmcontracts.MagicReceipt, from time.Time, limit int,
+) error {
+	failed, refused, err := s.couldNotComplete(ctx, from, limit)
+	if err != nil {
+		return err
+	}
+	receipt.CouldNotComplete = failed
+	waiting, queueRefused, err := s.needsYou(ctx, limit)
+	if err != nil {
+		return err
+	}
+	receipt.NeedsYou = waiting
+	// The window does not bound this lane. A standing condition is true now or
+	// it is not, and a mailbox that broke before the reader last looked is
+	// exactly the one they most need told about.
+	watched, sourceRefused, err := s.watching(ctx, receipt.AsOf)
+	if err != nil {
+		return err
+	}
+	receipt.Watching = watched
+	for _, unavailable := range []*crmcontracts.WorklistSourceUnavailable{
+		refused, queueRefused, sourceRefused,
+	} {
+		if unavailable != nil {
+			receipt.SourcesUnavailable = append(receipt.SourcesUnavailable, *unavailable)
+		}
+	}
+	return nil
 }
 
 // windowStart resolves what "since" means for this reader.

@@ -10,7 +10,11 @@ package agents
 // a conclusion not to draw, written for a reader that will otherwise draw it,
 // and maintaining them is a different job from the plumbing that carries them.
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+)
 
 // initialize answers the handshake era's opening call: the revision this
 // server will speak with THIS client, what it can do, and who it is.
@@ -73,7 +77,7 @@ func (s *Dispatcher) instructions() string {
 const surfaceInstructions = "A governed CRM tool surface. Every call re-authenticates and is bounded by " +
 	"the granting human's own permissions, so a tool may refuse a record this passport cannot " +
 	"reach. Tools that a human must approve say so in their own description; calling one " +
-	"stages the effect for review rather than performing it."
+	"stages the effect for review rather than performing it. " + mcp.ConflictingSourcesRule
 
 // queueInstruction is the REPORTING RULE, appended where the queue is served.
 //

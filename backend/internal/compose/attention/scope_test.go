@@ -9,6 +9,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -70,6 +71,56 @@ func TestTheOfferedScopesMatchTheReadersOwnReach(t *testing.T) {
 			if got[i] != option {
 				t.Fatalf("row scope %q was offered %v, wanted %v", tier, got, want)
 			}
+		}
+	}
+}
+
+// holds names which of the two team grants a test seat carries.
+type holds struct{ leads, oversees bool }
+
+// seat is a reader shaped like a role: its row scope, and which of the team
+// lead and team oversight grants it holds. Every one reads deals.
+func seat(tier principal.RowScope, grants holds) context.Context {
+	return principal.WithActor(context.Background(), principal.Principal{
+		Type:   principal.PrincipalHuman,
+		UserID: ids.MustParse("01a05500-0000-7000-8000-000000000001"),
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"team_lead":      {Read: grants.leads},
+				"team_oversight": {Read: grants.oversees},
+				"deal":           {Read: true},
+			},
+			RowScope: tier,
+		},
+	})
+}
+
+// The team's WEEK is offered apart from the team's WORK. A read-only seat keeps
+// the `team` worklist its row scope reaches and is not offered the week, which
+// is a lead's verdict on named colleagues; a custom team-scoped role that leads
+// nobody keeps its team worklist too.
+func TestTheTeamWeekIsOfferedApartFromTheTeamScope(t *testing.T) {
+	cases := []struct {
+		name   string
+		reader context.Context
+		week   crmcontracts.WorklistTeamWeek
+	}{
+		{"read_only", seat(principal.RowScopeAll, holds{}), crmcontracts.WorklistTeamWeekNone},
+		{"custom team-scoped seat", seat(principal.RowScopeTeam, holds{}), crmcontracts.WorklistTeamWeekNone},
+		{"custom team-scoped lead", seat(principal.RowScopeTeam, holds{leads: true}), crmcontracts.WorklistTeamWeekTeamsLed},
+		{"manager", seat(principal.RowScopeTeam, holds{leads: true}), crmcontracts.WorklistTeamWeekTeamsLed},
+		{"management", seat(principal.RowScopeAll, holds{leads: true, oversees: true}), crmcontracts.WorklistTeamWeekEveryTeam},
+		{"rep", seat(principal.RowScopeOwn, holds{}), crmcontracts.WorklistTeamWeekNone},
+	}
+	for _, tc := range cases {
+		if got := teamWeekFor(tc.reader); got != tc.week {
+			t.Errorf("%s was offered the week %q, wanted %q", tc.name, got, tc.week)
+		}
+		if tc.name == "rep" {
+			continue
+		}
+		if !slices.Contains(scopeOptionsFor(tc.reader), scopeTeam) {
+			t.Errorf("%s lost the team worklist its row scope reaches", tc.name)
 		}
 	}
 }

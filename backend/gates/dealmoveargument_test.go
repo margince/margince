@@ -51,7 +51,7 @@ var recordArgumentCases = []struct {
 	{"a request source", map[string]any{"request_activity_id": "01a05500-0000-7000-8000-0000000000a1"}, true},
 	{"a malformed request source", map[string]any{"request_activity_id": 42}, false},
 	// A generic task acts on its subject and links, without source evidence.
-	{"a verb with other arguments", map[string]any{"subject": "Agree the next step", "source": "ui"}, false},
+	{"a verb with other arguments", map[string]any{"subject": "Agree the next step", "source": "manual"}, false},
 	// firstOutreach builds its move with no arguments at all; the card
 	// normalizes that to an empty object rather than null.
 	{"an opening outreach", map[string]any{}, false},

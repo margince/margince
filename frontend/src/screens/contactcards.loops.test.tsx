@@ -168,7 +168,7 @@ describe("open tasks are commitments too", () => {
       screen.getAllByText(/Send the MCP whitepaper/).length,
     ).toBeGreaterThan(0);
     expect(screen.getByText("Open")).toBeDefined();
-    expect(screen.queryByText(/Nothing has been promised/)).toBeNull();
+    expect(screen.queryByText(/No commitments or questions/)).toBeNull();
   });
 
   it("reads an overdue task against the clock, like a claim", () => {
@@ -252,6 +252,6 @@ describe("open tasks are commitments too", () => {
       </StoryProviders>,
     );
 
-    expect(screen.getByText(/Nothing has been promised/)).toBeDefined();
+    expect(screen.getByText(/No commitments or questions/)).toBeDefined();
   });
 });

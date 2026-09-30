@@ -6,8 +6,8 @@ import {
 import { type ReactNode, useCallback, useState } from "react";
 import { api } from "../api/client";
 import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
-import { ENTITY, isEntityKind } from "../app/entity";
-import { navigate, type Route } from "../app/router";
+import { recordRoute } from "../app/entity";
+import { navigate } from "../app/router";
 import { Button, Card } from "../design-system/atoms";
 import {
   DecisionCard,
@@ -15,12 +15,14 @@ import {
   DecisionStatusChip,
   type DecisionStatusLabels,
 } from "../design-system/decisioncard";
+import { ErrorLine } from "../design-system/errorline";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
+import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   ApprovalDetailModal,
   DecideOutcome,
@@ -28,11 +30,7 @@ import {
   editableStrings,
   StagedEditor,
 } from "./approvaleditor";
-import {
-  approvalKindLabel,
-  resolveDisplay,
-  stagedDayFormatter,
-} from "./approvalkind";
+import { approvalKindLabel } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import { stagedSendOf } from "./approvalsend";
 import {
@@ -81,22 +79,16 @@ export function useDecisionSink(): {
   const [alreadyDecided, setAlreadyDecided] = useState(false);
   const onAlreadyDecided = useCallback(() => setAlreadyDecided(true), []);
   const decidedNote = alreadyDecided ? (
-    <Card
-      as="div"
-      inset
-      style={{
-        marginTop: "var(--space-3)",
-        display: "flex",
-        gap: "var(--space-2)",
-        alignItems: "center",
-      }}
-    >
-      <p style={{ color: "var(--dangerText)", flex: 1 }}>
+    <Card as="div" inset className="approval-decided">
+      <ErrorLine
+        actions={
+          <Button onClick={() => setAlreadyDecided(false)}>
+            {t("decision.dismiss")}
+          </Button>
+        }
+      >
         {t("decision.alreadyDecided")}
-      </p>
-      <Button onClick={() => setAlreadyDecided(false)}>
-        {t("decision.dismiss")}
-      </Button>
+      </ErrorLine>
     </Card>
   ) : null;
   return { onAlreadyDecided, decidedNote };
@@ -141,24 +133,6 @@ function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
     rejected: t("decision.status.rejected"),
     expired: t("decision.status.expired"),
   };
-}
-
-// The record page an approved change can be put back on, or undefined when
-// there is none.
-//
-// isEntityKind is the same question the breadcrumb asks before it links, and it
-// narrows the wire's free-form string to the five kinds with a record page. The
-// history panel serves one more — `activity` — which has no page to route to,
-// so a target of that kind is honestly not offered rather than linked into
-// nothing.
-export function recordRoute(
-  entityType: string | null | undefined,
-  entityID: string | null | undefined,
-): Route | undefined {
-  if (!entityID || !entityType || !isEntityKind(entityType)) {
-    return undefined;
-  }
-  return ENTITY[entityType].route(entityID);
 }
 
 export function ApprovalRow({

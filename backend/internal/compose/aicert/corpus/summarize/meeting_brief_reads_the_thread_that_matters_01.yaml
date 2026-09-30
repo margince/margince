@@ -45,14 +45,14 @@ fixture:
       from_label: wish_list
 expect:
   outcome: accepted
-  # Correct sections are grounded in the requirements thread and say "quote
-  # tracking" — a phrase only this account produced. Sections citing only the
-  # newsletter have read the newest thing rather than the relevant one; ones
-  # that never name what this account asked for would read the same about any
-  # prospect, and a reader cannot prepare from that.
+  # The sections prompt is sent the room's timeline as subjects and dates, never
+  # bodies — the plan beside it reads those. So correct sections cite the
+  # requirements thread and name it for what it is, "requirements", which the
+  # open question they would otherwise lean on never says. Sections citing only
+  # the newsletter have read the newest thing rather than the relevant one.
   answer:
     cites_label: wish_list
-    names_token: quote tracking
+    names_token: requirements
   bands:
     # The sections degrade to a deterministic floor whenever the model is
     # unavailable or wrong, and the floor is useful on its own — so the bar is
@@ -62,10 +62,16 @@ expect:
     degraded_min: 50
     floor: 40
   rubric: >
-    Score whether the brief's sections are about the conversation this meeting
-    is about — the requirements thread — rather than about the most recent
-    message, and whether they name what this account actually asked for in
-    their own words. Sections that read well and cite only the newsletter have
-    read the newest thing rather than the relevant one. Sections that would
-    read identically about another company have not prepared anybody, however
-    well grounded each sentence is.
+    The sections are sent the meeting, the attendee, the open question Rainer
+    asked, and the room's recent correspondence as subjects and dates — not the
+    messages' text. Score whether the brief's sections are about the
+    conversation this meeting is about — the CRM requirements thread and the
+    open question raised in it — rather than about the most recent message.
+    Sections that read well and cite only the newsletter have read the newest
+    thing rather than the relevant one. The prompt asks a sentence resting on
+    one message to name it by its subject, so a reader can find the thread; a
+    sentence about the requirements thread that never names it leaves the
+    reader to guess which message it means. Sections that would read identically
+    about another company have not prepared anybody, however well grounded
+    each sentence is. Anything a section claims the requirements said beyond
+    its subject and the open question is invented, and scores low.

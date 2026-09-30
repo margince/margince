@@ -59,7 +59,7 @@ func TestTheWorkerMarksItsCredentials(t *testing.T) {
 	for _, name := range []string{
 		"MARGINCE_DSN", "MARGINCE_GMAIL_CLIENT_SECRET", "MARGINCE_GRAPH_CLIENT_SECRET",
 		"MARGINCE_WEBHOOK_KEY", "MARGINCE_KEYVAULT_ROOT_KEY", "MARGINCE_LICENSE",
-		"BRAVE_SEARCH_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY",
+		"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY",
 	} {
 		if !secret[name] {
 			t.Errorf("%s authenticates something and is not marked Secret", name)

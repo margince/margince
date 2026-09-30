@@ -3,53 +3,47 @@
 
 package storekit
 
-// Whether the row already carries exactly the answer being offered.
-//
-// This decides whether the repair WRITES, so a wrong `true` skips a correction
-// and a wrong `false` restamps a record for nothing. The asymmetric cases are
-// the ones worth pinning: an offer that drops a seat id, or adds one, is a
-// different answer even when the name is identical, and a nil is not an empty
-// string.
-
 import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestOnlyAnIdenticalAnswerCountsAsUnchanged(t *testing.T) {
+// The author columns are numbered after the statement's own binds, so a create
+// with nineteen fixed args binds the author at $20 and $21 and a custom field
+// chained after them at $22.
+func TestTheAuthorPairIsNumberedAfterTheFixedBinds(t *testing.T) {
 	seat := ids.NewV7()
-	other := ids.NewV7()
 	name := "Mutaz Suleiman"
-	otherName := "Shayne Ahsan"
-	empty := ""
+	base := make([]any, 19)
 
-	ptr := func(s string) *string { return &s }
-	id := func(u ids.UUID) *ids.UUID { return &u }
+	cols, holders, args := AuthorInsertFragments(SourceAuthorInput{AuthorID: &seat, AuthorName: &name}, base)
 
-	for _, c := range []struct {
-		what      string
-		beforeID  *ids.UUID
-		beforeNam *string
-		in        SourceAuthorInput
-		same      bool
-	}{
-		{what: "both halves match", beforeID: id(seat), beforeNam: &name, same: true, in: SourceAuthorInput{AuthorID: id(seat), AuthorName: &name}},
-		{what: "name only, on a row carrying name only", beforeNam: &name, same: true, in: SourceAuthorInput{AuthorName: &name}},
-		{what: "seat only, on a row carrying seat only", beforeID: id(seat), same: true, in: SourceAuthorInput{AuthorID: id(seat)}},
-		{what: "a different name under the same seat", beforeID: id(seat), beforeNam: &name, in: SourceAuthorInput{AuthorID: id(seat), AuthorName: &otherName}},
-		{what: "a different seat under the same name", beforeID: id(seat), beforeNam: &name, in: SourceAuthorInput{AuthorID: id(other), AuthorName: &name}},
-		{what: "the offer DROPS the seat the row carries", beforeID: id(seat), beforeNam: &name, in: SourceAuthorInput{AuthorName: &name}},
-		{what: "the offer ADDS a seat the row lacks", beforeNam: &name, in: SourceAuthorInput{AuthorID: id(seat), AuthorName: &name}},
-		{what: "nothing stored yet", in: SourceAuthorInput{AuthorName: &name}},
-		{what: "an empty name is not an absent one", beforeNam: ptr(empty), in: SourceAuthorInput{AuthorName: &name}},
-		{what: "a stored name against an EMPTY offered one", beforeNam: &name, in: SourceAuthorInput{AuthorName: ptr(empty)}},
-		{what: "an absent stored name against an empty offered one", in: SourceAuthorInput{AuthorName: ptr(empty)}},
-		{what: "an empty stored name against an empty offered one", beforeNam: ptr(empty), same: true, in: SourceAuthorInput{AuthorName: ptr(empty)}},
-	} {
-		before := SourceAuthorBefore{ID: c.beforeID, Name: c.beforeNam}
-		if got := before.Same(c.in); got != c.same {
-			t.Errorf("%s: Same = %v, want %v", c.what, got, c.same)
-		}
+	if cols != ", source_author_id, source_author_name" {
+		t.Errorf("cols = %q", cols)
+	}
+	if holders != ", $20, $21" {
+		t.Errorf("placeholders = %q, want \", $20, $21\"", holders)
+	}
+	if len(args) != 21 || args[19] != &seat || args[20] != &name {
+		t.Errorf("the pair is not bound at the end of the args: %d args", len(args))
+	}
+	if len(base) != 19 {
+		t.Errorf("the caller's base slice was written through: len %d", len(base))
+	}
+}
+
+// No author still binds both columns, as NULL, so every create spells one
+// statement rather than two.
+func TestNoAuthorBindsTwoNulls(t *testing.T) {
+	_, holders, args := AuthorInsertFragments(SourceAuthorInput{}, []any{"x"})
+
+	if holders != ", $2, $3" {
+		t.Errorf("placeholders = %q", holders)
+	}
+	id, idOK := args[1].(*ids.UUID)
+	name, nameOK := args[2].(*string)
+	if !idOK || !nameOK || id != nil || name != nil {
+		t.Errorf("an empty author must bind two typed NULLs, got %#v", args[1:])
 	}
 }

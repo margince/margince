@@ -13,7 +13,7 @@ import { FilterPills } from "./filterpills";
 // whose count is absent, which is not a zero — it is a cut nobody has finished
 // counting yet.
 const meta: Meta<typeof FilterPills> = {
-  title: "Design System/FilterPills",
+  title: "Components/Forms and input/Filter pills",
   component: FilterPills,
   parameters: { layout: "padded" },
   decorators: [
@@ -41,7 +41,7 @@ function Live(props: Readonly<{ initial: Cut; layout?: "row" | "list" }>) {
       layout={props.layout}
       pills={[
         { value: "all", label: "All", count: 42 },
-        { value: "conversations", label: "Conversations", count: 18 },
+        { value: "conversations", label: "Threads", count: 18 },
         // A paged read that hit `has_more`: the server knows the cut holds AT
         // LEAST this many, not exactly this many, so no figure is drawn.
         { value: "changes", label: "Changes" },

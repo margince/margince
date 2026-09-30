@@ -136,13 +136,13 @@ func TestRecordWritesEveryAttemptOfOneLogicalCallInOneTransaction(t *testing.T) 
 	terminalPayload := &ai.Payload{Request: json.RawMessage(`{"messages":[]}`), Response: json.RawMessage(`{"text":"ok"}`)}
 	attempts := []ai.Call{
 		{
-			LogicalCallID: logical, Attempt: 1, IsTerminal: false, AttemptReason: "provider_error",
+			LogicalCallID: logical, Attempt: 1, IsTerminal: false,
 			Kind: "completion", Task: ai.TaskSummarize, Tier: ai.TierPremium,
 			Provider: "anthropic", ModelID: "claude-premium", ServedIdentitySource: "response",
 			RequestFingerprint: "fp-multi", ErrorSentinel: "provider_error",
 		},
 		{
-			LogicalCallID: logical, Attempt: 2, IsTerminal: true,
+			LogicalCallID: logical, Attempt: 2, IsTerminal: true, AttemptReason: "provider_error",
 			Kind: "completion", Task: ai.TaskSummarize, Tier: ai.TierCheapCloud,
 			Provider: "openai", ModelID: "gpt-cheap", ServedIdentitySource: "response",
 			RequestFingerprint: "fp-multi", TokensIn: 5, TokensOut: 3,
@@ -188,10 +188,10 @@ func TestRecordWritesEveryAttemptOfOneLogicalCallInOneTransaction(t *testing.T) 
 		if len(got) != 2 {
 			t.Fatalf("scanned %d rows, want 2", len(got))
 		}
-		if got[0].attempt != 1 || got[0].terminal || got[0].reason != "provider_error" || got[0].tier != "premium" {
+		if got[0].attempt != 1 || got[0].terminal || got[0].reason != "" || got[0].tier != "premium" {
 			t.Errorf("attempt 1 wrong: %+v", got[0])
 		}
-		if got[1].attempt != 2 || !got[1].terminal || got[1].tier != "cheap_cloud" {
+		if got[1].attempt != 2 || !got[1].terminal || got[1].reason != "provider_error" || got[1].tier != "cheap_cloud" {
 			t.Errorf("attempt 2 wrong: %+v", got[1])
 		}
 		return nil

@@ -6,6 +6,7 @@ import { navigate } from "../app/router";
 import { Button, Field } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import {
   liveProjects,
   type PickableProject,
@@ -62,6 +63,11 @@ import {
 import { deadRecipientsAmong } from "./composereachability";
 import { RELINK_KINDS, type RelinkKind, RelinkModal } from "./composerelink";
 import {
+  type SavedDraftFields,
+  SavedDraftNotices,
+  useSavedDraft,
+} from "./composesaveddraft";
+import {
   momentLabel,
   momentOf,
   ScheduleDialog,
@@ -91,15 +97,10 @@ import { useSendPermission } from "./usesendpermission";
 import { useVoiceProfile } from "./voice-profile";
 import "./compose.css";
 
-// The composer surface for the three already-routed ops (draftEmail /
-// sendEmail / relinkActivity): a human's edit-then-confirm reply, and a
-// mis-captured activity's relink. Pure frontend — every op is live, audited,
-// and typed on the backend; this file only calls them.
-
+// The composer reviews replies, first messages and relinks before submitting.
 type Activity = components["schemas"]["Activity"];
 type EmailDraft = components["schemas"]["EmailDraft"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
-
 // What a drafting call reported about the text it produced. Held apart from the
 // fields it filled because the disclosure is owed for the call that put model
 // output on this surface, whatever the human then does to the words.
@@ -395,6 +396,50 @@ async function draftFromLead({
     params: { path: { id: entityId } },
     body: intent.trim() ? { intent: intent.trim() } : {},
   });
+  return draftAnswer(response, error, data, t);
+}
+
+// The contact-started draft: the composer's "Write email" on a contact.
+//
+// The mirror of the account path, and simpler for one reason — the record in
+// the path is the recipient, so there is nobody to name. It takes the project
+// when the rep attributed the message to one, exactly as the account path does,
+// so the grounding read drops correspondence filed under the others.
+//
+// Answers the same `{available, draft}` shape as the three beside it, so the
+// fill cannot tell the origins apart and they cannot drift into different
+// clobber rules.
+/**
+ * What the caller is asking FOR, on either route: their own words, and the
+ * draft those words are about when there is one.
+ *
+ * Omitted rather than sent empty. The server reads an absent `rewrite_of` as a
+ * first draft, so a blank string would ask it to revise an empty composer —
+ * and both routes have to agree about that, which is why this is one function
+ * rather than the same two lines twice.
+ */
+/**
+ * What a draft route makes of its answer.
+ *
+ * `501` is the deployment saying it has no model lane — a fact about the stack
+ * rather than a failure this page can act on, and the one answer the rep is
+ * told about in those words.
+ *
+ * Success is a real 2xx WITH a draft body, never merely the absence of an
+ * error: openapi-fetch reports a falsy `error` and undefined `data` for a
+ * bodiless non-2xx (a gateway 502/503/504), which would otherwise fall through
+ * as a fabricated draft and crash the fill on undefined fields.
+ *
+ * Shared because three routes reading one answer their own way is how the
+ * contact page came to report "the model is not configured" on a stack that
+ * was answering every other AI call on the same screen.
+ */
+function draftAnswer(
+  response: Response,
+  error: unknown,
+  data: DraftedPayload | undefined,
+  t: ReturnType<typeof useT>,
+): DraftResult {
   if (response.status === 501) {
     return { available: false as const, reason: "no_model" as const };
   }
@@ -409,25 +454,24 @@ async function draftFromLead({
   };
 }
 
-// The contact-started draft: the composer's "Write email" on a contact.
-//
-// The mirror of the account path, and simpler for one reason — the record in
-// the path is the recipient, so there is nobody to name. It takes the project
-// when the rep attributed the message to one, exactly as the account path does,
-// so the grounding read drops correspondence filed under the others.
-//
-// Answers the same `{available, draft}` shape as the three beside it, so the
-// fill cannot tell the origins apart and they cannot drift into different
-// clobber rules.
+function steering(intent: string, rewriteOf: string) {
+  return {
+    ...(intent.trim() ? { intent: intent.trim() } : {}),
+    ...(rewriteOf.trim() ? { rewrite_of: rewriteOf.trim() } : {}),
+  };
+}
+
 async function draftFromContact({
   entityId,
   projectId,
   intent,
+  rewriteOf,
   t,
 }: Readonly<{
   entityId: string;
   projectId: string;
   intent: string;
+  rewriteOf: string;
   t: ReturnType<typeof useT>;
 }>): Promise<DraftResult> {
   const { data, error, response } = await api.POST(
@@ -436,22 +480,11 @@ async function draftFromContact({
       params: { path: { id: entityId } },
       body: {
         ...(projectId ? { project_id: projectId } : {}),
-        ...(intent.trim() ? { intent: intent.trim() } : {}),
+        ...steering(intent, rewriteOf),
       },
     },
   );
-  if (response.status === 501) {
-    return { available: false as const, reason: "no_model" as const };
-  }
-  if (!response.ok || !data) {
-    throwProblem(error || { title: t("compose.actionFailed") });
-  }
-  return {
-    available: true as const,
-    draft: data,
-    reasoning: data.reasoning,
-    scope: data.scope,
-  };
+  return draftAnswer(response, error, data, t);
 }
 
 // The account-started draft (ADR-0087/A132). It grounds itself in the account
@@ -469,6 +502,7 @@ async function draftFromAccount({
   dealId,
   projectId,
   intent,
+  rewriteOf,
   t,
 }: Readonly<{
   entityType: RelinkKind;
@@ -477,6 +511,10 @@ async function draftFromAccount({
   dealId: string;
   projectId: string;
   intent: string;
+  // What the composer is SHOWING. Without it "make it shorter" is a second
+  // grounded draft from the same record rather than a shorter version of this
+  // one, and the rep's edits go with it.
+  rewriteOf: string;
   t: ReturnType<typeof useT>;
 }>): Promise<DraftResult> {
   // A LEAD grounds its own. The record IS the recipient — the address is on it
@@ -493,7 +531,7 @@ async function draftFromAccount({
   // below and told the rep the model was not configured while making no request
   // at all, on a deployment answering every other AI call on the same screen.
   if (entityType === "contact") {
-    return draftFromContact({ entityId, projectId, intent, t });
+    return draftFromContact({ entityId, projectId, intent, rewriteOf, t });
   }
   // A company page has to be told which contact, because an account has many.
   // A deal grounds nothing here: writing to a contact from whatever account
@@ -513,22 +551,11 @@ async function draftFromAccount({
         // the draft in the 360 SCOPED to it, so the other projects'
         // correspondence never reaches the model.
         ...(projectId ? { project_id: projectId } : {}),
-        ...(intent.trim() ? { intent: intent.trim() } : {}),
+        ...steering(intent, rewriteOf),
       },
     },
   );
-  if (response.status === 501) {
-    return { available: false as const, reason: "no_model" as const };
-  }
-  if (!response.ok || !data) {
-    throwProblem(error || { title: t("compose.actionFailed") });
-  }
-  return {
-    available: true as const,
-    draft: data,
-    reasoning: data.reasoning,
-    scope: data.scope,
-  };
+  return draftAnswer(response, error, data, t);
 }
 
 // What either drafting path answers.
@@ -547,6 +574,16 @@ async function draftFromAccount({
 // missing provider that was never missing: the contact page simply made no
 // request at all.
 export type DraftUnavailable = "no_model" | "unsupported_origin";
+
+// What a draft route's 2xx body carries, as the fill reads it. The two shapes
+// are not the same — only the account draft answers `reasoning` and `scope` —
+// so both are optional here rather than intersecting the contract types, which
+// would make every optional field of one optional on both and stop the fill
+// noticing when a required field went missing.
+type DraftedPayload = Extract<DraftResult, { available: true }>["draft"] & {
+  reasoning?: components["schemas"]["AccountDraftReason"][];
+  scope?: ProjectScope;
+};
 
 type DraftResult =
   | { available: false; reason: DraftUnavailable }
@@ -784,6 +821,7 @@ async function sendFrom(args: {
     // this is a set of references and never bytes.
     attachment_ids?: string[];
     draft_ref?: string;
+    mail_draft_id?: string;
     // OMITTED on a reply, deliberately. The engine resolves reply_to_inbound
     // from the anchor, and a claim added on top could only agree with it or
     // contradict it — and a contradiction is recorded as a claim the evidence
@@ -1023,9 +1061,7 @@ function MailSendNotices({
   return (
     <>
       {sharedUnsubscribeAhead(to, cc, context) && (
-        <p style={{ color: "var(--dangerText)" }}>
-          {t("compose.multiRecipientWarning")}
-        </p>
+        <ErrorLine standing>{t("compose.multiRecipientWarning")}</ErrorLine>
       )}
     </>
   );
@@ -1094,6 +1130,10 @@ function useDraftMutation({
       resetUnavailable();
       const { grounding, activityId, entityType } = ask;
       const intentOf = ask.instruction ?? ask.intent;
+      // The body on screen, when there is one. An `instruction` is the rewrite
+      // verb the composer offers over an existing draft; a first draft carries
+      // none and sends nothing to rewrite.
+      const rewriteOf = ask.instruction ? ask.body : "";
       // A reply answers the message it is anchored to; an account-started
       // message has none, so it is grounded in the account itself and needs
       // the recipient named first.
@@ -1105,6 +1145,7 @@ function useDraftMutation({
         entityId: ask.entityId,
         ...grounding,
         intent: intentOf,
+        rewriteOf,
         t,
       });
     },
@@ -1304,6 +1345,7 @@ const NO_TRANSPORTS: readonly Transport[] = [];
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this modal was already at the ceiling; the account-started origin (ADR-0087/A132) adds three necessary branches — the recipient/deal pickers, the grounded-draft gate and the drawer placement, and the transport dial adds the fourth. The head, the attachment shelf, the drafting call, the form fill, the body edit and both draft controls are extracted (composehead.tsx, composeattachments.tsx); what is left is one dialog's own wiring, and splitting the send/consent/refusal/voice flow apart from the fields it gates would scatter it.
 export function ComposeModal({
+  initialMessage,
   activityId,
   entityType,
   entityId,
@@ -1324,6 +1366,7 @@ export function ComposeModal({
   // behaviour below is shared rather than forked. A reply keeps threading and
   // inherits its links; an account-started message roots its own thread and
   // files itself under the record it was started from.
+  initialMessage?: Readonly<{ subject: string; body: string }>;
   activityId?: string;
   entityType: RelinkKind;
   entityId: string;
@@ -1410,11 +1453,11 @@ export function ComposeModal({
   // stays open, because a field holding a value may never be hidden.
   const [bcc, setBcc] = useState<string[]>([]);
   const [bccOpen, setBccOpen] = useState(false);
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(initialMessage?.subject ?? "");
   // The two renderings of one message: `body` is what a text client receives and
   // what every gate reads, `html` the markup alternative beside it. Both travel,
   // because the wire is multipart/alternative.
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(initialMessage?.body ?? "");
   const [html, setHtml] = useState("");
   // Uploads may finish after switching; their callback retains its target's bank.
   const [filesByTarget, setFilesByTarget] = useState<
@@ -1958,6 +2001,28 @@ export function ComposeModal({
     },
   });
 
+  const restoreFields = useCallback((saved: SavedDraftFields) => {
+    draftEpoch.current += 1;
+    offered.current = true;
+    setTo([...saved.to]);
+    setCc([...saved.cc]);
+    setBcc([...saved.bcc]);
+    if (saved.bcc.length > 0) setBccOpen(true);
+    setSubject(saved.subject);
+    setBody(saved.body);
+    setHtml(saved.html);
+    setDraftRef(null);
+    setProvenance(null);
+  }, []);
+  const savedDraft = useSavedDraft({
+    where: { answering, entityType, entityId, isChannelReply },
+    open,
+    fields: { to, cc, bcc, subject, body, html },
+    replyTo: anchorActivity,
+    offeredRecipient: offeredAddress.current,
+    onRestore: restoreFields,
+    onClose,
+  });
   const send = useMutation({
     mutationKey: ["email", entityId],
     // The grounding is the variable, not a closure read: a stale closure
@@ -1986,6 +2051,7 @@ export function ComposeModal({
         setSendUnavailable(true);
         return;
       }
+      savedDraft.sent();
       for (const queryKey of entityTimelineKeys(entityType, entityId)) {
         queryClient.invalidateQueries({ queryKey });
       }
@@ -2284,7 +2350,7 @@ export function ComposeModal({
       <ConfirmModal
         initialFocusTo={() => document.getElementById(bodyId)}
         open={open}
-        onClose={onClose}
+        onClose={savedDraft.requestClose}
         title={t(
           isChannelReply
             ? "compose.sendMessageConfirmTitle"
@@ -2311,8 +2377,9 @@ export function ComposeModal({
         // The button stays live with fields outstanding. Grey, it refused
         // without saying what for, and the reader was left comparing the form
         // against a control that would not answer. It is disabled only while a
-        // rejection is in flight, which is a genuine "not now".
-        confirmDisabled={rejectionInFlight}
+        // rejection or a draft save is in flight, each a genuine "not now": a
+        // send racing a first save would leave without the draft it discards.
+        confirmDisabled={rejectionInFlight || savedDraft.saving}
         onConfirm={() => {
           // A missing field or a carriage block keeps the press from sending;
           // marking and focusing is harmless when only the latter is present.
@@ -2337,6 +2404,7 @@ export function ComposeModal({
               bcc: bcc.length ? bcc : undefined,
               attachment_ids: attachmentIds,
               draft_ref: draftRef ?? undefined,
+              mail_draft_id: savedDraft.held?.id,
               communication_context: claimedContext,
               ...scheduleFields(sendAt),
             },
@@ -2353,7 +2421,7 @@ export function ComposeModal({
           });
         }}
         pending={send.isPending}
-        error={sendError}
+        error={sendError ?? savedDraft.error}
         // The mark leads the footer row, before discard and the send controls:
         // it is what a rep checks before pressing anything. The Callout in the
         // body explains a refusal; this says the engine looked and found
@@ -2379,6 +2447,15 @@ export function ComposeModal({
                 title={t("compose.discardDraftHint")}
               >
                 {t("compose.discardDraft")}
+              </Button>
+            )}
+            {savedDraft.enabled && (
+              <Button
+                onClick={savedDraft.save}
+                pending={savedDraft.saving}
+                disabled={send.isPending || rejectionInFlight}
+              >
+                {t("compose.saveDraft")}
               </Button>
             )}
           </>
@@ -2421,6 +2498,7 @@ export function ComposeModal({
             />
           )}
           <div className="compose-fields">
+            <SavedDraftNotices draft={savedDraft} />
             {draftKept && <p role="status">{t("compose.draftKept")}</p>}
             {/* HOW this is going, above everything that depends on it. A reader
             who changes the dial changes what the rest of the head even is —
@@ -2623,13 +2701,9 @@ export function ComposeModal({
             )}
             {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
             {/* The rejection failed, and the rep has to be told: the judgment is
-            still open and the words on screen are still the ones it names.
-            Announced rather than merely coloured, on the same terms as every
-            other failure in this drawer. */}
+            still open and the words on screen are still the ones it names. */}
             {discardControl?.error && (
-              <p role="alert" style={{ color: "var(--dangerText)" }}>
-                {discardControl.error}
-              </p>
+              <ErrorLine>{discardControl.error}</ErrorLine>
             )}
             <SendRefusal
               refusal={refusal}

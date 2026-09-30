@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
-import { CommercialPanel, DealsCard } from "./company360";
+import { DealsCard } from "./company360";
 
 // Money on this page is an integer minor amount PLUS its ISO currency, and the
 // wire may carry either half alone. Neither absence has a safe default, and the
@@ -18,8 +18,8 @@ import { CommercialPanel, DealsCard } from "./company360";
 //     RangeError on an empty currency code, so a page that reaches for one takes
 //     the whole record down, navigation rail included.
 //
-// Both readings therefore go through formatMoneyOrAbsent, and both suites below
-// mount the panels directly: the account page renders them from a composite read
+// Both readings therefore go through formatMoneyOrAbsent, and the suite below
+// mounts the panel directly: the account page renders it from a composite read
 // whose deals section a stub would have to fake anyway.
 
 type Company360 = components["schemas"]["Company360"];
@@ -112,24 +112,5 @@ describe("DealsCard — a money reading with one half missing", () => {
 
     expect(screen.getByText("Retrofit rollout")).toBeTruthy();
     expect(screen.getByText(MONEY_ABSENT)).toBeTruthy();
-  });
-});
-
-describe("CommercialPanel — the same two readings, one card up", () => {
-  it("holds the lifetime slot with an absence rather than a fabricated total", () => {
-    render(
-      <CommercialPanel
-        view={view(
-          dealsSection({ amount_minor: 4_200_000, currency: null }, [
-            UNLABELLED_DEAL,
-          ]),
-        )}
-      />,
-    );
-
-    // The label keeps its slot, so the reader sees WHICH figure is missing —
-    // and the deal row beside it is the second reading of the same field.
-    expect(screen.getByText("Won to date")).toBeTruthy();
-    expect(screen.getAllByText(MONEY_ABSENT).length).toBe(2);
   });
 });

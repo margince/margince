@@ -14,16 +14,3 @@
   flex: 1;
   min-inline-size: 0;
 }
-
-/* What a pressed Send is still waiting for, under the field it waits on. The
-   danger tone is the same one a send-time refusal gets, and it sits tight to the
-   control so the message and the thing to fix are read as one.
-
-   BOTH classes, not one: `.t-caption` carries the size and sets its own colour at
-   the same specificity, so a single class left the message grey whenever the
-   bundler put the base sheet last. The pairing states the override rather than
-   depending on file order. */
-.t-caption.compose-need {
-  color: var(--dangerText);
-  margin-top: var(--space-1);
-}

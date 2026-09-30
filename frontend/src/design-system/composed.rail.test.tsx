@@ -16,6 +16,7 @@ describe("the timeline's rail marks who wrote", () => {
   it("draws an agent's change indigo, a contact's hollow, and an exchange solid", () => {
     const { container } = render(
       <RecordView
+        identity="r-1"
         name="Anna Weber"
         // No date is asserted here: the rail's marks are what is under test,
         // and the zone is only the shape the view requires.

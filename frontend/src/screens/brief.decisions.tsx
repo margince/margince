@@ -15,6 +15,7 @@ import {
   type DecisionDeckItem,
   type DecisionDeckLabels,
 } from "../design-system/decisiondeck";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import type { SectionState } from "../design-system/surfacestate";
 import { useToast } from "../design-system/toast";
@@ -31,11 +32,8 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  approvalKindLabel,
-  resolveDisplay,
-  stagedDayFormatter,
-} from "./approvalkind";
+import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
+import { approvalKindLabel } from "./approvalkind";
 import { commitTray } from "./brief.decisions.commit";
 import { problemMessageOf, provenanceOf, useViewerId } from "./common";
 import { worklistLaneHref } from "./worklist.header";
@@ -266,7 +264,7 @@ export function DecisionsSection({
         state={state}
         loadingLabel={t("brief.panel.decisions")}
         commitState={commitState}
-        notice={notice ? <p className="brief-error">{notice}</p> : undefined}
+        notice={notice ? <ErrorLine>{notice}</ErrorLine> : undefined}
         onCommit={(staged) => commit.mutate({ staged, items })}
         // The four facts a reader needs BEFORE they say yes, and none of them
         // is the deck's to know: which agent tier staged this, what kind of act

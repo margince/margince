@@ -1,0 +1,98 @@
+{
+  "task": "growth_fit",
+  "provider": "ollama",
+  "served_model": "gemma4:12b",
+  "env_class": "sovereign",
+  "prompt_version": "p50dbbecfac204c7d3eb870fd191496f1",
+  "corpus_version": "v1",
+  "verdict": "not_supported",
+  "runs": 18,
+  "passed": 10,
+  "reliability": 0.5555555555555556,
+  "reported_accepted": 10,
+  "reported_wrong_answer": 5,
+  "reported_invalid": 0,
+  "reported_abstained": 3,
+  "certified_scope": "full_invocation",
+  "context_applied": true,
+  "context_scopes": [
+    "offer",
+    "positioning",
+    "proof"
+  ],
+  "judge_score_p50": 81,
+  "judge_score_min": 65,
+  "latency_p50": 109540,
+  "latency_p95": 123468,
+  "mean_tokens": 3115,
+  "mean_tokens_in": 1983,
+  "mean_tokens_out": 1131,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 0,
+  "judge_served_model": "claude-sonnet-4-6",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "ran_at": "2026-09-29T06:00:12Z",
+  "scenarios": [
+    {
+      "scenario": "growth_fit_reads_their_facts_against_our_offering",
+      "site": "growth_fit",
+      "stamp": "d002337807c62e9e616efe90a373f832791ed1064ab2ab16150474cb402f388937f6df99f903014467c9cce61e28511ebb9fd0271db1897500f4e861dce6372599a8f235b92b702391046076fbabcbff83904dedd7eb8bb30097882e29de1669",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 9,
+      "passed": 5,
+      "judge_scores": [
+        83,
+        87,
+        73,
+        65,
+        81,
+        75,
+        70,
+        84,
+        76
+      ],
+      "bands": {
+        "certified_min": 75,
+        "degraded_min": 55,
+        "floor": 45
+      },
+      "reported_accepted": 5,
+      "reported_wrong_answer": 3,
+      "reported_invalid": 0,
+      "reported_abstained": 1
+    },
+    {
+      "scenario": "growth_fit_calls_a_company_outside_our_market_weak",
+      "site": "growth_fit",
+      "stamp": "aada1330e0a60630ed627dadccb6ac6b523ef14b502aa544fa729057ccbd033ccbfeb9c4893c8a7b4c02eba4df2a1165d420fdbc3484ed7659bb5223227b18365cee077a0f1d803f1484a05f844daa7cc1bcbaae3c69c4b9c214d5303e6ac278",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 9,
+      "passed": 5,
+      "judge_scores": [
+        88,
+        68,
+        83,
+        82,
+        80,
+        82,
+        88,
+        77,
+        83
+      ],
+      "bands": {
+        "certified_min": 75,
+        "degraded_min": 55,
+        "floor": 45
+      },
+      "reported_accepted": 5,
+      "reported_wrong_answer": 2,
+      "reported_invalid": 0,
+      "reported_abstained": 2
+    }
+  ]
+}

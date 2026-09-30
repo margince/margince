@@ -249,3 +249,90 @@ func TestModelRateOverwriteAuditsAsUpdate(t *testing.T) {
 func pinnedRateDay() time.Time {
 	return time.Date(2026, time.August, 5, 0, 0, 0, 0, time.UTC)
 }
+
+// modelRateEntry seeds one model's entry through the real writer: a price in
+// force filed under `first`, and one scheduled a week out filed under `head`,
+// so the sheet files the model as `head` while an older row still says `first`.
+func modelRateEntry(ctx context.Context, t *testing.T, store *ai.RateStore, model string, first, head ai.Lane, today time.Time) {
+	t.Helper()
+	for _, row := range []struct {
+		day  time.Time
+		lane ai.Lane
+	}{{today, first}, {today.AddDate(0, 0, 7), head}} {
+		if _, err := store.SetModelRate(ctx, ai.SetModelRateInput{
+			Provider: "anthropic", ModelID: model, Lane: row.lane,
+			InputUsd: "1", OutputUsd: "2", CacheReadUsd: "0", CacheWriteUsd: "0",
+			EffectiveDate: row.day,
+		}); err != nil {
+			t.Fatalf("seed %s on %s: %v", model, row.day.Format(time.DateOnly), err)
+		}
+	}
+}
+
+// Removing an entry takes every date of it, the rows an earlier filing left
+// under another lane included, and nothing beside it; records what each row
+// said; and is a not-found the second time, so a retry cannot pretend it
+// removed something. The lane names the entry as the sheet files it (its head
+// row), so the wrong lane is a miss rather than a removal of somebody else's.
+func TestModelRateDeleteRemovesTheWholeEntryAndNothingElse(t *testing.T) {
+	e := Setup(t)
+	today := pinnedRateDay()
+	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	ctx := e.Admin()
+	modelRateEntry(ctx, t, store, "typo/jev-latest", ai.LaneChat, ai.LaneDecisions, today)
+	modelRateEntry(ctx, t, store, "claude-opus-4-8", ai.LaneChat, ai.LaneChat, today)
+	modelRateEntry(ctx, t, store, "voyage-3", ai.LaneEmbeddings, ai.LaneEmbeddings, today)
+
+	err := store.DeleteModelRate(ctx, ai.ModelRateKey{Provider: "anthropic", ModelID: "typo/jev-latest", Lane: ai.LaneChat})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("delete under the lane of an older row = %v, want ErrNotFound (the sheet files the model as decisions)", err)
+	}
+	if err := store.DeleteModelRate(ctx, ai.ModelRateKey{Provider: "anthropic", ModelID: "typo/jev-latest", Lane: ai.LaneDecisions}); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM ai_model_rate WHERE provider='anthropic' AND model_id='typo/jev-latest'`); n != 0 {
+		t.Fatalf("rows left for the removed entry = %d, want 0 (both dates go, the chat-filed one included)", n)
+	}
+	for _, kept := range []string{"claude-opus-4-8", "voyage-3"} {
+		if n := e.WsCount(t, `SELECT count(*) FROM ai_model_rate WHERE provider='anthropic' AND model_id=$1`, kept); n != 2 {
+			t.Fatalf("rows for %s = %d, want 2 (an unrelated entry is untouched)", kept, n)
+		}
+	}
+	// One ledger row per removed price, each carrying the price and the lane
+	// that row held.
+	for lane, want := range map[string]int{"chat": 1, "decisions": 1} {
+		if n := e.WsCount(t, `SELECT count(*) FROM audit_log
+			WHERE entity_type='ai_model_rate' AND action='erase'
+			  AND before->>'model_id'='typo/jev-latest' AND before->>'lane'=$1
+			  AND (before->>'input_microusd')::bigint = 1000000`, lane); n != want {
+			t.Fatalf("erase audit rows for the removed %s-filed price = %d, want %d", lane, n, want)
+		}
+	}
+
+	err = store.DeleteModelRate(ctx, ai.ModelRateKey{Provider: "anthropic", ModelID: "typo/jev-latest", Lane: ai.LaneDecisions})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("second delete = %v, want ErrNotFound", err)
+	}
+}
+
+// The removal is a correction: the update grant alone carries it through the
+// transaction, and create alone is refused at the door.
+func TestModelRateDeleteTakesTheUpdateGrant(t *testing.T) {
+	e := Setup(t)
+	today := pinnedRateDay()
+	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	modelRateEntry(e.Admin(), t, store, "m", ai.LaneChat, ai.LaneChat, today)
+	key := ai.ModelRateKey{Provider: "anthropic", ModelID: "m", Lane: ai.LaneChat}
+
+	creator := e.As(e.Rep1, nil, modelRatePerms(principal.ObjectGrant{Create: true, Read: true}))
+	if err := store.DeleteModelRate(creator, key); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("create-only delete = %v, want ErrPermissionDenied", err)
+	}
+	updater := e.As(e.Rep1, nil, modelRatePerms(principal.ObjectGrant{Update: true, Read: true}))
+	if err := store.DeleteModelRate(updater, key); err != nil {
+		t.Fatalf("update-only delete: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM ai_model_rate WHERE provider='anthropic' AND model_id='m'`); n != 0 {
+		t.Fatalf("rows after the update-only delete = %d, want 0", n)
+	}
+}

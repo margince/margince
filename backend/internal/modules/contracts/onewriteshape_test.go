@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // An update to a contract row is four things that must happen together: the
@@ -48,8 +50,7 @@ const updateShapeOwner = "applyContractUpdate"
 // because the shorter sentence read as covering both.
 const updateEvent = "PublicEventContractUpdated"
 
-// contractsPackage is where the event type is declared, and contractsDir is
-// that package's directory relative to this one.
+// contractsPackage is where the event type is declared.
 //
 // The gate resolves each file's own name for the type rather than assuming one:
 // a file that imported the package as `cc`, or dot-imported it, names the same
@@ -60,11 +61,11 @@ const updateEvent = "PublicEventContractUpdated"
 // directory. They differ here — the directory is `contracts` and the package is
 // `crmcontracts` — so an unaliased import binds `crmcontracts`, and a census
 // built on the directory name hunts a string no file in this tree can produce.
-// That is the fail-short direction again, so the name is derived and its
-// absence is fatal rather than empty.
+// That is the fail-short direction again, so the name is derived — by
+// gatekit.DeclaredPackageName, which reads the package clause and is shared
+// with every gate that resolves an unaliased import.
 const (
 	contractsPackage = "github.com/margince/margince/backend/internal/contracts"
-	contractsDir     = "../../contracts"
 )
 
 // updateEventType is how the event names itself on the wire, and the second way
@@ -79,7 +80,7 @@ const (
 const updateEventType = "contract.updated"
 
 func TestTheContractUpdateShapeHasOneWriter(t *testing.T) {
-	declared := declaredPackageName(t, contractsDir)
+	declared := gatekit.DeclaredPackageName(contractsPackage)
 	emitters := functionsWhere(t, func(file *ast.File, fn *ast.FuncDecl) bool {
 		return namesType(fn, localNamesFor(file, contractsPackage, declared, updateEvent)) ||
 			namesLiteral(fn, updateEventType)
@@ -123,45 +124,6 @@ func localNamesFor(file *ast.File, path, declared, typeName string) []string {
 		}
 	}
 	return names
-}
-
-// declaredPackageName reads the package clause of the sources in dir.
-//
-// Derived rather than assumed, and fatal rather than empty: a gate that
-// silently resolved no name would judge a population of nothing and report a
-// clean package, which is the one way a census must not fail.
-func declaredPackageName(t *testing.T, dir string) string {
-	t.Helper()
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("reading %s for its package name: %v", dir, err)
-	}
-	fset := token.NewFileSet()
-	for _, entry := range entries {
-		name := entry.Name()
-		// A `_test.go` may declare the EXTERNAL test package — `crmcontracts_test`
-		// — and os.ReadDir returns entries by name, so one sorting first would
-		// hand back a package no production file imports. That is the fail-short
-		// direction again, and it is not caught by the fatal below: a wrong name
-		// is not an absent one.
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		file, perr := parser.ParseFile(fset, dir+"/"+name, nil, parser.PackageClauseOnly)
-		if perr != nil || file.Name == nil {
-			continue
-		}
-		if strings.HasSuffix(file.Name.Name, "_test") {
-			// Belt and braces: every source in the directory being a test
-			// package would otherwise resolve to one, and the skip above only
-			// covers the filename convention rather than the clause itself.
-			continue
-		}
-		return file.Name.Name
-	}
-	t.Fatalf("no package clause found in %s, so this gate cannot say what an unaliased "+
-		"import of it binds and would hunt a spelling no file can produce", dir)
-	return ""
 }
 
 // functionsWhere names the package's non-test functions satisfying want. The

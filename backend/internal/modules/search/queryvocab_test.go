@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -444,5 +445,133 @@ func TestAFieldsOperatorsAreNotTheSharedSetItself(t *testing.T) {
 	first.Ops[0] = "mutated"
 	if newField("b", KindNumber).Ops[0] == "mutated" {
 		t.Error("editing one field's operators changed what the next field admits")
+	}
+}
+
+// maskedReaderFor is readerFor with a field mask on the deal, the only object
+// this build can withhold columns of.
+//
+// The row scope is narrowed off RowScopeAll deliberately: a principal reading
+// every row is unbounded, and an unbounded principal reads every column by
+// design. Left wide, this fixture would assert nothing and pass.
+func maskedReaderFor(field string, objects ...string) context.Context {
+	ctx := readerFor(objects...)
+	p, _ := principal.Actor(ctx)
+	p.Permissions.RowScope = principal.RowScopeOwn
+	p.Permissions.FieldMasks = []principal.FieldMask{{Object: fieldmask.Deal, Field: field}}
+	return principal.WithActor(ctx, p)
+}
+
+// A predicate is a read of the value it tests, so a masked column is not
+// askable.
+//
+// `amount_minor >= N` never returns the amount and does not have to: the hit
+// or the miss answers the question, and a caller who may not read the figure
+// recovers it by bisection. The list read has refused a sort or filter over a
+// masked column all along; this is the plan vocabulary asking the same
+// question, which is where the agent surface reaches the same columns.
+//
+// The whole GROUP goes, not the configured name: masking the amount while the
+// ARR stays filterable leaves the size of the deal recoverable from the field
+// beside it.
+func TestAMaskedColumnIsNotAskable(t *testing.T) {
+	resolver := NewVocabularyResolver()
+
+	wide, err := resolver.Resolve(readerFor("deal"), "deal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	deal, ok := wide.Target("deal")
+	if !ok {
+		t.Fatal("the deal is missing from an unmasked reader's vocabulary")
+	}
+	for _, field := range fieldmask.Maskable(fieldmask.Deal) {
+		if _, askable := deal.Field(field); !askable {
+			// Not every maskable field is a stored scalar the vocabulary
+			// publishes; only the ones that are can be dropped from it.
+			continue
+		}
+		masked, err := resolver.Resolve(maskedReaderFor(field, "deal"), "deal")
+		if err != nil {
+			t.Fatal(err)
+		}
+		narrow, ok := masked.Target("deal")
+		if !ok {
+			t.Fatal("a masked column removed the whole record type from the vocabulary")
+		}
+		for _, withheld := range fieldmask.Withheld(fieldmask.Deal, []string{field}) {
+			if _, askable := narrow.Field(withheld); askable {
+				t.Errorf("a mask on %q left %q askable — a predicate over it is an oracle for a "+
+					"value this caller may not read", field, withheld)
+			}
+		}
+	}
+}
+
+// A mask on a reader who reads every row takes nothing out of their vocabulary.
+//
+// Reading every row is reading every column — auth.Unbounded says so, and every
+// mask arm in the tree returns "nothing withheld" for such a principal. The
+// same masks that emptied a bounded reader's fields above must leave this one's
+// whole, which is what makes the arm a narrowing of the caller rather than of
+// the contract.
+func TestAMaskOnAnUnboundedReaderNarrowsNothing(t *testing.T) {
+	resolver := NewVocabularyResolver()
+
+	// Counted, and asserted below. The baseline is itself resolved through the
+	// arm under test, so a broken arm empties it, every field is skipped, and
+	// this test passes having checked nothing.
+	checked := 0
+	for _, field := range fieldmask.Maskable(fieldmask.Deal) {
+		plain, err := resolver.Resolve(readerFor("deal"), "deal")
+		if err != nil {
+			t.Fatal(err)
+		}
+		unmasked, ok := plain.Target("deal")
+		if !ok {
+			t.Fatal("the deal is missing from a reader's vocabulary")
+		}
+		if _, askable := unmasked.Field(field); !askable {
+			continue
+		}
+		checked++
+		// readerFor leaves RowScopeAll, so this principal carries the mask AND
+		// reads every row.
+		ctx := readerFor("deal")
+		p, _ := principal.Actor(ctx)
+		p.Permissions.FieldMasks = []principal.FieldMask{{Object: fieldmask.Deal, Field: field}}
+		wide, err := resolver.Resolve(principal.WithActor(ctx, p), "deal")
+		if err != nil {
+			t.Fatal(err)
+		}
+		deal, ok := wide.Target("deal")
+		if !ok {
+			t.Fatal("a mask removed the record type from an unbounded reader's vocabulary")
+		}
+		if _, askable := deal.Field(field); !askable {
+			t.Errorf("a mask on %q narrowed a reader who reads every row — they already read every "+
+				"column, so the arm has taken away something no rule withholds", field)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("no maskable field was askable even before a mask was applied — the vocabulary is " +
+			"empty or the mask arm drops everything, and either way this test asserted nothing")
+	}
+}
+
+// With nobody bound to the context, the vocabulary REFUSES.
+//
+// The mask arm cannot answer "does this caller read this column" without a
+// caller, and the tempting failure is to treat "no masks found" as "nothing is
+// masked" — which publishes every column to a request that never proved who
+// made it. It fails closed instead, and the error travels rather than being
+// swallowed into a narrowing nobody asked for.
+func TestAVocabularyWithNoActorRefusesRatherThanPublishingEveryField(t *testing.T) {
+	t.Parallel()
+
+	fields := []Field{newField("amount_minor", KindNumber)}
+	if _, err := admittedFields(context.Background(), "deal", fields); err == nil {
+		t.Error("an unauthenticated resolve returned a vocabulary — a predicate compiled off it " +
+			"would read a column nobody established the caller may see")
 	}
 }

@@ -37,6 +37,8 @@ type Answers = Readonly<{
    *  from nowhere else, so a story for one is a story about this feed. */
   running?: readonly unknown[];
   recent?: readonly unknown[];
+  /** Live work across every kind; absent is a body that does not say. */
+  liveTotal?: number;
   /** A mailbox import in flight, as the connections read reports it. */
   importing?: Readonly<{ scanned: number; estimated: number | null }>;
   /** What the month cost, in minor units, when anything in it was priced.
@@ -68,7 +70,7 @@ function settled(minutesAgo: number, over: Readonly<Record<string, unknown>>) {
 }
 
 // The two objects the section actually asks about: `license` gates the posture
-// the orb reads (`useLicensePosture`) and `automation:update` gates the runtime
+// the panel's pill reads (`useLicensePosture`) and `automation:update` gates the runtime
 // row's `/ai/calls`. Granting exactly these rather than a blanket allow is what
 // keeps a story named for an INSTALLATION posture from also quietly documenting
 // an authority one — every story below is about what the installation answers,
@@ -96,6 +98,7 @@ function callRow(task: string, minutesAgo: number, index: number) {
   return {
     id: `call-${index}`,
     occurred_at: new Date(NOW - minutesAgo * 60_000).toISOString(),
+    kind: "completion",
     task,
     tier: "cheap_cloud",
     provider: "anthropic",
@@ -108,6 +111,7 @@ function callRow(task: string, minutesAgo: number, index: number) {
     cached_tokens: 0,
     latency_ms: 840,
     has_payload: false,
+    decision_attempted: false,
   };
 }
 
@@ -225,6 +229,9 @@ function story(
         jsonResponse({
           running: answers.running ?? [],
           recent: answers.recent ?? [],
+          ...(answers.liveTotal === undefined
+            ? {}
+            : { live_total: answers.liveTotal }),
         }),
     });
     return (
@@ -289,7 +296,7 @@ type Story = StoryObj<typeof AgentRail>;
 /** Idle: every source reachable, nothing waiting, a model bound, a valid licence.
  *
  *  Which makes it the QUIET installation, and that is most installations most of
- *  the afternoon: one true reading, and it is "Nothing needs you". What the line
+ *  the afternoon: one true reading, and it is "Nothing needs attention". What the line
  *  says between turns of it are the tips — standing facts about the product
  *  rather than invented work, one per pass and a different one next time round
  *  (agentrail-copy.ts). Watch it for half a minute rather than a moment; the
@@ -352,6 +359,14 @@ export const Working: Story = {
   render: story({ ...HEALTHY, running: [occurrence({})] }),
 };
 
+/** Working on something the rail does not narrate: the feed lists nothing, the
+ *  total says one run is live. The orb pulses on the generic word, and the
+ *  panel admits the work in one caption without offering a row to read. */
+export const UnnamedWork: Story = {
+  render: story({ ...HEALTHY, liveTotal: 1 }),
+  play: openThePanel,
+};
+
 /** Error: the overnight brief failed. It holds the orb until the panel has
  *  been opened, because a run that broke at four in the morning was seen by
  *  nobody. */
@@ -368,10 +383,12 @@ export const RunStalled: Story = {
   render: story({ ...HEALTHY, running: [occurrence({ state: "stalled" })] }),
 };
 
-/** Warning: no licence bound. The orb goes amber and the line names the fault
- *  rather than raising it as a hard failure. */
-export const Warning: Story = {
-  render: story({ ...HEALTHY, licenseState: "absent" }),
+/** A refused licence: the panel's runtime strip carries the pill that leads to
+ *  the seats page, and the orb rests, because a standing condition does not
+ *  take the live line. */
+export const LicenceRefused: Story = {
+  render: story({ ...HEALTHY, licenseState: "rejected" }),
+  play: openThePanel,
 };
 
 /** Error: a mailbox the agent cannot reach — the token expired and capture is
@@ -537,13 +554,13 @@ export const PanelOpenPhone: Story = {
 };
 
 /**
- * A seat the licence is none of: the orb reports the installation's HEALTH and
- * stays neutral about its commercial standing.
+ * A seat the licence is none of: the panel reports the installation's HEALTH
+ * and stays neutral about its commercial standing.
  *
  * The distinction this story exists for is that a withheld licence must not
- * read as a fault. A rep's seat cannot see the entitlement, and an orb that
- * went amber about it on every screen they opened would be a permission
- * boundary drawn as a broken installation — so `useLicensePosture` answers
+ * read as a fault. A rep's seat cannot see the entitlement, and a pill about it
+ * in every panel they opened would be a permission boundary drawn as a broken
+ * installation — so `useLicensePosture` answers
  * "nothing to report" rather than "something is wrong", and this is the story
  * that would fail if that ever changed.
  */

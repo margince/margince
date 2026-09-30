@@ -1,0 +1,688 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package aicert_test
+
+// The top of the certification page: the half written for somebody choosing a
+// preset, who asks "can I use it?" and has never heard of a task id, a stamp, a
+// band or a judge. Everything here is layout over the same document the
+// engineers' half renders — the grades are the records' own verdicts, and the
+// grading summary quotes the verdict rule's own constants and doc comment, so
+// this half cannot hold a second opinion about any of them.
+
+import (
+	"fmt"
+	"go/parser"
+	"go/token"
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/modules/ai"
+)
+
+// aiCertWhereDataGoes names a preset's profile as the place a reader's data is
+// sent. A profile it does not name answers empty, which
+// assertAICertProfilesAreNamed fails rather than letting a blank cell ship.
+func aiCertWhereDataGoes(p aiCertPreset) string {
+	switch ai.Profile(p.Profile) {
+	case ai.ProfileEUHosted:
+		return "EU-hosted cloud"
+	case ai.ProfileSovereign:
+		return "your own servers"
+	case ai.ProfileCloudFrontier:
+		return "global cloud"
+	default:
+		return ""
+	}
+}
+
+// The four grades a reader sees, and the answer a preset gives instead when it
+// binds no model for a feature.
+const (
+	aiCertReady    = "✅ Ready"
+	aiCertCare     = "⚠️ Usable with care"
+	aiCertNotYet   = "❌ Not reliable yet"
+	aiCertUnproven = "❔ Not measured"
+	aiCertOff      = "➖ Off"
+)
+
+// aiCertVerdictSource is the file whose Verdict doc comment states the rule.
+const aiCertVerdictSource = "score.go"
+
+func assertAICertProfilesAreNamed(t *testing.T, presets []aiCertPreset) {
+	t.Helper()
+	for _, p := range presets {
+		if aiCertWhereDataGoes(p) == "" {
+			t.Errorf("preset %s declares profile %q, which aiCertWhereDataGoes does not name — "+
+				"the page would not say where that preset sends data", p.File, p.Profile)
+		}
+	}
+}
+
+// loadAICertVerdictRule is the indented rule block of Verdict's doc comment,
+// so the page's exact rule is the one the code documents beside itself. It
+// fails when the block names a pass rate or majority other than the constants
+// the rule reads, which is the one way the two could disagree.
+func loadAICertVerdictRule(t *testing.T) string {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), aiCertVerdictSource, nil, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("parsing %s for the verdict rule: %v", aiCertVerdictSource, err)
+	}
+	var rule []string
+	for _, group := range file.Comments {
+		text := group.Text()
+		if !strings.HasPrefix(text, "Verdict folds") {
+			continue
+		}
+		for _, line := range strings.Split(text, "\n") {
+			if strings.HasPrefix(line, "\t") {
+				rule = append(rule, strings.TrimPrefix(line, "\t"))
+			}
+		}
+	}
+	if len(rule) == 0 {
+		t.Fatalf("%s has no indented rule block in Verdict's doc comment; the page quotes it", aiCertVerdictSource)
+	}
+	joined := strings.Join(rule, "\n")
+	for _, percent := range []int{aicert.CertifiedPassPercent, aicert.CertifiedPassBoundPercent, aicert.CasePassPercent, aicert.VetoPassPercent} {
+		if want := fmt.Sprintf("%d%%", percent); !strings.Contains(joined, want) {
+			t.Fatalf("Verdict's documented rule does not state the %s the code applies:\n%s", want, joined)
+		}
+	}
+	if want := fmt.Sprintf("⌈%dN/%d⌉", aicert.MajorityNumerator, aicert.MajorityDenominator); !strings.Contains(joined, want) {
+		t.Fatalf("Verdict's documented rule does not state the %s degraded pooled majority the code applies:\n%s", want, joined)
+	}
+	if want := fmt.Sprintf("z = %v", aicert.ConfidenceZ); !strings.Contains(joined, want) {
+		t.Fatalf("Verdict's documented rule does not state the %s its bounds are drawn at:\n%s", want, joined)
+	}
+	if want := fmt.Sprintf("max(sd, %d)", aicert.JudgeScoreSDFloor); !strings.Contains(joined, want) {
+		t.Fatalf("Verdict's documented rule does not state the %s spread floor its t bounds use:\n%s", want, joined)
+	}
+	return joined
+}
+
+// assertAICertPresetSectionsCount reads each preset's rendered section back
+// and counts its grades against the document's counts, which the summary row
+// prints.
+func assertAICertPresetSectionsCount(t *testing.T, page string, presets []aiCertPreset) {
+	t.Helper()
+	for _, p := range presets {
+		heading := "### `" + aiCertPresetName(p) + "`\n"
+		start := strings.Index(page, heading)
+		if start < 0 {
+			t.Errorf("the page has no section for preset %s", p.File)
+			continue
+		}
+		section, _, _ := strings.Cut(page[start:], "<details>")
+		want := map[string]int{
+			aiCertReady: p.Bands.Certified, aiCertCare: p.Bands.SupportedDegraded,
+			aiCertNotYet: p.Bands.NotSupported, aiCertUnproven: p.Untested, aiCertOff: p.Unbound,
+		}
+		for grade, count := range want {
+			got := strings.Count(section, "| "+grade+" |") + strings.Count(section, "| "+grade+"<br>")
+			if got != count {
+				t.Errorf("preset %s's section shows %d feature(s) %s; the document counts %d", p.File, got, grade, count)
+			}
+		}
+		if row := "| [`" + aiCertPresetName(p) + "`]"; !strings.Contains(page, row) {
+			t.Errorf("preset %s has no row in the summary table", p.File)
+		}
+	}
+}
+
+func writeAICertHead(page *strings.Builder) {
+	page.WriteString("# AI certification\n\n")
+	page.WriteString("<!-- Generated from the invocation-site census, the scenario corpus and the committed records; do not edit by hand. -->\n\n")
+	page.WriteString("This page tells you which AI features you can rely on under each preset — the\n")
+	page.WriteString("ready-made choice of AI models you pick when you set Margince up. Every grade\n")
+	page.WriteString("here was measured by running the product's real prompts against the model, not\n")
+	page.WriteString("promised by anyone.\n\n")
+	page.WriteString("<details>\n<summary>How this page is made</summary>\n\n")
+	page.WriteString("Generated by `" + aiCertRegenerate + "`; do not edit by hand. It reads the same\n")
+	page.WriteString("three trees `make e2e-ai-report` reads: the sites this build registers, the\n")
+	page.WriteString("scenarios under [`backend/internal/compose/aicert/corpus/`](" + corpusLinkPrefix + aiCertCorpusDocs + "corpus/README.md),\n")
+	page.WriteString("and the records under [`backend/internal/compose/aicert/records/`](" + corpusLinkPrefix + aiCertCorpusDocs + "records/README.md).\n\n")
+	page.WriteString("[`ai-certification.json`](ai-certification.json) beside this page holds the same\n")
+	page.WriteString("numbers, whole, for a reader who wants to ask a question this page does not\n")
+	page.WriteString("answer. This page is rendered from that file.\n\n")
+	page.WriteString("Nothing here is a merge gate. The certification lane is paid, manual and\n")
+	page.WriteString("BYOK-gated, so a prompt edit turns a record `stale` rather than failing a build.\n\n")
+	page.WriteString("How to add a case: [write-a-certification-case.md](../how-to/write-a-certification-case.md).\n")
+	page.WriteString("How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.md).\n\n")
+	page.WriteString("</details>\n\n")
+}
+
+// writeAICertPresetSummary is the page's answer, one row per preset: a reader
+// choosing between them reads across a row and down a column, and needs
+// nothing else on the page to do it.
+func writeAICertPresetSummary(page *strings.Builder, presets []aiCertPreset) {
+	page.WriteString("## Can I use this preset?\n\n")
+	page.WriteString("A [preset](" + aiCertPresetLink + "README.md) picks which AI model runs each feature, so the same\n")
+	page.WriteString("feature can be ready under one preset and not under another.\n\n")
+	writeAICertOlderVersionNote(page, presets)
+	page.WriteString("| Preset | Where your data goes | " + aiCertReady + " | " + aiCertCare + " | " +
+		aiCertNotYet + " | " + aiCertUnproven + " | Bottom line |\n")
+	page.WriteString("|---|---|---:|---:|---:|---:|---|\n")
+	for _, p := range presets {
+		name := aiCertPresetName(p)
+		fmt.Fprintf(page, "| [`%s`](#%s) | %s | %d | %d | %d | %d | %s |\n",
+			name, aiCertSiteAnchor(name), aiCertWhereDataGoes(p),
+			p.Bands.Certified, p.Bands.SupportedDegraded, p.Bands.NotSupported, p.Untested, aiCertBottomLine(p))
+	}
+	page.WriteString("\n")
+	writeAICertLegend(page, presets)
+	for _, p := range presets {
+		writeAICertPresetDetail(page, p)
+	}
+}
+
+// writeAICertLegend says what each grade means for the reader's own decision:
+// what was measured, and what to do about it. Off and the private-mail note are
+// explained only when a preset shows them, so the legend never explains a mark
+// the page lacks.
+func writeAICertLegend(page *strings.Builder, presets []aiCertPreset) {
+	anyOff, anyPrivateMail := false, false
+	for _, p := range presets {
+		anyOff = anyOff || p.Unbound > 0
+		for _, row := range p.Tasks {
+			anyPrivateMail = anyPrivateMail || row.SendsPrivateMailTo != ""
+		}
+	}
+	page.WriteString("**What the grades mean**\n\n")
+	page.WriteString("| Grade | What we measured | What to do |\n|---|---|---|\n")
+	fmt.Fprintf(page, "| %s | Right in at least %d of every 100 tries, no test case clearly broken, and good answers. | Turn it on and rely on it. |\n",
+		aiCertReady, aicert.CertifiedPassPercent)
+	fmt.Fprintf(page, "| %s | Right in at least %s of tries, and acceptable answers. | Turn it on, and have someone look over what it produces. |\n",
+		aiCertCare, aiCertMajorityWords())
+	fmt.Fprintf(page, "| %s | Wrong too often, or answers below the quality bar. | Leave it off, or check every answer by hand. |\n", aiCertNotYet)
+	fmt.Fprintf(page, "| %s | This preset has a model for the feature, but nobody has tested it yet. | Ask for a test before relying on it. |\n", aiCertUnproven)
+	if anyOff {
+		fmt.Fprintf(page, "| %s | This preset has no model for the feature. | Nothing — the feature is switched off. |\n", aiCertOff)
+	}
+	page.WriteString("\nThe small line under a grade names the model that answers the feature and its tier,\n")
+	page.WriteString("then the model a failed call falls back to and that model's own grade on the feature.\n")
+	page.WriteString("The router falls back only when a call fails — an error, a timeout, an answer broken\n")
+	page.WriteString("off midway — and never because an answer was wrong, so a fallback does not rescue a\n")
+	page.WriteString("feature graded below.\n")
+	if anyPrivateMail {
+		page.WriteString("\n*sends private mail to* marks a feature that reads the private content of a mailbox\n")
+		page.WriteString("(`local_only` in `backend/api/ai-tasks.yaml`) on a preset whose model for it is not on\n")
+		page.WriteString("your own servers: that mail leaves your machine for the provider named.\n")
+	}
+	page.WriteString("\n*re-check pending* after a grade means the product has changed since it was\n")
+	page.WriteString("measured. The grade is the last one we have, and it is shown until the next test replaces it.\n")
+	page.WriteString("[How the scoring works](#how-the-scoring-works) explains how a grade is reached.\n\n")
+}
+
+func aiCertPresetName(p aiCertPreset) string { return strings.TrimSuffix(p.File, ".yaml") }
+
+// aiCertBottomLine is the preset's one-line answer. A count read from stale
+// grades says so, or the summary row would state old measurements as current.
+func aiCertBottomLine(p aiCertPreset) string {
+	line := fmt.Sprintf("%d of %d features ready", p.Bands.Certified, len(p.Tasks))
+	measured, stale := aiCertStaleGrades(p)
+	switch stale {
+	case 0:
+	case measured:
+		line += " (re-check pending)"
+	case 1:
+		line += " (1 re-check pending)"
+	default:
+		line += fmt.Sprintf(" (%d re-checks pending)", stale)
+	}
+	if p.Unbound > 0 {
+		line += fmt.Sprintf(", %d switched off", p.Unbound)
+	}
+	return line
+}
+
+// aiCertStaleGrades counts p's measured grades and how many of them are stale.
+func aiCertStaleGrades(p aiCertPreset) (measured, stale int) {
+	for _, row := range p.Tasks {
+		if row.Band == "" {
+			continue
+		}
+		measured++
+		if row.State == aicert.StatusStale {
+			stale++
+		}
+	}
+	return measured, stale
+}
+
+// writeAICertOlderVersionNote says, once, how many of the grades below were
+// measured on a version of the product that has since changed. The grades
+// stay shown — they are the last measurement there is — and this is what
+// keeps them from reading as current.
+func writeAICertOlderVersionNote(page *strings.Builder, presets []aiCertPreset) {
+	measured, older := 0, 0
+	for _, p := range presets {
+		presetMeasured, presetStale := aiCertStaleGrades(p)
+		measured += presetMeasured
+		older += presetStale
+	}
+	switch older {
+	case 0:
+		return
+	case measured:
+		page.WriteString("Every grade below was measured on an older version of the product, so each one\n")
+		page.WriteString("is waiting to be re-checked.\n\n")
+	default:
+		fmt.Fprintf(page, "%d of the %d grades below were measured on an older version of the product and\n"+
+			"are waiting to be re-checked; each is marked below.\n\n", older, measured)
+	}
+}
+
+// writeAICertPresetDetail is one preset's features, in words, with the models
+// behind them folded away for the reader who wants them.
+func writeAICertPresetDetail(page *strings.Builder, p aiCertPreset) {
+	fmt.Fprintf(page, "### `%s`\n\n", aiCertPresetName(p))
+	fmt.Fprintf(page, "Your data goes to: %s. %s. Preset file: [`%s`](%s%s).\n\n",
+		aiCertWhereDataGoes(p), aiCertBottomLine(p), p.File, aiCertPresetLink, p.File)
+	rows := append([]aiCertPresetTask(nil), p.Tasks...)
+	sort.SliceStable(rows, func(i, j int) bool { return rows[i].Label < rows[j].Label })
+	page.WriteString("| Feature | Can I use it? | In plain words |\n|---|---|---|\n")
+	for _, row := range rows {
+		fmt.Fprintf(page, "| %s <sub>`%s`</sub> | %s | %s |\n",
+			row.Label, row.Task, aiCertGradeCell(row), aiCertPlainWords(row))
+	}
+	page.WriteString("\n<details>\n<summary>Which models this preset uses</summary>\n\n")
+	page.WriteString("| Tier | Provider | Model |\n|---|---|---|\n")
+	for _, tier := range p.Tiers {
+		fmt.Fprintf(page, "| `%s` | `%s` | `%s` |\n", tier.Tier, tier.Provider, tier.Model)
+	}
+	page.WriteString("\nEach feature walks its own ladder of tiers until it reaches one this preset\n")
+	page.WriteString("binds; this is the rung and the model it lands on, and the record behind its grade.\n\n")
+	page.WriteString("| Task | Served on | Model | Grade | Measurement |\n|---|---|---|---|---|\n")
+	for _, row := range p.Tasks {
+		fmt.Fprintf(page, "| `%s` | %s | %s | %s | %s |\n",
+			row.Task, aiCertCell(row.Tier), aiCertCell(row.Model.Model),
+			aiCertGrade(row), aiCertStateWords(row))
+	}
+	page.WriteString("\n</details>\n\n")
+}
+
+// aiCertGradeCell is the grade with the route behind it on a smaller line, so
+// a reader sees which model earned it without opening the tier table.
+func aiCertGradeCell(row aiCertPresetTask) string {
+	if row.Tier == "" {
+		return aiCertGrade(row)
+	}
+	return aiCertGrade(row) + "<br><sub>" + aiCertRouteLine(row) + "</sub>"
+}
+
+// aiCertRouteLine names the model that answers a feature, its tier, and the
+// model a failed call falls to with that model's own grade on the feature.
+func aiCertRouteLine(row aiCertPresetTask) string {
+	line := aiCertShortModel(row.Model.Model) + " · " + row.Tier
+	fallback := row.Fallback
+	switch {
+	case fallback == nil:
+	case fallback.SameModel:
+		line += " → " + fallback.Tier + " is the same model, so no separate fallback"
+	case fallback.Band == "":
+		line += " → " + aiCertShortModel(fallback.Model.Model) + ", not measured on this feature"
+	default:
+		line += " → " + aiCertShortModel(fallback.Model.Model) + ", " + bandGrade(fallback.Band) + staleMark(fallback.State)
+	}
+	if row.Abandoned > 0 {
+		line += fmt.Sprintf("; %d of %d runs broke off", row.Abandoned, row.Runs)
+		if fallback != nil && !fallback.SameModel {
+			line += " and would have gone to " + aiCertShortModel(fallback.Model.Model)
+		} else {
+			line += ", with no other model to take them"
+		}
+	}
+	if row.SendsPrivateMailTo != "" {
+		line += "; sends private mail to " + row.SendsPrivateMailTo
+	}
+	return line
+}
+
+// aiCertGrade is the answer to "can I use it?" for one feature. Off and not
+// measured are different answers: the first is the preset's choice, the
+// second a gap in the testing.
+func aiCertGrade(row aiCertPresetTask) string {
+	switch {
+	case row.Tier == "":
+		return aiCertOff
+	case row.Band == "":
+		return aiCertUnproven
+	case row.Band == aicert.VerdictCertified:
+		return aiCertReady
+	case row.Band == aicert.VerdictSupportedDegraded:
+		return aiCertCare
+	case row.Band == aicert.VerdictNotSupported:
+		return aiCertNotYet
+	default:
+		return "`" + row.Band + "`"
+	}
+}
+
+// aiCertPlainWords says what the grade rests on: how often the answer was
+// right, which half of the rule held it down, and whether it is still the
+// product as it ships.
+func aiCertPlainWords(row aiCertPresetTask) string {
+	switch {
+	case row.Tier == "":
+		return "Off — this preset has no model for it"
+	case row.Band == "":
+		return "Not measured yet"
+	}
+	words := aiCertTriesWords(row.Runs, row.Passed)
+	if row.Band != aicert.VerdictCertified {
+		if row.CasesFailingOften > 0 {
+			words += "; " + aiCertCases(row.CasesFailingOften) + " wrong too often"
+		}
+		if row.CasesBelowQualityBar > 0 {
+			words += "; answer quality below the bar in " + aiCertCases(row.CasesBelowQualityBar)
+		}
+	}
+	switch row.State {
+	case aicert.StatusStale:
+		words += " · re-check pending"
+	case aicert.StatusPartial:
+		words += " · newer test cases not tried yet"
+	}
+	return words
+}
+
+func aiCertTriesWords(runs, passed int) string {
+	switch {
+	case runs == 0:
+		return "No tries recorded"
+	case passed == runs:
+		return fmt.Sprintf("Right every time (%d of %d)", passed, runs)
+	default:
+		return fmt.Sprintf("Right in %d of %d tries", passed, runs)
+	}
+}
+
+func aiCertCases(n int) string {
+	if n == 1 {
+		return "one test case"
+	}
+	return fmt.Sprintf("%d test cases", n)
+}
+
+// writeAICertGrading explains the grades in words, then states the exact rule
+// for whoever needs to argue with one. The numbers in the words are the rule's
+// own: every threshold is its constant, the try counts the runner's.
+func writeAICertGrading(page *strings.Builder, rule string, selfJudged int, bars []aiCertQualityBar) {
+	page.WriteString("## How the scoring works\n\n")
+	page.WriteString("1. **Real test cases.** Every feature has a set of test cases: a realistic\n")
+	page.WriteString("   situation (an email, an account, a web page) and the answer we expect. The\n")
+	page.WriteString("   model receives exactly the prompt the product sends in real use.\n")
+	fmt.Fprintf(page, "2. **Several tries.** Each test case is run %d times at first (`RUNS=` can change\n"+
+		"   that for one run), because a model can answer the same question differently\n"+
+		"   each time. A test case whose result sits close to a line gets %d more tries at a\n"+
+		"   time, up to %d, so a close call is settled by more evidence rather than by luck.\n",
+		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns)
+	page.WriteString("3. **Two checks on every try.**\n")
+	page.WriteString("   - *Is it right?* The answer is checked mechanically against what we expect: the\n")
+	page.WriteString("     right label, the right record, no invented facts, fast enough.\n")
+	page.WriteString("   - *Is it good?* A second AI model, chosen so that it is not the one being tested,\n")
+	page.WriteString("     scores the answer from 0 to 100 against a written description of a good answer.\n")
+	page.WriteString("     A test case whose own check already sees everything that description asks is\n")
+	page.WriteString("     *checked mechanically* instead: no scoring model is asked, and it counts on its\n")
+	page.WriteString("     right answers alone.\n")
+	if selfJudged > 0 {
+		fmt.Fprintf(page, "     %d older results were scored by the model they tested or one of its family; the\n"+
+			"     next re-check replaces them.\n", selfJudged)
+	}
+	fmt.Fprintf(page, "4. **A close score is checked again.** The scoring model grades every try once. A\n"+
+		"   score within %d points of one of the test case's bars is asked for a second time,\n"+
+		"   and two readings more than %d apart for a third; the middle one counts (the\n"+
+		"   average, of two). So one odd reading cannot decide a close call, and a clear one\n"+
+		"   is not paid for %d times.\n", aicert.ReaskBandMargin, aicert.ReaskDisagreement, aicert.MaxJudgeOpinions)
+	page.WriteString("5. **The grade.** All the tries of a feature are then read together:\n\n")
+	page.WriteString("| Grade | Right answers | Every test case | Quality |\n|---|---|---|---|\n")
+	fmt.Fprintf(page, "| %s | at least %d of every 100 tries, and enough tries to be sure of at least %d | right in at least half its tries, and not clearly broken | good on average across all tries, even allowing for doubt |\n",
+		aiCertReady, aicert.CertifiedPassPercent, aicert.CertifiedPassBoundPercent)
+	fmt.Fprintf(page, "| %s | at least %s of all tries | not failing nearly every try, and not clearly very poor | acceptable on average, even allowing for doubt |\n",
+		aiCertCare, aiCertMajorityWords())
+	fmt.Fprintf(page, "| %s | anything less, or a test case the scoring model never scored | | |\n\n", aiCertNotYet)
+	page.WriteString("A feature does not have to be perfect to be ready: a stray miss or a low score\n")
+	page.WriteString("among many tries is allowed, because the grade weighs all of them together. A\n")
+	page.WriteString("test case that is clearly broken is not — one that fails nearly every try, or\n")
+	page.WriteString("scores below its acceptable bar on every try — and it holds the whole feature\n")
+	page.WriteString("back however well the others do.\n\n")
+	writeAICertThresholds(page, bars)
+	writeAICertExactRule(page, rule, selfJudged)
+}
+
+// writeAICertExactRule quotes Verdict's rule block and says what its terms mean.
+func writeAICertExactRule(page *strings.Builder, rule string, selfJudged int) {
+	page.WriteString("<details>\n<summary>The exact rule</summary>\n\n")
+	page.WriteString("From `Verdict` in [`" + aiCertVerdictSource + "`](" + corpusLinkPrefix + aiCertCorpusDocs +
+		aiCertVerdictSource + "), applied to every case of a task at once:\n\n")
+	page.WriteString("```text\n" + rule + "\n```\n\n")
+	page.WriteString("Each case sets its own quality bands (`certified_min`, `degraded_min`, `floor`), so\n")
+	page.WriteString("the pooled judge criterion averages every run's distance from its own case's bar.\n")
+	fmt.Fprintf(page, "Every run is graded once, again when that score is within %d of any of its case's bands,\n"+
+		"and a third time when the two differ by more than %d, at most %d opinions; it scores at the\n"+
+		"median of the opinions that parsed (the mean of two).\n",
+		aicert.ReaskBandMargin, aicert.ReaskDisagreement, aicert.MaxJudgeOpinions)
+	fmt.Fprintf(page, "A case runs %d times, then %d more at a time up to %d while it is borderline: its pass\n"+
+		"count k of n satisfies (2k − n)² ≤ n, or its median score is within one standard\n"+
+		"error of `certified_min` or `degraded_min`. Every case extends while the pool is\n"+
+		"undecided: the pooled pass rate is at least %d%% but its Wilson bound is under %d%%, or\n"+
+		"the pooled `certified_min` margin averages at least 0 but its bound is under 0. The\n"+
+		"decision reads only scored runs, so a resumed run replays the same extensions.\n",
+		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns,
+		aicert.CertifiedPassPercent, aicert.CertifiedPassBoundPercent)
+	fmt.Fprintf(page, "The grades map to the record's words as %s = `%s`, %s = `%s`, %s = `%s`, and\n"+
+		"%s = no record for that model.\n",
+		aiCertReady, aicert.VerdictCertified, aiCertCare, aicert.VerdictSupportedDegraded,
+		aiCertNotYet, aicert.VerdictNotSupported, aiCertUnproven)
+	if selfJudged > 0 {
+		fmt.Fprintf(page, "\n%d of the committed records were nonetheless graded by the model they measured or its family\n"+
+			"(`self_judged` in the record file).\n", selfJudged)
+	}
+	page.WriteString("\n</details>\n\n")
+}
+
+// aiCertQualityBar is one set of quality bands and how many cases of the corpus
+// are graded against it.
+type aiCertQualityBar struct {
+	Bands aicert.Bands
+	Cases int
+}
+
+// aiCertQualityBars groups the corpus by its bands, the most used first, so the
+// page states every bar a case is held to without listing each case.
+func aiCertQualityBars(corpus []aicert.Scenario) []aiCertQualityBar {
+	counts := map[aicert.Bands]int{}
+	for _, sc := range corpus {
+		if sc.Expect.Judged() {
+			counts[sc.Expect.Bands]++
+		}
+	}
+	bars := make([]aiCertQualityBar, 0, len(counts))
+	for bands, cases := range counts {
+		bars = append(bars, aiCertQualityBar{Bands: bands, Cases: cases})
+	}
+	sort.Slice(bars, func(i, j int) bool {
+		if bars[i].Cases != bars[j].Cases {
+			return bars[i].Cases > bars[j].Cases
+		}
+		a, b := bars[i].Bands, bars[j].Bands
+		if a.CertifiedMin != b.CertifiedMin {
+			return a.CertifiedMin > b.CertifiedMin
+		}
+		if a.DegradedMin != b.DegradedMin {
+			return a.DegradedMin > b.DegradedMin
+		}
+		return a.Floor > b.Floor
+	})
+	return bars
+}
+
+// aiCertThresholdsHeading opens the table of every number a grade is reached by.
+const aiCertThresholdsHeading = "### Thresholds\n\n"
+
+// writeAICertThresholds states every threshold in plain words, each read from
+// the constant or the corpus that sets it.
+func writeAICertThresholds(page *strings.Builder, bars []aiCertQualityBar) {
+	page.WriteString(aiCertThresholdsHeading)
+	page.WriteString("| What | Threshold |\n|---|---|\n")
+	fmt.Fprintf(page, "| Right answers needed for %s | at least %d of every 100 tries, counted over all of the feature's test cases |\n",
+		aiCertReady, aicert.CertifiedPassPercent)
+	fmt.Fprintf(page, "| How sure that must be, for %s | the pass rate's lower bound at least %d of every 100 |\n",
+		aiCertReady, aicert.CertifiedPassBoundPercent)
+	fmt.Fprintf(page, "| Each test case, for %s | right in at least %d of every 100 of its own tries |\n",
+		aiCertReady, aicert.CasePassPercent)
+	fmt.Fprintf(page, "| Right answers needed for %s | at least %s of all tries |\n", aiCertCare, aiCertMajorityWords())
+	fmt.Fprintf(page, "| A test case is clearly broken | its pass rate's upper bound is under %d of every 100 (blocks %s and %s), or its quality score's upper bound is under its acceptable bar (blocks %s) |\n",
+		aicert.VetoPassPercent, aiCertReady, aiCertCare, aiCertReady)
+	fmt.Fprintf(page, "| Tries per test case | %d at first (`RUNS=` changes it for one run); a borderline case gets %d more at a time, up to %d |\n",
+		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns)
+	fmt.Fprintf(page, "| Quality opinions per try | 1; a 2nd when it is within %d points of a bar or under the lowest, a 3rd when the two are more than %d apart; the middle one counts |\n",
+		aicert.ReaskBandMargin, aicert.ReaskDisagreement)
+	fmt.Fprintf(page, "| How sure every bound is | one-sided 90%% (z = %v for a pass rate, Student's t for an average score, whose spread is taken as at least %d points) |\n",
+		aicert.ConfidenceZ, aicert.JudgeScoreSDFloor)
+	for _, bar := range bars {
+		b := bar.Bands
+		fmt.Fprintf(page, "| Quality bar %d / %d / %d — %s | %s needs scores averaging at least %d, allowing for doubt, no case whose best-case average is under %d, and no single try under %d; %s needs at least %d, and no case whose best-case average is under %d |\n",
+			b.CertifiedMin, b.DegradedMin, b.Floor, aiCertCases(bar.Cases),
+			aiCertReady, b.CertifiedMin, b.CertifiedMin, b.Floor, aiCertCare, b.DegradedMin, b.Floor)
+	}
+	page.WriteString("\nAll of these live in [`backend/internal/compose/aicert/thresholds.go`](" + corpusLinkPrefix + aiCertCorpusDocs +
+		"thresholds.go) (quality bars: in each test case's file); change them there and regenerate this page.\n\n")
+}
+
+// assertAICertThresholdsStateTheRule holds the Thresholds table to the constants
+// and the corpus, so a number typed into its writer by hand fails here.
+func assertAICertThresholdsStateTheRule(t *testing.T, page string, corpus []aicert.Scenario) {
+	t.Helper()
+	_, table, found := strings.Cut(page, aiCertThresholdsHeading)
+	if !found {
+		t.Fatalf("the page has no %q table", strings.TrimSpace(aiCertThresholdsHeading))
+	}
+	table, _, _ = strings.Cut(table, "\n\n")
+	want := []string{
+		fmt.Sprintf("| Right answers needed for %s | at least %d of every 100 tries", aiCertReady, aicert.CertifiedPassPercent),
+		fmt.Sprintf("| Tries per test case | %d ", aicert.DefaultRepeats),
+	}
+	for _, sc := range corpus {
+		if !sc.Expect.Judged() {
+			continue
+		}
+		b := sc.Expect.Bands
+		want = append(want, fmt.Sprintf("| Quality bar %d / %d / %d — ", b.CertifiedMin, b.DegradedMin, b.Floor))
+	}
+	for _, row := range want {
+		if !strings.Contains(table, row) {
+			t.Errorf("the Thresholds table does not state %q:\n%s", row, table)
+		}
+	}
+}
+
+// aiCertMajorityWords says the case majority as a fraction in words, "two
+// thirds", falling back to digits for a fraction English has no short name for.
+func aiCertMajorityWords() string {
+	num, den := aicert.MajorityNumerator, aicert.MajorityDenominator
+	counts := []string{"", "one", "two", "three", "four"}
+	parts := map[int]string{2: "half", 3: "third", 4: "quarter", 5: "fifth"}
+	part, named := parts[den]
+	if num < 1 || num >= len(counts) || !named {
+		return fmt.Sprintf("%d/%d", num, den)
+	}
+	if num > 1 {
+		part += "s"
+	}
+	return counts[num] + " " + part
+}
+
+// aiCertCell renders an unmeasured or unbound value as the page's own dash
+// rather than as an empty table cell, which reads as a rendering fault.
+func aiCertCell(value string) string {
+	if value == "" {
+		return "-"
+	}
+	return "`" + value + "`"
+}
+
+// aiCertStateWords says in plain words whether a grade is the product as it
+// ships, so no record vocabulary reaches the part of the page above the
+// engineers' section.
+func aiCertStateWords(row aiCertPresetTask) string {
+	switch {
+	case row.Tier == "":
+		return "off"
+	case row.Band == "":
+		return "not measured"
+	}
+	switch row.State {
+	case aicert.StatusCurrent:
+		return "current"
+	case aicert.StatusStale:
+		return "re-check pending"
+	case aicert.StatusPartial:
+		return "newer test cases not tried yet"
+	default:
+		return "not measured"
+	}
+}
+
+// A preset's bottom line counts ready features from whatever grades it has, so it
+// says when those grades are waiting on a re-check — all of them, or how many.
+func TestAPresetsBottomLineSaysHowManyGradesArePending(t *testing.T) {
+	row := func(band, state string) aiCertPresetTask {
+		return aiCertPresetTask{Tier: "premium", Band: band, State: state}
+	}
+	current, stale := aicert.StatusCurrent, aicert.StatusStale
+	for _, tc := range []struct {
+		name  string
+		tasks []aiCertPresetTask
+		want  string
+	}{
+		{"every grade current", []aiCertPresetTask{row(aicert.VerdictCertified, current), row("", "")}, "1 of 2 features ready"},
+		{"every grade stale", []aiCertPresetTask{row(aicert.VerdictCertified, stale), row("", "")}, "1 of 2 features ready (re-check pending)"},
+		{"one grade stale", []aiCertPresetTask{row(aicert.VerdictCertified, stale), row(aicert.VerdictNotSupported, current)}, "1 of 2 features ready (1 re-check pending)"},
+		{"some grades stale", []aiCertPresetTask{
+			row(aicert.VerdictCertified, stale), row(aicert.VerdictNotSupported, stale), row(aicert.VerdictCertified, current),
+		}, "2 of 3 features ready (2 re-checks pending)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			preset := aiCertPreset{Tasks: tc.tasks}
+			for _, r := range tc.tasks {
+				if r.Band == aicert.VerdictCertified {
+					preset.Bands.Certified++
+				}
+			}
+			if got := aiCertBottomLine(preset); got != tc.want {
+				t.Errorf("bottom line = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// The legend says a fallback answers only a failed call, so no reader takes a
+// fallback's grade for a second chance at a wrong answer, and it explains the
+// private-mail note only on a page that shows one.
+func TestTheLegendSaysAFallbackAnswersOnlyAFailedCall(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		mailTo   string
+		wantNote bool
+	}{
+		{"no feature sends private mail", "", false},
+		{"a feature sends private mail", "broker.example", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var page strings.Builder
+			writeAICertLegend(&page, []aiCertPreset{{Tasks: []aiCertPresetTask{{Tier: "local_small", SendsPrivateMailTo: tc.mailTo}}}})
+			legend := page.String()
+			if !strings.Contains(legend, "never because an answer was wrong") {
+				t.Errorf("the legend does not say a fallback answers only a failed call:\n%s", legend)
+			}
+			if got := strings.Contains(legend, "*sends private mail to*"); got != tc.wantNote {
+				t.Errorf("legend explains the private-mail note = %v, want %v", got, tc.wantNote)
+			}
+		})
+	}
+}

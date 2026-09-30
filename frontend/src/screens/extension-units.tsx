@@ -7,7 +7,7 @@ import {
   type UnitSecretScope,
   unitsForSecretScope,
 } from "../app/extensions";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import "./extension-units.css";
@@ -63,7 +63,7 @@ export function ExtensionUnitsCard({
     // header bands that disagree about their own height.
     <Panel title={t(`extUnits.${scope}.title`)}>
       <PanelBody>
-        <p className="settings-panel-sub">{t(`extUnits.${scope}.sub`)}</p>
+        <PanelIntro>{t(`extUnits.${scope}.sub`)}</PanelIntro>
         <SettingList>
           {units.map((unit) => (
             <UnitRow key={unit.name} name={unit.name} />

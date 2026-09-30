@@ -16,6 +16,7 @@ package integration
 
 import (
 	"context"
+	"maps"
 	"reflect"
 	"testing"
 
@@ -37,11 +38,13 @@ func seatUserInRoom(t *testing.T, owner *pgx.Conn, activity, user ids.UUID) {
 	}
 }
 
-// coachPerms is the manager seat: the rep grid, plus the role key that decides
-// whether a seat may coach at all.
+// coachPerms is the manager seat: the rep grid, plus the team_lead grant that
+// decides whether a seat may coach at all.
 func coachPerms() principal.Permissions {
 	perms := roomPerms
 	perms.RoleKeys = []string{roleManager}
+	perms.Objects = maps.Clone(roomPerms.Objects)
+	perms.Objects["team_lead"] = principal.ObjectGrant{Create: true, Read: true}
 	return perms
 }
 

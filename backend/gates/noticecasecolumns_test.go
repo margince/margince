@@ -19,8 +19,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -93,7 +91,6 @@ func assertOneSpelling(t *testing.T, table string, wholeRowColumns int, spelling
 	if err != nil {
 		t.Fatalf("reading the consent package: %v", err)
 	}
-	fset := token.NewFileSet()
 	var offenders []string
 	for _, e := range entries {
 		// Tests are excluded deliberately: a fixture asserting the exact shape
@@ -103,7 +100,7 @@ func assertOneSpelling(t *testing.T, table string, wholeRowColumns int, spelling
 			continue
 		}
 		path := filepath.Join(dir, e.Name())
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

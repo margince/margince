@@ -91,7 +91,7 @@ function Fold({ data }: Readonly<{ data: Company360 }>) {
 }
 
 const meta: Meta = {
-  title: "Records/Company record/Thread fold",
+  title: "Records/Company 360/Thread fold",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -118,12 +118,12 @@ const openTheFold =
 // teased is now the message itself.
 export const Opened: Story = {
   render: () => <Fold data={view([inboundEmail, loggedCall])} />,
-  play: openTheFold("What happened · 2"),
+  play: openTheFold("Activity · 2"),
 };
 
 // An account nothing has been filed against: the fold opens on the section's
 // own empty state rather than teasing an exchange it cannot promise.
 export const NothingLogged: Story = {
   render: () => <Fold data={view([])} />,
-  play: openTheFold("What happened"),
+  play: openTheFold("Activity"),
 };

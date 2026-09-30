@@ -32,7 +32,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path"
 	"path/filepath"
@@ -373,12 +372,11 @@ func errorReturnersIn(t *testing.T, dir string) map[string]bool {
 		t.Fatalf("listing %s: %v", dir, err)
 	}
 	decls := map[string]bool{}
-	fset := token.NewFileSet()
 	for _, source := range sources {
 		if strings.HasSuffix(source, "_test.go") {
 			continue
 		}
-		file, parseErr := parser.ParseFile(fset, source, nil, 0)
+		file, parseErr := gatekit.ParseFile(source, 0)
 		if parseErr != nil {
 			t.Fatalf("parsing %s: %v", source, parseErr)
 		}
@@ -571,7 +569,7 @@ func judgeSource(t *testing.T, source string) (string, bool) {
 	if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
 		t.Fatalf("writing the fixture: %v", err)
 	}
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing the fixture: %v", err)
 	}
@@ -586,7 +584,7 @@ func judgeSource(t *testing.T, source string) (string, bool) {
 // none — which is itself the answer some cases assert.
 func singleSite(t *testing.T, source string) *replySite {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), "site.go", source, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "site.go", source, 0)
 	if err != nil {
 		t.Fatalf("parsing the fixture: %v", err)
 	}

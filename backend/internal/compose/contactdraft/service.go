@@ -39,6 +39,8 @@ type Assembler interface {
 // Request is the transport's body, narrowed to what the writer needs.
 type Request struct {
 	Intent string
+	// RewriteOf is the draft the composer is showing; empty is a first draft.
+	RewriteOf string
 	// ProjectID names the body of work the message is about. When set, the
 	// draft is grounded in the 360 scoped to that project and the project's
 	// own facts are folded in; nil is the contact in general.

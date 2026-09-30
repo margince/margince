@@ -29,7 +29,7 @@ import type { WorklistItem } from "./worklist.queries";
 // it are all `color-mix()` over canonical tokens and re-resolve on the flip.
 
 const meta: Meta<typeof Triage> = {
-  title: "Shell/Home focus",
+  title: "Shell/Home/Focus",
   component: Triage,
   parameters: { layout: "fullscreen" },
 };

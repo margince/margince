@@ -13,7 +13,7 @@ import type { WorklistItem } from "./worklist.queries";
 // THE EMPTY FRAMES ARE THE POINT OF THIS FILE. A panel with nothing in it draws
 // nothing at all — no band, no hairline, no grey sentence — and the rail's own
 // quiet panel carries one line per silent source instead (see
-// `Shell/Brief rail`). Every OTHER state keeps the box: a read in flight and a
+// `Shell/Home/Page`). Every OTHER state keeps the box: a read in flight and a
 // read that failed are facts about the request, and collapsing them would tell
 // a rep their morning was clear on the strength of an answer nobody received.
 //
@@ -59,7 +59,7 @@ const BOOKED = readingsDay({}, [
 const CLEAR = readingsDay({}, []);
 
 const meta: Meta = {
-  title: "Shell/Home schedule",
+  title: "Shell/Home/Schedule",
 };
 export default meta;
 type Story = StoryObj;

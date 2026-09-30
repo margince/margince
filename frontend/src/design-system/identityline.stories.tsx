@@ -9,7 +9,7 @@ import { IdentityFact, IdentityLine, IdentityMeta } from "./identityline";
 // The facts under a record's name. Every record page draws this row; the two
 // stories below are the two shapes it comes in, which is the whole of its API.
 const meta: Meta<typeof IdentityLine> = {
-  title: "Design System/IdentityLine",
+  title: "Components/Text and data display/Identity line",
   component: IdentityLine,
   parameters: { layout: "padded" },
   decorators: [

@@ -170,7 +170,8 @@ func TestEmbeddingReindexGrants(t *testing.T) {
 func TestRateObjectsAreAdminOnly(t *testing.T) {
 	for _, obj := range []string{"fx_rate", "ai_model_rate"} {
 		// Admin/ops may create, read, and same-day-correct (update) — but the
-		// sheets are strict append-forward, so NO role holds delete.
+		// sheets are strict append-forward, so NO role holds delete: removing
+		// a model's whole entry is gated on update, not on a verb of its own.
 		for _, key := range []string{"admin", "ops"} {
 			doc, err := Parse(MustDefaultJSON(key))
 			if err != nil {
@@ -185,7 +186,7 @@ func TestRateObjectsAreAdminOnly(t *testing.T) {
 				}
 			}
 			if merged.Allows(obj, principal.ActionDelete) {
-				t.Errorf("role %q must not delete %q (append-forward, no delete surface)", key, obj)
+				t.Errorf("role %q must not delete %q (append-forward; the entry removal takes update)", key, obj)
 			}
 		}
 		// Every non-admin/ops role is denied ALL four actions — the editor is

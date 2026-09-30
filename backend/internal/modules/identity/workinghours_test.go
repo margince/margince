@@ -11,36 +11,49 @@ import (
 	"testing"
 )
 
+// The clock spellings the wire admits, and what each one means. The contract's
+// `start_time`/`end_time` pattern is held against this same table, so the regex
+// a generated client validates with and the parser the server runs cannot come
+// to accept different days.
+var clockTimesAccepted = map[string]int{
+	"00:00": 0,
+	"09:00": 9 * 60,
+	"09:30": 9*60 + 30,
+	"13:45": 13*60 + 45,
+	"23:59": 23*60 + 59,
+	// The end of the day, and the reason this is not time.Parse: a working day
+	// that runs to midnight is one somebody keeps, and 23:59 is a different
+	// answer.
+	"24:00": 24 * 60,
+}
+
+// "9:00" is here on purpose: a single-digit hour is the shape a hand-written
+// client sends, and admitting it would make the wire format two formats. "09"
+// carries no colon, so no digit count makes it a time. The signed spellings
+// are the same invariant from the other side: a two-character field whose
+// first character is a sign is two characters long, so a length check alone
+// lets the wire mean something the pattern never admits.
+var clockTimesRefused = []string{
+	"", "9:00", "0900", "24:01", "25:00", "09:60", "aa:bb", "09",
+	"+9:00", "09:+5", "+9:+9",
+}
+
 func TestATimeOnTheWireIsReadAsTheMinuteItNames(t *testing.T) {
-	for _, one := range []struct {
-		written string
-		want    int
-	}{
-		{"00:00", 0},
-		{"09:00", 9 * 60},
-		{"13:45", 13*60 + 45},
-		// The end of the day, and the reason this is not time.Parse: a working
-		// day that runs to midnight is one somebody keeps, and 23:59 is a
-		// different answer.
-		{"24:00", 24 * 60},
-	} {
-		t.Run(one.written, func(t *testing.T) {
-			got, err := minutePastMidnight(one.written)
+	for written, want := range clockTimesAccepted {
+		t.Run(written, func(t *testing.T) {
+			got, err := minutePastMidnight(written)
 			if err != nil {
-				t.Fatalf("reading %q: %v", one.written, err)
+				t.Fatalf("reading %q: %v", written, err)
 			}
-			if got != one.want {
-				t.Errorf("%q read as %d, want %d", one.written, got, one.want)
+			if got != want {
+				t.Errorf("%q read as %d, want %d", written, got, want)
 			}
 		})
 	}
 }
 
 func TestATimeThatIsNotOneIsRefused(t *testing.T) {
-	// "9:00" is in the list on purpose: a single-digit hour is the shape a
-	// hand-written client sends, and admitting it would make the wire format
-	// two formats.
-	for _, written := range []string{"", "9:00", "0900", "24:01", "25:00", "09:60", "aa:bb", "09"} {
+	for _, written := range clockTimesRefused {
 		t.Run(written, func(t *testing.T) {
 			if _, err := minutePastMidnight(written); err == nil {
 				t.Errorf("%q was read as a time", written)

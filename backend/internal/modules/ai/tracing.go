@@ -37,28 +37,35 @@ const (
 	servedIdentitySourceConfigured = "configured"
 )
 
+// servedIdentityPerReply is a registry value, never a stored label: the
+// adapter's server may name its own snapshot or may hand the requested model
+// back, so servedIdentity grades each reply as one of the two above.
+const servedIdentityPerReply = "per_reply"
+
 // servedSource maps a provider to its served-identity source.
-var servedSource = map[string]string{
-	providerAnthropic:        servedIdentitySourceResponse,
-	providerOllama:           servedIdentitySourceResponse,
-	providerGemini:           servedIdentitySourceResponse,
-	providerOpenAI:           servedIdentitySourceResponse,
-	providerOpenAICompatible: servedIdentitySourceEcho,
-	providerVLLM:             servedIdentitySourceEcho,
-	ProviderFake:             servedIdentitySourceResponse,
-}
+var servedSource = projectProviders(
+	func(d providerDescriptor) string { return d.servedSource }, everyProvider,
+)
 
 // servedIdentity resolves a trace's served-model fields: the response's own
 // reported identity wins, tagged with how trustworthy that report is; an empty
 // report (the provider named none, or the call never reached a provider at
 // all — a total ladder failure) falls back to the tier's configured binding,
 // honestly labeled servedIdentitySourceConfigured rather than passed off as
-// confirmed.
+// confirmed. On a per-reply wire a name other than the one requested cannot
+// be a reflection of the request, so it is the server's own report.
 func servedIdentity(provider, configuredModel, respServedModel string) (servedModel, source string) {
 	if respServedModel == "" {
 		return configuredModel, servedIdentitySourceConfigured
 	}
-	return respServedModel, servedSource[provider]
+	source = servedSource[provider]
+	if source == servedIdentityPerReply {
+		source = servedIdentitySourceEcho
+		if respServedModel != configuredModel {
+			source = servedIdentitySourceResponse
+		}
+	}
+	return respServedModel, source
 }
 
 // newAttemptTrace opens the ai_call row for one completion attempt with
@@ -74,6 +81,15 @@ func (r *Router) newAttemptTrace(ctx context.Context, task Task, key, reason str
 		ContextBytes: req.ContextBytes, ContextTokensEstimate: req.ContextTokensEstimate,
 		AttemptReason: reason, CacheOff: r.cacheOff,
 	}
+	withAmbientIdentity(ctx, &trace)
+	return trace
+}
+
+// withAmbientIdentity stamps the ids a trace row is joined on from the call's
+// context: the correlation id, the agent run and the subject. Every attempt
+// trace — a completion's and a decision's — reads them here, so one logical
+// call cannot file its rows under two correlations.
+func withAmbientIdentity(ctx context.Context, trace *Call) {
 	if cid, ok := principal.CorrelationID(ctx); ok {
 		trace.CorrelationID = &cid
 	}
@@ -83,7 +99,6 @@ func (r *Router) newAttemptTrace(ctx context.Context, task Task, key, reason str
 	if subject, ok := SubjectOf(ctx); ok {
 		trace.Subject = subject
 	}
-	return trace
 }
 
 // finalizeAttempt completes trace from this attempt's outcome — latency,
@@ -102,6 +117,7 @@ func (r *Router) finalizeAttempt(ctx context.Context, b *binding, lc *logicalCal
 	// means no broker named an upstream, and substituting the configured
 	// provider would turn "nobody told us" into a claim about who served.
 	trace.ServedProvider, trace.FinishReason = resp.ServedProvider, finishReasonFor(resp.FinishReason, callErr)
+	trace.SchemaDowngrade = schemaDowngradeFor(resp.SchemaDowngrade, callErr)
 	// Payload capture is best-effort and, like the trace write itself, must
 	// not become a new way for a working model call to fail (contrast the
 	// meter, which fails loudly to protect the budget guardrail). flush()
@@ -155,10 +171,16 @@ var ErrAllTiersFailed = errors.New("ai: every bound tier failed")
 // non-terminal Call to lc as the walk moves past it — the last rung's own
 // outcome (success or the aggregate "every bound tier failed" error) is
 // what serveAttempt's own deferred trace records, so it is never
-// double-counted here. On success the served response is metered (failing
+// double-counted here.
+//
+// trace is that terminal Call, and each failed rung's row is cloned from it.
+// Its reason — the walk's own — is the first rung's: once a rung fails and the
+// walk moves on, every rung above ran because the one below it failed, so the
+// walk rewrites trace's reason to provider_error for them and for the terminal
+// row. On success the served response is metered (failing
 // loudly — unmetered spend would quietly hollow out the budget guardrail)
 // and cached before it is returned to serveAttempt for tracing.
-func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall, base Call, task Task, ladder []Tier, req model.Request, key string, wsID ids.WorkspaceID, start time.Time) (resp model.Response, tier Tier, served bool, err error) {
+func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall, trace *Call, task Task, ladder []Tier, req model.Request, key string, wsID ids.WorkspaceID, start time.Time) (resp model.Response, tier Tier, served bool, err error) {
 	var boundRungs []Tier
 	for _, t := range ladder {
 		if _, ok := b.clients[t]; ok {
@@ -185,19 +207,30 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			// a premium provider for every call while the configured cheap one
 			// is unusable and nobody is told. A throttle keeps escalating,
 			// because it clears by itself and names no account to fix.
-			if errors.Is(callErr, ErrProviderQuota) {
-				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
+			//
+			// A rejected request stops only when the next rung is the same
+			// provider and model: only then is the identical request re-sent to
+			// the API that refused it. Any other rung may accept it.
+			if errors.Is(callErr, ErrProviderQuota) || rejectedAgainAbove(b, callErr, boundRungs[i:]) {
+				lc.append(r.traceForFailedRung(b, *trace, t, callErr, start))
 				// Not an exhausted ladder — the rungs above were never tried.
 				// Reported as the refusal alone so a caller cannot read "every
 				// tier failed" off a walk that stopped at the first one.
 				return model.Response{}, t, false, callErr
 			}
+			// A withheld answer walks on: a different model may answer what this
+			// one declined, and the content is the caller's own to send it. The
+			// tokens it spent are billed all the same, so they are metered.
+			if meterErr := r.meterWithheld(ctx, task, t, callErr); meterErr != nil {
+				return model.Response{}, t, false, meterErr
+			}
 			if i < len(boundRungs)-1 {
-				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
+				lc.append(r.traceForFailedRung(b, *trace, t, callErr, start))
+				trace.AttemptReason = attemptReasonProviderError
 			}
 			continue
 		}
-		if meterErr := r.meter.Record(ctx, Usage{Task: task, Tier: t, TokensIn: out.InputTokens, TokensOut: out.OutputTokens, CachedTokens: out.CachedTokens, ReasoningTokens: out.ReasoningTokens, CacheWriteTokens: out.CacheWriteTokens}); meterErr != nil {
+		if meterErr := r.meter.Record(ctx, usageOf(task, t, out)); meterErr != nil {
 			// Return the served response and tier even though the call fails:
 			// provider tokens were spent, and the trace must bill them to the
 			// tier that answered. errMeteringFailed keeps classifyError from
@@ -222,15 +255,60 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		// "the request was wrong" without matching the message: the two are
 		// different HTTP answers, and a caller that cannot separate them has to
 		// report a dependency being down as an internal fault.
+		//
+		// Except when the last rung withheld or rejected: a model was reached
+		// and decided, so the walk ended on an outcome, and ErrAllTiersFailed
+		// would send a caller to re-drive it as an outage.
+		if errors.Is(lastErr, model.ErrOutputWithheld) || errors.Is(lastErr, model.ErrRequestRejected) {
+			return model.Response{}, lastTier, false, lastErr
+		}
 		return model.Response{}, lastTier, false, fmt.Errorf("%w for %s: %w", ErrAllTiersFailed, task, lastErr)
 	}
 	return model.Response{}, "", false, nil
 }
 
+// rejectedAgainAbove reports whether callErr rejected the request and the next
+// rung of rest (rest[0] is the rung that answered) is the same known binding:
+// provider, model and base URL, the one API the identical request would reach.
+func rejectedAgainAbove(b *binding, callErr error, rest []Tier) bool {
+	if !errors.Is(callErr, model.ErrRequestRejected) || len(rest) < 2 {
+		return false
+	}
+	here, above := b.routeMeta[rest[0]], b.routeMeta[rest[1]]
+	return here.provider != "" && here == above
+}
+
+// usageOf is one served or withheld reply's spend as the meter records it.
+func usageOf(task Task, tier Tier, out model.Response) Usage {
+	return Usage{
+		Task: task, Tier: tier, TokensIn: out.InputTokens, TokensOut: out.OutputTokens, CachedTokens: out.CachedTokens,
+		ReasoningTokens: out.ReasoningTokens, CacheWriteTokens: out.CacheWriteTokens,
+	}
+}
+
+// meterWithheld records what a withheld rung reported spending. A rung whose
+// error names no spend has nothing to meter.
+func (r *Router) meterWithheld(ctx context.Context, task Task, tier Tier, callErr error) error {
+	var withheld interface{ Spent() model.Response }
+	if !errors.As(callErr, &withheld) {
+		return nil
+	}
+	spent := withheld.Spent()
+	if spent.InputTokens+spent.OutputTokens == 0 {
+		return nil
+	}
+	if err := r.meter.Record(ctx, usageOf(task, tier, spent)); err != nil {
+		return fmt.Errorf("ai: a withheld answer's spend could not be metered: %w", errors.Join(errMeteringFailed, err))
+	}
+	r.spendAgentTokens(ctx, spent.InputTokens+spent.OutputTokens)
+	return nil
+}
+
 // traceForFailedRung builds the non-terminal Call for a ladder rung the
 // walk moved past — cloning base's request-level fields (task,
-// correlation, fingerprint, cache-off) and filling in this rung's own
-// tier, provider/model, latency-so-far, and provider_error sentinel.
+// correlation, fingerprint, cache-off, and the reason this rung ran) and
+// filling in this rung's own tier, provider/model, latency-so-far, and error
+// sentinel.
 func (r *Router) traceForFailedRung(b *binding, base Call, t Tier, callErr error, start time.Time) Call {
 	c := base
 	c.Tier = t
@@ -240,14 +318,29 @@ func (r *Router) traceForFailedRung(b *binding, base Call, t Tier, callErr error
 	c.ErrorSentinel = classifyError(callErr)
 	c.ServedModel, c.ServedIdentitySource = servedIdentity(c.Provider, c.ModelID, "")
 	c.LatencyMS = r.now().Sub(start).Milliseconds()
-	c.AttemptReason = attemptReasonProviderError
 	// A rung that fell back is stored too, so it needs the terminal for the
 	// same reason the finalized attempt does — and it is the row most likely
 	// to carry one, since an abnormal finish is exactly what sends the walk
 	// to the next rung. There is no Response on this path at all: the rung
 	// failed, so the reason can only have come from the error.
 	c.FinishReason = finishReasonFor("", callErr)
+	c.SchemaDowngrade = schemaDowngradeFor("", callErr)
 	return c
+}
+
+// schemaDowngradeFor is finishReasonFor's rule for the schema downgrade: what
+// the Response reported, else what a failed call's error carries
+// (reportSchemaDowngrade), else "" — the schema went as written, or there was
+// none. One function because both trace writers record it.
+func schemaDowngradeFor(reported string, callErr error) string {
+	if reported != "" {
+		return reported
+	}
+	var downgraded interface{ SchemaDowngrade() string }
+	if errors.As(callErr, &downgraded) {
+		return downgraded.SchemaDowngrade()
+	}
+	return ""
 }
 
 // finishReasonFor derives the terminal for one stored attempt, and is the ONE
@@ -257,13 +350,15 @@ func (r *Router) traceForFailedRung(b *binding, base Call, t Tier, callErr error
 //
 // `reported` is what the Response said, and it wins whenever it is set: a
 // provider that stated its terminal outranks anything inferred from an error
-// value. A failed attempt has no Response to read, so an abnormal terminal
-// arrives on the error instead (gemini.go's stoppedError).
+// value, and it is how a truncation arrives: a cut-off reply is a Response
+// carrying model.FinishReasonLength on every wire, never a failure. A failed
+// attempt has no Response to read, so a withholding terminal arrives on the
+// error instead (withheldError, truncatedError).
 //
 // Without this the stored row is blank on exactly the calls finish_reason
-// exists to describe: MAX_TOKENS, SAFETY and RECITATION all classify to the
-// single `provider_error` sentinel and are separable only by this field,
-// though they call for opposite responses.
+// exists to describe: SAFETY and RECITATION both classify to the single
+// `provider_error` sentinel and are separable only by this field, though they
+// call for different responses.
 func finishReasonFor(reported string, callErr error) string {
 	if reported != "" {
 		return reported

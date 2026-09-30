@@ -11,7 +11,7 @@ import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 // The card is a MACHINE's reading in every state it can be in, so the indigo
 // band and the disclosure badge ride the panel rather than the writer that
 // answered on the day. What does vary is the writer, and the foot names it:
-// `Written by Margince` over a model's prose, `Assembled from your records`
+// `Written by Margince` over a model's prose, `Compiled from CRM records`
 // over the composition it degrades to. The two frames below differ in that
 // line and in nothing else, which is the claim worth documenting.
 //
@@ -85,7 +85,7 @@ function card(value: ContactBrief | undefined) {
 }
 
 const meta: Meta<typeof ContactBriefCard> = {
-  title: "Records/Contact relationship brief",
+  title: "Records/Contact 360/Relationship brief",
   component: ContactBriefCard,
   parameters: { layout: "padded" },
 };

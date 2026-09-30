@@ -72,7 +72,7 @@ func (s *Store) SetAnchorCompanyLogo(ctx context.Context, slot LogoSlot, objectK
 		supersededKey = supersededObject(previous, objectKey)
 		return recordLogoWrite(ctx, tx, companyID, slot, logoWrite{
 			previousOrigin: previousOrigin, origin: &named,
-			source: companySourceHuman, by: by,
+			source: CompanySourceHuman, by: by,
 		})
 	})
 	if err != nil {
@@ -113,7 +113,7 @@ func (s *Store) ClearCompanyLogo(ctx context.Context, slot LogoSlot) (superseded
 		}
 		supersededKey = previous
 		return recordLogoWrite(ctx, tx, companyID, slot, logoWrite{
-			previousOrigin: previousOrigin, source: companySourceHuman, by: by,
+			previousOrigin: previousOrigin, source: CompanySourceHuman, by: by,
 		})
 	})
 	if err != nil {

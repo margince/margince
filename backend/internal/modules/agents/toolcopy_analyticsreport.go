@@ -37,15 +37,15 @@ package agents
 // nothing to look up.
 var composeAnalyticsReportCopy = toolCopy{
 	Purpose: "WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary " +
-		"for a meeting — whose every number comes from a saved analytics run instead of " +
+		"for a meeting — whose numbers come from governed queries, standard metrics or frozen editions instead of " +
 		"being typed. Not for answering with a figure: a number in the reply is " +
 		"run_analytics_query's or run_report's. The document carries the STRUCTURE and the " +
-		"WORDS; each figure names a run id and a cell inside it, and the server resolves " +
+		"WORDS; each figure names a query cell, metric_ref or edition_ref, and the server resolves " +
 		"those handles under the reader's own authority.",
 	Limits: "It writes no number of its own and refuses any document that does. A block " +
 		"carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the " +
 		"literal is what renders, the two can disagree, and no reader could tell the page " +
-		"shows a figure the database never computed. Save a run first — run an analytics " +
+		"shows a figure the database never computed. Preserve returned coverage, units and capture context. For a query cell, run an analytics " +
 		"query with save, and cite the run id it answers with.",
 	Instead: "Ask run_analytics_query for one number when a figure is what is wanted. This " +
 		"composes a DOCUMENT of several, which is worth the round trip only when the answer " +

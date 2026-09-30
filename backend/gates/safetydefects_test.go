@@ -30,6 +30,8 @@ import (
 	"go/token"
 	"sort"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // safetyDefectsFile is where both the constants and the map live. One file by
@@ -39,8 +41,7 @@ const safetyDefectsFile = "internal/modules/deals/stageprogressionsuspend.go"
 
 func TestEverySafetyDefectCanActuallySuspendARule(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, safetyDefectsFile, nil, parser.ParseComments)
+	file, err := gatekit.ParseFile(safetyDefectsFile, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", safetyDefectsFile, err)
 	}

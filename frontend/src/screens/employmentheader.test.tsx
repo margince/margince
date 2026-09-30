@@ -34,13 +34,13 @@ it("does not label a former or unknown company as the contact's current employer
   expect(header?.textContent).not.toContain("Unknown Company");
 });
 
-it("keeps unknown roles and additional current jobs in Career", async () => {
-  const { render } = await import("@testing-library/react");
-  const { IdentityRail } = await import("./contact360");
+it("keeps unknown roles and additional current jobs on the Employers panel", async () => {
+  const { render, within } = await import("@testing-library/react");
+  const { Employers } = await import("./contactemployers");
   const { StoryProviders } = await import("./story-utils");
   render(
     <StoryProviders>
-      <IdentityRail
+      <Employers
         view={{
           ...view,
           employments: {
@@ -75,7 +75,12 @@ it("keeps unknown roles and additional current jobs in Career", async () => {
       />
     </StoryProviders>,
   );
-  expect(await screen.findByText("Uncertain Employer")).toBeTruthy();
+  const uncertain = (await screen.findByText("Uncertain Employer")).closest(
+    ".pe-employment",
+  );
   expect(await screen.findByText("Second Employer")).toBeTruthy();
-  expect(await screen.findByText(/Status unknown/)).toBeTruthy();
+  expect(uncertain).not.toBeNull();
+  expect(
+    within(uncertain as HTMLElement).getByText(/Status unknown/),
+  ).toBeTruthy();
 });

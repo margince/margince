@@ -1,7 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Field,
@@ -12,9 +13,17 @@ import {
 import { Callout } from "../design-system/callout";
 import { EvidenceReceipt } from "../design-system/evidencereceipt";
 import { MoneyInput } from "../design-system/moneyinput";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { SegmentBar } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
-import { formatMoneyOrAbsent, formatNumber } from "../format/format";
+import {
+  formatDateAbbrev,
+  formatDateTime,
+  formatMoneyCompact,
+  formatMoneyOrAbsent,
+  formatNumber,
+} from "../format/format";
+import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
@@ -25,6 +34,10 @@ import {
   type ForecastPeriod,
   useForecastReadings,
 } from "./forecast.queries";
+// The section's layout classes (toolbar, the checks-and-receipt pair) live in
+// the screen's sheet; imported here too so the view draws the same when it is
+// rendered on its own.
+import "./analytics.css";
 
 type Readings = components["schemas"]["ForecastReadings"];
 
@@ -42,71 +55,129 @@ export function ForecastView({
   const t = useT();
   const { locale } = useLocale();
   const [period, setPeriod] = useState<ForecastPeriod>("quarter");
+  // Whether the call editor is open. Held here rather than in the editor,
+  // because the verb that opens it stands in the toolbar beside the period it
+  // files against, outside the read the editor needs.
+  const [editing, setEditing] = useState(false);
+  // Only a reader who may call, calling for ONE population: a blended view of
+  // several teams has no single call to record.
+  const canCall = canSubmit && writableScope(selection.scope) != null;
 
   // The same read the morning's pipeline counter makes, through the same key:
   // two surfaces asking what the pipeline is worth must not get two answers.
   const readings = useForecastReadings(selection.scope, period);
 
   return (
-    <>
-      {/* Which window the figures below are over. Above the readings rather
-          than beside them, because every number on this page changes when it
-          moves — a control nested among them would read as filtering one. */}
-      <SegmentedControl
-        label={t("forecast.period")}
-        options={FORECAST_PERIODS}
-        value={period}
-        onChange={setPeriod}
-        labels={{
-          quarter: t("forecast.period.quarter"),
-          month: t("forecast.period.month"),
-          week: t("forecast.period.week"),
-        }}
-      />
+    <div className="analytics-stack">
+      {/* Which window the figures below are over, and the verb that records a
+          call about it. Above the readings rather than beside them, because
+          every number on this page changes when the window moves — a control
+          nested among them would read as filtering one. */}
+      <div className="analytics-toolbar">
+        <SegmentedControl
+          label={t("forecast.period")}
+          options={FORECAST_PERIODS}
+          value={period}
+          onChange={setPeriod}
+          labels={{
+            quarter: t("forecast.period.quarter"),
+            month: t("forecast.period.month"),
+            week: t("forecast.period.week"),
+          }}
+        />
+        {canCall && !editing ? (
+          <Button onClick={() => setEditing(true)}>
+            {t("forecast.updateCall")}
+          </Button>
+        ) : null}
+      </div>
       <QueryGate query={readings} pendingLabel={t("forecast.updateCall")}>
         {(data) => (
           <>
             <ForecastAnswer readings={data} locale={locale} />
-            {canSubmit && writableScope(selection.scope) ? (
+            {canCall && editing ? (
               <ForecastCallEditor
                 readings={data}
                 selection={selection}
                 period={period}
+                onClose={() => setEditing(false)}
               />
             ) : null}
             {/* What to check comes BEFORE the receipt: a manager with ten
               minutes reads what needs doing first, and the receipt is what
-              they consult when a number looks wrong. */}
-            <ForecastReview />
-            <EvidenceReceipt
-              title={t("forecast.receipt")}
-              counts={[
-                {
-                  key: "eligible",
-                  term: t("forecast.eligible"),
-                  value: formatNumber(data.eligible_count, locale),
-                },
-                {
-                  key: "priced",
-                  term: t("forecast.priced"),
-                  value: formatNumber(data.priced_count, locale),
-                },
-                {
-                  key: "confirmed",
-                  term: t("forecast.confirmed"),
-                  value: formatNumber(data.confirmed_date_count, locale),
-                },
-                {
-                  key: "fx",
-                  term: t("forecast.fxMissing"),
-                  value: formatNumber(data.fx_missing_count, locale),
-                },
-              ]}
-            />
+              they consult when a number looks wrong. Side by side where the
+              page is wide, so the receipt stops being a full-width table of
+              four numbers. */}
+            <div className="analytics-pair">
+              <ForecastReview />
+              <EvidenceReceipt
+                title={t("forecast.receipt")}
+                counts={[
+                  {
+                    key: "eligible",
+                    term: t("forecast.eligible"),
+                    value: formatNumber(data.eligible_count, locale),
+                  },
+                  {
+                    key: "priced",
+                    term: t("forecast.priced"),
+                    value: formatNumber(data.priced_count, locale),
+                  },
+                  {
+                    key: "confirmed",
+                    term: t("forecast.confirmed"),
+                    value: formatNumber(data.confirmed_date_count, locale),
+                  },
+                  {
+                    key: "fx",
+                    term: t("forecast.fxMissing"),
+                    value: formatNumber(data.fx_missing_count, locale),
+                  },
+                ]}
+              />
+            </div>
           </>
         )}
       </QueryGate>
-    </>
+    </div>
+  );
+}
+
+// How far the call sits from the evidence, in the sentence that direction
+// needs.
+//
+// THREE sentences and an UNSIGNED magnitude, because a difference cannot be
+// said in one. A signed figure in a sentence ending "over evidence" printed a
+// call twenty thousand SHORT of its evidence as "-€20,000.00 over evidence",
+// which is the wrong direction stated twice and then contradicted by a minus
+// sign. Equal is its own arm rather than a zero: "±€0 over evidence" is a
+// difference nobody has.
+function callDetail(
+  call: NonNullable<Readings["current_call"]>,
+  readings: Readings,
+  locale: Locale,
+  t: ReturnType<typeof useT>,
+): string {
+  // The day the call was authored, cut in the zone the period itself was cut
+  // in: a reporting figure and the date beside it must not be bucketed on two
+  // different calendars.
+  const date = formatDateAbbrev(call.created_at, locale, readings.timezone);
+  const difference = call.amount_minor - readings.evidence_minor;
+  if (difference === 0) {
+    return t("forecast.currentCallDetailEven", { date });
+  }
+  const gap = formatMoneyOrWord(
+    Math.abs(difference),
+    readings.base_currency,
+    locale,
+    t("format.notForecast"),
+    formatMoneyCompact,
+  );
+  return t(
+    difference > 0
+      ? "forecast.currentCallDetailOver"
+      : "forecast.currentCallDetailUnder",
+    { date, gap },
   );
 }
 
@@ -117,8 +188,32 @@ function ForecastAnswer({
 }: Readonly<{ readings: Readings; locale: Locale }>) {
   const t = useT();
   const currency = readings.base_currency;
+  // The sentence carries the amount in FULL — it is read once, at prose width,
+  // and a call somebody authored to the cent is a number they should meet as
+  // they wrote it. The slots below carry the same figures compactly, because a
+  // slot is a hundred points wide and a full amount clips there.
   const money = (minor: number | null | undefined) =>
     formatMoneyOrAbsent(minor ?? null, currency, locale);
+  // Compact, and a WORD where the pair cannot be said as money at all: a slot
+  // is about a hundred points wide, and one compared across a row must not
+  // answer with a glyph. The landing cards at the end of this strip answer the
+  // same way, so the row reads as one comparison.
+  const slot = (minor: number | null | undefined) =>
+    formatMoneyOrWord(
+      minor,
+      currency,
+      locale,
+      t("format.notForecast"),
+      formatMoneyCompact,
+    );
+  const call = readings.current_call;
+  // What best case adds on top of the evidence it already contains. Never
+  // below zero: a superset that read smaller than its subset is a server fault
+  // to show as nothing added, not as a part drawn backwards.
+  const bestCaseAdds = Math.max(
+    0,
+    readings.best_case_minor - readings.evidence_minor,
+  );
 
   return (
     <>
@@ -131,19 +226,57 @@ function ForecastAnswer({
               reader shown only one of the two has no way to tell whether the
               call is ahead of the evidence or behind it. */}
           <p>
-            {readings.current_call
+            {call
               ? t("forecast.answerWithCall", {
-                  call: money(readings.current_call.amount_minor),
+                  call: money(call.amount_minor),
                   evidence: money(readings.evidence_minor),
                 })
               : t("forecast.answerNoCall", {
                   evidence: money(readings.evidence_minor),
                 })}
           </p>
+          {/* The same answer as one shape: what is banked, what is committed
+              with a date, what best case adds, and the call across them. The
+              three are DISJOINT on the server — evidence and best case count
+              open deals only, and best case contains evidence — so they are
+              laid end to end, and best case contributes only what it adds. */}
+          <SegmentBar
+            label={t("forecast.makeup")}
+            parts={[
+              {
+                key: "won",
+                label: t("forecast.alreadyWon"),
+                value: readings.won_minor,
+                amount: slot(readings.won_minor),
+              },
+              {
+                key: "evidence",
+                label: t("forecast.evidence"),
+                value: readings.evidence_minor,
+                amount: slot(readings.evidence_minor),
+              },
+              {
+                key: "bestCase",
+                label: t("forecast.bestCaseAdds"),
+                value: bestCaseAdds,
+                amount: slot(bestCaseAdds),
+              },
+            ]}
+            marker={
+              call
+                ? {
+                    key: "call",
+                    label: t("forecast.currentCall"),
+                    value: call.amount_minor,
+                    amount: slot(call.amount_minor),
+                  }
+                : undefined
+            }
+          />
         </PanelBody>
       </Panel>
 
-      {/* An unpriced deal is real pipeline contributing zero money, so the gap
+      {/* An unpriced deal is a real deal contributing zero money, so the gap
           between eligible and priced is stated beside the total rather than
           left in the receipt alone. */}
       {readings.priced_count < readings.eligible_count && (
@@ -159,25 +292,30 @@ function ForecastAnswer({
         </Callout>
       )}
 
+      {/* EVERY slot declares the narrow shape, the landing pair included: the
+          fold is the strip's, so a card that did not declare it would keep its
+          box while the rows beside it lost theirs. */}
       <StatStrip>
         <StatCard
+          narrow="row"
           label={t("forecast.currentCall")}
           // No call is a reading, not a missing figure: the sentence above
           // already says the book is running on evidence alone, and a slot in a
           // row compared across must not answer that with a glyph.
-          value={
-            readings.current_call
-              ? money(readings.current_call.amount_minor)
-              : t("forecast.currentCallNone")
-          }
+          value={call ? slot(call.amount_minor) : t("forecast.currentCallNone")}
+          detail={call ? callDetail(call, readings, locale, t) : undefined}
         />
         <StatCard
+          narrow="row"
           label={t("forecast.evidence")}
-          value={money(readings.evidence_minor)}
+          value={slot(readings.evidence_minor)}
+          detail={t("forecast.evidenceDetail")}
         />
         <StatCard
+          narrow="row"
           label={t("forecast.alreadyWon")}
-          value={money(readings.won_minor)}
+          value={slot(readings.won_minor)}
+          detail={t("forecast.alreadyWonDetail")}
         />
         {/* Both are absent for a managed-teams reading, which covers several
             populations at once: a landing summed across books that are called
@@ -211,14 +349,17 @@ function ForecastCallEditor({
   readings,
   selection,
   period,
+  onClose,
 }: Readonly<{
   readings: Readings;
   selection: AnalyticsSelection;
   period: ForecastPeriod;
+  // Leaving the editor, whether by cancelling or by a recorded call: the view
+  // that opened it owns whether it is open.
+  onClose: () => void;
 }>) {
   const t = useT();
   const client = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [amountMinor, setAmountMinor] = useState<number>(
     readings.current_call?.amount_minor ?? 0,
   );
@@ -264,20 +405,9 @@ function ForecastCallEditor({
       // population alone: a workspace call changes what a team reading shows
       // beneath it, and a stale sibling is the bug this replaces.
       await client.invalidateQueries({ queryKey: ["forecast"] });
-      setOpen(false);
-      setNote("");
+      onClose();
     },
   });
-
-  if (!open) {
-    return (
-      <div className="card-actions">
-        <Button onClick={() => setOpen(true)}>
-          {t("forecast.updateCall")}
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <Panel
@@ -286,7 +416,7 @@ function ForecastCallEditor({
       // act on rather than in the band that names it.
       actions={
         <>
-          <Button onClick={() => setOpen(false)}>{t("forecast.cancel")}</Button>
+          <Button onClick={onClose}>{t("forecast.cancel")}</Button>
           <Button
             variant="primary"
             disabled={save.isPending}
@@ -301,7 +431,7 @@ function ForecastCallEditor({
         {/* Two sentences: what a call is, and what recording one does not do.
             The head band holds one line, and the half it would cut is the
             half that says no deal moves. */}
-        <p className="t-sub">{t("forecast.callExplains")}</p>
+        <PanelIntro>{t("forecast.callExplains")}</PanelIntro>
         <Field label={t("forecast.expectedTotal")}>
           {(control) => (
             <MoneyInput
@@ -324,5 +454,45 @@ function ForecastCallEditor({
         </Field>
       </PanelBody>
     </Panel>
+  );
+}
+
+export function SharedForecastView({ token }: Readonly<{ token: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const query = useQuery({
+    queryKey: ["shared-forecast", token],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/forecast/shared/{token}", {
+        params: { path: { token } },
+      });
+      if (error) throwProblem(error);
+      return data;
+    },
+  });
+  return (
+    <div className="wrap">
+      <QueryGate query={query} pendingLabel={t("analytics.sectionForecast")}>
+        {(view) => (
+          <>
+            <p className="t-caption">
+              {view.kind === "snapshot"
+                ? t("reporting.frozen")
+                : t("reporting.live")}
+              {view.as_of
+                ? ` · ${formatDateTime(view.as_of, locale, zone)}`
+                : ""}
+            </p>
+            {view.withheld && (
+              <Callout tone="warning" title={t("reporting.restricted")}>
+                {t("reporting.restricted")}
+              </Callout>
+            )}
+            <ForecastAnswer readings={view.readings} locale={locale} />
+          </>
+        )}
+      </QueryGate>
+    </div>
   );
 }

@@ -21,7 +21,7 @@ function show(onPick: (file: File) => void, file?: File) {
       <FileDropzone
         label="Document"
         hint="Up to 25 MB."
-        emptyLabel="Drop the file here, or click to choose one"
+        emptyLabel="Drop a file here, or click to choose one"
         file={file}
         onPick={onPick}
       />
@@ -146,7 +146,7 @@ describe("choosing a file", () => {
 
     expect(screen.getByText("order_form.txt")).toBeTruthy();
     expect(
-      screen.queryByText("Drop the file here, or click to choose one"),
+      screen.queryByText("Drop a file here, or click to choose one"),
     ).toBeNull();
   });
 
@@ -212,7 +212,7 @@ describe("choosing a file", () => {
       <LocaleProvider initial="en">
         <FileDropzone
           label="Document"
-          emptyLabel="Choose a .vcf file"
+          emptyLabel="Select .vcf file"
           accept=".vcf,text/vcard"
           onPick={vi.fn()}
         />
@@ -227,4 +227,18 @@ describe("choosing a file", () => {
 
     expect(target().hasAttribute("accept")).toBe(false);
   });
+});
+
+// The prompt is a question until it is answered, and the answer takes the
+// reader's own ink rather than the placeholder's. One class carries that, so
+// nothing else fails when it goes.
+it("marks the label as an answer once a file is chosen, and not before", () => {
+  const { unmount } = show(vi.fn());
+  expect(
+    screen.getByText("Drop a file here, or click to choose one").className,
+  ).not.toContain("chosen");
+  unmount();
+
+  show(vi.fn(), new File(["x"], "contract.pdf", { type: "application/pdf" }));
+  expect(screen.getByText(/contract\.pdf/).className).toContain("chosen");
 });

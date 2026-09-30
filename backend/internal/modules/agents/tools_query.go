@@ -132,6 +132,7 @@ func (t queryWorkspace) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "query_workspace", Title: "Query the workspace", Version: toolVersionV1,
 		Description:   queryWorkspaceCopy.render(),
+		Instead:       queryWorkspaceCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		// The plan document is NOT re-declared here. Its grammar is published
 		// at margince://schema/query, derived per caller from the field catalog
@@ -141,6 +142,9 @@ func (t queryWorkspace) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["plan"],"properties":{
 			"plan":{"type":"object","description":"A query plan, in the grammar published at margince://schema/query. That document, not this description, holds the record types, fields, operators and relationships this workspace admits: a name outside it is refused by name, never guessed at."}},
 			"additionalProperties":false}`),
+		UnkeyedArguments: map[string]string{
+			"$.plan": "the plan is a document in a grammar derived per caller from the live column catalog",
+		},
 		OutputSchema: schemaFor[QueryWorkspaceResult](),
 	}
 }

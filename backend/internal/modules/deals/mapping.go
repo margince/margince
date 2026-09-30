@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -106,6 +107,17 @@ func stageCreateInput(req crmcontracts.CreateStageRequest) (CreateStageInput, er
 }
 
 func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error) {
+	return dealCreateInputAdmitting(req, false)
+}
+
+// dealCreateInputFromImporter is dealCreateInput for a declared importer
+// (auth.DeclaredImporter, asked by the handler): it may stamp the mirror:
+// namespace. provider.go keeps the closed door.
+func dealCreateInputFromImporter(req crmcontracts.CreateDealRequest) (CreateDealInput, error) {
+	return dealCreateInputAdmitting(req, true)
+}
+
+func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool) (CreateDealInput, error) {
 	if req.Name == "" {
 		return CreateDealInput{}, &RequiredFieldError{Field: "name"}
 	}
@@ -114,7 +126,11 @@ func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error
 	// on the attempt rather than only on an otherwise-complete body. Answering
 	// "pipeline_id is required" to a forged-provenance write would tell the caller
 	// how to make the forgery land.
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
+		return CreateDealInput{}, err
+	}
+	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
+	if err != nil {
 		return CreateDealInput{}, err
 	}
 	// A deal is born INTO a stage of a pipeline, and neither is defaultable here:
@@ -136,6 +152,8 @@ func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error
 		PipelineID:       pathID[ids.PipelineKind](req.PipelineId),
 		StageID:          pathID[ids.StageKind](req.StageId),
 		Source:           req.Source,
+		SourceSystem:     req.SourceSystem,
+		Author:           author,
 		CompanyID:        idArg[ids.CompanyKind](req.CompanyId),
 		PartnerCompanyID: idArg[ids.CompanyKind](req.PartnerCompanyId),
 		ProjectID:        idArg[ids.ProjectKind](req.ProjectId),

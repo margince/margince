@@ -86,9 +86,11 @@ settles. Report a criterion only when the text SAYS it: quote the passage that s
 Report nothing for a topic merely discussed, for something you are inferring rather than
 reading, and for anything about what should happen to the DEAL — you report what was said
 about each criterion, never what the deal should do next or which stage it belongs in.
-Say met=false only where the text states the thing has NOT happened; silence about a
-criterion is not evidence either way, and the correct answer is to omit it.
-Reporting nothing is the correct answer for many conversations.`
+A speaker reporting what somebody else said or agreed ("she confirmed the budget")
+is not their own statement, and settles nothing.
+Say met=false where the text states the thing has NOT happened: it is still awaited,
+only forecast, floated and deferred, or denied. Silence about a criterion is not
+evidence either way; omit it. Reporting nothing is the correct answer for many conversations.`
 
 // stageEvidenceSystemFor names THIS call's data boundary; see
 // promptfence.Fence.Rule. The language rule governs "quote" — which is a
@@ -192,8 +194,7 @@ func stageEvidenceRequest(
 		`ascending and with no line skipped between the first and the last — `+
 		`quote the interruption rather than reading around it. `+
 		`"quote" is the passage itself, copied from the span, at most %d characters. `+
-		`"met" is "true" where the text says the thing happened and "false" where it `+
-		`says it has NOT; omit the criterion entirely where the text says neither. `+
+		`"met" is "true" where the text says the thing happened and "false" as above. `+
 		`"commitment" is "agreed" where a party settled it, "proposed" where one `+
 		`floated it without agreement, and "none" where the text describes it without `+
 		`either. Do not name a stage, a next step, or what the deal should do.`,
@@ -203,7 +204,7 @@ func stageEvidenceRequest(
 		System:         stageEvidenceSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: stageEvidenceSchema(),
+		ResponseSchema: stageEvidenceSchema(criteria, spans),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -211,19 +212,34 @@ func stageEvidenceRequest(
 // stageEvidenceSchema is the generation-time shape guardrail. It names no
 // stage and no author side, so the shape itself refuses the reply this site
 // must never accept.
-func stageEvidenceSchema() json.RawMessage {
+//
+// The two ids a claim cites are closed to THIS call's own: the criterion keys
+// it listed and the span ids it supplied. stageEvidenceValid refuses anything
+// else afterwards, but a decoder that can only write an offered id cannot
+// spend a whole reply on a record this call never read. The lines are
+// integers because a claim cites line 3, never line 2.5, and the reader
+// decodes them into ints.
+func stageEvidenceSchema(criteria []stageEvidenceCriterion, spans []stageEvidenceSpan) json.RawMessage {
+	keys := make([]string, 0, len(criteria))
+	for _, c := range criteria {
+		keys = append(keys, c.Key)
+	}
+	sourceIDs := make([]string, 0, len(spans))
+	for _, span := range spans {
+		sourceIDs = append(sourceIDs, span.SourceID)
+	}
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			"claims": schema.Array(schema.Object(
 				map[string]schema.Node{
-					"criterion_key": schema.String(),
-					"source_id":     schema.String(),
-					"source_lines":  schema.Array(schema.Number()),
+					"criterion_key": schema.Enum(keys...),
+					"source_id":     schema.Enum(sourceIDs...),
+					"source_lines":  schema.Array(schema.Integer()),
 					"quote":         schema.String(),
 					// met is a STRING enum rather than a boolean: the shape must
 					// refuse a third state, and "the text says neither" is
 					// expressed by omitting the criterion, not by a value.
-					"met":                   schema.Enum("true", "false"),
+					"met":                   schema.Enum(stageEvidenceMet, stageEvidenceNotMet),
 					"commitment":            schema.Enum(stageEvidenceCommitments...),
 					extractionConfidenceKey: schema.Number(),
 				},
@@ -376,11 +392,33 @@ func validateStageEvidenceQuote(claim stageEvidenceClaim, span stageEvidenceSpan
 	// under its whitespace normalisation is what lets a model reflow a wrapped
 	// line without failing — reflow is not the failure this guards against;
 	// composing a sentence nobody wrote is.
-	if !claims.Quoted(cited.String(), claim.Quote) {
+	spoken, oneSpeaker := oneSpeakersWords(claim.SourceLines, span)
+	if !claims.Quoted(cited.String(), claim.Quote) &&
+		(!oneSpeaker || !claims.Quoted(spoken, claim.Quote)) {
 		return fmt.Sprintf("the quote on %q is not in the lines it cites",
 			clampToken(claim.CriterionKey))
 	}
 	return ""
+}
+
+// oneSpeakersWords joins the cited lines without their "Name:" labels when one
+// named speaker said every line. A quote running over two of her own turns may
+// drop the second label, which is attribution rather than words; across two
+// speakers the label is the seam between them, and erasing it would let a
+// reply pass the rep's sentence off as the buyer's.
+func oneSpeakersWords(lines []int, span stageEvidenceSpan) (string, bool) {
+	var words strings.Builder
+	first := ""
+	for i, line := range lines {
+		speaker, said := ai.SplitSpeakerLine(span.Lines[line-1])
+		if speaker == "" || (i > 0 && speaker != first) {
+			return "", false
+		}
+		first = speaker
+		words.WriteString(said)
+		words.WriteString(" ")
+	}
+	return words.String(), true
 }
 
 // refuseSplicedCitation stops a quote assembled out of lines that do not read

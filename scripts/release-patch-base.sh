@@ -39,7 +39,7 @@ fallback="${3-}"
 # force-push discards its old tip, so a `before` the fetched history no longer
 # carries is not an error to report — it is simply not a base.
 resolvable() {
-	[ -n "$1" ] && git rev-parse --verify --quiet "$1^{commit}" >/dev/null 2>&1
+	[[ -n "$1" ]] && git rev-parse --verify --quiet "$1^{commit}" >/dev/null 2>&1
 }
 
 # An all-zeros `before` is branch creation: there is no previous state at all.
@@ -61,7 +61,7 @@ fi
 # whose tag has not been written yet. The previous tip is the old behaviour and
 # the best remaining guess — it is right whenever the lane before this one did
 # publish, which is the ordinary case.
-if [ -n "$before" ] && ! zeros "$before" && resolvable "$before"; then
+if [[ -n "$before" ]] && ! zeros "$before" && resolvable "$before"; then
 	git rev-parse --verify "$before^{commit}"
 	exit 0
 fi

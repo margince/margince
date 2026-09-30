@@ -60,15 +60,20 @@ func fillFromSignature(ctx context.Context, t *testing.T, e *dedupeEnv, contactI
 // which is what the supersede rule compares.
 func fillFromSignatureObserved(ctx context.Context, t *testing.T, e *dedupeEnv, contactID ids.ContactID, observedAt time.Time, f SignatureField) bool {
 	t.Helper()
-	var verdict signatureVerdict
+	var applied bool
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if f.Name == fieldPhone {
+			landed, err := applySignatureNumbers(ctx, tx, contactID, "mailto:signature", observedAt, []SignatureField{f})
+			applied = landed > 0
+			return err
+		}
 		var err error
-		verdict, err = e.store.applySignatureField(ctx, tx, contactID, "mailto:signature", observedAt, f)
+		applied, err = e.store.applySignatureField(ctx, tx, contactID, "mailto:signature", observedAt, f)
 		return err
 	}); err != nil {
 		t.Fatalf("apply the signature field %s: %v", f.Name, err)
 	}
-	return verdict.applied
+	return applied
 }
 
 // A machine read a page or a footer; the human read the evidence and chose.
@@ -77,7 +82,7 @@ func fillFromSignatureObserved(ctx context.Context, t *testing.T, e *dedupeEnv, 
 func TestAMachineFillNeverReplacesWhatAHumanAccepted(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	contactID, _ := e.seedEmployedContact(ctx, t,
+	contactID, companyID := e.seedEmployedContact(ctx, t,
 		"Ola Brekke", "ola@precedence.test", "Brekke AS", "precedence.test")
 
 	accepted := ResearchClaimInput{
@@ -90,17 +95,17 @@ func TestAMachineFillNeverReplacesWhatAHumanAccepted(t *testing.T) {
 		t.Fatalf("accept the claim: %v", err)
 	}
 
-	applied, err := e.store.ApplyDiscoveredFields(ctx, contactID, []DiscoveredField{{
-		Field:           "linkedin",
-		Value:           "https://www.linkedin.com/in/someone-else",
-		EvidenceSnippet: "Someone Else — Brekke AS",
-		SourceRef:       "search:precedence",
-	}})
+	matched, err := e.store.ApplySiteContactFields(ctx, companyID, SiteContactFields{
+		Name:            "Ola Brekke",
+		LinkedinURL:     "https://www.linkedin.com/in/someone-else",
+		EvidenceSnippet: "Ola Brekke — Brekke AS",
+		SourceURL:       "https://precedence.test/about",
+	})
 	if err != nil {
-		t.Fatalf("ApplyDiscoveredFields: %v", err)
+		t.Fatalf("ApplySiteContactFields: %v", err)
 	}
-	if len(applied) != 0 {
-		t.Errorf("the search fill reported %v applied, want nothing: the field was already answered", applied)
+	if !matched {
+		t.Fatal("the site did not match the contact, so this test proves nothing about the fill")
 	}
 
 	got := readStoredClaim(ctx, t, e, contactID, "linkedin")

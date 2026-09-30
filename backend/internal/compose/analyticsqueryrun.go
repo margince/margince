@@ -39,6 +39,9 @@ type AnalyticsAnswer struct {
 	// SchemaVersion is the vocabulary this ran against. A caller comparing two
 	// answers needs to know they were asked in the same language.
 	SchemaVersion string
+	// PopulationNarrowed is reportOutcome's: why the answer covers fewer
+	// owners than the report's population, or "".
+	PopulationNarrowed string
 }
 
 // RunAnalyticsQuery compiles and runs one question.
@@ -78,7 +81,14 @@ func RunAnalyticsQuery(
 		return AnalyticsAnswer{}, err
 	}
 
-	plan, err := analyticsquery.Compile(q, schema, analyticsScope(ctx, tx, spec, q))
+	// Every owner a filter names is judged before anything compiles, the same
+	// refusal run_report gives. The explanation re-runs this question first, so
+	// it is judged there too.
+	if err := requireMeasurableTypedOwners(ctx, tx, spec, q.Filters); err != nil {
+		return AnalyticsAnswer{}, err
+	}
+	var narrowed string
+	plan, err := analyticsquery.Compile(q, schema, analyticsScope(ctx, tx, spec, q, &narrowed))
 	if err != nil {
 		return AnalyticsAnswer{}, err
 	}
@@ -117,7 +127,9 @@ func RunAnalyticsQuery(
 	if err != nil {
 		return AnalyticsAnswer{}, fmt.Errorf("compose: reading an analytics answer: %w", err)
 	}
-	return withheldAnswer(raw, plan, floor, schema.Version), nil
+	answer := withheldAnswer(raw, plan, floor, schema.Version)
+	answer.PopulationNarrowed = narrowed
+	return answer, nil
 }
 
 // refuseIfTheFilterHidesTooLittle refuses an answer whose filter narrowed the
@@ -165,12 +177,18 @@ func refuseIfTheFilterHidesTooLittle(
 // style: the gate holding this rule walks function declarations, and a closure
 // is invisible to it. Written inline, swapping the whole composer for its scope
 // half passed the gate — which is the defect the gate exists to catch.
+//
+// narrowed receives the narrowing the answer must announce, since the compiler
+// takes clauses and has no place to carry it back.
 func analyticsScope(
-	ctx context.Context, tx pgx.Tx, spec reportSpec, q analyticsquery.Query,
+	ctx context.Context, tx pgx.Tx, spec reportSpec, q analyticsquery.Query, narrowed *string,
 ) analyticsquery.ScopeClauses {
 	named := namedByAnalyticsQuery(spec, q)
+	breakdown := typedOwnerBreakdown(spec, q)
 	return func(arg func(any) int) ([]string, error) {
-		return specNarrowings(ctx, tx, spec, requestedFromQuery(q), named, arg)
+		clauses, reason, err := specNarrowings(ctx, tx, spec, requestedFromQuery(q), named, breakdown, arg)
+		*narrowed = reason
+		return clauses, err
 	}
 }
 

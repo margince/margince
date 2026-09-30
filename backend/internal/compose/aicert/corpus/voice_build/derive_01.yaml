@@ -14,7 +14,7 @@ fixture:
   samples:
     - id: S1
       kind: email
-      register: customer_email
+      register: email
       weight: 1
       word_count: 223
       text: |
@@ -43,8 +43,8 @@ fixture:
 
         Numbers are in the attachment. Ask if anything reads wrong.
     - id: S2
-      kind: chat
-      register: internal_chat
+      kind: other
+      register: general
       weight: 1
       word_count: 227
       text: |
@@ -75,14 +75,14 @@ fixture:
         Back at four if you need me.
     - id: S3
       kind: email
-      register: customer_email
+      register: email
       weight: 1
       word_count: 215
       text: |
         Quick one: can we move this to Thursday? I want the numbers in front of us
         before we decide.
 
-        Here is where I am. The forecast you sent has us adding two contacts in Q3. I
+        Here is where I am. The forecast you sent has us adding two hires in Q3. I
         do not think we need two. I think we need one and a better process, and I
         would like to test that before we hire.
 
@@ -94,17 +94,17 @@ fixture:
         hours. I would rather read a boring table than a nice chart.
 
         On the budget question you asked. Yes, the money is there. That is not the
-        constraint. The constraint is that every contact we add is a contact somebody
-        has to train, and right now the only contact who can train them is you.
+        constraint. The constraint is that every hire we add is a hire somebody
+        has to train, and right now the only one who can train them is you.
 
         I am not saying no. I am saying Thursday, with the data.
 
-        One last thing. Whatever we decide, we tell the team the reasoning. Contacts
+        One last thing. Whatever we decide, we tell the team the reasoning. Staff
         take a headcount decision much better when they know what it was weighed
         against.
     - id: S4
-      kind: chat
-      register: internal_chat
+      kind: other
+      register: general
       weight: 1
       word_count: 144
       text: |
@@ -128,7 +128,10 @@ fixture:
         want to know what it says.
 expect:
   outcome: accepted
-  answer: [S1, S2]
+  # One citation per register at least, not per sample: S1 and S3 are the
+  # author's customer email and S2 and S4 their internal notes, stored as the
+  # general register, so either sample of a register proves it was read.
+  answer: [email, general]
   rubric: >
     Score whether the derived profile identifies concise, direct,
     decision-oriented writing — the verdict in the opening line, the reasoning

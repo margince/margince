@@ -23,7 +23,6 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -32,6 +31,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // statusCheck is the constraint line, and the quoted literals inside it.
@@ -99,8 +100,7 @@ func ledgerStatusesFromCatalog() ([]string, error) {
 // and the list live in one file, so the two halves are read together.
 func declaredLedgerStatuses() ([]string, error) {
 	path := filepath.Join(repoRoot, "backend", "internal", "modules", "capture", "pending.go")
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		return nil, fmt.Errorf("parsing the ledger's constants: %w", err)
 	}

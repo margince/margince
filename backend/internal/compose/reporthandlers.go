@@ -45,13 +45,13 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 	for _, row := range rows {
 		// The handle carries the instant this answer converted at, so opening it
 		// tomorrow still reconciles to the figure printed today.
-		row[reservedDerivationColumn] = derivationURL(
-			outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, row, outcome.GeneratedAt)
+		row[reservedDerivationColumn] = scopedDerivationURL(
+			outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, row, outcome.GeneratedAt, outcome.Scope)
 	}
 	// The whole-result handle pins the same instant its rows do: it explains the
 	// same answer, over every row rather than one group's.
-	resultURL := derivationURL(
-		outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, nil, outcome.GeneratedAt)
+	resultURL := scopedDerivationURL(
+		outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, nil, outcome.GeneratedAt, outcome.Scope)
 	totalRows := len(rows)
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportResult{
 		Report:               outcome.Report,
@@ -60,6 +60,7 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 		Rows:                 rows,
 		TotalRows:            &totalRows,
 		ExcludedByPermission: outcome.ExcludedByPermission,
+		PopulationNarrowed:   populationNarrowedWire(outcome.PopulationNarrowed),
 		GeneratedAt:          &outcome.GeneratedAt,
 		DerivationUrl:        &resultURL,
 
@@ -97,8 +98,19 @@ func (h reportHandlers) ExplainReport(w http.ResponseWriter, r *http.Request, re
 		Aggregates:           &outcome.Aggregates,
 		TotalRows:            &outcome.TotalRows,
 		ExcludedByPermission: outcome.ExcludedByPermission,
+		PopulationNarrowed:   populationNarrowedWire(outcome.PopulationNarrowed),
 		GeneratedAt:          &outcome.GeneratedAt,
 		AsOf:                 &outcome.AsOf,
 		AsOfPinned:           &outcome.AsOfPinned,
 	})
+}
+
+// populationNarrowedWire is the envelope's narrowing reason, absent when
+// nothing was narrowed. Every report and analytics envelope goes through it.
+func populationNarrowedWire(reason string) *crmcontracts.PopulationNarrowed {
+	if reason == "" {
+		return nil
+	}
+	wire := crmcontracts.PopulationNarrowed(reason)
+	return &wire
 }

@@ -147,7 +147,7 @@ func TestACustomFieldReachesThePublishedVocabularyWithoutADeploy(t *testing.T) {
 		Detail     string `json:"detail"`
 	}
 	status := env.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
-		"object": "deal", "label": "Renewal risk", "type": "text", "source": "ui",
+		"object": "deal", "label": "Renewal risk", "type": "text", "source": "manual",
 	}, nil, &created)
 	if status != http.StatusCreated {
 		t.Fatalf("adding a custom field → %d %s: %s", status, created.Title, created.Detail)

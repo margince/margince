@@ -20,15 +20,21 @@ var (
 	readOnly   = grant{Read: true}
 	readUpdate = grant{Read: true, Update: true}
 	// writeNoDelete is the append-forward config posture: create + read +
-	// same-day-correct (update), never delete. The rate sheets (fx_rate,
-	// ai_model_rate) have no delete surface at all — a past-dated row prices
-	// historical rollups and must never disappear — so no role holds delete.
+	// same-day-correct (update), never delete. A past-dated row on a rate sheet
+	// (fx_rate, ai_model_rate) prices historical rollups and must never
+	// disappear on its own, so no role holds delete; removing a model's WHOLE
+	// entry is a correction of the sheet and takes update.
 	writeNoDelete = grant{Create: true, Read: true, Update: true}
-	// createRead is the posture of a record nobody edits: a forecast reading is
-	// derived, and a current call SUPERSEDES rather than being rewritten, so
-	// neither update nor delete has a surface to gate. A grant for a verb the
-	// product does not offer reads as an oversight the next author has to
-	// research.
+	// createRead is the posture of a record nobody edits: it is recorded, and a
+	// later one supersedes it rather than replacing it in place, so neither
+	// update nor delete has a surface to gate. A grant for a verb the product does not offer reads as an oversight
+	// the next author has to research.
+	//
+	// It used to name `forecast` as the example, and that stopped being true
+	// when assurance findings gained an answer: the READING is still derived
+	// and superseded, but answering a finding is an update on the same object.
+	// The example is gone rather than corrected, because an example that has
+	// to be re-checked against the product is what made this wrong.
 	createRead = grant{Create: true, Read: true}
 	// none is the zero grant, named so a role's override map says WHY a line is
 	// there. Inside a `map[string]grant` the literal simplifies to a bare `{}`,
@@ -122,8 +128,8 @@ func grid(base grant, overrides map[string]grant) map[string]grant {
 const (
 	// The rate sheets. Append-forward on every role that holds them —
 	// create, read, same-day-correct, never delete — because a past-dated row
-	// prices a historical rollup and must not disappear. No delete surface
-	// exists at all, so no role holds one.
+	// prices a historical rollup and must not disappear. The one removal the
+	// product offers, a model's whole entry, is gated on update.
 	objAiModelRate = "ai_model_rate"
 	// Which vendor this installation's text is sent to (ai-operational-spec
 	// §1.4). Deliberately NOT folded into installation_settings: whoever may
@@ -277,6 +283,15 @@ const (
 	// construction: the licensee, the entitlement and the contract terms stay
 	// on objLicense, so Management can plan headcount without reading them.
 	objSeatUsage = "seat_usage"
+	// Every team's coaching week, read by a seat that leads none of them. A
+	// lead reads their own team's week without it. Admin and management hold
+	// read; read_only holds nothing, because reaching every record is not a
+	// claim to read a manager's verdict on a named colleague.
+	objTeamOversight = "team_oversight"
+	// Leading the teams a seat is on: create raises a coaching notice for a
+	// teammate, read opens a led team's week. Admin, management and manager
+	// hold both; a rep on a team does not coach their teammates.
+	objTeamLead = "team_lead"
 )
 
 // AdministrationObjects are the grants that reach back and change who may do

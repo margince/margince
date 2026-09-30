@@ -74,6 +74,7 @@ func setupReconcile(t *testing.T) *reconcileEnv {
 		svc:   e.svc,
 		draft: newCommsAdapter(e.Pool, nil, SendPath{}),
 		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
+		pool:  e.Pool,
 	}
 	e.reconciler = deals.NewFollowUpReconciler(e.DB(), stager, quiet)
 	// The deal owner needs REAL grants, not the harness's in-memory ones: the

@@ -178,6 +178,7 @@ func (t reviewCommitments) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "review_commitments", Title: "Review open commitments", Version: toolVersionV1,
 		Description:   reviewCommitmentsCopy.render(),
+		Instead:       reviewCommitmentsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listActivities",
 		InputSchema: schema(`{"type":"object","properties":{

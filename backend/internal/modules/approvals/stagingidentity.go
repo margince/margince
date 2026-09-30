@@ -174,6 +174,12 @@ func (s *Service) HasPendingKind(ctx context.Context, kind string, targetID ids.
 // a human answered is not the caller's to take back, and a caller that acts on
 // the retraction needs to know the retraction happened.
 func (s *Service) WithdrawInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, reason string) (bool, error) {
+	return withdrawInTx(ctx, tx, id, reason)
+}
+
+// withdrawInTx is WithdrawInTx's body, shared with the deal-owner move, which
+// runs on the deal writer's transaction and holds no Service.
+func withdrawInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, reason string) (bool, error) {
 	// The same row lock decideInTx takes, for the same reason: a decision landing
 	// concurrently has to be ordered against this write rather than interleaved
 	// with it. A human who wins the lock leaves the row decided and this reports

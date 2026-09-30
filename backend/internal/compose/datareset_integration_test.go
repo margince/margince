@@ -257,6 +257,7 @@ func TestDropResetCustomFieldColumns(t *testing.T) {
 // was written for AND every DELETE trigger added to that table afterwards,
 // including one that really does block. Each trigger earns its own line.
 var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
+	"field_mask report_authority_field_mask": "Advances the preserved projection fence once per statement and refuses no delete; reset must invalidate publications that began under the old field masks.",
 	// Not a protected table: the guard refuses a DELETE only while a row carries
 	// `restricted_at`, which is a statutory hold on that one record. Preserving
 	// `activity` would leave every conversation behind on a reset whose whole

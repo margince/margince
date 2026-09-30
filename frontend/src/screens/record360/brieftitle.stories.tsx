@@ -36,7 +36,7 @@ function Head({ name }: Readonly<{ name?: string }>) {
 }
 
 const meta: Meta<typeof CallCard> = {
-  title: "Records/Company 360/Brief title",
+  title: "Records/Record 360/Brief title",
   component: CallCard,
 };
 export default meta;

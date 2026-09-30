@@ -248,8 +248,7 @@ func (s *PendingStore) NoiseMailToHide(ctx context.Context, limit int) ([]ids.UU
 // for evidence a forger cannot plant on somebody else's mail.
 func (s *PendingStore) NoiseMailToRedact(ctx context.Context, window time.Duration, limit int) ([]ids.UUID, error) {
 	return s.noiseMail(ctx, withinVerdictReach()+`
-		AND p.resolved_at IS NOT NULL
-		AND a.bulk_mail_attested
+		AND (NOT p.machine OR (p.resolved_at IS NOT NULL AND a.bulk_mail_attested))
 		AND a.archived_at IS NOT NULL AND a.archived_at <= now() - `+quoteInterval(window)+`
 		AND (a.subject IS NOT NULL OR a.body IS NOT NULL OR a.raw IS NOT NULL
 		     OR EXISTS (
@@ -265,8 +264,8 @@ func (s *PendingStore) NoiseMailForTx(ctx context.Context, tx pgx.Tx, email stri
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT a.id, a.occurred_at
 		  FROM activity a
-		  JOIN capture_pending_counterparty p ON p.email = a.counterparty_email
-		 WHERE p.email = $2 AND p.status = 'noise' AND `+noiseMailScope+withinVerdictReach()+`
+		  JOIN `+disownedSenders+` ON p.email = a.counterparty_email
+		 WHERE p.email = $2 AND p.machine AND `+noiseMailScope+withinVerdictReach()+`
 		   AND a.archived_at IS NULL
 		 ORDER BY a.occurred_at
 		 LIMIT $1`, limit, normalizeEmail(email))
@@ -307,15 +306,62 @@ func (s *PendingStore) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activit
 	if len(activityIDs) == 0 {
 		return nil
 	}
+	// TWO ARMS, because raw_capture has two writers and they key differently.
+	//
+	// The stored LINK is the exact one: the ingest that created the activity
+	// knew which original it read and now says so. Everything captured since
+	// that column landed is destroyed by this arm, whatever lane it came
+	// through.
+	//
+	// The NATURAL-KEY join is for the rows written before it. It holds only
+	// where the two writers' keys agree, which is mail alone — the channel
+	// sink stores the provider's redelivery key, not the domain natural key —
+	// so it is a backstop for deployed history and never the primary answer.
+	// It cannot simply be dropped: an installation upgrading today has years of
+	// originals whose activity carries no link, and a purge that skipped them
+	// would leave exactly the verbatim payloads this sweep exists to destroy.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM raw_capture r
 		 USING activity a
 		 WHERE a.id = ANY($1)
-		   AND r.source_system = a.source_system AND r.source_id = a.source_id`, activityIDs); err != nil {
-		return fmt.Errorf("capture: purging the redacted mail's provider originals: %w", err)
+		   AND (r.id = a.raw_capture_id
+		        OR (a.raw_capture_id IS NULL
+		            AND r.source_system = a.source_system AND r.source_id = a.source_id))`,
+		activityIDs); err != nil {
+		return fmt.Errorf("capture: purging the redacted message's provider originals: %w", err)
 	}
 	return nil
 }
+
+// disownedSenders gathers the addresses the workspace has disowned, and by
+// whose authority. Both arms reach the same mail through the same scope rule, and
+// they are one relation rather than two queries so that rule cannot come to
+// mean two things.
+//
+// The MACHINE arm is a judged ledger row. The HUMAN arm is a standing keep_out,
+// which has no ledger row at all: `keep_out` is recorded against an address a
+// seat typed, and the address may never have opened one — settled before the
+// decision, or never judged. That is the whole of what this second arm adds,
+// and without it the contract's "the mail this sender already brought in is
+// destroyed" was true only for a sender who happened to be mid-judgement.
+//
+// `machine` is what the two arms disagree about downstream: the reach window
+// and the corroboration requirement below are both defences against a FORGED
+// From turning a model's verdict into authority, and neither has anything to
+// answer when the authority is a seat that typed the address itself.
+//
+// Not narrowed to the deciding seat, which is the shape the immediate effect
+// already takes: hideNoise reaches the address rather than the seat, on the
+// reasoning that the scope below has already excluded anything a colleague
+// linked, corresponds with or holds a contact for. What is left is mail no
+// colleague has a claim on.
+const disownedSenders = `(
+	  SELECT email, resolved_at, true AS machine
+	    FROM capture_pending_counterparty WHERE status = 'noise'
+	  UNION ALL
+	  SELECT address AS email, NULL::timestamptz, false
+	    FROM capture_sender_override WHERE decision = 'keep_out'
+	) p`
 
 // noiseMail runs the shared join with one extra predicate.
 func (s *PendingStore) noiseMail(ctx context.Context, extra string, limit int) ([]ids.UUID, error) {
@@ -324,8 +370,8 @@ func (s *PendingStore) noiseMail(ctx context.Context, extra string, limit int) (
 		rows, err := tx.Query(ctx, `
 			SELECT DISTINCT a.id, a.occurred_at
 			  FROM activity a
-			  JOIN capture_pending_counterparty p ON p.email = a.counterparty_email
-			 WHERE p.status = 'noise' AND a.restricted_at IS NULL
+			  JOIN `+disownedSenders+` ON p.email = a.counterparty_email
+			 WHERE a.restricted_at IS NULL
 			   AND `+noiseMailScope+extra+`
 			 ORDER BY a.occurred_at
 			 LIMIT $1`, limit)

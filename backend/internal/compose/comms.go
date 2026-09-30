@@ -14,14 +14,17 @@ import (
 	"fmt"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarbacking"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // sendAccepted is what a send answers with: the delivery path took it. It is
@@ -84,12 +87,22 @@ var _ automation.Comms = commsAdapter{}
 // message captured before the domain was registered — has nobody outside the
 // company to answer, and an automation must not compose one for a human to
 // wave through.
+// A thread with nobody outside the company to answer is DECLINED rather than
+// failed: nothing went wrong, a redelivery meets the same record, and the
+// engine records a decline as a skip and a failure as a broken run. Translated
+// here because automation may not import activities, and this seam is the one
+// place that sees both vocabularies.
 func (c commsAdapter) ReplyAddress(ctx context.Context, anchor ids.UUID) (string, error) {
 	own, err := c.own.Colleagues(ctx)
 	if err != nil {
 		return "", fmt.Errorf("compose: reading who counts as a colleague: %w", err)
 	}
-	return c.store.ReplyAddressFor(ctx, ids.From[ids.ActivityKind](anchor), own.Covers)
+	to, err := c.store.ReplyAddressFor(ctx, ids.From[ids.ActivityKind](anchor), own.Covers)
+	var noAddress *activities.NoReplyAddressError
+	if errors.As(err, &noAddress) {
+		return "", workflow.DeclinedBecause(noAddress)
+	}
+	return to, err
 }
 
 func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent string) (string, string, error) {
@@ -351,19 +364,15 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 	if err != nil {
 		return agents.AvailabilityResult{}, err
 	}
-	// The busy list alone cannot be read honestly: a host with no connected
-	// calendar and a host with an empty day produce the same slots, and the
-	// caller has no other way to tell them apart.
-	//
-	// ONLY FOR THE ACTING SEAT. capture is per-user, and this tool takes any
-	// host_user_id — so asking it for an arbitrary host would answer, to anyone
-	// holding read, which colleagues have connected Google or Microsoft and
-	// whose grant has since stopped working. capture's own connections reader
-	// hard-scopes to the actor for that reason and this follows it.
 	backing, err := c.calendarBackingFor(ctx, calendarOwner)
 	if err != nil {
 		return agents.AvailabilityResult{}, err
 	}
+	// This surface reads the CRM-only path above, so it may not claim the
+	// diary whatever the host has connected. The REST door passes its own
+	// answer through the same helper.
+	backing = agents.CalendarBacking(
+		calendarbacking.WithoutReadingTheCalendar(string(backing)))
 	// truncated is not decoration on this surface. The walk stops at a cap, and
 	// a model handed a capped list with nothing marking it will tell a rep there
 	// is no later opening — the same failure AtRiskReport.Truncated and
@@ -432,4 +441,24 @@ func defaultHost(ctx context.Context, host *ids.UUID) (ids.UUID, error) {
 		return ids.Nil, fmt.Errorf("comms: no host named and the principal has no user calendar")
 	}
 	return actor.UserID, nil
+}
+
+func (c commsAdapter) InviteMeeting(ctx context.Context, in crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {
+	return c.store.CreateInvitation(ctx, in)
+}
+
+func (c commsAdapter) ReliableAvailability(ctx context.Context, host *ids.UUID, from, to time.Time, minutes int) (agents.AvailabilityResult, error) {
+	user, err := defaultHost(ctx, host)
+	if err != nil {
+		return agents.AvailabilityResult{}, err
+	}
+	slots, truncated, err := c.store.ReliableAvailability(ctx, ids.From[ids.UserKind](user), from, to, time.Duration(minutes)*time.Minute)
+	if err != nil {
+		return agents.AvailabilityResult{}, err
+	}
+	result := agents.AvailabilityResult{Slots: make([]agents.FreeSlot, 0, len(slots)), Truncated: truncated, CalendarBacking: agents.CalendarBacked}
+	for _, slot := range slots {
+		result.Slots = append(result.Slots, agents.FreeSlot{Start: slot.Start, End: slot.End})
+	}
+	return result, nil
 }

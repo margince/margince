@@ -14,7 +14,7 @@ import { Calendar, type ISODay } from "./calendar";
 const TODAY = new Date(2026, 7, 27);
 
 const meta: Meta<typeof Calendar> = {
-  title: "Design System/Calendar",
+  title: "Components/Forms and input/Calendar",
   component: Calendar,
   parameters: { layout: "padded" },
   decorators: [

@@ -43,7 +43,9 @@ import (
 //
 // 20/min is below the booking edge's 60: a human claims an installation once,
 // and a client retrying more than that is not the case being served.
-func newSetupLimiter() *ratelimit.Limiter { return ratelimit.New(20, time.Minute) }
+func newSetupLimiter() *ratelimit.Limiter {
+	return ratelimit.New("setup/claim-per-ip", ratelimit.FailClosed, 20, time.Minute)
+}
 
 // setupClaimResponse names the company a claim created, so the caller
 // can go straight to signing in rather than probing for it.

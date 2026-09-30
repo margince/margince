@@ -164,7 +164,6 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         // project is this" read a changelog first. The three record-keeping
         // cards below answer questions a reader comes looking for on purpose;
         // the two above answer the one they arrive with.
-        //
         // The details pane beside the work: the same pane, fold and memory of
         // it as every other record page.
         // The cards stand straight in the pane: `RecordView` gives the aside
@@ -195,6 +194,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         }
         asideOpen={details.open}
         name={project.name}
+        identity={project.id}
         scale="compact"
         badges={<ProjectIdentityFacts view={view} locale={locale} />}
         zone={recordZone}

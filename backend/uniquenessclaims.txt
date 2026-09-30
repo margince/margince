@@ -68,7 +68,7 @@ internal/compose/agentsplit.go#const block at const opApplyTag
 internal/compose/agenttasks.go#const taskColumns
 internal/compose/aicert/record.go#type Record.Scenarios
 internal/compose/aicert/reportcmd/report.go#var reportColumns
-internal/compose/aicert/run.go#type runCalls
+internal/compose/aicert/runcalls.go#type runCalls
 internal/compose/aicert/scenario.go#const sourceHandAuthored
 internal/compose/approval_kinds_test.go#var exportedApprovalKinds
 internal/compose/attentionreceiptseam.go#const approvalStatusApproved
@@ -79,10 +79,8 @@ internal/compose/brain.go#type agentBrain
 internal/compose/captureautoenrich.go#func startAutoEnrichRead
 internal/compose/capturedomaintriage.go#func startDomainTriageRead
 internal/compose/captureofflinedemo.go#method offlineDemoDirectory.accounts
-internal/compose/certcase_agentloop_window.go#type agentLoopToolWindow
 internal/compose/certcase_fieldextract.go#method fieldExtractCases.CertifiedScope
 internal/compose/certcase_ratefx_test.go#type fxCompleterStub
-internal/compose/certcase_ratepricing_test.go#type pricingCompleterStub
 internal/compose/channelaxis_fitness_integration_test.go#func TestActivityKindTableMatchesTheContractKindEnum
 internal/compose/channelprovider.go#func CoreChannelProviders
 internal/compose/channelprovider.go#func reservedCoreProviders
@@ -137,7 +135,6 @@ internal/compose/deploymentsecretseal.go#method vaultBinding.open
 internal/compose/dispatch.go#func fanOutChildren
 internal/compose/documentextract.go#func documentFieldOrder
 internal/compose/documentextract.go#func toModelField
-internal/compose/draftcheck/draftcheck.go#func allDirectedRelationshipPhrases
 internal/compose/export.go#func exportableColumns
 internal/compose/extensionpolicy.go#func preflightRetentionClasses
 internal/compose/extensions.go#var composedExtensions
@@ -153,6 +150,7 @@ internal/compose/extrouteargs.go#type argumentReader
 internal/compose/extroutes.go#type toolInvoker
 internal/compose/extruntime.go#func BindExtensionCapture
 internal/compose/extruntime.go#method callRuntime.usable
+internal/compose/fxpassages.go#func CountPassages
 internal/compose/gmailpush.go#func handleGmailPush
 internal/compose/heldrelease_integration_test.go#const draftRecipient
 internal/compose/idempotency.go#const replayWindow
@@ -198,7 +196,6 @@ internal/compose/meetingbrief/meeting.go#type meeting.Room
 internal/compose/meetingbrief/meeting.go#type roomScopes
 internal/compose/meetingbrief/model.go#func knownRecords
 internal/compose/meetingbrief/sections.go#var specSequence
-internal/compose/modelraterefresh.go#func CountPassages
 internal/compose/networkseams.go#func toAgentRisks
 internal/compose/oauthedge.go#func sessionDigest
 internal/compose/offerdraft.go#const offerDraftAgentID
@@ -311,8 +308,6 @@ internal/modules/agents/volumerelease.go#type VolumeReleaseRequest.Proposal
 internal/modules/ai/feedback.go#const fieldSubjectType
 internal/modules/ai/feedback.go#type RecordInput.ClaimPath
 internal/modules/ai/railemit_test.go#func TestADegradedCallSaysWhyEvenWithNoSentinel
-internal/modules/ai/routing.go#method RoutingConfig.BoundModelIDsByProvider
-internal/modules/ai/selectbrain.go#var knownProviders
 internal/modules/ai/sovereignendpoint_test.go#func TestABracketedIPv6EndpointIsAccepted
 internal/modules/ai/voice_sendoutcome_integration_test.go#func TestRecordSendOutcomeCannotReachAnotherWorkspacesSignal
 internal/modules/ai/voicecorpus.go#const CorpusMeterVersion
@@ -350,7 +345,6 @@ internal/modules/capture/mailmap/mailmap.go#type Message.addresses
 internal/modules/capture/oauthflow/oauthflow.go#package oauthflow
 internal/modules/capture/offlinedemo/locale.go#const block at const threadKickoff
 internal/modules/capture/offlinedemo/locale.go#type templateWords
-internal/modules/capture/pending.go#func normalizeEmail
 internal/modules/capture/rawcapture.go#func InsertRawCaptureTx
 internal/modules/capture/registry_connections.go#const sendableConnection
 internal/modules/capture/sink.go#const fieldError
@@ -424,7 +418,6 @@ internal/modules/customfields/engine.go#const codeUnsupportedObject
 internal/modules/customfields/engine.go#func quoteIdentifier
 internal/modules/customfields/engine.go#type FieldSpec
 internal/modules/customfields/engine.go#var FieldObjects
-internal/modules/customfields/privilege_boundary_test.go#func isStorekitAuditCall
 internal/modules/customfields/service.go#const catalogColumns
 internal/modules/dealrooms/document_read.go#const inTheDealsFilesArea
 internal/modules/dealrooms/document_read.go#func documentIDOf
@@ -457,7 +450,6 @@ internal/modules/identity/passport.go#func mintPassport
 internal/modules/identity/passport.go#var passportScopeVocabulary
 internal/modules/identity/passwordlink.go#func passwordLink
 internal/modules/identity/rbacobjects.go#func RegisterRbacObjects
-internal/modules/identity/roles.go#method Service.ListRoles
 internal/modules/identity/seatusage.go#const fullSeatsInUseQuery
 internal/modules/identity/service.go#func passwordLengthError
 internal/modules/identity/settingsentry.go#func BaseCurrencyOf
@@ -466,7 +458,6 @@ internal/modules/integrations/poll.go#func pollFrom
 internal/modules/integrations/store.go#const block at const auditKeyProvider
 internal/modules/integrations/surfe/surfe.go#const baseURL
 internal/modules/integrations/surfe/surfe.go#const block at const poolEmail
-internal/modules/privacy/auditfilter_test.go#func TestEveryPublishedAuditFilterReachesTheStore
 internal/modules/privacy/auditlog.go#const auditContentStateKey
 internal/modules/privacy/auditlog.go#func ScrubNewerThanRowSQL
 internal/modules/privacy/erasure.go#const block at const evidenceKeyCause

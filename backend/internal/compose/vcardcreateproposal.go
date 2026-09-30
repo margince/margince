@@ -160,7 +160,7 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry conta
 			ProposedChange: body,
 			DiffHash:       hex.EncodeToString(digest[:]),
 			Identity:       identity,
-			Summary:        vcardCreateSummary(entry.FullName),
+			Summary:        vcardCreateSummary(approvalSummaryCopyOver(ctx, pool), entry.FullName),
 			JoinPending:    true,
 		})
 		return err
@@ -170,13 +170,14 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry conta
 // vcardCreateSummary keeps the qualifier — the whole reason the card is in
 // the queue — ahead of the card's own name, and bounds that name: the name
 // is the uploader's text, and a long one placed first would push "resembles
-// an existing contact" past the summary's truncation.
-func vcardCreateSummary(fullName string) string {
+// an existing contact" past the summary's truncation. Every language's
+// sentence keeps that order.
+func vcardCreateSummary(said approvalSummaryCopy, fullName string) string {
 	name := strings.TrimSpace(fullName)
 	if runes := []rune(name); len(runes) > 80 {
 		name = string(runes[:80]) + "…"
 	}
-	return "This card resembles an existing contact. Create " + name + " anyway?"
+	return fmt.Sprintf(said.vcardResemblesContact, name)
 }
 
 // loweredCardEmails is the card's addresses in the canonical form the

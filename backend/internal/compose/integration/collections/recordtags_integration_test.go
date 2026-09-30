@@ -55,7 +55,7 @@ func TestRecordTagsAnswersForAllThreeAdvertisedTypes(t *testing.T) {
 
 	var company integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/companies", integration.AnyMap{
-		"display_name": "Tagged Company", "source": "ui",
+		"display_name": "Tagged Company", "source": "manual",
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("creating the company: status=%d body=%v", status, company)
 	}

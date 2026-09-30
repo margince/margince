@@ -25,14 +25,14 @@ const COPY: MapCopy = {
     waiting: "Needs reply",
     answered: "Answered",
     no_reply: "No reply",
-    untried: "Not approached",
+    untried: "Not contacted",
   },
   awaitingReply: "awaiting reply",
   replyOwed: "reply owed",
-  theyReplied: "they replied",
-  neverWritten: "never written to",
+  theyReplied: "the lead replied",
+  neverWritten: "never contacted",
   onDeal: "on the deal",
-  askIntro: "Ask for an intro",
+  askIntro: "Request introduction",
 };
 
 function coverage(over: Partial<Coverage> = {}): Coverage {
@@ -128,7 +128,7 @@ test("carries the server's own band rather than banding again", () => {
 });
 
 // The words carry the direction, because a line cannot: "awaiting reply" and
-// "they replied" are opposite next moves and would otherwise be one grey line
+// "the lead replied" are opposite next moves and would otherwise be one grey line
 // apiece.
 test("says which way the conversation is owed", () => {
   const answered = mapModelFromCoverage(
@@ -148,7 +148,7 @@ test("says which way the conversation is owed", () => {
     COPY,
   );
   expect(answered.edges.find((edge) => edge.kind === "route")?.words).toBe(
-    "they replied",
+    "the lead replied",
   );
 });
 

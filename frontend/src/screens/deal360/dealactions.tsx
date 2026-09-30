@@ -21,15 +21,18 @@ import { ifMatch, requireVersion } from "../../api/version";
 import { useCanWrite } from "../../app/capability";
 import { navigate } from "../../app/router";
 import { Button, Modal, OverflowMenu } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { dealRecordKeys } from "../activitykeys";
 import { ArchiveAction } from "../archive";
-import { problemMessageOf, throwProblem, useMe } from "../common";
+import { throwProblem, useMe } from "../common";
 import { LogActivityAction } from "../logactivity";
 import { RecordEmailVerb } from "../recordemail";
 import { ShareAction } from "../share";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
+import "./deal360.css";
+import { AddToShortlistAction } from "../addtoshortlist";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -130,14 +133,7 @@ function ReopenAction({
         <p className="t-sub" id="reopen-title">
           {t("deal.reopenPick")}
         </p>
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            flexWrap: "wrap",
-            margin: "var(--space-3) 0",
-          }}
-        >
+        <div className="d360-reopen-stages">
           {openStages.map((s) => (
             <Button
               key={s.id}
@@ -149,17 +145,7 @@ function ReopenAction({
             </Button>
           ))}
         </div>
-        {reopen.isError && (
-          <p
-            // The sentence arrives after the press, so it is announced: a
-            // reader who cannot see the dialog change otherwise learns the
-            // reopen failed only by tabbing back over it.
-            role="alert"
-            style={{ color: "var(--dangerText)" }}
-          >
-            {problemMessageOf(reopen.error, t)}
-          </p>
-        )}
+        <ErrorLine error={reopen.error} />
         <div className="actions">
           <Button onClick={() => setOpen(false)}>{t("deals.cancel")}</Button>
           <Button
@@ -269,6 +255,7 @@ export function DealActions({
           recordId={deal.id}
           disabledReasonId={refusedReasonId}
         />
+        <AddToShortlistAction entityType="deal" entityId={deal.id} />
         {/* Reopen answers a CLOSED deal, so an open one has no reason to be
             told about it — absent, not refused. An archived closed deal keeps
             it, refused: the reader came asking whether this can come back. */}

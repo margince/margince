@@ -1,10 +1,11 @@
+import type { ReactNode } from "react";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Button, OverflowMenu } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { InlineText } from "../design-system/inlinetext";
 import { formatDateAbbrev } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import { problemMessageOf } from "./common";
 import type { Employment, EmploymentActions } from "./contactemployers";
 import {
   EmploymentLogo,
@@ -30,9 +31,12 @@ export function EmploymentRow({
   onEdit,
   showCompany = true,
   fallbackRole,
+  mark,
 }: Readonly<{
   employment: Employment;
   showCompany?: boolean;
+  // The row's provenance mark, drawn beside the company button, never inside it.
+  mark?: ReactNode;
   fallbackRole?: string;
   canEdit: boolean;
   readOnlyReason: string | undefined;
@@ -82,6 +86,7 @@ export function EmploymentRow({
             ) : (
               <span className="inlinetext">{t("field.unset")}</span>
             ))}
+          {mark}
           {stillHeld(employment) && (
             <span className="pe-rail-value-good">{t("rel.current")}</span>
           )}
@@ -144,11 +149,7 @@ export function EmploymentRow({
           </OverflowMenu>
         </span>
       )}
-      {endFailed && (
-        <p className="pe-colleague-proof t-caption" role="alert">
-          {problemMessageOf(actions.end.error, t)}
-        </p>
-      )}
+      {endFailed && <ErrorLine error={actions.end.error} />}
     </div>
   );
 }

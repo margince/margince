@@ -37,17 +37,14 @@ export function RecordCard({
   email,
   aside,
 }: Readonly<{
-  /**
-   * What the card stands for, which the mark's shape says before a word of it
-   * is read: a contact is round the way a face is, a company a rounded square
-   * the way a logo is. `Avatar` owns the distinction; the card passes it on.
-   */
+  // What the card stands for, and so what a message to its address is filed
+  // under.
   kind: "contact" | "company";
   name: string;
   // The record's own page.
   href: string;
   /**
-   * The record's own id. It keys the mark's tint through `Avatar`, which
+   * The record's own id. It keys the mark's mesh through `Avatar`, which
    * explains why a name is the poor key: renaming a record moves it to another
    * colour on every screen at once. It is also what a message to the card's
    * address is filed under, which is why it is not optional.
@@ -75,7 +72,7 @@ export function RecordCard({
   // target, and a reader who aims at the face gets nothing.
   const mark = (
     <>
-      <Avatar name={name} identity={identity} shape={kind} />
+      <Avatar name={name} identity={identity} />
       <span className="record-card-name">{name}</span>
     </>
   );

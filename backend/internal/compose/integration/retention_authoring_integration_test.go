@@ -212,6 +212,7 @@ func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
 	}
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}
@@ -256,6 +257,7 @@ func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}
@@ -331,8 +333,8 @@ func bootstrapWithRetentionPosture(t *testing.T, retention *deployconfig.Retenti
 		},
 		Seeds: deployconfig.Seeds{
 			Retention:          retention,
-			StarterAutomations: boolPtr(false),
-			BookingPage:        boolPtr(false),
+			StarterAutomations: BoolPtr(false),
+			BookingPage:        BoolPtr(false),
 		},
 	}
 	if err := compose.EnsureInstallation(context.Background(),
@@ -369,7 +371,7 @@ func TestBootstrapTakesItsRetentionPostureFromTheDeploymentConfiguration(t *test
 	// The seeded ladder is the data-model's pins under BOTH postures, so this is
 	// asserted per case rather than once: a posture that quietly planted fewer
 	// rows would hide the ladder an admin is entitled to see.
-	const seededPolicies = 6
+	const seededPolicies = 8
 
 	cases := []struct {
 		name      string
@@ -439,6 +441,7 @@ func TestRetainOnlyPostureDoesNotDestroyContentThroughTheEmbedCascade(t *testing
 	}
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}
@@ -467,6 +470,7 @@ func TestRetainOnlyPostureDoesNotDestroyContentThroughTheEmbedCascade(t *testing
 	}); err != nil {
 		t.Fatal(err)
 	}
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}
@@ -520,6 +524,7 @@ func TestAPolicyWithNoExecutorCannotBeAuthoredAndCannotStopThePass(t *testing.T)
 	staleLead, _, staleDeal, _ := seedOverAgeRecords(t, e)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("a policy with no executor aborted the whole pass: %v", err)
 	}
@@ -574,6 +579,7 @@ func TestRetentionAnonymizesAnUnattachedContactAndArchivesAnAgedNote(t *testing.
 		noteID)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}
@@ -650,6 +656,7 @@ func TestTheClockReachesEveryLinkedInGhostAnErasureWould(t *testing.T) {
 	e.WsExec(t, ghost, stranger, e.Rep1, "Nobody Related", "nobody related", "Other", "other", nil, nil)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}

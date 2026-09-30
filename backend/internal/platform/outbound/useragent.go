@@ -16,6 +16,10 @@ const version = "1.0"
 // and the policy matched against it back out of step. That is the defect this
 // package exists to remove, and a const cannot reach it.
 const (
+	// CalendarProduct identifies authenticated scheduling requests.
+	CalendarProduct = "margince-calendar"
+	CalendarHeader  = CalendarProduct + "/" + version
+
 	// SiteReadProduct is the crawler's token. It appears in site operators'
 	// robots.txt files, so changing it silently stops their rules applying to
 	// us — a Disallow written for the name we advertise is no longer matched.
@@ -73,26 +77,12 @@ const (
 	KeySetProduct = "margince-keyset"
 	KeySetHeader  = KeySetProduct + "/" + version
 
-	// SearchProduct identifies web-search queries. The key names the ACCOUNT,
-	// which is one customer's contract with the provider; the agent names the
-	// software making the calls under it. An operator diagnosing a spike can
-	// act on the second without cancelling the first.
-	SearchProduct = "margince-search"
-	SearchHeader  = SearchProduct + "/" + version
-
-	// EnrichProduct identifies contact-enrichment lookups, for the same reason
-	// as the search token and separately from it: the two run at different
-	// rates against different vendors, and one being throttled must not be the
-	// other's problem.
+	// EnrichProduct identifies contact-enrichment lookups. The key names the
+	// ACCOUNT, which is one customer's contract with the provider; the agent
+	// names the software making the calls under it. An operator diagnosing a
+	// spike can act on the second without cancelling the first.
 	EnrichProduct = "margince-enrich"
 	EnrichHeader  = EnrichProduct + "/" + version
-
-	// MirrorProduct identifies reads and writes against a customer's own CRM
-	// while this product mirrors it. Their administrator sees the traffic in an
-	// audit log beside their contacts's own, and "some Go program" is not an
-	// answer to "what is writing to our records".
-	MirrorProduct = "margince-mirror"
-	MirrorHeader  = MirrorProduct + "/" + version
 
 	// MailProduct is what an SMTP session announces when the sender's address
 	// carries no domain to announce instead. A relay operator reads the EHLO

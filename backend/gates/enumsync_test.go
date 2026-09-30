@@ -18,7 +18,6 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"os"
@@ -28,6 +27,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // enumBindings maps "table.column" to the Go type that mirrors it.
@@ -50,6 +51,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"deal.status":                      {"internal/modules/deals", "DealStatus"},
 	"stage.semantic":                   {"internal/modules/deals", "StageSemantic"},
 	"contact_consent.state":            {"internal/modules/consent", "ConsentState"},
+	"consent_purpose.class":            {"internal/modules/consent", "Class"},
 	"offer_line_item.proposal_state":   {"internal/modules/deals", "ProposalState"},
 	"stage_exit_criterion.kind":        {"internal/modules/deals", "CriterionKind"},
 	"knowledge_document.ingest_status": {"internal/contracts", "KnowledgeDocumentIngestStatus"},
@@ -59,6 +61,10 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// know, so a half-widened palette reaches a reader as a tag with no dot,
 	// which is exactly how an uncoloured tag looks.
 	"tag.color": {"internal/contracts", "TagColor"},
+	// Where a saved draft was opened. The wire enum is what the composer sends,
+	// so a value the contract admits and the CHECK refuses would be a save that
+	// fails with a constraint error instead of a validation answer.
+	"mail_draft.anchor_type": {"internal/contracts", "MailDraftAnchorType"},
 
 	"activity_link.entity_type": {"internal/shared/ports/datasource", "RecordType"},
 	"list.entity_type":          {"internal/shared/ports/datasource", "RecordType"},
@@ -241,7 +247,6 @@ func tableCheckSets(t *testing.T) map[string][]string {
 func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 	t.Helper()
 	var vals []string
-	fset := token.NewFileSet()
 	entries, err := os.ReadDir(pkgDir)
 	if err != nil {
 		t.Fatal(err)
@@ -250,7 +255,7 @@ func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(pkgDir, e.Name()), nil, 0)
+		file, err := gatekit.ParseFile(filepath.Join(pkgDir, e.Name()), 0)
 		if err != nil {
 			t.Fatal(err)
 		}

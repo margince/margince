@@ -60,7 +60,7 @@ func confirmFactCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ 
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewConfirmFactCall(deps.records, agents.ConfirmFactCommand{ID: id, FactKey: factKey}), nil
+	return agents.NewConfirmFactCall(deps.records, deps.language, agents.ConfirmFactCommand{ID: id, FactKey: factKey}), nil
 }
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -73,7 +73,7 @@ func updateFactCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ [
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewUpdateFactCall(deps.records, agents.UpdateFactCommand{ID: id, FactKey: factKey}), nil
+	return agents.NewUpdateFactCall(deps.records, deps.language, agents.UpdateFactCommand{ID: id, FactKey: factKey}), nil
 }
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -82,7 +82,7 @@ func createFactCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ [
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewCreateFactCall(deps.records, agents.CreateFactCommand{ID: id}), nil
+	return agents.NewCreateFactCall(deps.records, deps.language, agents.CreateFactCommand{ID: id}), nil
 }
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -95,7 +95,7 @@ func deleteFactCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ [
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewDeleteFactCall(deps.records, agents.DeleteFactCommand{ID: id, FactKey: factKey}), nil
+	return agents.NewDeleteFactCall(deps.records, deps.language, agents.DeleteFactCommand{ID: id, FactKey: factKey}), nil
 }
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -108,7 +108,7 @@ func confirmProfileFieldCommand(_ agentPolicy, deps restCommandDeps, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewConfirmProfileFieldCall(deps.records, agents.ConfirmProfileFieldCommand{ID: id, Field: field}), nil
+	return agents.NewConfirmProfileFieldCall(deps.records, deps.language, agents.ConfirmProfileFieldCommand{ID: id, Field: field}), nil
 }
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -121,7 +121,7 @@ func updateProfileFieldCommand(_ agentPolicy, deps restCommandDeps, r *http.Requ
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewUpdateProfileFieldCall(deps.records, agents.UpdateProfileFieldCommand{ID: id, Field: field}), nil
+	return agents.NewUpdateProfileFieldCall(deps.records, deps.language, agents.UpdateProfileFieldCommand{ID: id, Field: field}), nil
 }
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -130,7 +130,7 @@ func retireCustomFieldCommand(_ agentPolicy, deps restCommandDeps, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewRetireCustomFieldCall(deps.records, agents.RetireCustomFieldCommand{ID: id}), nil
+	return agents.NewRetireCustomFieldCall(deps.records, deps.language, agents.RetireCustomFieldCommand{ID: id}), nil
 }
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -139,7 +139,7 @@ func updateCustomFieldOptionsCommand(_ agentPolicy, deps restCommandDeps, r *htt
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewUpdateCustomFieldOptionsCall(deps.records, agents.UpdateCustomFieldOptionsCommand{ID: id}), nil
+	return agents.NewUpdateCustomFieldOptionsCall(deps.records, deps.language, agents.UpdateCustomFieldOptionsCommand{ID: id}), nil
 }
 
 // setStakeholderCommand decodes PUT /v1/projects/{id}/stakeholders, whose
@@ -166,7 +166,7 @@ func setStakeholderCommand(_ agentPolicy, deps restCommandDeps, r *http.Request,
 	if err := requireStakeholderContact(body); err != nil {
 		return nil, err
 	}
-	return agents.NewSetStakeholderCall(deps.records, agents.SetStakeholderCommand{ID: id}), nil
+	return agents.NewSetStakeholderCall(deps.records, deps.language, agents.SetStakeholderCommand{ID: id}), nil
 }
 
 // requireStakeholderContact holds the body to the one member the attach cannot
@@ -209,7 +209,7 @@ func removeStakeholderCommand(_ agentPolicy, deps restCommandDeps, r *http.Reque
 	if perr != nil {
 		return nil, httperr.Validation("contact_id", "invalid", "contact_id must be a uuid")
 	}
-	return agents.NewRemoveStakeholderCall(deps.records, agents.RemoveStakeholderCommand{ID: id, ContactID: contactID}), nil
+	return agents.NewRemoveStakeholderCall(deps.records, deps.language, agents.RemoveStakeholderCommand{ID: id, ContactID: contactID}), nil
 }
 
 // createRoomItemCommand decodes POST /v1/deal-rooms/{id}/documents and the
@@ -224,7 +224,7 @@ func removeStakeholderCommand(_ agentPolicy, deps restCommandDeps, r *http.Reque
 // wording a human is being asked to release.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func createRoomItemCommand(pol agentPolicy, _ restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
+func createRoomItemCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
 	roomID, err := routedID(r)
 	if err != nil {
 		return nil, err
@@ -233,7 +233,7 @@ func createRoomItemCommand(pol agentPolicy, _ restCommandDeps, r *http.Request, 
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewCreateCall(agents.CreateCommand{
+	return agents.NewCreateCall(deps.language, agents.CreateCommand{
 		RecordType: string(pol.RecordType),
 		Fields:     fields,
 	}), nil
@@ -271,7 +271,7 @@ func roomItemPatchCommand(pol agentPolicy, deps restCommandDeps, r *http.Request
 	if perr != nil {
 		return nil, apperrors.ErrNotFound
 	}
-	return agents.NewPatchCall(deps.records, agents.PatchCommand{
+	return agents.NewPatchCall(deps.records, deps.language, agents.PatchCommand{
 		RecordType: string(pol.RecordType),
 		ID:         itemID,
 		Fields:     json.RawMessage(body),
@@ -316,7 +316,7 @@ func setCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bod
 	if err := requireCompanyCompany(body); err != nil {
 		return nil, err
 	}
-	return agents.NewSetCompanyCall(deps.records, agents.SetCompanyCommand{ID: id}), nil
+	return agents.NewSetCompanyCall(deps.records, deps.language, agents.SetCompanyCommand{ID: id}), nil
 }
 
 // requireCompanyCompany holds the body to the one member the attach cannot
@@ -353,6 +353,6 @@ func removeCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, 
 	if perr != nil {
 		return nil, httperr.Validation("company_id", "invalid", "company_id must be a uuid")
 	}
-	return agents.NewRemoveCompanyCall(deps.records,
+	return agents.NewRemoveCompanyCall(deps.records, deps.language,
 		agents.RemoveCompanyCommand{ID: id, CompanyID: companyID}), nil
 }

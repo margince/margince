@@ -32,13 +32,17 @@ const growthFitFixtureJSON = `{
 	],
 	"facts": [
 		{"label":"their_stack","field":"technology","value":"SAP S/4HANA"}
-	]
+	],
+	"our_offering": {
+		"offer": [{"key":"offer_summary","value":"SAP integration services for software vendors"}]
+	}
 }`
 
 func prepareGrowthFit(t *testing.T, expected string) aitasks.PreparedCase {
 	t.Helper()
 	prepared, err := growthFitCases{}.Prepare(
-		json.RawMessage(growthFitFixtureJSON), json.RawMessage(expected))
+		json.RawMessage(growthFitFixtureJSON), json.RawMessage(expected),
+	)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -56,7 +60,7 @@ type citingLane struct {
 var promptFieldID = regexp.MustCompile(`"[iI]d":"([0-9a-fA-F-]{36})"`)
 
 func (l citingLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
-	found := promptFieldID.FindStringSubmatch(req.Messages[0].Content)
+	found := promptFieldID.FindStringSubmatch(req.Messages[len(req.Messages)-1].Content)
 	if found == nil {
 		return model.Response{}, errors.New("the request carried no record id to cite")
 	}
@@ -104,7 +108,8 @@ func TestAScenarioThatCouldNeverDisagreeWithAReplyIsRefused(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := (growthFitCases{}).Prepare(
-				json.RawMessage(growthFitFixtureJSON), json.RawMessage(expected)); err == nil {
+				json.RawMessage(growthFitFixtureJSON), json.RawMessage(expected),
+			); err == nil {
 				t.Error("a scenario that measures nothing was accepted into the corpus")
 			}
 		})
@@ -122,6 +127,36 @@ func TestTheGrowthFitCaseGradesTheReplyAgainstIdsItMinted(t *testing.T) {
 
 	if got := prepared.Evaluate(trace); got.Result != aitasks.OutcomeAccepted {
 		t.Errorf("outcome = %v (%s), want accepted", got.Result, got.Detail)
+	}
+}
+
+// A fit is judged against what WE sell, and production serves that as the
+// company context; a case that sent only their records would grade a model
+// asked to compare one company with nothing.
+func TestTheGrowthFitCaseServesOurOfferingAsTheCompanyContext(t *testing.T) {
+	prepared := prepareGrowthFit(t, `{"cites":["their_offer"],"bands":["strong","moderate"]}`)
+	trace, err := prepared.Run(context.Background(), citingLane{band: "strong"})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	req := trace.Requests[0]
+	if req.ContextFingerprint == "" || !strings.Contains(req.Messages[0].Content, "SAP integration services") {
+		t.Fatalf("the request was not served our offering as company context: %+v", req.Messages)
+	}
+}
+
+func TestAGrowthFitFixtureWithoutAUsableOfferingIsRefused(t *testing.T) {
+	base := `"profile_fields":[{"label":"their_offer","field":"offer_summary","value":"x"}]`
+	for name, fixture := range map[string]string{
+		"no offering at all":             `{` + base + `}`,
+		"a scope growth_fit never reads": `{` + base + `,"our_offering":{"administrative":[{"key":"legal_name","value":"Us GmbH"}]}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := (growthFitCases{}).Prepare(json.RawMessage(fixture),
+				json.RawMessage(`{"cites":["their_offer"],"bands":["strong"]}`)); err == nil {
+				t.Error("a fit with nothing of ours to judge against was accepted into the corpus")
+			}
+		})
 	}
 }
 
@@ -157,12 +192,60 @@ func TestAReplyProductionWouldDiscardIsReportedAsAnAbstention(t *testing.T) {
 	}
 }
 
+// subScoreLane cites their offer in a factor and their stack ONLY in a
+// sub-score, reading both ids out of the request in the order it sends them:
+// profile fields first, then facts.
+type subScoreLane struct{ stackID func(ids []string) string }
+
+func (l subScoreLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
+	var ids []string
+	for _, found := range promptFieldID.FindAllStringSubmatch(req.Messages[len(req.Messages)-1].Content, -1) {
+		ids = append(ids, found[1])
+	}
+	if len(ids) != 3 {
+		return model.Response{}, errors.New("the request did not carry the fixture's three records")
+	}
+	return model.Response{Text: `{"band":"strong","sub_scores":[{"dimension":"transformation_need","score":70,` +
+		`"reason":"They run SAP S/4HANA.","evidence":[{"entity_type":"fact","entity_id":"` + l.stackID(ids) + `"}]}],` +
+		`"positive_factors":[{"text":"They sell load-shifting software.","nature":"fact",` +
+		`"evidence":[{"entity_type":"profile_field","entity_id":"` + ids[0] + `"}]}]}`}, nil
+}
+
+// A sub-score's evidence is grounded by the same filter as a claim's and opened
+// by the reader the same way, so a record cited only there was cited; a
+// sub-score citing an id the summary never gave was dropped and cites nothing.
+func TestTheGrowthFitCaseCountsWhatASubScoreCites(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		stackID func(ids []string) string
+		want    string
+	}{
+		{"their stack, cited by a sub-score", func(ids []string) string { return ids[2] }, aitasks.OutcomeAccepted},
+		{
+			"an id the summary never gave", func([]string) string { return "0198c0de-0000-7000-8000-000000000000" },
+			aitasks.OutcomeWrongAnswer,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			prepared := prepareGrowthFit(t, `{"cites":["their_offer","their_stack"],"bands":["strong","moderate"]}`)
+			trace, err := prepared.Run(context.Background(), subScoreLane{stackID: tc.stackID})
+			if err != nil {
+				t.Fatalf("run: %v", err)
+			}
+			if got := prepared.Evaluate(trace); got.Result != tc.want {
+				t.Errorf("outcome = %v (%s), want %v", got.Result, got.Detail, tc.want)
+			}
+		})
+	}
+}
+
 // The dossier case grades the records a description had to rest on, not its
 // wording — the whole reason that lane exists is that the same facts read
 // better as prose, and pinning sentences would fail a good dossier.
 func TestTheDossierCaseGradesTheRecordsADescriptionRestsOn(t *testing.T) {
 	prepared, err := (companyDossierCases{}).Prepare(
-		json.RawMessage(growthFitFixtureJSON), json.RawMessage(`["their_offer"]`))
+		json.RawMessage(growthFitFixtureJSON), json.RawMessage(`["their_offer"]`),
+	)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -180,7 +263,8 @@ func TestTheDossierCaseGradesTheRecordsADescriptionRestsOn(t *testing.T) {
 // production shows as the deterministic floor rather than as prose.
 func TestADossierCitingNothingOfThisCompanyAbstains(t *testing.T) {
 	prepared, err := (companyDossierCases{}).Prepare(
-		json.RawMessage(growthFitFixtureJSON), json.RawMessage(`["their_offer"]`))
+		json.RawMessage(growthFitFixtureJSON), json.RawMessage(`["their_offer"]`),
+	)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}

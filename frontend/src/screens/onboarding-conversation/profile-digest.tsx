@@ -116,15 +116,20 @@ export function ProfileDigest({
 
 /** The company as the head of the record shows it. */
 export type ProfileIdentity = Readonly<{
-  /** The site the record was read from; what the monogram's tint derives from. */
+  /** The site the record was read from; its host names an unnamed mark. */
   rootUrl: string;
+  /**
+   * The installation's company once one exists, as on a re-run of setup: the
+   * mark keys on it and keeps the colour the rail and settings give it.
+   */
+  companyId?: string;
   /** Where the mark the read resolved is served from, when it found one. */
   logoUrl?: string;
 }>;
 
 // The record's mark: the logo the read resolved from the company's own site,
-// or the deterministic monogram every other surface draws for it. Named from
-// the record's own display name, so what the reader corrected shows.
+// or its monogram. Named from the record's own display name, so what the
+// reader corrected shows.
 function ProfileMark({
   rows,
   identity,
@@ -133,11 +138,12 @@ function ProfileMark({
     rows.find((row) => row.field === "display_name")?.value.trim() ||
     (identity === undefined ? "" : hostOf(identity.rootUrl));
   return (
+    // A first setup reviews a read before the company exists, so the name is
+    // the key until it does; the colour changes once, when the record is made.
     <Avatar
-      shape="company"
       size="md"
       name={name}
-      identity={identity?.rootUrl}
+      identity={identity?.companyId ?? name}
       src={identity?.logoUrl}
     />
   );

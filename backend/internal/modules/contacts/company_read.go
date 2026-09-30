@@ -30,7 +30,9 @@ import (
 )
 
 // GetCompany reads one company under the caller's own gates: the
-// object grant first, then row visibility, then the row itself.
+// object grant first, then row visibility, then the row itself. The grant is
+// asked before the transaction as well as inside EnsureReadable, so a caller
+// holding none costs no connection.
 func (s *Store) GetCompany(ctx context.Context, id ids.CompanyID, archived storekit.ArchivedFilter) (crmcontracts.Company, error) {
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return crmcontracts.Company{}, err
@@ -59,9 +61,6 @@ func (s *Store) GetCompany(ctx context.Context, id ids.CompanyID, archived store
 func (s *Store) GetCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	archived storekit.ArchivedFilter, active CustomColumns,
 ) (crmcontracts.Company, error) {
-	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
-		return crmcontracts.Company{}, err
-	}
 	return getCompanyInTx(ctx, tx, id, archived, active.cols)
 }
 
@@ -70,7 +69,7 @@ func (s *Store) GetCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 func getCompanyInTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	archived storekit.ArchivedFilter, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
-	if err := auth.EnsureVisible(ctx, tx, "company", id.UUID); err != nil {
+	if err := auth.EnsureReadable(ctx, tx, "company", id.UUID); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	out, err := readCompany(ctx, tx, id, archived, active)
@@ -162,7 +161,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&lifecycle, &relevance, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Source, &o.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &o.IsAnchor,
-		&o.LastActivityAt,
+		&o.LastActivityAt, &o.LegalHold,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {

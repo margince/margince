@@ -3,8 +3,16 @@
 
 package compose
 
-// The certification case for agent_loop/loop — the Surface-B runner's model
-// turn: the window the loop builds, and the step the loop will accept back.
+// The certification case for one agent_loop site — one scheduled agent's model
+// turn on the Surface-B runner: the window the loop builds, and the step the
+// loop will accept back.
+//
+// WHAT IT CERTIFIES IS WHAT RUNS. agent_loop is the engine and each site is one
+// scheduled agent. The goal and the tool allowlist are that agent's own,
+// resolved by ScheduledAgentSpecByName exactly as the runner service resolves
+// them, and the runner narrows the registry to the allowlist itself. A scenario
+// supplies only what varies between runs — the occurrence and what retrieval
+// seeded — so no scenario can offer a goal or a surface no run is given.
 //
 // WHAT IT EXERCISES. One turn, driven through the shipped entry point. Run calls
 // runner.Run with the runner's own brain and tool seams, so the prompt is the
@@ -42,77 +50,60 @@ package compose
 // the rubric and the judge are for.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// agentLoopSite names this site in every refusal it writes, so a corpus author
-// reading one knows which scenario to open.
-const agentLoopSite = "agent_loop/loop"
+// agentLoopSite names the task in every refusal the case writes; the site's own
+// name follows wherever the refusal is about one agent.
+const agentLoopSite = "agent_loop"
 
 // agentLoopFinalStep is the expectation token for the step that ends a run. It
 // is the protocol's own word for it, and it is the one name a fixture may not
 // give a tool — the two would be indistinguishable in an expectation.
 const agentLoopFinalStep = "final"
 
-// agentLoopFixture is ONE runner turn in exactly what the loop is handed: the
-// job the catalog spec carries, the seed context retrieval returned for it, and
-// the tool surface this run was offered.
+// agentLoopFixture is ONE scheduled run's first turn, in the two things that
+// vary between runs of one agent: the occurrence that started it and the seed
+// context retrieval returned for it. Everything else the window carries is the
+// agent's own and is looked up, never supplied.
 //
-// The grounding arrives already retrieved and the tools already registered,
-// because the certified thing is the window built from them, not the search and
-// the registry that produced them. What those guarantee about them is enforced at
-// Prepare instead.
+// The grounding arrives already retrieved, because the certified thing is the
+// window built from it, not the search that produced it. What retrieval
+// guarantees about it is enforced at Prepare instead.
 type agentLoopFixture struct {
-	Goal       string               `json:"goal"`
 	TriggerRef string               `json:"trigger_ref"`
 	Grounding  []agentLoopGrounding `json:"grounding"`
-	// Tools is the offered surface in either of the two spellings a scenario
-	// needs — a hand-spelled window, or the registered catalog. Both are what
-	// production is given; which one a scenario means is what it is about.
-	Tools agentLoopToolWindow `json:"tools"`
 }
 
-// agentLoopGrounding is one provenance-stamped seed item, in the shape retrieval
-// hands it over: the evidence source, the trust tier that decides whether it
-// prints raw or inside the run's boundary, and the snippet itself.
+// agentLoopGrounding is one piece of retrieved evidence, in the shape retrieval
+// hands it over: its source and its snippet. It carries no trust tier because
+// a run's seed never chooses one — retrievedSeed stamps every seed alike.
 type agentLoopGrounding struct {
-	SourceID  string `json:"source_id"`
-	TrustTier string `json:"trust_tier"`
-	Content   string `json:"content"`
+	SourceID string `json:"source_id"`
+	Content  string `json:"content"`
 }
 
-// agentLoopTool is one offered tool as the window prints it. A registered tool
-// carries admission machinery too — required scope, risk tier, its resolver —
-// and none of it is here, because none of it reaches the prompt and this case
-// executes nothing. A fixture carrying it would describe authority the certified
-// turn never exercises.
-type agentLoopTool struct {
-	Name string `json:"name"`
-	// Description is what the window tells the model this tool is for, and it
-	// is here for the reason the schema is: the prompt prints it, so a fixture
-	// without one builds a prompt the product never sends.
-	Description string          `json:"description"`
-	InputSchema json.RawMessage `json:"input_schema"`
-}
+// agentLoopCases serves one agent_loop site: the scheduled agent it names.
+type agentLoopCases struct{ agent string }
 
-// agentLoopCases serves the one site that runs a governed agent loop.
-type agentLoopCases struct{}
-
-func (agentLoopCases) Site() aitasks.Site {
+func (c agentLoopCases) Site() aitasks.Site {
 	return aitasks.Site{
 		Task:    ai.TaskAgentLoop,
-		Variant: "loop",
+		Variant: c.agent,
 		Kind:    ai.SiteKindAgentLoop,
 	}
 }
@@ -121,18 +112,30 @@ func (agentLoopCases) Site() aitasks.Site {
 // runnable case.
 //
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
-func (agentLoopCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
+func (c agentLoopCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
+	// Strict, because a key this shape does not hold is a scenario still
+	// supplying a goal or a tool surface of its own, and ignoring it would
+	// certify the agent's window while the scenario's author reads theirs.
 	var f agentLoopFixture
-	if err := json.Unmarshal(fixture, &f); err != nil {
-		return nil, fmt.Errorf("%s: the fixture is not the shape this site takes: %w", agentLoopSite, err)
+	decoder := json.NewDecoder(bytes.NewReader(fixture))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&f); err != nil {
+		return nil, fmt.Errorf("%s: the fixture is not the shape this site takes — a scheduled agent's "+
+			"trigger_ref and its grounding, nothing else: %w", agentLoopSite, err)
 	}
-	if err := refuseUnrunnableAgentJob(f); err != nil {
-		return nil, err
-	}
-	specs, err := f.Tools.specs()
+	agent, err := c.refuseUnrunnableAgentJob(f)
 	if err != nil {
 		return nil, err
 	}
+	job := runner.Job{
+		Goal:         agent.Goal,
+		TriggerRef:   f.TriggerRef,
+		Budget:       agent.Budget,
+		Tools:        agent.Tools,
+		Grounding:    agentLoopSeedContext(f.Grounding),
+		LanguageRule: promptlang.Rule(string(textlang.English)),
+	}
+	specs := job.Narrow(agentLoopRegistry())
 	// A turn that took the right step differs from one that took the wrong step
 	// in that step alone, so the expectation is that token — plus, only where a
 	// scenario means it, the arguments the step had to be called with.
@@ -146,94 +149,26 @@ func (agentLoopCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 	if err := refuseUnaskableArguments(want, specs); err != nil {
 		return nil, err
 	}
-	return &agentLoopCase{
-		job: runner.Job{
-			Goal:       f.Goal,
-			TriggerRef: f.TriggerRef,
-			Grounding:  agentLoopSeedContext(f.Grounding),
-		},
-		specs:    specs,
-		expected: want,
-	}, nil
-}
-
-// agentLoopToolSpecs rebuilds the offered tool surface, refusing one the registry
-// could never advertise. Every clause is a bound the tool surface already holds:
-// a registered tool has a name, the registry holds one entry per name, and every
-// entry carries a written description and an input schema — both of which the
-// window prints, so a fixture missing either sends a prompt the product never
-// sends.
-func agentLoopToolSpecs(tools []agentLoopTool) ([]mcp.ToolSpec, error) {
-	specs := make([]mcp.ToolSpec, 0, len(tools))
-	seen := make(map[string]bool, len(tools))
-	for _, tool := range tools {
-		switch {
-		case strings.TrimSpace(tool.Name) == "":
-			return nil, fmt.Errorf(
-				"%s: the fixture offers a tool with no name, and the name is the only thing a step can call it by",
-				agentLoopSite)
-		case seen[tool.Name]:
-			return nil, fmt.Errorf(
-				"%s: the fixture offers tool %q twice, and the registry holds one entry per name",
-				agentLoopSite, tool.Name)
-		case tool.Name == agentLoopFinalStep:
-			return nil, fmt.Errorf(
-				"%s: the fixture offers a tool named %q, which is the step protocol's own word for ending a run — "+
-					"an expectation could not tell the two apart", agentLoopSite, agentLoopFinalStep)
-		case strings.TrimSpace(tool.Description) == "":
-			return nil, fmt.Errorf(
-				"%s: tool %q carries no description, and the window prints the description the model chooses it by",
-				agentLoopSite, tool.Name)
-		case !agentLoopSchemaObject(tool.InputSchema):
-			return nil, fmt.Errorf(
-				"%s: tool %q advertises no input schema object, and the window prints the schema the model has to "+
-					"call it by", agentLoopSite, tool.Name)
-		}
-		seen[tool.Name] = true
-		specs = append(specs, mcp.ToolSpec{
-			Name: tool.Name, Description: tool.Description, InputSchema: tool.InputSchema,
-		})
-	}
-	return specs, nil
-}
-
-// agentLoopSchemaObject reports whether an advertised schema is the JSON Schema
-// object every registered tool carries. Well-formed JSON is not enough: a fixture
-// that omits the field encodes as null, which parses and would print the word
-// "null" into the prompt as the shape the model must call the tool by.
-func agentLoopSchemaObject(schema json.RawMessage) bool {
-	var object map[string]json.RawMessage
-	return json.Unmarshal(schema, &object) == nil && object != nil
+	return &agentLoopCase{job: job, expected: want}, nil
 }
 
 // refuseUnrunnableAgentJob names a job the scheduler could never have handed the
-// runner, and so a window the product never builds. A catalog spec carries a goal
-// and an occurrence ref, and retrieval stamps every seed item with the tier that
-// decides whether it prints raw or inside the boundary — an item with no tier
-// would be fenced here by the same default-deny that fences an unknown one, which
-// is the right behaviour for text and the wrong thing to certify as a fixture.
-func refuseUnrunnableAgentJob(f agentLoopFixture) error {
-	switch {
-	case strings.TrimSpace(f.Goal) == "":
-		return fmt.Errorf(
-			"%s: the fixture carries no goal, and the goal is the prompt's only statement of what to do",
-			agentLoopSite)
-	case strings.TrimSpace(f.TriggerRef) == "":
-		return fmt.Errorf(
-			"%s: the fixture names no trigger, and every run the scheduler starts is one named occurrence",
-			agentLoopSite)
+// runner for this site, and so a window the product never builds, and otherwise
+// returns the agent as production resolves it: every run the scheduler starts is
+// one named occurrence of one agent.
+func (c agentLoopCases) refuseUnrunnableAgentJob(f agentLoopFixture) (runner.AgentSpec, error) {
+	agent, ok := ScheduledAgentSpecByName(c.agent)
+	if !ok {
+		return runner.AgentSpec{}, fmt.Errorf(
+			"%s/%s: no scheduled agent carries this site's name, so no run ever builds its window",
+			agentLoopSite, c.agent)
 	}
-	if err := refuseUnmintableTriggerRef(f.TriggerRef); err != nil {
-		return err
+	if strings.TrimSpace(f.TriggerRef) == "" {
+		return runner.AgentSpec{}, fmt.Errorf(
+			"%s/%s: the fixture names no trigger, and every run the scheduler starts is one named occurrence",
+			agentLoopSite, c.agent)
 	}
-	for _, item := range f.Grounding {
-		if strings.TrimSpace(item.TrustTier) == "" {
-			return fmt.Errorf(
-				"%s: seed item %q carries no trust tier, and the tier is what decides whether it enters the prompt "+
-					"raw or inside the run's boundary", agentLoopSite, item.SourceID)
-		}
-	}
-	return nil
+	return agent, refuseUnmintableTriggerRef(agent, f.TriggerRef)
 }
 
 // refuseUnreachableAgentStep names an expectation no reply to this window could
@@ -261,30 +196,27 @@ func refuseUnreachableAgentStep(want string, specs []mcp.ToolSpec) error {
 		agentLoopSite, want, strings.Join(offered, ", "), agentLoopFinalStep)
 }
 
-// agentLoopSeedContext re-types the fixture's seed items into the loop's own
-// grounding, which is where the tier rule and the provenance-ref shape gate are
-// applied — by the window, on the way into the prompt.
+// agentLoopSeedContext seeds the window the way the runner service does, through
+// the same helper, so the tier rule and the provenance-ref shape gate are
+// applied by the window to exactly what a production run would carry.
 func agentLoopSeedContext(items []agentLoopGrounding) []runner.Grounding {
 	seed := make([]runner.Grounding, 0, len(items))
 	for _, item := range items {
-		seed = append(seed, runner.Grounding{
-			SourceID: item.SourceID, TrustTier: item.TrustTier, Content: item.Content,
-		})
+		seed = append(seed, retrievedSeed(item.SourceID, item.Content))
 	}
 	return seed
 }
 
-// agentLoopCase is one seeded window ready to be answered, closed over the tool
-// surface the answer is judged against.
+// agentLoopCase is one seeded window ready to be answered. The job carries the
+// agent's allowlist, so the runner narrows the registry to it on every pass.
 type agentLoopCase struct {
 	job      runner.Job
-	specs    []mcp.ToolSpec
 	expected agentLoopStep
 }
 
 // agentLoopTurnBudget bounds a run to the single turn this site certifies.
 //
-// The budget is the case's, not the fixture's, because the scope is: one paid
+// The step bound is the case's, not the agent's, because the scope is: one paid
 // reply per scenario, never the two further attempts the loop makes when a reply
 // will not parse — a case that let those run would certify the answer a model
 // gives after being told what it got wrong rather than the answer it gives. The
@@ -307,8 +239,8 @@ func agentLoopTurnBudget() runner.Budget { return runner.Budget{MaxSteps: 1} }
 func (c *agentLoopCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	recorder := &agentLoopRecorder{completer: completer}
 	job := c.job
-	job.Budget = agentLoopTurnBudget()
-	_, err := runner.New(agentLoopToolSurface{specs: c.specs}, recorder).Run(ctx, job)
+	job.Budget.MaxSteps = agentLoopTurnBudget().MaxSteps
+	_, err := runner.New(agentLoopToolSurface{}, recorder).Run(ctx, job)
 	trace := aitasks.Trace{Requests: recorder.requests}
 	if recorder.failed != nil {
 		return trace, fmt.Errorf("%s: the model call did not complete: %w", agentLoopSite, recorder.failed)
@@ -370,7 +302,9 @@ func (r agentLoopReplay) Complete(context.Context, model.Request) (model.Respons
 func (agentLoopReplay) PromptWindow() int { return runner.MinimumPromptWindow }
 
 // agentLoopToolSurface is the tool surface a certification run is offered: it
-// advertises the fixture's tools and applies none of them.
+// advertises the registered surface, as a passport admitting every scope would,
+// and applies none of it. The runner narrows it to the agent's allowlist exactly
+// as it narrows a production run's.
 //
 // Staging every proposal is the honest posture for a lane that holds no
 // authority. A certification run has no seat, no passport and no workspace to act
@@ -379,25 +313,11 @@ func (agentLoopReplay) PromptWindow() int { return runner.MinimumPromptWindow }
 // pretending an outcome. It also keeps the graded turn to one turn: a refusal
 // would be fed back as an observation and re-prompted, which is the loop, and the
 // loop is not what this site's scenarios measure.
-type agentLoopToolSurface struct{ specs []mcp.ToolSpec }
+type agentLoopToolSurface struct{}
 
-func (s agentLoopToolSurface) Specs() []mcp.ToolSpec { return s.specs }
+func (agentLoopToolSurface) Specs() []mcp.ToolSpec { return agentLoopRegistry() }
 
-// Offered is the fixture's whole surface, unfiltered — and it must stay that
-// way even though production runs are now scope-filtered.
-//
-// The band measures RESTRAINT, and restraint is only observable against a tool
-// the model can actually see. a_draft_precedes_a_send scores whether the turn
-// resists send_email; the_record_is_found_before_it_is_changed scores whether it
-// resists update_record. Narrow this surface to the scope each scenario's
-// expected step needs and both pass for no reason: the tempting tool was never
-// offered, so declining it proves nothing about the model.
-//
-// The consequence is worth stating rather than leaving to be rediscovered: this
-// band cannot measure whether scope filtering improves selection, because the
-// filter removes exactly what the band exists to tempt the model with. That
-// claim needs a site built for it, not this one.
-func (s agentLoopToolSurface) Offered(context.Context) []mcp.ToolSpec { return s.specs }
+func (agentLoopToolSurface) Offered(context.Context) []mcp.ToolSpec { return agentLoopRegistry() }
 
 func (agentLoopToolSurface) Invoke(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 	return nil, &workflow.StagedApprovalError{ApprovalID: ids.New[ids.ApprovalKind]()}
@@ -416,7 +336,7 @@ func (agentLoopToolSurface) Invoke(context.Context, string, json.RawMessage) (js
 // replay on the first pass. The replay does no I/O, so it needs nothing from the
 // run's context.
 func (c *agentLoopCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	res, err := runner.New(agentLoopToolSurface{specs: c.specs}, agentLoopReplay{reply: trace.Output}).
+	res, err := runner.New(agentLoopToolSurface{}, agentLoopReplay{reply: trace.Output}).
 		Run(context.Background(), c.job)
 	if err != nil {
 		return aitasks.Outcome{
@@ -433,6 +353,12 @@ func (c *agentLoopCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		// call names which tool — and, for a scenario that pins them, the
 		// arguments it was called with.
 		return c.gradeStep(res.Pending.Tool, res.Pending.Args)
+	case len(res.Steps) > 0 && res.Steps[0].Admission == runner.AdmissionRefused:
+		// The first step named a tool outside this agent's allowlist, which the
+		// runner refuses before the surface sees it — as it would in a run. The
+		// replay then re-plans into the same text until its budget ends, so the
+		// graded step is the first one, not the budget it exhausted.
+		return c.gradeStep(res.Steps[0].Tool, res.Steps[0].Args)
 	default:
 		// The report is an operator artifact whose whole subject is what the
 		// step protocol refused, so it takes the detail rather than the reason a

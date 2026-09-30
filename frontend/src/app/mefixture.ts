@@ -15,6 +15,7 @@ import type { RbacAction, RbacObject } from "./capability";
 // granted, its sibling not) are the point, not an edge case.
 
 type MeResponse = components["schemas"]["MeResponse"];
+type SettingsAvailability = components["schemas"]["SettingsAvailability"];
 type RbacObjectGrant = components["schemas"]["RbacObjectGrant"];
 type RowScope = NonNullable<
   components["schemas"]["Authorization"]
@@ -25,6 +26,11 @@ const NO_GRANT: RbacObjectGrant = {
   read: false,
   update: false,
   delete: false,
+};
+
+const AVAILABLE: SettingsAvailability = {
+  company_context: true,
+  embedding_reindex: true,
 };
 
 export type GrantSpec = Partial<Record<RbacObject, readonly RbacAction[]>>;
@@ -42,7 +48,7 @@ export function meFixture({
   seat = "full",
   allow = {},
   rowScope = "own",
-  settingsAvailability = { company_context: true },
+  settingsAvailability = {},
 }: {
   roles?: string[];
   seat?: "full" | "read";
@@ -55,10 +61,9 @@ export function meFixture({
    */
   rowScope?: RowScope;
   /**
-   * Which settings surfaces exist in this installation. Defaults to the company
-   * page being available, because that is the compiled default the deployment
-   * config resolves to — a fixture omitting it should describe an ordinary
-   * installation, not one with the rollout switched off.
+   * Which settings surfaces exist in this installation. A key left out is
+   * available — the company page's compiled default and a bound embed lane —
+   * so a fixture names only the surface it switches off.
    *
    * Pass `null` for the third state, which is neither of those: a server older
    * than the field, or a snapshot cached before it shipped, answers /me with no
@@ -66,7 +71,7 @@ export function meFixture({
    * the surface is off, and a reader has to fail closed on both — so the
    * absence needs its own spelling rather than riding the default.
    */
-  settingsAvailability?: MeResponse["settings_availability"] | null;
+  settingsAvailability?: Partial<SettingsAvailability> | null;
 } = {}): MeResponse {
   const objects: Record<string, RbacObjectGrant> = {};
   for (const [object, actions] of Object.entries(allow)) {
@@ -92,7 +97,10 @@ export function meFixture({
     data_reset_available: false,
     admin_password_link: false,
     authorization: { seat_type: seat, objects, row_scope: rowScope },
-    settings_availability: settingsAvailability ?? undefined,
+    settings_availability:
+      settingsAvailability === null
+        ? undefined
+        : { ...AVAILABLE, ...settingsAvailability },
   };
   return me;
 }

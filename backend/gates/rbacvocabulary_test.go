@@ -29,7 +29,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"slices"
@@ -37,6 +36,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -177,7 +178,7 @@ func contractSchema(t *testing.T, name string) contractSchemaFields {
 // collected rather than one per declaration.
 func objectGrantActions(t *testing.T) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), principalFile, nil, 0)
+	file, err := gatekit.ParseFile(principalFile, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", principalFile, err)
 	}

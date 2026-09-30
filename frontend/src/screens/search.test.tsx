@@ -416,7 +416,7 @@ describe("SearchScreen", () => {
 
     const hit = await screen.findByText("Key Account");
     expect(hit.tagName).toBe("BUTTON");
-    expect(screen.getByText("On 7 records")).toBeTruthy();
+    expect(screen.getByText("7 tagged records")).toBeTruthy();
 
     await userEvent.setup().click(hit);
     expect(window.location.hash).toBe(
@@ -424,8 +424,32 @@ describe("SearchScreen", () => {
     );
   });
 
+  it("counts a tag on one record in the singular", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "tag",
+              id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+              title: "Key Account",
+              snippet: null,
+              score: 2,
+              carried_by: 1,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="key" />);
+    expect(await screen.findByText("1 tagged record")).toBeTruthy();
+  });
+
   // Absent is not zero. A server that sent no number has not said the word is
-  // unused, and printing "On 0 records" would be a claim nobody made.
+  // unused, and printing "Records: 0" would be a claim nobody made.
   it("prints no count when the answer carried none", async () => {
     vi.stubGlobal(
       "fetch",
@@ -448,7 +472,101 @@ describe("SearchScreen", () => {
     render(<SearchScreen q="key" />);
 
     expect(await screen.findByText("Key Account")).toBeTruthy();
-    expect(screen.queryByText(/On \d+ records/)).toBeNull();
+    expect(screen.queryByText(/Records: \d+/)).toBeNull();
+  });
+
+  // A partner is a property of a company and not a thing the search finds, so
+  // the company hit carries the fact and the route: the account is a partner,
+  // and its partner record is one press away rather than reachable only by
+  // knowing the Partners screen exists.
+  it("marks a partner company and routes to its partner record", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "company",
+              id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+              title: "Brandt GmbH",
+              trust_tier: "authoritative",
+              is_partner: true,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    const { container } = render(<SearchScreen q="brandt" />);
+    await waitFor(() => expect(screen.getByText("Brandt GmbH")).toBeTruthy());
+    expect(screen.getByText("Partner")).toBeTruthy();
+    // The one badge on the row is the fact; the route beside it is a link,
+    // because a badge is never pressed.
+    expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(1);
+    // Named for the account, so a page of partner rows does not announce the
+    // same "Open partner record" on every one of them.
+    const open = screen.getByRole("link", {
+      name: "Open partner record for Brandt GmbH",
+    });
+    expect(open.getAttribute("href")).toBe(
+      "#/companies/01a05ebd-b03d-7183-b2fb-c00bcb58b419/partner",
+    );
+  });
+
+  // `false` is a company checked and found plain; an absent field is a marker
+  // nobody took, which the server sends when the reader may not read partner
+  // programmes. Neither is a partner, so neither draws the mark or the route.
+  it.each([{ is_partner: false }, { is_partner: null }, {}])(
+    "draws no partner mark for a company hit carrying %o",
+    async (marker) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () =>
+          jsonResponse({
+            data: [
+              {
+                type: "company",
+                id: "o1",
+                title: "Brandt GmbH",
+                trust_tier: "authoritative",
+                ...marker,
+              },
+            ],
+            page: { next_cursor: null, has_more: false },
+          }),
+        ),
+      );
+      const { container } = render(<SearchScreen q="brandt" />);
+      await waitFor(() => expect(screen.getByText("Brandt GmbH")).toBeTruthy());
+      expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(0);
+      expect(screen.queryByText("Open partner record")).toBeNull();
+    },
+  );
+
+  // The marker means nothing off a company, and the screen holds that itself
+  // rather than trusting the server to send it on company hits alone.
+  it("draws no partner mark on a hit that is not a company", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "contact",
+              id: "p1",
+              title: "Dana Buyer",
+              trust_tier: "authoritative",
+              is_partner: true,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    const { container } = render(<SearchScreen q="dana" />);
+    await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
+    expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(0);
+    expect(screen.queryByText("Open partner record")).toBeNull();
   });
 });
 
@@ -545,7 +663,7 @@ describe("SearchScreen — narrowing by type", () => {
     await waitFor(() =>
       expect(globalThis.location.hash).toContain("type=product"),
     );
-    await user.click(screen.getByRole("button", { name: "Everything" }));
+    await user.click(screen.getByRole("button", { name: "All" }));
     await waitFor(() =>
       expect(globalThis.location.hash).not.toContain("type="),
     );
@@ -566,6 +684,6 @@ describe("SearchScreen — narrowing by type", () => {
     );
     render(<SearchScreen q="zzz" />);
     expect(await screen.findByText(/No matches/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Everything" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "All" })).toBeTruthy();
   });
 });

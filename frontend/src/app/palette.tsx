@@ -8,7 +8,7 @@ import {
   SearchField,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { useDialogFocus } from "../design-system/dialogfocus";
+import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -16,6 +16,7 @@ import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import type { SettingsPageId } from "../screens/settingscatalog";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
 import { settingsHref } from "../screens/settingsrouting";
+import { useHoldsAdminRole } from "./capability";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
@@ -24,6 +25,7 @@ import {
 import { CREATE_ID, NAV } from "./nav";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 import { navigate, type Route } from "./router";
+import { openAsk } from "./urlstate";
 
 // ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a type
 // tag (screen / action / record); record entries are fed by the search seam
@@ -39,7 +41,10 @@ export type Command = {
   // older word must not be told the screen does not exist.
   keywords?: readonly string[];
   type: "screen" | "action" | "record";
-  route: Route;
+  // Where the row goes. Absent on a row that opens something OVER the page
+  // instead of leaving it — asking does that, and a route it never follows
+  // would be a claim about where the reader ends up that is simply untrue.
+  route?: Route;
 };
 
 // The words a settings entry answers to beyond its own label. A reader types the
@@ -90,6 +95,9 @@ export function useBuiltinCommands(): Command[] {
   // The same table the settings rail walks, not a second opinion about it: a
   // palette reading its own list offers a page the rail no longer lists.
   const visible = useVisibleSettingsPages();
+  // Company profile draws its website card for an admin seat only, so only an
+  // admin finds the page by that card's words; any other seat would land on none.
+  const isAdmin = useHoldsAdminRole();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
@@ -124,12 +132,6 @@ export function useBuiltinCommands(): Command[] {
         route: { screen: "deals", id: CREATE_ID },
       },
       {
-        id: "action:read-company",
-        label: t("action.readCompany"),
-        type: "action",
-        route: { screen: "onboarding", id: "company" },
-      },
-      {
         id: "action:booking",
         label: t("action.booking"),
         type: "action",
@@ -142,13 +144,19 @@ export function useBuiltinCommands(): Command[] {
     // shelving can open, where deriving brings a new tab here for free.
     //
     // Gated on the SAME predicate the settings level uses, because that level
-    // falls back to Account for an entry the principal may not open — so an
-    // ungated command would be a shortcut that silently goes somewhere else.
+    // answers an entry the principal may not open with the access boundary — so
+    // an ungated command would be a shortcut to a refusal.
     // Only the admin half has a predicate; the `you` half is every reader's.
     const settingsScreens: Command[] = visible.map((page) => ({
       id: `screen:settings-${page.id}`,
       label: t(`settings.tab.${page.id}`),
-      keywords: [page.id, ...(SETTINGS_ALIASES[page.id] ?? [])],
+      keywords: [
+        page.id,
+        ...(SETTINGS_ALIASES[page.id] ?? []),
+        ...(page.id === "company" && isAdmin
+          ? [t("settings.companyRefresh")]
+          : []),
+      ],
       type: "screen",
       route: settingsHref(page.id),
     }));
@@ -185,7 +193,7 @@ export function useBuiltinCommands(): Command[] {
       ...offRailScreens,
       ...settingsScreens,
     ];
-  }, [t, visible, locale]);
+  }, [t, visible, locale, isAdmin]);
 }
 
 const TYPE_KEY: Record<Command["type"], MessageKey> = {
@@ -193,10 +201,6 @@ const TYPE_KEY: Record<Command["type"], MessageKey> = {
   action: "palette.typeAction",
   record: "palette.typeRecord",
 };
-
-// `#/ai?q=<question>`: the row's question travels in the ADDRESS, because a
-// reader already on the AI surface changes no path and so remounts nothing.
-export const ASK_QUESTION_PARAM = "q";
 
 export function CommandPalette({
   open,
@@ -266,30 +270,25 @@ export function CommandPalette({
       }
     : null;
 
-  const askRow: Command | null = query.trim()
-    ? {
-        id: "ask-ai",
-        label: t("palette.askAi", { query: query.trim() }),
-        type: "action",
-        route: { screen: "ai" },
-      }
-    : null;
-  const rows = [
-    ...filtered,
-    ...search.commands,
-    ...(seeAll ? [seeAll] : []),
-    ...(askRow ? [askRow] : []),
-  ];
+  // Asking leads, always. The palette answers two different questions — where
+  // do I go, and what does this company know — and only the first has a list of
+  // destinations to scan. A reader who came to ASK had to type something and
+  // then hunt past every screen whose name happened to match it, so the row sat
+  // last on the one journey it exists for. It carries the query when there is
+  // one and opens an empty box when there is not; either way it goes nowhere.
+  const rows = [...filtered, ...search.commands, ...(seeAll ? [seeAll] : [])];
   const clamp = (index: number) =>
     Math.max(0, Math.min(index, rows.length - 1));
 
   const run = (command: Command) => {
     onClose();
-    const asking = command.id === "ask-ai";
-    navigate(
-      command.route,
-      asking ? new Map([[ASK_QUESTION_PARAM, query.trim()]]) : undefined,
-    );
+    if (command.id === "ask-ai") {
+      openAsk(query.trim());
+      return;
+    }
+    if (command.route) {
+      navigate(command.route);
+    }
   };
 
   if (!mounted) {
@@ -384,6 +383,27 @@ export function CommandPalette({
               when one query replaces another under it — a reader typing through
               a slow search should see one steady bar, not one that blinks out
               and returns per letter. */}
+          {/* Asking, always, and deliberately NOT one of the options below.
+              The palette answers two questions — where do I go, and what does
+              this company know — and only the first has a list to scan. Pinned
+              into that list it took the first row, which is the row Enter
+              presses, so a reader typing a screen name would have asked about
+              it instead of going there. Here it is reachable on sight and by
+              Tab, and it carries whatever is typed into the box rather than
+              asking it: a question matched mid-word is one still being
+              written. */}
+          <button
+            type="button"
+            className="palette-ask t-body"
+            onClick={() => {
+              onClose();
+              openAsk(query.trim());
+            }}
+          >
+            <Sparkles aria-hidden />
+            <span className="label">{t("corpusAsk.title")}</span>
+            <Badge tone="ai">{t("palette.typeAction")}</Badge>
+          </button>
           {search.pending && (
             <PendingBody
               label={t("palette.searching")}
@@ -446,15 +466,22 @@ export function paletteHotkeyCaps(platform: string): readonly string[] {
   return /mac|iphone|ipad|ipod/i.test(platform) ? ["⌘", "K"] : ["Ctrl", "K"];
 }
 
-export function usePaletteHotkey(toggle: () => void) {
+export function usePaletteHotkey(
+  open: boolean,
+  setOpen: (open: boolean) => void,
+) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        toggle();
+        // An open dialog makes the rest of the app unreachable, the palette with
+        // it; asked only while closed, so the palette's own box never blocks it.
+        if (open || liveDialogs().length === 0) {
+          setOpen(!open);
+        }
       }
     };
     globalThis.addEventListener("keydown", onKey);
     return () => globalThis.removeEventListener("keydown", onKey);
-  }, [toggle]);
+  }, [open, setOpen]);
 }

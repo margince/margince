@@ -164,7 +164,7 @@ func TestExtLocalesGenVanillaIsTheCommittedStub(t *testing.T) {
 // of one fact drift, and the drift would be a unit shipping copy no locale
 // switch can select — or being refused for a locale the product ships.
 func TestComposedLocalesMatchTheCatalogue(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "frontend/src/i18n/index.tsx"))
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "frontend/src/i18n/locale.ts"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestComposedLocalesMatchTheCatalogue(t *testing.T) {
 	marker := "export const LOCALES = ["
 	i := strings.Index(src, marker)
 	if i < 0 {
-		t.Fatal("frontend/src/i18n/index.tsx no longer declares LOCALES — this gate cannot read the catalogue")
+		t.Fatal("frontend/src/i18n/locale.ts no longer declares LOCALES — this gate cannot read the catalogue")
 	}
 	declared := src[i+len(marker) : i+len(marker)+strings.Index(src[i+len(marker):], "]")]
 	for _, locale := range composedLocales {

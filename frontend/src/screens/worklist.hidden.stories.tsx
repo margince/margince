@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { fn } from "storybook/test";
 import { StoryProviders } from "./story-utils";
 import { HiddenFigures } from "./worklist.hidden";
 
@@ -15,6 +16,7 @@ const meta: Meta<typeof HiddenFigures> = {
   title: "Records/Worklist/Hidden backlog",
   component: HiddenFigures,
   parameters: { layout: "padded" },
+  args: { onOpenEmail: fn() },
   decorators: [
     (Story) => (
       <StoryProviders>
@@ -35,6 +37,7 @@ const base = {
   past_horizon: 0,
   unlinked: 0,
   colleagues: 0,
+  informs_us: 0,
   truncated: false,
   clear: false,
 };
@@ -52,6 +55,12 @@ export const OurOwnDomainsHideTooMuch: Story = {
   args: { backlog: { ...base, colleagues: 9 } },
 };
 
+// Mail the classifier judged to ask nothing. A model's opinion, so its figure
+// is where a wrong verdict about a customer would show.
+export const JudgedToAskNothing: Story = {
+  args: { backlog: { ...base, informs_us: 6 } },
+};
+
 // Every rule holding something, which is what a queue in trouble looks like.
 export const EveryRuleHoldingWork: Story = {
   args: {
@@ -61,6 +70,7 @@ export const EveryRuleHoldingWork: Story = {
       unlinked: 2,
       not_sales: 9,
       set_aside: 3,
+      informs_us: 2,
     },
   },
 };

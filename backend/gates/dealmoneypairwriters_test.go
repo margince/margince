@@ -42,6 +42,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // moneyFigureFields are the deal's two money figures on the wire struct. A
@@ -79,8 +81,8 @@ func TestOneFunctionDecidesWhetherADealsMoneyPairIsLegal(t *testing.T) {
 				strings.Contains(filepath.ToSlash(path), dealMoneyPairOwner) {
 				return nil
 			}
-			fset := token.NewFileSet()
-			file, parseErr := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+			fset := gatekit.SourceFileSet()
+			file, parseErr := gatekit.ParseFile(path, parser.SkipObjectResolution)
 			if parseErr != nil {
 				return parseErr
 			}

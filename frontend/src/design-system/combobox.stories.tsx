@@ -19,7 +19,7 @@ import { ComboBox, type ComboBoxSuggestion } from "./combobox";
  * toolbar to see the dark rendering — every value here is a token.
  */
 const meta = {
-  title: "Design System/ComboBox",
+  title: "Components/Forms and input/Combobox",
   parameters: { layout: "padded" },
 } satisfies Meta;
 export default meta;

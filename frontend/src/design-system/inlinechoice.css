@@ -53,6 +53,11 @@
   margin: -2px -4px;
   width: calc(100% + 8px);
 }
+/* A refused field gives back its block-end overlap: the error line under it
+   moves the row anyway, and the field gap then clears the box as elsewhere. */
+.inlinetext-edit .input[aria-invalid="true"] {
+  margin-block-end: 0;
+}
 
 /* The caret only a chooser draws, and only once the reader has already
  * noticed the underline — two affordances at once would be one more thing to

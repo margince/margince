@@ -148,3 +148,50 @@ func (q Query) SelectIDs(ctx context.Context, tx pgx.Tx, p Predicate, limit int)
 	}
 	return matched, nil
 }
+
+// SelectPage runs the predicate as one keyset page: up to limit matching ids
+// after `after` (nil for the first page), id-ordered, and whether more follow.
+// Unlike SelectIDs it has no ceiling on the whole set, so a caller can walk
+// every match a page at a time and a set past PredicateRowLimit is complete.
+func (q Query) SelectPage(ctx context.Context, tx pgx.Tx, p Predicate, after *ids.UUID, limit int) ([]ids.UUID, bool, error) {
+	limit = ClampLimit(&limit)
+	where, args, err := q.predicateWhere(ctx, p)
+	if err != nil {
+		return nil, false, err
+	}
+	if after != nil {
+		args = append(args, *after)
+		where += fmt.Sprintf(" AND t.id > $%d", len(args))
+	}
+	args = append(args, limit+1)
+	sql := fmt.Sprintf("SELECT t.id FROM %s t WHERE %s ORDER BY t.id LIMIT $%d", q.Table, where, len(args))
+	rows, err := tx.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, false, fmt.Errorf("predicate page on %s: %w", q.Table, err)
+	}
+	matched, err := ScanUUIDColumn(rows, "predicate page on "+q.Table)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(matched) > limit {
+		return matched[:limit], true, nil
+	}
+	return matched, false, nil
+}
+
+// MatchClause renders "this row is selected by the predicate" for a caller's
+// own statement over the same table, whose id column is idColumn. It carries
+// the resource's base clause and the compiled filter and NO row scope: the
+// caller's statement is a read that already applies its own, and this only
+// narrows it.
+func (q Query) MatchClause(p Predicate, idColumn string, arg func(any) int) (string, error) {
+	compiled, err := CompilePredicate(p, q.Fields, arg)
+	if err != nil {
+		return "", err
+	}
+	where := compiled
+	if q.BaseWhere != "" {
+		where = q.BaseWhere + " AND " + compiled
+	}
+	return fmt.Sprintf("%s IN (SELECT t.id FROM %s t WHERE %s)", idColumn, q.Table, where), nil
+}

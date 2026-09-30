@@ -42,7 +42,7 @@ func normalizedPattern(body string, insensitive bool) string {
 // per census.
 func goSplitterTables(t *testing.T) map[string][]string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), goSplitter, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(goSplitter, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", goSplitter, err)
 	}
@@ -123,7 +123,7 @@ func mustCompileArgument(t *testing.T, call *ast.CallExpr) (string, bool) {
 // goSplitterConst reads one integer constant out of the Go file.
 func goSplitterConst(t *testing.T, name string) int {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), goSplitter, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(goSplitter, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", goSplitter, err)
 	}

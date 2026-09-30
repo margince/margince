@@ -34,7 +34,7 @@ const DRAFT = {
   body: "Hi Dung,\n\nYou asked what this would cost for 40 seats.",
   generated_by: "model",
   ai_generated: true,
-  ai_disclosure: "This message was drafted with AI assistance.",
+  ai_disclosure: "Drafted with AI assistance. Review before sending.",
 };
 
 const PURPOSES = {
@@ -125,6 +125,8 @@ describe("where a finished draft leaves the reader", () => {
     // band is the notice, and the words are what the press was for.
     await waitFor(() => expect(reveal).toHaveBeenCalled());
     expect(reveal).toHaveBeenCalledWith({ block: "nearest" });
-    expect(editor.textContent).toContain("You asked what this would cost");
+    await waitFor(() =>
+      expect(editor.textContent).toContain("You asked what this would cost"),
+    );
   });
 });

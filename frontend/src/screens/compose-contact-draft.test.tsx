@@ -59,7 +59,7 @@ const CONTACT_DRAFT = {
   body: "Guten Tag Frau Malherbe,\n\nfür das Beispiel brauchen wir zwei Produkte.",
   generated_by: "model",
   ai_generated: true,
-  ai_disclosure: "This message was drafted with AI assistance.",
+  ai_disclosure: "Drafted with AI assistance. Review before sending.",
 };
 
 function stubRoutes(
@@ -166,7 +166,7 @@ describe("drafting to a contact", () => {
     );
 
     await userEvent.type(
-      screen.getByPlaceholderText(/What should this email achieve|Reply with/),
+      screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "kurz halten",
     );
     await userEvent.click(
@@ -179,6 +179,76 @@ describe("drafting to a contact", () => {
     // recipient, so naming one would be this client answering a question the
     // route does not ask.
     expect(call?.body).toEqual({ intent: "kurz halten" });
+  });
+
+  // A rewrite verb has to carry the draft it is a rewrite OF. Without it the
+  // server generates a second grounded draft from the same record and the
+  // composer swaps it in over the first: a different email rather than a
+  // shorter one, and whatever the rep had edited is gone with it.
+  it("sends the draft on screen when the reader asks for a rewrite", async () => {
+    const sent = stubRoutes({
+      "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
+    });
+    render(
+      <ComposeModal
+        intent="Follow up on our discussion"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
+    );
+    await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
+
+    await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
+
+    await waitFor(() => {
+      const calls = sent.filter(
+        (c) => c.key === "POST /contacts/c-1/draft-email",
+      );
+      expect(calls.length).toBe(2);
+    });
+    const rewrite = sent.filter(
+      (c) => c.key === "POST /contacts/c-1/draft-email",
+    )[1];
+    expect(rewrite.body).toEqual({
+      intent: "Keep the meaning and use fewer words.",
+      rewrite_of: CONTACT_DRAFT.body,
+    });
+  });
+
+  // The other direction, so `rewrite_of` cannot simply be sent always: a FIRST
+  // draft has nothing to rewrite, and a body sent with one would ask the model
+  // to revise an empty composer.
+  it("sends nothing to rewrite on a first draft", async () => {
+    const sent = stubRoutes({
+      "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
+    });
+    render(
+      <ComposeModal
+        intent="Follow up on our discussion"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
+    );
+    await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
+
+    const first = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
+    expect(first?.body).toEqual({ intent: "Follow up on our discussion" });
   });
 
   it("discloses a model-written draft", async () => {
@@ -256,7 +326,7 @@ describe("drafting to a contact", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText(/not offered from this page/i)).toBeTruthy(),
+      expect(screen.getByText(/not available on this page/i)).toBeTruthy(),
     );
     // No claim about the model, because nothing was asked of it.
     expect(screen.queryByText(/model is not configured/i)).toBeNull();

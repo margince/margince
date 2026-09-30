@@ -19,7 +19,7 @@ import {
 // through the api client on mount; LeadScreen's lifecycle panel also reads
 // GET /me (the session-principal probe every role-aware surface shares).
 const meta: Meta = {
-  title: "Records/Leads/Screen",
+  title: "Records/Leads/Page",
   parameters: { layout: "padded" },
 };
 export default meta;

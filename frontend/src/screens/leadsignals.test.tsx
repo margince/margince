@@ -93,7 +93,7 @@ function question(name: string): HTMLElement {
 }
 
 function save(): HTMLElement {
-  return screen.getByRole("button", { name: "Add to the score" });
+  return screen.getByRole("button", { name: "Add to score" });
 }
 
 /** The PUT bodies, in the order the screen sent them. */
@@ -129,7 +129,7 @@ describe("LeadManualSignals", () => {
 
     await user.click(question("Company size?"));
     const size = screen.getByRole("listbox");
-    for (const band of ["1–10", "11–50", "51–200", "201+"]) {
+    for (const band of ["1 to 10", "11 to 50", "51 to 200", "201+"]) {
       expect(within(size).getByRole("option", { name: band })).toBeTruthy();
     }
     await user.keyboard("{Escape}");
@@ -162,7 +162,7 @@ describe("LeadManualSignals", () => {
       // the enum can say and claims no certainty at all.
       signal_kind: "assumption",
       confidence: null,
-      reason: "No source given. Entered by hand.",
+      reason: "No evidence given. Entered manually.",
     });
   });
 
@@ -175,7 +175,7 @@ describe("LeadManualSignals", () => {
     await user.click(summary);
     expect(summary.closest("details")?.open).toBe(true);
 
-    await pickOption(user, question("How reliable is this?"), "Verified");
+    await pickOption(user, question("Evidence quality"), "Verified");
     await pickOption(user, question("Confidence"), "90% confidence");
     await pickOption(user, question("Budget?"), "Budget confirmed");
     await user.click(save());
@@ -186,7 +186,7 @@ describe("LeadManualSignals", () => {
       band: "confirmed",
       signal_kind: "fact",
       confidence: 0.9,
-      reason: "No source given. Entered by hand.",
+      reason: "No evidence given. Entered manually.",
     });
   });
 
@@ -195,9 +195,9 @@ describe("LeadManualSignals", () => {
     const writes: Write[] = [];
     await show(writes);
 
-    await pickOption(user, question("Company size?"), "51–200");
+    await pickOption(user, question("Company size?"), "51 to 200");
     await user.type(
-      screen.getByRole("textbox", { name: "How do you know?" }),
+      screen.getByRole("textbox", { name: "Evidence" }),
       "  Counted them on their team page.  ",
     );
     await user.click(save());

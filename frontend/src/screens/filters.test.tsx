@@ -10,7 +10,9 @@ import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { vocabularyQueryKey } from "./filterdata";
 import { FiltersScreen } from "./filters";
+import { savedViewsKey } from "./savedviews.manage";
 
 // What this screen owns is the WIRING and one judgement: how a count that is a
 // moment behind should read. So these tests are about which request went out for
@@ -50,6 +52,7 @@ function mount(
     rows?: readonly Record<string, unknown>[];
   },
   views: readonly Record<string, unknown>[] = [],
+  viewsAnswered: Promise<void> = Promise.resolve(),
 ) {
   const seen: string[] = [];
   const written: unknown[] = [];
@@ -119,6 +122,7 @@ function mount(
           );
           return json({ id: "v-new", ...(views[0] ?? {}) });
         }
+        await viewsAnswered;
         return json({
           data: views,
           page: { next_cursor: null, has_more: false },
@@ -135,7 +139,7 @@ function mount(
       <LocaleProvider>{children}</LocaleProvider>
     </QueryClientProvider>
   );
-  return { seen, written, wrapper };
+  return { seen, written, wrapper, client };
 }
 
 /** A stored view row, with whatever `query` blob the test is about. */
@@ -184,7 +188,7 @@ it("asks for no preview until a clause is complete", async () => {
   // filter_shape_invalid — asking would spend a request to be told so.
   expect(seen.some((url) => url.includes("/filters/preview"))).toBe(false);
   // And the count says nothing has been asked, which is NOT the same as zero.
-  expect(screen.getByText("Add a clause to see what it selects")).toBeTruthy();
+  expect(screen.getByText("Add a clause to preview matches")).toBeTruthy();
   // Nor is there a results table: an empty one would say "no records match this
   // filter" about a filter nobody has written.
   expect(screen.queryByText("Matching records")).toBeNull();
@@ -216,7 +220,7 @@ it("shows the rows behind the count", async () => {
   // The identity column, and the row behind the count — a number alone cannot be
   // checked, which is what AC-5's table is for.
   expect(await screen.findByText("Ann Lee")).toBeTruthy();
-  expect(screen.getByRole("columnheader", { name: /full name/ })).toBeTruthy();
+  expect(screen.getByRole("columnheader", { name: /^Name/ })).toBeTruthy();
 });
 
 it("says how many match once a clause is complete", async () => {
@@ -257,7 +261,7 @@ it("restores a saved filter, count and all, without a clause being retyped", asy
   render(<FiltersScreen />, { wrapper });
 
   await user.click(
-    await screen.findByRole("button", { name: "Load a saved filter" }),
+    await screen.findByRole("button", { name: "Load saved filter" }),
   );
   await user.click(screen.getByRole("button", { name: "Berliners" }));
 
@@ -265,6 +269,70 @@ it("restores a saved filter, count and all, without a clause being retyped", asy
   // engine would refuse is a view that fails the moment it is opened.
   expect(await screen.findByDisplayValue("ann")).toBeTruthy();
   expect(await screen.findByText("7 contacts match")).toBeTruthy();
+});
+
+it("opens the saved view the address names, already loaded", async () => {
+  const { wrapper } = mount({ match_count: 4 }, [
+    viewRow("Other", {
+      filter: { and: [{ field: "full_name", op: "contains", value: "bob" }] },
+    }),
+    viewRow("Berliners", {
+      filter: { and: [{ field: "full_name", op: "contains", value: "ann" }] },
+    }),
+  ]);
+  render(<FiltersScreen id="contacts" view="v-Berliners" />, { wrapper });
+
+  expect(await screen.findByDisplayValue("ann")).toBeTruthy();
+  expect(screen.queryByDisplayValue("bob")).toBeNull();
+  expect(await screen.findByText("4 contacts match")).toBeTruthy();
+});
+
+it("holds the builder until the addressed view is read, so no edit is overwritten", async () => {
+  let answer = () => {};
+  const answered = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  const { wrapper, client } = mount(
+    { match_count: 4 },
+    [
+      viewRow("Berliners", {
+        filter: { and: [{ field: "full_name", op: "contains", value: "ann" }] },
+      }),
+    ],
+    answered,
+  );
+  render(<FiltersScreen id="contacts" view="v-Berliners" />, { wrapper });
+
+  // The vocabulary has answered, which alone would make the builder editable.
+  await waitFor(() =>
+    expect(client.getQueryState(vocabularyQueryKey("contact"))?.status).toBe(
+      "success",
+    ),
+  );
+  expect(screen.queryByRole("button", { name: "Add clause" })).toBeNull();
+  answer();
+  expect(await screen.findByDisplayValue("ann")).toBeTruthy();
+});
+
+it("reads the views again when the cached ones predate the addressed view", async () => {
+  const berliners = viewRow("Berliners", {
+    filter: { and: [{ field: "full_name", op: "contains", value: "ann" }] },
+  });
+  const { wrapper, client } = mount({ match_count: 4 }, [berliners]);
+  client.setQueryData(savedViewsKey("contacts"), []);
+  render(<FiltersScreen id="contacts" view="v-Berliners" />, { wrapper });
+
+  expect(await screen.findByDisplayValue("ann")).toBeTruthy();
+});
+
+it("opens an empty builder when the addressed view is gone", async () => {
+  const { wrapper } = mount({ match_count: 4 }, []);
+  render(<FiltersScreen id="contacts" view="v-Gone" />, { wrapper });
+
+  expect(
+    await screen.findByRole("button", { name: "Add clause" }),
+  ).toBeTruthy();
+  expect(screen.queryByDisplayValue("ann")).toBeNull();
 });
 
 it("does not offer a view whose stored filter it cannot read", async () => {
@@ -281,7 +349,7 @@ it("does not offer a view whose stored filter it cannot read", async () => {
 
   await screen.findByRole("button", { name: "Add clause" });
   expect(
-    screen.queryByRole("button", { name: "Load a saved filter" }),
+    screen.queryByRole("button", { name: "Load saved filter" }),
   ).toBeNull();
 });
 
@@ -476,11 +544,11 @@ it("reads a refused preview as a failure, not as an unwritten filter", async () 
   vi.stubGlobal("fetch", previewRefused({}, 502));
   await addSecondClause(user);
 
-  // Not "Add a clause to see what it selects": two complete clauses are on
+  // Not "Add a clause to preview matches": two complete clauses are on
   // screen, and blaming the reader for the server's refusal is exactly what hid
   // this refusal.
   expect(await screen.findByText("Count unavailable")).toBeTruthy();
-  expect(screen.queryByText("Add a clause to see what it selects")).toBeNull();
+  expect(screen.queryByText("Add a clause to preview matches")).toBeNull();
   // The reason and the way out land where a sentence fits.
   expect(
     screen.getByRole("heading", { name: "Matching records" }),
@@ -524,7 +592,9 @@ it("names the seat when a read seat is refused a preview", async () => {
   // has met and offers nothing to do about it, so the catalog copy replaces it.
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toContain("This seat is read-only");
-  expect(alert.textContent).toContain("Ask an operator to raise the seat.");
+  expect(alert.textContent).toContain(
+    "Ask an administrator to upgrade the seat.",
+  );
   expect(alert.textContent).not.toContain("seat tier insufficient");
 });
 
@@ -542,7 +612,7 @@ it("starts a fresh tree when the object changes", async () => {
   // The contact clause is gone rather than carried onto deals, where the field it
   // names does not exist — a filter the new vocabulary would refuse.
   expect(screen.queryByLabelText("Value")).toBeNull();
-  expect(screen.getByText("Add a clause to see what it selects")).toBeTruthy();
+  expect(screen.getByText("Add a clause to preview matches")).toBeTruthy();
 });
 
 // The shell's page head names every rail destination and prints the subtitle
@@ -556,7 +626,7 @@ it("leaves the page's own name to the shell", async () => {
   expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   expect(
     screen.queryByText(
-      "Build a filter, watch what it selects, and save it as a view.",
+      "Build a filter, preview its matches and save it as a view.",
     ),
   ).toBeNull();
   // The object choice stays, because it is the screen's own state rather than

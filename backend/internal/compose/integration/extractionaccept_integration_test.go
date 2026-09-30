@@ -454,13 +454,13 @@ func TestExtractionAcceptDealUpdateAndNotesShareOneTransaction(t *testing.T) {
 	}
 	err = database.WithWorkspaceTx(ctx, a.Pool, func(tx pgx.Tx) error {
 		if _, err := a.Deals.UpdateDealTx(ctx, tx, ids.From[ids.DealKind](a.deal), deals.UpdateDealInput{
-			Name: strPtr("Rolled Back Name"),
+			Name: StrPtr("Rolled Back Name"),
 		}, active); err != nil {
 			return err
 		}
 		if _, _, err := a.Activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
 			Kind:   string(crmcontracts.ActivityKindNote),
-			Body:   strPtr("should never persist past the rollback"),
+			Body:   StrPtr("should never persist past the rollback"),
 			Links:  []activities.ActivityLinkInput{{EntityType: acceptDealEntityForTest, EntityID: a.deal}},
 			Source: "atomic_tx_probe",
 		}); err != nil {

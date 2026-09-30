@@ -36,7 +36,7 @@ import { BEHAVIOUR } from "./margince-core-motion";
  * catches two states having drifted into looking alike.
  */
 const meta = {
-  title: "Design System/Margince core",
+  title: "Components/AI and provenance/Margince core",
   component: MarginceCoreScene,
   parameters: { layout: "centered" },
 } satisfies Meta<typeof MarginceCoreScene>;
@@ -190,8 +190,9 @@ export const Ladder: Story = {
  * raises the intake floor the shader draws with, so a Core that is merely
  * present must not carry it.
  *
- * It is also what a Core sitting next to copy needs. The workbench header and
- * the dock both run `feed={false}` for exactly that reason.
+ * It is also what a Core sitting next to copy needs. The agent rail
+ * (agentrail.tsx) and the voice scene (voice-scenes.tsx) both run
+ * `feed={false}` for exactly that reason.
  */
 export const WithoutFeed: Story = {
   args: { state: "idle", feed: false },

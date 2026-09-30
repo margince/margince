@@ -147,9 +147,9 @@ func foldOne(c storedClaim, out *crmcontracts.ContactProviderProfile) error {
 	case provider.ClaimLocation:
 		return foldLocation(c, out)
 	case provider.ClaimDepartments:
-		return foldStrings(c, &out.Departments)
+		return foldStrings(c, &out.Departments, out, crmcontracts.ContactProviderAttributeKindDepartment)
 	case provider.ClaimSeniorities:
-		return foldStrings(c, &out.Seniorities)
+		return foldStrings(c, &out.Seniorities, out, crmcontracts.ContactProviderAttributeKindSeniority)
 	default:
 		// Unreachable today: the nine ClaimKey constants and the nine keys
 		// the CHECK constraint admits are the same nine, and each has a case
@@ -304,16 +304,52 @@ func foldLocation(c storedClaim, out *crmcontracts.ContactProviderProfile) error
 		return fmt.Errorf("contact360: reading the %s claim: %w", c.key, err)
 	}
 	out.Location = emptyToNil(location)
+	keepAttributes(out, func(a crmcontracts.ContactProviderAttribute) bool {
+		return a.Kind != crmcontracts.ContactProviderAttributeKindLocation
+	})
+	if out.Location != nil {
+		dateAttribute(out, crmcontracts.ContactProviderAttributeKindLocation, location, c.retrievedAt)
+	}
 	return nil
 }
 
-func foldStrings(c storedClaim, into *[]string) error {
+func foldStrings(c storedClaim, into *[]string, out *crmcontracts.ContactProviderProfile,
+	kind crmcontracts.ContactProviderAttributeKind,
+) error {
 	var values []string
 	if err := json.Unmarshal(c.value, &values); err != nil {
 		return fmt.Errorf("contact360: reading the %s claim: %w", c.key, err)
 	}
 	*into = append(*into, values...)
+	for _, v := range values {
+		if v != "" {
+			dateAttribute(out, kind, v, c.retrievedAt)
+		}
+	}
 	return nil
+}
+
+// dateAttribute dates a value by the claim that reported it. Claims fold oldest
+// first, so an earlier entry for the same value gives way to the later run.
+func dateAttribute(out *crmcontracts.ContactProviderProfile, kind crmcontracts.ContactProviderAttributeKind,
+	value string, at time.Time,
+) {
+	keepAttributes(out, func(a crmcontracts.ContactProviderAttribute) bool {
+		return a.Kind != kind || a.Value != value
+	})
+	*out.Attributes = append(*out.Attributes, crmcontracts.ContactProviderAttribute{
+		Kind: kind, Value: value, RetrievedAt: at,
+	})
+}
+
+func keepAttributes(out *crmcontracts.ContactProviderProfile, keep func(crmcontracts.ContactProviderAttribute) bool) {
+	kept := []crmcontracts.ContactProviderAttribute{}
+	for _, a := range *out.Attributes {
+		if keep(a) {
+			kept = append(kept, a)
+		}
+	}
+	*out.Attributes = kept
 }
 
 // decodeInto reads a bare JSON string claim onto a nullable field.

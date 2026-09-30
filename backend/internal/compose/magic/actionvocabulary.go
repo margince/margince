@@ -40,6 +40,9 @@ type admittedAction struct {
 	reversible bool
 }
 
+// actionUpdate is the audit verb for a change to a record's fields.
+const actionUpdate = "update"
+
 // admitted is the closed set, keyed by the audit action.
 //
 // Keyed by action alone rather than by (action, entity_type): the audit
@@ -57,7 +60,7 @@ var admitted = map[string]admittedAction{
 		consequence: "magic.consequence.lead_promoted",
 		reversible:  true,
 	},
-	"update": {
+	actionUpdate: {
 		sentence:    "magic.action.update",
 		consequence: "",
 		reversible:  true,

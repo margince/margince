@@ -97,7 +97,7 @@ type Story = StoryObj<typeof DispositionVerbs>;
 const openTheChooser: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await userEvent.click(
-    await canvas.findByRole("button", { name: "For how long" }),
+    await canvas.findByRole("button", { name: "Snooze duration" }),
   );
 };
 
@@ -181,7 +181,7 @@ export const FoldedToAMenu: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Take off the list" }),
+      await canvas.findByRole("button", { name: "Remove from list" }),
     );
   },
 };

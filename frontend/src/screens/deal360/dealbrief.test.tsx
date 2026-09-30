@@ -35,7 +35,7 @@ it.each([false, true])(
       </StoryProviders>,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Write the brief" }),
+      await screen.findByRole("button", { name: "Write brief" }),
     );
     expect(
       await screen.findByRole("button", { name: "Change Brief" }),
@@ -52,8 +52,6 @@ it.each([true, false])(
       </StoryProviders>,
     );
     expect(screen.getByText(/No brief written yet/)).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: "Write the brief" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Write brief" })).toBeNull();
   },
 );

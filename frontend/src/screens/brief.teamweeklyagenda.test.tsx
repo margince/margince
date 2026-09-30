@@ -1,9 +1,14 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { en } from "../i18n/en";
 import { TeamWeeklySection } from "./brief.teamweekly";
-import { agendaRows, agendaText } from "./brief.teamweeklyagenda";
+import {
+  AgendaSummary,
+  agendaRows,
+  agendaText,
+} from "./brief.teamweeklyagenda";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
 import type { TeamWeeklyRep, TeamWeeklyReview } from "./teamweekly.queries";
 
@@ -130,8 +135,16 @@ describe("the agenda on the screen", () => {
     const summary = container.querySelector(
       '[data-testid="teamweekly-agenda-summary"]',
     );
-    expect(summary?.textContent).toContain("Noah Berger");
-    expect(summary?.textContent).toContain("2");
+    expect(summary?.textContent).toBe(
+      "2 items for Monday, starting with Noah Berger.",
+    );
+  });
+
+  it("counts a one-item agenda in the singular", () => {
+    render(<AgendaSummary review={review({ agenda: ["u1"] })} />);
+    expect(screen.getByTestId("teamweekly-agenda-summary").textContent).toBe(
+      "1 item for Monday, starting with Lena Fischer.",
+    );
   });
 
   it("says the week could not be read rather than drawing an empty meeting", async () => {
@@ -147,15 +160,7 @@ describe("the agenda on the screen", () => {
   });
 
   it("copies exactly what is on screen", async () => {
-    const written: string[] = [];
-    vi.stubGlobal("navigator", {
-      clipboard: {
-        writeText: (text: string) => {
-          written.push(text);
-          return Promise.resolve();
-        },
-      },
-    });
+    const { written } = stubClipboard("accepts");
     stubApi({ "GET /weekly-reviews/team": () => jsonResponse(review()) });
     render(<TeamWeeklySection teamId="t1" />);
 
@@ -179,7 +184,7 @@ describe("the agenda on the screen", () => {
   // Copy and got nothing has no way to know the agenda is still on screen to
   // select by hand.
   it("says so when the browser will not hand over a clipboard", async () => {
-    vi.stubGlobal("navigator", {});
+    stubClipboard("absent");
     stubApi({ "GET /weekly-reviews/team": () => jsonResponse(review()) });
     render(<TeamWeeklySection teamId="t1" />);
 

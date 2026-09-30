@@ -144,7 +144,7 @@ export function ConfirmAdvanceModal({
             <AutonomyDot tier={verbTier("progress_deal", tierMap)} />{" "}
             {t("deals.confirmAdvance", { stage: pending.toStage.name })}
           </p>
-          <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
+          <p className="t-caption advance-terminal">
             {t("deals.confirmTerminal", { status: pending.toStage.semantic })}
           </p>
           {(needsLostReason || needsWonReason) && (

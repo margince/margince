@@ -7,16 +7,14 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  isVersionSkew,
-  ProblemError,
-  problemMessageOf,
-  throwProblem,
-} from "./common";
+import { isVersionSkew, ProblemError, throwProblem } from "./common";
+import "./commissiondecide.css";
+import "./common.css";
 
 // Moving one commission entry through the ledger's lifecycle.
 //
@@ -208,17 +206,12 @@ export function CommissionDecision({
         // top of the document without a named target.
         returnFocusTo={() => triggerRef.current}
       >
-        <Heading
-          size="large"
-          id={headingId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t(copy.label)}
         </Heading>
-        <p style={{ marginBottom: "var(--space-4)" }}>{t(copy.confirm)}</p>
+        <p className="commissiondecide-confirm">{t(copy.confirm)}</p>
         {needsReason && (
-          <div style={{ marginBottom: "var(--space-4)" }}>
+          <div className="commissiondecide-reason">
             <Field
               label={t("commission.decide.reasonLabel")}
               required
@@ -240,16 +233,11 @@ export function CommissionDecision({
             </Field>
           </div>
         )}
-        {mutation.isError && (
-          // role="alert" so a refused decision is announced: the dialog stays
-          // open either way, and without this the only difference between "it
-          // failed" and "it is still working" is a line of red text.
-          <p role="alert" style={{ color: "var(--dangerText)" }}>
-            {mutation.error instanceof ProblemError &&
-            isVersionSkew(mutation.error.problem)
-              ? t("edit.versionSkew")
-              : problemMessageOf(mutation.error, t)}
-          </p>
+        {mutation.error instanceof ProblemError &&
+        isVersionSkew(mutation.error.problem) ? (
+          <ErrorLine>{t("edit.versionSkew")}</ErrorLine>
+        ) : (
+          <ErrorLine error={mutation.error} />
         )}
         <div className="actions">
           <Button onClick={() => setOpen(false)} disabled={mutation.isPending}>

@@ -18,7 +18,6 @@ package gatekit
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"path/filepath"
 	"strconv"
@@ -163,7 +162,7 @@ func PackageStringConstants(t testing.TB, dir string) map[string]string {
 		if strings.HasSuffix(source, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
+		file, err := ParseFile(source, 0)
 		if err != nil {
 			t.Fatalf("parsing %s for its string constants: %v", source, err)
 		}

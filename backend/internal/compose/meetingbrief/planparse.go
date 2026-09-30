@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // scenarioCap bounds the branches. Three is a thing a rep can hold walking in;
@@ -119,7 +120,7 @@ type replyScenario struct {
 // production parses.
 func ParsePlan(reply string, in Input, floor Plan) (Plan, error) {
 	var parsed planReply
-	if err := json.Unmarshal([]byte(strings.TrimSpace(reply)), &parsed); err != nil {
+	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return Plan{}, fmt.Errorf("the meeting plan reply is not the JSON the prompt asked for: %w", err)
 	}
 	known := knownRecords(in)

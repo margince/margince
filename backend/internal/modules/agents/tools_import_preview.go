@@ -31,6 +31,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "preview_import", Title: "Preview an import", Version: toolVersionV1,
 		Description:   previewImportCopy.render(),
+		Instead:       previewImportCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "createImportRun",
 		InputSchema: schema(`{"type":"object","required":["object","csv"],"properties":{
@@ -41,6 +42,9 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
 			  "description":"A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For contacts an address already held is refused either way — an email is a real key, a company name is not."}},
 			"additionalProperties":false}`),
+		UnkeyedArguments: map[string]string{
+			"$.mapping": "the mapping is keyed by the uploaded file's own column headers",
+		},
 		OutputSchema: schemaFor[ImportPreviewResult](),
 	}
 }

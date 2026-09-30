@@ -20,7 +20,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
@@ -47,7 +46,6 @@ var unprovenConsentWrites = gatekit.Waive(map[string]string{})
 func TestEveryConsentStateWriteAppendsProof(t *testing.T) {
 	t.Parallel()
 	defer unprovenConsentWrites.AssertAllMatched(t)
-	fset := token.NewFileSet()
 	for _, root := range []string{"internal/modules", "internal/compose"} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
@@ -55,7 +53,7 @@ func TestEveryConsentStateWriteAppendsProof(t *testing.T) {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(fset, path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}

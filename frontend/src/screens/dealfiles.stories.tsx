@@ -14,7 +14,7 @@ import { installFetchStub, jsonResponse } from "./story-utils";
 // mailbox on a running stack.
 
 const meta: Meta<typeof DealFiles> = {
-  title: "Records/Deal/Files",
+  title: "Records/Deal 360/Files",
   component: DealFiles,
   parameters: { layout: "padded" },
 };

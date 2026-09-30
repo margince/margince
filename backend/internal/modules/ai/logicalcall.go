@@ -19,6 +19,14 @@ const (
 	attemptReasonBudgetDegrade = "budget_degrade"
 )
 
+// attemptReasons is every reason a row can carry, the ladder's and the
+// decision attempt's, which the wire's description must name.
+//
+// Held by: TestTheAttemptReasonDescriptionNamesEveryReason (backend/internal/modules/ai/logicalcall_test.go)
+var attemptReasons = append([]string{
+	attemptReasonProviderError, attemptReasonSchemaInvalid, attemptReasonBudgetDegrade,
+}, decisionAttemptReasons...)
+
 // logicalCall buffers every attempt of one served-or-failed decision —
 // retries, degradations, escalations all included — under one
 // LogicalCallID, so the store observes them as a single flush instead of

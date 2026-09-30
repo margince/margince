@@ -78,7 +78,7 @@ func setupFacts(t *testing.T) *factsEnv {
 	// of its own, so it runs last and sees a package that has genuinely stopped.
 	// The pool outlives the test now, so a goroutine still holding a connection
 	// would go on writing into the database the NEXT test just reset.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
 	return e
 }
@@ -111,6 +111,7 @@ type capturedRow struct {
 	audience        string
 	undecidedSender bool
 	withContact     bool
+	declined        bool
 }
 
 func (e *factsEnv) seed(t *testing.T, row capturedRow) ids.UUID {
@@ -137,6 +138,11 @@ func (e *factsEnv) seed(t *testing.T, row capturedRow) ids.UUID {
 			INSERT INTO capture_pending_counterparty (id, owner_id, email, status, activity_id)
 			VALUES ($1, $2, $3, 'pending', $4)`, ids.NewV7(), e.user, email, id)
 	}
+	if row.declined {
+		if recorded, err := e.store.MarkCaptureLabelDeclined(e.as(), id, rulesetNew); err != nil || !recorded {
+			t.Fatalf("recording the decline: recorded=%v err=%v", recorded, err)
+		}
+	}
 	if row.withContact {
 		contact := ids.NewV7()
 		e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
@@ -158,6 +164,7 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 		e.seed(t, capturedRow{kind: "email", archived: true}):              pipelinetrace.ReasonArchived,
 		e.seed(t, capturedRow{kind: "email", capturedBy: "human:someone"}): pipelinetrace.ReasonNotConnectorCaptured,
 		e.seed(t, capturedRow{kind: "email", undecidedSender: true}):       pipelinetrace.ReasonSenderUndecided,
+		e.seed(t, capturedRow{kind: "email", declined: true}):              pipelinetrace.ReasonModelsDeclined,
 	}
 	// The audience exclusion is asserted apart from the loop above, because the
 	// trace read is itself audience-gated: to a reader outside the audience the
@@ -169,7 +176,7 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 		capturedBy: "connector:gmail:" + e.user.String(),
 	})
 
-	limitedFacts, err := e.store.ReadPipelineFacts(ctx, limited)
+	limitedFacts, err := e.store.ReadPipelineFacts(ctx, limited, rulesetNew)
 	if err != nil {
 		t.Fatalf("the mailbox owner could not read their own limited message's trace: %v", err)
 	}
@@ -183,7 +190,7 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 	}
 
 	// Half one: the classifier's own backlog selects EXACTLY the eligible row.
-	backlog, err := e.store.UnlabeledCaptureEmails(ctx, 50, 200)
+	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 50, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
 	}
@@ -195,7 +202,7 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 	// Half two: the reader names the exclusion that applied to each of the rest,
 	// and agrees with the backlog about which one was eligible.
 	for id, reason := range want {
-		facts, err := e.store.ReadPipelineFacts(ctx, id)
+		facts, err := e.store.ReadPipelineFacts(ctx, id, rulesetNew)
 		if err != nil {
 			t.Fatalf("reading pipeline facts for %s: %v", id, err)
 		}
@@ -221,7 +228,7 @@ func TestTheContactLinkIsWhatTheContactCreationRungReads(t *testing.T) {
 		e.seed(t, capturedRow{kind: "email"}):                    false,
 		e.seed(t, capturedRow{kind: "email", withContact: true}): true,
 	} {
-		facts, err := e.store.ReadPipelineFacts(ctx, id)
+		facts, err := e.store.ReadPipelineFacts(ctx, id, rulesetNew)
 		if err != nil {
 			t.Fatalf("reading pipeline facts: %v", err)
 		}
@@ -265,11 +272,11 @@ func TestReadingPipelineFactsTakesTheRowScopeNotJustTheGrant(t *testing.T) {
 
 	// The allow arm over the same seed: the contact's owner reads it. Without
 	// this, a link that failed to land would make the refusal below meaningless.
-	if _, err := e.store.ReadPipelineFacts(asUser(other, principal.RowScopeOwn), id); err != nil {
+	if _, err := e.store.ReadPipelineFacts(asUser(other, principal.RowScopeOwn), id, rulesetNew); err != nil {
 		t.Fatalf("the private contact's owner could not read the seed: %v", err)
 	}
 
-	if _, err := e.store.ReadPipelineFacts(asUser(e.user, principal.RowScopeOwn), id); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.ReadPipelineFacts(asUser(e.user, principal.RowScopeOwn), id, rulesetNew); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("err = %v, want ErrNotFound — the grant is held, so only the row "+
 			"scope can refuse, and it must hide existence rather than deny", err)
 	}
@@ -286,7 +293,7 @@ func TestReadingPipelineFactsTakesTheActivityGate(t *testing.T) {
 			Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
 			Permissions: principal.Permissions{RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll},
 		})
-	if _, err := e.store.ReadPipelineFacts(ungranted, id); err == nil {
+	if _, err := e.store.ReadPipelineFacts(ungranted, id, rulesetNew); err == nil {
 		t.Error("a caller with no activity grant read the pipeline facts")
 	}
 }
@@ -308,7 +315,7 @@ func TestTheLabelWriteLosesToANarrowingThatLandedWhileTheModelThought(t *testing
 	// than a refusal that never had a chance. Asked of this row rather than of
 	// the backlog's size: the package shares one database, so a sibling test's
 	// rows are in it too and a count assertion would fail for their reason.
-	backlog, err := e.store.UnlabeledCaptureEmails(ctx, 200, 200)
+	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 200, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
 	}
@@ -362,7 +369,7 @@ func TestTheLabelWriteLosesToAnArchiveThatLandedWhileTheModelThought(t *testing.
 	ctx := e.as()
 
 	open := e.seed(t, capturedRow{kind: "email"})
-	backlog, err := e.store.UnlabeledCaptureEmails(ctx, 200, 200)
+	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 200, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
 	}

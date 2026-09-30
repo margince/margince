@@ -8,7 +8,7 @@ import type { TimelineFilters } from "./recordtimeline";
 import { TimelineFilterBar } from "./timelinefilterbar";
 
 const meta: Meta<typeof TimelineFilterBar> = {
-  title: "Design System/Timeline filter bar",
+  title: "Components/Forms and input/Timeline filter bar",
   component: TimelineFilterBar,
   parameters: { layout: "padded" },
   decorators: [

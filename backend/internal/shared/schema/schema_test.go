@@ -121,3 +121,77 @@ func TestArrayCarriesItemSchemaAndScalarsHaveNoExtraKeys(t *testing.T) {
 		t.Fatalf("scalar leaf carried additionalProperties: %v", items)
 	}
 }
+
+func TestIntegerIsItsOwnTypeNotANumber(t *testing.T) {
+	if got := decode(t, schema.Integer())["type"]; got != "integer" {
+		t.Fatalf("integer leaf type = %v, want integer", got)
+	}
+}
+
+// Optional keeps the field required and spells absence as null, because the
+// strict profile refuses an object with a property missing from required.
+func TestOptionalIsTheValueOrNull(t *testing.T) {
+	m := decode(t, schema.Optional(schema.Enum("positive", "negative")))
+	if _, typed := m["type"]; typed {
+		t.Fatalf("an optional node carries its own type beside anyOf: %v", m)
+	}
+	branches, ok := m["anyOf"].([]any)
+	if !ok || len(branches) != 2 {
+		t.Fatalf("anyOf = %v, want the value and null", m["anyOf"])
+	}
+	value, _ := branches[0].(map[string]any)
+	null, _ := branches[1].(map[string]any)
+	if value["type"] != "string" || null["type"] != "null" {
+		t.Fatalf("branches = %v, want the enum then null", branches)
+	}
+}
+
+// A Record renders its properties in the order declared, and requires every
+// one of them in that same order.
+func TestRecordRendersItsFieldsInDeclaredOrder(t *testing.T) {
+	raw := string(schema.Must(schema.Record(
+		schema.Field("subject", schema.String()),
+		schema.Field("body", schema.String()),
+		schema.Field("reasoning", schema.Array(schema.Integer())),
+	)))
+	want := `{"type":"object","additionalProperties":false,"properties":{` +
+		`"subject":{"type":"string"},"body":{"type":"string"},` +
+		`"reasoning":{"type":"array","items":{"type":"integer"}}},` +
+		`"required":["subject","body","reasoning"]}`
+	if raw != want {
+		t.Fatalf("record rendered\n %s\nwant\n %s", raw, want)
+	}
+}
+
+// An Object renders exactly as encoding/json renders the map it holds: a
+// prompt version is stamped from these bytes, so an Object's rendering is part
+// of what a certification record describes.
+func TestObjectRendersItsPropertiesSortedByName(t *testing.T) {
+	raw := string(schema.Must(schema.Object(map[string]schema.Node{
+		"zeta": schema.String(), "alpha": schema.Number(), "mid<&>": schema.String().Describe("a<b & c>d"),
+	}, "zeta", "alpha")))
+	want := `{"type":"object","additionalProperties":false,"properties":{` +
+		`"alpha":{"type":"number"},"mid\u003c\u0026\u003e":{"type":"string","description":"a\u003cb \u0026 c\u003ed"},` +
+		`"zeta":{"type":"string"}},"required":["zeta","alpha"]}`
+	if raw != want {
+		t.Fatalf("object rendered\n %s\nwant\n %s", raw, want)
+	}
+}
+
+func TestRecordRefusesAFieldDeclaredTwice(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("a record naming one field twice rendered instead of panicking")
+		}
+	}()
+	schema.Record(schema.Field("id", schema.String()), schema.Field("id", schema.Integer()))
+}
+
+type verdict string
+
+func TestNamesSpellsANamedStringTypeAsPlainStrings(t *testing.T) {
+	got := schema.Names(verdict("agreed"), verdict("proposed"))
+	if len(got) != 2 || got[0] != "agreed" || got[1] != "proposed" {
+		t.Fatalf("Names = %v", got)
+	}
+}

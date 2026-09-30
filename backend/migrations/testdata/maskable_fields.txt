@@ -1,14 +1,21 @@
 # What this build can actually withhold: one "<object> <field>" per line, sorted.
 #
-# Rendered from the enforcing code by deals/maskablefields_test.go and compared
-# against a migrated database's maskable_field table by
+# Rendered from the enforcing code by the render test in the module that owns
+# each object — deals/maskablefields_test.go for the deal, and
+# contacts/partnermaskablefields_test.go for the partner — and compared against
+# a migrated database's maskable_field table by
 # compose/integration/maskablefieldparity_integration_test.go. Neither side may
 # move without the other: a pair the code withholds and the table does not offer
 # cannot be configured at all, and a pair the table offers and no code withholds
 # is a mask an administrator sets and nothing applies.
+#
+# An object listed here that nothing masks is caught by
+# gates/maskablefieldobjects_test.go, which no single module's render test can
+# see: a module may not import its sibling, so each renders its own object only.
 deal amount_minor
 deal company_id
 deal currency
 deal expected_arr_minor
 deal partner_company_id
 deal project_id
+partner margin_tier

@@ -118,7 +118,7 @@ const refusedWin = advance({
 async function askedHowItWasWon() {
   const dialog = within(await screen.findByRole("dialog"));
   await userEvent.click(dialog.getByRole("button", { name: "Confirm" }));
-  await dialog.findByText(/tell us how it was won/);
+  await dialog.findByText(/Record how the deal was won/);
 }
 
 export const WinNamingNoEvidence: Story = {

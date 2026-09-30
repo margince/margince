@@ -41,9 +41,8 @@ import (
 // (backend/gates/aiprovenancenotice_test.go)
 const noticeHome = "backend/internal/shared/kernel/draftfloor/contacttext.go"
 
-// noticeStems are the parts of each sentence a copy would carry, short of the
-// citation clause: a drafter that wrote its own would spell the opening and
-// might well leave the article off, which is precisely the drift that happened.
+// noticeStems are each notice's opening sentence: a drafter that wrote its own
+// would spell the opening and might well word the review prompt differently.
 //
 // Matched anywhere in the file rather than only at the start of a literal. A
 // second copy does not have to be a whole string — the first one this gate was
@@ -55,9 +54,9 @@ func noticeStems(t *testing.T) []string {
 	var out []string
 	for _, lang := range textlang.Shipped {
 		line := draftfloor.AIProvenanceNotice(lang)
-		stem, _, found := strings.Cut(line, " (")
+		stem, _, found := strings.Cut(line, ". ")
 		if !found {
-			t.Fatalf("the %s provenance notice carries no citation clause to cut at: %q", lang, line)
+			t.Fatalf("the %s provenance notice has no second sentence to cut at: %q", lang, line)
 		}
 		out = append(out, stem)
 	}

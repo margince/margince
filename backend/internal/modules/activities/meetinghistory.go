@@ -34,6 +34,7 @@ import (
 
 // meetingTransition is one status change, as the writer takes it.
 type meetingTransition struct {
+	RecordedAt *time.Time
 	ActivityID ids.ActivityID
 	// Status is what the meeting became. Empty means this write set no status,
 	// and recordMeetingTransition returns without writing — a note being edited
@@ -109,11 +110,15 @@ func recordMeetingTransition(ctx context.Context, tx pgx.Tx, in meetingTransitio
 	if sourceSystem == nil || sourceID == nil {
 		sourceSystem, sourceID = nil, nil
 	}
-	_, err := tx.Exec(ctx, `
-		INSERT INTO activity_meeting_history
-		    (activity_id, status, effective_at, scheduled_start, actor, source_system, source_id)
-		VALUES ($1, $2, now(), $3, $4, $5, $6)`,
-		in.ActivityID.UUID, in.Status, in.ScheduledStart, actor.ID, sourceSystem, sourceID)
+	args := []any{in.ActivityID.UUID}
+	activityParameter := fmt.Sprintf("$%d", len(args))
+	args = append(args, in.Status, in.ScheduledStart, actor.ID, sourceSystem, sourceID)
+	placeholders := storekit.Placeholders(args)
+	args = append(args, in.RecordedAt)
+	recordedParameter := fmt.Sprintf("$%d", len(args))
+	_, err := tx.Exec(ctx, `INSERT INTO activity_meeting_history
+        (activity_id,status,scheduled_start,actor,source_system,source_id,host_id_at_change,effective_at,customer_eligible_at_change)
+        SELECT `+placeholders+`,a.host_user_id,COALESCE(`+recordedParameter+`::timestamptz,now()),EXISTS(SELECT 1 FROM activity_link al WHERE al.activity_id=a.id AND (al.contact_id IS NOT NULL OR al.lead_id IS NOT NULL OR al.company_id IS NOT NULL)) FROM activity a WHERE a.id=`+activityParameter, args...)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			// This exact connector event is already on record.

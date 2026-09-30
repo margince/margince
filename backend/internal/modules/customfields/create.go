@@ -42,10 +42,8 @@ func lockTimedOut(err error) bool {
 //
 // Deliberately NOT database.WithWorkspaceTx: that helper runs on the app
 // pool, whose margince_app role carries DML-only grants and cannot ALTER
-// a core table. The transaction here opens as the schema pool's owner
-// role, runs the DDL first, THEN downgrades itself to exactly the
-// authority every other tenant write runs under (SET LOCAL ROLE
-// margince_app) for the catalog insert and audit write.
+// a core table. The whole transaction runs as the owner role and never
+// SET ROLEs: the owner is not a member of margince_app on a real install.
 func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.CustomField, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionCreate); err != nil {
 		return crmcontracts.CustomField{}, err
@@ -94,7 +92,7 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 }
 
 // createInTx is Create's transaction body: lock → collision pre-check →
-// ALTER (owner) → downgrade → catalog INSERT + audit.
+// ALTER → catalog INSERT + audit, all as the schema pool's owner role.
 func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, creator ids.UUID, slug, column, ddl string) (crmcontracts.CustomField, error) {
 	if err := serializeSchemaChange(ctx, tx, spec.Object); err != nil {
 		return crmcontracts.CustomField{}, err
@@ -103,11 +101,11 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 		return crmcontracts.CustomField{}, err
 	}
 
-	// The one privileged statement: the ALTER runs as the schema pool's
-	// owner role. 42701 can still fire despite the pre-check when the
-	// column arrived outside the engine's serialization (a fork
-	// migration) — the same honest answer applies. 55P03 is the bounded
-	// lock wait firing: the table is busy, the caller retries.
+	// The one statement that needs the owner role. 42701 can still fire
+	// despite the pre-check when the column arrived outside the engine's
+	// serialization (a fork migration) — the same honest answer applies.
+	// 55P03 is the bounded lock wait firing: the table is busy, the caller
+	// retries.
 	if _, err := tx.Exec(ctx, ddl); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgDuplicateColumn {
@@ -117,10 +115,6 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 			return crmcontracts.CustomField{}, ErrTableBusy
 		}
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: adding column: %w", err)
-	}
-
-	if err := downgradeToAppRole(ctx, tx); err != nil {
-		return crmcontracts.CustomField{}, err
 	}
 
 	var currency *string
@@ -230,28 +224,6 @@ func refuseTakenColumn(ctx context.Context, tx pgx.Tx, object, column string) er
 			column, object, apperrors.ErrConflict)
 	}
 	return &ColumnTakenError{Column: column}
-}
-
-// downgradeToAppRole drops the transaction to the DML-only app role for
-// everything after the DDL, so the catalog and audit writes run under
-// exactly the authority every other tenant write has — the app role's
-// own grants, no owner privilege in reach. SET LOCAL is transaction-scoped:
-// the pooled connection reverts to the owner role at COMMIT/ROLLBACK. The role name
-// is the scripts/db-init.sql runtime role, the same one the app pool's
-// DSN connects as.
-//
-// This is the arc's privilege boundary, and privilege_boundary_test.go
-// pins both call sites (here and in options.go's setOptionsInTx):
-// deleting either one leaves the transaction on the owner role for the
-// catalog/audit write and every other test still passes, because the
-// owner role can issue those writes too. Nothing about the rows produced
-// differs — only the authority they were produced under — so no test that
-// reads the result can tell, which is why these two exist.
-func downgradeToAppRole(ctx context.Context, tx pgx.Tx) error {
-	if _, err := tx.Exec(ctx, `SET LOCAL ROLE margince_app`); err != nil {
-		return fmt.Errorf("customfields: downgrading to the app role: %w", err)
-	}
-	return nil
 }
 
 // optionsJSON renders a picklist's option set for the jsonb catalog

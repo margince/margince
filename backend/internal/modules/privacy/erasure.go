@@ -84,10 +84,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 	// hangs off must not destroy the correspondence itself below its floor.
 	floorInterval, floorAnchor := statutoryFloorArgs()
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritableForSubjectRights(ctx, tx, "contact", subject.UUID); err != nil {
-			return err
-		}
-		if err := refuseContactUnderLegalHold(ctx, tx, subject); err != nil {
+		if err := requireErasableContact(ctx, tx, subject); err != nil {
 			return err
 		}
 		keys, err := subjectIdentifiers(ctx, tx, subject)
@@ -113,6 +110,9 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 			return err
 		}
 
+		if err := redactSubjectReporting(ctx, tx, subject); err != nil {
+			return err
+		}
 		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails, identities, reason)
 		if err != nil {
 			return err
@@ -143,11 +143,11 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err := purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, reason, e.payloads); err != nil {
 			return err
 		}
-		// The messages nobody has sent yet. They hold the subject's address and
-		// the body before any activity exists, so nothing above this line can
-		// reach them — and a scheduled one would otherwise fire the morning
-		// after this erasure certified the data destroyed.
-		if err := redactScheduledSends(ctx, tx, reason, emails); err != nil {
+		// The messages nobody has sent yet — scheduled, or still a draft. They
+		// hold the subject's address and the body before any activity exists, so
+		// nothing above this line can reach them — and a scheduled one would
+		// otherwise fire the morning after this erasure certified the data destroyed.
+		if err := redactUnsentMessages(ctx, tx, reason, subject, leadsWiped, emails); err != nil {
 			return err
 		}
 		// And the ones nobody has DECIDED yet, one step earlier in the same life
@@ -257,6 +257,9 @@ func subjectIdentifiers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID)
 // they answered to, the proposals read out of them, and the transmitted copy in
 // the send log.
 func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string, payloads PayloadPurger) error {
+	if err := redactReportingSource(ctx, tx, "activity", activities); err != nil {
+		return err
+	}
 	// The vectors go with the text they were built from. purgeDerivedTraces
 	// reaches embeddings through activity_link, which by construction cannot
 	// see the unlinked mail redactSubjectTimeline now covers — and
@@ -364,26 +367,9 @@ func anonymizeSubjectRows(
 	if err != nil {
 		return nil, err
 	}
-	// The author repair's bookkeeping about this subject, cleared in the same
-	// transaction as the columns above.
-	//
-	// The UPDATE at the top of this function clears `contact.source_author_name`
-	// and anonymizeLeadTwins clears `lead.source_author_name`, but the repair
-	// keeps a SECOND copy of that free text in source_attribution_repair, plus an
-	// unkeyed SHA-256 of it and the operator's batch label. Until the record
-	// repair landed, that ledger held activities only and the timeline's own
-	// clear covered it; it now holds contact and lead rows under their own
-	// object_type, and nothing reached them. An erasure that stopped at the
-	// record would leave the erased name readable one table over.
-	//
-	// Both types, and not merely the contact: a promoted subject's lead twin
-	// carries its own ledger row keyed `lead`, so clearing one and not the other
-	// leaves half the copies standing.
-	if err := clearAttributionLedgerNames(ctx, tx, "contact", []ids.UUID{contactID.UUID}); err != nil {
-		return nil, fmt.Errorf("privacy: clearing the contact's attribution ledger: %w", err)
-	}
-	if err := clearAttributionLedgerNames(ctx, tx, "lead", wiped); err != nil {
-		return nil, fmt.Errorf("privacy: clearing the lead twins' attribution ledger: %w", err)
+	// The Shortlists they and those leads were chosen for, with the notes.
+	if err := deleteSubjectListMemberships(ctx, tx, contactID, wiped); err != nil {
+		return nil, err
 	}
 	if err := purgeContactDerivedRows(ctx, tx, contactID, subjects); err != nil {
 		return nil, err
@@ -493,4 +479,11 @@ func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string
 		}
 	}
 	return nil
+}
+
+func requireErasableContact(ctx context.Context, tx pgx.Tx, subject ids.ContactID) error {
+	if err := auth.EnsureWritableForSubjectRights(ctx, tx, "contact", subject.UUID); err != nil {
+		return err
+	}
+	return refuseContactUnderLegalHold(ctx, tx, subject)
 }

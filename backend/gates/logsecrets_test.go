@@ -29,7 +29,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
@@ -195,7 +194,7 @@ type credentialLogSite struct {
 func unguardedCredentialLogs(t *testing.T) []credentialLogSite {
 	t.Helper()
 	var sites []credentialLogSite
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	// Every hand-written Go tree, which is the same four CLAUDE.md names and
 	// `craft static` sweeps — backend, extensions, fixtures and desktop — not the
 	// backend half. The desktop launcher is exactly where this class recurs: it
@@ -208,7 +207,7 @@ func unguardedCredentialLogs(t *testing.T) []credentialLogSite {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, parseErr := parser.ParseFile(fset, path, nil, 0)
+			file, parseErr := gatekit.ParseFile(path, 0)
 			if parseErr != nil {
 				return parseErr
 			}

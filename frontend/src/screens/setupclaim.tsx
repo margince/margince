@@ -223,6 +223,7 @@ export function SetupClaimScreen({
         <AuthCardTitle>{t("setup.title")}</AuthCardTitle>
         <p>{t("setup.body")}</p>
         {error && (
+          // ds:ignore a bordered banner box shared with auth, not a line
           <p className="auth-error" role="alert">
             {error}
           </p>

@@ -65,6 +65,11 @@ import (
 // departs in exactly the ways managementObjects names below; the two used to be
 // one variable, and the administration objects are what separated them.
 var managerObjects = grid(crud, map[string]grant{
+	reportingSalesTarget:     writeNoDelete,
+	reportingFrameworkObject: readOnly,
+	reportingReportEdition:   writeNoDelete,
+	reportingCreditObject:    readOnly,
+
 	objAiModelRate:          none,
 	objAiRouting:            none,
 	objAiBudget:             none,
@@ -77,7 +82,7 @@ var managerObjects = grid(crud, map[string]grant{
 	objDataCoverage:         none,
 	objEmbeddingReindex:     none,
 	"finance":               readOnly,
-	objForecast:             createRead,
+	objForecast:             writeNoDelete,
 	objFxRate:               none,
 	objImportRun:            none,
 	objInstallationSettings: readOnly,
@@ -109,13 +114,17 @@ var managerObjects = grid(crud, map[string]grant{
 	objAuthenticationPolicy:   none,
 	objOauthApplication:       none,
 	objSeatUsage:              none,
+	objTeamOversight:          none,
+
+	// The Team Lead leads the teams they are on; management inherits it.
+	objTeamLead: createRead,
 })
 
-// managementObjects is managerObjects with the five administration reads a
+// managementObjects is managerObjects with the administration reads a
 // sales leader answers for: the AI spend, the consent vocabulary their team is
 // bound by, the sign-in posture, which OAuth applications the workspace issued,
-// and how many seats are used. Every one is a READ — management sees what it is
-// accountable for and changes none of it.
+// and how many seats are used, plus every team's coaching week. Every one is a
+// READ — management sees what it is accountable for and changes none of it.
 //
 // Derived from managerObjects by copy rather than by aliasing it: the two grids
 // now differ, and one variable serving both is how a later edit to a team lead's
@@ -129,6 +138,7 @@ var managementObjects = func() map[string]grant {
 		objAuthenticationPolicy,
 		objOauthApplication,
 		objSeatUsage,
+		objTeamOversight,
 	} {
 		out[object] = readOnly
 	}
@@ -141,9 +151,18 @@ var defaults = map[string]Document{
 	// (RD-AC-7); license is issued rather than edited; capture_trace is written
 	// by the pipeline and swept by its own job; the rate sheets and
 	// capture_settings are append-forward because a past-dated row prices a
-	// historical rollup; forecast supersedes rather than being rewritten.
+	// historical rollup. forecast carries no DELETE for the same reason — a
+	// call that was made is a thing that happened, and a current one
+	// supersedes it rather than erasing it — but it does carry update: an
+	// assurance finding is ANSWERED on the forecast object, which is a write
+	// surface the reading itself does not have.
 	"admin": {
 		Objects: grid(crud, map[string]grant{
+			reportingSalesTarget:     writeNoDelete,
+			reportingFrameworkObject: readUpdate,
+			reportingReportEdition:   writeNoDelete,
+			reportingCreditObject:    readOnly,
+
 			objAiModelRate:          writeNoDelete,
 			objAiRouting:            readUpdate,
 			objAiBudget:             readUpdate,
@@ -152,7 +171,7 @@ var defaults = map[string]Document{
 			objComputedField:        readOnly,
 			objDataCoverage:         readOnly,
 			objEmbeddingReindex:     readUpdate,
-			objForecast:             createRead,
+			objForecast:             writeNoDelete,
 			objFxRate:               writeNoDelete,
 			objInstallationSettings: readUpdate,
 			objIntroduction:         writeNoDelete,
@@ -170,6 +189,8 @@ var defaults = map[string]Document{
 			objAiDiagnostics:        readOnly,
 			objAuthenticationPolicy: readUpdate,
 			objSeatUsage:            readOnly,
+			objTeamOversight:        readOnly,
+			objTeamLead:             createRead,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
@@ -230,7 +251,20 @@ var defaults = map[string]Document{
 	// property, admin included.
 	"rep": {
 		Objects: grid(readOnly, map[string]grant{
-			"activity":          writeNoDelete,
+			reportingReportDefinition: crud,
+			reportingReportSchedule:   crud,
+			reportingReportEdition:    writeNoDelete,
+
+			"activity": writeNoDelete,
+			// A rep ANSWERS an assurance finding, and is usually the only one
+			// who can: the finding is about the quality of an input, and the
+			// seat that knows why a deal's numbers look the way they do is
+			// the one that entered them. Row scope already bounds what they
+			// reach, so this widens what they may say about their own work
+			// rather than what they can see. Making every finding a
+			// supervisory errand would route the question away from the only
+			// seat that can answer it.
+			objForecast:         readUpdate,
 			objAiModelRate:      none,
 			objAiRouting:        none,
 			objAiBudget:         none,
@@ -278,6 +312,8 @@ var defaults = map[string]Document{
 			objAuthenticationPolicy:   none,
 			objOauthApplication:       none,
 			objSeatUsage:              none,
+			objTeamOversight:          none,
+			objTeamLead:               none,
 		}),
 		RowScope: principal.RowScopeOwn,
 	},
@@ -318,6 +354,8 @@ var defaults = map[string]Document{
 			objAuthenticationPolicy:   none,
 			objOauthApplication:       none,
 			objSeatUsage:              none,
+			objTeamOversight:          none,
+			objTeamLead:               none,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
@@ -327,6 +365,13 @@ var defaults = map[string]Document{
 	// grant here expresses.
 	"ops": {
 		Objects: grid(crud, map[string]grant{
+			reportingReportDefinition: readOnly,
+			reportingSalesTarget:      readOnly,
+			reportingFrameworkObject:  readOnly,
+			reportingReportSchedule:   readOnly,
+			reportingReportEdition:    readOnly,
+			reportingCreditObject:     readOnly,
+
 			objAiModelRate:          writeNoDelete,
 			objAiRouting:            readUpdate,
 			objAiBudget:             readUpdate,
@@ -335,7 +380,7 @@ var defaults = map[string]Document{
 			objComputedField:        readOnly,
 			objDataCoverage:         readOnly,
 			objEmbeddingReindex:     readUpdate,
-			objForecast:             createRead,
+			objForecast:             writeNoDelete,
 			objFxRate:               writeNoDelete,
 			objInstallationSettings: readUpdate,
 			objIntroduction:         writeNoDelete,
@@ -360,6 +405,10 @@ var defaults = map[string]Document{
 			objAiDiagnostics:        readOnly,
 			objAuthenticationPolicy: readOnly,
 			objSeatUsage:            readOnly,
+			// Ops runs the installation and leads nobody, so it reads no
+			// team's coaching week.
+			objTeamOversight: none,
+			objTeamLead:      none,
 			// Ops configures the rules and does not send under them. Directing
 			// a message past the engine's answer about a contact is a decision
 			// somebody takes about their own correspondence, and this seat has

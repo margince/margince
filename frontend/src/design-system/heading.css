@@ -2,8 +2,9 @@
    heading belongs to the passage it opens, so the parent — a Stack, a Panel
    body, a page zone — spaces it, and one component cannot fight another over
    the same whitespace. Ink inherits for the same reason: a heading on a tinted
-   surface takes that surface's colour without being told. */
-.heading {
+   surface takes that surface's colour without being told.
+   :where(), so a caller's rule sets the margin whatever the chunk order. */
+:where(.heading) {
   margin: 0;
 }
 

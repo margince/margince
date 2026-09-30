@@ -21,23 +21,8 @@ fixture:
 expect:
   outcome: accepted
   answer: legal
-  rubric: >
-    A dispute in progress: a formal notice through the other side's solicitor, a
-    deadline, a threatened remedy at our cost, and our own counsel's advice on
-    how to answer. The thread also contains an admission — that part of the
-    defect list is justified — which is the sentence that makes this one worth
-    holding rather than merely awkward.
-    "legal" scores high. "explicitly_confidential" and "financial_corporate"
-    score in the middle: each holds the thread, which is the outcome that
-    matters, and the second is defensible once a claim carries a cost. "ordinary"
-    is the failure this scenario exists to catch and scores zero at any
-    confidence — it puts our own counsel's advice and our admission of a partly
-    valid claim in front of the whole company, and a dispute is exactly the
-    correspondence where a leak changes the outcome rather than merely
-    embarrassing somebody. The trap is that the thread reads like ordinary
-    project traffic: a project name, a date, a spreadsheet, a colleague asking to
-    align internally.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The rubric
+    only ranked the other kinds by the harm each does, which the check fails
+    outright.

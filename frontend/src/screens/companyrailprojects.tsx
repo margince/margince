@@ -1,4 +1,5 @@
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import { routeHash } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
@@ -11,6 +12,8 @@ import { useLocale, useT } from "../i18n";
 // sibling having loaded the stylesheet first is not something it can assume.
 import "../design-system/recordcard.css";
 import "./company360.css";
+import { NewProjectAction } from "./companyactions";
+import { useCompanyReadOnlyReason } from "./companyheader";
 import {
   RAIL_ROW_LIMIT,
   SectionSummary,
@@ -26,6 +29,7 @@ import type { ProjectPhase } from "./projects.form";
 // the second right after the first.
 
 type Company360 = components["schemas"]["Company360"];
+type Company = components["schemas"]["Company"];
 type Project = components["schemas"]["Company360Project"];
 
 /**
@@ -92,12 +96,8 @@ export function ProjectsSection({
               section's own empty verb does. Outside, it sat at the section's
               edge and read as chrome of the rail rather than as this
               section's one thing to do. */}
-          {state === "empty" && (
-            <div className="card-actions">
-              <Button variant="ghost" onClick={() => onTab("deals")}>
-                {t("co.rail.add")}
-              </Button>
-            </div>
+          {state === "empty" && view?.company && (
+            <ProjectsEmptyVerb company={view.company} onTab={onTab} />
           )}
         </PanelBody>
       )}
@@ -111,6 +111,34 @@ export function ProjectsSection({
         </div>
       )}
     </Disclosure>
+  );
+}
+
+// The ONE verb an empty projects section carries: the create verb when the
+// reader may write the account and create a project, the way to the tab that
+// lists its projects when either is missing. Asking only the account would
+// leave an empty action row, because NewProjectAction draws nothing without
+// the project grant.
+function ProjectsEmptyVerb({
+  company,
+  onTab,
+}: Readonly<{ company: Company; onTab: (tab: "deals") => void }>) {
+  const t = useT();
+  const readOnlyReason = useCompanyReadOnlyReason(company);
+  const canCreate = useCanWrite("project", "create");
+  return (
+    <div className="card-actions">
+      {readOnlyReason || !canCreate ? (
+        <Button variant="ghost" onClick={() => onTab("deals")}>
+          {t("co.rail.add")}
+        </Button>
+      ) : (
+        <NewProjectAction
+          companyId={company.id}
+          companyName={company.display_name}
+        />
+      )}
+    </div>
   );
 }
 

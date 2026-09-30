@@ -285,6 +285,23 @@ link_employment() {
     echo "employing $what answered HTTP $code" >&2; exit 1; }
 }
 
+# The installation describes its own company first: POST /users refuses a
+# colleague with 409 company_not_described until an admin has saved the profile.
+# PUT converges, so a re-run writes the same values over its own. The values are
+# scripts/seed-dev.sh's, so both seeds describe the same installation.
+describe_code="$(status_of PUT /company '{
+  "display_name":"Brandt Automotive GmbH",
+  "legal_name":"Brandt Automotive GmbH",
+  "registered_address":"Werkstraße 4, 70435 Stuttgart",
+  "register_vat":"DE811234567",
+  "industry":"Automotive",
+  "website":"brandt.example",
+  "offer_summary":"Retrofit kits and workshop software for independent vehicle fleets.",
+  "icp":"Independent fleet operators in DACH running 50 to 500 vehicles."
+}')"
+[[ "$describe_code" = "200" ]] || {
+  echo "describing the installation's own company answered HTTP $describe_code" >&2; exit 1; }
+
 # The colleague who owns the accounts. Criterion 6 of case 4 is about telling
 # the rep an account is somebody ELSE'S, so a workspace where the admin owns
 # everything cannot exercise it.

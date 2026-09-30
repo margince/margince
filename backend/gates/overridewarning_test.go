@@ -32,6 +32,8 @@ import (
 	"go/token"
 	"strconv"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The warning lives in consent, which this package may not import: gates read
@@ -95,8 +97,7 @@ func TestTheOverrideWarningTextMatchesItsVersion(t *testing.T) {
 // concatenation, in order, whatever quoting each uses.
 func servedWarning(t *testing.T) (version, text string) {
 	t.Helper()
-	fileSet := token.NewFileSet()
-	parsed, err := parser.ParseFile(fileSet, overrideWarningFile, nil, parser.ParseComments)
+	parsed, err := gatekit.ParseFile(overrideWarningFile, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("reading %s: %v", overrideWarningFile, err)
 	}

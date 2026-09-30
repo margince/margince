@@ -16,8 +16,13 @@ package company360
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	company360svc "github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -669,4 +674,36 @@ func TestAnIntroRequestRefusesTheReaderAsTheirOwnIntroducer(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Fatalf("a reader drafted an introduction from themselves: %v", err)
 	}
+}
+
+// A reading whose model lane ended without an answer is the assistant being
+// unavailable, not a server fault: the 503 the client has copy for, since a
+// buying role can be typed onto the committee by hand.
+func TestARoleReadingTheModelWithheldIsTheAssistantBeingUnavailable(t *testing.T) {
+	e := integration.Setup(t)
+	company, deal := seedRoleDeal(t, e)
+	buyer := e.SeedContact(t, "Ute Sommer", nil)
+	employ(t, e, buyer, company, "Chief Financial Officer")
+	wrote(t, e, buyer, company, "Re: Angebot", "I sign off the budget for this, so send the figures to me directly.", 3)
+
+	lane := &withholdingLane{}
+	handlers := company360svc.NewHandlers(company360Service(e)).WithRoleLane(lane)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/deals/"+deal.String()+"/role-proposals", nil).WithContext(e.Admin())
+	handlers.ProposeDealRoles(rec, req, openapi_types.UUID(deal))
+
+	if lane.calls == 0 {
+		t.Fatal("the reading never reached the model, so this proves nothing about its failure")
+	}
+	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), "assistant_unavailable") {
+		t.Errorf("want 503 assistant_unavailable, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+// withholdingLane is a provider whose safety filter withheld every answer.
+type withholdingLane struct{ calls int }
+
+func (l *withholdingLane) Complete(context.Context, model.Request) (model.Response, error) {
+	l.calls++
+	return model.Response{}, fmt.Errorf("ai: provider: %w", model.ErrOutputWithheld)
 }

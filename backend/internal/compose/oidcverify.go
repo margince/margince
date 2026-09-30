@@ -62,6 +62,12 @@ type oidcTokenVerifier struct {
 	matchIdentity func(oidcClaims) error
 	client        *http.Client
 	now           func() time.Time
+	// coalesced reports a caller JOINING an in-flight refresh rather than
+	// starting one. A seam for the reason `now` is one: the decision is made
+	// under the mutex and is gone before anything outside can look, so a test
+	// holding the first fetch open until the second arrives has nothing else to
+	// wait on — and starting a goroutine says only that it was created.
+	coalesced func()
 
 	mu          sync.Mutex
 	keys        map[string]*rsa.PublicKey
@@ -173,6 +179,11 @@ type oidcClaims struct {
 	// as a fallback where a work/school account carries no `email` claim, and
 	// only under a tenant this installation trusts.
 	PreferredUsername string `json:"preferred_username"`
+	// Groups is the token's standard `groups` claim, feeding identity's
+	// additive group→role grants. Absent decodes as nil — the empty list the
+	// sign-in adapters hand on, never an error, because most Google tokens
+	// carry no such claim and a token naming no groups simply grants nothing.
+	Groups []string `json:"groups"`
 }
 
 // Verify returns the decoded claims only for a well-formed, correctly-signed
@@ -298,6 +309,9 @@ func (v *oidcTokenVerifier) refresh(ctx context.Context) error {
 	v.mu.Lock()
 	if fl := v.inflight; fl != nil {
 		v.mu.Unlock()
+		if v.coalesced != nil {
+			v.coalesced()
+		}
 		select {
 		case <-fl.done:
 			return fl.err

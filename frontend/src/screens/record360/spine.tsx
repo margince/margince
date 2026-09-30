@@ -23,6 +23,7 @@ import { PanelBody } from "../../design-system/panel";
 import {
   contactsOn,
   mergeContacts,
+  namesOf,
   withWhom,
 } from "../../design-system/participants";
 import {
@@ -679,8 +680,7 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
       continue;
     }
     // The two key spaces never meet: a provider whose thread ids look like our
-    // own fallback would otherwise merge an unrelated conversation into one it
-    // has nothing to do with.
+    // own fallback would otherwise fold an unrelated conversation into it.
     const key = entry.thread_key
       ? `thread:${entry.thread_key}`
       : // Lowercased against the invariant locale, never the machine's: this is
@@ -689,7 +689,7 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
         // from every other reader's.
         `subject:${subject.toLowerCase()}`;
     const seen = conversations.get(key);
-    const contacts = contactsOn(entry.links, ctx.nameOf);
+    const contacts = namesOf(contactsOn(entry.links, ctx.nameOf));
     // The list arrives newest-first, so the first row of a conversation is its
     // latest message: that is the date the thread shows it at, and its subject
     // is the one the conversation currently goes by after a mid-thread rename.

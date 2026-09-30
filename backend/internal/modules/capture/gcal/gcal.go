@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
@@ -40,11 +41,14 @@ type Connector struct {
 	oauth googleconn.Authorizer
 	api   API
 	owner string // used ONLY by Normalize (the test-guarded pure mapping); never set by Sync
+	// now dates the capture horizon and the list's age; a field so tests pin
+	// the clock.
+	now func() time.Time
 }
 
 // New returns a Calendar connector over the given OAuth + API surfaces.
 func New(oauth googleconn.Authorizer, api API) *Connector {
-	return &Connector{oauth: oauth, api: api}
+	return &Connector{oauth: oauth, api: api, now: time.Now}
 }
 
 var (
@@ -71,6 +75,10 @@ func (c *Connector) AccountLabel(auth connector.Auth) (string, error) {
 // cursorState is the persisted incremental watermark: Calendar's syncToken.
 type cursorState struct {
 	SyncToken string `json:"sync_token"`
+	// ListedAt is when the full list this token descends from was taken. Zero
+	// is a cursor written before it was recorded, which re-lists on the next
+	// sync and starts keeping it (listIsStale).
+	ListedAt time.Time `json:"listed_at,omitzero"`
 }
 
 // AuthRequestFrom packages an OAuth callback's code into the opaque connector
@@ -107,19 +115,28 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		return nil, err
 	}
 
-	start, err := parseCursor(cursor)
+	prior, err := parseCursor(cursor)
 	if err != nil {
 		// A stored cursor we can't read is a bug/corruption, NOT a fresh
 		// calendar: stop and let the next cycle retry rather than silently
 		// backfilling and overwriting the watermark.
 		return nil, err
 	}
-	events, nextToken, err := c.selectEvents(ctx, access, start)
+	events, nextToken, relisted, err := c.selectEvents(ctx, access, prior)
 	if err != nil {
 		return nil, err
 	}
 
+	edge := c.now().Add(captureForwards)
 	for _, raw := range events {
+		// Past the horizon the event is not captured, but a meeting captured
+		// while it was nearer and moved out since still moves with it.
+		if beyondHorizon(raw, owner, edge) {
+			if err := meetingmap.MoveOne(ctx, raw, sink, owner, connectorName, decodeEvent); err != nil {
+				return nil, err
+			}
+			continue
+		}
 		if err := meetingmap.CaptureOne(ctx, raw, sink, owner, connectorName, decodeEvent); err != nil {
 			return nil, err
 		}
@@ -127,24 +144,51 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 
 	// selectEvents (through listPages) guarantees a non-empty syncToken on a
 	// successful pull, so the advanced watermark is always real here.
-	return marshalCursor(nextToken), nil
+	//
+	// The listing date carries forward across an incremental round and is reset
+	// only by a re-list, because it dates the WINDOW rather than the pull:
+	// refreshing it every sync would mean the list never reads as stale.
+	listedAt := prior.ListedAt
+	if relisted {
+		listedAt = c.now()
+	}
+	return marshalCursor(nextToken, listedAt), nil
 }
 
 // selectEvents resolves which events to pull and the syncToken to advance to,
-// choosing the initial-backfill or the incremental path and folding the
-// stale-token fallback into one place.
-func (c *Connector) selectEvents(ctx context.Context, access, start string) ([][]byte, string, error) {
-	if start == "" {
-		return c.api.ListInitial(ctx, access)
+// choosing the initial-backfill or the incremental path, and reports whether it
+// re-listed.
+//
+// It re-lists on THREE conditions: no cursor (a fresh calendar), a token Google
+// no longer honors, and a list gone stale. The third is not an error path — the
+// token works, but occurrences that were past the capture horizon when the list
+// was taken never change, so no incremental pull will ever mention them again.
+//
+// A stale list with a working token drains the token FIRST. The full list only
+// reaches back 90 days, so a change still waiting in the old token — a decline
+// on a meeting that ended four months ago — would otherwise be dropped with the
+// token it was waiting in.
+func (c *Connector) selectEvents(ctx context.Context, access string, cur cursorState) ([][]byte, string, bool, error) {
+	if cur.SyncToken == "" {
+		events, next, err := c.api.ListInitial(ctx, access)
+		return events, next, true, err
 	}
-	events, next, err := c.api.ListIncremental(ctx, access, start)
+	events, next, err := c.api.ListIncremental(ctx, access, cur.SyncToken)
 	if errors.Is(err, ErrSyncTokenGone) {
-		return c.api.ListInitial(ctx, access)
+		events, next, err = c.api.ListInitial(ctx, access)
+		return events, next, true, err
 	}
 	if err != nil {
-		return nil, "", err
+		return nil, "", false, err
 	}
-	return events, next, nil
+	if c.listIsStale(cur.ListedAt) {
+		listed, fresh, err := c.api.ListInitial(ctx, access)
+		if err != nil {
+			return nil, "", false, err
+		}
+		return append(events, listed...), fresh, true, nil
+	}
+	return events, next, false, nil
 }
 
 // Normalize maps ONE raw Calendar event resource to its meeting activity — the
@@ -170,24 +214,24 @@ func (c *Connector) HealthCheck(ctx context.Context, auth connector.Auth) error 
 // fresh calendar (→ initial backfill); a NON-empty but unreadable cursor is an
 // error, not a silent re-anchor — the caller stops rather than backfill and
 // overwrite the watermark.
-func parseCursor(cur connector.Cursor) (string, error) {
+func parseCursor(cur connector.Cursor) (cursorState, error) {
 	if len(cur) == 0 {
-		return "", nil
+		return cursorState{}, nil
 	}
 	var cs cursorState
 	if err := json.Unmarshal(cur, &cs); err != nil {
-		return "", fmt.Errorf("gcal: unreadable sync cursor: %w", err)
+		return cursorState{}, fmt.Errorf("gcal: unreadable sync cursor: %w", err)
 	}
 	if cs.SyncToken == "" {
 		// A stored-but-empty token is corruption, NOT a fresh calendar: stop
 		// rather than silently re-backfill and overwrite the watermark.
-		return "", fmt.Errorf("gcal: sync cursor carries no token")
+		return cursorState{}, fmt.Errorf("gcal: sync cursor carries no token")
 	}
-	return cs.SyncToken, nil
+	return cs, nil
 }
 
-func marshalCursor(syncToken string) connector.Cursor {
-	// cursorState has only a string field, so Marshal cannot fail here.
-	b, _ := json.Marshal(cursorState{SyncToken: syncToken}) //nolint:errchkjson // string-only struct never errors
+func marshalCursor(syncToken string, listedAt time.Time) connector.Cursor {
+	// cursorState holds a string and a time, so Marshal cannot fail here.
+	b, _ := json.Marshal(cursorState{SyncToken: syncToken, ListedAt: listedAt}) //nolint:errchkjson // string+time struct never errors
 	return b
 }

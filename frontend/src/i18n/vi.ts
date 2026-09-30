@@ -14,6 +14,325 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "retention.scopeReportEdition": "Bản báo cáo đã lưu",
+  "reporting.reviewQueue":
+    "Xem cơ hội có rủi ro trong danh sách công việc của bạn",
+  "reporting.lastCapture": "Lần ghi nhận thành công gần nhất {at}",
+  "reporting.allocationDifference": "Mục tiêu nhóm trừ mục tiêu đã phân bổ",
+  "reporting.allocatedTarget": "Mục tiêu đã phân bổ",
+  "reporting.view": "Chế độ hiệu suất",
+  "reporting.fromDate": "Từ ngày",
+  "reporting.throughDate": "Đến hết ngày",
+  "reporting.chooseDates":
+    "Chọn ngày bắt đầu và kết thúc để xem giai đoạn này.",
+  "reporting.expired":
+    "Bản báo cáo đã hết hạn · Số liệu đã được xóa theo chính sách lưu giữ",
+  "brief.weekly.legacyDefinitions":
+    "Định nghĩa trước đây · Số liệu đã lưu không thay đổi.",
+  "brief.weekly.sharedDefinitions":
+    "Cuộc họp khách hàng đã xác nhận và doanh số theo phụ trách lúc chốt · Pipeline mới tính deal mới tạo, không phải lần đạt chuẩn.",
+  "brief.weekly.numericPartial":
+    "Một số bằng chứng không khả dụng. Số liệu chỉ gồm bản ghi được phép đọc và có giá trị xác định.",
+  "reporting.owner": "Phụ trách",
+  "reporting.edit": "Sửa báo cáo",
+  "reporting.moveUp": "Di chuyển lên",
+  "reporting.moveDown": "Di chuyển xuống",
+  "reporting.scorecard": "Hiệu suất theo phụ trách",
+  "reporting.exportCsv": "Xuất CSV",
+  "reporting.captureContexts": "Ảnh chụp dự báo hàng ngày",
+  "reporting.captureHelp":
+    "Chọn nhóm và quy trình cố định. Cần hai ảnh chụp hàng ngày tương thích để xem thay đổi.",
+  "reporting.addCapture": "Thêm ảnh chụp",
+  "reporting.removeCapture": "Xóa ảnh chụp",
+  "reporting.revision": "Bản sửa đổi {revision}",
+  "reporting.duplicate": "Nhân bản riêng tư",
+  "reporting.archiveConfirm":
+    "Lưu trữ báo cáo này và tạm dừng lịch chạy? Các phiên bản đã lưu vẫn có thể truy cập.",
+  "reporting.archive": "Lưu trữ báo cáo",
+  "reporting.schedule": "Lịch chạy",
+  "reporting.editions": "Phiên bản đã lưu",
+  "reporting.executions": "Lịch sử chạy",
+  "reporting.freeze": "Chốt phiên bản",
+  "reporting.all": "Tất cả báo cáo",
+  "reporting.scheduled": "Đã lên lịch",
+  "reporting.frequency": "Tần suất",
+  "reporting.weekly": "Hàng tuần",
+  "reporting.monthly": "Hàng tháng",
+  "reporting.day": "Ngày chạy",
+  "reporting.time": "Giờ địa phương",
+  "reporting.enabled": "Bật lịch chạy",
+  "reporting.timezone": "Múi giờ báo cáo",
+  "reporting.scheduleBasis":
+    "Chốt tuần hoặc tháng hoàn chỉnh trước. Bản sửa đổi báo cáo được giữ nguyên cho đến khi bạn thay đổi.",
+  "reporting.nextRun": "Lần chạy tiếp: {at}",
+  "reporting.pause": "Tạm dừng",
+  "reporting.resume": "Tiếp tục",
+  "reporting.compare": "So sánh phiên bản",
+  "reporting.left": "Phiên bản trước",
+  "reporting.right": "Phiên bản sau",
+  "reporting.reason": "Lý do sửa đổi",
+  "reporting.value": "Số tiền hoặc số lượng mục tiêu",
+  "reporting.newTarget": "Đặt mục tiêu",
+  "reporting.revise": "Sửa mục tiêu",
+  "reporting.commitments":
+    "Cam kết nhóm và phân bổ cá nhân là các mục tiêu riêng. Chênh lệch không được tự động phân phối lại.",
+  "reporting.up": "Di chuyển lên",
+  "reporting.down": "Di chuyển xuống",
+  "reporting.periodStart": "Ngày đầu của kỳ mục tiêu",
+  "reporting.moneyUnit":
+    "Nhập số tiền theo {currency} hoặc số nguyên cho mục tiêu hoạt động.",
+  "reporting.noComparison": "Không có phiên bản trước tương thích.",
+  "reporting.noSource": "Không có chi tiết nguồn.",
+  "reporting.framework": "Khung báo cáo",
+  "reporting.template": "Chế độ xem mặc định",
+  "reporting.sales": "Bán hàng",
+  "reporting.sdr": "Kết quả SDR",
+  "reporting.qualification": "Giai đoạn đủ điều kiện",
+  "reporting.publish": "Xuất bản khung",
+  "reporting.prospective":
+    "Thay đổi áp dụng cho sự kiện tương lai. Các phiên bản hiện có giữ nguyên khung gốc.",
+  "reporting.performance": "Hiệu suất",
+  "reporting.reports": "Báo cáo đã lưu",
+  "reporting.targets": "Mục tiêu",
+  "reporting.definitions": "Định nghĩa chỉ số",
+  "reporting.purpose":
+    "Xem tiến độ, kiểm tra dữ liệu và lưu lịch sử có thể so sánh.",
+  "reporting.save": "Lưu báo cáo",
+  "reporting.advanced": "Phân tích nâng cao",
+  "reporting.period": "Kỳ sự kiện",
+  "reporting.pipeline": "Quy trình bán hàng",
+  "reporting.allPipelines": "Tất cả pipeline",
+  "reporting.this_month": "Tháng này",
+  "reporting.last_month": "Tháng trước",
+  "reporting.last_week": "Tuần hoàn chỉnh trước",
+  "reporting.this_quarter": "Quý tài chính này",
+  "reporting.custom": "Khoảng thời gian tùy chọn",
+  "reporting.start": "Ngày bắt đầu",
+  "reporting.end": "Ngày kết thúc (không bao gồm)",
+  "reporting.bookings_trend": "Chúng ta có tiến bộ không?",
+  "reporting.stage_distribution": "Pipeline đang ở đâu?",
+  "reporting.owner_attainment": "Ai cần hỗ trợ?",
+  "reporting.stage_age": "Deal đang chậm ở đâu?",
+  "reporting.sdr_outcomes": "Cuộc họp và cơ hội được chấp nhận",
+  "reporting.target_progress": "Tiến độ so với mục tiêu",
+  "reporting.forecast_support": "Điều gì hỗ trợ dự báo?",
+  "reporting.pipeline_movement": "Pipeline đã thay đổi thế nào?",
+  "reporting.metric_reading": "Chi tiết chỉ số",
+  "reporting.bookings_won": "Doanh thu đã thắng",
+  "reporting.closed_win_rate": "Tỷ lệ thắng deal đã đóng",
+  "reporting.open_pipeline": "Pipeline đang mở",
+  "reporting.qualified_pipeline_created": "Pipeline đủ điều kiện mới",
+  "reporting.meetings_held": "Cuộc họp đã diễn ra",
+  "reporting.accepted_opportunities": "Cơ hội được chấp nhận",
+  "reporting.forecast_landing": "Kết quả dự báo",
+  "reporting.actual": "Thực tế",
+  "reporting.previous": "Kỳ tương đương trước",
+  "reporting.target": "Mục tiêu",
+  "reporting.targetBasis": "Kỳ mục tiêu",
+  "reporting.month": "Tháng",
+  "reporting.fiscal_quarter": "Quý tài chính",
+  "reporting.closeWindow": "Khoảng dự kiến đóng",
+  "reporting.all_open": "Tất cả deal đang mở",
+  "reporting.median": "Số ngày trung vị",
+  "reporting.upper": "Phân vị 75",
+  "reporting.data": "Hiển thị dữ liệu gốc",
+  "reporting.evidence": "Bằng chứng",
+  "reporting.details": "Thêm chỉ số và chi tiết",
+  "reporting.noTarget": "Chưa đặt mục tiêu",
+  "reporting.unavailable": "Không có dữ liệu",
+  "reporting.stateAt": "Trạng thái hiện tại lúc {at}",
+  "reporting.interval": "{start} đến {end} · {zone}",
+  "reporting.coverage": "Độ bao phủ: {status}",
+  "reporting.restricted": "Bản ghi bị hạn chế",
+  "reporting.next": "Trang tiếp",
+  "reporting.name": "Tên báo cáo",
+  "reporting.audience": "Đối tượng",
+  "reporting.private": "Chỉ mình tôi",
+  "reporting.team": "Nhóm đã chọn",
+  "reporting.workspace": "Tổ chức",
+  "reporting.blocks": "Biểu đồ và thứ tự",
+  "reporting.metrics": "Chỉ số",
+  "reporting.cancel": "Hủy",
+  "reporting.saved": "Đã lưu báo cáo",
+  "reporting.live": "Xem trước trực tiếp",
+  "reporting.opening": "Đầu kỳ",
+  "reporting.closing": "Cuối kỳ",
+  "reporting.reconcile": "Các biến động không khớp với giá trị cuối kỳ.",
+  "reporting.managerCall": "Dự báo của quản lý",
+  "reporting.independent":
+    "Số sự kiện độc lập; đây không phải phễu chuyển đổi.",
+  "reporting.frozen": "Phiên bản đã chốt",
+  "reporting.redacted": "Đã áp dụng ẩn dữ liệu riêng tư",
+  "reporting.withheld": "Một số đóng góp bị ẩn theo quyền hiện tại của bạn.",
+  "scheduling.back": "Quay lại Margince",
+  "scheduling.prepare": "Chuẩn bị cho cuộc họp",
+  "scheduling.timezone": "Múi giờ",
+  "scheduling.replace": "Thay liên kết đặt lịch",
+  "scheduling.replaceHelp":
+    "Liên kết cũ sẽ ngừng nhận lịch hẹn. Hãy cập nhật chữ ký email và mọi nơi đã chia sẻ. Cuộc hẹn hiện có vẫn giữ liên kết thay đổi riêng.",
+  "scheduling.reschedule": "Đổi lịch",
+  "scheduling.rescheduleHelp":
+    "Giờ hẹn hiện tại được giữ đến khi lịch xác nhận thay đổi.",
+  "scheduling.saveTime": "Xác nhận giờ mới",
+  "scheduling.hostRecovery":
+    "Kết nối lại lịch nếu cần, rồi thử lại. Thời gian vẫn được giữ khi việc gửi chưa rõ kết quả.",
+  "scheduling.guestRecovery":
+    "Chủ lịch cần kiểm tra lời mời này. Yêu cầu đặt lịch của bạn đã được lưu.",
+  "scheduling.deliveryUnknown":
+    "Máy chủ chưa trả về lời mời. Hãy hỏi chủ lịch trước khi thử lại.",
+  "scheduling.personalGuest":
+    "Lời mời dành cho khách nhận liên kết. Cuộc hẹn sử dụng địa chỉ email do chủ lịch chọn.",
+  "scheduling.proposalGreeting": "Xin chào,",
+  "scheduling.proposalChoose": "Chọn một giờ tại đây hoặc tìm giờ khác:",
+  "scheduling.proposalReply": "Bạn cũng có thể trả lời với thời gian phù hợp.",
+  "scheduling.proposalHelp":
+    "Các lựa chọn không giữ chỗ trong lịch. Liên kết cá nhân dùng một lần và hết hạn sau bảy ngày hoặc giờ đề xuất cuối cùng.",
+  "scheduling.createPersonalLink": "Tạo liên kết cá nhân",
+  "scheduling.reviewProposal": "Tạo đề xuất",
+  "scheduling.personalLink": "Mở lời mời cá nhân",
+  "scheduling.expires": "Hết hạn {date}",
+  "scheduling.reviewEmail": "Xem lại email",
+  "scheduling.method": "Cách sắp xếp cuộc hẹn",
+  "scheduling.propose": "Đề xuất thời gian",
+  "scheduling.sharePersonal": "Chia sẻ liên kết cá nhân",
+  "scheduling.selectOptions_one": "Chọn hai hoặc ba giờ · Đã chọn {count}",
+  "scheduling.selectOptions_other": "Chọn hai hoặc ba giờ · Đã chọn {count}",
+  "scheduling.blockingCalendars": "Các lịch khác chặn thời gian",
+  "scheduling.blockingHelp":
+    "Lịch tạo cuộc hẹn luôn chặn thời gian. Tên sự kiện riêng tư vẫn nằm trong lịch của bạn.",
+  "scheduling.savedRequest":
+    "Yêu cầu cuộc hẹn của bạn đã được lưu. Mở để kiểm tra lời mời, đổi lịch hoặc hủy.",
+  "scheduling.openMeeting": "Xem cuộc hẹn của bạn",
+  "scheduling.emailReminder": "Nhắc qua email một giờ trước cuộc hẹn",
+  "scheduling.reminderHelp":
+    "Áp dụng cho cuộc hẹn mới. Sử dụng hộp thư đã kết nối và kiểm tra quyền gửi email trước khi gửi.",
+  "scheduling.reminder.pending": "Đã lên lịch email nhắc hẹn.",
+  "scheduling.reminder.queued": "Email nhắc hẹn đang chờ gửi.",
+  "scheduling.reminder.unavailable":
+    "Không thể gửi lời nhắc. Kiểm tra kết nối email và gửi email trực tiếp cho khách mời.",
+  "history.field.reminder_status": "Trạng thái lời nhắc",
+  "scheduling.myLink": "Liên kết đặt lịch của tôi",
+  "scheduling.linkIntro":
+    "Một liên kết cho chữ ký email, tin nhắn và trang web. Khách chọn giờ trong lịch trống của bạn.",
+  "scheduling.copyLink": "Sao chép liên kết",
+  "scheduling.copied": "Đã sao chép",
+  "scheduling.copyFallback": "Chọn và sao chép liên kết bên dưới.",
+  "scheduling.preview": "Xem trước trang công khai",
+  "scheduling.active": "Đang nhận lịch hẹn",
+  "scheduling.paused": "Đã tạm dừng đặt lịch công khai",
+  "scheduling.pause": "Tạm dừng đặt lịch",
+  "scheduling.resume": "Bật đặt lịch",
+  "scheduling.settings": "Cài đặt cuộc họp",
+  "scheduling.save": "Lưu cài đặt",
+  "settings.tab.meetings": "Cuộc họp",
+  "settings.page.meetings.sub": "Giờ làm việc, lịch và tùy chọn đặt lịch.",
+  "scheduling.missingSavedCalendar":
+    "Lịch sự kiện đã lưu không khả dụng. Chọn lịch khác trước khi bật đặt lịch.",
+  "scheduling.providerChanged":
+    "Nhà cung cấp lịch đã lưu không khả dụng. Khi lưu, lịch đã kết nối hiển thị ở đây sẽ được sử dụng.",
+  "scheduling.windowHorizon":
+    "Ngày này nằm ngoài khoảng thời gian cho phép đặt lịch của người tổ chức. Chọn ngày sớm hơn.",
+  "scheduling.windowNotice":
+    "Ngày này không đáp ứng thời gian báo trước. Chọn ngày muộn hơn.",
+  "scheduling.windowLimits":
+    "Thời gian báo trước không để lại thời gian nào trong khoảng cho phép đặt lịch. Người tổ chức cần điều chỉnh cài đặt cuộc họp.",
+  "scheduling.openSettings": "Mở cài đặt cuộc hẹn",
+  "scheduling.setupInSettings":
+    "Thiết lập lịch và giờ trống trong Cài đặt → Cuộc hẹn; bản nháp này vẫn mở.",
+  "scheduling.noTimesHelp":
+    "Sự kiện bận, giờ làm việc và giới hạn đặt lịch quyết định thời gian trống.",
+  "scheduling.findNext": "Tìm giờ trống tiếp theo",
+  "scheduling.noTimesHorizon":
+    "Không có giờ trống trong khoảng cho phép đặt lịch. Kiểm tra cài đặt cuộc hẹn và sự kiện lịch.",
+  "scheduling.allDayBlocks":
+    "Sự kiện cả ngày được đánh dấu bận cũng chặn giờ trống.",
+  "scheduling.effectiveHours":
+    "Giờ cho phép đặt lịch: {start} đến {end} ({zone}).",
+  "scheduling.bookingUntil": "Có thể đặt lịch đến {date}.",
+  "scheduling.outsideHorizon":
+    "Ngày này nằm ngoài khoảng cho phép đặt lịch. Chọn ngày sớm hơn hoặc cập nhật cài đặt cuộc hẹn.",
+  "scheduling.provider": "Nhà cung cấp lịch",
+  "scheduling.proposalChanged":
+    "Liên kết này giữ nguyên thông tin đã tạo. Bạn có thể tạo liên kết mới cho các thay đổi; liên kết cũ vẫn có hiệu lực đến khi hết hạn.",
+  "scheduling.proposalUpdate": "Tạo đề xuất đã cập nhật",
+  "scheduling.calendar": "Lịch cuộc hẹn",
+  "scheduling.bookContact": "Đặt cuộc họp",
+  "scheduling.setupCalendar": "Chọn lịch đặt cuộc họp",
+
+  "scheduling.chooseProvider": "Chọn nhà cung cấp lịch",
+
+  "scheduling.readOnlyCalendar":
+    "Lịch đã kết nối để đọc sự kiện. Kết nối lại và cấp quyền gửi lời mời để tạo, đổi lịch và hủy cuộc họp.",
+  "scheduling.disconnectedCalendar":
+    "Kết nối lịch này trước khi gửi lời mời. Nếu chỉ kết nối hộp thư, hãy kết nối lịch riêng.",
+  "scheduling.expiredCalendar":
+    "Kết nối lịch đã hết hạn. Kết nối lại để gửi lời mời.",
+  "scheduling.bookRefused": "Quản trị viên cần cấp quyền đặt cuộc họp.",
+  "scheduling.meetingChanged":
+    "Cuộc họp đã thay đổi. Xem lại thông tin mới và thử lại.",
+  "scheduling.previewCalendarSetup":
+    "Chọn lịch trong Cài đặt → Cuộc họp để xem trước các khung giờ còn trống.",
+  "scheduling.publicCalendarUnavailable":
+    "Trang đặt lịch đang hoạt động nhưng không thể gửi lời mời lịch. Mở cài đặt cuộc hẹn để kiểm tra kết nối hoặc tạm dừng trang.",
+  "scheduling.manageConnection": "Mở kết nối lịch",
+  "scheduling.calendarConnected":
+    "Đã kết nối: {account}. Đã cấp quyền gửi lời mời.",
+  "scheduling.noWritableCalendar":
+    "Không có lịch có thể chỉnh sửa. Chọn nhà cung cấp khác hoặc kiểm tra quyền truy cập lịch.",
+  "scheduling.finishSetup":
+    "Hoàn tất thiết lập lịch trong cài đặt cuộc hẹn để chọn giờ trống.",
+  "scheduling.readOnlyBadge": "Lịch chỉ đọc",
+  "scheduling.accountName":
+    "Tên trên trang đặt lịch được lấy từ cài đặt Tài khoản.",
+  "scheduling.linkNotCreated": "Lưu cài đặt cuộc họp để tạo liên kết đặt lịch.",
+  "scheduling.calendarSetupNeeded":
+    "Chọn và lưu lịch trong cài đặt Cuộc họp trước khi bật đặt lịch.",
+  "scheduling.hostName": "Tên công khai của bạn",
+  "scheduling.subject": "Tiêu đề cuộc họp",
+  "scheduling.location": "Địa điểm hoặc liên kết cuộc họp",
+  "scheduling.duration": "Thời lượng tính bằng phút",
+  "scheduling.noticeHelp":
+    "24 giờ nghĩa là đặt trước ít nhất một ngày trọn vẹn.",
+  "scheduling.anchorBrand": "Tên và logo công ty được lấy từ hồ sơ công ty.",
+  "scheduling.locationExample": "https://meet.google.com/abc-defg-hij",
+  "scheduling.locationHelp":
+    "Dán liên kết Google Meet, Zoom hoặc Teams, hoặc nhập địa chỉ họp. Đây là nơi diễn ra cuộc họp, không phải trang đặt lịch.",
+  "scheduling.previewActive":
+    "Chỉ xem trước. Trang đặt lịch đang hoạt động; chế độ xem trước không gửi lời mời.",
+  "scheduling.previewPaused":
+    "Chỉ xem trước. Đặt lịch công khai đang tạm dừng. Bật liên kết trong cài đặt Cuộc họp để khách có thể đặt lịch.",
+  "scheduling.notice": "Thời gian báo trước tính bằng giờ",
+  "scheduling.buffer": "Thời gian đệm tính bằng phút",
+  "scheduling.horizon": "Khoảng thời gian đặt lịch tính bằng ngày",
+
+  "scheduling.invite": "Gửi lời mời",
+  "scheduling.contact": "Bạn sẽ gặp ai?",
+  "scheduling.guestAgenda": "Bạn muốn trao đổi về điều gì?",
+  "scheduling.agenda": "Lời nhắn cho khách",
+  "scheduling.chooseTime": "Chọn giờ",
+  "scheduling.date": "Ngày bắt đầu",
+  "scheduling.next": "Thêm giờ",
+  "scheduling.noTimes":
+    "Không còn giờ trống trong khoảng này. Hãy chọn ngày khác.",
+  "scheduling.pending": "Đang tạo lời mời…",
+  "scheduling.confirmed": "Đã tạo lời mời trong lịch",
+  "scheduling.needs_attention": "Lời mời cần được kiểm tra",
+  "scheduling.rescheduling": "Đang đổi lịch cuộc họp…",
+  "scheduling.canceling": "Đang hủy cuộc họp…",
+  "scheduling.canceled": "Đã hủy cuộc họp",
+  "scheduling.deliveryHelp":
+    "Xác nhận từ lịch không có nghĩa là khách đã chấp nhận. Phản hồi sẽ đến qua lịch đã kết nối.",
+  "scheduling.openCalendar": "Mở trong lịch",
+  "scheduling.cancel": "Hủy cuộc họp",
+  "scheduling.cancelConfirm": "Hủy cuộc họp này và thông báo cho khách mời?",
+  "scheduling.retry": "Thử lại lời mời",
+  "scheduling.book": "Xác nhận cuộc họp",
+  "scheduling.unavailable":
+    "Trang đặt lịch này không khả dụng. Hãy liên hệ chủ lịch.",
+  "scheduling.publicUrlMissing":
+    "Thiết lập địa chỉ công khai cho hệ thống trước khi chia sẻ liên kết đặt lịch.",
+  "scheduling.new": "Đặt cuộc họp",
+
   "aiAdmin.allowance": "Hạn mức AI hàng tháng",
   "aiAdmin.pool":
     "Hạn mức chung của công ty, không phải hạn mức cá nhân hay giới hạn chi tiêu bằng đô la.",
@@ -53,9 +372,6 @@ export const vi = {
     "Chỉ người có cả quyền đọc chẩn đoán AI và quyền đọc hạn mức AI mới xem được các tính năng đang hoạt động.",
   "aiAdmin.save": "Lưu hạn mức",
   "aiAdmin.cancel": "Hủy",
-  "aiAdmin.prospective":
-    "Mô hình được chính sách hiện tại chọn. Lời gọi thực tế có thể dùng dự phòng hoặc thất bại; đây không phải trạng thái nhà cung cấp hay bằng chứng mô hình đã được dùng.",
-  "aiAdmin.calls": "Xem các lời gọi mô hình thực tế",
   "aiAdmin.website": "Đọc website",
   "aiAdmin.scans": "Quét tài khoản",
   "aiAdmin.voice": "Tạo giọng văn",
@@ -65,18 +381,19 @@ export const vi = {
   "aiAdmin.unavailable": "Không khả dụng",
   "aiAdmin.impact.blocked": "Chờ hạn mức",
   "aiAdmin.impact.model": "Đã chọn mô hình khác",
+  "aiAdmin.impact.decision": "Đã đổi mô hình quyết định",
   "aiAdmin.impact.fallback": "Chuỗi dự phòng đã đổi",
   "aiAdmin.impact.unconfigured": "Chưa cấu hình mô hình",
   "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",
-  "aiAdmin.impact.same": "Giữ nguyên lựa chọn mô hình",
   "aiAdmin.activity": "Hoạt động",
   "aiAdmin.model": "Mô hình được chính sách chọn",
-  "aiAdmin.cloud": "Nhà cung cấp đám mây",
-  "aiAdmin.endpoint": "Điểm cuối đã cấu hình; vị trí chưa xác minh",
-  "aiAdmin.editBinding": "Sửa liên kết dùng chung",
-  "aiAdmin.effect": "Tác động",
-  "aiAdmin.advanced": "Nâng cao: liên kết mô hình dùng chung",
-  "aiAdmin.unused": "Không được hoạt động hiện có sử dụng: {tiers}",
+  "aiAdmin.thenLadder": "sau đó",
+  "aiAdmin.decisionSkip.unbound":
+    "Không dùng mô hình quyết định: chưa liên kết mô hình nào.",
+  "aiAdmin.decisionSkip.uncertified":
+    "Không dùng mô hình quyết định: chưa được chứng nhận cho hoạt động này.",
+  "aiAdmin.decisionSkip.local_only":
+    "Không dùng mô hình quyết định: hoạt động này chỉ nhận nhà cung cấp quyết định cục bộ.",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
@@ -123,7 +440,7 @@ export const vi = {
   "brief.readings.riskPartial":
     "Chỉ tính giá trị đã biết; chưa kiểm tra được một số công việc về cơ hội.",
   "brief.readings.unpricedCount_one":
-    "{count} cơ hội không có giá trị so sánh được nên không được tính.",
+    "1 cơ hội chưa định giá · không được tính",
   "brief.readings.unpricedCount_other":
     "{count} cơ hội không có giá trị so sánh được nên không được tính.",
   "brief.coverage.source.generic": "Công việc khác",
@@ -146,13 +463,44 @@ export const vi = {
   "brief.coverage.source.conversation_claim": "Cam kết với khách hàng",
   "brief.coverage.source.brief_item": "Cập nhật giao dịch",
   "brief.coverage.source.dedupe_candidate": "Hồ sơ có thể trùng",
+  "brief.coverage.source.deal_suggestion": "Cơ hội được gợi ý",
+  "worklist.untitled.deal_suggestion": "Cơ hội được gợi ý từ các tín hiệu",
+  "dealSuggestion.agent": "Trinh sát cơ hội",
+  "dealSuggestion.name": "{company} · {hint}",
+  "dealSuggestion.hint.proposal_sent": "đã gửi báo giá",
+  "dealSuggestion.hint.opportunity_signalled": "có tín hiệu mua",
+  "dealSuggestion.hint.meeting_held": "đã họp",
+  "dealSuggestion.companyTitle": "Cơ hội được gợi ý",
+  "dealSuggestion.open": "Tạo cơ hội này",
+  "dealSuggestion.dismiss": "Không phải cơ hội",
+  "dealSuggestion.dismissed":
+    "Đã bỏ qua cho cả nhóm. Gợi ý chỉ quay lại khi có dấu hiệu mới hơn.",
+  "dealSuggestion.decided":
+    "Gợi ý này đã được quyết định. Hãy tải lại để xem tình trạng.",
+  "dealSuggestion.unavailable": "Không đọc được gợi ý này. Hãy thử lại sau.",
+  "dealSuggestion.failed": "Chưa thực hiện được. Hãy thử lại.",
+  "dealSuggestion.evidence.meeting": "Đã họp: {title}",
+  "dealSuggestion.evidence.signal": "Tín hiệu: {title}",
+  "dealSuggestion.evidence.attachment": "Đã gửi: {title}",
+  "dealSuggestion.acceptTitle": "Tạo cơ hội với {company}",
+  "dealSuggestion.field.name": "Tên cơ hội",
+  "dealSuggestion.field.amount": "Giá trị",
+  "dealSuggestion.field.currency": "Tiền tệ",
+  "dealSuggestion.field.stage": "Giai đoạn",
+  "dealSuggestion.field.owner": "Phụ trách",
+  "dealSuggestion.ownerMe": "Tôi",
+  "dealSuggestion.field.closeDate": "Dự kiến chốt",
+  "dealSuggestion.closeDateHint": "Để trống nếu chưa ai nói thời điểm.",
+  "dealSuggestion.confirm": "Tạo cơ hội",
+  "dealSuggestion.accepted": "Đã tạo cơ hội: {name}.",
+  "dealSuggestion.acceptedUnlinked":
+    "Đã tạo cơ hội: {name}. Một số dấu hiệu vẫn ở chỗ cũ vì quyền hạn không cho phép chuyển chúng.",
   "brief.team.commitmentRate":
     "Đã hoàn thành {done} trên {total} cam kết đến hạn.",
   "brief.team.meetingRate":
     "{done} trên {total} cuộc họp có bước tiếp theo được ghi nhận.",
   "brief.digest.messages": "Email đã đồng bộ",
   "brief.team.week": "Xem tuần bắt đầu",
-  "brief.week.movedLabel": "Thay đổi giai đoạn",
   "brief.week.lostLabel": "Đã mất",
   "brief.feed.refreshFailed":
     "Không thể làm mới bản tin. Vẫn hiển thị công việc đã tải lần trước.",
@@ -196,15 +544,25 @@ export const vi = {
   "brief.readings.summary": "Tổng quan công việc",
   "brief.readings.unpriced": "Chưa có giá trị",
   "brief.readings.noDealWork": "Không có giao dịch được đánh dấu",
+  "brief.readings.noDealWorkWhy": "Hôm nay không giao dịch nào bị đánh dấu",
   "brief.readings.unavailable": "Chưa rõ",
+  "brief.readings.unavailable.urgent": "Các nguồn không khả dụng",
+  "brief.readings.unavailable.meetings": "Lịch không khả dụng",
+  "brief.readings.unavailable.leads":
+    "Nguồn khách hàng tiềm năng không khả dụng",
+  "brief.readings.unavailable.decisions": "Nguồn không khả dụng",
   "brief.feed.incomplete":
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
   "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
   "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
-  "brief.week.leads": "Đã phân công {count} khách hàng tiềm năng.",
-  "brief.week.responses":
+  "brief.week.leads_one": "Đã phân công {count} khách hàng tiềm năng.",
+  "brief.week.leads_other": "Đã phân công {count} khách hàng tiềm năng.",
+  "brief.week.responses_one":
     "Đã phản hồi {count} khách hàng tiềm năng trong thời hạn.",
-  "brief.week.lost": "Mất {count} giao dịch.",
+  "brief.week.responses_other":
+    "Đã phản hồi {count} khách hàng tiềm năng trong thời hạn.",
+  "brief.week.lost_one": "Mất {count} giao dịch.",
+  "brief.week.lost_other": "Mất {count} giao dịch.",
   "brief.row.details": "Chi tiết",
   "brief.glance.introTeam": "Đây là công việc hôm nay của nhóm.",
   "teamweekly.focus.deals_at_risk": "Khôi phục tiến độ cơ hội",
@@ -247,10 +605,7 @@ export const vi = {
   "trust.systemTag": "Tiến trình hệ thống {job}",
   "trust.systemUnnamed": "Tiến trình hệ thống",
   "trust.connectorTag": "Qua {connector}",
-  "trust.dismissed": "Đã bỏ qua đề xuất.",
   "trust.stagedProposal": "đề xuất chờ duyệt",
-  "trust.resolvedValue": "giá trị đã chốt",
-  "trust.editValue": "Sửa {description}",
   "trust.evidenceFrom": "Bằng chứng từ {source}",
   "trust.evidenceLine_one": "dòng {lines}",
   "trust.evidenceLine_other": "dòng {lines}",
@@ -277,7 +632,9 @@ export const vi = {
   "history.undo.confirmTitle": "Hoàn tác thay đổi này?",
   "history.undo.confirmEdgeBody":
     "Thao tác này thay đổi liên kết với {other}. Các bản ghi vẫn còn; chỉ mối liên kết giữa chúng thay đổi.",
-  "history.undo.confirmBody":
+  "history.undo.confirmBody_one":
+    "{count} trường sẽ trở lại giá trị trước thay đổi này:",
+  "history.undo.confirmBody_other":
     "{count} trường sẽ trở lại giá trị trước thay đổi này:",
   "history.undo.versionSkew":
     "Bản ghi đã thay đổi trong lúc bạn đang xem. Lịch sử vừa được tải lại — hãy kiểm tra lại thay đổi trước khi hoàn tác.",
@@ -287,14 +644,14 @@ export const vi = {
   "history.undo.unsupportedRecordType":
     "Không thể hoàn tác thay đổi trên loại bản ghi này.",
   "history.undo.superseded":
-    "Đã có người sửa các trường này sau đó. Hoàn tác sẽ xoá cả quyết định của họ.",
+    "Các trường này đã thay đổi sau đó, nên không thể hoàn tác thay đổi này.",
   "history.undo.behindErasureBoundary":
     "Thay đổi này nằm sau một lần xoá dữ liệu, nội dung của nó đã bị xoá vĩnh viễn.",
   "history.undo.alreadyUndone": "Thay đổi này đã được hoàn tác.",
   "history.undo.notRestorableByThisPath":
     "Các trường này không được ghi qua đường mà thao tác hoàn tác đi.",
   "history.undo.recordArchived":
-    "Bản ghi đang được lưu trữ. Hãy khôi phục bản ghi trước khi hoàn tác một thay đổi.",
+    "Bản ghi này đã lưu trữ và không nhận thay đổi, nên không thể hoàn tác thay đổi này.",
   "history.undo.nullUnwritable":
     "Không thể hoàn tác vì thao tác này sẽ phải xoá trống một trường mà bản ghi này không thể xoá trống.",
   "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
@@ -335,6 +692,8 @@ export const vi = {
   "history.field.emails": "Địa chỉ email",
   "history.field.nudge_dismissal": "Đã bỏ qua nhắc nhở",
   "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
+  "history.field.invitation_status": "Trạng thái lời mời",
+  "history.field.proposal_status": "Trạng thái đề xuất cuộc họp",
   "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.candidate_company_key": "Công ty khớp",
   "history.field.communication_basis": "Căn cứ pháp lý",
@@ -377,6 +736,7 @@ export const vi = {
   "history.field.scope": "Phạm vi",
   "history.field.stopped": "Đã dừng",
   "history.field.stops_carried": "Lệnh dừng đã chuyển",
+  "history.field.consent_records_carried": "Dữ liệu đồng ý đã chuyển",
   "history.field.submission_decision": "Quyết định về yêu cầu",
   "history.field.vat_checked_at": "Đã kiểm tra mã số thuế",
   "history.field.vat_consultation_number": "Số tra cứu mã số thuế",
@@ -427,7 +787,6 @@ export const vi = {
   "nav.leads": "Lead",
   "nav.deals": "Deals",
   "nav.analytics": "Analytics",
-  "nav.ai": "Hỏi Margince",
   "nav.settings": "Cài đặt",
   "nav.automations": "Tự động hoá",
   "nav.group.records": "Dữ liệu",
@@ -494,6 +853,7 @@ export const vi = {
   "search.group.tag": "Tag",
   "search.kind.contact": "Liên hệ",
   "search.kind.company": "Tổ chức",
+  "search.kind.partnerCompany": "Tổ chức đối tác",
   "search.kind.deal": "Deal",
   "search.kind.project": "Dự án",
   "search.kind.product": "Sản phẩm",
@@ -504,24 +864,17 @@ export const vi = {
   "search.filter.label": "Chỉ hiển thị",
   "search.filter.all": "Tất cả",
   "search.pending": "Đang tìm…",
-  "search.tag.carriedBy": "Trên {count} bản ghi",
+  "search.tag.carriedBy_one": "Trên {count} bản ghi",
+  "search.tag.carriedBy_other": "Trên {count} bản ghi",
   "search.tier.mirrored": "Từ hệ thống đã kết nối",
   "search.tier.unverified": "Chưa xác minh",
-
-  "context.recentTouches": "Trao đổi gần đây",
-  "context.openTasks": "Công việc đang mở",
-  "context.relatedContacts": "Liên hệ liên quan",
-  "context.relatedCompanies": "Công ty liên quan",
-  "context.relatedProjects": "Dự án liên quan",
-  "context.whoKnows": "Ai biết họ",
-  "context.relatedDeals": "Cơ hội liên quan",
-  "context.title": "Bằng chứng liên quan",
-  "context.empty": "Chưa có gì liên quan.",
+  "search.partner.badge": "Đối tác",
+  "search.partner.open": "Mở hồ sơ đối tác",
+  "search.partner.openNamed": "Mở hồ sơ đối tác của {name}",
 
   "palette.aria": "Bảng lệnh",
   "palette.placeholder": "Tìm mọi thứ hoặc nhận câu trả lời từ Margince",
   "palette.empty": "Không có kết quả.",
-  "palette.askAi": "Hỏi AI: “{query}”",
   "palette.typeScreen": "Màn hình",
   "palette.typeAction": "Hành động",
   "palette.typeRecord": "Bản ghi",
@@ -530,17 +883,22 @@ export const vi = {
   "palette.searchFailedTitle": "Hiện chưa thể tìm bản ghi",
   "palette.searchFailed": "Các lệnh phía trên vẫn hoạt động.",
   "action.newDeal": "Deal mới",
-  "action.readCompany": "Đọc một công ty",
   "action.booking": "Trang đặt lịch",
 
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
+  "clipboard.copyFailedTitle":
+    "Trình duyệt này không cho phép truy cập bộ nhớ tạm",
 
   "explain.open": "Giải thích con số này",
   "explain.mayHaveMoved":
     "Liên kết này không ghi con số được tính vào lúc nào, nên các số dưới đây vừa được tính lại. Nếu tỷ giá đã thay đổi trong khoảng đó, chúng có thể không khớp với con số bạn đã bấm.",
   "explain.title": "Con số này được dựng thế nào",
-  "explain.rate": "tỷ giá {rate} ngày {date}",
+  "explain.cell": "Giải thích {figure}",
+  "explain.excluded_one":
+    "1 bản ghi không có trong con số này và các dòng bên dưới. Một trường của bản ghi đó bị ẩn với vai trò của bạn.",
+  "explain.excluded_other":
+    "{count} bản ghi không có trong con số này và các dòng bên dưới. Một trường của các bản ghi đó bị ẩn với vai trò của bạn.",
 
   "board.count": "{count} deal",
   "board.weighted": "trọng số {value}",
@@ -562,6 +920,9 @@ export const vi = {
   "deal.mail.viewAll": "Xem toàn bộ hoạt động",
   "deal.closesProvisional": "ngày chốt tạm tính, chưa được ai xác nhận",
   "record.notShown": "Không hiển thị",
+  "reading.restricted": "Bị hạn chế",
+  "reading.loading": "Đang tải",
+  "format.notForecast": "Chưa dự báo",
   "record.timelineLoading": "Đang tải lịch sử của bản ghi này…",
   "record.chronologyLoading": "Đang đọc lịch sử thay đổi…",
   "record.timeline": "Lịch sử",
@@ -590,8 +951,7 @@ export const vi = {
   "record.archiveConfirm":
     "Bạn chắc chứ? Thao tác này lưu trữ bản ghi — không có nút hoàn tác.",
   "record.archived": "Đã lưu trữ",
-  "record.archivedReadOnly":
-    "Công ty này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào.",
+  "record.archivedReadOnly": "Công ty này đã lưu trữ và không nhận thay đổi.",
   "record.notYoursToChange":
     "Bạn không thể thay đổi công ty này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "record.logActivityRefused":
@@ -682,7 +1042,8 @@ export const vi = {
   "rollup.closedWon": "Đã thắng (quý hiện tại)",
   "rollup.activity30d": "Hoạt động (30 ngày)",
   "rollup.accounts": "Tài khoản đã gộp",
-  "rollup.excluded": "Đã loại trừ {count} tài khoản bạn không xem được",
+  "rollup.excluded_one": "Đã loại trừ {count} công ty bị ẩn",
+  "rollup.excluded_other": "Đã loại trừ {count} công ty bị ẩn",
   "rollup.fxUnavailable":
     "Thiếu một tỷ giá quy đổi — không tính được số tổng hợp.",
   "rollup.computedAt": "Tính lúc {when}",
@@ -713,6 +1074,8 @@ export const vi = {
   "commission.status.paid": "Đã thanh toán",
   "commission.status.void": "Đã đảo",
   "commission.outstanding": "Còn nợ",
+  "commission.outstandingDetail_one": "1 khoản · đã tính hoặc đã duyệt",
+  "commission.outstandingDetail_other": "{count} khoản · đã tính hoặc đã duyệt",
   "commission.column.actions": "Quyết định",
   "commission.decide.withheld": "Không thuộc quyền quyết định của bạn",
   "commission.decide.approve": "Duyệt",
@@ -822,6 +1185,24 @@ export const vi = {
   "card.errorTitle": "Thẻ này đã ngừng hoạt động.",
   "card.errorRetry": "Thử lại",
 
+  "offline.title": "Không kết nối được tới Margince",
+  "offline.body": "Margince sẽ tải lại khi có kết nối trở lại.",
+  "offline.retry": "Thử lại",
+
+  "connectivity.offline.title": "Thiết bị đang ngoại tuyến",
+  "connectivity.offline.body":
+    "Chưa thể lưu thay đổi cho đến khi có kết nối trở lại.",
+  "connectivity.unreachable.title": "Không kết nối được tới Margince",
+  "connectivity.unreachable.body":
+    "Chưa thể lưu thay đổi cho đến khi máy chủ phản hồi trở lại.",
+  "connectivity.restored": "Đã kết nối lại",
+  "connectivity.unsaved.offline":
+    "Thiết bị đang ngoại tuyến nên chưa lưu được gì. Hãy thử lại khi có kết nối trở lại.",
+  "connectivity.uncertain.offline":
+    "Thiết bị vừa mất kết nối nên thay đổi có thể chưa được lưu. Khi có kết nối trở lại, hãy kiểm tra xem đã lưu chưa rồi mới thử lại.",
+  "connectivity.uncertain.unreachable":
+    "Không kết nối được tới Margince nên thay đổi có thể chưa được lưu. Khi máy chủ phản hồi trở lại, hãy kiểm tra xem đã lưu chưa rồi mới thử lại.",
+
   "state.withheld": "Đã ẩn — vai trò của bạn không đọc được phần này",
   "state.unavailable": "Không tải được — đây có thể chưa phải toàn cảnh",
   "state.failed": "Phần này không tải được.",
@@ -851,8 +1232,9 @@ export const vi = {
   "table.rowsPerPage": "Số dòng mỗi trang",
   "table.perPage": "{count} mỗi trang",
   "table.sortedBy": "sắp xếp theo {column}",
-  "table.columns": "Cột",
   "table.shownColumns": "Cột hiển thị",
+  "table.display": "Hiển thị",
+  "table.density": "Mật độ",
   "table.compact": "Thu gọn",
   "table.sort": "Sắp xếp",
   "table.sortNamed": "Sắp xếp: {column}",
@@ -885,6 +1267,7 @@ export const vi = {
   "table.filterSearching": "Đang tìm…",
   "table.filterSearchFailed": "Tìm kiếm thất bại. Hãy thử lại.",
   "table.filterNoMatches": "Không có kết quả.",
+  "table.filterBack": "Quay lại tất cả bộ lọc",
 
   "contacts.name": "Tên",
   "contacts.email": "Email",
@@ -900,6 +1283,15 @@ export const vi = {
   "views.saveTitle": "Lưu bộ lọc này",
   "views.name": "Tên",
   "views.rail": "Chế độ xem đã lưu",
+  "views.manage": "Quản lý chế độ xem",
+  "views.none": "Chưa có bộ lọc đã lưu",
+  "views.rename": "Đổi tên",
+  "views.renameNamed": "Đổi tên {name}",
+  "views.delete": "Xóa",
+  "views.deleteNamed": "Xóa {name}",
+  "views.deleteAsk":
+    "Xóa {name} sẽ gỡ thẻ của nó. Các bản ghi trong đó không thay đổi.",
+  "views.deleteConfirm": "Xóa bộ lọc",
   "list.viewMine": "Của tôi",
   "list.viewCustomers": "Khách hàng",
   "list.viewProspects": "Khách tiềm năng",
@@ -996,21 +1388,19 @@ export const vi = {
   "co.strip.netInvoiced": "Đã xuất hóa đơn ròng · 12 tháng",
   "co.strip.notAssessed": "Chưa đánh giá",
   "co.strip.lifetimeOf": "{amount} tổng cộng",
-  "co.strip.finance": "Tài chính",
   "stat.evidence": "Bằng chứng",
   "stat.evidence.rests": "Cơ sở của số liệu này",
   "stat.open": "Mở",
-  "co.strip.fin.notACustomer": "Chưa phải khách hàng",
   "co.strip.fin.neverInvoiced": "Chưa từng xuất hóa đơn",
   "co.strip.fin.noConnection": "Kết nối phần mềm kế toán",
   "co.strip.fin.unmapped": "Chưa khớp với khách hàng nào",
   "co.strip.fin.syncing": "Đang đồng bộ…",
-  "co.strip.fin.withheld": "Bạn không có quyền xem tài chính của tài khoản này",
   "co.strip.fin.staleFigure": "Đồng bộ lần cuối đã lâu — hãy kiểm tra ngày",
+  "co.strip.fin.notCurrent": "Không còn mới",
   "co.strip.fin.errorFigure":
     "Đồng bộ gần nhất thất bại — có thể không còn đúng",
-  "co.strip.fin.nothingBilled": "Chưa xuất hóa đơn nào",
   "co.strip.fin.error": "Không đọc được",
+  "co.strip.fin.errorWhy": "Đọc thất bại",
   "co.strip.fin.noFigure": "Chưa có số liệu",
   "co.strip.fin.loading": "Đang tải…",
   "co.strip.unpriced": "Không có giá trị quy đổi được",
@@ -1033,6 +1423,8 @@ export const vi = {
   "co.360.fullHistory": "Toàn bộ lịch sử",
   "co.strip.healthQuiet": "Đã lặng",
   "co.strip.noInboundEver": "Họ chưa từng liên hệ",
+  "co.strip.unanswered": "Chưa được hồi đáp",
+  "co.strip.unansweredDetail": "Chưa hồi đáp · {days} ngày",
   "co.strip.engagement.never_contacted": "Chưa từng liên hệ",
   "co.strip.engagement.active": "Đang trao đổi",
   "co.strip.engagement.waiting_on_them": "Đang chờ họ",
@@ -1109,7 +1501,6 @@ export const vi = {
   "co.health.payment.overdue": "Hiện có khoản quá hạn.",
   "co.health.payment.late": "Thường thanh toán trễ {days} ngày.",
   "co.health.payment.onTime": "Thanh toán đúng hạn.",
-  "co.health.sinceInbound": "Họ viết lần cuối cách đây {days} ngày",
   "company.partnerSetUp": "Thiết lập chương trình đối tác",
   "signal.kind.stalled_deal": "Deal đình trệ",
   "signal.kind.champion_left": "Người ủng hộ đã rời đi",
@@ -1160,6 +1551,7 @@ export const vi = {
     "Deal này chưa có Deal Room. Hãy mở một phòng từ trang deal.",
   "roompage.backToDeal": "← Về deal",
   "roompage.accessMenu": "Quyền vào phòng",
+  "roompage.manage": "Quản lý phòng",
   "roompage.pause": "Tạm dừng",
   "roompage.pauseHint":
     "Người mua giữ liên kết nhưng thấy trang tạm dừng cho đến khi bạn tiếp tục.",
@@ -1202,7 +1594,8 @@ export const vi = {
   "access.state.revoked": "đã thu hồi",
   "access.state.revokedBadge": "Đã thu hồi",
   "access.lastSeen": "xem lần cuối {when}",
-  "access.downloads": "Đã tải xuống {count} tài liệu",
+  "access.downloads_one": "Đã tải xuống {count} tài liệu",
+  "access.downloads_other": "Đã tải xuống {count} tài liệu",
   "access.linkRequested":
     "Đã xin liên kết mới {when}. Hãy cấp một liên kết và tự gửi.",
   "access.rowActions": "Thao tác cho {name}",
@@ -1228,8 +1621,7 @@ export const vi = {
   "access.issued.linkLabel": "Liên kết của họ",
   "access.issued.copy": "Sao chép liên kết",
   "access.issued.copied": "Đã sao chép",
-  "access.issued.copyFailed":
-    "Không sao chép được; hãy chọn liên kết và sao chép.",
+  "access.issued.copyFailed": "Hãy chọn liên kết và tự sao chép.",
   "access.issued.oneTime":
     "Liên kết cá nhân, dùng một lần, trên một thiết bị. Mỗi người cần lời mời riêng.",
   "access.issueLinkTitle": "Cấp liên kết mới cho {name}",
@@ -1265,6 +1657,7 @@ export const vi = {
   "co.partial":
     "Một phần trang này không tải được, nên có thể chưa hiển thị hết mọi thứ của tài khoản này.",
   "evidence.explain": 'Nguồn của "{value}"',
+  "evidence.explainBeside": '{label}: nguồn của "{value}"',
   "evidence.fullHistory": "Lịch sử đầy đủ",
   "co.section.unavailable": "Không tải được — đây có thể chưa phải toàn cảnh",
   "billing.title": "Liên hệ hóa đơn",
@@ -1297,7 +1690,7 @@ export const vi = {
   "finance.syncing":
     "Đang đồng bộ với nguồn kế toán. Số liệu sẽ hiện sau lần quét đầu tiên.",
   "finance.noConnection":
-    "Chưa kết nối nguồn tài chính — hãy kết nối để thấy khách hàng này đã được xuất hóa đơn bao nhiêu và có trả đúng hạn không",
+    "Chưa kết nối nguồn tài chính — hóa đơn và việc thanh toán của khách hàng này sẽ hiện khi có nguồn được kết nối",
   "finance.unmapped":
     "Đã kết nối, nhưng công ty này chưa được khớp với khách hàng nào trong hệ thống kế toán",
   "finance.netInvoiced": "Đã xuất hóa đơn ròng · 12 tháng",
@@ -1327,7 +1720,6 @@ export const vi = {
   "finance.col.status": "Trạng thái",
   "finance.unnumbered": "Không số",
   "finance.moreInvoices": "Còn hóa đơn khác trong hệ thống kế toán",
-  "finance.connect": "Kết nối nguồn tài chính",
   "finance.syncedFrom": "Từ {provider} · đồng bộ {when}",
   "finance.fromNeverSynced": "Từ {provider} · chưa đồng bộ",
   "finance.status.draft": "Nháp",
@@ -1338,7 +1730,6 @@ export const vi = {
   "finance.status.disputed": "Đang tranh chấp",
   "finance.status.credited": "Đã ghi có",
   "finance.status.void": "Đã hủy",
-  "commercial.closes": "chốt {when}",
   "contracts.title": "H\u1ee3p \u0111\u1ed3ng",
   "contracts.empty": "Ch\u01b0a c\u00f3 h\u1ee3p \u0111\u1ed3ng n\u00e0o",
   "contracts.noneActive":
@@ -1466,18 +1857,6 @@ export const vi = {
   "co.next.overdue": "Quá hạn",
   "co.next.due": "Hạn {when}",
   "co.next.undated": "Chưa có hạn",
-  "co.facts.pipeline": "Pipeline \u0111ang m\u1edf",
-  "co.facts.inFlight": "\u0110ang tri\u1ec3n khai",
-  "co.facts.reading": "\u0110ang \u0111\u1ecdc\u2026",
-  "co.facts.noDeals": "Kh\u00f4ng c\u00f3 deal \u0111ang m\u1edf",
-  "co.facts.unpriced": "Ch\u01b0a \u0111\u1ecbnh gi\u00e1",
-  "co.facts.nothing": "Kh\u00f4ng c\u00f3 g\u00ec",
-  "co.facts.deals_one": "1 deal",
-  "co.facts.deals_other": "{count} deal",
-  "co.facts.projects_one": "1 d\u1ef1 \u00e1n",
-  "co.facts.projects_other": "{count} d\u1ef1 \u00e1n",
-  "co.facts.atLeast": "ho\u1eb7c h\u01a1n",
-  "co.work.noDeals": "Kh\u00f4ng c\u00f3 deal n\u00e0o \u0111ang m\u1edf.",
   "co.work.closes": "ch\u1ed1t {date}",
   "co.brief.by.model": "Do Margince viết",
   "co.brief.by.deterministic": "Tổng hợp từ dữ liệu của bạn",
@@ -1559,6 +1938,7 @@ export const vi = {
   "approval.kind.send_email": "Gửi một email",
   "approval.kind.communication_review": "Quyết định email bị từ chối",
   "approval.kind.held_draft": "Xem lại email đã soạn",
+  "approval.kind.invite_meeting": "Gửi lời mời lịch",
   "approval.kind.book_meeting": "Đặt một lịch họp",
   "approval.kind.volume_release": "Cho tác nhân tiếp tục",
   "approval.kind.coldstart": "Điền thông tin công ty mới",
@@ -1577,7 +1957,6 @@ export const vi = {
   "approval.kind.transcript_proposal":
     "Thêm bước tiếp theo từ bản ghi cuộc trò chuyện",
   "approval.kind.fx_rate_proposal": "Làm mới tỷ giá",
-  "approval.kind.ai_model_rate_proposal": "Làm mới giá mô hình",
   "approval.kind.disqualify_lead": "Loại một khách hàng tiềm năng",
   "approval.kind.demote_lead": "Hoàn tác chuyển đổi lead",
   "approval.kind.advance_project_phase": "Chuyển dự án sang giai đoạn kế tiếp",
@@ -1609,6 +1988,12 @@ export const vi = {
   "approval.field.domain": "Tên miền",
   "approval.field.company": "Công ty",
   "approval.field.title": "Chức danh",
+  "approval.field.leadNameNow": "Tên hiện có",
+  "approval.field.capturedName": "Tên trong tin nhắn",
+  "approval.field.leadCompanyNow": "Công ty hiện có",
+  "approval.field.capturedCompany": "Công ty trong tin nhắn",
+  "approval.field.leadTitleNow": "Chức danh hiện có",
+  "approval.field.capturedTitle": "Chức danh trong tin nhắn",
   "approval.field.phone": "Điện thoại",
   "approval.field.url": "Trang web",
   "approval.field.address": "Địa chỉ",
@@ -1621,10 +2006,6 @@ export const vi = {
   "approval.field.currency": "Tiền tệ",
   "approval.field.rate": "Tỷ giá mới",
   "approval.field.prior_rate": "Tỷ giá hiện tại",
-  "approval.field.provider": "Nhà cung cấp",
-  "approval.field.model": "Mô hình",
-  "approval.field.input_per_mtok": "Đầu vào, mỗi triệu token",
-  "approval.field.output_per_mtok": "Đầu ra, mỗi triệu token",
   "approval.field.tool": "Nó đang làm gì",
   "approval.field.observed": "Đã dùng",
   "approval.field.limit": "Giới hạn",
@@ -1641,7 +2022,6 @@ export const vi = {
   "co.ask.q.whats_changed": "Gần đây có gì thay đổi?",
   "co.ask.nothing": "Không có gì bạn xem được ở đây trả lời được câu đó.",
   "co.ask.failed": "Không trả lời được câu hỏi đó — hãy thử lại.",
-  "co.suggest.title": "Margince đề xuất",
   "co.suggest.kind.no_reply": "Chưa có hồi đáp",
   "co.suggest.kind.stalled_deal": "Deal đình trệ",
   "co.suggest.kind.no_next_step": "Chưa có gì lên lịch",
@@ -1686,10 +2066,6 @@ export const vi = {
   "co.rail.projects.empty": "Chưa có dự án.",
 
   "co.commercial.title": "Thương mại",
-  "co.commercial.lostFigure": "Deal đã thua",
-  "co.commercial.allDeals": "Tất cả deal",
-  "co.commercial.truncated":
-    "Tài khoản này có nhiều deal đang mở hơn số hiển thị ở đây. Mở Tất cả deal để xem phần còn lại.",
   "linkedinImport.title": "Kết nối LinkedIn",
   "linkedinImport.sub":
     "Nhập bản xuất của chính bạn để biết đội của bạn đã quen những ai",
@@ -1775,7 +2151,9 @@ export const vi = {
   "compose.threadShare": "Chia sẻ với tổ chức",
   "compose.threadMakePrivate": "Đặt riêng tư",
   "compose.threadScope": "Áp dụng cho toàn bộ chuỗi thư.",
-  "compose.threadStillHeld":
+  "compose.threadStillHeld_one":
+    "Vẫn được giữ lại: {count} người khác trong chuỗi thư này chưa chia sẻ.",
+  "compose.threadStillHeld_other":
     "Vẫn được giữ lại: {count} người khác trong chuỗi thư này chưa chia sẻ.",
   "compose.reason.posture": "Giữ lại theo thiết lập của bạn",
   "compose.reason.workspaceFloor": "Giữ lại theo tổ chức",
@@ -1816,7 +2194,7 @@ export const vi = {
   "visibility.workspace": "Được chia sẻ",
   "visibility.participants": "Người tham gia",
   "visibility.selected": "Được chọn",
-  "visibility.private": "Chỉ bạn",
+  "visibility.private": "Riêng tư",
   "visibility.withheld": "Bị giữ lại",
   "email.access.unnamedMember": "Một người không còn ở đây",
   "email.move.needsReply": "Cần trả lời",
@@ -1893,8 +2271,9 @@ export const vi = {
   "co.contacts.band.seatsHeld": "{count} trong nhóm",
   "co.contacts.band.someHidden": "{count} người khác bạn không thấy",
   "co.contacts.band.coverage": "Độ phủ",
-  "co.contacts.band.reachable": "{count} đang trả lời",
-  "co.contacts.band.untried": "{count} chưa từng tiếp cận",
+  "co.contacts.band.reachable": "{count} trên {total}",
+  "co.contacts.band.untried":
+    "{count} chưa từng tiếp cận · {waiting} đang chờ hồi đáp",
   "co.contacts.board.nobodyHolds": "Chưa ai giữ vai trò này",
   "co.contacts.band.noOpenDeal": "Không có deal đang mở",
   "co.contacts.band.noOpenDealWhy": "Vai trò mua hàng được ghi trên deal",
@@ -1940,8 +2319,7 @@ export const vi = {
   "co.intro.body": "Tin nhắn",
   "co.intro.basedOn": "Dựa trên",
   "co.intro.copy": "Sao chép",
-  "co.intro.copyFailed":
-    "Trình duyệt không cho phép trang sao chép. Hãy chọn tin nhắn và tự sao chép.",
+  "co.intro.copyFailed": "Hãy chọn tin nhắn và tự sao chép.",
   "co.intro.copied": "Đã sao chép",
   "co.intro.openMail": "Mở trong ứng dụng email",
   "co.map.askIntro": "Nhờ giới thiệu",
@@ -1949,13 +2327,17 @@ export const vi = {
   "co.contacts.board.suggesting": "Đang đọc tin nhắn của họ",
   "co.contacts.board.suggestNoDeal":
     "Vai trò được ghi trên một deal, và khách hàng này không có deal nào đang mở.",
-  "co.contacts.board.suggestWrote":
+  "co.contacts.board.suggestWrote_one":
+    "Đã ghi {count} liên hệ từ chính lời họ viết.",
+  "co.contacts.board.suggestWrote_other":
     "Đã ghi {count} liên hệ từ chính lời họ viết.",
   "co.contacts.board.suggestUnavailable":
     "Đọc vai trò cần một mô hình, và bản cài đặt này chưa cấu hình mô hình nào.",
   "co.contacts.board.suggestNothing":
     "Tin nhắn của họ không cho biết ai là người quyết định.",
-  "co.contacts.board.suggestRefused":
+  "co.contacts.board.suggestRefused_one":
+    "Không có gì đủ rõ để ghi lại. {count} kết quả đã bị loại vì bằng chứng yếu.",
+  "co.contacts.board.suggestRefused_other":
     "Không có gì đủ rõ để ghi lại. {count} kết quả đã bị loại vì bằng chứng yếu.",
   "co.contacts.board.confirm": "Xác nhận",
   "co.contacts.board.confirming": "Đang xác nhận",
@@ -2227,7 +2609,9 @@ export const vi = {
   "leadSources.builtIn": "Có sẵn",
   "leadSources.builtInKept":
     "Nguồn có sẵn có thể đổi tên và tắt, không xóa được.",
-  "leadSources.inUse":
+  "leadSources.inUse_one":
+    "{count} khách hàng tiềm năng dùng nguồn này — hãy tắt thay vì xóa.",
+  "leadSources.inUse_other":
     "{count} khách hàng tiềm năng dùng nguồn này — hãy tắt thay vì xóa.",
   "leadSources.deactivateInstead": "hãy tắt thay vì xóa",
   "leadSources.activeFor": "{label} đang bật",
@@ -2250,7 +2634,9 @@ export const vi = {
     "Điều nhân viên chọn khi bỏ một khách hàng tiềm năng. Lý do hiển thị trên hồ sơ và lọc được.",
   "leadReasons.labelFor": "Nhãn của lý do {label}",
   "leadReasons.leadCount": "{count} khách hàng tiềm năng",
-  "leadReasons.inUse":
+  "leadReasons.inUse_one":
+    "{count} khách hàng tiềm năng mang lý do này — hãy tắt thay vì xóa.",
+  "leadReasons.inUse_other":
     "{count} khách hàng tiềm năng mang lý do này — hãy tắt thay vì xóa.",
   "leadReasons.newLabel": "Lý do mới",
   "leadReasons.listLabel": "Các lý do trong danh sách",
@@ -2308,7 +2694,6 @@ export const vi = {
   "lead.filterScoreWarm": "Từ 60",
   "lead.filterScoreCool": "Từ 40",
   "lead.details": "Chi ti\u1ebft",
-  "lead.detailsUnset": "Chưa đặt",
   "lead.rail.deal.title": "Deal",
   "lead.rail.deal.empty":
     "Chưa có deal. Khi thẩm định lead này, bạn có thể mở một deal.",
@@ -2346,7 +2731,7 @@ export const vi = {
   "lead.demote": "Hoàn tác chuyển đổi",
   "lead.demoteDialog": "Hoàn tác việc chuyển đổi này?",
   "lead.demoteExplain":
-    "Lead quay lại hàng đợi ở trạng thái “Đang xử lý”. Liên hệ do việc chuyển tạo ra sẽ được lưu trữ; liên hệ đã được gộp vào giữ nguyên. Không thể hoàn tác với liên hệ đang gắn với một deal.",
+    "Lead quay lại trạng thái “Đang trao đổi”. Liên hệ do việc chuyển tạo ra sẽ được lưu trữ; liên hệ đã được gộp vào giữ nguyên. Không thể hoàn tác khi liên hệ đang gắn với một deal chưa lưu trữ.",
   "lead.demoteReason": "Lý do (được ghi vào nhật ký)",
   "lead.demoteReasonRequired": "H\u00e3y n\u00eau l\u00fd do tr\u01b0\u1edbc.",
   "lead.demoteConfirm": "Hoàn tác",
@@ -2558,7 +2943,8 @@ export const vi = {
   "deal.partnerWithheld": "Đối tác bị ẩn",
   "deal.forecastCategory": "Nhóm dự báo",
   "deal.strip.title": "Deal đang ở đâu",
-  "deal.seats.ours": "{count} người bên mình phụ trách",
+  "deal.seats.ours_one": "{count} người bên mình phụ trách",
+  "deal.seats.ours_other": "{count} người bên mình phụ trách",
   "deal.committee.title": "Nhóm ra quyết định mua",
   "deal.committee.legendEngaged": "Đang trao đổi với chúng ta",
   "deal.committee.legendQuiet": "Có tham gia nhưng không trao đổi",
@@ -2730,8 +3116,8 @@ export const vi = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Chỉ deal đình trệ",
   "deals.filterOwnerMe": "Deal của tôi",
-  "deals.totalsNeedOwnerFilter":
-    "Chỉ phần đã tải — chọn Deal của tôi để xem tổng",
+  "deals.totalsOwnerNotMeasurable":
+    "Chỉ phần đã tải — bạn không được xem tổng của người phụ trách này",
   "deals.totalsNoTagFilter": "Chỉ phần đã tải — không có tổng khi lọc theo thẻ",
   "deals.filterPartner": "Đối tác",
   "deals.filterPartnerAnyOne": "Mọi đối tác",
@@ -2751,21 +3137,84 @@ export const vi = {
   "deals.filterPartnerAll": "Mọi nguồn",
   "deals.sortNewest": "Mới nhất",
   "deals.unit": "deal",
-  "deals.bulkSelected": "Đã chọn {count}",
-  "deals.bulkSelectRow": "Chọn {name}",
-  "deals.bulkOwner": "Người phụ trách mới",
-  "deals.bulkOwnerPick": "Chọn người phụ trách",
-  "deals.bulkAssign": "Gán",
   "deals.bulkStage": "Chuyển sang giai đoạn",
   "deals.bulkStagePick": "Chọn giai đoạn",
   "deals.bulkMove": "Chuyển",
-  "deals.bulkArchive": "Lưu trữ",
-  "deals.bulkArchiveConfirmTitle_one": "Lưu trữ deal này?",
-  "deals.bulkArchiveConfirmTitle_other": "Lưu trữ {count} deal?",
-  "deals.bulkArchiveConfirmBody":
-    "Chúng sẽ biến mất khỏi mọi danh sách và báo cáo, và hiện chưa có cách khôi phục từ đây.",
   "deals.bulkFailed": "{count} không áp dụng được —",
   "deals.bulkFailedRow": "không lưu được",
+  "bulk.selected_one": "Đã chọn {count}",
+  "bulk.selected_other": "Đã chọn {count}",
+  "bulk.selectRow": "Chọn {name}",
+  "bulk.owner": "Người phụ trách mới",
+  "bulk.ownerPick": "Chọn người phụ trách",
+  "bulk.assign": "Giao người phụ trách",
+  "bulk.archive": "Lưu trữ",
+  "bulk.titleReassign": "Đổi người phụ trách cho {unit} đã chọn?",
+  "bulk.titleUndo": "Hoàn tác thay đổi với các {unit} này?",
+  "bulk.confirmUndo": "Hoàn tác thay đổi",
+  "bulk.titleArchive": "Lưu trữ {unit} đã chọn?",
+  "bulk.checking": "Đang kiểm tra lựa chọn…",
+  "bulk.affects_one": "Thay đổi {count} trên {total} mục đã chọn.",
+  "bulk.affects_other": "Thay đổi {count} trên {total} mục đã chọn.",
+  "bulk.nothing": "Không có gì thay đổi. Mọi bản ghi đã chọn vẫn giữ nguyên.",
+  "bulk.largeTitle": "Thay đổi lớn",
+  "bulk.largeBody":
+    "Hơn 10 bản ghi thay đổi cùng lúc. Hãy xem các ví dụ trước khi xác nhận.",
+  "bulk.sampleHeading": "Ví dụ",
+  "bulk.colRecord": "Bản ghi",
+  "bulk.colNow": "Hiện tại",
+  "bulk.colAfter": "Sau khi đổi",
+  "bulk.colReason": "Lý do",
+  "bulk.excluded_one": "{count} giữ nguyên",
+  "bulk.excluded_other": "{count} giữ nguyên",
+  "bulk.stateActive": "Đang hoạt động",
+  "bulk.reason.not_found": "Không tìm thấy hoặc đã lưu trữ",
+  "bulk.reason.not_writable": "Không có quyền thay đổi",
+  "bulk.reason.changed_since_preview": "Đã thay đổi từ khi tải danh sách",
+  "bulk.reason.no_change": "Đã có người phụ trách này",
+  "bulk.reason.anchor_company": "Công ty của bạn không bao giờ bị lưu trữ",
+  "bulk.reason.refused": "Không được phép với bản ghi này",
+  "bulk.reason.not_previewed": "Không có trong bản xem trước đã xác nhận",
+  "bulk.reason.changed_since_batch":
+    "Đã thay đổi sau lần thay đổi đang hoàn tác",
+  "bulk.reason.merged": "Đã gộp vào bản ghi khác",
+  "bulk.reason.erased": "Dữ liệu cá nhân đã bị xóa",
+  "bulk.reason.value_taken": "Email hoặc tên miền giờ thuộc về bản ghi khác",
+  "bulk.reason.no_previous_owner": "Trước đó không có người phụ trách",
+  "bulk.refusal.sole_project_company":
+    "Công ty duy nhất của một dự án đang chạy",
+  "bulk.refusal.locked": "Đang bị giữ theo yêu cầu pháp lý hoặc lưu giữ",
+  "bulk.refusal.anchor_protected": "Công ty của bạn được bảo vệ",
+  "bulk.refusal.required": "Liên hệ riêng tư phải có người phụ trách",
+  "bulk.confirmReassign": "Đổi người phụ trách",
+  "bulk.confirmArchive": "Lưu trữ {unit}",
+  "bulk.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
+  "bulk.titleAddToList":
+    "Th\u00eam {unit} \u0111\u00e3 ch\u1ecdn v\u00e0o {list}?",
+  "bulk.confirmAddToList": "Th\u00eam v\u00e0o danh s\u00e1ch",
+  "bulk.titleRemoveFromList":
+    "G\u1ee1 {unit} \u0111\u00e3 ch\u1ecdn kh\u1ecfi {list}?",
+  "bulk.confirmRemoveFromList": "G\u1ee1 kh\u1ecfi danh s\u00e1ch",
+  "bulk.stateListed": "C\u00f3 trong danh s\u00e1ch",
+  "bulk.stateNotListed": "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch",
+  "bulk.doneContacts_one": "Đã thay đổi {count} liên hệ.",
+  "bulk.doneContacts_other": "Đã thay đổi {count} liên hệ.",
+  "bulk.doneCompanies_one": "Đã thay đổi {count} công ty.",
+  "bulk.doneCompanies_other": "Đã thay đổi {count} công ty.",
+  "bulk.doneDeals_one": "Đã thay đổi {count} deal.",
+  "bulk.doneDeals_other": "Đã thay đổi {count} deal.",
+  "bulk.doneSkipped_one": "{count} bản ghi được giữ nguyên.",
+  "bulk.doneSkipped_other": "{count} bản ghi được giữ nguyên.",
+  "bulk.undoneContacts_one": "Đã hoàn tác {count} liên hệ.",
+  "bulk.undoneContacts_other": "Đã hoàn tác {count} liên hệ.",
+  "bulk.undoneCompanies_one": "Đã hoàn tác {count} công ty.",
+  "bulk.undoneCompanies_other": "Đã hoàn tác {count} công ty.",
+  "bulk.undoneDeals_one": "Đã hoàn tác {count} deal.",
+  "bulk.undoneDeals_other": "Đã hoàn tác {count} deal.",
+  "bulk.undoLeftBehind_one":
+    "{count} liên kết, thẻ hoặc mục trong danh sách không khôi phục được.",
+  "bulk.undoLeftBehind_other":
+    "{count} liên kết, thẻ hoặc mục trong danh sách không khôi phục được.",
 
   "deal.offers": "Báo giá",
   "deal.newOffer": "Báo giá mới",
@@ -2817,9 +3266,12 @@ export const vi = {
   "offer.rejectReason": "Lý do (không bắt buộc)",
   "offer.regenerate": "Tạo lại bản mới",
   "offer.aiDisclosureTitle": "Công bố có AI hỗ trợ",
-  "offer.diffAdded": "Đã thêm {count} dòng",
-  "offer.diffRemoved": "Đã gỡ {count} dòng",
-  "offer.diffChanged": "Đã đổi {count} dòng",
+  "offer.diffAdded_one": "Đã thêm {count} dòng",
+  "offer.diffAdded_other": "Đã thêm {count} dòng",
+  "offer.diffRemoved_one": "Đã gỡ {count} dòng",
+  "offer.diffRemoved_other": "Đã gỡ {count} dòng",
+  "offer.diffChanged_one": "Đã đổi {count} dòng",
+  "offer.diffChanged_other": "Đã đổi {count} dòng",
   "offer.renderPdf": "Tạo PDF",
   "offer.viewPdf": "Xem PDF",
   "offer.pdfUnavailable": "Bản triển khai này không tạo được PDF.",
@@ -2861,8 +3313,9 @@ export const vi = {
   "brief.weekly.scorecard.advanced": "Khách tiềm năng tiến lên",
   "brief.weekly.scorecard.advancedBasis": "Số bậc tiến lên, đếm theo từng bước",
   "brief.weekly.scorecard.answeredInTarget": "Phản hồi đã ghi nhận",
-  "brief.weekly.scorecard.breachedDetail": "{count} quá hạn",
-  "brief.weekly.scorecard.meetingsHeld": "Cuộc họp đã diễn ra",
+  "brief.weekly.scorecard.answeredDetail": "{count} trả lời trong hạn",
+  "brief.weekly.scorecard.allInTarget": "Tất cả trả lời trong hạn",
+  "brief.weekly.scorecard.meetingsHeld": "Chuyển sang trạng thái đã họp",
   "brief.weekly.scorecard.meetingsBasis":
     "{booked} đã đặt · {noShow} không đến",
   "brief.weekly.scorecard.partialHistory": "Cuộc họp không có lịch sử",
@@ -2876,6 +3329,7 @@ export const vi = {
     "Cho các giai đoạn cơ hội rời khỏi tuần này",
   "brief.weekly.scorecard.withNextStep": "Có bước tiếp theo",
   "brief.weekly.scorecard.ofOpen": "trên {total} cơ hội đang mở",
+  "brief.weekly.scorecard.noOpen": "Không có cơ hội đang mở",
   "brief.weekly.scorecard.multiThreaded": "Nhiều hơn một liên hệ",
   "brief.weekly.scorecard.multiThreadedBasis":
     "trên {total} cơ hội đang mở, trong 30 ngày qua",
@@ -2901,13 +3355,21 @@ export const vi = {
   "brief.sentence.one": "Trước tiên: {lead}",
   "brief.sentence.many": "Trước tiên: {lead}. Rồi {rest}.",
   "brief.sentence.rest": "{count} mục nữa",
+  "brief.order.withheld": "Không được tính trong thứ tự này: {factors}",
+  "brief.factor.warmth": "mức độ thân thiết của mối quan hệ",
+  "brief.factor.unknown": "một yếu tố mà phiên bản này không gọi tên được",
 
   // Câu mở đầu của Bản tin tuần, dựng từ các con số đã đóng băng.
-  "brief.week.won": "Bạn đã chốt {count} deal.",
-  "brief.week.moved": "Bạn đã đẩy {count} deal tiến lên.",
-  "brief.week.met": "Bạn đã có {count} cuộc họp.",
-  "brief.week.carryPromises": "{count} cam kết còn dang dở.",
-  "brief.week.carryTasks": "{count} công việc còn dang dở.",
+  "brief.week.won_one": "Bạn đã chốt {count} deal.",
+  "brief.week.won_other": "Bạn đã chốt {count} deal.",
+  "brief.week.moved_one": "Bạn đã đẩy {count} deal tiến lên.",
+  "brief.week.moved_other": "Bạn đã đẩy {count} deal tiến lên.",
+  "brief.week.met_one": "Bạn đã có {count} cuộc họp.",
+  "brief.week.met_other": "Bạn đã có {count} cuộc họp.",
+  "brief.week.carryPromises_one": "{count} cam kết còn dang dở.",
+  "brief.week.carryPromises_other": "{count} cam kết còn dang dở.",
+  "brief.week.carryTasks_one": "{count} công việc còn dang dở.",
+  "brief.week.carryTasks_other": "{count} công việc còn dang dở.",
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet":
     "Chưa ghi nhận công việc hoàn thành hoặc thay đổi giao dịch.",
@@ -2924,7 +3386,7 @@ export const vi = {
   "teamweekly.loading": "Đang đọc tuần của nhóm",
   "teamweekly.empty": "Không có gì để hiển thị cho tuần này.",
   "teamweekly.forbidden":
-    "Tuần của nhóm là câu hỏi cấp nhóm, còn quyền của bạn chỉ tới các bản ghi của chính bạn.",
+    "Tuần của nhóm chỉ dành cho trưởng nhóm và các vai trò giám sát mọi nhóm.",
   "teamweekly.noSnapshot":
     "Chưa có tổng kết được lưu cho nhóm và tuần này. Chọn tuần khác hoặc xem công việc hiện tại của nhóm.",
   "teamweekly.pickTeam": "Chọn một nhóm",
@@ -2936,11 +3398,14 @@ export const vi = {
   "teamweekly.card.firstResponse": "Phản hồi đã ghi nhận",
   "teamweekly.card.firstResponseBasis":
     "{breached} lần vượt thời hạn phản hồi được ghi nhận",
+  "teamweekly.card.noLeads": "Không có lead mới",
   "teamweekly.card.meetings": "Cuộc họp có việc tiếp theo liên kết",
   "teamweekly.card.meetingsBasis":
     "liên kết công việc được ghi trước cuối tuần",
+  "teamweekly.card.noMeetings": "Chưa ghi nhận",
   "teamweekly.card.commitments": "Cam kết kế hoạch đã giữ",
   "teamweekly.card.commitmentsBasis": "trên số đã cam kết",
+  "teamweekly.card.noCommitments": "Không có mục đến hạn",
   "teamweekly.card.won": "Thắng",
   "teamweekly.card.wonBasis": "{lost} thua",
   "teamweekly.card.wonBasisValue": "thắng {value} · thua {lost}",
@@ -2955,11 +3420,12 @@ export const vi = {
   "teamweekly.agenda.title": "Chương trình họp thứ Hai",
   "teamweekly.agenda.empty":
     "Không đọc được tuần của bất kỳ ai trong nhóm này, nên không có gì để mang tới buổi họp.",
-  "teamweekly.agenda.summary": "{count} mục cho thứ Hai, bắt đầu với {first}.",
+  "teamweekly.agenda.summary_one":
+    "{count} mục cho thứ Hai, bắt đầu với {first}.",
+  "teamweekly.agenda.summary_other":
+    "{count} mục cho thứ Hai, bắt đầu với {first}.",
   "teamweekly.agenda.copy": "Sao chép chương trình",
   "teamweekly.agenda.copied": "Đã sao chép",
-  "teamweekly.agenda.copyFailedTitle":
-    "Trình duyệt này không cho phép truy cập bộ nhớ tạm",
   "teamweekly.agenda.copyFailed": "Hãy chọn danh sách và tự sao chép.",
   "teamweekly.focus.help_requested": "Đã nhờ giúp đỡ",
   "teamweekly.focus.leads_breached": "Quá hạn phản hồi",
@@ -3021,6 +3487,7 @@ export const vi = {
   "brief.weekly.outlook.won": "Đã thắng",
   "brief.weekly.outlook.commit": "Cam kết còn lại",
   "brief.weekly.outlook.bestCase": "Trường hợp tốt nhất (gồm cam kết)",
+  "brief.weekly.outlook.bestCaseDetail": "Đã gồm cam kết",
   "brief.weekly.outlook.weighted": "Có trọng số",
   "brief.weekly.outlook.landing": "Dự phóng kết quả kỳ",
   "brief.weekly.outlook.measure.commit_evidence": "Đọc từ bằng chứng cam kết",
@@ -3155,7 +3622,7 @@ export const vi = {
   "deepread.title": "Margince có thể điền giúp",
   "deepread.titleRead": "Nghiên cứu website",
   "deepread.sub":
-    "Margince đọc website của công ty để tìm tên miền, ngành, quy mô, địa điểm và những người có thể ra quyết định, rồi đề xuất bước đầu tiên. Kết quả được xếp chờ bạn duyệt — không có gì được ghi cho đến khi bạn chấp nhận.",
+    "Margince đọc website của công ty để tìm tên miền, ngành, quy mô và địa điểm, rồi đề xuất bước đầu tiên. Kết quả được xếp chờ bạn duyệt — không có gì được ghi cho đến khi bạn chấp nhận. Những người được nêu tên trên website sẽ không được thêm vào.",
   "deepread.cta": "Bắt đầu nghiên cứu công ty",
   "deepread.ctaAgain": "Đọc lại website",
   "deepread.starting": "Đang bắt đầu…",
@@ -3273,6 +3740,9 @@ export const vi = {
   "create.postalCode": "Mã bưu chính",
   "create.country": "Quốc gia (ISO-3166, ví dụ DE)",
   "create.companyName": "Công ty",
+  "create.companyPicked": "Gắn liên hệ vào công ty có sẵn này.",
+  "create.companyNew":
+    "Tạo công ty mới nếu không chọn công ty có sẵn trong danh sách.",
   "create.dealName": "Tên deal",
   "create.amount": "Giá trị",
   "create.currency": "Tiền tệ",
@@ -3366,6 +3836,8 @@ export const vi = {
   "today.workQueue": "Danh sách công việc",
 
   "evidence.mark": "đã đọc",
+
+  "evidence.bought": "đã mua",
   "evidence.confirm": "Xác nhận",
   "evidence.correct": "Sửa",
   "evidence.save": "Lưu",
@@ -3536,29 +4008,74 @@ export const vi = {
   "log.saving": "Đang ghi nhận…",
 
   "recordAccess.contact.title": "Ai xem được liên hệ này",
-  "recordAccess.contact.privateToYou":
-    "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
   "recordAccess.contact.shared":
     "Mọi người trong tổ chức đều xem được liên hệ này.",
-  "recordAccess.contact.privateTip":
-    "Chỉ bạn thấy được liên hệ này. Chia sẻ với tổ chức để đồng nghiệp cũng thấy.",
-  "recordAccess.contact.share": "Chia sẻ với tổ chức",
+  "recordAccess.contact.privateYours":
+    "Chỉ bạn và những người hoặc nhóm được chia sẻ mới xem được liên hệ này.",
+  "recordAccess.contact.privateOf":
+    "Riêng của {owner}. Bạn xem được liên hệ này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
+  "recordAccess.contact.privateOfOwner":
+    "Riêng của chủ sở hữu. Bạn xem được liên hệ này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
   "recordAccess.contact.published": "Tổ chức đã xem được liên hệ này.",
-  "recordAccess.contact.makePrivate": "Đặt ở chế độ riêng tư",
   "recordAccess.contact.madePrivate":
-    "Liên hệ này thuộc về chủ sở hữu trở lại. Những ai đã được chia sẻ bản ghi vẫn giữ quyền truy cập.",
+    "Liên hệ này thuộc về chủ sở hữu trở lại. Những người hoặc nhóm đã được chia sẻ vẫn giữ quyền truy cập.",
+  "recordAccess.contact.leftYourAccess":
+    "Liên hệ này thuộc về chủ sở hữu trở lại. Bạn không còn quyền truy cập.",
   "recordAccess.company.title": "Ai xem được công ty này",
-  "recordAccess.company.privateToYou":
-    "Riêng của bạn. Hộp thư của bạn đã tạo công ty này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
   "recordAccess.company.shared":
     "Mọi người trong tổ chức đều xem được công ty này.",
-  "recordAccess.company.privateTip":
-    "Chỉ bạn thấy được công ty này. Chia sẻ với tổ chức để đồng nghiệp cũng thấy.",
-  "recordAccess.company.share": "Chia sẻ với tổ chức",
+  "recordAccess.company.privateYours":
+    "Chỉ bạn và những người hoặc nhóm được chia sẻ mới xem được công ty này.",
+  "recordAccess.company.privateOf":
+    "Riêng của {owner}. Bạn xem được công ty này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
+  "recordAccess.company.privateOfOwner":
+    "Riêng của chủ sở hữu. Bạn xem được công ty này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
   "recordAccess.company.published": "Tổ chức đã xem được công ty này.",
-  "recordAccess.company.makePrivate": "Đặt ở chế độ riêng tư",
   "recordAccess.company.madePrivate":
     "Công ty này thuộc về chủ sở hữu trở lại. Các deal, liên hệ và email đã lưu vào công ty vẫn giữ phạm vi hiển thị riêng của chúng.",
+  "recordAccess.company.leftYourAccess":
+    "Công ty này thuộc về chủ sở hữu trở lại. Bạn không còn quyền truy cập.",
+  "recordAccess.option.owner": "Chỉ chủ sở hữu",
+  "recordAccess.option.ownerHint":
+    "Những người hoặc nhóm được chia sẻ vẫn giữ quyền truy cập.",
+  "recordAccess.option.ownerHintNotYours":
+    "Bạn sẽ mất quyền truy cập, trừ khi nó được chia sẻ với bạn hoặc nhóm của bạn.",
+  "recordAccess.option.ownerNeeded": "Hãy chỉ định chủ sở hữu trước.",
+  "recordAccess.option.workspace": "Cả tổ chức",
+  "recordAccess.manage": "Quản lý quyền truy cập",
+  "whoCanSee.title": "Ai xem được bản ghi này",
+  "whoCanSee.group.owner": "Chủ sở hữu",
+  "whoCanSee.group.shared": "Chia sẻ trực tiếp",
+  "whoCanSee.group.teamShared": "Chia sẻ với nhóm",
+  "whoCanSee.everyone.contact_one": "{count} thành viên có quyền xem liên hệ",
+  "whoCanSee.everyone.contact_other": "{count} thành viên có quyền xem liên hệ",
+  "whoCanSee.everyone.company_one": "{count} thành viên có quyền xem công ty",
+  "whoCanSee.everyone.company_other": "{count} thành viên có quyền xem công ty",
+  "whoCanSee.teamAccess_one":
+    "Thêm {count} thành viên có quyền xem hoặc sửa qua một nhóm. Chỉ quản trị viên thấy đó là ai.",
+  "whoCanSee.teamAccess_other":
+    "Thêm {count} thành viên có quyền xem hoặc sửa qua một nhóm. Chỉ quản trị viên thấy đó là ai.",
+  "whoCanSee.canChange": "Được sửa",
+  "whoCanSee.until": "đến {date}",
+  "whoCanSee.reason.workspace": "Mở cho mọi thành viên",
+  "whoCanSee.reason.owner": "Là chủ sở hữu",
+  "whoCanSee.reason.userShare": "Chia sẻ trực tiếp",
+  "whoCanSee.reason.teamShare": "Qua chia sẻ nhóm",
+  "whoCanSee.reason.teamShareNamed": "Qua nhóm {team}",
+  "whoCanSee.reason.sameTeam": "Cùng nhóm với chủ sở hữu",
+  "whoCanSee.reason.allRecords": "Vai trò bao gồm mọi bản ghi",
+  "whoCanSee.reason.writeShare": "Chia sẻ cho phép sửa",
+  "whoCanSee.you.change.contact": "Bạn xem và sửa được liên hệ này.",
+  "whoCanSee.you.open.contact":
+    "Bạn xem được liên hệ này nhưng không sửa được.",
+  "whoCanSee.you.change.company": "Bạn xem và sửa được công ty này.",
+  "whoCanSee.you.open.company":
+    "Bạn xem được công ty này nhưng không sửa được.",
+  "whoCanSee.archived": "Đã lưu trữ. Không ai sửa được cho đến khi khôi phục.",
+  "whoCanSee.emails.contact":
+    "Email với liên hệ này có phạm vi đọc riêng. Mở một email trong dòng thời gian để xem ai đọc được.",
+  "whoCanSee.emails.company":
+    "Email lưu vào công ty này có phạm vi đọc riêng. Mở một email trong dòng thời gian để xem ai đọc được.",
   "compose.reply": "Trả lời",
   "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",
@@ -3577,6 +4094,20 @@ export const vi = {
   "compose.discardDraft": "Bỏ bản nháp",
   "compose.discardDraftHint":
     "Việc này báo cho Voice DNA của bạn biết bản nháp chưa đạt. Văn bản do AI tạo không bao giờ được giữ lại.",
+  "compose.saveDraft": "Lưu bản nháp",
+  "compose.savedDraftSaved": "Đã lưu bản nháp",
+  "compose.savedDraftDelete": "Xóa",
+  "compose.savedDraftDeleted": "Đã xóa bản nháp đã lưu",
+  "compose.savedDraftRestored": "Đã khôi phục bản nháp đã lưu",
+  "compose.savedDraftRemove": "Xóa bản nháp đã lưu",
+  "compose.savedDraftChangedTitle": "Bản nháp đã đổi ở cửa sổ khác",
+  "compose.savedDraftChangedBody":
+    "Khi lưu, nội dung trên màn hình được giữ lại. Tải phiên bản đã lưu để viết tiếp từ đó.",
+  "compose.savedDraftGoneBody":
+    "Bản nháp đã được gửi hoặc xóa ở nơi khác. Khi lưu, nội dung trên màn hình trở thành bản nháp mới.",
+  "compose.savedDraftFailed":
+    "Bản nháp chưa được lưu. Hãy lưu lại, hoặc đóng lần nữa để bỏ nội dung.",
+  "compose.savedDraftLoad": "Tải phiên bản đã lưu",
   "compose.aiDisclosureTitle": "Bản nháp có AI hỗ trợ",
   "compose.aiDisclosureFallback":
     "Bản nháp này do AI tạo. Hãy đọc và sửa trước khi gửi.",
@@ -3640,7 +4171,9 @@ export const vi = {
   "compose.fileStoredUnnamed":
     "Tệp đã ở trên hồ sơ, nhưng chúng tôi không đọc lại được đó là tệp nào. Hãy đính kèm nó từ danh sách phía trên.",
   "compose.carriageTitle": "Tin nhắn này không thể gửi trên {channel}",
-  "compose.carriageCarries":
+  "compose.carriageCarries_one":
+    "{channel} không mang được tệp, nên tin nhắn này cùng {count} tệp đính kèm không thể gửi trên đó. Hãy gửi phần chữ qua {channel}, hoặc gửi tệp bằng cách khác.",
+  "compose.carriageCarries_other":
     "{channel} không mang được tệp, nên tin nhắn này cùng {count} tệp đính kèm không thể gửi trên đó. Hãy gửi phần chữ qua {channel}, hoặc gửi tệp bằng cách khác.",
   "compose.carriageCount":
     "{channel} mang tối đa {limit} tệp trong một tin nhắn, mà tin này có {named}. Hãy gửi phần còn lại thành một tin nhắn thứ hai.",
@@ -3823,6 +4356,7 @@ export const vi = {
     "chỉ deal đang mở, mỗi deal quy đổi riêng sang {currency} — chưa trọng số cạnh có trọng số",
   "analytics.currency": "Tiền tệ",
   "analytics.count": "Deal",
+  "analytics.closedDeals": "Deal đã đóng",
   "analytics.unweighted": "Chưa trọng số",
   "analytics.weighted": "Có trọng số",
   "analytics.priced": "{priced}/{total} đã định giá",
@@ -3837,6 +4371,145 @@ export const vi = {
   "analytics.sectionOutcomes": "Kết quả của tôi",
   "analytics.sectionCoverage": "Độ phủ dữ liệu",
   "analytics.sectionDelivery": "Triển khai",
+  // The Questions section: a question composed from the seat's own analytics
+  // schema. Field keys are the engine's wire names, rendered under the
+  // `analytics.field.` stem; a backend gate holds them against the report catalog.
+  "analytics.sectionQuestions": "Câu hỏi",
+  "analytics.reportDealsByStage": "Tất cả deal theo giai đoạn",
+  "analytics.reportLeadsByStatus": "Lead theo trạng thái",
+  "analytics.reportActivitiesByKind": "Hoạt động theo loại",
+  "analytics.reportMeetingConversion": "Tỷ lệ chuyển đổi cuộc họp",
+  "analytics.field.amount_base_minor": "Giá trị quy đổi",
+  "analytics.field.amount_minor": "Giá trị",
+  "analytics.field.became_opportunity": "Đã chuyển đổi",
+  "analytics.field.company_id": "Công ty",
+  "analytics.field.currency": "Tiền tệ",
+  "analytics.field.days_in_stage": "Số ngày ở giai đoạn",
+  "analytics.field.days_to_close": "Số ngày đến khi chốt",
+  "analytics.field.direction": "Chiều",
+  "analytics.field.forecast_category": "Nhóm dự báo",
+  "analytics.field.host_user_id": "Chủ trì cuộc họp",
+  "analytics.field.key": "Mã dự án",
+  "analytics.field.kind": "Loại hoạt động",
+  "analytics.field.last_activity_at": "Hoạt động gần nhất",
+  "analytics.field.lost_reason": "Lý do thua",
+  "analytics.field.meeting_status": "Trạng thái cuộc họp",
+  "analytics.field.name": "Tên dự án",
+  "analytics.field.open_commitments": "Cam kết đang mở",
+  "analytics.field.open_deal_value_minor": "Giá trị deal đang mở",
+  "analytics.field.overdue_commitments": "Cam kết quá hạn",
+  "analytics.field.owner_id": "Phụ trách",
+  "analytics.field.partner_company_id": "Công ty đối tác",
+  "analytics.field.period_month": "Tháng chốt",
+  "analytics.field.period_quarter": "Quý chốt",
+  "analytics.field.period_year": "Năm chốt",
+  "analytics.field.phase": "Pha dự án",
+  "analytics.field.pipeline_id": "Quy trình bán hàng",
+  "analytics.field.project": "Nhãn dự án",
+  "analytics.field.project_id": "Dự án",
+  "analytics.field.quiet_since": "Im ắng từ",
+  "analytics.field.size_band": "Quy mô công ty",
+  "analytics.field.source": "Nguồn",
+  "analytics.field.stage_id": "Giai đoạn",
+  "analytics.field.status": "Trạng thái",
+  "analytics.field.weighted_amount_minor": "Giá trị có trọng số",
+  "analytics.field.weighted_base_minor": "Giá trị có trọng số quy đổi",
+  "analytics.field.win_probability": "Xác suất thắng",
+  "analytics.field.won_deal_value_minor": "Giá trị deal đã thắng",
+  "analytics.fn.count": "Số lượng",
+  "analytics.fn.count_distinct": "Số giá trị khác nhau",
+  "analytics.fn.sum": "Tổng",
+  "analytics.fn.avg": "Trung bình",
+  "analytics.fn.min": "Thấp nhất",
+  "analytics.fn.max": "Cao nhất",
+  "analytics.fn.median": "Trung vị",
+  "analytics.fn.p75": "Tứ phân vị trên",
+  "analytics.q.addFilter": "Thêm bộ lọc",
+  "analytics.q.addMeasure": "Thêm chỉ số",
+  "analytics.q.allRecords": "Tất cả bản ghi",
+  "analytics.q.answerTitle": "Kết quả",
+  "analytics.q.ask": "Hỏi",
+  "analytics.q.asking": "Đang hỏi…",
+  "analytics.q.builderTitle": "Câu hỏi của bạn",
+  "analytics.q.chooseField": "Chọn trường",
+  "analytics.q.choosePopulation": "Chọn báo cáo",
+  "analytics.q.copyLink": "Sao chép liên kết",
+  "analytics.q.linkCopied": "Đã sao chép liên kết",
+  "analytics.q.copyRemedy":
+    "Hãy sao chép địa chỉ từ thanh địa chỉ của trình duyệt.",
+  "analytics.q.edit": "Sửa câu hỏi",
+  "analytics.q.empty": "Không có bản ghi nào khớp với câu hỏi này.",
+  "analytics.q.explainEmpty": "Nhóm này không có bản ghi nào.",
+  "analytics.q.explainLoading": "Đang tải bản ghi…",
+  "analytics.q.explainTruncated_one":
+    "Đang hiển thị bản ghi đầu tiên. Nhóm này còn nhiều hơn.",
+  "analytics.q.explainTruncated_other":
+    "Đang hiển thị {count} bản ghi đầu tiên. Nhóm này còn nhiều hơn.",
+  "analytics.q.explainWithheld":
+    "Nhóm này có quá ít bản ghi nên các bản ghi được ẩn.",
+  "analytics.q.filterN": "Bộ lọc {n}",
+  "analytics.q.filters": "Bộ lọc",
+  "analytics.q.groupBy": "Nhóm theo",
+  "analytics.q.limited_one":
+    "Chỉ hiển thị nhóm đầu tiên. Thêm bộ lọc để thu hẹp câu hỏi.",
+  "analytics.q.limited_other":
+    "Chỉ hiển thị {count} nhóm đầu tiên. Thêm bộ lọc để thu hẹp câu hỏi.",
+  "analytics.q.loadingRun": "Đang tải câu hỏi đã lưu…",
+  "analytics.q.loadingSchema": "Đang tải câu hỏi…",
+  "analytics.q.measureN": "Chỉ số {n}",
+  "analytics.q.measureOf": "{fn} của {field}",
+  "analytics.q.measuredOver": "Phạm vi đo",
+  "analytics.q.measures": "Chỉ số",
+  "analytics.q.mixedBody":
+    "Hãy nhóm theo tiền tệ hoặc lọc theo một loại tiền tệ để xem các giá trị này.",
+  "analytics.q.mixedCurrencies": "Nhiều loại tiền tệ",
+  "analytics.q.mixedTitle":
+    "Giá trị ở các loại tiền tệ khác nhau không được cộng dồn",
+  "analytics.q.needEntity": "Hãy chọn một báo cáo để hỏi.",
+  "analytics.q.needField": "Hãy chọn trường cho mọi chỉ số.",
+  "analytics.q.needFilterField": "Hãy chọn trường cho mọi bộ lọc.",
+  "analytics.q.needValue": "Hãy nhập giá trị cho mọi bộ lọc.",
+  "analytics.q.newQuestion": "Câu hỏi mới",
+  "analytics.q.no": "Không",
+  "analytics.q.yes": "Có",
+  "analytics.q.noEntities":
+    "Vai trò của bạn không đọc được dữ liệu báo cáo nào. Quản trị viên có thể cấp quyền truy cập.",
+  "analytics.q.noGrouping": "Không nhóm",
+  "analytics.q.none": "Không có",
+  "analytics.q.notSet": "Chưa đặt",
+  "analytics.q.population": "Báo cáo",
+  "analytics.q.readerAccess":
+    "Được trả lời theo quyền truy cập của chính bạn, nên số liệu có thể khác với lúc câu hỏi được lưu.",
+  "analytics.q.record": "Bản ghi",
+  "analytics.q.recordId": "Mã",
+  "analytics.q.refusal.invalid": "Không thể trả lời câu hỏi này như đã hỏi.",
+  "analytics.q.refusal.privacy": "Câu trả lời sẽ mô tả quá ít bản ghi.",
+  "analytics.q.refusal.unsupported":
+    "Không thể trả lời câu hỏi này với những gì bạn có quyền truy cập.",
+  "analytics.q.removeMeasure": "Xóa chỉ số {n}",
+  "analytics.q.save": "Lưu câu hỏi",
+  "analytics.q.savedBy": "Lưu bởi",
+  "analytics.q.savedTitle": "Câu hỏi đã lưu",
+  "analytics.q.scopeUnknown": "Bạn không có quyền xem",
+  "analytics.q.withheldBody":
+    "Nhóm có quá ít bản ghi sẽ bị ẩn, cùng với đủ phần còn lại để không thể suy ra nhóm đó từ các nhóm khác.",
+  "analytics.q.withheldTitle": "Một số nhóm đã bị ẩn",
+  "analytics.q.amountInvalid":
+    "Hãy nhập mỗi số tiền dưới dạng số, không nhiều chữ số thập phân hơn đơn vị tiền tệ cho phép.",
+  "analytics.q.needCurrencyFilter":
+    "Hãy thêm bộ lọc “Tiền tệ là …” để so sánh số tiền theo đơn vị tiền tệ của từng deal.",
+  "analytics.q.scopeNotAvailable":
+    "Câu hỏi này được lưu cho phạm vi bản ghi mà bạn không thể đo. Câu hỏi sẽ được hỏi trên {scope}.",
+  "analytics.q.staleTitle": "Kết quả đã cũ",
+  "analytics.q.staleBody":
+    "Kết quả này dành cho câu hỏi đã hỏi lần trước. Hãy hỏi lại để cập nhật.",
+  "analytics.q.calculationN": "Phép tính, chỉ số {n}",
+  "analytics.q.measureFieldN": "Trường, chỉ số {n}",
+  "analytics.q.filterFieldN": "Trường, bộ lọc {n}",
+  "analytics.q.filterOperatorN": "Toán tử, bộ lọc {n}",
+  "analytics.q.filterValueN": "Giá trị, bộ lọc {n}",
+  "analytics.q.withheldGroups_one": "Đã ẩn 1 nhóm",
+  "analytics.q.withheldGroups_other": "Đã ẩn {count} nhóm",
   "analytics.reportProjectsByPhase": "Dự án theo giai đoạn",
   "analytics.reportProjectCommitments": "Cam kết dự án",
   "analytics.reportProjectsGoneQuiet": "Dự án im ắng",
@@ -3880,8 +4553,17 @@ export const vi = {
   "analytics.lost": "Thua",
   "analytics.baseValue": "Giá trị ({currency})",
   "analytics.baseValueUnnamed": "Giá trị",
+  "analytics.noBaseCurrency": "Không có số tiền",
+  "analytics.noBaseCurrencyWhy": "Chưa đặt đơn vị tiền tệ",
   "analytics.forecastNoFigure": "Chưa đo được",
-  "analytics.myPipelineNoRow": "Chưa có gì để đọc",
+  "analytics.forecastDeals_one": "1 deal",
+  "analytics.forecastDeals_other": "{count} deal",
+  "analytics.forecastNoAmount": "Không có số tiền",
+  "analytics.forecastWeighted": "{amount} có trọng số",
+  "analytics.forecastPriced": "{priced}/{count} đã định giá",
+  "analytics.readingNone": "Không có",
+  "analytics.readingLoading": "Đang tải",
+  "analytics.readingUnavailable": "Không khả dụng",
   "analytics.medianDaysToClose": "Số ngày chốt trung vị",
   "analytics.p75DaysToClose": "Số ngày chốt P75",
   "analytics.medianDaysInStage": "Số ngày trung vị ở giai đoạn",
@@ -3900,8 +4582,7 @@ export const vi = {
     "Các con số như khi trạng thái được lưu lại. Chúng không thay đổi, nên liên kết nêu rõ thời điểm.",
   "analytics.share.snapshotUnavailable":
     "Chưa có trạng thái nào được đóng băng cho kỳ này.",
-  "analytics.share.expiryNote":
-    "Liên kết ngừng hoạt động sau 30 ngày. Bạn có thể đóng sớm hơn.",
+  "analytics.share.expiryNote": "Liên kết ngừng hoạt động sau 30 ngày.",
   "analytics.share.create": "Tạo liên kết",
   "analytics.share.linkTitle": "Liên kết của bạn",
   "analytics.share.linkWarning":
@@ -3910,9 +4591,26 @@ export const vi = {
     "Rời đi mà không sao chép sẽ làm mất liên kết. Bạn sẽ phải tạo liên kết khác.",
   "analytics.share.copy": "Sao chép liên kết",
   "analytics.share.copied": "Đã sao chép",
-  "analytics.share.copyFailedTitle": "Không thể sao chép liên kết",
   "analytics.share.copyFailed": "Hãy chọn ở trên và sao chép thủ công.",
   "analytics.share.done": "Xong",
+  "analytics.share.revoke": "Đóng liên kết",
+  "analytics.share.closedTitle": "Đã đóng liên kết",
+  "analytics.share.closedBody":
+    "Liên kết không còn mở được. Ai truy cập sẽ bị từ chối.",
+  "analytics.share.listOpen": "Liên kết đã chia sẻ",
+  "analytics.share.listTitle": "Liên kết bạn đã chia sẻ",
+  "analytics.share.listIntro":
+    "Các liên kết bạn đã tạo và vẫn mở được. Đóng một liên kết sẽ dừng nó ngay lập tức.",
+  "analytics.share.listEmpty":
+    "Bạn không có liên kết nào đang mở. Chia sẻ chế độ xem để tạo một liên kết.",
+  "analytics.share.listCreated": "Tạo ngày {date}",
+  "analytics.share.listExpires": "Hết hạn ngày {date}",
+  "analytics.share.populationCompany": "Toàn tổ chức",
+  "analytics.share.populationTeam": "Nhóm",
+  "analytics.share.populationOwner": "Đồng nghiệp",
+  "analytics.share.closeTitle": "Đóng liên kết này?",
+  "analytics.share.closeBody":
+    "Liên kết ngừng mở ngay lập tức với bất kỳ ai có nó. Liên kết đã đóng không thể mở lại.",
   "analytics.frame": "Tính đến {asOf} · {zone}",
   "review.title": "Cần kiểm tra gì trước khi chốt cam kết?",
   "review.ready": "Sẵn sàng",
@@ -3931,9 +4629,32 @@ export const vi = {
   "review.sourcesUnread":
     "Chưa đọc: {sources}. Các phát hiện bên dưới chỉ bao gồm những gì kiểm tra được.",
   "review.notCheckedYet":
-    "Chưa có gì được kiểm tra — chưa có lần chạy hằng đêm nào hoàn tất cho bản cài đặt này. Các số liệu ở trên dựa trên dữ liệu hiện có.",
+    "Chưa kiểm tra gì: lần kiểm tra đầu tiên chưa chạy. Các số liệu ở trên phản ánh hồ sơ hiện tại.",
+  "review.firstCheck.title": "Bắt đầu kiểm tra dữ liệu đầu vào",
+  "review.firstCheck.body":
+    "Việc kiểm tra hằng đêm chỉ chạy sau khi bạn bắt đầu. Lần kiểm tra đầu tiên nêu mọi phát hiện cùng một lúc và mở một việc cho mỗi giao dịch liên quan, nên biết trước quy mô là điều đáng làm.",
+  "review.firstCheck.scope":
+    "Giao dịch sẽ kiểm tra: {deals}. Phát hiện sẽ nêu: {findings}.",
+  "review.firstCheck.start": "Bắt đầu kiểm tra",
+  "review.firstCheck.starting": "Đang bắt đầu kiểm tra…",
+  "review.firstCheck.pending":
+    "Đang tính xem một lượt kiểm tra sẽ tìm thấy gì…",
+  "review.check.running": "Đang kiểm tra. Kết quả sẽ hiện ở đây khi xong.",
+  "review.recheck.label": "Kiểm tra lại",
+  "review.recheck.starting": "Đang bắt đầu kiểm tra…",
+  "review.firstCheck.cannotLook":
+    "Một lượt kiểm tra ngay bây giờ không đọc được mọi nguồn cần thiết, nên không thể nói sẽ tìm thấy gì. Vẫn có thể bắt đầu; lượt chạy sẽ báo đúng khoảng trống đó.",
+  "review.check.failed": "Không thể bắt đầu kiểm tra",
   "review.nothingToCheck": "Không có gì để kiểm tra.",
   "review.answer": "Trả lời",
+  "review.colSeverity": "Mức độ",
+  "review.colFinding": "Phát hiện",
+  "review.colDeal": "Thuộc deal",
+  "review.colAtStake": "Số tiền bị ảnh hưởng",
+  "review.colSeenSince": "Thấy từ",
+  "review.severityHigh": "Cao",
+  "review.severityMedium": "Trung bình",
+  "review.severityLow": "Thấp",
   "review.closePast": "Ngày chốt đã qua",
   "review.closeUnconfirmed": "Ngày chốt chưa được xác nhận",
   "review.closePushed": "Ngày chốt liên tục dời",
@@ -3972,8 +4693,15 @@ export const vi = {
     "{priced} trên {eligible} deal có số tiền. Số còn lại là pipeline thật nhưng không đóng góp vào các tổng ở trên.",
   "forecast.currentCall": "Cam kết hiện tại",
   "forecast.currentCallNone": "Chưa có dự báo",
+  "forecast.currentCallDetailOver": "Chốt ngày {date} · {gap} trên bằng chứng",
+  "forecast.currentCallDetailUnder": "Chốt ngày {date} · {gap} dưới bằng chứng",
+  "forecast.currentCallDetailEven": "Chốt ngày {date} · khớp với bằng chứng",
   "forecast.evidence": "Có bằng chứng hỗ trợ",
+  "forecast.evidenceDetail": "Ngày chốt đã xác nhận",
+  "forecast.bestCaseAdds": "Phần thêm khả quan nhất",
+  "forecast.makeup": "Kỳ này gồm những gì",
   "forecast.alreadyWon": "Đã thắng",
+  "forecast.alreadyWonDetail": "Đã chốt trong kỳ này",
   "forecast.updateCall": "Cập nhật cam kết hiện tại",
   "forecast.callExplains":
     "Cam kết là con số bạn tin sẽ chốt. Nó ghi lại con số của bạn và không thay đổi deal nào.",
@@ -3994,7 +4722,6 @@ export const vi = {
   "forecast.fxMissing": "Thiếu tỷ giá",
   "analytics.reportForecast": "Nhóm dự báo",
   "analytics.reportOpenByCompany": "Deal đang mở theo công ty",
-  "analytics.forecastBannerTitle": "Cách đọc các ô này",
   "analytics.forecastBanner":
     'Mỗi ô hiển thị tổng chưa trọng số, và bên dưới là tổng có trọng số — được làm tròn theo từng deal, nên luôn khớp với "Giải thích con số này".',
   "analytics.company": "Công ty",
@@ -4007,19 +4734,6 @@ export const vi = {
   "explain.col.stage": "Giai đoạn",
   "explain.col.owner": "Phụ trách",
   "explain.col.pipeline": "Pipeline",
-
-  "ai.sub": "mang Agent của riêng bạn — được quản trị bằng hợp đồng hai bậc",
-  "ai.tiers": "Một Agent được phép làm gì",
-  "ai.tierAutoExecute": "Đọc và soạn nháp chạy ngay.",
-  "ai.tierAutoExecuteDetail":
-    "Tra cứu, tóm tắt, bản nháp — thấy được, đảo ngược được, có ghi nhật ký.",
-  "ai.tierConfirmationRequired": "Các thay đổi nhạy cảm chờ bạn.",
-  "ai.tierConfirmationRequiredDetail":
-    "Trường tùy chỉnh mới, đăng ký webhook và làm giàu dữ liệu trả phí được xếp vào hộp phê duyệt trước. Hầu hết thay đổi bản ghi và tin nhắn gửi đi chạy ngay, trong phạm vi quyền bạn đã cấp.",
-  "ai.connect": "Kết nối một Agent",
-  "ai.connectDetail":
-    "Trỏ bất kỳ Agent hỗ trợ MCP nào vào tổ chức của bạn và cho phép quyền truy cập mà nó yêu cầu. Không cần chuẩn bị gì trước.",
-  "ai.paletteHint": "Hỏi từ bất cứ đâu bằng",
 
   "settings.accountCard": "Tài khoản của bạn",
   "unsaved.title": "Bạn có thay đổi chưa lưu",
@@ -4056,6 +4770,16 @@ export const vi = {
     "C\u00e1ch \u0111\u1ed3ng nghi\u1ec7p th\u1ea5y b\u1ea1n \u2014 tr\u00ean b\u1ea3n ghi, trong danh s\u00e1ch ch\u1ecdn v\u00e0 trong nh\u1eadt k\u00fd.",
   "settings.displayNameSave": "L\u01b0u",
   "settings.languageHelp": "Chỉ giữ trong phiên làm việc.",
+  "settings.deviceCard": "Thiết bị này",
+  "settings.installApp": "Ứng dụng Margince",
+  "settings.installAppHelp":
+    "Cài Margince lên thiết bị này thành ứng dụng có cửa sổ và biểu tượng riêng.",
+  "settings.installAppManual":
+    "Để cài đặt, chạm “Chia sẻ” rồi chọn “Thêm vào MH chính”.",
+  "settings.installAppInstalled": "Đã cài đặt",
+  "settings.installAppDismissed":
+    "Cài Margince sau qua menu trình duyệt hoặc biểu tượng cài đặt trên thanh địa chỉ.",
+  "settings.installAppAction": "Cài đặt",
   "role.admin": "Quản trị",
   "role.management": "Ban lãnh đạo",
   "role.manager": "Trưởng nhóm",
@@ -4251,6 +4975,7 @@ export const vi = {
   "agent.panel.decisions": "Quyết định",
   "agent.panel.nothingWaiting": "Không có gì chờ",
   "agent.panel.nothingToday": "Hôm nay chưa xong việc nào",
+  "agent.panel.unnamedLive": "Đang làm việc trong nền",
   "agent.fact.model": "Mô hình",
   "agent.fact.tools": "Công cụ",
   "agent.fact.sources": "Nguồn",
@@ -4267,7 +4992,7 @@ export const vi = {
   "agent.line.justNow": "vừa xong",
   "agent.setting.edgeLight": "Viền màn hình phát sáng",
   "agent.tip.day": "Việc cần làm, quyết định và bản trùng nằm ở {name}.",
-  "agent.tip.ask": "Hỏi tôi ở bất cứ đâu bằng ⌘K.",
+  "agent.tip.ask": "Hỏi tôi bằng {chord}.",
   "agent.tip.recap": "Mở tôi để xem hoạt động hôm nay.",
   "agent.tip.edge": "Viền màn hình sáng lên khi tôi làm việc.",
 
@@ -4439,10 +5164,13 @@ export const vi = {
   "jobs.waitedHours_other": "cũ nhất đã chờ {count} giờ",
   "jobs.waitedDays_one": "cũ nhất đã chờ {count} ngày",
   "jobs.waitedDays_other": "cũ nhất đã chờ {count} ngày",
-  "jobs.deadTitle": "{count} tác vụ đã chết trong {hours} giờ qua",
+  "jobs.deadTitle_one": "{count} tác vụ đã chết trong {hours} giờ qua",
+  "jobs.deadTitle_other": "{count} tác vụ đã chết trong {hours} giờ qua",
   "jobs.deadTotal":
     "{count} bị loại bỏ hoặc bị huỷ trong 7 ngày qua — đó cũng là thời gian bản ghi được giữ lại.",
-  "jobs.deadBody":
+  "jobs.deadBody_one":
+    "{count} tác vụ đã bị loại bỏ hoặc bị huỷ: công việc đó sẽ không tự diễn ra nữa. Một tác vụ bị loại bỏ đã dùng hết mọi lần thử; một tác vụ bị huỷ là do có người chủ động dừng. Hãy đọc các lỗi bên dưới trước khi xếp lại vào hàng đợi.",
+  "jobs.deadBody_other":
     "{count} tác vụ đã bị loại bỏ hoặc bị huỷ: công việc đó sẽ không tự diễn ra nữa. Một tác vụ bị loại bỏ đã dùng hết mọi lần thử; một tác vụ bị huỷ là do có người chủ động dừng. Hãy đọc các lỗi bên dưới trước khi xếp lại vào hàng đợi.",
   "jobs.failures": "Lỗi gần đây",
   "jobs.failuresSub":
@@ -4479,6 +5207,58 @@ export const vi = {
   "extIngest.noDetail":
     "Chỉ số lượng và bước kiểm tra đã từ chối, không bao giờ là bản ghi: lý do nêu tên trường bị từ chối, và điều đó trích lại nội dung của bên gửi. Nhật ký của chính trình kết nối giữ câu đầy đủ cho từng trường hợp.",
   "extIngest.generatedAt": "Đọc lúc {time}",
+  "settings.captureHealth": "Kiểm tra ghi nhận thư",
+  "settings.captureHealthSub":
+    "Việc ghi nhận thư có theo kịp những câu hỏi cần trả lời hay không.",
+  "captureHealth.adminOnly":
+    "Tình trạng ghi nhận thư bao trùm mọi hộp thư và cần quyền mà vai trò của bạn không có.",
+  "captureHealth.sweeps": "Lượt sửa chữa",
+  "captureHealth.sweepsSub":
+    "Các lượt chạy nền hoàn tất những gì việc ghi nhận còn để ngỏ.",
+  "captureHealth.sweep.settledThreads": "Chuỗi thư đã quyết định",
+  "captureHealth.sweep.strandedContacts": "Liên hệ chưa được hỏi",
+  "captureHealth.sweep.filedMeetings": "Cuộc họp đã gắn hồ sơ",
+  "captureHealth.keepingUp": "Theo kịp",
+  "captureHealth.warn.neverRun": "Chưa từng chạy",
+  "captureHealth.warn.failed": "Lần chạy cuối thất bại",
+  "captureHealth.warn.skipped": "Lần chạy cuối bị bỏ qua",
+  "captureHealth.warn.overdue": "Quá hạn",
+  "captureHealth.warn.backlog": "Còn tồn đọng",
+  "captureHealth.lastSucceeded": "thành công gần nhất {when}",
+  "captureHealth.neverSucceeded": "chưa từng thành công",
+  "captureHealth.everyMinutes_one": "chạy mỗi {count} phút",
+  "captureHealth.everyMinutes_other": "chạy mỗi {count} phút",
+  "captureHealth.everyHours_one": "chạy mỗi {count} giờ",
+  "captureHealth.everyHours_other": "chạy mỗi {count} giờ",
+  "captureHealth.everyDays_one": "chạy mỗi {count} ngày",
+  "captureHealth.everyDays_other": "chạy mỗi {count} ngày",
+  "captureHealth.mailboxes": "Hộp thư",
+  "captureHealth.noDetail":
+    "Chỉ có số đếm. Chỉ chủ hộp thư mới thấy liên hệ và chuỗi thư nào đang chờ.",
+  "captureHealth.mailboxesEmpty": "Không hộp thư nào có gì đang chờ.",
+  "captureHealth.unnamedMailbox": "Hộp thư chưa đặt tên",
+  "captureHealth.contactsWaiting_one": "{count} liên hệ đang chờ",
+  "captureHealth.contactsWaiting_other": "{count} liên hệ đang chờ",
+  "captureHealth.threadsWaiting_one": "{count} chuỗi thư đang chờ",
+  "captureHealth.threadsWaiting_other": "{count} chuỗi thư đang chờ",
+  "captureHealth.oldestContact": "liên hệ: {waited}",
+  "captureHealth.oldestThread": "chuỗi thư: {waited}",
+  "captureHealth.installation": "Toàn bộ bản cài đặt",
+  "captureHealth.classifier": "Kiểm tra địa chỉ gửi",
+  "captureHealth.pending_one": "{count} đang chờ",
+  "captureHealth.pending_other": "{count} đang chờ",
+  "captureHealth.unsure_one": "{count} chưa chắc",
+  "captureHealth.unsure_other": "{count} chưa chắc",
+  "captureHealth.exhausted_one": "{count} địa chỉ gửi hết lượt thử",
+  "captureHealth.exhausted_other": "{count} địa chỉ gửi hết lượt thử",
+  "captureHealth.oldestPending": "đang chờ: {waited}",
+  "captureHealth.heldMeetings": "Cuộc họp bị giữ lại",
+  "captureHealth.meetingsHeld_one": "{count} cuộc họp bị giữ",
+  "captureHealth.meetingsHeld_other": "{count} cuộc họp bị giữ",
+  "captureHealth.oldestMeeting": "bị giữ: {waited}",
+  "captureHealth.heldMeetingsSub":
+    "Cuộc họp đã gắn hồ sơ nhưng đồng nghiệp chưa thấy. Lượt chạy hằng đêm sẽ chia sẻ chúng.",
+  "captureHealth.generatedAt": "Đọc lúc {time}",
 
   "audit.you": "Bạn",
   "audit.system": "Hệ thống",
@@ -4544,6 +5324,45 @@ export const vi = {
     "Những nghĩa vụ này nêu tên liên hệ và cách chúng ta có được họ, nên chỉ hiển thị trong hộp thư quyền riêng tư.",
   "notice.dueAt": "Đến hạn {date}",
   "notice.overdue": "Quá hạn",
+  "notifications.bell": "Thông báo",
+  "notifications.bellWaiting_one": "Thông báo, {count} đang chờ",
+  "notifications.bellWaiting_other": "Thông báo, {count} đang chờ",
+  "notifications.centre": "Thông báo",
+  "notifications.markAllRead": "Đánh dấu tất cả đã đọc",
+  "notifications.markRead": "Đánh dấu đã đọc",
+  "notifications.markAllFailed": "Chưa đánh dấu được thông báo nào là đã đọc",
+  "notifications.markReadFailed": "Chưa đánh dấu được thông báo đó là đã đọc",
+  "notifications.new": "Mới",
+  "notifications.byAgent": "Do tác nhân tạo",
+  "notifications.empty":
+    "Chưa có gì gửi đến. Những điều sản phẩm cần cho bạn biết sẽ xuất hiện ở đây.",
+  "notifications.title": "Mỗi loại đến với bạn bằng cách nào",
+  "notifications.sub":
+    "Mọi thông báo đều được giữ trong trung tâm thông báo của bạn, bất kể bạn chọn gì ở đây. Lựa chọn này quyết định điều gì xảy ra thêm khi một thông báo đến.",
+  "notifications.saveFailed": "Lựa chọn đó chưa được lưu",
+  "notifications.saveFailedFor": "Chưa lưu được “{setting}”",
+  "notifications.class.approval_pending.label": "Phê duyệt đang chờ bạn",
+  "notifications.class.approval_pending.help":
+    "Đồng nghiệp cần quyết định của bạn để công việc của họ tiếp tục được.",
+  "notifications.class.automation.label": "Tự động hoá đã chạy",
+  "notifications.class.automation.help":
+    "Một quy tắc của tổ chức này đã chạy, hoặc đã không chạy được.",
+  "notifications.class.lead_sla.label": "Lead đã quá hạn",
+  "notifications.class.lead_sla.help":
+    "Một lead chưa ai trả lời trong khoảng thời gian nhóm bạn đã thống nhất.",
+  "notifications.class.capture.label": "Thu thập thư",
+  "notifications.class.capture.help":
+    "Sự cố khi đọc một hộp thư của bạn, hoặc một khối tồn đọng đã ngừng chuyển động.",
+  "notifications.class.system.label": "Thông báo hệ thống",
+  "notifications.class.system.help":
+    "Bảo trì, một giới hạn đã đạt tới, và mọi điều khác mà bản cài đặt phải cho bạn biết.",
+  "notifications.class.coach.label": "Lời nhắc của đồng nghiệp",
+  "notifications.class.coach.help":
+    "Đồng nghiệp trong nhóm bạn chỉ ra một deal, một câu trả lời hoặc một khối tồn đọng của bạn. Những lời nhắc này luôn đến được với bạn theo cách nào đó, nên không thể tắt.",
+  "notifications.delivery.off": "Tắt",
+  "notifications.delivery.in_app": "Trong ứng dụng",
+  "notifications.delivery.email": "Qua email",
+  "notifications.delivery.digest": "Bản tổng hợp hằng ngày",
   "privacynotice.title": "Chúng tôi lưu giữ thông tin gì về quý vị",
   "privacynotice.intro":
     "Chúng tôi thông báo điều này vì pháp luật yêu cầu. Quý vị không cần trả lời hay làm gì cả.",
@@ -4563,6 +5382,8 @@ export const vi = {
     "Quý vị đã điền một biểu mẫu hoặc đăng ký tham gia điều gì đó.",
   "privacynotice.source.publicSource":
     "Chúng tôi tìm thấy thông tin của quý vị từ nguồn công khai hoặc nguồn doanh nghiệp, chẳng hạn danh bạ hoặc trang web công ty.",
+  "privacynotice.source.crmMigration":
+    "Thông tin của quý vị đã có trong hệ thống khách hàng chúng tôi dùng trước đây và được chuyển sang đây cùng hệ thống đó.",
   "privacynotice.source.purchasedOrImported":
     "Thông tin của quý vị đến từ một danh sách được mua hoặc nhập vào.",
   "privacynotice.source.unknown":
@@ -4727,17 +5548,17 @@ export const vi = {
   "retention.scopeAiCallPayloadContent": "Nội dung lời gọi AI",
 
   "retention.scopeRawCapture": "Bản gốc tin nhắn đã lưu",
+  "retention.scopeDealRiskDay":
+    "Ghi nhận hằng ngày các deal quan trọng có rủi ro",
   "settings.pipelines": "Pipeline",
   "settings.pipelinesReadOnly":
     "Chế độ chỉ đọc — bạn không thể thay đổi pipeline hay các giai đoạn.",
   "settings.pipelinesSub":
     "Các giai đoạn một deal đi qua — mỗi pipeline một thang.",
   "pipeline.new": "Pipeline mới",
-  "pipeline.edit": "Sửa pipeline",
   "pipeline.name": "Tên",
   "pipeline.default": "Mặc định",
   "pipeline.notDefault": "Không mặc định",
-  "pipeline.position": "Vị trí",
   "pipeline.retired": "Đã ngừng dùng",
   "pipeline.retire": "Ngừng dùng",
   "pipeline.retireConfirm":
@@ -4747,6 +5568,29 @@ export const vi = {
   "pipeline.retired.done": "Đã ngừng dùng {name}",
   "pipeline.restore": "Dùng lại",
   "pipeline.restored": "{name} đã được dùng lại",
+  "pipeline.rename": "Đổi tên",
+  "pipeline.makeDefault": "Đặt làm mặc định",
+  "pipeline.defaultSet": "Đã đặt {name} làm mặc định",
+  "pipeline.inUse": "Pipeline đang dùng",
+  "pipeline.orderHint":
+    "Kéo pipeline bằng tay nắm, hoặc chọn tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
+  "pipeline.handle": "Di chuyển {name}, vị trí {position} trên {total}",
+  "pipeline.moved": "Đã chuyển {name} đến vị trí {position} trên {total}",
+  "pipeline.openStageCount_one": "{count} giai đoạn đang mở",
+  "pipeline.openStageCount_other": "{count} giai đoạn đang mở",
+  "pipeline.retiredGroup_one": "{count} pipeline đã ngừng dùng",
+  "pipeline.retiredGroup_other": "{count} pipeline đã ngừng dùng",
+  "pipeline.retiredNote":
+    "Đã ngừng dùng. Deal mới không thể bắt đầu trong pipeline này, và các giai đoạn của nó không thể thay đổi cho đến khi được dùng lại.",
+  "pipeline.retireNote":
+    "Pipeline sẽ rời khỏi các danh sách chọn và biểu mẫu deal mới. Deal trên đó vẫn giữ giai đoạn.",
+  "pipeline.flow": "Deal đi qua các giai đoạn",
+  "pipeline.orderSaved": "Đã lưu thứ tự",
+  "pipeline.orderRestored": "Đã khôi phục thứ tự trước",
+  "pipeline.orderStale":
+    "Thứ tự chưa được lưu. Thứ tự đã được thay đổi ở nơi khác trước, nên thứ tự mới nhất đang được hiển thị.",
+  "pipeline.orderNotSaved":
+    "Thứ tự chưa được lưu. Hãy thử lại hoặc tải lại trang.",
   "stage.new": "Giai đoạn mới",
   "stage.edit": "Sửa giai đoạn",
   "stage.name": "Tên",
@@ -4760,6 +5604,22 @@ export const vi = {
   "stage.removeTitle": "Gỡ giai đoạn này?",
   "stage.removeBody":
     "“{name}” sẽ rời khỏi pipeline và các giai đoạn sau dồn lên. Lịch sử chuyển giai đoạn vẫn đọc được. Các deal còn nằm ở đây phải chuyển đi trước.",
+  "stage.openGroup": "Giai đoạn đang mở",
+  "stage.closingGroup": "Giai đoạn kết thúc",
+  "stage.closingNote":
+    "Mọi deal kết thúc ở một trong các giai đoạn này, nên chúng luôn đứng sau các giai đoạn đang mở.",
+  "stage.closingMissing":
+    "Chưa có giai đoạn thắng hoặc thua. Hãy thêm một giai đoạn mới thuộc loại đó.",
+  "stage.orderHint":
+    "Kéo giai đoạn bằng tay nắm, hoặc chọn tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
+  "stage.handle": "Di chuyển {name}, bước {position} trên {total}",
+  "stage.moved": "{name} giờ là bước {position} trên {total}",
+  "stage.lowerThanAbove": "Thấp hơn {name} ({reading}) ở trên",
+  "stage.oddsOf": "Xác suất thắng của {name}",
+  "stage.noneOpen": "Chưa có giai đoạn đang mở",
+  "stage.noneOpenNote":
+    "Thêm bước đầu tiên của một deal. Bước này đứng trước các giai đoạn kết thúc.",
+  "stage.added": "Đã thêm giai đoạn",
   "stage.criteria.title": "Tiêu chí rời giai đoạn",
   "stage.criteria.sub":
     "Điều gì phải đúng trước khi một deal rời giai đoạn này.",
@@ -4793,43 +5653,8 @@ export const vi = {
   "stage.criteria.kindTermsAccepted": "Đã chấp nhận điều khoản",
   "stage.criteria.kindCustom": "Tùy chỉnh",
 
-  "ob.url": "Website",
-  "ob.urlScheme": "https://",
   "ob.back": "Quay lại",
   "ob.restoring": "Đang khôi phục thiết lập của bạn…",
-  "ob.readManual": "Bạn tự kể cho tôi",
-  "ob.coreIntroTitle": "Trước tiên, tôi cần biết pháp nhân của bạn.",
-  "ob.coreIntroBody":
-    "Tôi cần tên pháp lý, địa chỉ và mã số thuế. Sau đó tôi tìm hiểu bạn bán gì cho ai.",
-  "ob.coreLegalKicker": "Tôi bắt đầu từ danh tính pháp lý",
-  "ob.corePathLabel": "Những gì tôi sẽ tìm hiểu",
-  "ob.corePathLegal": "Danh tính pháp lý",
-  "ob.corePathOffer": "Sản phẩm dịch vụ",
-  "ob.corePathCustomer": "Khách hàng",
-  "ob.coreReadingPage": "Tôi đang đọc",
-  "ob.coreWebsiteTitle": "Tôi nên đọc website nào?",
-  "ob.coreWebsiteBody":
-    "Tôi đọc phần thông tin pháp lý trước, rồi đến sản phẩm, khách hàng và định vị.",
-  "ob.corePreparing": "Tôi đang chuẩn bị đọc {host}",
-  "ob.coreLegalReading": "Tôi đang đọc danh tính pháp lý trên {host}",
-  "ob.coreLegalReadingBody":
-    "Tôi tìm thông tin pháp lý, địa chỉ và mã số thuế. Gì không nêu thì để trống.",
-  "ob.coreBusinessReading": "Tôi đang tìm hiểu cách công ty vận hành",
-  "ob.coreBusinessReadingBody":
-    "Tôi đang nối sản phẩm, khách hàng và định vị với đúng đoạn văn bản công khai chứng minh cho chúng.",
-  "ob.coreReady": "Tôi tìm được {count} chi tiết công ty có dẫn nguồn",
-  "ob.corePartial": "Tôi tìm được {count} chi tiết hữu ích, còn vài chỗ trống",
-  "ob.coreReadyBody":
-    "Tôi chưa lưu gì. Hãy rà soát danh tính pháp lý trước, rồi đến sản phẩm dịch vụ.",
-  "ob.coreDeferredBody": "Tôi sẽ tự động đọc tiếp.",
-  "ob.coreFailedBody":
-    "Tôi không đọc chắc được website này nên dừng thay vì đoán. Bạn tự cho tôi biết nhé.",
-  "ob.coreFindingsTitle": "Những gì tôi tìm được và chứng minh được",
-  "ob.coreFindingsBody":
-    "Mỗi giá trị đều kèm đoạn văn bản công khai. Gì không xác minh được thì để trống.",
-  "ob.ai.identity": "Chào bạn, tôi là Margince",
-  "ob.ai.role": "AI tìm hiểu công ty của bạn",
-  "ob.ai.speaker": "M",
   "ob.ai.speakerName": "Margince",
   "ob.ai.ready": "Tôi đã sẵn sàng tìm hiểu",
   "ob.ai.configured": "AI đã cấu hình",
@@ -4856,42 +5681,15 @@ export const vi = {
   "ob.ai.tier.premium": "suy luận cao cấp",
   "ob.ai.tier.frontier": "suy luận tiên phong",
   "ob.ai.tier.localLarge": "cục bộ, mạnh",
-  // The rail footer's plain-language line: the exact ids sit one click away
-  // in the runtime chip's "Configured AI" row, so this says only what a
-  // non-technical reader needs at a glance — how many models, and where.
-  "ob.ai.summary.cloud_one": "1 mô hình, chạy trên đám mây",
-  "ob.ai.summary.cloud_other": "{count} mô hình, chạy trên đám mây",
-  "ob.ai.summary.local_one": "1 mô hình, chạy cục bộ",
-  "ob.ai.summary.local_other": "{count} mô hình, chạy cục bộ",
-  "ob.ai.summary.hybrid_one": "1 mô hình, chia giữa đám mây và cục bộ",
-  "ob.ai.summary.hybrid_other": "{count} mô hình, chia giữa đám mây và cục bộ",
-  "ob.ai.summary.development_one": "1 mô hình, chế độ phát triển",
-  "ob.ai.summary.development_other": "{count} mô hình, chế độ phát triển",
-  "ob.ai.summary.none": "Chưa cấu hình mô hình nào",
-  "ob.ai.summaryProviders_one": "1 nhà cung cấp đã cấu hình",
-  "ob.ai.summaryProviders_other": "{count} nhà cung cấp đã cấu hình",
-  "ob.ai.readFirst": "Hãy bắt đầu thiết lập công ty trước khi hỏi về phần này.",
   "ob.ai.liveArtifact": "Bản dựng trực tiếp, rà soát được",
   "ob.ai.companyKnowledge": "Những gì tôi hiểu về công ty của bạn",
   "ob.ai.companyKnowledgeBody":
     "Bằng chứng từ website được giữ tách khỏi cuộc trò chuyện. Bạn quyết định điều gì trở thành thông tin công ty.",
   "ob.ai.companyKnowledgeManualBody":
     "Câu trả lời của bạn và gợi ý của tôi vẫn sửa được ở đây. Bạn quyết định điều gì trở thành thông tin công ty.",
-  "ob.ai.askPlaceholder":
-    "Hỏi tôi về một phát hiện, sửa một chi tiết, hoặc cho biết tôi đã bỏ sót gì…",
-  "ob.ai.send": "Gửi cho Margince",
-  "ob.ai.reviewBoundary":
-    "Ở đây tôi chỉ đề xuất thay đổi. Tôi chỉ áp dụng vào bản nháp của bạn khi bạn duyệt.",
   "ob.ai.confirmBoundary":
     "Không gì trở thành thông tin công ty cho đến khi bạn xác nhận bản nháp này.",
   "ob.ai.confirmCompany": "Xác nhận và lưu công ty",
-  "ob.ai.thinking": "Tôi đang xem lại tập hồ sơ và chuẩn bị câu trả lời…",
-  "ob.ai.suggestedChanges": "Thay đổi được đề xuất cho bản nháp của bạn",
-  "ob.ai.applyChanges": "Áp dụng vào bản nháp",
-  "ob.ai.applied": "Đã áp dụng vào bản nháp",
-  "ob.ai.finding_one": "phát hiện có dẫn nguồn",
-  "ob.ai.finding_other": "phát hiện có dẫn nguồn",
-  "ob.continueManual": "Kể cho tôi thay vì đọc",
   "ob.readStatus.queued": "Tôi đang chuẩn bị",
   "ob.readStatus.deferred": "Tôi đang chờ hạn mức AI",
   "ob.readStatus.reading": "Tôi đang đọc",
@@ -4900,15 +5698,10 @@ export const vi = {
   "ob.readStatus.failed": "Tôi cần bạn giúp",
   "ob.readStatus.confirmed": "Tôi đã lưu lựa chọn của bạn",
   "ob.readStatus.abandoned": "Tôi đã dừng",
-  "ob.pagesRead": "trang tôi đã đọc",
-  "ob.legalEntitiesFound": "pháp nhân tôi tìm được",
-  "ob.coverageDetails": "Những gì tôi đã đọc và không đọc được",
-  "ob.legalFoundTitle": "Pháp nhân tôi tìm được",
-  "ob.legalFoundBody":
-    "Mỗi khối giữ tên đăng ký, địa chỉ và mã số thuế. Bạn chọn pháp nhân của mình khi rà soát.",
-  "ob.legalEntity": "Pháp nhân",
-  "ob.confirmWebsite":
-    "Tôi dẫn nguồn phần này từ {count} trang công khai. Bạn sửa được mọi thứ; giá trị nào không đụng tới thì vẫn giữ bằng chứng.",
+  "ob.confirmWebsite_one":
+    "Phần này dựa trên {count} trang công khai. Bạn sửa được mọi thứ; giá trị nào không đụng tới thì vẫn giữ bằng chứng.",
+  "ob.confirmWebsite_other":
+    "Phần này dựa trên {count} trang công khai. Bạn sửa được mọi thứ; giá trị nào không đụng tới thì vẫn giữ bằng chứng.",
   "ob.confirmManual":
     "Bạn nói trực tiếp với tôi, nên tôi sẽ lưu câu trả lời của bạn dưới dạng khẳng định của con người.",
   "ob.legalTitle": "Tôi nên dùng pháp nhân nào?",
@@ -4926,7 +5719,6 @@ export const vi = {
   "ob.s1.title": "Rà soát những gì tôi tìm hiểu được về công ty bạn",
   "ob.s1.sub":
     "Tôi chỉ điền những gì chứng minh được từ website của bạn. Hãy sửa lại chỗ nào sai.",
-  "ob.s1.urlPlaceholder": "congtycuaban.com",
   "ob.s1.identityLabel": "Pháp nhân",
   "ob.s1.offerLabel": "Sản phẩm và dịch vụ",
   "ob.s1.customerLabel": "Khách hàng",
@@ -4938,10 +5730,7 @@ export const vi = {
   "ob.s1.saveFailed": "Không lưu được công ty của bạn",
   "ob.s1.savedNote":
     "Đã lưu vào tổ chức của bạn. Sửa gì ở đây rồi tiếp tục là lưu lại lần nữa.",
-  "ob.readGo": "Đọc website của tôi",
-  "ob.urlWillRead": "Tôi sẽ đọc {host}",
   "ob.readFromSite": "đọc từ website",
-  "ob.failTitle": "Tôi đọc được quá ít từ website này",
 
   "ob.manualChapterLegal": "Pháp nhân của bạn",
   "ob.manualChapterOffer": "Sản phẩm và dịch vụ",
@@ -5213,19 +6002,11 @@ export const vi = {
   "overnightGrant.writeFailedTitle": "Thay đổi chưa được lưu",
   "overnightGrant.renewScope":
     "Margince nay làm được nhiều hơn so với khi bạn đồng ý. Tắt rồi bật lại tùy chọn này để mở rộng — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
-  "aiHealth.title": "Các tầng mô hình",
-  "aiHealth.sub":
-    "Mỗi tầng mô hình có đang trả lời hay không. Một tầng đã ngừng và một tầng chỉ đang thận trọng trông giống hệt nhau ở mọi nơi khác — thư đã thu thập vẫn bị giữ lại trong cả hai trường hợp.",
   "aiHealth.noCalls": "không có mô hình nào được gọi trong {hours} giờ qua",
-  "aiHealth.colTier": "Tầng",
-  "aiHealth.colState": "Trạng thái",
-  "aiHealth.colCalls": "{hours} giờ qua",
-  "aiHealth.colLatency": "Trung vị",
-  "aiHealth.colLast": "Trả lời gần nhất",
   "aiHealth.answering": "Đang trả lời",
   "aiHealth.notAnswering": "Không trả lời",
-  "aiHealth.callCounts": "{calls} lượt gọi, {failures} thất bại",
-  "aiHealth.ms": "{ms} ms",
+  "aiHealth.callCounts_one": "{count} lượt gọi, {failures} thất bại",
+  "aiHealth.callCounts_other": "{count} lượt gọi, {failures} thất bại",
   "heldThreads.title": "Đang giữ lại khỏi nhóm",
   "heldThreads.sub":
     "Những chuỗi thư hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi cho phép mọi đồng nghiệp đọc nó; không ai khác có thể chia sẻ chuỗi của bạn.",
@@ -5240,10 +6021,15 @@ export const vi = {
   "heldThreads.nothingToShare":
     "Không còn thư nào để chia sẻ — thư đầu tiên của chuỗi này đã bị xóa. Việc giữ lại vẫn tiếp tục để một thư trả lời sau không đến ở trạng thái mở.",
   "heldThreads.pending": "Đang chờ phán quyết",
-  "heldThreads.attempts": "đã hỏi {count} lần",
-  "heldThreads.backlogStalled":
+  "heldThreads.attempts_one": "Đã hỏi {count} lần",
+  "heldThreads.attempts_other": "Đã hỏi {count} lần",
+  "heldThreads.backlogStalled_one":
     "{count} chuỗi thư đã được hỏi nhiều lần mà chưa có trả lời. Trong lúc này thư vẫn được giữ lại — không mất gì cả, và sẽ tự hết khi bộ phân loại trả lời trở lại.",
-  "heldThreads.heldByOthers":
+  "heldThreads.backlogStalled_other":
+    "{count} chuỗi thư đã được hỏi nhiều lần mà chưa có trả lời. Trong lúc này thư vẫn được giữ lại — không mất gì cả, và sẽ tự hết khi bộ phân loại trả lời trở lại.",
+  "heldThreads.heldByOthers_one":
+    "Vẫn bị giữ lại: {count} hộp thư khác cũng đã nhập thư này và chưa chia sẻ. Một chuỗi chỉ mở khi mọi người nhận đều đồng ý.",
+  "heldThreads.heldByOthers_other":
     "Vẫn bị giữ lại: {count} hộp thư khác cũng đã nhập thư này và chưa chia sẻ. Một chuỗi chỉ mở khi mọi người nhận đều đồng ý.",
   "heldThreads.releaseFailed": "Chưa chia sẻ chuỗi thư",
   "heldThreads.stillHeldTitle": "Đang chờ các hộp thư khác",
@@ -5286,6 +6072,12 @@ export const vi = {
   "senders.kind.business": "Công việc",
   "senders.kind.keptOut": "Đã chặn",
   "senders.kind.undecided": "Chưa quyết định",
+  "senders.waiting.title": "Đang chờ quyết định",
+  "senders.waiting.sub":
+    "Liên hệ từ thư của bạn mà chỉ bạn thấy cho đến khi địa chỉ gửi được quyết định.",
+  "senders.waiting.colContact": "Liên hệ",
+  "senders.waiting.colAddresses": "Địa chỉ",
+  "senders.waiting.colSince": "Chờ từ",
   "mailSharing.title": "Chia sẻ email",
   "mailSharing.sub":
     "Email được thu thập sẽ hiển thị với mọi đồng nghiệp có quyền xem liên hệ đó. Bật mặc định — đây là điều làm cho pipeline được chia sẻ.",
@@ -5494,6 +6286,8 @@ export const vi = {
   "connectors.telegramConnectCta": "Kết nối một bot Telegram",
   "connectors.telegramRosterLabel": "Bot đang chuyển tin nhắn",
   "connectors.telegramEmpty": "Chưa có bot nào được kết nối.",
+  "connectors.telegramReadOnly":
+    "Chỉ quản trị viên hoặc vận hành mới kết nối hoặc thay đổi được bot.",
   "connectors.telegramEditToken": "Thay token",
   "connectors.telegramDisconnectTitle": "Ngắt kết nối bot này?",
   "connectors.telegramDisconnectBody":
@@ -5614,7 +6408,6 @@ export const vi = {
   "ob.s4.connectFailed": "Không kết nối được hộp thư đó",
   "ob.s4.notNow": "Để sau",
 
-  "ob.conv.threadLabel": "Cuộc trò chuyện onboarding",
   "ob.conv.read.started": "Đang đọc {host}. Tìm được gì tôi sẽ báo bạn.",
   "ob.conv.read.pages": "Số trang đã đọc: {pages}.",
   "ob.conv.read.learnedField": "Đã biết {field}: {value}",
@@ -5626,8 +6419,6 @@ export const vi = {
   "ob.conv.read.deferred": "Lượt đọc đang tạm dừng. Tôi sẽ tự động làm tiếp.",
   "ob.conv.read.pollFailed":
     "Tôi mất kết nối giữa chừng khi đang đọc. Những gì đã tìm được vẫn được giữ.",
-  "ob.conv.clarify.entity":
-    "Website nêu nhiều hơn một pháp nhân. Bản cài đặt này dành cho pháp nhân nào?",
   "ob.conv.company.confirmed":
     "Đã xác nhận hồ sơ công ty. Mọi thứ tôi lưu đều kèm nguồn.",
   "ob.conv.manual.chosen": "Tôi sẽ tự nhập.",
@@ -5764,7 +6555,6 @@ export const vi = {
     "Không tìm thấy liên hệ nào trên website của bạn.",
   "ob.conv.triage.factsLabel": "Dữ kiện",
   "ob.conv.triage.factsCount": "tìm được {count}",
-  "ob.rail.tokensUnit": "tok",
   "ob.conv.scene.step": "Bước {n} / {m} · {label}",
   "ob.conv.scene.detour": "Rẽ ngang một chút",
   "ob.conv.scene.decisionSub":
@@ -5861,8 +6651,6 @@ export const vi = {
   "ob.conv.scene.hideEvidence": "ẩn bằng chứng",
   "ob.conv.scene.whyThis": "Tôi đã đọc được gì",
   "ob.conv.scene.foundOn": "Tìm thấy tại",
-  "ob.conv.activity.steps_one": "{count} bước",
-  "ob.conv.activity.steps_other": "{count} bước",
   "ob.conv.showField": "Cho tôi xem",
   "ob.conv.review.editDirectly": "Sửa trực tiếp từng trường",
   "ob.conv.review.backToDossier": "Quay lại tập hồ sơ",
@@ -6031,9 +6819,6 @@ export const vi = {
   "ob.scan.costUnpriced": " · có phần dùng chưa có giá",
 
   // --- the live panel: what the read covered, and what it left ----------
-  "ob.live.stateDone": "xong",
-  "ob.live.stateNow": "đang chạy",
-  "ob.live.stateWaiting": "đang chờ",
   "ob.live.review": "Rà soát",
   "ob.live.hide": "Ẩn đi",
   "ob.live.countPages": "đọc {read} · bỏ qua {skipped}",
@@ -6295,17 +7080,8 @@ export const vi = {
   "client.attribution":
     "Mọi lượt ghi nhận đều được quy trách và kiểm toán được.",
 
-  "book.title": "Đặt lịch họp",
-  "book.min15": "15 phút",
-  "book.min30": "30 phút",
-  "book.min60": "60 phút",
-  "book.attendee": "Email người tham dự",
-  "book.welcomeBack": "Đã nhận ra: {name}",
+  "book.attendee": "Email khách mời",
   "book.subject": "Cuộc họp qua Margince",
-  "book.confirmed": "Đã đặt lịch.",
-  "book.tellThemYourself":
-    "Margince không gửi thư mời — bạn hãy tự báo giờ hẹn cho người tham dự.",
-  "book.failed": "Việc đặt lịch không thành — không có gì được lên lịch.",
   "book.name": "Tên của bạn",
   "book.email": "Email của bạn",
   "book.consentWording":
@@ -6613,17 +7389,7 @@ export const vi = {
   "strength.inout": "{in} vào · {out} ra (90 ngày)",
   "strength.computedFrom": "Tính từ {count} hoạt động",
 
-  // The relationship-graph cards (ADR-0078). The colleague bands are PO-F-3b's
-  // own vocabulary and deliberately differ from the workspace-wide card's:
-  // the two measure different things and must not read as comparable.
-  "network.title": "Ai bên mình quen họ",
-  "network.empty": "Chưa ai bên mình từng trao đổi với liên hệ này.",
-  "network.interactions": "{count} lượt tương tác (90 ngày)",
-  "network.neverSpoken": "Chưa ghi nhận liên hệ",
-  "network.bucket.none": "Chưa liên hệ",
-  "network.bucket.weak": "Yếu",
-  "network.bucket.moderate": "Vừa",
-  "network.bucket.strong": "Mạnh",
+  // The relationship-graph coverage card (ADR-0078).
   "coverage.engaged": "Đang trao đổi",
   "coverage.quiet": "Chưa có trao đổi hai chiều",
   "coverage.seatWithheld": "Một liên hệ bạn không thể xem",
@@ -6748,6 +7514,8 @@ export const vi = {
     "T\u1eeb ng\u1eef b\u1ea3n nh\u00e1p d\u00f9ng khi vi\u1ebft thay b\u1ea1n.",
   "settings.page.agents.sub":
     "T\u00e1c nh\u00e2n \u0111\u01b0\u1ee3c l\u00e0m g\u00ec khi kh\u00f4ng c\u00f3 b\u1ea1n, v\u00e0 client n\u00e0o gi\u1eef th\u00f4ng tin \u0111\u0103ng nh\u1eadp c\u1ee7a b\u1ea1n.",
+  "settings.page.notifications.sub":
+    "Nh\u1eefng lo\u1ea1i th\u00f4ng b\u00e1o n\u00e0o \u0111\u1ebfn v\u1edbi b\u1ea1n, v\u00e0 b\u1eb1ng c\u00e1ch n\u00e0o.",
   "settings.page.connections.sub":
     "H\u1ed9p th\u01b0 v\u00e0 \u0111\u1ecba ch\u1ec9 m\u00e0 gh\u1ebf n\u00e0y \u0111\u1ecdc.",
   "settings.page.capture-activity.sub":
@@ -6755,11 +7523,12 @@ export const vi = {
   "settings.page.company.sub":
     "T\u00ean, ti\u1ec1n t\u1ec7 v\u00e0 b\u1ed1i c\u1ea3nh m\u00e0 m\u1ecdi b\u1ea3n ghi \u0111\u01b0\u1ee3c \u0111\u1ecdc theo.",
   "settings.page.authentication.sub":
-    "C\u00e1ch m\u1ecdi ng\u01b0\u1eddi \u0111\u0103ng nh\u1eadp v\u00e0o b\u1ea3n tri\u1ec3n khai n\u00e0y, v\u00e0 \u1ee9ng d\u1ee5ng n\u00e0o \u0111\u01b0\u1ee3c thay m\u1eb7t n\u00f3.",
+    "C\u00e1ch m\u1ecdi ng\u01b0\u1eddi \u0111\u0103ng nh\u1eadp v\u00e0o b\u1ea3n tri\u1ec3n khai n\u00e0y, \u1ee9ng d\u1ee5ng n\u00e0o \u0111\u01b0\u1ee3c thay m\u1eb7t n\u00f3, v\u00e0 nh\u00f3m IdP n\u00e0o c\u1ea5p vai tr\u00f2.",
   "settings.page.members.sub":
     "M\u1ecdi ng\u01b0\u1eddi c\u00f3 gh\u1ebf, v\u00e0 m\u1ed7i ng\u01b0\u1eddi t\u1edbi \u0111\u01b0\u1ee3c \u0111\u00e2u.",
   "settings.page.teams.sub":
     "Ai l\u00e0m vi\u1ec7c c\u00f9ng nhau \u2014 \u0111\u00f3 l\u00e0 c\u0103n c\u1ee9 c\u1ee7a ph\u1ea1m vi h\u00e0ng.",
+  "settings.page.roles.sub": "Mỗi vai trò được làm gì và với bản ghi của ai.",
   "settings.page.seats.sub":
     "Bao nhi\u00eau gh\u1ebf \u0111ang d\u00f9ng so v\u1edbi quy\u1ec1n c\u1ee7a b\u1ea3n tri\u1ec3n khai n\u00e0y.",
   "settings.page.stageautomation.sub":
@@ -6825,6 +7594,7 @@ export const vi = {
   "settings.tab.authentication": "Đăng nhập & ứng dụng",
   "settings.tab.members": "Thành viên",
   "settings.tab.teams": "Nhóm",
+  "settings.tab.roles": "Vai trò và quyền",
   "settings.tab.seats": "Giấy phép & chỗ ngồi",
   "settings.tab.stageautomation": "T\u1ef1 \u0111\u1ed9ng giai \u0111o\u1ea1n",
   "settings.tab.pipelines": "Quy trình",
@@ -6835,10 +7605,10 @@ export const vi = {
   "settings.tab.tags": "Thẻ",
   "settings.tab.products": "Sản phẩm & báo giá",
   "settings.tab.import": "Nhập dữ liệu",
-  "settings.tab.models": "Mô hình & định tuyến",
+  "settings.tab.models": "Mô hình AI",
   "settings.tab.automations": "Tự động hoá",
   "settings.tab.usage": "Mức dùng AI",
-  "settings.tab.model-calls": "Lượt gọi mô hình",
+  "settings.tab.model-calls": "Nhật ký gọi AI",
   "settings.tab.audit": "Nhật ký kiểm toán",
   "settings.tab.system-health": "Tình trạng hệ thống",
   "settings.tab.reset": "Đặt lại dữ liệu",
@@ -6852,14 +7622,11 @@ export const vi = {
   "settings.tab.account": "Tài khoản",
   "settings.tab.voice": "Giọng viết",
   "settings.tab.agents": "Tác nhân",
+  "settings.tab.notifications": "Thông báo",
   "settings.tab.connections": "Kết nối",
-  "settings.tab.general": "Chung",
-  "settings.tab.users": "Người dùng & nhóm",
   "settings.tab.extensions": "Tiện ích mở rộng",
   "settings.tab.integrations": "Tích hợp",
   "settings.tab.capture": "Quy tắc thu thập",
-  "settings.tab.data-model": "Mô hình dữ liệu",
-  "settings.tab.ai": "AI",
   "settings.tab.knowledge": "Tri thức",
   "corpusAsk.title": "Hỏi tài liệu của bạn",
   "corpusAsk.sub":
@@ -6867,9 +7634,8 @@ export const vi = {
   "corpusAsk.whichSet": "Bộ nào",
   "corpusAsk.question": "Câu hỏi của bạn",
   "corpusAsk.submit": "Hỏi",
-  "corpusAsk.byModel": "Được viết từ các đoạn bên dưới",
-  "corpusAsk.atLine": "dòng {line}, cột {column}",
-  "corpusAsk.byPassages": "Chính các đoạn văn — không ai viết bản tóm tắt",
+  "corpusAsk.byModel": "Margince viết từ tài liệu của bạn",
+  "corpusAsk.byPassages": "Chính các đoạn trích — không ai viết câu trả lời",
   "corpusAsk.notReady":
     "Bộ này chưa đọc xong — {embedded} trên {total} đoạn có thể tìm kiếm. Câu hỏi của bạn không có gì sai; hãy thử lại sau ít phút.",
   "corpusAsk.retrievalUnavailable":
@@ -6880,6 +7646,21 @@ export const vi = {
   "corpusAsk.unreviewedTitle": "Chưa ai đọc các đoạn này",
   "corpusAsk.notReadyTitle": "Bộ này vẫn đang được đọc",
   "corpusAsk.retrievalUnavailableTitle": "Chưa cấu hình chỉ mục tìm kiếm",
+  "corpusAsk.noGrantTitle": "Bạn không mở được tài liệu của công ty này",
+  "corpusAsk.noGrant":
+    "Hỏi sẽ đọc một bộ tài liệu bạn chưa được cấp quyền. Quản trị viên có thể cấp cho bạn.",
+  "corpusAsk.noSetsTitle": "Chưa có bộ tài liệu nào để hỏi",
+  "corpusAsk.noSets":
+    "Công ty này chưa lưu tài liệu nào nên không có gì để tìm.",
+  "corpusAsk.citeAtLine": "{number}: {document}, dòng {line}",
+  "corpusAsk.citeInDocument": "{number}: trong {document}",
+  "corpusAsk.documentLoading": "Đang mở tài liệu…",
+  "corpusAsk.documentFailedTitle": "Không mở được tài liệu đó",
+  "corpusAsk.documentFailed":
+    "Hiện chưa đọc được {document}. Đoạn được trích dẫn nằm bên dưới.",
+  "corpusAsk.openFile": "Mở tệp",
+  "corpusAsk.quoteNotPinpointed":
+    "Trích dẫn này vắt qua một lần xuống dòng nên không đánh dấu chính xác được. Tài liệu được mở đúng chỗ xuất hiện đoạn đó.",
   "corpusAsk.notCovered.title": "Bộ này không bao gồm",
   "corpusAsk.notCovered.body":
     "{name} đã được tìm toàn bộ và không có gì đủ gần để trả lời. Bộ này bao gồm:",
@@ -6961,6 +7742,11 @@ export const vi = {
   "captureActivity.outcome.suppressed": "Không tạo liên hệ",
   "captureActivity.outcome.deferred": "Đang chờ phán quyết người gửi",
   "captureActivity.outcome.fault": "Suy luận thất bại",
+  "captureActivity.funnel.captured": "Đã ghi nhận",
+  "captureActivity.funnel.internal": "Nội bộ",
+  "captureActivity.funnel.suppressed": "Không có liên hệ",
+  "captureActivity.funnel.deferred": "Chờ phán quyết",
+  "captureActivity.funnel.fault": "Thất bại",
   "captureActivity.reason.internal_only":
     "mọi bên đều thuộc tên miền của chính bạn",
   "captureActivity.reason.deferral_capped":
@@ -7009,7 +7795,6 @@ export const vi = {
   "pipeline.reason.record_not_available":
     "bản ghi của bước này không còn được lưu, hoặc bạn không được đọc — khi bản ghi đã mất thì không thể phân biệt hai điều đó",
   "pipeline.status.not_reported": "Không báo cáo ở đây",
-  "pipeline.subject.message": "về tin nhắn này",
   "pipeline.subject.sender": "về người gửi, không riêng tin nhắn này",
   "pipeline.subject.domain": "về tên miền của người gửi",
   "pipeline.subject.thread": "về toàn bộ cuộc trò chuyện",
@@ -7118,8 +7903,6 @@ export const vi = {
   "pipeline.reason.would_restore_erased":
     "báo cáo điều này sẽ khôi phục dữ liệu mà một yêu cầu xóa đã gỡ bỏ",
   "pipeline.reason.no_writer_yet": "bước này chưa tồn tại",
-  "settings.tab.maintenance": "Bảo trì",
-  "settings.tab.license": "Giấy phép",
   "license.card.title": "Giấy phép và chỗ ngồi",
   "license.state.licensed": "Đã có giấy phép",
   "license.state.uncapped": "Đã có giấy phép, không giới hạn chỗ",
@@ -7134,10 +7917,10 @@ export const vi = {
   "license.seats.capacityOnly":
     "Số chỗ đầy đủ mà bản cài đặt này đang dùng. Quyền hạn được cấp không thuộc phạm vi bạn xem.",
   "license.seats.title": "Số chỗ",
-  "license.seats.used": "Chỗ đang dùng",
-  "license.seats.granted": "Chỗ được cấp",
   "license.seats.uncapped": "Không giới hạn",
-  "license.meter.label": "Đang dùng {used} trong {granted} chỗ",
+  "license.seats.ofGranted": "{used} trên {granted}",
+  "license.seats.left": "còn {count}",
+  "license.seats.over": "{count} vượt hạn mức",
   "license.over.title": "Bạn đã vượt quá số chỗ được cấp",
   "license.over.body":
     "Đang dùng {used} chỗ trong khi giấy phép cấp {granted}. Không ai mất quyền truy cập và không chỗ nào bị thu hồi — nhưng không thể mời thành viên mới cho đến khi trở lại trong hạn mức. Hãy vô hiệu hoá một thành viên hoặc nâng hạn mức.",
@@ -7355,6 +8138,74 @@ export const vi = {
     "Đã xếp hàng — sẽ xong trong chốc lát và tự cập nhật.",
   "settings.voice.buildStatus.pending":
     "Vẫn đang dựng — việc này có thể mất một lát; xong sẽ tự cập nhật ở đây.",
+  "roles.title": "Vai trò",
+  "roles.sub":
+    "Vai trò quyết định thành viên được làm gì với từng loại bản ghi và cài đặt, và được thay đổi bản ghi của ai. Margince có sẵn các vai trò mặc định; vai trò mới bắt đầu là bản sao của một vai trò có sẵn.",
+  "roles.readOnly":
+    "Vai trò của bạn được xem vai trò nhưng không được thay đổi.",
+  "roles.showArchived": "Hiện vai trò đã lưu trữ",
+  "roles.showArchivedSub":
+    "Vai trò đã lưu trữ không cấp quyền nào và không thể gán cho ai.",
+  "roles.system": "Mặc định",
+  "roles.archived": "Đã lưu trữ",
+  "roles.open": "Mở",
+  "roles.openNamed": "Mở {name}",
+  "roles.empty": "Không có vai trò nào.",
+  "roles.new": "Vai trò mới",
+  "roles.newTitle": "Vai trò mới",
+  "roles.newFrom": "Sao chép quyền từ",
+  "roles.newFromHint":
+    "Vai trò mới bắt đầu với đúng các quyền của vai trò này.",
+  "roles.newName": "Tên",
+  "roles.newSubmit": "Tạo vai trò",
+  "roles.notCreated": "Chưa tạo được vai trò",
+  "roles.created": "Đã tạo {name}",
+  "roles.detailSub":
+    "Thay đổi áp dụng cho mọi thành viên giữ vai trò này từ yêu cầu tiếp theo của họ.",
+  "roles.rename": "Đổi tên",
+  "roles.renameTitle": "Đổi tên vai trò",
+  "roles.nameLabel": "Tên",
+  "roles.renameSubmit": "Lưu tên",
+  "roles.scopeTitle": "Thành viên được thay đổi bản ghi của ai",
+  "roles.scopeSub":
+    "Liên hệ, công ty, lead và deal vẫn đọc được với mọi vai trò có quyền đọc chúng. Mục này quyết định thành viên được thay đổi gì và thấy những dự án nào.",
+  "roles.scope.own": "Của chính họ",
+  "roles.scope.ownSub": "Bản ghi do thành viên sở hữu.",
+  "roles.scope.team": "Của nhóm họ",
+  "roles.scope.teamSub":
+    "Bản ghi do bất kỳ ai trong các nhóm của thành viên sở hữu.",
+  "roles.scope.all": "Của tất cả",
+  "roles.scope.allSub": "Mọi bản ghi trong công ty.",
+  "roles.grantsSub": "Mỗi công tắc lưu ngay lập tức.",
+  "roles.grantsCore": "Bản ghi và cài đặt",
+  "roles.grantsExtensions": "Tiện ích mở rộng",
+  "roles.grantsNarrowOnly":
+    "Mỗi công tắc lưu ngay lập tức. Chỉ quản trị viên mới bật được một quyền; bạn có thể tắt quyền.",
+  "roles.turnOnAdminOnly": "Chỉ quản trị viên mới bật được một quyền.",
+  "roles.widenAdminOnly":
+    "Chỉ quản trị viên mới mở rộng được phạm vi bản ghi của vai trò; bạn có thể thu hẹp nó.",
+  "roles.objectColumn": "Đối tượng",
+  "roles.preview": "Xem trước những gì vai trò này thấy",
+  "roles.archive": "Lưu trữ vai trò",
+  "roles.restore": "Khôi phục vai trò",
+  "roles.archivedNote":
+    "Vai trò này đã được lưu trữ. Nó không cấp quyền nào và không ai được gán nó cho đến khi được khôi phục.",
+  "roles.archivedToast": "Đã lưu trữ {name}",
+  "roles.restoredToast": "Đã khôi phục {name}",
+  "roles.notSaved": "Chưa lưu thay đổi",
+  "roles.refusal.widening":
+    "Chỉ quản trị viên mới được tạo hoặc khôi phục vai trò, bật một quyền, hoặc mở rộng phạm vi bản ghi của nó. Bạn có thể đổi tên, thu hẹp hoặc lưu trữ vai trò.",
+  "roles.refusal.versionSkew":
+    "Vai trò này đã được thay đổi ở nơi khác khi nó đang mở. Trang hiện hiển thị thay đổi đó; hãy thực hiện lại thay đổi của bạn nếu vẫn cần.",
+  "roles.refusal.inUse":
+    "Vẫn còn thành viên có thể đăng nhập đang giữ vai trò này. Hãy gán cho họ vai trò khác trước, rồi lưu trữ nó.",
+  "roles.refusal.archivedHeld":
+    "Một thành viên vẫn giữ vai trò đã lưu trữ. Hãy gán cho họ một vai trò đang dùng trước.",
+  "roles.refusal.system": "Không thể lưu trữ vai trò mặc định.",
+  "roles.refusal.adminFloor":
+    "Vai trò quản trị giữ quyền quản lý thành viên, vai trò và nhóm, để công ty luôn được quản trị.",
+  "roles.refusal.nameTaken":
+    "Đã có vai trò khác mang tên này. Hãy chọn tên khác.",
   "extAccess.title": "Tiện ích mở rộng & quyền truy cập",
   "extAccess.sub":
     "Mỗi đơn vị tiện ích đã ghép vào bản cài đặt này mang theo những gì, và vai trò nào được dùng. Chỉ dành cho quản trị viên.",
@@ -7480,7 +8331,6 @@ export const vi = {
   "users.link.urlLabel": "Liên kết đặt mật khẩu",
   "users.link.copy": "Sao chép liên kết",
   "users.link.copied": "Đã sao chép",
-  "users.link.copyFailedTitle": "Không sao chép được liên kết",
   "users.link.copyFailed":
     "Hãy bôi đen liên kết trong trường rồi sao chép thủ công.",
   "users.link.expires": "Hết hạn {when}.",
@@ -7498,7 +8348,8 @@ export const vi = {
     "Giữ cho bối cảnh kinh doanh chung — nền cho soạn nháp, báo giá, tìm kiếm và Agent có kiểm soát — luôn chính xác. Mỗi nhận định đều gắn với ai đã cung cấp và nguồn từ đâu.",
   "settings.companyTrust":
     "Chỉ tri thức đã xác nhận — văn bản website không bao giờ trở thành chỉ dẫn.",
-  "settings.companyConfirmed": "nhận định đã xác nhận",
+  "settings.companyConfirmed_one": "{count} nhận định đã xác nhận",
+  "settings.companyConfirmed_other": "{count} nhận định đã xác nhận",
   "settings.companyMark": "Logo công ty",
   "settings.companyMarkIntro":
     "Hai dấu hiệu, vì thanh bên hiển thị công ty của bạn ở hai độ rộng. Điền dấu hiệu rộng thì thanh bên thu gọn cũng dùng nó, cho đến khi bạn thêm biểu tượng vuông.",
@@ -7614,7 +8465,7 @@ export const vi = {
   "template.edit": "Sửa mẫu",
   "template.archive": "Lưu trữ mẫu",
   "template.archiveConfirm":
-    "Lưu trữ mẫu này? Các báo giá tham chiếu tới mẫu này sẽ quay về mẫu mặc định của ngôn ngữ.",
+    "Lưu trữ mẫu này? Các báo giá đang dùng mẫu này vẫn giữ bố cục của nó. Báo giá mới không thể chọn mẫu này.",
   "template.name": "Tên",
   "template.locale": "Ngôn ngữ",
   "template.isDefault": "Mặc định cho ngôn ngữ này",
@@ -7642,6 +8493,7 @@ export const vi = {
     "Mức dùng của tháng đã chọn. Ước tính tách biệt với hạn mức token hiện tại và hóa đơn nhà cung cấp.",
   "aiusage.col.task": "Tác vụ",
   "aiusage.col.tier": "Bậc",
+  "aiTier.decide": "Mô hình quyết định",
   "aiusage.col.calls": "Lượt gọi",
   "aiusage.col.cached": "Đã cache",
   "aiusage.col.tokensIn": "Token vào",
@@ -7656,6 +8508,14 @@ export const vi = {
   "aiusage.empty": "Không có lượt gọi AI nào trong khoảng này.",
   "aiusage.prevMonth": "Tháng trước",
   "aiusage.nextMonth": "Tháng sau",
+  "aiusage.decisions.note":
+    "Mỗi con số đếm một yêu cầu, dù yêu cầu đó đã qua bao nhiêu mô hình. Đạt nghĩa là câu trả lời của mô hình quyết định được giữ; chuyển tiếp nghĩa là một mô hình ngôn ngữ đã tiếp nhận.",
+  "aiusage.decisions.empty":
+    "Tháng này chưa có tác vụ nào hỏi mô hình quyết định.",
+  "aiusage.decisions.col.asked": "Đã hỏi",
+  "aiusage.decisions.col.passRate": "Tỷ lệ đạt",
+  "aiusage.decisions.col.fallbackRate": "Tỷ lệ chuyển tiếp",
+  "aiusage.decisions.reasonsFor": "Chuyển tiếp theo lý do cho {rate}",
 
   "aibanner.degraded": "Đã đạt ngưỡng 80% hạn mức AI — xem tác động",
   "aibanner.queued": "Đã hết hạn mức AI — xem công việc bị hoãn",
@@ -7663,11 +8523,13 @@ export const vi = {
   "aibanner.link": "Quản lý hạn mức",
   "aibanner.dismiss": "Bỏ qua",
 
+  "licensebanner.body":
+    "Token giấy phép của bản cài đặt này đã được kiểm tra và bị từ chối.",
+  "licensebanner.link": "Mở {tab}",
+
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":
     "Chỉ người vận hành mới đọc được dấu vết từng lượt gọi. Nó ghi lại mọi lượt gọi mô hình của bản cài đặt, nên không hiển thị rộng hơn.",
-  "aiHealth.withheld":
-    "Chỉ người vận hành mới xem được các tầng mô hình có đang trả lời hay không. Đó là hệ thống của bản cài đặt, không phải điều gì về công việc của bạn.",
   "aicalls.sub":
     "Mọi lượt gọi mô hình — danh tính định tuyến, token, số lần thử lại, nội dung đã ghi.",
   "aicalls.col.detail": "Chi tiết",
@@ -7681,6 +8543,19 @@ export const vi = {
   "aicalls.badge.cacheHit": "Trúng cache",
   "aicalls.badge.degraded": "Giảm cấp",
   "aicalls.badge.retries": "Thử lại ×{count}",
+  "aicalls.badge.decision": "Mô hình quyết định",
+  "aicalls.reason.decision_below_floor":
+    "Mô hình quyết định dưới ngưỡng tin cậy",
+  "aicalls.reason.decision_error": "Mô hình quyết định bị lỗi",
+  "aicalls.reason.decision_off_enum":
+    "Mô hình quyết định trả lời ngoài các lựa chọn",
+  "aicalls.reason.decision_state_too_large":
+    "Dữ liệu vào quá lớn cho mô hình quyết định",
+  "aicalls.reason.decision_uncertified":
+    "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
+  "aicalls.reason.decision_local_only":
+    "Tác vụ chỉ chạy cục bộ, mô hình quyết định thì không",
+  "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Các lệnh gọi gần đây",
   "aicalls.filter.all": "Mọi tác vụ",
   "aicalls.loadMore": "Tải thêm",
@@ -7705,7 +8580,6 @@ export const vi = {
   "aiexport.copy": "Sao chép YAML",
   "aiexport.copied": "Đã sao chép",
   "aiexport.download": "Tải xuống .yaml",
-  "aiexport.copyFailedTitle": "Sao chép thất bại",
   "aiexport.copyFailed": "Hãy dùng phần xem trước hoặc tải xuống.",
   "aiexport.close": "Đóng",
   "aiexport.previewLabel": "Xem trước kịch bản",
@@ -7759,10 +8633,9 @@ export const vi = {
   "forecast.landing.caveat.call_below_actual":
     "Đánh giá thấp hơn số tiền đã thắng. Nó được hiển thị đúng như đã ghi, không chỉnh sửa.",
   "forecast.pipelineNeeded": "Pipeline cần có",
-  "forecast.pipelineNeededDetail":
-    "{current} đang mở so với {needed} cần để đạt {reference}.",
-  "forecast.pipelineBasis.manager_call": "Đo theo đánh giá cho kỳ này.",
-  "forecast.pipelineBasis.historical_median":
+  "forecast.pipelineNeededDetail": "{open} đang mở · để đạt {landing}",
+  "forecast.pipelineBasisWhy.manager_call": "Đo theo đánh giá cho kỳ này.",
+  "forecast.pipelineBasisWhy.historical_median":
     "Đo theo trung vị của bốn kỳ tương đương gần nhất.",
   "forecast.pipelineAbsentTitle": "Không có số liệu bao phủ cho kỳ này",
   "forecast.pipelineAbsent.insufficient_basis":
@@ -7797,6 +8670,28 @@ export const vi = {
     "Cung cấp nhà cung cấp này trên màn hình đăng nhập. Tắt đi sẽ dừng cả những lượt đăng nhập đang diễn ra; các phiên hiện có không bị ảnh hưởng.",
   "signInMethods.noneConfigured":
     "Bản triển khai này chưa cấu hình nhà cung cấp bên ngoài nào, nên ngoài mật khẩu không có lựa chọn khác.",
+  "groupRoles.title": "Cấp vai trò theo nhóm",
+  "groupRoles.sub":
+    "Cấp một vai trò khi đăng nhập doanh nghiệp cho mọi thành viên đã được mời thuộc một nhóm IdP. Viết tên nhóm đúng như claim groups trong ID token. Cách này không tạo tài khoản: email chưa được mời vẫn bị từ chối, dù có nhóm hay không.",
+  "groupRoles.grantOnlyTitle": "Chỉ cấp: thư mục không bao giờ thu hồi",
+  "groupRoles.grantOnly":
+    "Mỗi lần đăng nhập cấp các vai trò đã ánh xạ và không bao giờ gỡ vai trò nào. Xóa một thành viên khỏi nhóm IdP không thu hồi vai trò ở đây: việc thu hồi vẫn là hành động chủ động của quản trị viên trên tài khoản của chính thành viên đó.",
+  "groupRoles.adminGrant":
+    "Ánh xạ một nhóm vào vai trò Admin sẽ cấp quyền quản trị cho mọi thành viên đã được mời của nhóm đó ở lần đăng nhập kế tiếp.",
+  "groupRoles.group": "Nhóm IdP",
+  "groupRoles.groupPlaceholder": "Tên nhóm, đúng như ID token ghi",
+  "groupRoles.role": "Vai trò được cấp",
+  "groupRoles.add": "Thêm nhóm",
+  "groupRoles.remove": "Gỡ ánh xạ nhóm này",
+  "groupRoles.removeNamed": "Gỡ ánh xạ {group}",
+  "groupRoles.save": "Lưu cấp vai trò theo nhóm",
+  "groupRoles.empty":
+    "Chưa có nhóm nào được ánh xạ. Đăng nhập doanh nghiệp không cấp thêm gì ngoài những gì mỗi thành viên đang có.",
+  "groupRoles.blankGroup": "Mỗi ánh xạ cần một tên nhóm.",
+  "groupRoles.whitespaceGroup":
+    "Tên nhóm không được bắt đầu hay kết thúc bằng khoảng trắng. Tên phải khớp chính xác với ID token.",
+  "groupRoles.duplicateGroup": "Mỗi nhóm chỉ được ánh xạ một lần.",
+  "groupRoles.tooMany": "Chỉ có thể ánh xạ tối đa 64 nhóm.",
   "oauthApp.google.title": "Ứng dụng Google",
   "oauthApp.google.sub":
     "Hộp thư được kết nối, và mọi người đăng nhập bằng Google, thông qua một ứng dụng Google OAuth của bạn. Thông tin xác thực của tổ chức bạn được dùng thay vì của chúng tôi.",
@@ -7832,6 +8727,7 @@ export const vi = {
   "oauthApp.writeFailed": "Thay đổi chưa được lưu",
   "oauthApp.remove": "Xoá ứng dụng",
   "oauthApp.redirectCopied": "Đã sao chép",
+  "oauthApp.redirectCopyFailed": "Hãy chọn địa chỉ và tự sao chép.",
   "oauthApp.redirectCopy": "Sao chép URI {purpose}",
   "oauthApp.redirect.mailbox_connect": "Hộp thư",
   "oauthApp.redirect.calendar_connect": "Lịch",
@@ -7861,13 +8757,15 @@ export const vi = {
   "aiSettings.withheld": "Không thuộc quyền xem của bạn",
   "aiSettings.unread": "Không đọc được",
   "aiSettings.pending": "Đang đọc…",
-  "aiSettings.spend.label": "Chi tiêu tháng này",
-  "aiSettings.spend.value": "{spent} trên {budget} token",
   "aiSettings.spend.estimated": "≈ {amount} ước tính",
+  "aiSettings.spend.notPriced": "Chưa có giá",
   "aiSettings.providers.label": "Nhà cung cấp",
-  "aiSettings.providers.value": "{count} đã có khoá",
+  "aiSettings.providers.value": "{count} trên {total}",
   "aiSettings.providers.missing": "{count} đã gán nhưng chưa có khoá",
   "aiSettings.providers.lastCall": "lần gọi cuối {elapsed}",
+  "aiSettings.providers.lastCallOnly": "Lần gọi cuối cùng {elapsed}",
+  "aiSettings.providers.neverCalled": "Chưa từng gọi",
+  "aiSettings.providers.traceFailed": "Không xem được nhật ký gọi",
   "elapsed.justNow": "vừa xong",
   "elapsed.minutes": "{minutes} phút trước",
   "elapsed.hours": "{hours} giờ trước",
@@ -7882,16 +8780,19 @@ export const vi = {
   "aiRouting.lane.local_large":
     "Tầng định tuyến cục bộ cao hơn; kiểm tra điểm cuối",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy hồi trên dữ liệu của bạn",
-  "aiRouting.lanes.title": "Các làn định tuyến",
+  "aiRouting.lane.decisions":
+    "Câu hỏi có kiểu, hỏi trước các tầng khi đã chứng nhận",
+  "aiRouting.decisions.add": "Thêm mô hình quyết định",
+  "aiRouting.decisions.remove": "Gỡ mô hình quyết định",
+  "aiRouting.decisions.preset.openrouter": "Mẫu: OpenRouter",
+  "aiRouting.decisions.preset.openrouterKey":
+    "Điền sẵn host và mô hình. Khóa đặt trong JEV_COMPATIBLE_API_KEY.",
+  "aiRouting.decisions.absent":
+    "Chưa có mô hình quyết định. Mọi tác vụ dùng các tầng.",
   "aiRouting.priceSheet": "Bảng giá",
   "aiRouting.provider.label": "Nhà cung cấp",
-  "aiRouting.change": "Đổi",
-  "aiRouting.done": "Xong",
   "aiRouting.noKey": "Chưa có khoá",
-  "aiRouting.unpriced": "Chưa định giá",
-  "aiRouting.effect":
-    "Ràng buộc đã lưu sẽ đến mọi tiến trình trong vòng một phút, không cần khởi động lại.",
-  "aiProviderKeys.title": "Khóa nhà cung cấp mô hình",
+  "aiProviderKeys.title": "Nhà cung cấp",
   "aiProviderKeys.keyless": "Không cần khoá",
   "aiProviderKeys.field": "Khoá API",
   "aiProviderKeys.save": "Lưu khoá",
@@ -7900,6 +8801,7 @@ export const vi = {
   "aiProviderKeys.saveFailed": "Không thể cập nhật nhà cung cấp này",
   "aiProviderKeys.configured": "Đã cấu hình",
   "aiProviderKeys.absent": "Chưa đặt",
+  "aiProviderKeys.optional": "Không bắt buộc",
   "aiProviderKeys.configuredHint":
     "Đã niêm phong trong kho khóa. Không thể đọc lại — dán khóa mới để thay thế. Khóa cũng có thể đến qua {envVar}.",
   "aiProviderKeys.absentHint":
@@ -7916,7 +8818,7 @@ export const vi = {
   "aiProviderKeys.remove": "Xóa",
   "aiRouting.withheld":
     "Chỉ người có quyền thay đổi liên kết mô hình mới thấy bản cài đặt này dùng những mô hình nào.",
-  "aiRouting.title": "Định tuyến mô hình",
+  "aiRouting.title": "Các tầng mô hình",
   "aiRouting.sheetAsOf":
     "Danh sách mô hình là bảng giá tính đến {date}. Mọi ID mới hơn mà nhà cung cấp của bạn phục vụ cũng dùng được — cứ gõ vào.",
   "aiRouting.sheetUnknown":
@@ -7925,42 +8827,92 @@ export const vi = {
   "aiRouting.unboundUnkeyed":
     "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy thêm khóa nhà cung cấp mô hình bên dưới, rồi ràng buộc các tầng tại đây. Bản triển khai cũng có thể khai báo ràng buộc đầu tiên tại seeds.ai_routing trong margince.yaml; mục này chỉ được đọc một lần khi tạo tổ chức.",
   "aiRouting.unboundKeyed":
-    "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy bắt đầu với mặc định của nhà cung cấp đã có khóa, chỉnh sửa tùy ý rồi lưu.",
+    "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy bắt đầu với mặc định của một nhà cung cấp; bạn có thể đổi từng tầng sau đó.",
   "aiRouting.unboundStart": "Bắt đầu với {provider}",
-  "aiRouting.profile.card": "Hồ sơ triển khai",
-  "aiRouting.profile.label": "Vị trí",
-  "aiRouting.profile.help":
-    "Nơi chạy suy luận. Sovereign nghĩa là không có dữ liệu ra ngoài: chỉ mô hình trên máy chủ của bạn, bị từ chối khi lưu chứ không phải ở lần gọi đầu tiên.",
-  "aiRouting.profile.eu_hosted": "Đặt tại EU",
-  "aiRouting.profile.sovereign": "Sovereign (không ra ngoài)",
-  "aiRouting.profile.cloud_frontier": "Cloud frontier (đám mây cao cấp)",
   "aiRouting.dimensions.label": "Độ rộng vector",
   "aiRouting.dimensions.help":
     "Để trống để dùng mặc định của nhà cung cấp. Giá trị ngoài khoảng 1 đến 2000 sẽ bị từ chối.",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Máy chủ",
   "aiRouting.baseUrl.help":
-    "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
+    "Gốc host; /v1 được thêm vào. Bắt buộc: bộ chuyển này không có mặc định.",
+  "aiRouting.baseUrl.help.jev":
+    "URL endpoint đầy đủ. Để trống để dùng API của chính TypeSafe.",
+  "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.jevCompatible":
+    "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc.",
+  "aiRouting.baseUrl.placeholder.jevCompatible":
+    "https://openrouter.ai/api/alpha/decisions",
   "aiRouting.models.noKey":
-    "Chỉ hiện bảng giá — nhà cung cấp này chưa có khoá nên không thể hỏi nó phục vụ những gì. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
-  "aiRouting.models.noEndpoint":
-    "Chỉ hiện bảng giá — điền host ở trên rồi mới hỏi được nhà cung cấp này. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
+    "Chưa có khóa nên không có danh sách mô hình. Hãy nhập ID bất kỳ.",
+  "aiRouting.models.noEndpoint": "Nhập host ở trên để tải danh sách mô hình.",
   "aiRouting.models.profileForbids":
-    "Chỉ hiện bảng giá — hồ sơ triển khai này không cho phép tiếp cận nhà cung cấp đó.",
+    "Hồ sơ này không cho phép nhà cung cấp này.",
   "aiRouting.models.notPublished":
-    "Chỉ hiện bảng giá — nhà cung cấp này không công bố danh sách mô hình.",
+    "Nhà cung cấp này không công bố danh sách mô hình.",
   "aiRouting.models.unreachable":
-    "Chỉ hiện bảng giá — nhà cung cấp này không phản hồi. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
+    "Nhà cung cấp không phản hồi. Hãy nhập ID bất kỳ.",
   "aiRouting.model.label": "Mô hình",
   "aiRouting.model.help":
-    "Danh sách là những mô hình mà bản cài đặt này biết giá, trên mỗi triệu token, đầu vào → đầu ra. Mọi ID khác mà nhà cung cấp của bạn phục vụ cũng dùng được — hãy nhập vào.",
-  "aiRouting.save": "Lưu định tuyến",
+    "Chọn một mô hình trong danh sách, hoặc nhập bất kỳ ID nào mà nhà cung cấp phục vụ.",
   "aiRouting.saving": "Đang lưu ràng buộc…",
-  "aiRouting.savedTitle": "Đã lưu định tuyến",
-  "aiRouting.saved": "Mọi tiến trình đang phục vụ theo nó.",
   "aiRouting.saveFailed": "Không thể lưu định tuyến",
   "aiRouting.adminOnly":
     "Đổi định tuyến mô hình cần quyền cập nhật định tuyến và đọc hạn mức.",
+  "aiProviderKeys.test": "Kiểm tra",
+  "aiProviderKeys.testing": "Đang kiểm tra khóa…",
+  "aiProviderKeys.connected": "Đã kết nối",
+  "aiProviderKeys.accepted": "Nhà cung cấp đã chấp nhận khóa.",
+  "aiProviderKeys.answered": "Máy chủ đã phản hồi.",
+  "aiProviderKeys.unconfirmed":
+    "Máy chủ đã phản hồi và không từ chối khóa. Máy chủ không thể xác nhận khóa hợp lệ; khóa sai sẽ lộ ra ở quyết định đầu tiên.",
+  "aiProviderKeys.testFailed": "Kiểm tra thất bại",
+  "aiProviderKeys.modelCount_one": "Có {count} mô hình",
+  "aiProviderKeys.modelCount_other": "Có {count} mô hình",
+  "aiProviderKeys.reason.authFailed":
+    "Nhà cung cấp từ chối khóa này. Hãy kiểm tra rồi thay khóa.",
+  "aiProviderKeys.reason.rateLimited":
+    "Nhà cung cấp đang giới hạn tốc độ với khóa này. Khóa có thể vẫn hợp lệ; hãy thử lại sau.",
+  "aiProviderKeys.reason.noKey": "Chưa lưu khóa nào cho nhà cung cấp này.",
+  "aiProviderKeys.reason.noEndpoint":
+    "Chưa có tầng nào dùng nhà cung cấp này nên không có máy chủ để kiểm tra. Hãy ràng buộc một tầng trước.",
+  "aiProviderKeys.reason.profileForbids":
+    "Hồ sơ triển khai này không cho phép truy cập nhà cung cấp này.",
+  "aiProviderKeys.reason.notPublished":
+    "Phiên bản này không thể kiểm tra nhà cung cấp này.",
+  "aiProviderKeys.reason.unreachable":
+    "Nhà cung cấp không phản hồi. Hãy kiểm tra máy chủ và mạng.",
+  "aiRouting.intro":
+    "Chọn nhà cung cấp và mô hình cho từng tầng, cho embeddings và, nếu muốn, cho mô hình quyết định. Ràng buộc đã lưu áp dụng cho mọi tiến trình trong vòng một phút, không cần khởi động lại.",
+  "aiRouting.profileLine":
+    "Hồ sơ triển khai: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một tầng được dùng và do bộ phận vận hành đặt.",
+  "aiRouting.notBound": "Chưa gắn",
+  "aiRouting.lastResponse": "Phản hồi gần nhất {when}",
+  "aiTerms.provider": "Nhà cung cấp",
+  "aiTerms.providerGloss": "bên chúng tôi gọi",
+  "aiTerms.tier": "Bậc",
+  "aiTerms.tierGloss": "một loại công việc, gắn với một mô hình",
+  "aiTerms.task": "Tác vụ",
+  "aiTerms.taskGloss": "việc sản phẩm làm",
+  "aiRouting.taskCount_one": "{count} tác vụ",
+  "aiRouting.taskCount_other": "{count} tác vụ",
+  "aiRouting.noPrice": "Chưa có giá. Thêm ở nhà cung cấp.",
+  "aiRouting.edit": "Sửa",
+  "aiRouting.editTitle": "Sửa ràng buộc {lane}",
+  "aiRouting.saveBinding": "Lưu ràng buộc",
+  "aiRouting.keyMissing": "Thiếu khóa nhà cung cấp",
+  "aiRouting.keyMissingHelp":
+    "{provider} chưa có khóa. Hãy thêm khóa trong mục Nhà cung cấp trước khi ràng buộc mô hình.",
+  "aiRouting.conflictHelp":
+    "Trong lúc bạn sửa, một ràng buộc khác đã được lưu ở đây. Thay đổi của bạn vẫn còn trong biểu mẫu: lưu lại để thay thế, hoặc hủy để giữ bản đã lưu.",
+  "aiRouting.notListed":
+    "Không có trong danh sách mô hình công bố của {provider}. Bạn vẫn có thể lưu nếu nhà cung cấp phục vụ ID này.",
+  "aiRouting.median": "Trung vị {ms} ms",
+  "aiTasks.title": "Tác vụ AI",
+  "aiTasks.intro":
+    "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng hiển thị tầng và mô hình nó đang chạy.",
+  "aiTasks.decisionFirst": "Mô hình quyết định trước",
+  "aiTasks.viewCalls": "Xem lượt gọi",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
   "workingHours.sub":
     "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",
@@ -7971,8 +8923,10 @@ export const vi = {
   "workingHours.end": "Kết thúc ngày",
   "workingHours.days": "Những ngày bạn làm việc",
   "workingHours.timezone": "Múi giờ của bạn",
+  "workingHours.browserZone":
+    "Trình duyệt của bạn sử dụng {zone}. Lựa chọn ở trên là múi giờ dùng để tính thời gian trống.",
   "workingHours.timezoneHelp":
-    "Đồng hồ dùng để đọc hai mốc giờ trên. Điền sẵn từ trình duyệt này.",
+    "Múi giờ dùng để tính thời gian trống. Tìm theo thành phố hoặc khu vực.",
   "workingHours.narrowedTitle": "Bạn nhận lịch trong ít thời gian hơn",
   "workingHours.narrowed":
     "Sẽ có ít khách tìm được giờ hẹn hơn. Đó là thay đổi bạn vừa lưu, không phải lỗi.",
@@ -8060,6 +9014,55 @@ export const vi = {
   "captureExclusions.kind.domain": "Tên miền",
   "captureExclusions.kind.container": "Nhãn, thư mục hoặc hộp thư",
   "captureExclusions.scopeLabel": "Áp dụng cho",
+  "capturePurge.open": "Xóa thư đã thu thập từ {value}",
+  "capturePurge.title": "Xóa thư đã thu thập từ {value}?",
+  "capturePurge.intro":
+    "Thao tác này xóa vĩnh viễn các thư mà quy tắc này đã khớp: nội dung, bản gốc, tệp đính kèm và mọi dữ liệu dẫn xuất. Không thể hoàn tác. Hãy xem trước những gì sẽ bị xóa.",
+  "capturePurge.preview": "Xem trước",
+  "capturePurge.confirm": "Xóa vĩnh viễn",
+  "capturePurge.done": "Đóng",
+  "capturePurge.failed":
+    "Việc xóa chưa hoàn tất. Một số thư có thể đã bị xóa vĩnh viễn. Hãy kiểm tra lại xem còn lại những gì.",
+  "capturePurge.wouldDestroy_one": "{count} thư sẽ bị xóa vĩnh viễn.",
+  "capturePurge.wouldDestroy_other": "{count} thư sẽ bị xóa vĩnh viễn.",
+  "capturePurge.destroyed_one": "Đã xóa vĩnh viễn {count} thư.",
+  "capturePurge.destroyed_other": "Đã xóa vĩnh viễn {count} thư.",
+  "capturePurge.released_one":
+    "{count} thư cũng được đồng nghiệp thu thập. Quyền truy cập của bạn kết thúc; bản của họ vẫn còn.",
+  "capturePurge.released_other":
+    "{count} thư cũng được đồng nghiệp thu thập. Quyền truy cập của bạn kết thúc; bản của họ vẫn còn.",
+  "capturePurge.anonymised_one":
+    "{count} liên hệ đã được gỡ bỏ thông tin nhận dạng, vì thư của bạn là lý do duy nhất CRM biết đến họ.",
+  "capturePurge.anonymised_other":
+    "{count} liên hệ đã được gỡ bỏ thông tin nhận dạng, vì thư của bạn là lý do duy nhất CRM biết đến họ.",
+  "capturePurge.keptHeld_one":
+    "{count} thư được giữ lại: thư đang được ghim, và còn cho đến khi được gỡ.",
+  "capturePurge.keptHeld_other":
+    "{count} thư được giữ lại: chúng đang được ghim, và còn cho đến khi được gỡ.",
+  "capturePurge.keptStatute_one":
+    "{count} thư được giữ lại như thư tín thương mại, mà bạn không được xóa.",
+  "capturePurge.keptStatute_other":
+    "{count} thư được giữ lại như thư tín thương mại, mà bạn không được xóa.",
+  "capturePurge.keptFor_one": "Luật yêu cầu lưu giữ trong {years} năm.",
+  "capturePurge.keptFor_other": "Luật yêu cầu lưu giữ trong {years} năm.",
+  "capturePurge.keptForFromYearEnd_one":
+    "Luật yêu cầu lưu giữ trong {years} năm kể từ khi kết thúc năm dương lịch thư được nhận.",
+  "capturePurge.keptForFromYearEnd_other":
+    "Luật yêu cầu lưu giữ trong {years} năm kể từ khi kết thúc năm dương lịch thư được nhận.",
+  "capturePurge.keptUndetermined_one":
+    "{count} thư được giữ lại vì bản cài đặt này không xác định được luật yêu cầu gì đối với thư đó. Không có gì bị xóa dựa trên một quy tắc không ai đọc được.",
+  "capturePurge.keptUndetermined_other":
+    "{count} thư được giữ lại vì bản cài đặt này không xác định được luật yêu cầu gì đối với chúng. Không có gì bị xóa dựa trên một quy tắc không ai đọc được.",
+  "capturePurge.keptRequest_one":
+    "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu vẫn đang được xử lý và cần thư đó.",
+  "capturePurge.keptRequest_other":
+    "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu vẫn đang được xử lý và cần chúng.",
+  "captureExclusions.containerLabel": "Thư mục hoặc nhãn",
+  "captureExclusions.noContainers":
+    "Hộp thư này không báo cáo thư mục nào. Hãy kết nối hộp thư có thư mục, hoặc loại trừ theo địa chỉ hoặc tên miền.",
+  "captureExclusions.containersUnreadable": "Không đọc được thư mục của bạn",
+  "captureExclusions.containersUnreadableBody":
+    "Nhà cung cấp thư không phản hồi, nên danh sách này có thể thiếu thư mục. Hãy thử lại sau giây lát, hoặc loại trừ theo địa chỉ hoặc tên miền.",
   "captureExclusions.kindLabel": "Loại",
   "captureExclusions.addLabel": "Loại trừ một địa chỉ hoặc tên miền",
   "captureExclusions.placeholder.address": "ten@vidu.com",
@@ -8116,7 +9119,6 @@ export const vi = {
     "Khoá này chỉ hiện một lần và không lấy lại được. Hãy lưu ngay — mọi lượt gửi đều được ký bằng nó.",
   "webhooks.secret.copy": "Sao chép",
   "webhooks.secret.copied": "Đã sao chép",
-  "webhooks.secret.copyFailedTitle": "Không sao chép được khoá",
   "webhooks.secret.copyFailed":
     "Hãy bôi đen khoá ở trên rồi sao chép thủ công.",
   "webhooks.secret.done": "Xong",
@@ -8154,6 +9156,9 @@ export const vi = {
     "Trạng thái dựng lại chỉ mục của kho embedding — chỉ quản trị và vận hành, kể cả việc xem.",
   "embedreindex.withheld":
     "Chỉ quản trị viên hoặc ops mới thấy được chỉ mục tìm kiếm. Dựng lại nó tiêu tốn token của cả bản cài đặt, nên trạng thái của nó không được hiển thị rộng hơn.",
+  "embedreindex.unbound":
+    "Chưa gắn mô hình nhúng nào, nên không có chỉ mục tìm kiếm để dựng lại.",
+  "embedreindex.unboundLink": "Gắn một mô hình trong cài đặt AI",
   "embedreindex.statusLabel": "Trạng thái chỉ mục",
   "embedreindex.reindexLabel": "Lập lại chỉ mục phần đã thay đổi",
   "embedreindex.reindexHelp":
@@ -8215,14 +9220,6 @@ export const vi = {
   "consent.invalidTitle": "Không hoàn tất được yêu cầu kết nối này",
   "consent.invalidBody":
     "Bản cài đặt này sẽ không cho phép yêu cầu ở dạng hiện tại — có thể ứng dụng không còn được đăng ký ở đây. Hãy quay lại ứng dụng bạn đang kết nối và bắt đầu lại.",
-  "contact.thin.title": "Những gì đã biết đến giờ",
-  "contact.thin.known":
-    "Đã có {what} của {name}, nhưng chưa ai bên mình ghi nhận trao đổi với họ.",
-  "contact.thin.remediation.capture":
-    "Hãy kết nối hộp thư vẫn viết cho họ, trang này sẽ tự đầy lên — mỗi trường kèm nguồn gốc của nó.",
-  "contact.thin.remediation.employer":
-    "Hãy thêm nơi họ làm việc, Margince sẽ đọc website công ty đó để tìm vai trò của họ.",
-  "contact.thin.logFirst": "Ghi nhận tương tác đầu tiên",
   "contact.enriched.title": "Những gì Margince đọc được",
   "contact.confirm.title_one": "{count} thông tin cần xác nhận",
   "contact.confirm.title_other": "{count} thông tin cần xác nhận",
@@ -8279,7 +9276,8 @@ export const vi = {
   "contact.intro.factOneSided": "Một chiều",
   "contact.intro.factDirect": "Quan hệ trực tiếp",
   "contact.intro.factIndirect": "Qua một đồng nghiệp",
-  "contact.intro.factReceipts": "{count} bằng chứng xem được",
+  "contact.intro.factReceipts_one": "{count} bằng chứng xem được",
+  "contact.intro.factReceipts_other": "{count} bằng chứng xem được",
   "contact.intro.verdictDirect":
     "Hỏi {name} — hai bên đã trao đổi thư từ với nhau.",
   "contact.intro.verdictOneSided":
@@ -8300,30 +9298,29 @@ export const vi = {
   "contact.intro.lastDays": "{days} ngày trước",
   "contact.intro.lastNever": "Không có trong 90 ngày",
   "contact.intro.stripWho": "Ai tiếp cận được họ",
-  "contact.intro.stripWhoCount_one": "Chỉ {name}",
-  "contact.intro.stripWhoCount_other": "{count} đồng nghiệp",
   "contact.intro.stripWhoMix":
     "{direct} trực tiếp · {indirect} qua một liên hệ",
-  "contact.intro.stripWhoOnlyYou": "Chỉ bạn",
-  "contact.intro.stripWhoWithYou_one": "Bạn và {count} đồng nghiệp",
-  "contact.intro.stripWhoWithYou_other": "Bạn và {count} đồng nghiệp",
+  "contact.intro.stripWhoOwn": "có quan hệ của chính bạn",
   "contact.intro.otherRoutesTitle": "Các lối vào khác",
   "contact.intro.otherRoutesSub":
     "Xếp theo mức trao đổi hai chiều làm cơ sở cho từng lối.",
   "contact.intro.relayDue": "hạn {date}",
   "contact.intro.stripDirect": "Quan hệ trực tiếp",
   "contact.intro.stripNoPath": "Chưa ai ở đây tiếp cận được họ",
+  "contact.intro.stripNoRoutes": "Không có",
   "contact.intro.stripWhyNow": "Vì sao lúc này",
-  "contact.intro.stripWhyNowSub": "Thay đổi gần nhất trong quan hệ này",
   "contact.intro.stripNoMoment": "Không có gì mới",
-  "contact.intro.stripNoMomentSub":
-    "Không có thay đổi gần đây trong quan hệ này",
+  "contact.intro.change.replied": "Đã trả lời",
+  "contact.intro.change.repliedSub": "Sau {days} ngày im ắng",
+  "contact.intro.change.quiet": "Im ắng",
+  "contact.intro.change.quietSub": "{days} ngày",
+  "contact.intro.change.warmed": "Ấm hơn",
+  "contact.intro.change.cooled": "Nguội hơn",
+  "contact.intro.change.buckets": "{from} → {to}",
   "contact.intro.stripHandoff": "Trạng thái lời nhờ",
   "contact.intro.handoffNotStarted": "Chưa bắt đầu",
-  "contact.intro.handoffNotStartedSub": "Chưa nhờ ai giới thiệu",
   "contact.intro.handoffOwner": "{name} phụ trách bước tiếp theo",
   "contact.intro.ownerColleague": "đồng nghiệp của bạn",
-  "contact.intro.ownerYou": "bạn",
   "contact.intro.ownerNobody": "không ai",
   "contact.intro.relayTitle": "Tiến trình giới thiệu",
   "contact.intro.stepRoute": "Chọn hướng",
@@ -8416,11 +9413,13 @@ export const vi = {
   "contact.intro.stateAccepted": "Họ sẽ giới thiệu bạn",
   "contact.intro.stateNameDropApproved": "Bạn có thể nhắc tên họ",
   "contact.intro.stateSuggestOther": "Họ gợi ý người khác",
+  "contact.intro.handoffOtherSub": "Đã gợi ý một đầu mối khác",
   "contact.intro.stateDeclined": "Đã từ chối",
   "contact.intro.stateIntroduced": "Đã giới thiệu",
   "contact.intro.stateNameDropped": "Đã nhắc tên",
   "contact.intro.stateReplied": "Họ đã trả lời",
   "contact.intro.stateExpired": "Không trả lời kịp hạn",
+  "contact.intro.handoffExpiredSub": "Không trả lời kịp hạn",
   "contact.intro.stateCancelled": "Đã rút lại",
   "contact.intro.alreadyRequested": "Đã hỏi rồi",
   "contact.intro.declined": "Đã từ chối trước đó",
@@ -8441,33 +9440,8 @@ export const vi = {
   "contact.bandBadge.weak": "Yếu",
   "contact.bandBadge.moderate": "Vừa",
   "contact.bandBadge.strong": "Mạnh",
-  "contact.pulse.title": "Quan hệ",
-  "contact.pulse.warmestIs": "{name} có quan hệ thân thiết nhất bên mình.",
-  "contact.pulse.nobodyYet": "Chưa ai bên mình ghi nhận trao đổi với họ.",
-  "contact.pulse.lastInbound": "Họ viết lần cuối",
-  "contact.pulse.lastOutbound": "Mình viết lần cuối",
-  "contact.pulse.neverInbound": "chưa bao giờ",
-  "contact.pulse.neverOutbound": "chưa bao giờ",
-  "contact.pulse.why": "Cách tính con số này",
-  "contact.pulse.arithmetic":
-    "Điểm {score}/100 = 100 x độ gần đây {recency} x tần suất {frequency} x mức qua lại {reciprocity}. Tính lúc đọc từ nhịp trao đổi đã thu thập, không bao giờ lưu lại.",
-  "contact.identity.title": "Danh tính",
-  "contact.identity.emailDead":
-    "Bị trả lại — thư gửi tới địa chỉ này không đến nơi",
-  "contact.identity.email": "Email",
-  "contact.identity.phone": "Điện thoại",
-  "contact.identity.currentRole": "Vai trò hiện tại",
-  "contact.identity.buyingRole": "Vai trò mua hàng",
-  "contact.career.title": "Vai trò trước đây",
-  "contact.consent.title": "Chốt kiểm gửi ra",
-  "contact.consent.allowed": "Được phép: {purposes}",
-  "contact.consent.noneGranted":
-    "Chưa mục đích nào được cấp phép, nên việc gửi ra vẫn bị chặn.",
-  "contact.consent.blocked": "Bị chặn: {purposes}",
+  "contact.bought.from": "Đã mua từ {provider}",
   "contact.network.title": "Ai bên mình quen họ",
-  "contact.network.twoWay": "{count} lượt trao đổi hai chiều trong 90 ngày",
-  "contact.network.oneSided": "{count} lượt tương tác trong 90 ngày, một chiều",
-  "contact.network.replied": "đã hồi đáp {when}",
 
   "contact.page.loading": "Đang tải…",
   "contact.page.notOpened": "Không mở được liên hệ này.",
@@ -8478,7 +9452,7 @@ export const vi = {
 
   "contact.rail.detailsTitle": "Chi tiết",
   "contact.rail.archivedReadOnly":
-    "Liên hệ này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào tại đây.",
+    "Liên hệ này đã lưu trữ và không nhận thay đổi.",
   "contact.notYoursToChange":
     "Bạn không thể thay đổi liên hệ này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
   "contact.rail.employmentVersionUnresolved":
@@ -8712,8 +9686,6 @@ export const vi = {
   "contact.meeting.objective": "Kết quả cần đạt được",
   "contact.meeting.openWith": "Mở đầu bằng",
   "contact.meeting.arc": "Diễn biến quan hệ",
-  "contact.meeting.arcSub":
-    "Chỉ những thời điểm làm thay đổi cuộc trò chuyện hôm nay.",
   "contact.meeting.close": "Kết thúc cuộc họp",
   "contact.meeting.advance.minimum": "Tối thiểu",
   "contact.meeting.advance.best": "Tốt nhất",
@@ -8911,6 +9883,25 @@ export const vi = {
   "filters.emptyGroup":
     "Ch\u01b0a c\u00f3 \u0111i\u1ec1u ki\u1ec7n \u2014 nh\u00f3m tr\u1ed1ng kh\u00f4ng kh\u1edbp v\u1edbi g\u00ec, h\u00e3y th\u00eam m\u1ed9t \u0111i\u1ec1u ki\u1ec7n.",
   "filters.field": "Tr\u01b0\u1eddng",
+  "filters.field.amount": "Giá trị quy đổi",
+  "filters.field.city": "Thành phố",
+  "filters.field.classification": "Phân loại",
+  "filters.field.company_industry": "Ngành của công ty",
+  "filters.field.company_lifecycle": "Vòng đời của công ty",
+  "filters.field.company_size_band": "Quy mô công ty",
+  "filters.field.country": "Mã quốc gia",
+  "filters.field.created_at": "Ngày tạo",
+  "filters.field.hosting_provider": "Lưu trữ",
+  "filters.field.last_activity_at": "Hoạt động gần nhất",
+  "filters.field.mail_provider": "Hệ thống thư",
+  "filters.field.operated_service": "Dịch vụ vận hành",
+  "filters.field.owner_team_id": "Nhóm sở hữu",
+  "filters.field.phase": "Giai đoạn dự án",
+  "filters.field.pipeline_id": "Pipeline",
+  "filters.field.relationship_type": "Loại quan hệ",
+  "filters.field.stage_id": "Giai đoạn",
+  "filters.field.tag": "Tag",
+  "filters.field.technology": "Công nghệ",
   "filters.choosePlaceholder": "Ch\u1ecdn m\u1ed9t tr\u01b0\u1eddng",
   "filters.customBadge": "Tr\u01b0\u1eddng t\u00f9y ch\u1ec9nh",
   "filters.operator": "To\u00e1n t\u1eed",
@@ -8937,6 +9928,168 @@ export const vi = {
   "filters.op.atLeast": "\u00edt nh\u1ea5t l\u00e0",
   "filters.op.lessThan": "nh\u1ecf h\u01a1n",
   "filters.op.atMost": "nhi\u1ec1u nh\u1ea5t l\u00e0",
+  "filters.tab.leads": "Kh\u00e1ch ti\u1ec1m n\u0103ng",
+  "filters.matchLeads_one": "{count} kh\u00e1ch ti\u1ec1m n\u0103ng kh\u1edbp",
+  "filters.matchLeads_other":
+    "{count} kh\u00e1ch ti\u1ec1m n\u0103ng kh\u1edbp",
+  "filters.date.on": "V\u00e0o m\u1ed9t ng\u00e0y",
+  "filters.date.daysAgo": "S\u1ed1 ng\u00e0y tr\u01b0\u1edbc",
+  "filters.date.mode": "C\u00e1ch nh\u1eadp ng\u00e0y",
+  "filters.date.daysAgoCount":
+    "{field}: s\u1ed1 ng\u00e0y tr\u01b0\u1edbc h\u00f4m nay",
+  "filters.saveList": "L\u01b0u th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
+  "filters.saveListTitle":
+    "L\u01b0u b\u1ed9 l\u1ecdc n\u00e0y th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
+  "filters.saveListConfirm": "L\u01b0u danh s\u00e1ch",
+  "lists.page": "Danh s\u00e1ch",
+  "lists.section.label": "Hi\u1ec3n th\u1ecb",
+  "lists.section.views": "Ch\u1ebf \u0111\u1ed9 xem c\u1ee7a t\u00f4i",
+  "lists.section.lists":
+    "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
+  "lists.section.build": "T\u1ea1o b\u1ed9 l\u1ecdc",
+  "lists.kind.live": "Danh s\u00e1ch \u0111\u1ed9ng",
+  "lists.kind.shortlist": "Danh s\u00e1ch ch\u1ecdn",
+  "lists.type.contact": "Li\u00ean h\u1ec7",
+  "lists.type.company": "C\u00f4ng ty",
+  "lists.type.deal": "Giao d\u1ecbch",
+  "lists.type.lead": "Kh\u00e1ch ti\u1ec1m n\u0103ng",
+  "lists.type.project": "D\u1ef1 \u00e1n",
+  "lists.sharing.private": "Ch\u1ec9 m\u00ecnh t\u00f4i",
+  "lists.sharing.team": "M\u1ed9t nh\u00f3m",
+  "lists.sharing.workspace": "To\u00e0n c\u00f4ng ty",
+  "lists.sharingLabel": "Ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y",
+  "lists.sharingHint":
+    "Chia s\u1ebb danh s\u00e1ch kh\u00f4ng cho ai xem b\u1ea3n ghi m\u00e0 h\u1ecd v\u1ed1n kh\u00f4ng \u0111\u01b0\u1ee3c xem.",
+  "lists.teamLabel": "Nh\u00f3m n\u00e0o",
+  "lists.team.allMine": "T\u1ea5t c\u1ea3 c\u00e1c nh\u00f3m c\u1ee7a t\u00f4i",
+  "lists.team.allOwners":
+    "T\u1ea5t c\u1ea3 c\u00e1c nh\u00f3m c\u1ee7a ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch",
+  "lists.audience.yourTeams": "C\u00e1c nh\u00f3m c\u1ee7a b\u1ea1n",
+  "lists.audience.ownerTeams":
+    "C\u00e1c nh\u00f3m c\u1ee7a ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch",
+  "lists.audience.unknownTeam":
+    "M\u1ed9t nh\u00f3m b\u1ea1n kh\u00f4ng xem \u0111\u01b0\u1ee3c",
+  "lists.health.ownerless": "C\u1ea7n ph\u1ee5 tr\u00e1ch",
+  "lists.health.invalid":
+    "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
+  "lists.library.title":
+    "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
+  "lists.library.search": "T\u00ecm danh s\u00e1ch",
+  "lists.library.all": "T\u1ea5t c\u1ea3",
+  "lists.library.kind": "Lo\u1ea1i danh s\u00e1ch",
+  "lists.library.empty":
+    "Ch\u01b0a c\u00f3 danh s\u00e1ch n\u00e0o. H\u00e3y l\u01b0u m\u1ed9t b\u1ed9 l\u1ecdc th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng ho\u1eb7c t\u1ea1o danh s\u00e1ch ch\u1ecdn.",
+  "lists.library.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
+  "lists.col.name": "T\u00ean",
+  "lists.col.kind": "Lo\u1ea1i",
+  "lists.col.recordType": "B\u1ea3n ghi",
+  "lists.col.count": "B\u1ea1n th\u1ea5y \u0111\u01b0\u1ee3c",
+  "lists.col.steward": "Ph\u1ee5 tr\u00e1ch",
+  "lists.col.sharing": "Chia s\u1ebb v\u1edbi",
+  "lists.noSteward": "Ch\u01b0a c\u00f3 ai",
+  "lists.newShortlist": "Danh s\u00e1ch ch\u1ecdn m\u1edbi",
+  "lists.newShortlistTitle": "T\u1ea1o danh s\u00e1ch ch\u1ecdn",
+  "lists.newShortlistOption":
+    "M\u1ed9t danh s\u00e1ch ch\u1ecdn m\u1edbi\u2026",
+  "lists.recordTypeLabel": "Lo\u1ea1i b\u1ea3n ghi",
+  "lists.name": "T\u00ean",
+  "lists.purpose": "D\u00f9ng \u0111\u1ec3 l\u00e0m g\u00ec",
+  "lists.create": "T\u1ea1o danh s\u00e1ch",
+  "lists.save": "L\u01b0u",
+  "lists.settings": "S\u1eeda danh s\u00e1ch",
+  "lists.settingsTitle": "S\u1eeda danh s\u00e1ch n\u00e0y",
+  "lists.archive": "L\u01b0u tr\u1eef danh s\u00e1ch",
+  "lists.restore": "Kh\u00f4i ph\u1ee5c",
+  "lists.unavailable":
+    "Danh s\u00e1ch ch\u01b0a \u0111\u01b0\u1ee3c b\u1eadt cho h\u1ec7 th\u1ed1ng n\u00e0y.",
+  "lists.gone":
+    "Danh s\u00e1ch n\u00e0y kh\u00f4ng t\u1ed3n t\u1ea1i ho\u1eb7c kh\u00f4ng \u0111\u01b0\u1ee3c chia s\u1ebb v\u1edbi b\u1ea1n.",
+  "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
+  "lists.head.facts":
+    "{type} \u00b7 b\u1ea1n th\u1ea5y {visible} \u00b7 ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y: {sharing} \u00b7 ph\u1ee5 tr\u00e1ch: {steward}",
+  "lists.head.exported_one":
+    "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
+  "lists.head.exported_other":
+    "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
+  "lists.archived.title":
+    "Danh s\u00e1ch n\u00e0y \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef",
+  "lists.archived.body":
+    "Danh s\u00e1ch ch\u1ec9 \u0111\u1ecdc cho \u0111\u1ebfn khi \u0111\u01b0\u1ee3c kh\u00f4i ph\u1ee5c. Th\u00e0nh vi\u00ean v\u00e0 l\u1ecbch s\u1eed v\u1eabn \u0111\u01b0\u1ee3c gi\u1eef.",
+  "lists.invalid.title":
+    "B\u1ed9 l\u1ecdc n\u00e0y kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
+  "lists.invalid.body":
+    "M\u1ed9t tr\u01b0\u1eddng m\u00e0 b\u1ed9 l\u1ecdc d\u00f9ng \u0111\u00e3 thay \u0111\u1ed5i. Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch c\u00f3 th\u1ec3 s\u1eeda b\u1ed9 l\u1ecdc trong tr\u00ecnh t\u1ea1o.",
+  "lists.ownerless.title":
+    "Kh\u00f4ng ai ph\u1ee5 tr\u00e1ch danh s\u00e1ch n\u00e0y",
+  "lists.ownerless.body":
+    "Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch \u0111\u00e3 r\u1eddi \u0111i ho\u1eb7c ch\u01b0a t\u1eebng \u0111\u01b0\u1ee3c ch\u1ec9 \u0111\u1ecbnh. Ai c\u00f3 quy\u1ec1n s\u1eeda danh s\u00e1ch n\u00ean nh\u1eadn ph\u1ee5 tr\u00e1ch.",
+  "lists.ownerless.takeOver": "Nh\u1eadn ph\u1ee5 tr\u00e1ch",
+  "lists.members.title": "Th\u00e0nh vi\u00ean",
+  "lists.members.loading": "\u0110ang t\u1ea3i th\u00e0nh vi\u00ean",
+  "lists.members.emptyLive":
+    "Kh\u00f4ng c\u00f3 b\u1ea3n ghi n\u00e0o b\u1ea1n th\u1ea5y \u0111\u01b0\u1ee3c kh\u1edbp v\u1edbi b\u1ed9 l\u1ecdc c\u1ee7a danh s\u00e1ch.",
+  "lists.members.emptyShortlist":
+    "Ch\u01b0a ch\u1ecdn g\u00ec. Th\u00eam b\u1ea3n ghi t\u1eeb trang b\u1ea3n ghi ho\u1eb7c t\u1eeb m\u1ed9t l\u1ef1a ch\u1ecdn.",
+  "lists.members.projects":
+    "Danh s\u00e1ch d\u1ef1 \u00e1n hi\u1ec3n th\u1ecb th\u00e0nh vi\u00ean trong danh s\u00e1ch D\u1ef1 \u00e1n.",
+  "lists.members.whyColumn": "L\u00fd do",
+  "lists.members.why": "V\u00ec sao?",
+  "lists.members.more": "Xem th\u00eam",
+  "lists.history.title": "Nh\u1eefng thay \u0111\u1ed5i",
+  "lists.history.empty": "Ch\u01b0a c\u00f3 thay \u0111\u1ed5i n\u00e0o.",
+  "lists.history.loading": "\u0110ang t\u1ea3i l\u1ecbch s\u1eed",
+  "lists.history.when": "Khi n\u00e0o",
+  "lists.history.what": "N\u1ed9i dung",
+  "lists.history.who": "Ai",
+  "lists.history.added": "\u0110\u00e3 th\u00eam m\u1ed9t b\u1ea3n ghi",
+  "lists.history.removed": "\u0110\u00e3 g\u1ee1 m\u1ed9t b\u1ea3n ghi",
+  "lists.history.revised": "\u0110\u00e3 s\u1eeda danh s\u00e1ch",
+  "lists.history.reason.chosen": "th\u1ee7 c\u00f4ng",
+  "lists.history.reason.bulk":
+    "trong m\u1ed9t thay \u0111\u1ed5i h\u00e0ng lo\u1ea1t",
+  "lists.history.reason.archived":
+    "v\u00ec b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef",
+  "lists.history.reason.restored":
+    "v\u00ec b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c kh\u00f4i ph\u1ee5c",
+  "lists.why.title": "V\u00ec sao {name}",
+  "lists.why.loading": "\u0110ang t\u00ecm l\u00fd do",
+  "lists.why.liveMember":
+    "C\u00f3 trong danh s\u00e1ch: b\u1ed9 l\u1ecdc hi\u1ec7n \u0111ang ch\u1ecdn b\u1ea3n ghi n\u00e0y.",
+  "lists.why.liveNotMember":
+    "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch: b\u1ed9 l\u1ecdc hi\u1ec7n kh\u00f4ng ch\u1ecdn b\u1ea3n ghi n\u00e0y.",
+  "lists.why.notEligible":
+    "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch: b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef ho\u1eb7c kh\u00f4ng th\u1ec3 \u0111\u01b0a v\u00e0o danh s\u00e1ch.",
+  "lists.why.all": "T\u1ea5t c\u1ea3 c\u00e1c \u0111i\u1ec1u ki\u1ec7n",
+  "lists.why.any": "B\u1ea5t k\u1ef3 \u0111i\u1ec1u ki\u1ec7n n\u00e0o",
+  "lists.why.met": "Th\u1ecfa m\u00e3n",
+  "lists.why.unmet": "Kh\u00f4ng th\u1ecfa m\u00e3n",
+  "lists.why.unknown":
+    "Kh\u00f4ng c\u00f3 gi\u00e1 tr\u1ecb \u0111\u1ec3 x\u00e9t",
+  "lists.why.value": "Hi\u1ec7n t\u1ea1i: {value}",
+  "lists.why.empty": "tr\u1ed1ng",
+  "lists.why.hidden": "Gi\u00e1 tr\u1ecb b\u1ecb \u1ea9n v\u1edbi b\u1ea1n",
+  "lists.why.daysAgo_one": "{count} ng\u00e0y tr\u01b0\u1edbc",
+  "lists.why.daysAgo_other": "{count} ng\u00e0y tr\u01b0\u1edbc",
+  "lists.why.chosen": "\u0110\u01b0\u1ee3c {who} ch\u1ecdn v\u00e0o {when}.",
+  "lists.why.someone": "ai \u0111\u00f3",
+  "lists.why.notChosen":
+    "B\u1ea3n ghi n\u00e0y kh\u00f4ng c\u00f3 trong danh s\u00e1ch ch\u1ecdn.",
+  "lists.remove": "G\u1ee1 kh\u1ecfi danh s\u00e1ch ch\u1ecdn",
+  "lists.removeTitle":
+    "G\u1ee1 b\u1ea3n ghi n\u00e0y kh\u1ecfi danh s\u00e1ch ch\u1ecdn?",
+  "lists.note": "L\u00fd do (kh\u00f4ng b\u1eaft bu\u1ed9c)",
+  "lists.noteHint":
+    "\u0110\u01b0\u1ee3c l\u01b0u c\u00f9ng thay \u0111\u1ed5i \u0111\u1ec3 \u0111\u1ed3ng nghi\u1ec7p bi\u1ebft l\u00fd do.",
+  "lists.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
+  "lists.onShortlists": "C\u00f3 trong danh s\u00e1ch ch\u1ecdn",
+  "lists.add": "Th\u00eam",
+  "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",
+  "lists.pickShortlist": "Ch\u1ecdn danh s\u00e1ch",
+  "lists.views.empty":
+    "Ch\u01b0a c\u00f3 ch\u1ebf \u0111\u1ed9 xem n\u00e0o. H\u00e3y t\u1ea1o b\u1ed9 l\u1ecdc r\u1ed3i b\u1ea5m L\u01b0u b\u1ed9 l\u1ecdc.",
+  "lists.views.loading":
+    "\u0110ang t\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
+  "lists.history.someone": "Ai \u0111\u00f3",
 
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.
   "filters.title": "B\u1ed9 l\u1ecdc & ch\u1ee7 \u0111\u1ec1",
@@ -8949,9 +10102,12 @@ export const vi = {
   "filters.builderTitle": "B\u1ed9 l\u1ecdc",
   "filters.dynamic":
     "\u0110\u1ed9ng \u2014 t\u00ednh l\u1ea1i sau m\u1ecdi s\u1ef1 ki\u1ec7n",
-  "filters.matchContacts": "{count} liên hệ khớp",
-  "filters.matchCompanies": "{count} c\u00f4ng ty kh\u1edbp",
-  "filters.matchDeals": "{count} deal kh\u1edbp",
+  "filters.matchContacts_one": "{count} li\u00ean h\u1ec7 kh\u1edbp",
+  "filters.matchContacts_other": "{count} li\u00ean h\u1ec7 kh\u1edbp",
+  "filters.matchCompanies_one": "{count} c\u00f4ng ty kh\u1edbp",
+  "filters.matchCompanies_other": "{count} c\u00f4ng ty kh\u1edbp",
+  "filters.matchDeals_one": "{count} deal kh\u1edbp",
+  "filters.matchDeals_other": "{count} deal kh\u1edbp",
   "filters.noFilterYet":
     "Th\u00eam \u0111i\u1ec1u ki\u1ec7n \u0111\u1ec3 xem k\u1ebft qu\u1ea3",
   "filters.countUnavailable":
@@ -9046,19 +10202,11 @@ export const vi = {
     "Dự án là công việc nhiều công ty cùng làm — khách hàng, cùng mọi đối tác hoặc nhà thầu phụ tham gia.",
   "projectCompanies.attach": "Liên kết công ty",
   "projectCompanies.detachTitle": "Bỏ công ty này khỏi dự án?",
+  "projectCompanies.detachConfirm": "Bỏ công ty",
   "projectCompanies.searchLabel": "Tìm công ty theo tên",
-  "contactProjects.title": "Dự án",
-  "contactProjects.empty":
-    "Liên hệ này xuất hiện ở đây khi tham gia một dự án: với vai trò người bảo trợ, đầu mối, hoặc bất kỳ ai đang thực hiện.",
   "projectRole.customer": "Khách hàng",
   "projectRole.partner": "Đối tác",
   "projectRole.subcontractor": "Nhà thầu phụ",
-  "contactRole.sponsor": "Người bảo trợ",
-  "contactRole.projectLead": "Trưởng dự án",
-  "contactRole.deliveryLead": "Phụ trách bàn giao",
-  "contactRole.expert": "Chuyên gia",
-  "contactRole.user": "Người dùng",
-  "projectLinks.new": "Dự án mới",
   "projectLinks.attach": "Liên kết dự án",
   "projectLinks.move": "Chuyển sang dự án khác",
   "projectLinks.detach": "Bỏ liên kết",
@@ -9140,9 +10288,10 @@ export const vi = {
   "project.rollups.noneOpen": "Không có deal mở",
   "project.rollups.noneWon": "Chưa thắng deal nào",
   "project.rollups.openCommitments": "Cam kết đang mở",
-  "project.rollups.lastActivity": "Hoạt động gần nhất",
   "project.rollups.never": "chưa có gì",
   "project.rollups.activityCount": "Hoạt động",
+  "project.rollups.activityFiled": "{count} đã ghi",
+  "project.rollups.activityLast": "Gần nhất · {date}",
   "project.history.title": "Lịch sử giai đoạn",
   "project.history.empty": "Chưa ghi nhận thay đổi giai đoạn nào.",
   "project.history.current": "hiện tại",
@@ -9209,15 +10358,19 @@ export const vi = {
   "worklist.loading": "Đang đọc ngày của bạn…",
   "worklist.queue": "Hôm nay",
   "worklist.review": "Cần xem xét",
-  "worklist.more": "Xem thêm",
+  "worklist.more": "Tải thêm",
+  "worklist.more.where":
+    "Thêm trong ngày: mục mới có thể nằm ở “{today}” hoặc “{review}”.",
   "worklist.more.failed": "Không tải thêm được. Hãy thử lại.",
   "worklist.summary":
     "{urgent} khẩn · {due} đến hạn · {inPlay} đang xử lý · {lower} thường lệ — tổng {total}",
   "worklist.summary.noMiddle":
     "{urgent} khẩn · {due} đến hạn · {lower} thường lệ — tổng {total}",
+  "worklist.summary.split": "{today} hôm nay · {review} cần xem xét",
   "worklist.completeness": "Hiển thị {shown} trong {considered}",
   "worklist.review.partial":
-    "Hiển thị {loaded} trong {total} — xem tiếp trong ngày để thấy phần còn lại",
+    "Hiển thị {loaded} trong {total} — tải thêm ở bên dưới để thấy phần còn lại",
+  "worklist.review.partialDone": "Hiển thị {loaded} trong {total}",
   "worklist.completeness.bounded_one":
     "Hiển thị {shown} · {sources} nguồn còn nữa",
   "worklist.completeness.bounded_other":
@@ -9275,7 +10428,6 @@ export const vi = {
   "worklist.disposition.snoozeUntil.reply": "Đến khi họ trả lời",
   "worklist.disposition.verb.not_mine": "Không phải của tôi",
   "worklist.disposition.verb.not_sales": "Không phải khách hàng",
-  "worklist.disposition.done.snooze": "Ngày mai sẽ trở lại danh sách của bạn.",
   "worklist.disposition.doneSnooze_one":
     "Ngày mai sẽ trở lại danh sách của bạn.",
   "worklist.disposition.doneSnooze_other":
@@ -9374,10 +10526,14 @@ export const vi = {
   "worklist.board.overdue": "Quá hạn",
   "worklist.board.nobody": "Công việc chưa phân công",
   "worklist.coaching.title": "Đáng trao đổi sáng nay",
-  "worklist.coaching.promises":
+  "worklist.coaching.promises_one":
     "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",
-  "worklist.coaching.waiting": "{count} khách hàng đang chờ {name}.",
-  "worklist.coaching.overdue": "{name} có {count} công việc đã quá hạn.",
+  "worklist.coaching.promises_other":
+    "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",
+  "worklist.coaching.waiting_one": "{count} khách hàng đang chờ {name}.",
+  "worklist.coaching.waiting_other": "{count} khách hàng đang chờ {name}.",
+  "worklist.coaching.overdue_one": "{name} có {count} công việc đã quá hạn.",
+  "worklist.coaching.overdue_other": "{name} có {count} công việc đã quá hạn.",
   "worklist.board.promises": "Cam kết đến hạn",
   "worklist.board.truncated":
     "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
@@ -9411,12 +10567,17 @@ export const vi = {
   "worklist.hidden.colleagues": "Từ tên miền của chính chúng ta",
   "worklist.hidden.colleagues.detail":
     "Đồng nghiệp, không phải khách hàng. Một tên miền nhập sai sẽ giấu đi thư thật.",
+  "worklist.hidden.informsUs": "Được đánh giá là không yêu cầu gì",
+  "worklist.hidden.informsUs.detail":
+    "AI đọc những thư này là báo cáo hoặc thông báo. Chỉ tính cho quy tắc này. Một yêu cầu đã được ghi nhận sẽ không bao giờ bị ẩn.",
   "worklist.hidden.notSales": "Được đánh giá không phải việc bán hàng",
   "worklist.hidden.notSales.detail": "Ẩn với toàn bộ tổ chức, và không tự bỏ.",
   "worklist.hidden.setAside": "Bạn đã gác lại",
   "worklist.hidden.setAside.detail":
     "Đã hoãn hoặc đánh dấu không phải của bạn. Một lần hoãn sẽ tự quay lại.",
   "worklist.hidden.shown": "Bản thân danh sách mang {count}.",
+  "worklist.hidden.rows.loading": "Đang tải các thư bị giữ lại…",
+  "worklist.hidden.rows.empty": "Quy tắc này hiện không giữ lại thư nào.",
   "worklist.filter.label": "Loại công việc",
   "worklist.filter.all": "Tất cả",
   "worklist.filter.customer_waiting": "Khách đang chờ",
@@ -9536,7 +10697,20 @@ export const vi = {
   "worklist.untitled.relationship_decay": "Một mối quan hệ đang nguội",
   "worklist.untitled.failed_approval": "Điều bạn duyệt đã không chạy",
   "worklist.untitled.dsr": "Một yêu cầu quyền riêng tư",
-  "worklist.untitled.notice_case": "Một thông báo cần gửi cho liên hệ này",
+  "noticeDuty.title": "Cần gửi thông báo quyền riêng tư (GDPR Điều 14)",
+  "noticeDuty.what":
+    "Margince lưu thông tin của liên hệ này nhưng không nhận từ chính họ: bạn đã viết cho họ, hoặc họ ở dòng Cc, và họ chưa từng viết cho bạn. GDPR yêu cầu thông báo cho họ trong vòng một tháng ai đang giữ dữ liệu của họ và vì sao.",
+  "noticeDuty.how":
+    "Gửi thông báo quyền riêng tư, đề nghị họ xác nhận thông tin (việc này cũng thông báo cho họ), hoặc kết thúc nghĩa vụ nếu họ đã biết hoặc có ngoại lệ.",
+  "noticeDuty.sendNotice": "Gửi thông báo quyền riêng tư",
+  "noticeDuty.askConfirm": "Đề nghị họ xác nhận thông tin",
+  "noticeDuty.end": "Kết thúc nghĩa vụ…",
+  "noticeDuty.sent":
+    "Đã gửi tới {address}. Nghĩa vụ hoàn tất khi thư được gửi đi.",
+  "noticeDuty.notSent":
+    "Chưa gửi: hệ thống này không thể gửi thư tới {address}.",
+  "noticeDuty.ended": "Nghĩa vụ đã kết thúc, lý do của bạn đã được lưu.",
+  "worklist.untitled.notice_case": "Cần gửi thông báo quyền riêng tư",
   "worklist.untitled.capture_health": "Kết nối hộp thư cần chú ý",
   "worklist.untitled.ai_work_health": "Công việc AI cần xem lại",
   "worklist.untitled.bounce": "Một email không đến nơi",
@@ -9611,11 +10785,16 @@ export const vi = {
   "worklist.source.failed": "Không đọc được một nguồn: {source}",
   "worklist.source.withheld": "Một nguồn bị ẩn với tài khoản của bạn: {source}",
   "worklist.untitled.generic": "Có việc cần bạn",
-  "worklist.batch.likely_automated": "{count} người gửi có thể tự động",
-  "worklist.batch.company_match": "{count} địa chỉ ở công ty đã biết",
-  "worklist.batch.uncertain_contact": "{count} địa chỉ cần quyết định",
-  "worklist.batch.duplicates": "{count} bản ghi có thể trùng",
-  "worklist.batch.held_draft": "{count} bản nháp đang chờ gửi",
+  "worklist.batch.likely_automated_one": "{count} người gửi có thể tự động",
+  "worklist.batch.likely_automated_other": "{count} người gửi có thể tự động",
+  "worklist.batch.company_match_one": "{count} địa chỉ ở công ty đã biết",
+  "worklist.batch.company_match_other": "{count} địa chỉ ở công ty đã biết",
+  "worklist.batch.uncertain_contact_one": "{count} địa chỉ cần quyết định",
+  "worklist.batch.uncertain_contact_other": "{count} địa chỉ cần quyết định",
+  "worklist.batch.duplicates_one": "{count} bản ghi có thể trùng",
+  "worklist.batch.duplicates_other": "{count} bản ghi có thể trùng",
+  "worklist.batch.held_draft_one": "{count} bản nháp đang chờ gửi",
+  "worklist.batch.held_draft_other": "{count} bản nháp đang chờ gửi",
   "worklist.untitled.batch": "Một nhóm quyết định thường lệ",
   "worklist.verb.review_batch": "Xem lại",
   "worklist.verb.draft_reply": "Đọc và trả lời",
@@ -9630,7 +10809,8 @@ export const vi = {
   "worklist.deal.closes": "chốt {date}",
   "worklist.when.starts": "bắt đầu {when}",
   "worklist.when.due": "đến hạn {when}",
-  "worklist.batch.system_incident": "{cause} đã lỗi {count} lần",
+  "worklist.batch.system_incident_one": "{cause} đã lỗi {count} lần",
+  "worklist.batch.system_incident_other": "{cause} đã lỗi {count} lần",
   "worklist.batch.unnamedCause": "Một tác vụ",
 
   "ob.conv.scene.settleEyebrow": "Có một điểm chỉ bạn mới quyết được",
@@ -9666,7 +10846,8 @@ export const vi = {
   "ob.digest.yours": "của bạn",
   "ob.digest.editLine": "Sửa {label}",
   "ob.digest.saveChanges": "Lưu thay đổi",
-  "ob.digest.changed": "{count} dòng đã đổi, chưa lưu",
+  "ob.digest.changed_one": "{count} dòng đã đổi, chưa lưu",
+  "ob.digest.changed_other": "{count} dòng đã đổi, chưa lưu",
   "ob.digest.pickFacts": "Chọn các sự thật cần giữ",
   "ob.digest.referenceNote":
     "Một lần đọc lại sau này có thể đề xuất thay đổi cho hồ sơ này. Nó sẽ không bao giờ ghi đè lên dòng mà một người đã từng sửa.",
@@ -9687,7 +10868,10 @@ export const vi = {
   "ob.digest.pageKind.other": "Trang",
   "ob.deck.counter": "{n} / {m}",
   "ob.deck.left": "Còn {n} / {m}",
-  "ob.deck.settled": "{count} dữ kiện đã vào hồ sơ kèm nguồn, không cần bạn",
+  "ob.deck.settled_one":
+    "{count} dữ kiện đã vào hồ sơ kèm nguồn, không cần bạn",
+  "ob.deck.settled_other":
+    "{count} dữ kiện đã vào hồ sơ kèm nguồn, không cần bạn",
   "ob.deck.needed": "Cần để đi tiếp",
   "ob.deck.optional": "Đáng xem qua",
   "ob.deck.next": "Tiếp tục",
@@ -9697,11 +10881,16 @@ export const vi = {
   "ob.deck.backToRecord": "Quay lại hồ sơ",
   "ob.deck.confirm": "Xác nhận hồ sơ",
   "ob.deck.stillNeeded": "Còn thiếu: {fields}",
-  "ob.deck.openLeft":
-    "Câu hỏi chưa trả lời: {count}. Hồ sơ được lưu mà không có chúng.",
+  "ob.deck.openLeft_one":
+    "{count} câu hỏi chưa trả lời. Hồ sơ được lưu mà không có chúng.",
+  "ob.deck.openLeft_other":
+    "{count} câu hỏi chưa trả lời. Hồ sơ được lưu mà không có chúng.",
   "ob.conv.invite.pickOne": "Chọn một trong hai để tiếp tục.",
   "ob.conv.voice.speakerPick": "Chọn một người nói để tiếp tục.",
-  "ob.deck.clear": "Không còn gì để giải quyết. {count} dữ kiện đã vào hồ sơ.",
+  "ob.deck.clear_one":
+    "Không còn gì để giải quyết. {count} dữ kiện đã vào hồ sơ.",
+  "ob.deck.clear_other":
+    "Không còn gì để giải quyết. {count} dữ kiện đã vào hồ sơ.",
   "ob.deck.eyebrow": "Mọi thứ còn lại đã vào kèm nguồn",
   "ob.deck.title": "Nó không đoán những điều này.",
   "ob.stage.flow": "Thiết lập",
@@ -9775,10 +10964,63 @@ export const vi = {
   "aiRates.unpriced": "Chưa có giá",
   "aiRates.unpricedDetail":
     "Mô hình vẫn phục vụ được. Các lệnh gọi sẽ báo là chưa có giá, nên không xuất hiện trong mức dùng và chi phí cho tới khi ai đó thêm đơn giá ở Cài đặt → AI.",
+  "aiRates.unpricedConsequence": "Thiếu trong mức dùng và chi phí",
+  "aiRates.unpricedBasis":
+    "Thêm đơn giá ở Cài đặt → AI thì các lệnh gọi này sẽ bắt đầu báo chi phí.",
   "aiRates.priced": "Giá áp dụng từ {date}",
   "aiRates.proposed": "Giá của OpenRouter",
-  "aiRates.proposedDetail":
-    "Vừa đọc từ nhà cung cấp, không phải từ bảng giá của bạn. Khi bạn gán mô hình này, giá sẽ vào hộp phê duyệt để mức dùng và chi phí tính được sau khi bạn xác nhận.",
+  "aiRates.proposedDetail": "Giá của nhà cung cấp, chưa có trong bảng giá",
+  "aiRates.proposedBasis":
+    "Bấm Làm mới giá mô hình để ghi giá này vào bảng giá; sau đó mức dùng và chi phí sẽ tính theo giá đó.",
+  "aiRates.refresh.button": "Làm mới giá mô hình",
+  "aiRates.refresh.outcome.updated": "Đã cập nhật",
+  "aiRates.refresh.outcome.unchanged": "Đã mới nhất",
+  "aiRates.refresh.outcome.not_available": "Đặt thủ công",
+  "aiRates.refresh.outcome.unreachable": "Không truy cập được",
+  "aiRates.refresh.outcome.not_bound": "Không dùng",
+  "aiRates.refresh.outcome.not_listed": "Không có trong danh sách",
+  "aiRates.refresh.unlisted":
+    "Không có trong danh sách của nhà môi giới: {ids}",
+  "aiRates.refresh.updatedCount_one": "Đã ghi {count} giá",
+  "aiRates.refresh.updatedCount_other": "Đã ghi {count} giá",
+  "aiRates.refresh.unchangedCount_one": "{count} giá đã mới nhất",
+  "aiRates.refresh.unchangedCount_other": "{count} giá đã mới nhất",
+  "aiProviders.state.active": "Đang dùng",
+  "aiProviders.state.ready": "Sẵn sàng",
+  "aiProviders.state.needsKey": "Thiếu khóa",
+  "aiProviders.state.inactive": "Không hoạt động",
+  "aiProviders.usedBy": "Được dùng bởi {roles}",
+  "aiProviders.notUsed": "Chưa dùng",
+  "aiProviders.opensNewTab": "(Mở trong tab mới)",
+  "aiProviders.inUse": "Đang dùng",
+  "aiProviders.unpriced": "{model} đang được dùng và chưa có giá.",
+  "aiProviders.setPrice": "Đặt giá",
+  "aiProviders.manage": "Quản lý",
+  "aiProviders.connection": "Kết nối",
+  "aiProviders.prices": "Giá",
+  "aiProviders.addPrice": "Thêm giá",
+  "aiProviders.backToPrices": "← Giá",
+  "aiProviders.priceUnit": "USD trên 1 triệu token",
+  "aiProviders.priceSource": "Bảng giá của nhà cung cấp ↗",
+  "aiProviders.noPrices": "Nhà cung cấp này chưa có giá.",
+  "aiProviders.colInput": "Đầu vào",
+  "aiProviders.colOutput": "Đầu ra",
+  "aiProviders.colCacheRead": "Đọc cache",
+  "aiProviders.colCacheWrite": "Ghi cache",
+  "aiRates.manual.editing": "Đang sửa {model} · dùng cho {lane}",
+  "aiRates.manual.from": "từ {date}",
+  "aiRates.manual.edit": "Sửa",
+  "aiRates.manual.malformed":
+    "Giá là số thường như 5 hoặc 0.25, tối đa sáu chữ số thập phân.",
+  "aiRates.manual.lane": "Dùng cho",
+  "aiRates.manual.laneChat": "Trò chuyện",
+  "aiRates.manual.laneEmbeddings": "Nhúng",
+  "aiRates.manual.laneDecisions": "Quyết định",
+  "aiRates.remove.verb": "Xóa {model}",
+  "aiRates.remove.title": "Xóa giá của {model} ({lane})?",
+  "aiRates.remove.body":
+    "Giá của {model} dùng cho {lane} sẽ bị xóa và ước tính chi phí cho các lần gọi trước đây của mô hình này trở thành chưa có giá.",
+  "aiRates.remove.confirm": "Xóa",
   "firstRun.ai.foot":
     "Chưa có gì gửi tới nhà cung cấp của bạn cho tới khi bạn bấm Tiếp tục.",
   "contact.readings.title": "Vị thế của liên hệ này",
@@ -9815,6 +11057,12 @@ export const vi = {
   "lead.readings.title": "Vị thế của khách hàng tiềm năng này",
   "lead.readings.firstResponse": "Phản hồi đầu tiên",
   "lead.readings.noClock": "chưa đặt mục tiêu phản hồi",
+  "lead.readings.archived": "Đã lưu trữ",
+  "lead.readings.merged": "Đã gộp",
+  "lead.readings.mergedInto": "Vào một khách hàng tiềm năng khác",
+  "lead.readings.company": "Công ty",
+  "lead.readings.noCompany": "Không có",
+  "lead.readings.scoreManual": "Đặt thủ công",
   "lead.readings.owed": "Ch\u01b0a tr\u1ea3 l\u1eddi",
   "lead.today.answer": "Trả lời {name}",
   "lead.today.answerMeta": "Còn nợ phản hồi đầu tiên",
@@ -9908,4 +11156,136 @@ export const vi = {
   "employment.dateHint":
     "Dùng YYYY-MM hoặc YYYY-MM-DD. Để trống nếu chưa biết.",
   "employment.more": "Xem thêm công việc",
+
+  "magic.title": "Margince đã làm gì",
+  "magic.since": "Kể từ {when}",
+  "magic.window.label": "Hiển thị",
+  "magic.window.brief": "Từ bản tóm tắt gần nhất",
+  "magic.window.week": "7 ngày qua",
+  "magic.window.month": "30 ngày qua",
+  "magic.loading": "Đang đọc những gì hệ thống đã làm",
+  "magic.lane.done": "Đã làm giúp bạn",
+  "magic.lane.needsYou": "Đang chờ bạn",
+  "magic.lane.couldNotComplete": "Không hoàn tất được",
+  "magic.lane.watching": "Cần khôi phục",
+  "magic.empty.done":
+    "Trong khoảng thời gian này không có gì được làm giúp bạn.",
+  "magic.empty.needsYou": "Không có quyết định nào đang chờ bạn.",
+  "magic.empty.couldNotComplete": "Mọi việc đã bắt đầu đều hoàn tất.",
+  "magic.empty.watching": "Mọi nguồn và quy tắc đều bình thường.",
+  "magic.laneCount_one": "{count} dòng",
+  "magic.laneCount_other": "{count} dòng",
+  "magic.col.what": "Chuyện gì đã xảy ra",
+  "magic.col.about": "Liên quan đến",
+  "magic.col.by": "Bởi",
+  "magic.aboutMany_one": "{label} và {others} bản ghi khác",
+  "magic.aboutMany_other": "{label} và {others} bản ghi khác",
+  "magic.aboutCount_one": "{count} bản ghi",
+  "magic.aboutCount_other": "{count} bản ghi",
+  "magic.action.mail_filed": "Đã xếp email thu thập vào liên hệ này",
+  "magic.action.company_profile_read": "Đã đọc hồ sơ kỹ thuật của công ty",
+  "magic.action.fields_changed": "Đã thay đổi {fields}",
+  "magic.action.retention_lead_anonymize":
+    "Đã ẩn danh khách hàng tiềm năng chưa chuyển đổi đã quá hạn lưu trữ",
+  "magic.action.retention_lead_archive":
+    "Đã lưu trữ khách hàng tiềm năng chưa chuyển đổi đã quá hạn lưu trữ",
+  "magic.action.retention_contact_anonymize":
+    "Đã ẩn danh liên hệ không có đồng ý hoặc giao dịch đã quá hạn lưu trữ",
+  "magic.action.retention_contact_erase": "Đã xóa liên hệ đã quá hạn lưu trữ",
+  "magic.action.retention_activity_archive":
+    "Đã lưu trữ email, cuộc họp và ghi chú đã quá hạn lưu trữ",
+  "magic.action.retention_activity_erase":
+    "Đã xóa nội dung bản chép lời đã quá hạn lưu trữ",
+  "magic.action.retention_deal_archive":
+    "Đã lưu trữ giao dịch đã đóng đã quá hạn lưu trữ",
+  "magic.why.mail_filed": "Địa chỉ bên gửi thuộc về liên hệ này.",
+  "magic.why.public_records":
+    "Từ trang web công khai và bản ghi DNS của công ty.",
+  "magic.why.site_read": "Đọc trên {site}.",
+  "magic.why.site_read_unnamed": "Đọc trên trang web của công ty.",
+  "magic.why.site_read_each": "Đọc trên trang web riêng của từng công ty.",
+  "magic.why.signature": "Lấy từ chữ ký email.",
+  "magic.why.retention": "Quy tắc lưu trữ: sau {days} ngày.",
+  "magic.by.retention": "Lưu trữ dữ liệu",
+  "magic.by.mail_filing": "Xếp email",
+  "magic.by.company_lookup": "Tra cứu công ty",
+  "magic.by.website_reader": "Trình đọc website",
+  "magic.by.signature_reader": "Trình đọc chữ ký",
+  "magic.by.overnight_agent": "Tác tử ban đêm",
+  "magic.by.mail_reader": "Trình đọc email",
+  "magic.by.auto_apply": "Tự động áp dụng",
+  "magic.by.automation": "Tự động hóa",
+  "magic.by.lead_routing": "Phân phối khách hàng tiềm năng",
+  "magic.by.mailbox": "Đồng bộ hộp thư",
+  "magic.by.agent": "Một tác tử",
+  "magic.by.system": "Hệ thống Margince",
+  "magic.col.when": "Khi nào",
+  "magic.failingSince": "Lỗi từ {when}",
+  "magic.col.wayBack": "Cách hoàn tác",
+  "magic.noRecord": "Không nêu bản ghi nào",
+  "magic.undo.action": "Hoàn tác",
+  "magic.undo.done": "Đã hoàn tác",
+  "magic.undo.perRecord": "Hoàn tác từng bản ghi bên trong",
+  "magic.records.title": "Những gì đã thay đổi, theo từng bản ghi",
+  "magic.records.show": "Những gì đã thay đổi",
+  "magic.records.empty": "Không còn bản ghi nào trong số này hiển thị.",
+  "magic.records.more": "Xem thêm",
+  "magic.records.fromTo": "từ {from} thành {to}",
+  "magic.records.empty_value": "trống",
+  "magic.records.count_one": "{count} bản ghi",
+  "magic.records.count_other": "{count} bản ghi",
+  "magic.undoReason.noCompletedChange":
+    "Không có gì thay đổi nên không có gì để hoàn tác.",
+  "magic.undoReason.notEvaluated":
+    "Bản cài đặt này chưa kiểm tra xem có thể hoàn tác hay không.",
+  "magic.notShown_one": "{count} thay đổi không được hiển thị: {reason}",
+  "magic.notShown_other": "{count} thay đổi không được hiển thị: {reason}",
+  "magic.notShown.unadmittedAction": "việc bảo trì không có ý nghĩa với bạn",
+  "magic.notShown.unknownEntityType":
+    "một loại bản ghi mà trang này không xếp được",
+  "magic.notShown.outOfScope": "nằm ngoài các bản ghi của bạn",
+  "magic.action.advance_stage": "Một deal đã chuyển sang giai đoạn tiếp theo",
+  "magic.action.promote": "Một lead đã trở thành deal",
+  "magic.action.update": "Một bản ghi đã được cập nhật",
+  "magic.action.assign": "Công việc đã được giao lại",
+  "magic.action.activity_relink": "Một trao đổi đã được xếp vào đúng bản ghi",
+  "magic.action.send_email": "Một tin nhắn đã được gửi",
+  "magic.action.schedule": "Một cuộc hẹn đã được đặt",
+  "magic.action.disqualify": "Một lead đã bị loại",
+  "magic.action.automation_troubled": "{name} đang gặp trục trặc: {outcome}",
+  "magic.action.approval_coldstart":
+    "Một lần tiếp cận đầu tiên đang chờ bạn duyệt",
+  "magic.action.approval_send_email": "Một tin nhắn đang chờ bạn duyệt",
+  "magic.action.approval_advance_deal":
+    "Một bước chuyển giai đoạn đang chờ bạn duyệt",
+  "magic.action.approval_promote_lead":
+    "Việc chuyển một lead thành deal đang chờ bạn duyệt",
+  "magic.action.approval_overnight":
+    "Một đề xuất từ đêm qua đang chờ bạn duyệt",
+  "magic.action.approval_transcript_proposal":
+    "Một đề xuất từ bản ghi âm đang chờ bạn duyệt",
+  "magic.action.approval_pending": "Một đề xuất loại {kind} đang chờ bạn duyệt",
+  "magic.action.capture_reauth_required": "{provider} cần được kết nối lại",
+  "magic.action.capture_connection_error": "Không kết nối được tới {provider}",
+  "magic.action.capture_sync_failing": "{provider} đang không theo kịp",
+  "magic.action.capture_backfill_failed":
+    "{provider} không đọc xong được lịch sử",
+  "magic.consequence.stage_moved": "Deal hiện ở một giai đoạn muộn hơn.",
+  "magic.consequence.lead_promoted": "Pipeline có thêm một deal mới.",
+  "magic.consequence.owner_changed": "Trách nhiệm nay thuộc về bên khác.",
+  "magic.consequence.record_relinked": "Trao đổi nay nằm đúng bản ghi của nó.",
+  "magic.consequence.message_sent":
+    "Bên nhận đã có tin nhắn và không thể thu hồi.",
+  "magic.consequence.meeting_booked": "Cuộc hẹn đã có trong lịch.",
+  "magic.consequence.lead_disqualified": "Lead đã rời khỏi pipeline.",
+  "magic.consequence.automation_did_nothing":
+    "Không điều gì quy tắc hứa hẹn đã xảy ra.",
+  "magic.consequence.awaits_your_decision":
+    "Không có gì diễn ra cho đến khi bạn quyết định.",
+  "magic.consequence.capture_not_collecting":
+    "Không có gì được thu thập từ nguồn này.",
+  "magic.consequence.capture_may_be_incomplete":
+    "Những gì bạn thấy từ nguồn này có thể còn thiếu.",
+  "magic.consequence.capture_history_incomplete":
+    "Các trao đổi cũ hơn từ nguồn này bị thiếu.",
 } as const satisfies Record<MessageKey, string>;

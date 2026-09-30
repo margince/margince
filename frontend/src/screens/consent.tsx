@@ -10,13 +10,14 @@ import {
   EmptyState,
   Skeleton,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { humanizeToken } from "./audit";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { QueryStates, throwProblem } from "./common";
 import "./consent.css";
 import { stable } from "../format/collate";
 
@@ -175,19 +176,6 @@ const STATE_TONE: Record<
   unknown: undefined,
 };
 
-// A mutation's own refusal, in the server's words rather than a generic
-// failure — a DOI-required purpose 422s here, and the human needs to see
-// exactly why the toggle didn't take.
-function MutationError({ error }: Readonly<{ error: unknown }>) {
-  const t = useT();
-  if (!error) {
-    return null;
-  }
-  return (
-    <p style={{ color: "var(--dangerText)" }}>{problemMessageOf(error, t)}</p>
-  );
-}
-
 // One consent-purpose row on the Contact 360 (P-8/P-9): the state badge, a
 // Grant/Withdraw toggle that writes an append-only consent_event through
 // POST /contacts/{id}/consent, and a toggleable proof log. A purpose needing
@@ -299,7 +287,7 @@ function ConsentRow({
         </Button>
       </div>
       {requiresDoi && <p>{t("consent.doiBySubject")}</p>}
-      {setState.isError && <MutationError error={setState.error} />}
+      <ErrorLine error={setState.error} />
       {showLog && <ConsentProofLog events={events} />}
     </PanelRow>
   );
@@ -481,7 +469,7 @@ export function ConfirmDetailsAction({
         </p>
       )}
       <p>{t("consent.askToConfirmWhat")}</p>
-      {ask.isError && <MutationError error={ask.error} />}
+      <ErrorLine error={ask.error} />
       {ask.data && (
         <p className="t-caption" data-testid="confirm-details-sent">
           {sentenceFor(ask.data, t)} {t("consent.askExpires")}:{" "}

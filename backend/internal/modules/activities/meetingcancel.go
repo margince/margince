@@ -52,8 +52,31 @@ const auditFieldMeetingStatus = "meeting_status"
 // stamped with. A pull that runs days after the fact would otherwise record the
 // cancellation as having happened when we noticed, and every question about when
 // bookings fell through would answer with the sync schedule.
+//
+// A caller that must prove its standing first calls CancelCapturedMeetingFor
+// instead; this entry point carries no guard, for the caller named there.
 func CancelCapturedMeetingTx(
 	ctx context.Context, tx pgx.Tx, key connector.NaturalKey, at time.Time,
+) (ids.ActivityID, bool, error) {
+	return closeCapturedMeetingTx(ctx, tx, key, at, nil)
+}
+
+// CancelCapturedMeetingFor is CancelCapturedMeetingTx for a caller that must
+// prove its standing first: a connector acting on a row it found by the
+// provider's event id, which the provider check binds to the acting connector
+// and not to the seat whose calendar is syncing.
+func CancelCapturedMeetingFor(holds SeatStanding) func(
+	ctx context.Context, tx pgx.Tx, key connector.NaturalKey, at time.Time,
+) (ids.ActivityID, bool, error) {
+	return func(
+		ctx context.Context, tx pgx.Tx, key connector.NaturalKey, at time.Time,
+	) (ids.ActivityID, bool, error) {
+		return closeCapturedMeetingTx(ctx, tx, key, at, holds)
+	}
+}
+
+func closeCapturedMeetingTx(
+	ctx context.Context, tx pgx.Tx, key connector.NaturalKey, at time.Time, holds SeatStanding,
 ) (ids.ActivityID, bool, error) {
 	if key.SourceSystem == "" || key.SourceID == "" {
 		return ids.ActivityID{}, false, errors.New("activities: cancelling a captured meeting needs a natural key")
@@ -88,6 +111,19 @@ func CancelCapturedMeetingTx(
 			return ids.ActivityID{}, false, nil
 		}
 		return ids.ActivityID{}, false, fmt.Errorf("activities: reading the meeting being cancelled: %w", err)
+	}
+	if holds != nil {
+		mine, err := holds(ctx, tx, id)
+		if err != nil {
+			return ids.ActivityID{}, false, err
+		}
+		if !mine {
+			// Reported as not-found, and the ZERO id is the load-bearing half:
+			// the caller reads a found row as "the natural key had the word"
+			// and would otherwise send the cancellation on to whatever the
+			// event's cross-door identity names.
+			return ids.ActivityID{}, false, nil
+		}
 	}
 	cancelled := string(crmcontracts.ActivityMeetingStatusCanceled)
 	if !cancellableFrom(status) {

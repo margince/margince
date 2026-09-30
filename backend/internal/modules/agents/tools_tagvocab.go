@@ -29,6 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -40,6 +41,7 @@ func (t createTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "create_tag", Title: "Create a tag", Version: toolVersionV1,
 		Description:   createTagCopy.render(),
+		Instead:       createTagCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		// A tag is a WORD, not a row with a scope, so this answer names no
 		// record and the replay has nothing to re-read. The grant is what the
@@ -86,6 +88,7 @@ func (t updateTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "update_tag", Title: "Rename or recolour a tag", Version: toolVersionV1,
 		Description:   updateTagCopy.render(),
+		Instead:       updateTagCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		// A tag is a WORD, not a row with a scope, so this answer names no
 		// record and the replay has nothing to re-read. The grant is what the
@@ -163,12 +166,16 @@ const clearColor = "none"
 // editing a word are auto-execute because the same seat can undo either from
 // the vocabulary screen; a merge rewrites every record carrying the source and
 // releases the source's name, and nothing records where those taggings went.
-type mergeTags struct{ tags Tags }
+type mergeTags struct {
+	tags     Tags
+	language baselanguage.Resolver
+}
 
 func (t mergeTags) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "merge_tags", Title: "Fold one tag into another", Version: toolVersionV1,
 		Description:   mergeTagsCopy.render(),
+		Instead:       mergeTagsCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
 		OpenAPIOp: "mergeTags",
 		InputSchema: schema(`{"type":"object","required":["tag_id","into_tag_id"],"properties":{
@@ -194,7 +201,7 @@ func (t mergeTags) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewMergeTagsCall(t.tags, MergeTagsCommand{
+	return StageSubject(ctx, NewMergeTagsCall(t.tags, t.language, MergeTagsCommand{
 		SourceID: args.TagID,
 		TargetID: args.IntoTagID,
 	}))

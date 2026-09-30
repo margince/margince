@@ -8,12 +8,13 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { RefusalLine } from "./common";
 import { stillHeld } from "./employmentcurrency";
 import { datePatch, patchEmployment, validDateEntry } from "./employmentpatch";
+import "./common.css";
 
 type Employment = components["schemas"]["Contact360Employment"];
 type Patch = components["schemas"]["UpdateRelationshipRequest"];
@@ -76,12 +77,7 @@ export function EmploymentEdit({
   const valid = validDateEntry(start) && validDateEntry(end);
   return (
     <Modal open={open} onClose={onClose} labelledBy={id}>
-      <Heading
-        size="large"
-        id={id}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={id} className="t-h2 modal-title">
         {t("employment.edit")}
       </Heading>
       <div className="form-stack">
@@ -144,7 +140,7 @@ export function EmploymentEdit({
           disabled={status !== "current" || saving.isPending}
           onChange={(e) => setPrimary(e.target.checked)}
         />
-        {saving.isError && <RefusalLine error={saving.error} />}
+        <ErrorLine error={saving.error} />
         <Button
           disabled={!valid || saving.isPending}
           onClick={() => {

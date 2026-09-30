@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
@@ -324,16 +325,14 @@ export function LeadBulkBar({
           reads `outcomes`, which only fills on success — so a destination the
           server refused before touching any lead left the reader pressing
           Assign and watching nothing happen. */}
-      {run.isError && (
-        <span className="t-danger">{problemMessageOf(run.error, t)}</span>
-      )}
+      <ErrorLine inline error={run.error} />
       {failed.length > 0 && (
-        <span className="t-danger">
+        <ErrorLine inline>
           {t("lead.bulkFailed", {
             count: formatNumber(failed.length, locale),
           })}{" "}
           {failed.map((o) => `${o.name}: ${o.error}`).join(" · ")}
-        </span>
+        </ErrorLine>
       )}
     </>
   );

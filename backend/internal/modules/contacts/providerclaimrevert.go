@@ -117,7 +117,7 @@ func RevertProviderFills(ctx context.Context, tx pgx.Tx, providerName string, su
 // appliedFieldsFor reads what one provider filled on one contact.
 func appliedFieldsFor(ctx context.Context, tx pgx.Tx, providerName string, subject ids.UUID) ([]appliedField, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT target_table, target_field, target_row_id, applied_value
+		SELECT id, target_table, target_field, target_row_id, applied_value
 		  FROM provider_applied_field
 		 WHERE provider = $1 AND contact_id = $2`, providerName, subject)
 	if err != nil {
@@ -127,7 +127,7 @@ func appliedFieldsFor(ctx context.Context, tx pgx.Tx, providerName string, subje
 	var out []appliedField
 	for rows.Next() {
 		var f appliedField
-		if err := rows.Scan(&f.table, &f.field, &f.rowID, &f.value); err != nil {
+		if err := rows.Scan(&f.ledgerID, &f.table, &f.field, &f.rowID, &f.value); err != nil {
 			return nil, err
 		}
 		f.subject, f.provider = subject, providerName

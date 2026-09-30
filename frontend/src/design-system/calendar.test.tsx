@@ -79,3 +79,30 @@ it("marks the chosen day and nothing else", () => {
   expect(pressed).toHaveLength(1);
   expect(pressed[0].textContent).toBe("25");
 });
+
+// The grid is six weeks whatever the month, so up to eleven of its forty-two
+// cells belong to the month either side. Undistinguished they read as the month
+// on show, which is how a reader picks the 1st of the wrong one — and the class
+// is the only thing that separates them, so nothing else can fail if it goes.
+it("marks the days that belong to the month either side", () => {
+  render(
+    <Calendar
+      month={AUGUST_2026}
+      onMonthChange={() => {}}
+      selected=""
+      onSelect={() => {}}
+      today={TODAY}
+      locale="en"
+    />,
+  );
+
+  // 26 July, the Sunday the grid opens on, is the month before.
+  expect(
+    screen.getByRole("button", { name: "Sunday, 26 July 2026" }).className,
+  ).toContain("calendar-day-outside");
+  // 25 August is the month on show, and must NOT carry it — a class on every
+  // day would satisfy the line above while distinguishing nothing.
+  expect(
+    screen.getByRole("button", { name: "Tuesday, 25 August 2026" }).className,
+  ).not.toContain("calendar-day-outside");
+});

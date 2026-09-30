@@ -37,7 +37,7 @@ func TestBothPagesAgreeTheNextStepIsAMeeting(t *testing.T) {
 
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Annabelle Malherbe", "source": "ui",
+		"full_name": "Annabelle Malherbe", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}
@@ -126,7 +126,7 @@ func TestAPageOfRemindersDoesNotBuryTheNextStep(t *testing.T) {
 
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Annabelle Malherbe", "source": "ui",
+		"full_name": "Annabelle Malherbe", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}
@@ -142,7 +142,7 @@ func TestAPageOfRemindersDoesNotBuryTheNextStep(t *testing.T) {
 	// last of all.
 	far := time.Now().UTC().AddDate(0, 0, 90).Format(time.RFC3339)
 	if status := e.Call(t, "POST", "/v1/tasks", AnyMap{
-		"subject": "Send the revised rollout plan", "due_at": far, "source": "ui",
+		"subject": "Send the revised rollout plan", "due_at": far, "source": "manual",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contactID}},
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("file the human promise = %d", status)

@@ -156,28 +156,27 @@ func dealStageSemantic(
 // A stage it cannot resolve degrades to naming the destination rather than
 // failing: the approval is already the safe answer, and refusing to describe it
 // would turn a readable-enough decision into no decision at all.
-func dealMoveSummary(ctx context.Context, stages StageResolver, rec datasource.Record, target string) string {
+func dealMoveSummary(ctx context.Context, said summaryCopy, stages StageResolver, rec datasource.Record, target string) string {
 	label := recordLabel(rec)
 	var fields struct {
 		StageID ids.UUID `json:"stage_id"`
 	}
 	if err := json.Unmarshal(rec.Fields, &fields); err != nil || fields.StageID.IsZero() {
-		return fmt.Sprintf("Move deal %s to %s", label, target)
+		return fmt.Sprintf(said.dealMove, label, target)
 	}
 	source, _, err := stages.StageSemantic(ctx, fields.StageID)
 	switch {
 	case err != nil || source == "":
-		return fmt.Sprintf("Move deal %s to %s", label, target)
+		return fmt.Sprintf(said.dealMove, label, target)
 	case source == stageSemanticOpen && target == stageSemanticOpen:
 		// Reachable even though the tier gate calls this transition 🟢: a
 		// per-field precedence split stages an otherwise auto-execute call, and
 		// the human then reads this line about a routine move.
-		return fmt.Sprintf("Move deal %s to another open stage", label)
+		return fmt.Sprintf(said.dealMoveOpen, label)
 	case source != stageSemanticOpen && target == stageSemanticOpen:
-		return fmt.Sprintf("REOPEN deal %s, which is currently %s — this clears its close date, "+
-			"its lost reason and the exchange rate frozen when it closed", label, source)
+		return fmt.Sprintf(said.dealReopen, label, source)
 	case source != stageSemanticOpen:
-		return fmt.Sprintf("Change deal %s from %s to %s", label, source, target)
+		return fmt.Sprintf(said.dealChange, label, source, target)
 	}
-	return fmt.Sprintf("Close deal %s as %s", label, target)
+	return fmt.Sprintf(said.dealClose, label, target)
 }

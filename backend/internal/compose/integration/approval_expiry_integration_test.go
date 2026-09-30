@@ -61,7 +61,7 @@ func TestApprovalExpiryClosesTheDecisionGate(t *testing.T) {
 	if _, err := svc.Decide(rep, approvalID, true, nil); !errors.As(err, &decided) || decided.Status != "expired" {
 		t.Fatalf("approving an expired staging → %v, want AlreadyDecidedError{expired}", err)
 	}
-	if _, err := svc.Decide(rep, approvalID, false, strPtr("late no")); !errors.As(err, &decided) || decided.Status != "expired" {
+	if _, err := svc.Decide(rep, approvalID, false, StrPtr("late no")); !errors.As(err, &decided) || decided.Status != "expired" {
 		t.Fatalf("rejecting an expired staging → %v, want AlreadyDecidedError{expired}", err)
 	}
 	// Never approved, so redemption is asserting authority that does not

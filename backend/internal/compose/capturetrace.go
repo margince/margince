@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/capturelabel"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -55,7 +56,7 @@ func WithCaptureTrace(tracePayloads bool) Option {
 		// so the store is injected rather than imported by the renderer. It is
 		// the company-keyed door's whole source.
 		s.pipelineTraceHandlers = pipelinetrace.NewHandlers(pipelinetrace.NewAssembler(
-			traces, activities.NewStore(InstallationDB(pool)), tracePayloads,
+			traces, activities.NewStore(InstallationDB(pool)), capturelabel.Ruleset, tracePayloads,
 		).
 			WithThreadReader(NewThreadReadings(InstallationDB(pool), time.Now)).
 			WithDomainTriageReader(contacts.NewStore(InstallationDB(pool))))

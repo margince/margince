@@ -39,6 +39,11 @@ type FakeStep struct {
 	Text        string
 	ServedModel string
 	Err         error
+	// FinishReason scripts the provider's stop reason, so a test can stand a
+	// TRUNCATED completion up: "length" is a successful HTTP response carrying a
+	// half-written body, which is a different thing from Err and the one the
+	// retry policy most needs to be able to see.
+	FinishReason string
 }
 
 // FakeCall is one recorded model invocation: the exact bytes that would
@@ -117,7 +122,7 @@ func (f *FakeClient) Complete(ctx context.Context, req model.Request) (model.Res
 	if err := attachmentUnsupported("fake", req.Attachments, f.Caps().AttachmentMIMEs); err != nil {
 		return model.Response{}, err
 	}
-	payload, report, err := sendablePayload(ctx, fakeWire(req), req.SecretStripper)
+	payload, report, err := SendablePayload(ctx, fakeWire(req), req.SecretStripper)
 	if err != nil {
 		return model.Response{}, err
 	}
@@ -142,6 +147,7 @@ func (f *FakeClient) Complete(ctx context.Context, req model.Request) (model.Res
 		InputTokens:  len(payload) / 4,
 		OutputTokens: len(step.Text) / 4,
 		ServedModel:  servedModel,
+		FinishReason: step.FinishReason,
 	}, nil
 }
 
@@ -151,7 +157,7 @@ func (f *FakeClient) Stream(ctx context.Context, req model.Request) (model.Token
 	if err := attachmentUnsupported("fake", req.Attachments, f.Caps().AttachmentMIMEs); err != nil {
 		return nil, err
 	}
-	payload, report, err := sendablePayload(ctx, fakeWire(req), req.SecretStripper)
+	payload, report, err := SendablePayload(ctx, fakeWire(req), req.SecretStripper)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +167,7 @@ func (f *FakeClient) Stream(ctx context.Context, req model.Request) (model.Token
 }
 
 func (f *FakeClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
-	payload, _, err := sendablePayload(ctx, req.Inputs, nil)
+	payload, _, err := SendablePayload(ctx, req.Inputs, nil)
 	if err != nil {
 		return model.Embeddings{}, err
 	}

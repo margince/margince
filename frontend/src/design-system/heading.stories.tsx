@@ -9,7 +9,7 @@ import { Heading } from "./heading";
 // cases a caller meets: the sizes on their own, the two coming apart, and the
 // spacing belonging to whoever holds the headings.
 const meta: Meta<typeof Heading> = {
-  title: "Design System/Heading",
+  title: "Components/Text and data display/Heading",
   component: Heading,
   parameters: { layout: "padded" },
 };

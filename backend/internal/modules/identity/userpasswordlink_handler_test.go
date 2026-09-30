@@ -77,14 +77,25 @@ func TestPasswordLinkNonAdminCannotSpendTheTargetsIssuanceBudget(t *testing.T) {
 	}
 }
 
-func TestPasswordLinkRefusesWhenTheInstallationMailsInstead(t *testing.T) {
+// A wired mailer is not a refusal, and the case is kept rather than deleted
+// because the refusal it used to assert is the defect.
+//
+// `email_channel_configured` said "invite the user instead", which is sound
+// advice only while the mail arrives. On an installation whose relay is
+// configured and dead the invite answers 201 and delivers nothing, so this
+// refused the one fallback — the escape disabled by the fault it escapes.
+//
+// 404 here rather than 200 because the test context binds no workspace, which
+// is how every other case in this file reaches the merits: what it says is that
+// the request got PAST configuration to the target.
+func TestAWiredMailerNoLongerRefusesAnAdminIssuedLink(t *testing.T) {
 	h := NewHandlers(&Service{}).WithPasswordReset(nopMailer{}).WithPasswordLinkBase("https://crm.example.test")
 	rec := linkRequest(t, h, ids.UserID{UUID: ids.NewV7()}, "admin")
-	if rec.Code != http.StatusConflict {
-		t.Fatalf("mailer wired = %d, want 409", rec.Code)
+	if rec.Code == http.StatusConflict {
+		t.Fatalf("mailer wired = 409 (%s) — a configured relay may be dead, and this is the only fallback", rec.Body)
 	}
-	if !strings.Contains(rec.Body.String(), "email_channel_configured") {
-		t.Fatalf("refusal body = %s, want the email_channel_configured code", rec.Body)
+	if strings.Contains(rec.Body.String(), "email_channel_configured") {
+		t.Fatalf("refusal body = %s, want no email_channel_configured refusal at all", rec.Body)
 	}
 }
 
@@ -163,26 +174,35 @@ func TestMeAdvertisesTheLinkActionOnlyToAnAdminWhoCanUseIt(t *testing.T) {
 	if NewHandlers(&Service{}).canIssuePasswordLink(context.Background(), admin) {
 		t.Error("admin with no public base URL: want the action hidden, since it could only 409")
 	}
+	// A CONFIGURED MAILER NO LONGER HIDES IT. The installation this used to be
+	// wrong about is the one with no escape: a dead relay answers 201 to an
+	// invite and delivers nothing, and the admin-issued link was refused
+	// precisely because a mailer was configured.
 	mailed := NewHandlers(&Service{}).WithPasswordReset(nopMailer{}).WithPasswordLinkBase("https://crm.example.test")
-	if mailed.canIssuePasswordLink(context.Background(), admin) {
-		t.Error("admin where email is configured: want the action hidden, since the invite mails the link")
+	if !mailed.canIssuePasswordLink(context.Background(), admin) {
+		t.Error("admin where email is configured: want the action advertised — the mailed flow may be dead, " +
+			"and this is the only fallback")
 	}
 }
 
 func TestAConfigurationRefusalDoesNotSpendTheTargetsBudget(t *testing.T) {
 	// The handler decides the configuration gates before the limiter precisely
 	// so a request this installation can never serve cannot exhaust the budget
-	// protecting one it can. Without that order, an admin on a mailed-link
-	// installation could lock a member out of issuance by retrying an operation
-	// that was never going to work.
-	mailed := NewHandlers(&Service{}).WithPasswordReset(nopMailer{}).WithPasswordLinkBase("https://crm.example.test")
+	// protecting one it can. Without that order, an admin could lock a member
+	// out of issuance by retrying an operation that was never going to work.
+	//
+	// The refusal is the MISSING BASE URL, which is the one configuration state
+	// left that refuses issuance outright: a link built on an empty origin is
+	// worse than no recovery at all. A configured mailer used to stand here and
+	// no longer refuses anything.
+	unbuildable := NewHandlers(&Service{}).WithPasswordReset(nopMailer{})
 	target := ids.UserID{UUID: ids.NewV7()}
 	for range 8 { // past the 5/hour per-target ceiling
-		if rec := linkRequest(t, mailed, target, "admin"); rec.Code != http.StatusConflict {
+		if rec := linkRequest(t, unbuildable, target, "admin"); rec.Code != http.StatusConflict {
 			t.Fatalf("configuration refusal = %d, want 409", rec.Code)
 		}
 	}
-	if !mailed.passwordLinkPerTarget.Allow(target.String()) {
+	if !unbuildable.passwordLinkPerTarget.Allow(target.String()) {
 		t.Error("the target's issuance budget was spent by refusals the installation could never serve")
 	}
 }

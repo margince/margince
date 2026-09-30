@@ -33,12 +33,22 @@ const KEY_READER: GrantSpec = { ai_routing: ["read"] };
 
 const LISTED = {
   providers: [
-    { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-    { provider: "openai", configured: false, env_var: "OPENAI_API_KEY" },
+    {
+      provider: "gemini",
+      configured: true,
+      env_var: "GEMINI_API_KEY",
+      optional: false,
+    },
+    {
+      provider: "openai",
+      configured: false,
+      env_var: "OPENAI_API_KEY",
+      optional: false,
+    },
   ],
 };
 
-function backendFor(allow: GrantSpec) {
+function backendFor(allow: GrantSpec, listed: typeof LISTED = LISTED) {
   const puts: Array<{ url: string; body: unknown }> = [];
   const deletes: string[] = [];
   const fetchMock = vi.fn(
@@ -57,7 +67,13 @@ function backendFor(allow: GrantSpec) {
           deletes.push(req.url);
           return new Response(null, { status: 204 });
         }
-        return jsonResponse(LISTED);
+        return jsonResponse(listed);
+      }
+      if (
+        req.url.includes("/ai/routing") ||
+        req.url.includes("/ai-model-rates")
+      ) {
+        return jsonResponse({}, 404);
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
@@ -65,12 +81,23 @@ function backendFor(allow: GrantSpec) {
   return { fetchMock, puts, deletes };
 }
 
+/** Opens a vendor's sheet, where its credential lives. */
+async function openSheet(
+  user: ReturnType<typeof userEvent.setup>,
+  provider: string,
+) {
+  await user.click(
+    await screen.findByRole("button", { name: `Manage ${provider}` }),
+  );
+  return screen.findByTestId(`ai-provider-key-${provider}`);
+}
+
 /** Opens one vendor's paste field, the way a reader does. */
 async function openKey(
   user: ReturnType<typeof userEvent.setup>,
   provider: string,
 ) {
-  const row = screen.getByTestId(`ai-provider-key-${provider}`);
+  const row = await openSheet(user, provider);
   await user.click(
     within(row).getByRole("button", { name: /^(add|replace)$/i }),
   );
@@ -103,36 +130,58 @@ describe("AiProviderKeysCard", () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);
 
-    expect(await screen.findByText(/^configured$/i)).toBeTruthy();
-    expect(screen.getByText(/^not set$/i)).toBeTruthy();
-    // Every servable vendor gets a row, not only the configured one — an
-    // installation that has configured nothing is the one that needs this card.
-    // The row says which state it is in and offers the verb that changes it:
-    // Replace where a key is held, Add where none is.
-    expect(screen.getByRole("button", { name: /^replace$/i })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /^add$/i })).toBeTruthy();
-    // And no paste field until one is asked for. Six open password boxes is
-    // what this card used to be, and it is not a page anybody could audit.
+    // Both vendors are unbound in this fixture, so a held key reads Ready and a
+    // missing one Not active; the credential itself is one click deeper.
+    expect(await screen.findByText(/^ready$/i)).toBeTruthy();
+    expect(screen.getByText(/^not active$/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Manage gemini" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Manage openai" })).toBeTruthy();
+    // And no paste field until a sheet is opened and asked for one. Six open
+    // password boxes is what this card used to be.
     expect(screen.queryByPlaceholderText(/paste/i)).toBeNull();
+  });
+
+  // A self-hosted decision server needs no key, so an absent one there is not
+  // a gap: the row says optional rather than warning, and still offers Add
+  // for a server that does take one.
+  it("reads an optional key that is not held as optional, not missing", async () => {
+    const selfHostable = {
+      provider: "jev_compatible",
+      configured: false,
+      env_var: "JEV_COMPATIBLE_API_KEY",
+      optional: true,
+    };
+    vi.stubGlobal(
+      "fetch",
+      backendFor(KEY_EDITOR, { providers: [selfHostable] }).fetchMock,
+    );
+    render(<AiProviderKeysCard />);
+
+    const user = userEvent.setup();
+    const row = await openSheet(user, "jev_compatible");
+    expect(within(row).getByText(/^optional$/i)).toBeTruthy();
+    expect(within(row).queryByText(/^not set$/i)).toBeNull();
+    expect(within(row).getByRole("button", { name: /^add$/i })).toBeTruthy();
   });
 
   it("never renders the key, and offers no field that could hold one read back", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByText(/^configured$/i);
+    await screen.findByRole("button", { name: "Manage gemini" });
 
     const user = userEvent.setup();
-    await openKey(user, "gemini");
-    await openKey(user, "openai");
-
-    // Every input starts EMPTY, including the vendor that has a key. A prefilled
-    // or masked value would imply the real one is retrievable and invite a
-    // screenshot; it is not retrievable, and the card must not suggest it is.
-    for (const input of screen.getAllByPlaceholderText(/paste/i)) {
+    for (const provider of ["gemini", "openai"]) {
+      await openKey(user, provider);
+      // Every input starts EMPTY, including the vendor that has a key. A
+      // prefilled or masked value would imply the real one is retrievable and
+      // invite a screenshot; it is not retrievable, and the card must not
+      // suggest it is.
+      const input = screen.getByPlaceholderText(/paste/i);
       expect(input).toHaveValue("");
       // Typed as a password so the browser does not offer to remember a
       // credential this app deliberately never keeps client-side.
       expect(input).toHaveAttribute("type", "password");
+      await user.keyboard("{Escape}");
     }
   });
 
@@ -140,12 +189,12 @@ describe("AiProviderKeysCard", () => {
     const backend = backendFor(KEY_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByText(/^not set$/i);
+    await screen.findByRole("button", { name: "Manage openai" });
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
     await user.type(
-      within(row).getByPlaceholderText(/paste the api key/i),
+      within(row).getByPlaceholderText(/paste api key/i),
       "  sk-openai-pasted  ",
     );
     await user.click(within(row).getByRole("button", { name: /save key/i }));
@@ -160,11 +209,11 @@ describe("AiProviderKeysCard", () => {
   it("clears the field on success so the credential does not linger on screen", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByText(/^not set$/i);
+    await screen.findByRole("button", { name: "Manage openai" });
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
-    const input = within(row).getByPlaceholderText(/paste the api key/i);
+    const input = within(row).getByPlaceholderText(/paste api key/i);
     await user.type(input, "sk-openai");
     await user.click(within(row).getByRole("button", { name: /save key/i }));
 
@@ -189,12 +238,12 @@ describe("AiProviderKeysCard", () => {
   it("drops the credential from the mutation cache once the save settles", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     const { client } = render(<AiProviderKeysCard />);
-    await screen.findByText(/^not set$/i);
+    await screen.findByRole("button", { name: "Manage openai" });
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
     await user.type(
-      within(row).getByPlaceholderText(/paste the api key/i),
+      within(row).getByPlaceholderText(/paste api key/i),
       "sk-openai-secret",
     );
     await user.click(within(row).getByRole("button", { name: /save key/i }));
@@ -213,14 +262,11 @@ describe("AiProviderKeysCard", () => {
     const backend = backendFor(KEY_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByText(/^not set$/i);
+    await screen.findByRole("button", { name: "Manage openai" });
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
-    await user.type(
-      within(row).getByPlaceholderText(/paste the api key/i),
-      "   ",
-    );
+    await user.type(within(row).getByPlaceholderText(/paste api key/i), "   ");
     // Removing a credential is the Remove button; a blank write is a mistake the
     // server would refuse, so the button does not offer it.
     expect(
@@ -234,7 +280,7 @@ describe("AiProviderKeysCard", () => {
     const backend = backendFor(KEY_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByText(/^configured$/i);
+    await screen.findByRole("button", { name: "Manage gemini" });
 
     // Removing is behind the row's own verb, with the paste field: it is a
     // change to the credential, not a reading of it.
@@ -249,7 +295,9 @@ describe("AiProviderKeysCard", () => {
     await user.click(removes[0]);
     expect(backend.deletes).toHaveLength(0);
 
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", {
+      name: /remove gemini key/i,
+    });
     await user.click(within(dialog).getByRole("button", { name: /remove/i }));
     await waitFor(() => expect(backend.deletes).toHaveLength(1));
     expect(backend.deletes[0]).toContain("/ai/provider-keys/gemini");
@@ -263,11 +311,13 @@ describe("AiProviderKeysCard", () => {
     const backend = backendFor(KEY_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByText(/^configured$/i);
+    await screen.findByRole("button", { name: "Manage gemini" });
 
     await openKey(user, "gemini");
     await user.click(screen.getByRole("button", { name: /remove/i }));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", {
+      name: /remove gemini key/i,
+    });
     await user.click(within(dialog).getByRole("button", { name: /cancel/i }));
 
     expect(backend.deletes).toHaveLength(0);
@@ -282,7 +332,7 @@ describe("AiProviderKeysCard", () => {
   it("names the environment variable in the hint, with no stray braces", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByText(/^configured$/i);
+    await screen.findByRole("button", { name: "Manage gemini" });
 
     const user = userEvent.setup();
     for (const [provider, envVar] of [
@@ -311,7 +361,11 @@ describe("AiProviderKeysCard", () => {
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiProviderKeysCard />);
 
-    expect(await screen.findByText(/only an operator/i)).toBeTruthy();
+    expect(
+      await screen.findByText(
+        /only an administrator or operations user who can change model bindings/i,
+      ),
+    ).toBeTruthy();
     expect(screen.queryByPlaceholderText(/paste/i)).toBeNull();
     const asked = backend.fetchMock.mock.calls.map((c) => String(c[0]));
     expect(asked.some((u) => u.includes("/ai/provider-keys"))).toBe(false);
@@ -320,15 +374,24 @@ describe("AiProviderKeysCard", () => {
   it("disables the controls for a reader who may look but not change", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_READER).fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByText(/^configured$/i);
+    await screen.findByRole("button", { name: "Manage gemini" });
 
     // Refused, not hidden: an operator who must ask somebody else to rotate a
     // key still reads which vendors hold one, off the rows themselves. What is
     // refused is the verb that would change one — and unlike a lane row, there
     // is nothing behind it to read: an empty password box states no fact.
-    expect(screen.getByRole("button", { name: /^replace$/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /^add$/i })).toBeDisabled();
-    expect(screen.getByText(/^not set$/i)).toBeTruthy();
+    const user = userEvent.setup();
+    const held = await openSheet(user, "gemini");
+    expect(
+      within(held).getByRole("button", { name: /^replace$/i }),
+    ).toBeDisabled();
+    expect(within(held).getByText(/^configured$/i)).toBeTruthy();
+    await user.keyboard("{Escape}");
+    const absent = await openSheet(user, "openai");
+    expect(
+      within(absent).getByRole("button", { name: /^add$/i }),
+    ).toBeDisabled();
+    expect(within(absent).getByText(/^not set$/i)).toBeTruthy();
   });
 
   // A credential must not survive the fold. Closing the editor DROPS what was
@@ -339,18 +402,16 @@ describe("AiProviderKeysCard", () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByText(/^not set$/i);
+    await screen.findByRole("button", { name: "Manage openai" });
 
     const row = await openKey(user, "openai");
     await user.type(
-      within(row).getByPlaceholderText(/paste the api key/i),
+      within(row).getByPlaceholderText(/paste api key/i),
       "sk-typed-then-abandoned",
     );
     // Close, then open again: the field is empty, not holding what was typed.
     await user.click(within(row).getByRole("button", { name: /^add$/i }));
     await user.click(within(row).getByRole("button", { name: /^add$/i }));
-    expect(within(row).getByPlaceholderText(/paste the api key/i)).toHaveValue(
-      "",
-    );
+    expect(within(row).getByPlaceholderText(/paste api key/i)).toHaveValue("");
   });
 });

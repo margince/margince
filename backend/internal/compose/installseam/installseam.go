@@ -14,6 +14,7 @@ package installseam
 
 import (
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -45,5 +46,8 @@ func Deals() deals.Installation {
 		// another company" read lives there and the edge is injected here for
 		// the same reason.
 		EnsureContractsShareCompany: contracts.EnsureDealContractsShareCompany,
+		// approvals owns the pending proposals that follow a deal to its new
+		// owner, so the hand-over lives there and the edge is injected here.
+		FollowOwner: approvals.FollowDealOwnerInTx,
 	}
 }

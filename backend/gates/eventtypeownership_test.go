@@ -27,7 +27,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"maps"
@@ -67,7 +66,7 @@ func payloadEventTypes(t *testing.T) map[string]string {
 	}
 	out := map[string]string{}
 	for _, path := range generated {
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("reading the generated payloads to derive their event types: %v", err)
 		}
@@ -209,7 +208,7 @@ func collectEmitSites(t *testing.T) map[string][]emitSite {
 	t.Helper()
 	types := payloadEventTypes(t)
 	sites := map[string][]emitSite{} // event type → where it is built
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	// Every hand-written tree that could hold a payload literal, and the list is
 	// the whole list rather than the obvious half: cmd and pkg can import
 	// internal/contracts as legally as internal can, so an emitter added under
@@ -222,7 +221,7 @@ func collectEmitSites(t *testing.T) map[string][]emitSite {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(fset, path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}
@@ -377,8 +376,6 @@ func TestEveryEventTypeHasOneEmittingModule(t *testing.T) {
 // explain rather than passing on the ones it still can.
 var unemittedEventTypes = gatekit.Waive(map[string]string{
 	"audit.appended":              "deliberate and documented in the contract: no emit site and none planned. It exists so the catalog is completely covered by a payload schema, never carrying a subscribable type with no contract",
-	"deal.restored":               "documented in the contract as never emitted today — there is no restore path",
-	"contact.restored":            "the same, for the contact restore path that does not exist",
 	"deal_room.decision_recorded": "the buyer's approval of a document version was retired as a product decision — sharing a document with a buyer is sharing it, not submitting it for approval — so nothing writes a decision any more and nothing emits this. The deal_room_decision table went with it. The TYPE stays because the deal timeline still decodes events emitted before the retirement, which are on the bus whether or not the rows behind them survive",
 })
 

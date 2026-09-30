@@ -34,10 +34,13 @@ import (
 type fixedVerifier struct {
 	email, sub    string
 	emailVerified bool
+	// groups stands in for the token's `groups` claim; the zero value is the
+	// groupless token most providers mint.
+	groups []string
 }
 
-func (f fixedVerifier) Verify(context.Context, string) (string, string, bool, error) {
-	return f.email, f.sub, f.emailVerified, nil
+func (f fixedVerifier) Verify(context.Context, string) (string, string, bool, []string, error) {
+	return f.email, f.sub, f.emailVerified, f.groups, nil
 }
 
 type fixedExchanger struct{ idToken string }
@@ -64,8 +67,8 @@ func (erroringExchanger) Exchange(context.Context, string, string, string) (stri
 
 type unverifiedEmailVerifier struct{}
 
-func (unverifiedEmailVerifier) Verify(context.Context, string) (string, string, bool, error) {
-	return "carol@example.com", "sub-carol", false, nil
+func (unverifiedEmailVerifier) Verify(context.Context, string) (string, string, bool, []string, error) {
+	return "carol@example.com", "sub-carol", false, nil, nil
 }
 
 func oidcStrPtr(s string) *string { return &s }
@@ -360,7 +363,7 @@ func TestADisabledProviderIsRefusedAtStartAndAtCallback(t *testing.T) {
 		oidcProviders: map[string]OIDCProviderSource{
 			"google": FixedOIDCProvider(OIDCProvider{Config: OIDCProviderConfig{Key: "google", Label: "Continue with Google", ClientID: "cid", AuthURL: "https://accounts.example/auth"}}),
 		},
-		oidcPerIP: ratelimit.New(30, time.Minute),
+		oidcPerIP: ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
 	}.WithOIDCProvidersEnabledFn(disabled)
 
 	start := httptest.NewRecorder()
@@ -398,7 +401,7 @@ func TestAFailedProviderPolicyReadDoesNotReadAsAnAbsentProvider(t *testing.T) {
 		oidcProviders: map[string]OIDCProviderSource{
 			"google": FixedOIDCProvider(OIDCProvider{Config: OIDCProviderConfig{Key: "google", Label: "Continue with Google", ClientID: "cid", AuthURL: "https://accounts.example/auth"}}),
 		},
-		oidcPerIP: ratelimit.New(30, time.Minute),
+		oidcPerIP: ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
 	}.WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
 		return nil, errors.New("the settings row is unreachable")
 	})
@@ -421,7 +424,7 @@ func TestAProviderWithoutAClientIsNeitherOfferedNorStarted(t *testing.T) {
 	none := func(context.Context) (OIDCProvider, bool, error) { return OIDCProvider{}, false, nil }
 	h := Handlers{
 		oidcProviders: map[string]OIDCProviderSource{"google": none},
-		oidcPerIP:     ratelimit.New(30, time.Minute),
+		oidcPerIP:     ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
 	}.WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
 		return []OIDCProviderConfig{{Key: "google", Label: "Continue with Google"}}, nil
 	})
@@ -446,7 +449,7 @@ func TestAFailedClientResolutionDoesNotReadAsAnAbsentProvider(t *testing.T) {
 	}
 	h := Handlers{
 		oidcProviders: map[string]OIDCProviderSource{"google": sealed},
-		oidcPerIP:     ratelimit.New(30, time.Minute),
+		oidcPerIP:     ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
 	}.WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
 		return []OIDCProviderConfig{{Key: "google", Label: "Continue with Google"}}, nil
 	})

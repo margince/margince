@@ -94,10 +94,10 @@ func (f dealCFVFixture) defineDealField(t *testing.T, spec customfields.FieldSpe
 
 func TestCustomFieldValues_DealRoundTrip(t *testing.T) {
 	f := setupDealCFV(t)
-	col := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Segment", Type: customfields.TypeText, Source: "ui"})
+	col := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Segment", Type: customfields.TypeText, Source: "manual"})
 
 	created, err := f.store.CreateDeal(f.ctx, deals.CreateDealInput{
-		Name: "Acme Renewal", PipelineID: f.pipeline, StageID: f.stage, Source: "ui",
+		Name: "Acme Renewal", PipelineID: f.pipeline, StageID: f.stage, Source: "manual",
 		CustomFields: map[string]any{col: "enterprise"},
 	})
 	if err != nil {
@@ -145,11 +145,11 @@ func TestCustomFieldValues_DealRoundTrip(t *testing.T) {
 // bind that happened to accept it.
 func TestCustomFieldValues_ProjectRoundTrip(t *testing.T) {
 	f := setupDealCFV(t)
-	col := f.defineDealField(t, customfields.FieldSpec{Object: "project", Label: "Engagement Model", Type: customfields.TypeText, Source: "ui"})
+	col := f.defineDealField(t, customfields.FieldSpec{Object: "project", Label: "Engagement Model", Type: customfields.TypeText, Source: "manual"})
 	company := f.e.SeedCompany(t, "Northwind", nil)
 
 	created, err := f.projects.CreateProject(f.ctx, projects.CreateProjectInput{
-		Name: "Rollout", CompanyID: companyIDOf(company), Source: "ui",
+		Name: "Rollout", CompanyID: companyIDOf(company), Source: "manual",
 		CustomFields: map[string]any{col: "retainer"},
 	})
 	if err != nil {

@@ -31,16 +31,16 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // bumpFunction is the sole mechanism that moves a version column: the only
@@ -112,7 +112,7 @@ func TestEveryVersionPinnedTableBumpsItsVersion(t *testing.T) {
 	}
 	versioned := versionedTables(t) // reused from updateguard_test.go
 
-	for _, table := range sortedNames(pinned) {
+	for _, table := range sortedKeys(pinned) {
 		if bumped[table] {
 			continue
 		}
@@ -130,7 +130,7 @@ func TestEveryVersionPinnedTableBumpsItsVersion(t *testing.T) {
 // alone resolves not a single one.
 func versionPinnedTables(t *testing.T) map[string]bool {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	files := parsePackageDir(t, fset, approvalsDir)
 	consts := stringConsts(t, fset, files)
 
@@ -241,7 +241,7 @@ func parsePackageDir(t *testing.T, fset *token.FileSet, dir string) []*ast.File 
 			continue
 		}
 		path := filepath.Join(dir, e.Name())
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -313,14 +313,4 @@ func packageVarCompositeLit(t *testing.T, files []*ast.File, name string) *ast.C
 	}
 	t.Fatalf("var %s not found in the parsed package: the derivation lost its subject list", name)
 	return nil
-}
-
-// sortedNames gives a set's members a stable report order.
-func sortedNames(set map[string]bool) []string {
-	names := make([]string, 0, len(set))
-	for name := range set {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
 }

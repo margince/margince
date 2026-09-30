@@ -12,6 +12,23 @@
 // and whether the reader may have it at all are the caller's business.
 
 /**
+ * The anchor, named and clicked — the part both ways of saving share.
+ *
+ * In the document BEFORE the click: Safari ignores `download` on a node that is
+ * not in one and saves nothing at all, silently. `FilePreview` knew that and
+ * did it; this module did not, so the three screens that export through it were
+ * one browser away from a button that looked like it worked.
+ */
+function saveViaAnchor(href: string, filename: string) {
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
+/**
  * Save `bytes` to the reader's downloads as `filename`.
  *
  * The revoke is not optional housekeeping: an object URL pins its blob in memory
@@ -20,11 +37,20 @@
  */
 export function downloadBytes(bytes: BlobPart, filename: string, type: string) {
   const url = URL.createObjectURL(new Blob([bytes], { type }));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
+  saveViaAnchor(url, filename);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Save what the page can already address: a URL the server serves, or an object
+ * URL something else on the page owns and will release itself.
+ *
+ * The caller keeps the lifetime, which is the whole difference from
+ * `downloadBytes` — a preview that is still drawing the blob it just saved must
+ * not have it revoked out from under the image.
+ */
+export function downloadFrom(href: string, filename: string) {
+  saveViaAnchor(href, filename);
 }
 
 /**

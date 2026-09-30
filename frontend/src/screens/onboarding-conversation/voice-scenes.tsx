@@ -3,6 +3,7 @@ import type { ChangeEvent, ReactNode, RefObject } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { Button, Disclosure, Radio } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { MarginceCoreScene } from "../../design-system/margince-core";
 import { usePrefersReducedMotion } from "../../design-system/motion";
 import { formatNumber } from "../../format/format";
@@ -117,9 +118,9 @@ export function VoiceScene({
  * sub already say the CRM drafts mail in the reader's words; this band adds
  * the two things that make that credible — where the voice comes from, and
  * that it stays theirs alone — without repeating either sentence. The Core
- * sits at the size the brand line uses (`mw-core`'s pattern), not the hero
- * size the build scene reaches for, because this is context beside copy, not
- * the scene's own subject.
+ * sits at the size a brand line uses, not the hero size the build scene
+ * reaches for, because this is context beside copy, not the scene's own
+ * subject.
  */
 // Why the step is worth doing, one press away. It answers a fair question, but
 // it answers it for the reader who stops to ask — a permanently open band of
@@ -339,11 +340,7 @@ export function VoiceCollectScene({
             </section>
           )}
 
-          {startError !== null && (
-            <p className="mw-send-error" role="alert">
-              {startError}
-            </p>
-          )}
+          <ErrorLine>{startError}</ErrorLine>
         </div>
         <VoiceDistillPanel manifest={manifest} summary={summary} />
       </div>
@@ -491,10 +488,9 @@ export function VoiceBuildScene({
             progress={progress}
             feed={false}
           />
-          {/* Decorative: the stage checklist beside it and the rail's own log
-              (role="log" in ConversationThread) already carry the build's
-              progress in words, so the crawling digits stay out of the a11y
-              tree instead of being announced on every tick. */}
+          {/* Decorative: the stage checklist beside it already carries the
+              build's progress in words, so the crawling digits stay out of the
+              a11y tree instead of being announced on every tick. */}
           <span className="ob-voice-orb-pct" aria-hidden>
             {formatNumber(Math.round(progress * 100), locale)}
             <small>%</small>

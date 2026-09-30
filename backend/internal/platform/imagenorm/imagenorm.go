@@ -123,11 +123,12 @@ func FitPNG(img image.Image, maxEdge int) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-// TrimTransparentPNG removes only fully transparent canvas around a PNG. It
-// exists for logos stored before FitPNG preserved their natural aspect: those
-// objects carry a wide wordmark centred in a square transparent canvas. A
-// painted square logo is returned byte-for-byte, while an old letterboxed
-// wordmark becomes the wide image the contact originally supplied.
+// TrimTransparentPNG removes only fully transparent canvas around a PNG. A
+// logo is trimmed once when it is stored, and a logo stored before that is
+// trimmed when it is served: those objects can carry a wide wordmark centred
+// in a square transparent canvas. A painted square logo is returned
+// byte-for-byte, while a letterboxed wordmark becomes the wide image the
+// contact originally supplied.
 func TrimTransparentPNG(src []byte) ([]byte, error) {
 	img, err := Decode(src)
 	if err != nil {

@@ -411,7 +411,15 @@ func TestAnUnmetClaimIsAlsoBoundToItsDealsStage(t *testing.T) {
 func TestEvidenceLandsOnTheStageTheDealWasOnWhenItHappened(t *testing.T) {
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionDocumentSigned)
-	observedAt := time.Now().UTC()
+	// The signature was observed an HOUR before the stage moved, which is the
+	// lag this test is about — an outage, a backlog, a retry.
+	//
+	// An hour and not "now", because the stage move's own timestamp comes from
+	// the database and this one came from Go. Under a loaded lane the move can
+	// record an instant at or before a `time.Now()` read just before it, and
+	// the resolver then finds the LATER stage current at the observed moment —
+	// failing with the exact message this test writes for a real regression.
+	observedAt := time.Now().UTC().Add(-time.Hour)
 
 	// The deal moves on to a later stage that asks for the SAME kind, so a
 	// writer resolving against the current stage would still find a criterion

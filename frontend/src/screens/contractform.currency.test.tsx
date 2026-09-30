@@ -95,7 +95,7 @@ function show(ui: ReactNode) {
 async function recordAgreement(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/^Title/), "MSA 2026");
   await user.type(screen.getByLabelText("Value"), "5000");
-  await user.click(screen.getByRole("button", { name: "Record agreement" }));
+  await user.click(screen.getByRole("button", { name: "Record contract" }));
 }
 
 async function writtenBody(seen: Request[], method: "POST" | "PATCH") {

@@ -19,15 +19,16 @@ package gates
 // product module is the pin CI actually reads, so it is the one that decides.
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"testing"
 )
 
-// goDirective matches the `go 1.26.6` line a module or workspace file carries.
+// goDirective matches the `go 1.27.0` line a module or workspace file carries.
 var goDirective = regexp.MustCompile(`(?m)^go (\d+\.\d+(?:\.\d+)?)$`)
 
 func TestEveryGoVersionPinMatchesTheProductModule(t *testing.T) {
@@ -46,10 +47,12 @@ func TestEveryGoVersionPinMatchesTheProductModule(t *testing.T) {
 		}
 	})
 
-	for _, module := range append([]string{
-		"tools/go.mod",
-		"../composition/go.mod",
-	}, extensionModules(t)...) {
+	// Derived from the tree, not listed. The list this replaced reached five
+	// modules of the twelve that exist, and one it did not reach
+	// (desktop/launcher) had already drifted a patch release behind — which is
+	// the same failure the whole test exists to catch, reintroduced by the shape
+	// of the check. A list also cannot cover a module written after it.
+	for _, module := range everyModuleFile(t) {
 		t.Run(module, func(t *testing.T) {
 			if got := goVersionOf(t, module); got != want {
 				t.Errorf("%s pins go %s, backend/go.mod pins %s", module, got, want)
@@ -77,22 +80,45 @@ func TestEveryGoVersionPinMatchesTheProductModule(t *testing.T) {
 	})
 }
 
-// extensionModules scans the tier for its unit modules rather than listing
-// them here. A list is a second copy of the tier: the unit added this morning
-// is not on it, and a pin nobody checks reads exactly like one that agrees. It
-// fails on an empty tier for the reason every census in this tree does —
-// reading nothing and reporting a clean sweep is the failure a version pin
-// cannot afford.
-func extensionModules(t *testing.T) []string {
+// moduleRoots are the trees a hand-written go.mod lives under. They are named
+// the way license_test.go names its roots, and for the same reason: a walk from
+// the repository root would also read the GENERATED module under build/, and any
+// unrelated checkout nested inside the working tree, neither of whose pins this
+// test has any claim on.
+var moduleRoots = []string{".", "../composition", "../desktop", "../extensions", "../fixtures", "../tools"}
+
+// everyModuleFile collects every go.mod under those roots, so a module added
+// tomorrow is held to the product module's pin on the day it lands.
+func everyModuleFile(t *testing.T) []string {
 	t.Helper()
-	found, err := filepath.Glob("../extensions/*/go.mod")
-	if err != nil {
-		t.Fatalf("scanning the extension tier: %v", err)
+	var found []string
+	for _, root := range moduleRoots {
+		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			// An extension unit may carry a frontend, and walking its installed
+			// dependencies is thousands of directories of pure cost.
+			if entry.IsDir() && entry.Name() == "node_modules" {
+				return fs.SkipDir
+			}
+			if !entry.IsDir() && entry.Name() == "go.mod" {
+				found = append(found, path)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walking %s for go.mod files: %v", root, err)
+		}
 	}
-	if len(found) == 0 {
-		t.Fatal("the extension tier holds no go.mod — a scan that finds no module passes exactly like one that checked every module, so either the tier moved or this glob is stale")
+	// The product module is the pin every other one is compared against, so its
+	// own file must be in what the walk found. Without this a mistyped root
+	// reports success for having read nothing, which is the one way a derived
+	// check fails worse than the list it replaced.
+	if !slices.Contains(found, "go.mod") {
+		t.Fatalf("the walk over %v did not find backend/go.mod, so it is not reading this tree; found %v",
+			moduleRoots, found)
 	}
-	sort.Strings(found)
 	return found
 }
 

@@ -60,7 +60,7 @@ var unfencedRatParseWaivers = gatekit.Waive(map[string]string{
 	"internal/compose/aicert/scenariorender.go:representable": "compares a number read from a " +
 		"corpus YAML file this repository authors; ParseFloat has already accepted the text, and no " +
 		"request, page or model output reaches the corpus loader",
-	"internal/compose/certcase_agentloop_window.go:agentLoopSameNumber": "certification-only " +
+	"internal/compose/certcase_agentloop_step.go:agentLoopSameNumber": "certification-only " +
 		"comparison of a fixed scenario's expected argument with the one a model produced for that " +
 		"scenario; an operator runs it against their own provider, and no fetched or user content is in the prompt",
 	"internal/compose/offerdraft_price.go:validDecimal": "its rune filter admits only digits, '.' " +
@@ -172,7 +172,7 @@ func calledName(call *ast.CallExpr) string {
 func TestEveryDecimalParseIsFencedBeforeBigRatReadsIt(t *testing.T) {
 	t.Parallel()
 	defer unfencedRatParseWaivers.AssertAllMatched(t)
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	judged := 0
 	sawFxRate := false
 	for _, root := range []string{"internal", "cmd"} {
@@ -187,7 +187,7 @@ func TestEveryDecimalParseIsFencedBeforeBigRatReadsIt(t *testing.T) {
 				strings.HasPrefix(path, "internal/contracts/") {
 				return nil
 			}
-			file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+			file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 			if err != nil {
 				return err
 			}
@@ -241,7 +241,7 @@ func TestTheDecimalFenceCensusRefusesTheShapesItExistsFor(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			src := "package p\nfunc parse(s string) {\n" + tc.body + "\n}\n"
-			fset := token.NewFileSet()
+			fset := gatekit.SourceFileSet()
 			file, err := parser.ParseFile(fset, "p.go", src, parser.SkipObjectResolution)
 			if err != nil {
 				t.Fatal(err)

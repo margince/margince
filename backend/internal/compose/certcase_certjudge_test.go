@@ -29,7 +29,17 @@ const (
 	certJudgeRubric = "Score higher for a concrete, on-topic answer naming the material; lower for a vague or off-topic one."
 	certJudgeInput  = "Describe the heat exchanger in one sentence."
 	certJudgeAnswer = "The heat exchanger is a stainless-steel plate unit rated for 40 kW."
+	// The two optional inputs, which a case that dropped them would certify a
+	// grading call production no longer makes without.
+	certJudgeRules    = "Answer in one sentence and name the material."
+	certJudgeExpected = "A stainless-steel plate heat exchanger."
 )
+
+// certJudgeFullInput is the grading call runCertJudgeCase issues, every field set.
+var certJudgeFullInput = JudgeInput{
+	Rubric: certJudgeRubric, ProductRules: certJudgeRules, ScenarioInput: certJudgeInput,
+	ExpectedAnswer: certJudgeExpected, CandidateOutput: certJudgeAnswer,
+}
 
 func certJudgeFixtureOf(t *testing.T, rubric, input, output string) json.RawMessage {
 	t.Helper()
@@ -59,8 +69,14 @@ func certJudgeReply(score, reason string) string {
 
 func runCertJudgeCase(t *testing.T, expected json.RawMessage, reply string) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
-	prepared, err := certJudgeCases{}.Prepare(
-		certJudgeFixtureOf(t, certJudgeRubric, certJudgeInput, certJudgeAnswer), expected)
+	fixture, err := json.Marshal(certJudgeFixture{
+		Rubric: certJudgeRubric, ProductRules: certJudgeRules, ScenarioInput: certJudgeInput,
+		ExpectedAnswer: certJudgeExpected, CandidateOutput: certJudgeAnswer,
+	})
+	if err != nil {
+		t.Fatalf("encoding the fixture: %v", err)
+	}
+	prepared, err := certJudgeCases{}.Prepare(fixture, expected)
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -244,7 +260,7 @@ func TestCertJudgeCaseGradesAnEmptyCandidateOutput(t *testing.T) {
 
 // The claim this case makes is that it certifies the shipped path. The proof is
 // that the request it issues IS the production builder's, argument for argument:
-// the harness's own judge call builds it from the same three strings, so a case
+// the harness's own judge call builds it from the same five strings, so a case
 // that reordered them — or built a request of its own — would certify a prompt
 // the harness never sends.
 //
@@ -257,7 +273,7 @@ func TestCertJudgeCaseIssuesTheProductionJudgeRequest(t *testing.T) {
 	if len(trace.Requests) != 1 {
 		t.Fatalf("the trace carries %d requests, want the one call this site issues", len(trace.Requests))
 	}
-	want := normalizeJudgeMarker(t, JudgeRequest(certJudgeRubric, certJudgeInput, certJudgeAnswer))
+	want := normalizeJudgeMarker(t, JudgeRequest(certJudgeFullInput))
 	got := normalizeJudgeMarker(t, trace.Requests[0])
 	if got.System != want.System {
 		t.Errorf("the certified system prompt is not production's:\n%q\n%q", got.System, want.System)

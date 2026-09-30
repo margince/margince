@@ -59,16 +59,19 @@ var dealGate = objectGate{
 // the gated set: removing the deal condition could only WIDEN the result the
 // caller already sees.
 var predicateDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/unarchive.go":                                  "the relationship restore of a contact or company un-archive: `deal` appears only in a NOT EXISTS that keeps a link to an archived deal archived. Nothing is selected",
+	"internal/modules/activities/quietmailbox.go:quietRecordOwner":            "the owner arm of the cold-queue selector: the deal's owner_id — a USER id, not deal content — decides whether that seat's mailbox is visible enough to call the deal quiet. Nothing of the deal is selected; its only effect is to WITHHOLD a queue entry, never to surface one",
 	"internal/compose/company360/contacts.go:contactDealRoles":                "the roster's deal-role column: `r.contact_id, r.deal_id, r.role` off the relationship table, with the deal joined only for its row scope so a seat on a deal the caller may not open is absent. The projection is the EDGE, and the deal id it carries is one the row scope already admitted",
 	"internal/compose/company360/roleproposalwrite.go:ownWords":               "the quoted sentence a role proposal rests on — who said it and what they said — with the deal joined to bound which conversations count. The projection is an activity's subject and body under the activity grants; no deal column is selected",
 	"internal/compose/contact360/nextmeeting.go:nextMeetingSection":           "the contact's next meeting: `a.id, a.occurred_at, a.subject`, with the deal joined only to reach the meetings that hang off one. Activity columns under the activity grant, and removing the join would widen the meetings considered",
-	"internal/compose/dealownerseam.go:dealOwner":                             "reads `owner_id` — a USER id, the colleague who owns the deal — so a seam can route work to them. No deal column is selected and what the caller learns is who to ask",
+	"internal/compose/dealownerseam.go:lockedDealOwner":                       "reads `owner_id` — a USER id, the colleague who owns the deal — so a seam can route work to them. No deal column is selected and what the caller learns is who to ask",
 	"internal/compose/network/companycoverage.go:companyStakeholderEdge":      "the stakeholder-edge predicate inside the account coverage read: whether a contact holds a seat on a live deal at this account. The deal appears only inside the join condition, and what the coverage answers is about CONTACTS, under the grants that read owns",
 	"internal/compose/reportprojects.go":                                      "the project report's deal sums, `sum(d.amount_minor_base)` over a project's open and won deals. Aggregates rather than rows, composed by the report the project grant admits, and the figures are the project's own commercial size",
 	"internal/compose/signalscan.go:scanGhostedThreads":                       "the ghosted-thread scan asks which OPEN deals have gone quiet so a signal can be raised. It runs on the scan's schedule and what it writes is a signal row; the signal is then read through the signal grant, which SignalScopeClause resolves back to the subject's own visibility",
 	"internal/compose/slippingnextstep.go:dealsWithNoOpenNextStep":            "selects `d.id` and nothing else — which deals carry no open next step, so the slipping-next-step pass can raise one. No deal column reaches a caller; what does is a task on the deal the pass already decided about",
 	"internal/compose/stageevidenceread.go:criteriaOf":                        "reads a deal's current `stage_id` so the evidence criteria for THAT stage can be looked up. One id leaves it, to choose a row in the criteria catalog, and the criteria are workspace configuration rather than deal data",
 	"internal/compose/stageprogression.go:refuseAStaleAutomaticMove":          "reads a deal's `pipeline_id` to refuse an automatic stage move whose pipeline has changed underneath it. Its only effect is a REFUSAL — the move does not happen — and the executor runs under the system principal",
+	"internal/modules/commissions/entryfieldmask.go:dealAmountExcludedClause": "the arm that takes a ledger entry out when the deal's amount is withheld from this reader: `EXISTS (SELECT 1 FROM deal d WHERE d.id = deal_id AND ...)` over the write-authority predicate auth renders. No deal column is selected and none reaches the response — the entry's own columns do, under the commission grant the read already holds. Removing the condition could only WIDEN the ledger, which is the disclosure it exists to close",
 	"internal/modules/activities/attachment.go:accountRollUp":                 "resolves `company_id` from the deal an attachment's activity is linked to, so the file rolls up to the right account. One id leaves it, inside the upload's own write",
 	"internal/modules/activities/capturedfiles.go:accountForCapturedActivity": "the same `company_id` resolution for captured files, on the capture path. One id, consumed by the write that files them",
 	"internal/modules/activities/companyscope.go":                             "the account-scope fragment: which activities belong to an account, reached through the link's deal among other ends. It is a clause that only ever narrows the activities a caller is shown, never a reader of deal columns",
@@ -105,6 +108,11 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
+	// Deal Scout: its system-principal evidence read and the suggestion writer's own conditions.
+	"internal/modules/deals/suggestion.go:SuggestionFloorExpr":         "the instant a company's suggestion evidence must be newer than, read from the latest close of a deal on it. Composed only into the system-only suggestion writer and the scout's system-principal evidence read; it selects a timestamp that decides which evidence counts, never a deal",
+	"internal/modules/deals/suggestion.go:SuggestionCompanyFreeClause": "asks whether a company has an open deal, and selects no deal column. Composed into the system-only writer and superseding pass, the scout's system-principal read, and an acceptance that has already asked the deal create grant and holds the suggestion under the reader's visibility clause",
+
 	"internal/compose/assuranceseam.go":                                        "the assurance scan's subject statement, selecting a deal's owner, amount and currency so a finding can be raised against it. assurancebundle.go records that the pass runs as PrincipalSystem over the whole installation; what a human later reads is AssuranceExceptions, which asks both halves",
 	"internal/compose/captureofflinedemo.go:fillParties":                       "the offline capture demo's fixture parties, read to seed a mailbox that has something to capture against. Demo seeding rather than a product read path, where the demo binds its own principal",
 	"internal/modules/activities/retentionstamp.go:StampCorrespondenceForDeal": "the retention stamp freezes the deal's NAME into the evidence at the moment the correspondence qualifies, because a rename or a delete must not take the proof with it. It runs inside the qualifying write and the name goes onto the evidence row, never to a caller",
@@ -127,6 +135,7 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X.
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
+	"internal/compose/magic/undoversion.go":                                "the version an undo on the magic receipt is sent with, for the restore route's If-Match; no other column. Reached only from magic.Service.Read and LineRecords, and only for a record their done lane already placed through doneForType, which asks auth.Require for the object grant and renders auth.ScopeClauseFor on the same row; the restore write re-asks everything under its own lock",
 	"internal/compose/briefs/briefcontinuity.go:previousRanking":           "the previous run's ranking, so a brief can say what moved. The briefs package asks the deal object gate at its own entry points",
 	"internal/compose/briefs/brieflineage.go:briefLineage":                 "a brief item's lineage across runs, behind those same gated entry points",
 	"internal/compose/briefs/briefreads.go:briefCandidates":                "the candidate deals a brief ranks, behind the gated brief entry",
@@ -165,7 +174,9 @@ var calleeGatedDealReads = gatekit.Waive(map[string]string{
 })
 
 // ruledDealReads: a DISCLOSING read the product has ruled needs no deal grant.
-var ruledDealReads = gatekit.Waive(map[string]string{})
+var ruledDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/legalholdlist.go": "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
+})
 
 // deferredDealReads: a DISCLOSING read that is still ungated, each naming
 // the issue that will close it.

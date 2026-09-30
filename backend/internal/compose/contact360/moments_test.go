@@ -255,6 +255,7 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 // that switch — a surface added there belongs here, and until it is, offering
 // it fails rather than shipping another quiet nothing.
 var dispatchedByTheContactPage = map[crmcontracts.ContactMomentDestinationSurface]bool{
+	"booking": true,
 	crmcontracts.ContactMomentDestinationSurfaceComposer:     true,
 	crmcontracts.ContactMomentDestinationSurfaceResearch:     true,
 	crmcontracts.ContactMomentDestinationSurfaceMeetingBrief: true,

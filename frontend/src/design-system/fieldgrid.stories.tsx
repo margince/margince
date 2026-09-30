@@ -11,7 +11,8 @@ import { InlineText } from "./inlinetext";
 // FieldGrid is the grid around a value, not the value itself: a read-only row
 // takes a plain node, an editable row wraps InlineText or InlineChoice.
 const meta: Meta = {
-  title: "Design System/FieldGrid",
+  title: "Components/Forms and input/Field grid",
+  component: FieldGrid,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -75,7 +76,7 @@ export const ReadOnly: Story = {
   render: () => (
     <FieldGrid>
       <FieldRow label="Legal name">Brandt Automotive GmbH</FieldRow>
-      <FieldRow label="Account lifecycle">Customer</FieldRow>
+      <FieldRow label="Lifecycle">Customer</FieldRow>
       <FieldRow label="Owner">Mira Voss</FieldRow>
       <FieldRow label="Domain">brandt.example</FieldRow>
     </FieldGrid>

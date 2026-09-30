@@ -45,7 +45,6 @@ import type {
   AiActivityItem,
   AiCall,
   AiPosture,
-  LicensePosture,
   Signals,
   Spend,
 } from "./agentrail-reads";
@@ -64,6 +63,7 @@ import { PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { plain, type SpokenLine, speak, spokenText } from "./ai-activity-speak";
 import { useAgentTierMap } from "./autonomy";
+import type { LicensePosture } from "./license-posture";
 import { usePopoverDismiss } from "./popover";
 import type { Route } from "./router";
 import { routeHash } from "./router";
@@ -106,7 +106,7 @@ const RECAP_ROWS = 5;
  */
 const AI_SETTINGS_HREF = routeHash(settingsHref("usage"));
 /** Where a licence key is entered: the seats section of settings. */
-const LICENSE_SETTINGS_HREF = "#/settings/seats";
+const LICENSE_SETTINGS_HREF = routeHash(settingsHref("seats"));
 
 /**
  * The state in a word, under the agent's name.
@@ -381,17 +381,19 @@ function RuntimeFacts({
 }
 
 /**
- * One list of scheduled runs, in the reader's words, under its own heading.
+ * The runs live now, in the reader's words, under the section's heading.
  *
  * A kind or state the copy map has no line for draws NOTHING — not a fallback
  * sentence, not the message key. A surface that answers an unknown run with an
  * invented sentence is one a reader cannot trust about the runs it DOES name.
- * When that empties the section, the section is absent too.
+ * An emptied section is absent. Work the live total holds beyond the rows gets
+ * one caption, unless a listed row is live: a stalled one is outside its lease.
  */
 function RunSection({
-  heading,
   items,
-}: Readonly<{ heading: MessageKey; items: readonly AiActivityItem[] }>) {
+  unnamed,
+}: Readonly<{ items: readonly AiActivityItem[]; unnamed: boolean }>) {
+  const heading = PANEL_HEADING.running;
   const t = useT();
   // flatMap rather than map+filter: the empty array drops the run AND narrows
   // the line to a string, where a filtered predicate would only have claimed it.
@@ -399,20 +401,24 @@ function RunSection({
     const line = speak(item, t);
     return line === null ? [] : [{ item, line }];
   });
-  if (said.length === 0) {
-    return null;
-  }
+  const namesLive = said.some(({ item }) => item.state !== "stalled");
+  if (said.length === 0 && !unnamed) return null;
   return (
     <PanelSection title={t(heading)}>
-      <ul className="arruns">
-        {said.map(({ item, line }) => (
-          <li className="arbox arrun" key={item.id}>
-            <span className="arrunline">
-              <RailLine line={line} />
-            </span>
-          </li>
-        ))}
-      </ul>
+      {said.length > 0 && (
+        <ul className="arruns">
+          {said.map(({ item, line }) => (
+            <li className="arbox arrun" key={item.id}>
+              <span className="arrunline">
+                <RailLine line={line} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {unnamed && !namesLive && (
+        <p className="arempty t-caption">{t("agent.panel.unnamedLive")}</p>
+      )}
     </PanelSection>
   );
 }
@@ -486,6 +492,7 @@ function AgentPanel({
   state,
   line,
   running,
+  unnamed,
   settled,
   signals,
   model,
@@ -498,6 +505,7 @@ function AgentPanel({
   line: SpokenLine;
   /** The scheduled runs the server reports as live. */
   running: readonly AiActivityItem[];
+  unnamed: boolean;
   /** What settled today, or undefined while no read of the feed has answered. */
   settled: readonly AiActivityItem[] | undefined;
   signals: Signals;
@@ -528,7 +536,7 @@ function AgentPanel({
           settled belongs to the recap further down, so an occurrence is in one
           section or the other and never both. The section is absent when its
           list is, rather than drawn empty. */}
-      <RunSection heading={PANEL_HEADING.running} items={running} />
+      <RunSection items={running} unnamed={unnamed} />
 
       {/* THREE cases, not two, and the difference is the whole doctrine of this
           surface: a count nobody has read is not a count of zero.
@@ -783,15 +791,19 @@ function usePanelFrame(
  *
  * The order is severity, and it starts with the faults that stop the agent
  * running AT ALL, because an agent with no model bound is not a broken run, it
- * is no runs. Under those, a run that actually broke. Under that, the licence.
+ * is no runs. Under those, a run that actually broke, then one that stalled.
  * Only then the agent's own live work, and at the bottom, rest.
+ *
+ * The licence is not in the order. The line answers what the agent is doing
+ * right now; a licence posture is a standing condition of the installation,
+ * still true in an hour, and letting it take the live line would hide every
+ * run behind it. It has its own persistent chrome (`LicenseBanner`).
  *
  * It answers the CAUSE alongside the state, and the two travel together for one
  * reason: the sentence the block carries is the cause's own, so a caller that
  * re-derived the cause by its own reading could caption a colour with a run that
- * did not produce it. A licensing amber over an installation whose agent is
- * mid-brief is exactly that case, and it is not hypothetical: a workspace in
- * grace keeps running its agent.
+ * did not produce it: an unread failure over a second run still in flight
+ * must read as the failure, not the run.
  */
 type Reading = Readonly<{
   state: MarginceCoreState;
@@ -813,9 +825,8 @@ function derive(
   if (signals.ai === "unconfigured" || signals.offline.length > 0) {
     return { state: "error", cause: null, register: "agent" };
   }
-  // A run that broke, and that this reader has not been shown yet. It outranks
-  // the licence because it is a thing that HAPPENED rather than a standing
-  // condition, and it clears by being read rather than by being repaired.
+  // A run that broke, and that this reader has not been shown yet. It clears by
+  // being read rather than by being repaired.
   if (fault !== null) {
     return { state: fault.severity, cause: fault.item, register: "agent" };
   }
@@ -828,18 +839,6 @@ function derive(
   const stalled = server.running.find((item) => item.state === "stalled");
   if (stalled) {
     return { state: "warning", cause: stalled, register: "agent" };
-  }
-  // REFUSED only, and it stays amber rather than escalating, because escalating
-  // would make the chrome a sales surface.
-  //
-  // An installation that never had a licence is deliberately not a fault: every
-  // demo and every fresh dev stack is in that state, and an orb that is amber
-  // for all of them has stopped being a signal. Asked and refused is different,
-  // because there is a repair behind it. The missing licence is stated once
-  // where an operator goes looking for it, on the licence card in settings,
-  // rather than spending the chrome's only ambient warning on it.
-  if (signals.license === "refused") {
-    return { state: "warning", cause: null, register: "agent" };
   }
   // The agent's own live work, and which half of the lifecycle it is in comes
   // from the KIND of work rather than from how far along it is: evidence
@@ -864,14 +863,13 @@ function derive(
       register: server.asking ? "agent" : "capture",
     };
   }
-  // This tab's own ask, which the feed has not caught up with yet. `working`
-  // rather than a lane read from the kind, because the kind is exactly what is
-  // not known here: a request in flight says the agent is busy and nothing
-  // about which half of its lifecycle it is in. No cause travels with it, so
-  // the line falls back to the generic word rather than borrowing a sentence
-  // about some other run, and the moment the feed carries the occurrence
-  // and names it.
-  if (server.asking) {
+  // Work the feed cannot name: this tab's own ask, before the feed catches up,
+  // or live work of a kind the rail does not narrate. `working` rather than a
+  // lane read from the kind, because the kind is exactly what is not known
+  // here. No cause travels with either, so the line falls back to the generic
+  // word rather than borrowing a sentence about some other run, until the
+  // feed carries an occurrence it can name.
+  if (server.asking || server.unnamed) {
     return { state: "working", cause: null, register: "agent" };
   }
   // A request that failed a moment ago does NOT colour the orb. One dropped
@@ -916,8 +914,8 @@ function causeLine(
  * this state, in the reader's own locale: the run that broke, the one past its
  * lease, or the one running now. It leads wherever it exists, because a state is
  * a colour and a named run is an answer. It is null only for a state no
- * occurrence caused (a licence, an unbound model) or for a kind this build
- * writes no sentence for.
+ * occurrence caused (an unbound model, an unreachable source) or for a kind this
+ * build writes no sentence for.
  */
 function barLine(
   state: MarginceCoreState,
@@ -960,9 +958,9 @@ function barLine(
  * the ranking is the whole content: a deployment with no model bound and a
  * source that stopped answering are different repairs, and both outrank a run
  * that broke — an agent that cannot run at all is not a failed run, it is no
- * runs. Amber with no occurrence behind it is the licence, and it is the only
- * way to reach that: derive() ranks a broken run and a stalled one above it,
- * and both carry a sentence of their own.
+ * runs. Amber always has an occurrence behind it, a broken run or a stalled
+ * one, and causeLine gives every kind a sentence, so amber's fallback is the
+ * same last resort the red branch keeps.
  */
 function faultLine(
   state: "error" | "warning",
@@ -971,7 +969,7 @@ function faultLine(
   t: Translator,
 ): SpokenLine {
   if (state === "warning") {
-    return agentLine ?? plain(signals.licenseLine);
+    return agentLine ?? plain(t("agent.line.runStopped"));
   }
   if (signals.ai === "unconfigured") {
     return plain(t("agent.fact.noModel"));
@@ -1222,19 +1220,8 @@ export function AgentRail({
       },
       said,
     ),
-    restingTips(route.screen, t),
+    restingTips(route.screen, t, navigator.platform),
   );
-
-  // The one screen it absents itself from, and the reason is not layout: the Ask
-  // surface IS the agent, at hero size, and a second Core in the rail would be
-  // the product disagreeing with itself about how many agents there are. The
-  // railless screens need no rule of their own any more, because a section in
-  // the rail is absent wherever the rail is. Below every hook, because a screen
-  // this component draws nothing on is still a render it has to make the same
-  // calls in.
-  if (route.screen === "ai") {
-    return null;
-  }
 
   // Two things can hold the line, and this is their order: whatever the state
   // itself has to say, because a fault outranks small talk, and at rest the
@@ -1248,13 +1235,13 @@ export function AgentRail({
       ? resting
       : barLine(state, signals, t("auth.coreDevelopment"), agentLine, said);
   // ONE line under the orb, whoever is talking. While this tab is fetching
-  // something it can name, that sentence is the orb's line — "Reading Acme" is
+  // something it can name, that sentence is the orb's line — "Loading Acme" is
   // the status a reader is waiting on at that moment — and the agent's own line
   // has the slot back the instant the read settles. Two stacked lines read as
   // two statuses, and a reader asked which one was the status.
   //
   // A fault keeps the slot regardless: the colour and the caption are always
-  // about the same thing, and an amber orb captioned "Reading the pipeline"
+  // about the same thing, and an amber orb captioned "Loading pipeline"
   // tells a reader the pipeline is the fault.
   const holdsFault = state === "warning" || state === "error";
   const shown = ticker.length > 0 && !holdsFault ? plain(ticker[0].said) : line;
@@ -1285,6 +1272,7 @@ export function AgentRail({
               frame={frame}
               line={line}
               running={server.running}
+              unnamed={server.unnamed}
               settled={server.answered ? server.recent : undefined}
               spend={spend}
             />

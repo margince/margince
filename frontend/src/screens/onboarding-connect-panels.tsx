@@ -8,6 +8,12 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  writeStored,
+} from "../app/storage";
 import { Badge, Button, Disclosure, Field } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -41,16 +47,16 @@ const PERMANENT_FAILURE_BODY: Record<string, MessageKey | undefined> = {
 // The honest-failure banner the connect panels share.
 function ConnectWarn({ title, body }: { title: string; body: string }) {
   return (
-    // The measure and the centring belong to the stylesheet with the rest of
-    // the banner: as an inline `margin` shorthand they also reset the top
-    // margin the banner declares for itself, so the one block on the surface
-    // that says something went wrong was the one with nothing above it.
+    // The measure and the centring belong to the stylesheet: an inline `margin`
+    // shorthand also resets the banner's own top margin, leaving the one block
+    // that says something went wrong with nothing above it.
     <div className="readfail warning ob-connect-warning">
       <span className="rfi">
         <Circle aria-hidden />
       </span>
       <div>
         <div className="rft">{title}</div>
+        {/* ds:ignore the body under the read-failure banner's title */}
         <p className="rfp">{body}</p>
       </div>
     </div>
@@ -76,39 +82,21 @@ function asOAuthProvider(value: string | undefined): OAuthProvider | null {
 // it. `sessionStorage` (not `localStorage`) is deliberate: the mark belongs
 // to the ONE tab that started the trip, the same scope the redirect itself
 // stays within.
-const OAUTH_ATTEMPT_KEY = "ob.connect.oauthAttempt";
-
 function markOAuthAttempt(provider: OAuthProvider): void {
-  try {
-    sessionStorage.setItem(OAUTH_ATTEMPT_KEY, provider);
-  } catch {
-    // Storage can be unavailable (private browsing, disabled): the redirect
-    // still happens, and the return trip falls back to showing its result
-    // inline rather than reopening a dialog it has no proof this tab opened.
-  }
+  writeStored(STORAGE_KEYS.oauthAttempt, provider);
 }
 
 /** The provider a real attempt from THIS tab is returning for, or null if
  * none is recorded — read-only, so the caller decides when the mark is
  * actually spent (`clearOAuthAttempt`). */
 export function peekOAuthAttempt(): OAuthProvider | null {
-  try {
-    return asOAuthProvider(
-      sessionStorage.getItem(OAUTH_ATTEMPT_KEY) ?? undefined,
-    );
-  } catch {
-    return null;
-  }
+  return asOAuthProvider(readStored(STORAGE_KEYS.oauthAttempt) ?? undefined);
 }
 
 /** Spends the mark so a reload of the same return URL reads as the stale
  * link it now is, not a second live attempt. */
 export function clearOAuthAttempt(): void {
-  try {
-    sessionStorage.removeItem(OAUTH_ATTEMPT_KEY);
-  } catch {
-    // Nothing to clear if the write never landed.
-  }
+  removeStored(STORAGE_KEYS.oauthAttempt);
 }
 
 const OAUTH_COPY: Record<

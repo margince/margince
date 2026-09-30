@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+const (
+	reportingStatusField              = "status"
+	reportingEventPeriod              = "event_period"
+	reportingOwnerAttainment          = "owner_attainment"
+	reportingReports                  = "reports"
+	reportingHandleVersion            = "handle_version"
+	reportingScope                    = "scope"
+	reportingScopeKind                = "scope_kind"
+	reportingBookingsWon              = "bookings_won"
+	reportingClosedWinRate            = "closed_win_rate"
+	reportingOpenPipeline             = "open_pipeline"
+	reportingStageAge                 = "stage_age"
+	reportingQualifiedPipelineCreated = "qualified_pipeline_created"
+	reportingAcceptedOpportunities    = "accepted_opportunities"
+	reportingState                    = "state"
+	reportingTarget                   = "target"
+	reportingUnavailable              = "unavailable"
+	reportingInsufficientSample       = "insufficient_sample"
+	reportingInterval                 = "interval"
+	reportingMonthContext             = "month"
+	reportingForecastProjection       = "forecast_projection"
+	reportingPartial                  = "partial"
+	reportingForecastLanding          = "forecast_landing"
+	reportingPipelineMovement         = "pipeline_movement"
+	reportingMeetingsHeld             = "meetings_held"
+	reportingCreditObject             = "reporting_credit"
+	reportingSubject                  = "subject"
+	reportingStateAt                  = "state_at"
+	reportingMoney                    = "money"
+	reportingMetricReading            = "metric_reading"
+	reportingTargetProgress           = "target_progress"
+	reportingSdrOutcomes              = "sdr_outcomes"
+	reportingEditions                 = "editions"
+	reportingCurrency                 = "currency"
+	reportingCSVContentType           = "text/csv; charset=utf-8"
+	reportingName                     = "name"
+)

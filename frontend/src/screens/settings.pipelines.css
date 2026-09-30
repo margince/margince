@@ -1,0 +1,199 @@
+/* Settings → Pipelines: the catalog above the pipeline it opens. */
+
+.settings-pipelines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+}
+
+/* The standing marks and verbs in a pipeline's head band, and the retire row's
+   control. Wraps, because a badge plus two verbs is wider than a phone. */
+.pipeline-standing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* One pipeline in the catalog: the whole row is the one press that opens it,
+   so it fills the row the list draws around it. */
+.pipeline-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-1) 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.pipeline-choice:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+/* Wraps, so on a phone the count takes a line of its own rather than squeezing
+   the name down to its first letters. */
+.pipeline-choice-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+/* The name is the only free text in the row, so it is what gives way. */
+.pipeline-choice-name {
+  flex: 1 1 8rem;
+  min-width: 0;
+  font-weight: var(--fontWeightMedium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pipeline-choice:hover .pipeline-choice-name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Retired pipelines are opened, never ordered: they hold no place in the
+   catalog, so they sit in plates of their own below it. */
+.pipeline-retired {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.pipeline-retired > li {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  color: var(--textSecondary);
+}
+.pipeline-retired > li:has(> [aria-current="true"]) {
+  border-color: var(--accentMed);
+  background: var(--accentLight);
+}
+
+.pipeline-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.stage-hint {
+  margin: 0;
+}
+
+/* One stage: its step, its name, its odds, its verbs; the exit criteria fold
+   under the name. The step and odds tracks are fixed so a column of stages
+   lines up, and the name is the track that gives. */
+.stage-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 132px auto;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+.stage-step {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgCard);
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+}
+/* A stage name is free text nobody promised would be short, so it may break
+   anywhere rather than paint over the odds beside it. */
+.stage-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-weight: var(--fontWeightMedium);
+  overflow-wrap: anywhere;
+}
+.stage-dip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: var(--fontBodySmall);
+  color: var(--warningText);
+}
+.stage-dip svg {
+  inline-size: 12px;
+  block-size: 12px;
+  flex: none;
+}
+.stage-odds {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.stage-odds > [role="meter"] {
+  flex: 1;
+}
+.stage-verbs {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+.stage-criteria {
+  grid-column: 2 / -1;
+}
+
+/* The closing pair: plates like the open rows, recessed and locked, and the
+   lock sits where an open row's handle and step are so the names line up. */
+.stage-closing {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.stage-row.is-closing {
+  grid-template-columns:
+    calc(var(--controlHeight) + var(--space-1) + 24px)
+    minmax(0, 1fr) 132px auto;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-1);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgWell);
+}
+.stage-row.is-closing .stage-name {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+.stage-lock {
+  inline-size: 16px;
+  block-size: 16px;
+  justify-self: center;
+  color: var(--textSecondary);
+}
+
+/* On a phone the fixed tracks and the verbs are the width, so the name takes
+   the first line and the odds and verbs share the second. */
+@media (max-width: 560px) {
+  .stage-row,
+  .stage-row.is-closing {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+  }
+  .stage-name {
+    grid-column: 2 / -1;
+  }
+  .stage-odds {
+    grid-column: 2;
+  }
+  .stage-verbs {
+    grid-column: 3;
+  }
+  .stage-criteria {
+    grid-column: 1 / -1;
+  }
+}

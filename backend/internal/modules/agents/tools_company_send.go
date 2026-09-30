@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -26,8 +27,9 @@ import (
 // sendCompanyEmailTool carries a record reader like its reply twin, but reads
 // something else with it: the twin reads its ANCHOR, and this has none.
 type sendCompanyEmailTool struct {
-	comms Comms
-	p     datasource.SystemOfRecordProvider
+	comms    Comms
+	p        datasource.SystemOfRecordProvider
+	language baselanguage.Resolver
 }
 
 // SendCompanyEmailArgs is one account-started send: the reply's arguments,
@@ -41,6 +43,7 @@ func (t sendCompanyEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_company_email", Title: "Start an email conversation from a record", Version: toolVersionV1,
 		Description:   sendCompanyEmailCopy.render(),
+		Instead:       sendCompanyEmailCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendCompanyEmail",
 		InputSchema: schema(`{"type":"object","required":["to","subject","body","links"],"properties":{
@@ -72,7 +75,7 @@ func (t sendCompanyEmailTool) StageInfo(ctx context.Context, in json.RawMessage)
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewSendCompanyEmailCall(t.p, SendCompanyEmailCommand{
+	return StageSubject(ctx, NewSendCompanyEmailCall(t.p, t.language, SendCompanyEmailCommand{
 		To:      args.To,
 		Cc:      args.Cc,
 		Subject: args.Subject,

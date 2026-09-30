@@ -25,7 +25,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // frames for a surface that already has its own.
 
 const meta: Meta<typeof ChannelReplyAction> = {
-  title: "Records/Channel reply action",
+  title: "Patterns/Compose mail/Channel reply action",
   component: ChannelReplyAction,
   parameters: { layout: "padded" },
 };
@@ -200,7 +200,7 @@ export const PreparedReply: Story = {
             entityType="deal"
             entityId="d-1"
             prepared={{
-              label: "Draft the reply",
+              label: "Draft reply",
               intent: "reply to their last message: waiting 13 days",
             }}
           />

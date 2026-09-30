@@ -3,11 +3,11 @@
 
 package compose
 
-// The rate-refresh transport: the two admin-only propose-refresh endpoints
-// enqueue an async River job through the api role's insert-only runner (the api
-// never crawls in-request — the worker does) and return 202 immediately. The
+// The rate-refresh transport: the admin-only FX propose-refresh endpoint
+// enqueues an async River job through the api role's insert-only runner (the api
+// never fetches in-request — the worker does) and returns 202 immediately. The
 // unique window (ByArgs + activeSweepStates) makes a double-click a no-op rather
-// than a second crawl. Without WithRateRefresh wired, both ops stay 501.
+// than a second fetch. Without WithRateRefresh wired, the op stays 501.
 
 import (
 	"context"
@@ -20,14 +20,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// rateRefreshQueue isolates the rate refreshes (FX fetch + pricing-page
-// crawl+LLM extract) from the default queue on their own bounded pool: each job
-// is long, so a multi-workspace burst on the shared queue would starve the
-// short maintenance jobs. Mirrors the deep-read precedent.
+// rateRefreshQueue isolates the FX refresh (fetch + LLM extract) from the
+// default queue on their own bounded pool: each job is long, so a
+// multi-workspace burst on the shared queue would starve the short maintenance
+// jobs. Mirrors the deep-read precedent.
 const (
 	rateRefreshQueue      = "rate_refresh"
 	rateRefreshMaxWorkers = 2
@@ -42,36 +41,31 @@ type rateRefreshHandlers struct {
 	enqueue rateRefreshEnqueuer
 }
 
-func (h rateRefreshHandlers) ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request) {
-	h.enqueueRefresh(w, r, "fx_rate", func(ws ids.UUID, by string) river.JobArgs {
-		return FxRateRefreshArgs{Workspace: ws, RequestedBy: by}
-	})
-}
-
+// ProposeAiModelRateRefresh is retired: model prices come from
+// POST /ai-model-rates/refresh. The route stays for one release so an old
+// client is told so rather than getting a missing-route error.
 func (h rateRefreshHandlers) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request) {
-	h.enqueueRefresh(w, r, "ai_model_rate", func(ws ids.UUID, by string) river.JobArgs {
-		return AiModelRateRefreshArgs{Workspace: ws, RequestedBy: by}
-	})
+	httperr.NotImplemented(w, r, "propose-refresh for model prices (use POST /ai-model-rates/refresh)")
 }
 
-func (h rateRefreshHandlers) enqueueRefresh(w http.ResponseWriter, r *http.Request, object string, mkArgs func(ids.UUID, string) river.JobArgs) {
+func (h rateRefreshHandlers) ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request) {
 	if h.enqueue == nil {
 		httperr.NotImplemented(w, r, "rate refresh")
 		return
 	}
 	ctx := r.Context()
-	// The same admission the staged effect's write (SetFxRate/SetModelRate)
-	// opens with: a refresh proposes both new rows and corrections to today's,
-	// so either write grant admits proposing one. Which grant the apply
-	// actually needs is settled inside that write, against the sheet.
-	if err := auth.RequireAny(ctx, object, principal.ActionCreate, principal.ActionUpdate); err != nil {
+	// The same admission the staged effect's write (SetFxRate) opens with: a
+	// refresh proposes both new rows and corrections to today's, so either
+	// write grant admits proposing one. Which grant the apply actually needs is
+	// settled inside that write, against the sheet.
+	if err := auth.RequireAny(ctx, "fx_rate", principal.ActionCreate, principal.ActionUpdate); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	args := mkArgs(storekit.MustWorkspace(ctx), requestedBy(ctx))
+	args := FxRateRefreshArgs{Workspace: storekit.MustWorkspace(ctx), RequestedBy: requestedBy(ctx)}
 	// ByArgs uniqueness now hashes only the river:"unique"-tagged WorkspaceID
 	// (RequestedBy is provenance, untagged), so two admins refreshing the same
-	// workspace collapse to one in-flight crawl rather than racing two.
+	// workspace collapse to one in-flight refresh rather than racing two.
 	opts := &river.InsertOpts{
 		Queue: rateRefreshQueue,
 		// One-off: an admin pressed refresh and nothing re-presses it. The
@@ -87,8 +81,8 @@ func (h rateRefreshHandlers) enqueueRefresh(w http.ResponseWriter, r *http.Reque
 	httperr.WriteJSON(w, http.StatusAccepted, crmcontracts.RefreshAccepted{Status: crmcontracts.RefreshAcceptedStatusEnqueued})
 }
 
-// WithRateRefresh wires the api role's insert-only runner into the two
-// propose-refresh handlers. Without it, both ops stay their explicit 501.
+// WithRateRefresh wires the api role's insert-only runner into the FX
+// propose-refresh handler. Without it, the op stays its explicit 501.
 func WithRateRefresh(inserter rateRefreshEnqueuer) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.rateRefreshHandlers = rateRefreshHandlers{enqueue: inserter}

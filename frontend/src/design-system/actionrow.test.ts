@@ -42,6 +42,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { selectorList } from "../../scripts/lib/css-rules";
 import {
   extensionFrontendFiles,
   extensionLayers,
@@ -89,7 +90,7 @@ function gapsByClass(sheets: string[]): Map<string, Set<string>> {
       if (!declared) continue;
       // The class a rule STYLES is the last one in it: `.board > .actions`
       // spaces the row, not the board it sits in.
-      for (const part of rule[1].split(/,(?![^(]*\))/)) {
+      for (const part of selectorList(rule[1])) {
         const named = [...part.matchAll(/\.([A-Za-z0-9_-]+)/g)];
         const subject = named.at(-1)?.[1];
         if (!subject) continue;

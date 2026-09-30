@@ -85,11 +85,14 @@ func crmYAMLNamedEnum(t *testing.T, schema string) []string {
 }
 
 // crmYAMLSchema is as much of one contract schema as these gates read: its own
-// enum, when it is one, and its properties' enums when it is an object.
+// enum, when it is one, and its properties' enums and descriptions when it is
+// an object. The description is what the entity model prints beside a column,
+// so the contract stays the one place a field's purpose is written down.
 type crmYAMLSchema struct {
 	Enum       []string `yaml:"enum"`
 	Properties map[string]struct {
-		Enum []string `yaml:"enum"`
+		Enum        []string `yaml:"enum"`
+		Description string   `yaml:"description"`
 	} `yaml:"properties"`
 }
 

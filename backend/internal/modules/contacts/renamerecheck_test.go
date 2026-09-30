@@ -6,7 +6,6 @@ package contacts
 import (
 	"strings"
 	"testing"
-	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -55,13 +54,21 @@ func TestNameScoringIsBoundedAgainstAnAbsurdName(t *testing.T) {
 	left := "Acme " + strings.Repeat("x", 400_000)
 	right := "Acme " + strings.Repeat("y", 400_000)
 
-	start := time.Now()
 	score := nameSimilarity(normalizeName(left), normalizeName(right))
-	// Unbounded this pair is minutes of CPU; bounded it is microseconds. A
-	// second is a ceiling generous enough that a loaded machine cannot trip it
-	// and tight enough that losing the bound cannot pass.
-	if elapsed := time.Since(start); elapsed > time.Second {
-		t.Fatalf("scoring two 400k-rune names took %v — the quadratic bound is gone", elapsed)
+
+	// Asked of the WORK, not of a stopwatch: this test sits in the merge gate,
+	// where a clock bound means one thing on an idle laptop and another on a
+	// loaded runner. The bound truncates at nameScoringMaxRunes, so scoring the
+	// absurd pair must give exactly what scoring their first 256 runes gives —
+	// an equality that answers the same on any machine, and that an unbounded
+	// metric cannot satisfy because it would read the 400 000 that follow.
+	capped := nameSimilarity(
+		normalizeName(string([]rune(left)[:nameScoringMaxRunes])),
+		normalizeName(string([]rune(right)[:nameScoringMaxRunes])),
+	)
+	if score != capped {
+		t.Fatalf("scoring 400k runes gave %v against %v for their first %d — "+
+			"the quadratic bound is gone", score, capped, nameScoringMaxRunes)
 	}
 	// The bound caps the work, not the contract: the answer is still a score.
 	if score < 0 || score > 1 {

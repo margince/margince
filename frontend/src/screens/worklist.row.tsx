@@ -43,7 +43,6 @@ import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
 import { MeetingOutcome } from "./worklist.meetingoutcome";
-import { PairDecision } from "./worklist.pair";
 import { lastTouch } from "./worklist.pane";
 import { PlanWorkActions } from "./worklist.plan";
 import {
@@ -63,6 +62,7 @@ import {
 } from "./worklist.row.captions";
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
+import { answerBelow } from "./worklist.suggestion";
 import { VerdictLine } from "./worklist.verdict";
 import "./worklist.row.css";
 
@@ -553,12 +553,9 @@ function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
   if (decidable(item)) {
     return { primary: <RowDecision item={item} /> };
   }
-  if (item.source === "dedupe_candidate" && item.pair) {
-    // UNDER the row, not in it. Each of its two verbs names the record it
-    // would keep and stands in the list entry that describes that record —
-    // lifted out into a row of verbs, "Keep Acme GmbH" and "Keep Acme GmbH"
-    // would be two identical buttons over an irreversible merge.
-    return { below: <PairDecision item={item} /> };
+  const below = answerBelow(item);
+  if (below) {
+    return below;
   }
   // Never a BATCH: a group row stands for a pile and names no single record, so
   // every id-keyed answer below would act on the wrong one.
@@ -776,7 +773,7 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
         size="wide"
         returnFocusTo={() => opener.current}
       >
-        <Heading size="large" id={titleId}>
+        <Heading size="large" id={titleId} className="modal-title">
           {t("worklist.decision.title")}
         </Heading>
         {usable?.bundle_id ? (

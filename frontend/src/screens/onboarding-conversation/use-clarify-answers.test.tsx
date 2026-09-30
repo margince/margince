@@ -8,8 +8,8 @@ import { createQueryClient } from "../../app/queryclient";
 import { translate } from "../../i18n";
 import type { CompanyDraft } from "../onboarding";
 import { changeDraftField, EMPTY_DRAFT } from "../onboarding";
-import type { SuggestedCompanyChange } from "../onboarding-read";
 import { draftWithLegalEntity } from "./company-proposal";
+import type { SuggestedCompanyChange } from "./use-clarify-answers";
 import { useClarifyAnswers } from "./use-clarify-answers";
 
 // The legal-entity clarify authorizes exactly legal_name (the contract's own
@@ -674,6 +674,30 @@ describe("useClarifyAnswers — honest failures", () => {
     // The reader is told the choice did not stick; the thing that actually
     // broke is kept once, by the client's own sink, so an operator reading
     // the console sees one failure rather than two spellings of it.
+    expect(errorLog).toHaveBeenCalledTimes(1);
+    expect(errorLog).toHaveBeenCalledWith(crash);
+  });
+
+  it("never surfaces a raw exception message when the answer cannot be read, and reports it exactly once", async () => {
+    const crash = new TypeError("Cannot read properties of undefined");
+    // The answer arrives and its body breaks off: a fault past the network.
+    const answer = jsonResponse({});
+    Object.defineProperty(answer, "text", {
+      value: () => Promise.reject(crash),
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => answer),
+    );
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { result } = setupHook([]);
+
+    act(() => {
+      result.current.answerClarify(entityClarify.id, gradionEntity.name);
+    });
+
+    await waitFor(() => expect(result.current.failure).not.toBeNull());
+    expect(result.current.failure).toEqual({ kind: "unconfirmed" });
     expect(errorLog).toHaveBeenCalledTimes(1);
     expect(errorLog).toHaveBeenCalledWith(crash);
   });

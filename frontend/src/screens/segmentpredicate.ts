@@ -33,13 +33,35 @@ export type FilterOp =
   | "contains"
   | "exists";
 
-/** A leaf's operand: a JSON scalar, or a list for `in`. */
+/**
+ * A date counted back from the day the filter runs: `{ days_ago: 45 }` is the
+ * day 45 days before today, so a saved filter keeps meaning "in the last 45
+ * days" tomorrow.
+ */
+export type RelativeDate = Readonly<{ days_ago: number }>;
+
+/** A leaf's operand: a JSON scalar, a list for `in`, or a relative date. */
 export type LeafValue =
   | string
   | number
   | boolean
   | readonly string[]
-  | readonly number[];
+  | readonly number[]
+  | RelativeDate;
+
+export function isRelativeDate(value: unknown): value is RelativeDate {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const keys = Object.keys(value);
+  const days = (value as Record<string, unknown>).days_ago;
+  return (
+    keys.length === 1 &&
+    typeof days === "number" &&
+    Number.isInteger(days) &&
+    days >= 0
+  );
+}
 
 export type Leaf = Readonly<{
   id: string;
@@ -211,7 +233,10 @@ function hasUsableOperand(op: FilterOp, value: LeafValue): boolean {
     case "contains":
       return typeof value === "string" && value !== "";
     default:
-      return !Array.isArray(value) && value !== "";
+      return (
+        isRelativeDate(value) ||
+        (!Array.isArray(value) && typeof value !== "object" && value !== "")
+      );
   }
 }
 
@@ -311,7 +336,8 @@ function isLeafValue(value: unknown): value is LeafValue {
   if (
     typeof value === "string" ||
     typeof value === "number" ||
-    typeof value === "boolean"
+    typeof value === "boolean" ||
+    isRelativeDate(value)
   ) {
     return true;
   }

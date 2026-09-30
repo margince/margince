@@ -15,15 +15,15 @@ import { DeckItemCard } from "./decisiondeck.item";
 // an expander, and that the dense line belongs to the list form and never to
 // the stack.
 //
-// The queue around it is `Design System/DecisionDeck`; the card's own states are
-// `Design System/DecisionCard`. This node exists because the assembly sits
+// The queue around it is `Decision deck/Deck`; the card's own states are
+// `Decision card/Card`. This node exists because the assembly sits
 // between them and neither of those frames can show it failing on its own.
 //
 // Both themes: the ground is `.staging-card`'s dashed `--aiMed` over
 // `--aiLight`, the product's one signal that what is on a surface is PROPOSED
 // rather than recorded, and both tokens re-resolve on the flip.
 const meta: Meta<typeof DeckItemCard> = {
-  title: "Design System/DecisionDeck item",
+  title: "Components/AI and provenance/Decision deck/Item",
   component: DeckItemCard,
   parameters: { layout: "padded" },
   decorators: [
@@ -53,7 +53,7 @@ const CARD: DecisionCardLabels = {
   expired: "This ran out of time before anyone answered it.",
   draftSubject: "Subject",
   draftBody: "Message",
-  showMore: "Show the whole message",
+  showMore: "Show full message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",
   loading: "Reading the proposal",
@@ -62,7 +62,7 @@ const CARD: DecisionCardLabels = {
 const LABELS: DecisionDeckLabels = {
   card: CARD,
   deckLabel: "Waiting on you",
-  viewLabel: "How the queue is shown",
+  viewLabel: "View",
   viewDeck: "Deck",
   viewList: "List",
   keys: "→ stages accept, ← reject, ↑ edit, ↓ later. Enter sends.",
@@ -72,7 +72,7 @@ const LABELS: DecisionDeckLabels = {
   skipped: (count) => `${count} skipped`,
   commitNothingToSend: "Clear skipped",
   commit: "Send staged decisions",
-  unstage: "Undo the last one",
+  unstage: "Undo last",
   clearedTitle: "Deck clear",
   cleared: (count) => `${count} decisions sent`,
   clearedTime: () => "at 09:00",
@@ -157,7 +157,7 @@ export const ARowAtListDensity: Story = {
     layout: "row" as const,
     labels: {
       ...LABELS,
-      compactRow: { detail: "What is being proposed", more: "Other answers" },
+      compactRow: { detail: "Proposal", more: "More options" },
     },
   },
 };

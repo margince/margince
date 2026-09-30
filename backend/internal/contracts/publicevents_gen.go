@@ -447,6 +447,7 @@ const (
 	CompanyArchived                       SubscribableEventType = "company.archived"
 	CompanyCreated                        SubscribableEventType = "company.created"
 	CompanyMerged                         SubscribableEventType = "company.merged"
+	CompanyRestored                       SubscribableEventType = "company.restored"
 	CompanyUpdated                        SubscribableEventType = "company.updated"
 	ConsentChanged                        SubscribableEventType = "consent.changed"
 	ConsentSuppressed                     SubscribableEventType = "consent.suppressed"
@@ -505,8 +506,15 @@ const (
 	LinkedinAccountChanged                SubscribableEventType = "linkedin_account.changed"
 	LinkedinMatchDecided                  SubscribableEventType = "linkedin_match.decided"
 	LinkedinNetworkImported               SubscribableEventType = "linkedin_network.imported"
+	ListArchived                          SubscribableEventType = "list.archived"
+	ListCreated                           SubscribableEventType = "list.created"
+	ListMemberAdded                       SubscribableEventType = "list.member_added"
+	ListMemberRemoved                     SubscribableEventType = "list.member_removed"
+	ListRestored                          SubscribableEventType = "list.restored"
+	ListUpdated                           SubscribableEventType = "list.updated"
 	NoticeCreated                         SubscribableEventType = "notice.created"
 	NoticeRead                            SubscribableEventType = "notice.read"
+	NotificationPreferenceChanged         SubscribableEventType = "notification.preference_changed"
 	OfferAccepted                         SubscribableEventType = "offer.accepted"
 	OfferCreated                          SubscribableEventType = "offer.created"
 	OfferRejected                         SubscribableEventType = "offer.rejected"
@@ -584,6 +592,8 @@ func (e SubscribableEventType) Valid() bool {
 	case CompanyCreated:
 		return true
 	case CompanyMerged:
+		return true
+	case CompanyRestored:
 		return true
 	case CompanyUpdated:
 		return true
@@ -701,9 +711,23 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case LinkedinNetworkImported:
 		return true
+	case ListArchived:
+		return true
+	case ListCreated:
+		return true
+	case ListMemberAdded:
+		return true
+	case ListMemberRemoved:
+		return true
+	case ListRestored:
+		return true
+	case ListUpdated:
+		return true
 	case NoticeCreated:
 		return true
 	case NoticeRead:
+		return true
+	case NotificationPreferenceChanged:
 		return true
 	case OfferAccepted:
 		return true
@@ -1060,6 +1084,9 @@ type PublicEventCompanyMerged struct {
 	MergedIntoId openapi_types.UUID `json:"merged_into_id"`
 }
 
+// PublicEventCompanyRestored Payload for company.restored — an archived company was brought back, with the domains, relationship types, partner programme, relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
+type PublicEventCompanyRestored struct{}
+
 // PublicEventCompanyUpdated Payload for company.updated — an OPEN envelope: eight emit sites carry divergent shapes (a flat column patch, the anchor company save's field delta, the partner extension's nested delta, enrichment/deep-read applies, a relationship delta), so the honest shape is a change-set map rather than a fixed field list.
 type PublicEventCompanyUpdated struct {
 	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form.
@@ -1147,7 +1174,7 @@ type PublicEventContactMergedRelinkCounts struct {
 	Relationships int64 `json:"relationships"`
 }
 
-// PublicEventContactRestored Payload for contact.restored. Never emitted today (no restore path exists for contact); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it.
+// PublicEventContactRestored Payload for contact.restored — an archived contact was brought back, with the emails, phones, channel identities, relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
 type PublicEventContactRestored struct{}
 
 // PublicEventContactUpdated Payload for contact.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat column patch, a lead-promotion conversion note, a signature-enrichment fill, a relationship delta), so the honest shape is a change-set map rather than a fixed field list.
@@ -1230,7 +1257,7 @@ type PublicEventDealOwnerChanged struct {
 	ToOwnerId openapi_types.UUID `json:"to_owner_id"`
 }
 
-// PublicEventDealRestored Payload for deal.restored. Never emitted today (no restore path exists for deal); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it.
+// PublicEventDealRestored Payload for deal.restored — an archived deal was brought back, with the relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
 type PublicEventDealRestored struct{}
 
 // PublicEventDealRoomArchived Payload for deal_room.archived — the room ended and buyer access is revoked.
@@ -1732,6 +1759,42 @@ type PublicEventLinkedinNetworkImported struct {
 	Skipped int `json:"skipped"`
 }
 
+// PublicEventListArchived Payload for list.archived — a list was archived. Carries no data.
+type PublicEventListArchived struct{}
+
+// PublicEventListCreated Payload for list.created — somebody made a Live List (list_type dynamic) or a Shortlist (static). Delivered to a subscriber who may find the list by its sharing.
+type PublicEventListCreated struct {
+	// ListType static or dynamic.
+	ListType string `json:"list_type"`
+
+	// RecordType The record type the list holds.
+	RecordType string `json:"record_type"`
+
+	// Sharing private, team or workspace.
+	Sharing string `json:"sharing"`
+}
+
+// PublicEventListMemberAdded Payload for list.member_added — a record was added to a Shortlist by hand or in a bulk change. The subject is the RECORD (contact, company, deal, lead or project), so the event reaches only a subscriber who may see that record. It names no list: delivery is decided by the record, and a list its subscriber cannot find must not be named to them. Which list, and the note, stay on the list's history, which is read under the list's own sharing.
+type PublicEventListMemberAdded struct {
+	// Reason chosen or bulk.
+	Reason string `json:"reason"`
+}
+
+// PublicEventListMemberRemoved Payload for list.member_removed — a record was taken off a Shortlist by hand or in a bulk change. The subject is the record, as for list.member_added.
+type PublicEventListMemberRemoved struct {
+	// Reason chosen or bulk.
+	Reason string `json:"reason"`
+}
+
+// PublicEventListRestored Payload for list.restored — an archived list was brought back. Carries no data.
+type PublicEventListRestored struct{}
+
+// PublicEventListUpdated Payload for list.updated — a list's name, purpose, filter, sharing, team or steward changed. The version is the list's new one.
+type PublicEventListUpdated struct {
+	Changed []string `json:"changed"`
+	Version int64    `json:"version"`
+}
+
 // PublicEventNoticeCreated Payload for notice.created — a durable informational notice was recorded for one contact (notices/store.go's Create). Recording the row IS the delivery on this transport; the entity is the recipient. The content stays on the row: an event fan-out of subject and body would put the same prose on two wires to drift.
 type PublicEventNoticeCreated struct {
 	// Kind The producing flow's own label (automation, lead_sla).
@@ -1743,6 +1806,12 @@ type PublicEventNoticeCreated struct {
 // PublicEventNoticeRead Payload for notice.read — the recipient settled the notice (notices/store.go's MarkRead). Emitted once: a replayed mark is a no-op and announces nothing.
 type PublicEventNoticeRead struct {
 	NoticeId openapi_types.UUID `json:"notice_id"`
+}
+
+// PublicEventNotificationPreferenceChanged Payload for notification.preference_changed — one seat decided how a class of notification reaches them (notices/preference.go's SaveNotificationPreference). The entity is that seat. The CLASS is on the wire and the choice is not: what somebody decided about their own interruptions is theirs, and a fan-out carrying the value would tell every subscription owner who had switched their mail off.
+type PublicEventNotificationPreferenceChanged struct {
+	// Class Which class of notification was decided about (automation, approval_pending, coach).
+	Class string `json:"class"`
 }
 
 // PublicEventOfferAccepted Payload for offer.accepted — a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
@@ -1796,7 +1865,7 @@ type PublicEventOfferRejected struct {
 	Revision *int `json:"revision,omitempty"`
 }
 
-// PublicEventOfferSent Payload for offer.sent — a draft offer left the workspace. Carries the FX rate frozen at send time (RT-PR-C2) so consumers never need a read-back for the native-currency-to-base conversion.
+// PublicEventOfferSent Payload for offer.sent — a draft offer moved to `sent` and its commercial terms were frozen. Nothing was delivered to a counterparty: delivery is a separate capability that does not exist yet, so a subscriber must not read this as an offer having reached anybody. Carries the FX rate frozen at send time (RT-PR-C2) so consumers never need a read-back for the native-currency-to-base conversion.
 type PublicEventOfferSent struct {
 	// DealId The deal this offer belongs to.
 	DealId openapi_types.UUID `json:"deal_id"`
@@ -1892,7 +1961,7 @@ type PublicEventPipelineCreatedStage struct {
 	Semantic string `json:"semantic"`
 }
 
-// PublicEventPipelineUpdated Payload for pipeline.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat name/is_default/position patch from UpdatePipeline, or a stage_positions reorder map from UpdateStage when a stage's position changes), so the honest shape is a change-set map rather than a fixed field list.
+// PublicEventPipelineUpdated Payload for pipeline.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat name/is_default/position patch from UpdatePipeline or reorderPipelines, or a stage_positions reorder map from UpdateStage, reorderStages or a stage removal when stage positions change), so the honest shape is a change-set map rather than a fixed field list.
 type PublicEventPipelineUpdated struct {
 	// ChangedFields Field name → new value for whatever this update touched (name, is_default, position, or stage_positions).
 	ChangedFields map[string]interface{} `json:"changed_fields"`
@@ -2409,6 +2478,10 @@ func (PublicEventCompanyMerged) EventType() string { return "company.merged" }
 
 func (PublicEventCompanyMerged) EntityType() string { return "company" }
 
+func (PublicEventCompanyRestored) EventType() string { return "company.restored" }
+
+func (PublicEventCompanyRestored) EntityType() string { return "company" }
+
 func (PublicEventCompanyUpdated) EventType() string { return "company.updated" }
 
 func (PublicEventCompanyUpdated) EntityType() string { return "company" }
@@ -2649,6 +2722,30 @@ func (PublicEventLinkedinNetworkImported) EventType() string { return "linkedin_
 
 func (PublicEventLinkedinNetworkImported) EntityType() string { return "user" }
 
+func (PublicEventListArchived) EventType() string { return "list.archived" }
+
+func (PublicEventListArchived) EntityType() string { return "list" }
+
+func (PublicEventListCreated) EventType() string { return "list.created" }
+
+func (PublicEventListCreated) EntityType() string { return "list" }
+
+func (PublicEventListMemberAdded) EventType() string { return "list.member_added" }
+
+func (PublicEventListMemberAdded) EntityType() string { return "dynamic" }
+
+func (PublicEventListMemberRemoved) EventType() string { return "list.member_removed" }
+
+func (PublicEventListMemberRemoved) EntityType() string { return "dynamic" }
+
+func (PublicEventListRestored) EventType() string { return "list.restored" }
+
+func (PublicEventListRestored) EntityType() string { return "list" }
+
+func (PublicEventListUpdated) EventType() string { return "list.updated" }
+
+func (PublicEventListUpdated) EntityType() string { return "list" }
+
 func (PublicEventNoticeCreated) EventType() string { return "notice.created" }
 
 func (PublicEventNoticeCreated) EntityType() string { return "user" }
@@ -2656,6 +2753,12 @@ func (PublicEventNoticeCreated) EntityType() string { return "user" }
 func (PublicEventNoticeRead) EventType() string { return "notice.read" }
 
 func (PublicEventNoticeRead) EntityType() string { return "user" }
+
+func (PublicEventNotificationPreferenceChanged) EventType() string {
+	return "notification.preference_changed"
+}
+
+func (PublicEventNotificationPreferenceChanged) EntityType() string { return "user" }
 
 func (PublicEventOfferAccepted) EventType() string { return "offer.accepted" }
 
@@ -2843,6 +2946,7 @@ var PublicEventVersions = map[string]int{
 	"company.archived":                          1,
 	"company.created":                           1,
 	"company.merged":                            1,
+	"company.restored":                          1,
 	"company.updated":                           1,
 	"consent.changed":                           1,
 	"consent.suppressed":                        1,
@@ -2901,8 +3005,15 @@ var PublicEventVersions = map[string]int{
 	"linkedin_account.changed":                  1,
 	"linkedin_match.decided":                    1,
 	"linkedin_network.imported":                 1,
+	"list.archived":                             1,
+	"list.created":                              1,
+	"list.member_added":                         1,
+	"list.member_removed":                       1,
+	"list.restored":                             1,
+	"list.updated":                              1,
 	"notice.created":                            1,
 	"notice.read":                               1,
+	"notification.preference_changed":           1,
 	"offer.accepted":                            1,
 	"offer.created":                             1,
 	"offer.rejected":                            1,

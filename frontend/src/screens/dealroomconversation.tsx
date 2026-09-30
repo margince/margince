@@ -3,8 +3,9 @@ import { Trash2 } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { QueryStates, throwProblem } from "./common";
 import {
   AddDocument,
   DOCUMENT_GROUPS,
@@ -40,9 +41,7 @@ function RemoveButton({
       >
         <Trash2 aria-hidden />
       </Button>
-      {remove.isError ? (
-        <p className="t-danger">{problemMessageOf(remove.error, t)}</p>
-      ) : null}
+      <ErrorLine error={remove.error} />
     </>
   );
 }
@@ -81,7 +80,7 @@ export function DealRoomConversation({
           document_id: input.documentId,
           body: input.body,
           required_change: input.requiredChange,
-          source: "ui",
+          source: "manual",
         },
       });
       if (error) {
@@ -98,7 +97,7 @@ export function DealRoomConversation({
         "/deal-rooms/{id}/threads/{threadId}/comments",
         {
           params: { path: { id: room.id, threadId: input.threadId } },
-          body: { body: input.body, source: "ui" },
+          body: { body: input.body, source: "manual" },
         },
       );
       if (error) {

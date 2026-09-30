@@ -314,7 +314,7 @@ func TestAFilterRefusalNamesTheThresholdsToo(t *testing.T) {
 		// nil tx: the filter refusal below happens in the loop over `filters`,
 		// before anything reads the database. A test opening a transaction to
 		// prove a message would be proving it about a different code path.
-		_, err := buildReportWhere(
+		_, _, err := buildReportWhere(
 			t.Context(), nil, spec, req, callersOwnPopulation(), func(any) int { return 1 })
 		var refusal *FieldNotAllowedError
 		if !errors.As(err, &refusal) {

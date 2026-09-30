@@ -73,6 +73,10 @@ func roleKeyComparisons(src string, keys []string) []string {
 // LEGACY_ADMIN_SEGMENT), and failing a constant nobody decides a role with is
 // the noise that gets a gate ignored.
 func roleKeyIsDecidedOn(src, key string) bool {
+	// Every shape below, the bound-key one included, spells the key quoted.
+	if !strings.Contains(src, "\""+key+"\"") && !strings.Contains(src, "'"+key+"'") && !strings.Contains(src, "`"+key+"`") {
+		return false
+	}
 	quoted := "(?:\"" + key + "\"|'" + key + "'|`" + key + "`)"
 	for _, shape := range []*regexp.Regexp{
 		// role === "admin" / role == "admin", and the negated halves. The
@@ -268,4 +272,65 @@ func seededRoleKeyList(t *testing.T) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// seededRoleEntry matches one entry of identity's systemRoles table.
+var seededRoleEntry = regexp.MustCompile(`\{"([a-z_]+)",\s*"[^"]*"\}`)
+
+// seededRoleKeys reads the keys identity seeds out of its systemRoles table.
+func seededRoleKeys(t *testing.T) map[string]bool {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("internal", "modules", "identity", "service.go"))
+	if err != nil {
+		t.Fatalf("reading the identity service source: %v", err)
+	}
+	keys := map[string]bool{}
+	for _, m := range seededRoleEntry.FindAllSubmatch(raw, -1) {
+		keys[string(m[1])] = true
+	}
+	return keys
+}
+
+// seededRoleNamed matches one entry of identity's systemRoles table, key and
+// stored name.
+var seededRoleNamed = regexp.MustCompile(`\{"([a-z_]+)",\s*"([^"]*)"\}`)
+
+// clientSeededRole matches one entry of the client's SEEDED_ROLES table.
+var clientSeededRole = regexp.MustCompile(`(?m)^\s*([a-z_]+): \{ label: "[^"]+", name: "([^"]*)" \},?$`)
+
+// The client translates a seeded role's label only while its stored name is
+// the one bootstrap seeded, so the client's copy of each seeded name has to be
+// identity's exactly. A drift in either direction shows the wrong label: a
+// stale name leaves the untranslated English, a renamed role its old label.
+func TestTheClientKnowsEachSeededRoleByTheNameIdentityStores(t *testing.T) {
+	t.Parallel()
+	service, err := os.ReadFile(filepath.Join("internal", "modules", "identity", "service.go"))
+	if err != nil {
+		t.Fatalf("reading the identity service source: %v", err)
+	}
+	client, err := os.ReadFile(filepath.Join("..", "frontend", "src", "screens", "roles.queries.ts"))
+	if err != nil {
+		t.Fatalf("reading the client's role table: %v", err)
+	}
+	seeded := map[string]string{}
+	for _, m := range seededRoleNamed.FindAllSubmatch(service, -1) {
+		seeded[string(m[1])] = string(m[2])
+	}
+	known := map[string]string{}
+	for _, m := range clientSeededRole.FindAllSubmatch(client, -1) {
+		known[string(m[1])] = string(m[2])
+	}
+	if len(seeded) == 0 || len(known) == 0 {
+		t.Fatalf("read %d seeded roles from identity and %d from the client — one table has moved", len(seeded), len(known))
+	}
+	for key, name := range seeded {
+		if known[key] != name {
+			t.Errorf("identity seeds %s as %q; the client's SEEDED_ROLES knows it as %q", key, name, known[key])
+		}
+	}
+	for key := range known {
+		if _, ok := seeded[key]; !ok {
+			t.Errorf("the client's SEEDED_ROLES names %s, which identity does not seed", key)
+		}
+	}
 }

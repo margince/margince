@@ -69,10 +69,17 @@ var enrichFieldNames = map[string]bool{
 	"address": true, "website": true,
 }
 
+// signatureRepeatedFields hold a list. A signature listing a German, a
+// Vietnamese and a Singapore number states three numbers, all current, and a
+// gate that kept the first would record one and lose two.
+var signatureRepeatedFields = map[string]bool{"phone": true}
+
 const signatureEnrichSystem = `You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone,
 linkedin, company_name, address, website. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet
 must appear character-for-character in the supplied text. Ignore quoted replies, legal
-disclaimers, and marketing taglines. Phone numbers verbatim, never normalized.
+disclaimers, and marketing taglines. Phone numbers verbatim, never normalized. A signature
+often lists several numbers (desk, mobile, one per country): emit one phone entry for EVERY
+number, each with its own snippet; never merge them and never keep only one.
 Emit address as the single line the signature prints it on. Emit website only for the
 company's own site; a social profile is never a website, and linkedin carries that one.
 The signature must be THE NAMED CONTACT'S OWN. A block naming somebody else — a colleague,
@@ -263,7 +270,7 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand contacts.Signature
 	// The code-side gate: verbatim-snippet-or-drop against the exact lines
 	// the model was shown, then the confidence floor.
 	gated, dropped := gateEvidence(resp.Text, lines, "activity:"+cand.ActivityID.String(),
-		func(name string) bool { return enrichFieldNames[name] })
+		func(name string) bool { return enrichFieldNames[name] }, signatureRepeatedFields)
 	if unparseableReply(dropped) {
 		// A reply no reader can parse is a fault in the ANSWER, not evidence
 		// that the signature states nothing — so the read goes unrecorded and
@@ -321,13 +328,16 @@ func signatureShapeValid(text string) error {
 	return nil
 }
 
-// signatureEnrichSchema is the generation-time shape guardrail (§2.9).
+// signatureEnrichSchema is the generation-time shape guardrail (§2.9). The
+// field enum says in its description that phone repeats, because a structured
+// reply follows the schema at least as closely as the prose.
 func signatureEnrichSchema() json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			laneFields: schema.Array(schema.Object(
 				map[string]schema.Node{
-					extractionFieldKey: schema.Enum(fieldTitle, "phone", "linkedin", companyNameField, "address", "website"),
+					extractionFieldKey: schema.Enum(fieldTitle, "phone", "linkedin", companyNameField, "address", "website").
+						Describe("phone once per number the signature lists; every other field at most once"),
 					"value":            schema.String(),
 					"evidence_snippet": schema.String(),
 					"confidence":       schema.Number(),

@@ -173,11 +173,9 @@ export const BuilderRefusal: Story = {
     // how a reader learns to ignore every notice on a page. What holds it is
     // the claim itself and the verb it keeps dead, which is what the co-located
     // test asserts too.
-    await canvas.findByText(
-      "That looks like a new object or relationship, not a field.",
-    );
+    await canvas.findByText("This looks like a new object or relationship");
     await expect(
-      canvas.getByRole("button", { name: "Confirm & add field" }),
+      canvas.getByRole("button", { name: "Add field" }),
     ).toBeDisabled();
   },
 };
@@ -328,7 +326,7 @@ export const CardAddDialog: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", {
-        name: "Add a field",
+        name: "New field",
       }),
     );
   },

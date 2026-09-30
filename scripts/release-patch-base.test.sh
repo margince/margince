@@ -26,7 +26,7 @@ expect() {
 	local name="$1" want="$2" got
 	shift 2
 	got="$(cd "$WORK" && bash "$RESOLVE" "$@")"
-	if [ "$got" != "$want" ]; then
+	if [[ "$got" != "$want" ]]; then
 		printf 'FAIL: %s — base %s, want %s\n' "$name" "${got:-<none>}" "${want:-<none>}"
 		FAILURES=$((FAILURES + 1))
 		return
@@ -84,14 +84,14 @@ expect "an unreachable before is skipped, not reported" "$C3" released "deadbeef
 	git add file
 	git commit -qm "the first commit"
 	got="$(bash "$RESOLVE" released "" HEAD~1)"
-	if [ -n "$got" ]; then
+	if [[ -n "$got" ]]; then
 		printf 'FAIL: a first commit resolved a base (%s) — a release with nothing behind it owes no patch\n' "$got"
 		exit 1
 	fi
 	printf 'ok    a repository with one commit resolves no base at all\n'
 ) || FAILURES=$((FAILURES + 1))
 
-if [ "$FAILURES" -ne 0 ]; then
+if [[ "$FAILURES" -ne 0 ]]; then
 	printf '\nrelease-patch-base: %d case(s) failed\n' "$FAILURES" >&2
 	exit 1
 fi

@@ -32,7 +32,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // enrichSource is the DM-CONV-11 channel for signature-extracted fields.
@@ -41,7 +40,8 @@ const enrichSource = "capture_enrich"
 // enrichCapturedBy is the acting identity on enrichment rows.
 const enrichCapturedBy = "agent:enrich"
 
-// SignatureField is one gated, evidence-carrying extraction.
+// SignatureField is one gated, evidence-carrying extraction. phone may appear
+// once per number the signature lists; every other field appears once.
 type SignatureField struct {
 	Name       string // title | phone | role | linkedin | company_name | address | website
 	Value      string
@@ -61,8 +61,8 @@ type SignatureField struct {
 // SignatureApplyResult counts what one apply did — honest numbers for the
 // digest, not fabrications.
 type SignatureApplyResult struct {
-	Applied int // fields this statement was newer than, and therefore replaced
-	Skipped int // fields answered later than this, or ruled on by a human
+	Applied int // fields (one per phone number) this statement was newer than
+	Skipped int // fields answered later than this, unreadable, or ruled on by a human
 }
 
 // ApplySignatureFields lands one contact's gated signature fields in one
@@ -177,49 +177,14 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 		if err != nil {
 			return err
 		}
-		var appliedFields []string
-		// Every field this pass landed, as it found it and as it left it —
-		// keyed by the field name, whether it is a column of the contact or a
-		// row of contact_profile_field. The site and search fills record the
-		// sidecar fields the same way, and a field that projected as a change
-		// from one writer and as nothing from another would give one field two
-		// histories.
-		before, after := map[string]any{}, map[string]any{}
-		for _, f := range fields {
-			if corrected[f.Name] {
-				// A human ruled on this field. Their answer stands until they
-				// confirm a replacement, so the statement is evidence for that
-				// confirm and not a write.
-				res.Skipped++
-				continue
-			}
-			verdict, err := s.applySignatureField(ctx, tx, contactID, sourceRef, observedAt, f)
-			if err != nil {
-				return err
-			}
-			if !verdict.applied {
-				res.Skipped++
-				continue
-			}
-			res.Applied++
-			appliedFields = append(appliedFields, f.Name)
-			// Named, not quoted. This pass parses its values out of a message
-			// somebody sent, and one of the fields it can fill is a phone
-			// number; audit_log is append-only, so a value written here outlives
-			// the erasure that clears the record it came from. The same refusal
-			// the bought-claim writers make, for the same reason and the same
-			// closed vocabulary of field names.
-			//
-			// nil rather than the replaced value, even though this pass can now
-			// replace one: the before image is subject to the same refusal as
-			// the after image. What was there is recoverable from the field
-			// row's own undo buffer, which erasure clears with the record.
-			before[f.Name] = nil
-			after[f.Name] = signatureFieldFilled
+		appliedFields, err := s.applySignatureStatement(ctx, tx, contactID, sourceRef, observedAt, fields, corrected, &res)
+		if err != nil {
+			return err
 		}
 		if len(appliedFields) == 0 {
 			return nil
 		}
+		before, after := signatureImages(appliedFields)
 		// The write shape: the enrichment is a contact mutation, so the
 		// audit row and the contact.updated outbox event ride this commit.
 		//
@@ -244,86 +209,131 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 	return res, nil
 }
 
-// readSignatureValue is the candidate value a signature field contributes, in
-// the shape the column it fills accepts — or false when this pass cannot read
-// one, which is a skipped field and not a failure.
-//
-// The phone goes through values.ParsePhone, the same door the create and dedupe
-// paths use. contact_phone.phone is E.164 by contract and nothing in the database
-// enforces it, so a signature line — which states a number in whatever shape its
-// author types, "+49 (30) 1234-5678" or "030 12345678" — would reach the column
-// verbatim. The one without a country prefix is the one that matters: it is
-// unreachable, and it defeats the phone dedupe, which matches the normalized
-// form.
-//
-// It normalizes BEFORE the evidence row is written rather than at the INSERT,
-// because the sidecar's `value` column is what the surfaces show as the claim
-// this evidence supports. Normalizing only the contact_phone row would leave the
-// two disagreeing about the same fact.
-func readSignatureValue(f SignatureField) (string, bool) {
-	value := strings.TrimSpace(f.Value)
-	if value == "" {
-		return "", false
+// applySignatureStatement lands every field of one signature that no human has
+// ruled on, and returns the names of those that landed.
+func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, fields []SignatureField, corrected map[string]bool, res *SignatureApplyResult) ([]string, error) {
+	var appliedFields []string
+	var numbers []SignatureField
+	for _, f := range fields {
+		if corrected[f.Name] {
+			// A human ruled on this field. Their answer stands until they
+			// confirm a replacement, so the statement is evidence for that
+			// confirm and not a write.
+			res.Skipped++
+			continue
+		}
+		if f.Name == fieldPhone {
+			// A signature lists several numbers, and they are applied as one
+			// set below.
+			numbers = append(numbers, f)
+			continue
+		}
+		applied, err := s.applySignatureField(ctx, tx, contactID, sourceRef, observedAt, f)
+		if err != nil {
+			return nil, err
+		}
+		if !applied {
+			res.Skipped++
+			continue
+		}
+		res.Applied++
+		appliedFields = append(appliedFields, f.Name)
 	}
-	if f.Name != "phone" {
-		return value, true
-	}
-	parsed, err := values.ParsePhone(value)
+	landed, err := applySignatureNumbers(ctx, tx, contactID, sourceRef, observedAt, numbers)
 	if err != nil {
-		// Declined, not failed: a footer this pass cannot read is one candidate
-		// skipped, exactly like an empty one. Propagating it would abandon the
-		// other fields of the same signature, and the rest of the batch, over
-		// one contact's formatting.
-		return "", false
+		return nil, err
 	}
-	return parsed.String(), true
+	res.Applied += landed
+	res.Skipped += len(numbers) - landed
+	if landed > 0 {
+		appliedFields = append(appliedFields, fieldPhone)
+	}
+	return appliedFields, nil
 }
 
-// signatureVerdict is what one gated field did to the record: whether it landed
-// at all, and the value it landed — which is the value the audit image carries,
-// normalized, rather than the string the signature spelled.
-type signatureVerdict struct {
-	applied bool
-	value   string
+// signatureImages builds the audit images for the fields this pass landed, as
+// it found them and as it left them — keyed by the field name, whether it is a column of the contact or
+// a row of contact_profile_field. The site and search fills record the sidecar
+// fields the same way, and a field that projected as a change from one writer
+// and as nothing from another would give one field two histories.
+//
+// Named, not quoted. This pass parses its values out of a message somebody
+// sent, and one of the fields it can fill is a phone number; audit_log is
+// append-only, so a value written here outlives the erasure that clears the
+// record it came from. The same refusal the bought-claim writers make, for the
+// same reason and the same closed vocabulary of field names.
+//
+// nil rather than the replaced value, even though this pass can replace one:
+// the before image is subject to the same refusal as the after image. What was
+// there is recoverable from the field row's own undo buffer, which erasure
+// clears with the record.
+func signatureImages(appliedFields []string) (before, after map[string]any) {
+	before, after = map[string]any{}, map[string]any{}
+	for _, name := range appliedFields {
+		before[name], after[name] = nil, signatureFieldFilled
+	}
+	return before, after
 }
 
 // signatureFieldFilled marks a field this pass answered. The image says WHICH
 // field moved and does not carry what it moved to.
 const signatureFieldFilled = "filled"
 
-func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, f SignatureField) (signatureVerdict, error) {
-	value, readable := readSignatureValue(f)
-	if !readable {
-		return signatureVerdict{}, nil
+// applySignatureField lands one single-answer field and reports whether it did.
+// A value that is only whitespace is a skipped field, not a failure.
+func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, f SignatureField) (bool, error) {
+	value := strings.TrimSpace(f.Value)
+	if value == "" {
+		return false, nil
 	}
-
 	// The contact's own dated statement, applied by the writer both this pass
-	// and the card import share. Every field records its evidence row, which is
-	// what keeps the value auditable back to the verbatim signature line; a
-	// phone ALSO reaches the number list, because a contact has several numbers
-	// and the sidecar holds one answer per field.
+	// and the card import share, which records the evidence row that keeps the
+	// value auditable back to the verbatim signature line.
 	outcome, err := applyObservedField(ctx, tx, contactID, observedField{
 		Field: f.Name, Value: value, Evidence: f.Evidence, SourceRef: sourceRef,
 		Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
 		ObservedAt: observedAt,
 	})
 	if err != nil || outcome != observedApplied {
-		return signatureVerdict{}, err
+		return false, err
 	}
-	if f.Name == "phone" {
-		if _, err := applyObservedPhone(ctx, tx, contactID, observedPhone{
-			Phone: value, PhoneType: emailTypeWork, SourceRef: sourceRef,
-			Source: enrichSource, CapturedBy: enrichCapturedBy, ObservedAt: observedAt,
-		}); err != nil {
-			return signatureVerdict{}, err
-		}
-	}
-
 	if err := storekit.StampFields(ctx, tx, entityContact, contactID.UUID, sourceRef, enrichCapturedBy,
 		[]storekit.FieldStamp{{Field: f.Name}}); err != nil {
-		return signatureVerdict{}, err
+		return false, err
 	}
-	return signatureVerdict{applied: true, value: value}, nil
+	return true, nil
+}
+
+// applySignatureNumbers lands every number one signature lists and reports how
+// many changed the number list.
+//
+// Each number goes through values.ParsePhone inside the shared writer, the same
+// door the create and dedupe paths use: contact_phone.phone is E.164 by
+// contract and nothing in the database enforces it, and a number without its
+// country prefix is unreachable and defeats the phone dedupe.
+func applySignatureNumbers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, fields []SignatureField) (int, error) {
+	if len(fields) == 0 {
+		return 0, nil
+	}
+	numbers := make([]observedNumber, 0, len(fields))
+	for _, f := range fields {
+		confidence := f.Confidence
+		numbers = append(numbers, observedNumber{
+			Phone: f.Value, PhoneType: emailTypeWork, Evidence: f.Evidence, Confidence: &confidence,
+		})
+	}
+	landed, err := applyObservedNumbers(ctx, tx, contactID, observedNumbers{
+		Numbers: numbers, SourceRef: sourceRef, Source: enrichSource,
+		CapturedBy: enrichCapturedBy, ObservedAt: observedAt,
+	})
+	if err != nil || len(landed) == 0 {
+		return 0, err
+	}
+	if err := storekit.StampFields(ctx, tx, entityContact, contactID.UUID, sourceRef, enrichCapturedBy,
+		[]storekit.FieldStamp{{Field: fieldPhone}}); err != nil {
+		return 0, err
+	}
+	return len(landed), nil
 }
 
 // revokeSignatureEvidence withdraws the just-inserted evidence row when

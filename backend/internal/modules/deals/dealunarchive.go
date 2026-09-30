@@ -1,0 +1,64 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package deals
+
+// Bringing an archived deal back. The flow and its refusals are
+// storekit/unarchive.go's; this is the deal's share of the statements.
+//
+// The relationship, membership and tag statements repeat the contacts
+// module's word for word. A module never imports a sibling, and each copy has
+// to stay a literal in the module that writes it for the table-ownership gate
+// to see the write at all.
+
+import (
+	"context"
+
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+var dealUnarchive = storekit.UnarchiveShape{
+	Table: dealTable,
+	// A deal is never merged, so it answers false for the merged column.
+	Lock: `SELECT name, archived_at, false, version FROM deal WHERE id = $1 FOR UPDATE`,
+	Children: []storekit.ChildRestore{{Table: "relationship", Statement: `UPDATE relationship r SET archived_at = NULL
+		WHERE r.id = $1 AND r.archived_at = $2
+		  AND NOT EXISTS (SELECT 1 FROM contact c WHERE c.id IN (r.contact_id, r.counterparty_contact_id) AND c.archived_at IS NOT NULL)
+		  AND NOT EXISTS (SELECT 1 FROM company c WHERE c.id IN (r.company_id, r.counterparty_company_id) AND c.archived_at IS NOT NULL)
+		  AND NOT EXISTS (SELECT 1 FROM deal d WHERE d.id = r.deal_id AND d.archived_at IS NOT NULL)
+		  AND NOT EXISTS (SELECT 1 FROM project p WHERE p.id = r.project_id AND p.archived_at IS NOT NULL)`}},
+	Membership: `WITH back AS (
+		INSERT INTO list_member (list_id, entity_type, entity_id, added_by, created_at, note)
+		SELECT @list_id, @entity_type, @entity_id, @added_by, @created_at, @note
+		WHERE EXISTS (SELECT 1 FROM list WHERE id = @list_id AND archived_at IS NULL)
+		ON CONFLICT (list_id, entity_type, entity_id) DO NOTHING
+		RETURNING list_id, entity_type, entity_id)
+	INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
+	SELECT list_id, entity_type, entity_id, 'added', 'record_restored', @actor FROM back`,
+	Tag: `INSERT INTO taggable (tag_id, entity_type, entity_id, assigned_by, assigned_by_kind, assigned_at)
+		SELECT $1, $2, $3, $4, $5, $6 WHERE EXISTS (SELECT 1 FROM tag WHERE id = $1 AND archived_at IS NULL)
+		ON CONFLICT (tag_id, entity_type, entity_id) DO NOTHING`,
+	Restored: crmcontracts.PublicEventDealRestored{},
+}
+
+// RestoreDealTx brings an archived deal back on the caller's transaction,
+// conditioned on ifVersion, behind the gates the archive asks.
+func (s *Store) RestoreDealTx(
+	ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64, with storekit.RestoreWith,
+) (storekit.RestoreReport, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionDelete); err != nil {
+		return storekit.RestoreReport{}, err
+	}
+	// Not the live twin: the row is archived by definition, and bringing it
+	// back is the write that reaches it on purpose.
+	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
+		return storekit.RestoreReport{}, err
+	}
+	return storekit.Unarchive(ctx, tx, dealUnarchive, id.UUID, ifVersion, with)
+}

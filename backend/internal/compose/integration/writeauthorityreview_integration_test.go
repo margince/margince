@@ -167,7 +167,7 @@ func TestAReadShareOfARecordCannotDecideAChangeStagedAgainstIt(t *testing.T) {
 	if _, err := svc.Get(holder, staged); err != nil {
 		t.Fatalf("a write share does not open the staged change: %v", err)
 	}
-	if _, err := svc.Decide(holder, staged, false, strPtr("not now")); err != nil {
+	if _, err := svc.Decide(holder, staged, false, StrPtr("not now")); err != nil {
 		t.Fatalf("deciding under a write share → %v, want allowed", err)
 	}
 }

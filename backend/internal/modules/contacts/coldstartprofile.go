@@ -76,6 +76,27 @@ var columnBackedColdStartFields = map[string]string{
 // The evidence row is upserted for EVERY accepted field, column-backed
 // or not, so provenance stays queryable either way.
 func (s *Store) ApplyColdStartProfile(ctx context.Context, in ApplyColdStartProfileInput) (ids.CompanyID, error) {
+	var companyID ids.CompanyID
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		companyID, err = s.ApplyColdStartProfileTx(ctx, tx, in)
+		return err
+	})
+	if err != nil {
+		return ids.CompanyID{}, err
+	}
+	return companyID, nil
+}
+
+// ApplyColdStartProfileTx is ApplyColdStartProfile inside a transaction the
+// CALLER owns, so an approved proposal can be redeemed and applied as one
+// commit.
+//
+// Redeeming separately spends the approval before this write runs, and a write
+// that then fails leaves it consumed with the change lost and no path back:
+// Decide refuses a second decision, Redeem refuses a second redemption, and
+// nothing else drives the effect.
+func (s *Store) ApplyColdStartProfileTx(ctx context.Context, tx pgx.Tx, in ApplyColdStartProfileInput) (ids.CompanyID, error) {
 	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
 		return ids.CompanyID{}, err
 	}
@@ -90,25 +111,18 @@ func (s *Store) ApplyColdStartProfile(ctx context.Context, in ApplyColdStartProf
 	if len(in.Fields) == 0 {
 		return ids.CompanyID{}, errors.New("contacts: an accepted coldstart proposal carries no fields")
 	}
-
-	var companyID ids.CompanyID
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		companyID, err = applyColdStartTx(ctx, tx, in, host, by)
-		if err != nil {
-			return err
-		}
-		// A VAT number a read just extracted has not been checked, and this is
-		// where most of them arrive — a rep correcting one afterwards is the
-		// rarer path. Queued in the SAME transaction, so a rolled-back apply
-		// leaves no job asking about a number the record does not hold.
-		if statesAVatNumber(in.Fields) {
-			return s.enqueueVatCheck(ctx, tx, companyID)
-		}
-		return nil
-	})
+	companyID, err := applyColdStartTx(ctx, tx, in, host, by)
 	if err != nil {
 		return ids.CompanyID{}, err
+	}
+	// A VAT number a read just extracted has not been checked, and this is
+	// where most of them arrive — a rep correcting one afterwards is the
+	// rarer path. Queued in the SAME transaction, so a rolled-back apply
+	// leaves no job asking about a number the record does not hold.
+	if statesAVatNumber(in.Fields) {
+		if err := s.enqueueVatCheck(ctx, tx, companyID); err != nil {
+			return ids.CompanyID{}, err
+		}
 	}
 	return companyID, nil
 }

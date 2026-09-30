@@ -114,21 +114,14 @@ var prebuiltReports = map[string]reportSpec{
 			// The most recent entry into the CURRENT stage. A deal that moved
 			// out and back counts from its return, because that is when the
 			// clock a reader cares about started again.
-			`LEFT JOIN LATERAL (
-				SELECT max(h.changed_at) AS entered_at
-				FROM deal_stage_history h
-				WHERE h.deal_id = t.id AND h.to_stage_id = t.stage_id
-			) entry ON true`,
+			currentStageEntryJoin,
 		},
 		baseWhere: whereArchivedNull + " AND t.status = 'open'",
 		basePlain: "live (unarchived) open deals, aged from the last time each entered its current stage",
-		// Stays on the caller's own/team default: owner_id is both a
-		// dimension and a filter here, and `deal` is an identity table (row
-		// scope renders unconditionally TRUE), so declaring
-		// measureEveryReadableRow would remove the only narrowing between a
-		// rep and a named colleague's exact stage-aging figures. The
-		// unowned-row arm (analyticsscope.go) still reaches this report's own
-		// default population.
+		// How long deals sit is a question about the pipeline, not about the
+		// asker. Naming one owner goes through the owner gate
+		// (reportownergate.go).
+		population: measureEveryReadableRow,
 		dimensions: map[string]string{
 			fieldStageID:    colStageID,
 			fieldPipelineID: colPipelineID,
@@ -139,7 +132,7 @@ var prebuiltReports = map[string]reportSpec{
 			// one whose stage was set at creation before any move — falls back
 			// to its creation date rather than reporting NULL: the age is real
 			// even where the history is silent about it.
-			fieldDaysInStage: "EXTRACT(DAY FROM (now() - COALESCE(entry.entered_at, t.created_at)))",
+			fieldDaysInStage: currentStageAgeSQL("now()"),
 		},
 		filters: map[string]string{
 			fieldPipelineID: colPipelineID,
@@ -161,6 +154,10 @@ var prebuiltReports = map[string]reportSpec{
 		joins:     []string{joinStageForWinProbability},
 		baseWhere: whereArchivedNull,
 		basePlain: "live (unarchived) deals",
+		// The Pipeline board's column totals, over the same deals the board
+		// draws as cards: every deal the reader may see. Its owner dial goes
+		// through the owner gate (reportownergate.go).
+		population: measureEveryReadableRow,
 		dimensions: map[string]string{
 			fieldStageID:        colStageID,
 			fieldStatus:         colStatus,
@@ -235,6 +232,11 @@ var prebuiltReports = map[string]reportSpec{
 		table:     tableLead,
 		baseWhere: "",
 		basePlain: "every lead, including the promoted and disqualified ones a work queue hides",
+		// The Leads board's column counts, over the same leads the board
+		// lists when a terminal column is opened: every lead the reader may
+		// see. Its owner dial goes through the owner gate
+		// (reportownergate.go).
+		population: measureEveryReadableRow,
 		dimensions: map[string]string{
 			fieldStatus:  colStatus,
 			fieldOwnerID: colOwnerID,
@@ -289,10 +291,9 @@ var prebuiltReports = map[string]reportSpec{
 			fieldDirection:     colDirection,
 			fieldMeetingStatus: colMeetingStatus,
 			// The seat hosting the meeting — the one per-contact handle the
-			// activity table itself carries, set exactly for meetings. Ungated
-			// like every owner_id filter in this catalog, for the same reason:
-			// it narrows WITHIN rows the caller's activity clause already
-			// admits, and the ordinary activities list serves host and
+			// activity table itself carries, set exactly for meetings. Not
+			// owner-gated: it narrows WITHIN rows the caller's activity clause
+			// already admits, and the ordinary activities list serves host and
 			// standing on each of those rows one by one.
 			fieldHostUserID: colHostUserID,
 			fieldProjectID:  activityProjectIDExpr,
@@ -337,7 +338,7 @@ var prebuiltReports = map[string]reportSpec{
 	// expression the drill-through rows expose. Stakeholders never join
 	// in: the grain is one row per deal, so a multi-stakeholder deal
 	// counts once (AC-F2).
-	"forecast": {
+	objectForecast: {
 		entity:    datasource.EntityDeal,
 		table:     tableDeal,
 		joins:     []string{joinStageForWinProbability},
@@ -407,4 +408,14 @@ var prebuiltReports = map[string]reportSpec{
 			{Fn: aggFnSum, Field: fieldWeightedAmountMinor, As: "weighted_minor"},
 		},
 	},
+}
+
+const currentStageEntryJoin = `LEFT JOIN LATERAL (
+				SELECT max(h.changed_at) AS entered_at
+				FROM deal_stage_history h
+				WHERE h.deal_id = t.id AND h.to_stage_id = t.stage_id
+			) entry ON true`
+
+func currentStageAgeSQL(at string) string {
+	return "EXTRACT(DAY FROM (" + at + " - COALESCE(entry.entered_at, t.created_at)))"
 }

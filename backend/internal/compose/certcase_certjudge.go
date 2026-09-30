@@ -53,15 +53,18 @@ const certJudgeSite = "cert_judge/judge"
 
 // certJudgeFixture is one grading call in exactly what the harness hands it: the
 // rubric to score against, the input the candidate was answering, and the raw
-// output to score.
+// output to score — plus, when the scenario supplies them, the product rules
+// the candidate was given and the reference answer.
 //
 // The rubric is this codebase's own text and the input is the scenario's; only
-// the candidate output is a model's. All three reach the same user turn today,
-// which is why the fixture holds all three — the fixture is what production is
+// the candidate output is a model's. All of them reach the same user turn today,
+// which is why the fixture holds all of them — the fixture is what production is
 // given, not what is safe to give it.
 type certJudgeFixture struct {
 	Rubric          string `json:"rubric"`
+	ProductRules    string `json:"product_rules,omitempty"`
 	ScenarioInput   string `json:"scenario_input"`
+	ExpectedAnswer  string `json:"expected_answer,omitempty"`
 	CandidateOutput string `json:"candidate_output"`
 }
 
@@ -175,7 +178,13 @@ type certJudgeCase struct {
 
 // Run issues the one request this site sends.
 func (c *certJudgeCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := JudgeRequest(c.fixture.Rubric, c.fixture.ScenarioInput, c.fixture.CandidateOutput)
+	req := JudgeRequest(JudgeInput{
+		Rubric:          c.fixture.Rubric,
+		ProductRules:    c.fixture.ProductRules,
+		ScenarioInput:   c.fixture.ScenarioInput,
+		ExpectedAnswer:  c.fixture.ExpectedAnswer,
+		CandidateOutput: c.fixture.CandidateOutput,
+	})
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

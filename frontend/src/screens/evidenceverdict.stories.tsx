@@ -125,16 +125,47 @@ export const SavingCorrection: Story = {
   },
 };
 
-/** A refused write. The server's own sentence stands under the verbs, and the
- *  claim is still there to rule on — nothing was consumed by the attempt. */
+/** A refused correction is the field's own error: under the typed value,
+ *  which survives, and wired to it the way every field's error is. */
+export const CorrectionRefused: Story = {
+  render: verdict({
+    [CORRECT]: () =>
+      jsonResponse(
+        { code: "version_skew", title: "Conflict", detail: "version skew" },
+        409,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const user = userEvent.setup();
+    await user.click(
+      await canvas.findByRole("button", { name: en["evidence.correct"] }),
+    );
+    const field = await canvas.findByRole("textbox", {
+      name: en["evidence.correctedValue"],
+    });
+    await user.clear(field);
+    await user.type(field, "Automotive tier-one supply");
+    await user.click(canvas.getByRole("button", { name: en["evidence.save"] }));
+    const refusal = await canvas.findByRole("alert");
+    await expect(refusal).toHaveTextContent(en["edit.versionSkew"]);
+    await expect(refusal).toHaveClass("field-error");
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+  },
+};
+
+/** A refused write, and the claim is still there to rule on — nothing was
+ *  consumed by the attempt. The server states this one as the bare sentinel
+ *  `permission denied`, so the words under the verbs are the catalog's: a
+ *  refusal phrased as a code names no one a reader can go to about it. */
 export const Refused: Story = {
   render: verdict({
     [CONFIRM]: () =>
       jsonResponse(
         {
-          code: "forbidden",
-          title: "Not permitted",
-          detail: "You cannot rule on evidence for this account.",
+          code: "permission_denied",
+          title: "Forbidden",
+          detail: "permission denied",
         },
         403,
       ),
@@ -145,6 +176,33 @@ export const Refused: Story = {
     await user.click(
       await canvas.findByRole("button", { name: en["evidence.confirm"] }),
     );
-    await canvas.findByRole("alert");
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      en["common.permissionDenied"],
+    );
+  },
+};
+
+/** Somebody else ruled on this claim first. The precondition both verbs send is
+ *  what turns that into a refusal instead of a silent overwrite, and the reader
+ *  is told what happened and what to do — the server states this one as the
+ *  bare sentinel `version skew`, which names nothing a reader has met. The
+ *  claim stays on the row, so the verdict can be given again after a reload. */
+export const RowMovedUnderYou: Story = {
+  render: verdict({
+    [CONFIRM]: () =>
+      jsonResponse(
+        { code: "version_skew", title: "Conflict", detail: "version skew" },
+        409,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const user = userEvent.setup();
+    await user.click(
+      await canvas.findByRole("button", { name: en["evidence.confirm"] }),
+    );
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      en["edit.versionSkew"],
+    );
   },
 };

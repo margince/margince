@@ -1,47 +1,22 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MarginceCoreScene } from "../../design-system/margince-core";
 import { LocaleProvider } from "../../i18n";
-import { installFetchStub, meRoute } from "../story-utils";
 import {
   type ConversationState,
   initialConversationState,
   type ThreadEntry,
 } from "./conversation-machine";
-import {
-  NarrationBubble,
-  OutcomeCard,
-  QuestionCard,
-  UserTurn,
-} from "./entries";
+import { NarrationBubble } from "./entries";
 import { presenceFor } from "./presence";
-import { ConversationThread } from "./thread";
-
-// A UserTurn draws the signed-in person's Avatar and so calls useMe() —
-// react-query for the client, and GET /me for the answer. Both are decorators
-// rather than per-story wrappers because the requirement belongs to the
-// entries, not to the two stories that happen to show one.
-//
-// Without the route the request left the page for a real host, 404'd, and the
-// name resolved to "" — a story called "User" screenshotting an anonymous chip,
-// green in every gate that does not watch the console.
-const client = new QueryClient({
-  defaultOptions: { queries: { retry: false } },
-});
 
 const meta: Meta = {
   title: "Onboarding/Conversation/Entries",
   decorators: [
-    (Story) => {
-      installFetchStub({ "GET /me": meRoute({}) });
-      return (
-        <QueryClientProvider client={client}>
-          <LocaleProvider initial="en">
-            <Story />
-          </LocaleProvider>
-        </QueryClientProvider>
-      );
-    },
+    (Story) => (
+      <LocaleProvider initial="en">
+        <Story />
+      </LocaleProvider>
+    ),
   ],
 };
 export default meta;
@@ -54,46 +29,6 @@ const narration: Extract<ThreadEntry, { kind: "narration" }> = {
   params: { value: "Industrial robotics" },
   paramKeys: { field: "ob.field.industry" },
   findingIds: ["industry"],
-};
-
-const question: Extract<ThreadEntry, { kind: "question" }> = {
-  kind: "question",
-  id: "question:clarify-entity",
-  question: {
-    id: "clarify-entity",
-    i18nKey: "ob.conv.clarify.entity",
-    options: [
-      { value: "acme-gmbh", label: "Acme GmbH" },
-      { value: "acme-holding", label: "Acme Holding SE" },
-    ],
-  },
-};
-
-const userTurn: Extract<ThreadEntry, { kind: "user" }> = {
-  kind: "user",
-  id: "answer:clarify-entity",
-  text: "Acme GmbH",
-};
-
-const outcome: Extract<ThreadEntry, { kind: "outcome" }> = {
-  kind: "outcome",
-  id: "4:company:confirmed",
-  i18nKey: "ob.conv.company.confirmed",
-  tone: "success",
-};
-
-const deferredOutcome: Extract<ThreadEntry, { kind: "outcome" }> = {
-  kind: "outcome",
-  id: "5:build:deferred",
-  i18nKey: "ob.conv.build.deferred",
-  tone: "deferred",
-};
-
-const failureOutcome: Extract<ThreadEntry, { kind: "outcome" }> = {
-  kind: "outcome",
-  id: "6:read:failed",
-  i18nKey: "ob.conv.read.failed",
-  tone: "failure",
 };
 
 export const Narration: Story = {
@@ -176,48 +111,5 @@ export const OrbChoreography: Story = {
         );
       })}
     </div>
-  ),
-};
-
-export const Question: Story = {
-  render: () => (
-    <QuestionCard question={question.question} onAnswer={() => {}} />
-  ),
-};
-
-export const User: Story = {
-  render: () => <UserTurn entry={userTurn} />,
-};
-
-export const Outcome: Story = {
-  render: () => <OutcomeCard entry={outcome} />,
-};
-
-export const OutcomeDeferred: Story = {
-  render: () => <OutcomeCard entry={deferredOutcome} />,
-};
-
-export const OutcomeFailure: Story = {
-  render: () => <OutcomeCard entry={failureOutcome} />,
-};
-
-export const Thread: Story = {
-  render: () => (
-    <ConversationThread
-      entries={[
-        {
-          kind: "narration",
-          id: "0:pages:5",
-          i18nKey: "ob.conv.read.pages",
-          params: { pages: "5" },
-        },
-        narration,
-        question,
-        userTurn,
-        outcome,
-      ]}
-      pendingQuestionId={null}
-      onAnswer={() => {}}
-    />
   ),
 };

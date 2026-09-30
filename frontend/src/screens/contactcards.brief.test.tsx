@@ -88,7 +88,7 @@ describe("the relationship brief discloses the machine that reads it", () => {
     // foot says so rather than naming a writer that did not write.
     const panel = card("deterministic");
     expect(
-      within(panel).getByText("Assembled from your records"),
+      within(panel).getByText("Compiled from CRM records"),
     ).toBeInTheDocument();
     expect(within(panel).queryByText("Written by Margince")).toBeNull();
   });

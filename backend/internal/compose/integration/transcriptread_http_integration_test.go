@@ -88,7 +88,7 @@ func logTranscript(t *testing.T, e *apptest.AppEnv, body string) string {
 	}
 	status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "meeting", "subject": "Rollout call", "body": body,
-		"source_system": "transcript", "source": "ui",
+		"source_system": "transcript", "source": "manual",
 	}, nil, &activity)
 	if status != http.StatusCreated {
 		t.Fatalf("logging the transcript → %d", status)
@@ -202,7 +202,7 @@ func TestTheDoorRefusesWhatHasNoLinesToCite(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
-		"kind": "note", "subject": "An ordinary note", "body": "No transcript here.", "source": "ui",
+		"kind": "note", "subject": "An ordinary note", "body": "No transcript here.", "source": "manual",
 	}, nil, &note); status != http.StatusCreated {
 		t.Fatalf("logging the note → %d", status)
 	}

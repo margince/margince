@@ -111,3 +111,32 @@ func TestTheSystemPrincipalDoesNotUnlockTheImporterNamespace(t *testing.T) {
 		t.Fatalf("err = %v, want ReservedError — the import namespace is not the engine's to write", err)
 	}
 }
+
+// HANDLERS ONLY, and this is where that is pinned.
+//
+// auth.DeclaredImporter is computed in the two HTTP handlers and nowhere else.
+// The provider seam is the AGENT's door onto the same store, and an agent
+// carries its granting human's whole Permissions — so a human holding
+// import_run:create whose agent reached this seam would otherwise hand the
+// agent the importer's namespace.
+//
+// The refusal here does not depend on the principal's grants at all, which is
+// the point: this seam never asks, so there is nothing to grant.
+func TestTheProviderSeamDoesNotOpenTheImporterNamespace(t *testing.T) {
+	importer := principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:admin",
+		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
+			"import_run": {Create: true},
+		}},
+	}
+	ctx := principal.WithActor(context.Background(), importer)
+
+	_, err := logInputForPrincipal(ctx, reminderCreate(provenance.ReservedSourceSystemPrefix+"hubspot"))
+	var refused *provenance.ReservedError
+	if !errors.As(err, &refused) {
+		t.Fatalf("err = %v, want ReservedError — the importer's door is the HTTP handler, not this seam", err)
+	}
+	if refused.Field != "source_system" {
+		t.Errorf("refusal names %q, want source_system", refused.Field)
+	}
+}

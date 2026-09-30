@@ -13,10 +13,10 @@
 #
 #                Both halves are needed, and the second is what keeps the corpus
 #                honest: a design-system sheet may space a class belonging to a
-#                SCREEN (`.mw-conversation .ob-conv-thread` places the screen's
-#                thread inside the workbench). Spacing alone would read that as
-#                the tier owning `.ob-conv-thread` and turn the screen's own
-#                base rule into a finding. Declaring a class with nothing above
+#                SCREEN (a descendant selector placing the screen's element
+#                inside a primitive). Spacing alone would read that as the tier
+#                owning the screen's class and turn the screen's own base rule
+#                into a finding. Declaring a class with nothing above
 #                it is what owning it looks like.
 #
 #   mode=check   over one screen stylesheet — report every declaration that

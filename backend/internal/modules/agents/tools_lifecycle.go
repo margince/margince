@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -39,12 +40,12 @@ func RegisterLifecycleTools(
 	demoter LeadDemoter,
 	advancer ProjectPhaseAdvancer,
 ) {
-	r.Register(relinkActivity{relinker: relinker, p: p})
-	r.Register(relinkThread{relinker: relinker, p: p})
-	r.Register(relinkActivities{relinker: relinker, p: p})
-	r.Register(disqualifyLead{p: p, disqualifier: disqualifier})
-	r.Register(demoteLead{p: p, demoter: demoter})
-	r.Register(advanceProjectPhase{p: p, advancer: advancer})
+	r.Register(relinkActivity{relinker: relinker, p: p, language: r.language})
+	r.Register(relinkThread{relinker: relinker, p: p, language: r.language})
+	r.Register(relinkActivities{relinker: relinker, p: p, language: r.language})
+	r.Register(disqualifyLead{p: p, disqualifier: disqualifier, language: r.language})
+	r.Register(demoteLead{p: p, demoter: demoter, language: r.language})
+	r.Register(advanceProjectPhase{p: p, advancer: advancer, language: r.language})
 }
 
 // ActivityRelinker moves an activity's typed link onto a record, idempotently
@@ -116,13 +117,15 @@ type relinkActivity struct {
 	// tier became dynamic: a project destination resolves 🟡, and a 🟡 call
 	// that cannot describe its subject is refused with no card minted, so the
 	// human the raise asks for is never asked.
-	p datasource.SystemOfRecordProvider
+	p        datasource.SystemOfRecordProvider
+	language baselanguage.Resolver
 }
 
 func (t relinkActivity) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "relink_activity", Title: "Re-associate an activity to a record", Version: toolVersionV1,
 		Description: relinkActivityCopy.render(),
+		Instead:     relinkActivityCopy.Instead,
 		// Dynamic because filing under a PROJECT classifies the activity as
 		// commercial correspondence — write-once and monotonic — while every
 		// other destination is an association a member can undo. See
@@ -155,7 +158,7 @@ func (t relinkActivity) StageInfo(ctx context.Context, in json.RawMessage) (Stag
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewRelinkActivityCall(t.p, RelinkActivityCommand{
+	return StageSubject(ctx, NewRelinkActivityCall(t.p, t.language, RelinkActivityCommand{
 		ActivityID: args.ActivityID, EntityType: args.EntityType, EntityID: args.EntityID,
 	}))
 }
@@ -200,7 +203,7 @@ func (t relinkActivity) ResolverInput(ctx context.Context, in json.RawMessage) (
 	// what is wrong instead of a card nobody can act on.
 	return mcp.TierResolverInput{
 		Args: in,
-		ObservedVersion: observedVersion(ctx, NewRelinkActivityCall(t.p, RelinkActivityCommand{
+		ObservedVersion: observedVersion(ctx, NewRelinkActivityCall(t.p, t.language, RelinkActivityCommand{
 			ActivityID: args.ActivityID, EntityType: args.EntityType, EntityID: args.EntityID,
 		})),
 	}, nil
@@ -237,12 +240,14 @@ type disqualifyLeadArgs struct {
 type disqualifyLead struct {
 	p            datasource.SystemOfRecordProvider
 	disqualifier LeadDisqualifier
+	language     baselanguage.Resolver
 }
 
 func (t disqualifyLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "disqualify_lead", Title: "Disqualify a lead", Version: toolVersionV1,
 		Description:   disqualifyLeadCopy.render(),
+		Instead:       disqualifyLeadCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "disqualifyLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id"],"properties":{
@@ -262,7 +267,7 @@ func (t disqualifyLead) StageInfo(ctx context.Context, in json.RawMessage) (Stag
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewDisqualifyLeadCall(t.p, DisqualifyLeadCommand(args)))
+	return StageSubject(ctx, NewDisqualifyLeadCall(t.p, t.language, DisqualifyLeadCommand(args)))
 }
 
 func (t disqualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -289,14 +294,16 @@ type demoteLeadArgs struct {
 }
 
 type demoteLead struct {
-	p       datasource.SystemOfRecordProvider
-	demoter LeadDemoter
+	p        datasource.SystemOfRecordProvider
+	demoter  LeadDemoter
+	language baselanguage.Resolver
 }
 
 func (t demoteLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "demote_lead", Title: "Reverse a lead promotion", Version: toolVersionV1,
 		Description:   demoteLeadCopy.render(),
+		Instead:       demoteLeadCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "demoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","reason"],"properties":{
@@ -318,7 +325,7 @@ func (t demoteLead) StageInfo(ctx context.Context, in json.RawMessage) (StageInf
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewDemoteLeadCall(t.p, DemoteLeadCommand(args)))
+	return StageSubject(ctx, NewDemoteLeadCall(t.p, t.language, DemoteLeadCommand(args)))
 }
 
 func (t demoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -365,12 +372,14 @@ type advanceProjectPhaseArgs struct {
 type advanceProjectPhase struct {
 	p        datasource.SystemOfRecordProvider
 	advancer ProjectPhaseAdvancer
+	language baselanguage.Resolver
 }
 
 func (t advanceProjectPhase) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "advance_project_phase", Title: "Move a project to a phase", Version: toolVersionV1,
 		Description:   advanceProjectPhaseCopy.render(),
+		Instead:       advanceProjectPhaseCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "advanceProjectPhase",
 		InputSchema: schema(`{"type":"object","required":["project_id","to_phase"],"properties":{
@@ -396,7 +405,7 @@ func (t advanceProjectPhase) StageInfo(ctx context.Context, in json.RawMessage) 
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewAdvanceProjectPhaseCall(t.p, AdvanceProjectPhaseCommand{
+	return StageSubject(ctx, NewAdvanceProjectPhaseCall(t.p, t.language, AdvanceProjectPhaseCommand{
 		ProjectID: args.ProjectID,
 		ToPhase:   args.ToPhase,
 		Reason:    args.Reason,

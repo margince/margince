@@ -88,13 +88,18 @@
   description: "Reporting, saved views, filters, export"
 
 # ---------------------------------------------------------------------------
-# Status — an issue nobody should pick up yet, whether because it cannot be
-# worked or because it is deliberately not now's work. Both colours sit in the
-# needs-decision yellow: same axis, and the paler one is the calmer state.
+# Status — an issue nobody ELSE should pick up: it cannot be worked, it is
+# deliberately not now's work, or somebody already has it. The two waiting
+# states sit in the needs-decision yellow, same axis with the paler one calmer;
+# the third is blue because it reports work happening rather than work parked,
+# and a reader scanning a list should not have to read it to tell those apart.
 # ---------------------------------------------------------------------------
 - name: "status: deferred"
   color: "FEF2C0"
   description: "Real and agreed, deliberately not scheduled - no milestone yet. Do not pick it up"
+- name: "status: in progress"
+  color: "1D76DB"
+  description: "Somebody is working on this - see the assignee. Do not pick it up"
 - name: "status: needs-decision"
   color: "FBCA04"
   description: "Unactionable until someone rules on it - 'decide or decline X'"
@@ -102,15 +107,15 @@
 # ---------------------------------------------------------------------------
 # Claim — a lock one session takes so the others do not race it.
 #
-# The only axis that lives on a PULL REQUEST rather than an issue, and the only
-# one that is about who is working rather than about what the work is. `main`
-# goes red often here on purpose — merging past a red check is a standing
-# decision — and every session that notices reaches for the same fix at the
-# same time. A draft pull request wearing this label is how the first one says
-# so, and the rulebook is what makes the others look before they start.
+# The only axis that lives on a PULL REQUEST rather than an issue. `main` goes
+# red often here on purpose — merging past a red check is a standing decision —
+# and every session that notices reaches for the same fix at the same time. A
+# draft pull request wearing this label is how the first one says so, and the
+# rulebook is what makes the others look before they start.
 #
-# It is not a `status:`: those mark an issue nobody should pick up, and this
-# marks work somebody already did pick up.
+# It says who is working, which `status: in progress` also says. What separates
+# them is what wears it: a red `main` has no issue to label, so the claim is the
+# draft pull request itself.
 # ---------------------------------------------------------------------------
 - name: "claim: main-red"
   color: "5319E7"

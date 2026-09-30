@@ -24,5 +24,5 @@
 // the chain of what was believed when survives, and it writes no deal row —
 // calling a number is not editing the pipeline.
 //
-// Tables owned: forecast_call, forecast_snapshot, forecast_contribution
+// Tables owned: forecast_call, forecast_snapshot, forecast_contribution, forecast_capture_status
 package forecasting

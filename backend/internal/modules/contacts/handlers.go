@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -33,6 +34,8 @@ type Handlers struct {
 	stageVCardReview func(ctx context.Context, entry VCardEntry, candidate *ids.ContactID) error
 
 	store *Store
+	// listMembers resolves a list read's list_id; nil while lists are off.
+	listMembers storekit.ListMemberFilterResolver
 	// blob serves the company logo's bytes. Nil is a role that stores no
 	// objects: the logo endpoint then answers 501 rather than nil-derefing,
 	// and no logo can have been resolved for it to serve anyway.
@@ -48,11 +51,14 @@ type Handlers struct {
 	// through. Allocated once here rather than lazily, so a stream that never
 	// calls WithBlobstore still holds a usable, if unused, map.
 	logoWritesInFlight *sync.Map
+	// tightLogos is the legacy keys this process has seen need no crop, shared
+	// across With* copies for the same reason as the map above.
+	tightLogos *tightLogoKeys
 }
 
 // NewHandlers builds the module's HTTP surface over a workspace-bound handle.
 func NewHandlers(db *database.DB) Handlers {
-	return Handlers{store: NewStore(db), logoWritesInFlight: &sync.Map{}}
+	return Handlers{store: NewStore(db), logoWritesInFlight: &sync.Map{}, tightLogos: newTightLogoKeys()}
 }
 
 // WithMatchStager wires the pass that turns this member's suggested LinkedIn
@@ -141,6 +147,14 @@ func (h Handlers) WithDealOpener(opener LeadDealOpener) Handlers {
 // refuses rather than dropping the stop — see stopcarry.go.
 func (h Handlers) WithStopCarrier(carrier StopCarrier) Handlers {
 	h.store = h.store.WithStopCarrier(carrier)
+	return h
+}
+
+// WithSatelliteCarriers wires the seams that carry a retiring subject's
+// consent links and introduction asks onto the survivor — see
+// satellitecarry.go.
+func (h Handlers) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros IntroCarrier) Handlers {
+	h.store = h.store.WithSatelliteCarriers(consent, intros)
 	return h
 }
 

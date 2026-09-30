@@ -63,6 +63,8 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureWritable":     {argument: 2},
 	"EnsureWritableLive": {argument: 2},
 	"HoldWritableLive":   {argument: 2},
+	"EnsureReadable":     {argument: 2},
+	"EnsureChangeable":   {argument: 2},
 	"EnsureLinkTarget":   {argument: 2},
 	// The attach direction's probe opens with EnsureLinkTarget and narrows the
 	// share arm, so it bounds a reference at least as tightly.
@@ -447,5 +449,31 @@ const (
 	// nullable contact id used to decide which entity an audit row hangs from.
 	// A match on two records takes the first and the stop is unaffected either
 	// way, because the suppression itself deliberately names no contact.
-	modulesTierUnscopedCeiling = 105
+	//
+	// 106: privacy.contactsMatchingSuppression walks every live contact_email
+	// in the installation, hashes it against the erasure-suppression list and
+	// hands back the ids of subjects an erasure already ended — a restore or a
+	// re-import having put them back.
+	//
+	// Unscoped ON PURPOSE. The suppression list has no tenant predicate and
+	// nothing for one to key on (storekit/suppression.go, ADR-0091 and
+	// ADR-0061), so narrowing the pass to one seat's rows would leave a
+	// resurrected subject standing everywhere that seat cannot reach. The
+	// reference never leaves: the ids go straight into EraseContact.
+	//
+	// 107: activities.HeldMeetingCounterparties is the held-meeting walk Deal
+	// Scout reads, the participant twin of CompanyReachSet above it in the same
+	// census and unscoped for the same reason: it is a derived-table body a
+	// system-principal producer composes, with no seat to narrow to. The
+	// company it names goes to deals.RecordSuggestionTx, and a rep sees the
+	// suggestion only through deals' visibility clause, which applies the
+	// company's row scope and every evidence item's content gate.
+	//
+	// 108, 109: contacts.archiveContactRows and contacts.retireCompanyCascade read
+	// back the ids of the Shortlists an archive took the record off, from the
+	// same statement that deleted the memberships and recorded their removal
+	// in list_member_event. The list ids go into the archive's own audit
+	// evidence, which an un-archive reads to put the memberships back; no
+	// reader is handed one, so there is no list scope to apply.
+	modulesTierUnscopedCeiling = 109
 )

@@ -28,7 +28,7 @@ func decodeInto(t *testing.T, raw string, into any) {
 
 func TestContactCreateInputCarriesCustomFieldKeys(t *testing.T) {
 	var req crmcontracts.CreateContactRequest
-	decodeInto(t, `{"full_name":"Ada","source":"ui","cf_tier":"gold","cf_seats":12}`, &req)
+	decodeInto(t, `{"full_name":"Ada","source":"manual","cf_tier":"gold","cf_seats":12}`, &req)
 
 	in, err := contactCreateInput(req)
 	if err != nil {
@@ -54,7 +54,7 @@ func TestContactUpdateInputCarriesCustomFieldKeys(t *testing.T) {
 
 func TestCompanyCreateInputCarriesCustomFieldKeys(t *testing.T) {
 	var req crmcontracts.CreateCompanyRequest
-	decodeInto(t, `{"display_name":"Acme","source":"ui","cf_region":"emea"}`, &req)
+	decodeInto(t, `{"display_name":"Acme","source":"manual","cf_region":"emea"}`, &req)
 
 	in, err := companyCreateInput(req)
 	if err != nil {
@@ -77,7 +77,7 @@ func TestCompanyUpdateInputCarriesCustomFieldKeys(t *testing.T) {
 
 func TestLeadCreateInputCarriesCustomFieldKeys(t *testing.T) {
 	var req crmcontracts.CreateLeadRequest
-	decodeInto(t, `{"source":"ui","cf_iscool":true,"cf_tier":"gold"}`, &req)
+	decodeInto(t, `{"source":"manual","cf_iscool":true,"cf_tier":"gold"}`, &req)
 
 	in, err := leadCreateInput(req)
 	if err != nil {

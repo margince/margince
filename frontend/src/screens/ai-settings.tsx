@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useCan } from "../app/capability";
 import { StatCard } from "../design-system/atoms";
 import { formatMoney, formatNumber } from "../format/format";
 import { formatElapsed, useNow } from "../format/now";
-import { useLocale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { useProviderKeys } from "./ai-provider-keys";
-import { useRouting } from "./ai-routing";
-import { useLastCallAt } from "./aicalls";
-import { bandTone, currentMonth, useAiUsage } from "./aiusage";
+import { boundProviders, useRouting } from "./ai-routing-query";
+import { type LastCall, useLastCallAt } from "./aicalls";
+import { currentMonth, useAiUsage } from "./aiusage";
 import "./ai-settings.css";
 
 // The company's AI as ONE page with five bodies, read in the order the
@@ -41,75 +42,52 @@ import "./ai-settings.css";
 // Exported rather than moved so the queries, the locale formatting and the
 // withheld-reading behaviour stay in one file with the cards that share them.
 
-// What this month has cost, in the denomination the runtime actually meters:
-// tokens against the monthly ceiling, with the priced estimate under it.
+// The month's priced estimate, drawn inside the allowance card under the token
+// meter it qualifies.
 //
 // Tokens are the budget and the money is the estimate, in that order, because
 // that is which of the two the runtime enforces — the band that degrades a lane
 // is drawn on tokens, and a lane never stops because a dollar figure was reached.
 // The estimate is priced on read from the workspace's sheet and a call outside it
-// carries no price at all, so the money line is absent rather than short when
-// nothing in the month priced.
-export function SpendStat() {
+// carries no price at all, so a month nothing priced says so in words: an absent
+// line there reads as a month that cost nothing.
+export function SpendEstimate() {
   const t = useT();
   const { locale } = useLocale();
   // The same gate the endpoint behind `useAiUsage` asks for
-  // (ai/usage.go: ai_diagnostics.read). Asking `automation.update` here read
-  // the header as withheld for a holder the server would have answered, and
-  // rendered the number for an automation editor it would have refused.
+  // (ai/usage.go: ai_diagnostics.read). A seat without it still has the
+  // allowance card; only this line is withheld, and says so — an absent
+  // estimate would read as a month that cost nothing.
   const canSee = useCan("ai_diagnostics", "read");
-  // The current month, fixed: the header reads "this month" while the Usage tab
-  // below it lets a reader step back through earlier ones, and a header that
-  // followed the stepper would stop answering the question it asks.
+  // The current month, fixed: the usage card below lets a reader step back
+  // through earlier ones, and an estimate that followed the stepper would stop
+  // answering "this month".
   const [month] = useState(currentMonth);
   const query = useAiUsage(month, canSee);
-
   if (!canSee) {
-    return (
-      <StatCard
-        label={t("aiSettings.spend.label")}
-        value={t("aiSettings.withheld")}
-      />
-    );
+    return <p>{t("aiSettings.withheld")}</p>;
   }
   const budget = query.data?.budget;
   if (!budget) {
-    return (
-      <StatCard
-        label={t("aiSettings.spend.label")}
-        value={readingState(query.isError, t)}
-      />
-    );
+    return <p>{readingState(query.isError, t)}</p>;
   }
-  const priced = (query.data?.days ?? []).reduce(
-    (sum, day) =>
-      sum +
-      day.tasks.reduce(
-        (dayTotal, task) => dayTotal + (task.cost_est_minor ?? 0),
-        0,
-      ),
+  const tasks = (query.data?.days ?? []).flatMap((day) => day.tasks);
+  const priced = tasks.reduce(
+    (sum, task) => sum + (task.cost_est_minor ?? 0),
     0,
   );
-  const anyPriced = (query.data?.days ?? []).some((day) =>
-    day.tasks.some((task) => task.cost_est_minor !== undefined),
-  );
+  const anyPriced = tasks.some((task) => task.cost_est_minor !== undefined);
+  // In FULL, unlike the token figures: a month's estimate is a handful of
+  // dollars as often as it is thousands, and the compact formatter carries no
+  // fraction below ten thousand — it would print forty cents as "US$0".
   return (
-    <StatCard
-      label={t("aiSettings.spend.label")}
-      value={t("aiSettings.spend.value", {
-        spent: formatNumber(budget.spent_tokens, locale),
-        budget: formatNumber(budget.monthly_tokens, locale),
-      })}
-      tone={bandTone(budget.band)}
-      meter={{ filled: budget.spent_tokens, total: budget.monthly_tokens }}
-      detail={
-        anyPriced
-          ? t("aiSettings.spend.estimated", {
-              amount: formatMoney(priced, budget.currency ?? "USD", locale),
-            })
-          : undefined
-      }
-    />
+    <p>
+      {anyPriced
+        ? t("aiSettings.spend.estimated", {
+            amount: formatMoney(priced, budget.currency ?? "USD", locale),
+          })
+        : t("aiSettings.spend.notPriced")}
+    </p>
   );
 }
 
@@ -125,9 +103,13 @@ export function ProvidersStat() {
   const t = useT();
   const { locale } = useLocale();
   const canSeeKeys = useCan("ai_routing", "read");
+  // The trace rides a DIFFERENT grant from the keys and answers in states
+  // rather than in an instant, so this card never has to guess which silence
+  // it is looking at. The grant is the hook's to ask; asking it a second time
+  // here would be a second answer to one question.
+  const lastCall = useLastCallAt();
   const keys = useProviderKeys(canSeeKeys);
   const routing = useRouting(canSeeKeys);
-  const lastCall = useLastCallAt();
   // A minute is the resolution the line reads at, so that is how often it is
   // worth re-rendering for.
   const now = useNow(60_000);
@@ -154,61 +136,103 @@ export function ProvidersStat() {
   const missing =
     bound === null
       ? null
-      : providers.filter((p) => bound.has(p.provider) && !p.configured).length;
+      : providers.filter(
+          (p) => bound.has(p.provider) && !p.configured && !p.optional,
+        ).length;
   return (
     <StatCard
       label={t("aiSettings.providers.label")}
       value={t("aiSettings.providers.value", {
         count: formatNumber(keyed, locale),
+        // Out of the vendors this installation knows about, which is what makes
+        // the figure a reading rather than a number a reader has to go and find
+        // the denominator for.
+        total: formatNumber(providers.length, locale),
       })}
       tone={missing ? "danger" : undefined}
-      detail={
-        <>
-          {missing ? (
-            <span className="ai-settings-missing">
-              {t("aiSettings.providers.missing", {
-                count: formatNumber(missing, locale),
-              })}
-            </span>
-          ) : null}
-          {lastCall !== null && (
-            <span>
-              {t("aiSettings.providers.lastCall", {
-                elapsed: formatElapsed(now - lastCall, t, locale),
-              })}
-            </span>
-          )}
-        </>
-      }
+      detail={providersDetail({ missing, lastCall, now, locale }, t)}
     />
   );
 }
 
-// The vendors the routing document names, chat lanes and the embedding lane
-// alike. The embedding lane is in here on purpose: retrieval binds separately
-// and can be the only thing pointing at an unkeyed vendor, which is exactly the
-// case a reader would otherwise find out about from a failed reindex.
+// What each silence from the call trace is worth saying, and which says
+// nothing. A table rather than a ladder: one arm of `LastCall` is one row, so a
+// state added to that union and not to this one is a hole a reader can see
+// rather than a branch that quietly falls through.
+const TRACE_SILENCE: Record<
+  Exclude<LastCall["state"], "at">,
+  MessageKey | null
+> = {
+  // Not this reader's to see, which is a fact about them and no evidence about
+  // the installation — the card simply does not speak for it.
+  withheld: null,
+  // Still arriving, and it resolves by waiting.
+  unread: null,
+  failed: "aiSettings.providers.traceFailed",
+  never: "aiSettings.providers.neverCalled",
+};
+
+// What qualifies the key count: the bindings that would fail closed, and when a
+// vendor was last reached.
 //
-// `null` for a body that is not the routing document. `tiers` and `embeddings`
-// are both REQUIRED of the response, so the type above says they are there —
-// but the type is a promise the WIRE does not keep: nothing validates a 200,
-// and reading `Object.values(undefined)` threw, which the error boundary turned
-// into the whole settings page saying "this view no longer works". A server too
-// old, a projection that lost a field or a proxy answering something else are
-// all real ways to get such a body, and none of them should cost a reader the
-// page. The caller already draws an unanswered read; this is one.
-function boundProviders(
-  routing: NonNullable<ReturnType<typeof useRouting>["data"]>["routing"],
-): Set<string> | null {
-  if (routing.tiers === undefined || routing.embeddings === undefined) {
-    return null;
+// ONE line where both are known — the two qualify the same reading, and two grey
+// lines read as two readings — so the lead fragment decides the second one's
+// case. Nothing to say at all is NO detail rather than an empty one: an empty
+// caption draws air under the figure and reads as a line that failed to render.
+function providersDetail(
+  {
+    missing,
+    lastCall,
+    now,
+    locale,
+  }: Readonly<{
+    missing: number | null;
+    lastCall: LastCall;
+    now: number;
+    locale: Locale;
+  }>,
+  t: ReturnType<typeof useT>,
+): ReactNode {
+  const broken = missing
+    ? t("aiSettings.providers.missing", {
+        count: formatNumber(missing, locale),
+      })
+    : null;
+  if (lastCall.state !== "at") {
+    // Its own line rather than a tail, because each of these is a sentence and
+    // not a timestamp. ONLY the answered "never" claims the installation has
+    // made no call; a trace still arriving or one this reader may not see is a
+    // fact about the READ, and both used to fall through to a detail line with
+    // nothing in it. A BROKEN read says so rather than going quiet — waiting
+    // will not fix it, and silence there reads as a runtime with nothing to
+    // report.
+    const silence = TRACE_SILENCE[lastCall.state];
+    const said = silence ? t(silence) : null;
+    if (!broken && !said) {
+      return undefined;
+    }
+    return (
+      <>
+        {/* ds:ignore a count label in the danger ink, not a message */}
+        {broken && <span className="ai-settings-missing">{broken}</span>}
+        {said && <span>{said}</span>}
+      </>
+    );
   }
-  const named = new Set<string>();
-  for (const binding of Object.values(routing.tiers)) {
-    named.add(binding.provider);
-  }
-  named.add(routing.embeddings.provider);
-  return named;
+  const called = t(
+    broken
+      ? "aiSettings.providers.lastCall"
+      : "aiSettings.providers.lastCallOnly",
+    { elapsed: formatElapsed(now - lastCall.epochMs, t, locale) },
+  );
+  return (
+    <span>
+      {/* ds:ignore a count label in the danger ink, not a message */}
+      {broken && <span className="ai-settings-missing">{broken}</span>}
+      {broken ? " · " : null}
+      {called}
+    </span>
+  );
 }
 
 // What a reading says before it has one.

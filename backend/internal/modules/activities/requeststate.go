@@ -18,7 +18,12 @@ package activities
 // outranks what the pass decided about it, and without that inner clause a
 // reopened reminder would sit on a request this predicate reports as settled —
 // the queue and the task list disagreeing about the same obligation.
-const requestUnsettledSQL = `a.kind IN ('email', 'message')
+const requestUnsettledSQL = requestOpenSQL + `
+ AND ` + notDismissedSQL
+
+// requestOpenSQL is requestUnsettledSQL without the not-sales judgement, which
+// owedSQL applies itself so the hidden-backlog reading can relax it alone.
+const requestOpenSQL = `a.kind IN ('email', 'message')
  AND a.direction = 'inbound'
  AND a.archived_at IS NULL AND a.restricted_at IS NULL
  AND NOT EXISTS (SELECT 1 FROM activity settled
@@ -30,8 +35,10 @@ const requestUnsettledSQL = `a.kind IN ('email', 'message')
      AND NOT EXISTS (SELECT 1 FROM activity reopened
        WHERE reopened.source_system = '` + EmailRequestTaskSource + `'
          AND reopened.source_activity_id = a.id
-         AND reopened.is_done = false AND reopened.archived_at IS NULL))
- AND NOT EXISTS (SELECT 1 FROM activity_sales_state dismissed
+         AND reopened.is_done = false AND reopened.archived_at IS NULL))`
+
+// notDismissedSQL is false once anybody judged the thread not sales.
+const notDismissedSQL = `NOT EXISTS (SELECT 1 FROM activity_sales_state dismissed
    WHERE dismissed.thread_key = a.thread_key AND dismissed.kind = a.kind
      AND dismissed.channel_provider = coalesce(a.channel_provider, ''))`
 
@@ -46,15 +53,25 @@ const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
  AND reminder.source_activity_id = a.id AND NOT reminder.is_done
  AND reminder.archived_at IS NULL)`
 
-const outstandingRequestSQL = requestUnsettledSQL + ` AND (a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL + `)`
+// confirmedRequestSQL is a request the classifier or a human confirmed.
+const confirmedRequestSQL = `a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL
+
+const outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `)`
 
 // A scheduling/commitment label is enough to keep an unjudged candidate for
 // review, never enough to assign it. This also lets the classifier reconcile
 // older imported requests instead of aging them out before it reads them.
-const requestCandidateSQL = requestUnsettledSQL + ` AND (a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL + `
- OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting')))`
+const requestIntentSQL = confirmedRequestSQL + `
+ OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting'))`
 
+const requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)`
+
+// reviewableRequestSQL asks a threadless unjudged message for request
+// evidence first. The deal card offers these as work, and it applies no
+// sender rule, so a hand-logged note or a threadless noreply mail would
+// otherwise become a standing obligation on the deal.
 func reviewableRequestSQL(asOf string) string {
 	return requestUnsettledSQL + ` AND (a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL + `
- OR (a.owed_verdict IS NULL AND ` + unansweredConversationSQL(asOf) + `))`
+ OR (a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
+   OR (a.thread_key IS NOT NULL AND NOT ` + answeredSQL("a", asOf) + `))))`
 }

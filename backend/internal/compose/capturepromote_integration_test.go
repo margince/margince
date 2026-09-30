@@ -73,13 +73,22 @@ func captureInboundThroughRealSink(
 	t *testing.T, e *integration.Env, owner ids.UUID, sourceID, counterparty, threadKey string,
 ) {
 	t.Helper()
+	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, owner), t, e, "a@authz.test", sourceID, counterparty, threadKey)
+}
+
+// captureInboundThroughRealSinkAs is the same capture under a principal the
+// caller built, delivered to the seat address given.
+func captureInboundThroughRealSinkAs(
+	ctx context.Context, t *testing.T, e *integration.Env, seatAddress, sourceID, counterparty, threadKey string,
+) {
+	t.Helper()
 	// Domain is populated the way mailmap populates it — the address's own
 	// host. Omitting it looks harmless and is not: the ledger row would carry
 	// no domain, and every effect keyed on the domain (the company refusal
 	// among them) returns early on a record no connector ever produces.
 	domain := counterparty[strings.LastIndex(counterparty, "@")+1:]
 	sink := newCaptureSink(e.Pool, CaptureConfig{})
-	_, err := sink.Upsert(mailboxOwnerCtx(e, owner), connector.NormalizedRecord{
+	_, err := sink.Upsert(ctx, connector.NormalizedRecord{
 		EntityType: "activity",
 		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: sourceID},
 		Counterparty: connector.Counterparty{
@@ -93,7 +102,7 @@ func captureInboundThroughRealSink(
 		// One of the SEAT's own addresses on the message, which is the evidence
 		// the import row is written on: without it the sink stores the activity
 		// but records no per-seat contribution, and nothing opens a question.
-		Addresses: []string{counterparty, "a@authz.test"},
+		Addresses: []string{counterparty, seatAddress},
 		Source:    "gmail:" + sourceID, CapturedBy: "connector:gmail",
 	})
 	if err != nil {

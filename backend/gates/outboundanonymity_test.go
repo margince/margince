@@ -54,11 +54,13 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	// The model providers. Each call carries the customer's own API key, which
 	// is the account the provider bills, rate-limits and revokes; an agent
 	// beside it names software the provider has no lever over.
-	"internal/modules/ai/anthropic.go:func sendOnce": "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/gemini.go:func post":        "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/ollama.go:func post":        "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
-	"internal/modules/ai/openai.go:func postRaw":     "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/openaicompat.go:func post":  "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/anthropic.go:func send":          "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/gemini.go:func post":             "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/ollama.go:func post":             "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
+	"internal/modules/ai/openai.go:func postRaw":          "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/openaicompat.go:func post":       "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/decisionwire.go:func Decide":     "carries the customer's own provider key to a decision endpoint, or reaches a decision runner the operator runs on a host they configured — either way the other end already knows what is calling it",
+	"internal/modules/ai/decisionprobe.go:func wireProbe": "the key test's empty decision request: the same caller as Decide, carrying the customer's own key to the endpoint they bound, or reaching a runner they configured",
 	// One builder for all five vendors' model-list endpoint, on the same ground
 	// as their completion calls above: the request that asks a vendor what it
 	// serves carries the same credential as the request that then calls it.
@@ -560,7 +562,7 @@ func TestTheAnonymityCensusSeesEachShapeARequestIsBuiltIn(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			parsed, err := parser.ParseFile(token.NewFileSet(), "probe.go", tc.source, 0)
+			parsed, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", tc.source, 0)
 			if err != nil {
 				t.Fatalf("parsing the probe: %v", err)
 			}

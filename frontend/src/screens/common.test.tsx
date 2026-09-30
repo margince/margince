@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -9,8 +10,14 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { App } from "../App";
+import { ConnectivityError, connectivityNow } from "../app/connectivity";
+import { meFixture } from "../app/mefixture";
+import { createQueryClient } from "../app/queryclient";
+import { STORAGE_KEYS } from "../app/storage";
 import { LocaleProvider, translate } from "../i18n";
+import { memoryStorage } from "../testing/appharness";
 import {
   isConsentNotGranted,
   logUnexpectedError,
@@ -22,6 +29,7 @@ import {
   problemMessageOf,
   provenanceOf,
   QueryStates,
+  resetToSignedOut,
   throwProblem,
 } from "./common";
 import { CreateAction } from "./create";
@@ -442,7 +450,7 @@ describe("provenanceOf", () => {
   });
 
   it("reports an unrecorded source as unknown rather than as the reader's own typing", () => {
-    // The old fallback made every unattributed row read as "typed by you" —
+    // The old fallback made every unattributed row read as "entered by you" —
     // the one attribution nobody can check.
     expect(provenanceOf(undefined)).toEqual({ kind: "unknown" });
     expect(provenanceOf("")).toEqual({ kind: "unknown" });
@@ -518,6 +526,60 @@ describe("problemMessageOf", () => {
         t("connectors.loadFailed"),
       ),
     ).toBe("budget exhausted");
+  });
+});
+
+describe("problemMessageOf, for a request that never reached Margince", () => {
+  const refused = (
+    outage: "offline" | "unreachable",
+    method: string,
+    unsent = false,
+  ) =>
+    new ConnectivityError(
+      outage,
+      new Request("https://test.local/v1/notes", { method }),
+      new TypeError("Failed to fetch"),
+      unsent,
+    );
+
+  it("says a write the device never sent was not saved", () => {
+    expect(problemMessageOf(refused("offline", "POST", true), t)).toBe(
+      t("connectivity.unsaved.offline"),
+    );
+  });
+
+  // A connection cut after the request left may still have landed it, and a
+  // blind retry would then write it twice.
+  it("says a write cut off in flight may have been saved, and to check first", () => {
+    expect(problemMessageOf(refused("offline", "POST"), t)).toBe(
+      t("connectivity.uncertain.offline"),
+    );
+    expect(problemMessageOf(refused("unreachable", "PATCH"), t)).toBe(
+      t("connectivity.uncertain.unreachable"),
+    );
+  });
+
+  it("names the outage over a surface's own copy, which cannot know it", () => {
+    expect(
+      problemMessageOf(
+        refused("unreachable", "DELETE"),
+        t,
+        t("connectors.loadFailed"),
+      ),
+    ).toBe(t("connectivity.uncertain.unreachable"));
+  });
+
+  it("leaves a read on the ordinary line: it saved nothing and runs again", () => {
+    expect(problemMessageOf(refused("offline", "GET", true), t)).toBe(
+      t("common.errorNoCause"),
+    );
+    expect(
+      problemMessageOf(
+        refused("offline", "GET"),
+        t,
+        t("connectors.loadFailed"),
+      ),
+    ).toBe(t("connectors.loadFailed"));
   });
 });
 
@@ -646,5 +708,148 @@ describe("what a tool is called on screen", () => {
     );
 
     expect(provenance).toEqual({ kind: "agent", agent: undefined });
+  });
+});
+
+describe("signing out", () => {
+  afterEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it("forgets what the member left in storage and keeps what no one else inherits", async () => {
+    const declined = `${STORAGE_KEYS.platformDeclined.prefix}account-1`;
+    localStorage.setItem(STORAGE_KEYS.importRun.name, "run-1");
+    sessionStorage.setItem(STORAGE_KEYS.oauthAttempt.name, "gmail");
+    localStorage.setItem(STORAGE_KEYS.theme.name, "dark");
+    localStorage.setItem(declined, "1");
+
+    await resetToSignedOut(new QueryClient());
+
+    expect(localStorage.getItem(STORAGE_KEYS.importRun.name)).toBeNull();
+    expect(sessionStorage.getItem(STORAGE_KEYS.oauthAttempt.name)).toBeNull();
+    expect(localStorage.getItem(STORAGE_KEYS.theme.name)).toBe("dark");
+    expect(localStorage.getItem(declined)).toBe("1");
+  });
+});
+
+// A reader who opens the app while the api restarts gets the connection screen,
+// and must get in without pressing anything once Margince answers again.
+describe("the connection screen after Margince could not be reached", () => {
+  const CONNECTION_TITLE = "Margince could not be reached";
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+  let apiUp = false;
+  let sessionAnswer = () => json(meFixture({}));
+  let sessionReads = 0;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    apiUp = false;
+    sessionAnswer = () => json(meFixture({}));
+    sessionReads = 0;
+    vi.stubGlobal("localStorage", memoryStorage());
+    globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.endsWith("/v1/me")) sessionReads += 1;
+        if (!apiUp) throw new TypeError("Failed to fetch");
+        if (url === "/healthz") return new Response("ok");
+        if (url.endsWith("/v1/me")) return sessionAnswer();
+        return json({ code: "unavailable" }, 503);
+      }),
+    );
+  });
+
+  afterEach(() => {
+    // Unmounted first: a shell still reading would reach the real network.
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  async function openWhileUnreachable() {
+    rtlRender(
+      <QueryClientProvider client={createQueryClient()}>
+        <LocaleProvider initial="en">
+          <App />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(CONNECTION_TITLE)).toBeTruthy();
+    // One check, sent while the screen watches, is what gives it an outage to
+    // hold; the reads it then pauses cannot send another.
+    await waitFor(() => expect(connectivityNow()).toBe("unreachable"));
+    expect(sessionReads).toBe(2);
+  }
+
+  it("lets the reader in by itself once Margince answers", async () => {
+    await openWhileUnreachable();
+
+    apiUp = true;
+    await act(() => vi.advanceTimersByTimeAsync(2_000));
+
+    await waitFor(() =>
+      expect(screen.queryByText(CONNECTION_TITLE)).toBeNull(),
+    );
+    expect(sessionReads).toBe(3);
+  });
+
+  it("lets the reader in at once when they press Retry", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await openWhileUnreachable();
+
+    apiUp = true;
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText(CONNECTION_TITLE)).toBeNull(),
+    );
+  });
+
+  // Answered, but with no session in it: the boundary draws this same screen,
+  // so the check must not send the reader round again.
+  it("checks once and stays when Margince answers with no session", async () => {
+    apiUp = true;
+    sessionAnswer = () => json({});
+    rtlRender(
+      <QueryClientProvider client={createQueryClient()}>
+        <LocaleProvider initial="en">
+          <App />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(CONNECTION_TITLE)).toBeTruthy();
+
+    await act(() => vi.advanceTimersByTimeAsync(20_000));
+    expect(sessionReads).toBe(2);
+    expect(screen.getByText(CONNECTION_TITLE)).toBeTruthy();
+  });
+
+  it("gives way to sign-in when its own check is answered 401", async () => {
+    apiUp = true;
+    let answers = 0;
+    sessionAnswer = () => {
+      answers += 1;
+      if (answers === 1) throw new TypeError("Failed to fetch");
+      return json({ status: 401, code: "unauthorized" }, 401);
+    };
+    rtlRender(
+      <QueryClientProvider client={createQueryClient()}>
+        <LocaleProvider initial="en">
+          <App />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(CONNECTION_TITLE)).toBeTruthy();
+
+    expect(
+      await screen.findByRole("heading", { name: "Sign in to Margince" }),
+    ).toBeTruthy();
   });
 });

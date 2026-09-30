@@ -7,12 +7,12 @@ import { type ResolveAnswer, ResolveSheet } from "./resolvesheet";
 afterEach(cleanup);
 
 const labels = {
-  title: "Answer this check",
-  outcomeLegend: "What kind of answer is this?",
+  title: "Answer check",
+  outcomeLegend: "Answer type",
   outcomes: [
-    { value: "fixed_record", label: "I corrected the record" },
-    { value: "added_evidence", label: "I added the evidence" },
-    { value: "value_correct", label: "The value is correct" },
+    { value: "fixed_record", label: "Record corrected" },
+    { value: "added_evidence", label: "Evidence added" },
+    { value: "value_correct", label: "Value is correct" },
     { value: "not_relevant", label: "Not relevant to this deal" },
     { value: "remind_later", label: "Not now" },
     { value: "reassign", label: "Somebody else's" },
@@ -20,8 +20,8 @@ const labels = {
   reason: "Why",
   reasonHelp:
     "The next contact to see the number is owed the reason it is not flagged.",
-  remindAt: "Bring it back on",
-  expiresAt: "Stops holding on",
+  remindAt: "Remind on",
+  expiresAt: "Expires on",
   expiresHelp: "At most 90 days.",
   cancel: "Cancel",
   submit: "Save",
@@ -49,10 +49,10 @@ describe("ResolveSheet", () => {
 
     // An answer that hides nothing needs no reason — demanding one would make
     // the common answers tedious enough that contacts stop giving them.
-    await user.click(screen.getByLabelText("I corrected the record"));
+    await user.click(screen.getByLabelText("Record corrected"));
     expect(screen.queryByLabelText("Why")).toBeNull();
 
-    await user.click(screen.getByLabelText("The value is correct"));
+    await user.click(screen.getByLabelText("Value is correct"));
     expect(screen.getByLabelText("Why")).toBeTruthy();
 
     await user.click(screen.getByLabelText("Not relevant to this deal"));
@@ -66,10 +66,10 @@ describe("ResolveSheet", () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByLabelText("Not now"));
-    expect(screen.getByLabelText("Bring it back on")).toBeTruthy();
+    expect(screen.getByLabelText("Remind on")).toBeTruthy();
     // A deferral is not a suppression: no reason, no expiry.
     expect(screen.queryByLabelText("Why")).toBeNull();
-    expect(screen.queryByLabelText("Stops holding on")).toBeNull();
+    expect(screen.queryByLabelText("Expires on")).toBeNull();
   });
 
   // Nothing chosen is not an answer.
@@ -86,7 +86,7 @@ describe("ResolveSheet", () => {
     const user = userEvent.setup();
     const save = screen.getByRole("button", { name: "Save" });
 
-    await user.click(screen.getByLabelText("The value is correct"));
+    await user.click(screen.getByLabelText("Value is correct"));
     expect(save).toHaveProperty("disabled", true);
 
     await user.type(
@@ -104,7 +104,7 @@ describe("ResolveSheet", () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByLabelText("Not now"));
-    await user.type(screen.getByLabelText("Bring it back on"), "2026-06-30");
+    await user.type(screen.getByLabelText("Remind on"), "2026-06-30");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(submitted).toHaveLength(1);
@@ -121,7 +121,7 @@ describe("ResolveSheet", () => {
     open((answer: ResolveAnswer) => submitted.push(answer));
     const user = userEvent.setup();
 
-    await user.click(screen.getByLabelText("The value is correct"));
+    await user.click(screen.getByLabelText("Value is correct"));
     await user.keyboard("{Tab}");
     await user.keyboard("Checked against the signed order");
     const save = screen.getByRole("button", { name: "Save" });

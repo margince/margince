@@ -14,7 +14,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftreply"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
-	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -75,9 +74,9 @@ const introSystem = `You write one short message asking a COLLEAGUE at your own 
 This is a favour asked of a teammate, not a message to a customer. Write the way somebody writes to a colleague they see every week: brief, direct, no pitch and no pleasantries stacked on the front.
 
 Rules you must not break:
-- Address the colleague by name: open with their first name, then the ask.
-- Say who you want to meet and why, in one sentence each, and name the contact you want to meet in full.
-- Do not invent anything about the relationship. You are told how warm it is and when they last spoke; say no more than that.
+- Open with a greeting line naming the colleague by first name, then a blank line, then the ask.
+- In one sentence, name the contact you want to meet in full, with their title and company when given, so the colleague knows who you mean. Give a reason only when "deal" names one, in one sentence; with no deal, the ask is complete without a reason.
+- Say that the colleague and the contact have been in touch, with "relationship" and "last_spoke" as given, and nothing warmer: the colleague can check any claim about their own relationship from memory.
 - Do not write the introduction itself, and do not write to the contact. The message is TO the colleague.
 - Write a short subject line in the "subject" field, naming the contact you want to meet.
 - No subject line inside the body.`
@@ -89,6 +88,8 @@ Rules you must not break:
 // and a deal's name were both entered by a contact, and on a shared account that
 // contact may not be us. So they go inside the fence like everything else that
 // came from a human.
+//
+//promptvoice:exempt the ask goes out under the rep's own name to a colleague; Margince's register ("no greetings", "say I for what you did") would contradict the greeting this message opens with.
 func introRequest(facts introFacts) model.Request {
 	fence := promptfence.New()
 	payload, err := json.Marshal(map[string]string{
@@ -107,11 +108,7 @@ func introRequest(facts introFacts) model.Request {
 		payload = []byte("{}")
 	}
 	return model.Request{
-		// The voice and the language rules, because this is PROSE a contact
-		// sends under their own name — the two things a reader would notice
-		// first if they were missing, and the two the shared rules already
-		// spell for every other drafting surface.
-		System: introSystem + "\n" + promptvoice.Rule + "\n" +
+		System: introSystem + "\n" +
 			promptlang.Rule(string(introLang(facts.lang))) + "\n\n" +
 			fence.Rule("the facts of the introduction"),
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(string(payload))}},

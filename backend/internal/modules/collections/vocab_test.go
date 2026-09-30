@@ -148,7 +148,7 @@ func TestTheTeamLeafJoinsMembershipOnTheOwnerColumn(t *testing.T) {
 // Gated rather than explained, because a comment claiming it cannot notice the
 // day someone adds validation to one leaf and leaves the rest.
 func TestAPicklistLeafComparesAnUnrecognisedValueRatherThanRefusingIt(t *testing.T) {
-	engine, ok, err := (&Store{}).SegmentEngine(context.Background(), "company")
+	engine, ok, err := (&Store{}).SegmentEngine(readerCtx(), "company")
 	if err != nil || !ok {
 		t.Fatalf("segmentEngine: ok=%v err=%v", ok, err)
 	}

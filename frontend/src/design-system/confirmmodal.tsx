@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useId } from "react";
 import { useT } from "../i18n";
 import { Button, Modal } from "./atoms";
+import { ErrorLine } from "./errorline";
 import { Heading } from "./heading";
 import { AutonomyDot } from "./trust";
 
@@ -102,12 +103,7 @@ export function ConfirmModal({
       returnFocusTo={returnFocusTo}
       initialFocusTo={initialFocusTo}
     >
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {tier && (
           <>
             <AutonomyDot tier={tier} />{" "}
@@ -116,13 +112,7 @@ export function ConfirmModal({
         {title}
       </Heading>
       {children}
-      {error && (
-        // role="alert" (assertive live region) so a screen reader announces the
-        // mutation failure when it appears — e.g. a rejected reset confirmation.
-        <p role="alert" style={{ color: "var(--dangerText)" }}>
-          {error}
-        </p>
-      )}
+      {error && <ErrorLine>{error}</ErrorLine>}
       <div className="actions">
         {actionsLead && <span className="actions-lead">{actionsLead}</span>}
         {/* Cancel is `disabled`, not `pending`, and the difference is real: it
@@ -130,16 +120,29 @@ export function ConfirmModal({
             unavailable rather than busy. Backing out of an act that is already
             on its way to the server would leave the reader believing they
             stopped something they did not. */}
-        <Button onClick={onClose} disabled={pending}>
-          {t("create.cancel")}
-        </Button>
-        {/* The compound this dialog used to carry — `pending || confirmDisabled`
+        <span className="actions-pair">
+          <Button onClick={onClose} disabled={pending}>
+            {t("create.cancel")}
+          </Button>
+          {/* The compound this dialog used to carry — `pending || confirmDisabled`
             — folded two unrelated facts into one attribute: a write in flight
             and a precondition the caller has not met. Split, each is drawn as
             what it is, and the twenty-eight surfaces built on this dialog get
             it without changing a line. */}
-        {confirmMenu ? (
-          <span className="actions-split">
+          {confirmMenu ? (
+            <span className="actions-split">
+              <Button
+                variant={confirmVariant}
+                onClick={onConfirm}
+                pending={pending}
+                disabled={confirmDisabled}
+                reason={confirmReason}
+              >
+                {confirmLabel}
+              </Button>
+              {confirmMenu}
+            </span>
+          ) : (
             <Button
               variant={confirmVariant}
               onClick={onConfirm}
@@ -149,19 +152,8 @@ export function ConfirmModal({
             >
               {confirmLabel}
             </Button>
-            {confirmMenu}
-          </span>
-        ) : (
-          <Button
-            variant={confirmVariant}
-            onClick={onConfirm}
-            pending={pending}
-            disabled={confirmDisabled}
-            reason={confirmReason}
-          >
-            {confirmLabel}
-          </Button>
-        )}
+          )}
+        </span>
       </div>
     </Modal>
   );

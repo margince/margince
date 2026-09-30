@@ -1,0 +1,53 @@
+# GitHub keeps labels on a closed issue, so without this a finished claim reads
+# as work in progress for ever. The assignee stays as the record of who did it.
+name: issue-closed
+
+on:
+  issues:
+    types: [closed]
+  schedule:
+    - cron: "37 4 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  release-claim:
+    name: release the in-progress claim
+    if: "github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'status: in progress')"
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Remove status in progress
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          LABEL: "status: in progress"
+        # A label already gone from the issue is a no-op for gh. One missing from
+        # the repository fails, which is how a rename in labels.yml surfaces here.
+        run: gh issue edit "$ISSUE" --repo "$REPO" --remove-label "$LABEL"
+
+  # Catches closes made with GITHUB_TOKEN, which start no workflow, and failed runs.
+  sweep:
+    name: release claims left on closed issues
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Remove status in progress from every closed issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          LABEL: "status: in progress"
+        run: |
+          set -euo pipefail
+          issues="$(gh issue list --repo "$REPO" --state closed --label "$LABEL" \
+            --limit 1000 --json number -q '.[].number')"
+          for issue in $issues; do
+            gh issue edit "$issue" --repo "$REPO" --remove-label "$LABEL"
+          done

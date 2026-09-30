@@ -63,6 +63,28 @@ type Capture struct {
 	// TestOnlyTheResolverReadsTheTracePayloadsField name its subject exactly
 	// instead of guessing a receiver's type from its spelling.
 	TracePayloadsSetting *bool `yaml:"trace_payloads"`
+	// MaxBackfillMonths caps how far back a mailbox import may reach, for the
+	// whole installation. Absent means no cap, which is what every deployment
+	// has today — the offered ceiling was widened deliberately, and a default
+	// here would take that back from operators who chose it.
+	//
+	// Settable only in the deployment file, like the posture above: how much of
+	// a colleague's history this installation takes is not a per-seat choice,
+	// and today it is made again by whoever connects next.
+	MaxBackfillMonths *int `yaml:"max_backfill_months"`
+}
+
+// BackfillCeiling answers the three-state field: an operator who said nothing
+// gets no cap.
+//
+// Every reader goes through this rather than dereferencing the pointer, so
+// there is one place the default lives and a nil can never panic at a call site
+// that forgot it.
+func (c Capture) BackfillCeiling() int {
+	if c.MaxBackfillMonths == nil {
+		return 0
+	}
+	return *c.MaxBackfillMonths
 }
 
 // TracesPayloads answers the question the field spells as three states: an

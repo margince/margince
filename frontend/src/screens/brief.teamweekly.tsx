@@ -16,16 +16,19 @@ import { calendarDay, middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,
-  formatMoney,
+  formatMoneyCompact,
   formatNumber,
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { openAnalyticsSection } from "./analytics.address";
-import { BriefTeamSelect } from "./brief.teamselect";
+import { weeklyNumericStatus } from "./brief.numeric";
+import { BriefTeamSelect, weekTeams } from "./brief.teamselect";
 import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
 import { OutlookPanel } from "./brief.waterfall";
 import {
   type TeamWeeklyReview,
+  type TeamWeekReach,
   useTeamWeeklyReview,
 } from "./teamweekly.queries";
 
@@ -74,8 +77,13 @@ export function TeamWeeklySection({
       </>
     );
   const measured = review.counts.reps_counted > 0;
+  const numeric = weeklyNumericStatus(review.numeric_summary);
   return (
     <section id="brief-team-weekly">
+      <p className="t-sub">{t(numeric.basis)}</p>
+      {numeric.partial && (
+        <p className="t-sub">{t("brief.weekly.numericPartial")}</p>
+      )}
       <WeekPicker week={week ?? review.local_week_start} />
       <p>
         {t("teamweekly.weekOf", {
@@ -145,7 +153,11 @@ function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
   const counts = review.counts;
-  if (counts.reps_counted === 0 || (review.reps_unread ?? 0) > 0)
+  if (
+    counts.reps_counted === 0 ||
+    (review.reps_unread ?? 0) > 0 ||
+    weeklyNumericStatus(review.numeric_summary).partial
+  )
     return (
       <Heading size="medium" className="teamweekly-headline">
         {t(
@@ -239,44 +251,87 @@ function wonValue(
   if (pipeline === undefined) {
     return undefined;
   }
-  return formatMoney(pipeline.won_minor, pipeline.currency, locale);
+  // Compact, like every other figure on this plate: it is an AGGREGATE of deal
+  // value riding a `narrow="row"` slot, where a full amount clips — and a
+  // clipped number is a different number rather than a shorter rendering of the
+  // right one. A balance somebody is owed would keep its digits; this is not
+  // one.
+  return formatMoneyCompact(pipeline.won_minor, pipeline.currency, locale);
 }
 
 function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
   const counts = review.counts;
+  const { bookingsUnavailable, meetingsUnavailable } = weeklyNumericStatus(
+    review.numeric_summary,
+  );
   const n = (value: number) => formatNumber(value, locale);
-  const ofTotal = (part: number, whole: number) =>
-    t("teamweekly.ofTotal", { part: n(part), whole: n(whole) });
   const won = wonValue(review, locale);
+  // A SHARE NEEDS A DENOMINATOR. "0 of 0" is a rate nobody could have scored,
+  // and the basis line beside it explains a measurement that was never taken —
+  // so a week that routed no lead, held no meeting or carried no commitment
+  // says the population was empty and says nothing else. One arm for the three,
+  // because the strip is read across and three spellings of one absence would
+  // read as three different weeks.
+  const share = (
+    part: number,
+    whole: number,
+    none: MessageKey,
+    basis: string,
+  ) =>
+    whole === 0
+      ? { value: t(none), detail: undefined }
+      : {
+          value: t("teamweekly.ofTotal", { part: n(part), whole: n(whole) }),
+          detail: basis,
+        };
 
   return (
     <StatStrip testId="teamweekly-strip">
       <StatCard
         narrow="row"
         label={t("teamweekly.card.firstResponse")}
-        value={ofTotal(counts.leads_answered_in_target, counts.leads_routed)}
-        detail={t("teamweekly.card.firstResponseBasis", {
-          breached: n(counts.leads_breached),
-        })}
+        {...share(
+          counts.leads_answered_in_target,
+          counts.leads_routed,
+          "teamweekly.card.noLeads",
+          t("teamweekly.card.firstResponseBasis", {
+            breached: n(counts.leads_breached),
+          }),
+        )}
       />
       <StatCard
         narrow="row"
         label={t("teamweekly.card.meetings")}
-        value={ofTotal(counts.meetings_with_next_step, counts.meetings_held)}
-        detail={t("teamweekly.card.meetingsBasis")}
+        {...(meetingsUnavailable
+          ? {
+              value: t("reporting.unavailable"),
+              detail: review.numeric_summary?.meetings_coverage.reason,
+            }
+          : share(
+              counts.meetings_with_next_step,
+              counts.meetings_held,
+              "teamweekly.card.noMeetings",
+              t("teamweekly.card.meetingsBasis"),
+            ))}
       />
       <StatCard
         narrow="row"
         label={t("teamweekly.card.commitments")}
-        value={ofTotal(counts.commitments_kept, counts.commitments_due)}
-        detail={t("teamweekly.card.commitmentsBasis")}
+        {...share(
+          counts.commitments_kept,
+          counts.commitments_due,
+          "teamweekly.card.noCommitments",
+          t("teamweekly.card.commitmentsBasis"),
+        )}
       />
       <StatCard
         narrow="row"
         label={t("teamweekly.card.won")}
-        value={n(counts.deals_won)}
+        value={
+          bookingsUnavailable ? t("reporting.unavailable") : n(counts.deals_won)
+        }
         // What the wins were WORTH, beside how many were lost. The count alone
         // says a week of five small renewals and a week of one company-making
         // deal are the same week — and the money was computed, FX-converted and
@@ -286,12 +341,14 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
         // strip can be read across as one comparison. The lost count stays,
         // because it is a different fact rather than a delta the money replaces.
         detail={
-          won === undefined
-            ? t("teamweekly.card.wonBasis", { lost: n(counts.deals_lost) })
-            : t("teamweekly.card.wonBasisValue", {
-                value: won,
-                lost: n(counts.deals_lost),
-              })
+          bookingsUnavailable
+            ? review.numeric_summary?.bookings_coverage.reason
+            : won === undefined
+              ? t("teamweekly.card.wonBasis", { lost: n(counts.deals_lost) })
+              : t("teamweekly.card.wonBasisValue", {
+                  value: won,
+                  lost: n(counts.deals_lost),
+                })
         }
       />
       <StatCard
@@ -326,6 +383,7 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
   const counts = review.counts;
+  const numeric = weeklyNumericStatus(review.numeric_summary);
   const rows = [
     { key: "teamweekly.movement.won" as const, value: counts.deals_won },
     { key: "teamweekly.movement.lost" as const, value: counts.deals_lost },
@@ -340,7 +398,14 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
       value: counts.meetings_held,
     },
     { key: "teamweekly.movement.leads" as const, value: counts.leads_routed },
-  ];
+  ].filter(
+    (row) =>
+      !(row.key === "teamweekly.movement.won" && numeric.bookingsUnavailable) &&
+      !(
+        row.key === "teamweekly.movement.meetings" &&
+        numeric.meetingsUnavailable
+      ),
+  );
   // One baseline for every bar. A per-row max would draw four full bars and say
   // nothing about which number is the big one.
   const max = Math.max(...rows.map((row) => row.value));
@@ -371,11 +436,11 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
  * control and the refusal cannot disagree — a picker offered to a rep who will
  * be refused every team is a control that exists to fail.
  */
-export function TeamWeeklyPanel({ offered }: Readonly<{ offered: boolean }>) {
+export function TeamWeeklyPanel({ reach }: Readonly<{ reach: TeamWeekReach }>) {
   const [params] = useUrlParams();
-  if (!offered) return null;
+  if (reach === "none") return null;
   return (
-    <BriefTeamSelect>
+    <BriefTeamSelect lists={weekTeams(reach)}>
       {(team) => <TeamWeeklySection teamId={team} week={params.get("week")} />}
     </BriefTeamSelect>
   );

@@ -187,7 +187,7 @@ describe("what a sent message files under", () => {
     await screen.findByLabelText("Related to");
     await pickBy("Related to", "Acme Renewal");
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -221,7 +221,7 @@ describe("what a sent message files under", () => {
     // The choice is visible, and so is what it does to the draft.
     expect(screen.getByText("Scoped to ERP-27")).toBeTruthy();
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -314,7 +314,7 @@ describe("what a sent message files under", () => {
 
     expect(await screen.findByText("Scoped to ERP-27")).toBeTruthy();
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -341,7 +341,7 @@ describe("what a sent message files under", () => {
 
     await screen.findByLabelText("Related to");
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -383,7 +383,7 @@ describe("what a sent message files under", () => {
     await screen.findByLabelText("Related to");
     await pickBy("Related to", "Acme Renewal");
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -416,7 +416,7 @@ describe("what a sent message files under", () => {
 
     await screen.findByLabelText("Subject");
     await fillBody();
-    await pickBy("Why are you writing?", "About a deal we are working on");
+    await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() =>
@@ -469,7 +469,7 @@ describe("what a channel reply says it will be filed under", () => {
 
     expect(
       await screen.findByText(
-        "Will be filed under ERP-27 · ERP rollout, with the conversation it answers.",
+        "Sending files it under ERP-27 · ERP rollout, with the thread it answers.",
       ),
     ).toBeTruthy();
     // Stated, not asked. A picker here would take an answer the send has no
@@ -488,7 +488,11 @@ describe("what a channel reply says it will be filed under", () => {
     // The composer is up and usable — the absent line is the assertion, not an
     // unrendered surface standing in for one.
     expect(await screen.findByRole("textbox", { name: "Body" })).toBeTruthy();
-    expect(screen.queryByText(/Will be filed under/)).toBeNull();
+    expect(
+      screen.queryByText(
+        /Sending files it under .* with the thread it answers/,
+      ),
+    ).toBeNull();
   });
 
   it("leaves a mail reply asking, because a subject tag can carry the answer", async () => {
@@ -522,6 +526,10 @@ describe("what a channel reply says it will be filed under", () => {
     );
 
     expect(await screen.findByLabelText("Project")).toBeTruthy();
-    expect(screen.queryByText(/Will be filed under/)).toBeNull();
+    expect(
+      screen.queryByText(
+        /Sending files it under .* with the thread it answers/,
+      ),
+    ).toBeNull();
   });
 });

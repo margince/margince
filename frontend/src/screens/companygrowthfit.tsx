@@ -4,13 +4,14 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState, PendingBody } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { type BriefSentence, SentenceList, WrittenBy } from "./record360";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -187,7 +188,7 @@ export function GrowthFitPanel({
       )}
       {reassess.error && (
         <PanelBody>
-          <p className="co-part-error">{problemMessageOf(reassess.error, t)}</p>
+          <ErrorLine error={reassess.error} />
         </PanelBody>
       )}
     </Panel>

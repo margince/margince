@@ -165,7 +165,9 @@ describe("AuditLogCard", () => {
     expect(
       await screen.findByRole("button", { name: "Retry" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Couldn't load this view.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Could not load this view. Reload the page."),
+    ).toBeInTheDocument();
     // The filter row survives the failure — a failed page must not take the
     // controls that could ask a different question with it.
     expect(screen.getByLabelText("Actor")).toBeInTheDocument();

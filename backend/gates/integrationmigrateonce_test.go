@@ -29,8 +29,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -80,7 +78,6 @@ var inlineMigrators = gatekit.Waive(map[string]string{
 func TestIntegrationSuitesMigrateOncePerProcess(t *testing.T) {
 	t.Parallel()
 	var offenders, inMigrations []string
-	fset := token.NewFileSet()
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
@@ -95,7 +92,7 @@ func TestIntegrationSuitesMigrateOncePerProcess(t *testing.T) {
 			return nil
 		}
 		path = filepath.ToSlash(path)
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}

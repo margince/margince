@@ -173,3 +173,21 @@ func statutoryFloorArgs() (interval string, yearEndAnchor bool) {
 	floor := statutoryCorrespondenceFloor(time.Now())
 	return floor.Keep.String(), floor.Anchor == jurisdiction.AnchorCalendarYearEnd
 }
+
+// StatutoryFloorClass names what the correspondence floor keeps and for how
+// long, so a purge can tell the owner WHICH rule kept their mail rather than
+// only that something did.
+//
+// The class name and the period, and no citation: the packs carry neither a
+// section number nor a statute name, and inventing one here would put a legal
+// reference in front of a colleague that nothing in the product can hold to.
+// The handbook is where the citation belongs, and it carries it.
+//
+// An installation with no applicable pack has a zero class, which reads as an
+// empty name and a zero period — and that is the honest answer, because a
+// purge that cannot ask what the law requires shields everything rather than
+// guessing (StatutoryFloor.column).
+func StatutoryFloorClass() (name string, keep jurisdiction.Period, yearEndAnchor bool) {
+	floor := statutoryCorrespondenceFloor(time.Now())
+	return string(floor.Name), floor.Keep, floor.Anchor == jurisdiction.AnchorCalendarYearEnd
+}

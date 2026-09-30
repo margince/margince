@@ -56,15 +56,15 @@ type publicDealRoomLimiters struct {
 
 func newPublicDealRoomLimiters() publicDealRoomLimiters {
 	return publicDealRoomLimiters{
-		perIP:     ratelimit.New(60, time.Minute),
-		linkPerIP: ratelimit.New(3, time.Minute),
+		perIP:     ratelimit.New("public-deal-room/per-ip", ratelimit.FailClosed, 60, time.Minute),
+		linkPerIP: ratelimit.New("public-deal-room/link-per-ip", ratelimit.FailClosed, 3, time.Minute),
 		// Per ADDRESS, whatever the source: a reissue retires the buyer's
 		// standing credential, so one address may be reissued a few times an
 		// hour and no more, or a distributed caller could keep a buyer's link
 		// perpetually retired.
-		linkPerEmail:  ratelimit.New(3, time.Hour),
-		linkShared:    ratelimit.New(10, time.Minute),
-		perSessionMut: ratelimit.New(20, time.Minute),
+		linkPerEmail:  ratelimit.New("public-deal-room/link-per-address", ratelimit.FailClosed, 3, time.Hour),
+		linkShared:    ratelimit.New("public-deal-room/link-shared", ratelimit.FailClosed, 10, time.Minute),
+		perSessionMut: ratelimit.New("public-deal-room/per-session-write", ratelimit.FailOpen, 20, time.Minute),
 	}
 }
 

@@ -14,13 +14,14 @@ package gates
 import (
 	"fmt"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const compositionModulePath = "github.com/margince/margince/composition"
@@ -85,7 +86,7 @@ func goImports(t *testing.T, dir string) map[string][]string {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
+		file, err := gatekit.ParseFile(path, parser.ImportsOnly)
 		if err != nil {
 			return err
 		}

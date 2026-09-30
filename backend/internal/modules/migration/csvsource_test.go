@@ -209,6 +209,45 @@ func TestCSVSourceIndexesTheHeaderTheProfilePublished(t *testing.T) {
 	}
 }
 
+// Header answers the names a mapping is checked against, so it must be the
+// file's OWN spelling — the same string Rows indexes by. A header read that
+// trimmed or folded anything would accept a column the walk then cannot find.
+func TestCSVSourceHeaderAnswersTheSpellingRowsIndexBy(t *testing.T) {
+	const body = "Email ,First Name\na@x.test,Ada\n"
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectLead,
+		map[string]string{"Email ": "email"}, "Email ")
+
+	header, err := src.Header(context.Background())
+	if err != nil {
+		t.Fatalf("Header: %v", err)
+	}
+	if len(header) != 2 || header[0] != "Email " || header[1] != "First Name" {
+		t.Fatalf("header = %q, want the file's own spelling", header)
+	}
+
+	// Reading the header must leave the rows readable: the two share one
+	// framing, and a Header that consumed the reader would empty the run.
+	rows, err := src.Rows(context.Background(), ObjectLead, 0, 10)
+	if err != nil {
+		t.Fatalf("Rows after Header: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("rows = %d, want the one row the file holds", len(rows))
+	}
+}
+
+// Header refuses what Rows refuses. The mapping check runs before the run
+// exists, so a header this source would reject later has to be rejected here
+// too — otherwise the check passes on a file nothing can walk.
+func TestCSVSourceHeaderRefusesWhatRowsRefuse(t *testing.T) {
+	src := NewCSVSource(seedCSV(t, "Email,Email\na@x.test,b@x.test\n"), testCSVKey, ObjectLead,
+		map[string]string{"Email": "email"}, "Email")
+
+	if _, err := src.Header(context.Background()); !errors.Is(err, ErrHeaderInvalid) {
+		t.Fatalf("err = %v, want ErrHeaderInvalid", err)
+	}
+}
+
 // The source refuses the same unusable headers the profile does, rather than
 // indexing them and losing rows further in.
 func TestCSVSourceRefusesAnUnusableHeader(t *testing.T) {

@@ -14,7 +14,7 @@ import { meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
 import { WorkingHoursCard } from "./working-hours";
 
-// Settings → Account → when you are bookable. The reader's own setting, so no
+// Settings → Meetings → when you are bookable. The reader's own setting, so no
 // grant fixture appears below: there is no seat that could be refused it, and
 // an admin does not set a colleague's week here.
 //
@@ -79,9 +79,21 @@ const render = (ui: ReactNode, locale: Locale = "en") => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("WorkingHoursCard", () => {
+  it("shows the effective server timezone before the first save", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(false, { ...FALLBACK, timezone: "Asia/Bangkok" }).fetchMock,
+    );
+    render(<WorkingHoursCard />);
+    expect(
+      (await screen.findByRole("combobox", { name: "Timezone" })).textContent,
+    ).toContain("Bangkok");
+  });
+
   it("offers the fallback as a starting point rather than as somebody's decision", async () => {
     vi.stubGlobal("fetch", backendFor(false).fetchMock);
     render(<WorkingHoursCard />);
@@ -89,7 +101,7 @@ describe("WorkingHoursCard", () => {
     // The sentence is the whole difference between "nobody has chosen" and
     // "somebody chose this": a reader who cannot tell them apart does not know
     // whether the hours below are theirs.
-    expect(await screen.findByText(/have not chosen yet/i)).not.toBeNull();
+    expect(await screen.findByText(/Not set yet/i)).not.toBeNull();
   });
 
   // A body that LOST the reading. The field is contract-required, so this is a
@@ -108,7 +120,7 @@ describe("WorkingHoursCard", () => {
     );
     render(<WorkingHoursCard />);
 
-    expect(await screen.findByText(/could not be loaded/i)).not.toBeNull();
+    expect(await screen.findByText(/Some data did not load/i)).not.toBeNull();
     expect(screen.queryByRole("button", { name: /save/i })).toBeNull();
   });
 
@@ -117,17 +129,18 @@ describe("WorkingHoursCard", () => {
     render(<WorkingHoursCard />);
 
     await screen.findByRole("button", { name: /save/i });
-    expect(screen.queryByText(/have not chosen yet/i)).toBeNull();
+    expect(screen.queryByText(/Not set yet/i)).toBeNull();
   });
 
   it("writes the days ascending, whatever order they were ticked in", async () => {
+    const user = userEvent.setup();
     const backend = backendFor(false);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<WorkingHoursCard />);
 
     const saturday = await screen.findByLabelText("Saturday");
-    await userEvent.click(saturday);
-    await userEvent.click(
+    await user.click(saturday);
+    await user.click(
       screen.getByRole("button", { name: /save working hours/i }),
     );
 
@@ -139,6 +152,7 @@ describe("WorkingHoursCard", () => {
   });
 
   it("says what narrowing the hours will do, at the moment it is saved", async () => {
+    const user = userEvent.setup();
     const backend = backendFor(true);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<WorkingHoursCard />);
@@ -146,30 +160,52 @@ describe("WorkingHoursCard", () => {
     // Monday to Thursday instead of Friday: one day fewer, which is a narrower
     // week however long each day is.
     const friday = await screen.findByLabelText("Friday");
-    await userEvent.click(friday);
-    await userEvent.click(
+    await user.click(friday);
+    await user.click(
       screen.getByRole("button", { name: /save working hours/i }),
     );
 
-    expect(
-      await screen.findByText(/bookable for less of the week/i),
-    ).not.toBeNull();
+    expect(await screen.findByText(/Fewer bookable hours/i)).not.toBeNull();
   });
 
   it("says nothing of the kind when the week did not narrow", async () => {
+    const user = userEvent.setup();
     const backend = backendFor(true);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<WorkingHoursCard />);
 
     const saturday = await screen.findByLabelText("Saturday");
-    await userEvent.click(saturday);
-    await userEvent.click(
+    await user.click(saturday);
+    await user.click(
       screen.getByRole("button", { name: /save working hours/i }),
     );
 
     await waitFor(() => expect(backend.writes()).toHaveLength(1));
     // A warning that fires on every save is one a reader learns to skip, and
     // then it is not there on the save it was written for.
-    expect(screen.queryByText(/bookable for less of the week/i)).toBeNull();
+    expect(screen.queryByText(/Fewer bookable hours/i)).toBeNull();
+  });
+
+  it("chooses a city with spaces by keyboard and saves its timezone identifier", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-01-15T12:00:00Z"));
+    const user = userEvent.setup();
+    const backend = backendFor(true);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<WorkingHoursCard />);
+
+    const picker = await screen.findByRole("combobox", { name: "Timezone" });
+    expect(picker.textContent).toContain("Berlin (Europe)");
+    await user.click(picker);
+    await user.keyboard("New York{Enter}");
+    expect(picker.textContent).toContain("New York (America) · UTC-5");
+    await user.click(picker);
+    await user.keyboard("Bangkok{Enter}");
+    expect(picker.textContent).toContain("Bangkok (Asia) · UTC+7");
+    await user.click(
+      screen.getByRole("button", { name: /save working hours/i }),
+    );
+    await waitFor(() => expect(backend.writes()).toHaveLength(1));
+    expect(backend.writes()[0].timezone).toBe("Asia/Bangkok");
   });
 });

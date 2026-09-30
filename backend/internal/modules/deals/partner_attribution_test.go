@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -20,6 +21,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -264,7 +266,7 @@ func TestACreateBodyCarriesItsPartnerThroughToTheStore(t *testing.T) {
 		Name:               "Northgate rollout",
 		PipelineId:         openapi_types.UUID(ids.New[ids.PipelineKind]().UUID),
 		StageId:            openapi_types.UUID(ids.New[ids.StageKind]().UUID),
-		Source:             "ui",
+		Source:             "manual",
 		PartnerCompanyId:   &partner,
 		PartnerAttribution: &claim,
 	})
@@ -289,11 +291,24 @@ func TestACreateBodyCarriesItsPartnerThroughToTheStore(t *testing.T) {
 	}
 }
 
+// A withheld partner takes its attribution with it AND names it: "sourced"
+// beside a null partner discloses that some partner sourced the deal, and a
+// null nothing names reads as a deal no partner sourced at all.
 func TestAWithheldPartnerTakesItsAttributionWithIt(t *testing.T) {
 	d := dealNamingPartner(attributionSourced)
 
-	withheldFields{filterPartnerCompanyID}.applyTo(&d)
+	names := auth.MaskedFields(dealSeatMasking(filterPartnerCompanyID), maskObject, false)
 
+	if !slices.Contains(names, partnerAttributionField) {
+		t.Errorf("a mask on the partner withholds %v, want the attribution among them", names)
+	}
+	for _, field := range names {
+		withhold, known := dealWithholders[field]
+		if !known {
+			t.Fatalf("%s is withheld and this module cannot null it", field)
+		}
+		withhold(&d)
+	}
 	if d.PartnerAttribution != nil {
 		t.Errorf("attribution = %q survived a withheld partner — it discloses that SOME partner sourced the deal", *d.PartnerAttribution)
 	}
@@ -395,5 +410,55 @@ func TestEitherHalfsNameForgetsTheWholePair(t *testing.T) {
 func TestADealsCompanyCanBeForgotten(t *testing.T) {
 	if _, clearable := clearableDealColumns(crmcontracts.Deal{})[filterCompanyID]; !clearable {
 		t.Error("company_id cannot be cleared; the edit form offers unsetting the company and would earn a 422")
+	}
+}
+
+// Blanking the recurring figure is not a statement about the partner.
+//
+// dealClearPairs holds the ARR clear beside the partner pair, and the flag
+// splitDealClears returns was raised by ANY pair. It travels to the partner
+// writer, which clears both partner columns unconditionally — so a request that
+// only asked to unset the ARR destroyed the attribution a commission accrues
+// on, silently, on a deal whose partner the caller never mentioned.
+func TestClearingTheRecurringFigureLeavesThePartnerAlone(t *testing.T) {
+	p := storekit.NewPatch()
+	current := dealNamingPartner(attributionSourced)
+
+	rest, partner := splitDealClears(p, []string{"expected_arr_minor"}, current)
+
+	if partner {
+		t.Error("clearing the ARR was read as forgetting the partner")
+	}
+	if len(rest) != 0 {
+		t.Errorf("rest = %v, want none — the ARR clear is paired and handled here", rest)
+	}
+	for _, column := range []string{filterPartnerCompanyID, partnerAttributionField} {
+		if value, set := p.After()[column]; set {
+			t.Errorf("after[%s] = %v — an ARR clear wrote a partner column", column, value)
+		}
+	}
+	// It still does its own job: the figure goes, and the currency with it,
+	// because this deal carries no one-off amount to denominate.
+	if value, set := p.After()["expected_arr_minor"]; !set || value != nil {
+		t.Errorf("after[expected_arr_minor] = %v (set=%v), want nil", value, set)
+	}
+}
+
+// The two clears in one request stay independent: naming both forgets the
+// partner AND the figure, which is the only reading under which the flag means
+// what its name says.
+func TestClearingBothTheFigureAndThePartnerDoesEach(t *testing.T) {
+	p := storekit.NewPatch()
+	current := dealNamingPartner(attributionSourced)
+
+	_, partner := splitDealClears(p, []string{"expected_arr_minor", filterPartnerCompanyID}, current)
+
+	if !partner {
+		t.Fatal("naming the partner did not raise the flag")
+	}
+	for _, column := range []string{filterPartnerCompanyID, partnerAttributionField, "expected_arr_minor"} {
+		if value, set := p.After()[column]; !set || value != nil {
+			t.Errorf("after[%s] = %v (set=%v), want nil", column, value, set)
+		}
 	}
 }

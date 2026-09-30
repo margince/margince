@@ -83,12 +83,23 @@ type OAuth interface {
 }
 
 // sentLabelID is Gmail's system label for the mailbox owner's own sent mail,
-// and draftLabelID the one for a message still being composed. System label ids
-// are stable strings, not localized names.
+// and draftLabelID the one for a message still being composed. spamLabelID and
+// trashLabelID are the two the owner has already rejected. System label ids are
+// stable strings, not localized names.
 const (
 	sentLabelID  = "SENT"
 	draftLabelID = "DRAFT"
+	spamLabelID  = "SPAM"
+	trashLabelID = "TRASH"
 )
+
+// includeSpamTrash is Gmail's messages.list switch for the spam and trash
+// folders. Its API default is already false, and stating it is the point: a
+// default is the provider's decision and can change under us, where a named
+// parameter is ours and reads as one in the request. The fetch-time refusal in
+// hasRejectedLabel is the half that actually holds — this is the half that says
+// so at enumeration.
+const includeSpamTrash = "includeSpamTrash"
 
 // Message is one fetched Gmail message: the decoded RFC822 bytes plus the one
 // thing the bytes cannot honestly tell us — whether Gmail itself filed the
@@ -118,7 +129,10 @@ type API interface {
 	ListRecent(ctx context.Context, accessToken string, maxResults int) (ids []string, err error)
 	// History returns the message ids added since startHistoryID and the
 	// advanced historyId; ErrHistoryGone if the cursor is too old.
-	History(ctx context.Context, accessToken, startHistoryID string) (addedIDs []string, historyID string, err error)
+	// History returns the ids added since startHistoryID, the ids the owner
+	// DELETED in the same span, and the advanced historyId; ErrHistoryGone if
+	// the cursor is too old.
+	History(ctx context.Context, accessToken, startHistoryID string) (addedIDs, deletedIDs []string, historyID string, err error)
 	// GetRaw fetches one message as its decoded RFC822 bytes (format=RAW)
 	// together with Gmail's own SENT filing of it, read off the same response.
 	GetRaw(ctx context.Context, accessToken, msgID string) (Message, error)
@@ -134,6 +148,9 @@ type API interface {
 	// expiration (Gmail caps a watch at 7 days).
 	Watch(ctx context.Context, accessToken, topic string) (historyID string, expiration time.Time, err error)
 
+	// ListLabels returns the mailbox's labels, system and user alike — what an
+	// owner may pick from to keep a folder out of capture.
+	ListLabels(ctx context.Context, accessToken string) ([]connector.NamedContainer, error)
 	// Send transmits one base64url-encoded RFC822 message. Threading is carried
 	// by the message's own In-Reply-To/References headers, which is the identity
 	// this system threads on; Gmail's threadId is not passed and not read.
@@ -225,7 +242,7 @@ func (a *httpAPI) ListRecent(ctx context.Context, accessToken string, maxResults
 			ID string `json:"id"`
 		} `json:"messages"`
 	}
-	q := url.Values{"maxResults": {strconv.Itoa(maxResults)}}
+	q := url.Values{"maxResults": {strconv.Itoa(maxResults)}, includeSpamTrash: {"false"}}
 	if _, err := a.get(ctx, accessToken, "/messages", q, &out, maxJSONResponseBytes); err != nil {
 		return nil, err
 	}
@@ -244,19 +261,31 @@ type historyPage struct {
 				ID string `json:"id"`
 			} `json:"message"`
 		} `json:"messagesAdded"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		// MessagesDeleted is the mailbox owner getting rid of their own copy.
+		// It names the message and nothing else — there is nothing to fetch for
+		// one, which is why it travels beside the added ids rather than among
+		// them.
+		MessagesDeleted []struct {
+			Message struct {
+				ID string `json:"id"`
+			} `json:"message"`
+		} `json:"messagesDeleted"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	} `json:"history"`
 	HistoryID     string `json:"historyId"`     //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 }
 
-func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID string) ([]string, string, error) {
-	var ids []string
+func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID string) ([]string, []string, string, error) {
+	var ids, deleted []string
 	latest := startHistoryID
 	pageToken := ""
 	for {
+		// Both history types in one walk. Asking for messageAdded alone is what
+		// made a deletion invisible: Gmail reports only the types requested, so
+		// the connector could not have acted on one however it tried.
 		q := url.Values{
 			"startHistoryId": {startHistoryID},
-			"historyTypes":   {"messageAdded"},
+			"historyTypes":   {"messageAdded", "messageDeleted"},
 		}
 		if pageToken != "" {
 			q.Set("pageToken", pageToken)
@@ -265,14 +294,19 @@ func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID strin
 		status, err := a.get(ctx, accessToken, "/history", q, &page, maxJSONResponseBytes)
 		if err != nil {
 			if status == http.StatusNotFound {
-				return nil, "", ErrHistoryGone
+				return nil, nil, "", ErrHistoryGone
 			}
-			return nil, "", err
+			return nil, nil, "", err
 		}
 		for _, h := range page.History {
 			for _, ma := range h.MessagesAdded {
 				if ma.Message.ID != "" {
 					ids = append(ids, ma.Message.ID)
+				}
+			}
+			for _, md := range h.MessagesDeleted {
+				if md.Message.ID != "" {
+					deleted = append(deleted, md.Message.ID)
 				}
 			}
 		}
@@ -284,7 +318,7 @@ func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID strin
 		}
 		pageToken = page.NextPageToken
 	}
-	return ids, latest, nil
+	return ids, deleted, latest, nil
 }
 
 func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Message, error) {
@@ -327,6 +361,19 @@ func hasSentLabel(labelIDs []string) bool {
 // from those of a message that went, so the header cannot tell us.
 func hasDraftLabel(labelIDs []string) bool {
 	return slices.Contains(labelIDs, draftLabelID)
+}
+
+// hasRejectedLabel reports whether Gmail filed this message under SPAM or
+// TRASH — the two dispositions where the owner, or Gmail on their behalf, has
+// already said this mail is not wanted.
+//
+// Read at FETCH time and not only at enumeration because the two are separate
+// calls: messages.list hands back ids, and a message can be moved to Spam or
+// Trash in the gap before messages.get reads it. Excluding it from the listing
+// is therefore necessary and not sufficient, and the sufficient half is here,
+// where the labels of the message actually being captured are in hand.
+func hasRejectedLabel(labelIDs []string) bool {
+	return slices.Contains(labelIDs, spamLabelID) || slices.Contains(labelIDs, trashLabelID)
 }
 
 // Watch registers a users.watch so Gmail publishes change notifications for

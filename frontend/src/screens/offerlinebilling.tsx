@@ -4,6 +4,7 @@
 import { Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
+import "./offers.css";
 
 /**
  * The three controls that say whether an offer line's price repeats.
@@ -98,8 +99,7 @@ export function OfferLineBillingFields({
               type="number"
               min="1"
               step="1"
-              className="input"
-              style={{ width: 110 }}
+              className="input offers-line-periods"
               value={value.intervalCount}
               onChange={(event) =>
                 onChange({ ...value, intervalCount: event.target.value })

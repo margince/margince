@@ -30,8 +30,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"sort"
 	"strings"
 	"testing"
@@ -45,6 +43,8 @@ const generatedContract = "internal/contracts/api_gen.go"
 // name today, proved by a TestEveryRequired...BodyIDIsNamedWhenAbsent in the
 // module that owns the mapping.
 var probedRequiredIDBodies = map[string]bool{
+	"MeetingInvitationRequest":          true,
+	"MeetingProposalRequest":            true,
 	"AssignLeadsRequest":                true,
 	"CreateOutcomeReviewRequest":        true,
 	"CreateDealRequest":                 true,
@@ -56,6 +56,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"CreateStageRequest":                true,
 	"SetTransitionPolicyRequest":        true,
 	"ApplyTagRequest":                   true,
+	"ListMemberChangeRequest":           true,
 	"MergeTagsRequest":                  true,
 	"RecordConsentRequest":              true,
 	"RecordCommunicationContextRequest": true,
@@ -154,7 +155,7 @@ func TestEveryContractBodyWithARequiredIDIsAccountedFor(t *testing.T) {
 // carries none of this hazard.
 func contractBodiesWithARequiredID(t *testing.T) map[string][]string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), generatedContract, nil, 0)
+	file, err := gatekit.ParseFile(generatedContract, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", generatedContract, err)
 	}

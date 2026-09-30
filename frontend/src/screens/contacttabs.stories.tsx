@@ -90,7 +90,7 @@ function tab(record: Contact360 | undefined) {
 }
 
 const meta: Meta<typeof ContactTimelineTab> = {
-  title: "Records/Contact record/History tab",
+  title: "Records/Contact 360/History tab",
   component: ContactTimelineTab,
   parameters: { layout: "padded" },
 };
@@ -113,9 +113,7 @@ export const Conversations: Story = {
   render: tab(view),
   play: async ({ canvasElement }) => {
     const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      await page.findByRole("button", { name: "Conversations" }),
-    );
+    await userEvent.click(await page.findByRole("button", { name: "Threads" }));
   },
 };
 

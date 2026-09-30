@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { type ReactNode, useEffect } from "react";
+import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { type Locale, LocaleProvider } from "../i18n";
+import { useMe } from "./common";
 import { recordUnroutedSessionProbe } from "./unrouted-session";
 
 // Shared Storybook rendering harness for the screens/* modules (fe-uat
@@ -212,6 +218,28 @@ function ensureFetchStubInstalled(): void {
 //
 // `locale` is PINNED rather than detected — a catalog that renders in whatever
 // language the reviewer's browser asks for compares against nothing. English is
+/**
+ * The installation's name and marks on the story's `/me`, added once the stubbed
+ * probe has answered — the way the real `/me` carries them to every seat, so the
+ * rail's brand block heads with the company rather than the product.
+ */
+export function WithInstallationBrand({
+  brand,
+  children,
+}: Readonly<{
+  brand: components["schemas"]["InstallationBrand"];
+  children: ReactNode;
+}>) {
+  const client = useQueryClient();
+  const me = useMe().data;
+  useEffect(() => {
+    if (me && me.installation_brand === undefined) {
+      client.setQueryData(["me"], { ...me, installation_brand: brand });
+    }
+  }, [client, me, brand]);
+  return <>{children}</>;
+}
+
 // the default because that is what every existing story was written against;
 // passing "de" is how a story reviews the German copy, whose length is the thing
 // worth looking at (it runs 20-35% longer, and the layouts are built for that).

@@ -51,7 +51,7 @@ func TestEveryFloorSentenceSurvivesTheSharedGroundingFilter(t *testing.T) {
 	in := populatedInput(t)
 	known := KnownRecords(in)
 
-	sections := Deterministic(in)
+	sections := Deterministic(in, "en")
 	if len(sections) == 0 {
 		t.Fatal("the floor produced nothing from three populated fields")
 	}
@@ -75,7 +75,7 @@ func TestAFieldWithNoRowIDIsSkippedRatherThanCitedAgainstTheCompany(t *testing.T
 			field("icp", "Energy-intensive manufacturers", nil),
 		},
 	}
-	if sections := Deterministic(in); len(sections) != 0 {
+	if sections := Deterministic(in, "en"); len(sections) != 0 {
 		t.Errorf("sections = %+v, want none — the one field cannot be cited", sections)
 	}
 }
@@ -88,7 +88,7 @@ func TestAnEmptyFieldWritesNoSentence(t *testing.T) {
 			field("legal_name", "Voltaq Systems GmbH", rowID()),
 		},
 	}
-	sections := Deterministic(in)
+	sections := Deterministic(in, "en")
 	for _, section := range sections {
 		for _, sentence := range section.Sentences {
 			// The blank field is named, so a sentence built around it is caught
@@ -111,7 +111,7 @@ func TestASectionWithNothingToSayIsAbsentRatherThanEmpty(t *testing.T) {
 		CompanyID:     ids.NewV7().String(),
 		ProfileFields: []crmcontracts.CompanyProfileField{field("legal_name", "Voltaq Systems GmbH", rowID())},
 	}
-	sections := Deterministic(in)
+	sections := Deterministic(in, "en")
 	if len(sections) != 1 {
 		t.Fatalf("sections = %d, want exactly the firmographics one", len(sections))
 	}
@@ -130,9 +130,9 @@ func TestASectionWithNothingToSayIsAbsentRatherThanEmpty(t *testing.T) {
 // question, and map iteration would do exactly that.
 func TestSectionsRenderInReadingOrder(t *testing.T) {
 	in := populatedInput(t)
-	first := Deterministic(in)
+	first := Deterministic(in, "en")
 	for range 8 {
-		again := Deterministic(in)
+		again := Deterministic(in, "en")
 		if len(again) != len(first) {
 			t.Fatalf("section count moved between reads: %d then %d", len(first), len(again))
 		}
@@ -154,7 +154,7 @@ func TestSectionsRenderInReadingOrder(t *testing.T) {
 // The floor restates recorded values and draws no conclusions, so labelling one
 // an assessment would claim a judgment nobody made.
 func TestTheFloorWritesOnlyFacts(t *testing.T) {
-	for _, section := range Deterministic(populatedInput(t)) {
+	for _, section := range Deterministic(populatedInput(t), "en") {
 		for _, sentence := range section.Sentences {
 			if sentence.Nature != natureFact {
 				t.Errorf("floor sentence %q carries nature %q, want fact", sentence.Text, sentence.Nature)
@@ -166,7 +166,7 @@ func TestTheFloorWritesOnlyFacts(t *testing.T) {
 // No answer may hand the reader a record id in its prose, whichever writer
 // produced it.
 func TestNoFloorSentenceSpellsAnIDAtTheReader(t *testing.T) {
-	for _, section := range Deterministic(populatedInput(t)) {
+	for _, section := range Deterministic(populatedInput(t), "en") {
 		for _, sentence := range section.Sentences {
 			if claims.SpellsRecordID(sentence.Text) {
 				t.Errorf("the floor spelled an id at the reader: %q", sentence.Text)
@@ -184,7 +184,7 @@ func TestAFieldWithNoMappedLabelWritesNoSentence(t *testing.T) {
 		CompanyID:     ids.NewV7().String(),
 		ProfileFields: []crmcontracts.CompanyProfileField{field("display_name", "Acme GmbH", rowID())},
 	}
-	if sections := Deterministic(in); len(sections) != 0 {
+	if sections := Deterministic(in, "en"); len(sections) != 0 {
 		t.Errorf("sections = %+v, want none — display_name has no mapped label", sections)
 	}
 }
@@ -198,7 +198,7 @@ func TestAFieldValueEndingItsOwnSentenceIsNotGivenASecondFullStop(t *testing.T) 
 			field("legal_name", "Voltaq Systems GmbH.", rowID()),
 		},
 	}
-	sections := Deterministic(in)
+	sections := Deterministic(in, "en")
 	if len(sections) != 1 || len(sections[0].Sentences) != 1 {
 		t.Fatalf("sections = %+v, want exactly one sentence", sections)
 	}
@@ -217,7 +217,7 @@ func TestAFieldValueThatIsPunctuationOnlyWritesNoSentence(t *testing.T) {
 			field("legal_name", "; : ,", rowID()),
 		},
 	}
-	if sections := Deterministic(in); len(sections) != 0 {
+	if sections := Deterministic(in, "en"); len(sections) != 0 {
 		t.Errorf("sections = %+v, want none — a punctuation-only value normalizes to empty", sections)
 	}
 }

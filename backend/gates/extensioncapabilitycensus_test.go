@@ -34,7 +34,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -45,6 +44,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -343,7 +343,7 @@ func unitsWhere(units []unit, match func(unit) bool) []unit {
 // inside New(), which is where the composer's own reader finds it too.
 func parseGo(t *testing.T, path string) *ast.File {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

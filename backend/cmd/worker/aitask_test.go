@@ -5,12 +5,14 @@ package main
 
 import (
 	"errors"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // testCorpusDir resolves the corpus from THIS package's directory, which is
@@ -65,13 +67,13 @@ func TestAITaskFlagsAcceptTheTwoRunnableInputs(t *testing.T) {
 	}
 
 	fromFixture, err := parseAITaskFlags([]string{
-		"run", "--site", "rate_extract/pricing", "--fixture", "f.json",
+		"run", "--site", "rate_extract/fx", "--fixture", "f.json",
 	})
 	if err != nil {
 		t.Fatalf("a fixture bound to a site is a complete probe input: %v", err)
 	}
-	if fromFixture.site != "rate_extract/pricing" || fromFixture.fixturePath != "f.json" {
-		t.Errorf("parsed %+v, want site=rate_extract/pricing fixturePath=f.json", fromFixture)
+	if fromFixture.site != "rate_extract/fx" || fromFixture.fixturePath != "f.json" {
+		t.Errorf("parsed %+v, want site=rate_extract/fx fixturePath=f.json", fromFixture)
 	}
 }
 
@@ -117,7 +119,7 @@ func TestFetchArtifactNamesDistinguishTwoFetches(t *testing.T) {
 func TestSlugifyKeepsWhatIsSafeAndReplacesTheRest(t *testing.T) {
 	for in, want := range map[string]string{
 		"openrouter.ai/api/v1/models": "openrouter.ai_api_v1_models",
-		"rate_extract/pricing":        "rate_extract_pricing",
+		"rate_extract/fx":             "rate_extract_fx",
 		"a b":                         "a_b",
 		"__trimmed__":                 "trimmed",
 	} {
@@ -134,7 +136,7 @@ func TestScaffoldToStdoutWritesNoFile(t *testing.T) {
 		t.Fatalf("census: %v", err)
 	}
 	var out strings.Builder
-	if err := scaffoldSite(&out, census, testCorpusDir(), "rate_extract/pricing", "-"); err != nil {
+	if err := scaffoldSite(&out, census, testCorpusDir(), "rate_extract/fx", "-"); err != nil {
 		t.Fatalf("scaffoldSite: %v", err)
 	}
 	if !strings.Contains(out.String(), "task: rate_extract") {
@@ -176,13 +178,13 @@ func TestAITaskListCarriesTheLadderAndScope(t *testing.T) {
 	}
 	var row string
 	for _, line := range strings.Split(out.String(), "\n") {
-		if strings.HasPrefix(line, "rate_extract/pricing") {
+		if strings.HasPrefix(line, "rate_extract/fx") {
 			row = line
 			break
 		}
 	}
 	if row == "" {
-		t.Fatal("no row for rate_extract/pricing")
+		t.Fatal("no row for rate_extract/fx")
 	}
 	// The ladder and the scope are the two things that say what a probe of this
 	// site would actually exercise, so neither may be dropped from the row.
@@ -197,6 +199,15 @@ func TestAITaskListCarriesTheLadderAndScope(t *testing.T) {
 // Asserting only the literal would stay green if the ignore rule were dropped —
 // exactly the change that would start committing fetched pages.
 func TestTheWorkDirIsActuallyIgnored(t *testing.T) {
+	// Every .gitignore on the probe's path, since git reads them out of the test
+	// cache's sight.
+	ignoreFiles := []string{"../../../.gitignore"}
+	for dir := workDirDefault; dir != "."; dir = filepath.Dir(dir) {
+		ignoreFiles = append(ignoreFiles, filepath.Join("../..", dir, ".gitignore"))
+	}
+	if err := gatekit.DeclareInputs(os.Getenv, append(ignoreFiles, "../../.gitignore")...); err != nil {
+		t.Fatal(err)
+	}
 	out, err := exec.Command("git", "-C", "../..", "check-ignore", "-q", workDirDefault+"/probe.txt").CombinedOutput()
 	if err == nil {
 		return // exit 0: the path is ignored, which is what this pins

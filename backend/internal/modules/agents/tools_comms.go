@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -153,11 +154,11 @@ func RegisterCommsTools(r *Registry, comms Comms, p datasource.SystemOfRecordPro
 		panic("crmagents: RegisterCommsTools needs a record provider — the confirm-first sends, the account-started send and book_meeting all read the records they stage against")
 	}
 	r.Register(draftEmailTool{comms: comms, p: p})
-	r.Register(sendEmailTool{comms: comms, p: p})
-	r.Register(sendCompanyEmailTool{comms: comms, p: p})
-	r.Register(sendMessageTool{comms: comms, p: p})
+	r.Register(sendEmailTool{comms: comms, p: p, language: r.language})
+	r.Register(sendCompanyEmailTool{comms: comms, p: p, language: r.language})
+	r.Register(sendMessageTool{comms: comms, p: p, language: r.language})
 	r.Register(checkAvailability{comms: comms})
-	r.Register(bookMeetingTool{comms: comms, p: p})
+	r.Register(bookMeetingTool{comms: comms, p: p, language: r.language})
 }
 
 // --- draft_email (🟢: proposes, never sends) ---
@@ -171,6 +172,7 @@ func (t draftEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "draft_email", Title: "Draft an email", Version: toolVersionV1,
 		Description:   draftEmailCopy.render(),
+		Instead:       draftEmailCopy.Instead,
 		RequiredScope: principal.ScopeDraft, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "draftEmail",
 		InputSchema: schema(`{"type":"object","properties":{
@@ -268,8 +270,9 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 // Neither is optional: removing the reader would let an agent holding `send`
 // transmit against a foreign system of record, unattended.
 type sendEmailTool struct {
-	comms Comms
-	p     datasource.SystemOfRecordProvider
+	comms    Comms
+	p        datasource.SystemOfRecordProvider
+	language baselanguage.Resolver
 }
 
 // sendContextProperties is the context arguments, spelled once for the three
@@ -318,6 +321,7 @@ func (t sendEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_email", Title: "Send an email", Version: toolVersionV1,
 		Description:   sendEmailCopy.render(),
+		Instead:       sendEmailCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendEmail",
 		InputSchema: schema(`{"type":"object","required":["activity_id","to","subject","body"],"properties":{
@@ -357,7 +361,7 @@ func (t sendEmailTool) StageInfo(ctx context.Context, in json.RawMessage) (Stage
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewSendEmailCall(t.p, SendEmailCommand{
+	return StageSubject(ctx, NewSendEmailCall(t.p, t.language, SendEmailCommand{
 		ActivityID: args.ActivityID,
 		To:         args.To,
 		Cc:         args.Cc,
@@ -396,14 +400,16 @@ func (t sendEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 // and StageInfo pins the target row's version when the verb is floored to
 // confirm-first. The executing path is the one that cannot do without it.
 type sendMessageTool struct {
-	comms Comms
-	p     datasource.SystemOfRecordProvider
+	comms    Comms
+	p        datasource.SystemOfRecordProvider
+	language baselanguage.Resolver
 }
 
 func (t sendMessageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_message", Title: "Reply on a channel conversation", Version: toolVersionV1,
 		Description:   sendMessageCopy.render(),
+		Instead:       sendMessageCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendMessage",
 		InputSchema: schema(`{"type":"object","required":["activity_id","body"],"properties":{
@@ -430,7 +436,7 @@ func (t sendMessageTool) StageInfo(ctx context.Context, in json.RawMessage) (Sta
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewSendMessageCall(t.p, t.comms, SendMessageCommand{
+	return StageSubject(ctx, NewSendMessageCall(t.p, t.comms, t.language, SendMessageCommand{
 		ActivityID: args.ActivityID,
 		Body:       args.Body,
 	}))

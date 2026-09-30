@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { Button, Field, Modal } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
@@ -10,8 +11,8 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { BillingContact, BillingContactRole } from "./billingcontacts";
 import type { BillingContactActions } from "./billingcontacts.queries";
-import { RefusalLine } from "./common";
 import { searchByEntity } from "./relationshipcandidates";
+import "./common.css";
 
 // The three capacities, in the order an invoice moves through them: it is
 // addressed to somebody, approved by somebody, then paid by somebody. Spelled
@@ -87,12 +88,7 @@ export function BillingContactModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {editing ? t("billing.changeTitle") : t("billing.addTitle")}
       </Heading>
       <div className="form-stack">
@@ -130,7 +126,7 @@ export function BillingContactModal({
           )}
         </Field>
         <p className="t-caption">{t("billing.roleNote")}</p>
-        {write.isError && <RefusalLine error={write.error} />}
+        <ErrorLine error={write.error} />
         <div className="actions">
           <Button variant="ghost" onClick={onClose} disabled={write.isPending}>
             {t("deals.cancel")}

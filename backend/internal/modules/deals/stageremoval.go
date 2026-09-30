@@ -143,11 +143,14 @@ func (s *Store) ArchiveStage(ctx context.Context, id ids.StageID, ifVersion *int
 		if err != nil {
 			return err
 		}
+		if err := markLadderChanged(ctx, tx, pipelineID); err != nil {
+			return err
+		}
 		return emitStageArchived(ctx, tx, id, pipelineID, moved)
 	})
 }
 
-// lockStageConfig takes the stage's PIPELINE row for update and answers
+// lockStageConfig takes the stage's PIPELINE row (lockLadder) and answers
 // its id — the one serialization point for reshaping a pipeline's stage
 // list.
 //
@@ -168,10 +171,7 @@ func lockStageConfig(ctx context.Context, tx pgx.Tx, id ids.StageID) (ids.Pipeli
 	if err != nil {
 		return pipelineID, fmt.Errorf("read the stage's pipeline: %w", err)
 	}
-	if _, err := storekit.LockRow(ctx, tx, "pipeline", pipelineID.UUID, storekit.LiveOnly); err != nil {
-		return pipelineID, err
-	}
-	return pipelineID, nil
+	return pipelineID, lockLadder(ctx, tx, pipelineID)
 }
 
 // refuseUnremovableStage answers every refusal the locked stage can be
@@ -252,71 +252,25 @@ func refuseIfOccupied(ctx context.Context, tx pgx.Tx, id ids.StageID) error {
 	return &StageOccupiedError{Count: count, Deals: named}
 }
 
-// renumberStages restates the pipeline's surviving stages as positions
-// 1..n in their existing order, and reports the rows that actually moved
-// for the reorder event.
+// renumberStages restates the pipeline's surviving stages as positions 1..n in
+// their existing order, and reports the rows that moved for the reorder event.
 //
 // It renumbers the WHOLE list, not just the stages above the removed one,
-// because contiguity is a postcondition of the removal and not an
-// invariant the schema holds: uq_stage_position enforces uniqueness only,
-// and both createStage and updateStage take the position they are handed.
-// Shifting only the tail would leave a pipeline that was already gapped
-// gapped, so the removal's own promise would hold on a seeded pipeline and
-// quietly not on a hand-configured one. Rows already at their rank are
-// left alone, so the ordinary case still touches only the tail.
-//
-// Ascending, one row at a time, on purpose: uq_stage_position is a per-row
-// check, and one set-based statement would depend on PostgreSQL visiting
-// the rows in an order that keeps every intermediate state unique — which
-// it does not promise. Ascending, the i-th row's target is i+1, which no
-// row still holds: the rows below it have already moved down, and a row
-// above it sits at a position strictly greater than its own index. A
-// pipeline holds a handful of stages, so the loop is bounded by the
-// bounded-config surface itself.
-//
-// FOR UPDATE because these rows are read and then written; the pipeline
-// lock the caller already holds is what keeps a concurrent reorder out.
+// because contiguity is a postcondition of the removal and not an invariant the
+// schema holds: uq_stage_position enforces uniqueness only. Shifting only the
+// tail would leave a pipeline that was already gapped gapped. Rows already at
+// their rank are left alone, so the ordinary case still touches only the tail.
 func renumberStages(ctx context.Context, tx pgx.Tx, pipelineID ids.PipelineID) (map[string]any, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT id, position FROM stage
-		 WHERE pipeline_id = $1 AND archived_at IS NULL
-		 ORDER BY position FOR UPDATE`, pipelineID)
+	ladder, err := readLadder(ctx, tx, pipelineID)
 	if err != nil {
-		return nil, fmt.Errorf("read the surviving stages: %w", err)
+		return nil, err
 	}
-	type placed struct {
-		id       ids.StageID
-		position int
+	moves := placements(ladder)
+	if err := placeStages(ctx, tx, ladder, moves); err != nil {
+		return nil, err
 	}
-	var surviving []placed
-	for rows.Next() {
-		var s placed
-		if err := rows.Scan(&s.id, &s.position); err != nil {
-			rows.Close()
-			return nil, fmt.Errorf("scan a surviving stage: %w", err)
-		}
-		surviving = append(surviving, s)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read the surviving stages: %w", err)
-	}
-	moved := map[string]any{}
-	for i, s := range surviving {
-		rank := i + 1
-		if s.position == rank {
-			continue
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE stage SET position = $2 WHERE id = $1`, s.id, rank); err != nil {
-			if storekit.IsUniqueViolation(err) {
-				return nil, apperrors.ErrConflict
-			}
-			return nil, fmt.Errorf("renumber the surviving stages: %w", err)
-		}
-		moved[s.id.String()] = rank
-	}
-	return moved, nil
+	_, after := positionImages(moves)
+	return after, nil
 }
 
 // emitStageArchived writes the audit row and the facts it links: the
@@ -340,10 +294,5 @@ func emitStageArchived(
 	if len(moved) == 0 {
 		return nil
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, pipelineID.UUID, crmcontracts.PublicEventPipelineUpdated{
-		ChangedFields: map[string]any{"stage_positions": moved},
-	}); err != nil {
-		return fmt.Errorf("emit pipeline reorder after stage archive: %w", err)
-	}
-	return nil
+	return emitStagePositions(ctx, tx, auditID, pipelineID, moved)
 }

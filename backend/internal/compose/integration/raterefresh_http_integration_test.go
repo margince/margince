@@ -45,22 +45,24 @@ func TestProposeRefreshEndpointsEnqueue(t *testing.T) {
 	if out.Status != "enqueued" {
 		t.Fatalf("status = %q, want enqueued", out.Status)
 	}
-	if status := e.Call(t, "POST", "/v1/ai-model-rates/propose-refresh", nil, nil, &out); status != http.StatusAccepted {
-		t.Fatalf("POST /ai-model-rates/propose-refresh → %d, want 202", status)
-	}
-	if len(fake.calls) != 2 {
-		t.Fatalf("enqueued %d jobs, want 2", len(fake.calls))
+	if len(fake.calls) != 1 {
+		t.Fatalf("enqueued %d jobs, want 1", len(fake.calls))
 	}
 	if _, ok := fake.calls[0].(compose.FxRateRefreshArgs); !ok {
 		t.Fatalf("first job = %T, want FxRateRefreshArgs", fake.calls[0])
 	}
-	if _, ok := fake.calls[1].(compose.AiModelRateRefreshArgs); !ok {
-		t.Fatalf("second job = %T, want AiModelRateRefreshArgs", fake.calls[1])
+	// The retired model-price route answers 501 and enqueues nothing: model
+	// prices come from POST /ai-model-rates/refresh.
+	if status := e.Call(t, "POST", "/v1/ai-model-rates/propose-refresh", nil, nil, nil); status != http.StatusNotImplemented {
+		t.Fatalf("POST /ai-model-rates/propose-refresh → %d, want 501", status)
 	}
-	// Both enqueues must request arg-scoped uniqueness on the bounded refresh
+	if len(fake.calls) != 1 {
+		t.Fatalf("the retired route enqueued a job: %d calls", len(fake.calls))
+	}
+	// The enqueue must request arg-scoped uniqueness on the bounded refresh
 	// queue: that is how two admins refreshing the same workspace collapse to
-	// one in-flight crawl (River hashes only the river:"unique" WorkspaceID) and
-	// how long crawls stay off the default queue. The fake can't exercise
+	// one in-flight refresh (River hashes only the river:"unique" WorkspaceID)
+	// and how long jobs stay off the default queue. The fake can't exercise
 	// River's real dedup — this asserts the handler asks for it correctly.
 	for i, opts := range fake.opts {
 		if opts == nil || !opts.UniqueOpts.ByArgs {

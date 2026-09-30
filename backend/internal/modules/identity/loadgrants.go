@@ -14,6 +14,8 @@ package identity
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,18 +25,73 @@ import (
 )
 
 func loadGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID) (roles []string, teams []ids.TeamID, perms principal.Permissions, err error) {
-	rows, err := tx.Query(ctx,
-		`SELECT r.key, r.permissions FROM role_assignment ra JOIN role r ON r.id = ra.role_id WHERE ra.user_id = $1`, userID)
+	all, err := loadGrantsFor(ctx, tx, []ids.UUID{userID.UUID})
 	if err != nil {
 		return nil, nil, principal.Permissions{}, err
 	}
+	g := all[userID.UUID]
+	return g.roles, g.teams, g.perms, nil
+}
+
+// seatGrants is one seat's roles, live teams and merged permissions.
+type seatGrants struct {
+	roles []string
+	teams []ids.TeamID
+	perms principal.Permissions
+}
+
+// loadGrantsFor resolves several seats in three set-based reads, for a caller
+// judging many seats at once; loadGrants is this with one seat, so a seat
+// resolves the same way whichever door asks. A seat with no role assignment
+// gets the zero grants: absent from the reads, it holds nothing.
+func loadGrantsFor(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]seatGrants, error) {
+	docs, roles, err := loadRoleDocuments(ctx, tx, users)
+	if err != nil {
+		return nil, err
+	}
+	teams, err := loadLiveTeams(ctx, tx, users)
+	if err != nil {
+		return nil, err
+	}
+	// Masks are keyed by role set: most seats share one of a handful.
+	masks := map[string][]principal.FieldMask{}
+	out := make(map[ids.UUID]seatGrants, len(users))
+	for _, user := range users {
+		g := seatGrants{roles: roles[user], teams: teams[user], perms: policy.Merge(docs[user])}
+		key := strings.Join(slices.Sorted(slices.Values(g.roles)), ",")
+		m, seen := masks[key]
+		if !seen {
+			if m, err = loadFieldMasks(ctx, tx, g.roles); err != nil {
+				return nil, err
+			}
+			masks[key] = m
+		}
+		g.perms.FieldMasks = m
+		out[user] = g
+	}
+	return out, nil
+}
+
+// loadRoleDocuments reads live roles only: an archived role grants nothing.
+// Archiving refuses while anybody who can sign in holds the role, so what this
+// drops is the role a deactivated member still carries, and reactivating them
+// does not bring an archived role's grants back with them.
+func loadRoleDocuments(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]map[string]policy.Document, map[ids.UUID][]string, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT ra.user_id, r.key, r.permissions FROM role_assignment ra JOIN role r ON r.id = ra.role_id
+		  WHERE ra.user_id = ANY($1) AND r.archived_at IS NULL`, users)
+	if err != nil {
+		return nil, nil, err
+	}
 	defer rows.Close()
-	byRole := map[string]policy.Document{}
+	docs := map[ids.UUID]map[string]policy.Document{}
+	roles := map[ids.UUID][]string{}
 	for rows.Next() {
+		var user ids.UUID
 		var key string
 		var raw []byte
-		if err := rows.Scan(&key, &raw); err != nil {
-			return nil, nil, principal.Permissions{}, err
+		if err := rows.Scan(&user, &key, &raw); err != nil {
+			return nil, nil, err
 		}
 		doc, err := policy.Parse(raw)
 		if err != nil {
@@ -47,38 +104,38 @@ func loadGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID) (roles []stri
 			// instead of failing here — because failing here failed the whole
 			// LOGIN, so removing a composed extension locked out every user
 			// whose role still carried its object (Task 14 UAT, F4).
-			return nil, nil, principal.Permissions{}, fmt.Errorf("crmauth: role %q: %w", key, err)
+			return nil, nil, fmt.Errorf("crmauth: role %q: %w", key, err)
 		}
-		roles = append(roles, key)
-		byRole[key] = doc
+		if docs[user] == nil {
+			docs[user] = map[string]policy.Document{}
+		}
+		roles[user] = append(roles[user], key)
+		docs[user][key] = doc
 	}
-	if err := rows.Err(); err != nil {
-		return nil, nil, principal.Permissions{}, err
-	}
+	return docs, roles, rows.Err()
+}
 
-	// Live teams only: an archived team keeps its membership rows so a
-	// restore brings them back, but while archived it resolves neither row
-	// scope nor a team share.
-	teamRows, err := tx.Query(ctx,
-		`SELECT tm.team_id FROM team_membership tm JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
-		  WHERE tm.user_id = $1`, userID)
+// loadLiveTeams reads live teams only: an archived team keeps its membership
+// rows so a restore brings them back, but while archived it resolves neither
+// row scope nor a team share.
+func loadLiveTeams(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID][]ids.TeamID, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT tm.user_id, tm.team_id FROM team_membership tm JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
+		  WHERE tm.user_id = ANY($1)`, users)
 	if err != nil {
-		return nil, nil, principal.Permissions{}, err
+		return nil, err
 	}
-	defer teamRows.Close()
-	for teamRows.Next() {
-		var t ids.TeamID
-		if err := teamRows.Scan(&t); err != nil {
-			return nil, nil, principal.Permissions{}, err
+	defer rows.Close()
+	out := map[ids.UUID][]ids.TeamID{}
+	for rows.Next() {
+		var user ids.UUID
+		var team ids.TeamID
+		if err := rows.Scan(&user, &team); err != nil {
+			return nil, err
 		}
-		teams = append(teams, t)
+		out[user] = append(out[user], team)
 	}
-	if err := teamRows.Err(); err != nil {
-		return nil, nil, principal.Permissions{}, err
-	}
-	perms = policy.Merge(byRole)
-	perms.FieldMasks, err = loadFieldMasks(ctx, tx, roles)
-	return roles, teams, perms, err
+	return out, rows.Err()
 }
 
 // rawTeamIDs widens typed team ids to the untyped []ids.UUID the kernel

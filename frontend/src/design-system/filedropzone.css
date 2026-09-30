@@ -52,11 +52,21 @@
 }
 
 .fdz-label {
+  /* The zone's prompt is a question until it is answered, so it asks in
+     secondary ink and the answer below takes the reader's own. At one ink a
+     reader cannot tell the placeholder from the file they picked. */
+  color: var(--textSecondary);
   /* Inert to the pointer — this text only, never the input stretched beside
    * it, which is the whole control. `dragleave` fires on the move from one
    * element to a sibling, so a cursor crossing this text would otherwise
    * flicker the highlight off and straight back on. */
   pointer-events: none;
+}
+
+/* A chosen file is the answer to the question the zone asked, so it stops
+   reading as placeholder prose and takes the reader's own ink. */
+.fdz-label.chosen {
+  color: var(--textPrimary);
 }
 
 /* A dropzone nobody may drop into. It carries a hover and a dragover state and

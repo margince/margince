@@ -27,6 +27,9 @@ type Handlers struct {
 	emailDrafter EmailDrafter
 	// consent gates the send path; nil fails closed (WithConsent wires it).
 	consent ConsentGate
+	// calendars answers whether a host's own diary reaches this product, which
+	// decides what an empty availability window may claim. Nil answers no.
+	calendars CalendarConnected
 	// preview answers what the engine WOULD decide, for a message nobody has
 	// written. Separate from consent because it is a different question asked
 	// of the same authority: the gate is the send path's default-deny door,
@@ -131,4 +134,11 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 	// "422 naming the rule" pre-empted, telling the caller to fix a value when
 	// nothing they can send will work until the retention window closes.
 	httperr.Write(w, r, err)
+}
+
+// WithCalendarConnected binds the answer to "does this host's own calendar
+// reach us", which the availability door publishes as calendar_backing.
+func (h Handlers) WithCalendarConnected(connected CalendarConnected) Handlers {
+	h.calendars = connected
+	return h
 }

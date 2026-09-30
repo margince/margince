@@ -25,7 +25,10 @@ posing as enforcement.
 
 ### Advertising without consent — the §7(3) existing-customer exception
 
-This is the only route, and it carries **all four** of its statutory conditions:
+**Margince does not offer this exception today.** The pack declares it with **all
+four** of its statutory conditions, and the engine refuses it: nothing on a
+message names the goods it advertises, so the similarity condition cannot be
+checked.
 
 | Condition | What §7(3) requires |
 |---|---|
@@ -38,10 +41,10 @@ Declaring three of four would be an exception the engine applies while checking
 less than the statute asks. That is worse than declaring none, because it looks
 lawful.
 
-**Similarity is checked per message, not once per contact.** A customer who
-bought one product has not opened the door to everything the seller sells, and
-an exception evaluated once per contact is the shape that turns one purchase into
-a permanent mailing list.
+**Similarity would have to be checked per message, not once per contact.** A
+customer who bought one product has not opened the door to everything the seller
+sells, and an exception evaluated once per contact is the shape that turns one
+purchase into a permanent mailing list.
 
 ### What a first message discloses (Art. 13)
 

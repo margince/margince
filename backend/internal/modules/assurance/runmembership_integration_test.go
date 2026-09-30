@@ -48,7 +48,7 @@ func startRun(t *testing.T, e *scanEnv, at time.Time) ids.UUID {
 	var runID ids.UUID
 	if err := e.store.InTx(e.as(), func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		runID, err = e.store.StartRun(ctx, tx, at)
+		runID, err = e.store.StartRun(ctx, tx, at, nil)
 		return err
 	}); err != nil {
 		t.Fatalf("starting a run: %v", err)
@@ -273,7 +273,7 @@ func TestTheNightlyScanRecordsWhatItSaw(t *testing.T) {
 		func(context.Context, pgx.Tx) ([]Subject, error) { return []Subject{sick}, nil },
 		checkedCoverage, DefaultConfig())
 
-	got, err := scanner.Scan(ctx, time.Now().UTC())
+	got, err := scanner.Scan(ctx, time.Now().UTC(), nil)
 	if err != nil {
 		t.Fatalf("the scan failed: %v", err)
 	}

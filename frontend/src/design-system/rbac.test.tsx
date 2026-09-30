@@ -32,8 +32,8 @@ describe("RoleBadge", () => {
         <RoleBadge roleKey="read_only" />
       </>,
     );
-    expect(screen.getByText("Benutzer")).toBeTruthy();
-    expect(screen.getByText("Nur Lesen")).toBeTruthy();
+    expect(screen.getByText("Mitglied")).toBeTruthy();
+    expect(screen.getByText("Nur Lesezugriff")).toBeTruthy();
   });
 
   it("falls back to the raw key for a workspace-defined role — never invented copy", () => {

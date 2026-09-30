@@ -8,6 +8,7 @@ import type { SelectOption } from "../design-system/select";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
+import "./automations.datefield.css";
 
 // renewal_reminder's date_field param (GH-706) names a workspace's own cf_*
 // date column — a free-text box would let an operator type a column that
@@ -119,11 +120,7 @@ export function DateFieldSelect({
         disabled={disabled}
         placeholder={t("auto.dateField.placeholder")}
       />
-      {hint && (
-        <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
-          {hint}
-        </p>
-      )}
+      {hint && <p className="t-caption datefield-hint">{hint}</p>}
     </>
   );
 }

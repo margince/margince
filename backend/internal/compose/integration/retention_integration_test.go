@@ -94,6 +94,7 @@ func TestRetentionActsOnOverAgeRecordsAndHonorsLegalHold(t *testing.T) {
 	staleLead, heldLead, staleDeal, transcript := seedOverAgeRecords(t, e)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}
@@ -140,6 +141,7 @@ func TestRetentionActsOnOverAgeRecordsAndHonorsLegalHold(t *testing.T) {
 	}
 
 	// A second pass is idempotent: everything due is already acted.
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +166,7 @@ func TestRetentionErasesOverAgeVoiceSignalPlaintext(t *testing.T) {
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO voice_profile (id, owner_id, scope, source, captured_by)
-			VALUES ($1, $2, 'user', 'ui', 'human:x')`, profileID, e.Rep1); err != nil {
+			VALUES ($1, $2, 'user', 'manual', 'human:x')`, profileID, e.Rep1); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(context.Background(), `
@@ -188,6 +190,7 @@ func TestRetentionErasesOverAgeVoiceSignalPlaintext(t *testing.T) {
 	}
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}

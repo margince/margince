@@ -406,11 +406,11 @@ func TestSiteCoverageIgnoresASiblingSitesScenarios(t *testing.T) {
 			{Scenario: "fx_basic", Site: "fx", Stamp: "s-fx", Verdict: "certified", Runs: 3, Passed: 3, ReportedAccepted: 3},
 		},
 	}
-	// The fx site's own corpus is complete. `pricing` is a DIFFERENT site of the
-	// same task and says nothing about this row.
+	// The fx site's own corpus is complete. `rates_json` is a DIFFERENT site of
+	// the same task and says nothing about this row.
 	perSite := map[string]map[string]string{
-		"rate_extract/fx":      {"fx_basic": "s-fx"},
-		"rate_extract/pricing": {"pricing_basic": "s-pricing"},
+		"rate_extract/fx":         {"fx_basic": "s-fx"},
+		"rate_extract/rates_json": {"rates_json_basic": "s-json"},
 	}
 	out := renderReadiness(aicert.Census{Sites: sites},
 		map[string]string{"rate_extract": "p-task"}, perSite, []aicert.Record{rec})

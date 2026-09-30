@@ -164,7 +164,11 @@ export function ContactCommercialCard({
             {commercial.committee.map((member) => (
               <div className="pe-committee-row" key={member.contact_id}>
                 <span className="pe-committee-contact">
-                  <Avatar name={member.full_name} src={member.photo_url} />
+                  <Avatar
+                    name={member.full_name}
+                    identity={member.contact_id}
+                    src={member.photo_url}
+                  />
                   <span>{member.full_name}</span>
                 </span>
                 <span className="t-sub">{readableRole(member.role)}</span>
@@ -372,6 +376,7 @@ function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
     const { days, late } = daysPast(dueMs, nowMs);
     if (late) {
       return (
+        // ds:ignore an overdue marker in the danger ink, not a message
         <span className="pe-loop-due pe-loop-overdue">
           {days > 0
             ? plural("contact.loops.overdue", days, {

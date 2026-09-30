@@ -23,7 +23,7 @@ import {
 // than as a control the row grew.
 
 const meta: Meta<typeof VatMark> = {
-  title: "Records/Company rail/VAT mark",
+  title: "Records/Company 360/Rail/VAT mark",
   component: VatMark,
   parameters: { layout: "padded" },
 };

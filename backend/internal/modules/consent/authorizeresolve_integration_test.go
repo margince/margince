@@ -106,7 +106,7 @@ func setupResolve(t *testing.T) *resolveEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
 	e.gate = NewGate(e.store)
 

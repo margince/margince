@@ -386,9 +386,17 @@ func (h backfillHandlers) CancelConnectorBackfill(w http.ResponseWriter, r *http
 	writeBackfillJSON(w, http.StatusAccepted, h.statusPayload(run))
 }
 
-// statusPayload maps a run (or its absence — state "none") onto the wire.
+// statusPayload maps a run (or its absence — state "none") onto the wire, and
+// adds what the shared mapping cannot know: which windows THIS installation
+// admits.
+//
+// Here rather than in backfillStatusPayload because the offer is a property of
+// the registry, not of the run — state "none" carries it too, and that is the
+// case that matters: a picker asks before any run exists.
 func (h backfillHandlers) statusPayload(run *capture.BackfillRun) crmcontracts.BackfillStatus {
-	return backfillStatusPayload(run)
+	st := backfillStatusPayload(run)
+	st.OfferedWindows = offeredWindowsPayload(h.registry.OfferedBackfillWindows())
+	return st
 }
 
 // backfillStatusPayload is the ONE run→wire mapping, shared with the

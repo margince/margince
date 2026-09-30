@@ -86,7 +86,7 @@ func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 	// refetch-and-retry the row can never accept.
 	staleSubject := "edited again"
 	_, err = e.Activities.UpdateActivity(e.Admin(), held,
-		activities.UpdateActivityInput{Subject: &staleSubject, IfVersion: int64Ptr(999999)})
+		activities.UpdateActivityInput{Subject: &staleSubject, IfVersion: Int64Ptr(999999)})
 	assert423("UpdateActivity with a stale If-Version", err)
 }
 

@@ -82,11 +82,9 @@
      box is the reading column — the tabs then start where the record's name
      does, and neither half can drift, because both are the same expression.
 
-     The padding is what the box needs and not a nicety: `cqi` counts the
-     scroller's gutter, the column inside it does not, so a strip sized against
-     the container sits half a scrollbar off the column it belongs to. Without
-     this the tabs rode that offset out past the column's edge, and the first one
-     lost its first glyph.
+     `100cqi` is the width content can use, scrollbar gutter already out of it
+     (app/shell.css names the SCROLLER `work` for exactly that), so the strip
+     spans the column without pushing the page past its own right edge.
 
      `100%` is the reading column here because that is this element's containing
      block. One level down, in the row, the same expression would resolve against

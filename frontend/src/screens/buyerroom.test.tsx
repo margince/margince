@@ -248,9 +248,7 @@ describe("BuyerRoomScreen", () => {
       screen.getByLabelText("Your email address"),
       "laura@buyer.example",
     );
-    await user.click(
-      screen.getByRole("button", { name: /send me a new link/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /request new link/i }));
     await screen.findByText(/a new link is on its way/i);
     const request = sent.find(
       (s) => s.key === "POST /public/rooms/link-request",
@@ -342,7 +340,7 @@ describe("BuyerRoomScreen", () => {
 
     expect(
       await screen.findByText(
-        "The download did not start. Try again, or ask your contact.",
+        "The download did not start. Retry, or ask your contact.",
       ),
     ).toBeTruthy();
   });
@@ -562,7 +560,7 @@ describe("an access state this build does not know", () => {
     expect(await screen.findByText("This room is now read-only.")).toBeTruthy();
     expect(
       screen.queryByText(
-        "This room is closed; what it shared is a record now.",
+        "This room is closed. Its content is kept as a record.",
       ),
     ).toBeNull();
   });

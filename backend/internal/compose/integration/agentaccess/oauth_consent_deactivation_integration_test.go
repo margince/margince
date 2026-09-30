@@ -43,6 +43,7 @@ func (o *oauthEnv) userIDByEmail(t *testing.T, email string) string {
 func TestAPendingConsentDoesNotSurviveItsHumansDeactivation(t *testing.T) {
 	o := setupOAuth(t)
 	code := o.authorize(t, url.Values{"scope": {"read"}})
+	o.DescribeCompany(t)
 
 	// The consenting human is the bootstrap admin, and the last active admin
 	// may not be deactivated — the company would lose user administration

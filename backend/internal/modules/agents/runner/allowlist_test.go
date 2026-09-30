@@ -6,6 +6,7 @@ package runner
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -142,22 +143,62 @@ func TestTheWindowListsOnlyWhatTheEntryAndThePassportBothAdmit(t *testing.T) {
 	}
 }
 
-// An empty Job.Tools means NO narrowing — the certification lane and every
-// non-catalog caller ride this door, so it is asserted rather than assumed.
-func TestAJobWithNoEntryIsNarrowedByThePassportAlone(t *testing.T) {
-	surface := &fakeSurface{results: map[string]json.RawMessage{
-		"update_record": json.RawMessage(`{"updated":true}`),
-	}}
-	brain := &scriptedBrain{texts: []string{
-		`{"tool":"update_record","args":{"record_id":"x"}}`,
-		`{"final":{"summary":"wrote it"}}`,
-	}}
-
-	if _, err := New(surface, brain).Run(context.Background(), Job{Goal: "write"}); err != nil {
-		t.Fatal(err)
+// An empty Job.Tools is refused, never read as "everything the passport
+// admits": that default would hand a run the whole catalog, and the listing
+// rides in every step. Both doors are held, because a parked run resumes
+// through the second one.
+func TestAJobWithNoAllowlistNeverStarts(t *testing.T) {
+	pending := Pending{
+		TranscriptVersion: neutralisedObservations,
+		ApprovalID:        ids.New[ids.ApprovalKind](), Tool: "update_record",
+		Args:      json.RawMessage(`{"record_id":"x"}`),
+		Window:    []model.Message{{Role: "user", Content: "Goal: write"}},
+		Fence:     promptfence.New(),
+		StepsUsed: 3, OutputTokens: 100,
 	}
-	if len(surface.calls) != 1 || surface.calls[0].Tool != "update_record" {
-		t.Fatalf("a job with no entry must reach whatever the passport admits: %+v", surface.calls)
+	for name, start := range map[string]func(*Runner) (Result, error){
+		"run": func(r *Runner) (Result, error) { return r.Run(context.Background(), Job{Goal: "write"}) },
+		"resume": func(r *Runner) (Result, error) {
+			return r.Resume(context.Background(), Job{Goal: "write"}, Decision{Pending: pending, Approved: true})
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			surface := &fakeSurface{results: map[string]json.RawMessage{
+				"update_record": json.RawMessage(`{"updated":true}`),
+			}}
+			brain := &scriptedBrain{texts: []string{
+				`{"tool":"update_record","args":{"record_id":"x"}}`,
+				`{"final":{"summary":"wrote it"}}`,
+			}}
+
+			res, err := start(New(surface, brain))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if res.Outcome != OutcomeDegraded || res.DegradeReason != unscopedJobReason {
+				t.Fatalf("a job with no allowlist must degrade as unscoped, got %q: %q", res.Outcome, res.DegradeReason)
+			}
+			if len(brain.requests) != 0 {
+				t.Fatalf("an unscoped job must not spend a model call: %d requests", len(brain.requests))
+			}
+			if len(surface.calls) != 0 {
+				t.Fatalf("an unscoped job reached the governed surface: %+v", surface.calls)
+			}
+		})
+	}
+}
+
+// The two filters behind the doors read an empty allowlist the same way, so a
+// caller that skips the start check still gets nothing.
+func TestAnEmptyAllowlistNarrowsToNothingAndPermitsNothing(t *testing.T) {
+	surface := &fakeSurface{}
+	if kept := (Job{}).Narrow(surface.Specs()); len(kept) != 0 {
+		t.Errorf("an empty allowlist kept %d tools of the offer: %+v", len(kept), kept)
+	}
+	for _, spec := range surface.Specs() {
+		if err := (Job{}).permits(spec.Name); !errors.Is(err, errOutsideAgentSpec) {
+			t.Errorf("an empty allowlist permitted %q: %v", spec.Name, err)
+		}
 	}
 }
 

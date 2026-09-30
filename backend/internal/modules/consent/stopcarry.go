@@ -26,6 +26,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -68,29 +69,9 @@ func (s *Store) LockStopsTx(ctx context.Context, tx pgx.Tx, subjects ...commsaut
 // the record first. Carrying it as the merging rep's own level would be a
 // laundering path: merge, then lift.
 func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error {
-	// GATED HERE TOO, not merely at the merge that calls it.
-	//
-	// This is exported and takes a transaction it does not own, so anything
-	// holding a consent store can call it directly — and its effect is to write
-	// a suppression onto a subject the caller names.
-	//
-	// THE GATE ADMITS ANY OF THE THREE GRANTS ITS THREE CALLERS RUN UNDER,
-	// rather than naming one and refusing the others. The three doors are:
-	//
-	//   MergeContact   contact:update
-	//   MergeLeads    lead:update
-	//   PromoteLead   lead:update + contact:create, and NEVER contact:update
-	//
-	// so a rule of "update on whichever subject survives" refused promotion
-	// outright — a rep entitled to turn a lead into a contact does not thereby
-	// hold the right to edit contacts, and the promotion rolled back on a
-	// permission the caller was never required to have.
-	//
-	// The point of this gate is to keep a caller who holds NO contacts grant at
-	// all from writing suppressions through a seam meant for merges. It is not
-	// to re-decide the merge's own entitlement, which each door already checked
-	// before opening its transaction.
-	if err := admitAMergingCaller(ctx); err != nil {
+	// GATED HERE TOO, not merely at the merge that calls it: this is exported
+	// and writes a suppression onto a subject the caller names. See admitACarry.
+	if err := admitACarry(ctx, tx, from, to); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -233,27 +214,49 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	return nil
 }
 
-// admitAMergingCaller refuses a principal holding none of the three grants the
-// three merge doors run under. auth.RequireAny takes one object and several
-// actions, and this rule spans two objects, so it is spelled out here rather
-// than by widening the platform primitive for a single call site.
+// admitACarry asks, at the seam, for the authority the merge door that owns
+// this shape of carry already asked for: the grant that door runs under, and
+// write authority over both records it names. An exported carry that asked
+// less would let an in-process caller move one subject's links and stops onto
+// another it may not change.
 //
-// A refusal names contact.update, because that is the grant an ordinary contact
-// merge is missing and the one an operator will go and grant.
-func admitAMergingCaller(ctx context.Context) error {
-	for _, g := range []struct {
-		object string
-		action principal.Action
-	}{
-		{entityContact, principal.ActionUpdate},
-		{entityLead, principal.ActionUpdate},
-		{entityContact, principal.ActionCreate},
-	} {
-		if err := auth.Require(ctx, g.object, g.action); err == nil {
-			return nil
+// THE GRANT FOLLOWS THE DOOR, not the survivor:
+//
+//	contact → contact   MergeContact   contact:update
+//	lead → lead         MergeLead      lead:update
+//	lead → contact      PromoteLead    lead:update + contact:create, never contact:update
+//
+// Promotion never requires contact:update.
+func admitACarry(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error {
+	switch {
+	case !from.ContactID.IsZero() && !to.ContactID.IsZero():
+		if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
+			return err
+		}
+	case !from.LeadID.IsZero() && !to.LeadID.IsZero():
+		if err := auth.Require(ctx, entityLead, principal.ActionUpdate); err != nil {
+			return err
+		}
+	case !from.LeadID.IsZero() && !to.ContactID.IsZero():
+		if err := auth.Require(ctx, entityLead, principal.ActionUpdate); err != nil {
+			return err
+		}
+		if err := auth.Require(ctx, entityContact, principal.ActionCreate); err != nil {
+			return err
+		}
+	default:
+		return errors.New("consent: a carry runs contact to contact, lead to lead, or lead to contact")
+	}
+	for _, subject := range []commsauthz.StopSubject{from, to} {
+		table, id := entityContact, subject.ContactID.UUID
+		if id.IsZero() {
+			table, id = entityLead, subject.LeadID.UUID
+		}
+		if err := auth.EnsureWritable(ctx, tx, table, id); err != nil {
+			return err
 		}
 	}
-	return auth.Require(ctx, entityContact, principal.ActionUpdate)
+	return nil
 }
 
 // authorityLadder renders commsauthz's own rank order for SQL, weakest first,

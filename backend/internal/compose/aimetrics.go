@@ -45,4 +45,5 @@ func (s Server) writeMetricsSections(w io.Writer) {
 	s.writeLicenseMetrics(w)
 	s.writeCaptureSection(w)
 	s.writeAuthzSection(w)
+	s.writeAgentVolumeSection(w)
 }

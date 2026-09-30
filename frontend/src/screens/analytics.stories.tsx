@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import { StatStrip } from "../design-system/statstrip";
 import { AnalyticsScreen, ForecastTile } from "./analytics";
 import {
@@ -14,8 +14,8 @@ import {
 } from "./story-utils";
 
 // The Reports screen for the fe-uat render gate. All three report segments draw
-// into ONE surface — a titled card whose trailing action row carries "Explain
-// this number" — so each story below is that same card holding a different
+// into ONE surface — a titled card whose head carries "Explain this number"
+// beside its title — so each story below is that same card holding a different
 // report, which is exactly the drift these stories exist to catch: the screen
 // body had no render coverage while three segments grew three different looks.
 //
@@ -70,14 +70,25 @@ function run(report: string, rows: Record<string, unknown>[]) {
 }
 
 // The converted report returns one row per stage and no currency column: each
-// deal was priced into the base currency before anything was summed.
+// deal was priced into the base currency before anything was summed. Each row
+// carries its own handle, so each stage draws its own explain trigger.
+const stageHandle = (stageId: string) =>
+  `/v1/reports/pipeline-current/derivation?by=stage_id&agg=sum:amount_base_minor:raw_minor&stage_id=${stageId}`;
+
 const stageRows = [
-  { stage_id: "pl-s1", raw_minor: 24686, weighted_minor: 4938, deal_count: 2 },
+  {
+    stage_id: "pl-s1",
+    raw_minor: 24686,
+    weighted_minor: 4938,
+    deal_count: 2,
+    derivation_url: stageHandle("pl-s1"),
+  },
   {
     stage_id: "pl-s2",
     raw_minor: 1850000,
     weighted_minor: 1110000,
     deal_count: 5,
+    derivation_url: stageHandle("pl-s2"),
   },
 ];
 
@@ -139,12 +150,40 @@ const derivation = {
   ],
 };
 
+const forecastReadings = {
+  period_start: "2026-07-01",
+  period_end: "2026-09-30",
+  scope_kind: "workspace",
+  won_minor: 92_000_00,
+  evidence_minor: 148_000_00,
+  best_case_minor: 260_000_00,
+  open_minor: 240_000_00,
+  weighted_minor: 132_000_00,
+  eligible_count: 52,
+  priced_count: 52,
+  confirmed_date_count: 31,
+  fx_missing_count: 0,
+  as_of: "2026-09-04T06:00:00Z",
+  timezone: "Europe/Berlin",
+  base_currency: "EUR",
+  current_call: {
+    id: "22222222-2222-4222-8222-222222222222",
+    amount_minor: 200_000_00,
+    currency: "EUR",
+    scope_kind: "workspace",
+    period_start: "2026-07-01",
+    period_end: "2026-09-30",
+    author_id: "11111111-1111-4111-8111-111111111111",
+    created_at: "2026-07-10T09:00:00Z",
+  },
+};
+
 const routes: RouteMap = {
-  "GET /me": meRoute({}),
+  "GET /me": meRoute({ forecast: ["create"] }),
   "GET /analytics/context": () =>
     jsonResponse({
-      default_scope: { kind: "workspace", label: "Whole workspace" },
-      allowed_scopes: [{ kind: "workspace", label: "Whole workspace" }],
+      default_scope: { kind: "workspace", label: "Whole company" },
+      allowed_scopes: [{ kind: "workspace", label: "Whole company" }],
       capabilities: {
         view_manager_forecast: true,
         submit_manager_forecast: true,
@@ -181,6 +220,19 @@ const routes: RouteMap = {
   "POST /reports/open-deals-per-company": () =>
     run("open-deals-per-company", companyRows),
   "GET /reports/pipeline-current/derivation": () => jsonResponse(derivation),
+  // The Forecast section's own reads: the period's readings, no check run yet
+  // (the assurance read answers 404, its ordinary first state), and the size
+  // the first check would have.
+  "GET /forecast": () => jsonResponse(forecastReadings),
+  "GET /forecast/assurance": () => jsonResponse({}, 404),
+  "GET /forecast/assurance/preview": () =>
+    jsonResponse({
+      started: false,
+      eligible_deals: forecastReadings.eligible_count,
+      findings: [],
+      readiness: "ready",
+      sources: [],
+    }),
 };
 
 function screenStory() {
@@ -213,17 +265,18 @@ const clickButton =
     }
   };
 
-const meta: Meta = { title: "Records/Reports" };
+const meta: Meta = { title: "Records/Reports/Page" };
 export default meta;
 
 type Story = StoryObj;
 
 // The default segment: the stage table inside the report card, the explain verb
-// in the card's own action row.
+// in the card's head, and the open value drawn as a bar with its weighted part.
 export const DealsByStage: Story = { render: screenStory };
 
-// Five money figures read across as one comparison — the strip, under the
-// callout that says how to read the second figure in each slot.
+// The section the screen opens on: the answer with the period drawn as won,
+// evidence and best case against the call, the readings under it, and the
+// checks beside the receipt.
 export const Forecast: Story = {
   render: screenStory,
   play: clickButton("Forecast"),
@@ -234,11 +287,9 @@ export const Forecast: Story = {
 // selection. This story asked for a button by the card's title and found none.
 export const OpenDealsPerCompany: Story = {
   render: screenStory,
-  play: clickButton("Pipeline"),
+  play: clickButton("Deals"),
 };
 
-// "Explain this number" open: the report card above, the derivation card below
-// it, both the same titled-card surface.
 // The performance section: closed outcomes beside stage velocity, every
 // duration the server's own, and a withheld percentile rendered as words
 // rather than a zero.
@@ -358,17 +409,70 @@ export const MyOutcomes: Story = {
   play: clickButton("My outcomes"),
 };
 
-export const Explain: Story = {
-  render: screenStory,
-  // Pipeline first: the explain verb belongs to a report card's action row, and
-  // the Forecast section the screen opens on draws no report cards at all.
-  play: clickButton("Pipeline", "Explain this number"),
+// The seat's readings with NOTHING behind them. The lens answered and the seat
+// holds no open deal, which is a reading — and a different one from a read that
+// failed or one still in flight, all three of which used to say "Nothing to
+// read yet".
+export const MyOutcomesEmpty: Story = {
+  render: () => {
+    installFetchStub({
+      ...ownLensRoutes,
+      "POST /reports/pipeline-current": () => run("pipeline-current", []),
+    });
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: clickButton("My outcomes"),
 };
 
-// The three absences a slot has to tell apart, side by side, because they are
-// three different facts and one of them used to be drawn as €0.00. A category
+// "Explain this number" open: the report card above, the derivation card below
+// it, both the same titled-card surface.
+export const Explain: Story = {
+  render: screenStory,
+  // Pipeline first: the explain verb belongs to a report card's head, and
+  // the Forecast section the screen opens on draws no report cards at all.
+  play: clickButton("Deals", "Explain this number"),
+};
+
+// One stage's figure explained in a drawer, over the table it came from.
+export const ExplainRow: Story = {
+  render: screenStory,
+  play: async (context) => {
+    await clickButton("Deals", "Explain Qualify")(context);
+    await screen.findByRole("dialog");
+  },
+};
+
+// The derivation card while its read is still in flight: the definition line,
+// then two skeleton lines where the breakdown will land.
+export const ExplainLoading: Story = {
+  render: () => {
+    installFetchStub({
+      ...routes,
+      "GET /reports/pipeline-current/derivation": () =>
+        new Promise<Response>(() => {}),
+    });
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: async (context) => {
+    await clickButton("Deals", "Explain this number")(context);
+    await within(context.canvasElement).findByText("How this number is built");
+  },
+};
+
+// The four absences a slot has to tell apart, side by side, because they are
+// four different facts and one of them used to be drawn as €0.00. A category
 // the report returned no row for was measured in no currency at all; a band of
-// deals nobody priced has a currency but no figure; a stored zero IS a figure.
+// deals nobody priced has a currency but no figure; a band whose deals ARE
+// counted answers with the count and says the amount is what is missing; a
+// stored zero IS a figure.
 export const ForecastAbsences: Story = {
   render: () => (
     <StoryProviders>
@@ -385,6 +489,14 @@ export const ForecastAbsences: Story = {
           amountMinor={null}
           weightedMinor={null}
           currency={null}
+          locale="en"
+        />
+        <ForecastTile
+          label="Counted, unpriced"
+          amountMinor={null}
+          weightedMinor={null}
+          dealCount={7}
+          currency="EUR"
           locale="en"
         />
         <ForecastTile
@@ -443,7 +555,36 @@ export const ForecastSlots: Story = {
           currency="EUR"
           locale="en"
         />
+        {/* The money covers only part of what the category holds, so the
+            second fragment states the GAP instead of the plain count. */}
+        <ForecastTile
+          label="Pipeline"
+          amountMinor={4100000}
+          weightedMinor={1600000}
+          dealCount={9}
+          pricedDeals={6}
+          currency="EUR"
+          locale="en"
+        />
       </StatStrip>
     </StoryProviders>
   ),
+};
+
+// At 390px. The strip folds to full-width ROWS — every slot declares
+// `narrow="row"` — because two slots abreast on a phone clip the label AND
+// ellipsize the figure, and a clipped number is a different number. The
+// hairline between rows is the plate's; the tiles lose their boxes.
+export const ForecastSlotsPhone: Story = {
+  ...ForecastSlots,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// The seat's own two readings at 390px, where the door in each row's foot has
+// to stay a thumb target of its own.
+export const MyOutcomesPhone: Story = {
+  ...MyOutcomes,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

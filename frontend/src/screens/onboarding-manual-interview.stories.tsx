@@ -60,7 +60,7 @@ type Story = StoryObj<typeof ManualCompanyInterview>;
 // dressed for is dark glass — so a story without the wrapper shows a surface
 // nobody can reach and hides the one everybody sees.
 function ArtifactPane({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="mw-review ob-conv-artifact">{children}</div>;
+  return <div className="ob-conv-artifact">{children}</div>;
 }
 
 function interview(values: CompanyForm) {
@@ -131,7 +131,7 @@ async function advance(canvasElement: HTMLElement, times: number) {
 // To the END, rather than by a count of steps. A number here is a second
 // statement of how many questions there are, and it goes wrong the day one is
 // added — which is how this story first failed, looking for a verb that had
-// already become "Review my answers". The condition cannot: the run is over
+// already become "Review answers". The condition cannot: the run is over
 // exactly when neither forward verb is on screen and only the review is left.
 async function advanceToLast(canvasElement: HTMLElement) {
   const user = userEvent.setup();

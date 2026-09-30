@@ -23,9 +23,10 @@ import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
@@ -167,9 +168,7 @@ export function MoveButton({
             <ListChecks aria-hidden />
             {t("deal360.createTask")}
           </Button>
-          {createTask.isError ? (
-            <p className="t-danger">{problemMessageOf(createTask.error, t)}</p>
-          ) : null}
+          <ErrorLine error={createTask.error} />
         </>
       );
     case "draft_email":

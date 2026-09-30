@@ -188,6 +188,11 @@
 .scroll {
   flex: 1;
   overflow-y: auto;
+  /* The gutter is reserved whether or not the page overflows, so walking from a
+     long page to a short one does not shift the column sideways under classic
+     (non-overlay) scrollbars. Overlay scrollbars reserve nothing, so the
+     default macOS look is unchanged. */
+  scrollbar-gutter: stable;
   padding-top: var(--pageGapTop);
   /* No bottom padding: `.wrap` carries the page's own end rhythm, and a second
      band under it — reserved for the agent dock's lane — read as a screenful of
@@ -280,11 +285,14 @@
   max-width: var(--pageMeasure);
   margin-inline: auto;
 }
-/* The rail-less surfaces — sign-in, onboarding, a public booking page. These
-   render no page head to align with, and they are a single centred column on
-   purpose, so they carry their own centring rather than inheriting it. */
+/* A single centred column for the surfaces that draw no page head — the public
+   booking page, the OAuth consent screen, the auth splash, the error boundary.
+   They have nothing to align with, so they carry their own centring rather than
+   inheriting it, and they take the measure the settings stack reads
+   (--settingsColumn): the product has three widths — full, the page, and this
+   one — and a number spelled here would be a fourth nobody chose. */
 .wrap.narrow {
-  max-width: 780px;
+  max-width: var(--settingsColumn);
   margin: 0 auto;
 }
 /* Screens drop content blocks straight into .wrap, which has no row gap, so two
@@ -346,7 +354,7 @@
  * colour on collapse would read as two shells.
  *
  * Top to bottom: brand, the destinations (or the entries of a section the
- * reader walked into), More at phone width, then the installation's entitlement
+ * reader walked into), More at phone width, then the agent (app/agentrail.tsx)
  * pinned to the foot. */
 .rail {
   /* Glass over the glow: the pane's translucent ground with the blur that lets
@@ -1172,7 +1180,8 @@
   overflow-y: auto;
   padding: var(--space-2);
 }
-.palette-row {
+.palette-row,
+.palette-ask {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -1185,7 +1194,15 @@
   font-family: var(--fontFamilyBody);
   text-align: left;
 }
-.palette-row svg {
+/* Asking is not one of the destinations, so it does not sit in their list: a
+   hairline under it says the rows below answer a different question. */
+.palette-ask {
+  border-bottom: 1px solid var(--borderSubtle);
+  border-radius: 0;
+  margin-bottom: var(--space-1);
+}
+.palette-row svg,
+.palette-ask svg {
   width: 14px;
   height: 14px;
   flex: none;
@@ -1195,7 +1212,8 @@
   background: var(--bgHover);
   color: var(--textPrimary);
 }
-.palette-row .label {
+.palette-row .label,
+.palette-ask .label {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1419,9 +1437,9 @@
   .rail.collapsed .navlevel {
     display: contents;
   }
-  /* The bottom bar carries destinations and nothing else. The group headings and
-     the entitlement row belong to a column with room for them, so the sheet
-     below is where they come back. */
+  /* The bottom bar carries destinations and nothing else. The brand block and
+     the group headings belong to a column with room for them, so the sheet
+     below is where they come back; the spacer and tooltips stay hidden. */
   .rail .navheading,
   .rail .ws,
   .rail .grow,
@@ -1727,11 +1745,22 @@
   min-height: 0;
 }
 
-/* `.appbanner` paints nothing and has no rule here on purpose: it is the
- * shell's MARKER on the wrapper a banner mounts in, read by
- * `.main:not(:has(> .appbanner)) > .scroll` above so the content column stops
- * reserving the top bar's height while a banner stands in it. The notice inside
- * the wrapper draws itself, and a wrapper is not a surface. */
+/* The shell banners' slot: outside the scroller, so a state that blocks work
+ * stays in view on a long page, and measured like the scroller beside it. */
+.appbanner {
+  padding-top: var(--space-3);
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
+/* The page column's inset, as `.wrap` takes it: the gutter, and on a capped
+ * page the measure centred in what the scrollbar leaves. */
+.appbanner > * {
+  margin-inline: max(
+    var(--pageGutter),
+    calc((100% - var(--pageMeasure, 100%)) / 2 + var(--pageGutter))
+  );
+}
 
 /* The resume-connect banner is the one that sits INSIDE the content column,
  * above the screen it interrupts, so it earns a gap under it. */
@@ -1748,12 +1777,13 @@
    Nothing else about the layout changes — inline-size containment only lets a
    child ask how wide this is.
 
-   The column and NOT the scroller inside it, even though a classic scrollbar
-   makes the two different widths: `cqi` counts the scrollbar's gutter either
-   way, so moving the container down one level buys a child nothing. What that
-   difference does to the tab strip is corrected where it lands, in
-   design-system/recordtabs.css. */
-.main-record {
+   THE SCROLLER carries it, not the column around it: `cqi` has to answer with
+   the width content can actually USE, and a classic scrollbar takes its gutter
+   out of the scroller while the column keeps it. Measured against the column, a
+   strip that spans the container spans the gutter too, and the page it stands
+   on pans sideways by half of that on every record — six pixels at 1920, on the
+   one page where the reader is holding a place. */
+.main-record > .scroll {
   container-type: inline-size;
   container-name: work;
 }

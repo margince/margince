@@ -48,6 +48,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
+// logDetailFilter is the system_log detail key an agent's logged preview
+// records its filter under, the key the filtered export's log uses too.
+const logDetailFilter = "filter"
+
 // filterPreviewDefaultRows is the page a caller who names no limit gets, and
 // filterPreviewMaxRows the ceiling. Both are about what a builder renders while
 // somebody types — a preview is a glance, not a report. The contract publishes
@@ -112,7 +116,7 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	preview, err := h.preview(r.Context(), engine, *req.Filter, limit)
+	preview, err := h.preview(r.Context(), engine, *req.Filter, limit, false)
 	if err != nil {
 		writeFilterPreviewError(w, r, err)
 		return
@@ -134,8 +138,12 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 // REPEATABLE READ. A preview is a glance at a moving table, and a count one write
 // stale is the honest cost of that — the alternative is a serialization failure
 // shown to somebody who is only typing.
+//
+// logged writes the preview to system_log in the same transaction. A human
+// typing is not logged; an agent's preview is, because for an agent the same
+// read is a bulk read of records that must leave a trace.
 func (h filterPreviewHandlers) preview(
-	ctx context.Context, engine storekit.Query, pred storekit.Predicate, limit int,
+	ctx context.Context, engine storekit.Query, pred storekit.Predicate, limit int, logged bool,
 ) (crmcontracts.FilterPreview, error) {
 	var out crmcontracts.FilterPreview
 	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
@@ -174,7 +182,13 @@ func (h filterPreviewHandlers) preview(
 			Rows:       rowsAsMaps(memberData{table: engine.Table, columns: columns, rows: rows}),
 			Truncated:  count > len(rows),
 		}
-		return nil
+		if !logged {
+			return nil
+		}
+		_, err = storekit.LogSystem(ctx, tx, "preview", map[string]any{
+			"table": engine.Table, logDetailFilter: pred, "match_count": count, "row_count": len(rows),
+		})
+		return err
 	})
 	return out, err
 }

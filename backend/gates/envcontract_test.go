@@ -61,6 +61,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // envVarName matches one MARGINCE_* name in prose — the reference doc and the
@@ -438,7 +440,7 @@ func declaredConfigDefaults(t *testing.T) []configItemDefault {
 	t.Helper()
 	consts := envNameConstants(t)
 	var out []configItemDefault
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, tree := range licensedTrees {
 		walkHandWrittenGoFiles(t, tree.root, func(path, text string) {
 			// Non-test only here: a config-item default declared in a suite is
@@ -559,7 +561,7 @@ func resolveStringExpr(expr ast.Expr, consts map[string]string) string {
 func envNameConstants(t *testing.T) map[string]string {
 	t.Helper()
 	consts := map[string]string{}
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, tree := range licensedTrees {
 		walkHandWrittenGoFiles(t, tree.root, func(path, text string) {
 			file, err := parser.ParseFile(fset, path, text, 0)

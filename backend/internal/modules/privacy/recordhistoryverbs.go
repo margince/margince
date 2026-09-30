@@ -114,5 +114,11 @@ var recordHistoryVerbs = map[string]string{ // #nosec G101 -- audit verbs and th
 	// shape and to composeRecordSummary — it belongs with the code that first
 	// writes a retention release, not ahead of it.
 	"restrict": "withheld",
-	"pin":      "pinned for statutory retention",
+	// The litigation hold. "Held" and "released" would read as the Deal Room's
+	// verb and as the retention override's — the two this hold deliberately
+	// does not share a word with — so the phrase names what was decided about
+	// the record rather than what happened to a column.
+	"place_legal_hold": "put under legal hold",
+	"lift_legal_hold":  "released from legal hold",
+	"pin":              "pinned for statutory retention",
 }

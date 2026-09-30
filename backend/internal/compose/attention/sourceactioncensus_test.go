@@ -63,7 +63,11 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// Both answered by PairDecision in worklist.pair.tsx, and each on its own
 	// guard: the Keep buttons ask for `merge`, and the "Not the same" line asks
 	// for `dismiss`. A pair no merge would accept still carries the second.
-	"dedupe_candidate":     {"merge", "dismiss", "open"},
+	"dedupe_candidate": {"merge", "dismiss", "open"},
+	// Answered by SuggestionDecision in worklist.suggestion.tsx: `decide` opens
+	// the deal it proposes, `dismiss` records that it is not one, and `open`
+	// reaches the company through the routing table.
+	"deal_suggestion":      {"decide", "dismiss", "open"},
 	"introduction_request": {"decide", "open"},
 	// Drawn by NoticeAcknowledge rather than through the routing table.
 	"notice": {"acknowledge", "open"},
@@ -330,7 +334,8 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		WithDomainQuestions(&stubDomainQuestions{rows: []DomainQuestion{{
 			Domain: "mckinsey.com", Reason: "Nothing on the site named a company.",
 			AskedAt: readInstant,
-		}}})
+		}}}).
+		WithDealSuggestions(&stubSuggestions{rows: []crmcontracts.DealSuggestion{suggestionRow("proposal_sent")}})
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling the day: %v", err)

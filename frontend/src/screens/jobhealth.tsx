@@ -18,7 +18,6 @@ import {
 import { viewerZone } from "../format/timezone";
 import {
   type Locale,
-  type PluralBase,
   type PluralTranslator,
   type Translator,
   useLocale,
@@ -27,7 +26,7 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
-import { HealthCard } from "./healthcard";
+import { formatWaitedFor, HealthCard } from "./healthcard";
 import { DeadWorkCallout } from "./jobhealthdead";
 import "./jobhealth.css";
 
@@ -56,32 +55,6 @@ const FAILURE_STATE: Record<
   discarded: { label: "jobs.state.discarded", tone: "danger" },
   cancelled: { label: "jobs.state.cancelled", tone: undefined },
 };
-
-// How long the oldest runnable job of a kind has waited, in the largest whole
-// unit. `format.ts`'s formatDuration cannot answer this: it floors anything
-// under an hour to "0 hr", and a queue that jammed five minutes ago is exactly
-// the reading an operator opens this card for.
-// A count of one takes the singular key, the house `.one`/`.other` pattern — a
-// queue that jammed sixty-one minutes ago read "waited 1 hours".
-function formatWaitedFor(
-  seconds: number,
-  plural: PluralTranslator,
-  locale: Locale,
-): string {
-  const [unit, count] =
-    seconds >= 86_400
-      ? (["Days", Math.floor(seconds / 86_400)] as const)
-      : seconds >= 3_600
-        ? (["Hours", Math.floor(seconds / 3_600)] as const)
-        : seconds >= 60
-          ? (["Minutes", Math.floor(seconds / 60)] as const)
-          : (["Seconds", seconds] as const);
-  // Annotated so an unknown unit is a compile error rather than a base the
-  // catalog silently echoes back. Which FORM the base takes is the plural
-  // helper's business, not this function's.
-  const base: PluralBase = `jobs.waited${unit}`;
-  return plural(base, count, { count: formatNumber(count, locale) });
-}
 
 // All four states of one kind, always all four. A zero is a fact an operator
 // came here to read — "0 dead" is the reassurance — and dropping the zeros

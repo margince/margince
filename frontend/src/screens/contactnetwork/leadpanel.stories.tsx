@@ -59,6 +59,7 @@ function Lead({ candidate }: Readonly<{ candidate: RouteCandidate }>) {
     <LeadPanel
       route={candidate}
       targetName="Dana Buyer"
+      targetId="contact-dana"
       blocked={availabilityLabel(candidate.availability, t)}
       onAsk={() => undefined}
     />
@@ -82,7 +83,7 @@ function draw(candidate: RouteCandidate) {
 }
 
 const meta: Meta<typeof LeadPanel> = {
-  title: "Records/Contact network/Recommended route",
+  title: "Records/Contact 360/Network/Recommended route",
   component: LeadPanel,
   parameters: { layout: "padded" },
 };

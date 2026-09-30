@@ -14,6 +14,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -24,11 +26,6 @@ import (
 // kind "enrich".
 func scrapeAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		// The single-use redemption IS the idempotency claim: whoever consumes
-		// the approval executes; anyone else finds it consumed.
-		if _, _, err := svc.Redeem(ctx, approvalID, enrichProposalKind, diffHash); err != nil {
-			return err
-		}
 		companyID, sourceURL, fields, err := contacts.UnmarshalEnrichment(proposedChange)
 		if err != nil {
 			return err
@@ -47,9 +44,20 @@ func scrapeAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals
 			UserID:     decider.UserID,
 			OnBehalfOf: decider.UserID,
 		})
-		return store.ApplyEnrichment(execCtx, companyID, contacts.ApplyColdStartProfileInput{
-			SourceURL: sourceURL,
-			Fields:    fields,
+		// The single-use redemption IS the idempotency claim: whoever consumes
+		// the approval executes; anyone else finds it consumed. Redeemed in the
+		// write's OWN transaction, so a failed apply leaves the approval
+		// unconsumed and retryable — spent first, a write that then fails loses
+		// the change with no path back, because Decide refuses a second
+		// decision and nothing else drives this effect.
+		// Redeemed under the DECIDER's context and applied under the executor's:
+		// the redemption is an assertion of that human's authority, and the
+		// write carries the machine provenance the 360 renders.
+		return svc.RedeemAndApply(ctx, approvalID, enrichProposalKind, diffHash, func(tx pgx.Tx) error {
+			return store.ApplyEnrichmentTx(execCtx, tx, companyID, contacts.ApplyColdStartProfileInput{
+				SourceURL: sourceURL,
+				Fields:    fields,
+			})
 		})
 	}
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -44,9 +45,22 @@ const (
 // It is silent for a non-interaction kind and for an activity with no contact
 // link — an unlinked note is a workspace-shared thought, not a conversation
 // with anybody.
-func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, direction *string, links []ActivityLinkInput) error {
+//
+// A row that names its source author was not logged by the caller: an import
+// writes another system's history, and the caller is whoever ran the import.
+// Our side is then the author's seat when the source names one, and nobody when
+// it names only an author with no seat here (an inbound mail's external sender,
+// a departed rep the source spelled by name). The backfill skips these rows for
+// the same reason (participantbackfill.go, class 3).
+func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, direction *string, links []ActivityLinkInput, author storekit.SourceAuthorInput) error {
 	if !relstrength.IsParticipantKind(kind) {
 		return nil
+	}
+	if author.AuthorID != nil {
+		return stampLoggedCounterparties(ctx, tx, activityID, direction, links, *author.AuthorID)
+	}
+	if author.AuthorName != nil {
+		return stampLoggedCounterparties(ctx, tx, activityID, direction, links, ids.Nil)
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {

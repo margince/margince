@@ -9,7 +9,7 @@ import { ProjectPicker, ScopeLine } from "./projectpicker";
 // The one control every AI surface is told its project through, and the one
 // line that says which project the output was narrowed to.
 const meta: Meta<typeof ProjectPicker> = {
-  title: "Design System/ProjectPicker",
+  title: "Components/Forms and input/Project picker",
   component: ProjectPicker,
   parameters: { layout: "padded" },
   decorators: [

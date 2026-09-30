@@ -3,8 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Button, Card, DataTable, Disclosure, TextInput } from "./atoms";
+import { Button, Card, Disclosure, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
+import { DataTable } from "./datatable";
 import { Select } from "./select";
 import { SettingList, SettingRow } from "./settingrow";
 import { Switch } from "./switch";
@@ -17,7 +18,7 @@ const REFUSED: RefusedDomain[] = [
 ];
 
 const meta: Meta<typeof SettingRow> = {
-  title: "Design System/SettingRow",
+  title: "Components/Layout and structure/Setting row",
   component: SettingRow,
   parameters: { layout: "padded" },
 };

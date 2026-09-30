@@ -18,20 +18,19 @@
 // component a second author rebuilds: the noun is obvious, the grep comes back
 // empty, and the duplicate looks reasonable in review.
 //
-// ## Three arms, one subject
+// ## Arms, one subject
 //
 // 1. Every component in this directory is NAMED in the catalog table.
 // 2. A row claiming a story of its own has a story file to claim.
-// 3. Every story in the tree files under a root the catalog documents.
+// 3. Every story in the tree carries a title this file can read, filed under a
+//    root the catalog documents.
+// 4. The catalog's groups are the `Components/` categories, in order.
 //
 // The third is here rather than beside the stories because the roots are
-// declared in this file's subject: the catalog names eight, and the sidebar had
-// grown to fourteen — a retired `Screens/` root still carrying nineteen files,
-// four roots holding one story each, and a `Design system/` separated from
-// `Design System/` by the case of one letter. A story's title is the only thing
-// that files it, fe-uat keys on importPath and never on the title, and so
-// nothing failed while the shelf a reader looks on stopped being the shelf the
-// story is on.
+// declared in this file's subject. A story's title is the only thing that files
+// it, and fe-uat keys on importPath, never on the title, so without this arm the
+// shelf a reader looks on can stop being the shelf the story is on and nothing
+// fails. How the sidebar is shaped under those roots is sidebar.test.ts's.
 //
 // ## What this gate deliberately does NOT decide
 //
@@ -58,52 +57,24 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import {
+  CATALOG_HEADING,
+  ROOTS_HEADING,
+  readDesignCatalog,
+  tableRows,
+  tablesIn,
+} from "../../scripts/lib/design-catalog";
 import { filesUnder, parseSource } from "../../scripts/lib/source-tree";
-import { storyTitle } from "../../scripts/lib/story-title";
+import { storyCensus } from "../../scripts/lib/story-files";
+import { titledStories } from "../../scripts/lib/story-title";
 
 const frontendRoot = resolve(__dirname, "..", "..");
 const srcDir = join(frontendRoot, "src");
 const dsDir = join(srcDir, "design-system");
-const catalogPath = join(dsDir, "README.md");
-
-// The catalog's two tables, found by their HEADINGS rather than by line number.
-// A line number would be a second copy of the file's shape, and every edit to
-// the prose above a table would move it.
-const CATALOG_HEADING = "## What this directory already gives you";
-const ROOTS_HEADING = "## Seeing them";
 
 // A module that is not a primitive: the gate's own subject is what this
 // directory SHIPS, and a test or a story ships nothing.
 const NOT_SHIPPED = /\.(test|stories)\.tsx$/;
-
-// readCatalog returns the raw text of the section under `heading`, up to the
-// next heading of the same level. Sections rather than the whole file: a name
-// that appears only in the prose at the top is a mention, not an entry, and the
-// distinction is the whole point of having an index.
-function catalogSection(heading: string): string {
-  const lines = readFileSync(catalogPath, "utf8").split("\n");
-  const start = lines.indexOf(heading);
-  if (start < 0) {
-    throw new Error(
-      `${relative(frontendRoot, catalogPath)} has no "${heading}" section — ` +
-        "this gate reads it, so renaming it silently empties the gate",
-    );
-  }
-  const rest = lines.slice(start + 1);
-  const end = rest.findIndex((line) => line.startsWith("## "));
-  return (end < 0 ? rest : rest.slice(0, end)).join("\n");
-}
-
-// tableRows returns the markdown table rows of a section, header and alignment
-// rule dropped, each split into its cells.
-function tableRows(section: string): string[][] {
-  return section
-    .split("\n")
-    .filter((line) => line.startsWith("|"))
-    .map((line) => line.slice(1).replace(/\|$/, "").split("|"))
-    .filter((cells) => !/^[\s|:-]*$/.test(cells.join("|")))
-    .slice(1);
-}
 
 // componentsIn returns every PascalCase export in `text` whose declaration
 // contains markup.
@@ -202,25 +173,80 @@ function rendersMarkup(node: ts.Node): boolean {
   return markup;
 }
 
-const catalogTable = catalogSection(CATALOG_HEADING);
-const rootsSection = catalogSection(ROOTS_HEADING);
+// A bare ✅ is met by the module's co-located story, or by a story named for a
+// component the row's first cell names that imports the row's module.
+function falseStoryClaims(
+  rows: string[][],
+  read: (story: string) => string | null,
+): string[] {
+  return rows.flatMap(([primitive, , file, story]) => {
+    if (story?.trim() !== "✅") return [];
+    const module = file.trim().replace(/`/g, "");
+    if (!module.endsWith(".tsx") || module.includes("/")) return [];
+    const stem = module.replace(/\.tsx$/, "");
+    const named = [...primitive.matchAll(/`([A-Z][A-Za-z0-9]*)`/g)].map(
+      ([, name]) => `${name.toLowerCase()}.stories.tsx`,
+    );
+    const met =
+      read(`${stem}.stories.tsx`) !== null ||
+      named.some((candidate) => importsModule(candidate, read, stem));
+    return met
+      ? []
+      : [
+          `${primitive.trim()} claims ✅ but no story imports ${module}: ${[...named, `${stem}.stories.tsx`].join(", ")}`,
+        ];
+  });
+}
 
-// The roots the catalog declares, read out of its own table. One row carries
-// three of them, which is why every backticked `Name/` in the first cell counts
-// rather than the cell itself.
-const documentedRoots = new Set(
-  tableRows(rootsSection).flatMap((cells) =>
-    [...cells[0].matchAll(/`([^`/]+)\/`/g)].map((match) => match[1]),
-  ),
-);
+function importsModule(
+  story: string,
+  read: (story: string) => string | null,
+  stem: string,
+): boolean {
+  const text = read(story);
+  if (text === null) return false;
+  return parseSource(join(dsDir, story), text).statements.some(
+    (statement) =>
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === `./${stem}` &&
+      importsValue(statement.importClause),
+  );
+}
+
+// A type-only import renders nothing, and neither does a bare side-effect one.
+function importsValue(clause: ts.ImportClause | undefined): boolean {
+  if (clause === undefined || clause.isTypeOnly) return false;
+  if (clause.name !== undefined) return true;
+  const bindings = clause.namedBindings;
+  if (bindings === undefined) return false;
+  return (
+    ts.isNamespaceImport(bindings) ||
+    bindings.elements.some((element) => !element.isTypeOnly)
+  );
+}
+
+const { catalogTable, rootsSection, roots, categories } =
+  readDesignCatalog(frontendRoot);
+const documentedRoots = new Set(roots);
+
+// Catalog groups that are not a `Components/` category.
+const UNSHELVED_GROUPS = ["Foundations", "Libraries"];
+
+function catalogGroups(section: string): string[] {
+  return section
+    .split("\n")
+    .filter((line) => line.startsWith("### "))
+    .map((line) => line.slice(4).trim());
+}
 
 const primitiveModules = filesUnder(dsDir).filter(
   (path) => path.endsWith(".tsx") && !NOT_SHIPPED.test(basename(path)),
 );
 
-const storyFiles = filesUnder(srcDir).filter((path) =>
-  path.endsWith(".stories.tsx"),
-);
+const { suffixes: storySuffixList, files: storyFiles } =
+  storyCensus(frontendRoot);
+const titled = await titledStories(storyFiles);
 
 describe("the catalog indexes this directory", () => {
   // A census that reads a smaller tree reports the same word a clean one does.
@@ -228,9 +254,23 @@ describe("the catalog indexes this directory", () => {
   // breaks, not to pin a number somebody must maintain.
   it("reads the tree it is pointed at", () => {
     expect(primitiveModules.length).toBeGreaterThan(30);
+    expect(storySuffixList).not.toBeNull();
     expect(storyFiles.length).toBeGreaterThan(100);
     expect(documentedRoots.size).toBeGreaterThan(4);
     expect(catalogTable.length).toBeGreaterThan(10_000);
+    expect(tableRows(catalogTable, "Primitive").length).toBeGreaterThan(100);
+  });
+
+  it("reads every table in its sections, and no other kind", () => {
+    const unread = [
+      ...tablesIn(catalogTable)
+        .filter(({ header }) => header !== "Primitive")
+        .map(({ header }) => `${CATALOG_HEADING}: a "${header}" table`),
+      ...tablesIn(rootsSection)
+        .filter(({ header }) => header !== "Root" && header !== "Category")
+        .map(({ header }) => `${ROOTS_HEADING}: a "${header}" table`),
+    ];
+    expect(unread).toEqual([]);
   });
 
   it("names every component this directory ships", () => {
@@ -251,24 +291,24 @@ describe("the catalog indexes this directory", () => {
   // about. So the arm holds the one claim that is unambiguous, and the
   // qualified rows are the author's word.
   it("claims a story of its own only where one exists", () => {
-    const lying = tableRows(catalogTable).flatMap((cells) => {
-      const [primitive, , file, story] = cells;
-      if (story?.trim() !== "✅") return [];
-      const module = file.trim().replace(/`/g, "");
-      if (!module.endsWith(".tsx") || module.includes("/")) return [];
-      const stories = join(dsDir, module.replace(/\.tsx$/, ".stories.tsx"));
-      return existsSync(stories)
-        ? []
-        : [
-            `${primitive.trim()} claims ✅ but ${basename(stories)} does not exist`,
-          ];
-    });
-    expect(lying).toEqual([]);
+    const read = (story: string) => {
+      const path = join(dsDir, story);
+      return existsSync(path) ? readFileSync(path, "utf8") : null;
+    };
+    expect(
+      falseStoryClaims(tableRows(catalogTable, "Primitive"), read),
+    ).toEqual([]);
+  });
+
+  it("reads a title off every story file", () => {
+    const untitled = titled
+      .filter(({ title }) => title === null)
+      .map(({ path }) => relative(frontendRoot, path));
+    expect(untitled).toEqual([]);
   });
 
   it("files every story under a documented root", () => {
-    const stray = storyFiles.flatMap((path) => {
-      const title = storyTitle(path, readFileSync(path, "utf8"));
+    const stray = titled.flatMap(({ path, title }) => {
       if (title === null) return [];
       const root = title.split("/")[0];
       return documentedRoots.has(root)
@@ -276,6 +316,13 @@ describe("the catalog indexes this directory", () => {
         : [`${relative(frontendRoot, path)} files under ${root}/`];
     });
     expect(stray).toEqual([]);
+  });
+
+  it("groups the catalog by the same categories, in order", () => {
+    const groups = catalogGroups(catalogTable).filter(
+      (group) => !UNSHELVED_GROUPS.includes(group),
+    );
+    expect(groups).toEqual(categories);
   });
 });
 
@@ -343,71 +390,97 @@ describe("the detectors report what they are for", () => {
     ).toEqual([]);
   });
 
-  it("reads the title off the default export, not the first match", () => {
-    const source = [
-      'const fixture = { title: "Commercial terms v4" };',
-      'const meta = { title: "Records/Deal room/Documents and threads" };',
-      "export default meta;",
+  it("holds a bare ✅ to a story that imports the row's module", () => {
+    const stories: Record<string, string> = {
+      "panel.stories.tsx": "export default {};",
+      "button.stories.tsx": 'import { Button } from "./atoms";',
+      "badge.stories.tsx": 'import { Badge } from "./badge-lookalike";',
+      "card.stories.tsx": 'import type { CardProps } from "./atoms";',
+      "field.stories.tsx": 'import { type FieldControl } from "./atoms";',
+      "textarea.stories.tsx": 'import "./atoms";',
+      "select.stories.tsx": 'import { type Option, Select } from "./atoms";',
+      "heading.stories.tsx": 'import * as atoms from "./atoms";',
+    };
+    const read = (story: string) => stories[story] ?? null;
+    const row = (primitive: string, file: string, story = "✅") => [
+      ` ${primitive} `,
+      " for ",
+      ` ${file} `,
+      ` ${story} `,
+    ];
+    expect(
+      falseStoryClaims(
+        [
+          row("`Panel`", "`panel.tsx`"),
+          row("**`Button`**", "`atoms.tsx`"),
+          row("`Checkbox` / `Button`", "`atoms.tsx`"),
+          row("`Badge`", "`atoms.tsx`"),
+          row("`Kbd`", "`atoms.tsx`"),
+          row("`useScrollRegion`", "`atoms.tsx`"),
+          row("`Kbd`", "`atoms.tsx`", "✅ (`Button`)"),
+          row("`.link-button`", "`atoms.css`"),
+          row("`Card`", "`atoms.tsx`"),
+          row("`Field`", "`atoms.tsx`"),
+          row("`Textarea`", "`atoms.tsx`"),
+          row("`Select`", "`atoms.tsx`"),
+          row("`Heading`", "`atoms.tsx`"),
+        ],
+        read,
+      ),
+    ).toEqual([
+      "`Badge` claims ✅ but no story imports atoms.tsx: badge.stories.tsx, atoms.stories.tsx",
+      "`Kbd` claims ✅ but no story imports atoms.tsx: kbd.stories.tsx, atoms.stories.tsx",
+      "`useScrollRegion` claims ✅ but no story imports atoms.tsx: atoms.stories.tsx",
+      "`Card` claims ✅ but no story imports atoms.tsx: card.stories.tsx, atoms.stories.tsx",
+      "`Field` claims ✅ but no story imports atoms.tsx: field.stories.tsx, atoms.stories.tsx",
+      "`Textarea` claims ✅ but no story imports atoms.tsx: textarea.stories.tsx, atoms.stories.tsx",
+    ]);
+  });
+
+  it("reads every table under its header, whatever its kind", () => {
+    const section = [
+      "| Root | What |",
+      "|---|---|",
+      "| `A/` | one |",
+      "",
+      "| Hook | What |",
+      "|---|---",
+      "| `useX` | a hook |",
+      "",
+      "| Root | What |",
+      "| --- | --- |",
+      "| `B/` | two |",
     ].join("\n");
-    expect(storyTitle(probe, source)).toBe(
-      "Records/Deal room/Documents and threads",
-    );
+    expect(tablesIn(section).map(({ header }) => header)).toEqual([
+      "Root",
+      "Hook",
+      "Root",
+    ]);
+    expect(tableRows(section, "Root").map((cells) => cells[0].trim())).toEqual([
+      "`A/`",
+      "`B/`",
+    ]);
+    expect(tableRows(section, "Hook")).toEqual([[" `useX` ", " a hook "]]);
   });
 
-  it("reads a title off an inline default export", () => {
+  it("reads the catalog's group headings", () => {
     expect(
-      storyTitle(probe, 'export default { title: "Shell/Top bar" };'),
-    ).toBe("Shell/Top bar");
-  });
-
-  it("reads a title through the type-only wrappers", () => {
-    // Each of these changes nothing about the object underneath. A scanner that
-    // stopped at one would read no title, and an absent title is skipped rather
-    // than reported — so this form would walk past the root check.
-    for (const meta of [
-      'const meta = { title: "Shell/Top bar" } satisfies Meta<typeof Bar>;',
-      'const meta = { title: "Shell/Top bar" } as Meta<typeof Bar>;',
-      'const meta = ({ title: "Shell/Top bar" });',
-    ]) {
-      expect(storyTitle(probe, `${meta}\nexport default meta;`)).toBe(
-        "Shell/Top bar",
-      );
-    }
-    expect(
-      storyTitle(
-        probe,
-        'export default { title: "Shell/Top bar" } satisfies Meta<typeof Bar>;',
+      catalogGroups(
+        "### Foundations\n\n| a |\n### Labels\n#### Not one\n### Messaging",
       ),
-    ).toBe("Shell/Top bar");
+    ).toEqual(["Foundations", "Labels", "Messaging"]);
   });
 
-  it("reads a title whichever way the key and value are written", () => {
-    for (const meta of [
-      'const meta = { "title": "Shell/Top bar" };',
-      'const meta = { title: "Shell/Top bar" as const };',
-      'const meta = { title: ("Shell/Top bar") };',
-      'const meta = { "title": "Shell/Top bar" as const };',
-    ]) {
-      expect(storyTitle(probe, `${meta}\nexport default meta;`)).toBe(
-        "Shell/Top bar",
-      );
-    }
-  });
-
-  it("reports no title rather than resolving a computed key", () => {
-    // What a computed key evaluates to is not a question the parser can answer,
-    // and a guess would be worse than the honest null.
-    expect(
-      storyTitle(
-        probe,
-        'const k = "title";\nconst meta = { [k]: "Shell/Top bar" };\nexport default meta;',
-      ),
-    ).toBe(null);
-  });
-
-  it("reports no title rather than guessing when there is no default export", () => {
-    expect(storyTitle(probe, 'const meta = { title: "Shell/Top bar" };')).toBe(
-      null,
+  it("refuses a blank row inside a table", () => {
+    const section = [
+      "| Category | What |",
+      "|---|---|",
+      "| Labels | pills |",
+      "| | |",
+      "| Messaging | notes |",
+    ].join("\n");
+    expect(() => tableRows(section, "Category")).toThrow(
+      'a blank table row follows "| Labels | pills |"',
     );
   });
 });

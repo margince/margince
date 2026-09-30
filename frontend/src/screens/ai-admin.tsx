@@ -2,16 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
-import { routeHash } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
-  Badge,
   Button,
-  DataTable,
   Disclosure,
   EmptyState,
   Field,
@@ -22,13 +19,14 @@ import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
+import { formatTokens } from "../format/tokens";
 import { useLocale, useT } from "../i18n";
+import { AiFeatureTable } from "./ai-feature-table";
+import { SpendEstimate } from "./ai-settings";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { settingsHref } from "./settingsrouting";
 
 type Budget = components["schemas"]["AiBudgetSnapshot"];
 type Change = components["schemas"]["AiBudgetChange"];
-type Feature = components["schemas"]["AiFeatureRoute"];
 type Deferred = components["schemas"]["AiDeferredWork"];
 
 export function useAiStatus(enabled: boolean) {
@@ -73,17 +71,21 @@ export function AiBudgetCard() {
   );
 }
 
-function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
+function BudgetReading({
+  budget,
+  estimate,
+}: Readonly<{ budget: Budget; estimate?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
   const number = (value: number) => formatNumber(value, locale);
+  const tokens = (value: number) => formatTokens(value, locale);
   const pct = Math.round((budget.spent_tokens / budget.monthly_tokens) * 100);
   return (
     <>
       <p>
         {t("aiAdmin.consumption", {
-          spent: number(budget.spent_tokens),
-          total: number(budget.monthly_tokens),
+          spent: tokens(budget.spent_tokens),
+          total: tokens(budget.monthly_tokens),
           pct: number(pct),
         })}
       </p>
@@ -93,17 +95,18 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
         label={t("aiAdmin.allowance")}
       />
       <p>
-        {t("aiAdmin.remaining", { tokens: number(budget.remaining_tokens) })} ·{" "}
+        {t("aiAdmin.remaining", { tokens: tokens(budget.remaining_tokens) })} ·{" "}
         {t("aiAdmin.reset", {
           date: formatDateTime(budget.resets_at, locale, "UTC"),
         })}
       </p>
+      {estimate}
       <p>
         {budget.source === "company_override"
           ? t("aiAdmin.fixed")
           : t("aiAdmin.formula", {
               users: number(budget.eligible_full_users),
-              tokens: number(budget.config.tokens_per_full_user),
+              tokens: tokens(budget.config.tokens_per_full_user),
             })}
         {budget.eligible_full_users === 0 &&
         budget.source !== "company_override"
@@ -143,7 +146,7 @@ function BudgetPreview({
       {canDiagnose && <DeferredWork rows={preview.deferred_work} />}
       {canRoute && (
         <Disclosure summary={t("aiAdmin.features")}>
-          <AiFeatureTable rows={preview.features} />
+          <AiFeatureTable rows={preview.features} canTrace={canDiagnose} />
         </Disclosure>
       )}
     </>
@@ -203,28 +206,30 @@ function BudgetBody({
   const busy = preview.isPending || save.isPending;
   return (
     <>
-      <BudgetReading budget={budget} />
+      <BudgetReading budget={budget} estimate={<SpendEstimate />} />
       {save.isSuccess && (
         <Callout kind="outcome" tone="success" title={t("aiAdmin.saved")}>
           {t("aiAdmin.recovery")}
         </Callout>
       )}
       {!editing && canManage && (
-        <Button
-          onClick={() => {
-            setPerUser(String(budget.config.tokens_per_full_user));
-            setCompany(
-              budget.config.company_monthly_tokens === null
-                ? ""
-                : String(budget.config.company_monthly_tokens),
-            );
-            setRevision(budget.revision);
-            setEditing(true);
-            save.reset();
-          }}
-        >
-          {t("aiAdmin.edit")}
-        </Button>
+        <div className="card-actions">
+          <Button
+            onClick={() => {
+              setPerUser(String(budget.config.tokens_per_full_user));
+              setCompany(
+                budget.config.company_monthly_tokens === null
+                  ? ""
+                  : String(budget.config.company_monthly_tokens),
+              );
+              setRevision(budget.revision);
+              setEditing(true);
+              save.reset();
+            }}
+          >
+            {t("aiAdmin.edit")}
+          </Button>
+        </div>
       )}
       {editing && (
         <>
@@ -327,33 +332,6 @@ export function AiFeaturesWithheldPanel() {
   );
 }
 
-export function AiFeaturesCard() {
-  const t = useT();
-  const canSee = useCan("ai_diagnostics", "read");
-  const canBudget = useCan("ai_budget", "read");
-  const canRoute = useCan("ai_routing", "read");
-  const query = useAiStatus(canSee && canBudget);
-  if (!canSee || !canBudget) return <AiFeaturesWithheldPanel />;
-  return (
-    <Panel title={t("aiAdmin.features")}>
-      <PanelBody>
-        <p>{t("aiAdmin.prospective")}</p>
-        <QueryGate query={query} pendingLabel={t("aiAdmin.features")}>
-          {(status) => (
-            <>
-              {canRoute && <AiFeatureTable rows={status.features} />}
-              <DeferredWork rows={status.deferred_work} />
-              <a href={routeHash(settingsHref("model-calls"))}>
-                {t("aiAdmin.calls")}
-              </a>
-            </>
-          )}
-        </QueryGate>
-      </PanelBody>
-    </Panel>
-  );
-}
-
 function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -378,87 +356,5 @@ function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
       </ul>
       <p>{t("aiAdmin.recovery")}</p>
     </Disclosure>
-  );
-}
-
-export function AiFeatureTable({
-  rows,
-  onEdit,
-}: Readonly<{ rows: Feature[]; onEdit?: (tier: string) => void }>) {
-  const t = useT();
-  const impact = (row: Feature) => {
-    switch (row.impact) {
-      case "budget_blocked":
-        return t("aiAdmin.impact.blocked");
-      case "model_changed":
-        return t("aiAdmin.impact.model");
-      case "fallback_changed":
-        return t("aiAdmin.impact.fallback");
-      case "unconfigured":
-        return t("aiAdmin.impact.unconfigured");
-      default:
-        return row.budget_exempt
-          ? t("aiAdmin.impact.exempt")
-          : t("aiAdmin.impact.same");
-    }
-  };
-  return (
-    <DataTable
-      label={t("aiAdmin.features")}
-      rows={rows}
-      rowKey={(row) => row.task}
-      columns={[
-        {
-          key: "activity",
-          header: t("aiAdmin.activity"),
-          render: (row: Feature) => (
-            <span title={row.task}>{row.display_name}</span>
-          ),
-        },
-        {
-          key: "model",
-          header: t("aiAdmin.model"),
-          render: (row: Feature) =>
-            row.effective_candidates.length ? (
-              <Disclosure
-                summary={`${row.effective_candidates[0].provider} · ${row.effective_candidates[0].model}`}
-              >
-                <ol>
-                  {row.effective_candidates.map((candidate) => (
-                    <li key={candidate.tier}>
-                      {candidate.provider} · {candidate.model} ·{" "}
-                      {candidate.processing === "cloud_provider"
-                        ? t("aiAdmin.cloud")
-                        : t("aiAdmin.endpoint")}
-                    </li>
-                  ))}
-                </ol>
-                {onEdit && (
-                  <Button onClick={() => onEdit(row.leading_tier)}>
-                    {t("aiAdmin.editBinding")}
-                  </Button>
-                )}
-              </Disclosure>
-            ) : (
-              "—"
-            ),
-        },
-        {
-          key: "impact",
-          header: t("aiAdmin.effect"),
-          render: (row: Feature) => (
-            <Badge
-              tone={
-                row.impact === "budget_blocked" || row.impact === "unconfigured"
-                  ? "warning"
-                  : undefined
-              }
-            >
-              {impact(row)}
-            </Badge>
-          ),
-        },
-      ]}
-    />
   );
 }

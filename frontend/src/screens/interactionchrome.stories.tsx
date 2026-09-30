@@ -20,7 +20,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
  * transport the record never carried.
  */
 const meta: Meta = {
-  title: "Records/Contact record/Interaction chrome",
+  title: "Records/Record 360/Interaction chrome",
   parameters: { layout: "padded" },
 };
 export default meta;

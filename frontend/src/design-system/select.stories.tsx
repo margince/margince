@@ -21,7 +21,7 @@ import "./tagpill.css";
  * dark rendering — every value here is a token, so all of it re-resolves.
  */
 const meta = {
-  title: "Design System/Select",
+  title: "Components/Forms and input/Select",
   parameters: { layout: "padded" },
 } satisfies Meta;
 export default meta;

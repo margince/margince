@@ -9,6 +9,10 @@ import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
+  contactNamedBy,
+  type RecordContact,
+} from "../design-system/participants";
+import {
   formatDayMonth,
   formatNumber,
   formatTimeOfDay,
@@ -87,7 +91,7 @@ export function ContactMemory({
             interactionLabel,
             locale,
             recordZone,
-            view.contact.full_name,
+            view.contact,
           ),
         )
       : foldActivities(view, t, interactionLabel, locale, recordZone);
@@ -147,7 +151,7 @@ export function ContactMemory({
               line: the counterparty on an email row, the contact themself on
               every other kind, so the column reads the same way a reader
               scans any list of contacts on this product. */}
-          <Avatar name={row.who} size="sm" />
+          <Avatar name={row.who.name} identity={row.who.key} size="sm" />
           {/* The meta line, as words: who the row is with, the transport the
               message came by (the directory's name for it with the kind's
               glyph, the one rule every source on this page follows, so a chat
@@ -155,7 +159,7 @@ export function ContactMemory({
               folded behind the row, and its standing. A pill per fact made
               three rows carry nine pills. */}
           <span className="meta-row-line t-caption">
-            <strong className="meta-row-who">{row.who}</strong>
+            <strong className="meta-row-who">{row.who.name}</strong>
             <span className="pe-source">
               {interactionIcon(row.kind)}
               {row.channelLabel}
@@ -231,8 +235,9 @@ type Row = {
   key: string;
   // Who the row is drawn beside: the other party on a retained email, and the
   // contact themself on every other kind, since a note or a call has no
-  // second name of its own to show.
-  who: string;
+  // second name of its own to show. `key` is a contact's id, or the
+  // counterparty's name when it names no contact this card knows.
+  who: Readonly<{ name: string; key: string }>;
   date: string;
   time: string;
   // What a reply anchors on, and the transport it would leave by. Null when the
@@ -302,15 +307,17 @@ function channelKeyOf(
 // hook, so the zone is read once in ContactMemory and passed down.
 type InteractionLabel = ReturnType<typeof useInteractionLabel>;
 
-// The row's counterparty, or the contact when the message names none of its
-// own. A retained email carries who it was with; every other kind, and an
-// email the server could not resolve a name for, reads as a conversation
-// with the record the card is on.
+// The row's counterparty, or this card's contact when the message names none.
+// A mail naming this contact keys on its record, as a thread's face does; any
+// other name, a colleague's or a stranger's, keys on itself.
 function whoFor(
-  emailSummary: EmailSummary | null,
-  contactName: string,
-): string {
-  return emailSummary?.counterparty ?? contactName;
+  activity: Pick<Activity, "email_summary" | "links"> | null,
+  contact: RecordContact,
+): Row["who"] {
+  const counterparty = activity?.email_summary?.counterparty;
+  if (!counterparty) return { name: contact.full_name, key: contact.id };
+  const named = contactNamedBy(counterparty, activity?.links, contact);
+  return { name: counterparty, key: named ?? counterparty };
 }
 
 function fromEntry(
@@ -319,14 +326,14 @@ function fromEntry(
   interactionLabel: InteractionLabel,
   locale: Locale,
   recordZone: string,
-  contactName: string,
+  contact: RecordContact,
 ): Row {
   const status = entry.status ?? null;
   return {
     key: entry.key,
     // A thread-projection entry carries no email summary of its own, so the
     // counterparty it reads is always the contact this card is on.
-    who: whoFor(null, contactName),
+    who: whoFor(null, contact),
     date: formatDayMonth(entry.occurred_at, locale, recordZone),
     time: formatTimeOfDay(entry.occurred_at, locale, recordZone),
     // first_activity_id is what "expand to original" opens, and it is the right
@@ -373,7 +380,7 @@ function foldActivities(
     return {
       key: row.id,
       messageCount: group.entries.length,
-      who: whoFor(row.email_summary ?? null, view.contact.full_name),
+      who: whoFor(row, view.contact),
       date: formatDayMonth(row.occurred_at, locale, recordZone),
       time: formatTimeOfDay(row.occurred_at, locale, recordZone),
       activityId: row.id,

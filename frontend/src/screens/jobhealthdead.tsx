@@ -4,7 +4,7 @@
 import type { components } from "../api/schema";
 import { Callout } from "../design-system/callout";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 
 type JobHealth = components["schemas"]["JobHealth"];
 
@@ -14,6 +14,7 @@ type JobHealth = components["schemas"]["JobHealth"];
 // shout.
 export function DeadWorkCallout({ health }: Readonly<{ health: JobHealth }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const dead = health.kinds.reduce((total, kind) => total + kind.dead, 0);
   // TWO NUMBERS, and only one of them interrupts. The week's total is real
@@ -38,12 +39,16 @@ export function DeadWorkCallout({ health }: Readonly<{ health: JobHealth }>) {
       tone="danger"
       kind="event"
       live="alert"
-      title={t("jobs.deadTitle", {
+      title={plural("jobs.deadTitle", recent, {
         count: formatNumber(recent, locale),
         hours: formatNumber(health.dead_window_hours, locale),
       })}
     >
-      <p>{t("jobs.deadBody", { count: formatNumber(recent, locale) })}</p>
+      <p>
+        {plural("jobs.deadBody", recent, {
+          count: formatNumber(recent, locale),
+        })}
+      </p>
       {/* Only when the two differ: "531 recently, 531 this week" is a
               sentence that reads as a second alarm rather than as context. */}
       {dead > recent && (

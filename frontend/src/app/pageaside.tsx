@@ -13,6 +13,7 @@ import {
 } from "react";
 import { Button, OptionCount } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { readStored, STORAGE_KEYS, writeStored } from "./storage";
 import { useHasUnsavedChanges } from "./unsaved";
 
 /**
@@ -45,20 +46,10 @@ type PageAsideState = {
 
 const PageAsideContext = createContext<PageAsideState | null>(null);
 
-const COLLAPSE_KEY = "margince.pageAside.collapsed";
-
 function readCollapsed(): boolean {
   // Open until folded: the pane holds the record's own facts, and a reader
-  // who has never chosen came for the whole record. Only a remembered fold
-  // closes it. A private window, cleared site data, or a browser refusing
-  // storage all throw here rather than returning null. None of them is a
-  // reason to fail to render a record, so the answer is the default and the
-  // reader simply does not get their remembered choice.
-  try {
-    return window.localStorage.getItem(COLLAPSE_KEY) === "1";
-  } catch {
-    return false;
-  }
+  // who has never chosen came for the whole record.
+  return readStored(STORAGE_KEYS.pageAsideCollapsed) === "1";
 }
 
 export function PageAsideProvider({
@@ -79,13 +70,7 @@ export function PageAsideProvider({
   const toggle = useCallback(() => {
     setCollapsed((current) => {
       const next = !current;
-      try {
-        window.localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
-      } catch {
-        // Storage refused the write. The toggle still works for this session;
-        // only the memory of it is lost, and a pane that would not fold
-        // because a preference could not be saved is the worse failure.
-      }
+      writeStored(STORAGE_KEYS.pageAsideCollapsed, next ? "1" : "0");
       return next;
     });
   }, []);

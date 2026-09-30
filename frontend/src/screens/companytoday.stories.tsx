@@ -409,6 +409,20 @@ export const SectionWithheld: Story = {
   render: () => <Brief view={withheld} />,
 };
 
+// The advice withheld and nothing else to list: the note says what was not
+// read, and no quiet sentence claims the day over it.
+export const AdviceWithheldNothingListed: Story = {
+  render: () => (
+    <Brief
+      view={{
+        ...company360,
+        suggestions: undefined,
+        sections_omitted: ["suggestions"],
+      }}
+    />
+  ),
+};
+
 // waiting_on_them is one of only two engagement states ENGAGEMENT_TONE
 // (company360.tsx) colours "warning" — the ball is in their court, not ours —
 // and the one state that also draws a silence note (companytoday.tsx's own

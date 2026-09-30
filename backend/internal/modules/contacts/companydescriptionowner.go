@@ -82,7 +82,7 @@ func describedDifferently(before, after map[string]any) bool {
 // agent case is a governed write against the same endpoint, and reporting it as
 // a different channel would say something about the request that is not true.
 func stampDescriptionAuthor(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, by string) error {
-	return storekit.StampFields(ctx, tx, "company", companyID.UUID, companySourceHuman, by,
+	return storekit.StampFields(ctx, tx, "company", companyID.UUID, CompanySourceHuman, by,
 		[]storekit.FieldStamp{{Field: descriptionField}})
 }
 

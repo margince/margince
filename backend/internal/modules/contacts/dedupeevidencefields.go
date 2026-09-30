@@ -48,6 +48,7 @@ func DedupeEvidenceSignals() []string {
 		evidenceSignalCollide,
 		evidenceSignalOneSided,
 		evidenceSignalExactConflict,
+		evidenceSignalLaneSplit,
 	}
 	slices.Sort(signals)
 	return signals

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/reportperiod"
 )
 
 // countWeekMoney sums what the week added to and took out of the pipeline, in
@@ -258,22 +259,36 @@ func priorReview(
 // Its own Prior is deliberately not loaded: a review carries ONE step of
 // history, and chaining would make a rep's fiftieth week read forty-nine rows
 // to render one comparison.
+//
+//nolint:nilnil // No comparable previous period is a valid absence.
 func readPriorWeek(
-	ctx context.Context, tx pgx.Tx, priorID *ids.UUID, userID ids.UUID,
+	ctx context.Context, tx pgx.Tx, current Review,
 ) (*PriorWeek, error) {
-	if priorID == nil {
+	if current.PriorReviewID == nil {
 		return nil, nil
 	}
-	prior, err := readReviewTx(ctx, tx, *priorID, userID)
+	prior, err := readReviewTx(ctx, tx, *current.PriorReviewID, current.UserID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	if !reportperiod.Comparable(numericPeriod(prior), numericPeriod(current)) {
+		return nil, nil
+	}
 	return &PriorWeek{
 		LocalWeekStart: prior.LocalWeekStart,
 		Counts:         prior.Counts,
 		Money:          prior.Money,
 	}, nil
+}
+
+func numericPeriod(review Review) reportperiod.Context {
+	if review.NumericSummary == nil {
+		return reportperiod.Context{}
+	}
+	numeric := review.NumericSummary
+	complete := func(status string, withheld bool) bool { return !withheld && (status == "ok" || status == "no_data") }
+	return reportperiod.Context{Start: numeric.Interval.StartAt, End: numeric.Interval.EndAt, Timezone: numeric.Timezone, Currency: numeric.Currency, Version: numeric.Version, Complete: complete(string(numeric.BookingsCoverage.Status), numeric.BookingsCoverage.Withheld) && complete(string(numeric.MeetingsCoverage.Status), numeric.MeetingsCoverage.Withheld)}
 }

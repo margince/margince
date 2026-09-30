@@ -1,11 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   CalendarDays,
+  Info,
   Mail,
   MoreHorizontal,
   PenLine,
   Phone,
 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "./atoms";
 import { IconAction } from "./iconaction";
 
@@ -14,7 +16,7 @@ import { IconAction } from "./iconaction";
 // pointer reader and a screen reader are told the same thing.
 
 const meta: Meta<typeof IconAction> = {
-  title: "Design System/IconAction",
+  title: "Components/Forms and input/Icon action",
   component: IconAction,
   parameters: { layout: "padded" },
 };
@@ -94,4 +96,45 @@ export const Held: Story = {
     icon: <Phone size={15} aria-hidden="true" />,
     disabled: true,
   },
+};
+
+// Inside a line of text, beside the words it explains: the square keeps its
+// whole target and takes one line box, so the line is as tall as its neighbour.
+export const Inline: Story = {
+  render: () => (
+    <div>
+      <p>
+        Qualify{" "}
+        <IconAction
+          inline
+          label="Explain Qualify"
+          icon={<Info aria-hidden="true" />}
+        />
+      </p>
+      <p>Proposal</p>
+    </div>
+  ),
+};
+
+// A glyph that OPENS the region under it, as a report's explain does: the
+// state is a disclosure, expanded or not, naming the region it controls.
+function DisclosureDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <IconAction
+        label="Explain this number"
+        icon={<Info aria-hidden="true" />}
+        disclosure={{ expanded: open, controls: "iconaction-derivation" }}
+        onClick={() => setOpen((value) => !value)}
+      />
+      <p id="iconaction-derivation" hidden={!open}>
+        Sum over 7 open deals, converted to EUR.
+      </p>
+    </div>
+  );
+}
+
+export const Disclosure: Story = {
+  render: () => <DisclosureDemo />,
 };

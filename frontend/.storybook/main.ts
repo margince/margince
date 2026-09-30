@@ -1,11 +1,9 @@
 import type { StorybookConfig } from "@storybook/react-vite";
 
-// Storybook 9 on the react-vite builder — version-matched to this repo's
-// Vite 6 / Vitest 3 toolchain, so the existing frontend test lanes and the
-// AC/axe UAT harness are untouched. Stories are the render surface the
-// change-scoped fe-uat capture gate (frontend/scripts/fe-uat.mjs) drives.
+// Storybook on the app's own Vite. Stories are the render surface the
+// change-scoped capture gate, frontend/scripts/fe-uat.mjs, drives.
 const config: StorybookConfig = {
-  stories: ["../src/**/*.stories.@(ts|tsx)"],
+  stories: ["../src/**/*.mdx", "../src/**/*.stories.@(ts|tsx)"],
   addons: ["@storybook/addon-docs", "@storybook/addon-a11y"],
   framework: { name: "@storybook/react-vite", options: {} },
 };

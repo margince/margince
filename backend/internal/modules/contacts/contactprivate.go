@@ -116,7 +116,10 @@ func (s *Store) RetractCaptureOnlyContactTx(
 	// every colleague — the private correspondent would be hidden from nobody.
 	// Narrowing first puts the row behind the owner scope even when somebody
 	// asks to see archived records.
-	if err := shiftVisibilityTx(ctx, tx, id, visibilityWorkspace, visibilityOwner); err != nil {
+	//
+	// The reason is the hold: a classifier judged the correspondence the
+	// owner's private life, and the record is archived as well.
+	if err := narrowTx(ctx, tx, id, NarrowedConfidentialityHold); err != nil {
 		return false, err
 	}
 	// The one spelling of archiving a contact inside a transaction: it lands the
