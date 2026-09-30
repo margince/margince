@@ -1,3 +1,4 @@
+import "./reporting.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useId, useState } from "react";
@@ -40,6 +41,7 @@ export function SaveReportingDialog({
   const [selection, setSelection] = useState(initialSelection);
   const title = useId();
   const queryClient = useQueryClient();
+  const [customizing, setCustomizing] = useState(!!report);
   const [name, setName] = useState(report?.name ?? "");
   const [audience, setAudience] = useState<"private" | "team" | "workspace">(
     report?.audience ?? "private",
@@ -105,7 +107,12 @@ export function SaveReportingDialog({
     },
   });
   return (
-    <Modal open onClose={onClose} labelledBy={title}>
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={title}
+      size={customizing ? "wide" : undefined}
+    >
       <form
         className="reporting-dialog"
         onSubmit={(event) => {
@@ -137,17 +144,9 @@ export function SaveReportingDialog({
             />
           )}
         </Field>
-        <ReportingFilters
-          selection={selection}
-          onChange={(next) => {
-            setSelection(next);
-            if (
-              next.scope.kind !== selection.scope.kind ||
-              next.scope.id !== selection.scope.id
-            )
-              setAudience("private");
-          }}
-        />
+        <p className="t-caption">
+          {selection.scope.label} · {t(`reporting.${selection.period}`)}
+        </p>
         <Field label={t("reporting.audience")}>
           {(field) => (
             <Select
@@ -173,72 +172,96 @@ export function SaveReportingDialog({
             />
           )}
         </Field>
-        <fieldset>
-          <legend>{t("reporting.metrics")}</legend>
-          {(
-            catalog.data?.metrics.map((metric) => metric.id) ??
-            selection.metrics
-          ).map((metric) => (
-            <Checkbox
-              key={metric}
-              label={metricLabel(metric, t)}
-              checked={metrics.includes(metric)}
-              onChange={(event) =>
-                setMetrics(
-                  event.target.checked
-                    ? [...metrics, metric]
-                    : metrics.filter((candidate) => candidate !== metric),
+        <Button
+          variant="link"
+          aria-expanded={customizing}
+          onClick={() => setCustomizing(!customizing)}
+        >
+          {t("reporting.customize")}
+        </Button>
+        {customizing && (
+          <div>
+            <ReportingFilters
+              selection={selection}
+              onChange={(next) => {
+                setSelection(next);
+                if (
+                  next.scope.kind !== selection.scope.kind ||
+                  next.scope.id !== selection.scope.id
                 )
-              }
+                  setAudience("private");
+              }}
             />
-          ))}
-        </fieldset>
-        <Disclosure summary={t("reporting.blocks")}>
-          <fieldset>
-            <legend>{t("reporting.blocks")}</legend>
-            {[...new Set([...selectedBlocks, ...allowedBlocks])].map(
-              (block) => (
-                <div key={block} className="reporting-block-choice">
-                  <Checkbox
-                    key={block}
-                    label={blockLabel(block, t)}
-                    checked={selectedBlocks.includes(block)}
-                    onChange={(event) =>
-                      setBlocks(
-                        event.target.checked
-                          ? [...selectedBlocks, block]
-                          : blocks.filter((candidate) => candidate !== block),
-                      )
-                    }
-                  />
-                  {selectedBlocks.includes(block) && (
-                    <span className="reporting-block-order">
-                      <Button
-                        variant="ghost"
-                        disabled={selectedBlocks.indexOf(block) === 0}
-                        onClick={() => moveBlock(block, -1)}
-                        aria-label={`${t("reporting.moveUp")}: ${blockLabel(block, t)}`}
-                      >
-                        <ArrowUp aria-hidden="true" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        disabled={
-                          selectedBlocks.indexOf(block) ===
-                          selectedBlocks.length - 1
+            <fieldset>
+              <legend>{t("reporting.metrics")}</legend>
+              {(
+                catalog.data?.metrics.map((metric) => metric.id) ??
+                selection.metrics
+              ).map((metric) => (
+                <Checkbox
+                  key={metric}
+                  label={metricLabel(metric, t)}
+                  checked={metrics.includes(metric)}
+                  onChange={(event) =>
+                    setMetrics(
+                      event.target.checked
+                        ? [...metrics, metric]
+                        : metrics.filter((candidate) => candidate !== metric),
+                    )
+                  }
+                />
+              ))}
+            </fieldset>
+            <Disclosure summary={t("reporting.blocks")}>
+              <fieldset>
+                <legend>{t("reporting.blocks")}</legend>
+                {[...new Set([...selectedBlocks, ...allowedBlocks])].map(
+                  (block) => (
+                    <div key={block} className="reporting-block-choice">
+                      <Checkbox
+                        key={block}
+                        label={blockLabel(block, t)}
+                        checked={selectedBlocks.includes(block)}
+                        onChange={(event) =>
+                          setBlocks(
+                            event.target.checked
+                              ? [...selectedBlocks, block]
+                              : blocks.filter(
+                                  (candidate) => candidate !== block,
+                                ),
+                          )
                         }
-                        onClick={() => moveBlock(block, 1)}
-                        aria-label={`${t("reporting.moveDown")}: ${blockLabel(block, t)}`}
-                      >
-                        <ArrowDown aria-hidden="true" />
-                      </Button>
-                    </span>
-                  )}
-                </div>
-              ),
-            )}
-          </fieldset>
-        </Disclosure>
+                      />
+                      {selectedBlocks.includes(block) && (
+                        <span className="reporting-block-order">
+                          <Button
+                            variant="ghost"
+                            disabled={selectedBlocks.indexOf(block) === 0}
+                            onClick={() => moveBlock(block, -1)}
+                            aria-label={`${t("reporting.moveUp")}: ${blockLabel(block, t)}`}
+                          >
+                            <ArrowUp aria-hidden="true" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            disabled={
+                              selectedBlocks.indexOf(block) ===
+                              selectedBlocks.length - 1
+                            }
+                            onClick={() => moveBlock(block, 1)}
+                            aria-label={`${t("reporting.moveDown")}: ${blockLabel(block, t)}`}
+                          >
+                            <ArrowDown aria-hidden="true" />
+                          </Button>
+                        </span>
+                      )}
+                    </div>
+                  ),
+                )}
+              </fieldset>
+            </Disclosure>
+          </div>
+        )}
         <ErrorLine error={write.error} />
         <div className="reporting-dialog-actions">
           <Button variant="ghost" onClick={onClose}>

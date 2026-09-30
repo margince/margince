@@ -7,10 +7,12 @@ import {
   history,
   LIVE_ID,
   listsMe,
+  liveHistory,
   liveList,
   members,
   SHORTLIST_ID,
   shortlist,
+  visitAnswer,
 } from "./lists.fixtures";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -32,7 +34,9 @@ export const LiveList: Story = {
     installFetchStub({
       "GET /me": listsMe(true),
       [`GET /lists/${LIVE_ID}`]: () => jsonResponse(liveList),
-      [`GET /lists/${LIVE_ID}/history`]: () => jsonResponse({ data: [], page }),
+      [`POST /lists/${LIVE_ID}/visit`]: visitAnswer(LIVE_ID),
+      [`GET /lists/${LIVE_ID}/history`]: () =>
+        jsonResponse({ data: liveHistory, page }),
       "GET /companies": () => jsonResponse({ data: members, page }),
     });
     return (
@@ -49,6 +53,7 @@ export const ShortlistNobodyLooksAfter: Story = {
     installFetchStub({
       "GET /me": listsMe(true),
       [`GET /lists/${SHORTLIST_ID}`]: () => jsonResponse(shortlist),
+      [`POST /lists/${SHORTLIST_ID}/visit`]: visitAnswer(SHORTLIST_ID),
       [`GET /lists/${SHORTLIST_ID}/history`]: () =>
         jsonResponse({ data: history, page }),
       "GET /companies": () => jsonResponse({ data: members, page }),
@@ -68,6 +73,7 @@ export const Archived: Story = {
       "GET /me": listsMe(true),
       [`GET /lists/${LIVE_ID}`]: () =>
         jsonResponse({ ...liveList, archived_at: "2026-09-25T10:00:00Z" }),
+      [`POST /lists/${LIVE_ID}/visit`]: visitAnswer(LIVE_ID),
       [`GET /lists/${LIVE_ID}/history`]: () => jsonResponse({ data: [], page }),
       "GET /companies": () => jsonResponse({ data: [], page }),
     });

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import { ReportingReportDetail } from "./reporting.report";
 import {
   reportingEditions,
@@ -102,6 +102,11 @@ export const ArchiveConfirmation: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
+        name: "Report actions",
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", {
         name: "Archive report",
       }),
     );

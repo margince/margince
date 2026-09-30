@@ -438,7 +438,7 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 // everything else is signal. A legal suffix is NOT folded away — see
 // CompanyCandidateScore.ExactName for why that distinction is the whole point.
 func companyNamesAreTheSame(left, right string) bool {
-	l, r := collapseSpaces(normalizeName(left)), collapseSpaces(normalizeName(right))
+	l, r := foldedNameKey(left), foldedNameKey(right)
 	return l != "" && l == r
 }
 

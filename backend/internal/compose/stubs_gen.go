@@ -1955,6 +1955,10 @@ func (stubs) RestoreList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 	httperr.NotImplemented(w, r, "RestoreList")
 }
 
+func (stubs) VisitList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "VisitList")
+}
+
 func (stubs) GetMagic(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMagicParams) {
 	httperr.NotImplemented(w, r, "GetMagic")
 }

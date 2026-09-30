@@ -114,26 +114,10 @@ export function ReportingLibrary() {
                     ),
                   },
                   {
-                    key: "metrics",
-                    header: t("reporting.metrics"),
-                    render: (report) => report.selection.metrics.length,
-                  },
-                  {
-                    key: "revision",
-                    header: t("reporting.details"),
-                    render: (report) =>
-                      t("reporting.revision", {
-                        revision: formatNumber(report.revision, locale),
-                      }),
-                  },
-                  {
                     key: "editions",
-                    header: t("reporting.editions"),
+                    header: t("reporting.latestSnapshot"),
                     render: (report) => (
                       <>
-                        {report.edition_count === undefined
-                          ? "—"
-                          : formatNumber(report.edition_count, locale)}
                         {report.latest_captured_at && (
                           <p className="t-sub">
                             {formatDateTime(

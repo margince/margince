@@ -149,7 +149,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_partner_attribution_check` — `CHECK (((partner_attribution IS NULL) OR (partner_attribution = ANY (ARRAY['sourced', 'influenced']))))`
 - `deal_partner_attribution_pairing` — `CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL)))`
 - `deal_priority_check` — `CHECK (((priority IS NULL) OR (priority = ANY (ARRAY['low', 'medium', 'high']))))`
-- `deal_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))) NOT VALID`
+- `deal_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `deal_status_check` — `CHECK ((status = ANY (ARRAY['open', 'won', 'lost'])))`
 - `deal_won_without_contract_detail` — `CHECK (((won_without_contract_reason IS DISTINCT FROM 'other') OR ((won_without_contract_detail IS NOT NULL) AND (btrim(won_without_contract_detail) <> ''))))`
 - `deal_won_without_contract_only_when_won` — `CHECK (((won_without_contract_reason IS NULL) OR (status = 'won')))`

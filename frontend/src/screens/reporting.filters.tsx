@@ -25,11 +25,13 @@ export function ReportingFilters({
   showScope = true,
   showPipeline = true,
   showTargets = true,
+  showCloseWindow = showPipeline,
   dates: controlledDates,
 }: Readonly<{
   showScope?: boolean;
   showPipeline?: boolean;
   showTargets?: boolean;
+  showCloseWindow?: boolean;
   dates?: Readonly<{
     from: string;
     through: string;
@@ -169,7 +171,7 @@ export function ReportingFilters({
           )}
         </Field>
       )}
-      {showPipeline && (
+      {showCloseWindow && (
         <Field label={t("reporting.closeWindow")}>
           {(field) => (
             <Select

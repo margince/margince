@@ -1,14 +1,12 @@
-import { Button } from "../design-system/atoms";
-import { PanelIntro } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
 import { formatDateTime } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import {
   type ReportingChart,
   type ReportingEvaluation,
   reportingAmount,
+  reportingPeriodLabel,
 } from "./reporting.model";
-import { worklistLaneHref } from "./worklist.header";
 
 export function ChartContext({
   chart,
@@ -21,88 +19,117 @@ export function ChartContext({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const amount = (value: number | null | undefined, unit: string) =>
-    reportingAmount(value, unit, evaluation.context.currency, locale);
+  const { timezone, currency } = evaluation.context;
   return (
-    <>
-      <PanelIntro>
-        {chart.state_at
-          ? t("reporting.stateAt", {
-              at: formatDateTime(
-                chart.state_at,
+    <div className="reporting-context">
+      <span className="t-caption">
+        {contextPeriod(chart, evaluation, editionId, locale, t)}
+      </span>
+      {(chart.kind === "stage_distribution" || chart.kind === "stage_age") && (
+        <span className="t-caption">
+          {t("reporting.closeWindow")}:{" "}
+          {evaluation.context.close_interval
+            ? reportingPeriodLabel(
+                evaluation.context.close_interval,
+                timezone,
                 locale,
-                evaluation.context.timezone,
-              ),
-            })
-          : chart.interval
-            ? t("reporting.interval", {
-                start: formatDateTime(
-                  chart.interval.start_at,
-                  locale,
-                  evaluation.context.timezone,
-                ),
-                end: formatDateTime(
-                  new Date(Date.parse(chart.interval.end_at) - 1).toISOString(),
-                  locale,
-                  evaluation.context.timezone,
-                ),
-                zone: evaluation.context.timezone,
-              })
-            : evaluation.context.scope.label}
-      </PanelIntro>
-      {chart.kind === "stage_age" && !editionId && (
-        <Button
-          variant="link"
-          onClick={() => {
-            window.location.hash = worklistLaneHref("deals_at_risk");
-          }}
-        >
-          {t("reporting.reviewQueue")}
-        </Button>
+              )
+            : t("reporting.all_open")}
+        </span>
       )}
-      {chart.capture_status && (
-        <p className="t-caption" role="status">
-          {chart.capture_status.failure ??
-            (chart.capture_status.last_success_at
-              ? t("reporting.lastCapture", {
-                  at: formatDateTime(
+      <Popover onHover label={t("reporting.contextDetails")}>
+        <p>
+          {evaluation.context.scope.label} · {timezone}
+        </p>
+        <p>
+          {formatDateTime(
+            chart.state_at ?? evaluation.context.evaluated_at,
+            locale,
+            timezone,
+          )}
+        </p>
+        {chart.interval && (
+          <p>
+            {formatDateTime(chart.interval.start_at, locale, timezone)} –{" "}
+            {formatDateTime(
+              new Date(Date.parse(chart.interval.end_at) - 1).toISOString(),
+              locale,
+              timezone,
+            )}
+          </p>
+        )}
+        {chart.capture_status && (
+          <p>
+            {t("reporting.lastCapture", {
+              at: chart.capture_status.last_success_at
+                ? formatDateTime(
                     chart.capture_status.last_success_at,
                     locale,
-                    evaluation.context.timezone,
-                  ),
-                })
-              : t("reporting.unavailable"))}{" "}
-          ·{" "}
-          {t("reporting.nextRun", {
-            at: formatDateTime(
-              chart.capture_status.next_capture_at,
+                    timezone,
+                  )
+                : "—",
+            })}{" "}
+            ·{" "}
+            {t("reporting.nextRun", {
+              at: formatDateTime(
+                chart.capture_status.next_capture_at,
+                locale,
+                timezone,
+              ),
+            })}
+          </p>
+        )}
+        {chart.allocation_difference != null && (
+          <p>
+            {t(
+              chart.allocation_difference < 0
+                ? "reporting.overallocated"
+                : "reporting.unallocated",
+            )}
+            :{" "}
+            {reportingAmount(
+              Math.abs(chart.allocation_difference),
+              chart.unit,
+              currency,
               locale,
-              evaluation.context.timezone,
-            ),
-          })}
-        </p>
-      )}
-      {chart.allocation_difference != null && (
-        <p className="t-caption">
-          {t("reporting.allocationDifference")}:{" "}
-          {amount(chart.allocation_difference, chart.unit)} ·{" "}
-          {t("reporting.allocatedTarget")}:{" "}
-          {amount(chart.allocated_target, chart.unit)}
-        </p>
-      )}
+            )}
+          </p>
+        )}
+      </Popover>
       {chart.coverage.status !== "ok" && (
-        <p className="t-caption">
-          <Popover
-            onHover
-            label={t(`reporting.status.${chart.coverage.status}`)}
-          >
-            <p>
-              {chart.coverage.reason ??
-                t(`reporting.status.${chart.coverage.status}`)}
-            </p>
-          </Popover>
+        <Popover onHover label={t(`reporting.status.${chart.coverage.status}`)}>
+          <p>
+            {chart.coverage.reason ??
+              t(`reporting.status.${chart.coverage.status}`)}
+          </p>
+        </Popover>
+      )}
+      {chart.capture_status?.failure && (
+        <p className="t-caption" role="status">
+          {chart.capture_status.failure}
         </p>
       )}
-    </>
+    </div>
   );
+}
+
+function contextPeriod(
+  chart: ReportingChart,
+  evaluation: ReportingEvaluation,
+  editionId: string | undefined,
+  locale: Locale,
+  t: Translator,
+): string | undefined {
+  const timezone = evaluation.context.timezone;
+  return chart.interval
+    ? reportingPeriodLabel(chart.interval, timezone, locale)
+    : chart.state_at
+      ? editionId
+        ? formatDateTime(chart.state_at, locale, timezone)
+        : t(
+            chart.kind === "stage_distribution" || chart.kind === "stage_age"
+              ? "reporting.currentPipeline"
+              : "reporting.currentState",
+          )
+      : evaluation.context.scope.label;
 }

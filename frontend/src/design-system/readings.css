@@ -135,17 +135,14 @@
 }
 .barlist-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 2fr) auto;
   align-items: center;
   gap: var(--space-3);
 }
-/* The label may be longer than its column — a stage name, a company. It
-   ellipsizes rather than wrapping, because a row that grows to two lines
-   breaks the horizontal scan the list exists for. */
 .barlist-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 /* Right-aligned so the digits form a column the eye can run down, which is
    the same reason the figures take tabular digits through `.t-num`. */
@@ -255,7 +252,7 @@
 
 .btn.btn-link.barlist-action {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 2fr) auto;
   align-items: center;
   gap: var(--space-3);
   width: 100%;

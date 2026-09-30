@@ -107,9 +107,9 @@ it("compares frozen editions and opens evidence from the selected side", async (
       <ReportingComparison editions={reportingEditions} onClose={() => {}} />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Won deal value" });
+  await screen.findByRole("cell", { name: "Sales won" });
   expect(screen.getByText(/25%/)).toBeVisible();
-  const bar = document.querySelector<HTMLButtonElement>(".report-chart-column");
+  const bar = screen.getByRole("button", { name: "€172,800.00" });
   if (!bar) throw new Error("Missing comparison observation");
   await user.click(bar);
   expect(await screen.findByText("August purchase order")).toBeVisible();
@@ -137,6 +137,7 @@ it("shows incompatible populations without a misleading delta", async () => {
 });
 
 it("renders captured editions without requesting the current live evaluation", async () => {
+  const user = userEvent.setup({ delay: null });
   installFetchStub({
     ...reportingStoryRoutes(),
     "GET /analytics/editions/edition-september": () =>
@@ -152,10 +153,11 @@ it("renders captured editions without requesting the current live evaluation", a
       <ReportingReportDetail reportId="report" editionId="edition-september" />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Won deal value over time" });
+  await screen.findByRole("heading", { name: "Sales won over time" });
   expect(
     await screen.findByRole("button", { name: "Compare snapshots" }),
   ).toBeEnabled();
+  await user.click(screen.getByText("History and schedules"));
   expect(
     screen.getByRole("button", { name: "Monthly · Revision 3" }),
   ).toBeVisible();
@@ -183,6 +185,9 @@ it("duplicates a shared report into a private definition", async () => {
     <StoryProviders>
       <ReportingReportDetail reportId="report" />
     </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Report actions" }),
   );
   await user.click(
     await screen.findByRole("button", { name: "Duplicate privately" }),
@@ -240,7 +245,7 @@ it("saves edited layout order, metric selection and team audience", async () => 
   );
   await pickOption(
     user,
-    screen.getByRole("combobox", { name: "Audience" }),
+    screen.getByRole("combobox", { name: "Visible to" }),
     "Selected team",
   );
   await user.click(
@@ -248,13 +253,13 @@ it("saves edited layout order, metric selection and team audience", async () => 
   );
   await user.click(
     await screen.findByRole("button", {
-      name: "Move down: Won deal value over time",
+      name: "Move down: Sales won over time",
     }),
   );
   await user.click(
     within(screen.getByRole("group", { name: "Charts and order" })).getByRole(
       "checkbox",
-      { name: "Where are deals slowing down?" },
+      { name: "Time in current stage" },
     ),
   );
   await user.click(screen.getByRole("button", { name: "Save report" }));
@@ -288,14 +293,14 @@ it("clears the comparison when the earlier snapshot changes", async () => {
       <ReportingComparison editions={reportingEditions} onClose={() => {}} />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Won deal value" });
+  await screen.findByRole("cell", { name: "Sales won" });
   const selectors = screen.getAllByRole("combobox");
   const rightLabel = selectors[1].textContent;
   if (!rightLabel) throw new Error("Missing edition date label");
   const count = fetch.mock.calls.length;
   await pickOption(user, selectors[0], rightLabel);
   expect(
-    screen.queryByRole("heading", { name: "Won deal value" }),
+    screen.queryByRole("cell", { name: "Sales won" }),
   ).not.toBeInTheDocument();
   expect(fetch.mock.calls).toHaveLength(count);
 });
@@ -388,7 +393,7 @@ it.each([
     });
     expect(banner).toHaveTextContent(message);
     expect(
-      screen.queryByRole("heading", { name: "Won deal value over time" }),
+      screen.queryByRole("heading", { name: "Sales won over time" }),
     ).not.toBeInTheDocument();
   },
 );
@@ -477,12 +482,10 @@ it("selects an adjacent comparison when older history supplies the first pair", 
     </StoryProviders>,
   );
   expect(
-    screen.queryByRole("heading", { name: "Won deal value" }),
+    screen.queryByRole("cell", { name: "Sales won" }),
   ).not.toBeInTheDocument();
   await user.click(
     screen.getByRole("button", { name: "Load older snapshots" }),
   );
-  expect(
-    await screen.findByRole("heading", { name: "Won deal value" }),
-  ).toBeVisible();
+  expect(await screen.findByRole("cell", { name: "Sales won" })).toBeVisible();
 });

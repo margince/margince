@@ -141,7 +141,7 @@ func stripSharedPrefixBlocks(pages []crawlPage) ([]crawlPage, []string) {
 // when nothing qualified.
 func stripOneSharedBlock(out []crawlPage) string {
 	prefix := sharedOpening(out)
-	if utf8.RuneCountInString(prefix) < boilerplateMinRunes {
+	if !runesAtLeast(prefix, boilerplateMinRunes) {
 		return ""
 	}
 
@@ -157,7 +157,7 @@ func stripOneSharedBlock(out []crawlPage) string {
 		// page is that page's own content -- near-identical pages share
 		// long passages, and cutting one out of the middle mangles the
 		// prose instead of removing a menu.
-		if utf8.RuneCountInString(page.Text[:at]) > chromeSearchRunes {
+		if runesAtLeast(page.Text[:at], chromeSearchRunes+1) {
 			continue
 		}
 		// Keep ONLY what follows the chrome. Joining the lead-in to the
@@ -207,20 +207,27 @@ const chromeAnchorRunes = 60
 // so the pairwise common prefix of any two chrome-carrying pages already IS
 // the header.
 func sharedOpening(pages []crawlPage) string {
-	best := ""
+	best, bestRunes := "", 0
 	// Try each page as the reference. A site whose FIRST page is atypical
 	// (a landing page with no menu) would otherwise defeat the whole check.
 	for i, candidate := range pages {
-		if utf8.RuneCountInString(candidate.Text) < boilerplateMinRunes {
+		if !runesAtLeast(candidate.Text, boilerplateMinRunes) {
 			continue
 		}
+		// Validated once per page per round rather than once per comparison:
+		// every run blockFrom narrows to is a prefix of this page from a word
+		// boundary, so it is valid whenever the page is.
+		valid := utf8.ValidString(candidate.Text)
 		// Skip past this page's own lead-in and take the run that follows
 		// as the chrome candidate. Anchoring on a mid-page offset is what
 		// lets a menu be found under a per-page <title>.
 		for _, start := range chromeStarts(candidate.Text) {
-			block := blockFrom(candidate, i, start, pages)
-			if utf8.RuneCountInString(block) > utf8.RuneCountInString(best) {
-				best = block
+			block := blockFrom(candidate, i, start, pages, valid)
+			// best's count is kept rather than recounted: this comparison
+			// runs once per offset per page, and best is up to a header's
+			// worth of text every time.
+			if n := utf8.RuneCountInString(block); n > bestRunes {
+				best, bestRunes = block, n
 			}
 		}
 	}
@@ -229,7 +236,10 @@ func sharedOpening(pages []crawlPage) string {
 
 // blockFrom narrows one candidate opening against every other page and
 // answers the shared run, or "" when the pages do not agree it is chrome.
-func blockFrom(candidate crawlPage, self, start int, pages []crawlPage) string {
+//
+// candidateValid says the candidate's text is valid UTF-8, which lets the
+// comparison skip re-validating each shared run (see commonPrefixOf).
+func blockFrom(candidate crawlPage, self, start int, pages []crawlPage, candidateValid bool) string {
 	common := candidate.Text[start:]
 	agreeing := 0
 	for j, other := range pages {
@@ -238,8 +248,8 @@ func blockFrom(candidate crawlPage, self, start int, pages []crawlPage) string {
 		if j == self {
 			continue
 		}
-		shared := longestSharedRun(common, other.Text)
-		if utf8.RuneCountInString(shared) < boilerplateMinRunes {
+		shared := longestSharedRunOf(common, other.Text, candidateValid)
+		if !runesAtLeast(shared, boilerplateMinRunes) {
 			continue
 		}
 		// Shrink to what this page also has, so the result is what the
@@ -265,10 +275,11 @@ func blockFrom(candidate crawlPage, self, start int, pages []crawlPage) string {
 // not chrome.
 func chromeStarts(text string) []int {
 	starts := []int{0}
-	limit := len(text)
-	if runes := []rune(text); len(runes) > chromeSearchRunes {
-		limit = len(string(runes[:chromeSearchRunes]))
-	}
+	// The window is measured on its re-encoded form, as it always was, but
+	// clamped to the text: a broken byte re-encodes as the three-byte
+	// U+FFFD, so the measured window can run past the end of the page it
+	// came from, and indexing on it panicked the deep read.
+	limit := min(len(headRunes(text, chromeSearchRunes)), len(text))
 	for i := 1; i < limit; i++ {
 		if text[i-1] == ' ' && text[i] != ' ' {
 			starts = append(starts, i)
@@ -294,23 +305,24 @@ func chromeStarts(text string) []int {
 // up. Locating the head's opening words inside the other page finds the run
 // wherever it sits.
 func longestSharedRun(head, other string) string {
-	anchor := head
-	if runes := []rune(anchor); len(runes) > chromeAnchorRunes {
-		anchor = string(runes[:chromeAnchorRunes])
-	}
+	return longestSharedRunOf(head, other, false)
+}
+
+// longestSharedRunOf is longestSharedRun for a head already known to be valid
+// UTF-8 when headValid is set. The answer is the same either way; the flag only
+// spares re-validating it.
+func longestSharedRunOf(head, other string, headValid bool) string {
+	anchor := headRunes(head, chromeAnchorRunes)
 	if strings.TrimSpace(anchor) == "" {
 		return ""
 	}
-	limit := len(other)
-	if runes := []rune(other); len(runes) > chromeSearchRunes {
-		limit = len(string(runes[:chromeSearchRunes]))
-	}
+	limit := len(headRunes(other, chromeSearchRunes))
 	at := strings.Index(other[:min(limit+len(anchor), len(other))], anchor)
 	if at < 0 {
 		return ""
 	}
-	shared := commonPrefix(head, other[at:])
-	if utf8.RuneCountInString(shared) < boilerplateMinRunes {
+	shared := commonPrefixOf(head, other[at:], headValid)
+	if !runesAtLeast(shared, boilerplateMinRunes) {
 		return ""
 	}
 	return shared
@@ -332,7 +344,7 @@ func blockDominatesPages(block string, pages []crawlPage) bool {
 		}
 		carrying++
 		remainder := strings.TrimSpace(page.Text[at+len(block):])
-		if utf8.RuneCountInString(remainder) < boilerplateMinSurvivingRunes {
+		if !runesAtLeast(remainder, boilerplateMinSurvivingRunes) {
 			dominated++
 		}
 	}
@@ -358,7 +370,7 @@ func tooLargeAShare(prefix string, pages []crawlPage) bool {
 		}
 		carrying++
 		remainder := strings.TrimSpace(page.Text[at+len(prefix):])
-		if utf8.RuneCountInString(remainder) < boilerplateMinRemainderRunes {
+		if !runesAtLeast(remainder, boilerplateMinRemainderRunes) {
 			stubs++
 		}
 	}
@@ -371,29 +383,34 @@ func tooLargeAShare(prefix string, pages []crawlPage) bool {
 // commonPrefix returns the longest rune-aligned prefix shared by a and b,
 // cut back to the last word boundary so a half-word is never left behind.
 func commonPrefix(a, b string) string {
-	limit := len(a)
-	if len(b) < limit {
-		limit = len(b)
-	}
+	return commonPrefixOf(a, b, false)
+}
+
+// commonPrefixOf is commonPrefix for an a already known to be valid UTF-8 when
+// aValid is set. It runs once per page pair per offset per round, so what it
+// scans is the whole cost of the stripper; the answer does not depend on the
+// flag, only the work does.
+func commonPrefixOf(a, b string, aValid bool) string {
 	// Chrome is a header, never a whole page, so the comparison stops at a
 	// header's worth of text. Without this the scan runs to end-of-page and
 	// the nested search becomes quadratic in page length: a site serving 40
 	// pages of 800 KB that all open alike cost 2m18s of a worker goroutine,
 	// which the deep read accepts from any attacker-chosen URL.
-	if limit > boilerplateMaxBlockBytes {
-		limit = boilerplateMaxBlockBytes
-	}
-	end := 0
-	for end < limit && a[end] == b[end] {
-		end++
-	}
-	shared := a[:end]
-	if !utf8.ValidString(shared) {
-		// The cut landed inside a multi-byte rune; back up to the last
-		// valid boundary.
-		for len(shared) > 0 && !utf8.ValidString(shared) {
-			shared = shared[:len(shared)-1]
+	limit := min(len(a), len(b), boilerplateMaxBlockBytes)
+	end := firstDifference(a[:limit], b[:limit])
+	var shared string
+	if aValid {
+		// a is valid, so a[:end] can only be broken by a cut inside a rune:
+		// back up to that rune's first byte. That is what re-validating the
+		// whole run and trimming would find, in at most three steps.
+		for end > 0 && end < len(a) && !utf8.RuneStart(a[end]) {
+			end--
 		}
+		shared = a[:end]
+	} else {
+		// The cut may have landed inside a multi-byte rune, or a itself may
+		// carry broken bytes; keep only what decodes.
+		shared = validPrefix(a[:end])
 	}
 	if space := strings.LastIndexAny(shared, " \t\n"); space > 0 {
 		shared = shared[:space]

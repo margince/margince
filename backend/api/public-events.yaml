@@ -44,6 +44,7 @@ components:
         - list.restored
         - list.member_added
         - list.member_removed
+        - list.evaluated
         - commission.accrued
         - commission.decided
         - contract.created
@@ -861,6 +862,23 @@ components:
       required: [reason]
       properties:
         reason: { type: string, description: 'chosen or bulk.' }
+      additionalProperties: false
+
+    PublicEventListEvaluated:
+      type: object
+      x-event-type: list.evaluated
+      x-entity-type: list
+      x-version: 1
+      description: >-
+        Payload for list.evaluated — a check of a Live List saw records join or leave it. Emitted
+        once per check that saw a change, never per record. It carries no counts: the check sees
+        every record, and a count would tell a subscriber how many records they cannot see. Who
+        joined and left is on the list's history, read under the reader's own row scope.
+      required: [definition_version, evaluated_at, filter_changed]
+      properties:
+        definition_version: { type: integer, format: int64, description: 'The list version the check ran under.' }
+        evaluated_at: { type: string, format: date-time }
+        filter_changed: { type: boolean, description: 'This was the first check after the filter changed.' }
       additionalProperties: false
 
     PublicEventDealOwnerChanged:

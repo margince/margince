@@ -36,6 +36,11 @@ export function reportingStoryRoutes(
       },
       { seat: readOnly ? "read" : "full" },
     ),
+    "GET /installation/settings": () =>
+      jsonResponse({
+        fiscal_year_start_month: 1,
+        timezone: REPORTING_FIXTURE_ZONE,
+      }),
     "GET /analytics/context": () =>
       jsonResponse({
         default_scope: reportingStoryScope,

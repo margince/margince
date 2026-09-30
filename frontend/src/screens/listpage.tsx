@@ -7,10 +7,10 @@
 // list_id, so the page is never one request per member.
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { navigate } from "../app/router";
-import { Button } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
@@ -34,6 +34,7 @@ import {
   useList,
   useListsAvailable,
   useUpdateList,
+  useVisitList,
 } from "./lists.queries";
 import { ListSettingsAction } from "./listsettings";
 import { useListAudienceLabel } from "./listsharing";
@@ -68,6 +69,7 @@ export function ListScreen({ listID }: Readonly<{ listID?: string }>) {
 function ListBody({ listID }: Readonly<{ listID: string }>) {
   const t = useT();
   const list = useList(listID);
+  useVisitOnce(listID, list.isSuccess && list.isFetchedAfterMount);
   if (list.isPending) {
     return null;
   }
@@ -79,9 +81,29 @@ function ListBody({ listID }: Readonly<{ listID: string }>) {
       <ListHead list={list.data} />
       <ListNotices list={list.data} />
       <MembersPanel list={list.data} />
-      <ListHistoryPanel listID={list.data.id} />
+      <ListHistoryPanel
+        listID={list.data.id}
+        live={list.data.list_type === "dynamic"}
+      />
     </div>
   );
+}
+
+/**
+ * Records one visit per opened list, once this page has read the list itself
+ * rather than a cached copy. The server counts "since your last visit" from
+ * the visit before the one in progress, so the read and the visit may land in
+ * either order and the page shows the same counts.
+ */
+function useVisitOnce(listID: string, readThisMount: boolean) {
+  const { mutate } = useVisitList();
+  const visited = useRef<string | null>(null);
+  useEffect(() => {
+    if (readThisMount && visited.current !== listID) {
+      visited.current = listID;
+      mutate(listID);
+    }
+  }, [listID, readThisMount, mutate]);
 }
 
 function ListHead({ list }: Readonly<{ list: List }>) {
@@ -110,6 +132,7 @@ function ListHead({ list }: Readonly<{ list: List }>) {
           steward: list.steward_name ?? t("lists.noSteward"),
         })}
       </p>
+      <ListCheckLine list={list} />
       {lastExport && (
         <p className="t-caption">
           {plural("lists.head.exported", list.dependencies?.length ?? 0, {
@@ -131,6 +154,42 @@ function ListHead({ list }: Readonly<{ list: List }>) {
         </div>
       )}
     </header>
+  );
+}
+
+/**
+ * When a Live List was last checked for who joined and left, and what it
+ * gained and lost since the reader's last visit. A Shortlist says nothing.
+ */
+function ListCheckLine({ list }: Readonly<{ list: List }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (list.list_type !== "dynamic") {
+    return null;
+  }
+  const check = list.last_check;
+  const pulse = list.since_last_visit;
+  const when = check
+    ? formatDateTime(check.checked_at, locale, viewerZone())
+    : "";
+  return (
+    <>
+      <p className="t-caption">
+        {!check
+          ? t("lists.head.notChecked")
+          : check.outcome === "too_large"
+            ? t("lists.head.tooLarge", { when })
+            : t("lists.head.lastChecked", { when })}
+      </p>
+      {pulse && pulse.entered + pulse.left > 0 && (
+        <p className="t-caption">
+          {t("lists.head.pulse", {
+            entered: formatNumber(pulse.entered, locale),
+            left: formatNumber(pulse.left, locale),
+          })}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -216,6 +275,10 @@ type MemberRow = Readonly<Record<string, unknown> & { id: string }>;
 function MembersPanel({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const [why, setWhy] = useState<MemberRow | null>(null);
+  const joined = useMemo(
+    () => new Set(list.joined_since_visit ?? []),
+    [list.joined_since_visit],
+  );
   if (!isMemberSource(list.entity_type)) {
     return (
       <Panel title={t("lists.members.title")}>
@@ -231,6 +294,7 @@ function MembersPanel({ list }: Readonly<{ list: List }>) {
       <PanelBody>
         <MemberRows
           list={list}
+          joined={joined}
           source={list.entity_type}
           onWhy={setWhy}
           onOpen={(row) => navigate({ screen: source.screen, id: row.id })}
@@ -247,11 +311,13 @@ function MembersPanel({ list }: Readonly<{ list: List }>) {
 
 function MemberRows({
   list,
+  joined,
   source,
   onWhy,
   onOpen,
 }: Readonly<{
   list: List;
+  joined: ReadonlySet<string>;
   source: MemberSource;
   onWhy: (row: MemberRow) => void;
   onOpen: (row: MemberRow) => void;
@@ -305,7 +371,15 @@ function MemberRows({
             key: "name",
             header: t("lists.col.name"),
             grow: true,
-            render: (row) => recordName(row, t),
+            render: (row) =>
+              joined.has(row.id) ? (
+                <span className="lists-member-name">
+                  {recordName(row, t)}
+                  <Badge tone="accent">{t("lists.members.new")}</Badge>
+                </span>
+              ) : (
+                recordName(row, t)
+              ),
           },
           {
             key: "why",

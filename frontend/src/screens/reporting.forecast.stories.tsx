@@ -12,7 +12,15 @@ export default meta;
 type Story = StoryObj;
 export const Default: Story = {
   render: () => {
-    installFetchStub(reportingStoryRoutes(forecastEvaluation));
+    installFetchStub(
+      reportingStoryRoutes({
+        ...forecastEvaluation,
+        metrics: [],
+        charts: forecastEvaluation.charts.filter(
+          (chart) => chart.kind === "pipeline_movement",
+        ),
+      }),
+    );
     return (
       <StoryProviders>
         <ReportingForecastGraphs scope={reportingStoryScope} />
@@ -25,22 +33,25 @@ export const CollectingHistory: Story = {
   render: () => {
     const evaluation = {
       ...forecastEvaluation,
-      charts: forecastEvaluation.charts.map((chart) =>
-        chart.kind === "pipeline_movement"
-          ? {
-              ...chart,
-              opening: undefined,
-              closing: undefined,
-              points: [],
-              coverage: {
-                status: "unavailable",
-                withheld: false,
-                reason:
-                  "Collecting movement history. The next successful daily capture enables comparison.",
-              },
-            }
-          : chart,
-      ),
+      metrics: [],
+      charts: forecastEvaluation.charts
+        .filter((chart) => chart.kind === "pipeline_movement")
+        .map((chart) =>
+          chart.kind === "pipeline_movement"
+            ? {
+                ...chart,
+                opening: undefined,
+                closing: undefined,
+                points: [],
+                coverage: {
+                  status: "unavailable",
+                  withheld: false,
+                  reason:
+                    "Collecting movement history. The next successful daily capture enables comparison.",
+                },
+              }
+            : chart,
+        ),
     } satisfies typeof forecastEvaluation;
     installFetchStub(reportingStoryRoutes(evaluation));
     return (

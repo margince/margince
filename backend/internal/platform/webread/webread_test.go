@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestStripTagsSurvivesUnicodeCaseFolding(t *testing.T) {
@@ -222,6 +224,45 @@ func TestRedirectTargetsRePassTheRobotsGate(t *testing.T) {
 
 	if _, err := testFetcher().Fetch(context.Background(), srv.URL+"/open"); !errors.Is(err, ErrRobotsDisallowed) {
 		t.Fatalf("redirect into a disallowed path → %v, want ErrRobotsDisallowed", err)
+	}
+}
+
+func TestARobotsFileThatRedirectsToAPageDoesNotRecurseIntoItsOwnPolicy(t *testing.T) {
+	// Seen in production: thainakonintimex.com/robots.txt redirects to an
+	// ordinary page. The redirect hook re-passed that hop through the robots
+	// gate, which fetched robots.txt again, which redirected again — every
+	// level a NEW request, so the five-redirect cap never tripped, and every
+	// level wrapping the error below it, so one deep read formatted half a
+	// gigabyte of error text in ten seconds and then failed anyway.
+	//
+	// A robots fetch follows its redirects like any fetch (RFC 9309 asks for
+	// at least five); what it must not do is ask for its own permission.
+	var robotsHits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/robots.txt":
+			robotsHits.Add(1)
+			http.Redirect(w, r, "/home", http.StatusMovedPermanently)
+		case "/home":
+			//craft:ignore swallowed-errors httptest handler write; a failed write fails the test through the assertion below
+			_, _ = w.Write([]byte("<html><body>Welcome to the company home page.</body></html>"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	doc, err := testFetcher().Fetch(ctx, srv.URL+"/home")
+	if err != nil {
+		t.Fatalf("a site whose robots.txt redirects to a page → %v; want the page (an HTML robots body declares no rules)", err)
+	}
+	if !strings.Contains(doc.Text, "company home page") {
+		t.Fatalf("fetched text = %q, want the page", doc.Text)
+	}
+	if n := robotsHits.Load(); n != 1 {
+		t.Fatalf("robots.txt was requested %d times for one fetch; want 1 (it re-entered its own policy lookup)", n)
 	}
 }
 

@@ -13,7 +13,7 @@ const coverage = {
   withheld: false,
 } satisfies components["schemas"]["ReportingCoverage"];
 export const interval = {
-  start_at: "2026-09-01T00:00:00Z",
+  start_at: "2026-08-31T22:00:00Z",
   end_at: "2026-09-22T12:00:00Z",
 };
 export const reportingStoryEvaluation: ReportingEvaluation = {
@@ -25,7 +25,7 @@ export const reportingStoryEvaluation: ReportingEvaluation = {
     interval,
     target_interval: {
       start_at: interval.start_at,
-      end_at: "2026-10-01T00:00:00Z",
+      end_at: "2026-09-30T22:00:00Z",
     },
     period_kind: "this_month",
     timezone: REPORTING_FIXTURE_ZONE,

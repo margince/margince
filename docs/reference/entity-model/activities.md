@@ -108,7 +108,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_restriction_window` — `CHECK (((restricted_until IS NULL) OR (restricted_until > restricted_at)))`
 - `activity_retention_class_known` — `CHECK (((retention_class IS NULL) OR (retention_class = 'commercial_correspondence')))`
 - `activity_retention_class_stamped` — `CHECK (((retention_class IS NULL) = (retention_class_at IS NULL)))`
-- `activity_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))) NOT VALID`
+- `activity_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `activity_task_fields` — `CHECK (((kind = 'task') OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))`
 
 **Indexes**

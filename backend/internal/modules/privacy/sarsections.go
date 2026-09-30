@@ -471,6 +471,10 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		   FROM list_member_event e JOIN list l ON l.id = e.list_id
 		   WHERE (e.entity_type = 'contact' AND e.entity_id = $1)
 		      OR (e.entity_type = 'lead' AND e.entity_id IN (SELECT id FROM lead WHERE promoted_contact_id = $1))`, nil},
+		{&pkg.LiveListMemberships, `SELECT l.name AS list, m.member_since
+		   FROM list_live_member m JOIN list l ON l.id = m.list_id
+		   WHERE (m.entity_type = 'contact' AND m.entity_id = $1)
+		      OR (m.entity_type = 'lead' AND m.entity_id IN (SELECT id FROM lead WHERE promoted_contact_id = $1))`, nil},
 		{&pkg.ProviderClaims, `SELECT ppc.provider, ppc.claim_key, ppc.value_json, ppc.confidence,
 		          ppc.source, ppc.captured_by, ppc.retrieved_at
 		   FROM contact_provider_claim ppc
