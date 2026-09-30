@@ -5,12 +5,11 @@ package database
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 )
 
@@ -37,12 +36,12 @@ func (d *DB) TxRetryingLockCycles(ctx context.Context, fn func(pgx.Tx) error) er
 	if _, joined := snapshotOf(ctx); joined {
 		return d.Tx(ctx, fn)
 	}
-	return retryLockCycles(ctx, lockCycleAttempts, func() error { return d.Tx(ctx, fn) })
+	return retryLockCycles(ctx, func() error { return d.Tx(ctx, fn) })
 }
 
-func retryLockCycles(ctx context.Context, attempts int, run func() error) error {
+func retryLockCycles(ctx context.Context, run func() error) error {
 	var err error
-	for attempt := range attempts {
+	for attempt := range lockCycleAttempts {
 		if attempt > 0 {
 			pause := time.NewTimer(backoff.Jittered(attempt-1, lockCycleBase, lockCycleCeiling))
 			select {
@@ -52,17 +51,9 @@ func retryLockCycles(ctx context.Context, attempts int, run func() error) error 
 			case <-pause.C:
 			}
 		}
-		if err = run(); !IsLockCycle(err) {
+		if err = run(); !storekit.IsLockCycle(err) {
 			return err
 		}
 	}
 	return err
-}
-
-// IsLockCycle reports the two refusals a whole-transaction retry clears:
-// 40P01, Postgres breaking a deadlock by aborting this transaction, and 40001,
-// a serialization failure. Neither says anything about the request.
-func IsLockCycle(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && (pgErr.Code == "40P01" || pgErr.Code == "40001")
 }

@@ -20,6 +20,7 @@ const (
 	pgLockNotAvailable    = "55P03"
 	pgProgramLimitExceed  = "54000"
 	pgDeadlockDetected    = "40P01"
+	pgSerialization       = "40001"
 
 	// 0A000 is "the server will not do that", and almost every member of it is
 	// a defect in the statement WE sent — an unsupported clause, a write to a
@@ -64,6 +65,14 @@ func IsLockTimeout(err error) bool {
 func IsDeadlock(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == pgDeadlockDetected
+}
+
+// IsLockCycle reports the two refusals a whole-transaction retry clears:
+// 40P01, a broken deadlock, and 40001, a serialization failure. Neither says
+// anything about the request.
+func IsLockCycle(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && (pgErr.Code == pgDeadlockDetected || pgErr.Code == pgSerialization)
 }
 
 // IsUniqueViolation detects the 23505 dedupe path (409 + existing id).

@@ -6,7 +6,7 @@ package httperr
 import (
 	"net/http"
 
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // writeContentionCode names the caller's half of a lock cycle: their write met
@@ -23,7 +23,7 @@ const lockCycleRetryAfter = 1
 // as an unknown fault and told to an agent as settled — the one advice that is
 // wrong, since the same call a moment later is exactly what succeeds.
 func lockCycleFault(err error) (Fault, bool) {
-	if !database.IsLockCycle(err) {
+	if !storekit.IsLockCycle(err) {
 		return Fault{}, false
 	}
 	return Fault{
