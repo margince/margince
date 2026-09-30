@@ -28,7 +28,7 @@ const NotifyActor = "system:approval-notify"
 // OvertakenSweepActor is the pass that takes those notices back. Its own
 // identity rather than the expiry sweep's: onlyTheExpirySweep admits
 // ExpiryActor to a bulk WRITE, and widening that admission to reach a read
-// would loosen the one gate standing in front of that write.
+// would loosen the gate that stands in front of that write.
 const OvertakenSweepActor = "system:notice-overtaken-sweep"
 
 // Terminal is an approval that can no longer be decided, and the colleague who

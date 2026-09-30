@@ -385,7 +385,7 @@ type surfaceCounts struct {
 	lane, badge, digest, centre int
 }
 
-func (e *noticeEnv) surfaces(t *testing.T, reader context.Context) surfaceCounts {
+func (e *noticeEnv) surfaces(reader context.Context, t *testing.T) surfaceCounts {
 	t.Helper()
 	lane, err := e.store.UnreadFor(reader, 8)
 	if err != nil {
@@ -419,11 +419,11 @@ func TestAnOvertakenNoticeLeavesEverySurfaceThatClaimedItWasWaiting(t *testing.T
 	}
 	id := e.raiseAutomation(t, e.recipient, "Approve the renewal")
 
-	if got, want := e.surfaces(t, reader), (surfaceCounts{lane: 1, badge: 1, digest: 1, centre: 1}); got != want {
+	if got, want := e.surfaces(reader, t), (surfaceCounts{lane: 1, badge: 1, digest: 1, centre: 1}); got != want {
 		t.Fatalf("a standing line reads %+v across the surfaces, want %+v", got, want)
 	}
 	e.overtake(t, id)
-	if got, want := e.surfaces(t, reader), (surfaceCounts{centre: 1}); got != want {
+	if got, want := e.surfaces(reader, t), (surfaceCounts{centre: 1}); got != want {
 		t.Fatalf("an overtaken line reads %+v across the surfaces, want %+v — it still claims a decision waits", got, want)
 	}
 }

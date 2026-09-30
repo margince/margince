@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 290 |
-| Columns | 3473 |
-| Foreign keys | 468 |
+| Columns | 3475 |
+| Foreign keys | 469 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -41,7 +41,7 @@ Ranked by how many foreign keys point at them, so this list follows the schema r
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 22 | 125 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 22 | 126 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 33 | 41 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 40 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 32 |
@@ -158,7 +158,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 14 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 22 | 125 |
+| [`app_user`](identity.md#app_user) | identity | 22 | 126 |
 | [`approval`](approvals.md#approval) | approvals | 30 | 3 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
@@ -314,7 +314,7 @@ erDiagram
 | [`meeting_proposal`](activities.md#meeting_proposal) | activities | 9 | 0 |
 | [`mfa_challenge_spent`](identity.md#mfa_challenge_spent) | identity | 2 | 0 |
 | [`mfa_recovery_code`](identity.md#mfa_recovery_code) | identity | 5 | 0 |
-| [`notice`](notices.md#notice) | notices | 14 | 0 |
+| [`notice`](notices.md#notice) | notices | 16 | 0 |
 | [`notification_digest_run`](notices.md#notification_digest_run) | notices | 4 | 0 |
 | [`notification_preference`](notices.md#notification_preference) | notices | 5 | 0 |
 | [`oauth_authorization_code`](identity.md#oauth_authorization_code) | identity | 12 | 0 |
