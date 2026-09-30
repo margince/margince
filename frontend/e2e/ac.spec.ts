@@ -428,7 +428,7 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(
     menu.getByRole("menuitem", { name: "Einstellungen" }),
   ).toHaveAttribute("href", "#/settings");
-  await expect(menu.getByRole("menuitem", { name: de["scheduling.myLink"] })).toHaveAttribute("href", "#/book");
+  await expect(menu.getByRole("menuitem", { name: de["scheduling.myLink"] })).toHaveAttribute("href", "#/settings/meetings");
   await expect(menu.locator("a[href]")).toHaveCount(2);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
@@ -1133,12 +1133,15 @@ test("AC-settings: the passport list is metadata-only and strikes revoked rows",
   await expect(page.getByText(/mgp_/)).toHaveCount(0);
 });
 
+// The public page opens on the current month, so these pin the clock to the
+// month the fixture's free times fall in.
 test("AC-book-public: consent gates calendar invitation and its wording passes through verbatim", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-07-01T06:00:00Z"));
   await page.goto("/#/book/host-1");
   await expect(page.locator("nav.rail")).toHaveCount(0);
-  const submit = page.getByRole("button", { name: de["scheduling.book"] });
+  await page.locator(".bookguest-times .meeting-slots button").first().click();
+  const submit = page.getByRole("button", { name: /\d{2}:\d{2} bestätigen$/ });
   await expect(submit).toBeDisabled();
-  await page.getByRole("button", { name: /06\.07\.2026/ }).first().click();
   await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
   await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
   await expect(submit).toBeDisabled();
@@ -1155,19 +1158,20 @@ test("AC-book-public: consent gates calendar invitation and its wording passes t
   expect(body.consent.purpose_id).toBeUndefined();
   expect(request.headers()["idempotency-key"]).toMatch(/^[0-9a-f-]{36}$/);
   await expect(page).toHaveURL(/#\/book\/manage-guest-booking$/);
-  await expect(page.getByRole("heading", { name: de["scheduling.pending"] })).toBeVisible();
-  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
+  await expect(page.getByRole("status")).toContainText(de["scheduling.pending"]);
+  await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 
 test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-07-01T06:00:00Z"));
   await page.goto("/#/book/host-1");
+  await page.getByRole("button", { name: "12:00" }).click();
   await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
   await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: /12:00/ }).click();
-  await page.getByRole("button", { name: de["scheduling.book"] }).click();
+  await page.getByRole("button", { name: /12:00 bestätigen$/ }).click();
   await expect(page.getByText("slot no longer available")).toBeVisible();
-  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
+  await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 
 test("AC-onboarding-1: onboarding is the rail-less conversational shell", async ({
