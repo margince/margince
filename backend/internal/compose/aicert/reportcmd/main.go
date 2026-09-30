@@ -81,7 +81,7 @@ func main() {
 	fmt.Print(renderPresets(reports)) //nolint:forbidigo // the report's third table, printed for the same reason                                                                              //nolint:forbidigo // the report's second table, printed for the same reason
 }
 
-// presetReports is every preset's rung states over the committed records.
+// presetReports reads the rung states of the presets under dir over the committed records.
 func presetReports(ctx context.Context, dir string, corpus []aicert.Scenario, census *aitasks.Registry, records []aicert.Record) ([]presetReport, error) {
 	presets, err := loadPresets(dir)
 	if err != nil {
