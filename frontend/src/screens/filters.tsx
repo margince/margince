@@ -13,11 +13,9 @@
 import { useState } from "react";
 import { navigate } from "../app/router";
 import { Badge, SegmentedControl } from "../design-system/atoms";
-import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatNumber } from "../format/format";
-import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
+import { type PluralBase, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryStates } from "./common";
 import { FilterBuilder } from "./filterbuilder";
@@ -36,6 +34,7 @@ import {
   SaveToListAction,
   useOpenListFromAddress,
 } from "./filterlistedit";
+import { MatchCount } from "./filtermatchcount";
 import {
   PlainWordsFilter,
   type UnusedPhrase,
@@ -280,7 +279,7 @@ function FilterBuildScreen({
             menus — measured 614px at a 390px viewport. */}
         <PanelBody className="filters-count-row">
           <MatchCount
-            tab={tab}
+            label={MATCH_LABEL[tab]}
             count={preview.data?.match_count}
             stale={preview.isFetching}
             failed={preview.isError}
@@ -437,65 +436,6 @@ function PreviewSection({
         />
       </PanelBody>
     </Panel>
-  );
-}
-
-/**
- * The count, and whether it is behind.
- *
- * Four readings, and keeping them apart is the point. A count the server has
- * answered reads plainly. A count being recomputed reads as the LAST answer,
- * marked stale — not as a spinner, because a number that vanishes on every
- * keystroke is harder to read than one that lags a moment. A tree with no
- * complete clause has no count at all, which is different from a count of zero:
- * zero means "nothing matches", and this means "you have not asked yet". And a
- * count the server was asked for and refused says exactly that.
- *
- * The refusal outranks the other three. It is read first because the previous
- * answer survives a failed refetch, so a stale number would otherwise be
- * presented as current, and because "you have not asked yet" over a finished
- * clause blames the reader for the server's refusal.
- */
-function MatchCount({
-  tab,
-  count,
-  stale,
-  failed,
-}: Readonly<{
-  tab: ObjectTab;
-  count: number | undefined;
-  stale: boolean;
-  failed: boolean;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  if (failed) {
-    // Silent: the results card below carries the reason in an assertive live
-    // region, and announcing the same failure twice fragments it.
-    return (
-      <span className="filters-count">
-        <ErrorLine inline standing>
-          {t("filters.countUnavailable")}
-        </ErrorLine>
-      </span>
-    );
-  }
-  if (count === undefined) {
-    return <span className="filters-count">{t("filters.noFilterYet")}</span>;
-  }
-  return (
-    <span
-      className="filters-count"
-      // Spoken, because the count changing is the feedback for every edit — a
-      // sighted reader sees the number move and a screen-reader user would
-      // otherwise get nothing back from adding a clause.
-      role="status"
-      aria-busy={stale}
-      data-stale={stale ? "true" : undefined}
-    >
-      {plural(MATCH_LABEL[tab], count, { count: formatNumber(count, locale) })}
-    </span>
   );
 }
 
