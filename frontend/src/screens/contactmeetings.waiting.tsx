@@ -18,6 +18,7 @@ import {
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import { entityTimelineKeys } from "./activitykeys";
 import { proposalEmailBody } from "./booking-proposal-message";
 import { throwProblem } from "./common";
 import { ComposeModal } from "./compose";
@@ -68,9 +69,12 @@ export function WaitingSection({
     },
     onSuccess: async (_done, { contactId }) => {
       setWithdrawing(null);
-      await client.invalidateQueries({
-        queryKey: ["meeting-proposals", contactId],
-      });
+      await Promise.all(
+        [
+          ["meeting-proposals", contactId],
+          ...entityTimelineKeys("contact", contactId),
+        ].map((queryKey) => client.invalidateQueries({ queryKey })),
+      );
     },
   });
   const rows = proposals.data ?? [];

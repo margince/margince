@@ -137,11 +137,11 @@ it("hides the waiting section when nothing is waiting", async () => {
   expect(screen.queryByRole("heading", { name: /Waiting on/ })).toBeNull();
 });
 
-it("withdraws an invitation by archiving it, then reads the list again", async () => {
+it("withdraws an invitation by archiving it, then reads the list and the timeline again", async () => {
   const user = userEvent.setup();
   let open = [proposed, personal];
   const archived: string[] = [];
-  mount(() => open, {
+  const { client } = mount(() => open, {
     [`DELETE /activities/${proposed.id}`]: () => {
       archived.push(proposed.id);
       open = [personal];
@@ -152,6 +152,7 @@ it("withdraws an invitation by archiving it, then reads the list again", async (
     await screen.findByText("Proposed 2 times · Project discovery")
   ).closest("article");
   if (!row) throw new Error("Each proposal is drawn as its own card");
+  client.setQueryData(["contact360", "p-1"], view);
   await user.click(within(row).getByRole("button", { name: "Withdraw" }));
   const dialog = await screen.findByRole("dialog");
   expect(within(dialog).getByText("Withdraw this invitation?")).toBeTruthy();
@@ -165,6 +166,8 @@ it("withdraws an invitation by archiving it, then reads the list again", async (
     ).toBeNull(),
   );
   expect(screen.getByText("Personal link · Intro call")).toBeTruthy();
+  // The archived proposal still sits on the contact's timeline until it is read again.
+  expect(client.getQueryState(["contact360", "p-1"])?.isInvalidated).toBe(true);
 });
 
 it("resends an invitation through the composer with the email it was sent with", async () => {
