@@ -12,6 +12,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { problemCodeOf, problemMessageOf } from "./common";
+import { ListRuleUses, ruleUsesOf } from "./listrules";
 import {
   type List,
   type ListRecordType,
@@ -165,6 +166,10 @@ export function SaveToListAction({
         }
       >
         <p>{t("lists.saveFilterBody")}</p>
+        <ListRuleUses
+          rules={ruleUsesOf(edited.list)}
+          lead={t("lists.rules.settingsLeadLive")}
+        />
       </ConfirmModal>
     </>
   );

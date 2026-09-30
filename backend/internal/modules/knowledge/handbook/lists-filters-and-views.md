@@ -329,7 +329,7 @@ A Live List's members are worked out again every time you open it, so the list i
 Also called: refresh a list, list sync, when does my list update.
 
 ### What changed on a list since my last visit?
-Margince remembers when you last opened each list. On **Shared views**, a Live List that changed since then shows "+3 / −1": three joined, one left. On the list's page, "Since your last visit" gives the same counts, names the newest records that joined and left as links, and says whether the filter changed; each member that joined since your visit carries a **New** badge.
+Margince remembers when you last opened each list. On **Shared views**, a Live List that changed since then shows "+3 / −1": three joined, one left. On a Live List's page, "Since your visit on" and the date give the same counts, name the newest three records that joined and that left as links ("+2 more" for the rest), and say how often the filter changed; each member that joined since your visit carries a **New** badge.
 **What changed**, at the bottom of the list's page, is the full history: who was added or taken off and how (by hand, in a bulk change, by an automation, or because the record was archived or restored), "Joined as of" and "Left as of" rows from the 15-minute check, and every change to the list itself. You see only the records you are allowed to see.
 Also called: list history, list activity, who joined, who left, new members.
 
@@ -350,7 +350,7 @@ Also called: broken list, list warning, archived custom field.
 ### How do I change a Live List's filter?
 To change which records a Margince Live List holds, open the list and press **Edit filter**. The builder opens on the list's filter, with a notice naming the list.
 1. Change, add or delete clauses; the match count updates as you go.
-2. Press **Save to** and the list's name, then **Save filter**. The list's page opens.
+2. Press **Save to** and the list's name. The dialog names any automations that use the list, because they act on the new filter from the next check. Press **Save filter**; the list's page opens.
 3. From then on records join and leave by the new filter, and **What changed** records the change.
 If someone changed the list after you opened it, Margince says so and saves nothing: open the list again and redo the edit. **Save as Live List** in the same place makes a new list instead. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **Edit filter**; a Shortlist has no filter.
 Also called: edit a list's criteria, change a segment, update a smart list.
@@ -363,10 +363,10 @@ Also called: delete a list, rename a list, change who can see a list.
 
 ### Can an automation act on a Live List?
 Yes. **Settings** → **Automations** has three rules that watch a Live List: **Follow up when a record joins or leaves a Live List** (a task for the record's owner), **Tell me when a record joins or leaves a Live List** (a notice to you), and **Add to a Shortlist when a record joins or leaves a Live List**.
-1. Pick the Live List to watch and whether the rule fires when a record joins, leaves, or either. For the Shortlist rule, pick a Shortlist of the same record type.
+1. Pick the Live List to watch and whether the rule fires when a record joins, leaves, or either. For the Shortlist rule, pick a Shortlist of the same record type; a record already on it stays as it is. The follow-up task is due 2 days out unless you change it.
 2. The rule fires from the 15-minute check, once for each record you can see that joined or left.
-3. When one check moves more than 100 records, the rule acts on none of them and pauses itself. It also pauses when the list is archived or its filter stops working.
-A paused rule stays paused until its owner resumes it; restoring or fixing the list does not resume it. A follow-up task never names the list, because the list may be private.
+3. When one check moves more than 100 records, the rule acts on none of them and pauses itself. It also pauses when the list is archived, when its filter stops working, or when you can no longer find the list.
+A paused rule says why and stays paused until its owner resumes it; restoring or fixing the list does not resume it, and a rule cannot be resumed while its list is archived or its filter is broken. A follow-up task never names the list, because the list may be private.
 Also called: list trigger, when someone joins a list, list workflow.
 
 ### Why can I not find Lists?

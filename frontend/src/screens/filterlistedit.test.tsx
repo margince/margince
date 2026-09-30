@@ -86,6 +86,33 @@ describe("editing a Live List's filter", () => {
     );
   });
 
+  it("names the automations watching the list before the save", async () => {
+    builder({
+      ...liveList,
+      dependencies: [
+        {
+          kind: "automation",
+          occurred_at: "2026-09-02T00:00:00Z",
+          blocking: false,
+          role: "watches",
+          automation_id: "01a0f000-0000-7000-8000-000000000041",
+          automation_name: "Tell me about new buyers",
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: saveTo }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(en["lists.rules.settingsLeadLive"]),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        en["lists.rules.watches"].replace("{name}", "Tell me about new buyers"),
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("says plainly when somebody changed the list since it was opened", async () => {
     builder(liveList, () =>
       jsonResponse(
