@@ -72,7 +72,7 @@ function frame(current: () => Response) {
 }
 
 const meta: Meta<typeof PlanSection> = {
-  title: "Shell/Weekly plan",
+  title: "Shell/Home/Weekly plan",
   component: PlanSection,
 };
 export default meta;

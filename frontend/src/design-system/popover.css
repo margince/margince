@@ -72,3 +72,17 @@
   background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
 }
+
+/* A popover trigger that wears the evidence mark (`.evmark-trigger`,
+   evidencemark.css): a figure that explains itself when pressed says so with
+   the same dotted underline and help cursor as every other "where does this
+   come from" value, rather than a second cue. Spelled here because the trigger's
+   own `cursor: pointer` above out-ranks the mark's plain class. */
+.popover-trigger.evmark-trigger:not(.btn) {
+  cursor: help;
+  text-decoration: underline dotted var(--borderStrong);
+  text-underline-offset: 3px;
+}
+.popover-trigger.evmark-trigger:not(.btn):hover {
+  text-decoration-color: var(--accent);
+}

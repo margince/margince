@@ -451,7 +451,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "voice.insights.disclosure",
     // A human being in a sentence about contacts rather than about the record.
     "agents.connectorOffDetail",
-    "aiHealth.withheld",
     "aicalls.withheld",
     "aiusage.withheld",
     "approval.kind.assign_owner",

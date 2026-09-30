@@ -708,10 +708,11 @@ rather than the file:
 
 | Root | What is under it |
 |---|---|
+| `Get started/` | The introduction: what the catalog is and how it is shelved. |
 | `Foundations/` | The rules under every component, one node per topic: `Color`, `Typography`, `Radius`, `Brand`. |
 | `Components/` | One node per component in this directory, under the category below that says what it is for. |
 | `Patterns/` | Screen-tier building blocks that are not a page: the query gate, the create/edit/merge/share actions, the composer. |
-| `Shell/` | The application frame. |
+| `Shell/` | The application frame and the Home page. |
 | `Records/` | The screens a rep works in, and the cards on them (`Company 360/`, `Company rail/`). |
 | `Settings/` | `<Group>/<Page>/<Card>`, mirroring the settings catalog one for one: the seven groups of `SETTINGS_GROUPS` and the pages of `SETTINGS_PAGES`, under their own sidebar labels. `screens/settingsstories.test.ts` holds the two together, so a story filed under a group or page the catalog does not declare fails. |
 | `Onboarding/`, `Signed out/` | The first run, and the pages reachable without a session. |
@@ -724,7 +725,7 @@ them, with AI and provenance as the one category of our own:
 | Category | What is under it |
 |---|---|
 | Forms and input | Controls a reader fills, picks or presses: Select, Combobox, Value inputs, Switch, Choice list, Field grid, the inline edits, the pickers, the filter controls, Icon action |
-| Images and icons | Marks that stand for a contact or a company: Avatar, Avatar stack, Company logo |
+| Images and icons | Marks that stand for a contact or a company, and the ground a place is drawn on: Avatar, Avatar stack, Company logo, Ambient waves |
 | Labels | A word in a pill that takes no click: Tag pill, Row tags, Visibility, Role badge |
 | Layout and structure | The boxes and columns a page is built from: Panel, Page zones, Setting row, Action row |
 | Messaging | What a surface says when something needs saying: Callout, Error line, Toast, Surface state, Card boundary |
@@ -735,10 +736,10 @@ them, with AI and provenance as the one category of our own:
 | Primitives | Stack and Row |
 | AI and provenance | What an agent proposed and where a value came from: Decision card, Decision deck, AI pending, Evidence mark, Evidence receipt, Source email panel, Trust, Margince core |
 
-Under `Foundations/` and `Components/`, every segment is Sentence case and a
-declared acronym or proper noun (`AI`, `Margince`) keeps its spelling. There,
-`catalog.test.ts` holds one title per story file and no title that is both a
-leaf and a group.
+Under every root but `Design System/` and `Records/`, every segment is
+Sentence case and a declared acronym or proper noun (`AI`, `Margince`,
+`MCP Apps`) keeps its spelling. There, `sidebar.test.ts` holds one title per
+story file and no title that is both a leaf and a group.
 
 ## Driving a control in a test
 
@@ -785,5 +786,6 @@ the shell script it replaced could not.
 | `design-system/type-source.test.ts` | Type declared by VALUE outside `tokens.css`. Every `.css` file under `src/` (comments blanked, line numbers kept) and every non-test `.ts`/`.tsx` style object: `font-size`, `line-height`, `letter-spacing` and `text-transform` may only say `inherit`, while `font` takes a `--font*` token and `font-weight` a `--fontWeight*` one. Two layout facts are excepted, and only inside the two UA resets (`app.css`, `mcp-apps/view.css`): `text-transform: none`, which hands a control back the platform's casing, and `line-height: 0` on a rule selecting nothing but `sub`/`sup`, so a footnote ordinal does not grow its line. The selector is part of the exception — a third element in that list fails. Each finding is named `file:line: declaration`. It also refuses CAPITALS drawn by any road other than `text-transform`: a caps keyword on `font-variant-caps` or inside the `font-variant` shorthand, and `"smcp"` / `"c2sc"` / `"pcap"` turned on through `font-feature-settings` — while `font-variant-numeric: tabular-nums` stays allowed, because lining up a column of money is not a decision about how loud text is. And on the TSX side it walks the syntax tree for a `.toUpperCase()` / `.toLocaleUpperCase()` whose result is RENDERED — a direct JSX child, an attribute value, or a template piece in either — while the same call in a comparison, a map key or a payload is data handling and passes. Fails closed: a corpus missing `app.css`, under 100 stylesheets, or under 100 components, is a failure rather than an empty pass |
 | `design-system/controlheight.test.ts` | A control standing at a height of its own. It reads every stylesheet under `src/` and reports each rule that declares `height`, `min-height`, `block-size` or `min-block-size` with anything but `var(--controlHeight)` on something the tree makes pressable — a class some rule marks `cursor: pointer`, a class the markup puts on a `<button>` (read as a syntax tree), or the `button` element itself. Both readings are floored, because a corpus that came back empty would report the same word as a clean tree. What is left over is a register of every OTHER height in the product with a sentence saying what that box is — a field is `--inputHeight`, a link is not a box, a row carries its list's rhythm, a sign-in door owes every pointer 44px — and the register may only shrink: an entry that stops answering a finding fails and names itself |
 | `design-system/menu-anatomy.test.ts` | A menu that spells its own anatomy. Every option surface in the product — the ListTable menus, `Select`'s popup, the suggestion list, the overflow panel, the account menu and its flyout, the settings search list — reads one inset (`--controlGap`, which above and below a `--fontBody` line is the `--controlHeight` every option row stands at), one floor (`--menuMinInlineSize`) and one ceiling (`--menuMaxBlockSize`); a surface that takes neither floor nor ceiling carries the reason in the roster. The roster is written by hand, because nothing in the tree says which class IS a menu — so a second arm walks every element claiming a `menu`, `listbox`, `menuitem` or `option` role and fails on a class the roster does not name, which is what stops the roster reading a smaller tree than there is |
-| `design-system/catalog.test.ts` | A component in this directory that this table never names; a row claiming a story of its own where no story file exists; a story file whose title cannot be read off its default export; a story anywhere under `src/` filed under a root the sidebar table above does not document; a `Components/` story outside a declared category, a `Foundations/` story outside a declared topic, or a category or topic with no story; under those two roots, a segment that is not Sentence case, two files sharing a title, or a title that is both a leaf and a group; a `storySort` in `.storybook/preview.tsx` whose roots, categories or topics are not these tables in their order |
+| `design-system/catalog.test.ts` | A component in this directory that this table never names; a row claiming a story of its own where no story file exists; a story or docs file whose title cannot be read; a story anywhere under `src/` filed under a root the sidebar table above does not document; catalog groups that are not the categories in their order |
+| `design-system/sidebar.test.ts` | A documented root with no story; a `Components/` story outside a declared category, a `Foundations/` story outside a declared topic, or a category or topic with no story; under the shaped roots, a segment that is not Sentence case, two files sharing a title, or a title that is both a leaf and a group; a `storySort` in `.storybook/preview.tsx` whose roots, categories or topics are not these tables in their order |
 | `e2e/` (axe) | WCAG 2.2 AA on every core screen, plus the 390px no-horizontal-scroll sweep |

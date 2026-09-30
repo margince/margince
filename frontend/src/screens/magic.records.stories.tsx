@@ -73,7 +73,7 @@ function opener(args: ComponentProps<typeof LineRecordsOpener>) {
 }
 
 const meta = {
-  title: "Shell/Home receipt/Line records",
+  title: "Shell/Home/Receipt line records",
   component: LineRecordsOpener,
   args: {
     line: LINE,

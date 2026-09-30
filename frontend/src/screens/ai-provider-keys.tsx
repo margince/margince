@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
+import { useCan, useCanUpsert, useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -19,7 +19,21 @@ import {
   KeyTestOutcome,
   useTestProviderKey,
 } from "./ai-provider-key-test";
+import {
+  ProviderSheet,
+  type ProviderUsage,
+  providerState,
+  STATE_LABEL,
+  STATE_TONE,
+} from "./ai-provider-sheet";
+import { providerUsage, useRouting } from "./ai-routing-query";
+import { PanelTitle } from "./ai-terms";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import {
+  RefreshModelPricesButton,
+  RefreshSummary,
+  useRefreshModelPrices,
+} from "./rate-catalogue-refresh";
 import "./ai-settings.css";
 
 // The vendor credentials this installation calls models with.
@@ -117,13 +131,28 @@ export function AiProviderKeysCard() {
   const canSee = useCan("ai_routing", "read");
   const canManage = useCanWrite("ai_routing", "update");
   const query = useProviderKeys(canSee);
+  const routing = useRouting(canSee);
+  const usage = routing.data ? providerUsage(routing.data.routing) : null;
+  // The provider whose sheet is open, by name so it follows the list as a key
+  // is saved rather than holding a copy that goes stale.
+  const [opened, setOpened] = useState<string | null>(null);
+  const refresh = useRefreshModelPrices();
+  // The refresh reads the sheet before it writes it, so the server asks for
+  // both grants; a writer without the read would press it into a refusal.
+  const canReadPrices = useCan("ai_model_rate", "read");
+  const canWritePrices = useCanUpsert("ai_model_rate");
+  const canPrice = canReadPrices && canWritePrices;
 
   if (!canSee) {
     // Withheld, not absent. An absent key card would say this installation has
     // no credentials — a claim about the DATA — where the truth is only that
     // which vendors are keyed is not this reader's to know.
     return (
-      <Panel title={t("aiProviderKeys.title")}>
+      <Panel
+        title={
+          <PanelTitle term="provider">{t("aiProviderKeys.title")}</PanelTitle>
+        }
+      >
         <PanelBody>
           <EmptyState>{t("aiProviderKeys.withheld")}</EmptyState>
         </PanelBody>
@@ -136,25 +165,96 @@ export function AiProviderKeysCard() {
   // reader auditing the page travels one column instead of reading six open
   // paste fields to find the one vendor that is not set up.
   return (
-    <Panel title={t("aiProviderKeys.title")}>
+    <Panel
+      title={
+        <PanelTitle term="provider">{t("aiProviderKeys.title")}</PanelTitle>
+      }
+      titleAction={
+        canPrice ? <RefreshModelPricesButton refresh={refresh} /> : undefined
+      }
+    >
       <QueryGate query={query} pendingLabel={t("aiProviderKeys.title")}>
-        {(list) => (
-          <>
-            {list.providers.map((p) => (
-              <ProviderKeyRow
-                key={p.provider}
-                status={p}
-                canManage={canManage}
-              />
-            ))}
-          </>
-        )}
+        {(list) => {
+          const openStatus = list.providers.find((p) => p.provider === opened);
+          return (
+            <>
+              <RefreshSummary refresh={refresh} />
+              {list.providers.map((p) => (
+                <ProviderRow
+                  key={p.provider}
+                  status={p}
+                  usage={usage?.get(p.provider)}
+                  onOpen={() => setOpened(p.provider)}
+                />
+              ))}
+              {openStatus ? (
+                <ProviderSheet
+                  status={openStatus}
+                  usage={usage?.get(openStatus.provider)}
+                  refresh={refresh}
+                  connection={
+                    <ProviderConnection
+                      status={openStatus}
+                      canManage={canManage}
+                    />
+                  }
+                  onClose={() => setOpened(null)}
+                />
+              ) : null}
+            </>
+          );
+        }}
       </QueryGate>
     </Panel>
   );
 }
 
-function ProviderKeyRow({
+// One vendor as a reading: its name, the variable its key rides in, whether it
+// can be called and what routing uses it for — and the way into its sheet.
+function ProviderRow({
+  status,
+  usage,
+  onOpen,
+}: {
+  status: ProviderStatus;
+  usage: ProviderUsage | undefined;
+  onOpen: () => void;
+}) {
+  const t = useT();
+  const state = providerState(status, usage);
+  return (
+    <PanelRow>
+      <div
+        className="ai-provider-line"
+        data-testid={`ai-provider-row-${status.provider}`}
+      >
+        <span className="ai-provider-who">
+          <span>{status.provider}</span>
+          <span className="ai-provider-env">
+            {status.env_var === "" ? "\u2014" : status.env_var}
+          </span>
+        </span>
+        <span
+          className="t-caption ai-provider-used"
+          title={usage?.for.join(", ")}
+        >
+          {usage
+            ? t("aiProviders.usedBy", { roles: usage.for.join(", ") })
+            : t("aiProviders.notUsed")}
+        </span>
+        <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>
+        <Button onClick={onOpen}>
+          {t("aiProviders.manage")}
+          <span className="sr-only"> {status.provider}</span>
+        </Button>
+      </div>
+    </PanelRow>
+  );
+}
+
+// The credential controls for ONE vendor, drawn inside its sheet: whether it is
+// keyed, the test, and the paste field that adds, replaces or removes the key.
+function ProviderConnection({
   status,
   canManage,
 }: {
@@ -208,11 +308,10 @@ function ProviderKeyRow({
   const keyless = status.env_var === "";
 
   return (
-    <PanelRow>
+    <div>
       <div data-testid={`ai-provider-key-${status.provider}`}>
         <div className="ai-provider">
           <span className="ai-provider-who">
-            <span>{status.provider}</span>
             {/* The variable is the only thing that says HOW a key reached the
                 vault, and an operator debugging a vendor wants to know whether
                 an export seeded it. Verbatim, because it is a name to be typed
@@ -259,10 +358,8 @@ function ProviderKeyRow({
                 : t("aiProviderKeys.absentHint", { envVar: status.env_var })
             }
           >
-            {/* One paste and the verbs that act on it, on one line. It carried
-                `row-inline`, which nothing in this tree styles, so the field,
-                its verb and the removal each took a full-width block of their
-                own. */}
+            {/* One paste and the verbs that act on it, on one line: Save sits
+                where the eye is when the paste ends. */}
             {(control) => (
               <div className="ai-key-entry">
                 <TextInput
@@ -371,7 +468,7 @@ function ProviderKeyRow({
       >
         {t("aiProviderKeys.removeConfirmBody")}
       </ConfirmModal>
-    </PanelRow>
+    </div>
   );
 }
 

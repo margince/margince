@@ -13,7 +13,7 @@ import "./preferences.css";
 // locked lane, which carries the "always on" badge with its lock and cannot be
 // switched; an ordinary lane a subject may turn off; and a lane that needs a
 // confirmation link before a grant counts. The page with every row in it is
-// `Signed out/Email preference centre`.
+// `Signed out/Email preference centre/Page`.
 
 function purpose(over: Partial<PurposeView>): PurposeView {
   return {

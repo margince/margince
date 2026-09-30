@@ -140,7 +140,8 @@ export const VocabularyWithheld: Story = {
  * settings column, which a narrow window cannot scroll back to.
  */
 export const Narrow: Story = {
-  parameters: { viewport: { defaultViewport: "mobile1" } },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
   render: () => (
     <div style={{ maxWidth: "22rem" }}>
       <Card />

@@ -13,7 +13,7 @@ import { OnboardingStage } from "./onboarding-stage";
 // emissive on a dark ground, and the room's two washes are alpha tints that
 // have to read on both.
 const meta: Meta<typeof OnboardingStage> = {
-  title: "Onboarding/Stage",
+  title: "Components/Layout and structure/Onboarding stage",
   component: OnboardingStage,
   parameters: { layout: "fullscreen" },
 };

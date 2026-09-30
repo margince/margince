@@ -192,7 +192,7 @@ async function fillAndSend() {
 }
 
 const meta: Meta = {
-  title: "Patterns/Compose mail",
+  title: "Patterns/Compose mail/Composer",
 };
 export default meta;
 

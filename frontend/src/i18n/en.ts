@@ -214,7 +214,6 @@ export const en = {
     "Only a user with both AI diagnostics read and AI allowance read can see which features are live now.",
   "aiAdmin.save": "Save allowance",
   "aiAdmin.cancel": "Cancel",
-  "aiAdmin.calls": "Inspect actual model calls",
   "aiAdmin.website": "Website reads",
   "aiAdmin.scans": "Company scans",
   "aiAdmin.voice": "Voice builds",
@@ -230,10 +229,7 @@ export const en = {
   "aiAdmin.impact.exempt": "Continues beyond allowance",
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
-  "aiAdmin.cloud": "Cloud provider",
-  "aiAdmin.endpoint": "Configured endpoint; location not verified",
-  "aiAdmin.decisionFirst":
-    "Decision model first ({provider} · {model} · {processing}) → then {ladder}",
+  "aiAdmin.thenLadder": "then",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
   "aiAdmin.decisionSkip.uncertified":
     "Decision model not used: not certified for this activity.",
@@ -6077,20 +6073,11 @@ export const en = {
   "overnightGrant.writeFailedTitle": "Change was not saved",
   "overnightGrant.renewScope":
     "Margince has gained capabilities since you agreed. Turn this off and on again to extend it. Until then, your Morning brief is not prepared.",
-  "aiHealth.title": "Tier call health",
-  "aiHealth.sub":
-    "Whether each model tier responds. A stopped tier and a cautious tier look the same elsewhere; captured mail stays held in both cases.",
   "aiHealth.noCalls": "No model calls in the last {hours}h.",
-  "aiHealth.colTier": "Tier",
-  "aiHealth.colState": "State",
-  "aiHealth.colCalls": "Last {hours}h",
-  "aiHealth.colLatency": "Median",
-  "aiHealth.colLast": "Last response",
   "aiHealth.answering": "Responding",
   "aiHealth.notAnswering": "Not responding",
   "aiHealth.callCounts_one": "{count} call, {failures} failed",
   "aiHealth.callCounts_other": "{count} calls, {failures} failed",
-  "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Held threads",
   "heldThreads.sub":
     "Threads your mailbox is withholding. Releasing a thread lets every colleague read it; only you can release yours.",
@@ -8605,7 +8592,7 @@ export const en = {
   "aiusage.decisions.col.asked": "Asked",
   "aiusage.decisions.col.passRate": "Pass rate",
   "aiusage.decisions.col.fallbackRate": "Fallback rate",
-  "aiusage.decisions.col.reasons": "Fallbacks by reason",
+  "aiusage.decisions.reasonsFor": "Fallbacks by reason for {rate}",
 
   "aibanner.degraded": "80% of AI allowance reached. Review affected features.",
   "aibanner.queued": "AI allowance reached. Review deferred work.",
@@ -8620,8 +8607,6 @@ export const en = {
   "aicalls.title": "AI call trace",
   "aicalls.withheld":
     "Only an administrator or operations user can read the call trace. It records every model call the installation made.",
-  "aiHealth.withheld":
-    "Only an administrator or operations user can see whether model tiers respond. This is installation infrastructure, not data about your work.",
   "aicalls.sub":
     "Every model call: routing identity, tokens, retries, captured payload.",
   "aicalls.col.detail": "Detail",
@@ -8856,9 +8841,9 @@ export const en = {
     "Typed questions, asked before the tiers where certified",
   "aiRouting.decisions.add": "Add decision model",
   "aiRouting.decisions.remove": "Remove decision model",
-  "aiRouting.decisions.preset.openrouter": "Use OpenRouter",
+  "aiRouting.decisions.preset.openrouter": "Preset: OpenRouter",
   "aiRouting.decisions.preset.openrouterKey":
-    "Fills in OpenRouter’s endpoint and model. JEV_COMPATIBLE_API_KEY takes your OpenRouter key.",
+    "Fills in host and model. The key goes in JEV_COMPATIBLE_API_KEY.",
   "aiRouting.decisions.absent": "No decision model. Every task uses the tiers.",
   "aiRouting.priceSheet": "Price sheet",
   "aiRouting.provider.label": "Provider",
@@ -8906,27 +8891,24 @@ export const en = {
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
-    "Provider host root without a version segment; /v1 is added. Required for openai_compatible, which has no default.",
+    "Host root; /v1 is added. Required: this adapter has no default.",
   "aiRouting.baseUrl.help.jev":
-    "Full endpoint URL, used as written. Leave blank for TypeSafe’s own API, https://api.typesafe.ai/v1/systemone.",
+    "Full endpoint URL. Blank uses TypeSafe’s own API.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
   "aiRouting.baseUrl.help.jevCompatible":
-    "Full endpoint URL, used as written. Required: OpenRouter is https://openrouter.ai/api/alpha/decisions, and a self-hosted server looks like http://127.0.0.1:8767/v1/systemone.",
+    "Full endpoint URL, used as written. Required.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
-  "aiRouting.models.noKey":
-    "Price sheet only: this provider has no key, so its model list cannot be requested. Any model ID it serves still works; type it.",
-  "aiRouting.models.noEndpoint":
-    "Price sheet only: enter the host above to request this provider’s model list. Any model ID it serves still works; type it.",
+  "aiRouting.models.noKey": "No key, so no model list. Type any ID it serves.",
+  "aiRouting.models.noEndpoint": "Enter the host above to load its model list.",
   "aiRouting.models.profileForbids":
-    "Price sheet only: this installation profile does not allow access to this provider.",
-  "aiRouting.models.notPublished":
-    "Price sheet only: this provider publishes no model list.",
+    "This profile does not allow this provider.",
+  "aiRouting.models.notPublished": "This provider publishes no model list.",
   "aiRouting.models.unreachable":
-    "Price sheet only: this provider did not respond. Any model ID it serves still works; type it.",
+    "The provider did not respond. Type any ID it serves.",
   "aiRouting.model.label": "Model",
   "aiRouting.model.help":
-    "Listed models are the ones this installation can price, per 1M tokens in → out. Any other model ID the provider serves also works; type it.",
+    "Pick a listed model, or type any ID the provider serves.",
   "aiRouting.saving": "Saving binding…",
   "aiRouting.saveFailed": "Routing not saved",
   "aiRouting.adminOnly":
@@ -8957,6 +8939,17 @@ export const en = {
     "Pick a provider and model for each tier, for embeddings and, optionally, for the decision model. Saved bindings reach every process within a minute, without a restart.",
   "aiRouting.profileLine":
     "Installation profile: {profile}. It limits which providers a tier can use and is set by the operator.",
+  "aiRouting.notBound": "Not bound",
+  "aiRouting.lastResponse": "Last response {when}",
+  "aiTerms.provider": "Provider",
+  "aiTerms.providerGloss": "who is called",
+  "aiTerms.tier": "Tier",
+  "aiTerms.tierGloss": "a class of work, bound to a model",
+  "aiTerms.task": "Task",
+  "aiTerms.taskGloss": "what the product does",
+  "aiRouting.taskCount_one": "{count} task",
+  "aiRouting.taskCount_other": "{count} tasks",
+  "aiRouting.noPrice": "No price set. Add it under the provider.",
   "aiRouting.edit": "Edit",
   "aiRouting.editTitle": "Edit {lane} binding",
   "aiRouting.saveBinding": "Save binding",
@@ -8968,9 +8961,6 @@ export const en = {
   "aiRouting.notListed":
     "Not in {provider}’s published model list. You can still save it if the provider serves this ID.",
   "aiRouting.median": "Median {ms} ms",
-  "aiRouting.untracked": "Call health is tracked for tiers only.",
-  "aiRouting.taskCount_one": "{count} task",
-  "aiRouting.taskCount_other": "{count} tasks",
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
     "Read-only: each task’s tier is fixed by contract. Each row leads with the model it runs on now.",
@@ -11076,16 +11066,53 @@ export const en = {
   "aiRates.proposedBasis":
     "Refresh model prices writes it to the sheet. Usage and spend include it from then on.",
   "aiRates.refresh.button": "Refresh model prices",
-  "aiRates.refresh.report": "Model price refresh",
   "aiRates.refresh.outcome.updated": "Updated",
   "aiRates.refresh.outcome.unchanged": "Up to date",
   "aiRates.refresh.outcome.not_available": "Set by hand",
   "aiRates.refresh.outcome.unreachable": "Unreachable",
   "aiRates.refresh.outcome.not_bound": "Not in use",
+  "aiRates.refresh.outcome.not_listed": "Not in the list",
+  "aiRates.refresh.unlisted": "Not in the broker’s list: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} price written",
   "aiRates.refresh.updatedCount_other": "{count} prices written",
   "aiRates.refresh.unchangedCount_one": "{count} price already current",
   "aiRates.refresh.unchangedCount_other": "{count} prices already current",
+  "aiProviders.state.active": "Active",
+  "aiProviders.state.ready": "Ready",
+  "aiProviders.state.needsKey": "Needs key",
+  "aiProviders.state.inactive": "Not active",
+  "aiProviders.usedBy": "Used by {roles}",
+  "aiProviders.notUsed": "Not used",
+  "aiProviders.opensNewTab": "(Opens in a new tab)",
+  "aiProviders.inUse": "In use",
+  "aiProviders.unpriced": "{model} is in use and has no price.",
+  "aiProviders.setPrice": "Set price",
+  "aiProviders.manage": "Manage",
+  "aiProviders.connection": "Connection",
+  "aiProviders.prices": "Prices",
+  "aiProviders.addPrice": "Add price",
+  "aiProviders.backToPrices": "← Prices",
+  "aiProviders.priceUnit": "USD per 1M tokens",
+  "aiProviders.priceSource": "Provider price list ↗",
+  "aiProviders.noPrices": "No prices set for this provider yet.",
+  "aiProviders.colInput": "Input",
+  "aiProviders.colOutput": "Output",
+  "aiProviders.colCacheRead": "Cache read",
+  "aiProviders.colCacheWrite": "Cache write",
+  "aiRates.manual.editing": "Editing {model} · used for {lane}",
+  "aiRates.manual.from": "from {date}",
+  "aiRates.manual.edit": "Edit",
+  "aiRates.manual.malformed":
+    "Prices are plain numbers such as 5 or 0.25, with at most six decimals.",
+  "aiRates.manual.lane": "Used for",
+  "aiRates.manual.laneChat": "Chat",
+  "aiRates.manual.laneEmbeddings": "Embeddings",
+  "aiRates.manual.laneDecisions": "Decisions",
+  "aiRates.remove.verb": "Remove {model}",
+  "aiRates.remove.title": "Remove the price for {model} ({lane})?",
+  "aiRates.remove.body":
+    "The price for {model} used for {lane} is removed and cost estimates for past calls of that model become unpriced.",
+  "aiRates.remove.confirm": "Remove",
   "firstRun.ignite.title": "Model connected",
   "firstRun.ignite.sub":
     "The key is stored and the model responded. This is what changes.",

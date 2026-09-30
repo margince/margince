@@ -16,7 +16,7 @@ import {
 // fetch mocking is needed here — the fe-uat render gate (fe-uat.mjs) drives
 // these states directly.
 const meta: Meta = {
-  title: "Patterns/Create record",
+  title: "Patterns/Create record/Form",
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

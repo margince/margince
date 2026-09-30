@@ -71,7 +71,6 @@
 571 frontend/src/screens/capture-activity.tsx
 562 frontend/src/screens/project360.tsx
 538 frontend/src/screens/adddocument.tsx
-576 frontend/src/screens/rates.tsx
 568 frontend/src/app/account.tsx
 536 frontend/src/screens/logactivity.tsx
 591 frontend/src/screens/dealroomaccess.tsx

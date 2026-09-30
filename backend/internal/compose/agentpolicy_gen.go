@@ -100,6 +100,7 @@ type agentPolicy struct {
 var agentPolicies = map[string]agentPolicy{
 	"DELETE /v1/activities/{id}":                                            {Op: "archiveActivity", Access: "tool", Tool: "archive_record", RecordType: "activity", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/activities/{id}/disposition":                                {Op: "clearActivityDisposition", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"DELETE /v1/ai-model-rates":                                             {Op: "deleteAiModelRate", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/ai/provider-keys/{provider}":                                {Op: "deleteAiProviderKey", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/assignments/{id}":                                           {Op: "archiveRecordAssignment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/attachments/{id}":                                           {Op: "deleteAttachment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

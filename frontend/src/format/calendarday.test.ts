@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   calendarDay,
   calendarMonth,
@@ -9,7 +9,14 @@ import {
   isRealCalendarDay,
   localDateTimeValue,
   middayInstant,
+  today,
 } from "./calendarday";
+import { viewerZone } from "./timezone";
+
+vi.mock("./timezone", async (importOriginal) => {
+  const real = await importOriginal<typeof import("./timezone")>();
+  return { ...real, viewerZone: vi.fn(real.viewerZone) };
+});
 
 // The zone the machine running this suite happens to be in. Every assertion
 // below is written against it rather than against a fixed offset, because the
@@ -31,6 +38,25 @@ describe("calendarDay", () => {
     const later = calendarDay(new Date("2026-07-05T12:00:00Z"), "UTC");
     expect(earlier).toBe("2026-07-04");
     expect(earlier < later).toBe(true);
+  });
+});
+
+describe("today", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.mocked(viewerZone).mockReset();
+  });
+
+  // The reader's calendar, not UTC's: 02:00 UTC on the 5th is still the
+  // evening of the 4th in New York, and a date box floored on UTC's day would
+  // refuse the day that reader can see on their wall.
+  it("is the reader's own calendar day", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-05T02:00:00Z"));
+    vi.mocked(viewerZone).mockReturnValue("America/New_York");
+    expect(today()).toBe("2026-07-04");
+    vi.mocked(viewerZone).mockReturnValue("Asia/Tokyo");
+    expect(today()).toBe("2026-07-05");
   });
 });
 

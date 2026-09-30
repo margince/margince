@@ -40,7 +40,7 @@ function page(children: React.ReactNode) {
 }
 
 const meta: Meta = {
-  title: "Signed out/Deal room frame",
+  title: "Signed out/Deal room/Frame",
   parameters: { layout: "fullscreen" },
 };
 export default meta;

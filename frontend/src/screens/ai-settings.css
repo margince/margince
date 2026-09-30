@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: BUSL-1.1
  * SPDX-FileCopyrightText: 2026 Gradion */
 
-/* Settings → AI. Two shapes live here and nothing else: the page header's pair
- * of readings, and the lane row that reports one binding on a single line. */
+/* Settings → AI. The page header's pair of readings, the providers list and
+ * its sheet, and the tier line that reports one binding under its health dot. */
 
 /* The header: the sentence that names the page, then the two readings an
  * operator opens it for. */
@@ -29,61 +29,9 @@
   color: var(--dangerText);
 }
 
-/* One lane, as a line: the lane's name, the vendor, the model it binds, what is
- * wrong with that pairing, and the way in. The model takes the slack because it
- * is the only part whose length is the vendor's to choose; everything else is
- * sized by its own content. Wrapping, because five items on one line is a
- * desktop reading and a phone gets the same facts stacked. */
-.ai-lane {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-/* What this lane is bound to: vendor, model, where it is reached, what it
- * costs, and anything wrong with the pairing. One flex item so the row's two
- * anchors — the lane's name and the way in — keep their edges, and the wrapping
- * happens between the facts instead of stranding the button on a line of its
- * own. */
-.ai-lane-binding {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: 1 1 14rem;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-/* The lane's own name, which is the row's subject: it holds a column of its own
- * so a reader travels one edge down the card rather than re-finding the name
- * behind a vendor of a different width on every row. */
-.ai-lane-name {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  flex: 0 0 15rem;
-  min-width: 0;
-}
-
-/* What a call on this lane costs. Meta weight beside the model it prices: the
- * figure is why the ladder is ordered the way it is, not a fact about the
- * binding's identity. */
-.ai-lane-price {
-  white-space: nowrap;
-}
-
-/* The model id: the one string here long enough to need the room, and the one
- * that may be truncated without losing the row's meaning — the name and the
- * vendor beside it already say which binding this is. */
-.ai-lane-model {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-/* The way in, pinned to the row's trailing edge. The slack lives HERE rather
- * than in the model id, so the pills that qualify a binding stay beside the
- * binding they qualify instead of drifting across the row to sit against the
+/* The credential's verbs, pinned to the row's trailing edge. The slack lives
+ * HERE rather than in the variable name, so the pill that qualifies the key
+ * stays beside it instead of drifting across the row to sit against the
  * button. */
 .ai-lane-open {
   display: inline-flex;
@@ -91,24 +39,93 @@
   margin-inline-start: auto;
 }
 
-/* The line under a lane: its task count and call health, spaced as one run of
- * facts that wraps rather than as a second row of columns. */
-.ai-lane-facts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin-block-start: var(--space-1);
-}
-
 /* One provider credential, as a line: who, whether it is keyed, and the way to
- * change that. Same skeleton as `.ai-lane`, because a reader crossing between
- * the two tabs is answering the same shape of question twice. */
+ * change that. */
 .ai-provider {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+/* One vendor in the Providers list, as columns so every row's pill and verb land
+ * where the row above put them: who, what routing uses it for, its state, the
+ * way into its sheet. The caption gives way first (an ellipsis) because a
+ * long list of tiers is the one cell that varies; below the phone breakpoint the
+ * columns stack and the verb takes the row's end. */
+.ai-provider-line {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr) 7rem auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* The pill is a grid item, which stretches; it is a label, not a column. */
+.ai-provider-line > .badge {
+  justify-self: start;
+}
+
+.ai-provider-line .ai-provider-used {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .ai-provider-line {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ai-provider-line .ai-provider-used {
+    grid-column: 1 / -1;
+    white-space: normal;
+  }
+}
+
+/* A provider's sheet is a stack of sections, each under a rule, so Connection
+ * and Prices read as two things rather than one run of controls. */
+.ai-sheet-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+}
+
+.ai-sheet-section + .ai-sheet-section {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* The status line under a sheet's title: the pill and the sentence about it on
+ * one centre line, with air between them and the title above. */
+.ai-sheet-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+/* The price table's cells carry their own inline padding, so its text starts
+ * that far inside the section's edge. Pulled out by exactly that much, the
+ * first column lines up with the headings above it and the Edit column's edge
+ * with Add price. */
+.ai-sheet-table {
+  margin-inline: calc(var(--space-3) * -1);
+}
+
+/* A model id with the mark that its price starts later, stacked so a long id
+ * keeps the width. */
+.ai-sheet-model {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.ai-sheet-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 /* The vendor over the variable its key may also arrive in: two facts about one
@@ -148,12 +165,10 @@
   min-width: 0;
 }
 
-/* Air between a row's reading and the fields it opens — the same interval on
- * both tabs, because the two rows ask the same shape of question. Without it a
+/* Air between a credential's reading and the field it opens. Without it the
  * field's own label sat directly under the last line of the summary and the two
  * read as one block instead of a reading and the thing it opened. */
-.ai-provider + *,
-.ai-lane + * {
+.ai-provider + * {
   margin-top: var(--space-4);
 }
 
@@ -166,4 +181,168 @@
   justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+/* The provider select with its lane's preset beside it. The select keeps the
+ * row's width; the preset sits on the select's baseline, not the label's. */
+.binding-provider-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.binding-provider-row > .field {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 11rem;
+}
+
+/* The preset's note belongs to the row above it, not to the next field. */
+.binding-preset-note {
+  margin-top: calc(var(--space-2) * -1);
+}
+
+.binding-preset-action {
+  flex: none;
+  padding-bottom: var(--space-1);
+}
+
+/* One lane in the Model tiers list: health dot, the lane, the binding, the way
+ * to change it. The lane and the model are the reading; the line under the
+ * model (price, host, tasks — or the failure) is small and muted, so the eye
+ * lands on WHICH model runs WHAT and reads the rest only if it wants to. */
+.ai-tier-line {
+  display: grid;
+  grid-template-columns: 1.25rem 11rem minmax(0, 1fr) 13rem;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ai-tier-line-plain {
+  grid-template-columns: 11rem minmax(0, 1fr) 13rem;
+}
+
+.ai-tier-who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* Two lines, always: the provider's mark and the model id on the first, the
+ * price under them on the second. Neither wraps — a long id gives way with an
+ * ellipsis (its full text is the tooltip), so every lane is the same height and
+ * the list reads as a column rather than as rows of different sizes. */
+.ai-tier-binding {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ai-tier-modelline > .badge {
+  flex: none;
+}
+
+.ai-tier-secondary,
+.ai-tier-model {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-tier-name {
+  font-weight: var(--fontWeightMedium);
+}
+
+.ai-health-dot {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  corner-shape: round;
+}
+
+.ai-health-dot-ok {
+  background: var(--success);
+}
+
+.ai-health-dot-bad {
+  background: var(--danger);
+}
+
+.ai-health-dot-idle {
+  background: color-mix(in srgb, var(--textSecondary) 40%, transparent);
+}
+
+@media (max-width: 720px) {
+  .ai-tier-line {
+    grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+  }
+
+  .ai-tier-line-plain {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ai-tier-binding {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The Provider -> Tier -> Task strip: three marked words, each with its gloss,
+ * on one wrapping line. */
+.ai-term-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-tier-modelline {
+  display: flex;
+  flex-wrap: nowrap;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-tier-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
+.ai-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A chain of models, one per line: providers in one column so the ids start on
+ * one edge, and the arrow under the mark of the step that hands over. */
+.ai-modelchain {
+  display: grid;
+  grid-template-columns: 11.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.ai-modelchain-arrow {
+  justify-self: center;
+  color: var(--textSecondary);
+}
+
+/* On a phone the provider column would leave the model id no room, so the
+ * chain stacks: each mark over its id, the arrow between the steps. */
+@media (max-width: 720px) {
+  .ai-modelchain {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ai-modelchain-arrow {
+    justify-self: start;
+  }
 }

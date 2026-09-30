@@ -619,15 +619,14 @@ export const SETTINGS_PAGES = [
     // processes the installation's text, and `/ai/provider-keys` writes the
     // installation key vault. Both contract summaries say "installation".
     scope: "installation",
-    // Two cards, two grants. The routing and provider-key cards read on
-    // `ai_routing`; `AiHealthCard` reads on `ai_diagnostics` (ai/health.go),
-    // and Models is the ONLY page that renders it. Management is seeded
-    // diagnostics WITHOUT routing, so on the routing grant alone this page was
-    // shut to the one role the health card was widened for.
+    // The routing and provider-key cards read on `ai_routing`; the tiers card's
+    // health and the AI tasks card read on `ai_diagnostics` (ai/health.go), and
+    // on that grant alone the tiers card still answers (ai-routing.tsx
+    // HealthOnly). Management is seeded diagnostics WITHOUT routing.
     requires: anyOf(reads("ai_routing"), reads("ai_diagnostics")),
-    // The routing binding and the provider keys, both on `ai_routing:update`.
-    // AiHealthCard is a read and does not widen this.
-    changes: acts(writes("ai_routing", ["update"])),
+    // Bindings and keys write on `ai_routing:update`, a provider sheet's prices
+    // on the `ai_model_rate` upsert (removal is admitted on update).
+    changes: acts(writes("ai_routing", ["update"]), writes("ai_model_rate")),
   },
   {
     id: "automations",

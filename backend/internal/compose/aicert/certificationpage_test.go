@@ -95,7 +95,7 @@ func TestAICertificationPage(t *testing.T) {
 	doc := buildAICertDoc(rows, unclaimed, corpus, records)
 	doc.Decisions = buildAICertDecisions(decisionRows)
 	doc.Presets = attributeAICertPresets(loadAICertPresets(t), doc, records)
-	doc.Families = buildAICertFamilies(doc)
+	doc.Families = buildAICertFamilies(doc, rows)
 	assertAICertDocCoversEverything(t, doc, rows, corpus, records)
 	assertAICertPresetsAreAttributed(t, doc.Presets, doc)
 	assertAICertPresetsReadTheRecords(t, doc.Presets, records)

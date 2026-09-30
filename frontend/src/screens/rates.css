@@ -11,21 +11,20 @@
   flex-wrap: wrap;
 }
 
-/* The catalogue refresh answers in the same breath, one line per provider,
- * beneath the button rather than beside it: five badges and their counts would
- * run a panel's action band off a phone. */
-.rates-refresh-report {
-  flex-basis: 100%;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--space-1);
-}
-
-.rates-refresh-report > li {
-  display: flex;
+/* The detail cell holds up to three small facts and a verb; they wrap together. */
+.rates-refresh-detail {
+  display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  flex-wrap: wrap;
+}
+
+/* The price form's verbs stay put while the dialog or sheet body scrolls on a
+ * short screen. */
+.rates-manual-actions {
+  position: sticky;
+  bottom: 0;
+  background: var(--bgElevated);
+  padding-block: var(--space-3) 0;
+  border-top: 1px solid var(--borderSubtle);
 }

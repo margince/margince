@@ -43,7 +43,7 @@ function plan(over: Partial<WeeklyPlan> = {}): WeeklyPlan {
 }
 
 const meta: Meta<typeof PlanContract> = {
-  title: "Shell/Home plan contract",
+  title: "Shell/Home/Plan contract",
   component: PlanContract,
 };
 export default meta;

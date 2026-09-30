@@ -7,6 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
@@ -399,15 +400,29 @@ const boundRouting = {
   decisions: { provider: "jev_compatible", model: "typesafe/jev-1.13" },
 };
 
-it("shows the decision model's pass and fallback rates when a decision model is bound", async () => {
+it("shows the decision model's pass rate and a fallback rate that opens its reasons", async () => {
+  const user = userEvent.setup();
   mount(decisionUsage, 200, DECIDING_OPERATOR, boundRouting);
   const task = await screen.findByText("site_triage");
   const table = task.closest("table");
   if (!table) throw new Error("the decision summary is not a table");
   expect(within(table).getByText("25%")).toBeTruthy();
-  expect(within(table).getByText("75%")).toBeTruthy();
+  expect(within(table).queryByText("Fallbacks by reason")).toBeNull();
+
+  // The rate is a keyboard-focusable button named for what it explains, and the
+  // reasons stay out of the page until it is pressed.
+  const trigger = within(table).getByRole("button", {
+    name: "Fallbacks by reason for 75%",
+  });
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  // The figure wears the evidence mark, so it reads as something to press.
+  expect(trigger.classList.contains("evmark-trigger")).toBe(true);
+  expect(screen.queryByText(/Decision model failed/)).toBeNull();
+  await user.click(trigger);
+  expect(trigger.getAttribute("aria-expanded")).toBe("true");
+
   // One reason per line, and the equal counts fall back to the reason key.
-  const reasons = within(table).getByText(
+  const reasons = await screen.findByText(
     "Decision model below its confidence floor: 1",
   );
   expect(
@@ -419,10 +434,16 @@ it("shows the decision model's pass and fallback rates when a decision model is 
     "Decision model failed: 1",
     "Decision model not certified for this task: 1",
   ]);
-  expect(within(table).queryByText(/ · /)).toBeNull();
+  expect(screen.queryByText(/ · /)).toBeNull();
+
+  // Escape closes it and hands focus back to the rate.
+  await user.keyboard("{Escape}");
+  expect(screen.queryByText(/Decision model failed/)).toBeNull();
+  expect(document.activeElement).toBe(trigger);
 });
 
-it("orders fallback reasons largest first and says nothing when there are none", async () => {
+it("orders fallback reasons largest first and draws a rate of nothing as plain text", async () => {
+  const user = userEvent.setup();
   mount(
     {
       ...decisionUsage,
@@ -440,13 +461,19 @@ it("orders fallback reasons largest first and says nothing when there are none",
     DECIDING_OPERATOR,
     boundRouting,
   );
+  await user.click(
+    await screen.findByRole("button", { name: /Fallbacks by reason for 100%/ }),
+  );
   const failed = await screen.findByText("Decision model failed: 4");
   expect(failed.nextElementSibling?.textContent).toBe(
     "Decision model below its confidence floor: 1",
   );
+  // A task that never fell back has nothing to explain: the figure is text,
+  // not a control that opens an empty panel.
   const quiet = screen.getByText("capture_classify").closest("tr");
   if (!quiet) throw new Error("the quiet task has no row");
-  expect(within(quiet).getAllByRole("cell").at(-1)?.textContent).toBe("—");
+  expect(within(quiet).getByText("0%")).toBeTruthy();
+  expect(within(quiet).queryByRole("button")).toBeNull();
 });
 
 // Rows written while a decision model was bound outlive the binding; once it is

@@ -53,15 +53,14 @@ describe("the Host field's help", () => {
 
   // Any server on the Jev wire has no address of its own, so its endpoint is
   // required, and it is the full URL: nothing is appended to it.
-  it("asks jev_compatible for its full endpoint, with both shapes it takes", () => {
+  it("asks jev_compatible for its full endpoint and shows the shape it takes", () => {
     mountFields("jev_compatible", "decisions");
     const host = screen.getByLabelText("Host");
     expect(host).toHaveAccessibleDescription(/used as written.*Required/);
-    expect(host).toHaveAccessibleDescription(
-      /https:\/\/openrouter\.ai\/api\/alpha\/decisions/,
-    );
-    expect(host).toHaveAccessibleDescription(
-      /http:\/\/127\.0\.0\.1:8767\/v1\/systemone/,
+    // The example lives in the box rather than in a paragraph under it.
+    expect(host).toHaveAttribute(
+      "placeholder",
+      "https://openrouter.ai/api/alpha/decisions",
     );
     expect(host).not.toHaveAccessibleDescription(/is added/);
   });
@@ -70,7 +69,7 @@ describe("the Host field's help", () => {
   it("offers jev its host, with the official endpoint it falls back to", () => {
     mountFields("jev", "decisions");
     const host = screen.getByLabelText("Host");
-    expect(host).toHaveAccessibleDescription(/Leave blank/);
+    expect(host).toHaveAccessibleDescription(/Blank uses/);
     expect(host).toHaveAttribute(
       "placeholder",
       "https://api.typesafe.ai/v1/systemone",

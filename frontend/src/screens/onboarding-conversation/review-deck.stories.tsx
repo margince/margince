@@ -63,7 +63,7 @@ function Deck({
 }
 
 const meta: Meta<typeof Deck> = {
-  title: "Onboarding/Review deck",
+  title: "Onboarding/Conversation/Review deck",
   component: Deck,
   parameters: { layout: "fullscreen" },
 };
