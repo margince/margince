@@ -193,7 +193,7 @@ function falseStoryClaims(
     return met
       ? []
       : [
-          `${primitive.trim()} claims ✅ but no story imports ${module}: ${[`${stem}.stories.tsx`, ...named].join(", ")}`,
+          `${primitive.trim()} claims ✅ but no story imports ${module}: ${[...named, `${stem}.stories.tsx`].join(", ")}`,
         ];
   });
 }
@@ -209,7 +209,20 @@ function importsModule(
     (statement) =>
       ts.isImportDeclaration(statement) &&
       ts.isStringLiteral(statement.moduleSpecifier) &&
-      statement.moduleSpecifier.text === `./${stem}`,
+      statement.moduleSpecifier.text === `./${stem}` &&
+      importsValue(statement.importClause),
+  );
+}
+
+// A type-only import renders nothing, and neither does a bare side-effect one.
+function importsValue(clause: ts.ImportClause | undefined): boolean {
+  if (clause === undefined || clause.isTypeOnly) return false;
+  if (clause.name !== undefined) return true;
+  const bindings = clause.namedBindings;
+  if (bindings === undefined) return false;
+  return (
+    ts.isNamespaceImport(bindings) ||
+    bindings.elements.some((element) => !element.isTypeOnly)
   );
 }
 
@@ -382,6 +395,11 @@ describe("the detectors report what they are for", () => {
       "panel.stories.tsx": "export default {};",
       "button.stories.tsx": 'import { Button } from "./atoms";',
       "badge.stories.tsx": 'import { Badge } from "./badge-lookalike";',
+      "card.stories.tsx": 'import type { CardProps } from "./atoms";',
+      "field.stories.tsx": 'import { type FieldControl } from "./atoms";',
+      "textarea.stories.tsx": 'import "./atoms";',
+      "select.stories.tsx": 'import { type Option, Select } from "./atoms";',
+      "heading.stories.tsx": 'import * as atoms from "./atoms";',
     };
     const read = (story: string) => stories[story] ?? null;
     const row = (primitive: string, file: string, story = "✅") => [
@@ -401,13 +419,21 @@ describe("the detectors report what they are for", () => {
           row("`useScrollRegion`", "`atoms.tsx`"),
           row("`Kbd`", "`atoms.tsx`", "✅ (`Button`)"),
           row("`.link-button`", "`atoms.css`"),
+          row("`Card`", "`atoms.tsx`"),
+          row("`Field`", "`atoms.tsx`"),
+          row("`Textarea`", "`atoms.tsx`"),
+          row("`Select`", "`atoms.tsx`"),
+          row("`Heading`", "`atoms.tsx`"),
         ],
         read,
       ),
     ).toEqual([
-      "`Badge` claims ✅ but no story imports atoms.tsx: atoms.stories.tsx, badge.stories.tsx",
-      "`Kbd` claims ✅ but no story imports atoms.tsx: atoms.stories.tsx, kbd.stories.tsx",
+      "`Badge` claims ✅ but no story imports atoms.tsx: badge.stories.tsx, atoms.stories.tsx",
+      "`Kbd` claims ✅ but no story imports atoms.tsx: kbd.stories.tsx, atoms.stories.tsx",
       "`useScrollRegion` claims ✅ but no story imports atoms.tsx: atoms.stories.tsx",
+      "`Card` claims ✅ but no story imports atoms.tsx: card.stories.tsx, atoms.stories.tsx",
+      "`Field` claims ✅ but no story imports atoms.tsx: field.stories.tsx, atoms.stories.tsx",
+      "`Textarea` claims ✅ but no story imports atoms.tsx: textarea.stories.tsx, atoms.stories.tsx",
     ]);
   });
 

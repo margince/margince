@@ -13,7 +13,7 @@ export default meta;
 
 type Story = StoryObj<typeof TextInput>;
 
-// Labelled through `Field`, which is the only way a form gives it a name.
+// Labelled through `Field`, the way a form gives it a name.
 export const States: Story = {
   render: () => (
     <div className="form-stack" style={{ maxWidth: "22rem" }}>

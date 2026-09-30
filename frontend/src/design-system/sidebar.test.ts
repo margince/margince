@@ -10,7 +10,7 @@
 //    `Get started/`, and the introduction lists the roots in the same order.
 // 2. Every `Components/` and `Foundations/` story sits on a shelf the catalog
 //    declares, and every declared shelf holds one.
-// 3. Under every shaped root, titles are Sentence case, one per file, and never
+// 3. Under every documented root, titles are Sentence case, one per file, and never
 //    both a leaf and a group.
 // 4. `.storybook/preview.tsx` sorts the sidebar in the catalog's order.
 //
@@ -40,12 +40,6 @@ const introductionPath = join(
 );
 
 const { roots, categories, topics } = readDesignCatalog(frontendRoot);
-
-// The documented roots the shape arms do not hold, each with the reason.
-const UNSHAPED = new Map<string, string>();
-const SHAPED_ROOTS = roots.filter((root) => !UNSHAPED.has(root));
-// The most titles one exemption may take out of the arms.
-const EXEMPT_CEILING = 3;
 
 // Spellings that hold wherever they stand in a segment, each with its reason.
 const PROPER_NOUNS = new Map([
@@ -82,19 +76,6 @@ function emptyRootFindings(filed: Filed[], documented: string[]): string[] {
     return [
       `${root}/ is documented and holds no ${docs ? "docs page" : "story"}`,
     ];
-  });
-}
-
-function exemptionFindings(
-  filed: Filed[],
-  exempt: ReadonlyMap<string, string>,
-  ceiling: number,
-): string[] {
-  return [...exempt.keys()].flatMap((root) => {
-    const held = filed.filter(({ title }) => rootOf(title) === root).length;
-    return held > ceiling
-      ? [`${root}/ is exempt and holds ${held} titles, over ${ceiling}`]
-      : [];
   });
 }
 
@@ -269,9 +250,7 @@ const filed = (await titledStories(storyCensus(frontendRoot).files)).flatMap(
 
 describe("the sidebar is shelved the way the catalog says", () => {
   const introduced = introductionRoots(readFileSync(introductionPath, "utf8"));
-  const shaped = filed.filter(({ title }) =>
-    SHAPED_ROOTS.includes(rootOf(title)),
-  );
+  const shaped = filed.filter(({ title }) => roots.includes(rootOf(title)));
   const order = sidebarOrder(previewPath, readFileSync(previewPath, "utf8"));
 
   it("reads the shelves and titles it holds", () => {
@@ -287,16 +266,6 @@ describe("the sidebar is shelved the way the catalog says", () => {
     ).toBeGreaterThanOrEqual(topics.length);
     expect(order).not.toBeNull();
     expect(introduced.length).toBeGreaterThan(4);
-  });
-
-  it("exempts only roots the catalog documents", () => {
-    expect(
-      [...UNSHAPED.keys()].filter((root) => !roots.includes(root)),
-    ).toEqual([]);
-  });
-
-  it("exempts no more titles than the ceiling allows", () => {
-    expect(exemptionFindings(filed, UNSHAPED, EXEMPT_CEILING)).toEqual([]);
   });
 
   it("fills every root the catalog documents", () => {
@@ -362,20 +331,6 @@ describe("the sidebar detectors report what they are for", () => {
       "Get started/ is documented and holds no docs page",
       "Shell/ is documented and holds no story",
     ]);
-  });
-
-  it("sees an exemption that takes a product root out of the arms", () => {
-    const planted = [
-      { path: "a", title: "Sheets/Atoms" },
-      { path: "b", title: "Records/Contacts" },
-      { path: "c", title: "Records/Companies" },
-    ];
-    expect(
-      exemptionFindings(planted, new Map([["Sheets", "sheets"]]), 1),
-    ).toEqual([]);
-    expect(
-      exemptionFindings(planted, new Map([["Records", "unshaped"]]), 1),
-    ).toEqual(["Records/ is exempt and holds 2 titles, over 1"]);
   });
 
   it("reads the introduction's roots off its list, and nothing else", () => {

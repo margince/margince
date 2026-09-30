@@ -127,10 +127,15 @@
   font-family: var(--fontFamilyBody);
 }
 
+/* On a phone the chip's own edges say nothing about where the screen ends, so
+   the popover spans the viewport inside the page gutter, below the chip. */
 @media (max-width: 640px) {
   .mw-aistat-pop {
-    right: auto;
-    left: 0;
+    position: fixed;
+    top: auto;
+    inset-inline: var(--space-5);
+    width: auto;
+    margin-top: var(--space-2);
   }
 }
 

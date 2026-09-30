@@ -12,7 +12,7 @@ import "./onboarding-stage.css";
 import { Heading } from "./heading";
 
 /**
- * The room every onboarding question is asked in, before the workbench.
+ * The room every onboarding question is asked in.
  *
  * ONE STAGE, NOT FOUR COLUMNS. First run, the gate and the payoff each had
  * their own full-viewport frame, and the three disagreed about everything a

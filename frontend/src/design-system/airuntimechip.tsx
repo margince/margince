@@ -215,8 +215,8 @@ function unique(values: string[]) {
   return values.filter((value, index) => values.indexOf(value) === index);
 }
 
-// Not `formatMoney`: its ISO minor-unit scale rounds a fraction-of-a-cent read
-// to $0.00.
+// Not `formatMoney`: it rounds a fraction-of-a-cent read to $0.00. The locale
+// stays the reader's, because a German reader writes 0,0043 $.
 function formatMicroUSD(value: number, locale: Locale) {
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "currency",

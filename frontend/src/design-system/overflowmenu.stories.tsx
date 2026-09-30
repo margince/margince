@@ -30,6 +30,17 @@ export default meta;
 
 type Story = StoryObj<typeof OverflowMenu>;
 
+// The items mount on the first press, into a panel portalled to the body, so
+// they are found through `screen` rather than the canvas.
+const openPanel: Story["play"] = async ({ canvasElement }) => {
+  const trigger = await within(canvasElement).findByRole("button", {
+    name: "More actions",
+  });
+  await userEvent.click(trigger);
+  await screen.findByRole("button", { name: "Merge with…" });
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+};
+
 export const Closed: Story = {
   render: () => (
     <OverflowMenu label="More actions">
@@ -54,14 +65,18 @@ export const Open: Story = {
       <Button variant="danger">Archive</Button>
     </OverflowMenu>
   ),
-  // The items mount on the first press, into a panel portalled to the body,
-  // so they are found through `screen` rather than the canvas.
-  play: async ({ canvasElement }) => {
-    const trigger = await within(canvasElement).findByRole("button", {
-      name: "More actions",
-    });
-    await userEvent.click(trigger);
-    await screen.findByRole("button", { name: "Merge with…" });
-    await expect(trigger).toHaveAttribute("aria-expanded", "true");
-  },
+  play: openPanel,
+};
+
+// A pending item leads with its busy mark, and every other label keeps the
+// same left edge beside it.
+export const WithAnItemInFlight: Story = {
+  render: () => (
+    <OverflowMenu label="More actions">
+      <Button pending>Pause the room</Button>
+      <Button>Merge with…</Button>
+      <Button variant="danger">Archive</Button>
+    </OverflowMenu>
+  ),
+  play: openPanel,
 };

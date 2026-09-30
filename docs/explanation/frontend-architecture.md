@@ -290,8 +290,8 @@ popover teaches the reader to stop opening them.
 
 `MarginceCoreScene` (`design-system/margince-core.tsx`, WDS-CORE-1..4 /
 ADR-0076) is the product's one piece of AI identity, shown by the
-unauthenticated surface, the session splash, onboarding and the in-app
-workbench. Four things about it are load-bearing rather than stylistic:
+unauthenticated surface, the session splash, onboarding and the agent
+rail. Four things about it are load-bearing rather than stylistic:
 
 - **One implementation.** A caller passes `state` and never restyles. Sizing
   through the documented `--coreSize` / `--coreGlass` custom properties is

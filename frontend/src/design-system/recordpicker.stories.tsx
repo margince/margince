@@ -5,9 +5,9 @@ import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
 // Stories are the render surface the change-scoped fe-uat capture gate drives
 // (frontend/scripts/fe-uat.mjs).
-// This is RecordPicker's first caller (Task 2.1): a fixed in-memory
-// candidate list stands in for a real search transport until the offer
-// header (Task 2.3) and line-item pickers (Task 3.3) wire a live one.
+// This is RecordPicker's first caller: a fixed in-memory candidate list
+// stands in for a real search transport until the offer header and
+// line-item pickers wire a live one.
 const meta: Meta = {
   title: "Components/Forms and input/Record picker",
   component: RecordPicker,

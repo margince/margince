@@ -106,7 +106,6 @@ export const NoteThatReadsLikeASignOff: Story = {
   },
 };
 
-// The right-aligned cluster appears only on the rows that supply an action.
 export const WithRowActions: Story = {
   args: {
     name: "Acme GmbH",
