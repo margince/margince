@@ -1697,6 +1697,33 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
   });
 });
 
+// The ignition is reached only by binding a model on a fresh installation, so
+// no route in the sweeps above ever draws it.
+test.describe("WCAG 2.2 AA (axe), the cold start's ignition at 390px", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+  const schemes: readonly ("light" | "dark")[] = ["light", "dark"];
+  for (const colorScheme of schemes) {
+    test(`no AA violations once the model is bound (${colorScheme})`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
+      await mockApi(page, { journey: "unconfigured" });
+      await page.goto("/#/onboarding");
+      await page.getByLabel(de["firstRun.ai.key"]).fill("AIza-not-a-real-key");
+      await page.getByRole("button", { name: de["firstRun.continue"] }).click();
+      const can = page.getByRole("list").filter({
+        hasText: de["firstRun.ignite.canNow"],
+      });
+      await expect(can.getByRole("listitem")).toHaveCount(3);
+      await settleAnimations(page);
+      await expectNoAaViolations(
+        page,
+        `onboarding — the ignition (390px, ${colorScheme})`,
+      );
+    });
+  }
+});
+
 /**
  * The AA sweep of one page: assert what axe DECIDED, report what it could not.
  *

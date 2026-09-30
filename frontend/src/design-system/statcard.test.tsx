@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
 
+import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -12,7 +13,8 @@ import {
 } from "../../scripts/lib/source-tree";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { StatCard } from "./statcard";
+import { rulesIn } from "../testing/css";
+import { STAT_CARD_TONES, StatCard } from "./statcard";
 
 // THE DOOR OUT OF A READING SAYS "Open", AND NOTHING ELSE EVER.
 //
@@ -129,6 +131,51 @@ describe("no reading names its own door", () => {
     });
 
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("a toned figure is read, so it takes the ink that clears contrast", () => {
+  const rules = filesMatching(sourceRoot, /\.css$/).flatMap((path) =>
+    rulesIn(readFileSync(path, "utf8")).map((rule) => ({
+      ...rule,
+      at: `${relative(sourceRoot, path)}:${rule.line}`,
+    })),
+  );
+  const declared = (selector: string) =>
+    rules
+      .filter((rule) => rule.selector.trim() === selector)
+      .map((rule) => rule.body)
+      .join("\n");
+
+  it.each(STAT_CARD_TONES)(
+    "letters a %s figure in its Text token and fills its bar with the base",
+    (tone) => {
+      expect(declared(`.stat-card-${tone}`)).toMatch(
+        new RegExp(`color:\\s*var\\(--${tone}Text\\)`),
+      );
+      expect(
+        declared(`.stat-card-${tone} ~ .stat-card-meter .stat-card-meter-fill`),
+      ).toMatch(new RegExp(`background:\\s*var\\(--${tone}\\);`));
+    },
+  );
+
+  it("colours no toned figure with anything but its Text token, in any sheet", () => {
+    const figure = new RegExp(`\\.stat-card-(${STAT_CARD_TONES.join("|")})$`);
+    const inked = rules.flatMap((rule) =>
+      rule.selector.split(",").flatMap((part) => {
+        const tone = figure.exec(part.trim().split(/\s+/).at(-1) ?? "")?.[1];
+        const ink = /(?:^|[;\s])color:\s*([^;]+)/.exec(rule.body)?.[1].trim();
+        return tone && ink
+          ? [{ tone, ink, at: `${rule.at} ${part.trim()}` }]
+          : [];
+      }),
+    );
+    expect(inked.length).toBeGreaterThanOrEqual(STAT_CARD_TONES.length);
+    expect(
+      inked
+        .filter(({ tone, ink }) => ink !== `var(--${tone}Text)`)
+        .map(({ at, ink }) => `${at} { color: ${ink} }`),
+    ).toEqual([]);
   });
 });
 

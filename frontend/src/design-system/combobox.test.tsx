@@ -51,6 +51,19 @@ describe("ComboBox", () => {
     expect(screen.getByTestId("committed")).toHaveTextContent("my-own-model");
   });
 
+  it("makes the scrolling popup itself the listbox the text box controls", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.click(box);
+
+    const listbox = screen.getByRole("listbox");
+    expect(listbox).toHaveClass("suggest-popup");
+    expect(box).toHaveAttribute("aria-controls", listbox.id);
+    expect(within(listbox).getAllByRole("option").length).toBeGreaterThan(0);
+  });
+
   it("commits the suggestion a reader picks", async () => {
     const user = userEvent.setup();
     render(<Harness />);
