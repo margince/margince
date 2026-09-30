@@ -6,6 +6,7 @@ import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
 import { type MeetingDay, MeetingWeek } from "../design-system/meetingslots";
 import { Panel, PanelBody } from "../design-system/panel";
+import { stable } from "../format/collate";
 import { dateTileParts } from "../format/datetile";
 import {
   formatDate,
@@ -51,7 +52,7 @@ export function weekDays(
     byDay.set(key, [...(byDay.get(key) ?? []), slot]);
   }
   return [...byDay.entries()]
-    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .sort(([a], [b]) => stable(a, b))
     .map(([key, daySlots]) => {
       const noon = Date.parse(startOfDayInZone(key, zone)) + DAY / 2;
       const tile = dateTileParts(new Date(noon).toISOString(), locale, zone);

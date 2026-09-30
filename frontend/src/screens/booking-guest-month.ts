@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import { type ISODay, isoDay } from "../design-system/calendar";
+import { stable } from "../format/collate";
 import { dayInZone, startOfDayInZone } from "../format/timezone";
 
 type Availability = components["schemas"]["MeetingAvailability"];
@@ -81,10 +82,7 @@ export function monthDays(
     availability?.truncated && last
       ? dayInZone(Date.parse(last.start), zone)
       : undefined;
-  const free = [...byDay.keys()]
-    .filter(isCalendarDay)
-    // `yyyy-mm-dd` sorts by its characters; no locale has a say in a date.
-    .sort();
+  const free = [...byDay.keys()].filter(isCalendarDay).sort(stable);
   return { byDay, free, knownUntil };
 }
 
