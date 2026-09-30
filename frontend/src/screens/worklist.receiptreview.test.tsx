@@ -41,6 +41,24 @@ it("accepts the exact recorded stage change and shows its persisted answer", asy
   expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
 });
 
+it("draws no group at all when no change waits for a word", async () => {
+  stubApi({
+    "GET /worklist/handled": () =>
+      jsonResponse({
+        as_of: "2026-09-13T08:00:00Z",
+        truncated: false,
+        receipts: [],
+      }),
+  });
+  const { container } = render(<BriefChanges />);
+  // The receipt's summary already answers for a quiet day, so an empty group
+  // would be a heading over nothing.
+  await waitFor(() => expect(container.innerHTML).toBe(""));
+  expect(
+    screen.queryByRole("heading", { name: "Changes made for you" }),
+  ).toBeNull();
+});
+
 it("uses the stage reversal route rather than restoring a stage field", async () => {
   const change = automaticStageReceipt;
   const path = `/deals/${change.subject?.id}/stage-progressions/${change.id}/revert`;

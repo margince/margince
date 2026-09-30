@@ -239,11 +239,6 @@
   gap: var(--space-4);
 }
 
-.brief-change {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 /* ── The context rail ─────────────────────────────────────────────────────
  * One column of `Panel`s, never a grid: a rail that re-columns is a second
  * body rather than a margin. */
@@ -466,41 +461,116 @@
 }
 
 /* ── The receipt ───────────────────────────────────────────────────────────
- * Four lanes inside one panel. The spacing is all that lives here: a lane is a
- * heading, a count and a table, and every one of those draws itself. */
+ * One summary line answering every lane, then a group per lane that has lines
+ * in it. The group heads and the seams between them are the panel's own. */
 
-.magic-lane + .magic-lane {
-  margin-top: var(--space-6);
+.magic-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  list-style: none;
+  border-radius: var(--r-md);
+  background: var(--bgWell);
 }
 
-/* The heading and its page count on one line, the way the queue's own bands
-   carry theirs. */
-.magic-lane-head {
+/* Tone reaches the glyph and, where the lane holds something, the words: a
+   clear lane stays in body ink so four green sentences do not read as alarms. */
+.magic-summary-item {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-2);
+  gap: var(--space-2);
 }
 
-.magic-lane-head > h3 {
+.magic-summary-item > svg {
+  flex: none;
+  color: var(--textSecondary);
+}
+
+.magic-summary-item[data-tone="success"] > svg {
+  color: var(--successText);
+}
+
+.magic-summary-item[data-tone="ai"] {
+  color: var(--aiText);
+}
+
+.magic-summary-item[data-tone="danger"] {
+  color: var(--dangerText);
+}
+
+.magic-summary-item[data-tone="warning"] {
+  color: var(--warningText);
+}
+
+.magic-summary-item:is(
+    [data-tone="ai"],
+    [data-tone="danger"],
+    [data-tone="warning"]
+  )
+  > svg {
+  color: inherit;
+}
+
+/* A line: what happened with its why and meaning under it, then the record,
+   who acted and when; the way back on the trailing edge. */
+.magic-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.magic-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.magic-line-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.magic-line-text p {
   margin: 0;
 }
 
-.magic-lane-count {
-  margin-left: auto;
+.magic-line-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
 }
 
-/* The two caveats: what could not be read, above the lanes, and what was left
-   out, below them. Both are lists of captions and neither wants a bullet. */
+.magic-line-meta > span + span::before {
+  content: "·";
+  margin-inline-end: var(--space-2);
+}
+
+.magic-line-back {
+  flex: none;
+}
+
+/* The two caveats: what could not be read, above the summary, and what was
+   left out, under the lanes. Both are lists of captions and neither wants a
+   bullet. */
 .magic-withheld,
 .magic-notshown {
   list-style: none;
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-3);
   padding: 0;
 }
 
 .magic-notshown {
-  margin: var(--space-4) 0 0;
+  margin: 0;
 }
 
 /* An opened line: one row per record, its name and its undo on one line, the

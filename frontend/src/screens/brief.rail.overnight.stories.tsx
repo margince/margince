@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Panel } from "../design-system/panel";
 import { digest, NOT_FOUND } from "./brief.fixtures";
-import { OvernightPanel } from "./brief.rail.overnight";
+import { OvernightDigest } from "./brief.rail.overnight";
 import {
   installFetchStub,
   jsonResponse,
@@ -12,9 +13,9 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// What the night shift did, as one panel of Brief's context rail: capture
-// counts with doors into the records they name, what moved on the projects, and
-// the one connector fact worth interrupting a morning for.
+// What the night shift did, as the last group of Home's receipt: capture counts
+// with doors into the records they name, what moved on the projects, and the
+// one connector fact worth interrupting a morning for.
 //
 // Read every frame in BOTH themes with the toolbar's Theme control — the
 // unhealthy-connector callout is the one that matters, because the warning family
@@ -40,8 +41,10 @@ function panel(routes: RouteMap = DIGEST_ROUTES) {
     installFetchStub(routes);
     return (
       <StoryProviders>
-        <div className="brief-rail" style={{ maxWidth: 320 }}>
-          <OvernightPanel />
+        <div style={{ maxWidth: 720 }}>
+          <Panel>
+            <OvernightDigest />
+          </Panel>
         </div>
       </StoryProviders>
     );

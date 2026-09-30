@@ -24,17 +24,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The lane a reader looks at, found by its own heading rather than by position:
-// the panel draws four sections and an assertion keyed on order would pass
-// while the rows sat under the wrong words.
-function lane(heading: string): HTMLElement {
-  const section = screen
-    .getByRole("heading", { name: heading })
-    .closest("section");
-  if (!section) {
-    throw new Error(`the "${heading}" heading sits in no section`);
-  }
-  return section;
+// The lane a reader looks at, found by its own name rather than by position:
+// an assertion keyed on order would pass while the rows sat under the wrong
+// words.
+function lane(name: string): Promise<HTMLElement> {
+  return screen.findByRole("list", { name });
+}
+
+function summary(): Promise<HTMLElement> {
+  return screen.findByRole("list", { name: "Summary" });
 }
 
 describe("the receipt draws every lane it promises", () => {
@@ -79,44 +77,75 @@ describe("the receipt draws every lane it promises", () => {
     );
     renderMagic();
     expect(
-      await within(lane("Done for you")).findByText(
+      within(await lane("Done for you")).getByText(
         "A deal moved to its next stage",
       ),
     ).toBeTruthy();
     expect(
-      within(lane("Waiting on you")).getByText(
+      within(await lane("Waiting on you")).getByText(
         "A message is waiting for your word",
       ),
     ).toBeTruthy();
     expect(
-      within(lane("Could not be finished")).getByText(
+      within(await lane("Could not be finished")).getByText(
         "Nightly follow-up is in trouble: timed out",
       ),
     ).toBeTruthy();
     expect(
-      within(lane("Needs restoring")).getByText(
+      within(await lane("Needs restoring")).getByText(
         "Gmail needs to be connected again",
       ),
     ).toBeTruthy();
+    // What waits and what broke lead; what already happened comes last.
+    expect(
+      screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+    ).toEqual([
+      "Waiting on you",
+      "Could not be finished",
+      "Needs restoring",
+      "Done for you",
+    ]);
   });
 
-  it("says a lane is clear rather than drawing a heading over a gap", async () => {
+  it("answers every lane in the summary and draws a group only for lines", async () => {
     stub(
       receipt({
-        done: [line()],
-        totals: { done: 1, needs_you: 0, could_not_complete: 0, watching: 0 },
+        done: [line(), line({ id: "00000000-0000-7000-8000-000000000009" })],
+        totals: { done: 2, needs_you: 0, could_not_complete: 0, watching: 0 },
       }),
     );
     renderMagic();
     expect(
-      await within(lane("Waiting on you")).findByText(
-        "No decision is waiting on you.",
-      ),
+      Array.from((await summary()).children).map((item) => item.textContent),
+    ).toEqual([
+      "Nothing waiting on you",
+      "Nothing failed",
+      "Every source healthy",
+      "2 done for you",
+    ]);
+    // A clear lane is said once, in the summary, rather than as a heading
+    // standing over nothing.
+    expect(
+      screen.queryByRole("heading", { name: "Waiting on you" }),
+    ).toBeNull();
+    expect(screen.queryByRole("list", { name: "Waiting on you" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Done for you" })).toBeTruthy();
+  });
+
+  it("titles the section by its window and says when that window began", async () => {
+    stub(receipt());
+    renderMagic();
+    expect(
+      await screen.findByRole("heading", { name: "Since your last brief" }),
     ).toBeTruthy();
     expect(
-      within(lane("Needs restoring")).getByText(
-        "Every source and rule is healthy.",
+      await screen.findByText(
+        `What Margince did since ${formatDateTime("2026-09-12T08:00:00Z", "en", viewerZone())}.`,
       ),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Last 30 days" }));
+    expect(
+      screen.getByRole("heading", { name: "The last 30 days" }),
     ).toBeTruthy();
   });
 
@@ -132,9 +161,9 @@ describe("the receipt draws every lane it promises", () => {
     ).toBeTruthy();
     // The lane the refusal belongs to is EMPTY, and saying so would report a
     // clear queue over an answer nobody could read.
-    expect(screen.queryByText("No decision is waiting on you.")).toBeNull();
+    expect(screen.queryByText("Nothing waiting on you")).toBeNull();
     expect(
-      within(lane("Waiting on you")).getByText(/may be incomplete/i),
+      within(await summary()).getByText("Waiting on you: may be incomplete"),
     ).toBeTruthy();
   });
 
@@ -195,9 +224,9 @@ describe("the receipt draws every lane it promises", () => {
       }),
     );
     renderMagic();
-    const waiting = lane("Waiting on you");
+    const waiting = await lane("Waiting on you");
     expect(
-      await within(waiting).findByText("Nothing happens until you decide."),
+      within(waiting).getByText("Nothing happens until you decide."),
     ).toBeTruthy();
     expect(within(waiting).queryAllByRole("button")).toEqual([]);
   });
@@ -326,12 +355,9 @@ describe("the receipt draws every lane it promises", () => {
   it("reports a refusal as a refusal, never as a quiet morning", async () => {
     stubRefusal();
     renderMagic();
-    await waitFor(() => {
-      expect(screen.getAllByText("This section did not load.")).toHaveLength(4);
-    });
-    expect(
-      screen.queryByText("Nothing was done on your behalf in this window."),
-    ).toBeNull();
+    expect(await screen.findByText("This section did not load.")).toBeTruthy();
+    expect(screen.queryByRole("list", { name: "Summary" })).toBeNull();
+    expect(screen.queryByText("Nothing done for you")).toBeNull();
   });
 
   // A watching line's occurred_at is when the condition was seen, so a source
@@ -380,10 +406,7 @@ describe("the receipt draws every lane it promises", () => {
       }),
     );
     renderMagic();
-    // The row, not its heading: the heading is drawn while the read is in
-    // flight, so an absent date under it is the empty page rather than a line
-    // that reported none.
-    await within(lane("Needs restoring")).findByText(
+    within(await lane("Needs restoring")).getByText(
       "google needs to be connected again",
     );
     expect(screen.queryByText(/Failing since/)).toBeNull();
@@ -398,12 +421,16 @@ describe("the receipt draws every lane it promises", () => {
   it("draws without a count rather than throwing on a receipt it cannot read", async () => {
     stub({ data: [] } as unknown as ReturnType<typeof receipt>);
     renderMagic();
-    // Waited for the state the DATA produces, not the heading, which the panel
-    // draws while the read is still in flight and which would pass over a
-    // render that throws the moment the answer lands.
-    await waitFor(() => {
-      expect(screen.getAllByText(/Some data did not load/)).toHaveLength(4);
-    });
+    // Every lane says it cannot be counted: absent is version skew, and only a
+    // list the server sent can say there is nothing in it.
+    expect(
+      Array.from((await summary()).children).map((item) => item.textContent),
+    ).toEqual([
+      "Waiting on you: may be incomplete",
+      "Could not be finished: may be incomplete",
+      "Needs restoring: may be incomplete",
+      "Done for you: may be incomplete",
+    ]);
   });
 });
 

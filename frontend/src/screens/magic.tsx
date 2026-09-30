@@ -9,30 +9,35 @@
 // at the surface that holds the verb, and holding it here would put a second
 // answer beside the first.
 //
-// FOUR LANES, because they ask different things: what already happened, what is
-// waiting on a human, what was promised and did not land, and what an
-// administrator must restore. One list would let a failure sort in beside a
-// success, which is the one thing a receipt must never do.
+// FOUR LANES, because they ask different things: what is waiting on a human,
+// what was promised and did not land, what an administrator must restore, and
+// what already happened. One list would let a failure sort in beside a success,
+// which is the one thing a receipt must never do.
 //
-// A PLAIN PANEL. The feed above already wears the indigo lead on this page, and
-// a second tinted panel is two leads, which is none.
+// ONE LINE FOR THE CLEAR ONES. Every lane is answered in the summary at the
+// top, each in its own words, and only a lane with lines in it draws a
+// section: four headings over "nothing" said less than one line saying so.
 //
-// LAST ON THE PAGE, and open — the position the Worklist's own receipt argues
-// for: a reader opens Home to find what to do next, and a list of what is
-// already finished answers a different question, one worth having and not worth
-// leading with.
+// A PLAIN PANEL, and Home's only receipt: the page hands in the changes that
+// wait for a word and the night's digest, so "what happened while I was away"
+// is answered in one place rather than three.
 
-import { useState } from "react";
+import type { LucideIcon } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleDashed, Sparkles } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
 import { SegmentedControl } from "../design-system/atoms";
-import { DataTable } from "../design-system/datatable";
-import { Eyebrow } from "../design-system/eyebrow";
-import { Panel, PanelBody } from "../design-system/panel";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, usePlural, useT } from "../i18n";
+import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   magicByKey,
@@ -52,16 +57,16 @@ import {
 import { LineRecordsOpener } from "./magic.records";
 import { MagicUndoButton } from "./magic.undo";
 import { sourceUnavailableText } from "./worklist.copy";
-import { listReadState } from "./worklist.listread";
 import "./brief.css";
 
-// The reading order: what happened, what waits on you, what broke, what needs
-// restoring. A list rather than four call sites, so a fifth lane is one entry.
+// The reading order: what waits on you, what broke, what needs restoring, and
+// what already happened. A list rather than four call sites, so a fifth lane is
+// one entry.
 const LANES = [
-  "done",
   "needs_you",
   "could_not_complete",
   "watching",
+  "done",
 ] as const satisfies readonly MagicLane[];
 
 const LANE_HEADING: Readonly<Record<MagicLane, MessageKey>> = {
@@ -71,14 +76,36 @@ const LANE_HEADING: Readonly<Record<MagicLane, MessageKey>> = {
   watching: "magic.lane.watching",
 };
 
-// What there is none OF, per lane. A lane says its own sentence because "no
-// decisions are waiting" and "nothing broke" are opposite news and a shared
-// "nothing here" would report them as one.
-const LANE_EMPTY: Readonly<Record<MagicLane, MessageKey>> = {
-  done: "magic.empty.done",
-  needs_you: "magic.empty.needsYou",
-  could_not_complete: "magic.empty.couldNotComplete",
-  watching: "magic.empty.watching",
+// What there is none OF, per lane. Each says its own words because "nothing is
+// waiting" and "nothing failed" are opposite news, and a shared "nothing here"
+// would report them as one.
+const LANE_CLEAR: Readonly<Record<MagicLane, MessageKey>> = {
+  done: "magic.clear.done",
+  needs_you: "magic.clear.needsYou",
+  could_not_complete: "magic.clear.couldNotComplete",
+  watching: "magic.clear.watching",
+};
+
+const LANE_COUNT: Readonly<Record<MagicLane, PluralBase>> = {
+  done: "magic.count.done",
+  needs_you: "magic.count.needsYou",
+  could_not_complete: "magic.count.couldNotComplete",
+  watching: "magic.count.watching",
+};
+
+// The tone a lane with lines in it wears. Waiting is indigo because what waits
+// is a proposal an agent staged; a failure and an outage are outcomes.
+const LANE_TONE: Readonly<Record<MagicLane, SummaryTone>> = {
+  done: "success",
+  needs_you: "ai",
+  could_not_complete: "danger",
+  watching: "warning",
+};
+
+const WINDOW_HEADING: Readonly<Record<MagicWindow, MessageKey>> = {
+  brief: "magic.heading.brief",
+  week: "magic.heading.week",
+  month: "magic.heading.month",
 };
 
 const NOT_SHOWN_REASON: Readonly<Record<MagicNotShown["reason"], MessageKey>> =
@@ -88,7 +115,25 @@ const NOT_SHOWN_REASON: Readonly<Record<MagicNotShown["reason"], MessageKey>> =
     out_of_scope: "magic.notShown.outOfScope",
   };
 
-export function MagicPanel() {
+type SummaryTone = "success" | "ai" | "danger" | "warning" | "neutral";
+
+const TONE_ICON: Readonly<Record<SummaryTone, LucideIcon>> = {
+  success: CircleCheck,
+  ai: Sparkles,
+  danger: CircleAlert,
+  warning: CircleAlert,
+  neutral: CircleDashed,
+};
+
+export function MagicPanel({
+  lead,
+  foot,
+}: Readonly<{
+  /** Home's changes that wait for a word, drawn above the lanes. */
+  lead?: ReactNode;
+  /** The night's digest, drawn under everything the window holds. */
+  foot?: ReactNode;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   // The READER's own zone. A receipt says when something happened to them, and
@@ -101,9 +146,15 @@ export function MagicPanel() {
   const magic = useMagic(span);
   const receipt = magic.data;
   const withheld = receipt?.sources_unavailable ?? [];
+  const drawn = LANES.filter((lane) => hasLines(receipt?.[lane]));
+  const state = magic.isPending
+    ? "loading"
+    : magic.isError
+      ? "failed"
+      : "ready";
   return (
     <Panel
-      title={t("magic.title")}
+      title={t(WINDOW_HEADING[span])}
       titleAction={
         <SegmentedControl
           options={MAGIC_WINDOWS}
@@ -117,37 +168,117 @@ export function MagicPanel() {
           }}
         />
       }
-      // WHICH WINDOW, in the band that belongs to the whole panel: "nothing
-      // happened" over an hour and over a day are different claims, and only
-      // the server knows which one this page is making.
-      footer={
-        receipt?.since &&
-        t("magic.since", {
-          when: formatDateTime(receipt.since, locale, zone),
-        })
-      }
     >
       <PanelBody>
-        {/* The caveat BEFORE the lanes. A reader who meets it after four
-            headings has already read three of them as complete. */}
-        <WithheldSources withheld={withheld} />
-        {LANES.map((lane) => (
-          <MagicLaneSection
-            key={lane}
-            lane={lane}
-            read={magic}
+        {/* WHICH WINDOW: "nothing happened" over an hour and over a day are
+            different claims, and only the server knows which one this is. */}
+        {receipt?.since && (
+          <PanelIntro>
+            {t("magic.intro", {
+              when: formatDateTime(receipt.since, locale, zone),
+            })}
+          </PanelIntro>
+        )}
+        <SurfaceState
+          state={state}
+          emptyLabel=""
+          loadingLabel={t("magic.loading")}
+          detail={{ onRetry: () => void magic.refetch() }}
+        >
+          {/* The caveat BEFORE the summary. A reader who meets it after four
+              answers has already read three of them as complete. */}
+          <WithheldSources withheld={withheld} />
+          <LaneSummary
             receipt={receipt}
             // "All clear" is forbidden while a lane could not be read: a lane
             // the reader may not see and a lane with nothing in it are
             // different answers, and only one of them is good news.
             canReportEmpty={withheld.length === 0}
-            onRetry={() => void magic.refetch()}
-            zone={zone}
           />
-        ))}
-        <NotShown entries={receipt?.not_shown ?? []} />
+        </SurfaceState>
       </PanelBody>
+      {lead}
+      {drawn.map((lane) => (
+        <MagicLaneSection
+          key={lane}
+          lane={lane}
+          rows={receipt?.[lane] ?? []}
+          since={receipt?.since}
+          zone={zone}
+        />
+      ))}
+      {(receipt?.not_shown?.length ?? 0) > 0 && (
+        <PanelBody>
+          <NotShown entries={receipt?.not_shown ?? []} />
+        </PanelBody>
+      )}
+      {foot}
     </Panel>
+  );
+}
+
+// A lane off a payload this client cannot read is not an empty one: absent is
+// version skew, and only a list the server sent can say there is nothing in it.
+function hasLines(rows: readonly MagicLine[] | undefined): boolean {
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+/**
+ * Every lane answered on one line: how many lines it holds, or in its own words
+ * that it holds none, or that this read cannot say.
+ */
+function LaneSummary({
+  receipt,
+  canReportEmpty,
+}: Readonly<{ receipt: MagicReceipt | undefined; canReportEmpty: boolean }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const plural = usePlural();
+  if (!receipt) {
+    return null;
+  }
+  const answers = LANES.map((lane) => {
+    const rows = receipt[lane];
+    if (!Array.isArray(rows) || (rows.length === 0 && !canReportEmpty)) {
+      return {
+        lane,
+        tone: "neutral" as const,
+        text: t("magic.incomplete", { lane: t(LANE_HEADING[lane]) }),
+      };
+    }
+    if (rows.length === 0) {
+      return { lane, tone: "success" as const, text: t(LANE_CLEAR[lane]) };
+    }
+    // THIS PAGE's count, which is all the endpoint promises, and the rows
+    // themselves when a server older or newer than this client sends none.
+    const count = receipt.totals?.[lane] ?? rows.length;
+    return {
+      lane,
+      tone: LANE_TONE[lane],
+      text: plural(LANE_COUNT[lane], count, {
+        count: formatNumber(count, locale),
+      }),
+    };
+  });
+  return (
+    <ul className="magic-summary" aria-label={t("magic.summary")}>
+      {answers.map((answer) => (
+        <SummaryItem key={answer.lane} tone={answer.tone} text={answer.text} />
+      ))}
+    </ul>
+  );
+}
+
+function SummaryItem({
+  tone,
+  text,
+}: Readonly<{ tone: SummaryTone; text: string }>) {
+  const Icon = TONE_ICON[tone];
+  return (
+    <li className="magic-summary-item" data-tone={tone}>
+      <Icon size={16} aria-hidden="true" />
+      <span>{text}</span>
+    </li>
   );
 }
 
@@ -181,9 +312,6 @@ function NotShown({
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
-  if (entries.length === 0) {
-    return null;
-  }
   return (
     <ul className="magic-notshown">
       {entries.map((entry) => (
@@ -200,99 +328,61 @@ function NotShown({
 
 function MagicLaneSection({
   lane,
-  read,
-  receipt,
-  canReportEmpty,
-  onRetry,
+  rows,
+  since,
   zone,
 }: Readonly<{
   lane: MagicLane;
-  read: Readonly<{ isPending: boolean; isError: boolean }>;
-  receipt: MagicReceipt | undefined;
-  canReportEmpty: boolean;
-  onRetry: () => void;
+  rows: readonly MagicLine[];
+  since: string | undefined;
   zone: string;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const plural = usePlural();
-  const rows = receipt?.[lane];
-  // Off the LIST, not off the query's flags alone: most lanes are empty on
-  // most days, and a state read from `isPending`/`isError` calls that `ready`
-  // and draws a table's header row over no rows.
-  const answered = listReadState(read, rows);
-  const state =
-    answered === "empty" && !canReportEmpty ? "unavailable" : answered;
-  // Optional all the way down: a response missing this field is a server older
-  // or newer than this client, and a receipt that renders without a count beats
-  // a panel that throws and takes the page with it.
-  const count = receipt?.totals?.[lane];
   return (
-    <section className="magic-lane">
-      <div className="magic-lane-head">
-        <Eyebrow as="h3">{t(LANE_HEADING[lane])}</Eyebrow>
-        {/* THIS PAGE's count, which is all the endpoint promises. The window's
-            own size arrives with the cursor that does not exist yet, and a
-            figure asserted before then would be neither the page nor the
-            window. */}
-        {state === "ready" && count !== undefined && (
-          <span className="t-caption magic-lane-count">
-            {plural("magic.laneCount", count, {
-              count: formatNumber(count, locale),
-            })}
-          </span>
-        )}
-      </div>
-      <SurfaceState
-        state={state}
-        emptyLabel={t(LANE_EMPTY[lane])}
-        loadingLabel={t("magic.loading")}
-        detail={{ onRetry }}
-      >
-        {/* `ready` already means there are rows — the state above is derived
-            from the list — so this narrows the type rather than deciding
-            anything. */}
-        {rows && (
-          <DataTable
-            label={t(LANE_HEADING[lane])}
-            rows={rows}
+    <>
+      <PanelGroupHead title={t(LANE_HEADING[lane])} level="h3" />
+      <PanelBody>
+        <ul className="magic-lines" aria-label={t(LANE_HEADING[lane])}>
+          {rows.map((row) => (
             // The lanes mint their ids independently, so an id alone can name a
-            // row in a lane the reader was not looking at, and React would
-            // draw one of the two.
-            rowKey={(row: MagicLine) => `${lane}-${row.id}`}
-            columns={[
-              {
-                key: "what",
-                header: t("magic.col.what"),
-                render: (row: MagicLine) => <LineSentence line={row} />,
-              },
-              {
-                key: "about",
-                header: t("magic.col.about"),
-                render: (row: MagicLine) => (
-                  <LineSubject line={row} since={receipt?.since} />
-                ),
-              },
-              {
-                key: "by",
-                header: t("magic.col.by"),
-                render: (row: MagicLine) => <LineBy line={row} />,
-              },
-              {
-                key: "when",
-                header: t("magic.col.when"),
-                render: (row: MagicLine) => <LineWhen line={row} zone={zone} />,
-              },
-              {
-                key: "wayBack",
-                header: t("magic.col.wayBack"),
-                render: (row: MagicLine) => <LineWayBack line={row} />,
-              },
-            ]}
-          />
-        )}
-      </SurfaceState>
-    </section>
+            // row in a lane the reader was not looking at.
+            <li className="magic-line" key={`${lane}-${row.id}`}>
+              <div className="magic-line-text">
+                <LineSentence line={row} />
+                <LineMeta line={row} since={since} zone={zone} />
+              </div>
+              <div className="magic-line-back">
+                <LineWayBack line={row} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </PanelBody>
+    </>
+  );
+}
+
+/**
+ * The record the line is about, who acted, and when: each its own element, so
+ * the separators between them are the stylesheet's and never part of a value.
+ */
+function LineMeta({
+  line,
+  since,
+  zone,
+}: Readonly<{ line: MagicLine; since: string | undefined; zone: string }>) {
+  const t = useT();
+  const by = line.actor.label ? magicByKey(line.actor.label.key) : null;
+  return (
+    <p className="t-caption magic-line-meta">
+      <span>
+        <LineSubject line={line} since={since} />
+      </span>
+      {by && <span>{t(by, line.actor.label?.values)}</span>}
+      <span>
+        <LineWhen line={line} zone={zone} />
+      </span>
+    </p>
   );
 }
 
@@ -324,24 +414,6 @@ function LineSentence({ line }: Readonly<{ line: MagicLine }>) {
 }
 
 /**
- * Who acted: the job as a reader would call it ("Mail filing", "Retention"),
- * never the ledger's internal actor id.
- */
-function LineBy({ line }: Readonly<{ line: MagicLine }>) {
-  const t = useT();
-  const key = line.actor.label ? magicByKey(line.actor.label.key) : null;
-  return key ? t(key, line.actor.label?.values) : null;
-}
-
-/**
- * Which record the line is about, as a link where the app has a page for it.
- *
- * The subject is a COLUMN rather than a word inside the sentence: the server
- * sends it as its own value, and interpolating a record's name into a
- * translated clause is how a sentence ends up ungrammatical in two of three
- * languages.
- */
-/**
  * When it happened, and for a watched source how long it has been that way.
  *
  * A watching line's occurred_at is when the condition was OBSERVED, so printing
@@ -360,6 +432,13 @@ function LineWhen({ line, zone }: Readonly<{ line: MagicLine; zone: string }>) {
   return formatDateTime(line.occurred_at, locale, zone);
 }
 
+/**
+ * Which record the line is about, as a link where the app has a page for it.
+ *
+ * The subject is its own value rather than a word inside the sentence:
+ * interpolating a record's name into a translated clause is how a sentence
+ * ends up ungrammatical in two of three languages.
+ */
 function LineSubject({
   line,
   since,
