@@ -23,6 +23,7 @@ import {
   TEAM_ID,
   teamsPage,
 } from "./lists.fixtures";
+import { ListSettingsAction } from "./listsettings";
 import { MyViews } from "./myviews";
 import { newGroup, newLeaf } from "./segmentpredicate";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -111,7 +112,52 @@ describe("changing a list from its page", () => {
     );
     await user.click(screen.getByRole("button", { name: en["lists.save"] }));
     await vi.waitFor(() => expect(patched).toHaveLength(1));
-    expect(patched[0]).toMatchObject({ sharing: "team", team_id: TEAM_ID });
+    expect(patched[0]).toMatchObject({ team_id: TEAM_ID });
+    expect(patched[0]).not.toHaveProperty("sharing");
+  });
+
+  it("leaves the audience alone when a refetch moves it while the form is open", async () => {
+    const patched: unknown[] = [];
+    installFetchStub({
+      "GET /me": listsMe(true, [TEAM_ID]),
+      "GET /teams": () => jsonResponse(teamsPage),
+      [`PATCH /lists/${LIVE_ID}`]: (body) => {
+        patched.push(body);
+        return jsonResponse(liveList);
+      },
+    });
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <StoryProviders>
+        <ListSettingsAction list={liveList} />
+      </StoryProviders>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.settings"] }),
+    );
+    // Somebody else narrowed the list to one team; the page refetched it.
+    rerender(
+      <StoryProviders>
+        <ListSettingsAction
+          list={{
+            ...liveList,
+            team_id: TEAM_ID,
+            sharing: "team",
+            version: liveList.version + 1,
+          }}
+        />
+      </StoryProviders>,
+    );
+    const name = screen.getByRole("textbox", { name: en["lists.name"] });
+    await user.clear(name);
+    await user.type(name, "Renamed");
+    await user.click(screen.getByRole("button", { name: en["lists.save"] }));
+    await vi.waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]).toEqual({
+      version: liveList.version,
+      name: "Renamed",
+      purpose: liveList.purpose,
+    });
   });
 
   it("archives a list, and a steward takes over one nobody looks after", async () => {

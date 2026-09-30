@@ -18,20 +18,28 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(list.name);
   const [purpose, setPurpose] = useState(list.purpose ?? "");
-  const [audience, setAudience] = useState<ListAudience>({
-    sharing: list.sharing,
-    teamId: list.team_id ?? null,
-  });
+  const [audience, setAudience] = useState<ListAudience>(audienceOf(list));
+  // What the form opened with, version included. A refetch while it is open
+  // must not decide what is sent: sharing and team go only when the reader
+  // moved them, so nobody else's change is undone by a save of the name.
+  const [started, setStarted] = useState<ListAudience>(audienceOf(list));
+  const [version, setVersion] = useState(list.version);
   const me = useMe();
   const update = useUpdateList();
-  // The team travels only when it changed under team sharing: an untouched
-  // one would write a revision that changes nothing.
-  const currentTeam = list.team_id ?? null;
+  const sharingChanged = audience.sharing !== started.sharing;
   const teamChanged =
-    audience.sharing === "team" && audience.teamId !== currentTeam;
+    audience.sharing === "team" && audience.teamId !== started.teamId;
+  const openForm = () => {
+    setName(list.name);
+    setPurpose(list.purpose ?? "");
+    setAudience(audienceOf(list));
+    setStarted(audienceOf(list));
+    setVersion(list.version);
+    setOpen(true);
+  };
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{t("lists.settings")}</Button>
+      <Button onClick={openForm}>{t("lists.settings")}</Button>
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
@@ -44,10 +52,10 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
           update.mutate(
             {
               id: list.id,
-              version: list.version,
+              version,
               name: name.trim(),
               purpose: purpose.trim() === "" ? null : purpose.trim(),
-              sharing: audience.sharing,
+              sharing: sharingChanged ? audience.sharing : undefined,
               teamId: teamChanged ? audience.teamId : undefined,
             },
             { onSuccess: () => setOpen(false) },
@@ -80,4 +88,8 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
       </ConfirmModal>
     </>
   );
+}
+
+function audienceOf(list: List): ListAudience {
+  return { sharing: list.sharing, teamId: list.team_id ?? null };
 }

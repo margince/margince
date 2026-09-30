@@ -177,7 +177,7 @@ function FilterBuildScreen({
   // nothing on a deal — carrying the tree across would offer the human a filter
   // the new vocabulary refuses.
   const [tree, setTree] = useState<Node>(() => newGroup("and"));
-  useOpenViewFromAddress(VIEW_OF[tab], view, setTree);
+  const opening = useOpenViewFromAddress(VIEW_OF[tab], view, setTree);
 
   const resource = RESOURCE_OF[tab];
   const vocabulary = useFilterVocabulary(resource);
@@ -253,7 +253,11 @@ function FilterBuildScreen({
         </PanelBody>
         <PanelBody>
           <SurfaceState
-            state={vocabularyState(vocabulary.isPending, vocabulary.isError)}
+            state={
+              opening
+                ? "loading"
+                : vocabularyState(vocabulary.isPending, vocabulary.isError)
+            }
             emptyLabel={t("filters.noFields")}
             loadingLabel={t("filters.loadingVocabulary")}
             // The builder that lands here is a condition row plus its verbs.
@@ -279,27 +283,35 @@ function FilterBuildScreen({
 }
 
 /**
- * Loads the saved view the address names into the builder, once, as soon as
- * the reader's views have been read. The screen remounts when the address
- * changes, so a second view is a second mount rather than a second load here.
- * A view that is gone or unreadable loads nothing and leaves an empty builder.
+ * Loads the saved view the address names into the builder, and answers true
+ * while it is still being read. The builder stays a skeleton until then, so
+ * nothing the reader types can be replaced by the view arriving late. The
+ * views are read afresh, because a cached list may predate the view; one that
+ * is gone or unreadable leaves an empty builder once that read has settled.
+ * The screen remounts per address, so this loads at most once.
  */
 function useOpenViewFromAddress(
   resource: ViewResource,
   viewId: string | undefined,
   load: (tree: Node) => void,
-) {
-  const views = useSavedViews(resource);
-  const [opened, setOpened] = useState<string | undefined>(undefined);
-  if (viewId === undefined || opened === viewId || !views.data) {
-    return;
+): boolean {
+  const views = useSavedViews(resource, viewId !== undefined);
+  const [opened, setOpened] = useState(false);
+  if (viewId === undefined || opened) {
+    return false;
   }
-  const found = views.data.find((row) => row.id === viewId);
+  const found = views.data?.find((row) => row.id === viewId);
   const tree = found ? filterTreeOf(found) : null;
-  setOpened(viewId);
   if (tree) {
+    setOpened(true);
     load(tree);
+    return false;
   }
+  const settled = !views.isFetching && (views.isSuccess || views.isError);
+  if (settled) {
+    setOpened(true);
+  }
+  return !settled;
 }
 
 /**
