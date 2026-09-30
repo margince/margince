@@ -898,18 +898,25 @@ function PlatformStep({
 }
 
 // What the room says while a step is answered, and for the four seconds after
-// the model binding lands: the ignition is not a step but the moment that
-// answer takes effect.
+// the binding lands, which carry no step's status line: it would be stale.
 function head(
   step: Step["step"],
   ignited: boolean,
-): Readonly<{ title: MessageKey; sub: MessageKey }> {
+): Readonly<{ eyebrow?: MessageKey; title: MessageKey; sub: MessageKey }> {
   if (ignited) {
     return { title: "firstRun.ignite.title", sub: "firstRun.ignite.sub" };
   }
   return step === "oauth_app"
-    ? { title: "firstRun.platform.title", sub: "firstRun.platform.sub" }
-    : { title: "firstRun.ai.title", sub: "firstRun.ai.sub" };
+    ? {
+        eyebrow: "firstRun.google.eyebrow",
+        title: "firstRun.platform.title",
+        sub: "firstRun.platform.sub",
+      }
+    : {
+        eyebrow: "firstRun.ai.eyebrow",
+        title: "firstRun.ai.title",
+        sub: "firstRun.ai.sub",
+      };
 }
 
 function modelBound(setup: Setup | undefined): boolean {
@@ -940,13 +947,9 @@ export function InstallationSetup() {
   // Owned here because the Core belongs to the stage and the write belongs to
   // the step. The step says when it is writing; nothing reads this but the orb.
   const [busy, setBusy] = useState(false);
-  // The binding landed and the reader is watching the sequence. Held here
-  // rather than in the step, because what it changes is the ROOM: the light, the
-  // orb and what stands in the column all belong to the stage.
-  //
-  // The vendor travels with it because the sequence names whose key was sealed,
-  // and "sealed in the vault" without saying whose is a sentence about a
-  // mechanism rather than about what the reader just did.
+  // The binding landed and the sequence is playing: the ROOM's state, so held
+  // here. The vendor travels with it, since "sealed in the vault" without whose
+  // key is a sentence about a mechanism, not about what the reader just did.
   const [ignited, setIgnited] = useState<string | null>(null);
   const igniting = useIgnitionCore(ignited !== null);
 
@@ -963,6 +966,7 @@ export function InstallationSetup() {
   }
   const core =
     ignited !== null ? igniting.state : busy ? "working" : ("idle" as const);
+  const heading = head(step.step, ignited !== null);
   return (
     <OnboardingStage
       flow={t("ob.stage.flow")}
@@ -986,11 +990,7 @@ export function InstallationSetup() {
           ? "firstRun.step.platform"
           : "firstRun.step.model",
       )}
-      eyebrow={t(
-        step.step === "oauth_app"
-          ? "firstRun.google.eyebrow"
-          : "firstRun.ai.eyebrow",
-      )}
+      eyebrow={heading.eyebrow && t(heading.eyebrow)}
       // The one qualification the step carries, on the card's bottom edge. It
       // is true of the whole screen rather than of any field on it, which is
       // what makes it chrome: as a callout in the board it read as an
@@ -1000,8 +1000,8 @@ export function InstallationSetup() {
           ? "firstRun.platform.foot"
           : "firstRun.ai.foot",
       )}
-      title={t(head(step.step, ignited !== null).title)}
-      sub={t(head(step.step, ignited !== null).sub)}
+      title={t(heading.title)}
+      sub={t(heading.sub)}
     >
       {step.step === "oauth_app" ? (
         <PlatformStep onBusy={setBusy} onDecline={decline} />

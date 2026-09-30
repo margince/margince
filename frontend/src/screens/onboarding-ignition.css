@@ -43,7 +43,7 @@
 .ob-ig-sealed {
   margin: 0;
   align-self: flex-start;
-  /* The badge truncates inside a bounded box, never past the board's edge. */
+  /* Bounded, so the badge never runs past the board's edge. */
   max-width: 100%;
   animation: ob-ig-appear var(--ig-beat) var(--ease-out) 150ms both;
 }
@@ -117,6 +117,14 @@
 .ob-ig-go {
   margin-top: var(--space-2);
   animation: ob-ig-rise var(--dur-enter) var(--ease-out) 3600ms both;
+}
+
+/* On the stacked stage the vendor is the half that matters, so the badge wraps
+   rather than truncating it out of sight. */
+@media (max-width: 60rem) {
+  .ob-ig-sealed .badge-label {
+    white-space: normal;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

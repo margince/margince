@@ -451,7 +451,7 @@
 .ob-stage-title {
   margin: 0;
   color: var(--textPrimary);
-  /* A domain in the title is one word, and at large text it outgrows a phone. */
+  /* A word longer than the board breaks rather than running past its edge. */
   overflow-wrap: break-word;
   /* A measure, not a width: a hero line that runs the full board reads as a
      paragraph set large rather than as a title. */
@@ -594,8 +594,8 @@
     box-shadow: none;
     max-width: none;
   }
-  /* Stretched, and its one track allowed below its content: a centred board
-     as wide as its longest nowrap line hangs off both edges of the window. */
+  /* Stretched, not centred: a centred board as wide as its longest line hangs
+     off both edges of the window. */
   .ob-stage-scene {
     flex-direction: column;
     align-items: stretch;
@@ -606,6 +606,7 @@
     transform: scale(var(--ob-core-scale, 1));
     padding-top: var(--space-6);
   }
+  /* And its one track may shrink below that line, or the stretch is undone. */
   .ob-stage-board {
     align-content: start;
     grid-template-columns: minmax(0, 1fr);
@@ -638,6 +639,10 @@
   .ob-stage-title,
   .ob-stage-sub {
     max-width: none;
+  }
+  /* At a syllable where the language allows it; `lang` is on <html>. */
+  .ob-stage-title {
+    hyphens: auto;
   }
   /* The mark alone: a step name, a sub-step and a row of dashes do not fit a
      phone's width, and the dashes are the half that still works at a glance. */

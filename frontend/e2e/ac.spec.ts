@@ -1734,25 +1734,43 @@ test.describe("WCAG 2.2 AA (axe), the cold start's ignition at 390px", () => {
 test.describe("the cold start's board on a phone at 200% text", () => {
   test.use({ viewport: { width: 320, height: 568 } });
 
+  // The board a keyboard lands on, named after its question, inside the
+  // window, and holding nothing wider than itself that it would clip.
+  async function expectBoardReachable(page: Page) {
+    const question = await page.locator(".ob-stage-title").innerText();
+    const board = page.getByRole("region", { name: question });
+    await expect(board).toHaveClass(/ob-stage-board/);
+    await expect(board).toHaveAttribute("tabindex", "0");
+    const box = await board.evaluate((element) => {
+      const { left, right } = element.getBoundingClientRect();
+      return {
+        left,
+        right,
+        window: document.documentElement.clientWidth,
+        held: element.scrollWidth,
+        shown: element.clientWidth,
+      };
+    });
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(box.window);
+    expect(box.held).toBeLessThanOrEqual(box.shown);
+  }
+
   test("is a tab stop named after its question, inside the window", async ({
     page,
   }) => {
     await mockApi(page, { journey: "unconfigured" });
     await page.goto("/#/onboarding");
-    await page.getByLabel(de["firstRun.ai.key"]).waitFor();
+    await page.getByLabel(de["firstRun.ai.key"]).fill("AIza-not-a-real-key");
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
     });
-    const question = await page.locator(".ob-stage-title").innerText();
-    const board = page.getByRole("region", { name: question });
-    await expect(board).toHaveClass(/ob-stage-board/);
-    await expect(board).toHaveAttribute("tabindex", "0");
-    const edges = await board.evaluate((box) => {
-      const { left, right } = box.getBoundingClientRect();
-      return { left, right, window: document.documentElement.clientWidth };
-    });
-    expect(edges.left).toBeGreaterThanOrEqual(0);
-    expect(edges.right).toBeLessThanOrEqual(edges.window);
+    await expectBoardReachable(page);
+    // The ignition is the widest step: the sealed badge and the capability
+    // lines are the lines that outgrew the board.
+    await page.getByRole("button", { name: de["firstRun.continue"] }).click();
+    await expect(page.locator(".ob-ig-can li")).toHaveCount(3);
+    await expectBoardReachable(page);
   });
 });
 

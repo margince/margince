@@ -388,6 +388,18 @@ describe("the first-run setup gate", () => {
     expect(writes[1].url).toBe("/v1/ai/routing");
   });
 
+  it("drops the step's status line once the binding lands", async () => {
+    const user = userEvent.setup();
+    mount(setupReport(false, false));
+    expect(await screen.findByText("No model connected")).toBeTruthy();
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      await screen.findByRole("heading", { name: "Model connected" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("No model connected")).toBeNull();
+  });
+
   // Every chat tier, not just one. A half-bound installation answers for one
   // task and refuses another, with nothing on screen saying which was configured.
   it("binds every chat tier and the embedding lane", async () => {

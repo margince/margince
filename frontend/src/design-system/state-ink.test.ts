@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
@@ -21,7 +22,7 @@ import {
   classNameLiterals,
   extensionFrontendFiles,
   filesMatching,
-  sourceFileAt,
+  parseSource,
 } from "../../scripts/lib/source-tree";
 import { states } from "./tokens-testing";
 
@@ -35,30 +36,63 @@ const BASE_INK = new RegExp(`var\\(\\s*--(?:${states.join("|")})\\s*[,)]`);
 // SVG geometry paints a shape and is exempt; SVG text is read like any other.
 const GEOMETRY =
   /^(?:svg|path|circle|ellipse|rect|line|polyline|polygon|use|g)(?![\w-])/i;
-const SVG_TEXT = /^(?:text|tspan)(?![\w-])/i;
+const SVG_TEXT = /^(?:text|tspan|textPath)(?![\w-])/i;
 
-type TextClasses = Readonly<{ exact: Set<string>; prefixes: string[] }>;
+type TextClasses = Readonly<{
+  exact: Set<string>;
+  prefixes: string[];
+  // Where a class could not be read: an unread class is text nobody checked.
+  unread: string[];
+}>;
 
-// The classes the app puts on an SVG `<text>` or `<tspan>`, read off the TSX.
-function svgTextClasses(): TextClasses {
+// Whether every class an expression can yield is spelled in it: a literal, or a
+// template whose expressions only ever finish a class its text began.
+function readable(node: ts.Expression): boolean {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    return true;
+  }
+  if (ts.isParenthesizedExpression(node)) return readable(node.expression);
+  if (ts.isConditionalExpression(node)) {
+    return readable(node.whenTrue) && readable(node.whenFalse);
+  }
+  if (!ts.isTemplateExpression(node)) return false;
+  const pieces = [
+    node.head.text,
+    ...node.templateSpans.map((s) => s.literal.text),
+  ];
+  return node.templateSpans.every(
+    (_, at) => /\S$/.test(pieces[at]) && !/^\S/.test(pieces[at + 1]),
+  );
+}
+
+// The classes the app puts on SVG text, read off the TSX.
+function svgTextClasses(
+  sources: readonly Readonly<{ path: string; text: string }>[],
+): TextClasses {
   const exact = new Set<string>();
   const prefixes: string[] = [];
-  const modules = [
-    ...filesMatching(join(frontendRoot, "src"), /\.tsx$/),
-    ...extensionFrontendFiles(join(frontendRoot, "..", "extensions")).filter(
-      (path) => path.endsWith(".tsx"),
-    ),
-  ].filter((path) => !/\.(test|stories|testkit)\.tsx$/.test(path));
-  for (const path of modules) {
-    const source = sourceFileAt(path);
+  const unread: string[] = [];
+  for (const { path, text } of sources) {
+    const source = parseSource(path, text);
     const visit = (node: ts.Node) => {
       if (
         ts.isJsxOpeningLikeElement(node) &&
         SVG_TEXT.test(node.tagName.getText(source))
       ) {
-        const className = node.attributes.properties
+        const where = `${relative(frontendRoot, path)}:${source.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
+        const props = node.attributes.properties;
+        if (props.some(ts.isJsxSpreadAttribute)) unread.push(`${where} spread`);
+        const className = props
           .filter(ts.isJsxAttribute)
           .find((attribute) => attribute.name.getText(source) === "className");
+        const value = className?.initializer;
+        if (
+          value !== undefined &&
+          ts.isJsxExpression(value) &&
+          (value.expression === undefined || !readable(value.expression))
+        ) {
+          unread.push(`${where} ${value.getText(source)}`);
+        }
         for (const literal of classNameLiterals(className)) {
           for (const token of literal.split(/\s+/).filter(Boolean)) {
             if (token.endsWith("-")) prefixes.push(token);
@@ -70,7 +104,18 @@ function svgTextClasses(): TextClasses {
     };
     visit(source);
   }
-  return { exact, prefixes };
+  return { exact, prefixes, unread };
+}
+
+function appModules() {
+  return [
+    ...filesMatching(join(frontendRoot, "src"), /\.tsx$/),
+    ...extensionFrontendFiles(join(frontendRoot, "..", "extensions")).filter(
+      (path) => path.endsWith(".tsx"),
+    ),
+  ]
+    .filter((path) => !/\.(test|stories|testkit)\.tsx$/.test(path))
+    .map((path) => ({ path, text: readFileSync(path, "utf8") }));
 }
 
 function paintsText(subject: string, text: TextClasses): boolean {
@@ -107,6 +152,9 @@ function baseInked(all: readonly Rule[], text: TextClasses): Finding[] {
   );
 }
 
+// A template placeholder, spelled into probe source without being one here.
+const slot = (name: string) => `$${"{"}${name}}`;
+
 function probe(selector: string, body: string): Rule[] {
   return selectorList(selector).map((one) => ({
     file: join(frontendRoot, "probe.css"),
@@ -118,9 +166,10 @@ function probe(selector: string, body: string): Rule[] {
 describe("text in a state colour", () => {
   const sheets = appStylesheets(frontendRoot);
   const all = rulesOf(sheets);
-  const text = svgTextClasses();
+  const text = svgTextClasses(appModules());
 
   it("reads the SVG text classes off the components that draw them", () => {
+    expect(text.unread).toEqual([]);
     expect(text.exact.size + text.prefixes.length).toBeGreaterThan(3);
     expect(text.exact.has("rmap-name")).toBe(true);
     expect(text.prefixes).toContain("rmap-pill-");
@@ -137,6 +186,32 @@ describe("text in a state colour", () => {
     expect(
       baseInked(all, text).map(({ at, value }) => `${at} { ${value} }`),
     ).toEqual([]);
+  });
+
+  it.each([
+    ["an identifier", "<text className={label} />"],
+    ["a member", "<text className={styles.label} />"],
+    ["a helper call", '<tspan className={cx("a", b)} />'],
+    ["a suffix template", `<textPath className={\`${slot("tone")}-label\`} />`],
+    ["a whole-class expression", `<text className={\`a ${slot("tone")}\`} />`],
+    ["a spread", "<text {...rest} />"],
+  ])("refuses to pass %s on SVG text unread", (_, markup) => {
+    const probe = svgTextClasses([
+      { path: join(frontendRoot, "probe.tsx"), text: `const x = ${markup};` },
+    ]);
+    expect(probe.unread).toHaveLength(1);
+  });
+
+  it("reads a literal, a prefix template and literal branches without complaint", () => {
+    const probe = svgTextClasses([
+      {
+        path: join(frontendRoot, "probe.tsx"),
+        text: `const x = <><text className="a" /><text className={\`p-${slot("t")}\`} /><text className={on ? "b" : "c"} /></>;`,
+      },
+    ]);
+    expect(probe.unread).toEqual([]);
+    expect([...probe.exact].sort()).toEqual(["a", "b", "c"]);
+    expect(probe.prefixes).toEqual(["p-"]);
   });
 
   it.each([
