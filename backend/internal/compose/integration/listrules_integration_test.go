@@ -13,12 +13,14 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -161,7 +163,7 @@ func TestALeaveRuleFiresOnlyForRecordsThatLeft(t *testing.T) {
 		t.Fatalf("one record left and one joined, and a leave rule fired %d runs, want 1", n)
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		WHERE a.subject = 'Follow up: left the list "Buyers"' AND l.contact_id = $1`, goes); n != 1 {
+		WHERE a.subject = 'Left a Live List' AND l.contact_id = $1`, goes); n != 1 {
 		t.Fatalf("the contact that left has %d follow-up tasks, want 1", n)
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE contact_id = $1`, stays); n != 0 {
@@ -391,5 +393,66 @@ func TestTheWhatChangedSummaryNamesOnlyRecordsTheReaderCanSee(t *testing.T) {
 	}
 	if summary.Left.Count != 1 || ids.UUID(summary.Left.Records[0].EntityId) != leaves || summary.FilterChanges != 0 {
 		t.Fatalf("left = %+v, filter changes = %d, want the one that left and no filter change", summary.Left, summary.FilterChanges)
+	}
+}
+
+func TestAFollowUpTaskNamesNoPrivateList(t *testing.T) {
+	f := newListRuleFixture(t)
+	private, err := f.store.CreateList(f.author(), collections.CreateListInput{
+		Name: "Rep1 secret targets", EntityType: "contact", ListType: "dynamic", Sharing: "private",
+		Definition: titleIs("Buyer"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.list = private.ID
+	f.rule(t, "list_membership_task", map[string]any{"direction": "entered"})
+	f.check(t)
+	joins := f.contactTitled(t, "Quiet Buyer", "Buyer")
+	f.check(t)
+	f.deliver(t, "list.evaluated")
+
+	if n := f.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
+		WHERE l.contact_id = $1 AND a.subject = 'Joined a Live List'`, joins); n != 1 {
+		t.Fatalf("the contact that joined has %d neutral follow-up tasks, want 1", n)
+	}
+	if n := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE subject LIKE '%secret targets%' OR body LIKE '%secret targets%'`); n != 0 {
+		t.Fatalf("%d activities name the private list, which anybody who can read the contact would see", n)
+	}
+}
+
+func TestAnArchiveNewsOlderThanARestoreAndResumePausesNothing(t *testing.T) {
+	f := newListRuleFixture(t)
+	id := f.rule(t, "list_membership_notify", map[string]any{"direction": "entered"})
+	if _, err := f.store.SetArchivedView(f.e.Admin(), f.list, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.store.SetArchivedView(f.e.Admin(), f.list, false); err != nil {
+		t.Fatal(err)
+	}
+	f.deliver(t, "list.archived")
+	if state := f.ruleState(t, id); !state.Enabled {
+		t.Fatalf("a late archive event paused a rule whose list is live again: %+v", state)
+	}
+}
+
+func TestAReaderWithoutTheListGrantReadsNoObservedChange(t *testing.T) {
+	f := newListRuleFixture(t)
+	f.check(t)
+	f.contactTitled(t, "Seen Buyer", "Buyer")
+	f.check(t)
+	view, err := f.store.GetList(f.e.Admin(), f.list)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actions := []string{"entered"}
+	if changes, _, err := f.store.ObservedChanges(f.rep1(), f.list, view.Version, f.clock, actions, 10); err != nil || len(changes) != 1 {
+		t.Fatalf("a reader holding list read got %v (%v), want the one change", changes, err)
+	}
+	p := RepPerms
+	p.Objects = map[string]principal.ObjectGrant{"contact": {Read: true}}
+	noList := f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, p)
+	if changes, _, err := f.store.ObservedChanges(noList, f.list, view.Version, f.clock, actions, 10); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a reader without list read got %v (%v), want a refusal", changes, err)
 	}
 }

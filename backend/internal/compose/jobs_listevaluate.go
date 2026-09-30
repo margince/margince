@@ -79,7 +79,7 @@ func CheckLiveLists(ctx context.Context, pool *pgxpool.Pool, workspace ids.UUID,
 	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), listCheckerActor)
 	checks, err := NewCollectionsStore(pool).CheckLiveLists(wsCtx, func() time.Time { return now().UTC() })
 	db := InstallationDB(pool)
-	pauser := automation.NewRulePauser(db, noticesNotifier{store: notices.NewStore(db)})
+	pauser := automation.NewRulePauser(db, noticesNotifier{store: notices.NewStore(db)}, NewListRules(pool))
 	for _, check := range checks {
 		if check.Outcome != collections.CheckInvalid {
 			continue

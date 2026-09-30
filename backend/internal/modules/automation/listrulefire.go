@@ -49,14 +49,14 @@ type rulePause struct {
 }
 
 // fireListRule fans one check out into a firing per changed record, or
-// pauses the rule instead.
-func (e *WorkflowEngine) fireListRule(ctx context.Context, rule listRule, ev workflow.Event) error {
+// pauses the rule instead, as of the version its instance was loaded at.
+func (e *WorkflowEngine) fireListRule(ctx context.Context, rule listRule, ev workflow.Event, version int64) error {
 	firings, pause, err := rule.expand(ctx, e.resolver, ev)
 	if err != nil {
 		return err
 	}
 	if pause != nil {
-		return e.pauses.pauseRule(ctx, ids.From[ids.AutomationKind](ev.AutomationID), *pause, ev.Entity.ID)
+		return e.pauses.pauseRule(ctx, ruleVersion{ID: ev.AutomationID, Version: version}, *pause, ev.Entity.ID)
 	}
 	var firstErr error
 	for _, firing := range firings {
@@ -99,7 +99,9 @@ func (r listRule) expand(ctx context.Context, resolver authz.Resolver, ev workfl
 	changes, total, err := r.ex.Lists.ObservedChanges(owner, list.ID, check.DefinitionVersion, check.EvaluatedAt,
 		actionsFor(rule.Direction), burstCap)
 	switch {
-	case errors.Is(err, apperrors.ErrNotFound):
+	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
+		// The owner can no longer find or read the list: what it holds is no
+		// longer theirs to be told about.
 		return nil, &rulePause{reason: PausedListUnavailable}, nil
 	case err != nil:
 		return nil, nil, err
@@ -147,27 +149,74 @@ func firingsFor(ev workflow.Event, list ListRef, at time.Time, changes []ListCha
 // paused until its owner resumes it: restoring or fixing the list does not.
 type RulePauser struct {
 	db       *database.DB
-	notifier Notifier
+	notifier PauseNotifier
+	lists    Lists
 }
 
-// NewRulePauser builds the pauser over the automation table and the notice
-// transport its owners hear through.
-func NewRulePauser(db *database.DB, notifier Notifier) *RulePauser {
-	return &RulePauser{db: db, notifier: notifier}
+// PauseNotifier writes a paused rule's notice on the pause's own
+// transaction, so the two commit together or not at all.
+type PauseNotifier interface {
+	NotifyTx(ctx context.Context, tx pgx.Tx, recipient ids.UUID, subject, body string, target datasource.EntityRef, dedupe string) error
+}
+
+// NewRulePauser builds the pauser over the automation table, the notice
+// transport its owners hear through, and the lists it re-reads before acting
+// on a list's news.
+func NewRulePauser(db *database.DB, notifier PauseNotifier, lists Lists) *RulePauser {
+	return &RulePauser{db: db, notifier: notifier, lists: lists}
 }
 
 // listRuleKeys are the catalog keys whose params name lists.
 var listRuleKeys = []string{listTaskName, listNotifyName, listShortlistName}
 
-// PauseRulesOnList pauses every active list rule that watches the list or
-// adds to it.
-func (p *RulePauser) PauseRulesOnList(ctx context.Context, listID ids.UUID, reason string) error {
-	return p.pause(ctx, `key = ANY(@keys) AND (params ->> 'list_id' = @list_id OR params ->> 'shortlist_id' = @list_id)`,
-		pgx.StrictNamedArgs{"keys": listRuleKeys, "list_id": listID.String()}, rulePause{reason: reason}, listID)
+// PauseRulesOnArchivedList pauses the rules on a list its archive event
+// names, unless the list is no longer archived: the event can arrive after
+// the list was restored and its rules resumed, and that later decision stands.
+func (p *RulePauser) PauseRulesOnArchivedList(ctx context.Context, listID ids.UUID) error {
+	if p.lists == nil {
+		return errors.New("automation: an archived list's rules cannot be re-checked with no lists seam wired")
+	}
+	list, err := p.lists.Find(ctx, listID)
+	switch {
+	case errors.Is(err, apperrors.ErrNotFound):
+	case err != nil:
+		return err
+	case !list.Archived:
+		return nil
+	}
+	return p.PauseRulesOnList(ctx, listID, PausedListArchived)
 }
 
-func (p *RulePauser) pauseRule(ctx context.Context, id ids.AutomationID, pause rulePause, listID ids.UUID) error {
-	return p.pause(ctx, `id = @id`, pgx.StrictNamedArgs{"id": id}, pause, listID)
+// PauseRulesOnList pauses every active list rule that watches the list or
+// adds to it. Each rule pauses and is told in its own transaction, so one
+// failure leaves the others paused and told.
+func (p *RulePauser) PauseRulesOnList(ctx context.Context, listID ids.UUID, reason string) error {
+	var candidates []ruleVersion
+	err := p.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT id, version FROM automation
+			WHERE enabled AND archived_at IS NULL AND key = ANY(@keys)
+			  AND (params ->> 'list_id' = @list_id OR params ->> 'shortlist_id' = @list_id)`,
+			pgx.StrictNamedArgs{"keys": listRuleKeys, "list_id": listID.String()})
+		if err != nil {
+			return err
+		}
+		candidates, err = pgx.CollectRows(rows, pgx.RowToStructByPos[ruleVersion])
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	var errs error
+	for _, rule := range candidates {
+		errs = errors.Join(errs, p.pauseRule(ctx, rule, rulePause{reason: reason}, listID))
+	}
+	return errs
+}
+
+// ruleVersion is a rule as a pause decision saw it.
+type ruleVersion struct {
+	ID      ids.UUID
+	Version int64
 }
 
 // auditEnabled is the audit image key a rule's on/off state is recorded under.
@@ -181,49 +230,39 @@ type pausedRule struct {
 	Version int64
 }
 
-// pause stops the enabled rules matching where, audits each, and then tells
-// each owner. A rule already paused is left alone and nobody is told twice.
-func (p *RulePauser) pause(ctx context.Context, where string, args pgx.StrictNamedArgs, pause rulePause, listID ids.UUID) error {
-	args["reason"] = pause.reason
-	var stopped []pausedRule
-	err := p.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `UPDATE automation SET enabled = false, paused_reason = @reason,
+// pauseRule stops one rule, audits it and writes its owner's notice, all in
+// one transaction. It acts only on the version the decision was taken
+// against: a rule edited, resumed or paused since then is left as it is.
+func (p *RulePauser) pauseRule(ctx context.Context, seen ruleVersion, pause rulePause, listID ids.UUID) error {
+	if p.notifier == nil {
+		// A pause nobody hears about looks like a rule that stopped working.
+		return ErrNoNotificationTransport
+	}
+	return p.db.Tx(ctx, func(tx pgx.Tx) error {
+		var rule pausedRule
+		err := tx.QueryRow(ctx, `UPDATE automation SET enabled = false, paused_reason = @reason,
 				version = version + 1, updated_at = now()
-			WHERE enabled AND archived_at IS NULL AND `+where+`
-			RETURNING id, name, owner_id, version`, args)
+			WHERE id = @id AND version = @version AND enabled AND archived_at IS NULL
+			RETURNING id, name, owner_id, version`,
+			pgx.StrictNamedArgs{"id": seen.ID, "version": seen.Version, "reason": pause.reason}).
+			Scan(&rule.ID, &rule.Name, &rule.Owner, &rule.Version)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
 		if err != nil {
 			return err
 		}
-		stopped, err = pgx.CollectRows(rows, pgx.RowToStructByPos[pausedRule])
-		if err != nil {
+		if _, err := storekit.Audit(ctx, tx, "update", "automation", rule.ID,
+			map[string]any{auditEnabled: true}, map[string]any{auditEnabled: false, "paused_reason": pause.reason}); err != nil {
 			return err
 		}
-		if len(stopped) > 0 && p.notifier == nil {
-			// A pause nobody hears about looks like a rule that stopped working.
-			return ErrNoNotificationTransport
-		}
-		for _, rule := range stopped {
-			if _, err := storekit.Audit(ctx, tx, "update", "automation", rule.ID,
-				map[string]any{auditEnabled: true}, map[string]any{auditEnabled: false, "paused_reason": pause.reason}); err != nil {
-				return err
-			}
-		}
-		return nil
+		return p.tellOwner(ctx, tx, rule, pause, listID)
 	})
-	if err != nil {
-		return err
-	}
-	for _, rule := range stopped {
-		if err := p.tellOwner(ctx, rule, pause, listID); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
-// tellOwner sends a paused rule's owner the reason. The key carries the
+// tellOwner writes a paused rule's owner the reason. The key carries the
 // version the pause wrote, so a later pause of the same rule is news again.
-func (p *RulePauser) tellOwner(ctx context.Context, rule pausedRule, pause rulePause, listID ids.UUID) error {
+func (p *RulePauser) tellOwner(ctx context.Context, tx pgx.Tx, rule pausedRule, pause rulePause, listID ids.UUID) error {
 	if rule.Owner == nil {
 		return nil
 	}
@@ -231,8 +270,8 @@ func (p *RulePauser) tellOwner(ctx context.Context, rule pausedRule, pause ruleP
 	if !listID.IsZero() {
 		target = datasource.EntityRef{Type: rbacObjList, ID: listID}
 	}
-	return p.notifier.Notify(ctx, *rule.Owner, "Paused: "+rule.Name, pauseSentence(pause), target,
-		fmt.Sprintf("automation_paused:%s:%d", rule.ID, rule.Version), nil)
+	return p.notifier.NotifyTx(ctx, tx, *rule.Owner, "Paused: "+rule.Name, pauseSentence(pause), target,
+		fmt.Sprintf("automation_paused:%s:%d", rule.ID, rule.Version))
 }
 
 // pauseSentence says why a rule stopped and what brings it back.

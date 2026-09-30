@@ -72,7 +72,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		Lists:     NewListRules(db.Pool()),
 		Authority: identity.NewService(db.Pool()),
 	}
-	engine.WithNotifier(ex.Notifier)
+	engine.WithRulePauses(noticesNotifier{store: notices.NewStore(db)}, ex.Lists)
 	for _, handler := range automation.StarterWorkflows(ex) {
 		engine.RegisterWorkflow(handler)
 	}

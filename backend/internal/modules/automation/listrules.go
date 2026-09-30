@@ -326,7 +326,9 @@ func (r listRule) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect,
 		if rule.DueInDays != nil {
 			days = *rule.DueInDays
 		}
-		return ownedTaskEffectNoKey(ctx, r.ex, ev, fmt.Sprintf("Follow up: %s the list %q", firing.did(), firing.ListName),
+		// The task is read by whoever may read the record, so it names no
+		// list: a list's name and membership stay with the list's own sharing.
+		return ownedTaskEffectNoKey(ctx, r.ex, ev, firing.taskSubject(),
 			ev.OccurredAt.AddDate(0, 0, days))
 	case ActionTypeNotify:
 		return r.planNotice(ev, firing)
@@ -356,6 +358,14 @@ func (r listRule) planNotice(ev workflow.Event, firing listFiring) (workflow.Eff
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the notify action: %w", err)
 	}
 	return workflow.Effect{Actions: []workflow.Action{{Kind: workflow.ActionNotify, Target: ev.Entity, Args: args}}}, nil
+}
+
+// taskSubject is a follow-up task's subject, which names no list.
+func (f listFiring) taskSubject() string {
+	if f.Action == directionLeft {
+		return "Left a Live List"
+	}
+	return "Joined a Live List"
 }
 
 // did says what the record did, in the past tense a sentence needs.

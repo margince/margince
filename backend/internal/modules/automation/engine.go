@@ -58,13 +58,14 @@ type WorkflowEngine struct {
 // (gate.go). compose injects the real resolver; a nil one fails firings
 // closed rather than waving them through.
 func NewWorkflowEngine(db *database.DB, resolver authz.Resolver) *WorkflowEngine {
-	return &WorkflowEngine{db: db, resolver: resolver, pauses: NewRulePauser(db, nil)}
+	return &WorkflowEngine{db: db, resolver: resolver, pauses: NewRulePauser(db, nil, nil)}
 }
 
-// WithNotifier names the transport a paused rule's owner hears through.
-// Without one a rule that must pause fails its firing instead.
-func (e *WorkflowEngine) WithNotifier(n Notifier) *WorkflowEngine {
-	e.pauses = NewRulePauser(e.db, n)
+// WithRulePauses names the transport a paused rule's owner hears through and
+// the lists a pause re-reads. Without them a rule that must pause fails its
+// firing instead.
+func (e *WorkflowEngine) WithRulePauses(notifier PauseNotifier, lists Lists) *WorkflowEngine {
+	e.pauses = NewRulePauser(e.db, notifier, lists)
 	return e
 }
 
@@ -166,7 +167,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 		}
 	}
 	if env.Type == eventListArchived {
-		if err := e.pauses.PauseRulesOnList(runCtx, ev.Entity.ID, PausedListArchived); err != nil {
+		if err := e.pauses.PauseRulesOnArchivedList(runCtx, ev.Entity.ID); err != nil {
 			firstErr = fmt.Errorf("pausing the rules on an archived list: %w", err)
 		}
 	}
@@ -179,7 +180,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 			iev.AutomationID = inst.id.UUID
 			iev.OwnerID = inst.owner
 			iev.Params = inst.params
-			if err := e.dispatch(runCtx, h, iev); err != nil && firstErr == nil {
+			if err := e.dispatch(runCtx, h, iev, inst.version); err != nil && firstErr == nil {
 				firstErr = fmt.Errorf("workflow %s: %w", h.Spec().Name, err)
 			}
 		}
@@ -189,9 +190,9 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 
 // dispatch runs one instance's firing. A list rule's event stands for every
 // record one check saw change, so it fans out first.
-func (e *WorkflowEngine) dispatch(ctx context.Context, h workflow.Handler, ev workflow.Event) error {
+func (e *WorkflowEngine) dispatch(ctx context.Context, h workflow.Handler, ev workflow.Event, version int64) error {
 	if rule, ok := h.(listRule); ok {
-		return e.fireListRule(ctx, rule, ev)
+		return e.fireListRule(ctx, rule, ev, version)
 	}
 	return e.runOne(ctx, h, ev)
 }
@@ -217,9 +218,10 @@ func (e *WorkflowEngine) clockHandlers() []workflow.Handler {
 // match-time gate reads it to decide whether a firing has a human
 // authority to re-check at all.
 type automationInstance struct {
-	id     ids.AutomationID
-	owner  ids.UUID
-	params json.RawMessage
+	id      ids.AutomationID
+	owner   ids.UUID
+	params  json.RawMessage
+	version int64
 }
 
 // liveInstances loads the workspace's enabled, unarchived automations,
@@ -229,7 +231,7 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 	out := map[string][]automationInstance{}
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT id, key, params, owner_id FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
+			`SELECT id, key, params, owner_id, version FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
 		if err != nil {
 			return err
 		}
@@ -238,7 +240,7 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 			var inst automationInstance
 			var key string
 			var owner *ids.UUID
-			if err := rows.Scan(&inst.id, &key, &inst.params, &owner); err != nil {
+			if err := rows.Scan(&inst.id, &key, &inst.params, &owner, &inst.version); err != nil {
 				return err
 			}
 			if owner != nil {

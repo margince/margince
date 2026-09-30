@@ -16,7 +16,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // RuleList is what a rule needs to know about one list the caller can find.
@@ -69,6 +71,11 @@ func (s *Store) ListForRule(ctx context.Context, id ids.ListID) (RuleList, error
 // ordinary check's events count; the first check after the filter changed
 // reports the new filter's difference, not records moving.
 func (s *Store) ObservedChanges(ctx context.Context, id ids.ListID, version int64, checkedAt time.Time, actions []string, limit int) ([]ObservedChange, int, error) {
+	// The same grant a list read asks: a rule owner who lost it is told nothing
+	// the list holds.
+	if err := auth.Require(ctx, listObject, principal.ActionRead); err != nil {
+		return nil, 0, err
+	}
 	var out []ObservedChange
 	total := 0
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
