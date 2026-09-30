@@ -227,3 +227,35 @@ func TestStandingApprovalReferencesNamesOnlyTheLinesStillClaimingSomething(t *te
 			refs, standing)
 	}
 }
+
+// Two approvals settled in one pass, each by a different colleague. The pairs
+// travel as two arrays joined by position, so a writer that appended a decider
+// only when there was one would shift every later name onto the wrong approval
+// — and every seat would be told a decision was made by somebody who did not
+// make it, which is the failure this whole change exists to prevent.
+func TestOvertakingNamesEachApprovalsOwnDecider(t *testing.T) {
+	e := setupNotices(t)
+	unattributed, attributed := ids.New[ids.ApprovalKind](), ids.New[ids.ApprovalKind]()
+	// The nil decider comes FIRST: a conditional append only misaligns the
+	// names that follow a gap, so a pass with the gap last would still agree.
+	lapsed := e.stageApprovalLine(t, e.recipient, unattributed)
+	decided := e.stageApprovalLine(t, e.recipient, attributed)
+	decider := e.other
+
+	moved, err := e.store.OvertakeApprovalNotices(e.sweepCtx(), []Overtaking{
+		{Approval: unattributed, By: nil},
+		{Approval: attributed, By: &decider},
+	})
+	if err != nil {
+		t.Fatalf("overtaking two approvals at once: %v", err)
+	}
+	if moved != 2 {
+		t.Fatalf("the pass moved %d line(s), want both", moved)
+	}
+	if got := e.standingOf(t, lapsed); got.overtakenBy != nil {
+		t.Errorf("the lapsed approval's line names %s; nobody decided it", got.overtakenBy)
+	}
+	if got := e.standingOf(t, decided); got.overtakenBy == nil || *got.overtakenBy != decider.UUID {
+		t.Errorf("the decided approval's line names %v, want %s", got.overtakenBy, decider)
+	}
+}

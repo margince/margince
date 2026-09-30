@@ -62,7 +62,9 @@ function story(notices: Notice[]) {
       "GET /notices": () =>
         jsonResponse({
           items: notices,
-          unread_count: notices.filter((row) => !row.read_at).length,
+          unread_count: notices.filter(
+            (row) => !row.read_at && !row.overtaken_at,
+          ).length,
         }),
     });
     return (

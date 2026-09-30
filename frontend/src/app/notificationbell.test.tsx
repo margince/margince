@@ -100,7 +100,8 @@ function backendFor(notices: Notice[]) {
       if (req.url.includes("/notices")) {
         return jsonResponse({
           items: state,
-          unread_count: state.filter((row) => !row.read_at).length,
+          unread_count: state.filter((row) => !row.read_at && !row.overtaken_at)
+            .length,
         });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
@@ -609,7 +610,9 @@ describe("NotificationBell", () => {
     const user = userEvent.setup();
     render(<NotificationBell />);
 
-    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /notifications/i }),
+    );
 
     const row = (await screen.findAllByRole("listitem"))[0] as HTMLElement;
     expect(within(row).getByText("Decided by Rosa Lindqvist")).not.toBeNull();
@@ -617,6 +620,13 @@ describe("NotificationBell", () => {
     // the whole complaint: the reader never opened it, so nothing else about
     // the row would have told them it had stopped being true.
     expect(row.className).toContain("notifrow-quiet");
+    // Quieted is not read. The reader still never opened this line, so it keeps
+    // the unread mark and the verb that clears it — a row that went quiet AND
+    // lost its only way to be dismissed would be one the reader cannot finish.
+    expect(within(row).getByText("New")).not.toBeNull();
+    expect(
+      within(row).getByRole("button", { name: /mark read/i }),
+    ).not.toBeNull();
   });
 
   // NOBODY DECIDED IT. The window closed, or the approval was withdrawn, so
@@ -633,7 +643,9 @@ describe("NotificationBell", () => {
     const user = userEvent.setup();
     render(<NotificationBell />);
 
-    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /notifications/i }),
+    );
 
     const row = (await screen.findAllByRole("listitem"))[0] as HTMLElement;
     expect(within(row).getByText("No longer waiting on you")).not.toBeNull();
@@ -656,7 +668,9 @@ describe("NotificationBell", () => {
     const user = userEvent.setup();
     render(<NotificationBell />);
 
-    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /notifications/i }),
+    );
 
     const row = (await screen.findAllByRole("listitem"))[0] as HTMLElement;
     expect(within(row).getByText("No longer waiting on you")).not.toBeNull();
