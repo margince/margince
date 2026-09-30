@@ -108,6 +108,11 @@ type RunnerConfig struct {
 	// six-hour window replays the ones it can instead of paying for them
 	// again. Empty = every run is paid for. See resume.go.
 	ResumeDir string
+	// StaleOnly skips every candidate whose committed record is current for
+	// this build, so a sweep pays for what changed. See staleonly.go.
+	StaleOnly bool // MARGINCE_AICERT_STALE_ONLY, default on
+	// current marks the candidates StaleOnly skips (candidateKey), set by Run.
+	current map[string]bool
 }
 
 // validateBindings refuses a run that could not produce a trustworthy verdict,
@@ -195,6 +200,11 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	}
 
 	ctx = ensureWorkspace(ctx)
+	if cfg.StaleOnly {
+		if cfg.current, err = currentBindings(ctx, cfg, byTask, log); err != nil {
+			return nil, fmt.Errorf("aicert: runner: %w", err)
+		}
+	}
 	// TraceDir empty ⇒ tracing off: trace stays nil and every method no-ops.
 	var trace *payloadTrace
 	if cfg.TraceDir != "" {

@@ -78,7 +78,7 @@ type skippedCandidate struct {
 	Reason string
 }
 
-// taskCandidates is every model a run certifies task against, in the order the
+// taskCandidates lists the models a run certifies task against, in the order the
 // router walks them. A routed run measures each distinct bound rung, because a
 // failed call on the first reaches the next and a buyer's answer then comes from
 // it; a rung binding a model above it has no record of its own. A fallback the
@@ -86,8 +86,8 @@ type skippedCandidate struct {
 func taskCandidates(cfg RunnerConfig, task ai.Task) ([]candidate, []skippedCandidate, error) {
 	if cfg.Routing == nil {
 		judge, err := cfg.judgeFor(cfg.Binding)
-		if err != nil {
-			return nil, nil, fmt.Errorf("task %s: %w", task, err)
+		if err != nil || cfg.current[candidateKey(task, cfg.Binding)] {
+			return nil, nil, taskErr(task, err)
 		}
 		return []candidate{{Binding: cfg.Binding, Judge: judge}}, nil, nil
 	}
@@ -110,9 +110,19 @@ func taskCandidates(cfg RunnerConfig, task ai.Task) ([]candidate, []skippedCandi
 			skipped = append(skipped, skippedCandidate{Task: task, Model: rung.Binding.Model, Reason: "the judge's own family"})
 			continue
 		}
+		if cfg.current[candidateKey(task, rung.Binding)] {
+			continue // STALE_ONLY: its record is current, and currentBindings said so
+		}
 		cands = append(cands, candidate{Binding: rung.Binding, Tier: rung.Tier, Rung: i, Judge: judge})
 	}
 	return cands, skipped, nil
+}
+
+func taskErr(task ai.Task, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("task %s: %w", task, err)
 }
 
 // validateRoutedBindings refuses a routed run that could not produce a

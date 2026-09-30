@@ -185,6 +185,9 @@ func TestE2ECertify(t *testing.T) {
 		// unset = every run is paid for. `make e2e-ai` sets it to the repo-root
 		// .tmp/aicert/resume default (RESUME=1); pass RESUME= to disable.
 		ResumeDir: os.Getenv("MARGINCE_AICERT_RESUME"),
+		// MARGINCE_AICERT_STALE_ONLY=0 re-measures records already current;
+		// anything else, unset included, pays only for what changed.
+		StaleOnly: os.Getenv("MARGINCE_AICERT_STALE_ONLY") != "0",
 	}
 
 	records, runErr := aicert.Run(context.Background(), cfg, slog.Default())
@@ -192,7 +195,7 @@ func TestE2ECertify(t *testing.T) {
 		t.Fatalf("certification run failed: %v", runErr)
 	}
 	if len(records) == 0 {
-		t.Fatal("the run produced no records — check MARGINCE_AICERT_TASK against the corpus")
+		t.Log("no record written: every candidate's record is current (STALE_ONLY=0 to re-measure)")
 	}
 	for _, r := range records {
 		t.Logf("%s: %s (reliability=%.2f judge_score_p50=%d self_judged=%v)",

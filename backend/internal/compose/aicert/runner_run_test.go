@@ -418,3 +418,62 @@ func TestAFailingFallbackKeepsTheAnsweringRungsRecord(t *testing.T) {
 		t.Errorf("err = %v, want the fallback named", err)
 	}
 }
+
+// staleOnlyRun certifies summarize on the offline fake into dir, with STALE_ONLY
+// as given. The binding names the fake's own served identity, so its record
+// grades the binding it measured.
+func staleOnlyRun(t *testing.T, dir string, staleOnly bool) ([]aicert.Record, error) {
+	t.Helper()
+	return aicert.Run(context.Background(), aicert.RunnerConfig{
+		Census:       censusFor(t, ai.TaskSummarize),
+		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "fake"},
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"},
+		Profile:      ai.ProfileCloudFrontier,
+		CorpusDir:    filepath.Join(dir, "corpus"),
+		RecordDir:    filepath.Join(dir, "records"),
+		Repeats:      1,
+		StaleOnly:    staleOnly,
+	}, quietTestLogger())
+}
+
+// A STALE_ONLY run measures only what is missing or stale: a record current for
+// this build is left alone, so a sweep pays for what changed and nothing else.
+func TestAStaleOnlyRunMeasuresOnlyWhatIsMissingOrStale(t *testing.T) {
+	dir := t.TempDir()
+	writeCorpusFile(t, filepath.Join(dir, "corpus"), "summarize/basic_01.yaml", scenarioYAML("summarize"))
+	if first, err := staleOnlyRun(t, dir, true); err != nil || len(first) != 1 {
+		t.Fatalf("the first run wrote %d record(s) (%v), want one", len(first), err)
+	}
+	if again, err := staleOnlyRun(t, dir, true); err != nil || len(again) != 0 {
+		t.Fatalf("a run over a current record certified %d (%v), want none", len(again), err)
+	}
+	writeCorpusFile(t, filepath.Join(dir, "corpus"), "summarize/basic_01.yaml",
+		strings.Replace(scenarioYAML("summarize"), "Describe the widget.", "Describe the gadget.", 1))
+	if stale, err := staleOnlyRun(t, dir, true); err != nil || len(stale) != 1 {
+		t.Fatalf("after the scenario changed the run certified %d (%v), want the record re-measured", len(stale), err)
+	}
+	writeCorpusFile(t, filepath.Join(dir, "corpus"), "summarize/grown_02.yaml",
+		strings.Replace(scenarioYAML("summarize"), "name: basic", "name: grown", 1))
+	if partial, err := staleOnlyRun(t, dir, true); err != nil || len(partial) != 1 {
+		t.Fatalf("after the corpus grew a case the run certified %d (%v), want the partial record re-measured", len(partial), err)
+	}
+	if err := os.RemoveAll(filepath.Join(dir, "records")); err != nil {
+		t.Fatal(err)
+	}
+	if missing, err := staleOnlyRun(t, dir, true); err != nil || len(missing) != 1 {
+		t.Fatalf("with no record the run certified %d (%v), want one", len(missing), err)
+	}
+}
+
+// STALE_ONLY=0 re-measures a current record: a same-prompt variance check asks
+// for exactly that.
+func TestStaleOnlyOffMeasuresACurrentRecord(t *testing.T) {
+	dir := t.TempDir()
+	writeCorpusFile(t, filepath.Join(dir, "corpus"), "summarize/basic_01.yaml", scenarioYAML("summarize"))
+	if _, err := staleOnlyRun(t, dir, false); err != nil {
+		t.Fatal(err)
+	}
+	if again, err := staleOnlyRun(t, dir, false); err != nil || len(again) != 1 {
+		t.Fatalf("with STALE_ONLY off the run certified %d (%v), want the record again", len(again), err)
+	}
+}
