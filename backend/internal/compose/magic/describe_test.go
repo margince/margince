@@ -4,11 +4,26 @@
 package magic
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// unmasked is the receipt's field mask for a reader nothing is withheld from,
+// built the way the service builds it. These tests are about the sentence a row
+// becomes; what a masked reader sees of its images is
+// TestAReceiptLineWithholdsWhatTheReaderMayNotSee.
+func unmasked(t *testing.T) imageMask {
+	t.Helper()
+	mask, err := newImageMask(principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem}))
+	if err != nil {
+		t.Fatalf("building the receipt's field mask: %v", err)
+	}
+	return mask
+}
 
 // auditRow is one machine update of a contact named Anna Keller.
 func auditRow(actor, before, after, evidence string, at time.Time) entry {
@@ -31,7 +46,7 @@ func auditRow(actor, before, after, evidence string, at time.Time) entry {
 
 // Mail filed under a contact reads as that, says why, and names the job.
 func TestAMailFilingSaysWhatItDidAndWhy(t *testing.T) {
-	line, _, ok := lineOf(auditRow("link-reconcile", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", time.Now()))
+	line, _, ok := lineOf(unmasked(t), auditRow("link-reconcile", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", time.Now()))
 	if !ok {
 		t.Fatal("a mail filing was not shown")
 	}
@@ -48,7 +63,7 @@ func TestAMailFilingSaysWhatItDidAndWhy(t *testing.T) {
 
 // An enrichment names the fields it changed and the page it read them on.
 func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
-	line, _, ok := lineOf(auditRow("agent:deepread",
+	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread",
 		`{"role": null, "title": null}`, `{"role": "Counsel", "title": "Counsel"}`,
 		`{"source": "site_read", "source_ref": "site_read:https://www.studiolegal.de/de/team"}`, time.Now()))
 	if !ok {
@@ -65,7 +80,7 @@ func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
 // The website reader records the page it read as source_url, which is the
 // shape every live row carries.
 func TestASiteReadNamesTheSiteItRecordedAsSourceURL(t *testing.T) {
-	line, _, ok := lineOf(auditRow("agent:deepread",
+	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread",
 		`{"industry": null}`, `{"industry": "Legal services"}`,
 		`{"source": "site_read", "source_url": "https://www.studiolegal.de/de/about"}`, time.Now()))
 	if !ok {
@@ -80,7 +95,7 @@ func TestASiteReadNamesTheSiteItRecordedAsSourceURL(t *testing.T) {
 // the site would be wrong, so the reason says the company's website instead.
 func TestALogoReadDoesNotNameTheImageHostAsTheSite(t *testing.T) {
 	logo := "https://cdn.prod.website-files.com/66ded54b/webclip.png"
-	line, _, ok := lineOf(auditRow("agent:deepread",
+	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread",
 		`{"logo": null}`, `{"logo": "`+logo+`"}`,
 		`{"source": "site_read", "source_url": "`+logo+`"}`, time.Now()))
 	if !ok {
@@ -104,7 +119,7 @@ func TestASiteReadOverManyRecordsIsOneLineWithoutOneSite(t *testing.T) {
 		entries = append(entries, auditRow("agent:deepread", `{"industry": null}`, after,
 			`{"source": "site_read", "source_url": "`+site+`"}`, now.Add(-time.Duration(i)*time.Second)))
 	}
-	lines, _ := linesOf(entries, 100)
+	lines, _ := linesOf(unmasked(t), entries, 100)
 	var industry []int
 	for i, l := range lines {
 		if (*l.Summary.Values)["fields"] == "industry" {
@@ -129,7 +144,7 @@ func TestOneRecordReadFromTwoSitesNamesNeither(t *testing.T) {
 	second.ID = ids.NewV7()
 	second.OccurredAt = now.Add(-time.Minute)
 	second.Evidence = []byte(`{"source": "site_read", "source_url": "https://b.example/about"}`)
-	lines, _ := linesOf([]entry{first, second}, 100)
+	lines, _ := linesOf(unmasked(t), []entry{first, second}, 100)
 	if len(lines) != 1 || lines[0].Reason == nil || lines[0].Reason.Key != "magic.why.site_read_unnamed" {
 		t.Fatalf("got %d lines, reason %v; want one line naming no single site", len(lines), lines[0].Reason)
 	}
@@ -139,7 +154,7 @@ func TestOneRecordReadFromTwoSitesNamesNeither(t *testing.T) {
 // the logo's address is an image rather than a page.
 func TestAWebsiteReadThatWritesTheWebsiteNamesTheSite(t *testing.T) {
 	site := "https://www.studiolegal.de"
-	line, _, ok := lineOf(auditRow("agent:deepread", `{"website": null}`, `{"website": "`+site+`"}`,
+	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread", `{"website": null}`, `{"website": "`+site+`"}`,
 		`{"source": "site_read", "source_url": "`+site+`"}`, time.Now()))
 	if !ok || line.Reason == nil || line.Reason.Key != "magic.why.site_read" || (*line.Reason.Values)["site"] != "studiolegal.de" {
 		t.Fatalf("reason %v, want the site it was read on", line.Reason)
@@ -151,7 +166,7 @@ func TestTheMailReadersReplySortingIsNotShown(t *testing.T) {
 	e := auditRow("system:owed_verdict", `{"owed_verdict": null, "owed_verdict_ruleset": null}`,
 		`{"owed_verdict": "informs_us", "owed_verdict_ruleset": "prompts-82e2"}`, "", time.Now())
 	e.EntityType = "activity"
-	if _, _, ok := lineOf(e); ok {
+	if _, _, ok := lineOf(unmasked(t), e); ok {
 		t.Fatal(`the mail reader's reply sorting was shown as "Changed owed verdict"`)
 	}
 }
@@ -163,7 +178,7 @@ func TestAnUpdateThatSaysNothingIsNotShown(t *testing.T) {
 		auditRow("agent:knowledge-ingest", `{"chunk_count": 0}`, `{"chunk_count": 25}`, "", time.Now()),
 		auditRow("system", `{"stage": "a"}`, `{"stage": "a"}`, "", time.Now()),
 	} {
-		if _, _, ok := lineOf(e); ok {
+		if _, _, ok := lineOf(unmasked(t), e); ok {
 			t.Errorf("%s %s after=%s was shown; it changed nothing a reader can use", e.ActorID, e.Action, e.After)
 		}
 	}
@@ -179,7 +194,7 @@ func TestOneJobOnManyRecordsIsOneLineWithACount(t *testing.T) {
 			now.Add(-time.Duration(i)*time.Second)))
 	}
 	entries = append(entries, auditRow("system", "", "", "", now))
-	lines, housekeeping := linesOf(entries, 100)
+	lines, housekeeping := linesOf(unmasked(t), entries, 100)
 	if len(lines) != 1 {
 		t.Fatalf("got %d lines, want the job folded into one", len(lines))
 	}
@@ -199,7 +214,7 @@ func TestAGroupCountsRecordsNotAuditRows(t *testing.T) {
 	again.ID = ids.NewV7()
 	again.OccurredAt = now.Add(-time.Minute)
 	other := auditRow("link-reconcile", "", `{"cohort_linked": 1, "cohort_promoted": 0}`, "", now.Add(-2*time.Minute))
-	lines, _ := linesOf([]entry{first, again, other}, 100)
+	lines, _ := linesOf(unmasked(t), []entry{first, again, other}, 100)
 	if len(lines) != 1 || lines[0].Count == nil || *lines[0].Count != 2 {
 		t.Fatalf("got %d lines with count %v, want one line counting the two distinct records", len(lines), lines[0].Count)
 	}
