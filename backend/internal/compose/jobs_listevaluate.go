@@ -39,13 +39,19 @@ func (ListEvaluateArgs) Kind() string { return "list_evaluate" }
 // workspace, and walks them itself (jobs.FleetWide).
 func (ListEvaluateArgs) FleetWide() {}
 
+// listEvaluateWorker stays registered while lists are switched off, so a
+// queued run completes as a no-op instead of failing as an unknown kind.
 type listEvaluateWorker struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
-	log  *slog.Logger
+	enabled bool
+	pool    *pgxpool.Pool
+	now     func() time.Time
+	log     *slog.Logger
 }
 
 func (w *listEvaluateWorker) Work(ctx context.Context, _ *river.Job[ListEvaluateArgs]) error {
+	if !w.enabled {
+		return nil
+	}
 	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.checkWorkspace))
 }
 
@@ -94,6 +100,6 @@ func CheckLiveLists(ctx context.Context, pool *pgxpool.Pool, workspace ids.UUID,
 // addListEvaluateJobs registers the check and hands back its schedule, whose
 // cadence is api/jobs.yaml's.
 func addListEvaluateJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
-	addDeclaredWorker[ListEvaluateArgs](reg, &listEvaluateWorker{pool: pool, now: time.Now, log: log})
+	addDeclaredWorker[ListEvaluateArgs](reg, &listEvaluateWorker{enabled: cfg.ListsEnabled, pool: pool, now: time.Now, log: log})
 	return periodicFor(cfg, ListEvaluateArgs{})
 }

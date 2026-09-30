@@ -66,6 +66,7 @@ func loadDeployment(cfg *workerConfig) (deployconfig.Config, error) {
 	}
 	cfg.allowDataReset = deployCfg.Operations.AllowDataReset
 	cfg.reportingEnabled = deployCfg.Analytics.PerformanceEnabled
+	cfg.listsEnabled = deployCfg.Lists.Enabled
 	cfg.ratesFx = deployCfg.Rates.Fx
 	cfg.ratesCurrencies = deployCfg.Rates.FxCurrencies
 	return deployCfg, nil

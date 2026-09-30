@@ -362,7 +362,7 @@ A paused rule stays paused until its owner resumes it; restoring or fixing the l
 Also called: list trigger, when someone joins a list, list workflow.
 
 ### Why can I not find Lists?
-If Margince says "Lists are switched off for this installation.", whoever runs your Margince installation has turned Lists off in its configuration. Nothing is deleted: when Lists are switched back on, every list, member and history entry is there as before. Saved views and **Filters and views** keep working meanwhile.
+If Margince says "Lists are switched off for this installation.", whoever runs your Margince installation has turned Lists off in its configuration. Nothing is deleted: when Lists are switched back on, every list, member and history entry is there as before. Live Lists are not checked while Lists are off, so the first check afterwards records everyone who joined or left in the meantime at once. Saved views and **Filters and views** keep working meanwhile.
 Also called: lists missing, Live Lists not available.
 
 ## Exporting a list

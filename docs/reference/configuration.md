@@ -1179,9 +1179,12 @@ reversible operational kill switch and never deletes confirmed company data.
 it to `false` to hide them: the `/v1/lists` routes answer 404, the `list_id`
 narrowing of the contact, company, deal and lead lists answers 404, the filtered export refuses a
 `list_id` source, the company page names no list, no agent list tool is
-registered, and `/me` reports `settings_availability.lists: false`, so no screen
-offers them. Switching it off hides lists without deleting any, and switching
-it back on shows them as they were.
+registered, `/me` reports `settings_availability.lists: false`, so no screen
+offers them, and the worker's 15-minute Live List check records nothing, so no
+list history grows and no `list.evaluated` event is emitted. The worker reads
+the same file, so set it in the file both roles load. Switching it off hides
+lists without deleting any, and switching it back on shows them as they were;
+the first check after that records who joined and left since the last one.
 
 ### `POST /v1/connectors/test_mailbox/connect` — the QC-only fake mailbox
 
