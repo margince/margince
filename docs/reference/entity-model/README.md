@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 293 |
-| Columns | 3489 |
+| Columns | 3487 |
 | Foreign keys | 472 |
 | Owning areas | 36 |
 
@@ -43,7 +43,7 @@ Ranked by how many foreign keys point at them, so this list follows the schema r
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 22 | 126 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 33 | 41 |
-| [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 40 |
+| [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 40 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 32 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 44 | 22 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 37 | 13 |
@@ -209,7 +209,7 @@ erDiagram
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 17 | 2 |
 | [`communication_review`](consent.md#communication_review) | consent | 11 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
-| [`company`](contacts.md#company) | contacts | 46 | 40 |
+| [`company`](contacts.md#company) | contacts | 44 | 40 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 10 | 0 |
 | [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 19 | 0 |

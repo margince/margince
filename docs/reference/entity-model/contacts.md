@@ -6,7 +6,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-46 columns · primary key `(id)` · referenced by 40 foreign keys
+44 columns · primary key `(id)` · referenced by 40 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -17,7 +17,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `address_line2` | `text` |  | Optional `text`. |
 | `address_postal_code` | `text` |  | Optional `text`. |
 | `address_region` | `text` |  | Optional `text`. |
-| `classification` | `text` | yes | One of `prospect`, `customer`, `agency`, `reseller`, `tech_vendor`, `platform` and 3 more. |
 | `description` | `text` |  | One human-written line saying what the company does, shown under the title on the company page. |
 | `display_name` | `text` | yes | Required `text`. |
 | `geocode_input_hash` | `text` |  | Optional `text`. |
@@ -41,7 +40,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `owner_id` | `uuid` |  | Points at `app_user.id` — deleting the parent keeps this row and clears the link. |
 | `parent_company_id` | `uuid` |  | Single-level hierarchy FK; no cycles. |
 | `quarantined_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
-| `relevance` | `smallint` |  | Optional `smallint`. |
 | `size_band` | `text` |  | One of `1-10`, `11-50`, `51-200`, `201-500`, `501-1000`, `1001-5000` and 1 more. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id` — deleting the parent keeps this row and clears the link. |
 | `source_author_name` | `text` |  | Optional `text`. |
@@ -69,7 +67,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `company_anchor_is_permanent` — `CHECK (((NOT is_anchor) OR ((archived_at IS NULL) AND (merged_into_id IS NULL))))`
-- `company_classification_check` — `CHECK ((classification = ANY (ARRAY['prospect', 'customer', 'agency', 'reseller', 'tech_vendor', 'platform', 'partner', 'competitor', 'other'])))`
 - `company_description_length` — `CHECK (((description IS NULL) OR (length(description) <= 500)))`
 - `company_geocode_resolved_has_a_point` — `CHECK (((geocode_status IS DISTINCT FROM 'ok') OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))`
 - `company_geocode_status_check` — `CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok', 'failed', 'no_match', 'stale']))))`
@@ -78,7 +75,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_name_source_check` — `CHECK ((name_source = ANY (ARRAY['human', 'dossier', 'signature', 'domain'])))`
 - `company_not_own_parent` — `CHECK (((parent_company_id IS NULL) OR (parent_company_id <> id)))`
 - `company_owner_private_names_its_owner` — `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
-- `company_relevance_check` — `CHECK (((relevance IS NULL) OR ((relevance >= 0) AND (relevance <= 100))))`
 - `company_size_band_check` — `CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']))))`
 - `company_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `company_visibility_check` — `CHECK ((visibility = ANY (ARRAY['workspace', 'owner'])))`
@@ -87,7 +83,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_linkedin_url_key` — `unique, btree (lower(linkedin_url)) WHERE ((linkedin_url IS NOT NULL) AND (archived_at IS NULL))`
 - `company_pkey` — `unique, btree (id)`
-- `idx_company_class` — `btree (classification) WHERE (archived_at IS NULL)`
 - `idx_company_created_keyset` — `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_company_geocoded` — `btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok') AND (archived_at IS NULL))`
 - `idx_company_import_display_name` — `btree (f_fold_import_name(display_name)) WHERE ((archived_at IS NULL) AND (merged_into_id IS NULL))`
