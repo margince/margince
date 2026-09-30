@@ -325,3 +325,43 @@ func TestAFailedApprovalReadReachesTheCaller(t *testing.T) {
 		t.Errorf("lines = %v and refusal = %v alongside a failure, want neither", lines, refused)
 	}
 }
+
+// A DECISION NAMES THE RECORD IT IS ABOUT.
+//
+// The contract promises a label on every entity reference, and without one the
+// screen draws "No record named" on a line asking somebody to decide. The label
+// is the one the staging FROZE, not the record's name today: the reader is being
+// asked about what they were shown, and a rename between staging and deciding
+// must not quietly change the question.
+func TestADecisionWaitingNamesItsTarget(t *testing.T) {
+	staged := stagedApproval("advance_deal")
+	targetType, targetID := "deal", openapi_types.UUID(ids.NewV7())
+	frozen := "Weber GmbH — Phase 2"
+	staged.TargetEntityType = &targetType
+	staged.TargetEntityId = &targetID
+	staged.TargetLabel = &frozen
+
+	lines := decisionsWaiting(t, staged)
+	if len(lines) != 1 {
+		t.Fatalf("lines = %d, want the one staged decision", len(lines))
+	}
+	entity := lines[0].Entity
+	if entity == nil || entity.Label == nil {
+		t.Fatalf("the entity carries no label, so the row reads as no record named: %+v", entity)
+	}
+	if *entity.Label != frozen {
+		t.Errorf("label = %q, want the name the staging froze", *entity.Label)
+	}
+}
+
+// A staging that named no target carries no entity at all, so there is nothing
+// to label — and a label without an id would point a reader at nothing.
+func TestADecisionAboutNoRecordCarriesNoEntity(t *testing.T) {
+	lines := decisionsWaiting(t, stagedApproval("coldstart"))
+	if len(lines) != 1 {
+		t.Fatalf("lines = %d, want the one staged decision", len(lines))
+	}
+	if lines[0].Entity != nil {
+		t.Errorf("a targetless staging carries entity %+v", lines[0].Entity)
+	}
+}

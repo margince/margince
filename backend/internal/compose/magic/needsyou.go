@@ -146,6 +146,11 @@ func pendingLine(a crmcontracts.Approval) (crmcontracts.MagicLine, bool) {
 		line.Entity = &crmcontracts.MagicEntityRef{
 			Type: *a.TargetEntityType,
 			Id:   *a.TargetEntityId,
+			// What the target was CALLED when the proposal was staged, which is
+			// the name the decision was taken against. A renamed record shows
+			// the frozen name rather than today's, and that is the point: the
+			// reader is being asked about what they were shown.
+			Label: a.TargetLabel,
 		}
 	}
 	if a.OnBehalfOf != nil {
