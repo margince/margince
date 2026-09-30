@@ -132,12 +132,15 @@ export function MagicPanel({
   const magic = useMagic(span);
   const receipt = magic.data;
   const withheld = receipt?.sources_unavailable ?? [];
-  const drawn = LANES.filter((lane) => hasLines(receipt?.[lane]));
   const state = magic.isPending
     ? "loading"
     : magic.isError
       ? "failed"
       : "ready";
+  // Lines only off a read that answered: a refresh that failed keeps the last
+  // answer cached, and drawing it would offer undos under "did not load".
+  const shown = state === "ready" ? receipt : undefined;
+  const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
   return (
     <Panel
       title={t(WINDOW_HEADING[span])}
@@ -189,14 +192,14 @@ export function MagicPanel({
           key={lane}
           lane={lane}
           title={t(LANE_HEADING[lane])}
-          rows={receipt?.[lane] ?? []}
-          since={receipt?.since}
+          rows={shown?.[lane] ?? []}
+          since={shown?.since}
           zone={zone}
         />
       ))}
-      {(receipt?.not_shown?.length ?? 0) > 0 && (
+      {(shown?.not_shown?.length ?? 0) > 0 && (
         <PanelBody>
-          <NotShown entries={receipt?.not_shown ?? []} />
+          <NotShown entries={shown?.not_shown ?? []} />
         </PanelBody>
       )}
       {foot}

@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import { QueryClient } from "@tanstack/react-query";
 import {
   cleanup,
   fireEvent,
@@ -358,6 +359,41 @@ describe("the receipt draws every lane it promises", () => {
     expect(await screen.findByText("This section did not load.")).toBeTruthy();
     expect(screen.queryByRole("list", { name: "Summary" })).toBeNull();
     expect(screen.queryByText("Nothing done for you")).toBeNull();
+  });
+
+  it("offers no undo from a receipt whose refresh failed", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            entity: {
+              type: "deal",
+              id: "00000000-0000-7000-8000-0000000000aa",
+              label: "Fleet retrofit",
+            },
+            undo: {
+              undoable: true,
+              audit_id: "00000000-0000-7000-8000-0000000000bb",
+              version: 7,
+            },
+          }),
+        ],
+        totals: { done: 1, needs_you: 0, could_not_complete: 0, watching: 0 },
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    renderMagic("en", client);
+    expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
+
+    stubRefusal();
+    await client.refetchQueries();
+    // The cached answer is still in the query, and an undo drawn from it
+    // would sit under a section that says it did not load.
+    expect(await screen.findByText("This section did not load.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(screen.queryByRole("list", { name: "Done for you" })).toBeNull();
   });
 
   // A watching line's occurred_at is when the condition was seen, so a source

@@ -59,10 +59,12 @@ export function stubPending() {
   );
 }
 
-export function renderMagic(locale: Locale = "en"): RenderResult {
-  const client = new QueryClient({
+export function renderMagic(
+  locale: Locale = "en",
+  client: QueryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
+  }),
+): RenderResult {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>

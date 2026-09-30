@@ -11266,7 +11266,7 @@ export const de = {
   "magic.heading.brief": "Seit deinem letzten Morgenbericht",
   "magic.heading.week": "Die letzten 7 Tage",
   "magic.heading.month": "Die letzten 30 Tage",
-  "magic.intro": "Was Margince seit {when} erledigt hat.",
+  "magic.intro": "Was Margince seit {when} getan hat.",
   "magic.summary": "Übersicht",
   "magic.clear.done": "Nichts für dich erledigt",
   "magic.clear.needsYou": "Nichts wartet auf dich",
