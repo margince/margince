@@ -43,5 +43,16 @@ database)
 esac
 
 echo "backend-clock-drift: running the backend suites at $SKEW"
-make -C backend test
-make -C backend test-integration
+suites=0
+make -C backend test && make -C backend test-integration || suites=$?
+
+# The shift is proven AGAIN, and on the failing path too. A time service that
+# re-synced partway through leaves the rest of the run an ordinary one, so a
+# green after that proves nothing and a red after it belongs to the lane rather
+# than to the tree — which is the first thing anyone reading a failure has to
+# rule out. Asserting only before the suites would say the clock was right at
+# the moment nobody was using it.
+if [ "${SKEW%%:*}" = machine ]; then
+	./scripts/clock-drift-host.sh assert "${SKEW##*:}"
+fi
+exit "$suites"

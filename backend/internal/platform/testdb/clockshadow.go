@@ -80,10 +80,20 @@ func installClockShadow(ctx context.Context, owner *pgx.Conn) error {
 	if err := owner.QueryRow(ctx, "SELECT current_database()").Scan(&database); err != nil {
 		return fmt.Errorf("reading the database to put the shadow on the path of: %w", err)
 	}
+	// The shadow goes AFTER public, not in front of it. current_schema() is the
+	// first schema on the path that exists, so leading with clockshadow makes it
+	// the current schema — and two column probes filter information_schema by
+	// current_schema() (customfields/create.go, search/querystorage.go), so they
+	// would look in the shadow schema and find none of the application's
+	// columns. An unqualified CREATE TABLE would land there too. Measured both
+	// ways: from public, current_schema() and an unqualified create both return
+	// to public, and now() is still shifted, because what shadows pg_catalog is
+	// naming it LAST rather than being first.
+	//
 	// The catalog name is sanitised rather than formatted raw: it is an
 	// identifier read back from the server, and the tree formats only
 	// identifiers, only through Sanitize or as a compile-time literal.
-	path := fmt.Sprintf(`ALTER DATABASE %s SET search_path = %s, "$user", public, ext, pg_catalog`,
+	path := fmt.Sprintf(`ALTER DATABASE %s SET search_path = "$user", public, %s, ext, pg_catalog`,
 		pgx.Identifier{database}.Sanitize(), shadowSchema)
 	if _, err := owner.Exec(ctx, path); err != nil {
 		return fmt.Errorf("putting %s ahead of pg_catalog on %s's search path: %w", shadowSchema, database, err)

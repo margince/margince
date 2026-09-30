@@ -42,10 +42,16 @@ usage() {
 # run reporting under the drift lane's name — a green that means nothing, which
 # is the failure this whole lane exists to remove.
 move() {
-	local days="$1"
-	date -u +%s >"$BASELINE"
+	local days="$1" real
+	real=$(date -u +%s)
 	sudo timedatectl set-ntp false
 	sudo date -s "+${days} days" >/dev/null
+	# Written only once the jump has taken, so the file's EXISTENCE is the
+	# evidence that there is something to undo. Written before, a failed jump
+	# would leave a baseline behind and the always() restore would subtract two
+	# hundred days from a clock that never moved — the poisoned runner that step
+	# exists to prevent, arrived at from the other direction.
+	printf '%s\n' "$real" >"$BASELINE"
 	assert "$days"
 }
 
@@ -83,6 +89,15 @@ assert() {
 # cleanup steps in ways nothing here would explain.
 restore() {
 	local days="$1"
+	# No baseline means move never completed — the compose stack failed, or the
+	# build did, or the jump itself. The workflow still reaches this step under
+	# always(), and subtracting the offset from a clock nobody moved is how a
+	# runner goes into the past.
+	if [ ! -r "$BASELINE" ]; then
+		echo "clock-drift-host: no baseline, so the clock was never moved — leaving it where it is."
+		sudo timedatectl set-ntp true
+		return 0
+	fi
 	sudo date -s "-${days} days" >/dev/null
 	rm -f "$BASELINE"
 	sudo timedatectl set-ntp true

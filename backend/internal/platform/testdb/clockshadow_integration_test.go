@@ -38,11 +38,22 @@ func TestTheDatabaseApplierMovesAnUnqualifiedNow(t *testing.T) {
 	// reaches the sessions that dial next, and the pools every test uses are
 	// held back until EnsureSchema has run this.
 	fresh := connectTo(t, probe)
-	var shifted, reserved string
+	var shifted, reserved, current string
 	err := fresh.QueryRow(ctx, `SELECT (now() - pg_catalog.now())::text,
-		(CURRENT_TIMESTAMP - pg_catalog.now())::text`).Scan(&shifted, &reserved)
+		(CURRENT_TIMESTAMP - pg_catalog.now())::text, current_schema()::text`).
+		Scan(&shifted, &reserved, &current)
 	if err != nil {
 		t.Fatalf("reading the shadowed clock: %v", err)
+	}
+
+	// The shadow must not become the CURRENT schema. current_schema() is the
+	// first schema on the path that exists, and two column probes filter
+	// information_schema by it, so a shadow in front of public sends them
+	// looking for the application's columns in a schema that holds one function
+	// — and an unqualified CREATE TABLE would land there as well.
+	if current != "public" {
+		t.Errorf("current_schema() = %q, want \"public\" — the shadow is ahead of public on the "+
+			"path, so every unqualified name resolves into it before reaching the application's", current)
 	}
 
 	if shifted != "200 days" {

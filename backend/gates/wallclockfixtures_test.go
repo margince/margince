@@ -138,23 +138,67 @@ func countWallClockReads(t *testing.T) map[string]int {
 }
 
 // wallClockReads counts the time.Now() calls in one parsed file.
+//
+// The package is resolved through the file's IMPORTS rather than matched on the
+// spelling `time`. Go lets a file bind the package to any name — `import
+// walltime "time"` makes every read `walltime.Now()` — and a counter keyed on
+// the word would return zero for such a file, admit it as reading no clock, and
+// report PASS. That is under-recognition, the one direction a census must not
+// fail in: it reads a smaller tree and there is no failing assertion to notice.
+//
+// It can over-count, and that is the safe direction. A local variable named
+// `time` with a Now method would be counted, because resolving that needs type
+// information this gate does not load; the result is a file that appears to
+// hold more reads than it does, which fails loudly and is fixed by a waiver
+// line rather than passing in silence.
 func wallClockReads(file *ast.File) int {
+	names, dotted := timePackageNames(file)
 	found := 0
 	ast.Inspect(file, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
 		if !ok {
 			return true
 		}
-		selector, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || selector.Sel.Name != "Now" {
-			return true
-		}
-		if pkg, ok := selector.X.(*ast.Ident); ok && pkg.Name == "time" {
-			found++
+		switch fun := call.Fun.(type) {
+		case *ast.SelectorExpr:
+			if pkg, ok := fun.X.(*ast.Ident); ok && fun.Sel.Name == "Now" && names[pkg.Name] {
+				found++
+			}
+		case *ast.Ident:
+			// A dot import puts Now in the file's own scope, so the call wears
+			// no package name at all.
+			if dotted && fun.Name == "Now" {
+				found++
+			}
 		}
 		return true
 	})
 	return found
+}
+
+// timePackageNames returns every local name this file can call the time package
+// by, and whether it dot-imported it.
+//
+// A blank import binds no name and is therefore absent from both: it cannot
+// carry a call.
+func timePackageNames(file *ast.File) (names map[string]bool, dotted bool) {
+	names = map[string]bool{}
+	for _, imported := range file.Imports {
+		path, err := strconv.Unquote(imported.Path.Value)
+		if err != nil || path != "time" {
+			continue
+		}
+		switch {
+		case imported.Name == nil:
+			names["time"] = true
+		case imported.Name.Name == ".":
+			dotted = true
+		case imported.Name.Name == "_":
+		default:
+			names[imported.Name.Name] = true
+		}
+	}
+	return names, dotted
 }
 
 // readLedger parses the frozen counts. A malformed line fails rather than being
