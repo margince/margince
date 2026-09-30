@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // spy stands in for *testing.T: it records what Census/NoCount report instead
@@ -72,8 +73,13 @@ func TestCensusReportsAnUnwrittenLanguage(t *testing.T) {
 	type table struct{ Greeting langcopy.Phrase }
 	bad := table{Greeting: langcopy.Phrase{En: "hi", Vi: "chào"}}
 	s := run(func(r reporter) { Census(r, bad) })
-	if !reports(s.errors, "Greeting") || !reports(s.errors, "de") {
-		t.Fatalf("an unwritten German sentence was not reported by field name and language: %v", s.errors)
+	// A bare language code is not a safe needle: "de" is a substring of
+	// "renders", which every censusEntry message carries. Tying the code to
+	// the unwritten branch's own wording and the field name is a fragment no
+	// other branch's message can produce.
+	want := fmt.Sprintf("%s leaves Greeting unwritten", textlang.German)
+	if !reports(s.errors, want) {
+		t.Fatalf("an unwritten German sentence was not reported as %q: %v", want, s.errors)
 	}
 }
 
@@ -146,6 +152,28 @@ func TestCensusReportsAFieldThatIsNeitherAPhraseNorAMapOfThem(t *testing.T) {
 	s := run(func(r reporter) { Census(r, bad) })
 	if !reports(s.errors, "Bogus") {
 		t.Fatalf("a field that is not a phrase or a map of them was not reported: %v", s.errors)
+	}
+}
+
+// censusField admits a map field by its Kind alone, not by its element type,
+// so a field typed as a map of an interface — not the map[string]langcopy.Phrase
+// every production table uses — reaches censusMap with an entry that is not
+// actually a Phrase. Planted here rather than deleted as dead code: Census's
+// own contract takes `any`, and censusField's admission is not narrower than
+// that, so this is a real path, not a hypothetical one.
+func TestCensusNamesABadEntryInAnInterfaceValuedMap(t *testing.T) {
+	t.Parallel()
+	type table struct {
+		Greeting langcopy.Phrase // keeps the table non-empty so only Items is under test
+		Items    map[string]any
+	}
+	bad := table{
+		Greeting: langcopy.Phrase{En: "hi", De: "hallo", Vi: "chào"},
+		Items:    map[string]any{"apple": "not a phrase"},
+	}
+	s := run(func(r reporter) { Census(r, bad) })
+	if !reports(s.errors, "Items[apple] is not a phrase") {
+		t.Fatalf("a map entry that is not a phrase was not reported: %v", s.errors)
 	}
 }
 
