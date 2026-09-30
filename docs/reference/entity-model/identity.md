@@ -421,7 +421,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `idx_passport_obo` — `btree (on_behalf_of) WHERE (revoked_at IS NULL)`
 - `idx_passport_on_behalf_of` — `btree (on_behalf_of)`
 - `passport_oauth_grant_ix` — `btree (oauth_grant_id)`
 - `passport_pkey` — `unique, btree (id)`

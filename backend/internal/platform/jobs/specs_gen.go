@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "48a2ec72abfb32f4b7717d3077129d05f09010a366ed53dbbd7e8fd4c9c171e6"
+const JobContractHash = "2cc55acccf87df5c77fb5e44eec1092983b727cf5a4155a8fbd29c1ec276d0ff"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -877,7 +877,7 @@ var queues = map[string]int{
 	"ai_capture":        2,
 	"capture_part_slim": 1,
 	"comms_send":        3,
-	"deep_read":         2,
+	"deep_read":         4,
 	"default":           5,
 	"geocode":           1,
 	"privacy_retention": 2,

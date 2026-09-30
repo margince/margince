@@ -19,8 +19,6 @@ package aicert_test
 // and a ladder rewritten in tasks_gen.go re-attributes every row.
 
 import (
-	"maps"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -84,9 +82,6 @@ type aiCertPresetTask struct {
 	// Abandoned counts the measured runs the upstream broke off mid-answer:
 	// each is a call the router would have handed to Fallback.
 	Abandoned int `json:"abandoned"`
-	// SendsPrivateMailTo names where a local-only task's mail goes when the
-	// model answering it is not on the operator's own machine.
-	SendsPrivateMailTo string `json:"sends_private_mail_to,omitempty"`
 	// Runs and Passed are the record's pooled counts over every case of the
 	// task, and the two case counts say which half of the rule held a grade
 	// down: a case failing too many of its own runs, or its answers' quality.
@@ -94,9 +89,9 @@ type aiCertPresetTask struct {
 	Passed               int `json:"passed"`
 	CasesFailingOften    int `json:"cases_failing_often"`
 	CasesBelowQualityBar int `json:"cases_below_quality_bar"`
-	// siteThinking is the measuring record's per-site levels, which a rung
-	// must serve too before the record grades it.
-	siteThinking map[string]string
+	// record is the measuring record, which grades a rung only where
+	// aicert.RecordMeasures says it measured that rung.
+	record aicert.Record
 }
 
 // aiCertFallback is the next bound rung of a task's ladder and what the
@@ -204,9 +199,6 @@ func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertP
 		row.CasesFailingOften, row.CasesBelowQualityBar = seen.CasesFailingOften, seen.CasesBelowQualityBar
 		row.Abandoned = seen.Abandoned
 	}
-	if ai.LocalOnly(ai.Task(task)) && !ai.ProviderIsLocal(first.Binding.Provider) {
-		row.SendsPrivateMailTo = aiCertDestination(first.Binding)
-	}
 	if len(rungs) > 1 {
 		next := rungs[1]
 		row.Fallback = &aiCertFallback{
@@ -220,15 +212,13 @@ func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertP
 	return row
 }
 
-// measuredOn is the record that grades a rung: one at the rung's binding, and
-// only where every site ran at the level this rung serves it — the contract's
-// site levels move with the build, and a record from before one was declared
-// measured a different call.
+// measuredOn is the record that grades a rung, by the rule the runner's
+// STALE_ONLY skip and the readiness report read too (aicert.RecordMeasures).
 func measuredOn(task string, binding ai.ProviderConfig, ref aiCertBindingRef,
 	measured map[string]aiCertPresetTask,
 ) (aiCertPresetTask, bool) {
 	seen, ok := measured[aiCertRouteKey(task, ref)]
-	if !ok || !maps.Equal(seen.siteThinking, ai.SiteThinkingLevels(binding, ai.Task(task))) {
+	if !ok || !aicert.RecordMeasures(seen.record, binding, ai.Profile(ref.Env), ai.Task(task)) {
 		return aiCertPresetTask{}, false
 	}
 	return seen, true
@@ -247,15 +237,6 @@ func (p aiCertPreset) routing() ai.RoutingConfig {
 		cfg.Tiers[ai.Tier(tier.Tier)] = tier.binding
 	}
 	return cfg
-}
-
-// aiCertDestination is where a hosted rung sends a prompt: the host an
-// operator configured, or the provider when it is reached at its own address.
-func aiCertDestination(binding ai.ProviderConfig) string {
-	if parsed, err := url.Parse(binding.BaseURL); err == nil && parsed.Hostname() != "" {
-		return parsed.Hostname()
-	}
-	return binding.Provider
 }
 
 func countPresetTask(preset *aiCertPreset, row aiCertPresetTask) {
@@ -305,7 +286,7 @@ func aiCertTaskVerdicts(doc aiCertDoc, records []aicert.Record) map[string]aiCer
 			verdicts[key] = aiCertPresetTask{
 				Band: rec.Verdict, State: siteRec.State, Runs: rec.Runs, Passed: rec.Passed,
 				CasesFailingOften: failing, CasesBelowQualityBar: belowQuality, Abandoned: aiCertAbandoned(rec),
-				siteThinking: rec.SiteThinking,
+				record: rec,
 			}
 		}
 	}
@@ -585,55 +566,22 @@ func TestAPresetRowNamesTheModelThatAnswersAndTheOneAFailedCallFallsTo(t *testin
 	}
 }
 
-// A local-only task reads private mail. A cloud preset still serves it, so the
-// page grades it from its record like any other feature and says where the mail
-// goes; a preset answering it on the operator's own machine says nothing.
-func TestALocalOnlyTaskOnACloudPresetIsGradedAndSaysWhereTheMailGoes(t *testing.T) {
+// A local-only task on a cloud preset is graded from its record like any other
+// feature: the router serves it there while the local_only rule is undecided.
+func TestALocalOnlyTaskOnACloudPresetIsGradedFromItsRecord(t *testing.T) {
 	task := ai.LocalOnlyTasks()[0]
-	cases := []struct {
-		name     string
-		binding  ai.ProviderConfig
-		profile  ai.Profile
-		wantNote string
-	}{
-		{
-			"a brokered cloud model names its host",
-			ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/m", BaseURL: "https://broker.example/api"},
-			ai.ProfileCloudFrontier, "broker.example",
-		},
-		{
-			"a vendor's own endpoint names the provider",
-			ai.ProviderConfig{Provider: "gemini", Model: "m"},
-			ai.ProfileCloudFrontier, "gemini",
-		},
-		{
-			"a local model sends nothing off the machine",
-			ai.ProviderConfig{Provider: "ollama", Model: "m"},
-			ai.ProfileSovereign, "",
-		},
+	binding := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/m", BaseURL: "https://broker.example/api"}
+	tiers := map[ai.Tier]ai.ProviderConfig{}
+	for _, tier := range ai.TaskLadder(task) {
+		tiers[tier] = binding
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			tiers := map[ai.Tier]ai.ProviderConfig{}
-			for _, tier := range ai.TaskLadder(task) {
-				tiers[tier] = tc.binding
-			}
-			preset := attributeOneTask(task, tc.profile, tiers,
-				measuredRecord(task, tc.binding, tc.profile, aicert.VerdictCertified, 0))
-			row := preset.Tasks[0]
-			if aiCertGrade(row) != aiCertReady || preset.Bands.Certified != 1 {
-				t.Errorf("grade = %q with %d certified, want %q from its record", aiCertGrade(row), preset.Bands.Certified, aiCertReady)
-			}
-			if row.SendsPrivateMailTo != tc.wantNote {
-				t.Errorf("sends private mail to %q, want %q", row.SendsPrivateMailTo, tc.wantNote)
-			}
-			note := "; sends private mail to " + tc.wantNote
-			if got := aiCertRouteLine(row); strings.HasSuffix(got, note) != (tc.wantNote != "") {
-				t.Errorf("route line = %q; want the privacy note only for a hosted model", got)
-			}
-			if got := aiCertBottomLine(preset); got != "1 of 1 features ready" {
-				t.Errorf("bottom line = %q", got)
-			}
-		})
+	preset := attributeOneTask(task, ai.ProfileCloudFrontier, tiers,
+		measuredRecord(task, binding, ai.ProfileCloudFrontier, aicert.VerdictCertified, 0))
+	row := preset.Tasks[0]
+	if aiCertGrade(row) != aiCertReady || preset.Bands.Certified != 1 {
+		t.Errorf("grade = %q with %d certified, want %q from its record", aiCertGrade(row), preset.Bands.Certified, aiCertReady)
+	}
+	if got := aiCertBottomLine(preset); got != "1 of 1 features ready" {
+		t.Errorf("bottom line = %q", got)
 	}
 }

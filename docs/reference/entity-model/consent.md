@@ -239,7 +239,6 @@ The 17 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `communication_suppression_live_address` — `btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL))`
-- `communication_suppression_live_contact` — `btree (contact_id) WHERE ((contact_id IS NOT NULL) AND (revoked_at IS NULL))`
 - `communication_suppression_one_live_bounce` — `unique, btree (lower(address)) WHERE ((kind = 'hard_bounce') AND (address IS NOT NULL) AND (revoked_at IS NULL))`
 - `communication_suppression_pkey` — `unique, btree (id)`
 - `idx_communication_suppression_contact` — `btree (contact_id)`

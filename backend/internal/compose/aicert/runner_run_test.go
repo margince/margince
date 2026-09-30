@@ -382,3 +382,158 @@ func TestARunThatReplaysEveryRunSkipsThePreflight(t *testing.T) {
 		t.Errorf("a run replaying every run from the journal still paid for a pre-flight, or did not say it skipped one:\n%s", second)
 	}
 }
+
+// A routed run writes the answering rung's record before it tries the fallback,
+// so a fallback that cannot run costs its own record and names itself, never
+// the record of the model a buyer is answered by.
+func TestAFailingFallbackKeepsTheAnsweringRungsRecord(t *testing.T) {
+	ladder := ai.TaskLadder(ai.TaskSummarize)
+	if len(ladder) != 2 {
+		t.Fatalf("%s's ladder is %v; this test needs two rungs", ai.TaskSummarize, ladder)
+	}
+	dir := t.TempDir()
+	corpusDir := filepath.Join(dir, "corpus")
+	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
+	routing := ai.RoutingConfig{Profile: ai.ProfileCloudFrontier, Tiers: map[ai.Tier]ai.ProviderConfig{
+		ladder[0]: {Provider: ai.ProviderFake, Model: "answers"},
+		// openai_compatible fails closed without a base_url: a fallback that cannot run.
+		ladder[1]: {Provider: "openai_compatible", Model: "vendor/unreachable"},
+	}}
+	records, err := aicert.Run(context.Background(), aicert.RunnerConfig{
+		Census:       censusFor(t, ai.TaskSummarize),
+		Routing:      &routing,
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"},
+		CorpusDir:    corpusDir,
+		RecordDir:    filepath.Join(dir, "records"),
+		Repeats:      1,
+	}, quietTestLogger())
+	if len(records) != 1 || records[0].Provider != ai.ProviderFake {
+		t.Fatalf("records = %+v, want the answering rung's alone", records)
+	}
+	onDisk, loadErr := aicert.LoadRecords(filepath.Join(dir, "records"))
+	if loadErr != nil || len(onDisk) != 1 {
+		t.Fatalf("records on disk = %d (%v), want the answering rung's record kept", len(onDisk), loadErr)
+	}
+	if err == nil || !strings.Contains(err.Error(), "vendor/unreachable") {
+		t.Errorf("err = %v, want the fallback named", err)
+	}
+}
+
+// staleOnlyRun certifies summarize on the offline fake into dir, with STALE_ONLY
+// as given. The binding names the fake's own served identity, so its record
+// grades the binding it measured.
+func staleOnlyRun(t *testing.T, dir string, staleOnly bool) ([]aicert.Record, error) {
+	t.Helper()
+	return aicert.Run(context.Background(), aicert.RunnerConfig{
+		Census:       censusFor(t, ai.TaskSummarize),
+		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "fake"},
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"},
+		Profile:      ai.ProfileCloudFrontier,
+		CorpusDir:    filepath.Join(dir, "corpus"),
+		RecordDir:    filepath.Join(dir, "records"),
+		Repeats:      1,
+		StaleOnly:    staleOnly,
+	}, quietTestLogger())
+}
+
+// A STALE_ONLY run measures only what is missing or stale: a record current for
+// this build is left alone, so a sweep pays for what changed and nothing else.
+func TestAStaleOnlyRunMeasuresOnlyWhatIsMissingOrStale(t *testing.T) {
+	dir := t.TempDir()
+	writeCorpusFile(t, filepath.Join(dir, "corpus"), "summarize/basic_01.yaml", scenarioYAML("summarize"))
+	if first, err := staleOnlyRun(t, dir, true); err != nil || len(first) != 1 {
+		t.Fatalf("the first run wrote %d record(s) (%v), want one", len(first), err)
+	}
+	if again, err := staleOnlyRun(t, dir, true); err != nil || len(again) != 0 {
+		t.Fatalf("a run over a current record certified %d (%v), want none", len(again), err)
+	}
+	writeCorpusFile(t, filepath.Join(dir, "corpus"), "summarize/basic_01.yaml",
+		strings.Replace(scenarioYAML("summarize"), "Describe the widget.", "Describe the gadget.", 1))
+	if stale, err := staleOnlyRun(t, dir, true); err != nil || len(stale) != 1 {
+		t.Fatalf("after the scenario changed the run certified %d (%v), want the record re-measured", len(stale), err)
+	}
+	writeCorpusFile(t, filepath.Join(dir, "corpus"), "summarize/grown_02.yaml",
+		strings.Replace(scenarioYAML("summarize"), "name: basic", "name: grown", 1))
+	if partial, err := staleOnlyRun(t, dir, true); err != nil || len(partial) != 1 {
+		t.Fatalf("after the corpus grew a case the run certified %d (%v), want the partial record re-measured", len(partial), err)
+	}
+	if err := os.RemoveAll(filepath.Join(dir, "records")); err != nil {
+		t.Fatal(err)
+	}
+	if missing, err := staleOnlyRun(t, dir, true); err != nil || len(missing) != 1 {
+		t.Fatalf("with no record the run certified %d (%v), want one", len(missing), err)
+	}
+}
+
+// STALE_ONLY=0 re-measures a current record: a same-prompt variance check asks
+// for exactly that.
+func TestStaleOnlyOffMeasuresACurrentRecord(t *testing.T) {
+	dir := t.TempDir()
+	writeCorpusFile(t, filepath.Join(dir, "corpus"), "summarize/basic_01.yaml", scenarioYAML("summarize"))
+	if _, err := staleOnlyRun(t, dir, false); err != nil {
+		t.Fatal(err)
+	}
+	if again, err := staleOnlyRun(t, dir, false); err != nil || len(again) != 1 {
+		t.Fatalf("with STALE_ONLY off the run certified %d (%v), want the record again", len(again), err)
+	}
+}
+
+// The preset report reads a record the run just wrote as current, and the rung
+// no run measured as absent: the same judgement STALE_ONLY skips on.
+func TestThePresetReportReadsTheRecordARunWrote(t *testing.T) {
+	dir := t.TempDir()
+	corpusDir := filepath.Join(dir, "corpus")
+	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
+	if _, err := staleOnlyRun(t, dir, true); err != nil {
+		t.Fatal(err)
+	}
+	census := censusFor(t, ai.TaskSummarize)
+	corpus, err := aicert.LoadCorpus(corpusDir, census)
+	if err != nil {
+		t.Fatal(err)
+	}
+	records, err := aicert.LoadRecords(filepath.Join(dir, "records"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ladder := ai.TaskLadder(ai.TaskSummarize)
+	routing := ai.RoutingConfig{Profile: ai.ProfileCloudFrontier, Tiers: map[ai.Tier]ai.ProviderConfig{
+		ladder[0]: {Provider: ai.ProviderFake, Model: "fake"},
+		ladder[1]: {Provider: ai.ProviderFake, Model: "unmeasured"},
+	}}
+	rungs, err := aicert.PresetRungs(context.Background(), routing, corpus, census, records)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rungs) != 1 || rungs[0].FirstState != aicert.StatusCurrent || rungs[0].FallbackState != aicert.StatusAbsent {
+		t.Fatalf("rungs = %+v, want summarize current on its first rung and absent on its fallback", rungs)
+	}
+}
+
+// A fallback the judge cannot grade is named before anything is spent and again
+// when the run ends, so an operator reading either end of a long log sees it.
+func TestASkippedFallbackIsNamedAtTheStartAndInTheClosingSummary(t *testing.T) {
+	dir := t.TempDir()
+	writeCorpusFile(t, filepath.Join(dir, "corpus"), "summarize/basic_01.yaml", scenarioYAML("summarize"))
+	ladder := ai.TaskLadder(ai.TaskSummarize)
+	judge := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"}
+	routing := ai.RoutingConfig{Profile: ai.ProfileCloudFrontier, Tiers: map[ai.Tier]ai.ProviderConfig{
+		ladder[0]: {Provider: ai.ProviderFake, Model: "fake"}, ladder[1]: judge,
+	}}
+	var logged strings.Builder
+	_, err := aicert.Run(context.Background(), aicert.RunnerConfig{
+		Census: censusFor(t, ai.TaskSummarize), Routing: &routing, JudgeBinding: judge,
+		CorpusDir: filepath.Join(dir, "corpus"), RecordDir: filepath.Join(dir, "records"), Repeats: 1,
+	}, slog.New(slog.NewTextHandler(&logged, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := logged.String()
+	first, certifying := strings.Index(out, "skipped fallback"), strings.Index(out, "aicert: certifying")
+	if first < 0 || certifying < 0 || first > certifying {
+		t.Errorf("the skip must be logged before the first certification:\n%s", out)
+	}
+	if !strings.Contains(out[certifying:], "fallbacks not measured") {
+		t.Errorf("the run's closing summary does not list the skipped fallback:\n%s", out)
+	}
+}

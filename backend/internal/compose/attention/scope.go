@@ -388,7 +388,7 @@ func (s *Service) keepTeams(ctx context.Context, rows []ranked) ([]ranked, scope
 	if s.teammates == nil {
 		return nil, scopeNote{failed: true}
 	}
-	roster, cut, err := s.teammates.LiveTeammatesOfCaller(ctx)
+	roster, cut, err := s.degradableRoster(ctx)
 	if err != nil {
 		return nil, scopeNote{failed: true}
 	}

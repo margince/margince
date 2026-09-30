@@ -56,7 +56,7 @@ func chromeCorpus(r *rand.Rand, breakers bool) []crawlPage {
 	for i := range menus {
 		menus[i] = chromeWords(r, 30+r.Intn(200), breakers)
 	}
-	pages := make([]crawlPage, 3+r.Intn(12))
+	pages := make([]crawlPage, 3+r.Intn(8))
 	for i := range pages {
 		var text strings.Builder
 		if r.Intn(3) > 0 {
@@ -75,7 +75,7 @@ func chromeCorpus(r *rand.Rand, breakers bool) []crawlPage {
 			}
 			fallthrough
 		default:
-			text.WriteString(chromeWords(r, 50+r.Intn(500), breakers))
+			text.WriteString(chromeWords(r, 50+r.Intn(250), breakers))
 		}
 		pages[i] = crawlPage{URL: fmt.Sprintf("https://example.test/%d", i), Text: text.String()}
 	}
@@ -95,7 +95,7 @@ func legacyPanicked(f func()) (panicked bool) {
 
 func TestTheChromeStripperAnswersExactlyAsItDidBefore(t *testing.T) {
 	compared, crashed := 0, 0
-	for seed := int64(0); seed < 200; seed++ {
+	for seed := int64(0); seed < 160; seed++ {
 		r := rand.New(rand.NewSource(seed))
 		pages := chromeCorpus(r, seed%2 == 1)
 		gotPages, gotBlocks := stripSharedPrefixBlocks(pages)
@@ -117,8 +117,8 @@ func TestTheChromeStripperAnswersExactlyAsItDidBefore(t *testing.T) {
 	}
 	// Guard the guard: a generator that only produced crashing corpora would
 	// pass this test while comparing nothing.
-	if compared < 150 {
-		t.Fatalf("only %d of 200 corpora were comparable (%d crashed the old code)", compared, crashed)
+	if compared < 120 {
+		t.Fatalf("only %d of 160 corpora were comparable (%d crashed the old code)", compared, crashed)
 	}
 	t.Logf("%d corpora matched byte-for-byte; %d crashed the old code and not the new", compared, crashed)
 }

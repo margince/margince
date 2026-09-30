@@ -74,6 +74,21 @@ func TestOfferDraftCaseRefusesAnUnreachableExpectation(t *testing.T) {
 			}),
 			wantMsg: "neither the cited context states nor any EUR rate-card product charges",
 		},
+		{
+			// 15000 is three support plans; 12345 is no whole number of them.
+			name: "a grounded line net no whole count of a product reaches",
+			expected: offerDraftExpectation(t, map[string]offerDraftExpectedLine{
+				offerDraftSupportSource: {LineNetMinor: offerDraftMinor(12345), PriceGrounded: true},
+			}),
+			wantMsg: "neither the cited context states nor any EUR rate-card product charges",
+		},
+		{
+			name: "a line judged by two figures",
+			expected: offerDraftExpectation(t, map[string]offerDraftExpectedLine{
+				offerDraftSupportSource: {UnitPriceMinor: 5000, LineNetMinor: offerDraftMinor(15000), PriceGrounded: true},
+			}),
+			wantMsg: "pins both a unit price and a line net",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -85,6 +100,19 @@ func TestOfferDraftCaseRefusesAnUnreachableExpectation(t *testing.T) {
 				t.Errorf("the refusal does not say what is unreachable: %v", err)
 			}
 		})
+	}
+}
+
+// A line net is reachable as whole units of a product the conversation asks for,
+// though no text states the net and no product charges it outright.
+func TestOfferDraftCasePreparesALineNetOfWholeRateCardUnits(t *testing.T) {
+	expected := offerDraftExpectation(t, map[string]offerDraftExpectedLine{
+		offerDraftSupportSource: {LineNetMinor: offerDraftMinor(15000), PriceGrounded: true},
+	})
+
+	_, err := offerDraftCases{}.Prepare(offerDraftFixtureJSON(t, offerDraftDealFixture()), expected)
+	if err != nil {
+		t.Fatalf("three support plans did not prepare as a line net: %v", err)
 	}
 }
 

@@ -53,6 +53,10 @@ type Subscriber struct {
 	// sets its own with [Subscriber.WithMinIdle].
 	minIdle time.Duration
 	batch   int64
+	// batchHandler, when set, takes every entry one read returned from one
+	// stream in a single call (subscriberbatch.go). handler remains the
+	// per-entry path it falls back to.
+	batchHandler BatchHandler
 }
 
 // NewSubscriber wires a handler to a consumer group. The consumer name is
@@ -137,9 +141,7 @@ func (s *Subscriber) Run(ctx context.Context) error {
 		}
 
 		for _, stream := range res {
-			for _, entry := range stream.Messages {
-				s.deliver(ctx, stream.Stream, entry)
-			}
+			s.deliverAll(ctx, stream.Stream, stream.Messages)
 		}
 	}
 	return ctx.Err()
@@ -191,9 +193,7 @@ func (s *Subscriber) reclaim(ctx context.Context) {
 				}
 				break
 			}
-			for _, entry := range claimed {
-				s.deliver(ctx, stream, entry)
-			}
+			s.deliverAll(ctx, stream, claimed)
 			if next == "0-0" { // wrapped: the PEL scan is complete
 				break
 			}

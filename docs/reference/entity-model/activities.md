@@ -721,7 +721,6 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `booking_page_pkey` — `unique, btree (id)`
 - `booking_page_slug_key` — `unique, btree (slug)`
-- `idx_booking_page_host` — `btree (host_user_id) WHERE (revoked_at IS NULL)`
 - `idx_booking_page_host_user` — `btree (host_user_id)`
 
 ## deal_document_hide

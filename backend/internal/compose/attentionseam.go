@@ -421,6 +421,12 @@ func (a attentionSnapshots) InSnapshot(ctx context.Context, fn func(context.Cont
 	return database.WithWorkspaceSnapshot(ctx, a.pool, fn)
 }
 
+func (a attentionSnapshots) Degradable(
+	ctx context.Context, budget time.Duration, fn func(context.Context) error,
+) error {
+	return database.WithDegradableRead(ctx, budget, fn)
+}
+
 func (a attentionSnapshots) Detached(ctx context.Context) context.Context {
 	return database.Detached(ctx)
 }

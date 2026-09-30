@@ -232,7 +232,12 @@ func (s *Service) owedLeads(
 	// The policy answer is deliberately unused: a deadline belongs on the row
 	// that has one, and every row already carries its own. Reading it here
 	// would be a second place deciding what the lane may say.
-	owed, _, err := s.leads.Owed(ctx, s.taskScope, s.taskOwner, leadResponseBound)
+	var owed []OwedLead
+	err := s.degradable(ctx, func(ctx context.Context) error {
+		var err error
+		owed, _, err = s.leads.Owed(ctx, s.taskScope, s.taskOwner, leadResponseBound)
+		return err
+	})
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return leadRead{}, &crmcontracts.WorklistSourceUnavailable{

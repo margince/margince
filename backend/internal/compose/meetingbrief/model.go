@@ -52,6 +52,7 @@ Write every sentence from the summary and from nothing else. Never invent a fact
 Label every sentence. A FACT restates what the summary says. An ASSESSMENT is a reading you draw from it — allowed only in risks and deal_state. A RECOMMENDATION is one concrete move — allowed only in goal and talking_points, at most three in the whole brief.
 Cite the ids the summary gave you, in evidence only. An id must never appear in the text a reader sees.
 When a sentence rests on one message, name that message by its subject in the text, so the reader can find the thread.
+A sentence that names a message cites that message's id in its evidence.
 Never open with "Absolutely", "Great question", "I'd be happy to", "Based on the provided context", or any greeting. No exclamation marks. No praise. No summary of what the reader already knows.
 Say plainly when something is uncertain or missing rather than filling the gap. If a section has nothing real to say, omit the section.
 `

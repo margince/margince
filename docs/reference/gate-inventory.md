@@ -264,6 +264,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `messagingruleapplied_test.go` | H2 | Every obligation a messaging pack declares is one the engine applies, or one this file records as not yet applied and says why. |
 | `metricsuffix_test.go` | H2 | A `\_total` suffix means COUNTER, in both directions. |
 | `migrationcitations_test.go` | H1 | No file acquires a citation of a migration version that does not exist. |
+| `narrowindextwin_test.go` | H2 | A partial index whose columns already carry an unpredicated one says why it is worth a second B-tree on every write. |
 | `noticecasecolumns_test.go` | H2 | One SELECT list per whole-row read in the consent package. |
 | `noticedutycensus_test.go` | H3 | Every way a contact can arrive has a decided disclosure duty. |
 | `onecallerpredicatebudget_test.go` | H2 | The ceiling on a statement whose predicate the CALLER wrote is one number, declared in platform/database as CallerPredicateBudget. |
@@ -318,6 +319,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendinghumanreaders_test.go` | H2 | principal.SendingHuman has ONE reader, and it answers one question. |
 | `settingreaders_test.go` | H2 | `setting` carries neither row-level security nor a row-scope clause. |
 | `settingscatalog_test.go` | H3 | The settings-catalog fitness gates (ADR-0090/A135 §7). |
+| `singleliteralcheck_test.go` | H2 | A CHECK that admits exactly one value is a discriminator or it is nothing. |
 | `sonarbinaryexclusions_test.go` | H3 | The scan's file-encoding obligation. |
 | `sonarwaivers_test.go` | H3 | A rule waiver in sonar-project.properties has to keep pointing at something, and there are two ways one stops — NEITHER of which announces itself. |
 | `sourcecensus_test.go` | H2 | The two source censuses that used to be awk, and the corpus that holds both halves of each of them to the same cases. |

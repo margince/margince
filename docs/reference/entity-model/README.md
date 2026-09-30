@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 293 |
-| Columns | 3490 |
+| Columns | 3488 |
 | Foreign keys | 472 |
 | Owning areas | 36 |
 
@@ -48,7 +48,7 @@ Ranked by how many foreign keys point at them, so this list follows the schema r
 | [`deal`](deals.md#deal) | [deals](deals.md) | 44 | 22 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 37 | 13 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
-| [`project`](projects.md#project) | [projects](projects.md) | 25 | 9 |
+| [`project`](projects.md#project) | [projects](projects.md) | 24 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 11 | 8 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 7 | 7 |
 | [`pipeline`](deals.md#pipeline) | [deals](deals.md) | 8 | 7 |
@@ -334,7 +334,7 @@ erDiagram
 | [`preference_token`](consent.md#preference_token) | consent | 8 | 0 |
 | [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 18 | 0 |
 | [`product`](deals.md#product) | deals | 18 | 1 |
-| [`project`](projects.md#project) | projects | 25 | 9 |
+| [`project`](projects.md#project) | projects | 24 | 9 |
 | [`project_health_assessment`](projects.md#project_health_assessment) | projects | 10 | 1 |
 | [`project_phase_history`](projects.md#project_phase_history) | projects | 7 | 0 |
 | [`provider_applied_field`](contacts.md#provider_applied_field) | contacts | 10 | 0 |
@@ -377,7 +377,7 @@ erDiagram
 | [`signal`](signals.md#signal) | signals | 24 | 2 |
 | [`signal_resolution`](signals.md#signal_resolution) | signals | 12 | 0 |
 | [`signal_thread_scan`](compose.md#signal_thread_scan) | compose | 10 | 0 |
-| [`signing_key`](approvals.md#signing_key) | approvals | 6 | 0 |
+| [`signing_key`](approvals.md#signing_key) | approvals | 5 | 0 |
 | [`site_read`](contacts.md#site_read) | contacts | 36 | 3 |
 | [`stage`](deals.md#stage) | deals | 10 | 10 |
 | [`stage_exit_criterion`](deals.md#stage_exit_criterion) | deals | 12 | 1 |
