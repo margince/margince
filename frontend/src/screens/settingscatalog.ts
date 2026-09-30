@@ -354,10 +354,10 @@ export const SETTINGS_PAGES = [
     // direction — a card narrower than its page withholds itself — and it
     // closes when they move to `oauth_application`.
     requires: reads("authentication_policy"),
-    // SignInMethodsCard writes on two grants: the provider switches and the
-    // SSO/MFA toggles save `installation_settings:update`, while the group→role
-    // map saves `authentication_policy:update` — admin-only, because writing it
-    // grants roles. The two OAuth application cards beside them save and remove
+    // SignInMethodsCard writes on two grants: the provider switches save
+    // `installation_settings:update`, while the group→role map saves
+    // `authentication_policy:update` — admin-only, because writing it grants
+    // roles. The two OAuth application cards beside them save and remove
     // through `capture_settings:update`, a different grant and a wider audience.
     // All are on this page, so any of them makes it the reader's to work in — a
     // custom role holding only the OAuth half still has working controls.

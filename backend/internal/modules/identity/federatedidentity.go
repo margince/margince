@@ -148,6 +148,16 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider, subje
 	}
 
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// A mapped grant is a role_assignment write and serializes with every
+		// other one, so an admin's re-role cannot interleave with a sign-in
+		// granting the role they just took away. Ahead of every row lock below,
+		// or the order inverts against ChangeUserRole's; a groupless token
+		// grants nothing and so takes nothing.
+		if len(groups) > 0 {
+			if err := lockAuthorization(ctx, tx); err != nil {
+				return err
+			}
+		}
 		userID, firstLink, resolveErr := s.resolveFederatedUser(ctx, tx, provider, subject, email)
 		if resolveErr != nil {
 			return resolveErr
