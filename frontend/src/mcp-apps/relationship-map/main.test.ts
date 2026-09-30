@@ -131,3 +131,73 @@ describe("the relationship map renders what it was given", () => {
     );
   });
 });
+
+describe("the meta line says who the card is about", () => {
+  const anchor = "01a0148e-3f66-7206-a206-685f2e40b606";
+
+  it("names the contact instead of printing the id the product calls them", () => {
+    const el = root();
+    render(
+      el,
+      {
+        contact_id: anchor,
+        contact_name: "Marta Vogel",
+        colleagues: [{ display_name: "Sam", strength_bucket: "low" }],
+      },
+      [],
+    );
+    const meta = el.querySelector(".meta")?.textContent ?? "";
+    expect(meta).toContain("Marta Vogel");
+    expect(meta).not.toContain(anchor);
+  });
+
+  it("leaves the name off rather than falling back to the id", () => {
+    const el = root();
+    render(
+      el,
+      {
+        contact_id: anchor,
+        colleagues: [{ display_name: "Sam", strength_bucket: "low" }],
+      },
+      [],
+    );
+    const meta = el.querySelector(".meta")?.textContent ?? "";
+    expect(meta).not.toContain(anchor);
+    expect(meta.trimEnd()).not.toMatch(/·$/);
+  });
+
+  it("counts one colleague in copy rather than a placeholder", () => {
+    const el = root();
+    render(
+      el,
+      {
+        contact_id: anchor,
+        contact_name: "Marta Vogel",
+        colleagues: [{ display_name: "Sam", strength_bucket: "low" }],
+      },
+      [],
+    );
+    const meta = el.querySelector(".meta")?.textContent ?? "";
+    expect(meta).toContain("1 colleague,");
+    expect(meta).not.toContain("colleague(s)");
+  });
+
+  it("counts several colleagues in the plural", () => {
+    const el = root();
+    render(
+      el,
+      {
+        contact_id: anchor,
+        contact_name: "Marta Vogel",
+        colleagues: [
+          { display_name: "Sam", strength_bucket: "low" },
+          { display_name: "Ada", strength_bucket: "low" },
+        ],
+      },
+      [],
+    );
+    expect(el.querySelector(".meta")?.textContent ?? "").toContain(
+      "2 colleagues,",
+    );
+  });
+});

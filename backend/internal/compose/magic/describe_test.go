@@ -119,7 +119,7 @@ func TestASiteReadOverManyRecordsIsOneLineWithoutOneSite(t *testing.T) {
 		entries = append(entries, auditRow("agent:deepread", `{"industry": null}`, after,
 			`{"source": "site_read", "source_url": "`+site+`"}`, now.Add(-time.Duration(i)*time.Second)))
 	}
-	lines, _ := linesOf(unmasked(t), entries, 100)
+	lines, _ := linesOf(unmasked(t), entries, nil, 100)
 	var industry []int
 	for i, l := range lines {
 		if (*l.Summary.Values)["fields"] == "industry" {
@@ -144,7 +144,7 @@ func TestOneRecordReadFromTwoSitesNamesNeither(t *testing.T) {
 	second.ID = ids.NewV7()
 	second.OccurredAt = now.Add(-time.Minute)
 	second.Evidence = []byte(`{"source": "site_read", "source_url": "https://b.example/about"}`)
-	lines, _ := linesOf(unmasked(t), []entry{first, second}, 100)
+	lines, _ := linesOf(unmasked(t), []entry{first, second}, nil, 100)
 	if len(lines) != 1 || lines[0].Reason == nil || lines[0].Reason.Key != "magic.why.site_read_unnamed" {
 		t.Fatalf("got %d lines, reason %v; want one line naming no single site", len(lines), lines[0].Reason)
 	}
@@ -194,7 +194,7 @@ func TestOneJobOnManyRecordsIsOneLineWithACount(t *testing.T) {
 			now.Add(-time.Duration(i)*time.Second)))
 	}
 	entries = append(entries, auditRow("system", "", "", "", now))
-	lines, housekeeping := linesOf(unmasked(t), entries, 100)
+	lines, housekeeping := linesOf(unmasked(t), entries, nil, 100)
 	if len(lines) != 1 {
 		t.Fatalf("got %d lines, want the job folded into one", len(lines))
 	}
@@ -214,8 +214,42 @@ func TestAGroupCountsRecordsNotAuditRows(t *testing.T) {
 	again.ID = ids.NewV7()
 	again.OccurredAt = now.Add(-time.Minute)
 	other := auditRow("link-reconcile", "", `{"cohort_linked": 1, "cohort_promoted": 0}`, "", now.Add(-2*time.Minute))
-	lines, _ := linesOf(unmasked(t), []entry{first, again, other}, 100)
+	lines, _ := linesOf(unmasked(t), []entry{first, again, other}, nil, 100)
 	if len(lines) != 1 || lines[0].Count == nil || *lines[0].Count != 2 {
 		t.Fatalf("got %d lines with count %v, want one line counting the two distinct records", len(lines), lines[0].Count)
+	}
+}
+
+// A line drawn from a read that was cut short says its count is a floor.
+//
+// The grouping sees only the rows the read returned, so a job over more records
+// than readCap is reported at the cap. Left unqualified the receipt states a
+// number it cannot know, and the direction of the error is the bad one: it
+// understates how far a machine went.
+func TestALineFromACutReadSaysItsCountIsAFloor(t *testing.T) {
+	first := auditRow("agent:deepread", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", time.Now())
+	second := auditRow("agent:deepread", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", time.Now().Add(-time.Minute))
+
+	lines, _ := linesOf(unmasked(t), []entry{first, second}, map[string]bool{"contact": true}, 100)
+	if len(lines) != 1 {
+		t.Fatalf("got %d lines, want the two rows folded into one", len(lines))
+	}
+	if lines[0].CountIsFloor == nil || !*lines[0].CountIsFloor {
+		t.Error("a line from a contact read that hit its cap does not say its count is a floor")
+	}
+}
+
+// A line from a read that came back short states its count flat, so the floor
+// flag cannot be something every receipt carries.
+func TestALineFromACompleteReadStatesItsCountFlat(t *testing.T) {
+	first := auditRow("agent:deepread", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", time.Now())
+	second := auditRow("agent:deepread", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", time.Now().Add(-time.Minute))
+
+	lines, _ := linesOf(unmasked(t), []entry{first, second}, map[string]bool{"deal": true}, 100)
+	if len(lines) != 1 {
+		t.Fatalf("got %d lines, want the two rows folded into one", len(lines))
+	}
+	if lines[0].CountIsFloor != nil {
+		t.Errorf("a line from an uncut contact read claims its count is a floor; only the deal arm was cut")
 	}
 }

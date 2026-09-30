@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { type ReactNode, useEffect } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { AiRuntimeChip, type AiRuntimeLabels } from "./airuntimechip";
 
@@ -118,4 +119,40 @@ export const AfterARun: Story = {
 export const PartialEstimate: Story = {
   args: { runtime: { ...RUNTIME, unpriced_calls: 1 } },
   play: openPopover,
+};
+
+// The browser's text size, set on the root because every type token is in rem.
+function LargeText({ children }: Readonly<{ children: ReactNode }>) {
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.fontSize = "200%";
+    return () => {
+      root.style.fontSize = "";
+    };
+  }, []);
+  return children;
+}
+
+// At 200% text the rows are taller than a phone, so the popover stops above
+// the screen's foot and they scroll inside it, reachable by Tab.
+export const PhoneLargeText: Story = {
+  name: "phone — 200% text",
+  args: { runtime: RUNTIME },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  decorators: [
+    (Story) => (
+      <LargeText>
+        <Story />
+      </LargeText>
+    ),
+  ],
+  play: async (context) => {
+    await openPopover?.(context);
+    const region = await within(context.canvasElement).findByRole("region", {
+      name: LABELS.answering,
+    });
+    // The popover fades in, so it is visible once the entrance has run.
+    await waitFor(() => expect(region).toBeVisible());
+  },
 };

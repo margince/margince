@@ -249,6 +249,55 @@ describe("the receipt draws every lane it promises", () => {
     expect(screen.getByText("Anna Keller and 1,199 more")).toBeTruthy();
   });
 
+  it("says a count is a floor when the read behind it was cut short", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            summary: { key: "magic.action.mail_filed" },
+            reason: { key: "magic.why.mail_filed" },
+            entity: {
+              type: "contact",
+              id: "00000000-0000-7000-8000-0000000000cc",
+              label: "Anna Keller",
+            },
+            count: 5000,
+            count_is_floor: true,
+          }),
+        ],
+        totals: { done: 1, needs_you: 0, could_not_complete: 0, watching: 0 },
+      }),
+    );
+    renderMagic();
+    expect(
+      await screen.findByText("Anna Keller and at least 4,999 more"),
+    ).toBeTruthy();
+  });
+
+  it("names the one record a cut read saw without claiming it was the only one", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            summary: { key: "magic.action.mail_filed" },
+            reason: { key: "magic.why.mail_filed" },
+            entity: {
+              type: "contact",
+              id: "00000000-0000-7000-8000-0000000000cc",
+              label: "Anna Keller",
+            },
+            count_is_floor: true,
+          }),
+        ],
+        totals: { done: 1, needs_you: 0, could_not_complete: 0, watching: 0 },
+      }),
+    );
+    renderMagic();
+    expect(
+      await screen.findByText("Anna Keller, and possibly others"),
+    ).toBeTruthy();
+  });
+
   it("counts a retention action without naming any record it touched", async () => {
     stub(
       receipt({
