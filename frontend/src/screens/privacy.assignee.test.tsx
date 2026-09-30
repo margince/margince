@@ -212,7 +212,7 @@ describe("an assignee the picker's own list does not offer", () => {
   it("says the name is still coming while its own read is still running", async () => {
     // The picker's OFFERED list settles fine; it is the assignee's own by-id
     // name read (GET /users/names) that has not answered, and that read is
-    // what this field now waits on — the roster walk beside it is a separate
+    // what this field waits on — the roster walk beside it is a separate
     // question.
     stub(
       dsrAssignedTo("u-gone"),
@@ -248,11 +248,11 @@ describe("an assignee the picker's own list does not offer", () => {
   });
 
   it("names an assignee even while the offered list is still a partial one", async () => {
-    // The by-id read that names the assignee no longer shares a budget with
-    // the roster walk that builds the offered list: a walk that stopped short
-    // of the workspace still leaves this field able to say who holds the
-    // request, which `state.partial` reports as a fact about the OPTIONS, not
-    // about the name above them.
+    // The by-id read that names the assignee is independent of the roster walk
+    // that builds the offered list: a walk that stopped short of the workspace
+    // still leaves this field able to say who holds the request, which
+    // `state.partial` reports as a fact about the OPTIONS, not about the name
+    // above them.
     stub(
       dsrAssignedTo("u-far"),
       endlessRoster(),

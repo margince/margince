@@ -424,7 +424,7 @@ describe("EntityRef", () => {
     render(<EntityRef kind="user" id="u-7" />);
 
     expect(await screen.findByText("Dana Kessler")).toBeTruthy();
-    // The walk is the picker's read, and naming no longer arms it.
+    // The walk is the picker's read; naming never arms it.
     expect(
       fetchMock.mock.calls.every(([input]) => {
         const request = input instanceof Request ? input : new Request(input);
@@ -668,8 +668,8 @@ describe("the roster walk", () => {
 
 // An imported record is often owned by a colleague who has not signed in yet.
 // `useMemberName` (see "names an invited colleague…" above) names them from
-// the by-id read regardless; the picker's own walk no longer asks the server
-// for invited seats at all, so nobody is offered work they cannot open.
+// the by-id read; the picker's walk asks for offerable seats alone, so nobody
+// is offered work they cannot open.
 describe("invited seats", () => {
   it("does not ask the picker's walk for invited seats", async () => {
     stubPagedRoster([[{ id: "u-1", display_name: "Priya Shah" }]]);
