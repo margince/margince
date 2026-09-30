@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 46,
-    "sites_best_current": 42,
+    "sites_best_current": 40,
     "sites_best_partial": 0,
-    "sites_best_stale": 4,
+    "sites_best_stale": 6,
     "sites_absent": 0,
     "scenarios": 156,
     "records": 245,
@@ -221,7 +221,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -231,7 +231,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 33,
@@ -1019,7 +1019,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1831,7 +1831,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1841,7 +1841,7 @@
             },
             "same_model": true,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 39,
@@ -2624,7 +2624,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2634,7 +2634,7 @@
             },
             "same_model": false,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 45,
@@ -3417,7 +3417,7 @@
             "env": "eu_hosted"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -3427,7 +3427,7 @@
             },
             "same_model": false,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 75,
@@ -4210,7 +4210,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -4220,7 +4220,7 @@
             },
             "same_model": true,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 72,
@@ -4803,7 +4803,7 @@
       "ready": 27,
       "usable_with_care": 14,
       "not_reliable_yet": 4,
-      "recheck_pending": 4,
+      "recheck_pending": 6,
       "models": [
         {
           "binding": {
@@ -4812,9 +4812,9 @@
             "env": "sovereign"
           },
           "sites": 45,
-          "sites_current": 41,
+          "sites_current": 39,
           "sites_partial": 0,
-          "sites_stale": 4,
+          "sites_stale": 6,
           "runs": 783,
           "passed": 629,
           "reliability": 0.8033205619412516,
@@ -4852,9 +4852,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 39,
+          "sites_current": 37,
           "sites_partial": 0,
-          "sites_stale": 4,
+          "sites_stale": 6,
           "runs": 573,
           "passed": 539,
           "reliability": 0.9406631762652705,
@@ -5002,7 +5002,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 3,
           "passed": 3,
           "records": 2
@@ -5030,7 +5030,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 2
@@ -5507,7 +5507,7 @@
       "ready": 26,
       "usable_with_care": 11,
       "not_reliable_yet": 8,
-      "recheck_pending": 4,
+      "recheck_pending": 6,
       "models": [
         {
           "binding": {
@@ -5516,9 +5516,9 @@
             "env": "eu_hosted"
           },
           "sites": 41,
-          "sites_current": 37,
+          "sites_current": 35,
           "sites_partial": 0,
-          "sites_stale": 4,
+          "sites_stale": 6,
           "runs": 570,
           "passed": 473,
           "reliability": 0.8298245614035088,
@@ -5556,9 +5556,9 @@
             "env": "cloud_frontier"
           },
           "sites": 39,
-          "sites_current": 35,
+          "sites_current": 33,
           "sites_partial": 0,
-          "sites_stale": 4,
+          "sites_stale": 6,
           "runs": 540,
           "passed": 504,
           "reliability": 0.9333333333333333,
@@ -5576,9 +5576,9 @@
             "env": "eu_hosted"
           },
           "sites": 39,
-          "sites_current": 35,
+          "sites_current": 33,
           "sites_partial": 0,
-          "sites_stale": 4,
+          "sites_stale": 6,
           "runs": 504,
           "passed": 473,
           "reliability": 0.9384920634920635,
@@ -5726,7 +5726,7 @@
             "env": "eu_hosted"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "records": 3
@@ -5754,7 +5754,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 24,
           "passed": 23,
           "records": 3
@@ -6231,7 +6231,7 @@
       "ready": 25,
       "usable_with_care": 16,
       "not_reliable_yet": 2,
-      "recheck_pending": 4,
+      "recheck_pending": 6,
       "models": [
         {
           "binding": {
@@ -6240,9 +6240,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 39,
+          "sites_current": 37,
           "sites_partial": 0,
-          "sites_stale": 4,
+          "sites_stale": 6,
           "runs": 606,
           "passed": 598,
           "reliability": 0.9867986798679867,
@@ -6390,7 +6390,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 3,
           "passed": 3,
           "records": 1
@@ -6418,7 +6418,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 18,
           "passed": 17,
           "records": 1
@@ -6867,7 +6867,7 @@
       "ready": 9,
       "usable_with_care": 8,
       "not_reliable_yet": 28,
-      "recheck_pending": 4,
+      "recheck_pending": 6,
       "models": [
         {
           "binding": {
@@ -6876,9 +6876,9 @@
             "env": "sovereign"
           },
           "sites": 45,
-          "sites_current": 41,
+          "sites_current": 39,
           "sites_partial": 0,
-          "sites_stale": 4,
+          "sites_stale": 6,
           "runs": 750,
           "passed": 591,
           "reliability": 0.788,
@@ -7026,7 +7026,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 7,
           "records": 1
@@ -7054,7 +7054,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 27,
           "passed": 20,
           "records": 1
@@ -7531,7 +7531,7 @@
       "ready": 13,
       "usable_with_care": 19,
       "not_reliable_yet": 11,
-      "recheck_pending": 4,
+      "recheck_pending": 6,
       "models": [
         {
           "binding": {
@@ -7540,9 +7540,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 39,
+          "sites_current": 37,
           "sites_partial": 0,
-          "sites_stale": 4,
+          "sites_stale": 6,
           "runs": 768,
           "passed": 685,
           "reliability": 0.8919270833333334,
@@ -7690,7 +7690,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 3,
           "passed": 3,
           "records": 1
@@ -7718,7 +7718,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 1
@@ -8168,9 +8168,9 @@
         "env": "cloud_frontier"
       },
       "sites": 44,
-      "sites_current": 40,
+      "sites_current": 38,
       "sites_partial": 0,
-      "sites_stale": 4,
+      "sites_stale": 6,
       "runs": 621,
       "passed": 613,
       "reliability": 0.9871175523349437,
@@ -8208,9 +8208,9 @@
         "env": "cloud_frontier"
       },
       "sites": 40,
-      "sites_current": 36,
+      "sites_current": 34,
       "sites_partial": 0,
-      "sites_stale": 4,
+      "sites_stale": 6,
       "runs": 453,
       "passed": 427,
       "reliability": 0.9426048565121413,
@@ -8228,9 +8228,9 @@
         "env": "sovereign"
       },
       "sites": 45,
-      "sites_current": 41,
+      "sites_current": 39,
       "sites_partial": 0,
-      "sites_stale": 4,
+      "sites_stale": 6,
       "runs": 783,
       "passed": 629,
       "reliability": 0.8033205619412516,
@@ -8268,9 +8268,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 39,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 4,
+      "sites_stale": 6,
       "runs": 573,
       "passed": 539,
       "reliability": 0.9406631762652705,
@@ -8288,9 +8288,9 @@
         "env": "eu_hosted"
       },
       "sites": 41,
-      "sites_current": 37,
+      "sites_current": 35,
       "sites_partial": 0,
-      "sites_stale": 4,
+      "sites_stale": 6,
       "runs": 570,
       "passed": 473,
       "reliability": 0.8298245614035088,
@@ -8328,9 +8328,9 @@
         "env": "cloud_frontier"
       },
       "sites": 39,
-      "sites_current": 35,
+      "sites_current": 33,
       "sites_partial": 0,
-      "sites_stale": 4,
+      "sites_stale": 6,
       "runs": 540,
       "passed": 504,
       "reliability": 0.9333333333333333,
@@ -8348,9 +8348,9 @@
         "env": "eu_hosted"
       },
       "sites": 39,
-      "sites_current": 35,
+      "sites_current": 33,
       "sites_partial": 0,
-      "sites_stale": 4,
+      "sites_stale": 6,
       "runs": 504,
       "passed": 473,
       "reliability": 0.9384920634920635,
@@ -8388,9 +8388,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 39,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 4,
+      "sites_stale": 6,
       "runs": 768,
       "passed": 685,
       "reliability": 0.8919270833333334,
@@ -8408,9 +8408,9 @@
         "env": "sovereign"
       },
       "sites": 45,
-      "sites_current": 41,
+      "sites_current": 39,
       "sites_partial": 0,
-      "sites_stale": 4,
+      "sites_stale": 6,
       "runs": 750,
       "passed": 591,
       "reliability": 0.788,
@@ -10711,17 +10711,8 @@
       "key": "cold_start/company_message",
       "scope": "single_turn",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
-          "env": "cloud_frontier"
-        },
-        "band": "supported_degraded",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "bare_answer_corrects_the_field_the_wizard_asked_for",
@@ -10737,9 +10728,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -10752,7 +10743,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -10761,9 +10760,9 @@
             "model": "gemini-3.5-flash",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -10776,7 +10775,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -10785,9 +10792,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 6,
           "passed": 6,
@@ -10800,7 +10807,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -10809,9 +10824,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -10824,7 +10839,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -10833,9 +10856,9 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 9,
           "passed": 8,
@@ -10848,7 +10871,15 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -10857,9 +10888,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 9,
           "passed": 9,
@@ -10872,7 +10903,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -10881,9 +10920,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 9,
           "passed": 9,
@@ -10896,7 +10935,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -10905,9 +10952,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -10920,7 +10967,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -10929,9 +10984,9 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 9,
           "passed": 7,
@@ -10944,7 +10999,15 @@
             "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          }
         }
       ]
     },
@@ -11189,17 +11252,8 @@
       "key": "cold_start/sitereadmessage",
       "scope": "single_turn",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
@@ -11233,9 +11287,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 18,
           "passed": 17,
@@ -11248,7 +11302,21 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for",
+          "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -11257,9 +11325,9 @@
             "model": "gemini-3.5-flash",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 15,
           "passed": 15,
@@ -11272,7 +11340,21 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for",
+          "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -11281,9 +11363,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 15,
           "passed": 9,
@@ -11296,7 +11378,21 @@
             "invalid": 6,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for",
+          "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -11305,9 +11401,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -11320,7 +11416,21 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for",
+          "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -11329,9 +11439,9 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 24,
           "passed": 23,
@@ -11344,7 +11454,21 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for",
+          "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -11353,9 +11477,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 15,
           "passed": 10,
@@ -11368,7 +11492,21 @@
             "invalid": 5,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for",
+          "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -11377,9 +11515,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 9,
@@ -11392,7 +11530,21 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for",
+          "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -11401,9 +11553,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -11416,7 +11568,21 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for",
+          "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          },
           "site_thinking": "low"
         },
         {
@@ -11425,9 +11591,9 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 27,
           "passed": 20,
@@ -11440,7 +11606,21 @@
             "invalid": 7,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for",
+          "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          }
         }
       ]
     },
