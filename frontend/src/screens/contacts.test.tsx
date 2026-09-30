@@ -217,9 +217,9 @@ const dormantStrength = {
   last_interaction: null,
 };
 
-// A URL-capturing fetch stub shared across the P-14/15/16 wiring tests
-// below: every request is recorded so a test can assert the params it
-// carried, and a caller-supplied responder decides what comes back.
+// A URL-capturing fetch stub shared across the wiring tests below: every
+// request is recorded so a test can assert the params it carried, and a
+// caller-supplied responder decides what comes back.
 function stubFetch(
   responder: (
     url: string,
