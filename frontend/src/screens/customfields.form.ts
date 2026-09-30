@@ -13,7 +13,7 @@ import type { components } from "../api/schema";
 import { formatMoneyOrAbsent } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { webUrl } from "../format/weburl";
-import { type Locale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import {
   type CreateField,
   joinMultiselectValue,
@@ -252,6 +252,16 @@ export function customFieldDisplay(
       // avoid a timezone shift a datetime formatter would introduce).
       return String(raw);
   }
+}
+
+// customFieldDisplay in this reader's locale and Yes/No words, for either record
+// surface that reads a custom field.
+export function useCustomFieldDisplay() {
+  const t = useT();
+  const { locale } = useLocale();
+  const boolLabels = { yes: t("field.yes"), no: t("field.no") };
+  return (field: CustomField, raw: unknown) =>
+    customFieldDisplay(field, raw, { locale, boolLabels });
 }
 
 // Where a displayed value may be followed to, or null when it is only text.

@@ -73,7 +73,11 @@ type Props = {
   canEdit: boolean;
   notice?: string;
   maskedFields?: readonly string[];
+  // On a scalar row the rendered value is a destination drawn beside the edit
+  // verb, so it is never nested in the inline-edit button.
   renderValues?: Readonly<Record<string, ReactNode>>;
+  // A scalar row's resting reading where it differs from the text it edits.
+  displayValues?: Readonly<Record<string, string>>;
   links?: Readonly<Record<string, { href: string; label: string }>>;
   // A provenance mark per field, drawn BESIDE a resting scalar value: the value
   // is the inline-edit button, and a mark nested in it would be a second one.
@@ -252,6 +256,8 @@ function RecordField({
       field={field}
       valueRef={target}
       link={props.links?.[field.key]}
+      rendered={renderedValue}
+      display={props.displayValues?.[field.key]}
       mark={props.marks?.[field.key]}
       label={label}
       values={values}
@@ -309,6 +315,8 @@ function RecordScalarField({
   field,
   valueRef,
   link,
+  rendered,
+  display,
   mark,
   label,
   values,
@@ -322,6 +330,8 @@ function RecordScalarField({
   field: CreateField;
   valueRef: ReturnType<typeof useDetailsFieldTarget>;
   link?: { href: string; label: string };
+  rendered?: ReactNode;
+  display?: string;
   mark?: ReactNode;
   label: string;
   values: Record<string, string>;
@@ -353,26 +363,33 @@ function RecordScalarField({
           onSave={onSave}
         />
       ) : (
-        <InlineText
-          label={label}
-          value={values[field.key] ?? ""}
-          placeholder={t("field.unset")}
-          multiline={field.type === "textarea"}
-          type={
-            field.type === "number" ||
-            field.type === "date" ||
-            field.type === "email"
-              ? field.type
-              : "text"
-          }
-          maxLength={field.maxLength}
-          step={field.step ?? (field.type === "number" ? "any" : undefined)}
-          canEdit={canEdit}
-          readOnlyReason={reason}
-          onEditingChange={onEditingChange}
-          onDirtyChange={onDirtyChange}
-          onSave={onSave}
-        />
+        <>
+          {!editing && rendered}
+          {(canEdit || !rendered) && (
+            <InlineText
+              label={label}
+              value={values[field.key] ?? ""}
+              display={display}
+              verb={Boolean(rendered)}
+              placeholder={t("field.unset")}
+              multiline={field.type === "textarea"}
+              type={
+                field.type === "number" ||
+                field.type === "date" ||
+                field.type === "email"
+                  ? field.type
+                  : "text"
+              }
+              maxLength={field.maxLength}
+              step={field.step ?? (field.type === "number" ? "any" : undefined)}
+              canEdit={canEdit}
+              readOnlyReason={reason}
+              onEditingChange={onEditingChange}
+              onDirtyChange={onDirtyChange}
+              onSave={onSave}
+            />
+          )}
+        </>
       )}
       {link && !editing && (
         <OffsiteLink href={link.href}>{link.label}</OffsiteLink>

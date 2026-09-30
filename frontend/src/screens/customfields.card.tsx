@@ -1,14 +1,14 @@
-// The read-only custom fields on a record 360. Mirrors the firmographics card
-// (companies.tsx): a labeled section + a `dl.firmo` list, evidence-or-omit
-// — a field with no stored value is absent, and a record with no custom values
-// renders nothing at all rather than an empty card.
+// RecordCustomFields is the editable Details section for company, contact, deal
+// and lead, showing every catalog field; CustomFieldsPanel is the read-only
+// reading for projects and contracts, which edit in a modal, and omits unset
+// fields.
 
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
 import {
-  customFieldDisplay,
   customFieldHref,
+  useCustomFieldDisplay,
   useObjectCustomFields,
 } from "./customfields.form";
 import type { CfObject } from "./customfields.logic";
@@ -18,17 +18,13 @@ export function CustomFieldsPanel({
   record,
 }: Readonly<{ object: CfObject; record: Record<string, unknown> }>) {
   const t = useT();
-  const { locale } = useLocale();
   const cf = useObjectCustomFields(object);
-  const boolLabels = { yes: t("field.yes"), no: t("field.no") };
+  const display = useCustomFieldDisplay();
 
   const rows = cf.fields
     .map((field) => ({
       field,
-      value: customFieldDisplay(field, record[field.column_name], {
-        locale,
-        boolLabels,
-      }),
+      value: display(field, record[field.column_name]),
     }))
     .filter((row): row is { field: typeof row.field; value: string } =>
       Boolean(row.value),
