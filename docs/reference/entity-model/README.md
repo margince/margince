@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 290 |
-| Columns | 3473 |
+| Columns | 3474 |
 | Foreign keys | 468 |
 | Owning areas | 36 |
 
@@ -314,7 +314,7 @@ erDiagram
 | [`meeting_proposal`](activities.md#meeting_proposal) | activities | 9 | 0 |
 | [`mfa_challenge_spent`](identity.md#mfa_challenge_spent) | identity | 2 | 0 |
 | [`mfa_recovery_code`](identity.md#mfa_recovery_code) | identity | 5 | 0 |
-| [`notice`](notices.md#notice) | notices | 14 | 0 |
+| [`notice`](notices.md#notice) | notices | 15 | 0 |
 | [`notification_digest_run`](notices.md#notification_digest_run) | notices | 4 | 0 |
 | [`notification_preference`](notices.md#notification_preference) | notices | 5 | 0 |
 | [`oauth_authorization_code`](identity.md#oauth_authorization_code) | identity | 12 | 0 |
