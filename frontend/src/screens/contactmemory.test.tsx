@@ -61,6 +61,10 @@ function emailSummary(over: Partial<EmailSummary> = {}): EmailSummary {
     subject: "Re: the renewal quote",
     preview: "Can you hold the price until Friday?",
     counterparty: "Dana Buyer",
+    // The server's own answer for which contact the phrase names. The card keys
+    // the face on this, so a fixture without it is a message whose far side
+    // resolved to nobody.
+    counterparty_contact_id: "p-1",
     direction: "inbound",
     display_status: "team",
     move: "needs_reply",
@@ -277,7 +281,10 @@ describe("the contact page's memory card", () => {
       viewWith([
         emailRow({
           links: filedHere,
-          email_summary: emailSummary({ counterparty: "Bob Stranger" }),
+          email_summary: emailSummary({
+            counterparty: "Bob Stranger",
+            counterparty_contact_id: "p-2",
+          }),
         }),
         noteRow,
       ]),

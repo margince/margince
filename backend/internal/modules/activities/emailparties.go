@@ -142,27 +142,38 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 }
 
 // counterpartyOf names the other side for a row: the first party the caller
-// can name, and how many more there were. A message whose participants all
-// resolve to nothing gets no counterparty rather than an invented stranger.
-func counterpartyOf(parties []crmcontracts.EmailParty) *string {
+// can name, how many more there were, and WHICH CONTACT supplied the name.
+//
+// The id travels beside the phrase because the phrase cannot be turned back
+// into a record. A client keying a face on the words alone has to guess which
+// contact they mean, and guesses wrong in both directions: a contact renamed
+// since capture stops matching and draws a second colour, and two contacts
+// sharing a name cannot be told apart at all. It is the id of the party the
+// name came FROM, not of the row — a message names one far side and the ` +N`
+// counts the rest.
+//
+// A message whose participants all resolve to nothing gets no counterparty
+// rather than an invented stranger, and an unresolved address names no contact.
+func counterpartyOf(parties []crmcontracts.EmailParty) (*string, *openapi_types.UUID) {
 	if len(parties) == 0 {
-		return nil
+		return nil, nil
 	}
 	var named string
+	var namedBy *openapi_types.UUID
 	for _, p := range parties {
 		if p.DisplayName != nil && strings.TrimSpace(*p.DisplayName) != "" {
-			named = *p.DisplayName
+			named, namedBy = *p.DisplayName, p.ContactId
 			break
 		}
 		if named == "" && p.Address != "" {
-			named = p.Address
+			named, namedBy = p.Address, p.ContactId
 		}
 	}
 	if named == "" {
-		return nil
+		return nil, nil
 	}
 	if extra := len(parties) - 1; extra > 0 {
 		named += " +" + strconv.Itoa(extra)
 	}
-	return &named
+	return &named, namedBy
 }

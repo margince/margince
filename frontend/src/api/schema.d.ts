@@ -19626,6 +19626,17 @@ export interface components {
              *     see — the row then says the direction alone rather than inventing a stranger.
              */
             counterparty?: string | null;
+            /**
+             * Format: uuid
+             * @description The contact `counterparty` names, when the party it was taken from resolved to one
+             *     this caller may see. Present so a client can key a face on the RECORD rather than on
+             *     the phrase: the phrase cannot be turned back into a contact, and matching it by name
+             *     is wrong in both directions — a contact renamed since capture stops matching and
+             *     draws a second colour, and two contacts sharing a name cannot be told apart. Absent
+             *     when the far side resolved to no contact, which is a face the client has nothing
+             *     better to key than the words.
+             */
+            counterparty_contact_id?: string;
             /** @description How many files came with it. Zero when withheld, like every other count. */
             attachment_count: number;
             /**
