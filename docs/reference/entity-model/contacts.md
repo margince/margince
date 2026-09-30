@@ -1686,7 +1686,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `site_read_stopped_reason_check` — `CHECK (((stopped_reason IS NULL) OR (stopped_reason = ANY (ARRAY['budget', 'page_cap', 'byte_cap', 'deadline']))))`
 - `site_read_target_kind_check` — `CHECK ((target_kind = ANY (ARRAY['onboarding', 'company', 'domain_triage'])))`
 - `site_read_target_shape` — `CHECK ((((target_kind = 'onboarding') AND ((company_id IS NULL) OR ((company_id IS NOT NULL) AND (confirmed_at IS NOT NULL)))) OR ((target_kind = 'company') AND (company_id IS NOT NULL)) OR ((target_kind = 'domain_triage') AND ((company_id IS NULL) OR ((company_id IS NOT NULL) AND (confirmed_at IS NOT NULL))))))`
-- `uq_site_read_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
@@ -1696,7 +1695,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `uq_site_read_company_inflight` — `unique, btree (company_id, seed_url) WHERE ((target_kind = 'company') AND (status = ANY (ARRAY['queued', 'deferred', 'running'])))`
 - `uq_site_read_onboarding_inflight` — `unique, btree (seed_url) WHERE ((target_kind = 'onboarding') AND (status = ANY (ARRAY['queued', 'deferred', 'running'])))`
 - `uq_site_read_triage_inflight` — `unique, btree (seed_url) WHERE ((target_kind = 'domain_triage') AND (status = ANY (ARRAY['queued', 'deferred', 'running'])))`
-- `uq_site_read_ws_id` — `unique, btree (id)`
 
 ## technical_lookup_cache
 

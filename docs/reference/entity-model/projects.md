@@ -50,7 +50,6 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `project_key_shape` — `CHECK (((key IS NULL) OR (key ~ '^[A-Za-z][A-Za-z0-9_-]{1,23}$')))`
 - `project_phase_check` — `CHECK ((phase = ANY (ARRAY['initiative', 'pursuing', 'delivering', 'closed'])))`
 - `project_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
-- `uq_project_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
@@ -61,7 +60,6 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `idx_project_search` — `gin (search_tsv)`
 - `project_pkey` — `unique, btree (id)`
 - `uq_project_key` — `unique, btree (lower(key)) WHERE ((key IS NOT NULL) AND (archived_at IS NULL))`
-- `uq_project_ws_id` — `unique, btree (id)`
 
 **Triggers**
 

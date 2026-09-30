@@ -158,8 +158,8 @@ type pipeline struct {
 // a deal outside it changes, and a stalled list cut before dismissals are
 // applied shrinks by one each time the rep judges a row. It reads one narrow row
 // per open deal of one account — columns through the company_id index, a
-// count served by idx_dsh_deal, and one rate lookup served by
-// idx_fx_rate_lookup.
+// count served by idx_dsh_deal, and one rate lookup served by fx_rate_pair_day,
+// the unique constraint's own index over the same three columns.
 //
 // The stall flag is folded with deals.IsStalled — the same call that stamps the
 // wire flag — rather than filtered in SQL. The deals module's SQL spelling of the

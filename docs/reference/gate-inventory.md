@@ -220,6 +220,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `docsreachability_test.go` | H3 | Every page under docs/ is reachable by following links from docs/README.md. |
 | `doitokenexposure_test.go` | H2 | The plaintext confirm token goes into the mail body and nowhere else. |
 | `draftreplyreader_test.go` | H2 | A {subject, body} model reply has ONE reader. |
+| `duplicateindex_test.go` | H2 | One set of columns, one index. |
 | `edgeendpointcensus_test.go` | H2 | Every end a link can have is an end that link's history is read from. |
 | `edgereaders_test.go` | H2 | `relationship` is a first-class RBAC object, and it is the only join table in the schema that is one. |
 | `emailpresentation_test.go` | H2 | A retained email reads the same everywhere, or it does not read the same anywhere. |

@@ -712,7 +712,6 @@ public.ai_call.task text NOT NULL gen=- def=-
 public.ai_call.tier text NOT NULL gen=- def=''::text
 public.ai_call.tokens_in bigint NOT NULL gen=- def=0
 public.ai_call.tokens_out bigint NOT NULL gen=- def=0
-public.ai_call.uq_ai_call_ws_id UNIQUE (id)
 public.ai_call_config acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.ai_call_config.ai_call_config_pkey PRIMARY KEY (hash)
 public.ai_call_config.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1460,7 +1459,6 @@ public.capture_connection.share_acknowledged_at timestamp with time zone gen=- d
 public.capture_connection.signature_enrich_enabled boolean gen=- def=-
 public.capture_connection.status text NOT NULL gen=- def='disconnected'::text
 public.capture_connection.sync_cursor jsonb gen=- def=-
-public.capture_connection.uq_capture_connection_ws_id UNIQUE (id)
 public.capture_connection.user_id uuid NOT NULL gen=- def=-
 public.capture_connection.watch_expires_at timestamp with time zone gen=- def=-
 public.capture_connection.watch_ref text gen=- def=-
@@ -3206,7 +3204,6 @@ public.deal_correction.standing_close_date text NOT NULL gen=- def=-
 public.deal_correction.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_correction.version bigint NOT NULL gen=- def=1
 public.deal_correction_audit_once CREATE UNIQUE INDEX deal_correction_audit_once ON public.deal_correction USING btree (audit_log_id)
-public.deal_correction_by_audit CREATE INDEX deal_correction_by_audit ON public.deal_correction USING btree (audit_log_id)
 public.deal_correction_live CREATE INDEX deal_correction_live ON public.deal_correction USING btree (deal_id, applied_at DESC) WHERE (reversed_at IS NULL)
 public.deal_correction_pkey CREATE UNIQUE INDEX deal_correction_pkey ON public.deal_correction USING btree (id)
 public.deal_correction_reversed CREATE INDEX deal_correction_reversed ON public.deal_correction USING btree (deal_id, reversed_at DESC) WHERE (reversed_at IS NOT NULL)
@@ -4085,7 +4082,6 @@ public.idx_auth_token_user_cascade CREATE INDEX idx_auth_token_user_cascade ON p
 public.idx_automation_key_live CREATE INDEX idx_automation_key_live ON public.automation USING btree (key) WHERE (enabled AND (archived_at IS NULL))
 public.idx_booking_page_host_user CREATE INDEX idx_booking_page_host_user ON public.booking_page USING btree (host_user_id)
 public.idx_brief_item_deal CREATE INDEX idx_brief_item_deal ON public.brief_item USING btree (deal_id)
-public.idx_brief_item_run CREATE INDEX idx_brief_item_run ON public.brief_item USING btree (brief_run_id, rank)
 public.idx_brief_item_state CREATE INDEX idx_brief_item_state ON public.brief_item USING btree (brief_run_id, state, state_at)
 public.idx_brief_run_user CREATE INDEX idx_brief_run_user ON public.brief_run USING btree (user_id, generated_at DESC)
 public.idx_bulk_confirmation_expires CREATE INDEX idx_bulk_confirmation_expires ON public.bulk_confirmation USING btree (expires_at)
@@ -4222,7 +4218,6 @@ public.idx_forecast_contribution_deal CREATE INDEX idx_forecast_contribution_dea
 public.idx_forecast_contribution_snapshot CREATE INDEX idx_forecast_contribution_snapshot ON public.forecast_contribution USING btree (snapshot_id)
 public.idx_forecast_snapshot_context CREATE INDEX idx_forecast_snapshot_context ON public.forecast_snapshot USING btree (scope_kind, scope_id, pipeline_id, taken_at DESC)
 public.idx_forecast_snapshot_period CREATE INDEX idx_forecast_snapshot_period ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, taken_at DESC)
-public.idx_fx_rate_lookup CREATE INDEX idx_fx_rate_lookup ON public.fx_rate USING btree (from_currency, to_currency, rate_date)
 public.idx_graph_contact_edge_b CREATE INDEX idx_graph_contact_edge_b ON public.graph_contact_edge USING btree (contact_b)
 public.idx_graph_edge_contact CREATE INDEX idx_graph_edge_contact ON public.graph_interaction_edge USING btree (contact_id, last_at DESC)
 public.idx_graph_edge_user CREATE INDEX idx_graph_edge_user ON public.graph_interaction_edge USING btree (user_id, last_at DESC)
@@ -4265,7 +4260,6 @@ public.idx_offer_deal CREATE INDEX idx_offer_deal ON public.offer USING btree (d
 public.idx_offer_status CREATE INDEX idx_offer_status ON public.offer USING btree (status) WHERE (archived_at IS NULL)
 public.idx_offer_template_fk CREATE INDEX idx_offer_template_fk ON public.offer USING btree (template_id) WHERE (template_id IS NOT NULL)
 public.idx_offer_template_search CREATE INDEX idx_offer_template_search ON public.offer_template USING gin (search_tsv)
-public.idx_oli_offer CREATE INDEX idx_oli_offer ON public.offer_line_item USING btree (offer_id, "position")
 public.idx_partner_stage CREATE INDEX idx_partner_stage ON public.partner USING btree (relationship_stage) WHERE (archived_at IS NULL)
 public.idx_partner_tier CREATE INDEX idx_partner_tier ON public.partner USING btree (margin_tier) WHERE (archived_at IS NULL)
 public.idx_passport_on_behalf_of CREATE INDEX idx_passport_on_behalf_of ON public.passport USING btree (on_behalf_of)
@@ -4347,7 +4341,6 @@ public.idx_weekly_plan_commitment_plan CREATE INDEX idx_weekly_plan_commitment_p
 public.idx_weekly_plan_owner CREATE INDEX idx_weekly_plan_owner ON public.weekly_plan USING btree (owner_id, local_week_start DESC)
 public.idx_weekly_review_deal_review CREATE INDEX idx_weekly_review_deal_review ON public.weekly_review_deal USING btree (weekly_review_id, occurred_at DESC)
 public.idx_weekly_review_driver_bar CREATE INDEX idx_weekly_review_driver_bar ON public.weekly_review_driver USING btree (weekly_review_id, period_kind, bar)
-public.idx_weekly_review_learning_review CREATE INDEX idx_weekly_review_learning_review ON public.weekly_review_learning USING btree (weekly_review_id, "position")
 public.idx_weekly_review_user CREATE INDEX idx_weekly_review_user ON public.weekly_review USING btree (user_id, local_week_start DESC)
 public.idx_withdrawal_credential_contact CREATE INDEX idx_withdrawal_credential_contact ON public.withdrawal_credential USING btree (contact_id) WHERE (contact_id IS NOT NULL)
 public.idx_withdrawal_credential_lead CREATE INDEX idx_withdrawal_credential_lead ON public.withdrawal_credential USING btree (lead_id) WHERE (lead_id IS NOT NULL)
@@ -4380,7 +4373,6 @@ public.import_run.source_ref text NOT NULL gen=- def=-
 public.import_run.status text NOT NULL gen=- def='pending'::text
 public.import_run.undo_report jsonb gen=- def=-
 public.import_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.import_run.uq_import_run UNIQUE (id)
 public.import_run_pkey CREATE UNIQUE INDEX import_run_pkey ON public.import_run USING btree (id)
 public.intro_request acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.intro_request.archived_at timestamp with time zone gen=- def=-
@@ -5057,11 +5049,9 @@ public.oauth_client.metadata_expires_at timestamp with time zone gen=- def=-
 public.oauth_client.oauth_client_client_id_key UNIQUE (client_id)
 public.oauth_client.oauth_client_created_via_check CHECK ((created_via = ANY (ARRAY['dcr'::text, 'admin'::text, 'cimd'::text])))
 public.oauth_client.oauth_client_pkey PRIMARY KEY (id)
-public.oauth_client.oauth_client_unique UNIQUE (client_id)
 public.oauth_client.redirect_uris text[] NOT NULL gen=- def=-
 public.oauth_client_client_id_key CREATE UNIQUE INDEX oauth_client_client_id_key ON public.oauth_client USING btree (client_id)
 public.oauth_client_pkey CREATE UNIQUE INDEX oauth_client_pkey ON public.oauth_client USING btree (id)
-public.oauth_client_unique CREATE UNIQUE INDEX oauth_client_unique ON public.oauth_client USING btree (client_id)
 public.oauth_code_lent_passport_ix CREATE INDEX oauth_code_lent_passport_ix ON public.oauth_authorization_code USING btree (lent_passport_id)
 public.oauth_code_unique CREATE UNIQUE INDEX oauth_code_unique ON public.oauth_authorization_code USING btree (code_hash)
 public.oauth_grant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -5073,7 +5063,6 @@ public.oauth_grant.oauth_grant_client_fkey FOREIGN KEY (client_id) REFERENCES oa
 public.oauth_grant.oauth_grant_lent_passport_fkey FOREIGN KEY (lent_passport_id) REFERENCES passport(id) ON DELETE SET NULL (lent_passport_id)
 public.oauth_grant.oauth_grant_pkey PRIMARY KEY (id)
 public.oauth_grant.oauth_grant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.oauth_grant.oauth_grant_ws_id_key UNIQUE (id)
 public.oauth_grant.refresh_allowed boolean NOT NULL gen=- def=false
 public.oauth_grant.resource text gen=- def=-
 public.oauth_grant.revoked_at timestamp with time zone gen=- def=-
@@ -5082,7 +5071,6 @@ public.oauth_grant.user_id uuid NOT NULL gen=- def=-
 public.oauth_grant_lent_passport_ix CREATE INDEX oauth_grant_lent_passport_ix ON public.oauth_grant USING btree (lent_passport_id)
 public.oauth_grant_pkey CREATE UNIQUE INDEX oauth_grant_pkey ON public.oauth_grant USING btree (id)
 public.oauth_grant_user_live_ix CREATE INDEX oauth_grant_user_live_ix ON public.oauth_grant USING btree (user_id, id) WHERE (revoked_at IS NULL)
-public.oauth_grant_ws_id_key CREATE UNIQUE INDEX oauth_grant_ws_id_key ON public.oauth_grant USING btree (id)
 public.oauth_refresh_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.oauth_refresh_token.consumed_at timestamp with time zone gen=- def=-
 public.oauth_refresh_token.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5133,7 +5121,6 @@ public.offer.template_id uuid gen=- def=-
 public.offer.terms_text text gen=- def=-
 public.offer.trg_offer_updated CREATE TRIGGER trg_offer_updated BEFORE UPDATE ON public.offer FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.offer.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.offer.uq_offer_ws_id UNIQUE (id)
 public.offer.valid_until date gen=- def=-
 public.offer.version bigint NOT NULL gen=- def=1
 public.offer_deal_id_id_key CREATE UNIQUE INDEX offer_deal_id_id_key ON public.offer USING btree (deal_id, id)
@@ -5189,7 +5176,6 @@ public.offer_template.offer_template_pkey PRIMARY KEY (id)
 public.offer_template.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
 public.offer_template.trg_offer_template_updated CREATE TRIGGER trg_offer_template_updated BEFORE UPDATE ON public.offer_template FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.offer_template.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.offer_template.uq_offer_template_ws_id UNIQUE (id)
 public.offer_template.version bigint NOT NULL gen=- def=1
 public.offer_template_name_unique CREATE UNIQUE INDEX offer_template_name_unique ON public.offer_template USING btree (name)
 public.offer_template_pkey CREATE UNIQUE INDEX offer_template_pkey ON public.offer_template USING btree (id)
@@ -5279,7 +5265,6 @@ public.passport.revoked_at timestamp with time zone gen=- def=-
 public.passport.scopes text[] NOT NULL gen=- def=-
 public.passport.token_hash text NOT NULL gen=- def=-
 public.passport.uq_passport_id_owner UNIQUE (id, on_behalf_of)
-public.passport.uq_passport_ws_id UNIQUE (id)
 public.passport_oauth_grant_ix CREATE INDEX passport_oauth_grant_ix ON public.passport USING btree (oauth_grant_id)
 public.passport_pkey CREATE UNIQUE INDEX passport_pkey ON public.passport USING btree (id)
 public.passport_token_hash_key CREATE UNIQUE INDEX passport_token_hash_key ON public.passport USING btree (token_hash)
@@ -5376,7 +5361,6 @@ public.product.trg_product_updated CREATE TRIGGER trg_product_updated BEFORE UPD
 public.product.unit text NOT NULL gen=- def='unit'::text
 public.product.unit_price_minor bigint NOT NULL gen=- def=-
 public.product.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.product.uq_product_ws_id UNIQUE (id)
 public.product.version bigint NOT NULL gen=- def=1
 public.product_pkey CREATE UNIQUE INDEX product_pkey ON public.product USING btree (id)
 public.project acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -5413,7 +5397,6 @@ public.project.started_at date gen=- def=-
 public.project.target_end_date date gen=- def=-
 public.project.trg_project_updated CREATE TRIGGER trg_project_updated BEFORE UPDATE ON public.project FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.project.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.project.uq_project_ws_id UNIQUE (id)
 public.project.version bigint NOT NULL gen=- def=1
 public.project_health_assessment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.project_health_assessment.assessed_at timestamp with time zone NOT NULL gen=- def=-
@@ -6335,7 +6318,6 @@ public.site_read.status_detail text gen=- def=-
 public.site_read.stopped_reason text gen=- def=-
 public.site_read.target_kind text NOT NULL gen=- def='company'::text
 public.site_read.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.site_read.uq_site_read_ws_id UNIQUE (id)
 public.site_read.warnings jsonb NOT NULL gen=- def='[]'::jsonb
 public.site_read_pkey CREATE UNIQUE INDEX site_read_pkey ON public.site_read USING btree (id)
 public.stage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -6717,7 +6699,6 @@ public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON pu
 public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE ((basis <> 'controller_pin'::text) AND ((deal_id IS NOT NULL) OR (project_id IS NOT NULL)))
 public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)
-public.uq_ai_call_ws_id CREATE UNIQUE INDEX uq_ai_call_ws_id ON public.ai_call USING btree (id)
 public.uq_analytics_share_token CREATE UNIQUE INDEX uq_analytics_share_token ON public.analytics_share USING btree (token_hash)
 public.uq_app_user_email CREATE UNIQUE INDEX uq_app_user_email ON public.app_user USING btree (lower(email))
 public.uq_approval_autonomy_policy_user_kind CREATE UNIQUE INDEX uq_approval_autonomy_policy_user_kind ON public.approval_autonomy_policy USING btree (user_id, kind)
@@ -6729,7 +6710,6 @@ public.uq_brief_item_run_rank CREATE UNIQUE INDEX uq_brief_item_run_rank ON publ
 public.uq_brief_run_user_day CREATE UNIQUE INDEX uq_brief_run_user_day ON public.brief_run USING btree (user_id, local_day)
 public.uq_bulk_operation_undo_of CREATE UNIQUE INDEX uq_bulk_operation_undo_of ON public.bulk_operation USING btree (undo_of) WHERE (undo_of IS NOT NULL)
 public.uq_capture_backfill_live CREATE UNIQUE INDEX uq_capture_backfill_live ON public.capture_backfill USING btree (connection_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
-public.uq_capture_connection_ws_id CREATE UNIQUE INDEX uq_capture_connection_ws_id ON public.capture_connection USING btree (id)
 public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), kind, value)
 public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain)
 public.uq_channel_connection_provider CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE (archived_at IS NULL)
@@ -6769,7 +6749,6 @@ public.uq_forecast_snapshot_daily_context CREATE UNIQUE INDEX uq_forecast_snapsh
 public.uq_forecast_snapshot_daily_workspace CREATE UNIQUE INDEX uq_forecast_snapshot_daily_workspace ON public.forecast_snapshot USING btree (period_start, period_end, local_day) WHERE ((trigger = 'daily'::text) AND (scope_id IS NULL) AND (pipeline_id IS NULL) AND (population_fingerprint = ''::text))
 public.uq_forecast_snapshot_period_close CREATE UNIQUE INDEX uq_forecast_snapshot_period_close ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE (trigger = 'period_close'::text)
 public.uq_forecast_snapshot_period_close_workspace CREATE UNIQUE INDEX uq_forecast_snapshot_period_close_workspace ON public.forecast_snapshot USING btree (period_start, period_end, local_day) WHERE ((trigger = 'period_close'::text) AND (scope_id IS NULL))
-public.uq_import_run CREATE UNIQUE INDEX uq_import_run ON public.import_run USING btree (id)
 public.uq_lead_email_dedupe CREATE UNIQUE INDEX uq_lead_email_dedupe ON public.lead USING btree (email) WHERE ((email IS NOT NULL) AND (archived_at IS NULL))
 public.uq_lead_manual_signal_live CREATE UNIQUE INDEX uq_lead_manual_signal_live ON public.lead_manual_signal USING btree (lead_id, factor) WHERE (superseded_at IS NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
@@ -6778,18 +6757,13 @@ public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection
 public.uq_linkedin_connection_provider CREATE UNIQUE INDEX uq_linkedin_connection_provider ON public.linkedin_connection USING btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)
 public.uq_notice_dedupe CREATE UNIQUE INDEX uq_notice_dedupe ON public.notice USING btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL)
 public.uq_offer_template_default CREATE UNIQUE INDEX uq_offer_template_default ON public.offer_template USING btree (locale) WHERE (is_default AND (archived_at IS NULL))
-public.uq_offer_template_ws_id CREATE UNIQUE INDEX uq_offer_template_ws_id ON public.offer_template USING btree (id)
-public.uq_offer_ws_id CREATE UNIQUE INDEX uq_offer_ws_id ON public.offer USING btree (id)
 public.uq_oli_position CREATE UNIQUE INDEX uq_oli_position ON public.offer_line_item USING btree (offer_id, "position")
 public.uq_passport_id_owner CREATE UNIQUE INDEX uq_passport_id_owner ON public.passport USING btree (id, on_behalf_of)
-public.uq_passport_ws_id CREATE UNIQUE INDEX uq_passport_ws_id ON public.passport USING btree (id)
 public.uq_pipeline_default CREATE UNIQUE INDEX uq_pipeline_default ON public.pipeline USING btree ((true)) WHERE (is_default AND (archived_at IS NULL))
 public.uq_preference_token_contact_address CREATE UNIQUE INDEX uq_preference_token_contact_address ON public.preference_token USING btree (contact_id, contact_email_id) NULLS NOT DISTINCT WHERE (revoked_at IS NULL)
 public.uq_product_sku CREATE UNIQUE INDEX uq_product_sku ON public.product USING btree (sku) WHERE ((sku IS NOT NULL) AND (archived_at IS NULL))
-public.uq_product_ws_id CREATE UNIQUE INDEX uq_product_ws_id ON public.product USING btree (id)
 public.uq_project_health_one_successor CREATE UNIQUE INDEX uq_project_health_one_successor ON public.project_health_assessment USING btree (supersedes_assessment_id) WHERE (supersedes_assessment_id IS NOT NULL)
 public.uq_project_key CREATE UNIQUE INDEX uq_project_key ON public.project USING btree (lower(key)) WHERE ((key IS NOT NULL) AND (archived_at IS NULL))
-public.uq_project_ws_id CREATE UNIQUE INDEX uq_project_ws_id ON public.project USING btree (id)
 public.uq_record_assignment_company_team CREATE UNIQUE INDEX uq_record_assignment_company_team ON public.record_assignment USING btree (company_id, role_id, team_id) WHERE ((company_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_record_assignment_company_user CREATE UNIQUE INDEX uq_record_assignment_company_user ON public.record_assignment USING btree (company_id, role_id, user_id) WHERE ((company_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_record_assignment_deal_team CREATE UNIQUE INDEX uq_record_assignment_deal_team ON public.record_assignment USING btree (deal_id, role_id, team_id) WHERE ((deal_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL))
@@ -6808,7 +6782,6 @@ public.uq_signal_fingerprint CREATE UNIQUE INDEX uq_signal_fingerprint ON public
 public.uq_site_read_company_inflight CREATE UNIQUE INDEX uq_site_read_company_inflight ON public.site_read USING btree (company_id, seed_url) WHERE ((target_kind = 'company'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
 public.uq_site_read_onboarding_inflight CREATE UNIQUE INDEX uq_site_read_onboarding_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'onboarding'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
 public.uq_site_read_triage_inflight CREATE UNIQUE INDEX uq_site_read_triage_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'domain_triage'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
-public.uq_site_read_ws_id CREATE UNIQUE INDEX uq_site_read_ws_id ON public.site_read USING btree (id)
 public.uq_stage_position CREATE UNIQUE INDEX uq_stage_position ON public.stage USING btree (pipeline_id, "position") WHERE (archived_at IS NULL)
 public.uq_tag_name CREATE UNIQUE INDEX uq_tag_name ON public.tag USING btree (lower(name)) WHERE (archived_at IS NULL)
 public.uq_team_weekly_review_outlook_period CREATE UNIQUE INDEX uq_team_weekly_review_outlook_period ON public.team_weekly_review_outlook USING btree (team_weekly_review_id, period_kind)
@@ -6820,7 +6793,6 @@ public.uq_voice_learning_signal_draft CREATE UNIQUE INDEX uq_voice_learning_sign
 public.uq_voice_profile_delta_version CREATE UNIQUE INDEX uq_voice_profile_delta_version ON public.voice_profile_delta USING btree (voice_profile_id, to_version)
 public.uq_voice_profile_user_live CREATE UNIQUE INDEX uq_voice_profile_user_live ON public.voice_profile USING btree (owner_id) WHERE ((scope = 'user'::text) AND (archived_at IS NULL))
 public.uq_voice_profile_version_number CREATE UNIQUE INDEX uq_voice_profile_version_number ON public.voice_profile_version USING btree (voice_profile_id, profile_version)
-public.uq_voice_profile_version_profile_number CREATE UNIQUE INDEX uq_voice_profile_version_profile_number ON public.voice_profile_version USING btree (voice_profile_id, profile_version)
 public.uq_weekly_plan_owner_week CREATE UNIQUE INDEX uq_weekly_plan_owner_week ON public.weekly_plan USING btree (owner_id, local_week_start)
 public.uq_weekly_review_driver_deal CREATE UNIQUE INDEX uq_weekly_review_driver_deal ON public.weekly_review_driver USING btree (weekly_review_id, period_kind, bar, deal_id)
 public.uq_weekly_review_learning_citation CREATE UNIQUE INDEX uq_weekly_review_learning_citation ON public.weekly_review_learning_citation USING btree (learning_id, subject_type, subject_id)
@@ -7050,7 +7022,6 @@ public.voice_profile_version.stats_json jsonb NOT NULL gen=- def=-
 public.voice_profile_version.status text NOT NULL gen=- def=-
 public.voice_profile_version.updated_at timestamp with time zone gen=- def=-
 public.voice_profile_version.uq_voice_profile_version_number UNIQUE (voice_profile_id, profile_version)
-public.voice_profile_version.uq_voice_profile_version_profile_number UNIQUE (voice_profile_id, profile_version)
 public.voice_profile_version.version bigint NOT NULL gen=- def=1
 public.voice_profile_version.voice_profile_id uuid NOT NULL gen=- def=-
 public.voice_profile_version.voice_profile_md text NOT NULL gen=- def=-

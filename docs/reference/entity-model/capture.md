@@ -190,7 +190,6 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_connection_provider_check` — `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
 - `capture_connection_status_check` — `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
 - `capture_connection_unique` — `UNIQUE (user_id, provider)`
-- `uq_capture_connection_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
@@ -198,7 +197,6 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `connector_connection_pkey` — `unique, btree (id)`
 - `idx_capture_connection` — `btree (provider, status) WHERE (archived_at IS NULL)`
 - `idx_capture_watch_renew` — `btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'))`
-- `uq_capture_connection_ws_id` — `unique, btree (id)`
 
 ## capture_counterparty_hold
 
