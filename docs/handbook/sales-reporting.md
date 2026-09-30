@@ -3,14 +3,14 @@
 ## Where do I start my sales review?
 
 Open **Analytics → Performance** when your administrator has enabled sales reporting.
-Choose **Sales** for bookings, pipeline stages, owner targets and time in stage, or
+Choose **Sales** for sales won, pipeline stages, sales by salesperson and time in stage, or
 **SDR** for confirmed meetings held and accepted opportunities. Choose your record
 scope and period. Stage charts require a single pipeline. A rep's personal scope
 shows their own results; wider access is required to compare owners.
 
 Sales won follows the selected event period. Open pipeline and stage age describe
 the current pipeline, with their expected-close window printed beside the chart.
-Owner targets use the containing month or fiscal quarter, with that period's own
+Salesperson targets use the containing month or fiscal quarter, with that period's own
 actual. Changing the event period does not turn today's pipeline into history.
 
 Every chart has a numeric alternative. Focus or select a mark to open its evidence;

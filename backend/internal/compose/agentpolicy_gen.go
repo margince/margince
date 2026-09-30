@@ -642,6 +642,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/lists/{id}/members":                                           {Op: "addListMember", Access: "tool", Tool: "change_lists", RecordType: "list", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/lists/{id}/members/remove":                                    {Op: "removeListMember", Access: "tool", Tool: "change_lists", RecordType: "list", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/lists/{id}/restore":                                           {Op: "restoreList", Access: "tool", Tool: "change_lists", RecordType: "list", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/lists/{id}/visit":                                             {Op: "visitList", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/me/linkedin-connections":                                      {Op: "importLinkedInConnections", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/me/mfa/totp":                                                  {Op: "startMyTotpEnrolment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/me/mfa/totp/confirm":                                          {Op: "confirmMyTotp", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

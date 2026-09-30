@@ -10170,6 +10170,22 @@ export const vi = {
   "lists.myLists.title": "Danh s\u00e1ch c\u1ee7a t\u00f4i",
   "lists.myLists.empty":
     "Ch\u01b0a c\u00f3 danh s\u00e1ch ri\u00eang t\u01b0 n\u00e0o. Danh s\u00e1ch ch\u1ec9 b\u1ea1n t\u00ecm th\u1ea5y s\u1ebd hi\u1ec7n \u1edf \u0111\u00e2y. Khi chia s\u1ebb, danh s\u00e1ch s\u1ebd chuy\u1ec3n sang ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb.",
+  "lists.pulse.chip": "+{entered} / −{left}",
+  "lists.pulse.label":
+    "{entered} bản ghi vào và {left} bản ghi rời đi kể từ lần bạn xem trước",
+  "lists.head.lastChecked": "Kiểm tra lần cuối {when}",
+  "lists.head.notChecked":
+    "Chưa được kiểm tra. Bản ghi vào và rời đi được ghi nhận từ lần kiểm tra đầu tiên.",
+  "lists.head.tooLarge":
+    "Kiểm tra lần cuối {when}. Danh sách khớp quá nhiều bản ghi nên không ghi nhận được bản ghi nào vào hay rời đi.",
+  "lists.head.pulse": "Kể từ lần bạn xem trước: {entered} vào, {left} rời đi",
+  "lists.members.new": "Mới",
+  "lists.history.entered": "Đã vào, tính đến {when}",
+  "lists.history.left": "Đã rời đi, tính đến {when}",
+  "lists.history.reason.filterChanged": "sau khi bộ lọc thay đổi",
+  "lists.history.checker": "Lần kiểm tra định kỳ (15 phút một lần)",
+  "lists.history.liveNote":
+    "Việc kiểm tra chạy 15 phút một lần và ưu tiên các danh sách lâu nhất chưa được kiểm tra, nên khi có rất nhiều danh sách, một danh sách có thể phải chờ lâu hơn; “Kiểm tra lần cuối” cho biết lần kiểm tra gần nhất. Bản ghi vào hay rời đi được ghi nhận tại lần kiểm tra phát hiện ra thay đổi đó. Bản ghi vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
   "lists.history.someone": "Ai \u0111\u00f3",
 
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.

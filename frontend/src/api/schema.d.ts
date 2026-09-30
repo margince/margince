@@ -6890,12 +6890,43 @@ export interface paths {
         };
         /**
          * Read what changed on a list, newest first.
-         * @description Every change of the list's definition, and every Shortlist membership change of a record
-         *     this caller can see now. A change about a record they cannot see is absent.
+         * @description Every change of the list's definition, every Shortlist membership change, and every record
+         *     a Live List was seen to gain or lose, about a record this caller can see now. A change
+         *     about a record they cannot see is absent. The check runs every 15 minutes and takes the
+         *     Live Lists checked longest ago first, so with very many lists one can wait longer; the
+         *     list's `last_check` says when it was. `member_entered` and `member_left` are stamped with
+         *     the check that saw them, and a record that joined and left between two checks is not
+         *     recorded.
          */
         get: operations["listListHistory"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}/visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that the signed-in user has opened this list — the mark `since_last_visit` counts from.
+         * @description The mark moves only here, never as a side effect of reading the list, so a prefetch is not
+         *     a visit. It never moves backwards. A visit within half an hour of the last extends it
+         *     rather than starting a new one. The answer carries the visit `since_last_visit` now counts
+         *     from; null on a first visit.
+         */
+        post: operations["visitList"];
         delete?: never;
         options?: never;
         head?: never;
@@ -30541,6 +30572,12 @@ export interface components {
             retired_fields?: string[];
             /** @description Whether this caller holds list authority over the list. */
             can_edit: boolean;
+            /** @description A Live List's latest check; absent for a Shortlist or a Live List not checked yet. */
+            last_check?: components["schemas"]["ListCheck"];
+            /** @description What a Live List gained and lost since this caller last opened it, counting only records they can see now. Absent on a first visit and for a Shortlist. A visit recorded in the last half hour is the one in progress, so the counts run from the visit before it. */
+            since_last_visit?: components["schemas"]["ListPulse"];
+            /** @description On a single Live List read: the members this caller can see that a check saw joining since their last visit and that are still members, newest first, at most 500. Absent from the library. */
+            joined_since_visit?: string[];
             /** @description What uses this list. Exports are listed as usage and block nothing. */
             dependencies?: components["schemas"]["ListDependency"][];
             /** Format: date-time */
@@ -30549,6 +30586,35 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        /** @description When a Live List's members were last compared with the check before. `complete` recorded who joined and left; `too_large` matched more records than one check may hold, so nothing was recorded; `invalid` could not evaluate the filter. */
+        ListCheck: {
+            /** Format: date-time */
+            checked_at: string;
+            /** @enum {string} */
+            outcome: "complete" | "too_large" | "invalid";
+        };
+        ListPulse: {
+            /**
+             * Format: date-time
+             * @description The visit the counts run from.
+             */
+            since: string;
+            /** @description Records seen joining since then. */
+            entered: number;
+            /** @description Records seen leaving since then. */
+            left: number;
+        };
+        ListVisit: {
+            /** Format: uuid */
+            list_id: string;
+            /** Format: date-time */
+            visited_at: string;
+            /**
+             * Format: date-time
+             * @description Null on a first visit.
+             */
+            previous_visit_at?: string | null;
         };
         ListDependency: {
             /** @enum {string} */
@@ -30671,8 +30737,21 @@ export interface components {
         ListHistoryEntry: {
             /** Format: uuid */
             id: string;
-            /** @enum {string} */
-            kind: "member_added" | "member_removed" | "revised";
+            /**
+             * @description `member_entered` and `member_left` are a Live List's observed changes, stamped with the check that saw them.
+             * @enum {string}
+             */
+            kind: "member_added" | "member_removed" | "member_entered" | "member_left" | "revised";
+            /**
+             * Format: int64
+             * @description For an observed change, the list version whose filter it was seen under.
+             */
+            definition_version?: number | null;
+            /**
+             * @description `filter_changed` marks the first check after the filter changed.
+             * @enum {string|null}
+             */
+            reason?: "chosen" | "bulk" | "record_archived" | "record_restored" | "evaluated" | "filter_changed" | null;
             /** Format: date-time */
             occurred_at: string;
             actor: string;
@@ -30680,8 +30759,6 @@ export interface components {
             entity_type?: string | null;
             /** Format: uuid */
             entity_id?: string | null;
-            /** @enum {string|null} */
-            reason?: "chosen" | "bulk" | "record_archived" | "record_restored" | null;
             note?: string | null;
             /** Format: int64 */
             version?: number | null;
@@ -52841,6 +52918,32 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    visitList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored visit and the one before it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListVisit"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getFilterVocabulary: {

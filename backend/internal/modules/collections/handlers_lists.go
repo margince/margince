@@ -195,6 +195,15 @@ func (h Handlers) ListListHistory(w http.ResponseWriter, r *http.Request, id crm
 	respond(w, r, http.StatusOK, page, err)
 }
 
+// VisitList serves POST /lists/{id}/visit.
+func (h Handlers) VisitList(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if h.listsOff(w, r) {
+		return
+	}
+	visit, err := h.store.VisitView(r.Context(), pathID[ids.ListKind](id))
+	respond(w, r, http.StatusOK, visit, err)
+}
+
 // memberChange is a wire membership change as the membership writer takes it. The
 // entity_id is polymorphic, so it stays an untyped id; the store checks it
 // against the list's own record type and the reader's row scope.

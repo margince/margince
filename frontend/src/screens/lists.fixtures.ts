@@ -43,6 +43,9 @@ export const liveList: List = {
   health: "ok",
   can_edit: true,
   dependencies: [],
+  last_check: { checked_at: "2026-09-29T08:15:00Z", outcome: "complete" },
+  since_last_visit: { since: "2026-09-28T17:00:00Z", entered: 3, left: 1 },
+  joined_since_visit: [MEMBER_ID],
 };
 
 export const shortlist: List = {
@@ -116,6 +119,40 @@ export const history: ListHistoryEntry[] = [
     note: "Signed the quote for the launch deck",
   },
 ];
+
+/** What the Live List's checks saw since the reader's visit on the 28th. */
+export const liveHistory: ListHistoryEntry[] = [
+  {
+    id: "01a0f000-0000-7000-8000-000000000011",
+    kind: "member_entered",
+    occurred_at: "2026-09-29T08:15:00Z",
+    actor: "system:list-checker",
+    entity_type: "company",
+    entity_id: MEMBER_ID,
+    reason: "filter_changed",
+    definition_version: 3,
+  },
+  {
+    id: "01a0f000-0000-7000-8000-000000000012",
+    kind: "member_left",
+    occurred_at: "2026-09-29T08:00:00Z",
+    actor: "system:list-checker",
+    entity_type: "company",
+    entity_id: "01a0f000-0000-7000-8000-000000000005",
+    reason: "evaluated",
+    definition_version: 2,
+  },
+];
+
+/** The visit a list page records, answering the reader's visit on the 28th. */
+export function visitAnswer(listID: string) {
+  return () =>
+    jsonResponse({
+      list_id: listID,
+      visited_at: "2026-09-30T09:00:00Z",
+      previous_visit_at: "2026-09-28T17:00:00Z",
+    });
+}
 
 /**
  * The session probe of a reader on an installation with lists on or off, a

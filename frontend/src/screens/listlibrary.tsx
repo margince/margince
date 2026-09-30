@@ -130,10 +130,14 @@ export function ListTable({
           key: "count",
           header: t("lists.col.count"),
           align: "end",
-          render: (list) =>
-            list.visible_count == null
-              ? "—"
-              : formatNumber(list.visible_count, locale),
+          render: (list) => (
+            <span className="lists-library-count">
+              {list.visible_count == null
+                ? "—"
+                : formatNumber(list.visible_count, locale)}
+              <ListPulseBadge list={list} />
+            </span>
+          ),
         },
         {
           key: "steward",
@@ -152,6 +156,27 @@ export function ListTable({
         },
       ]}
     />
+  );
+}
+
+/**
+ * What a Live List gained and lost since the reader last opened it, counting
+ * only records they can see. Nothing on a first visit or a quiet list.
+ */
+export function ListPulseBadge({
+  list,
+}: Readonly<{ list: Pick<List, "since_last_visit"> }>) {
+  const t = useT();
+  const pulse = list.since_last_visit;
+  if (!pulse || pulse.entered + pulse.left === 0) {
+    return null;
+  }
+  const counts = { entered: String(pulse.entered), left: String(pulse.left) };
+  return (
+    <Badge tone="accent">
+      <span aria-hidden="true">{t("lists.pulse.chip", counts)}</span>
+      <span className="sr-only">{t("lists.pulse.label", counts)}</span>
+    </Badge>
   );
 }
 

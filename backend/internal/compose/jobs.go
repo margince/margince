@@ -424,6 +424,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),
 		addDealScoutJobs(reg, pool, cfg, log),
+		addListEvaluateJobs(reg, pool, cfg, log),
 		addFinanceJobs(reg, pool, cfg, log),
 		registerTelegramPoll(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:

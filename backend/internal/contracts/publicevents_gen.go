@@ -508,6 +508,7 @@ const (
 	LinkedinNetworkImported               SubscribableEventType = "linkedin_network.imported"
 	ListArchived                          SubscribableEventType = "list.archived"
 	ListCreated                           SubscribableEventType = "list.created"
+	ListEvaluated                         SubscribableEventType = "list.evaluated"
 	ListMemberAdded                       SubscribableEventType = "list.member_added"
 	ListMemberRemoved                     SubscribableEventType = "list.member_removed"
 	ListRestored                          SubscribableEventType = "list.restored"
@@ -714,6 +715,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ListArchived:
 		return true
 	case ListCreated:
+		return true
+	case ListEvaluated:
 		return true
 	case ListMemberAdded:
 		return true
@@ -1774,6 +1777,16 @@ type PublicEventListCreated struct {
 	Sharing string `json:"sharing"`
 }
 
+// PublicEventListEvaluated Payload for list.evaluated — a check of a Live List saw records join or leave it. Emitted once per check that saw a change, never per record. It carries no counts: the check sees every record, and a count would tell a subscriber how many records they cannot see. Who joined and left is on the list's history, read under the reader's own row scope.
+type PublicEventListEvaluated struct {
+	// DefinitionVersion The list version the check ran under.
+	DefinitionVersion int64     `json:"definition_version"`
+	EvaluatedAt       time.Time `json:"evaluated_at"`
+
+	// FilterChanged This was the first check after the filter changed.
+	FilterChanged bool `json:"filter_changed"`
+}
+
 // PublicEventListMemberAdded Payload for list.member_added — a record was added to a Shortlist by hand or in a bulk change. The subject is the RECORD (contact, company, deal, lead or project), so the event reaches only a subscriber who may see that record. It names no list: delivery is decided by the record, and a list its subscriber cannot find must not be named to them. Which list, and the note, stay on the list's history, which is read under the list's own sharing.
 type PublicEventListMemberAdded struct {
 	// Reason chosen or bulk.
@@ -2730,6 +2743,10 @@ func (PublicEventListCreated) EventType() string { return "list.created" }
 
 func (PublicEventListCreated) EntityType() string { return "list" }
 
+func (PublicEventListEvaluated) EventType() string { return "list.evaluated" }
+
+func (PublicEventListEvaluated) EntityType() string { return "list" }
+
 func (PublicEventListMemberAdded) EventType() string { return "list.member_added" }
 
 func (PublicEventListMemberAdded) EntityType() string { return "dynamic" }
@@ -3007,6 +3024,7 @@ var PublicEventVersions = map[string]int{
 	"linkedin_network.imported":                 1,
 	"list.archived":                             1,
 	"list.created":                              1,
+	"list.evaluated":                            1,
 	"list.member_added":                         1,
 	"list.member_removed":                       1,
 	"list.restored":                             1,

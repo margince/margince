@@ -125,6 +125,7 @@ const (
 	purposeField   = "purpose"
 	teamIDField    = "team_id"
 	stewardIDField = "steward_id"
+	versionField   = "version"
 )
 
 // memberEntityVocabulary renders the accepted set for the refusal message.
