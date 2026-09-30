@@ -129,7 +129,7 @@ func (h Handlers) decidersOn(ctx context.Context, page CentrePage) (map[ids.UUID
 		}
 	}
 	if len(deciders) == 0 {
-		return nil, nil
+		return map[ids.UUID]string{}, nil
 	}
 	return h.seats.SeatNames(ctx, deciders)
 }

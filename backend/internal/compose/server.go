@@ -278,8 +278,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// UTC clock would name the wrong day on a non-UTC installation for the
 		// hours either side of local midnight.
 		aiActivityHandlers: aiactivity.NewHandlers(aiactivity.NewStore(InstallationDB(pool)), time.Now),
+		// The centre names the colleague whose decision took a line back through
+		// identity's directory — the same read the Worklist lane and the agent
+		// surface ask, so a panel cannot grow a second spelling of one colleague.
 		noticesHandlers: notices.NewHandlers(
-			notices.NewStore(InstallationDB(pool)), newTeammatesSeam(pool), noticeSeatNames(pool)),
+			notices.NewStore(InstallationDB(pool)), newTeammatesSeam(pool), identity.NewService(pool)),
 		assignmentHandlers: assignments.NewHandlers(assignments.NewStore(InstallationDB(pool))),
 		// One clock, passed to both halves: the store stamps when each move
 		// happened and the transport works out when an unanswered ask goes

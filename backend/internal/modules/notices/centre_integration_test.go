@@ -465,7 +465,7 @@ func TestTheCentreListsAnOvertakenLineAndNamesWhoDecided(t *testing.T) {
 		t.Fatalf("a colleague deciding the approval: %v", err)
 	}
 
-	item := lineOf(t, e.centreThrough(t, e.asUser(e.recipient), seatsNamed{decider.UUID: "Dana Fuchs"}), line)
+	item := lineOf(t, e.centreThrough(e.asUser(e.recipient), t, seatsNamed{decider.UUID: "Dana Fuchs"}), line)
 	if item.OvertakenAt == nil {
 		t.Fatal("the line comes back still standing — the reader is told a decision waits on them " +
 			"when a colleague already made it")
@@ -497,7 +497,7 @@ func TestAnOvertakenLineWhoseDeciderHasLeftCarriesNoName(t *testing.T) {
 
 	// The directory holds nobody, which is what it answers for a seat the
 	// installation no longer has.
-	item := lineOf(t, e.centreThrough(t, e.asUser(e.recipient), seatsNamed{}), line)
+	item := lineOf(t, e.centreThrough(e.asUser(e.recipient), t, seatsNamed{}), line)
 	if item.OvertakenByName != nil {
 		t.Errorf("the line names %q for a colleague the directory no longer holds", *item.OvertakenByName)
 	}
@@ -533,7 +533,7 @@ func TestOnlyASeatThatCouldHaveDecidedIsToldWhoDid(t *testing.T) {
 	}
 
 	named := seatsNamed{decider.UUID: "Dana Fuchs"}
-	page := e.centreThrough(t, e.asUser(bystander), named)
+	page := e.centreThrough(e.asUser(bystander), t, named)
 	if len(page.Items) != 1 {
 		t.Fatalf("the bystander's centre holds %d lines, want the 1 unrelated notice they were sent", len(page.Items))
 	}
@@ -545,7 +545,7 @@ func TestOnlyASeatThatCouldHaveDecidedIsToldWhoDid(t *testing.T) {
 	}
 	// And the seat who COULD have decided is told, so the case above is the
 	// boundary and not the name failing to resolve for anybody.
-	told := e.centreThrough(t, e.asUser(e.recipient), named)
+	told := e.centreThrough(e.asUser(e.recipient), t, named)
 	if len(told.Items) != 1 || told.Items[0].OvertakenByName == nil {
 		t.Fatalf("the seat who could have decided is told %+v, want the decider's name", told.Items)
 	}
@@ -571,7 +571,7 @@ func (s seatsNamed) SeatNames(_ context.Context, seats []ids.UserID) (map[ids.UU
 // centreThrough reads the centre through the TRANSPORT, because the decider's
 // name is resolved there: ListFor is a store method holding no collaborator to
 // ask, so a test stopping at it would prove nothing about what a reader sees.
-func (e *noticeEnv) centreThrough(t *testing.T, ctx context.Context, named seatsNamed) crmcontracts.NotificationPage {
+func (e *noticeEnv) centreThrough(ctx context.Context, t *testing.T, named seatsNamed) crmcontracts.NotificationPage {
 	t.Helper()
 	limit := 10
 	rec := httptest.NewRecorder()
