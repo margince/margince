@@ -40,7 +40,7 @@ func (h Handlers) OAuthServerMetadata(w http.ResponseWriter, r *http.Request) {
 		"response_types_supported":              []string{oauthResponseTypeCode},
 		"grant_types_supported":                 oauthGrantTypesSupported,
 		"code_challenge_methods_supported":      []string{pkceMethodS256},
-		"token_endpoint_auth_methods_supported": []string{"none"},
+		"token_endpoint_auth_methods_supported": []string{oauthAuthMethodNone},
 		// offline_access is listed so Claude appends it when it wants a
 		// refresh token (§5.2) — it is a session-lifetime marker, never a
 		// passport scope, so the exchange records it as the grant's

@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -100,6 +101,11 @@ const listPassportsSQL = `
 // whose agents act for whom.
 func (s *Service) ListPassports(ctx context.Context, id Identity) ([]PassportRow, error) {
 	ctx = actorCtx(ctx, id)
+	// Which agents act for a seat is the seat's own to see: no agent lists
+	// them, and no buyer holds any.
+	if err := auth.RequireHuman(ctx); err != nil {
+		return nil, err
+	}
 	var out []PassportRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, listPassportsSQL, id.UserID)

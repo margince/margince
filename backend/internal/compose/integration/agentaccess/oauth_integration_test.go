@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 
@@ -489,7 +490,8 @@ func TestOAuthRegistersAClientSendingStandardMetadata(t *testing.T) {
 	}, nil, &registered); status != http.StatusCreated || registered.ClientID == "" {
 		t.Fatalf("DCR with standard metadata → %d %+v, want 201", status, registered)
 	}
-	if len(registered.GrantTypes) != 2 || len(registered.ResponseTypes) != 1 {
-		t.Errorf("echoed %+v, want the grant and response types the client asked for", registered)
+	if !slices.Equal(registered.GrantTypes, []string{"authorization_code", "refresh_token"}) ||
+		!slices.Equal(registered.ResponseTypes, []string{"code"}) {
+		t.Errorf("echoed %+v, want the grant and response types the server issues", registered)
 	}
 }

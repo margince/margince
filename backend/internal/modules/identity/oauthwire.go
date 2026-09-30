@@ -50,6 +50,12 @@ const (
 	// oauthGrantAuthorizationCode is the grant a consented code is exchanged
 	// under — the one grant a connection begins with.
 	oauthGrantAuthorizationCode = "authorization_code"
+	// oauthAuthMethodNone is the one token endpoint auth method served: public
+	// clients, with PKCE as the proof of possession.
+	oauthAuthMethodNone = "none"
+	// RFC 7591 §3.2.2's two registration refusals.
+	oauthErrInvalidClientMetadata = "invalid_client_metadata"
+	oauthErrInvalidRedirectURI    = "invalid_redirect_uri"
 	// oauthParamError is RFC 6749's error member, which this server writes in
 	// two disjoint positions: the §5.2 JSON error body an endpoint answers, and
 	// the §4.1.2.1 error redirect a refused authorization sends to the client.

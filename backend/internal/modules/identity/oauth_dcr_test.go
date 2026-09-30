@@ -64,34 +64,72 @@ func TestRegistrationEchoesTheGrantsTheServerIssues(t *testing.T) {
 	}
 }
 
+func TestRegistrationReadsAnEmptyListAsOmitted(t *testing.T) {
+	req, refusal := parseDocument(t,
+		`{"client_name":"x","redirect_uris":["https://c.example/cb"],"grant_types":[],"response_types":[]}`)
+	if refusal != nil {
+		t.Fatalf("parseDCR refused empty lists: %s", refusal.description)
+	}
+	if echo := req.registered("client-1"); !slices.Equal(echo.GrantTypes, oauthGrantTypesSupported) {
+		t.Errorf("grant_types = %v, want what the server issues", echo.GrantTypes)
+	}
+}
+
 func TestRegistrationRefusesWhatItCannotHonour(t *testing.T) {
 	for name, tc := range map[string]struct {
 		document, code string
 	}{
 		"implicit grant": {
 			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"grant_types":["implicit"]}`,
-			"invalid_client_metadata"},
+			"invalid_client_metadata",
+		},
 		"refresh without a code": {
 			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"grant_types":["refresh_token"]}`,
-			"invalid_client_metadata"},
+			"invalid_client_metadata",
+		},
 		"token response type": {
 			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"response_types":["token"]}`,
-			"invalid_client_metadata"},
+			"invalid_client_metadata",
+		},
 		"confidential client": {
 			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"token_endpoint_auth_method":"client_secret_basic"}`,
-			"invalid_client_metadata"},
+			"invalid_client_metadata",
+		},
 		"plain-http redirect": {
 			`{"client_name":"x","redirect_uris":["http://c.example/cb"]}`,
-			"invalid_redirect_uri"},
+			"invalid_redirect_uri",
+		},
 		"no redirect": {`{"client_name":"x"}`, "invalid_client_metadata"},
-		"mistyped member": {
+		"grant beside the code grant": {
+			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"grant_types":["authorization_code","implicit"]}`,
+			"invalid_client_metadata",
+		},
+		"mistyped redirect_uris": {
 			`{"client_name":"x","redirect_uris":"https://c.example/cb"}`,
-			"invalid_client_metadata"},
+			"invalid_client_metadata",
+		},
+		"mistyped client_name": {
+			`{"client_name":7,"redirect_uris":["https://c.example/cb"]}`,
+			"invalid_client_metadata",
+		},
+		"mistyped token_endpoint_auth_method": {
+			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"token_endpoint_auth_method":["none"]}`,
+			"invalid_client_metadata",
+		},
+		"mistyped grant_types": {
+			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"grant_types":"authorization_code"}`,
+			"invalid_client_metadata",
+		},
+		"mistyped response_types": {
+			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"response_types":"code"}`,
+			"invalid_client_metadata",
+		},
 		// Member names are case-sensitive: a near-spelling is an unknown member,
 		// ignored, so the required one is still missing.
 		"case-folded name": {
 			`{"Client_Name":"x","redirect_uris":["https://c.example/cb"]}`,
-			"invalid_client_metadata"},
+			"invalid_client_metadata",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, refusal := parseDocument(t, tc.document)
@@ -131,5 +169,26 @@ func TestRegisterEndpointRefusesANonObjectDocument(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "invalid_client_metadata") {
 		t.Errorf("register → %d %s, want 400 invalid_client_metadata", rec.Code, rec.Body.String())
+	}
+}
+
+func TestRegisterEndpointNamesTheMemberItRefuses(t *testing.T) {
+	rec := httptest.NewRecorder()
+	workspacelessHandlers().oauthRegister(rec, httptest.NewRequest(http.MethodPost, "/oauth/register",
+		strings.NewReader(`{"client_name":"x","redirect_uris":["https://c.example/cb"],"grant_types":["implicit"]}`)))
+
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "grant_types") {
+		t.Errorf("register → %d %s, want 400 naming grant_types", rec.Code, rec.Body.String())
+	}
+}
+
+func TestRegisterEndpointRefusesAnOversizedDocument(t *testing.T) {
+	oversized := `{"client_name":"` + strings.Repeat("x", 2<<20) + `"}`
+	rec := httptest.NewRecorder()
+	workspacelessHandlers().oauthRegister(rec,
+		httptest.NewRequest(http.MethodPost, "/oauth/register", strings.NewReader(oversized)))
+
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("register → %d, want 413", rec.Code)
 	}
 }

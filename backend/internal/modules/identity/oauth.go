@@ -63,11 +63,11 @@ func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
 	var members map[string]json.RawMessage
 	if err := httperr.DecodeOrRefusal(w, r, &members); err != nil {
 		if httperr.BodyTooLarge(err) {
-			oauthError(w, http.StatusRequestEntityTooLarge, "invalid_client_metadata",
+			oauthError(w, http.StatusRequestEntityTooLarge, oauthErrInvalidClientMetadata,
 				"registration document exceeds the 1 MiB cap")
 			return
 		}
-		oauthError(w, http.StatusBadRequest, "invalid_client_metadata",
+		oauthError(w, http.StatusBadRequest, oauthErrInvalidClientMetadata,
 			"the registration document must be one JSON object")
 		return
 	}

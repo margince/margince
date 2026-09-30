@@ -61,34 +61,47 @@ func parseDCR(members map[string]json.RawMessage) (dcrRequest, *dcrRefusal) {
 func (req dcrRequest) validate() *dcrRefusal {
 	// Public clients only: PKCE is the proof of possession. A client
 	// asking for a secret-based method is asking to be privileged —
-	// refused, and there is no column to store a secret in anyway.
-	if req.TokenEndpointAuthMethod != "" && req.TokenEndpointAuthMethod != "none" {
-		return &dcrRefusal{"invalid_client_metadata",
-			"only public clients register here (token_endpoint_auth_method must be none)"}
+	// refused, and there is no column to store a secret in anyway. An
+	// omitted method is taken as none, and the echo says so (§3.2.1).
+	if req.TokenEndpointAuthMethod != "" && req.TokenEndpointAuthMethod != oauthAuthMethodNone {
+		return &dcrRefusal{
+			oauthErrInvalidClientMetadata,
+			"only public clients register here (token_endpoint_auth_method must be none)",
+		}
 	}
 	if req.ClientName == "" || len(req.RedirectURIs) == 0 {
-		return &dcrRefusal{"invalid_client_metadata", "client_name and redirect_uris are required"}
+		return &dcrRefusal{oauthErrInvalidClientMetadata, "client_name and redirect_uris are required"}
 	}
 	for _, raw := range req.RedirectURIs {
 		if !validRedirectURI(raw) {
-			return &dcrRefusal{"invalid_redirect_uri",
-				fmt.Sprintf("%q: redirect uris must be https, or http on localhost", raw)}
+			return &dcrRefusal{
+				oauthErrInvalidRedirectURI,
+				fmt.Sprintf("%q: redirect uris must be https, or http on localhost", raw),
+			}
 		}
 	}
+	// An empty list names nothing, so it reads as the member omitted; the echo
+	// tells the client what it holds either way.
 	if len(req.GrantTypes) > 0 && !slices.Contains(req.GrantTypes, oauthGrantAuthorizationCode) {
-		return &dcrRefusal{"invalid_client_metadata",
-			"grant_types: every connection begins with authorization_code, so the list must include it"}
+		return &dcrRefusal{
+			oauthErrInvalidClientMetadata,
+			"grant_types: every connection begins with authorization_code, so the list must include it",
+		}
 	}
 	for _, grant := range req.GrantTypes {
 		if !slices.Contains(oauthGrantTypesSupported, grant) {
-			return &dcrRefusal{"invalid_client_metadata",
-				fmt.Sprintf("grant_types: %q is not issued here; supported: %v", grant, oauthGrantTypesSupported)}
+			return &dcrRefusal{
+				oauthErrInvalidClientMetadata,
+				fmt.Sprintf("grant_types: %q is not issued here; supported: %v", grant, oauthGrantTypesSupported),
+			}
 		}
 	}
 	for _, responseType := range req.ResponseTypes {
 		if responseType != oauthResponseTypeCode {
-			return &dcrRefusal{"invalid_client_metadata",
-				fmt.Sprintf("response_types: %q is not served here; only %q is", responseType, oauthResponseTypeCode)}
+			return &dcrRefusal{
+				oauthErrInvalidClientMetadata,
+				fmt.Sprintf("response_types: %q is not served here; only %q is", responseType, oauthResponseTypeCode),
+			}
 		}
 	}
 	return nil
@@ -111,7 +124,7 @@ type dcrRegistration struct {
 func (req dcrRequest) registered(clientID string) dcrRegistration {
 	return dcrRegistration{
 		ClientID: clientID, ClientName: req.ClientName, RedirectURIs: req.RedirectURIs,
-		TokenEndpointAuthMethod: "none",
+		TokenEndpointAuthMethod: oauthAuthMethodNone,
 		GrantTypes:              oauthGrantTypesSupported,
 		ResponseTypes:           []string{oauthResponseTypeCode},
 	}
@@ -126,8 +139,10 @@ func dcrMember[T any](members map[string]json.RawMessage, name string) (T, *dcrR
 		return value, nil
 	}
 	if json.Unmarshal(raw, &value) != nil {
-		return value, &dcrRefusal{"invalid_client_metadata",
-			fmt.Sprintf("%s: the value has the wrong type for this member", name)}
+		return value, &dcrRefusal{
+			oauthErrInvalidClientMetadata,
+			fmt.Sprintf("%s: the value has the wrong type for this member", name),
+		}
 	}
 	return value, nil
 }
