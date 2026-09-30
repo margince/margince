@@ -5323,7 +5323,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `weekly_learnings` / `learn`
 
-`system 2,486 B (~621 tok)` — rules 2,197 B · boundary 289 B · after boundary 0 B · **cacheable 88%**
+`system 2,663 B (~665 tok)` — rules 2,374 B · boundary 289 B · after boundary 0 B · **cacheable 89%**
 
 <details><summary>system prompt</summary>
 
@@ -5332,6 +5332,7 @@ You read one rep's week — how its tasks and promises tallied, which deals move
 
 Decide first whether the week teaches anything at all:
 - A lesson needs a shape that SEVERAL rows share, such as three deals lost the same way.
+- Several rows with the same recorded outcome ARE such a shape: state that pattern and cite each of those rows. Say what they share, never why — the summary records no cause.
 - A single outcome is not a lesson, and neither is one outcome beside another: a deal won in the same week a promise was kept does not mean the promise won it. The summary records what happened, never why, and a rep would act on a cause you made up.
 - With no shared shape, return {"learnings":[]} — that is a correct answer.
 
