@@ -121,6 +121,8 @@ export type NewList = Readonly<{
   definition?: Record<string, unknown>;
   purpose?: string;
   sharing?: List["sharing"];
+  /** Only with team sharing; null or absent is the owner's teams. */
+  teamId?: string | null;
 }>;
 
 export function useCreateList() {
@@ -135,6 +137,7 @@ export function useCreateList() {
           definition: input.definition,
           purpose: input.purpose || undefined,
           sharing: input.sharing ?? "team",
+          team_id: input.teamId ?? undefined,
         },
       });
       if (error) {
@@ -152,6 +155,8 @@ export type ListEdit = Readonly<{
   name?: string;
   purpose?: string | null;
   sharing?: List["sharing"];
+  /** Absent leaves the team as it is; null moves it to the owner's teams. */
+  teamId?: string | null;
   stewardId?: string;
 }>;
 
@@ -166,6 +171,7 @@ export function useUpdateList() {
           name: edit.name,
           purpose: edit.purpose,
           sharing: edit.sharing,
+          team_id: edit.teamId,
           steward_id: edit.stewardId,
         },
       });

@@ -25,7 +25,6 @@ import {
   ListHealthBadge,
   ListKindBadge,
   RECORD_TYPE_LABEL,
-  SHARING_LABEL,
 } from "./listlibrary";
 import {
   type List,
@@ -36,6 +35,7 @@ import {
   useUpdateList,
 } from "./lists.queries";
 import { ListSettingsAction } from "./listsettings";
+import { useListAudienceLabel } from "./listsharing";
 import { ListWhy } from "./listwhy";
 import "./lists.css";
 
@@ -88,6 +88,7 @@ function ListHead({ list }: Readonly<{ list: List }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   const archive = useArchiveList();
+  const audienceOf = useListAudienceLabel();
   const lastExport = list.dependencies?.[0];
   return (
     <header className="lists-head">
@@ -104,7 +105,7 @@ function ListHead({ list }: Readonly<{ list: List }>) {
             list.visible_count == null
               ? "—"
               : formatNumber(list.visible_count, locale),
-          sharing: t(SHARING_LABEL[list.sharing]),
+          sharing: audienceOf(list),
           steward: list.steward_name ?? t("lists.noSteward"),
         })}
       </p>

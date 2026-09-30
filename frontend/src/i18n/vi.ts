@@ -9924,7 +9924,8 @@ export const vi = {
   "lists.page": "Danh s\u00e1ch",
   "lists.section.label": "Hi\u1ec3n th\u1ecb",
   "lists.section.views": "Ch\u1ebf \u0111\u1ed9 xem c\u1ee7a t\u00f4i",
-  "lists.section.lists": "Danh s\u00e1ch c\u1ee7a nh\u00f3m",
+  "lists.section.lists":
+    "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
   "lists.section.build": "T\u1ea1o b\u1ed9 l\u1ecdc",
   "lists.kind.live": "Danh s\u00e1ch \u0111\u1ed9ng",
   "lists.kind.shortlist": "Danh s\u00e1ch ch\u1ecdn",
@@ -9934,15 +9935,25 @@ export const vi = {
   "lists.type.lead": "Kh\u00e1ch ti\u1ec1m n\u0103ng",
   "lists.type.project": "D\u1ef1 \u00e1n",
   "lists.sharing.private": "Ch\u1ec9 m\u00ecnh t\u00f4i",
-  "lists.sharing.team": "Nh\u00f3m c\u1ee7a t\u00f4i",
+  "lists.sharing.team": "M\u1ed9t nh\u00f3m",
   "lists.sharing.workspace": "To\u00e0n c\u00f4ng ty",
   "lists.sharingLabel": "Ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y",
   "lists.sharingHint":
     "Chia s\u1ebb danh s\u00e1ch kh\u00f4ng cho ai xem b\u1ea3n ghi m\u00e0 h\u1ecd v\u1ed1n kh\u00f4ng \u0111\u01b0\u1ee3c xem.",
+  "lists.teamLabel": "Nh\u00f3m n\u00e0o",
+  "lists.team.allMine": "T\u1ea5t c\u1ea3 c\u00e1c nh\u00f3m c\u1ee7a t\u00f4i",
+  "lists.team.allOwners":
+    "T\u1ea5t c\u1ea3 c\u00e1c nh\u00f3m c\u1ee7a ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch",
+  "lists.audience.yourTeams": "C\u00e1c nh\u00f3m c\u1ee7a b\u1ea1n",
+  "lists.audience.ownerTeams":
+    "C\u00e1c nh\u00f3m c\u1ee7a ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch",
+  "lists.audience.unknownTeam":
+    "M\u1ed9t nh\u00f3m b\u1ea1n kh\u00f4ng xem \u0111\u01b0\u1ee3c",
   "lists.health.ownerless": "C\u1ea7n ph\u1ee5 tr\u00e1ch",
   "lists.health.invalid":
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
-  "lists.library.title": "Danh s\u00e1ch c\u1ee7a nh\u00f3m",
+  "lists.library.title":
+    "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
   "lists.library.search": "T\u00ecm danh s\u00e1ch",
   "lists.library.all": "T\u1ea5t c\u1ea3",
   "lists.library.kind": "Lo\u1ea1i danh s\u00e1ch",
@@ -9975,7 +9986,7 @@ export const vi = {
     "Danh s\u00e1ch n\u00e0y kh\u00f4ng t\u1ed3n t\u1ea1i ho\u1eb7c kh\u00f4ng \u0111\u01b0\u1ee3c chia s\u1ebb v\u1edbi b\u1ea1n.",
   "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
   "lists.head.facts":
-    "{type} \u00b7 b\u1ea1n th\u1ea5y {visible} \u00b7 chia s\u1ebb v\u1edbi {sharing} \u00b7 ph\u1ee5 tr\u00e1ch: {steward}",
+    "{type} \u00b7 b\u1ea1n th\u1ea5y {visible} \u00b7 ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y: {sharing} \u00b7 ph\u1ee5 tr\u00e1ch: {steward}",
   "lists.head.exported_one":
     "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
   "lists.head.exported_other":
@@ -10055,7 +10066,7 @@ export const vi = {
   "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",
   "lists.pickShortlist": "Ch\u1ecdn danh s\u00e1ch",
   "lists.views.empty":
-    "Ch\u01b0a c\u00f3 b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u cho lo\u1ea1i b\u1ea3n ghi n\u00e0y.",
+    "Ch\u01b0a c\u00f3 ch\u1ebf \u0111\u1ed9 xem n\u00e0o. H\u00e3y t\u1ea1o b\u1ed9 l\u1ecdc r\u1ed3i b\u1ea5m L\u01b0u b\u1ed9 l\u1ecdc.",
   "lists.views.loading":
     "\u0110ang t\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
   "lists.history.someone": "Ai \u0111\u00f3",

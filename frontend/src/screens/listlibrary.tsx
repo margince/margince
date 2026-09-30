@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The team's lists: every Live List and Shortlist this reader may find, with
-// what each is for, how many of its members they can see, who looks after it,
-// and whether it needs someone. A row opens the list.
+// Shared views: every Live List and Shortlist this reader may find, with what
+// each is for, how many of its members they can see, who looks after it, who
+// else can find it, and whether it needs someone. A row opens the list.
 
 import { useState } from "react";
 import { navigate } from "../app/router";
@@ -31,6 +31,12 @@ import {
   useCreateList,
   useLists,
 } from "./lists.queries";
+import {
+  DEFAULT_AUDIENCE,
+  type ListAudience,
+  ListAudienceFields,
+  useListAudienceLabel,
+} from "./listsharing";
 
 /** The record types a list is made for on this screen, and their words. */
 export const LIST_RECORD_TYPES = [
@@ -87,6 +93,7 @@ export function ListLibrary() {
     listType: kind === "all" ? undefined : kind,
   });
   const rows = lists.data?.data ?? [];
+  const audienceOf = useListAudienceLabel();
 
   return (
     <Panel title={t("lists.library.title")} actions={<NewShortlistAction />}>
@@ -175,7 +182,7 @@ export function ListLibrary() {
               {
                 key: "sharing",
                 header: t("lists.col.sharing"),
-                render: (list) => t(SHARING_LABEL[list.sharing]),
+                render: audienceOf,
               },
             ]}
           />
@@ -184,12 +191,6 @@ export function ListLibrary() {
     </Panel>
   );
 }
-
-export const SHARING_LABEL: Record<List["sharing"], MessageKey> = {
-  private: "lists.sharing.private",
-  team: "lists.sharing.team",
-  workspace: "lists.sharing.workspace",
-};
 
 /**
  * "New Shortlist": an empty list of chosen records, named and typed here and
@@ -203,6 +204,7 @@ function NewShortlistAction() {
   const [name, setName] = useState("");
   const [purpose, setPurpose] = useState("");
   const [entityType, setEntityType] = useState<ListRecordType>("contact");
+  const [audience, setAudience] = useState<ListAudience>(DEFAULT_AUDIENCE);
   return (
     <>
       <Button onClick={() => setOpen(true)}>{t("lists.newShortlist")}</Button>
@@ -221,6 +223,8 @@ function NewShortlistAction() {
               purpose: purpose.trim(),
               entityType,
               listType: "static",
+              sharing: audience.sharing,
+              teamId: audience.sharing === "team" ? audience.teamId : null,
             },
             {
               onSuccess: (list) => {
@@ -262,6 +266,11 @@ function NewShortlistAction() {
             />
           )}
         </Field>
+        <ListAudienceFields
+          value={audience}
+          onChange={setAudience}
+          ownerIsReader
+        />
       </ConfirmModal>
     </>
   );

@@ -267,6 +267,22 @@ it("restores a saved filter, count and all, without a clause being retyped", asy
   expect(await screen.findByText("7 contacts match")).toBeTruthy();
 });
 
+it("opens the saved view the address names, already loaded", async () => {
+  const { wrapper } = mount({ match_count: 4 }, [
+    viewRow("Other", {
+      filter: { and: [{ field: "full_name", op: "contains", value: "bob" }] },
+    }),
+    viewRow("Berliners", {
+      filter: { and: [{ field: "full_name", op: "contains", value: "ann" }] },
+    }),
+  ]);
+  render(<FiltersScreen id="contacts" view="v-Berliners" />, { wrapper });
+
+  expect(await screen.findByDisplayValue("ann")).toBeTruthy();
+  expect(screen.queryByDisplayValue("bob")).toBeNull();
+  expect(await screen.findByText("4 contacts match")).toBeTruthy();
+});
+
 it("does not offer a view whose stored filter it cannot read", async () => {
   const { wrapper } = mount({ match_count: 1 }, [
     // A row written by an older build, or by hand: the operator is not one this

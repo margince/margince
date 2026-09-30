@@ -8,21 +8,27 @@
 import { useState } from "react";
 import { Button, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
-import { SHARING_LABEL } from "./listlibrary";
+import { problemMessageOf, useMe } from "./common";
 import { type List, useUpdateList } from "./lists.queries";
-
-const SHARINGS = ["private", "team", "workspace"] as const;
+import { type ListAudience, ListAudienceFields } from "./listsharing";
 
 export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(list.name);
   const [purpose, setPurpose] = useState(list.purpose ?? "");
-  const [sharing, setSharing] = useState<List["sharing"]>(list.sharing);
+  const [audience, setAudience] = useState<ListAudience>({
+    sharing: list.sharing,
+    teamId: list.team_id ?? null,
+  });
+  const me = useMe();
   const update = useUpdateList();
+  // The team travels only when it changed under team sharing: an untouched
+  // one would write a revision that changes nothing.
+  const currentTeam = list.team_id ?? null;
+  const teamChanged =
+    audience.sharing === "team" && audience.teamId !== currentTeam;
   return (
     <>
       <Button onClick={() => setOpen(true)}>{t("lists.settings")}</Button>
@@ -41,7 +47,8 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
               version: list.version,
               name: name.trim(),
               purpose: purpose.trim() === "" ? null : purpose.trim(),
-              sharing,
+              sharing: audience.sharing,
+              teamId: teamChanged ? audience.teamId : undefined,
             },
             { onSuccess: () => setOpen(false) },
           )
@@ -65,19 +72,11 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
             />
           )}
         </Field>
-        <Field label={t("lists.sharingLabel")} hint={t("lists.sharingHint")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={sharing}
-              onChange={(next) => setSharing(next as List["sharing"])}
-              options={SHARINGS.map((value) => ({
-                value,
-                label: t(SHARING_LABEL[value]),
-              }))}
-            />
-          )}
-        </Field>
+        <ListAudienceFields
+          value={audience}
+          onChange={setAudience}
+          ownerIsReader={list.owner_id === me.data?.user.id}
+        />
       </ConfirmModal>
     </>
   );

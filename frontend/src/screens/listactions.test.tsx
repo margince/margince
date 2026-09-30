@@ -20,6 +20,8 @@ import {
   members,
   SHORTLIST_ID,
   shortlist,
+  TEAM_ID,
+  teamsPage,
 } from "./lists.fixtures";
 import { MyViews } from "./myviews";
 import { newGroup, newLeaf } from "./segmentpredicate";
@@ -77,6 +79,39 @@ describe("changing a list from its page", () => {
       purpose: null,
       sharing: "workspace",
     });
+  });
+
+  it("moves a team list to one named team", async () => {
+    const patched: unknown[] = [];
+    installFetchStub({
+      "GET /me": listsMe(true, [TEAM_ID]),
+      "GET /teams": () => jsonResponse(teamsPage),
+      [`GET /lists/${LIVE_ID}`]: () => jsonResponse(liveList),
+      [`GET /lists/${LIVE_ID}/history`]: () => jsonResponse(empty),
+      "GET /companies": () => jsonResponse(empty),
+      [`PATCH /lists/${LIVE_ID}`]: (body) => {
+        patched.push(body);
+        return jsonResponse(liveList);
+      },
+    });
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <ListScreen listID={LIVE_ID} />
+      </StoryProviders>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.settings"] }),
+    );
+    await user.click(
+      screen.getByRole("combobox", { name: en["lists.teamLabel"] }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "Team Germany" }),
+    );
+    await user.click(screen.getByRole("button", { name: en["lists.save"] }));
+    await vi.waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]).toMatchObject({ sharing: "team", team_id: TEAM_ID });
   });
 
   it("archives a list, and a steward takes over one nobody looks after", async () => {
@@ -192,25 +227,38 @@ describe("changing a list from its page", () => {
 });
 
 describe("saving a filter as a Live List", () => {
-  it("saves the complete tree and opens the list", async () => {
-    const posted: unknown[] = [];
+  const tree = newGroup("and", [newLeaf("industry", "eq", "Manufacturing")]);
+
+  function saveAction(posted: unknown[]) {
     installFetchStub({
-      "GET /me": listsMe(true),
+      "GET /me": listsMe(true, [TEAM_ID]),
+      "GET /teams": () => jsonResponse(teamsPage),
       "POST /lists": (body) => {
         posted.push(body);
         return jsonResponse({ ...liveList, id: "saved" }, 201);
       },
     });
-    const user = userEvent.setup();
-    const tree = newGroup("and", [newLeaf("industry", "eq", "Manufacturing")]);
     render(
       <StoryProviders>
         <SaveFilterListAction resource="company" tree={tree} />
       </StoryProviders>,
     );
+  }
+
+  it("saves the complete tree for all of the reader's teams unless told otherwise", async () => {
+    const posted: unknown[] = [];
+    saveAction(posted);
+    const user = userEvent.setup();
     await user.click(
       await screen.findByRole("button", { name: en["filters.saveList"] }),
     );
+    // The audience is on screen before anything is saved.
+    expect(
+      screen.getByRole("combobox", { name: en["lists.sharingLabel"] }),
+    ).toHaveTextContent(en["lists.sharing.team"]);
+    expect(
+      screen.getByRole("combobox", { name: en["lists.teamLabel"] }),
+    ).toHaveTextContent(en["lists.team.allMine"]);
     await user.type(
       screen.getByRole("textbox", { name: en["lists.name"] }),
       "Manufacturers",
@@ -219,14 +267,67 @@ describe("saving a filter as a Live List", () => {
       screen.getByRole("button", { name: en["filters.saveListConfirm"] }),
     );
     await vi.waitFor(() => expect(window.location.hash).toBe("#/lists/saved"));
-    expect(posted[0]).toMatchObject({
+    expect(posted[0]).toEqual({
       name: "Manufacturers",
       entity_type: "company",
       list_type: "dynamic",
       definition: {
         and: [{ field: "industry", op: "eq", value: "Manufacturing" }],
       },
+      sharing: "team",
     });
+  });
+
+  it("sends the team the reader picked", async () => {
+    const posted: unknown[] = [];
+    saveAction(posted);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: en["filters.saveList"] }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: en["lists.name"] }),
+      "Manufacturers",
+    );
+    await user.click(
+      screen.getByRole("combobox", { name: en["lists.teamLabel"] }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "Team Germany" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["filters.saveListConfirm"] }),
+    );
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ sharing: "team", team_id: TEAM_ID });
+  });
+
+  it("sends only-me sharing with no team", async () => {
+    const posted: unknown[] = [];
+    saveAction(posted);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: en["filters.saveList"] }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: en["lists.name"] }),
+      "Mine",
+    );
+    await user.click(
+      screen.getByRole("combobox", { name: en["lists.sharingLabel"] }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: en["lists.sharing.private"] }),
+    );
+    expect(
+      screen.queryByRole("combobox", { name: en["lists.teamLabel"] }),
+    ).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: en["filters.saveListConfirm"] }),
+    );
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ sharing: "private" });
+    expect(posted[0]).not.toHaveProperty("team_id");
   });
 });
 
@@ -256,6 +357,21 @@ describe("my views", () => {
     );
     const row = await screen.findAllByText("Berlin gold");
     await user.click(row[0]);
-    expect(window.location.hash).toMatch(/^#\/filters\//);
+    expect(window.location.hash).toBe("#/filters/contacts/v1");
+  });
+
+  it("says how to make one when there are none", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /views": () => jsonResponse(empty),
+    });
+    render(
+      <StoryProviders>
+        <MyViews />
+      </StoryProviders>,
+    );
+    expect(
+      (await screen.findAllByText(en["lists.views.empty"])).length,
+    ).toBeGreaterThan(0);
   });
 });
