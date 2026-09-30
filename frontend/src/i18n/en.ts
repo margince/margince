@@ -7628,20 +7628,10 @@ export const en = {
   "auto.preview.explainer":
     "Read-only dry run. No records are changed and nothing is sent.",
 
-  "strength.title": "Relationship strength",
-  "strength.score": "Score {score} of 100",
   "strength.bucket.none": "Dormant",
   "strength.bucket.weak": "Weak",
   "strength.bucket.moderate": "Warm",
   "strength.bucket.strong": "Strong",
-  "strength.factor.recency": "Recency",
-  "strength.factor.frequency": "Frequency",
-  "strength.factor.reciprocity": "Reciprocity",
-  "strength.factor.direction": "Direction",
-  "strength.lastInteraction": "Last interaction: {when}",
-  "strength.none": "No interactions yet",
-  "strength.inout": "{in} in · {out} out (90 days)",
-  "strength.computedFrom": "Computed from {count} activities",
 
   // The relationship-graph coverage card (ADR-0078).
   "coverage.engaged": "Engaged",

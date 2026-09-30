@@ -26,7 +26,7 @@ import "./automationdetail.css";
 
 // The human surface for the two already-live, human-only automation ops
 // (listAutomationRuns / previewAutomation). Co-located with automations.tsx
-// (the strength.tsx / company-context.tsx precedent: a row's expandable body
+// (the company-context.tsx precedent: a row's expandable body
 // in its own file) so the screen stays legible. Both panels are pure reads;
 // neither writes.
 

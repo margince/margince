@@ -7374,20 +7374,10 @@ export const vi = {
   "auto.preview.explainer":
     "Một lượt chạy thử chỉ đọc — không bản ghi nào bị thay đổi và không gì được gửi đi.",
 
-  "strength.title": "Độ bền quan hệ",
-  "strength.score": "Điểm {score}/100",
   "strength.bucket.none": "Tạm lắng",
   "strength.bucket.weak": "Yếu",
   "strength.bucket.moderate": "Thân thiết",
   "strength.bucket.strong": "Bền chặt",
-  "strength.factor.recency": "Độ gần đây",
-  "strength.factor.frequency": "Tần suất",
-  "strength.factor.reciprocity": "Mức qua lại",
-  "strength.factor.direction": "Chiều trao đổi",
-  "strength.lastInteraction": "Tương tác gần nhất: {when}",
-  "strength.none": "Chưa có tương tác nào",
-  "strength.inout": "{in} vào · {out} ra (90 ngày)",
-  "strength.computedFrom": "Tính từ {count} hoạt động",
 
   // The relationship-graph coverage card (ADR-0078).
   "coverage.engaged": "Đang trao đổi",

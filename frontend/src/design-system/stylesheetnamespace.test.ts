@@ -59,7 +59,6 @@ const namespaces = [
   { prefix: "repeatablerowsfield-", home: "screens/repeatablerowsfield.css" },
   { prefix: "scheduledsends-", home: "screens/scheduledsends.css" },
   { prefix: "storyhost-", home: "mcp-apps/story-hosts.css" },
-  { prefix: "strength-", home: "screens/strength.css" },
   { prefix: "transcript-", home: "screens/transcriptread.css" },
 ];
 

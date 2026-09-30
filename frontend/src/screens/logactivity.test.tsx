@@ -85,16 +85,6 @@ function render(ui: ReactNode) {
 
 const emptyPage = { data: [], page: { next_cursor: null } };
 
-// The dormant/no-interactions strength response — the default backstop for
-// any test below that doesn't itself register a "GET .../strength" route:
-// the Contact Overview now fires this GET unconditionally (P-4).
-const dormantStrength = {
-  score: 0,
-  bucket: "none",
-  factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
-  last_interaction: null,
-};
-
 type Captured = { key: string; body: unknown };
 
 // One day, picked in the form and asserted against — and the zone the machine
@@ -187,9 +177,6 @@ function stubApi(
         return jsonResponse(
           meFixture({ allow: { activity: ["create"], contact: ["read"] } }),
         );
-      }
-      if (url.pathname.endsWith("/strength")) {
-        return jsonResponse(dormantStrength);
       }
       if (url.pathname.endsWith("/context")) {
         return jsonResponse({

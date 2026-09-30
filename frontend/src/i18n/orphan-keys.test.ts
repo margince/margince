@@ -361,26 +361,7 @@ const FRONTEND_ROOT = resolve(SRC_ROOT, "..");
 const KEPT_UNMOUNTED: ReadonlyMap<
   string,
   { readonly issue: string; readonly keys: readonly string[] }
-> = new Map([
-  [
-    join(SRC_ROOT, "screens", "strength.tsx"),
-    {
-      issue: "#4880",
-      keys: [
-        "strength.computedFrom",
-        "strength.factor.direction",
-        "strength.factor.frequency",
-        "strength.factor.recency",
-        "strength.factor.reciprocity",
-        "strength.inout",
-        "strength.lastInteraction",
-        "strength.none",
-        "strength.score",
-        "strength.title",
-      ],
-    },
-  ],
-]);
+> = new Map();
 
 // vite.config.ts names no build input, so Vite builds its default: the root
 // index.html. Each MCP view under src/ is built from its own index.html.

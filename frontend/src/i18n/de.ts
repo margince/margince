@@ -7440,20 +7440,10 @@ export const de = {
   "auto.preview.explainer":
     "Probelauf ohne Schreibzugriff. Es werden keine Datensätze geändert und nichts gesendet.",
 
-  "strength.title": "Beziehungsstärke",
-  "strength.score": "Score {score} von 100",
   "strength.bucket.none": "Ruhend",
   "strength.bucket.weak": "Schwach",
   "strength.bucket.moderate": "Warm",
   "strength.bucket.strong": "Stark",
-  "strength.factor.recency": "Aktualität",
-  "strength.factor.frequency": "Häufigkeit",
-  "strength.factor.reciprocity": "Gegenseitigkeit",
-  "strength.factor.direction": "Richtung",
-  "strength.lastInteraction": "Letzte Interaktion: {when}",
-  "strength.none": "Noch keine Interaktionen",
-  "strength.inout": "{in} eingehend · {out} ausgehend (90 Tage)",
-  "strength.computedFrom": "Berechnet aus Aktivitäten: {count}",
 
   // Die Abdeckungskarte des Beziehungsgraphen (ADR-0078).
   "coverage.engaged": "Im Austausch",
