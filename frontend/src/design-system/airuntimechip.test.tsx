@@ -110,6 +110,42 @@ describe("the runtime chip", () => {
     expect(button).toHaveAttribute("aria-expanded", "true");
   });
 
+  it("takes no tab stop in the popover while its rows fit", async () => {
+    render(chip());
+
+    await userEvent.tab();
+    await userEvent.tab();
+
+    expect(document.body).toHaveFocus();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+  });
+
+  it("lets Tab into a popover whose rows run past the screen, and Escape back out", async () => {
+    // happy-dom lays nothing out, so the popover is given a height it cannot hold.
+    const scrollHeight = vi
+      .spyOn(Element.prototype, "scrollHeight", "get")
+      .mockImplementation(function (this: Element) {
+        return this.classList.contains("mw-aistat-pop") ? 1200 : 0;
+      });
+    render(chip());
+    const button = screen.getByRole("button", {
+      name: new RegExp(LABELS.chip),
+    });
+
+    await userEvent.tab();
+    await userEvent.tab();
+
+    const region = screen.getByRole("region", { name: LABELS.chip });
+    expect(region).toHaveFocus();
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(region).toHaveTextContent(LABELS.scope);
+
+    await userEvent.keyboard("{Escape}");
+    expect(button).toHaveFocus();
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    scrollHeight.mockRestore();
+  });
+
   it("opens again after focus leaves and comes back", async () => {
     render(chip());
     const button = screen.getByRole("button", {

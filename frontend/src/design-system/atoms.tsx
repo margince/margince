@@ -1207,9 +1207,11 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
 // is not a reason to make every one of them say where it went.
 export { Modal } from "./modal";
 
-/** Whether a box is holding more width than it is showing. */
-function overflowsSideways(element: HTMLElement | null): boolean {
-  return element !== null && element.scrollWidth - element.clientWidth > 1;
+/** Whether a box is holding more than it is showing along `axis`. */
+function overflows(element: HTMLElement | null, axis: "inline" | "block") {
+  if (element === null) return false;
+  if (axis === "block") return element.scrollHeight - element.clientHeight > 1;
+  return element.scrollWidth - element.clientWidth > 1;
 }
 
 /** Spread onto the scrolling box. Empty while it has nothing hidden to reach. */
@@ -1220,22 +1222,20 @@ type ScrollRegion = Readonly<{
 }>;
 
 /**
- * Make a box that scrolls sideways reachable, and only then.
+ * Make a box that scrolls reachable, and only then: sideways, or downward for a
+ * `block` box such as a popover capped to the viewport.
  *
- * A region holding content past its right edge is content pointer users can
+ * A region holding content past its edge is content pointer users can
  * drag to and keyboard users cannot reach at all, so it takes a tab stop and
  * announces itself by name. It takes neither while it fits: a tab stop in front
  * of every table in the product, most of which fit, is a cost every keyboard
  * reader pays for the few that do not. That is the same bargain
  * `useTruncationTooltip` strikes for a string that fits its row.
- *
- * Both spellings of a scrolling table body use this — `TableScroll` below, and
- * the list surface's own `.lt-scroll` (listtable.tsx) — so a reader meets the
- * same behaviour whichever table they land in.
  */
 export function useScrollRegion(
   box: RefObject<HTMLElement | null>,
   label: string,
+  axis: "inline" | "block" = "inline",
 ): ScrollRegion {
   const [scrolls, setScrolls] = useState(false);
   const [watched, setWatched] = useState<HTMLElement | null>(null);
@@ -1247,7 +1247,7 @@ export function useScrollRegion(
   // between a board and a table) is re-watched rather than leaving the observer
   // below holding a node that is no longer on the page.
   useLayoutEffect(() => {
-    setScrolls(overflowsSideways(box.current));
+    setScrolls(overflows(box.current, axis));
     setWatched(box.current);
   });
   // A window resize is only one of the ways the box changes size, and the least
@@ -1264,7 +1264,7 @@ export function useScrollRegion(
       return;
     }
     const observer = new ResizeObserver(() =>
-      setScrolls(overflowsSideways(watched)),
+      setScrolls(overflows(watched, axis)),
     );
     observer.observe(watched);
     const content = watched.firstElementChild;
@@ -1272,7 +1272,7 @@ export function useScrollRegion(
       observer.observe(content);
     }
     return () => observer.disconnect();
-  }, [watched]);
+  }, [watched, axis]);
   return scrolls ? { tabIndex: 0, role: "region", "aria-label": label } : {};
 }
 

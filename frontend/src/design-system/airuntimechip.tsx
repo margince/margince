@@ -2,11 +2,20 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ChevronDown } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type RefObject,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import type { components } from "../api/schema";
 import { formatNumber, INTL_LOCALE } from "../format/format";
 import type { Locale } from "../i18n";
 import "./airuntimechip.css";
+import { useScrollRegion } from "./atoms";
 import { coveredByDialog } from "./dialogfocus";
 
 type AiRunSummary = components["schemas"]["AiRunSummary"];
@@ -48,7 +57,11 @@ export function AiRuntimeChip({
   const [dismissed, setDismissed] = useState(false);
   const popoverId = useId();
   const wrapper = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const popover = useRef<HTMLDivElement>(null);
   const open = !dismissed && (pinned || hovered || focused);
+  const room = useRoomBelow(wrapper, open);
+  const region = useScrollRegion(popover, labels.chip, "block");
 
   // On the wrapper, so the pointer can travel onto the popover; native
   // listeners keep the wrapper a plain layout element rather than a control.
@@ -65,11 +78,29 @@ export function AiRuntimeChip({
       setHovered(false);
       setDismissed(false);
     };
+    // Focus inside the wrapper, so Tab can move from the chip into a popover
+    // that scrolls without closing it.
+    const focusIn = () => setFocused(true);
+    const focusOut = (event: FocusEvent) => {
+      if (
+        event.relatedTarget instanceof Node &&
+        root.contains(event.relatedTarget)
+      ) {
+        return;
+      }
+      setFocused(false);
+      // Leaving resets the suppression, so coming back opens again.
+      setDismissed(false);
+    };
     root.addEventListener("mouseenter", enter);
     root.addEventListener("mouseleave", leave);
+    root.addEventListener("focusin", focusIn);
+    root.addEventListener("focusout", focusOut);
     return () => {
       root.removeEventListener("mouseenter", enter);
       root.removeEventListener("mouseleave", leave);
+      root.removeEventListener("focusin", focusIn);
+      root.removeEventListener("focusout", focusOut);
     };
   }, []);
 
@@ -85,6 +116,10 @@ export function AiRuntimeChip({
     };
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape" && !coveredByDialog(wrapper.current)) {
+        // A popover about to be hidden would drop its focus onto the body.
+        if (popover.current?.contains(document.activeElement)) {
+          button.current?.focus();
+        }
         close();
       }
     }
@@ -109,6 +144,7 @@ export function AiRuntimeChip({
   return (
     <div className="mw-aistat" ref={wrapper}>
       <button
+        ref={button}
         type="button"
         className="mw-aistat-btn"
         aria-expanded={open}
@@ -122,18 +158,19 @@ export function AiRuntimeChip({
           setPinned(!pinned);
           setDismissed(pinned);
         }}
-        onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setFocused(false);
-          // Leaving resets the suppression, so coming back opens again.
-          setDismissed(false);
-        }}
       >
         <i aria-hidden />
         <strong>{spend}</strong>
         <ChevronDown className="mw-aistat-caret" aria-hidden />
       </button>
-      <div className="mw-aistat-pop" id={popoverId} hidden={!open}>
+      <div
+        ref={popover}
+        className="mw-aistat-pop"
+        id={popoverId}
+        hidden={!open}
+        style={room}
+        {...region}
+      >
         <p className="mw-aistat-h">{labels.answering}</p>
         <dl className="mw-aistat-rows">
           <RuntimeRow label={labels.configured} value={configured} />
@@ -179,6 +216,36 @@ export function AiRuntimeChip({
       </div>
     </div>
   );
+}
+
+type RoomBelow = CSSProperties & Readonly<{ "--aistatRoom": string }>;
+
+// Not useAnchoredToTrigger: for a low trigger it measures the room ABOVE it,
+// and this popover always opens below.
+function useRoomBelow(
+  anchor: RefObject<HTMLElement | null>,
+  open: boolean,
+): RoomBelow | undefined {
+  const [room, setRoom] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+    const measure = () => {
+      const foot = anchor.current?.getBoundingClientRect().bottom;
+      if (foot !== undefined) {
+        setRoom(Math.max(globalThis.innerHeight - foot, 0));
+      }
+    };
+    measure();
+    globalThis.addEventListener("resize", measure);
+    globalThis.addEventListener("scroll", measure, true);
+    return () => {
+      globalThis.removeEventListener("resize", measure);
+      globalThis.removeEventListener("scroll", measure, true);
+    };
+  }, [open, anchor]);
+  return room === null ? undefined : { "--aistatRoom": `${room}px` };
 }
 
 function RuntimeRow({

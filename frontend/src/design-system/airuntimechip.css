@@ -71,6 +71,15 @@
   background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
   animation: mw-aistat-in var(--dur-state) var(--ease-in-out) both;
+  /* The measured room below the chip, less the drop to the popover and a
+     gutter: at large text the rows scroll inside rather than off the screen. */
+  max-block-size: calc(var(--aistatRoom, 100dvh) - var(--space-4));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.mw-aistat-pop:focus-visible {
+  outline: var(--focus-ring-forced);
+  outline-offset: 2px;
 }
 @keyframes mw-aistat-in {
   from {
