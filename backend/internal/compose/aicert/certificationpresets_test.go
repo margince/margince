@@ -19,7 +19,6 @@ package aicert_test
 // and a ladder rewritten in tasks_gen.go re-attributes every row.
 
 import (
-	"maps"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -94,9 +93,9 @@ type aiCertPresetTask struct {
 	Passed               int `json:"passed"`
 	CasesFailingOften    int `json:"cases_failing_often"`
 	CasesBelowQualityBar int `json:"cases_below_quality_bar"`
-	// siteThinking is the measuring record's per-site levels, which a rung
-	// must serve too before the record grades it.
-	siteThinking map[string]string
+	// record is the measuring record, which grades a rung only where
+	// aicert.RecordMeasures says it measured that rung.
+	record aicert.Record
 }
 
 // aiCertFallback is the next bound rung of a task's ladder and what the
@@ -220,15 +219,13 @@ func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertP
 	return row
 }
 
-// measuredOn is the record that grades a rung: one at the rung's binding, and
-// only where every site ran at the level this rung serves it — the contract's
-// site levels move with the build, and a record from before one was declared
-// measured a different call.
+// measuredOn is the record that grades a rung, by the rule the runner's
+// STALE_ONLY skip and the readiness report read too (aicert.RecordMeasures).
 func measuredOn(task string, binding ai.ProviderConfig, ref aiCertBindingRef,
 	measured map[string]aiCertPresetTask,
 ) (aiCertPresetTask, bool) {
 	seen, ok := measured[aiCertRouteKey(task, ref)]
-	if !ok || !maps.Equal(seen.siteThinking, ai.SiteThinkingLevels(binding, ai.Task(task))) {
+	if !ok || !aicert.RecordMeasures(seen.record, binding, ai.Profile(ref.Env), ai.Task(task)) {
 		return aiCertPresetTask{}, false
 	}
 	return seen, true
@@ -305,7 +302,7 @@ func aiCertTaskVerdicts(doc aiCertDoc, records []aicert.Record) map[string]aiCer
 			verdicts[key] = aiCertPresetTask{
 				Band: rec.Verdict, State: siteRec.State, Runs: rec.Runs, Passed: rec.Passed,
 				CasesFailingOften: failing, CasesBelowQualityBar: belowQuality, Abandoned: aiCertAbandoned(rec),
-				siteThinking: rec.SiteThinking,
+				record: rec,
 			}
 		}
 	}
