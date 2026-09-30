@@ -16,21 +16,22 @@
   "certified_scope": "single_call",
   "context_applied": false,
   "context_scopes": null,
-  "judge_score_p50": 97,
-  "judge_score_min": 95,
-  "latency_p50": 3706,
-  "latency_p95": 6457,
-  "mean_tokens": 2061,
-  "mean_tokens_in": 1229,
-  "mean_tokens_out": 832,
+  "judge_score_p50": 100,
+  "judge_score_min": 90,
+  "latency_p50": 3529,
+  "latency_p95": 6218,
+  "mean_tokens": 1898,
+  "mean_tokens_in": 1230,
+  "mean_tokens_out": 668,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 9331,
+  "est_cost_microusd": 7857,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-09-30T05:58:30Z",
+  "thinking_level": "low",
+  "ran_at": "2026-09-30T13:00:46Z",
   "scenarios": [
     {
       "scenario": "services_page_offering_facts",
@@ -41,9 +42,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        95,
         97,
-        100
+        90,
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -64,9 +65,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        95,
-        97,
-        95
+        100,
+        100,
+        100
       ],
       "bands": {
         "certified_min": 70,

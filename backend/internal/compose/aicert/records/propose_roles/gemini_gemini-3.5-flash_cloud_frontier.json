@@ -18,19 +18,20 @@
   "context_scopes": null,
   "judge_score_p50": 100,
   "judge_score_min": 95,
-  "latency_p50": 2366,
-  "latency_p95": 5422,
-  "mean_tokens": 1563,
-  "mean_tokens_in": 1045,
-  "mean_tokens_out": 518,
+  "latency_p50": 2657,
+  "latency_p95": 5282,
+  "mean_tokens": 1612,
+  "mean_tokens_in": 1077,
+  "mean_tokens_out": 535,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 6229,
+  "est_cost_microusd": 6430,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-09-30T05:53:56Z",
+  "thinking_level": "low",
+  "ran_at": "2026-09-30T12:50:12Z",
   "scenarios": [
     {
       "scenario": "propose_roles_reads_a_buyer_out_of_their_own_words",
@@ -42,8 +43,8 @@
       "passed": 3,
       "judge_scores": [
         97,
-        98,
-        95
+        95,
+        98
       ],
       "bands": {
         "certified_min": 80,
@@ -65,7 +66,7 @@
       "passed": 3,
       "judge_scores": [
         100,
-        99,
+        97,
         100
       ],
       "bands": {

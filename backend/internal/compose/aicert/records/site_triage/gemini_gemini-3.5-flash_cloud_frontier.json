@@ -17,20 +17,21 @@
   "context_applied": false,
   "context_scopes": null,
   "judge_score_p50": 100,
-  "judge_score_min": 97,
-  "latency_p50": 1694,
-  "latency_p95": 3376,
-  "mean_tokens": 780,
-  "mean_tokens_in": 662,
-  "mean_tokens_out": 117,
+  "judge_score_min": 95,
+  "latency_p50": 1771,
+  "latency_p95": 3727,
+  "mean_tokens": 776,
+  "mean_tokens_in": 663,
+  "mean_tokens_out": 113,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 2046,
+  "est_cost_microusd": 2011,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-09-30T06:00:13Z",
+  "thinking_level": "low",
+  "ran_at": "2026-09-30T13:02:28Z",
   "scenarios": [
     {
       "scenario": "a_one_contact_consultancy_is_still_a_company",
@@ -111,7 +112,7 @@
       "passed": 3,
       "judge_scores": [
         100,
-        100,
+        95,
         100
       ],
       "bands": {
@@ -134,8 +135,8 @@
       "passed": 3,
       "judge_scores": [
         97,
-        97,
-        97
+        95,
+        95
       ],
       "bands": {
         "certified_min": 70,
