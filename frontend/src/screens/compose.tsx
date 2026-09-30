@@ -1640,6 +1640,9 @@ export function ComposeModal({
   // roster, the account's own contacts from the record behind this drawer — whose
   // read is already in cache there, so this costs the composer nothing on the
   // page it opens over.
+  //
+  // Still walks rather than reading useMemberNames by id: `nameOf` is handed
+  // to useRecentConversations, called per value as ITS rows render.
   const roster = useRoster("user", open);
   const namesCompany = useCompany360(entityType === "company" ? entityId : "");
   const colleagues = new Map(

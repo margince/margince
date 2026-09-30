@@ -9,7 +9,7 @@ import { throwProblem } from "./common";
 // a single `GET /users/names` request rather than one request per reference.
 
 /** The most seats one request names — the contract's own `id` bound. */
-const SEAT_NAME_BATCH = 100;
+const MAX_SEATS_PER_REQUEST = 100;
 
 // The query every reader of one id's name shares — `useMemberName` and
 // `useMemberNames` both build their observers off this SAME options object,
@@ -45,45 +45,29 @@ export function useMemberName(id: string | null | undefined) {
   });
 }
 
-/** What a bulk naming read knows: who it named, and who it asked and failed. */
-export type MemberNaming = Readonly<{
-  names: ReadonlyMap<string, string>;
-  unreadable: ReadonlySet<string>;
-}>;
-
 /**
  * Every id a caller already holds, named at once — a list row, a board card,
  * a chronology's own colleagues — rather than one `useMemberName` per row,
  * which is not an option: a hook cannot be called inside a `.map()`.
  *
- * `names` carries every id that resolved to one; `unreadable` is every id
- * whose read FAILED, held apart because a failed read is not a settled
- * absence — the same distinction `useCompanyMarks` draws for a company a
- * board could not read (dealcompanymarks.ts). An id in neither is pending or
- * was never asked: this hook draws no loading state of its own, because none
- * of its callers render one per row today; a caller that starts to should
- * read `isPending`/`isError` off the same `useQueries` result this returns
- * rather than reach for a fifth shape.
+ * An id absent from the map is pending, failed, or was never asked; no caller
+ * renders those apart for a bulk read today, so none is drawn here.
  */
-export function useMemberNames(ids: readonly string[]): MemberNaming {
+export function useMemberNames(
+  ids: readonly string[],
+): ReadonlyMap<string, string> {
   const unique = [...new Set(ids.filter(Boolean))];
   const reads = useQueries({
     queries: unique.map((id) => memberNameQueryOptions(id)),
   });
   const names = new Map<string, string>();
-  const unreadable = new Set<string>();
   reads.forEach((read, index) => {
     const id = unique[index];
-    if (id === undefined) {
-      return;
-    }
-    if (read.data != null) {
+    if (id !== undefined && read.data != null) {
       names.set(id, read.data);
-    } else if (read.isError) {
-      unreadable.add(id);
     }
   });
-  return { names, unreadable };
+  return names;
 }
 
 // The ids this tick has asked about and not yet sent. A leaf component cannot
@@ -117,8 +101,8 @@ async function readNames(
   ids: readonly string[],
 ): Promise<ReadonlyMap<string, string>> {
   const named = new Map<string, string>();
-  for (let at = 0; at < ids.length; at += SEAT_NAME_BATCH) {
-    const page = ids.slice(at, at + SEAT_NAME_BATCH);
+  for (let at = 0; at < ids.length; at += MAX_SEATS_PER_REQUEST) {
+    const page = ids.slice(at, at + MAX_SEATS_PER_REQUEST);
     const { data, error } = await api.GET("/users/names", {
       params: { query: { id: page } },
     });

@@ -77,8 +77,8 @@ export function CompanyIdentityFacts({
     viewerId,
     company.author,
   );
-  // Named by id: the same read every other author/owner tag in this task
-  // moved onto, asked for only when the provenance names a human at all.
+  // Named by id, the same read every author/owner tag resolves through,
+  // asked for only when the provenance names a human at all.
   const authorName = useMemberName(
     provenance.kind === "human" ? provenance.userId : undefined,
   );

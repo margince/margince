@@ -5,10 +5,10 @@
 
 package identity
 
-// The naming read's HTTP surface. SeatNames itself is covered in
+// Which seats a naming read names, and that it names them to a caller who
+// administers nobody. SeatNames itself is covered in
 // rosterteams_integration_test.go, which holds that a non-member is refused;
-// these hold what the surface adds — which seats it names, and that it names
-// them to a caller who administers nobody.
+// some cases here call it directly and the rest go through its HTTP handler.
 
 import (
 	"context"
@@ -90,6 +90,29 @@ func TestANonAdminNamesADeactivatedColleague(t *testing.T) {
 	}
 	if named[departed.UUID] != "Dana Kessler" {
 		t.Fatalf("a deactivated colleague is named; the read says %q", named[departed.UUID])
+	}
+}
+
+// A colleague who has not yet redeemed their invite still owns whatever was
+// recorded under their name before they ever signed in, so a non-admin caller
+// sees that name rather than a uuid.
+func TestANonAdminNamesAnInvitedColleague(t *testing.T) {
+	e := setupRevocationEnv(t, "seat-names-invited")
+	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
+
+	invited, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
+		Email: "newcomer@acme.test", DisplayName: "Noor Newcomer", Role: "rep",
+	})
+	if err != nil {
+		t.Fatalf("inviting a colleague who has not signed in yet: %v", err)
+	}
+
+	named, err := e.svc.SeatNames(e.wsCtx(rep), []ids.UserID{invited})
+	if err != nil {
+		t.Fatalf("naming an invited colleague: %v", err)
+	}
+	if named[invited.UUID] != "Noor Newcomer" {
+		t.Fatalf("an invited colleague is named; the read says %q", named[invited.UUID])
 	}
 }
 

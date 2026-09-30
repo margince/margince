@@ -266,9 +266,9 @@ function WorklistBody({
   // Whose day this is, named by id, asking nothing on the reader's own day
   // (`owner` is then ""). `rosterOwnerNaming` answers null for nobody and for
   // an unnamed id alike, which is the one wording this sentence needs.
-  const colleague = rosterOwnerNaming(
-    useMemberNames(owner ? [owner] : []).names,
-  )(owner);
+  const colleague = rosterOwnerNaming(useMemberNames(owner ? [owner] : []))(
+    owner,
+  );
   // Default context follows seller work. An explicit choice may also name a
   // review row, whose record context must remain reachable from the queue.
   const selected = rowInHand(

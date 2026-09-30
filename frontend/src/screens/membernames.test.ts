@@ -36,9 +36,10 @@ function namesWhoeverIsAsked() {
 let client: QueryClient;
 
 beforeEach(() => {
-  client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  // No `retry` default here: the failed-read tests below exist to prove the
+  // module's OWN `retry: false` (memberNameQueryOptions), not to stand in for
+  // it with the client's.
+  client = new QueryClient();
 });
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -109,9 +110,10 @@ describe("useMemberName", () => {
   });
 
   it("holds a failed read as an error on every reference it covered", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+    const fetchMock = vi.fn(async () =>
       jsonResponse({ title: "Server error" }, 500),
     );
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
 
     const { result } = renderHook(
       () => [useMemberName("u-1"), useMemberName("u-2")],
@@ -121,6 +123,9 @@ describe("useMemberName", () => {
     await waitFor(() => expect(result.current[0].isError).toBe(true));
     expect(result.current[1].isError).toBe(true);
     expect(result.current[0].data).toBeUndefined();
+    // One request, not one per retry: a batch that fails must not reopen
+    // itself into up to N single-id requests.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("reads an id the answer omits as a settled absence, not an error", async () => {
@@ -184,26 +189,29 @@ describe("useMemberNames", () => {
       wrapper,
     });
 
-    await waitFor(() =>
-      expect(result.current.names.get("u-2")).toBe("Grace Hopper"),
-    );
-    expect(result.current.names.get("u-1")).toBe("Ada Lovelace");
+    await waitFor(() => expect(result.current.get("u-2")).toBe("Grace Hopper"));
+    expect(result.current.get("u-1")).toBe("Ada Lovelace");
   });
 
-  it("holds a failed id as unreadable, not a settled absence", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+  it("names nothing for a failed read", async () => {
+    const fetchMock = vi.fn(async () =>
       jsonResponse({ title: "Server error" }, 500),
     );
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
 
-    const { result } = renderHook(() => useMemberNames(["u-1", "u-2"]), {
-      wrapper,
-    });
-
-    await waitFor(() =>
-      expect(result.current.unreadable.has("u-1")).toBe(true),
+    // `single` gives this test a settled state to wait on; `bulk`'s own
+    // reads carry none, having no shape left for pending vs. failed.
+    const { result } = renderHook(
+      () => ({
+        bulk: useMemberNames(["u-1", "u-2"]),
+        single: useMemberName("u-1"),
+      }),
+      { wrapper },
     );
-    expect(result.current.unreadable.has("u-2")).toBe(true);
-    expect(result.current.names.size).toBe(0);
+
+    await waitFor(() => expect(result.current.single.isError).toBe(true));
+    expect(result.current.bulk.size).toBe(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("joins useMemberName's batch window rather than opening one of its own", async () => {
@@ -228,7 +236,7 @@ describe("useMemberNames", () => {
     await waitFor(() =>
       expect(result.current.single.data).toBe("Grace Hopper"),
     );
-    expect(result.current.bulk.names.get("u-2")).toBe("Grace Hopper");
+    expect(result.current.bulk.get("u-2")).toBe("Grace Hopper");
     // One request for the whole tick, which is the window and not the key:
     // both hooks reach the same module-level batch, so neither opens a loader
     // of its own. The cross-tick case below is what the shared key decides.
@@ -241,7 +249,7 @@ describe("useMemberNames", () => {
 
     const bulk = renderHook(() => useMemberNames(["u-1", "u-2"]), { wrapper });
     await waitFor(() =>
-      expect(bulk.result.current.names.get("u-2")).toBe("Name u-2"),
+      expect(bulk.result.current.get("u-2")).toBe("Name u-2"),
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
@@ -259,7 +267,7 @@ describe("useMemberNames", () => {
 
     const { result } = renderHook(() => useMemberNames([]), { wrapper });
 
-    expect(result.current.names.size).toBe(0);
+    expect(result.current.size).toBe(0);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

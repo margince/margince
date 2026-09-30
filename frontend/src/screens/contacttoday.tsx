@@ -271,7 +271,7 @@ function useOpenTaskRows(
     if (!userId) {
       return undefined;
     }
-    const name = assigneeNames.names.get(userId);
+    const name = assigneeNames.get(userId);
     return name ? { name, identity: userId } : undefined;
   };
   const asOf = Date.parse(view.as_of);

@@ -309,7 +309,9 @@ export function rosterOwnerName(
   if (!ownerId) {
     return unowned;
   }
-  return name.data ?? missLabel(readingOf(name), t, t("ref.notInRoster"));
+  return (
+    usableName(name.data) ?? missLabel(readingOf(name), t, t("ref.notInRoster"))
+  );
 }
 
 /**

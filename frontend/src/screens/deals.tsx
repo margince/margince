@@ -1635,7 +1635,7 @@ function DealBoardBody({
                   stageTotalsQuery.data ?? new Map(),
                   companyMarks,
                   totalsWithheld ? t(totalsWithheld) : undefined,
-                  rosterOwnerNaming(ownerNames.names),
+                  rosterOwnerNaming(ownerNames),
                 )}
                 onOpen={openDeal}
                 mailAside={dealMailAside}
