@@ -1568,7 +1568,7 @@ public.capture_pending_counterparty.display_name text gen=- def=-
 public.capture_pending_counterparty.disposition_reason text gen=- def=-
 public.capture_pending_counterparty.domain text gen=- def=-
 public.capture_pending_counterparty.email text NOT NULL gen=- def=-
-public.capture_pending_counterparty.id uuid NOT NULL gen=- def=gen_random_uuid()
+public.capture_pending_counterparty.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_pending_counterparty.kind text gen=- def=-
 public.capture_pending_counterparty.next_attempt_at timestamp with time zone gen=- def=-
 public.capture_pending_counterparty.owner_id uuid NOT NULL gen=- def=-
@@ -3671,7 +3671,7 @@ public.federated_identity.federated_identity_pkey PRIMARY KEY (id)
 public.federated_identity.federated_identity_provider_subject_key UNIQUE (provider, subject)
 public.federated_identity.federated_identity_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.federated_identity.federated_identity_user_provider_key UNIQUE (user_id, provider)
-public.federated_identity.id uuid NOT NULL gen=- def=gen_random_uuid()
+public.federated_identity.id uuid NOT NULL gen=- def=uuidv7()
 public.federated_identity.provider text NOT NULL gen=- def=-
 public.federated_identity.subject text NOT NULL gen=- def=-
 public.federated_identity.user_id uuid NOT NULL gen=- def=-
