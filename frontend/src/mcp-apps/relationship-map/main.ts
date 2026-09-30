@@ -97,12 +97,25 @@ function colleagueRow(colleague: Colleague, position: number): HTMLElement {
 
 /** The meta line. "warmest first" is only true of a COMPLETE ranking: when the
  *  read stopped at its bound these are the warmest FOUND, and saying otherwise
- *  is the claim the tool itself refuses to make. */
-function metaLine(found: number, contactID: string, bounded: boolean): string {
+ *  is the claim the tool itself refuses to make.
+ *
+ *  The contact is named, never identified: an id is what the product calls this
+ *  row, not what the reader calls the human, and a card headed by one has not
+ *  said who it is about. Where the answer carries no name the segment is left
+ *  off entirely rather than falling back to the id. */
+function metaLine(
+  found: number,
+  contactName: string,
+  bounded: boolean,
+): string {
+  const colleagues = `${found} ${found === 1 ? "colleague" : "colleagues"}`;
   if (bounded) {
-    return `${found} colleague(s) found — more know this contact than are listed, so this is not the whole network`;
+    return `${colleagues} found — more know this contact than are listed, so this is not the whole network`;
   }
-  return `${found} colleague(s), warmest first · ${contactID}`;
+  if (contactName === "") {
+    return `${colleagues}, warmest first`;
+  }
+  return `${colleagues}, warmest first · ${contactName}`;
 }
 
 export function render(
@@ -130,7 +143,7 @@ export function render(
       "meta",
       metaLine(
         colleagues.length,
-        asText(answer.contact_id),
+        asText(answer.contact_name),
         warned(warnings, SWEEP_TRUNCATED),
       ),
     ),

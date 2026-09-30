@@ -11438,6 +11438,9 @@
           "contact_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "contact_name": {
+            "type": "string"
           }
         },
         "required": [

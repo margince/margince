@@ -162,11 +162,16 @@ func TestTheAgentSeamsAnswerThroughTheSameGates(t *testing.T) {
 	}
 
 	// who_knows, through the seam the tool actually calls.
-	colleagues, truncated, err := whoKnowsLister(e.Pool)(e.Admin(), contact)
+	reading, err := whoKnowsLister(e.Pool, contacts.NewStore(e.DB()))(e.Admin(), contact)
 	if err != nil {
 		t.Fatalf("who_knows seam: %v", err)
 	}
-	if truncated {
+	colleagues := reading.Colleagues
+	if reading.ContactName == "" {
+		t.Error("the seam answered no name for the contact the question was about — the card then " +
+			"heads itself with the id, which is what a reader must never be shown")
+	}
+	if reading.Truncated {
 		t.Error("one colleague was reported as a capped list — the cap signal would make every answer look partial")
 	}
 	if len(colleagues) != 1 || colleagues[0].UserID != e.Rep1 {
@@ -178,7 +183,7 @@ func TestTheAgentSeamsAnswerThroughTheSameGates(t *testing.T) {
 
 	// An unknown contact refuses rather than answering an empty network:
 	// through the agent exactly as through the URL.
-	if _, _, err := whoKnowsLister(e.Pool)(e.Admin(), ids.NewV7()); err == nil {
+	if _, err := whoKnowsLister(e.Pool, contacts.NewStore(e.DB()))(e.Admin(), ids.NewV7()); err == nil {
 		t.Error("the seam answered for a contact that does not exist")
 	}
 }

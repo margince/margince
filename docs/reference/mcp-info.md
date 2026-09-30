@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 11 |
 | Tool catalog | 240.2 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 62531 |
+| Approx. wire tokens | 62539 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -142,7 +142,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`update_record`](#update_record) | Update a record |  |  | 3.8 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.0 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [`ui://margince/pipeline-review.html`](#pipeline_review_view) | 2.3 KB |
-| [`who_knows`](#who_knows) | Who knows this contact | yes | [`ui://margince/relationship-map.html`](#relationship_map_view) | 2.2 KB |
+| [`who_knows`](#who_knows) | Who knows this contact | yes | [`ui://margince/relationship-map.html`](#relationship_map_view) | 2.3 KB |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.8 KB |
 
 ## Resources
@@ -16582,6 +16582,9 @@ Renders its result in [`ui://margince/relationship-map.html`](#relationship_map_
         },
         "contact_id": {
           "format": "uuid",
+          "type": "string"
+        },
+        "contact_name": {
           "type": "string"
         }
       },
