@@ -7422,6 +7422,22 @@ export const vi = {
   "auto.delete": "Xoá",
   "auto.statusEnabled": "Đang bật",
   "auto.statusPaused": "Đang tạm dừng",
+  "auto.pausedReason.listArchived":
+    "Đã tạm dừng vì danh sách được theo dõi hoặc được thêm vào đã được lưu trữ. Khôi phục danh sách không tiếp tục tự động hóa này.",
+  "auto.pausedReason.listInvalid":
+    "Đã tạm dừng vì bộ lọc của danh sách động được theo dõi không còn dùng được. Sửa bộ lọc không tiếp tục tự động hóa này.",
+  "auto.pausedReason.listUnavailable":
+    "Đã tạm dừng vì chủ sở hữu không còn tìm thấy danh sách được theo dõi.",
+  "auto.pausedReason.burst":
+    "Đã tạm dừng vì một lần kiểm tra làm thay đổi hơn 100 bản ghi. Không bản ghi nào được xử lý.",
+  "auto.lists.placeholder": "Chọn danh sách",
+  "auto.lists.needsWatched":
+    "Chọn danh sách động trước. Danh sách chọn chứa cùng loại bản ghi.",
+  "auto.lists.loadError": "Không tải được danh sách.",
+  "auto.lists.noLive":
+    "Chưa có danh sách động. Hãy lưu một bộ lọc thành danh sách động trước.",
+  "auto.lists.noShortlist":
+    "Không có danh sách chọn nào thuộc loại bản ghi này có thể thay đổi.",
   "auto.dateField.placeholder": "Chọn trường ngày",
   "auto.dateField.needsObject":
     "Chọn đối tượng trước để xem các trường ngày của nó.",
@@ -10229,6 +10245,26 @@ export const vi = {
   "lists.history.liveNote":
     "Việc kiểm tra chạy 15 phút một lần và ưu tiên các danh sách lâu nhất chưa được kiểm tra, nên khi có rất nhiều danh sách, một danh sách có thể phải chờ lâu hơn; “Kiểm tra lần cuối” cho biết lần kiểm tra gần nhất. Bản ghi vào hay rời đi được ghi nhận tại lần kiểm tra phát hiện ra thay đổi đó. Bản ghi vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
   "lists.history.someone": "Ai \u0111\u00f3",
+  "lists.changes.since": "Kể từ lần bạn xem ngày {when}:",
+  "lists.changes.joined_one": "{count} vào",
+  "lists.changes.joined_other": "{count} vào",
+  "lists.changes.left_one": "{count} rời đi",
+  "lists.changes.left_other": "{count} rời đi",
+  "lists.changes.more_one": "+{count} bản ghi khác",
+  "lists.changes.more_other": "+{count} bản ghi khác",
+  "lists.changes.nothing": "không có bản ghi nào vào hay rời đi.",
+  "lists.changes.filter_one": "Bộ lọc đã thay đổi một lần.",
+  "lists.changes.filter_other": "Bộ lọc đã thay đổi {count} lần.",
+  "lists.rules.watches": "{name} theo dõi danh sách này",
+  "lists.rules.writes": "{name} thêm bản ghi vào danh sách này",
+  "lists.rules.hidden": "Một tự động hóa không mở được ở đây",
+  "lists.rules.archiveTitle": "Lưu trữ danh sách này?",
+  "lists.rules.archiveLead":
+    "Các tự động hóa này tạm dừng khi danh sách được lưu trữ. Khôi phục danh sách không tiếp tục chúng.",
+  "lists.rules.settingsLead": "Các tự động hóa dùng danh sách này:",
+  "lists.rules.settingsLeadLive":
+    "Các tự động hóa dùng danh sách này. Thay đổi bộ lọc sẽ thay đổi những gì chúng xử lý:",
+  "lists.history.reason.automation": "bởi một tự động hóa",
 
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.
   "filters.title": "B\u1ed9 l\u1ecdc & ch\u1ee7 \u0111\u1ec1",

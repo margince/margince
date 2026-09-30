@@ -266,4 +266,96 @@ describe("an opened list", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/^Last checked /)).not.toBeInTheDocument();
   });
+
+  it("says what changed since the last visit in one sentence whose records open", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /lists/${LIVE_ID}`]: () =>
+        jsonResponse({
+          ...liveList,
+          changes_since_visit: {
+            since: "2026-09-28T17:00:00Z",
+            joined: {
+              count: 4,
+              records: [
+                { entity_id: MEMBER_ID, name: "Acme" },
+                { entity_id: SHORTLIST_ID, name: "Globex" },
+              ],
+            },
+            left: {
+              count: 1,
+              records: [{ entity_id: LIVE_ID, name: "Initech" }],
+            },
+            filter_changes: 1,
+          },
+        }),
+      [`POST /lists/${LIVE_ID}/visit`]: visitAnswer(LIVE_ID),
+      [`GET /lists/${LIVE_ID}/history`]: () =>
+        jsonResponse({ data: [], page: { has_more: false } }),
+      "GET /companies": () =>
+        jsonResponse({ data: members, page: { has_more: false } }),
+    });
+    page(LIVE_ID);
+    const acme = await screen.findByRole("button", { name: "Acme" });
+    const sentence = acme.closest("p");
+    expect(sentence).toHaveTextContent(
+      /^Since your visit on .+: 4 joined \(Acme, Globex, \+2 more\), 1 left \(Initech\)\. The filter changed once\.$/,
+    );
+    expect(
+      within(sentence as HTMLElement).getByRole("button", { name: "Initech" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Since your last visit: 3 joined, 1 left"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names the automations an archive will pause before archiving", async () => {
+    const archived: string[] = [];
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /lists/${LIVE_ID}`]: () =>
+        jsonResponse({
+          ...liveList,
+          dependencies: [
+            {
+              kind: "automation",
+              occurred_at: "2026-09-20T08:00:00Z",
+              blocking: false,
+              role: "watches",
+              automation_id: MEMBER_ID,
+              automation_name: "Follow up on quiet manufacturers",
+            },
+          ],
+        }),
+      [`POST /lists/${LIVE_ID}/visit`]: visitAnswer(LIVE_ID),
+      [`GET /lists/${LIVE_ID}/history`]: () =>
+        jsonResponse({ data: [], page: { has_more: false } }),
+      "GET /companies": () =>
+        jsonResponse({ data: members, page: { has_more: false } }),
+      [`DELETE /lists/${LIVE_ID}`]: () => {
+        archived.push(LIVE_ID);
+        return jsonResponse({
+          ...liveList,
+          archived_at: "2026-09-30T08:00:00Z",
+        });
+      },
+    });
+    const user = userEvent.setup();
+    page(LIVE_ID);
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.archive"] }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(
+        "Follow up on quiet manufacturers watches this list",
+      ),
+    ).toBeInTheDocument();
+    expect(archived).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: en["lists.archive"] }),
+    );
+    await waitFor(() => expect(archived).toEqual([LIVE_ID]));
+    expect(screen.queryByText(/^Exported /)).not.toBeInTheDocument();
+  });
 });

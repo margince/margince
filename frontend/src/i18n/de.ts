@@ -7490,6 +7490,22 @@ export const de = {
   "auto.delete": "Löschen",
   "auto.statusEnabled": "Aktiv",
   "auto.statusPaused": "Pausiert",
+  "auto.pausedReason.listArchived":
+    "Pausiert, weil die beobachtete oder befüllte Liste archiviert wurde. Das Wiederherstellen der Liste setzt die Automatisierung nicht fort.",
+  "auto.pausedReason.listInvalid":
+    "Pausiert, weil der Filter der beobachteten Live-Liste nicht mehr funktioniert. Das Reparieren des Filters setzt die Automatisierung nicht fort.",
+  "auto.pausedReason.listUnavailable":
+    "Pausiert, weil das zuständige Teammitglied die beobachtete Liste nicht mehr findet.",
+  "auto.pausedReason.burst":
+    "Pausiert, weil eine Prüfung mehr als 100 Datensätze bewegt hat. Für keinen davon wurde etwas ausgeführt.",
+  "auto.lists.placeholder": "Liste wählen",
+  "auto.lists.needsWatched":
+    "Zuerst die Live-Liste wählen. Die Shortlist enthält denselben Datensatztyp.",
+  "auto.lists.loadError": "Listen konnten nicht geladen werden.",
+  "auto.lists.noLive":
+    "Noch keine Live-Listen. Zuerst einen Filter als Live-Liste speichern.",
+  "auto.lists.noShortlist":
+    "Keine änderbare Shortlist mit diesem Datensatztyp.",
   "auto.dateField.placeholder": "Datumsfeld auswählen",
   "auto.dateField.needsObject":
     "Wähle zuerst ein Objekt, um seine Datumsfelder anzuzeigen.",
@@ -10316,6 +10332,27 @@ export const de = {
   "lists.history.liveNote":
     "Die Prüfung läuft alle 15 Minuten und nimmt sich zuerst die Listen vor, die am längsten nicht geprüft wurden. Bei sehr vielen Listen kann eine Liste daher länger warten; „Zuletzt geprüft“ zeigt, wann es war. Wer hinzukam oder wegfiel, wird zum Zeitpunkt der Prüfung festgehalten, die die Änderung bemerkt hat. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder wegfällt, wird nicht festgehalten.",
   "lists.history.someone": "Jemand",
+  "lists.changes.since": "Seit deinem Besuch am {when}:",
+  "lists.changes.joined_one": "{count} hinzugekommen",
+  "lists.changes.joined_other": "{count} hinzugekommen",
+  "lists.changes.left_one": "{count} weggefallen",
+  "lists.changes.left_other": "{count} weggefallen",
+  "lists.changes.more_one": "+{count} weitere",
+  "lists.changes.more_other": "+{count} weitere",
+  "lists.changes.nothing": "nichts hinzugekommen oder weggefallen.",
+  "lists.changes.filter_one": "Der Filter wurde einmal geändert.",
+  "lists.changes.filter_other": "Der Filter wurde {count}-mal geändert.",
+  "lists.rules.watches": "{name} beobachtet diese Liste",
+  "lists.rules.writes": "{name} fügt dieser Liste Datensätze hinzu",
+  "lists.rules.hidden":
+    "Eine Automatisierung, die hier nicht geöffnet werden kann",
+  "lists.rules.archiveTitle": "Diese Liste archivieren?",
+  "lists.rules.archiveLead":
+    "Diese Automatisierungen pausieren, wenn die Liste archiviert wird. Das Wiederherstellen der Liste setzt sie nicht fort.",
+  "lists.rules.settingsLead": "Automatisierungen, die diese Liste nutzen:",
+  "lists.rules.settingsLeadLive":
+    "Automatisierungen, die diese Liste nutzen. Eine Filteränderung ändert, worauf sie reagieren:",
+  "lists.history.reason.automation": "durch eine Automatisierung",
 
   // Die Oberfl\u00e4che \u201eFilter & Ansichten\u201c.
   "filters.title": "Filter und Ansichten",

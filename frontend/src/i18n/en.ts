@@ -7681,6 +7681,21 @@ export const en = {
   "auto.delete": "Delete",
   "auto.statusEnabled": "Enabled",
   "auto.statusPaused": "Paused",
+  "auto.pausedReason.listArchived":
+    "Paused because the list it watches or adds to was archived. Restoring the list does not resume it.",
+  "auto.pausedReason.listInvalid":
+    "Paused because the filter of the Live List it watches stopped working. Fixing the filter does not resume it.",
+  "auto.pausedReason.listUnavailable":
+    "Paused because its owner can no longer find the list it watches.",
+  "auto.pausedReason.burst":
+    "Paused because one check moved more than 100 records. It acted on none of them.",
+  "auto.lists.placeholder": "Choose a list",
+  "auto.lists.needsWatched":
+    "Choose the Live List first. The Shortlist holds the same record type.",
+  "auto.lists.loadError": "Lists could not be loaded.",
+  "auto.lists.noLive": "No Live Lists yet. Save a filter as a Live List first.",
+  "auto.lists.noShortlist":
+    "No Shortlist of this record type that can be changed here.",
   "auto.dateField.placeholder": "Select date field",
   "auto.dateField.needsObject":
     "Choose an object first to list its date fields.",
@@ -10463,6 +10478,26 @@ export const en = {
   "lists.history.liveNote":
     "The check runs every 15 minutes and takes the lists checked longest ago first, so with very many lists one can wait longer; “Last checked” says when it was. Who joined and left is recorded as of the check that noticed it, and a record that joins and leaves between two checks is not recorded.",
   "lists.history.someone": "Someone",
+  "lists.changes.since": "Since your visit on {when}:",
+  "lists.changes.joined_one": "{count} joined",
+  "lists.changes.joined_other": "{count} joined",
+  "lists.changes.left_one": "{count} left",
+  "lists.changes.left_other": "{count} left",
+  "lists.changes.more_one": "+{count} more",
+  "lists.changes.more_other": "+{count} more",
+  "lists.changes.nothing": "nothing joined or left.",
+  "lists.changes.filter_one": "The filter changed once.",
+  "lists.changes.filter_other": "The filter changed {count} times.",
+  "lists.rules.watches": "{name} watches this list",
+  "lists.rules.writes": "{name} adds records to this list",
+  "lists.rules.hidden": "An automation that cannot be opened here",
+  "lists.rules.archiveTitle": "Archive this list?",
+  "lists.rules.archiveLead":
+    "These automations pause when the list is archived. Restoring the list does not resume them.",
+  "lists.rules.settingsLead": "Automations that use this list:",
+  "lists.rules.settingsLeadLive":
+    "Automations that use this list. Changing its filter changes what they act on:",
+  "lists.history.reason.automation": "by an automation",
 
   // The Filters & views screen's own chrome. The match line is keyed per object
   // because "3 contacts match" and "3 companies match" are different sentences in

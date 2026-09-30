@@ -17,12 +17,14 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useMe } from "./common";
 import { customColumnLabel } from "./filterdata";
+import { ListChangeSummary } from "./listchanges";
 import { ListHistoryPanel } from "./listhistory";
 import {
   ListHealthBadge,
   ListKindBadge,
   RECORD_TYPE_LABEL,
 } from "./listlibrary";
+import { ArchiveListAction } from "./listrules";
 import {
   MEMBER_SOURCES,
   type MemberRow,
@@ -101,9 +103,11 @@ function ListHead({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const archive = useArchiveList();
   const audienceOf = useListAudienceLabel();
-  const lastExport = list.dependencies?.[0];
+  const exports = (list.dependencies ?? []).filter(
+    (use) => use.kind === "export",
+  );
+  const lastExport = exports[0];
   return (
     <header className="lists-head">
       <div className="lists-head-title">
@@ -126,8 +130,8 @@ function ListHead({ list }: Readonly<{ list: List }>) {
       <ListCheckLine list={list} />
       {lastExport && (
         <p className="t-caption">
-          {plural("lists.head.exported", list.dependencies?.length ?? 0, {
-            count: formatNumber(list.dependencies?.length ?? 0, locale),
+          {plural("lists.head.exported", exports.length, {
+            count: formatNumber(exports.length, locale),
             when: formatDateTime(lastExport.occurred_at, locale, viewerZone()),
           })}
         </p>
@@ -135,13 +139,7 @@ function ListHead({ list }: Readonly<{ list: List }>) {
       {list.can_edit && !list.archived_at && (
         <div className="card-actions">
           <ListSettingsAction list={list} />
-          <Button
-            variant="ghost"
-            pending={archive.isPending}
-            onClick={() => archive.mutate({ id: list.id, archive: true })}
-          >
-            {t("lists.archive")}
-          </Button>
+          <ArchiveListAction list={list} />
         </div>
       )}
     </header>
@@ -160,6 +158,8 @@ function ListCheckLine({ list }: Readonly<{ list: List }>) {
   }
   const check = list.last_check;
   const pulse = list.since_last_visit;
+  const changes = list.changes_since_visit;
+  const type = list.entity_type;
   const when = check
     ? formatDateTime(check.checked_at, locale, viewerZone())
     : "";
@@ -172,13 +172,25 @@ function ListCheckLine({ list }: Readonly<{ list: List }>) {
             ? t("lists.head.tooLarge", { when })
             : t("lists.head.lastChecked", { when })}
       </p>
-      {pulse && pulse.entered + pulse.left > 0 && (
-        <p className="t-caption">
-          {t("lists.head.pulse", {
-            entered: formatNumber(pulse.entered, locale),
-            left: formatNumber(pulse.left, locale),
-          })}
-        </p>
+      {changes ? (
+        <ListChangeSummary
+          summary={changes}
+          onOpen={
+            isMemberSource(type)
+              ? (id) => navigate({ screen: MEMBER_SOURCES[type].screen, id })
+              : undefined
+          }
+        />
+      ) : (
+        pulse &&
+        pulse.entered + pulse.left > 0 && (
+          <p className="t-caption">
+            {t("lists.head.pulse", {
+              entered: formatNumber(pulse.entered, locale),
+              left: formatNumber(pulse.left, locale),
+            })}
+          </p>
+        )
       )}
     </>
   );

@@ -33,6 +33,7 @@ const REASON_LABEL: Record<
   record_restored: "lists.history.reason.restored",
   evaluated: null,
   filter_changed: "lists.history.reason.filterChanged",
+  automation: "lists.history.reason.automation",
 };
 
 /** A change a Live List's check saw, rather than one somebody made. */
