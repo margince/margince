@@ -19,11 +19,12 @@ const meetLink = "https://meet.google.com/abc-defg-hij"
 // videoCalendar records what Save sent and answers the insert with created,
 // and any later read of the event with read.
 type videoCalendar struct {
-	sent    scheduledEvent
-	query   string
-	reads   int
-	created scheduledEvent
-	read    scheduledEvent
+	readFails bool
+	sent      scheduledEvent
+	query     string
+	reads     int
+	created   scheduledEvent
+	read      scheduledEvent
 }
 
 func (c *videoCalendar) serve(t *testing.T) *httpAPI {
@@ -32,6 +33,10 @@ func (c *videoCalendar) serve(t *testing.T) *httpAPI {
 		reply := c.read
 		if r.Method == http.MethodGet {
 			c.reads++
+			if c.readFails {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
 		} else {
 			c.query = r.URL.RawQuery
 			if err := json.NewDecoder(r.Body).Decode(&c.sent); err != nil {
@@ -103,17 +108,20 @@ func TestAPendingMeetIsReadOnceAndNeverFailsTheDelivery(t *testing.T) {
 		name      string
 		status    string
 		later     string
+		readFails bool
 		wantReads int
 		wantLink  string
 	}{
-		{"pending then ready", "pending", meetLink, 1, meetLink},
-		{"still pending", "pending", "", 1, ""},
-		{"refused", "failure", meetLink, 0, ""},
+		{"pending then ready", "pending", meetLink, false, 1, meetLink},
+		{"still pending", "pending", "", false, 1, ""},
+		{"read unavailable", "pending", meetLink, true, 1, ""},
+		{"refused", "failure", meetLink, false, 0, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			calendar := &videoCalendar{
-				created: scheduledEvent{ID: "event", Conference: conferenceIn(tc.status)},
-				read:    scheduledEvent{ID: "event", VideoURL: tc.later},
+				readFails: tc.readFails,
+				created:   scheduledEvent{ID: "event", Conference: conferenceIn(tc.status)},
+				read:      scheduledEvent{ID: "event", VideoURL: tc.later},
 			}
 			receipt, err := calendar.serve(t).Save(context.Background(), "token", videoAppointment(true, ""))
 			if err != nil {

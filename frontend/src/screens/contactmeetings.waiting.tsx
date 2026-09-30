@@ -58,16 +58,18 @@ export function WaitingSection({
   const [withdrawing, setWithdrawing] = useState<Proposal | null>(null);
   const [resending, setResending] = useState<Proposal | null>(null);
   const withdraw = useMutation({
-    mutationFn: async (proposalId: string) => {
+    mutationFn: async ({
+      proposalId,
+    }: Readonly<{ proposalId: string; contactId: string }>) => {
       const { error } = await api.DELETE("/activities/{id}", {
         params: { path: { id: proposalId } },
       });
       if (error) throwProblem(error);
     },
-    onSuccess: async () => {
+    onSuccess: async (_done, { contactId }) => {
       setWithdrawing(null);
       await client.invalidateQueries({
-        queryKey: ["meeting-proposals", contact.id],
+        queryKey: ["meeting-proposals", contactId],
       });
     },
   });
@@ -109,7 +111,11 @@ export function WaitingSection({
         confirmVariant="danger"
         pending={withdraw.isPending}
         onConfirm={() => {
-          if (withdrawing) withdraw.mutate(withdrawing.id);
+          if (withdrawing)
+            withdraw.mutate({
+              proposalId: withdrawing.id,
+              contactId: contact.id,
+            });
         }}
       >
         <p>{t("contact.meetings.withdrawBody")}</p>

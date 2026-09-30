@@ -103,11 +103,10 @@ function MeetingSettingsForm({
     (provider !== "" && provider !== baseline.provider);
   const hoursDirty = JSON.stringify(hoursDraft) !== JSON.stringify(savedHours);
   useUnsavedGuard(profileDirty || hoursDirty);
-  const save = useSaveMeetingSettings((value, next) => {
+  const save = useSaveMeetingSettings(setSavedHours, (value) => {
     setBaseline(value);
     setForm(value);
     setNoticeHours(noticeText(value));
-    if (next) setSavedHours(next);
   });
   const discard = () => {
     setForm(baseline);
@@ -248,7 +247,8 @@ function MeetingSettingsForm({
 // here as one draft: hours first, because a profile saved without them would
 // publish a link against the old window.
 function useSaveMeetingSettings(
-  onSaved: (profile: Profile, hours: WorkingHours | null) => void,
+  onHoursSaved: (hours: WorkingHours) => void,
+  onSaved: (profile: Profile) => void,
 ) {
   const t = useT();
   const client = useQueryClient();
@@ -258,21 +258,24 @@ function useSaveMeetingSettings(
       if (hours) {
         const saved = await api.PUT("/me/working-hours", { body: hours });
         if (saved.error) throwProblem(saved.error);
+        // Settled the moment the server has them, so a profile write that
+        // fails after this does not leave saved hours showing as unsaved.
         client.setQueryData(["working-hours"], saved.data);
+        onHoursSaved(hours);
+        await client.invalidateQueries({ queryKey: ["reliable-availability"] });
       }
       const latest = await api.GET("/scheduling/profile");
       if (latest.error) throwProblem(latest.error);
       const changes = changedMeetingPreferences(original, next);
-      if (Object.keys(changes).length === 0)
-        return { profile: latest.data, hours };
+      if (Object.keys(changes).length === 0) return latest.data;
       const { data, error } = await api.PUT("/scheduling/profile", {
         body: { ...latest.data, ...changes },
       });
       if (error) throwProblem(error);
-      return { profile: data, hours };
+      return data;
     },
-    onSuccess: async ({ profile, hours }) => {
-      onSaved(profile, hours);
+    onSuccess: async (profile) => {
+      onSaved(profile);
       client.setQueryData(["scheduling-profile"], profile);
       await client.invalidateQueries({ queryKey: ["reliable-availability"] });
       toast.show(t("settings.saved"));

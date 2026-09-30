@@ -7,6 +7,7 @@ package gcal
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -184,20 +185,22 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 	}
 	receipt := connector.CalendarReceipt{EventID: result.ID, UID: result.UID, URL: result.URL, VideoURL: result.VideoURL}
 	if receipt.VideoURL == "" && result.conferencePending() {
-		receipt.VideoURL, err = a.videoURL(ctx, token, in.CalendarID, result.ID)
+		receipt.VideoURL = a.videoURL(ctx, token, in.CalendarID, result.ID)
 	}
-	return receipt, err
+	return receipt, nil
 }
 
 // videoURL reads a Meet link Google was still creating when it answered the
-// insert. One read, not a poll: a link that is still missing leaves a
-// delivered meeting without one, and a failed read retries through Lookup.
-func (a *httpAPI) videoURL(ctx context.Context, token, calendar, event string) (string, error) {
+// insert. One read, not a poll, and never a delivery failure: the event exists
+// and the invite reached the guest, so a link that is missing or unreadable
+// leaves a delivered meeting without one.
+func (a *httpAPI) videoURL(ctx context.Context, token, calendar, event string) string {
 	var current scheduledEvent
 	if _, err := calendarwire.Request(ctx, a.client, token, http.MethodGet, a.base+"/calendars/"+url.PathEscape(calendar)+"/events/"+url.PathEscape(event), nil, &current); err != nil {
-		return "", fmt.Errorf("calendar: read the new event's video link: %w", err)
+		slog.WarnContext(ctx, "calendar: the new event's video link could not be read", "err", err)
+		return ""
 	}
-	return current.VideoURL, nil
+	return current.VideoURL
 }
 
 func (a *httpAPI) Cancel(ctx context.Context, token, calendar, event string) error {

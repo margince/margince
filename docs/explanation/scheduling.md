@@ -60,13 +60,17 @@ proposal's choice travels with it to the guest's acceptance, and a public
 booking follows the host's setting.
 
 Google Calendar receives a conference request keyed to the invitation's stable
-request ID, so a retried create cannot ask for a second Google Meet. Outlook
-receives `isOnlineMeeting` without naming a provider, so the calendar's own
-default applies: Microsoft Teams for a work or school account. Only creation asks
-for a link; a reschedule keeps the conference the event already has.
+request ID, so a retried create cannot ask for a second Google Meet. For Outlook
+the calendar's own default online meeting provider is read and named with
+`isOnlineMeeting`, because Graph applies none by itself: Microsoft Teams for a
+work or school account, and no link for a calendar that offers none. Only
+creation asks for a link; a reschedule keeps the conference the event already
+has, and never rewrites an Outlook event's body, where Outlook keeps the join
+details.
 
 The link is read from the provider's answer. Google may still be creating it,
-in which case the event is read once more and no further. A calendar that
+in which case the event is read once more and no further; a read that fails
+leaves the delivered meeting without a link rather than failing it. A calendar that
 creates no link has still delivered the invitation: the meeting is
 **confirmed** without a link, and the host can add one in the calendar. The
 public booking page names the video app only when new meetings get a link, and

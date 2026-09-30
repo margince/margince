@@ -584,3 +584,24 @@ it("offers the booking link for a quick copy at the top of the page", async () =
   await user.click(quick);
   expect(copy.written).toEqual([bookingProfile.public_url]);
 });
+
+it("keeps hours the server saved when the profile write after them fails", async () => {
+  const user = userEvent.setup();
+  mount({
+    "GET /scheduling/profile": () =>
+      jsonResponse({ ...bookingProfile, calendar_id: "work" }),
+    "PUT /scheduling/profile": () =>
+      jsonResponse({ title: "Unavailable", status: 503 }, 503),
+    "PUT /me/working-hours": (body) =>
+      jsonResponse({ chosen: true, working_hours: body }),
+  });
+  await screen.findByLabelText("Meeting title");
+  const saturday = screen.getByRole("checkbox", { name: "Saturday" });
+  await user.click(saturday);
+  await user.type(screen.getByLabelText("Meeting title"), "!");
+  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  expect(await screen.findByRole("alert")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Discard" }));
+  expect(saturday).toHaveProperty("checked", true);
+  expect(screen.queryByRole("button", { name: "Save settings" })).toBeNull();
+});
