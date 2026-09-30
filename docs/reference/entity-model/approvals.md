@@ -54,7 +54,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 - `approval_co_target_whole` — `CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))`
 - `approval_decided` — `CHECK ((((status = 'pending') AND (decided_at IS NULL)) OR (status = 'expired') OR ((status = ANY (ARRAY['approved', 'rejected'])) AND (decided_at IS NOT NULL))))`
-- `approval_effect_failure_is_stated` — `CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL))) NOT VALID`
+- `approval_effect_failure_is_stated` — `CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL)))`
 - `approval_status_check` — `CHECK ((status = ANY (ARRAY['pending', 'approved', 'rejected', 'expired'])))`
 
 **Indexes**

@@ -80,7 +80,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_owner_private_names_its_owner` — `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
 - `company_relevance_check` — `CHECK (((relevance IS NULL) OR ((relevance >= 0) AND (relevance <= 100))))`
 - `company_size_band_check` — `CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']))))`
-- `company_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))) NOT VALID`
+- `company_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `company_visibility_check` — `CHECK ((visibility = ANY (ARRAY['workspace', 'owner'])))`
 
 **Indexes**
@@ -484,7 +484,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_narrowing_reason_check` — `CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict', 'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided'])))`
 - `contact_narrowing_reason_only_when_owner` — `CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner')))`
 - `contact_owner_private_names_its_owner` — `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
-- `contact_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))) NOT VALID`
+- `contact_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `contact_visibility_check` — `CHECK ((visibility = ANY (ARRAY['workspace', 'owner'])))`
 
 **Indexes**
@@ -1033,7 +1033,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `lead_score_override_reason_check` — `CHECK (((score_override_reason IS NULL) OR (length(btrim(score_override_reason)) > 0)))`
 - `lead_score_range` — `CHECK (((score >= 0) AND (score <= 100)))`
 - `lead_sla_breach_follows_creation` — `CHECK (((sla_breached_at IS NULL) OR (sla_breached_at >= created_at)))`
-- `lead_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))) NOT VALID`
+- `lead_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `lead_status_check` — `CHECK ((status = ANY (ARRAY['new', 'contacted', 'engaged', 'promoted', 'disqualified'])))`
 - `lead_status_set_by_check` — `CHECK (((status_set_by IS NULL) OR (status_set_by = ANY (ARRAY['human', 'system']))))`
 
