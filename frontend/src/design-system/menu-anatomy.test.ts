@@ -8,6 +8,7 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { selectorList } from "../../scripts/lib/css-rules";
 import {
+  classNameLiterals,
   extensionFrontendFiles,
   filesMatching,
   sourceFileAt,
@@ -365,7 +366,7 @@ function classesUnderAnOptionRole(): string[] {
           const className = attributes.find(
             (attribute) => attribute.name.getText(source) === "className",
           );
-          for (const literal of stringsIn(className)) {
+          for (const literal of classNameLiterals(className)) {
             for (const one of literal.split(/\s+/).filter(Boolean)) {
               found.add(one);
             }
@@ -380,24 +381,6 @@ function classesUnderAnOptionRole(): string[] {
   // ride the same attribute and say nothing about a box.
   const states = /^(is-|active$|selected$|open$|right$)/;
   return [...found].filter((one) => !states.test(one)).sort();
-}
-
-/** Every string literal inside a `className`, however the caller composed it. */
-function stringsIn(attribute: ts.JsxAttribute | undefined): string[] {
-  if (!attribute?.initializer) return [];
-  const out: string[] = [];
-  const visit = (node: ts.Node) => {
-    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-      out.push(node.text);
-    }
-    if (ts.isTemplateExpression(node)) {
-      out.push(node.head.text);
-      for (const span of node.templateSpans) out.push(span.literal.text);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(attribute.initializer);
-  return out;
 }
 
 // The two sizes are TOKENS, and every call site spells the value as a fallback

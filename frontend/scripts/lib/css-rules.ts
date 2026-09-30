@@ -7,7 +7,7 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { extensionLayers } from "./source-tree";
+import { extensionLayers, filesMatching } from "./source-tree";
 
 export function stylesheets(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -21,14 +21,14 @@ export function stylesheets(dir: string): string[] {
   });
 }
 
-// Every sheet the bundle ships: the core's and each extension's frontend layer.
+// Every sheet the bundle ships: the core's and each extension's frontend layer,
+// each directory read once however many links reach it.
 export function appStylesheets(frontendRoot: string): string[] {
+  const seen = new Set<string>();
   return [
-    ...stylesheets(join(frontendRoot, "src")),
-    ...extensionLayers(join(frontendRoot, "..", "extensions")).flatMap(
-      stylesheets,
-    ),
-  ];
+    join(frontendRoot, "src"),
+    ...extensionLayers(join(frontendRoot, "..", "extensions")),
+  ].flatMap((dir) => filesMatching(dir, /\.css$/, seen));
 }
 
 export type Rule = { file: string; selector: string; body: string };
@@ -326,15 +326,20 @@ export function subjectClasses(selector: string): Set<string> {
 // `(?:^|[;{\s])` is what keeps this off --*-color: the character before a
 // longhand's `color:` is always a hyphen.
 export function inks(body: string): string[] {
-  return [...body.matchAll(/(?:^|[;{\s])color:\s*var\((--[\w-]+)\)/g)].map(
-    ([, ink]) => ink,
+  return colorValues(body).flatMap(
+    (value) => /^var\((--[\w-]+)\)/.exec(value)?.[1] ?? [],
   );
 }
 
-// Every value a rule's body gives `color`, whatever it is spelled as: a
+// Every value a rule's body gives `property`, whatever it is spelled as: a
 // fallback, a `color-mix()` or a second declaration all read here.
+export function declaredValues(body: string, property: string): string[] {
+  const name = property.replaceAll("-", "\\-");
+  return [
+    ...body.matchAll(new RegExp(`(?:^|[;{\\s])${name}\\s*:\\s*([^;]+)`, "g")),
+  ].map(([, value]) => value.trim());
+}
+
 export function colorValues(body: string): string[] {
-  return [...body.matchAll(/(?:^|[;{\s])color\s*:\s*([^;]+)/g)].map(
-    ([, value]) => value.trim(),
-  );
+  return declaredValues(body, "color");
 }

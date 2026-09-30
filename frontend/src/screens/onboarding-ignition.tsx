@@ -117,8 +117,8 @@ export function Ignition({
       <p className="ob-ig-beat" data-beat="1">
         {t("firstRun.ignite.reaching")}
       </p>
-      {/* `aria-live` rather than `role="status"`: a role on the <ul> replaces
-          list and orphans its items. */}
+      {/* One region, so three timed lines are heard as one change; aria-live,
+          as a role on the <ul> replaces list and orphans its items. */}
       <ul className="ob-ig-can" aria-live="polite" aria-atomic="true">
         {CAPABILITIES.map((c) => (
           <li key={c.what} data-can={c.can}>

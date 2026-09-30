@@ -451,6 +451,8 @@
 .ob-stage-title {
   margin: 0;
   color: var(--textPrimary);
+  /* A domain in the title is one word, and at large text it outgrows a phone. */
+  overflow-wrap: break-word;
   /* A measure, not a width: a hero line that runs the full board reads as a
      paragraph set large rather than as a title. */
   max-width: 20ch;
@@ -592,21 +594,38 @@
     box-shadow: none;
     max-width: none;
   }
+  /* Stretched, and its one track allowed below its content: a centred board
+     as wide as its longest nowrap line hangs off both edges of the window. */
   .ob-stage-scene {
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
   }
   .ob-stage-core {
     position: static;
+    align-self: center;
     transform: scale(var(--ob-core-scale, 1));
     padding-top: var(--space-6);
   }
   .ob-stage-board {
     align-content: start;
+    grid-template-columns: minmax(0, 1fr);
     padding: var(--space-6);
   }
   .ob-stage[data-core="work"] .ob-stage-board {
     padding-left: var(--space-6);
+  }
+  /* The way onward drops under the hint, never past the window's edge; the hint
+     keeps a readable floor, so the drop happens only when both cannot fit. */
+  .ob-stage-foot {
+    flex-wrap: wrap;
+  }
+  .ob-stage-hint {
+    flex: 1 1 0;
+    min-width: min(100%, 6rem);
+  }
+  .ob-stage-acts {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   /* Back inside the component's own cap. The wide layout opts out of it because
      it reserved the Core's place; this one did not, and a 300px sphere on a

@@ -187,7 +187,7 @@ export function RecordSpine({
   // the one stop with no record behind it, and on a horizontal axis the WIDTH
   // is the waiting — a silence drawn the same width as the meeting before it
   // says the two took the same amount of time.
-  const columns = stops.map((stop) => todayColumn(stop)).join(" ");
+  const columns = stops.map(todayColumn).join(" ");
   return (
     <PanelBody className="co-spine">
       {/* The axis runs ACROSS, not down: a reader takes the account's shape —

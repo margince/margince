@@ -286,9 +286,9 @@
    *                    (dark) in OKLCh, chroma kept, until it clears 4.5:1 on
    *                    every ground it lands on AND on its own Surface. Ink:
    *                    badge lettering, an error line, a caption, a stat
-   *                    card's figure. It is also
-   *                    the GROUND of a filled control — see
-   *                    --textOnStatusControl for why the base cannot be.
+   *                    card's figure. It is also the GROUND of a filled
+   *                    control — see --textOnStatusControl for why the base
+   *                    cannot be.
    *   --<state>Surface the opaque tint, for a badge: a translucent one takes
    *                    its contrast from whatever it lands on, and this reads
    *                    the same on every surface.
