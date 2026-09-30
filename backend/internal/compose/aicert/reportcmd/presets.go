@@ -58,16 +58,26 @@ func renderPresets(reports []presetReport) string {
 	b.WriteString("\nBy preset: the rung that answers each task, and the one a failed call falls to.\n")
 	for _, report := range reports {
 		fmt.Fprintf(&b, "\n%s\n", report.File)
-		w := tabwriter.NewWriter(&b, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "TASK\tFIRST RUNG\tFALLBACK")
-		for _, r := range report.Rungs {
-			fmt.Fprintf(w, "%s\t%s\t%s\n", r.Task, rungCell(r.FirstTier, r.FirstModel, r.FirstState), fallbackCell(r))
-		}
-		if err := w.Flush(); err != nil {
+		if err := writePresetTable(&b, report.Rungs); err != nil {
 			fmt.Fprintf(&b, "(table could not be written: %v)\n", err)
 		}
 	}
 	return b.String()
+}
+
+// writePresetTable writes one preset's rows to b; a strings.Builder never fails
+// a write, but the tabwriter's own error is still the caller's to print.
+func writePresetTable(b *strings.Builder, rungs []aicert.PresetRungState) error {
+	w := tabwriter.NewWriter(b, 0, 0, 2, ' ', 0)
+	if _, err := fmt.Fprintln(w, "TASK\tFIRST RUNG\tFALLBACK"); err != nil {
+		return err
+	}
+	for _, r := range rungs {
+		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\n", r.Task, rungCell(r.FirstTier, r.FirstModel, r.FirstState), fallbackCell(r)); err != nil {
+			return err
+		}
+	}
+	return w.Flush()
 }
 
 func fallbackCell(r aicert.PresetRungState) string {
