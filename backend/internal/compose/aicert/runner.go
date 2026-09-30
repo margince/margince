@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -239,6 +240,7 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		return nil, fmt.Errorf("aicert: runner: %w", err)
 	}
 
+	skipped := fallbacksNotMeasured(ctx, cfg, sortedTasks(byTask), log)
 	var records []Record
 	var runErrs []error
 	for _, task := range sortedTasks(byTask) {
@@ -248,7 +250,28 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 			runErrs = append(runErrs, err)
 		}
 	}
+	if len(skipped) > 0 {
+		log.WarnContext(ctx, "aicert: fallbacks not measured", "skipped", strings.Join(skipped, "; "))
+	}
 	return records, errors.Join(runErrs...)
+}
+
+// fallbacksNotMeasured logs, before anything is spent, every fallback the judge
+// cannot grade, and returns them for the run's closing line: in a long run the
+// skip must be readable at either end of the log.
+func fallbacksNotMeasured(ctx context.Context, cfg RunnerConfig, tasks []ai.Task, log *slog.Logger) []string {
+	var names []string
+	for _, task := range tasks {
+		_, skipped, err := taskCandidates(cfg, task)
+		if err != nil {
+			continue // certifyAndWrite reports it, per task
+		}
+		for _, s := range skipped {
+			log.WarnContext(ctx, "aicert: skipped fallback", "task", string(s.Task), "model", s.Model, "reason", s.Reason)
+			names = append(names, fmt.Sprintf("%s %s (%s)", s.Task, s.Model, s.Reason))
+		}
+	}
+	return names
 }
 
 // certifyAndWrite certifies one task on each of its candidates and writes a
@@ -257,12 +280,9 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 func certifyAndWrite(ctx context.Context, cfg RunnerConfig, task ai.Task, scenarios []Scenario, repeats int,
 	trace *payloadTrace, journal *runJournal, log *slog.Logger,
 ) ([]Record, error) {
-	cands, skipped, err := taskCandidates(cfg, task)
+	cands, _, err := taskCandidates(cfg, task)
 	if err != nil {
 		return nil, err
-	}
-	for _, s := range skipped {
-		log.WarnContext(ctx, "aicert: skipped fallback", "task", string(s.Task), "model", s.Model, "reason", s.Reason)
 	}
 	var written []Record
 	var errs []error

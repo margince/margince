@@ -509,3 +509,31 @@ func TestThePresetReportReadsTheRecordARunWrote(t *testing.T) {
 		t.Fatalf("rungs = %+v, want summarize current on its first rung and absent on its fallback", rungs)
 	}
 }
+
+// A fallback the judge cannot grade is named before anything is spent and again
+// when the run ends, so an operator reading either end of a long log sees it.
+func TestASkippedFallbackIsNamedAtTheStartAndInTheClosingSummary(t *testing.T) {
+	dir := t.TempDir()
+	writeCorpusFile(t, filepath.Join(dir, "corpus"), "summarize/basic_01.yaml", scenarioYAML("summarize"))
+	ladder := ai.TaskLadder(ai.TaskSummarize)
+	judge := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"}
+	routing := ai.RoutingConfig{Profile: ai.ProfileCloudFrontier, Tiers: map[ai.Tier]ai.ProviderConfig{
+		ladder[0]: {Provider: ai.ProviderFake, Model: "fake"}, ladder[1]: judge,
+	}}
+	var logged strings.Builder
+	_, err := aicert.Run(context.Background(), aicert.RunnerConfig{
+		Census: censusFor(t, ai.TaskSummarize), Routing: &routing, JudgeBinding: judge,
+		CorpusDir: filepath.Join(dir, "corpus"), RecordDir: filepath.Join(dir, "records"), Repeats: 1,
+	}, slog.New(slog.NewTextHandler(&logged, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := logged.String()
+	first, certifying := strings.Index(out, "skipped fallback"), strings.Index(out, "aicert: certifying")
+	if first < 0 || certifying < 0 || first > certifying {
+		t.Errorf("the skip must be logged before the first certification:\n%s", out)
+	}
+	if !strings.Contains(out[certifying:], "fallbacks not measured") {
+		t.Errorf("the run's closing summary does not list the skipped fallback:\n%s", out)
+	}
+}
