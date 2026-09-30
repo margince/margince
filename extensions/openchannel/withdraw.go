@@ -48,6 +48,14 @@ func withdrawCaptured(ctx context.Context, rt extension.Runtime, d extension.Del
 		if err != nil {
 			return err
 		}
+		if len(withdrawn) == 0 {
+			// Nothing claimed this activity YET. Either it was never this
+			// unit's, or a drain is between Ingest and its landing write and
+			// will claim it in a moment — and the event carries nothing that
+			// tells those apart. Recording the id makes the order stop
+			// mattering: a landing that names it lands withdrawn instead.
+			return noteArchivedBeforeLanding(ctx, tx, d.Entity.ID)
+		}
 		for _, requestID := range withdrawn {
 			if err := recordWithdrawn(ctx, tx, requestID, d); err != nil {
 				return err
@@ -83,4 +91,17 @@ func withdrawFor(ctx context.Context, tx extension.Tx, activityID string) ([]str
 		withdrawn = append(withdrawn, requestID)
 	}
 	return withdrawn, rows.Err()
+}
+
+// noteArchivedBeforeLanding records an activity id this unit did not claim.
+//
+// ON CONFLICT DO NOTHING keeps the handler safe to run twice, which the bus
+// requires: a redelivery re-records nothing and the first notice keeps its own
+// noticed_at, so a marker's expiry is measured from when the archive actually
+// arrived rather than from the last time the bus repeated itself.
+func noteArchivedBeforeLanding(ctx context.Context, tx extension.Tx, activityID string) error {
+	_, err := tx.Exec(ctx,
+		`INSERT INTO `+archivedFirstTable+` (activity_id) VALUES ($1::uuid)
+		 ON CONFLICT (activity_id) DO NOTHING`, activityID)
+	return err
 }

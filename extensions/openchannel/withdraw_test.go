@@ -108,3 +108,52 @@ func TestADeliveryThisHandlerCannotActOnIsAcked(t *testing.T) {
 		})
 	}
 }
+
+// THE TWO ARRIVAL ORDERS END THE SAME WAY, which is the whole point of the
+// marker. Archiving after the landing withdraws the row directly; archiving
+// before it leaves the id where the landing looks, and the landing withdraws it
+// instead of claiming it.
+//
+// ASSERTED ON THE STATEMENTS, because this unit's suite has no database: the
+// fake records SQL and cannot run it, so the end state is not reachable from
+// here. What these hold is that each order issues the write the other order
+// depends on — the half a reader cannot check by looking at one path alone.
+func TestAnArchiveBeforeAnyLandingIsKeptForTheLandingToAnswer(t *testing.T) {
+	t.Parallel()
+	rt := newRuntime().unattended()
+	// No rows come back, so nothing has claimed this activity yet — the drain
+	// is between Ingest and its landing write, or it was never ours.
+	if err := withdrawCaptured(context.Background(), rt, archived()); err != nil {
+		t.Fatalf("withdrawing: %v", err)
+	}
+
+	sql, args := rt.tx.statementMentioning(t, archivedFirstTable)
+	if !strings.Contains(sql, "ON CONFLICT") {
+		t.Fatalf("the marker is not written idempotently, and the bus is at-least-once:\n%s", sql)
+	}
+	if len(args) != 1 || args[0] != landedActivity {
+		t.Fatalf("the marker records %v; it has to name the archived activity", args)
+	}
+	if len(rt.tx.audited) != 0 || len(rt.tx.published) != 0 {
+		t.Fatal("recording a marker announced a change; nothing was withdrawn yet")
+	}
+}
+
+// An archive that DID match writes no marker: the request is already withdrawn,
+// and a marker left behind would withdraw the next landing onto that activity
+// for a reason that has already been dealt with.
+func TestAnArchiveThatWithdrewSomethingKeepsNoMarker(t *testing.T) {
+	t.Parallel()
+	rt := newRuntime().unattended()
+	rt.tx.queryRows = [][]any{{firstRequestID}}
+
+	if err := withdrawCaptured(context.Background(), rt, archived()); err != nil {
+		t.Fatalf("withdrawing: %v", err)
+	}
+
+	for _, stmt := range rt.tx.statements {
+		if strings.Contains(stmt, archivedFirstTable) {
+			t.Fatalf("an archive that withdrew a request also kept a marker:\n%s", stmt)
+		}
+	}
+}
