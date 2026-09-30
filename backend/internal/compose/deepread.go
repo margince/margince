@@ -75,7 +75,7 @@ func (a SiteDeepReadArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // (deepReadMaxWorkers) caps how much of the fleet crawling can occupy.
 const (
 	deepReadQueue      = "deep_read"
-	deepReadMaxWorkers = 4
+	deepReadMaxWorkers = 6
 )
 
 // DeepReadPriorityLive is the priority a human or agent action's own deep

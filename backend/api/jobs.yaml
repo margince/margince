@@ -111,10 +111,10 @@ queues:
       wide enough that an ordinary text send is not queued behind two album
       uploads.
   deep_read:
-    max_workers: 4
+    max_workers: 6
     reason: >-
       Deep reads run on their own bounded pool so long crawls cannot evict the
-      short maintenance jobs from the default queue. Four, because a crawl is
+      short maintenance jobs from the default queue. Six, because a crawl is
       bound by the sites it reads and by the model rather than by the
       process: each one spends its time waiting on the network, holds little
       memory, and does not touch Postgres while it waits.
