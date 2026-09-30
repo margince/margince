@@ -5,7 +5,6 @@ package identity
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -28,7 +27,7 @@ const thirdPartyRegistration = `{
 	"software_version": "2.0.0"
 }`
 
-func parseDocument(t *testing.T, document string) (dcrRequest, error) {
+func parseDocument(t *testing.T, document string) (dcrRequest, *dcrRefusal) {
 	t.Helper()
 	var members map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(document), &members); err != nil {
@@ -38,26 +37,30 @@ func parseDocument(t *testing.T, document string) (dcrRequest, error) {
 }
 
 func TestRegistrationIgnoresMetadataItDoesNotUnderstand(t *testing.T) {
-	req, err := parseDocument(t, thirdPartyRegistration)
-	if err != nil {
-		t.Fatalf("parseDCR refused a conforming document: %v", err)
+	req, refusal := parseDocument(t, thirdPartyRegistration)
+	if refusal != nil {
+		t.Fatalf("parseDCR refused a conforming document: %s", refusal.description)
 	}
 	if req.ClientName != "Le Chat" || len(req.RedirectURIs) != 1 {
 		t.Errorf("parsed %+v, want the client name and its one redirect", req)
 	}
 }
 
-func TestRegistrationEchoesDefaultsForOmittedGrantAndResponseTypes(t *testing.T) {
-	req, err := parseDocument(t, `{"client_name":"bare","redirect_uris":["https://client.example/cb"]}`)
-	if err != nil {
-		t.Fatal(err)
+// The echo is what the server does, not what was asked: a client that
+// registered authorization_code alone still receives refresh tokens when it
+// asks for offline_access, so telling it otherwise would be false.
+func TestRegistrationEchoesTheGrantsTheServerIssues(t *testing.T) {
+	req, refusal := parseDocument(t,
+		`{"client_name":"narrow","redirect_uris":["https://client.example/cb"],"grant_types":["authorization_code"]}`)
+	if refusal != nil {
+		t.Fatal(refusal.description)
 	}
 	echo := req.registered("client-1")
-	if !slices.Equal(echo.GrantTypes, []string{oauthGrantAuthorizationCode}) {
-		t.Errorf("grant_types = %v, want the RFC 7591 default", echo.GrantTypes)
+	if !slices.Equal(echo.GrantTypes, oauthGrantTypesSupported) {
+		t.Errorf("grant_types = %v, want what the server issues %v", echo.GrantTypes, oauthGrantTypesSupported)
 	}
 	if !slices.Equal(echo.ResponseTypes, []string{oauthResponseTypeCode}) {
-		t.Errorf("response_types = %v, want the RFC 7591 default", echo.ResponseTypes)
+		t.Errorf("response_types = %v, want [code]", echo.ResponseTypes)
 	}
 }
 
@@ -67,6 +70,9 @@ func TestRegistrationRefusesWhatItCannotHonour(t *testing.T) {
 	}{
 		"implicit grant": {
 			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"grant_types":["implicit"]}`,
+			"invalid_client_metadata"},
+		"refresh without a code": {
+			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"grant_types":["refresh_token"]}`,
 			"invalid_client_metadata"},
 		"token response type": {
 			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"response_types":["token"]}`,
@@ -88,10 +94,9 @@ func TestRegistrationRefusesWhatItCannotHonour(t *testing.T) {
 			"invalid_client_metadata"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := parseDocument(t, tc.document)
-			var refusal *dcrMetadataError
-			if !errors.As(err, &refusal) {
-				t.Fatalf("parseDCR = %v, want a registration refusal", err)
+			_, refusal := parseDocument(t, tc.document)
+			if refusal == nil {
+				t.Fatal("parseDCR accepted the document, want a registration refusal")
 			}
 			if refusal.code != tc.code {
 				t.Errorf("error = %q (%s), want %q", refusal.code, refusal.description, tc.code)

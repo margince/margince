@@ -71,14 +71,9 @@ func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
 			"the registration document must be one JSON object")
 		return
 	}
-	req, err := parseDCR(members)
-	if err != nil {
-		var refusal *dcrMetadataError
-		if errors.As(err, &refusal) {
-			oauthError(w, http.StatusBadRequest, refusal.code, refusal.description)
-			return
-		}
-		httperr.Write(w, r, err)
+	req, refusal := parseDCR(members)
+	if refusal != nil {
+		oauthError(w, http.StatusBadRequest, refusal.code, refusal.description)
 		return
 	}
 
