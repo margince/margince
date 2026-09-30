@@ -114,6 +114,9 @@ type RunnerConfig struct {
 	StaleOnly bool // MARGINCE_AICERT_STALE_ONLY, default on
 	// current marks the candidates StaleOnly skips (candidateKey), set by Run.
 	current map[string]bool
+	// unservable marks the fallback bindings the pre-flight could not serve
+	// (bindingKey), set by Run: skipped and named, never fatal.
+	unservable map[string]bool
 }
 
 // validateBindings refuses a run that could not produce a trustworthy verdict,
@@ -236,7 +239,7 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		}
 	}()
 
-	if err := runPreflights(ctx, cfg, journal, byTask, repeats, log); err != nil {
+	if cfg.unservable, err = runPreflights(ctx, cfg, journal, byTask, repeats, log); err != nil {
 		return nil, fmt.Errorf("aicert: runner: %w", err)
 	}
 
@@ -261,13 +264,20 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 // sends no LLM call and the chat pre-flight would be its one paid call. The
 // decision pre-flight runs regardless: no decision run is journaled, so the
 // leg is paid for on every run and its pre-flight is always worth the call.
-func runPreflights(ctx context.Context, cfg RunnerConfig, journal *runJournal, byTask map[ai.Task][]Scenario, repeats int, log *slog.Logger) error {
+func runPreflights(ctx context.Context, cfg RunnerConfig, journal *runJournal, byTask map[ai.Task][]Scenario, repeats int, log *slog.Logger) (map[string]bool, error) {
+	lost := map[string]bool{}
 	if journal.replaysEverything(ctx, cfg, byTask, repeats) {
 		log.InfoContext(ctx, "aicert: pre-flight skipped — every run replays from the resume journal")
-	} else if err := preflight(ctx, cfg, sortedTasks(byTask), nil, log); err != nil {
-		return err
+	} else {
+		fallbacks, err := preflight(ctx, cfg, sortedTasks(byTask), nil, log)
+		if err != nil {
+			return nil, err
+		}
+		for _, b := range fallbacks {
+			lost[bindingKey(b)] = true
+		}
 	}
-	return preflightDecisions(ctx, cfg, byTask, nil, log)
+	return lost, preflightDecisions(ctx, cfg, byTask, nil, log)
 }
 
 // certifyTask runs every scenario for one task over a fresh

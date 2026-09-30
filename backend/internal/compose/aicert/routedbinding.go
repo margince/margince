@@ -109,6 +109,9 @@ func taskCandidates(cfg RunnerConfig, task ai.Task) ([]candidate, []skippedCandi
 		case err != nil:
 			skipped = append(skipped, skippedCandidate{Task: task, Model: rung.Binding.Model, Reason: "the judge's own family"})
 			continue
+		case i > 0 && cfg.unservable[bindingKey(rung.Binding)]:
+			skipped = append(skipped, skippedCandidate{Task: task, Model: rung.Binding.Model, Reason: "the pre-flight could not serve it"})
+			continue
 		}
 		if cfg.current[candidateKey(task, rung.Binding)] {
 			continue // STALE_ONLY: its record is current, and currentBindings said so
