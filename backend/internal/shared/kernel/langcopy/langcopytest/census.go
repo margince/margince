@@ -55,7 +55,11 @@ type reporter interface {
 // every assertion below without making a claim — which is how a census comes
 // to report PASS over a subject it never saw. Two private censuses reading two
 // subsets of their own tables are the same failure in miniature, which is why
-// this is the one census every migrated table calls.
+// this is the one census every langcopy.Phrase table calls. The copy tables
+// still written the older way — a map keyed by language rather than a struct
+// of phrases — keep their own walks until they are migrated onto Phrase.
+//
+// Held by: TestOneCensusReadsEveryPhraseTable (backend/gates/langcopyonecensus_test.go)
 //
 //craft:ignore naked-any every caller passes a different copy table's own struct or map type — the parameter names the shape this walks, not a shape of ours
 func Census(t reporter, table any) {
