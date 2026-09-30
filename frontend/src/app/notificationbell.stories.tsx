@@ -205,7 +205,7 @@ export const CentreOpenDark: Story = {
 };
 
 // A COLLEAGUE DECIDED IT. The notice went to every seat that could have
-// decided, so one person answering leaves the rest holding a line that waits
+// decided, so one colleague answering leaves the rest holding a line that waits
 // on nobody — quieted like history, with the reason it stopped waiting under
 // the subject and the unread mark still on it, because the reader never opened
 // it and it is still theirs to clear.

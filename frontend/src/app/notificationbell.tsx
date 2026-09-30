@@ -312,7 +312,7 @@ function NoticeRow({
       {/* ONE LINE OF REASON, naming a colleague only where the seat read could.
           A decider who has since left resolves to no name, which is the same
           sentence as nobody having decided at all: each says the line stopped
-          waiting, and neither puts a uuid where a person's name belongs. */}
+          waiting, and neither puts a uuid where a colleague's name belongs. */}
       {overtaken && (
         <p className="notifrow-reason t-caption">
           {notice.overtaken_by_name !== undefined
