@@ -6,7 +6,6 @@ package network
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -37,7 +36,7 @@ func TestTheFoldWritesInTheLanguageItIsGiven(t *testing.T) {
 	t.Parallel()
 	coverage := singleThreadedCoverage()
 	for _, lang := range textlang.Shipped {
-		risks := foldRisks(coverage, time.Now(), langcopy.For(string(lang)))
+		risks := foldRisks(coverage, langcopy.For(string(lang)))
 		if len(risks) == 0 {
 			t.Fatalf("%s: a single-threaded deal produced no risk to read", lang)
 		}

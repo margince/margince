@@ -247,7 +247,7 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 	// The finding is shared-record text — written once, read by everyone on the
 	// deal — so it follows the installation rather than whoever opened the page.
 	lang := identity.BaseLanguageForRecord(ctx, tx)
-	out.Risks = foldRisks(out, now, langcopy.For(string(lang)))
+	out.Risks = foldRisks(out, langcopy.For(string(lang)))
 	return out, nil
 }
 
@@ -255,10 +255,10 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 // Pure so it can be tested against hand-built inputs with no database — the
 // gather/fold split every detector in this codebase uses.
 //
-// The clock is the SAME instant the gather ran against, passed in rather than
-// read here: going-cold compares a stored timestamp to now, and a fold that
-// called time.Now() could not be asserted on without sleeping.
-func foldRisks(c DealCoverage, now time.Time, say langcopy.Spoken) []Risk {
+// It takes no clock. Every instant it judges against was stamped by the
+// database and carried here on the coverage view, for the reason goingCold
+// spells out below.
+func foldRisks(c DealCoverage, say langcopy.Spoken) []Risk {
 	var risks []Risk
 
 	// Every rule here is a PIPELINE rule. REPORT-PARAM-1 says "an open deal",
