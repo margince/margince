@@ -72,6 +72,14 @@ export const SignedIn: Story = {
   render: () => <Shell session={meRoute({ automation: ["update"] })} />,
 };
 
+// `uat-phone` drives the capture gate to 390px, where the band's end slot
+// takes a row of its own under the masthead.
+export const SignedInPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <Shell session={meRoute({ automation: ["update"] })} />,
+};
+
 // A seat that never set a display name. The name falls back to the address,
 // which is why the monogram splits on `@` and `.` as well as whitespace:
 // "jana.roth@gradion.test" reads as JR here, not as a lone J shared with

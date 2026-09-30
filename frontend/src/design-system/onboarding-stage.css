@@ -613,4 +613,21 @@
   .ob-stage-where {
     display: none;
   }
+  /* The end slot's controls outgrow a third of a phone, so they take a row of
+     their own and wrap there; the dashes stay put at the first row's end. */
+  .ob-stage-band {
+    grid-template-columns: 1fr auto;
+    row-gap: var(--space-2);
+  }
+  .ob-stage-end {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+  .ob-stage-corestate {
+    margin-inline-end: auto;
+  }
 }
