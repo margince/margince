@@ -3,7 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { BulkVerbs } from "./bulkverbs";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "./story-utils";
 
 // The bar the contacts and companies lists show while rows are selected. Each
 // verb opens the preview in bulkchange.stories.tsx.
@@ -29,7 +34,10 @@ const rows = [
 ];
 
 function Bar({ locale }: Readonly<{ locale?: "en" | "de" | "vi" }>) {
-  installFetchStub({ "GET /users": () => jsonResponse(roster) });
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "GET /users": () => jsonResponse(roster),
+  });
   return (
     <StoryProviders locale={locale}>
       <div className="lt-bulkbar">
