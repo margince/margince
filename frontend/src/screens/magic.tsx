@@ -34,6 +34,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { Locale } from "../i18n/locale";
 import {
   magicByKey,
   magicConsequenceKey,
@@ -360,6 +361,44 @@ function LineWhen({ line, zone }: Readonly<{ line: MagicLine; zone: string }>) {
   return formatDateTime(line.occurred_at, locale, zone);
 }
 
+/**
+ * How a line that stands for more than the record it names says so.
+ *
+ * `floor` is the receipt's own warning that the read behind the count was cut
+ * short, so every wording it picks is an "at least": the exact one would
+ * understate how far a machine went, which is the direction a reader of this
+ * page cannot recover from.
+ */
+function manySummary({
+  t,
+  plural,
+  locale,
+  label,
+  count,
+  floor,
+}: Readonly<{
+  t: ReturnType<typeof useT>;
+  plural: ReturnType<typeof usePlural>;
+  locale: Locale;
+  label: string | undefined;
+  count: number;
+  floor: boolean;
+}>) {
+  if (label && count > 1) {
+    return plural(
+      floor ? "magic.aboutManyAtLeast" : "magic.aboutMany",
+      count - 1,
+      { label, others: formatNumber(count - 1, locale) },
+    );
+  }
+  if (label && floor) {
+    return t("magic.aboutNamedAtLeast", { label });
+  }
+  return plural(floor ? "magic.aboutCountAtLeast" : "magic.aboutCount", count, {
+    count: formatNumber(count, locale),
+  });
+}
+
 function LineSubject({
   line,
   since,
@@ -381,19 +420,7 @@ function LineSubject({
   // single record, which is a group that MIGHT have more beyond the cut.
   const floor = line.count_is_floor === true;
   if (count > 1 || floor || (!line.entity && line.count !== undefined)) {
-    let summary: string;
-    if (label && count > 1) {
-      summary = plural(floor ? "magic.aboutManyAtLeast" : "magic.aboutMany", count - 1, {
-        label,
-        others: formatNumber(count - 1, locale),
-      });
-    } else if (label && floor) {
-      summary = t("magic.aboutNamedAtLeast", { label });
-    } else {
-      summary = plural(floor ? "magic.aboutCountAtLeast" : "magic.aboutCount", count, {
-        count: formatNumber(count, locale),
-      });
-    }
+    const summary = manySummary({ t, plural, locale, label, count, floor });
     return opens ? (
       <LineRecordsOpener line={line} since={since} summary={summary} />
     ) : (
