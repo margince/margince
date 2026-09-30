@@ -32,12 +32,6 @@ import { pageOverflow, textsOf } from "./waits";
  * outlives the guard fails here, naming itself, rather than being measured
  * mid-flight.
  */
-// How long a finite animation is given to land before the assertions read the
-// page. Longer than the design system's own arrivals — the Select's open is
-// ~140ms, the longest here — and short enough that a PERPETUAL animation is
-// still reported by the assertion below rather than hidden by the wait.
-const ANIMATION_LANDING_MS = 500;
-
 async function settleAnimations(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   // Reduced motion stops the NEXT animation; it cannot call off one already in
@@ -47,27 +41,34 @@ async function settleAnimations(page: Page) {
   // animation the media query has no say over, and CSS `animation: none` does
   // not govern a WAAPI one the way it governs a keyframe.
   //
-  // So the in-flight ones are given a moment to LAND, at their resting frame,
-  // which is what a settled page means. The race is the bound: a perpetual
-  // animation never resolves `finished`, and waiting on one would turn the
-  // finding below into a timeout that names nothing. What survives this wait is
-  // exactly what the assertion is about.
+  // So the in-flight ones are awaited to their resting frame, which is what a
+  // settled page means — and each is asked whether it HAS one rather than being
+  // raced against a clock. A perpetual animation never resolves `finished`, so
+  // it is left for the finding below to name; a finite one always resolves, so
+  // waiting on it needs no budget.
+  //
+  // That distinction is the whole of this wait. A wall-clock budget cannot tell
+  // "perpetual" from "slow", so on a loaded runner it expired while the page's
+  // own boot arrivals were still landing and handed the assertion four running
+  // animations to report — the settle returning early, dressed as a finding.
+  // The animation's own timing can tell them apart on any machine at any load.
   //
   // allSettled rather than all: a cancelled animation REJECTS `finished`, and
   // that is a settled outcome here — the animation is over, which is all this
   // waits for.
-  await page.evaluate(async (budgetMs) => {
-    const landing = document
-      .getAnimations()
-      .filter((animation) => animation.playState === "running")
-      .map((animation) => animation.finished);
-    await Promise.race([
-      Promise.allSettled(landing),
-      new Promise((resolve) => {
-        window.setTimeout(resolve, budgetMs);
-      }),
-    ]);
-  }, ANIMATION_LANDING_MS);
+  await page.evaluate(async () => {
+    const lands = (animation: Animation) =>
+      Number.isFinite(
+        animation.effect?.getComputedTiming().activeDuration ?? Infinity,
+      );
+    await Promise.allSettled(
+      document
+        .getAnimations()
+        .filter((animation) => animation.playState === "running")
+        .filter(lands)
+        .map((animation) => animation.finished),
+    );
+  });
   const motion = await page.evaluate(() => {
     const describe = (element: Element) =>
       `${element.tagName.toLowerCase()}.${element.className}`;
