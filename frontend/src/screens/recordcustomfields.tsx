@@ -83,6 +83,7 @@ function readings(
     if (!display) continue;
     displayValues[field.column_name] = display;
     const href = customFieldHref(display);
+    // Not a picklist: InlineChoice's trigger is its value and has no verb mode.
     if (href && field.type === "text")
       renderValues[field.column_name] = (
         <OffsiteLink href={href}>{display}</OffsiteLink>

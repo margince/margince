@@ -929,6 +929,8 @@ export const vi = {
   "record.edit": "Sửa",
 
   "record.fieldRequired": "Trường này là bắt buộc.",
+  "record.amountTooPrecise":
+    "Số tiền này có nhiều chữ số thập phân hơn mức {currency} cho phép.",
   "record.registration": "Thông tin đăng ký",
   "record.leadProfileReadOnly":
     "Không thể thay đổi LinkedIn của khách hàng tiềm năng.",

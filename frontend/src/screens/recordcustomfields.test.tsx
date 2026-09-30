@@ -37,9 +37,11 @@ const wiki = {
 };
 const WIKI = "https://wiki.example.com/globex";
 
+type Kind = "company" | "contact" | "deal" | "lead";
 function catalog(
   fields: unknown[],
-  kind: "company" | "contact" | "deal" | "lead" = "contact",
+  kind: Kind = "contact",
+  held?: Promise<void>,
 ) {
   const path = kind === "company" ? "companies" : `${kind}s`;
   const sent: unknown[] = [];
@@ -50,93 +52,134 @@ function catalog(
     ),
     "GET /custom-fields": () =>
       jsonResponse({ data: fields, page: { has_more: false } }),
-    [`PATCH /${path}/record1`]: (body) => {
+    [`PATCH /${path}/record1`]: async (body) => {
       sent.push(body);
+      await held;
       return jsonResponse({ id: "record1", version: 2 });
     },
   });
   return sent;
 }
 
+function renderDetails(kind: Kind, values: Record<string, unknown>) {
+  return render(
+    <StoryProviders>
+      <RecordCustomFields
+        kind={kind}
+        record={{ id: "record1", version: 1, writable: true, ...values }}
+      />
+    </StoryProviders>,
+  );
+}
+
 it.each(["company", "contact", "deal", "lead"] as const)(
-  "reads money in the field's currency and a web address as a link on a %s",
+  "reads money and a web address on a %s, and edits their raw values",
   async (kind) => {
-    catalog(
+    const user = userEvent.setup();
+    const sent = catalog(
       [
         { ...budget, object: kind },
         { ...wiki, object: kind },
       ],
       kind,
     );
-    render(
-      <StoryProviders>
-        <RecordCustomFields
-          kind={kind}
-          record={{
-            id: "record1",
-            version: 1,
-            writable: true,
-            cf_budget: 4_800_000,
-            cf_wiki: WIKI,
-          }}
-        />
-      </StoryProviders>,
-    );
-    expect(
-      (await screen.findByRole("button", { name: "Change Annual budget" }))
-        .textContent,
-    ).toBe("€48,000.00");
+    renderDetails(kind, { cf_budget: 4_800_000, cf_wiki: WIKI });
+    const change = await screen.findByRole("button", {
+      name: "Change Annual budget",
+    });
+    expect(change.textContent).toBe("€48,000.00");
     expect(screen.getByRole("link", { name: WIKI }).getAttribute("href")).toBe(
       WIKI,
     );
+    await user.click(change);
+    const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
+    expect((amount as HTMLInputElement).value).toBe("48000");
+    await user.clear(amount);
+    await user.type(amount, "48000.5{Enter}");
+    await waitFor(() => expect(sent).toEqual([{ cf_budget: 4_800_050 }]));
+
+    screen.getByRole("link", { name: WIKI }).focus();
+    await user.tab();
+    const verb = screen.getByRole("button", { name: "Change Account wiki" });
+    expect(document.activeElement).toBe(verb);
+    await user.keyboard("{Enter}");
     expect(
+      (
+        screen.getByRole("textbox", {
+          name: "Account wiki",
+        }) as HTMLInputElement
+      ).value,
+    ).toBe(WIKI);
+    expect(screen.queryByRole("link", { name: WIKI })).toBeNull();
+    await user.keyboard("{Escape}");
+    expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Change Account wiki" }),
-    ).toBeTruthy();
+    );
+    expect(screen.getByRole("link", { name: WIKI })).toBeTruthy();
   },
 );
 
-it("edits the major-unit amount and the address itself, not their readings", async () => {
+it("reads and edits a zero-decimal currency in whole units", async () => {
   const user = userEvent.setup();
-  const sent = catalog([budget, wiki]);
-  render(
-    <StoryProviders>
-      <RecordCustomFields
-        kind="contact"
-        record={{
-          id: "record1",
-          version: 1,
-          writable: true,
-          cf_budget: 4_800_000,
-          cf_wiki: WIKI,
-        }}
-      />
-    </StoryProviders>,
-  );
-  await user.click(
-    await screen.findByRole("button", { name: "Change Annual budget" }),
-  );
+  const sent = catalog([{ ...budget, currency: "JPY" }]);
+  renderDetails("contact", { cf_budget: 48_000 });
+  const change = await screen.findByRole("button", {
+    name: "Change Annual budget",
+  });
+  expect(change.textContent).toBe("JP¥48,000");
+  await user.click(change);
   const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
   expect((amount as HTMLInputElement).value).toBe("48000");
   await user.clear(amount);
-  await user.type(amount, "48000.5{Enter}");
-  await waitFor(() => expect(sent).toEqual([{ cf_budget: 4_800_050 }]));
+  await user.type(amount, "48001{Enter}");
+  await waitFor(() => expect(sent).toEqual([{ cf_budget: 48_001 }]));
+});
 
-  screen.getByRole("link", { name: WIKI }).focus();
-  await user.tab();
-  expect(document.activeElement).toBe(
-    screen.getByRole("button", { name: "Change Account wiki" }),
+it.each([
+  ["EUR", "48000.555"],
+  ["JPY", "48000.5"],
+])(
+  "refuses a %s amount finer than the currency, and sends nothing",
+  async (currency, typed) => {
+    const user = userEvent.setup();
+    const sent = catalog([{ ...budget, currency }]);
+    renderDetails("contact", { cf_budget: 4_800_000 });
+    await user.click(
+      await screen.findByRole("button", { name: "Change Annual budget" }),
+    );
+    const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
+    await user.clear(amount);
+    await user.type(amount, `${typed}{Enter}`);
+    expect(
+      await screen.findByText(
+        `This amount has more decimals than ${currency} allows.`,
+      ),
+    ).toBeTruthy();
+    expect(amount.getAttribute("aria-invalid")).toBe("true");
+    expect(sent).toEqual([]);
+  },
+);
+
+it("keeps the edit verb in place, disabled, while another field saves", async () => {
+  const user = userEvent.setup();
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const sent = catalog([budget, wiki], "contact", held);
+  renderDetails("contact", { cf_budget: 4_800_000, cf_wiki: WIKI });
+  await user.click(
+    await screen.findByRole("button", { name: "Change Annual budget" }),
   );
-  await user.keyboard("{Enter}");
-  expect(
-    (screen.getByRole("textbox", { name: "Account wiki" }) as HTMLInputElement)
-      .value,
-  ).toBe(WIKI);
-  expect(screen.queryByRole("link", { name: WIKI })).toBeNull();
-  await user.keyboard("{Escape}");
-  expect(document.activeElement).toBe(
-    screen.getByRole("button", { name: "Change Account wiki" }),
+  await user.type(
+    screen.getByRole("spinbutton", { name: "Annual budget" }),
+    "1{Enter}",
   );
-  expect(screen.getByRole("link", { name: WIKI })).toBeTruthy();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  const verb = screen.getByRole("button", { name: "Change Account wiki" });
+  expect((verb as HTMLButtonElement).disabled).toBe(true);
+  release();
+  await waitFor(() => expect((verb as HTMLButtonElement).disabled).toBe(false));
 });
 
 it("reads an unset money or address field as unset, with nothing to follow", async () => {
@@ -289,7 +332,7 @@ const WIRE = {
   cf_tier: "Strategic",
   cf_wiki: WIKI,
   cf_budget: 4_800_000,
-  cf_number: "220",
+  cf_number: 220,
   cf_date: "2026-03-01",
   cf_picklist: "North",
   cf_multiselect: ["North", "West"],

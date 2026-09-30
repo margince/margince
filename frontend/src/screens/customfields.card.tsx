@@ -1,7 +1,5 @@
-// RecordCustomFields is the editable Details section for company, contact, deal
-// and lead, showing every catalog field; CustomFieldsPanel is the read-only
-// reading for projects and contracts, which edit in a modal, and omits unset
-// fields.
+// RecordCustomFields: the editable Details of company, contact, deal and lead.
+// CustomFieldsPanel: read-only, for projects and contracts; omits unset fields.
 
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";

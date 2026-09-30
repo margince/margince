@@ -943,6 +943,8 @@ export const en = {
   "record.edit": "Edit",
 
   "record.fieldRequired": "This field is required.",
+  "record.amountTooPrecise":
+    "This amount has more decimals than {currency} allows.",
   "record.registration": "Registration",
   "record.leadProfileReadOnly": "LinkedIn cannot be changed on a lead.",
   "record.leadStatusAction": "Change the status with the lead status controls.",

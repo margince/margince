@@ -1,6 +1,7 @@
 import {
   type ComponentPropsWithoutRef,
   forwardRef,
+  type Ref,
   useEffect,
   useRef,
   useState,
@@ -69,6 +70,32 @@ function ReadOnlyText({
   );
 }
 
+// The edit verb beside a value its caller draws as something to follow.
+export function InlineEditVerb({
+  label,
+  disabled,
+  onClick,
+  ref,
+}: Readonly<{
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+  ref?: Ref<HTMLButtonElement>;
+}>) {
+  const t = useT();
+  return (
+    <Button
+      ref={ref}
+      variant="link"
+      className="inline-editable"
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {t("inlineChoice.change", { field: label })}
+    </Button>
+  );
+}
+
 export function InlineText({
   label,
   value,
@@ -92,7 +119,8 @@ export function InlineText({
   // a currency in its own code over the bare major-unit amount.
   display?: string;
   // The caller draws the value beside this as a link, so the resting trigger is
-  // the edit verb: a link inside the trigger would be two controls in one.
+  // the edit verb (disabled while `canEdit` is false): a link inside the trigger
+  // would be two controls in one.
   verb?: boolean;
   placeholder: string;
   // A value the record carries elsewhere that stands in for this field until
@@ -169,16 +197,6 @@ export function InlineText({
 
   if (!canEdit || !editing) {
     const shown = (value && display) || value || suggested || placeholder;
-    if (!canEdit) {
-      return (
-        <ReadOnlyText
-          value={value}
-          display={display}
-          suggested={suggested}
-          readOnlyReason={readOnlyReason}
-        />
-      );
-    }
     const change = t("inlineChoice.change", { field: label });
     const open = () => {
       setDraft(value);
@@ -191,16 +209,23 @@ export function InlineText({
       cancelling.current = false;
       setEditing(true);
     };
-    if (verb) {
+    if (verb)
       return (
-        <Button
+        <InlineEditVerb
           ref={trigger}
-          variant="link"
-          className="inline-editable"
+          label={label}
+          disabled={!canEdit}
           onClick={open}
-        >
-          {change}
-        </Button>
+        />
+      );
+    if (!canEdit) {
+      return (
+        <ReadOnlyText
+          value={value}
+          display={display}
+          suggested={suggested}
+          readOnlyReason={readOnlyReason}
+        />
       );
     }
     return (
