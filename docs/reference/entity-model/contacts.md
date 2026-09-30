@@ -1462,28 +1462,12 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `idx_rel_company_contacts` — `btree (company_id) WHERE ((kind = 'employment') AND (archived_at IS NULL))`
-- `idx_rel_company_projects` — `btree (company_id) WHERE ((kind = 'project_company') AND (archived_at IS NULL))`
-- `idx_rel_contact_companies` — `btree (contact_id) WHERE ((kind = 'employment') AND (archived_at IS NULL))`
-- `idx_rel_contact_projects` — `btree (contact_id) WHERE ((kind = 'project_stakeholder') AND (archived_at IS NULL))`
-- `idx_rel_deal_stakeholders` — `btree (deal_id) WHERE ((kind = 'deal_stakeholder') AND (archived_at IS NULL))`
 - `idx_rel_employer_contacts` — `btree (company_id, contact_id) WHERE ((kind = 'employment') AND (ended_at IS NULL) AND (archived_at IS NULL))`
 - `idx_rel_history_company` — `btree (company_id)`
 - `idx_rel_history_contact` — `btree (contact_id)`
 - `idx_rel_history_counterparty` — `btree (counterparty_company_id)`
 - `idx_rel_history_deal` — `btree (deal_id)`
 - `idx_rel_history_project` — `btree (project_id)`
-- `idx_rel_partner_company` — `btree (company_id) WHERE ((kind = ANY (ARRAY['partner_of', 'referred_by', 'co_sell_with'])) AND (archived_at IS NULL))`
-- `idx_rel_partner_counterparty` — `btree (counterparty_company_id) WHERE ((kind = ANY (ARRAY['partner_of', 'referred_by', 'co_sell_with'])) AND (archived_at IS NULL))`
-- `idx_rel_project_companies` — `btree (project_id) WHERE ((kind = 'project_company') AND (archived_at IS NULL))`
-- `idx_rel_project_stakeholders` — `btree (project_id) WHERE ((kind = 'project_stakeholder') AND (archived_at IS NULL))`
-- `idx_rel_stakeholder_deals` — `btree (contact_id) WHERE ((kind = 'deal_stakeholder') AND (archived_at IS NULL))`
-- `idx_rel_traverse_company` — `btree (company_id) WHERE (archived_at IS NULL)`
-- `idx_rel_traverse_contact` — `btree (contact_id) WHERE (archived_at IS NULL)`
-- `idx_rel_traverse_deal` — `btree (deal_id) WHERE (archived_at IS NULL)`
-- `idx_rel_traverse_project` — `btree (project_id) WHERE (archived_at IS NULL)`
-- `idx_rel_works_with_contact` — `btree (contact_id) WHERE ((kind = 'works_with') AND (archived_at IS NULL))`
-- `idx_rel_works_with_counterparty` — `btree (counterparty_contact_id) WHERE ((kind = 'works_with') AND (archived_at IS NULL))`
 - `idx_relationship_counterparty_contact` — `btree (counterparty_contact_id)`
 - `relationship_pkey` — `unique, btree (id)`
 - `uq_rel_billing_contact` — `unique, btree (company_id, contact_id, role) WHERE ((kind = 'billing_contact') AND (archived_at IS NULL))`
