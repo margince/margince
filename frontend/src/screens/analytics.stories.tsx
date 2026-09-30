@@ -260,7 +260,9 @@ const clickButton =
   async ({ canvasElement }: { canvasElement: HTMLElement }) => {
     for (const name of names) {
       await userEvent.click(
-        await within(canvasElement).findByRole("button", { name }),
+        await within(canvasElement.ownerDocument.body).findByRole("button", {
+          name,
+        }),
       );
     }
   };
@@ -379,7 +381,7 @@ export const Delivery: Story = {
       </StoryProviders>
     );
   },
-  play: clickButton("Delivery"),
+  play: clickButton("More analysis", "Delivery"),
 };
 
 export const DataCoverage: Story = {
@@ -394,7 +396,7 @@ export const DataCoverage: Story = {
       </StoryProviders>
     );
   },
-  play: clickButton("Data coverage"),
+  play: clickButton("More analysis", "Data coverage"),
 };
 
 export const MyOutcomes: Story = {

@@ -4,13 +4,20 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
+import {
+  Button,
+  Checkbox,
+  Disclosure,
+  Field,
+  TextInput,
+} from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
+import { ReportingFilters } from "./reporting.filters";
 import {
   blockLabel,
   metricLabel,
@@ -19,7 +26,7 @@ import {
 } from "./reporting.model";
 
 export function SaveReportingDialog({
-  selection,
+  selection: initialSelection,
   report,
   onClose,
   onSaved,
@@ -30,6 +37,7 @@ export function SaveReportingDialog({
   onSaved: (report: ReportingReport) => void;
 }>) {
   const t = useT();
+  const [selection, setSelection] = useState(initialSelection);
   const title = useId();
   const queryClient = useQueryClient();
   const [name, setName] = useState(report?.name ?? "");
@@ -129,6 +137,17 @@ export function SaveReportingDialog({
             />
           )}
         </Field>
+        <ReportingFilters
+          selection={selection}
+          onChange={(next) => {
+            setSelection(next);
+            if (
+              next.scope.kind !== selection.scope.kind ||
+              next.scope.id !== selection.scope.id
+            )
+              setAudience("private");
+          }}
+        />
         <Field label={t("reporting.audience")}>
           {(field) => (
             <Select
@@ -174,48 +193,52 @@ export function SaveReportingDialog({
             />
           ))}
         </fieldset>
-        <fieldset>
-          <legend>{t("reporting.blocks")}</legend>
-          {[...new Set([...selectedBlocks, ...allowedBlocks])].map((block) => (
-            <div key={block} className="reporting-block-choice">
-              <Checkbox
-                key={block}
-                label={blockLabel(block, t)}
-                checked={selectedBlocks.includes(block)}
-                onChange={(event) =>
-                  setBlocks(
-                    event.target.checked
-                      ? [...selectedBlocks, block]
-                      : blocks.filter((candidate) => candidate !== block),
-                  )
-                }
-              />
-              {selectedBlocks.includes(block) && (
-                <span className="reporting-block-order">
-                  <Button
-                    variant="ghost"
-                    disabled={selectedBlocks.indexOf(block) === 0}
-                    onClick={() => moveBlock(block, -1)}
-                    aria-label={`${t("reporting.moveUp")}: ${blockLabel(block, t)}`}
-                  >
-                    <ArrowUp aria-hidden="true" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled={
-                      selectedBlocks.indexOf(block) ===
-                      selectedBlocks.length - 1
+        <Disclosure summary={t("reporting.blocks")}>
+          <fieldset>
+            <legend>{t("reporting.blocks")}</legend>
+            {[...new Set([...selectedBlocks, ...allowedBlocks])].map(
+              (block) => (
+                <div key={block} className="reporting-block-choice">
+                  <Checkbox
+                    key={block}
+                    label={blockLabel(block, t)}
+                    checked={selectedBlocks.includes(block)}
+                    onChange={(event) =>
+                      setBlocks(
+                        event.target.checked
+                          ? [...selectedBlocks, block]
+                          : blocks.filter((candidate) => candidate !== block),
+                      )
                     }
-                    onClick={() => moveBlock(block, 1)}
-                    aria-label={`${t("reporting.moveDown")}: ${blockLabel(block, t)}`}
-                  >
-                    <ArrowDown aria-hidden="true" />
-                  </Button>
-                </span>
-              )}
-            </div>
-          ))}
-        </fieldset>
+                  />
+                  {selectedBlocks.includes(block) && (
+                    <span className="reporting-block-order">
+                      <Button
+                        variant="ghost"
+                        disabled={selectedBlocks.indexOf(block) === 0}
+                        onClick={() => moveBlock(block, -1)}
+                        aria-label={`${t("reporting.moveUp")}: ${blockLabel(block, t)}`}
+                      >
+                        <ArrowUp aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        disabled={
+                          selectedBlocks.indexOf(block) ===
+                          selectedBlocks.length - 1
+                        }
+                        onClick={() => moveBlock(block, 1)}
+                        aria-label={`${t("reporting.moveDown")}: ${blockLabel(block, t)}`}
+                      >
+                        <ArrowDown aria-hidden="true" />
+                      </Button>
+                    </span>
+                  )}
+                </div>
+              ),
+            )}
+          </fieldset>
+        </Disclosure>
         <ErrorLine error={write.error} />
         <div className="reporting-dialog-actions">
           <Button variant="ghost" onClick={onClose}>
@@ -223,7 +246,14 @@ export function SaveReportingDialog({
           </Button>
           <Button
             type="submit"
-            disabled={write.isPending || !name.trim() || metrics.length === 0}
+            disabled={
+              write.isPending ||
+              !name.trim() ||
+              metrics.length === 0 ||
+              (selection.period === "custom" &&
+                (!selection.interval ||
+                  selection.interval.start_at >= selection.interval.end_at))
+            }
           >
             {t("reporting.save")}
           </Button>

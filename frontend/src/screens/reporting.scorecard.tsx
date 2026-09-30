@@ -73,8 +73,8 @@ export function ReportingScorecard({
         {t("reporting.exportCsv")}
       </Button>
       <ErrorLine error={download.error} />
-      <Disclosure summary={t("reporting.scorecard")}>
-        {rows.length > 0 && (
+      {rows.length > 0 && (
+        <Disclosure summary={t("reporting.scorecard")}>
           <DataTable
             label={t("reporting.scorecard")}
             rows={rows}
@@ -128,8 +128,8 @@ export function ReportingScorecard({
               },
             ]}
           />
-        )}
-      </Disclosure>
+        </Disclosure>
+      )}
     </>
   );
 }

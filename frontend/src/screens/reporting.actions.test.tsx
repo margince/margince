@@ -50,7 +50,7 @@ it("sends independent pipeline, target-period and expected-close filters and ope
       <ReportingOverview scope={reportingStoryScope} />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Bookings progress" });
+  await screen.findByRole("heading", { name: "Won deal value over time" });
   await pickOption(
     user,
     screen.getByRole("combobox", { name: "Pipeline" }),
@@ -110,7 +110,7 @@ it("captures the saved revision with an idempotency key and exposes report editi
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Capture edition" }),
+    await screen.findByRole("button", { name: "Save snapshot" }),
   );
   await waitFor(() => expect(freeze).toHaveBeenCalledOnce());
   const request = fetch.mock.calls
@@ -197,14 +197,11 @@ it("creates a pipeline-specific fiscal-quarter count target and pages the target
   fireEvent.change(dialog.getByLabelText(/First day of target period/), {
     target: { value: "2026-10-01" },
   });
-  fireEvent.change(dialog.getByLabelText(/Target amount or count/), {
+  fireEvent.change(dialog.getByRole("spinbutton", { name: /^Target/ }), {
     target: { value: "120" },
   });
-  await user.type(
-    dialog.getByLabelText(/Reason for revision/),
-    "Quarter commitment",
-  );
-  await user.click(dialog.getByRole("button", { name: "Targets" }));
+  await user.type(dialog.getByLabelText(/Reason/), "Quarter commitment");
+  await user.click(dialog.getByRole("button", { name: "Set target" }));
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -237,10 +234,7 @@ it("removes a capture context without leaving an enabled phantom capture", async
   expect(
     screen.queryByRole("button", { name: "Remove capture" }),
   ).not.toBeInTheDocument();
-  await user.type(
-    screen.getByLabelText(/Reason for revision/),
-    "Stop unnecessary capture",
-  );
+  await user.type(screen.getByLabelText(/Reason/), "Stop unnecessary capture");
   await user.click(screen.getByRole("button", { name: "Publish framework" }));
   await waitFor(() =>
     expect(publish).toHaveBeenCalledWith(

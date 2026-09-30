@@ -100,10 +100,15 @@ func populateScheduleSummary(ctx context.Context, tx pgx.Tx, reports []crmcontra
 		if reports[i].LastStatus == nil {
 			reports[i].LastStatus = status
 		}
+		frequencies[id] = append(frequencies[id], frequency)
 		if !enabled {
+			if reports[i].PausedScheduleCount == nil {
+				count := 0
+				reports[i].PausedScheduleCount = &count
+			}
+			*reports[i].PausedScheduleCount++
 			continue
 		}
-		frequencies[id] = append(frequencies[id], frequency)
 		if reports[i].NextDueAt == nil || due.Before(*reports[i].NextDueAt) {
 			reports[i].NextDueAt = &due
 		}

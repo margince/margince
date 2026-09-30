@@ -4,10 +4,11 @@ import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 import { reportingSchedule } from "./reporting.scenarios";
 import { ReportingScheduleDialog } from "./reporting.schedule";
 import {
+  reportingStoryCatalog,
   reportingStoryReport,
   reportingStoryRoutes,
 } from "./reporting.story-fixtures";
-import { installFetchStub, StoryProviders } from "./story-utils";
+import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Schedule report" };
 export default meta;
@@ -46,6 +47,21 @@ export const MonthlyPaused: Story = {
           timezone={REPORTING_FIXTURE_ZONE}
           onClose={() => {}}
         />
+      </StoryProviders>
+    );
+  },
+};
+
+export const RetentionRequired: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/metrics": () =>
+        jsonResponse({ ...reportingStoryCatalog, schedule_ready: false }),
+    });
+    return (
+      <StoryProviders>
+        <Preview />
       </StoryProviders>
     );
   },

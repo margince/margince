@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	activeTarget  = "COALESCE((r.definition->>'retired')::boolean,false)=false"
 	targetColumns = "t.id,r.definition,t.period_start,t.period_end,t.unit,t.revision,t.version,t.created_at"
 	targetFrom    = " FROM sales_target t JOIN sales_target_revision r ON r.target_id=t.id AND r.revision=t.revision"
 )
@@ -54,6 +55,9 @@ func (s *Service) GetTarget(ctx context.Context, id ids.UUID) (crmcontracts.Repo
 		var err error
 		out, err = s.target(ctx, tx, id, false)
 		if err != nil {
+			return err
+		}
+		if err := s.targetHistory(ctx, tx, &out); err != nil {
 			return err
 		}
 		return s.targetAllocation(ctx, tx, &out)

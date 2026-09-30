@@ -13,6 +13,7 @@ import { useLocale, useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {
+  editionLabel,
   metricLabel,
   type ReportingEdition,
   type ReportingEvidenceRef,
@@ -22,12 +23,28 @@ import {
 export function ReportingComparison({
   editions,
   onClose,
-}: Readonly<{ editions: readonly ReportingEdition[]; onClose: () => void }>) {
+  hasMore,
+  loadingMore,
+  onLoadMore,
+}: Readonly<{
+  editions: readonly ReportingEdition[];
+  onClose: () => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const title = useId();
-  const [left, setLeft] = useState(editions[1]?.id ?? "");
-  const [right, setRight] = useState(editions[0]?.id ?? "");
+  const firstPair = editions.flatMap((before) =>
+    editions
+      .filter((after) => adjacentEditions(before, after))
+      .map((after) => ({ before, after })),
+  )[0];
+  const [left, setLeft] = useState(
+    firstPair?.before.id ?? editions[1]?.id ?? "",
+  );
+  const [right, setRight] = useState(firstPair?.after.id ?? "");
   const [evidence, setEvidence] = useState<{
     edition: ReportingEdition;
     reference: ReportingEvidenceRef;
@@ -45,11 +62,7 @@ export function ReportingComparison({
   });
   const options = editions.map((edition) => ({
     value: edition.id,
-    label: formatDateTime(
-      edition.intended_due_at,
-      locale,
-      edition.evaluation.context.timezone,
-    ),
+    label: editionLabel(edition, locale),
   }));
   return (
     <Modal open onClose={onClose} labelledBy={title} size="wide">
@@ -57,6 +70,12 @@ export function ReportingComparison({
         <Heading as="h2" size="medium" id={title}>
           {t("reporting.compare")}
         </Heading>
+        <p>{t("reporting.comparisonHelp")}</p>
+        {hasMore && (
+          <Button variant="ghost" pending={loadingMore} onClick={onLoadMore}>
+            {t("reporting.loadOlder")}
+          </Button>
+        )}
         <div className="reporting-toolbar">
           <Field label={t("reporting.left")}>
             {(field) => (
@@ -64,7 +83,10 @@ export function ReportingComparison({
                 {...field}
                 value={left}
                 options={options}
-                onChange={setLeft}
+                onChange={(value) => {
+                  setLeft(value);
+                  setRight("");
+                }}
               />
             )}
           </Field>
@@ -73,7 +95,15 @@ export function ReportingComparison({
               <Select
                 {...field}
                 value={right}
-                options={options}
+                options={options.filter((option) => {
+                  const before = editions.find(
+                    (edition) => edition.id === left,
+                  );
+                  const after = editions.find(
+                    (edition) => edition.id === option.value,
+                  );
+                  return before && after && adjacentEditions(before, after);
+                })}
                 onChange={setRight}
               />
             )}
@@ -90,14 +120,15 @@ export function ReportingComparison({
                     {comparison.reason ?? t("reporting.noComparison")}
                   </p>
                 )}
-                {comparison.left.evaluation.metrics.map((before) => (
-                  <ComparisonMetric
-                    key={before.id}
-                    comparison={comparison}
-                    before={before}
-                    onEvidence={setEvidence}
-                  />
-                ))}
+                {comparison.compatible &&
+                  comparison.left.evaluation.metrics.map((before) => (
+                    <ComparisonMetric
+                      key={before.id}
+                      comparison={comparison}
+                      before={before}
+                      onEvidence={setEvidence}
+                    />
+                  ))}
               </>
             )}
           </QueryGate>
@@ -155,16 +186,8 @@ function ComparisonMetric({
           <GroupedBars
             label={metricLabel(before.id, t)}
             dataLabel={t("reporting.data")}
-            valueLabel={formatDateTime(
-              comparison.left.captured_at,
-              locale,
-              comparison.left.evaluation.context.timezone,
-            )}
-            comparisonLabel={formatDateTime(
-              comparison.right.captured_at,
-              locale,
-              comparison.right.evaluation.context.timezone,
-            )}
+            valueLabel={editionLabel(comparison.left, locale)}
+            comparisonLabel={editionLabel(comparison.right, locale)}
             readings={[
               {
                 key: before.id,
@@ -241,5 +264,16 @@ function ComparisonMetric({
         )}
       </PanelBody>
     </Panel>
+  );
+}
+
+function adjacentEditions(
+  before: ReportingEdition,
+  after: ReportingEdition,
+): boolean {
+  return (
+    before.id !== after.id &&
+    Date.parse(before.evaluation.context.interval.end_at) ===
+      Date.parse(after.evaluation.context.interval.start_at)
   );
 }
