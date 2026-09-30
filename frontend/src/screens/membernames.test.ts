@@ -109,6 +109,33 @@ describe("useMemberName", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps the names one page read when a later page is refused", async () => {
+    const ids = Array.from({ length: 150 }, (_, at) => `u-${at}`);
+    let pages = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : new Request(input);
+        const asked = new URL(request.url).searchParams.getAll("id");
+        pages += 1;
+        return pages === 1
+          ? jsonResponse({
+              data: asked.map((id) => ({ id, display_name: `Name ${id}` })),
+            })
+          : jsonResponse({ title: "Server error" }, 500);
+      },
+    );
+
+    const { result } = renderHook(() => ids.map((id) => useMemberName(id)), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current[0].data).toBe("Name u-0"));
+    // The refusal is about the ids on the page it refused. Carrying it to the
+    // rest would report colleagues the server named as ones it could not read.
+    expect(result.current[149].isError).toBe(true);
+    expect(result.current[149].data).toBeUndefined();
+  });
+
   it("holds a failed read as an error on every reference it covered", async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({ title: "Server error" }, 500),
