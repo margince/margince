@@ -6,7 +6,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 ## project
 
-25 columns · primary key `(id)` · referenced by 9 foreign keys
+24 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -24,7 +24,6 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `source_author_name` | `text` |  | Optional `text`. |
 | `started_at` | `date` |  | Optional `date`. |
 | `target_end_date` | `date` |  | Optional `date`. |
-| `visibility` | `text` | yes | Always `workspace` — the column exists for the values it may hold later. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
@@ -51,7 +50,6 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `project_key_shape` — `CHECK (((key IS NULL) OR (key ~ '^[A-Za-z][A-Za-z0-9_-]{1,23}$')))`
 - `project_phase_check` — `CHECK ((phase = ANY (ARRAY['initiative', 'pursuing', 'delivering', 'closed'])))`
 - `project_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
-- `project_visibility_check` — `CHECK ((visibility = 'workspace'))`
 - `uq_project_ws_id` — `UNIQUE (id)`
 
 **Indexes**

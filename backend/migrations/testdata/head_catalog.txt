@@ -5423,7 +5423,6 @@ public.project.project_phase_check CHECK ((phase = ANY (ARRAY['initiative'::text
 public.project.project_pkey PRIMARY KEY (id)
 public.project.project_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.project.project_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
-public.project.project_visibility_check CHECK ((visibility = 'workspace'::text))
 public.project.raw jsonb gen=- def=-
 public.project.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(key, ''::text))), 'A'::"char"))
 public.project.source text NOT NULL gen=- def=-
@@ -5436,7 +5435,6 @@ public.project.trg_project_updated CREATE TRIGGER trg_project_updated BEFORE UPD
 public.project.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.project.uq_project_ws_id UNIQUE (id)
 public.project.version bigint NOT NULL gen=- def=1
-public.project.visibility text NOT NULL gen=- def='workspace'::text
 public.project_health_assessment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.project_health_assessment.assessed_at timestamp with time zone NOT NULL gen=- def=-
 public.project_health_assessment.captured_by text NOT NULL gen=- def=-
@@ -6304,14 +6302,12 @@ public.signal_thread_scan.signal_thread_scan_scanned_from_shape CHECK (((scanned
 public.signal_thread_scan.thread_key text NOT NULL gen=- def=-
 public.signal_thread_scan_pkey CREATE UNIQUE INDEX signal_thread_scan_pkey ON public.signal_thread_scan USING btree (thread_key)
 public.signing_key acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.signing_key.alg text NOT NULL gen=- def='EdDSA'::text
 public.signing_key.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.signing_key.kid text NOT NULL gen=- def=-
 public.signing_key.private_key bytea NOT NULL gen=- def=-
 public.signing_key.public_key bytea NOT NULL gen=- def=-
 public.signing_key.retired_at timestamp with time zone gen=- def=-
 public.signing_key.signing_key_pkey PRIMARY KEY (kid)
-public.signing_key.workspace_signing_key_alg_check CHECK ((alg = 'EdDSA'::text))
 public.signing_key_pkey CREATE UNIQUE INDEX signing_key_pkey ON public.signing_key USING btree (kid)
 public.site_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.site_read.attempt integer NOT NULL gen=- def=1

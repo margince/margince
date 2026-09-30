@@ -115,20 +115,15 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## signing_key
 
-6 columns · primary key `(kid)` · referenced by 0 foreign keys
+5 columns · primary key `(kid)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `alg` | `text` | yes | Always `EdDSA` — the column exists for the values it may hold later. |
 | `kid` | `text` | yes | Required `text`. |
 | `private_key` | `bytea` | yes | Required `bytea`. |
 | `public_key` | `bytea` | yes | Required `bytea`. |
 | `retired_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-
-**Rules**
-
-- `workspace_signing_key_alg_check` — `CHECK ((alg = 'EdDSA'))`
 
 **Indexes**
 
