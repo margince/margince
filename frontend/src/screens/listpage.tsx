@@ -7,10 +7,10 @@
 // list_id, so the page is never one request per member.
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { navigate } from "../app/router";
-import { Button } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
@@ -32,8 +32,10 @@ import {
   type ListRecordType,
   useArchiveList,
   useList,
+  useListHistory,
   useListsAvailable,
   useUpdateList,
+  useVisitList,
 } from "./lists.queries";
 import { ListSettingsAction } from "./listsettings";
 import { useListAudienceLabel } from "./listsharing";
@@ -68,6 +70,7 @@ export function ListScreen({ listID }: Readonly<{ listID?: string }>) {
 function ListBody({ listID }: Readonly<{ listID: string }>) {
   const t = useT();
   const list = useList(listID);
+  const previousVisit = useVisitOnce(listID, list.isSuccess);
   if (list.isPending) {
     return null;
   }
@@ -78,10 +81,31 @@ function ListBody({ listID }: Readonly<{ listID: string }>) {
     <div className="wrap lists-page">
       <ListHead list={list.data} />
       <ListNotices list={list.data} />
-      <MembersPanel list={list.data} />
-      <ListHistoryPanel listID={list.data.id} />
+      <MembersPanel list={list.data} previousVisit={previousVisit} />
+      <ListHistoryPanel
+        listID={list.data.id}
+        live={list.data.list_type === "dynamic"}
+      />
     </div>
   );
+}
+
+/**
+ * Records one visit per opened list, after the list has been read so its
+ * "since your last visit" counts from the visit before this one. Answers that
+ * earlier visit, null on a first visit or until the server has answered.
+ */
+function useVisitOnce(listID: string, listRead: boolean): string | null {
+  const visit = useVisitList();
+  const visited = useRef<string | null>(null);
+  const { mutate } = visit;
+  useEffect(() => {
+    if (listRead && visited.current !== listID) {
+      visited.current = listID;
+      mutate(listID);
+    }
+  }, [listID, listRead, mutate]);
+  return visit.data?.previous_visit_at ?? null;
 }
 
 function ListHead({ list }: Readonly<{ list: List }>) {
@@ -110,6 +134,7 @@ function ListHead({ list }: Readonly<{ list: List }>) {
           steward: list.steward_name ?? t("lists.noSteward"),
         })}
       </p>
+      <ListCheckLine list={list} />
       {lastExport && (
         <p className="t-caption">
           {plural("lists.head.exported", list.dependencies?.length ?? 0, {
@@ -131,6 +156,42 @@ function ListHead({ list }: Readonly<{ list: List }>) {
         </div>
       )}
     </header>
+  );
+}
+
+/**
+ * When a Live List was last checked for who joined and left, and what it
+ * gained and lost since the reader's last visit. A Shortlist says nothing.
+ */
+function ListCheckLine({ list }: Readonly<{ list: List }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (list.list_type !== "dynamic") {
+    return null;
+  }
+  const check = list.last_check;
+  const pulse = list.since_last_visit;
+  const when = check
+    ? formatDateTime(check.checked_at, locale, viewerZone())
+    : "";
+  return (
+    <>
+      <p className="t-caption">
+        {!check
+          ? t("lists.head.notChecked")
+          : check.outcome === "too_large"
+            ? t("lists.head.tooLarge", { when })
+            : t("lists.head.lastChecked", { when })}
+      </p>
+      {pulse && pulse.entered + pulse.left > 0 && (
+        <p className="t-caption">
+          {t("lists.head.pulse", {
+            entered: formatNumber(pulse.entered, locale),
+            left: formatNumber(pulse.left, locale),
+          })}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -213,9 +274,38 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
 
 type MemberRow = Readonly<Record<string, unknown> & { id: string }>;
 
-function MembersPanel({ list }: Readonly<{ list: List }>) {
+/**
+ * The members a Live List's checks saw joining since the reader's previous
+ * visit, read from the newest page of its history.
+ */
+function useJoinedSince(list: List, since: string | null): ReadonlySet<string> {
+  const history = useListHistory(list.id);
+  return useMemo(() => {
+    const joined = new Set<string>();
+    if (list.list_type !== "dynamic" || since === null) {
+      return joined;
+    }
+    const after = Date.parse(since);
+    for (const entry of history.data?.data ?? []) {
+      if (
+        entry.kind === "member_entered" &&
+        entry.entity_id &&
+        Date.parse(entry.occurred_at) > after
+      ) {
+        joined.add(entry.entity_id);
+      }
+    }
+    return joined;
+  }, [history.data, list.list_type, since]);
+}
+
+function MembersPanel({
+  list,
+  previousVisit,
+}: Readonly<{ list: List; previousVisit: string | null }>) {
   const t = useT();
   const [why, setWhy] = useState<MemberRow | null>(null);
+  const joined = useJoinedSince(list, previousVisit);
   if (!isMemberSource(list.entity_type)) {
     return (
       <Panel title={t("lists.members.title")}>
@@ -231,6 +321,7 @@ function MembersPanel({ list }: Readonly<{ list: List }>) {
       <PanelBody>
         <MemberRows
           list={list}
+          joined={joined}
           source={list.entity_type}
           onWhy={setWhy}
           onOpen={(row) => navigate({ screen: source.screen, id: row.id })}
@@ -247,11 +338,13 @@ function MembersPanel({ list }: Readonly<{ list: List }>) {
 
 function MemberRows({
   list,
+  joined,
   source,
   onWhy,
   onOpen,
 }: Readonly<{
   list: List;
+  joined: ReadonlySet<string>;
   source: MemberSource;
   onWhy: (row: MemberRow) => void;
   onOpen: (row: MemberRow) => void;
@@ -305,7 +398,15 @@ function MemberRows({
             key: "name",
             header: t("lists.col.name"),
             grow: true,
-            render: (row) => recordName(row, t),
+            render: (row) =>
+              joined.has(row.id) ? (
+                <span className="lists-member-name">
+                  {recordName(row, t)}
+                  <Badge tone="accent">{t("lists.members.new")}</Badge>
+                </span>
+              ) : (
+                recordName(row, t)
+              ),
           },
           {
             key: "why",

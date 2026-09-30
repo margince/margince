@@ -1407,6 +1407,23 @@ kinds:
       workspace.
 
 
+  list_evaluate:
+    role: worker
+    fleet: true
+    go_type: ListEvaluateArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 15m
+    reason: >-
+      Every fifteen minutes, because a Live List's history is only as fine as
+      its checks: a record that joins and leaves between two checks is never
+      seen, and the list page says so. A pass checks at most two hundred lists,
+      longest-unchecked first, each against at most fifty thousand records in
+      keyset pages, so ten minutes bounds the slowest pass with room to spare
+      and a pass cut short resumes where the checkpoints say.
+
+
   deal_scout:
     role: worker
     fleet: true

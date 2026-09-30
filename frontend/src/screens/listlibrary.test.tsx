@@ -83,6 +83,42 @@ describe("the shared views", () => {
     expect(within(chosen).getByText(en["lists.noSteward"])).toBeInTheDocument();
   });
 
+  it("shows what a Live List gained and lost since the last visit, and nothing on a quiet or first-visited list", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () =>
+        jsonResponse({
+          data: [
+            liveList,
+            {
+              ...liveList,
+              id: "01a0f000-0000-7000-8000-000000000009",
+              name: "Quiet list",
+              since_last_visit: {
+                since: "2026-09-28T17:00:00Z",
+                entered: 0,
+                left: 0,
+              },
+            },
+            shortlist,
+          ],
+          page: { has_more: false },
+        }),
+    });
+    library();
+    const live = (await screen.findByText(liveList.name)).closest(
+      "tr",
+    ) as HTMLElement;
+    expect(within(live).getByText("+3 / −1")).toBeInTheDocument();
+    expect(
+      within(live).getByText("3 joined and 1 left since your last visit"),
+    ).toBeInTheDocument();
+    for (const quiet of ["Quiet list", shortlist.name]) {
+      const row = screen.getByText(quiet).closest("tr") as HTMLElement;
+      expect(within(row).queryByText(/since your last visit/)).toBeNull();
+    }
+  });
+
   it("says who can find each list: a named team, the owner's teams, everyone", async () => {
     installFetchStub({
       "GET /me": listsMe(true, [TEAM_ID]),

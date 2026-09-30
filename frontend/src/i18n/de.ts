@@ -10239,6 +10239,23 @@ export const de = {
   "lists.myLists.title": "Meine Listen",
   "lists.myLists.empty":
     "Keine privaten Listen. Hier steht jede Liste, die nur du findest. Teilst du sie, wandert sie zu den geteilten Ansichten.",
+  "lists.pulse.chip": "+{entered} / −{left}",
+  "lists.pulse.label":
+    "{entered} hinzugekommen und {left} weggefallen seit deinem letzten Besuch",
+  "lists.head.lastChecked": "Zuletzt geprüft {when}",
+  "lists.head.notChecked":
+    "Noch nicht geprüft. Wer hinzukommt und wegfällt, wird ab der ersten Prüfung festgehalten.",
+  "lists.head.tooLarge":
+    "Zuletzt geprüft {when}. Die Liste traf zu viele Datensätze, um festzuhalten, wer hinzukam und wegfiel.",
+  "lists.head.pulse":
+    "Seit deinem letzten Besuch: {entered} hinzugekommen, {left} weggefallen",
+  "lists.members.new": "Neu",
+  "lists.history.entered": "Hinzugekommen, Stand {when}",
+  "lists.history.left": "Weggefallen, Stand {when}",
+  "lists.history.reason.filterChanged": "nachdem der Filter geändert wurde",
+  "lists.history.checker": "Die 15-Minuten-Prüfung",
+  "lists.history.liveNote":
+    "Eine Live-Liste wird alle 15 Minuten geprüft, und wer hinzukam oder wegfiel, wird mit der Prüfung festgehalten, die es gesehen hat. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder wegfällt, wird nicht festgehalten.",
   "lists.history.someone": "Jemand",
 
   // Die Oberfl\u00e4che \u201eFilter & Ansichten\u201c.

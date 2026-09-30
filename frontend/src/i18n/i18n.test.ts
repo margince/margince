@@ -38,6 +38,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // sentence, so rendering "Trí tuệ nhân tạo" on one nav heading would give
   // that one surface a vocabulary the rest of the product does not use.
   "settings.group.ai",
+  // Two signed counts and a slash, with no word to translate. Its spoken
+  // form, lists.pulse.label, is translated normally.
+  "lists.pulse.chip",
   // The area's name, which is the same word in all three catalogs by decision:
   // "Analytics" is what the product calls this surface, and both German and
   // Vietnamese borrow it as a term of art rather than translating it. The

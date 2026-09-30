@@ -104,6 +104,17 @@ func (s *Store) AddMemberView(ctx context.Context, id ids.ListID, change MemberC
 	return wireMember(m), nil
 }
 
+// VisitView records the caller's visit and answers it.
+func (s *Store) VisitView(ctx context.Context, id ids.ListID) (crmcontracts.ListVisit, error) {
+	visit, err := s.VisitList(ctx, id)
+	if err != nil {
+		return crmcontracts.ListVisit{}, err
+	}
+	return crmcontracts.ListVisit{
+		ListId: openapi_types.UUID(id.UUID), VisitedAt: visit.VisitedAt, PreviousVisitAt: visit.Previous,
+	}, nil
+}
+
 // ExplainView answers why a record is or is not on a list.
 func (s *Store) ExplainView(ctx context.Context, id ids.ListID, entityID ids.UUID) (crmcontracts.ListMemberExplanation, error) {
 	why, err := s.ExplainMember(ctx, id, entityID)
@@ -171,6 +182,14 @@ func wireList(l listSummary) crmcontracts.List {
 		team := openapi_types.UUID(l.TeamID.UUID)
 		out.TeamId = &team
 	}
+	if l.LastCheck != nil {
+		out.LastCheck = &crmcontracts.ListCheck{
+			CheckedAt: l.LastCheck.CheckedAt, Outcome: crmcontracts.ListCheckOutcome(l.LastCheck.Outcome),
+		}
+	}
+	if l.Pulse != nil {
+		out.SinceLastVisit = &crmcontracts.ListPulse{Since: l.Pulse.Since, Entered: l.Pulse.Entered, Left: l.Pulse.Left}
+	}
 	if l.Dependencies != nil {
 		deps := make([]crmcontracts.ListDependency, 0, len(l.Dependencies))
 		for _, d := range l.Dependencies {
@@ -229,7 +248,7 @@ func wireHistory(e HistoryEntry, names map[string]string) crmcontracts.ListHisto
 	out := crmcontracts.ListHistoryEntry{
 		Id: openapi_types.UUID(e.ID), Kind: crmcontracts.ListHistoryEntryKind(e.Kind),
 		OccurredAt: e.OccurredAt, Actor: e.Actor, EntityType: e.EntityType, Note: e.Note,
-		Version: e.Version, Name: e.Name, Sharing: e.Sharing,
+		DefinitionVersion: e.DefinitionVersion, Version: e.Version, Name: e.Name, Sharing: e.Sharing,
 	}
 	if name, ok := names[e.Actor]; ok {
 		out.ActorName = &name
