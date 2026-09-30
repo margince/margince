@@ -14,7 +14,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
 import { formatTimeOfDay } from "../format/format";
 import { formatDayFull, formatTimeRange } from "../format/meetingtime";
-import { viewerZone } from "../format/timezone";
+import { dayInZone, viewerZone } from "../format/timezone";
 import { BookingScreen } from "./book";
 import {
   bookingConnection,
@@ -163,6 +163,41 @@ it("reads the whole month on show, following a truncated answer from its last ti
   );
   // A bounded number of pages, however often the server says there is more.
   expect(availability.mock.calls.length).toBeLessThanOrEqual(4);
+});
+
+it("reads a day past where a truncated month stopped, and offers its times", async () => {
+  inBookingMonth();
+  const user = userEvent.setup();
+  const late = { start: "2026-10-14T10:00:00Z", end: "2026-10-14T10:30:00Z" };
+  let reads = 0;
+  installFetchStub({
+    "GET /scheduling/profile": () =>
+      jsonResponse({ ...bookingProfile, enabled: false }),
+    // The month's read is always told there is more, so it stops at its page
+    // bound knowing nothing past 5 October; any read after that is the day's.
+    "GET /availability": () =>
+      ++reads > 4
+        ? jsonResponse({ slots: [late], truncated: false })
+        : jsonResponse({ slots: bookingSlots, truncated: true }),
+  });
+  const requests = vi.spyOn(globalThis, "fetch");
+  render(
+    <StoryProviders>
+      <BookingScreen hostSlug="preview" />
+    </StoryProviders>,
+  );
+  await screen.findByRole("button", { name: slotName(0) });
+  await user.click(
+    screen.getByRole("button", { name: "Wednesday, 14 October 2026" }),
+  );
+  expect(
+    await screen.findByRole("button", {
+      name: formatTimeOfDay(late.start, "en", viewerZone()),
+    }),
+  ).toBeTruthy();
+  const dayRead = availabilityReads(requests.mock.calls).at(-1);
+  const from = new URL(dayRead?.url ?? "").searchParams.get("from") ?? "";
+  expect(dayInZone(Date.parse(from), viewerZone())).toBe("2026-10-14");
 });
 
 it("refuses days with nothing free and clears the time when another day is chosen", async () => {

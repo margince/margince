@@ -1,6 +1,7 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { navigate } from "../app/router";
 import { Calendar, type ISODay } from "../design-system/calendar";
 import { CompanyLogo } from "../design-system/companylogo";
@@ -18,11 +19,13 @@ import { BookingFooter, useBookingIntent } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
 import {
   dayRefused,
+  dayWindow,
   type GuestSlot,
   isoMonth,
   monthDays,
   monthOf,
   monthWindow,
+  pastKnown,
   readMonth,
 } from "./booking-guest-month";
 import {
@@ -35,6 +38,8 @@ import {
 } from "./booking-guest-parts";
 import { QueryGate, type QueryLike, throwProblem } from "./common";
 import "./booking-guest.css";
+
+type Availability = components["schemas"]["MeetingAvailability"];
 
 export const PUBLIC_BOOKING_CONSENT = { policy_version: "2026-07" };
 const NO_DETAILS: GuestDetails = {
@@ -53,6 +58,7 @@ export function BookingGuestScreen({
   const { locale } = useLocale();
   const [zone, setZone] = useState(viewerZone);
   const intent = useBookingIntent();
+  const client = useQueryClient();
   const [now] = useState(() => Date.now());
   const [month, setMonth] = useState(() => {
     const today = new Date(now);
@@ -121,18 +127,17 @@ export function BookingGuestScreen({
     if (error) throwBookingProblem(error, t);
     return data;
   };
+  const readKey = [
+    preview ? "reliable-availability" : "public-booking-slots",
+    preview ? "booking-preview" : hostSlug,
+    proposalToken,
+    preview ? profile.data : undefined,
+  ];
+  const readable =
+    profile.isSuccess && !needsCalendar && (preview || profile.data.enabled);
   const slots = useQuery({
-    queryKey: [
-      preview ? "reliable-availability" : "public-booking-slots",
-      preview ? "booking-preview" : hostSlug,
-      proposalToken,
-      visible?.from,
-      visible?.to,
-      locale,
-      preview ? profile.data : undefined,
-    ],
-    enabled:
-      profile.isSuccess && !needsCalendar && (preview || profile.data.enabled),
+    queryKey: [...readKey, visible?.from, visible?.to, locale],
+    enabled: readable,
     // A month already over has no times left to offer, and says so rather
     // than asking the server about the past.
     queryFn: () =>
@@ -188,7 +193,7 @@ export function BookingGuestScreen({
         });
     },
     onError: () => {
-      void slots.refetch();
+      void client.invalidateQueries({ queryKey: readKey });
       void profile.refetch();
     },
   });
@@ -198,6 +203,15 @@ export function BookingGuestScreen({
     ? pickedDay
     : (days?.free.find((free) => free.startsWith(monthKey)) ?? "");
   const today = dayInZone(now, zone);
+  const { dayRead, dayTimes } = useDayTimes({
+    day,
+    days,
+    slots,
+    readKey,
+    readable,
+    read: (window) => readMonth(read, window),
+    window: (late) => dayWindow(late, zone, now),
+  });
   const pickDay = (next: ISODay) => {
     setPickedDay(next);
     setSelected(null);
@@ -295,10 +309,11 @@ export function BookingGuestScreen({
                             offered={host.proposal?.options ?? []}
                             day={day}
                             days={days}
+                            times={dayTimes}
                             monthKey={monthKey}
                             zone={zone}
                             needsCalendar={needsCalendar}
-                            slots={slots}
+                            slots={dayRead}
                             onSelect={setSelected}
                           />
                         )}
@@ -316,6 +331,38 @@ export function BookingGuestScreen({
   );
 }
 
+// A busy month's read stops after a bounded number of pages; a day past where
+// it stopped is still open, and its times are read on their own.
+function useDayTimes({
+  day,
+  days,
+  slots,
+  readKey,
+  readable,
+  read,
+  window,
+}: Readonly<{
+  day: ISODay | "";
+  days: ReturnType<typeof monthDays> | undefined;
+  slots: QueryLike<Availability>;
+  readKey: readonly unknown[];
+  readable: boolean;
+  read: (
+    window: Readonly<{ from: string; to: string }>,
+  ) => Promise<Availability>;
+  window: (day: ISODay) => Readonly<{ from: string; to: string }>;
+}>) {
+  const lateDay = pastKnown(day, days) ? day : "";
+  const lateSlots = useQuery({
+    queryKey: [...readKey, "day", lateDay, lateDay && window(lateDay).from],
+    enabled: readable && lateDay !== "",
+    queryFn: () =>
+      lateDay ? read(window(lateDay)) : { slots: [], truncated: false },
+  });
+  if (!lateDay) return { dayRead: slots, dayTimes: days?.byDay.get(day) ?? [] };
+  return { dayRead: lateSlots, dayTimes: lateSlots.data?.slots ?? [] };
+}
+
 /**
  * The right-hand column before a time is picked: the times a personal
  * proposal offers first, then the chosen day's free times.
@@ -324,6 +371,7 @@ function GuestTimes({
   offered,
   day,
   days,
+  times,
   monthKey,
   zone,
   needsCalendar,
@@ -333,6 +381,7 @@ function GuestTimes({
   offered: readonly GuestSlot[];
   day: ISODay | "";
   days: ReturnType<typeof monthDays> | undefined;
+  times: readonly GuestSlot[];
   monthKey: string;
   zone: string;
   needsCalendar: boolean;
@@ -368,7 +417,7 @@ function GuestTimes({
         <QueryGate pendingLabel={t("common.loading")} query={slots}>
           {() => (
             <MeetingSlots
-              slots={(days?.byDay.get(day) ?? []).map((slot) => ({
+              slots={times.map((slot) => ({
                 ...slot,
                 label: formatTimeOfDay(slot.start, locale, zone),
               }))}

@@ -44,6 +44,18 @@ export function monthWindow(month: Date, zone: string, now: number) {
   return { from, to };
 }
 
+/** The instants one day covers in the guest's zone, starting no earlier than now. */
+export function dayWindow(day: ISODay, zone: string, now: number) {
+  const [year, month, date] = day.split("-").map(Number);
+  const to = startOfDayInZone(
+    isoDay(new Date(year, month - 1, date + 1)),
+    zone,
+  );
+  const start = startOfDayInZone(day, zone);
+  const from = Date.parse(start) > now ? start : new Date(now).toISOString();
+  return { from, to };
+}
+
 /** Every free time in one window, however many pages the server answers in. */
 export async function readMonth(
   read: (from: string, to: string) => Promise<Availability>,
@@ -84,6 +96,14 @@ export function monthDays(
       : undefined;
   const free = [...byDay.keys()].filter(isCalendarDay).sort(stable);
   return { byDay, free, knownUntil };
+}
+
+/** A day the month's read stopped short of, so its times need a read of their own. */
+export function pastKnown(
+  day: ISODay | "",
+  days: ReturnType<typeof monthDays> | undefined,
+): day is ISODay {
+  return day !== "" && !!days?.knownUntil && day > days.knownUntil;
 }
 
 /** Whether a day in the grid can be chosen, given what the month's read said. */
