@@ -1025,7 +1025,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 #### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 8 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
+Counted per record — one (task, binding) pair — over the 8 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 11 `stale_cause` entries are these 8 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
