@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -16,56 +17,60 @@ import (
 	"github.com/margince/margince/backend/internal/shared/clockskew"
 )
 
-// The database applier is worth a test because its failure mode is silence: a
-// shadow the search path never reaches moves nothing, every statement answers
-// at the real date, and the lane reports a green that says only that the
-// ordinary suite passed. Nothing about that reads as broken.
+// The database applier is worth a test because every way it fails is silent: a
+// shadow the path never reaches moves nothing, every statement answers at the
+// real date, and the lane reports a green meaning the ordinary suite passed.
 //
-// It runs against its own database rather than the package's clone, because the
-// path change is per-database and would otherwise outlive the test for every
-// suite that connects afterwards.
+// The assertions run as the APP role, because that is the role the suite's
+// queries use. Asked as the owner, the schema's own creator, all three of the
+// reachability conditions in clockshadow.go answer yes whether or not they hold
+// for anybody else.
+//
+// Each test gets its own database: the path is set per-database and would
+// otherwise outlive the test for every suite that connected afterwards.
 
-func TestTheDatabaseApplierMovesAnUnqualifiedNow(t *testing.T) {
+func TestTheDatabaseApplierMovesAnUnqualifiedNowForTheAppRole(t *testing.T) {
 	ctx := context.Background()
 	t.Setenv(clockskew.EnvVar, "database:200")
 
-	conn, probe := shadowProbeDB(t)
-	if err := installClockShadow(ctx, conn); err != nil {
+	owner, probe := shadowProbeDB(t)
+	if err := installClockShadow(ctx, owner); err != nil {
 		t.Fatalf("installing the shadow: %v", err)
 	}
 
-	// A CONNECTION OPENED AFTERWARDS, which is the whole point: ALTER DATABASE
-	// reaches the sessions that dial next, and the pools every test uses are
-	// held back until EnsureSchema has run this.
-	fresh := connectTo(t, probe)
-	var shifted, reserved, current string
-	err := fresh.QueryRow(ctx, `SELECT (now() - pg_catalog.now())::text,
-		(CURRENT_TIMESTAMP - pg_catalog.now())::text, current_schema()::text`).
-		Scan(&shifted, &reserved, &current)
+	// Dialled AFTER the install, as the app role: ALTER DATABASE reaches the
+	// sessions that connect next, and every test pool is held back until
+	// EnsureSchema has run this.
+	app := connectAs(t, appDSN(t), probe)
+	var shifted, reserved, current, path string
+	err := app.QueryRow(ctx, `SELECT (now() - pg_catalog.now())::text,
+		(CURRENT_TIMESTAMP - pg_catalog.now())::text,
+		current_schema()::text,
+		array_to_string(current_schemas(true), ',')`).Scan(&shifted, &reserved, &current, &path)
 	if err != nil {
 		t.Fatalf("reading the shadowed clock: %v", err)
 	}
 
-	// The shadow must not become the CURRENT schema. current_schema() is the
-	// first schema on the path that exists, and two column probes filter
-	// information_schema by it, so a shadow in front of public sends them
-	// looking for the application's columns in a schema that holds one function
-	// — and an unqualified CREATE TABLE would land there as well.
-	if current != "public" {
-		t.Errorf("current_schema() = %q, want \"public\" — the shadow is ahead of public on the "+
-			"path, so every unqualified name resolves into it before reaching the application's", current)
-	}
-
 	if shifted != "200 days" {
-		t.Errorf("an unqualified now() is %s from the real clock, want 200 days — the shadow is not "+
-			"on the search path ahead of pg_catalog, so the applier moves nothing", shifted)
+		t.Errorf("an unqualified now() is %s from the real clock for the app role, want 200 days. "+
+			"Its effective path is %s — a schema missing from it was dropped for want of USAGE.", shifted, path)
 	}
-	// Stated as an assertion rather than left to prose, because this is the
-	// limit that makes a green here weaker than the machine applier's, and
-	// clockskew.ShadowLimits promises it in words.
+	// current_schema() is the first schema on the path that exists, and two
+	// column probes filter information_schema by it.
+	if current != "public" {
+		t.Errorf("current_schema() = %q, want \"public\": every unqualified name resolves into the "+
+			"shadow before reaching the application's own schema", current)
+	}
+	// ext is on no path the application connects with, and two gates rest on
+	// that. This applier must not be the thing that changes it.
+	if strings.Contains(path, "ext") {
+		t.Errorf("the app role's effective path is %s, which volunteers ext: a unit's unqualified "+
+			"ext_* name would resolve into it under this applier and nowhere else", path)
+	}
+	// The limit that makes a green here weaker than the machine applier's.
 	if reserved != "00:00:00" {
 		t.Errorf("CURRENT_TIMESTAMP moved by %s; it resolves without consulting the search path, so "+
-			"a shift here means this test is no longer measuring what ShadowLimits claims", reserved)
+			"a shift here means this applier reaches further than it is documented to", reserved)
 	}
 }
 
@@ -76,26 +81,66 @@ func TestEveryOtherApplierLeavesTheDatabaseClockAlone(t *testing.T) {
 		t.Run("applier="+value, func(t *testing.T) {
 			t.Setenv(clockskew.EnvVar, value)
 
-			conn, _ := shadowProbeDB(t)
-			if err := installClockShadow(ctx, conn); err != nil {
+			owner, _ := shadowProbeDB(t)
+			if err := installClockShadow(ctx, owner); err != nil {
 				t.Fatalf("installing the shadow: %v", err)
 			}
-			var schemas int
-			if err := conn.QueryRow(ctx,
-				`SELECT count(*) FROM pg_namespace WHERE nspname = $1`, shadowSchema).Scan(&schemas); err != nil {
-				t.Fatalf("looking for the shadow schema: %v", err)
-			}
-			if schemas != 0 {
-				t.Errorf("the shadow was installed under %q. The machine applier already moved the clock "+
-					"this database reads, so shadowing on top of it stands the database 400 days out "+
-					"while the Go process stands at 200.", value)
+			if shadowInstalled(t, owner) {
+				t.Errorf("the shadow schema exists under %q; only the database applier installs it", value)
 			}
 		})
 	}
 }
 
-// shadowProbeDB makes a throwaway database and hands back an owner connection
+// A run that is not using the applier CLEARS what one left behind. The setting
+// lives in pg_db_role_setting rather than in a schema, so re-migrating does not
+// remove it and an ordinary run would otherwise inherit a previous drift run's
+// path with nothing set and nothing printed.
+func TestAnOrdinaryRunClearsAPreviousDriftRunsResidue(t *testing.T) {
+	ctx := context.Background()
+	t.Setenv(clockskew.EnvVar, "database:200")
+
+	owner, probe := shadowProbeDB(t)
+	if err := installClockShadow(ctx, owner); err != nil {
+		t.Fatalf("installing the shadow: %v", err)
+	}
+
+	t.Setenv(clockskew.EnvVar, "")
+	if err := installClockShadow(ctx, owner); err != nil {
+		t.Fatalf("the ordinary run: %v", err)
+	}
+
+	if shadowInstalled(t, owner) {
+		t.Error("the shadow schema survived an ordinary run")
+	}
+	app := connectAs(t, appDSN(t), probe)
+	var shifted, path string
+	if err := app.QueryRow(ctx, `SELECT (now() - pg_catalog.now())::text,
+		array_to_string(current_schemas(true), ',')`).Scan(&shifted, &path); err != nil {
+		t.Fatalf("reading the clock after the ordinary run: %v", err)
+	}
+	if shifted != "00:00:00" {
+		t.Errorf("an ordinary run answers %s from the real clock on path %s — it inherited a drift "+
+			"run's residue, which is a moved clock nobody asked for", shifted, path)
+	}
+}
+
+func shadowInstalled(t *testing.T, owner *pgx.Conn) bool {
+	t.Helper()
+
+	var installed bool
+	if err := owner.QueryRow(context.Background(),
+		`SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = $1)`, shadowSchema).Scan(&installed); err != nil {
+		t.Fatalf("looking for the shadow schema: %v", err)
+	}
+	return installed
+}
+
+// shadowProbeDB makes a throwaway database and hands back an OWNER connection
 // to it plus its name, dropped when the test ends.
+//
+// Its own dial rather than the package's ownerConn, which runs EnsureSchema and
+// would install the shadow on the shared clone.
 func shadowProbeDB(t *testing.T) (*pgx.Conn, string) {
 	t.Helper()
 
@@ -105,7 +150,7 @@ func shadowProbeDB(t *testing.T) (*pgx.Conn, string) {
 	ctx := context.Background()
 	quoted := pgx.Identifier{name}.Sanitize()
 
-	admin := connectTo(t, "")
+	admin := connectAs(t, ownerDSN(t), "")
 	if _, err := admin.Exec(ctx, "DROP DATABASE IF EXISTS "+quoted+" WITH (FORCE)"); err != nil {
 		t.Fatalf("clearing a previous probe database: %v", err)
 	}
@@ -113,37 +158,50 @@ func shadowProbeDB(t *testing.T) (*pgx.Conn, string) {
 		t.Fatalf("creating the probe database: %v", err)
 	}
 	t.Cleanup(func() {
-		// Through a connection of its own, to another database: a session
-		// cannot drop the database it is connected to.
-		cleanup := connectTo(t, "")
+		// Through a connection to another database: a session cannot drop the
+		// database it is connected to.
+		cleanup := connectAs(t, ownerDSN(t), "")
 		if _, err := cleanup.Exec(context.Background(), "DROP DATABASE IF EXISTS "+quoted+" WITH (FORCE)"); err != nil {
 			t.Errorf("dropping the probe database: %v", err)
 		}
 	})
-	return connectTo(t, name), name
+	return connectAs(t, ownerDSN(t), name), name
 }
 
-// connectTo dials the lane's cluster, swapping in database when it is named.
-//
-// The config is rebuilt rather than the DSN string, because reassembling a URL
-// from its parts drops the password — and the lane's owner DSN carries one.
-func connectTo(t *testing.T, database string) *pgx.Conn {
+func ownerDSN(t *testing.T) string { return laneDSN(t, "MARGINCE_TEST_DSN") }
+
+// appDSN is the role the product's queries run as, and the one the shadow has
+// to be reachable from.
+func appDSN(t *testing.T) string { return laneDSN(t, "MARGINCE_TEST_APP_DSN") }
+
+func laneDSN(t *testing.T, name string) string {
 	t.Helper()
 
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
+	dsn := os.Getenv(name)
 	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
+		t.Fatalf("%s not set — run `make db-up` (integration tests fail loudly, they never skip)", name)
 	}
+	return dsn
+}
+
+// connectAs dials the lane's cluster with dsn's credentials, swapping in
+// database when it is named.
+//
+// The config is rebuilt rather than the DSN string, because reassembling a URL
+// from its parts drops the password and the lane's DSNs carry one.
+func connectAs(t *testing.T, dsn, database string) *pgx.Conn {
+	t.Helper()
+
 	cfg, err := pgx.ParseConfig(dsn)
 	if err != nil {
-		t.Fatalf("parsing the owner DSN: %v", err)
+		t.Fatalf("parsing the lane DSN: %v", err)
 	}
 	if database != "" {
 		cfg.Database = database
 	}
 	conn, err := pgx.ConnectConfig(context.Background(), cfg)
 	if err != nil {
-		t.Fatalf("connecting to %s: %v", cfg.Database, err)
+		t.Fatalf("connecting to %s as %s: %v", cfg.Database, cfg.User, err)
 	}
 	t.Cleanup(func() {
 		if err := conn.Close(context.Background()); err != nil {

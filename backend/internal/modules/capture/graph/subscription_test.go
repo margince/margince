@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -115,7 +116,7 @@ func TestARoundRenewsTheSubscriptionItAlreadyHasRatherThanAddingOne(t *testing.T
 	api := NewAPI(srv.Client(), srv.URL)
 
 	sub, err := api.EnsureSubscription(context.Background(), "at",
-		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour))
+		"https://api.example/webhooks/graph?token=t", owner, clocktest.Now(t).Add(time.Hour))
 	if err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
@@ -157,7 +158,7 @@ func TestASubscriptionForADifferentURLIsNotAdopted(t *testing.T) {
 	api := NewAPI(srv.Client(), srv.URL)
 
 	if _, err := api.EnsureSubscription(context.Background(), "at",
-		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour)); err != nil {
+		"https://api.example/webhooks/graph?token=t", owner, clocktest.Now(t).Add(time.Hour)); err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
 	if created != 1 || renewed != 0 {
@@ -181,7 +182,7 @@ func TestARenewalOfAVanishedSubscriptionCreatesANewOne(t *testing.T) {
 	api := NewAPI(srv.Client(), srv.URL)
 
 	sub, err := api.EnsureSubscription(context.Background(), "at",
-		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour))
+		"https://api.example/webhooks/graph?token=t", owner, clocktest.Now(t).Add(time.Hour))
 	if err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
@@ -209,7 +210,7 @@ func subscriptionStub(t *testing.T, st subscriptionStubState) *httptest.Server {
 			}
 			w.WriteHeader(http.StatusCreated)
 			writeJSON(w, map[string]any{
-				"id": "sub-new", "expirationDateTime": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+				"id": "sub-new", "expirationDateTime": clocktest.Now(t).Add(time.Hour).UTC().Format(time.RFC3339),
 			})
 			return
 		}
@@ -224,7 +225,7 @@ func subscriptionStub(t *testing.T, st subscriptionStubState) *httptest.Server {
 			return
 		}
 		writeJSON(w, map[string]any{
-			"id": "sub-1", "expirationDateTime": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			"id": "sub-1", "expirationDateTime": clocktest.Now(t).Add(time.Hour).UTC().Format(time.RFC3339),
 		})
 	})
 	srv := httptest.NewServer(mux)
@@ -285,12 +286,12 @@ func TestASubscriptionIsFoundOnAPageAfterTheFirst(t *testing.T) {
 	mux.HandleFunc("/subscriptions/", func(w http.ResponseWriter, _ *http.Request) {
 		renewed++
 		writeJSON(w, map[string]any{
-			"id": "sub-ours", "expirationDateTime": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			"id": "sub-ours", "expirationDateTime": clocktest.Now(t).Add(time.Hour).UTC().Format(time.RFC3339),
 		})
 	})
 
 	sub, err := NewAPI(srv.Client(), srv.URL).EnsureSubscription(context.Background(), "at",
-		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour))
+		"https://api.example/webhooks/graph?token=t", owner, clocktest.Now(t).Add(time.Hour))
 	if err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
@@ -325,7 +326,7 @@ func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 		patched = r.URL.EscapedPath()
 		mu.Unlock()
 		writeJSON(w, map[string]any{
-			"id": "sub-1", "expirationDateTime": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			"id": "sub-1", "expirationDateTime": clocktest.Now(t).Add(time.Hour).UTC().Format(time.RFC3339),
 		})
 	})
 	srv := httptest.NewServer(mux)
@@ -336,7 +337,7 @@ func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 	// duplicate notification costs one redundant sync, where declining to renew
 	// costs the mailbox its push.
 	if _, err := NewAPI(srv.Client(), srv.URL).EnsureSubscription(context.Background(), "at",
-		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour)); err != nil {
+		"https://api.example/webhooks/graph?token=t", owner, clocktest.Now(t).Add(time.Hour)); err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
 	// Nothing was PATCHed at all: the id is refused before a request is built,

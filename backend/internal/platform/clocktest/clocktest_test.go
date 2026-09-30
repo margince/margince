@@ -13,11 +13,7 @@ import (
 func TestAnOrdinaryRunDatesAFixtureFromWallTime(t *testing.T) {
 	t.Setenv(clockskew.EnvVar, "")
 
-	before := time.Now()
-	got := Now(t)
-	if got.Before(before) || got.After(time.Now()) {
-		t.Fatalf("Now() = %v; want wall time, between %v and now", got, before)
-	}
+	assertOffsetFromWallTime(t, 0)
 }
 
 func TestTheFixtureApplierMovesTheBaseInstant(t *testing.T) {

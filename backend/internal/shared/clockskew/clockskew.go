@@ -2,23 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package clockskew reads the drift lane's offset: how far the suite is being
-// run from the real date, and which of the three machines in the test rig was
+// run from the real date, and which of the three clocks in the test rig was
 // moved to put it there.
 //
-// The backend suite's verdict must not depend on the calendar. A fixture
-// correct the day it is written — "seven days out, so it groups as later" — is
-// wrong on some later Thursday, and nothing in a diff causes that, so no
-// pull-request gate can find it. The lane that can is a second RUN at a moved
-// clock, which is what this offset arms.
-//
-// WHY ONE VARIABLE SPELLS BOTH HALVES. Three things can supply the shift and
-// they do not compose: the host wall clock, a shadowed now() in the test
-// database, and the base instant fixtures seed from. Two of them armed at once
-// runs the suite at twice the offset, with the layers disagreeing about which
-// day it is — failures that are the LANE's fault, which is the one outcome a
-// drift lane must not have, because it teaches a reader to ignore the red. A
-// single value naming the applier AND the amount makes that state unspellable
-// rather than possible and policed.
+// gates/wallclockfixtures_test.go carries why the lane exists. This package
+// parses the value and reads nothing itself.
 package clockskew
 
 import (
@@ -29,29 +17,29 @@ import (
 )
 
 // EnvVar carries `<applier>:<days>`, or nothing at all on an ordinary run.
-// Exported so the lanes and the gate do not each spell the string, which is how
-// a configuration surface drifts from the one that is documented.
 const EnvVar = "BACKEND_CLOCK_SKEW"
 
-// Applier is the thing that was moved to put the suite in the future.
+// maxDays bounds the offset at a century. A day count near the int64 nanosecond
+// ceiling wraps FixtureOffset to a large negative duration, which runs the suite
+// at a clock in the past under the drift lane's name — the same defect the zero
+// check refuses, arrived at from the other end.
+const maxDays = 36500
+
+// Applier is the clock that was moved to put the suite in the future.
 type Applier string
 
-// The three appliers, and the absence of one.
-//
-// They are not interchangeable and the difference is not a preference:
+// The three appliers, and the absence of one. They are not interchangeable:
 //
 //   - Machine moves the host's wall clock, which is what CI does. Linux has no
 //     CLOCK_REALTIME namespace, so a container reads the host's wall clock
 //     rather than one of its own: the compose Postgres and the Go process are
 //     looking at the same moved clock. It reaches every reading of now(),
-//     including the ones a column DEFAULT wrote, which is what makes it the
-//     applier the lane runs under.
-//   - Database shadows now() in the test template, for a laptop where moving
-//     the host clock is not acceptable. It is strictly weaker: see
-//     ShadowLimits.
-//   - Fixture moves only the base instant tests seed from. It shifts no
-//     database reading at all, so it proves a fixture's own arithmetic and
-//     nothing about a row Postgres stamped.
+//     including the ones a column DEFAULT wrote.
+//   - Database shadows now() in the test template, for a machine whose wall
+//     clock must not move. Strictly weaker — platform/testdb/clockshadow.go
+//     states what it cannot reach.
+//   - Fixture moves only the base instant tests seed from, through
+//     platform/clocktest. It shifts no database reading at all.
 const (
 	None     Applier = ""
 	Machine  Applier = "machine"
@@ -65,12 +53,13 @@ type Skew struct {
 	Days    int
 }
 
-// FixtureOffset is what a fixture's base instant must add to time.Now().
+// FixtureOffset is what a fixture's base instant adds to time.Now().
 //
 // Nonzero under Fixture alone. Under Machine the operating system has already
-// moved, and under Database the database has; a helper adding its own offset on
-// top would put the fixtures a further 200 days from the rows they are being
-// compared against, and every such failure would be the lane's own.
+// moved and under Database the database has, so a helper adding its own on top
+// would stand the fixtures a further 200 days from the rows they are compared
+// against — and every failure that produced would belong to the lane rather
+// than to the tree.
 func (s Skew) FixtureOffset() time.Duration {
 	if s.Applier != Fixture {
 		return 0
@@ -81,17 +70,16 @@ func (s Skew) FixtureOffset() time.Duration {
 // Armed reports whether the suite is running at a moved clock at all.
 func (s Skew) Armed() bool { return s.Applier != None }
 
-// Parse reads `<applier>:<days>`.
+// Parse reads `<applier>:<days>`. An unset value is the ordinary run.
 //
-// An unset variable is the ordinary run and not an error. An unparsable one IS
-// an error, and the callers fail on it rather than continuing: a typo that
-// silently shifted nothing would leave the lane reporting PASS over a suite it
-// never moved, which reads exactly like a suite that has no date-fragile
-// fixtures left. That is the shape of failure a drift lane exists to remove.
+// Anything else that cannot be read is an error rather than a fallback to the
+// ordinary run: a typo that silently shifted nothing leaves the lane reporting
+// PASS over a suite it never moved, which reads exactly like a suite with no
+// date-fragile fixtures left.
 //
-// This package does no reading of its own. Configuration is resolved at the
-// composition root and handed down (OPS-CFG-2), and the drift lane's root is
-// platform/clocktest, which takes the value from the config seam and calls this.
+// The applier is named beside the amount so that two cannot be armed at once.
+// The three clocks do not compose — two armed together run the suite at twice
+// the offset, with the layers disagreeing about which day it is.
 func Parse(value string) (Skew, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -100,8 +88,7 @@ func Parse(value string) (Skew, error) {
 
 	applier, days, ok := strings.Cut(value, ":")
 	if !ok {
-		return Skew{}, fmt.Errorf("%s=%q: want <applier>:<days>, one of %s — the applier is named "+
-			"beside the amount so that two of them cannot be armed at once", EnvVar, value, appliers())
+		return Skew{}, fmt.Errorf("%s=%q: want <applier>:<days>, one of %s", EnvVar, value, appliers())
 	}
 
 	parsed := Applier(strings.TrimSpace(applier))
@@ -112,18 +99,21 @@ func Parse(value string) (Skew, error) {
 	}
 
 	n, err := strconv.Atoi(strings.TrimSpace(days))
-	if err != nil {
+	switch {
+	case err != nil:
 		return Skew{}, fmt.Errorf("%s=%q: %q is not a number of days", EnvVar, value, days)
-	}
-	if n <= 0 {
+	case n <= 0:
 		return Skew{}, fmt.Errorf("%s=%q: %d days moves nothing — an offset that shifts no clock "+
 			"reports a verdict about the ordinary suite under the drift lane's name", EnvVar, value, n)
+	case n > maxDays:
+		return Skew{}, fmt.Errorf("%s=%q: %d days is past the %d-day ceiling, beyond which the offset "+
+			"wraps negative and runs the suite in the past", EnvVar, value, n, maxDays)
 	}
 	return Skew{Applier: parsed, Days: n}, nil
 }
 
-// String renders the offset the way the variable spells it, so a lane's log
-// line and the value a reader would set to reproduce it are the same text.
+// String renders the offset the way the variable spells it, so a lane's log line
+// and the value a reader sets to reproduce it are the same text.
 func (s Skew) String() string {
 	if !s.Armed() {
 		return string(None)
@@ -131,25 +121,6 @@ func (s Skew) String() string {
 	return fmt.Sprintf("%s:%d", s.Applier, s.Days)
 }
 
-// ShadowLimits states what the Database applier cannot move, for the lane that
-// runs under it to print. The two holes are not the same kind of hole, which is
-// measurable and was measured:
-//
-//   - CURRENT_TIMESTAMP is a reserved keyword the parser resolves without
-//     consulting search_path. Nothing closes this one.
-//   - A column DEFAULT binds whatever now() resolved to WHEN THE DDL RAN. The
-//     migrations build the template before any shadow exists, so their defaults
-//     keep the real date — a default written after the shadow does shift. It
-//     could be closed by shadowing before migrating, at the price of a template
-//     whose DDL no longer says what production's says, which is a worse thing
-//     for a reproduction aid to carry than a known-weaker shift.
-//
-// A reader who does not know this reads a green Database run as the verdict a
-// Machine run gives. It is not one, and saying so is the difference between a
-// reproduction aid and a lane whose red means nothing.
-const ShadowLimits = "CURRENT_TIMESTAMP and stored column DEFAULTs keep the real date under the database applier"
-
-// appliers renders the accepted vocabulary for an error a reader has to act on.
 func appliers() string {
 	return fmt.Sprintf("%q, %q, %q", Machine, Database, Fixture)
 }

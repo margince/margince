@@ -12,8 +12,8 @@
 //
 // WHY THE READ LIVES HERE. OPS-CFG-2 puts every environment read in the
 // composition root, and a test binary has no cmd/ to be one — so the lane's
-// root is this package, which resolves the offset once through the config seam
-// and hands it down. clockskew below it parses and decides; it reads nothing.
+// root is this package, which resolves the offset through the config seam and
+// hands it down. clockskew below it parses and decides; it reads nothing.
 // That is the same shape platform/testdb carries for the integration lane,
 // whose harnesses ARE the composition root of the lane they serve.
 //
@@ -38,10 +38,6 @@ func Skew() (clockskew.Skew, error) {
 
 // Now is the instant a fixture dates itself from — wall time on an ordinary
 // run, and wall time plus the offset under the fixture applier.
-//
-// It fails the test on an unparsable offset rather than falling back to wall
-// time. A drift lane that quietly ran unshifted would report PASS over a suite
-// it never moved, and that reads exactly like a suite with nothing left to find.
 func Now(t testing.TB) time.Time {
 	t.Helper()
 

@@ -9,23 +9,34 @@ package testdb
 // path, so the integration lane can be reproduced at a moved clock on a machine
 // whose wall clock must not move.
 //
-// WHY IT IS HERE AND NOT IN A SHELL SCRIPT. The lane's database admin goes
-// through cmd/migrate's db verbs precisely so that psql is not a host
-// requirement (scripts/lib-testdb.sh), and there is no sanctioned shell path for
-// arbitrary DDL. This is where the template's schema is already built, so this
-// is where the shadow belongs.
+// It lives here because the lane's database admin goes through cmd/migrate's db
+// verbs so that psql is not a host requirement, leaving no sanctioned shell path
+// for DDL.
 //
-// WHY pg_catalog MUST BE NAMED. Postgres searches pg_catalog implicitly BEFORE
-// the listed schemas unless the path names it explicitly. A shadow sitting in
-// public with the default path is therefore never reached — the path has to put
-// clockshadow first and pg_catalog last, or the whole applier silently does
-// nothing and the lane reports a green that means the ordinary suite passed.
+// THREE THINGS MAKE THE SHADOW REACHABLE, and missing any one of them leaves it
+// installed and inert — every statement answering at the real date under a lane
+// reporting green:
 //
-// WHAT IT DOES NOT MOVE is clockskew.ShadowLimits, measured rather than assumed:
-// CURRENT_TIMESTAMP resolves without consulting the search path, and the
-// migrations' column DEFAULTs bound pg_catalog.now() when they ran, which was
-// before this existed. That is why the lane prints that a green here is weaker
-// than the machine applier's.
+//   - pg_catalog is named LAST. Unnamed, it is searched implicitly FIRST and
+//     nothing in a listed schema is ever reached.
+//   - The schema is granted to PUBLIC. Postgres drops from a session's path any
+//     schema that session's role lacks USAGE on, silently: the product's
+//     queries run as the app role, and a schema owned by the migration role is
+//     invisible to them.
+//   - The shadow sits after public. current_schema() is the first schema on the
+//     path that exists, and customfields and search both filter
+//     information_schema by it, so leading with the shadow sends them looking
+//     for the application's columns in a schema holding one function.
+//
+// ext is deliberately NOT on the path. It is on none the application connects
+// with — extensionsqlscope_test.go and extmigrategate/role.go both rest on that
+// — so putting it there would resolve a unit's unqualified ext_* name into ext
+// only under this applier, and let the drift lane differ from the ordinary lane
+// for a reason that has nothing to do with the clock.
+//
+// WHAT IT CANNOT MOVE: CURRENT_TIMESTAMP, which resolves without consulting the
+// search path, and the migrations' column DEFAULTs, which bound pg_catalog.now()
+// before this existed. A green under this applier is weaker than the lane's.
 
 import (
 	"context"
@@ -42,61 +53,75 @@ import (
 const shadowSchema = "clockshadow"
 
 // installClockShadow puts the shadowed now() in front of pg_catalog's for every
-// connection opened to this database AFTERWARDS.
+// connection opened to this database afterwards, and takes it back off for a
+// run that is not using it.
 //
 // The setting is per-database rather than per-session because the tests reach
 // the database through their own pools, not through this connection. A pool
-// already dialled when this runs keeps the real clock — which is why it runs
-// inside EnsureSchema's once, before a package opens anything.
-//
-// A no-op under every other applier: the machine applier has already moved the
-// clock this database reads, and shadowing on top of it would put the database
-// 400 days out while the Go process stood at 200.
+// already dialled when this runs keeps the real clock, which is why it runs
+// inside EnsureSchema's once, before schemaReady releases any pool.
 func installClockShadow(ctx context.Context, owner *pgx.Conn) error {
 	skew, err := clocktest.Skew()
 	if err != nil {
 		return err
 	}
+	var database string
+	if err := owner.QueryRow(ctx, "SELECT current_database()").Scan(&database); err != nil {
+		return fmt.Errorf("reading the database the shadow applies to: %w", err)
+	}
 	if skew.Applier != clockskew.Database {
-		return nil
+		return clearClockShadow(ctx, owner, database)
 	}
 
-	// The interval is built from the parsed day count, which is an int that
-	// clockskew has already refused unless it is positive. It is formatted in
-	// because a function BODY is a string literal to the server and takes no
-	// parameter of its own; nothing here comes from outside the process.
+	// The day count is formatted in because a function BODY is a string literal
+	// to the server and takes no parameter of its own. It is an int clockskew
+	// has already bounded; nothing here comes from outside the process.
 	shadow := fmt.Sprintf(`
-		CREATE SCHEMA IF NOT EXISTS %s;
-		CREATE OR REPLACE FUNCTION %s.now() RETURNS timestamptz
+		CREATE SCHEMA IF NOT EXISTS %[1]s;
+		GRANT USAGE ON SCHEMA %[1]s TO PUBLIC;
+		CREATE OR REPLACE FUNCTION %[1]s.now() RETURNS timestamptz
 			LANGUAGE sql STABLE AS $shadow$
-				SELECT pg_catalog.now() + pg_catalog.make_interval(days => %d)
+				SELECT pg_catalog.now() + pg_catalog.make_interval(days => %[2]d)
 			$shadow$;`,
-		shadowSchema, shadowSchema, skew.Days)
+		shadowSchema, skew.Days)
 	if _, err := owner.Exec(ctx, shadow); err != nil {
 		return fmt.Errorf("installing the shadowed clock: %w", err)
 	}
 
-	var database string
-	if err := owner.QueryRow(ctx, "SELECT current_database()").Scan(&database); err != nil {
-		return fmt.Errorf("reading the database to put the shadow on the path of: %w", err)
-	}
-	// The shadow goes AFTER public, not in front of it. current_schema() is the
-	// first schema on the path that exists, so leading with clockshadow makes it
-	// the current schema — and two column probes filter information_schema by
-	// current_schema() (customfields/create.go, search/querystorage.go), so they
-	// would look in the shadow schema and find none of the application's
-	// columns. An unqualified CREATE TABLE would land there too. Measured both
-	// ways: from public, current_schema() and an unqualified create both return
-	// to public, and now() is still shifted, because what shadows pg_catalog is
-	// naming it LAST rather than being first.
-	//
 	// The catalog name is sanitised rather than formatted raw: it is an
 	// identifier read back from the server, and the tree formats only
 	// identifiers, only through Sanitize or as a compile-time literal.
-	path := fmt.Sprintf(`ALTER DATABASE %s SET search_path = "$user", public, %s, ext, pg_catalog`,
+	path := fmt.Sprintf(`ALTER DATABASE %s SET search_path = "$user", public, %s, pg_catalog`,
 		pgx.Identifier{database}.Sanitize(), shadowSchema)
 	if _, err := owner.Exec(ctx, path); err != nil {
-		return fmt.Errorf("putting %s ahead of pg_catalog on %s's search path: %w", shadowSchema, database, err)
+		return fmt.Errorf("putting %s on %s's search path: %w", shadowSchema, database, err)
+	}
+	return nil
+}
+
+// clearClockShadow removes what a previous drift run left behind.
+//
+// ALTER DATABASE ... SET lives in pg_db_role_setting, which is in no schema:
+// dropping and re-migrating the schema leaves it untouched, so one local
+// `make backend-clock-drift` would otherwise leave every later ordinary run on
+// the modified path — and, once the shadow is reachable, 200 days into the
+// future with nothing set and nothing printed. An ordinary run therefore clears
+// the residue rather than inheriting it.
+func clearClockShadow(ctx context.Context, owner *pgx.Conn, database string) error {
+	var installed bool
+	if err := owner.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = $1)`, shadowSchema).Scan(&installed); err != nil {
+		return fmt.Errorf("looking for a previous run's shadowed clock: %w", err)
+	}
+	if !installed {
+		return nil
+	}
+	reset := fmt.Sprintf(`ALTER DATABASE %s RESET search_path`, pgx.Identifier{database}.Sanitize())
+	if _, err := owner.Exec(ctx, reset); err != nil {
+		return fmt.Errorf("returning %s to the default search path: %w", database, err)
+	}
+	if _, err := owner.Exec(ctx, `DROP SCHEMA `+shadowSchema+` CASCADE`); err != nil {
+		return fmt.Errorf("dropping a previous run's shadowed clock: %w", err)
 	}
 	return nil
 }

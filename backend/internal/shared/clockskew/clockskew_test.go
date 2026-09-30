@@ -49,14 +49,15 @@ func TestAValueThatMovesNoClockIsRefused(t *testing.T) {
 	t.Parallel()
 
 	refused := []string{
-		"200",          // the amount without an applier
-		"machine",      // the applier without an amount
-		"machine:",     // ditto, with the separator
-		"machine:none", // an amount that is not a number
-		"machine:0",    // an offset of nothing
-		"machine:-200", // backwards, which no lane asks for
-		"clock:200",    // an applier that does not exist
-		"MACHINE:200",  // the vocabulary is lower case
+		"200",            // the amount without an applier
+		"machine",        // the applier without an amount
+		"machine:",       // ditto, with the separator
+		"machine:none",   // an amount that is not a number
+		"machine:0",      // an offset of nothing
+		"machine:-200",   // backwards, which no lane asks for
+		"machine:200000", // past the ceiling, where the offset wraps negative
+		"clock:200",      // an applier that does not exist
+		"MACHINE:200",    // the vocabulary is lower case
 	}
 	for _, value := range refused {
 		if skew, err := Parse(value); err == nil {

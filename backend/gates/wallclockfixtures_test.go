@@ -30,6 +30,8 @@ package gates
 //     against an elapsed duration is mergegateclockbounds_test.go's subject and
 //     is prohibited outright there; counting them here would report the same
 //     line under two rules.
+//   - A clock reached through an interface or a struct field rather than named.
+//     Resolving that needs type information this gate does not load.
 //   - A fixture spelling an absolute date — time.Date(2026, ...) — which is
 //     calendar-fragile in exactly the same way and which no count of time.Now
 //     reaches. The lane sees it; this ledger does not.
@@ -137,7 +139,12 @@ func countWallClockReads(t *testing.T) map[string]int {
 	return counted
 }
 
-// wallClockReads counts the time.Now() calls in one parsed file.
+// wallClockReads counts one parsed file's reads of the wall clock.
+//
+// A READ, not a call. `NewStore(db, time.Now)` hands the clock over as a value
+// and is the dominant injection idiom here: the store stamps rows at wall time
+// and no fixture helper can move it, which makes those the sites that matter
+// most. Counting only what is called missed 29 such files.
 //
 // The package is resolved through the file's IMPORTS rather than matched on the
 // spelling `time`. Go lets a file bind the package to any name — `import
@@ -155,24 +162,45 @@ func wallClockReads(file *ast.File) int {
 	names, dotted := timePackageNames(file)
 	found := 0
 	ast.Inspect(file, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
+		selector, ok := n.(*ast.SelectorExpr)
 		if !ok {
 			return true
 		}
-		switch fun := call.Fun.(type) {
+		if pkg, ok := selector.X.(*ast.Ident); ok && selector.Sel.Name == "Now" && names[pkg.Name] {
+			found++
+		}
+		return true
+	})
+	if dotted {
+		found += dotImportedNowReads(file)
+	}
+	return found
+}
+
+// dotImportedNowReads counts the bare Now a dot import puts in the file's own
+// scope. Reached only for a file that dot-imported time: an unqualified `Now`
+// is not distinctive on its own — a method, a field and a local can all wear
+// the name — so matching it anywhere else would report far more correct sites
+// than wrong ones.
+func dotImportedNowReads(file *ast.File) int {
+	found := 0
+	var count func(n ast.Node) bool
+	count = func(n ast.Node) bool {
+		switch node := n.(type) {
 		case *ast.SelectorExpr:
-			if pkg, ok := fun.X.(*ast.Ident); ok && fun.Sel.Name == "Now" && names[pkg.Name] {
-				found++
-			}
+			// Only the operand of a qualified name can hold a bare Now; its Sel
+			// is somebody's field or method, and a package-qualified read was
+			// already counted by the caller.
+			ast.Inspect(node.X, count)
+			return false
 		case *ast.Ident:
-			// A dot import puts Now in the file's own scope, so the call wears
-			// no package name at all.
-			if dotted && fun.Name == "Now" {
+			if node.Name == "Now" {
 				found++
 			}
 		}
 		return true
-	})
+	}
+	ast.Inspect(file, count)
 	return found
 }
 
@@ -221,6 +249,13 @@ func readLedger(t *testing.T) map[string]int {
 		n, err := strconv.Atoi(strings.TrimSpace(count))
 		if !ok || err != nil || n <= 0 {
 			t.Fatalf("%s:%d: %q is not `<path> <count>` with a positive count", ledgerPath, i+1, line)
+		}
+		// A second line for one path would otherwise overwrite the first, so
+		// the higher of two counts silently becomes the ceiling — the ledger
+		// raised by an edit that looks like an addition.
+		if was, seen := frozen[path]; seen {
+			t.Fatalf("%s:%d: %s is listed twice, frozen at %d and again at %d. One line per file, or "+
+				"the larger entry quietly becomes the budget.", ledgerPath, i+1, path, was, n)
 		}
 		frozen[path] = n
 	}
