@@ -24,7 +24,6 @@ import {
   ListKindBadge,
   RECORD_TYPE_LABEL,
 } from "./listlibrary";
-import { ArchiveListAction } from "./listrules";
 import {
   MEMBER_SOURCES,
   type MemberRow,
@@ -32,6 +31,7 @@ import {
   type MemberSource,
   memberName,
 } from "./listmembers";
+import { ArchiveListAction } from "./listrules";
 import {
   type List,
   type ListRecordType,
