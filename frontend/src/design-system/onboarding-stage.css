@@ -448,11 +448,15 @@
   align-content: start;
 }
 
+/* The stage's own lines: a word longer than the board breaks rather than
+   running past its edge, whichever face the reader's system substitutes. */
+.ob-stage-board > :is(.ob-stage-title, .t-eyebrow, .ob-stage-sub) {
+  overflow-wrap: break-word;
+}
+
 .ob-stage-title {
   margin: 0;
   color: var(--textPrimary);
-  /* A word longer than the board breaks rather than running past its edge. */
-  overflow-wrap: break-word;
   /* A measure, not a width: a hero line that runs the full board reads as a
      paragraph set large rather than as a title. */
   max-width: 20ch;
@@ -640,8 +644,8 @@
   .ob-stage-sub {
     max-width: none;
   }
-  /* At a syllable where the language allows it; `lang` is on <html>. */
-  .ob-stage-title {
+  /* The headings' long words break at a syllable; `lang` is on <html>. */
+  .ob-stage-board > :is(.ob-stage-title, .t-eyebrow) {
     hyphens: auto;
   }
   /* The mark alone: a step name, a sub-step and a row of dashes do not fit a
