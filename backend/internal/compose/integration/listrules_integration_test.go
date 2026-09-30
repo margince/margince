@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -454,5 +455,62 @@ func TestAReaderWithoutTheListGrantReadsNoObservedChange(t *testing.T) {
 	noList := f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, p)
 	if changes, _, err := f.store.ObservedChanges(noList, f.list, view.Version, f.clock, actions, 10); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a reader without list read got %v (%v), want a refusal", changes, err)
+	}
+}
+
+func TestTheSummaryWaitsForAVisitAndCountsFilterChanges(t *testing.T) {
+	f := newListRuleFixture(t)
+	f.check(t)
+	summary := func() *crmcontracts.ListChangeSummary {
+		t.Helper()
+		view, err := f.store.ListView(f.outsider(), f.list)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return view.ChangesSinceVisit
+	}
+	if got := summary(); got != nil {
+		t.Fatalf("a reader who never visited got a summary %+v", got)
+	}
+	f.visitedAnHourAgo(f.outsider(), t, f.e.Rep3)
+	if got := summary(); got == nil || got.Joined.Count+got.Left.Count+got.FilterChanges != 0 {
+		t.Fatalf("with nothing changed since the visit the summary is %+v, want one saying nothing moved", got)
+	}
+	before, err := f.store.GetList(f.e.Admin(), f.list)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.store.UpdateList(f.e.Admin(), f.list, collections.UpdateListInput{
+		Definition: titleIs("Seller"), IfVersion: &before.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	renamed := "Buyers (renamed)"
+	after, err := f.store.GetList(f.e.Admin(), f.list)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.store.UpdateList(f.e.Admin(), f.list, collections.UpdateListInput{Name: &renamed, IfVersion: &after.Version}); err != nil {
+		t.Fatal(err)
+	}
+	if got := summary(); got == nil || got.FilterChanges != 1 {
+		t.Fatalf("a filter change and a rename since the visit read as %+v, want exactly one filter change", got)
+	}
+	shortlist, err := f.store.ListView(f.author(), f.shortlist(t))
+	if err != nil || shortlist.ChangesSinceVisit != nil {
+		t.Fatalf("a Shortlist read carries a summary %+v (%v)", shortlist.ChangesSinceVisit, err)
+	}
+}
+
+func TestANoticeRuleTellsItsOwnerWhichListARecordJoined(t *testing.T) {
+	f := newListRuleFixture(t)
+	f.rule(t, "list_membership_notify", map[string]any{"direction": "entered"})
+	f.check(t)
+	joins := f.contactTitled(t, "Noted Buyer", "Buyer")
+	f.check(t)
+	f.deliver(t, "list.evaluated")
+	if n := f.e.WsCount(t, `SELECT count(*) FROM notice WHERE recipient_user_id = $1 AND target_id = $2
+		AND subject = 'Buyers' AND body = 'A record joined the list.'`, f.e.Rep1, joins); n != 1 {
+		t.Fatalf("the owner has %d notices naming the list the record joined, want 1", n)
 	}
 }
