@@ -13,71 +13,96 @@
 # ignore it, which is worse than having no lane.
 #
 # NOT FOR A DEVELOPER MACHINE. Moving a laptop's clock 200 days expires its
-# credentials and its certificates. This is for a disposable CI runner; the
-# local reproduction is the database applier, which `make backend-clock-drift`
-# selects by default.
+# credentials and its certificates. This is for a disposable CI runner.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Where the real instant is parked while the clock is moved. Restoring computes
-# from it rather than trusting a re-sync to happen, so a runner whose time
-# service never comes back still leaves with a plausible clock.
-BASELINE="${CLOCK_DRIFT_BASELINE:-${TMPDIR:-/tmp}/clock-drift-baseline}"
+# Where the real instant is parked while the clock is moved. Under RUNNER_TEMP
+# when the job has one: that directory is per-job, where a fixed path under /tmp
+# is guessable by anything else sharing a self-hosted runner, and a planted
+# baseline would make `assert` pass over a clock that never moved.
+BASELINE="${CLOCK_DRIFT_BASELINE:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/clock-drift-baseline}"
 
-# The tolerance on "did it move". Generous on purpose: what this proves is that
-# a 200-DAY shift took, and the seconds either side of it are the suite starting
-# up. A tight window here would fail the lane over scheduling noise, which is
-# the lane blaming the tree for itself.
-TOLERANCE_SECONDS=600
+# How far short of the full offset the clock may read before this calls it
+# unshifted. Generous, because it only ever has to separate "moved 200 days"
+# from "did not move at all".
+SHORTFALL_TOLERANCE_SECONDS=600
 
 usage() {
 	echo "usage: $0 move <days> | assert <days> | restore <days>" >&2
 	exit 2
 }
 
+# days validates the offset before it reaches arithmetic. Bash evaluates a
+# variable's VALUE recursively inside $(( )), so a non-numeric argument is both
+# a confusing failure and a way to smuggle an expression in.
+days() {
+	case "$1" in
+	'' | *[!0-9]*)
+		echo "clock-drift-host: $1 is not a number of days" >&2
+		exit 2
+		;;
+	esac
+	echo "$1"
+}
+
+# shortfall is how far short of the full offset the clock currently reads.
+#
+# Negative means it reads FURTHER out than the offset, which is the ordinary
+# case after the suites have run: the moved clock keeps ticking, so an hour of
+# testing puts it an hour past where the jump left it.
+shortfall() {
+	local want drift
+	want=$(($1 * 86400))
+	drift=$(($(date -u +%s) - $(cat "$BASELINE")))
+	echo $((want - drift))
+}
+
 # move parks the real instant and jumps the clock forward.
 #
 # Time sync goes off FIRST. A runner whose NTP client is still running snaps the
 # clock back mid-suite, and the half of the run after the snap is an ordinary
-# run reporting under the drift lane's name — a green that means nothing, which
-# is the failure this whole lane exists to remove.
+# run reporting under the drift lane's name — a green that means nothing.
 move() {
-	local days="$1" real
+	local days real
+	days=$(days "$1")
 	real=$(date -u +%s)
 	sudo timedatectl set-ntp false
 	sudo date -s "+${days} days" >/dev/null
 	# Written only once the jump has taken, so the file's EXISTENCE is the
-	# evidence that there is something to undo. Written before, a failed jump
-	# would leave a baseline behind and the always() restore would subtract two
-	# hundred days from a clock that never moved — the poisoned runner that step
-	# exists to prevent, arrived at from the other direction.
+	# evidence that there is something to undo.
 	printf '%s\n' "$real" >"$BASELINE"
 	assert "$days"
 }
 
-# assert proves the clock is still where move put it.
+# assert proves the clock is still the moved one.
 #
 # Called after the suites as well as before them, because the failure worth
 # catching is a time service that came back and re-synced partway through.
+#
+# ONE-SIDED, and that is the whole correctness of it. The baseline is the real
+# instant frozen at move time; it does not tick. The moved clock does, so after
+# an hour of suites the drift is the offset PLUS an hour, and a two-sided
+# tolerance would call every run of any length a failure. What this has to
+# separate is "the clock is still 200 days out" from "something put it back",
+# and only a SHORTFALL says the second.
 assert() {
-	local days="$1"
+	local days short
+	days=$(days "$1")
 	if [ ! -r "$BASELINE" ]; then
 		echo "clock-drift-host: no baseline at $BASELINE — nothing recorded the real instant, so the" >&2
 		echo "                  shift cannot be proven and a green run would prove nothing." >&2
 		exit 1
 	fi
-	local want moved drift skew
-	want=$((days * 86400))
-	moved=$(date -u +%s)
-	drift=$((moved - $(cat "$BASELINE")))
-	skew=$((drift - want))
-	if [ "${skew#-}" -gt "$TOLERANCE_SECONDS" ]; then
-		echo "clock-drift-host: the clock is ${drift}s from the real instant, want ${want}s (±${TOLERANCE_SECONDS}s)." >&2
-		echo "                  Either the jump did not take or a time service re-synced during the run;" >&2
-		echo "                  in both cases the suite ran at a clock nobody chose." >&2
+	short=$(shortfall "$days")
+	if [ "$short" -gt "$SHORTFALL_TOLERANCE_SECONDS" ]; then
+		echo "clock-drift-host: the clock reads ${short}s short of the ${days}-day offset." >&2
+		echo "                  Either the jump did not take or a time service re-synced during the" >&2
+		echo "                  run; in both cases the suite ran at a clock nobody chose, so this run" >&2
+		echo "                  is void rather than a finding about the tree." >&2
 		exit 1
 	fi
-	echo "clock-drift-host: +${days} days in force (${drift}s from the real instant)."
+	echo "clock-drift-host: +${days} days still in force."
 }
 
 # restore puts the clock back and hands timekeeping to the machine again.
@@ -85,21 +110,29 @@ assert() {
 # It SUBTRACTS the same offset rather than rewinding to the parked instant. The
 # moved clock ticked normally while the suite ran, so subtracting is exact,
 # where restoring the baseline would leave the machine however long the suite
-# took in the past — and a runner whose clock goes backwards fails its own
-# cleanup steps in ways nothing here would explain.
+# took in the past.
+#
+# It re-proves the shift first. A baseline can outlive a jump that did not hold
+# — `move` writes it and then asserts, so a time service winning the race
+# between the two leaves the file behind — and the workflow reaches this step
+# under always(). Subtracting from a clock nobody moved is the poisoned runner
+# this step exists to prevent, arrived at from the other side.
 restore() {
-	local days="$1"
-	# No baseline means move never completed — the compose stack failed, or the
-	# build did, or the jump itself. The workflow still reaches this step under
-	# always(), and subtracting the offset from a clock nobody moved is how a
-	# runner goes into the past.
+	local days short
+	days=$(days "$1")
 	if [ ! -r "$BASELINE" ]; then
 		echo "clock-drift-host: no baseline, so the clock was never moved — leaving it where it is."
 		sudo timedatectl set-ntp true
 		return 0
 	fi
-	sudo date -s "-${days} days" >/dev/null
+	short=$(shortfall "$days")
 	rm -f "$BASELINE"
+	if [ "$short" -gt "$SHORTFALL_TOLERANCE_SECONDS" ]; then
+		echo "clock-drift-host: the clock is already back (${short}s short of the offset) — leaving it alone."
+		sudo timedatectl set-ntp true
+		return 0
+	fi
+	sudo date -s "-${days} days" >/dev/null
 	sudo timedatectl set-ntp true
 	echo "clock-drift-host: clock restored, time sync back on."
 }

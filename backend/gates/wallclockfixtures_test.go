@@ -32,6 +32,13 @@ package gates
 //     line under two rules.
 //   - A clock reached through an interface or a struct field rather than named.
 //     Resolving that needs type information this gate does not load.
+//   - A read moved OUT of a _test.go file into a build-tagged helper beside it,
+//     the shape platform/testdb carries. The file's count drops to zero, this
+//     gate then requires its ledger entry deleted, and nothing counts the read
+//     again. No such helper holds one today. The alternative is to read every
+//     .go file, which would report the whole product's legitimate use of the
+//     clock — far more correct sites than wrong ones, and the noise that
+//     teaches a reader to skip a census.
 //   - A fixture spelling an absolute date — time.Date(2026, ...) — which is
 //     calendar-fragile in exactly the same way and which no count of time.Now
 //     reaches. The lane sees it; this ledger does not.

@@ -267,9 +267,8 @@ jobs:
         run: make check-backend
 
   # The backend's counterpart to fe-clock-drift, and the harder half of the same
-  # argument: the suite's verdict must not depend on the calendar. 302 backend
-  # test files date a fixture from wall time and 905 more compare against
-  # Postgres' now(), and one confirmed instance — a task seeded seven days out,
+  # argument: the suite's verdict must not depend on the calendar. 330 backend
+  # test files read the wall clock and 905 more compare against Postgres' now(), and one confirmed instance — a task seeded seven days out,
   # asserted to group as `later`, answering `this_week` on a Thursday — cost two
   # sessions a working stretch of bisecting a red main.
   #
@@ -329,8 +328,12 @@ jobs:
         run: make db-up
       - name: Compile the suites at the real date
         run: make -C backend build
-      - name: Move the runner's clock forward 200 days
-        run: ./scripts/clock-drift-host.sh move 200
+      # The offset comes from BACKEND_CLOCK_SKEW rather than being spelled again.
+      # The restore below is the copy that matters: raising the skew here and
+      # leaving a literal there hands the runner back with its clock in the
+      # past, which is the poisoning that step exists to prevent.
+      - name: Move the runner's clock forward
+        run: ./scripts/clock-drift-host.sh move "${BACKEND_CLOCK_SKEW##*:}"
       - name: The backend suites at the moved clock
         run: make backend-clock-drift
       # The clock goes back even when the suites failed. A runner handed back to
@@ -338,7 +341,7 @@ jobs:
       # failure would surface in someone else's lane with nothing to point at.
       - name: Restore the clock
         if: always()
-        run: ./scripts/clock-drift-host.sh restore 200
+        run: ./scripts/clock-drift-host.sh restore "${BACKEND_CLOCK_SKEW##*:}"
 
   # PERF-3/PERF-7 on the SMB tier, weekly. It is the only job here gated on a
   # cadence rather than running every time the workflow fires: the daily lane

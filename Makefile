@@ -616,19 +616,21 @@ fe-clock-drift:
 		FE_CLOCK_SKEW_DAYS=$(FE_CLOCK_SKEW_DAYS) pnpm exec vitest run
 
 ## backend-clock-drift — the same argument for the backend, which is the harder
-## half: 302 of its test files date a fixture from wall time, and 905 more
+## half: 330 of its test files read the wall clock, and 905 more
 ## compare against Postgres' now(). Both clocks have to move together or the
 ## failures belong to the lane rather than to the tree.
 ##
 ## BACKEND_CLOCK_SKEW names the applier beside the amount, because the three
 ## things that can supply the shift do not compose — internal/shared/clockskew
-## says what each one reaches. The default is the database applier, the only one
-## safe on a machine somebody owns; CI runs `machine:200`, which is the one that
-## moves every reading of now() including a column DEFAULT's.
+## says what each one reaches. There is deliberately NO default: `machine:200`
+## is what CI runs and what a verdict means, and it expires a laptop's
+## certificates; `database:200` leaves Go's clock and the migrations' column
+## DEFAULTs at the real date, so rows land at one date and queries compare
+## against another and some of the failures are its own. Picking between those
+## is a decision, and a default would make it silently.
 ##
 ## Like fe-clock-drift it is not in `make check` and not a pull-request gate:
 ## what breaks these tests is time passing rather than a diff.
-BACKEND_CLOCK_SKEW ?= database:200
 backend-clock-drift:
 	@BACKEND_CLOCK_SKEW=$(BACKEND_CLOCK_SKEW) ./scripts/backend-clock-drift.sh
 
