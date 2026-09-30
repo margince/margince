@@ -127,8 +127,10 @@ func expandCases(f *listFixture) []expandCase {
 		{name: "a burst", lists: func(s scriptedLists) scriptedLists { s.total = burstCap + 1; return s }, pause: PausedBurst},
 		{name: "one joined record", fires: 1, lists: func(s scriptedLists) scriptedLists {
 			s.total = 1
-			s.changes = []ListChange{{EventID: ids.NewV7(), Action: directionEntered,
-				Record: datasource.EntityRef{Type: "contact", ID: f.short.ID}}}
+			s.changes = []ListChange{{
+				EventID: ids.NewV7(), Action: directionEntered,
+				Record: datasource.EntityRef{Type: "contact", ID: f.short.ID},
+			}}
 			return s
 		}},
 	}
