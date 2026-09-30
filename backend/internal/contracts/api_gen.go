@@ -38958,6 +38958,9 @@ type ReportingCaptureStatus struct {
 // ReportingCatalog defines model for ReportingCatalog.
 type ReportingCatalog struct {
 	Metrics []ReportingMetricDefinition `json:"metrics"`
+
+	// ScheduleReady Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors.
+	ScheduleReady *bool `json:"schedule_ready,omitempty"`
 }
 
 // ReportingChart defines model for ReportingChart.
@@ -39190,21 +39193,24 @@ type ReportingReport struct {
 	ArchivedAt     *time.Time              `json:"archived_at,omitempty"`
 	Audience       ReportingReportAudience `json:"audience"`
 	AudienceTeamId *openapi_types.UUID     `json:"audience_team_id,omitempty"`
-	Cadence        *string                 `json:"cadence,omitempty"`
+
+	// Cadence Comma-separated frequencies of all schedules including paused schedules.
+	Cadence *string `json:"cadence,omitempty"`
 
 	// CanManage Whether the current human may manage this report, before individual object-action grants.
-	CanManage        *bool              `json:"can_manage,omitempty"`
-	CreatedAt        time.Time          `json:"created_at"`
-	EditionCount     *int               `json:"edition_count,omitempty"`
-	Id               openapi_types.UUID `json:"id"`
-	LastStatus       *string            `json:"last_status,omitempty"`
-	LatestCapturedAt *time.Time         `json:"latest_captured_at,omitempty"`
-	Name             string             `json:"name"`
-	NextDueAt        *time.Time         `json:"next_due_at,omitempty"`
-	OwnerId          openapi_types.UUID `json:"owner_id"`
-	Revision         int64              `json:"revision"`
-	Selection        ReportingSelection `json:"selection"`
-	Version          int64              `json:"version"`
+	CanManage           *bool              `json:"can_manage,omitempty"`
+	CreatedAt           time.Time          `json:"created_at"`
+	EditionCount        *int               `json:"edition_count,omitempty"`
+	Id                  openapi_types.UUID `json:"id"`
+	LastStatus          *string            `json:"last_status,omitempty"`
+	LatestCapturedAt    *time.Time         `json:"latest_captured_at,omitempty"`
+	Name                string             `json:"name"`
+	NextDueAt           *time.Time         `json:"next_due_at,omitempty"`
+	OwnerId             openapi_types.UUID `json:"owner_id"`
+	PausedScheduleCount *int               `json:"paused_schedule_count,omitempty"`
+	Revision            int64              `json:"revision"`
+	Selection           ReportingSelection `json:"selection"`
+	Version             int64              `json:"version"`
 }
 
 // ReportingReportAudience defines model for ReportingReport.Audience.
@@ -39297,11 +39303,14 @@ type ReportingTarget struct {
 	AllocationDifference *int64               `json:"allocation_difference,omitempty"`
 	CreatedAt            time.Time            `json:"created_at"`
 	Definition           ReportingTargetInput `json:"definition"`
-	Id                   openapi_types.UUID   `json:"id"`
-	Interval             ReportingWindow      `json:"interval"`
-	Revision             int64                `json:"revision"`
-	Unit                 string               `json:"unit"`
-	Version              int64                `json:"version"`
+
+	// History All definitions including the current revision, returned in revision order on the individual target read.
+	History  *[]ReportingTargetInput `json:"history,omitempty"`
+	Id       openapi_types.UUID      `json:"id"`
+	Interval ReportingWindow         `json:"interval"`
+	Revision int64                   `json:"revision"`
+	Unit     string                  `json:"unit"`
+	Version  int64                   `json:"version"`
 }
 
 // ReportingTargetInput defines model for ReportingTargetInput.
@@ -39311,8 +39320,11 @@ type ReportingTargetInput struct {
 	PeriodStart openapi_types.Date             `json:"period_start"`
 	PipelineId  *openapi_types.UUID            `json:"pipeline_id,omitempty"`
 	Reason      string                         `json:"reason"`
-	Scope       ReportingScope                 `json:"scope"`
-	Value       int64                          `json:"value"`
+
+	// Retired Excludes this allocation from live progress while preserving its revisions and saved snapshots.
+	Retired *bool          `json:"retired,omitempty"`
+	Scope   ReportingScope `json:"scope"`
+	Value   int64          `json:"value"`
 }
 
 // ReportingTargetInputPeriodKind defines model for ReportingTargetInput.PeriodKind.

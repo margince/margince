@@ -5,10 +5,10 @@ import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import { Button, Field, SegmentedControl } from "../design-system/atoms";
-import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
+import { currentParams, replaceParams, useUrlParams } from "../app/urlstate";
+import { Button, SegmentedControl } from "../design-system/atoms";
+import { type ISODate, isISODate } from "../design-system/dateinput";
 import { Heading } from "../design-system/heading";
-import { Select } from "../design-system/select";
 import { startOfDayInZone } from "../format/timezone";
 import { useT } from "../i18n";
 import { openAnalyticsSection } from "./analytics.address";
@@ -16,21 +16,16 @@ import type { AnalyticsScope } from "./analytics.context";
 import { QueryGate, throwProblem } from "./common";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
 import {
   type ReportingEvidenceRef,
   type ReportingSelection,
   reportingQuery,
 } from "./reporting.model";
+import { useReportingPipelines } from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
-const PERIODS: readonly ReportingSelection["period"][] = [
-  "this_month",
-  "last_month",
-  "last_week",
-  "this_quarter",
-  "custom",
-];
 
 export function ReportingOverview({
   scope,
@@ -44,16 +39,13 @@ export function ReportingOverview({
       return data;
     },
   });
+  const pipelines = useReportingPipelines();
   const setup = useQuery({
     queryKey: ["reporting-overview-setup"],
     queryFn: async () => {
-      const [framework, pipelines] = await Promise.all([
-        api.GET("/analytics/framework"),
-        api.GET("/pipelines", { params: { query: {} } }),
-      ]);
-      if (framework.error) throwProblem(framework.error);
-      if (pipelines.error) throwProblem(pipelines.error);
-      return { framework: framework.data, pipelines: pipelines.data.data };
+      const { data, error } = await api.GET("/analytics/framework");
+      if (error) throwProblem(error);
+      return data;
     },
   });
   return (
@@ -61,17 +53,82 @@ export function ReportingOverview({
       {(catalog) => (
         <QueryGate query={setup} pendingLabel={t("reporting.performance")}>
           {(setup) => (
-            <OverviewBody
-              scope={scope}
-              catalog={catalog}
-              template={setup.framework.definition.template}
-              pipelines={setup.pipelines}
-            />
+            <QueryGate query={pipelines} pendingLabel={t("reporting.pipeline")}>
+              {(pipelines) => (
+                <OverviewBody
+                  scope={scope}
+                  catalog={catalog}
+                  template={setup.definition.template}
+                  pipelines={pipelines.data}
+                />
+              )}
+            </QueryGate>
           )}
         </QueryGate>
       )}
     </QueryGate>
   );
+}
+
+function useOverviewFilters(
+  defaultTemplate: "sales" | "sdr",
+  pipelines: readonly components["schemas"]["Pipeline"][],
+) {
+  const [params] = useUrlParams();
+  const setParam = (key: string, value: string) => {
+    const next = new Map(currentParams());
+    next.set(key, value);
+    replaceParams(next);
+  };
+  const template =
+    params.get("view") === "sdr"
+      ? "sdr"
+      : params.get("view") === "sales"
+        ? "sales"
+        : defaultTemplate;
+  const setTemplate = (value: string) => setParam("view", value);
+  const from = params.get("from") ?? "";
+  const through = params.get("through") ?? "";
+  const start: ISODate | "" = isISODate(from) ? from : "";
+  const end: ISODate | "" = isISODate(through) ? through : "";
+  const setStart = (value: string) => setParam("from", value);
+  const setEnd = (value: string) => setParam("through", value);
+  const period =
+    REPORTING_PERIODS.find((value) => value === params.get("period")) ??
+    "this_month";
+  const setPeriod = (value: string) => setParam("period", value);
+  const defaultPipeline =
+    pipelines.find((pipeline) => pipeline.is_default)?.id ??
+    pipelines[0]?.id ??
+    "";
+  const pipelineId =
+    params.get("pipeline") === "all"
+      ? ""
+      : (pipelines.find((pipeline) => pipeline.id === params.get("pipeline"))
+          ?.id ?? defaultPipeline);
+  const setPipelineId = (value: string) => setParam("pipeline", value || "all");
+  const targetBasis: ReportingSelection["target_basis"] =
+    params.get("target") === "fiscal_quarter" ? "fiscal_quarter" : "month";
+  const setTargetBasis = (value: string) => setParam("target", value);
+  const closeWindow: ReportingSelection["close_window"] =
+    params.get("close") === "fiscal_quarter" ? "fiscal_quarter" : "all_open";
+  const setCloseWindow = (value: string) => setParam("close", value);
+  return {
+    template,
+    setTemplate,
+    start,
+    end,
+    setStart,
+    setEnd,
+    period,
+    setPeriod,
+    pipelineId,
+    setPipelineId,
+    targetBasis,
+    setTargetBasis,
+    closeWindow,
+    setCloseWindow,
+  };
 }
 
 function OverviewBody({
@@ -87,21 +144,23 @@ function OverviewBody({
 }>) {
   const t = useT();
   const zone = useRecordZone();
-  const [template, setTemplate] = useState(defaultTemplate);
-  const [start, setStart] = useState<ISODate | "">("");
-  const [end, setEnd] = useState<ISODate | "">("");
+  const {
+    template,
+    setTemplate,
+    start,
+    end,
+    setStart,
+    setEnd,
+    period,
+    setPeriod,
+    pipelineId,
+    setPipelineId,
+    targetBasis,
+    setTargetBasis,
+    closeWindow,
+    setCloseWindow,
+  } = useOverviewFilters(defaultTemplate, pipelines);
   const canSave = useCanWrite("report_definition", "create");
-  const [period, setPeriod] =
-    useState<ReportingSelection["period"]>("this_month");
-  const [pipelineId, setPipelineId] = useState(
-    pipelines.find((pipeline) => pipeline.is_default)?.id ??
-      pipelines[0]?.id ??
-      "",
-  );
-  const [targetBasis, setTargetBasis] =
-    useState<ReportingSelection["target_basis"]>("month");
-  const [closeWindow, setCloseWindow] =
-    useState<ReportingSelection["close_window"]>("fiscal_quarter");
   const [saving, setSaving] = useState(false);
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const metrics = catalog.metrics
@@ -145,7 +204,7 @@ function OverviewBody({
       ),
     ),
   };
-  const validPeriod = period !== "custom" || !!(start && end && end >= start);
+  const validPeriod = validDateRange(period, start, end);
   const query = useQuery({
     enabled: validPeriod,
     queryKey: ["reporting-evaluation", selection],
@@ -191,122 +250,37 @@ function OverviewBody({
           setEvidence(null);
         }}
       />
-      <div className="reporting-toolbar">
-        <Field label={t("reporting.period")}>
-          {(field) => (
-            <Select
-              {...field}
-              value={period}
-              options={PERIODS.map((value) => ({
-                value,
-                label: t(`reporting.${value}`),
-              }))}
-              onChange={(value) => {
-                const next = PERIODS.find((period) => period === value);
-                if (next) {
-                  setPeriod(next);
-                  setEvidence(null);
-                }
-              }}
-            />
-          )}
-        </Field>
-        {period === "custom" && (
-          <>
-            <Field label={t("reporting.fromDate")}>
-              {(field) => (
-                <DateInput
-                  {...field}
-                  value={start}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setStart(isISODate(value) ? value : "");
-                    setEvidence(null);
-                  }}
-                />
-              )}
-            </Field>
-            <Field label={t("reporting.throughDate")}>
-              {(field) => (
-                <DateInput
-                  {...field}
-                  value={end}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setEnd(isISODate(value) ? value : "");
-                    setEvidence(null);
-                  }}
-                />
-              )}
-            </Field>
-          </>
-        )}
-        {template === "sales" && (
-          <Field label={t("reporting.pipeline")}>
-            {(field) => (
-              <Select
-                {...field}
-                value={pipelineId}
-                options={[
-                  { value: "", label: t("reporting.allPipelines") },
-                  ...pipelines.map((pipeline) => ({
-                    value: pipeline.id,
-                    label: pipeline.name,
-                  })),
-                ]}
-                onChange={(value) => {
-                  setPipelineId(value);
-                  setEvidence(null);
-                }}
-              />
-            )}
-          </Field>
-        )}
-        <Field label={t("reporting.targetBasis")}>
-          {(field) => (
-            <Select
-              {...field}
-              value={targetBasis}
-              options={[
-                { value: "month", label: t("reporting.month") },
-                {
-                  value: "fiscal_quarter",
-                  label: t("reporting.fiscal_quarter"),
-                },
-              ]}
-              onChange={(value) => {
-                if (value === "month" || value === "fiscal_quarter") {
-                  setTargetBasis(value);
-                  setEvidence(null);
-                }
-              }}
-            />
-          )}
-        </Field>
-        {template === "sales" && (
-          <Field label={t("reporting.closeWindow")}>
-            {(field) => (
-              <Select
-                {...field}
-                value={closeWindow}
-                options={[
-                  {
-                    value: "fiscal_quarter",
-                    label: t("reporting.fiscal_quarter"),
-                  },
-                  { value: "all_open", label: t("reporting.all_open") },
-                ]}
-                onChange={(value) => {
-                  if (value === "fiscal_quarter" || value === "all_open") {
-                    setCloseWindow(value);
-                    setEvidence(null);
-                  }
-                }}
-              />
-            )}
-          </Field>
-        )}
-      </div>
+      <ReportingFilters
+        selection={selection}
+        showScope={false}
+        showPipeline={template === "sales"}
+        showTargets={
+          template === "sales" ||
+          query.data?.metrics.some((metric) => metric.target != null) === true
+        }
+        dates={{
+          from: start,
+          through: end,
+          onChange: (from, through) => {
+            setStart(from);
+            setEnd(through);
+            setEvidence(null);
+          },
+        }}
+        onChange={(next) => {
+          if (next.period !== period) setPeriod(next.period);
+          if (
+            template === "sales" &&
+            next.pipeline_id !== selection.pipeline_id
+          )
+            setPipelineId(next.pipeline_id ?? "");
+          if (next.target_basis !== targetBasis)
+            setTargetBasis(next.target_basis);
+          if (next.close_window !== closeWindow)
+            setCloseWindow(next.close_window);
+          setEvidence(null);
+        }}
+      />
       {!validPeriod && <p role="status">{t("reporting.chooseDates")}</p>}
       {validPeriod && (
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
@@ -344,4 +318,8 @@ function OverviewBody({
       )}
     </>
   );
+}
+
+function validDateRange(period: string, start: string, end: string): boolean {
+  return period !== "custom" || !!(start && end && end >= start);
 }

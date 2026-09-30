@@ -105,32 +105,57 @@ export const Loading: Story = {
   },
 };
 
-export const SDROutcomes: Story = {
-  render: () => {
-    const routes = reportingStoryRoutes(sdrEvaluation);
-    routes["GET /analytics/framework"] = () =>
-      jsonResponse({
-        ...reportingStoryFramework,
-        definition: { ...reportingStoryFramework.definition, template: "sdr" },
-      });
-    routes["GET /analytics/metrics"] = () =>
-      jsonResponse({
+function renderSdr(withTargets: boolean) {
+  const evaluation = withTargets
+    ? sdrEvaluation
+    : {
+        ...sdrEvaluation,
         metrics: sdrEvaluation.metrics.map((metric) => ({
-          id: metric.id,
-          version: "1",
-          unit: "count",
-          supports_target: true,
-          temporal_basis: "event_period",
-          definition:
-            "Independent confirmed outcomes credited to their original SDR.",
-          blocks: ["sdr_outcomes", "target_progress"],
+          ...metric,
+          target: undefined,
+          attainment: undefined,
         })),
-      });
-    installFetchStub(routes);
-    return (
-      <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
-      </StoryProviders>
-    );
-  },
+        charts: sdrEvaluation.charts.map((chart) => ({
+          ...chart,
+          points: chart.points.map((point) => ({
+            ...point,
+            target: undefined,
+          })),
+        })),
+      };
+  const routes = reportingStoryRoutes(evaluation);
+  routes["GET /analytics/framework"] = () =>
+    jsonResponse({
+      ...reportingStoryFramework,
+      definition: { ...reportingStoryFramework.definition, template: "sdr" },
+    });
+  routes["GET /analytics/metrics"] = () =>
+    jsonResponse({
+      metrics: sdrEvaluation.metrics.map((metric) => ({
+        id: metric.id,
+        version: "1",
+        unit: "count",
+        supports_target: true,
+        temporal_basis: "event_period",
+        definition:
+          "Independent confirmed outcomes credited to their original SDR.",
+        blocks: ["sdr_outcomes", "target_progress"],
+      })),
+    });
+  installFetchStub(routes);
+  return (
+    <StoryProviders>
+      <ReportingOverview scope={reportingStoryScope} />
+    </StoryProviders>
+  );
+}
+export const SDROutcomes: Story = { render: () => renderSdr(true) };
+export const SDRWithoutTargets: Story = { render: () => renderSdr(false) };
+export const SDRWithoutTargetsDark: Story = {
+  ...SDRWithoutTargets,
+  globals: { theme: "dark" },
+};
+export const TeamPerformanceDark: Story = {
+  ...TeamPerformance,
+  globals: { theme: "dark" },
 };

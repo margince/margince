@@ -70,14 +70,24 @@ export const Expired: Story = {
   },
 };
 
-export const RunFailures: Story = {
+export const CapturingAndFailures: Story = {
   render: () => {
     installFetchStub({
       ...reportingStoryRoutes(),
       "GET /analytics/reports/report/schedules": () =>
         jsonResponse({ data: [reportingSchedule] }),
       "GET /analytics/reports/report/executions": () =>
-        jsonResponse({ data: reportingExecutions }),
+        jsonResponse({
+          data: [
+            {
+              ...reportingExecutions[0],
+              id: "queued",
+              status: "pending",
+              edition_id: undefined,
+            },
+            ...reportingExecutions,
+          ],
+        }),
     });
     return (
       <StoryProviders>

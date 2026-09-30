@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestReportingTeamTargetRemainsIndependentOfOwnerAllocations(t *testing.T) {
@@ -62,4 +63,120 @@ func TestReportingTeamTargetRemainsIndependentOfOwnerAllocations(t *testing.T) {
 		return
 	}
 	t.Fatal("team target missing from list")
+}
+
+func TestReportingRetiredTargetStopsLiveAttainmentAndKeepsRevisionHistory(t *testing.T) {
+	f := reportingBusiness(t)
+	target := f.target
+	input := target.Definition
+	before, err := f.service.Evaluate(f.human, f.selection())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before.Metrics[0].Target == nil {
+		t.Fatal("active target was not applied")
+	}
+	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Monthly review", Audience: "private", Selection: f.selection()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	run, err := f.service.Freeze(f.human, ids.UUID(report.Id), 0, "before-retirement")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.service.Sweep(principal.SystemActing(f.human, "system:retirement-test")); err != nil {
+		t.Fatal(err)
+	}
+	completed, err := f.service.GetExecution(f.human, ids.UUID(run.Id))
+	if err != nil || completed.EditionId == nil {
+		t.Fatalf("publication: %+v %v", completed, err)
+	}
+	retired := true
+	input.Retired = &retired
+	input.Reason = "Incorrect allocation retired"
+	updated, err := f.service.UpdateTarget(f.human, ids.UUID(target.Id), target.Version, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, err := f.service.Evaluate(f.human, f.selection())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, metric := range after.Metrics {
+		if metric.Id == input.Metric && metric.Target != nil {
+			t.Fatal("retired target still drives live attainment")
+		}
+	}
+	frozen, err := f.service.GetEdition(f.human, ids.UUID(*completed.EditionId))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if frozen.Evaluation.Metrics[0].Target == nil || *frozen.Evaluation.Metrics[0].Target != float64(target.Definition.Value) {
+		t.Fatal("retirement rewrote the saved snapshot target")
+	}
+	history, err := f.service.GetTarget(f.human, ids.UUID(target.Id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if history.History == nil || len(*history.History) != 2 || (*history.History)[0].Value != input.Value || (*history.History)[1].Reason != input.Reason || updated.Version != target.Version+1 {
+		t.Fatal("retirement did not preserve reasoned revision history")
+	}
+	if _, err := f.service.UpdateTarget(f.human, ids.UUID(target.Id), target.Version, input); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Fatalf("stale retirement accepted: %v", err)
+	}
+	input.Retired = nil
+	input.Value = 0
+	input.Reason = "Explicit zero allocation"
+	if _, err := f.service.UpdateTarget(f.human, ids.UUID(target.Id), updated.Version, input); err != nil {
+		t.Fatal(err)
+	}
+	zero, err := f.service.Evaluate(f.human, f.selection())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if zero.Metrics[0].Target == nil || *zero.Metrics[0].Target != 0 {
+		t.Fatal("explicit zero target treated as retired")
+	}
+}
+
+func TestReportingPausedSchedulesRemainDiscoverableWithoutExposingSetupToReaders(t *testing.T) {
+	f := reportingBusiness(t)
+	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Scheduled review", Audience: "private", Selection: f.selection()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f.service.CreateSchedule(f.human, ids.UUID(report.Id), crmcontracts.ReportingScheduleInput{Frequency: "weekly", Day: 1, LocalTime: "09:00", ReportRevision: report.Revision, Enabled: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reports, err := f.service.ListReports(f.human, nil, 100, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reports.Data) != 1 || reports.Data[0].Cadence == nil || *reports.Data[0].Cadence != "weekly" || reports.Data[0].PausedScheduleCount == nil || *reports.Data[0].PausedScheduleCount != 1 || reports.Data[0].NextDueAt != nil {
+		t.Fatalf("paused report summary: %+v", reports)
+	}
+	actor, ok := principal.Actor(f.human)
+	if !ok {
+		t.Fatal("missing fixture actor")
+	}
+	grant := actor.Permissions.Objects["report_schedule"]
+	grant.Create = false
+	actor.Permissions.Objects["report_schedule"] = grant
+	catalog, err := f.service.Catalog(principal.WithActor(f.human, actor))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if catalog.ScheduleReady == nil {
+		t.Fatal("schedule updater did not receive setup readiness")
+	}
+	grant.Update = false
+	actor.Permissions.Objects["report_schedule"] = grant
+	catalog, err = f.service.Catalog(principal.WithActor(f.human, actor))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if catalog.ScheduleReady != nil {
+		t.Fatal("read-only schedule reader received setup readiness")
+	}
 }

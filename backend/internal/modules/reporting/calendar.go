@@ -34,7 +34,7 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 	start := time.Date(day.Year(), day.Month(), 1, 0, 0, 0, 0, zone)
 	end := at
 	switch selection.Period {
-	case "this_month":
+	case reportingThisMonth:
 	case "last_month":
 		end = start
 		start = start.AddDate(0, -1, 0)

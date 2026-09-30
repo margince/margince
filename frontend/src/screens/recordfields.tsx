@@ -17,7 +17,7 @@ import { useUnsavedGuard } from "../app/unsaved";
 import { Button } from "../design-system/atoms";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice } from "../design-system/inlinechoice";
-import { InlineText } from "../design-system/inlinetext";
+import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
@@ -73,7 +73,12 @@ type Props = {
   canEdit: boolean;
   notice?: string;
   maskedFields?: readonly string[];
+  // On a scalar row the rendered value is a destination drawn beside the edit
+  // verb, so it is never nested in the inline-edit button.
   renderValues?: Readonly<Record<string, ReactNode>>;
+  // A value's resting reading where it differs from the raw value its editor
+  // holds; a group row reads it only when the group is that one field.
+  displayValues?: Readonly<Record<string, string>>;
   links?: Readonly<Record<string, { href: string; label: string }>>;
   // A provenance mark per field, drawn BESIDE a resting scalar value: the value
   // is the inline-edit button, and a mark nested in it would be a second one.
@@ -190,7 +195,9 @@ function RecordField({
   const reason = props.fields
     .map((entry) => props.readOnlyFields?.[entry.key])
     .find(Boolean);
-  const canEdit = props.canEdit && !reason && (!pending || editing);
+  // A save elsewhere on the record pauses editing without unmounting the verb.
+  const editable = props.canEdit && !reason;
+  const canEdit = editable && (!pending || editing);
   const grouped =
     props.groups?.some((group) => group.keys.includes(field.key)) ||
     Boolean(field.searchTargets) ||
@@ -239,6 +246,7 @@ function RecordField({
         ) : (
           <GroupReading
             props={props}
+            editable={editable}
             canEdit={canEdit}
             reason={reason}
             label={label}
@@ -252,9 +260,12 @@ function RecordField({
       field={field}
       valueRef={target}
       link={props.links?.[field.key]}
+      rendered={renderedValue}
+      display={props.displayValues?.[field.key]}
       mark={props.marks?.[field.key]}
       label={label}
       values={values}
+      editable={editable}
       canEdit={canEdit}
       reason={reason}
       editing={editing}
@@ -267,40 +278,45 @@ function RecordField({
 
 function GroupReading({
   props,
+  editable,
   canEdit,
   reason,
   label,
   onEdit,
 }: Readonly<{
   props: Props;
+  editable: boolean;
   canEdit: boolean;
   reason?: string;
   label: string;
   onEdit: () => void;
 }>) {
   const t = useT();
-  const rendered = props.renderValues?.[props.fields[0].key];
-  const value = groupValue(
-    props.fields,
-    props.record,
-    t,
-    props.maskedFields,
-    props.readOnlyFields,
-  );
-  if (!canEdit)
-    return rendered ? null : (
-      <span title={reason}>{value || t("field.unset")}</span>
+  const key = props.fields[0].key;
+  const rendered = props.renderValues?.[key];
+  if (rendered)
+    return editable ? (
+      <InlineEditVerb label={label} disabled={!canEdit} onClick={onEdit} />
+    ) : null;
+  const value =
+    (props.fields.length === 1 ? props.displayValues?.[key] : undefined) ??
+    groupValue(
+      props.fields,
+      props.record,
+      t,
+      props.maskedFields,
+      props.readOnlyFields,
     );
-  const change = t("inlineChoice.change", { field: label });
+  if (!canEdit) return <span title={reason}>{value || t("field.unset")}</span>;
   return (
     <Button
       variant="link"
       className="inline-editable"
       data-empty={!value}
       onClick={onEdit}
-      aria-label={change}
+      aria-label={t("inlineChoice.change", { field: label })}
     >
-      {rendered ? change : value || t("field.unset")}
+      {value || t("field.unset")}
     </Button>
   );
 }
@@ -309,9 +325,12 @@ function RecordScalarField({
   field,
   valueRef,
   link,
+  rendered,
+  display,
   mark,
   label,
   values,
+  editable,
   canEdit,
   reason,
   editing,
@@ -322,9 +341,12 @@ function RecordScalarField({
   field: CreateField;
   valueRef: ReturnType<typeof useDetailsFieldTarget>;
   link?: { href: string; label: string };
+  rendered?: ReactNode;
+  display?: string;
   mark?: ReactNode;
   label: string;
   values: Record<string, string>;
+  editable: boolean;
   canEdit: boolean;
   reason?: string;
   editing: boolean;
@@ -342,9 +364,11 @@ function RecordScalarField({
           value={values[field.key] ?? ""}
           options={selectOptions(field, values, t)}
           render={(value) =>
-            selectOptions(field, values, t).find(
-              (option) => option.value === value,
-            )?.label ?? value
+            display && value === values[field.key]
+              ? display
+              : (selectOptions(field, values, t).find(
+                  (option) => option.value === value,
+                )?.label ?? value)
           }
           canEdit={canEdit}
           readOnlyReason={reason}
@@ -353,26 +377,33 @@ function RecordScalarField({
           onSave={onSave}
         />
       ) : (
-        <InlineText
-          label={label}
-          value={values[field.key] ?? ""}
-          placeholder={t("field.unset")}
-          multiline={field.type === "textarea"}
-          type={
-            field.type === "number" ||
-            field.type === "date" ||
-            field.type === "email"
-              ? field.type
-              : "text"
-          }
-          maxLength={field.maxLength}
-          step={field.step ?? (field.type === "number" ? "any" : undefined)}
-          canEdit={canEdit}
-          readOnlyReason={reason}
-          onEditingChange={onEditingChange}
-          onDirtyChange={onDirtyChange}
-          onSave={onSave}
-        />
+        <>
+          {!editing && rendered}
+          {(editable || !rendered) && (
+            <InlineText
+              label={label}
+              value={values[field.key] ?? ""}
+              display={display}
+              verb={Boolean(rendered)}
+              placeholder={t("field.unset")}
+              multiline={field.type === "textarea"}
+              type={
+                field.type === "number" ||
+                field.type === "date" ||
+                field.type === "email"
+                  ? field.type
+                  : "text"
+              }
+              maxLength={field.maxLength}
+              step={field.step ?? (field.type === "number" ? "any" : undefined)}
+              canEdit={canEdit}
+              readOnlyReason={reason}
+              onEditingChange={onEditingChange}
+              onDirtyChange={onDirtyChange}
+              onSave={onSave}
+            />
+          )}
+        </>
       )}
       {link && !editing && (
         <OffsiteLink href={link.href}>{link.label}</OffsiteLink>
