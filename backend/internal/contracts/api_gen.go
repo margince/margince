@@ -44064,6 +44064,14 @@ type Worklist struct {
 	// rep who can only see their own work is never offered a switch that would 403.
 	ScopeOptions []WorklistScopeOptions `json:"scope_options"`
 
+	// ScopeTruncated True when `scope` is `team` and the roster behind it came back at its cap, so
+	// rows owned by teammates past the cap were never weighed. The same admission
+	// `/worklist/team` makes with its own `truncated`, and for the same reason: a
+	// page short by a colleague's whole queue is still a page, and one that did not
+	// say so would read as a clear day. Absent or false means the scope was answered
+	// whole.
+	ScopeTruncated *bool `json:"scope_truncated,omitempty"`
+
 	// SourcesUnavailable Sources that could not be included, and why. Empty is the honest common case.
 	SourcesUnavailable []WorklistSourceUnavailable `json:"sources_unavailable"`
 
