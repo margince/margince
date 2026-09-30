@@ -110,7 +110,7 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 		}
 		if err := tx.QueryRow(ctx, fmt.Sprintf(`
 			SELECT count(*) FROM notice
-			 WHERE recipient_user_id = $1 AND read_at IS NULL AND %s`, inTheReadersLane(2)),
+			 WHERE recipient_user_id = $1 AND `+standingOnly+` AND %s`, inTheReadersLane(2)),
 			seat, muted).Scan(&page.UnreadCount); err != nil {
 			return err
 		}
@@ -170,6 +170,10 @@ func (s *Store) MarkAllRead(ctx context.Context) (int, error) {
 		// ever shown it. A second SELECT under the same predicate would be a
 		// second copy of the question, and at READ COMMITTED it could answer
 		// about a row this statement had just changed.
+		//
+		// Only notOvertaken of standing, because RETURNING reads the row this
+		// statement has just settled: read_at is no longer null there, so the
+		// half that asks is the one this write did not touch.
 		muted, txErr := mutedFor(ctx, tx, seat)
 		if txErr != nil {
 			return txErr
@@ -177,7 +181,7 @@ func (s *Store) MarkAllRead(ctx context.Context) (int, error) {
 		rows, txErr := tx.Query(ctx, fmt.Sprintf(`
 			UPDATE notice SET read_at = now()
 			 WHERE recipient_user_id = $1 AND read_at IS NULL
-			RETURNING %s`, inTheReadersLane(2)), seat, muted)
+			RETURNING %s`, inTheReadersLane(2)+" AND "+notOvertaken), seat, muted)
 		if txErr != nil {
 			return txErr
 		}

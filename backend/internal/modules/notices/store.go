@@ -299,6 +299,15 @@ const notTheReadersOwnStageMove = `NOT coalesce(
 	AND lower(origin->>'actor_id') IN
 	  (recipient_user_id::text, 'human:' || recipient_user_id::text), false)`
 
+// notOvertaken is the half of standing that another seat's act moves. It
+// stands alone only where read_at has already moved and cannot answer.
+const notOvertaken = `overtaken_at IS NULL`
+
+// standingOnly keeps a read to what still claims something of the reader:
+// unopened, and not taken back by somebody else's decision. Every reader of
+// the table composes it, so a sixth inherits the arm.
+const standingOnly = `read_at IS NULL AND ` + notOvertaken
+
 // inTheReadersLane is what the product may put in front of a reader without
 // being asked: not a stage move they made themselves, and not a class they
 // switched off.
@@ -343,7 +352,7 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 		rows, txErr := tx.Query(ctx, fmt.Sprintf(`
 			SELECT id, kind, subject, body, target_type, target_id, created_at, origin
 			  FROM notice
-			 WHERE recipient_user_id = $%d AND read_at IS NULL
+			 WHERE recipient_user_id = $%d AND `+standingOnly+`
 			   AND %s
 			 ORDER BY created_at DESC, id DESC
 			 LIMIT $%d`, recipient, lane, page), args...)

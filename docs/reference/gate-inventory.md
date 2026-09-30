@@ -266,6 +266,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `migrationcitations_test.go` | H1 | No file acquires a citation of a migration version that does not exist. |
 | `noticecasecolumns_test.go` | H2 | One SELECT list per whole-row read in the consent package. |
 | `noticedutycensus_test.go` | H3 | Every way a contact can arrive has a decided disclosure duty. |
+| `noticeovertakenfilter_test.go` | H2 | A read in notices that asks whether a line is unread also asks whether somebody else's act took it back. |
 | `onecallerpredicatebudget_test.go` | H2 | The ceiling on a statement whose predicate the CALLER wrote is one number, declared in platform/database as CallerPredicateBudget. |
 | `oneconsentcarry_test.go` | H2 | The consent carry — what happens to a retiring record's consent when another record survives it — is spelled once inside the contacts module. |
 | `onecursorenvelope_test.go` | H2 | A keyset cursor travels in one envelope, storekit's. |

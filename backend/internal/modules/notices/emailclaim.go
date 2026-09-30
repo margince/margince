@@ -59,13 +59,15 @@ type EmailAttempt struct {
 // the caller does after it is allowed to fail and lose the message; nothing
 // after it is allowed to produce a second one.
 //
-// FALSE covers three different worlds on purpose, because they are one answer
+// FALSE covers four different worlds on purpose, because they are one answer
 // to a sender: the attempt is already spent, the reader has already answered
-// the card on screen, or the notice is gone. `read_at IS NULL` is the half that
-// is not about duplicates — a job staged when the notice was written may be
-// worked seconds later, and by then the colleague may be looking at the card.
-// Mailing them about something they just answered is the most avoidable message
-// this lane can send, and it costs one predicate.
+// the card on screen, a colleague answered it for them, or the notice is gone.
+// standingOnly is the half that is not about duplicates — a job staged when the
+// notice was written may be worked seconds later, and by then the card may be
+// answered or gone. Mailing somebody about a decision they made, or about one
+// that is no longer theirs to make, is the most avoidable message this lane can
+// send, and it costs one predicate. It takes the fragment rather than the lane,
+// which narrows a READ and has no meaning over the single row this claims.
 //
 // The row is read in the SAME statement that claims it. Two statements would
 // leave a window in which the row could be settled between them, and the sender
@@ -83,7 +85,7 @@ func (s *Store) ClaimEmailAttempt(ctx context.Context, id ids.UUID) (EmailAttemp
 		row := tx.QueryRow(ctx, `
 			UPDATE notice
 			   SET email_attempted_at = now()
-			 WHERE id = $1 AND email_attempted_at IS NULL AND read_at IS NULL
+			 WHERE id = $1 AND email_attempted_at IS NULL AND `+standingOnly+`
 			 RETURNING recipient_user_id, kind, subject, body,
 			           target_type, target_id, created_at, origin, email_attempted_at`, id)
 		switch scanErr := row.Scan(&recipient, &attempt.Notice.Kind, &attempt.Notice.Subject,

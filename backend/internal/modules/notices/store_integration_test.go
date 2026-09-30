@@ -367,3 +367,91 @@ func TestANoticeToNobodyFailsLoudly(t *testing.T) {
 		t.Fatal("a notice to a user who does not exist was recorded")
 	}
 }
+
+// overtake stamps the column by hand. Who writes it, and on whose decision, is
+// a different door; what these cases are about is what the reads do with it.
+func (e *noticeEnv) overtake(t *testing.T, id ids.UUID) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE notice SET overtaken_at = now() WHERE id = $1`, id); err != nil {
+		t.Fatalf("overtaking the notice: %v", err)
+	}
+}
+
+// surfaceCounts is what each surface says the reader is holding: the Worklist
+// lane, the centre's badge, the morning's body, and the centre's own list. Read
+// together, because the defect is one surface disagreeing with the others.
+type surfaceCounts struct {
+	lane, badge, digest, centre int
+}
+
+func (e *noticeEnv) surfaces(t *testing.T, reader context.Context) surfaceCounts {
+	t.Helper()
+	lane, err := e.store.UnreadFor(reader, 8)
+	if err != nil {
+		t.Fatalf("reading the lane: %v", err)
+	}
+	page, err := e.store.ListFor(reader, 8, "")
+	if err != nil {
+		t.Fatalf("reading the centre: %v", err)
+	}
+	morning, err := e.store.DigestBody(reader, e.recipient, digestWindow)
+	if err != nil {
+		t.Fatalf("reading the morning: %v", err)
+	}
+	return surfaceCounts{
+		lane: len(lane), badge: page.UnreadCount,
+		digest: len(morning), centre: len(page.Items),
+	}
+}
+
+// A line somebody else's decision overtook is gone from the lane, gone from the
+// badge and gone from the morning — the three surfaces that told the reader a
+// decision was waiting on them. The centre still lists it: the centre is
+// history, and a line that was true when it was written belongs there.
+func TestAnOvertakenNoticeLeavesEverySurfaceThatClaimedItWasWaiting(t *testing.T) {
+	e := setupNotices(t)
+	reader := e.asUser(e.recipient)
+	// A morning carries only the classes the seat asked for in a batch, so
+	// without the preference the surface under test is empty either way.
+	if _, err := e.store.SaveNotificationPreference(reader, classAutomation, DeliveryDigest); err != nil {
+		t.Fatalf("asking for this class in a batch: %v", err)
+	}
+	id := e.raiseAutomation(t, e.recipient, "Approve the renewal")
+
+	if got, want := e.surfaces(t, reader), (surfaceCounts{lane: 1, badge: 1, digest: 1, centre: 1}); got != want {
+		t.Fatalf("a standing line reads %+v across the surfaces, want %+v", got, want)
+	}
+	e.overtake(t, id)
+	if got, want := e.surfaces(t, reader), (surfaceCounts{centre: 1}); got != want {
+		t.Fatalf("an overtaken line reads %+v across the surfaces, want %+v — it still claims a decision waits", got, want)
+	}
+}
+
+// Clearing the centre answers with what the badge was showing. An overtaken
+// line was never in that count, so it is not reported back as something the
+// reader cleared — and it is settled all the same, or it strands unread where
+// no act of theirs can reach it.
+func TestMarkAllReadDoesNotCountLinesTheReaderNeverHadWaiting(t *testing.T) {
+	e := setupNotices(t)
+	e.raiseAutomation(t, e.recipient, "Approve the renewal")
+	overtaken := e.raiseAutomation(t, e.recipient, "Approve the refund")
+	e.overtake(t, overtaken)
+
+	shown, err := e.store.MarkAllRead(e.asUser(e.recipient))
+	if err != nil {
+		t.Fatalf("settling the centre: %v", err)
+	}
+	if shown != 1 {
+		t.Fatalf("clearing reported %d lines, want 1 — the badge was carrying one", shown)
+	}
+	var unread int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM notice WHERE recipient_user_id = $1 AND read_at IS NULL`,
+		e.recipient).Scan(&unread); err != nil {
+		t.Fatal(err)
+	}
+	if unread != 0 {
+		t.Fatalf("%d line(s) left unread after clearing: an overtaken one strands in the partial index", unread)
+	}
+}

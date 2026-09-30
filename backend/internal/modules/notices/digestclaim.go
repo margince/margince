@@ -40,7 +40,7 @@ import (
 )
 
 // digestWindowSQL is how much of a seat's queue one morning considers: still
-// unread, and recorded inside the span the caller binds at fromAt and untilAt.
+// standing, and recorded inside the span the caller binds at fromAt and untilAt.
 //
 // THE PLACEHOLDERS ARE READ OFF THE ARGUMENT LIST, not written into the text.
 // Two statements compose this fragment and they do not carry the same other
@@ -66,7 +66,7 @@ import (
 // finds every notice from before five, because the bound is the MORNING and
 // not the tick.
 func digestWindowSQL(fromAt, untilAt int) string {
-	return fmt.Sprintf(`notice.read_at IS NULL
+	return fmt.Sprintf(standingOnly+`
 	   AND notice.created_at >= $%d
 	   AND notice.created_at < $%d
 	   AND `, fromAt, untilAt) + notTheReadersOwnStageMove
