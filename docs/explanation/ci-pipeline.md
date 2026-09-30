@@ -512,6 +512,16 @@ merged from the shard + unit binary pods) and `frontend` (lcov) jobs already
 produced, then runs only the scanner — so there is no second
 Postgres/Redis/MinIO stack and no duplicated test run.
 
+Those pods are uploaded through
+[`.github/actions/upload-artifact-retried`](../../.github/actions/upload-artifact-retried/action.yml),
+which every workflow in this repository uses in place of `actions/upload-artifact`
+(`backend/gates/artifactuploadretry_test.go` holds it). One transient failure
+from GitHub's artifact service used to cost a whole lane: the fan-in cannot
+merge a shard's missing pods, `ci` reports its failure, and the push-time check
+files a main-red issue against a tree whose every test passed. The wrapper
+tries twice; the second attempt is not tolerant, so a genuinely lost pod still
+fails rather than reaching the scanner as a false ~0%.
+
 Why CI-based rather than SonarCloud's Automatic Analysis: the scanner reads the
 committed [`sonar-project.properties`](../../sonar-project.properties)
 (exclusions + rule tuning + coverage report paths), so that file is the single
