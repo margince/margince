@@ -151,7 +151,7 @@ func countWallClockReads(t *testing.T) map[string]int {
 // A READ, not a call. `NewStore(db, time.Now)` hands the clock over as a value
 // and is the dominant injection idiom here: the store stamps rows at wall time
 // and no fixture helper can move it, which makes those the sites that matter
-// most. Counting only what is called missed 29 such files.
+// most.
 //
 // The package is resolved through the file's IMPORTS rather than matched on the
 // spelling `time`. Go lets a file bind the package to any name — `import

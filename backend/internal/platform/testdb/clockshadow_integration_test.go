@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -63,7 +64,12 @@ func TestTheDatabaseApplierMovesAnUnqualifiedNowForTheAppRole(t *testing.T) {
 	}
 	// ext is on no path the application connects with, and two gates rest on
 	// that. This applier must not be the thing that changes it.
-	if strings.Contains(path, "ext") {
+	//
+	// Compared element by element rather than as a substring: the path holds
+	// the expanded "$user", so a role or schema whose name merely contains the
+	// three letters — extensions, context, an app role named for them — would
+	// report a failure against a path that is correct.
+	if slices.Contains(strings.Split(path, ","), "ext") {
 		t.Errorf("the app role's effective path is %s, which volunteers ext: a unit's unqualified "+
 			"ext_* name would resolve into it under this applier and nowhere else", path)
 	}
