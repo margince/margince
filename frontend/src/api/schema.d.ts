@@ -20163,6 +20163,15 @@ export interface components {
         /** @description The folders or labels one mailbox has, as a picker offers them. */
         ConnectorContainers: {
             containers: components["schemas"]["ConnectorContainer"][];
+            /**
+             * @description True when the walk stopped short of the whole mailbox — a page or depth budget
+             *     spent before the folders ran out. The list is still worth showing: a long one
+             *     that stops beats no list at all. What it must not do is read as complete, because
+             *     somebody whose folder is missing would conclude the mailbox has no such folder
+             *     rather than that nobody looked. Absent or false means the whole mailbox was
+             *     enumerated.
+             */
+            truncated?: boolean;
         };
         /** @description One folder or label: the provider's own token, and the name its owner reads. */
         ConnectorContainer: {

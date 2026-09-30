@@ -28133,6 +28133,14 @@ type ConnectorContainer struct {
 // ConnectorContainers The folders or labels one mailbox has, as a picker offers them.
 type ConnectorContainers struct {
 	Containers []ConnectorContainer `json:"containers"`
+
+	// Truncated True when the walk stopped short of the whole mailbox — a page or depth budget
+	// spent before the folders ran out. The list is still worth showing: a long one
+	// that stops beats no list at all. What it must not do is read as complete, because
+	// somebody whose folder is missing would conclude the mailbox has no such folder
+	// rather than that nobody looked. Absent or false means the whole mailbox was
+	// enumerated.
+	Truncated *bool `json:"truncated,omitempty"`
 }
 
 // ConnectorContextTag The one existing word every record this connector creates is filed under, so
