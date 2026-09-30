@@ -192,6 +192,8 @@ The 18 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
+- `communication_override_contact_cascade` — `btree (contact_id) WHERE (contact_id IS NOT NULL)`
+- `communication_override_lead_cascade` — `btree (lead_id) WHERE (lead_id IS NOT NULL)`
 - `communication_override_live_contact` — `btree (contact_id, category) WHERE (revoked_at IS NULL)`
 - `communication_override_live_lead` — `btree (lead_id, category) WHERE (revoked_at IS NULL)`
 - `communication_override_pkey` — `unique, btree (id)`

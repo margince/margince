@@ -44,3 +44,10 @@ CREATE INDEX communication_override_live_contact
     ON communication_override (contact_id, category) WHERE revoked_at IS NULL;
 CREATE INDEX communication_override_live_lead
     ON communication_override (lead_id, category) WHERE revoked_at IS NULL;
+
+-- The live indexes above are partial on revoked_at, which a cascade cannot use:
+-- deleting the subject must find every override naming it, revoked ones included.
+CREATE INDEX communication_override_contact_cascade
+    ON communication_override (contact_id) WHERE contact_id IS NOT NULL;
+CREATE INDEX communication_override_lead_cascade
+    ON communication_override (lead_id) WHERE lead_id IS NOT NULL;

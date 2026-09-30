@@ -93,6 +93,9 @@ func (e *StopCarrierNotWiredError) Error() string {
 		"asked us to stop"
 }
 
+// Every carrier-not-wired refusal names the source record, so the three spell it once.
+const fieldSourceID = "source_id"
+
 // FieldFault carries the refusal to every surface rather than to the HTTP one
 // alone. The MCP tool surface reaches this store through the datasource seam
 // and never runs the REST error mapper, so a branch there would have told an
@@ -103,7 +106,7 @@ func (e *StopCarrierNotWiredError) Error() string {
 // the one an operator will look at. Naming the target would send them to the
 // record that has nothing wrong with it.
 func (e *StopCarrierNotWiredError) FieldFault() (field, code, message string) {
-	return "source_id", "stop_carrier_not_wired", e.Error()
+	return fieldSourceID, "stop_carrier_not_wired", e.Error()
 }
 
 // carryStopsTx is the one call site, so the refusal below cannot be forgotten

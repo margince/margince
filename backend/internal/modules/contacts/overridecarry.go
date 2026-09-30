@@ -85,5 +85,5 @@ func (e *OverrideCarrierNotWiredError) Error() string {
 // REST error mapper, and the field names the source record because that is
 // the one holding the override and the one an operator will look at.
 func (e *OverrideCarrierNotWiredError) FieldFault() (field, code, message string) {
-	return "source_id", "override_carrier_not_wired", e.Error()
+	return fieldSourceID, "override_carrier_not_wired", e.Error()
 }
