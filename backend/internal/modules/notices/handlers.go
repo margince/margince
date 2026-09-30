@@ -4,6 +4,7 @@
 package notices
 
 import (
+	"context"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -24,12 +25,20 @@ import (
 type Handlers struct {
 	store *Store
 	mates Teammates
+	seats SeatNamer
 }
 
-// NewHandlers binds the transport to its store and to the membership question
-// coaching is gated on.
-func NewHandlers(store *Store, mates Teammates) Handlers {
-	return Handlers{store: store, mates: mates}
+// NewHandlers binds the transport to its store, to the membership question
+// coaching is gated on, and to the directory that names a colleague.
+func NewHandlers(store *Store, mates Teammates, seats SeatNamer) Handlers {
+	return Handlers{store: store, mates: mates, seats: seats}
+}
+
+// SeatNamer resolves colleagues the reader is being told about. Bound by
+// compose to the same by-id seat read the Worklist lane uses — one answer to
+// "what is this colleague called", not two.
+type SeatNamer interface {
+	SeatNames(ctx context.Context, seats []ids.UserID) (map[ids.UUID]string, error)
 }
 
 // RaiseNotice records one colleague's coaching nudge to a teammate.
@@ -97,7 +106,32 @@ func (h Handlers) ListNotices(w http.ResponseWriter, r *http.Request, params crm
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, centrePageWire(page))
+	named, err := h.decidersOn(r.Context(), page)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, centrePageWire(page, named))
+}
+
+// decidersOn names the colleagues whose decisions took this page's lines back,
+// in ONE directory read rather than one per line — the page is bounded at
+// centrePageBound, so the set is too.
+//
+// An empty page asks nothing at all, and not merely for nothing: the directory
+// admits members only, and a buyer holding notices reads their own centre here.
+// Asking on their behalf would refuse the whole page over a name no line wants.
+func (h Handlers) decidersOn(ctx context.Context, page CentrePage) (map[ids.UUID]string, error) {
+	deciders := []ids.UserID{}
+	for _, item := range page.Items {
+		if item.OvertakenBy != nil {
+			deciders = append(deciders, ids.From[ids.UserKind](*item.OvertakenBy))
+		}
+	}
+	if len(deciders) == 0 {
+		return nil, nil
+	}
+	return h.seats.SeatNames(ctx, deciders)
 }
 
 // MarkAllNoticesRead clears the acting contact's centre in one act.
@@ -147,10 +181,10 @@ func (h Handlers) SaveNotificationPreference(w http.ResponseWriter, r *http.Requ
 // The token is ABSENT on a final page rather than empty, because the contract
 // makes that absence a claim — nothing was left behind — and an empty string
 // beside it is a page a client can ask for and never receive.
-func centrePageWire(page CentrePage) crmcontracts.NotificationPage {
+func centrePageWire(page CentrePage, named map[ids.UUID]string) crmcontracts.NotificationPage {
 	items := make([]crmcontracts.NotificationItem, 0, len(page.Items))
 	for _, item := range page.Items {
-		items = append(items, centreItemWire(item))
+		items = append(items, centreItemWire(item, named))
 	}
 	out := crmcontracts.NotificationPage{Items: items, UnreadCount: page.UnreadCount}
 	if page.NextCursor != "" {
@@ -165,14 +199,25 @@ func centrePageWire(page CentrePage) crmcontracts.NotificationPage {
 // Kind travels as the plain string the row holds and never as NoticeKind: that
 // vocabulary is the coaching one and a system flow's kind is deliberately absent
 // from it, so a cast would publish a value the enum does not admit.
-func centreItemWire(item CentreItem) crmcontracts.NotificationItem {
+func centreItemWire(item CentreItem, named map[ids.UUID]string) crmcontracts.NotificationItem {
 	out := crmcontracts.NotificationItem{
-		Id:        openapi_types.UUID(item.ID),
-		Kind:      item.Kind,
-		Subject:   item.Subject,
-		CreatedAt: item.CreatedAt,
-		ReadAt:    item.ReadAt,
-		Origin:    item.Origin,
+		Id:          openapi_types.UUID(item.ID),
+		Kind:        item.Kind,
+		Subject:     item.Subject,
+		CreatedAt:   item.CreatedAt,
+		ReadAt:      item.ReadAt,
+		OvertakenAt: item.OvertakenAt,
+		Origin:      item.Origin,
+	}
+	if item.OvertakenBy != nil {
+		by := openapi_types.UUID(*item.OvertakenBy)
+		out.OvertakenBy = &by
+		// A name the directory did not hold stays ABSENT rather than becoming
+		// the id spelled out: the reader gets a colleague they recognise or
+		// nothing, and never a uuid dressed as one.
+		if name, held := named[*item.OvertakenBy]; held {
+			out.OvertakenByName = &name
+		}
 	}
 	if item.Body != "" {
 		body := item.Body

@@ -38,15 +38,21 @@ import (
 // opens, and fifty lines is already more than one scroll of it.
 const centrePageBound = 50
 
-// CentreItem is one line of the centre: the notice, and whether its reader has
-// already answered it.
+// CentreItem is one line of the centre: the notice, whether its reader has
+// already answered it, and whether somebody else's act took it back first.
 //
 // ReadAt rather than a bool, because the centre renders history: "you read this
 // on Tuesday" is what tells a reader whether they are looking at something they
 // have already dealt with, and a bool cannot say when.
+//
+// OvertakenAt is the other half and never a substitute: one says the reader
+// acted, the other says they no longer need to. OvertakenBy is nil where the
+// window closed with nobody deciding, so a line can be overtaken by no one.
 type CentreItem struct {
 	Notice
-	ReadAt *time.Time
+	ReadAt      *time.Time
+	OvertakenAt *time.Time
+	OvertakenBy *ids.UUID
 }
 
 // CentrePage is one window of the centre, with the badge beside it.
@@ -115,7 +121,8 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			SELECT id, kind, subject, body, target_type, target_id, created_at, origin, read_at
+			SELECT id, kind, subject, body, target_type, target_id, created_at, origin,
+			       read_at, overtaken_at, overtaken_by
 			  FROM notice
 			 WHERE recipient_user_id = $1 AND `+notTheReadersOwnStageMove+keyset+`
 			 ORDER BY created_at DESC, id DESC
@@ -250,7 +257,8 @@ func scanCentreItems(rows pgx.Rows) ([]CentreItem, error) {
 		var targetType *string
 		var targetID *ids.UUID
 		if err := rows.Scan(&item.ID, &item.Kind, &item.Subject, &item.Body,
-			&targetType, &targetID, &item.CreatedAt, &item.Origin, &item.ReadAt); err != nil {
+			&targetType, &targetID, &item.CreatedAt, &item.Origin,
+			&item.ReadAt, &item.OvertakenAt, &item.OvertakenBy); err != nil {
 			return nil, err
 		}
 		if targetType != nil && targetID != nil {

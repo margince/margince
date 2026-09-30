@@ -12,7 +12,10 @@ package notices
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"slices"
 	"testing"
 	"time"
@@ -448,4 +451,166 @@ func itemIDs(page CentrePage) []ids.UUID {
 		out = append(out, item.ID)
 	}
 	return out
+}
+
+// The centre is history: an overtaken line is still listed, and it says why it
+// stopped standing rather than pretending the reader answered it.
+func TestTheCentreListsAnOvertakenLineAndNamesWhoDecided(t *testing.T) {
+	e := setupNotices(t)
+	approval := ids.New[ids.ApprovalKind]()
+	line := e.stageApprovalLine(t, e.recipient, approval)
+	decider := e.other
+	if _, err := e.store.OvertakeApprovalNotices(e.sweepCtx(),
+		[]Overtaking{{Approval: approval, By: &decider}}); err != nil {
+		t.Fatalf("a colleague deciding the approval: %v", err)
+	}
+
+	item := lineOf(t, e.centreThrough(t, e.asUser(e.recipient), seatsNamed{decider.UUID: "Dana Fuchs"}), line)
+	if item.OvertakenAt == nil {
+		t.Fatal("the line comes back still standing — the reader is told a decision waits on them " +
+			"when a colleague already made it")
+	}
+	if item.OvertakenBy == nil || ids.UUID(*item.OvertakenBy) != decider.UUID {
+		t.Fatalf("the line names %v as the decider, want %s", item.OvertakenBy, decider)
+	}
+	if item.OvertakenByName == nil || *item.OvertakenByName != "Dana Fuchs" {
+		t.Errorf("the line names the decider %v, want the display name a reader recognises", item.OvertakenByName)
+	}
+	// The two facts are independent, and this is the one a client rendering
+	// read_at alone gets wrong: nobody opened this line.
+	if item.ReadAt != nil {
+		t.Errorf("the line reads as settled at %v — being overtaken is not the reader answering it", item.ReadAt)
+	}
+}
+
+// A colleague who has since left resolves to no name, and the id still stands.
+// This is the null path the contract promises.
+func TestAnOvertakenLineWhoseDeciderHasLeftCarriesNoName(t *testing.T) {
+	e := setupNotices(t)
+	approval := ids.New[ids.ApprovalKind]()
+	line := e.stageApprovalLine(t, e.recipient, approval)
+	departed := e.other
+	if _, err := e.store.OvertakeApprovalNotices(e.sweepCtx(),
+		[]Overtaking{{Approval: approval, By: &departed}}); err != nil {
+		t.Fatalf("the colleague deciding before they left: %v", err)
+	}
+
+	// The directory holds nobody, which is what it answers for a seat the
+	// installation no longer has.
+	item := lineOf(t, e.centreThrough(t, e.asUser(e.recipient), seatsNamed{}), line)
+	if item.OvertakenByName != nil {
+		t.Errorf("the line names %q for a colleague the directory no longer holds", *item.OvertakenByName)
+	}
+	// The id is the fact the row holds; only the name was ever a lookup, so
+	// losing the lookup may not lose the line or the id under it.
+	if item.OvertakenBy == nil || ids.UUID(*item.OvertakenBy) != departed.UUID {
+		t.Fatalf("the line names %v as the decider, want %s — the row says so whoever has left", item.OvertakenBy, departed)
+	}
+	if item.OvertakenAt == nil {
+		t.Error("the line comes back still standing because its decider has left")
+	}
+}
+
+// The reader is told who decided only because they could have decided it
+// themselves — that is what put the line in front of them.
+//
+// Nothing in the centre asks who may decide: the fan-out asked once, per seat,
+// and wrote a line only where the answer was yes. So the boundary is the set of
+// lines, and a seat outside it holds nothing for a decider's name to ride on.
+func TestOnlyASeatThatCouldHaveDecidedIsToldWhoDid(t *testing.T) {
+	e := setupNotices(t)
+	bystander := e.seedSeat(t)
+	approval := ids.New[ids.ApprovalKind]()
+	e.stageApprovalLine(t, e.recipient, approval)
+	e.stageApprovalLine(t, e.other, approval)
+	// The bystander's centre is not empty, so a silent one below is the
+	// boundary holding and not the read failing to carry anything at all.
+	e.seedNotice(t, bystander, "A lead's first response is overdue")
+	decider := e.other
+	if _, err := e.store.OvertakeApprovalNotices(e.sweepCtx(),
+		[]Overtaking{{Approval: approval, By: &decider}}); err != nil {
+		t.Fatalf("a colleague deciding the approval: %v", err)
+	}
+
+	named := seatsNamed{decider.UUID: "Dana Fuchs"}
+	page := e.centreThrough(t, e.asUser(bystander), named)
+	if len(page.Items) != 1 {
+		t.Fatalf("the bystander's centre holds %d lines, want the 1 unrelated notice they were sent", len(page.Items))
+	}
+	for _, item := range page.Items {
+		if item.OvertakenBy != nil || item.OvertakenByName != nil {
+			t.Errorf("a seat that was never asked to decide this approval is told %v decided it",
+				item.OvertakenByName)
+		}
+	}
+	// And the seat who COULD have decided is told, so the case above is the
+	// boundary and not the name failing to resolve for anybody.
+	told := e.centreThrough(t, e.asUser(e.recipient), named)
+	if len(told.Items) != 1 || told.Items[0].OvertakenByName == nil {
+		t.Fatalf("the seat who could have decided is told %+v, want the decider's name", told.Items)
+	}
+}
+
+// seatsNamed is the directory read the centre resolves a decider through. A
+// seat it holds has a name and one it does not is simply absent, which is what
+// identity.SeatNames answers for a colleague who has left — that module holds
+// the rule against real rows, and what these cases turn on is what the centre
+// does with either answer.
+type seatsNamed map[ids.UUID]string
+
+func (s seatsNamed) SeatNames(_ context.Context, seats []ids.UserID) (map[ids.UUID]string, error) {
+	named := map[ids.UUID]string{}
+	for _, seat := range seats {
+		if name, held := s[seat.UUID]; held {
+			named[seat.UUID] = name
+		}
+	}
+	return named, nil
+}
+
+// centreThrough reads the centre through the TRANSPORT, because the decider's
+// name is resolved there: ListFor is a store method holding no collaborator to
+// ask, so a test stopping at it would prove nothing about what a reader sees.
+func (e *noticeEnv) centreThrough(t *testing.T, ctx context.Context, named seatsNamed) crmcontracts.NotificationPage {
+	t.Helper()
+	limit := 10
+	rec := httptest.NewRecorder()
+	NewHandlers(e.store, teammatesSaying(false), named).ListNotices(
+		rec, httptest.NewRequest(http.MethodGet, "/v1/notifications", nil).WithContext(ctx),
+		crmcontracts.ListNoticesParams{Limit: &limit})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("the centre answered %d: %s", rec.Code, rec.Body.String())
+	}
+	var page crmcontracts.NotificationPage
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatalf("decoding the centre: %v", err)
+	}
+	return page
+}
+
+// seedSeat adds a colleague beyond the two the environment starts with, for the
+// cases that need a seat the fan-out never wrote to.
+func (e *noticeEnv) seedSeat(t *testing.T) ids.UserID {
+	t.Helper()
+	seat := ids.New[ids.UserKind]()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`,
+		seat, "rep-"+seat.String()+"@notices.test"); err != nil {
+		t.Fatalf("seeding a colleague: %v", err)
+	}
+	return seat
+}
+
+// lineOf is the one line under test, failing rather than returning a zero item:
+// every assertion after it is about fields, and a zero value would read as the
+// feature being absent instead of the line being.
+func lineOf(t *testing.T, page crmcontracts.NotificationPage, id ids.UUID) crmcontracts.NotificationItem {
+	t.Helper()
+	for _, item := range page.Items {
+		if ids.UUID(item.Id) == id {
+			return item
+		}
+	}
+	t.Fatalf("the centre holds %d line(s) and none of them is %s", len(page.Items), id)
+	return crmcontracts.NotificationItem{}
 }

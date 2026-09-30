@@ -30670,8 +30670,9 @@ components:
     NotificationItem:
       type: object
       description: |
-        One line of the notification centre: a durable notice addressed to the caller, and
-        whether they have already answered it.
+        One line of the notification centre: a durable notice addressed to the caller, whether
+        they have already answered it, and whether somebody else's decision took it back before
+        they could.
       required: [id, kind, subject, created_at]
       properties:
         id: { type: string, format: uuid }
@@ -30695,6 +30696,25 @@ components:
             When the reader settled it. ABSENT means unread. The instant rather than a flag,
             because the centre renders history: "you read this on Tuesday" is what tells a reader
             they are looking at something they already dealt with, and a flag cannot say when.
+        overtaken_at:
+          type: string
+          format: date-time
+          description: |
+            When this line stopped being true without the reader doing anything — a colleague
+            decided the approval, or the window closed, or it was withdrawn. ABSENT means it
+            still stands. Independent of `read_at`: a reader may open an overtaken line and gain
+            a `read_at` beside it, and a client that renders only `read_at` tells them they read
+            something they never opened.
+        overtaken_by:
+          type: string
+          format: uuid
+          description: The colleague whose decision made this line untrue. Absent when nobody decided it.
+        overtaken_by_name:
+          type: string
+          description: |
+            That colleague's display name. ABSENT for a colleague who has since left, on the same
+            terms as `actor_name`: the name resolves through the membership-scoped seat read, and
+            a departed seat is simply absent from it.
         target:
           type: object
           description: |

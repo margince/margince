@@ -21294,8 +21294,9 @@ export interface components {
             items: components["schemas"]["NotificationPreference"][];
         };
         /**
-         * @description One line of the notification centre: a durable notice addressed to the caller, and
-         *     whether they have already answered it.
+         * @description One line of the notification centre: a durable notice addressed to the caller, whether
+         *     they have already answered it, and whether somebody else's decision took it back before
+         *     they could.
          */
         NotificationItem: {
             /** Format: uuid */
@@ -21321,6 +21322,26 @@ export interface components {
              *     they are looking at something they already dealt with, and a flag cannot say when.
              */
             read_at?: string;
+            /**
+             * Format: date-time
+             * @description When this line stopped being true without the reader doing anything — a colleague
+             *     decided the approval, or the window closed, or it was withdrawn. ABSENT means it
+             *     still stands. Independent of `read_at`: a reader may open an overtaken line and gain
+             *     a `read_at` beside it, and a client that renders only `read_at` tells them they read
+             *     something they never opened.
+             */
+            overtaken_at?: string;
+            /**
+             * Format: uuid
+             * @description The colleague whose decision made this line untrue. Absent when nobody decided it.
+             */
+            overtaken_by?: string;
+            /**
+             * @description That colleague's display name. ABSENT for a colleague who has since left, on the same
+             *     terms as `actor_name`: the name resolves through the membership-scoped seat read, and
+             *     a departed seat is simply absent from it.
+             */
+            overtaken_by_name?: string;
             /**
              * @description The record the notice is about, when it is about one. Both halves or neither — a type
              *     with no id names a KIND of thing and cannot be opened. Absent is the common case: a

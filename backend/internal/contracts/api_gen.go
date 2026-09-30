@@ -36149,8 +36149,9 @@ type NotificationClass string
 // interrupted.
 type NotificationDelivery string
 
-// NotificationItem One line of the notification centre: a durable notice addressed to the caller, and
-// whether they have already answered it.
+// NotificationItem One line of the notification centre: a durable notice addressed to the caller, whether
+// they have already answered it, and whether somebody else's decision took it back before
+// they could.
 type NotificationItem struct {
 	// Body The notice's own words beneath the headline. Absent when it had none.
 	Body      *string            `json:"body,omitempty"`
@@ -36166,6 +36167,21 @@ type NotificationItem struct {
 
 	// Origin The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link.
 	Origin *NoticeOrigin `json:"origin,omitempty"`
+
+	// OvertakenAt When this line stopped being true without the reader doing anything — a colleague
+	// decided the approval, or the window closed, or it was withdrawn. ABSENT means it
+	// still stands. Independent of `read_at`: a reader may open an overtaken line and gain
+	// a `read_at` beside it, and a client that renders only `read_at` tells them they read
+	// something they never opened.
+	OvertakenAt *time.Time `json:"overtaken_at,omitempty"`
+
+	// OvertakenBy The colleague whose decision made this line untrue. Absent when nobody decided it.
+	OvertakenBy *openapi_types.UUID `json:"overtaken_by,omitempty"`
+
+	// OvertakenByName That colleague's display name. ABSENT for a colleague who has since left, on the same
+	// terms as `actor_name`: the name resolves through the membership-scoped seat read, and
+	// a departed seat is simply absent from it.
+	OvertakenByName *string `json:"overtaken_by_name,omitempty"`
 
 	// ReadAt When the reader settled it. ABSENT means unread. The instant rather than a flag,
 	// because the centre renders history: "you read this on Tuesday" is what tells a reader
