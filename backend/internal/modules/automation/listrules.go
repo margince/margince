@@ -127,8 +127,8 @@ func validateListRuleParams(extra map[string]any) func(map[string]any) error {
 				return &ParamError{Field: "params." + key, Reason: "is required"}
 			}
 		}
-		for key, value := range params {
-			if err := validateListRuleParam(key, value, extra); err != nil {
+		for key := range params {
+			if err := validateListRuleParam(params, key, extra); err != nil {
 				return err
 			}
 		}
@@ -136,8 +136,8 @@ func validateListRuleParams(extra map[string]any) func(map[string]any) error {
 	}
 }
 
-func validateListRuleParam(key string, value any, extra map[string]any) error {
-	field := "params." + key
+func validateListRuleParam(params map[string]any, key string, extra map[string]any) error {
+	field, value := "params."+key, params[key]
 	switch key {
 	case paramListID, paramShortlistID:
 		if key == paramShortlistID && extra[paramShortlistID] == nil {
@@ -188,7 +188,11 @@ func actionsFor(direction string) []string {
 // live Live List they can find and the Shortlist one of its record type they
 // may change. The same questions are asked again as the owner at fire time.
 func validateListRuleRefs(ctx context.Context, lists Lists, params map[string]any) error {
-	rule, err := decodeListRuleParams(params)
+	raw, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+	rule, err := decodeListRuleParams(raw)
 	if err != nil {
 		return err
 	}
@@ -241,15 +245,7 @@ type listRuleParams struct {
 	ShortlistID *ids.UUID `json:"shortlist_id"`
 }
 
-func decodeListRuleParams(params any) (listRuleParams, error) {
-	raw, ok := params.(json.RawMessage)
-	if !ok {
-		encoded, err := json.Marshal(params)
-		if err != nil {
-			return listRuleParams{}, err
-		}
-		raw = encoded
-	}
+func decodeListRuleParams(raw json.RawMessage) (listRuleParams, error) {
 	var out listRuleParams
 	if err := json.Unmarshal(raw, &out); err != nil {
 		return listRuleParams{}, fmt.Errorf("automation: reading a list rule's params: %w", err)
