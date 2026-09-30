@@ -9,10 +9,8 @@ package activities
 // mailbox.
 //
 // The statement measures every inbound message of a year against the mail that
-// answered it, so its cost is per row and a row's cost is set by the plan: on
-// production it ran 28 s over 4,600 messages and cancelled at the 30 s ceiling,
-// which took the Worklist and the hourly owed-verdict run with it. A result
-// test cannot see that, because the slow plan and the fast one return the same
+// answered it, so its cost is per row and a row's cost is set by the plan. A
+// result test cannot see that: a slow plan and a fast one return the same
 // number. So this reads the plan.
 
 import (
