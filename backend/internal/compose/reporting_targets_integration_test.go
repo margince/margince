@@ -167,6 +167,15 @@ func TestReportingPausedSchedulesRemainDiscoverableWithoutExposingSetupToReaders
 	if err != nil {
 		t.Fatal(err)
 	}
+	if catalog.ScheduleReady == nil {
+		t.Fatal("schedule updater did not receive setup readiness")
+	}
+	grant.Update = false
+	actor.Permissions.Objects["report_schedule"] = grant
+	catalog, err = f.service.Catalog(principal.WithActor(f.human, actor))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if catalog.ScheduleReady != nil {
 		t.Fatal("read-only schedule reader received setup readiness")
 	}

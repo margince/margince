@@ -291,7 +291,11 @@ export function BulletChart({
               style={markGeometry(
                 (Math.max(0, reading.value ?? 0) / scale) * 100,
               )}
-              aria-label={`${reading.label}: ${reading.amount}; ${targetLabel}: ${reading.targetAmount ?? "—"}`}
+              aria-label={
+                reading.target != null
+                  ? `${reading.label}: ${reading.amount}; ${targetLabel}: ${reading.targetAmount ?? "—"}`
+                  : `${reading.label}: ${reading.amount}`
+              }
             >
               <span className="report-chart-row-name">{reading.label}</span>
               <span className="report-chart-bullet" aria-hidden="true">

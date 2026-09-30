@@ -13,10 +13,8 @@ import {
 
 type Contact = components["schemas"]["Contact"];
 
-// ContactsScreen reads through
-// the api client on mount — fixtures mirror contacts.test.tsx's `anna` +
-// dormant-strength default (the Overview tab fires the strength GET
-// unconditionally).
+// ContactsScreen reads through the api client on mount — fixtures mirror
+// contacts.test.tsx's `anna`.
 const meta: Meta = {
   title: "Records/Contacts",
   parameters: { layout: "padded" },

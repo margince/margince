@@ -133,7 +133,6 @@ function readModule(path: string, text: string): Module {
 type ModuleGraph = {
   /** Every module the roots load, each parsed once however often reached. */
   readonly reach: (roots: readonly string[]) => ReadonlyMap<string, Module>;
-  readonly moduleOf: (path: string) => Module | undefined;
 };
 
 function moduleGraph(program: Program): ModuleGraph {
@@ -164,19 +163,7 @@ function moduleGraph(program: Program): ModuleGraph {
     }
     return reached;
   };
-  return { reach, moduleOf };
-}
-
-// A kept module vouches for the keys it names itself, never for its imports'.
-function renderingModules(
-  graph: ModuleGraph,
-  entries: readonly string[],
-  kept: readonly string[],
-): Module[] {
-  return [
-    ...graph.reach(entries).values(),
-    ...kept.flatMap((path) => graph.moduleOf(path) ?? []),
-  ];
+  return { reach };
 }
 
 /**
@@ -216,14 +203,13 @@ describe("the orphan finder, over a planted tree", () => {
   const verdict = (
     files: Record<string, string>,
     keys: readonly string[],
-    kept: readonly string[] = [],
   ): string[] => {
     const graph = moduleGraph({
       tree: new Map(Object.entries(files)),
       aliases: new Map([["@alias/copy", "/app/src/aliased"]]),
       catalogs: new Set(),
     });
-    return orphanKeys(keys, renderingModules(graph, [MAIN], kept));
+    return orphanKeys(keys, graph.reach([MAIN]).values());
   };
 
   it("counts a key the entry renders", () => {
@@ -320,16 +306,6 @@ describe("the orphan finder, over a planted tree", () => {
     expect(verdict(files, keys)).toEqual(["a.raw", "a.url"]);
   });
 
-  it("lets a kept module vouch for its own keys and not its imports'", () => {
-    const files = {
-      [MAIN]: ``,
-      "/app/src/kept.tsx": `import { Row } from "./row"; t("k.own");`,
-      "/app/src/row.tsx": `t("k.imported");`,
-    };
-    const keys = ["k.own", "k.imported"];
-    expect(verdict(files, keys, ["/app/src/kept.tsx"])).toEqual(["k.imported"]);
-  });
-
   it("counts a plural pair by its base only where a loaded module names it", () => {
     const files = {
       [MAIN]: `plural("live.count", n);`,
@@ -356,31 +332,6 @@ describe("the orphan finder, over a planted tree", () => {
 
 const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FRONTEND_ROOT = resolve(SRC_ROOT, "..");
-
-// Kept while unmounted: the issue that mounts it, and the keys it may vouch for.
-const KEPT_UNMOUNTED: ReadonlyMap<
-  string,
-  { readonly issue: string; readonly keys: readonly string[] }
-> = new Map([
-  [
-    join(SRC_ROOT, "screens", "strength.tsx"),
-    {
-      issue: "#4880",
-      keys: [
-        "strength.computedFrom",
-        "strength.factor.direction",
-        "strength.factor.frequency",
-        "strength.factor.recency",
-        "strength.factor.reciprocity",
-        "strength.inout",
-        "strength.lastInteraction",
-        "strength.none",
-        "strength.score",
-        "strength.title",
-      ],
-    },
-  ],
-]);
 
 // vite.config.ts names no build input, so Vite builds its default: the root
 // index.html. Each MCP view under src/ is built from its own index.html.
@@ -470,7 +421,6 @@ describe("catalog keys against the bundle that renders them", () => {
     ...buildScriptEntries(),
   ];
   const mounted = graph.reach(entries);
-  const kept = [...KEPT_UNMOUNTED.keys()];
   const keys = Object.keys(en);
 
   it("derives an entry point from every owner that declares one", () => {
@@ -481,29 +431,8 @@ describe("catalog keys against the bundle that renders them", () => {
     expect(missing, "declared, but not a file in src").toEqual([]);
   });
 
-  it("keeps an unmounted module only while it exists and nothing mounts it", () => {
-    const stale = kept.filter((path) => !tree.has(path) || mounted.has(path));
-    expect(
-      stale,
-      "mounted or deleted now: drop its KEPT_UNMOUNTED entry",
-    ).toEqual([]);
-  });
-
-  it("lets a kept module vouch for exactly the keys it is kept for", () => {
-    const withKept = new Set(
-      orphanKeys(keys, renderingModules(graph, entries, kept)),
-    );
-    const vouched = orphanKeys(keys, mounted.values()).filter(
-      (key) => !withKept.has(key),
-    );
-    const declared = [...KEPT_UNMOUNTED.values()].flatMap(
-      (entry) => entry.keys,
-    );
-    expect(vouched.sort()).toEqual([...declared].sort());
-  });
-
   it("every key is rendered by a module the bundle loads", () => {
-    const orphans = orphanKeys(keys, renderingModules(graph, entries, kept));
+    const orphans = orphanKeys(keys, mounted.values());
     expect(
       orphans,
       `keys translated three times and rendered nowhere: ${orphans.join(", ")}`,

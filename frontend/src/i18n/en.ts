@@ -7679,20 +7679,10 @@ export const en = {
   "auto.preview.explainer":
     "Read-only dry run. No records are changed and nothing is sent.",
 
-  "strength.title": "Relationship strength",
-  "strength.score": "Score {score} of 100",
   "strength.bucket.none": "Dormant",
   "strength.bucket.weak": "Weak",
   "strength.bucket.moderate": "Warm",
   "strength.bucket.strong": "Strong",
-  "strength.factor.recency": "Recency",
-  "strength.factor.frequency": "Frequency",
-  "strength.factor.reciprocity": "Reciprocity",
-  "strength.factor.direction": "Direction",
-  "strength.lastInteraction": "Last interaction: {when}",
-  "strength.none": "No interactions yet",
-  "strength.inout": "{in} in · {out} out (90 days)",
-  "strength.computedFrom": "Computed from {count} activities",
 
   // The relationship-graph coverage card (ADR-0078).
   "coverage.engaged": "Engaged",
@@ -7825,7 +7815,7 @@ export const en = {
   "settings.page.company.sub":
     "Company name, currency and business context used across all records.",
   "settings.page.authentication.sub":
-    "How people sign in to this installation, and which apps may act for it.",
+    "How people sign in to this installation, which apps may act for it, and which IdP groups grant roles.",
   "settings.page.members.sub":
     "Everyone with a seat, and what each can access.",
   "settings.page.teams.sub":
@@ -8947,6 +8937,28 @@ export const en = {
     "Shows this provider on the sign-in screen. Turning it off stops sign-ins in progress; existing sessions continue.",
   "signInMethods.noneConfigured":
     "This installation has no external provider configured. Password is the only sign-in method.",
+  "groupRoles.title": "Group role grants",
+  "groupRoles.sub":
+    "Grant a role at corporate sign-in to every invited member of an IdP group. Spell the group exactly as the ID token’s groups claim does. No account is created this way: an email nobody invited is refused, whether they have groups or not.",
+  "groupRoles.grantOnlyTitle": "Grants only: the directory never revokes",
+  "groupRoles.grantOnly":
+    "Each sign-in grants the mapped roles and never removes any. Removing a member from an IdP group does not take the role away here: revocation stays a deliberate admin action on the member’s own account.",
+  "groupRoles.adminGrant":
+    "Mapping a group onto Admin grants admin to every invited member of that group at their next sign-in.",
+  "groupRoles.group": "IdP group",
+  "groupRoles.groupPlaceholder": "Group, exactly as the ID token spells it",
+  "groupRoles.role": "Granted role",
+  "groupRoles.add": "Add group",
+  "groupRoles.remove": "Remove this group mapping",
+  "groupRoles.removeNamed": "Remove the {group} mapping",
+  "groupRoles.save": "Save group grants",
+  "groupRoles.empty":
+    "No groups are mapped. Corporate sign-in grants nothing beyond what each member already holds.",
+  "groupRoles.blankGroup": "Every mapping needs a group name.",
+  "groupRoles.whitespaceGroup":
+    "A group name cannot begin or end with a space. It must match the ID token exactly.",
+  "groupRoles.duplicateGroup": "Each group can be mapped only once.",
+  "groupRoles.tooMany": "At most 64 groups can be mapped.",
   "oauthApp.google.title": "Google app",
   "oauthApp.google.sub":
     "Mailboxes are connected, and people sign in with Google, through a Google OAuth app your company owns, using its own credentials.",

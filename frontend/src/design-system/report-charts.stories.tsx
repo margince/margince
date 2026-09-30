@@ -216,3 +216,8 @@ export const NoComparisonHistory: Story = {
     />
   ),
 };
+
+export const OwnerTargetsDark: Story = {
+  ...OwnerTargets,
+  globals: { theme: "dark" },
+};

@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { ReportingComparison } from "./reporting.comparison";
@@ -419,4 +420,69 @@ it("clears capture feedback when publication finishes before the execution refet
   expect(
     screen.queryByText("Snapshot queued. It will appear here when ready."),
   ).not.toBeInTheDocument();
+});
+
+it("recovers capture after retrying unavailable execution status", async () => {
+  const user = userEvent.setup({ delay: null });
+  let unavailable = true;
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/reports/report/executions": () =>
+      unavailable
+        ? jsonResponse(
+            { title: "Execution status unavailable", status: 503 },
+            503,
+          )
+        : jsonResponse({ data: [] }),
+  });
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  await screen.findByRole("alert");
+  const capture = screen.getByRole("button", { name: "Save snapshot" });
+  expect(capture).toBeDisabled();
+  unavailable = false;
+  await user.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(capture).toBeEnabled());
+});
+
+it("selects an adjacent comparison when older history supplies the first pair", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/editions/compare": () =>
+      jsonResponse({
+        left: reportingEditions[1],
+        right: reportingEditions[0],
+        compatible: true,
+        deltas: [],
+      }),
+  });
+  function History() {
+    const [loaded, setLoaded] = useState(false);
+    return (
+      <ReportingComparison
+        editions={loaded ? reportingEditions : [reportingEditions[0]]}
+        hasMore={!loaded}
+        onLoadMore={() => setLoaded(true)}
+        onClose={() => {}}
+      />
+    );
+  }
+  render(
+    <StoryProviders>
+      <History />
+    </StoryProviders>,
+  );
+  expect(
+    screen.queryByRole("heading", { name: "Won deal value" }),
+  ).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole("button", { name: "Load older snapshots" }),
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Won deal value" }),
+  ).toBeVisible();
 });

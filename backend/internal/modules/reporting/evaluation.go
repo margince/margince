@@ -28,7 +28,8 @@ func (s *Service) Catalog(ctx context.Context) (crmcontracts.ReportingCatalog, e
 		return crmcontracts.ReportingCatalog{}, err
 	}
 	out, err := s.evaluator.Catalog(ctx)
-	if err != nil || !auth.Allows(ctx, "report_schedule", principal.ActionCreate) {
+	canSchedule := auth.Allows(ctx, "report_schedule", principal.ActionCreate) || auth.Allows(ctx, "report_schedule", principal.ActionUpdate)
+	if err != nil || !canSchedule {
 		return out, err
 	}
 	err = s.store.db.Tx(ctx, func(tx pgx.Tx) error {

@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -321,4 +322,44 @@ it("lets an author pause an enabled schedule after retention becomes unavailable
       expect.objectContaining({ enabled: false }),
     ),
   );
+});
+
+it("waits for readiness before claiming retention setup is needed", async () => {
+  let release: () => void = () => {
+    throw new Error("Readiness was not requested");
+  };
+  const response = new Promise<Response>((resolve) => {
+    release = () =>
+      resolve(jsonResponse({ metrics: [], schedule_ready: true }));
+  });
+  const readiness = vi.fn(() => response);
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/metrics": readiness,
+  });
+  render(
+    <StoryProviders>
+      <ReportingScheduleDialog
+        report={reportingStoryReport}
+        timezone={REPORTING_FIXTURE_ZONE}
+        onClose={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await waitFor(() => expect(readiness).toHaveBeenCalledOnce());
+  const enabled = screen.getByRole("checkbox", { name: "Schedule enabled" });
+  expect(enabled).toBeDisabled();
+  expect(
+    screen.queryByText(/Enable snapshot retention/),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Retention settings" }),
+  ).not.toBeInTheDocument();
+  await act(async () => {
+    release();
+  });
+  await waitFor(() => expect(enabled).toBeEnabled());
+  expect(
+    screen.queryByText(/Enable snapshot retention/),
+  ).not.toBeInTheDocument();
 });

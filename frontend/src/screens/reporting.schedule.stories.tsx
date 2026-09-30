@@ -66,3 +66,21 @@ export const RetentionRequired: Story = {
     );
   },
 };
+
+export const ReadinessLoading: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/metrics": () => new Promise<Response>(() => undefined),
+    });
+    return (
+      <StoryProviders>
+        <Preview />
+      </StoryProviders>
+    );
+  },
+};
+export const ReadinessLoadingDark: Story = {
+  ...ReadinessLoading,
+  globals: { theme: "dark" },
+};

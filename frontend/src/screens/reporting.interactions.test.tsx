@@ -162,7 +162,7 @@ it("does not request editions or schedules without their read grants", async () 
     screen.queryByRole("button", { name: "Save snapshot" }),
   ).not.toBeInTheDocument();
 });
-it("preserves the sales pipeline when returning from SDR outcomes", async () => {
+it("preserves the sales pipeline after changing the SDR date range", async () => {
   const user = userEvent.setup({ delay: null });
   installFetchStub(reportingStoryRoutes());
   render(
@@ -176,7 +176,15 @@ it("preserves the sales pipeline when returning from SDR outcomes", async () => 
   expect(
     screen.queryByRole("combobox", { name: "Pipeline" }),
   ).not.toBeInTheDocument();
+  await pickOption(
+    user,
+    screen.getByRole("combobox", { name: "Date range" }),
+    "Last month",
+  );
   await user.click(screen.getByRole("button", { name: "Sales" }));
+  expect(
+    screen.getByRole("combobox", { name: "Date range" }),
+  ).toHaveTextContent("Last month");
   expect(screen.getByRole("combobox", { name: "Pipeline" })).toHaveTextContent(
     "Sales",
   );

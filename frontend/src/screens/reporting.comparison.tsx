@@ -41,10 +41,12 @@ export function ReportingComparison({
       .filter((after) => adjacentEditions(before, after))
       .map((after) => ({ before, after })),
   )[0];
-  const [left, setLeft] = useState(
-    firstPair?.before.id ?? editions[1]?.id ?? "",
-  );
-  const [right, setRight] = useState(firstPair?.after.id ?? "");
+  const [selection, setSelection] = useState<{
+    left: string;
+    right: string;
+  } | null>(null);
+  const left = selection?.left ?? firstPair?.before.id ?? editions[1]?.id ?? "";
+  const right = selection?.right ?? firstPair?.after.id ?? "";
   const [evidence, setEvidence] = useState<{
     edition: ReportingEdition;
     reference: ReportingEvidenceRef;
@@ -84,8 +86,7 @@ export function ReportingComparison({
                 value={left}
                 options={options}
                 onChange={(value) => {
-                  setLeft(value);
-                  setRight("");
+                  setSelection({ left: value, right: "" });
                 }}
               />
             )}
@@ -104,7 +105,7 @@ export function ReportingComparison({
                   );
                   return before && after && adjacentEditions(before, after);
                 })}
-                onChange={setRight}
+                onChange={(value) => setSelection({ left, right: value })}
               />
             )}
           </Field>

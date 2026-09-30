@@ -118,6 +118,47 @@ func TestTheInstallationGrantDoesNotOpenTheSignInPolicy(t *testing.T) {
 	}
 }
 
+// Enforced-SSO round-trips through the policy: an admin sets it on the same
+// installation_settings.update path its sibling uses, the authentication_policy
+// read reports it, and the login gate's own anonymous read sees the same value —
+// the three surfaces resolving one stored answer.
+func TestRequireSSORoundTripsThroughThePolicy(t *testing.T) {
+	e := SetupSearch(t)
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+
+	writer := e.authPolicyCtx(map[string]principal.ObjectGrant{
+		"installation_settings": {Read: true, Update: true},
+	})
+	on := true
+	if _, err := store.UpdateInstallation(writer, identity.InstallationPatch{RequireSSO: &on, RequireMFA: &on}); err != nil {
+		t.Fatalf("turning enforced-SSO and require-MFA on: %v", err)
+	}
+
+	reader := e.authPolicyCtx(map[string]principal.ObjectGrant{"authentication_policy": {Read: true}})
+	policy, err := store.SignInPolicy(reader)
+	if err != nil {
+		t.Fatalf("reading the sign-in policy: %v", err)
+	}
+	if !policy.RequireSSO || !policy.RequireMFA {
+		t.Errorf("the authentication_policy read did not report the switches after they were turned on: %+v", policy)
+	}
+
+	// The login-path gates read each on an anonymous context, the way the login
+	// flow does.
+	loginCtx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	enforced, err := store.SSOEnforced(loginCtx)
+	if err != nil {
+		t.Fatalf("the login gate's SSO read: %v", err)
+	}
+	requireMFA, err := store.MFARequired(loginCtx)
+	if err != nil {
+		t.Fatalf("the login gate's MFA read: %v", err)
+	}
+	if !enforced || !requireMFA {
+		t.Errorf("the login-path reads did not see the stored policy: sso=%v mfa=%v", enforced, requireMFA)
+	}
+}
+
 // The split is only HALF done, and this records which half.
 //
 // A narrow endpoint beside an aggregate that still hands the same field to every

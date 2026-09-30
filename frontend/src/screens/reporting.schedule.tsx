@@ -128,8 +128,10 @@ export function ReportingScheduleDialog({
           {timezone}
         </p>
         <p className="t-caption">{t("reporting.scheduleBasis")}</p>
-        {!ready && <p role="status">{t("reporting.scheduleSetup")}</p>}
-        {!ready && canRetention && (
+        {readiness.isSuccess && !ready && (
+          <p role="status">{t("reporting.scheduleSetup")}</p>
+        )}
+        {readiness.isSuccess && !ready && canRetention && (
           <Button
             variant="link"
             onClick={() => navigate({ screen: "settings", id: "retention" })}

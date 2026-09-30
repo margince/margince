@@ -268,10 +268,16 @@ function OverviewBody({
           },
         }}
         onChange={(next) => {
-          setPeriod(next.period);
-          setPipelineId(next.pipeline_id ?? "");
-          setTargetBasis(next.target_basis);
-          setCloseWindow(next.close_window);
+          if (next.period !== period) setPeriod(next.period);
+          if (
+            template === "sales" &&
+            next.pipeline_id !== selection.pipeline_id
+          )
+            setPipelineId(next.pipeline_id ?? "");
+          if (next.target_basis !== targetBasis)
+            setTargetBasis(next.target_basis);
+          if (next.close_window !== closeWindow)
+            setCloseWindow(next.close_window);
           setEvidence(null);
         }}
       />
