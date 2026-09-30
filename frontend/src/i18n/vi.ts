@@ -7522,6 +7522,17 @@ export const vi = {
   "cf.noPermission":
     "Bạn chỉ có quyền đọc trường tùy chỉnh — thêm, sửa và lưu trữ không thuộc quyền của bạn ở đây.",
   "cf.retired": "Đã ngừng dùng",
+  "cf.retire.title": "Lưu trữ “{label}”?",
+  "cf.retire.body":
+    "Trường sẽ bị ẩn khỏi bản ghi mới và bộ lọc. Các giá trị đã lưu được giữ lại.",
+  "cf.retire.lists":
+    "Các danh sách động này lọc theo trường này. Chúng vẫn hoạt động với giá trị đã lưu và sẽ nhắc thành viên phụ trách thay điều kiện:",
+  "cf.retire.unseen_one":
+    "{count} danh sách động khác mà bạn không mở được cũng lọc theo trường này.",
+  "cf.retire.unseen_other":
+    "{count} danh sách động khác mà bạn không mở được cũng lọc theo trường này.",
+  "cf.retire.noLists": "Không có danh sách động nào lọc theo trường này.",
+  "cf.retire.checking": "Đang kiểm tra danh sách nào dùng trường này",
   // "Chung" thay vì "Tổ chức" cho mục đầu tiên: tiêu đề nhóm phía trên đã nói
   // từ đó, và một dòng lặp lại tiêu đề của chính nó thì không gọi tên được gì.
   "settings.home": "T\u1ed5ng quan",
@@ -10013,13 +10024,15 @@ export const vi = {
   "lists.health.ownerless": "C\u1ea7n ph\u1ee5 tr\u00e1ch",
   "lists.health.invalid":
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
+  "lists.health.retiredField":
+    "D\u00f9ng tr\u01b0\u1eddng \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng",
   "lists.library.title":
     "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
   "lists.library.search": "T\u00ecm danh s\u00e1ch",
   "lists.library.all": "T\u1ea5t c\u1ea3",
   "lists.library.kind": "Lo\u1ea1i danh s\u00e1ch",
   "lists.library.empty":
-    "Ch\u01b0a c\u00f3 danh s\u00e1ch n\u00e0o. H\u00e3y l\u01b0u m\u1ed9t b\u1ed9 l\u1ecdc th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng ho\u1eb7c t\u1ea1o danh s\u00e1ch ch\u1ecdn.",
+    "Ch\u01b0a c\u00f3 danh s\u00e1ch \u0111\u01b0\u1ee3c chia s\u1ebb n\u00e0o. H\u00e3y l\u01b0u m\u1ed9t b\u1ed9 l\u1ecdc th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng ho\u1eb7c t\u1ea1o danh s\u00e1ch ch\u1ecdn.",
   "lists.library.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
   "lists.col.name": "T\u00ean",
   "lists.col.kind": "Lo\u1ea1i",
@@ -10065,6 +10078,12 @@ export const vi = {
   "lists.ownerless.body":
     "Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch \u0111\u00e3 r\u1eddi \u0111i ho\u1eb7c ch\u01b0a t\u1eebng \u0111\u01b0\u1ee3c ch\u1ec9 \u0111\u1ecbnh. Ai c\u00f3 quy\u1ec1n s\u1eeda danh s\u00e1ch n\u00ean nh\u1eadn ph\u1ee5 tr\u00e1ch.",
   "lists.ownerless.takeOver": "Nh\u1eadn ph\u1ee5 tr\u00e1ch",
+  "lists.retiredField.title":
+    "B\u1ed9 l\u1ecdc n\u00e0y d\u00f9ng m\u1ed9t tr\u01b0\u1eddng \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng",
+  "lists.retiredField.body_one":
+    "{fields} \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng. Danh s\u00e1ch v\u1eabn ho\u1ea1t \u0111\u1ed9ng v\u1edbi c\u00e1c gi\u00e1 tr\u1ecb \u0111\u00e3 l\u01b0u, nh\u01b0ng s\u1ebd kh\u00f4ng c\u00f3 gi\u00e1 tr\u1ecb m\u1edbi. Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch n\u00ean thay \u0111i\u1ec1u ki\u1ec7n \u0111\u00f3 trong b\u1ed9 l\u1ecdc.",
+  "lists.retiredField.body_other":
+    "{fields} \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng. Danh s\u00e1ch v\u1eabn ho\u1ea1t \u0111\u1ed9ng v\u1edbi c\u00e1c gi\u00e1 tr\u1ecb \u0111\u00e3 l\u01b0u, nh\u01b0ng s\u1ebd kh\u00f4ng c\u00f3 gi\u00e1 tr\u1ecb m\u1edbi. Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch n\u00ean thay c\u00e1c \u0111i\u1ec1u ki\u1ec7n \u0111\u00f3 trong b\u1ed9 l\u1ecdc.",
   "lists.members.title": "Th\u00e0nh vi\u00ean",
   "lists.members.loading": "\u0110ang t\u1ea3i th\u00e0nh vi\u00ean",
   "lists.members.emptyLive":
@@ -10130,6 +10149,9 @@ export const vi = {
     "Ch\u01b0a c\u00f3 ch\u1ebf \u0111\u1ed9 xem n\u00e0o. H\u00e3y t\u1ea1o b\u1ed9 l\u1ecdc r\u1ed3i b\u1ea5m L\u01b0u b\u1ed9 l\u1ecdc.",
   "lists.views.loading":
     "\u0110ang t\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
+  "lists.myLists.title": "Danh s\u00e1ch c\u1ee7a t\u00f4i",
+  "lists.myLists.empty":
+    "Ch\u01b0a c\u00f3 danh s\u00e1ch ri\u00eang t\u01b0 n\u00e0o. Danh s\u00e1ch ch\u1ec9 b\u1ea1n t\u00ecm th\u1ea5y s\u1ebd hi\u1ec7n \u1edf \u0111\u00e2y. Khi chia s\u1ebb, danh s\u00e1ch s\u1ebd chuy\u1ec3n sang ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb.",
   "lists.history.someone": "Ai \u0111\u00f3",
 
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.

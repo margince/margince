@@ -7798,6 +7798,27 @@ func (e CustomFieldType) Valid() bool {
 	}
 }
 
+// Defines values for CustomFieldLiveListSharing.
+const (
+	CustomFieldLiveListSharingPrivate   CustomFieldLiveListSharing = "private"
+	CustomFieldLiveListSharingTeam      CustomFieldLiveListSharing = "team"
+	CustomFieldLiveListSharingWorkspace CustomFieldLiveListSharing = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the CustomFieldLiveListSharing enum.
+func (e CustomFieldLiveListSharing) Valid() bool {
+	switch e {
+	case CustomFieldLiveListSharingPrivate:
+		return true
+	case CustomFieldLiveListSharingTeam:
+		return true
+	case CustomFieldLiveListSharingWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DataSubjectRequestKind.
 const (
 	DataSubjectRequestKindAccess  DataSubjectRequestKind = "access"
@@ -10395,9 +10416,10 @@ func (e ListEntityType) Valid() bool {
 
 // Defines values for ListHealth.
 const (
-	ListHealthInvalid   ListHealth = "invalid"
-	ListHealthOk        ListHealth = "ok"
-	ListHealthOwnerless ListHealth = "ownerless"
+	ListHealthInvalid      ListHealth = "invalid"
+	ListHealthOk           ListHealth = "ok"
+	ListHealthOwnerless    ListHealth = "ownerless"
+	ListHealthRetiredField ListHealth = "retired_field"
 )
 
 // Valid indicates whether the value is a known member of the ListHealth enum.
@@ -10408,6 +10430,8 @@ func (e ListHealth) Valid() bool {
 	case ListHealthOk:
 		return true
 	case ListHealthOwnerless:
+		return true
+	case ListHealthRetiredField:
 		return true
 	default:
 		return false
@@ -19678,6 +19702,27 @@ func (e ListListsParamsListType) Valid() bool {
 	case ListListsParamsListTypeDynamic:
 		return true
 	case ListListsParamsListTypeStatic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListListsParamsSharing.
+const (
+	ListListsParamsSharingPrivate   ListListsParamsSharing = "private"
+	ListListsParamsSharingTeam      ListListsParamsSharing = "team"
+	ListListsParamsSharingWorkspace ListListsParamsSharing = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListListsParamsSharing enum.
+func (e ListListsParamsSharing) Valid() bool {
+	switch e {
+	case ListListsParamsSharingPrivate:
+		return true
+	case ListListsParamsSharingTeam:
+		return true
+	case ListListsParamsSharingWorkspace:
 		return true
 	default:
 		return false
@@ -30532,6 +30577,9 @@ type CustomField struct {
 	// Label Display label; the only thing a rename updates.
 	Label string `json:"label"`
 
+	// LiveLists Only on the retire answer: the Live Lists whose filter names the field. Every other read leaves it out.
+	LiveLists *CustomFieldLiveLists `json:"live_lists,omitempty"`
+
 	// Object The existing core object this field is added to (CUSTOM-FIELDS-PARAM-2).
 	Object CustomFieldObject `json:"object"`
 
@@ -30568,6 +30616,24 @@ type CustomFieldType string
 type CustomFieldListResponse struct {
 	Data []CustomField `json:"data"`
 	Page PageInfo      `json:"page"`
+}
+
+// CustomFieldLiveList defines model for CustomFieldLiveList.
+type CustomFieldLiveList struct {
+	Id      openapi_types.UUID         `json:"id"`
+	Name    string                     `json:"name"`
+	Sharing CustomFieldLiveListSharing `json:"sharing"`
+}
+
+// CustomFieldLiveListSharing defines model for CustomFieldLiveList.Sharing.
+type CustomFieldLiveListSharing string
+
+// CustomFieldLiveLists The Live Lists whose filter names a custom field: the ones the caller may find by name, and how many more exist that they may not find.
+type CustomFieldLiveLists struct {
+	Lists []CustomFieldLiveList `json:"lists"`
+
+	// UnseenCount Live Lists that name the field but that this caller may not find.
+	UnseenCount int `json:"unseen_count"`
 }
 
 // DataCompleteness How much of what the band needs is actually present — with BOTH counts. "4 of 9"
@@ -34639,7 +34705,7 @@ type List struct {
 	Dependencies *[]ListDependency `json:"dependencies,omitempty"`
 	EntityType   ListEntityType    `json:"entity_type"`
 
-	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles.
+	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `invalid` outranks `ownerless`, which outranks `retired_field`.
 	Health   ListHealth          `json:"health"`
 	Id       openapi_types.UUID  `json:"id"`
 	ListType ListListType        `json:"list_type"`
@@ -34648,6 +34714,9 @@ type List struct {
 
 	// Purpose What the list is for, in the words of its steward.
 	Purpose *string `json:"purpose,omitempty"`
+
+	// RetiredFields The retired custom fields a Live List's filter names, by column name. Absent when it names none.
+	RetiredFields *[]string `json:"retired_fields,omitempty"`
 
 	// Sharing Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
 	Sharing ListSharing `json:"sharing"`
@@ -34668,7 +34737,7 @@ type List struct {
 // ListEntityType defines model for List.EntityType.
 type ListEntityType string
 
-// ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles.
+// ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `invalid` outranks `ownerless`, which outranks `retired_field`.
 type ListHealth string
 
 // ListListType defines model for List.ListType.
@@ -48834,6 +48903,9 @@ type ListListsParams struct {
 	// Q Matches the name or purpose, case-insensitively.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 
+	// Sharing Only lists with one of these sharing settings. `private` alone reads the caller's own private lists; `team` and `workspace` together read the lists shared with others.
+	Sharing *[]ListListsParamsSharing `form:"sharing,omitempty" json:"sharing,omitempty"`
+
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
 	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 }
@@ -48843,6 +48915,9 @@ type ListListsParamsEntityType string
 
 // ListListsParamsListType defines parameters for ListLists.
 type ListListsParamsListType string
+
+// ListListsParamsSharing defines parameters for ListLists.
+type ListListsParamsSharing string
 
 // ListListHistoryParams defines parameters for ListListHistory.
 type ListListHistoryParams struct {
@@ -63365,6 +63440,9 @@ type ServerInterface interface {
 	// Rename a custom field's display label (🟢 — not a schema change).
 	// (PATCH /custom-fields/{id})
 	RenameCustomField(w http.ResponseWriter, r *http.Request, id Id, params RenameCustomFieldParams)
+	// The Live Lists whose filter names this custom field.
+	// (GET /custom-fields/{id}/lists)
+	ListCustomFieldLiveLists(w http.ResponseWriter, r *http.Request, id Id)
 	// Edit a picklist custom field's allowed options (🟡 — regenerates the column's CHECK).
 	// (PATCH /custom-fields/{id}/options)
 	UpdateCustomFieldOptions(w http.ResponseWriter, r *http.Request, id Id, params UpdateCustomFieldOptionsParams)
@@ -66635,6 +66713,12 @@ func (_ Unimplemented) CreateCustomField(w http.ResponseWriter, r *http.Request,
 // Rename a custom field's display label (🟢 — not a schema change).
 // (PATCH /custom-fields/{id})
 func (_ Unimplemented) RenameCustomField(w http.ResponseWriter, r *http.Request, id Id, params RenameCustomFieldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The Live Lists whose filter names this custom field.
+// (GET /custom-fields/{id}/lists)
+func (_ Unimplemented) ListCustomFieldLiveLists(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -83216,6 +83300,40 @@ func (siw *ServerInterfaceWrapper) RenameCustomField(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListCustomFieldLiveLists operation middleware
+func (siw *ServerInterfaceWrapper) ListCustomFieldLiveLists(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCustomFieldLiveLists(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UpdateCustomFieldOptions operation middleware
 func (siw *ServerInterfaceWrapper) UpdateCustomFieldOptions(w http.ResponseWriter, r *http.Request) {
 
@@ -89420,6 +89538,19 @@ func (siw *ServerInterfaceWrapper) ListLists(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sharing" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sharing", r.URL.Query(), &params.Sharing, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sharing"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sharing", Err: err})
 		}
 		return
 	}
@@ -102879,6 +103010,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/custom-fields/{id}", wrapper.RenameCustomField)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/custom-fields/{id}/lists", wrapper.ListCustomFieldLiveLists)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/custom-fields/{id}/options", wrapper.UpdateCustomFieldOptions)

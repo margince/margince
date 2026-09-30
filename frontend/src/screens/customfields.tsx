@@ -46,6 +46,7 @@ import {
   looksStructural,
   slug,
 } from "./customfields.logic";
+import { RetireFieldConfirm } from "./customfields.retire";
 import "./customfields.css";
 import { stable } from "../format/collate";
 
@@ -574,6 +575,7 @@ export function CustomFieldsAdmin() {
   const [object, setObject] = useState<CfObject>("deal");
   const toast = useToast();
   const [renaming, setRenaming] = useState<CustomField | null>(null);
+  const [retiring, setRetiring] = useState<CustomField | null>(null);
   const [renameLabel, setRenameLabel] = useState("");
   // The dialog stays MOUNTED so it can animate out, so `addSeq` is what gives
   // each open a builder of its own: it re-keys the form, which discards a
@@ -689,25 +691,6 @@ export function CustomFieldsAdmin() {
     },
   });
 
-  const archive = useMutation({
-    mutationFn: async (field: CustomField) => {
-      const { data, error } = await api.POST("/custom-fields/{id}/retire", {
-        params: { path: { id: field.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (_data, field) => {
-      invalidate();
-      toast.show(t("cf.archived", { label: field.label }));
-    },
-    onError: (error) => {
-      toast.show(problemMessageOf(error, t), { tone: "danger" });
-    },
-  });
-
   const startRename = (field: CustomField) => {
     setRenaming(field);
     setRenameLabel(field.label);
@@ -782,7 +765,7 @@ export function CustomFieldsAdmin() {
                       canEdit={canEdit}
                       meUserId={meUserId}
                       onRename={startRename}
-                      onArchive={(field) => archive.mutate(field)}
+                      onArchive={setRetiring}
                     />
                   )}
                 </QueryGate>
@@ -845,6 +828,16 @@ export function CustomFieldsAdmin() {
           onCancel={() => setAdding(false)}
         />
       </Modal>
+
+      <RetireFieldConfirm
+        field={retiring}
+        onClose={() => setRetiring(null)}
+        onRetired={(field) => {
+          invalidate();
+          toast.show(t("cf.archived", { label: field.label }));
+          setRetiring(null);
+        }}
+      />
 
       <Modal
         open={renaming !== null}

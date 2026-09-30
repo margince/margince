@@ -42,7 +42,7 @@ func (s listSeam) ReadLists(ctx context.Context, q agents.ListRead) (json.RawMes
 	}
 	switch q.Mode {
 	case agents.ListModeFind:
-		filter := collections.ListFilter{Query: &q.Query, Archived: storekit.LiveOnly}
+		filter := collections.ListFilter{Query: &q.Query, Sharing: q.Sharing, Archived: storekit.LiveOnly}
 		if q.EntityType != "" {
 			filter.EntityType = &q.EntityType
 		}

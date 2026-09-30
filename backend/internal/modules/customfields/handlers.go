@@ -119,13 +119,20 @@ func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id c
 
 // RetireCustomField soft-retires the field (CUSTOM-FIELDS-WIRE-4):
 // status flips to retired, archived_at stays null, the physical column
-// and every value in it are preserved.
+// and every value in it are preserved. It names the Live Lists still
+// filtering on the field, which keep evaluating on the kept values.
 func (h Handlers) RetireCustomField(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RetireCustomFieldParams) {
 	field, err := h.svc.Retire(r.Context(), ids.UUID(id))
 	if err != nil {
 		writeCustomFieldErr(w, r, err)
 		return
 	}
+	lists, err := h.svc.LiveLists(r.Context(), ids.UUID(id))
+	if err != nil {
+		writeCustomFieldErr(w, r, err)
+		return
+	}
+	field.LiveLists = &lists
 	httperr.WriteJSON(w, http.StatusOK, field)
 }
 

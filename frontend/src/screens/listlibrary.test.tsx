@@ -221,4 +221,53 @@ describe("the shared views", () => {
       sharing: "team",
     });
   });
+
+  it("reads only the lists shared with a team or everyone", async () => {
+    const asked: string[] = [];
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () => jsonResponse({ data: [], page: { has_more: false } }),
+    });
+    const inner = globalThis.fetch;
+    globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes("/lists")) {
+        asked.push(new URL(url, "https://x.local").search);
+      }
+      return inner(input, init);
+    };
+    library();
+    expect(
+      await screen.findByText(en["lists.library.empty"]),
+    ).toBeInTheDocument();
+    expect(asked).not.toHaveLength(0);
+    for (const search of asked) {
+      const sharing = new URLSearchParams(search).getAll("sharing");
+      expect(sharing.sort()).toEqual(["team", "workspace"]);
+    }
+  });
+
+  it("says a Live List uses a retired field", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () =>
+        jsonResponse({
+          data: [
+            {
+              ...liveList,
+              health: "retired_field",
+              retired_fields: ["cf_last_touch"],
+            },
+          ],
+          page: { has_more: false },
+        }),
+    });
+    library();
+    const row = (await screen.findByText(liveList.name)).closest(
+      "tr",
+    ) as HTMLElement;
+    expect(
+      within(row).getByText(en["lists.health.retiredField"]),
+    ).toBeInTheDocument();
+  });
 });

@@ -7776,6 +7776,17 @@ export const en = {
     "Every addition, edit and archive is recorded permanently in the audit log.",
   "cf.noPermission": "You have read-only access to custom fields.",
   "cf.retired": "Retired",
+  "cf.retire.title": "Archive “{label}”?",
+  "cf.retire.body":
+    "It is hidden from new records and filters. The values already stored are kept.",
+  "cf.retire.lists":
+    "These Live Lists filter on it. They keep working on the stored values, and each asks its steward to replace the clause:",
+  "cf.retire.unseen_one":
+    "{count} more Live List you cannot open also filters on it.",
+  "cf.retire.unseen_other":
+    "{count} more Live Lists you cannot open also filter on it.",
+  "cf.retire.noLists": "No Live List filters on this field.",
+  "cf.retire.checking": "Checking which lists use this field",
   // The settings level, in the order the sidebar prints it. "General" rather
   // than "Company" for the first company entry: the group heading above it
   // already says that word, and a row repeating its own heading names nothing.
@@ -10269,12 +10280,13 @@ export const en = {
   "lists.audience.unknownTeam": "A team you cannot see",
   "lists.health.ownerless": "Needs a steward",
   "lists.health.invalid": "Filter no longer works",
+  "lists.health.retiredField": "Uses a retired field",
   "lists.library.title": "Shared views",
   "lists.library.search": "Search lists",
   "lists.library.all": "All",
   "lists.library.kind": "List type",
   "lists.library.empty":
-    "No lists yet. Save a filter as a Live List, or start a Shortlist.",
+    "No shared lists yet. Save a filter as a Live List, or start a Shortlist.",
   "lists.library.loading": "Loading lists",
   "lists.col.name": "Name",
   "lists.col.kind": "Type",
@@ -10312,6 +10324,11 @@ export const en = {
   "lists.ownerless.body":
     "Its steward has left or was never set. Somebody who may change the list should take it over.",
   "lists.ownerless.takeOver": "Look after it",
+  "lists.retiredField.title": "This filter uses a retired field",
+  "lists.retiredField.body_one":
+    "{fields} was retired. The list still works on the values already stored, and nothing new is recorded there. Its steward should replace that clause in the builder.",
+  "lists.retiredField.body_other":
+    "{fields} were retired. The list still works on the values already stored, and nothing new is recorded there. Its steward should replace those clauses in the builder.",
   "lists.members.title": "Members",
   "lists.members.loading": "Loading members",
   "lists.members.emptyLive":
@@ -10367,6 +10384,9 @@ export const en = {
   "lists.pickShortlist": "Pick a Shortlist",
   "lists.views.empty": "No views yet. Build a filter and press Save view.",
   "lists.views.loading": "Loading saved filters",
+  "lists.myLists.title": "My lists",
+  "lists.myLists.empty":
+    "No private lists. A list only you can find shows here. Share it and it moves to Shared views.",
   "lists.history.someone": "Someone",
 
   // The Filters & views screen's own chrome. The match line is keyed per object

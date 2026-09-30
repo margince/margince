@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 239.8 KB |
+| Tool catalog | 240.2 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 62438 |
+| Approx. wire tokens | 62531 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 107.2 KB | 44% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 60.8 KB | 25% | Yes, every step |
-| Input schemas | 54.8 KB | 22% | Yes, every step |
+| Descriptions (incl. governance clause) | 61.0 KB | 25% | Yes, every step |
+| Input schemas | 55.1 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.9 KB | 7% | Partly |
-| **Description + input schema** | **115.7 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **116.0 KB** | **48%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -121,7 +121,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/company-brief.html`](#company_brief_view) | 3.2 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
-| [`read_lists`](#read_lists) | Find and read lists | yes |  | 3.1 KB |
+| [`read_lists`](#read_lists) | Find and read lists | yes |  | 3.5 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.2 KB |
@@ -11779,7 +11779,7 @@ Where one import got to: awaiting approval, running, done, or stopped. A stopped
 
 **Find and read lists**
 
-Find the team's Live Lists (saved filters whose members join and leave on their own) and Shortlists (records chosen by hand), read one, page through its members, say why a record is or is not on it, read what changed on it, or preview what a filter would select before a Live List is saved. Every count, member and reason is what the user you act for may see: a list shared with them never shows a member record they cannot read, so two users may see different counts for one list. A preview is logged as a read of those records. search_records finds records by name; tags are applied with apply_tag, not lists. Keep list_id, the version for a later change, and next_cursor to read the next page. (Governance: runs immediately; requires passport scope "read".)
+Find the team's Live Lists (saved filters whose members join and leave on their own) and Shortlists (records chosen by hand), read one, page through its members, say why a record is or is not on it, read what changed on it, or preview what a filter would select before a Live List is saved. Every count, member and reason is what the user you act for may see: a list shared with them never shows a member record they cannot read, so two users may see different counts for one list. A preview is logged as a read of those records. A list with health retired_field still works but filters on a retired custom field, named in retired_fields; its steward should replace that clause. search_records finds records by name; tags are applied with apply_tag, not lists. Keep list_id, the version for a later change, and next_cursor to read the next page. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -11899,6 +11899,18 @@ Find the team's Live Lists (saved filters whose members join and leave on their 
       "description": "For why: the record to explain",
       "format": "uuid",
       "type": "string"
+    },
+    "sharing": {
+      "description": "For find (optional): only lists with one of these sharing settings; private alone is the caller's own private lists",
+      "items": {
+        "enum": [
+          "private",
+          "team",
+          "workspace"
+        ],
+        "type": "string"
+      },
+      "type": "array"
     }
   },
   "required": [

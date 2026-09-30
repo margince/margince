@@ -7589,6 +7589,17 @@ export const de = {
     "Jedes Hinzufügen, Bearbeiten und Archivieren wird dauerhaft im Audit-Log erfasst.",
   "cf.noPermission": "Du hast nur Lesezugriff auf eigene Felder.",
   "cf.retired": "Stillgelegt",
+  "cf.retire.title": "„{label}“ archivieren?",
+  "cf.retire.body":
+    "Das Feld verschwindet aus neuen Datensätzen und Filtern. Gespeicherte Werte bleiben erhalten.",
+  "cf.retire.lists":
+    "Diese Live-Listen filtern danach. Mit den gespeicherten Werten funktionieren sie weiter und bitten ihre Verantwortlichen, die Bedingung zu ersetzen:",
+  "cf.retire.unseen_one":
+    "{count} weitere Live-Liste, die du nicht öffnen kannst, filtert ebenfalls danach.",
+  "cf.retire.unseen_other":
+    "{count} weitere Live-Listen, die du nicht öffnen kannst, filtern ebenfalls danach.",
+  "cf.retire.noLists": "Keine Live-Liste filtert nach diesem Feld.",
+  "cf.retire.checking": "Prüfe, welche Listen dieses Feld nutzen",
   // "Allgemein" statt "Firma" für den ersten Eintrag: die Gruppen-
   // überschrift darüber sagt das Wort schon, und eine Zeile, die ihre eigene
   // Überschrift wiederholt, benennt nichts.
@@ -10116,12 +10127,13 @@ export const de = {
   "lists.audience.unknownTeam": "Ein Team, das du nicht sehen kannst",
   "lists.health.ownerless": "Niemand verantwortlich",
   "lists.health.invalid": "Filter funktioniert nicht mehr",
+  "lists.health.retiredField": "Nutzt ein stillgelegtes Feld",
   "lists.library.title": "Geteilte Ansichten",
   "lists.library.search": "Listen durchsuchen",
   "lists.library.all": "Alle",
   "lists.library.kind": "Listentyp",
   "lists.library.empty":
-    "Noch keine Listen. Speichere einen Filter als Live-Liste oder lege eine Shortlist an.",
+    "Noch keine geteilten Listen. Speichere einen Filter als Live-Liste oder lege eine Shortlist an.",
   "lists.library.loading": "Listen werden geladen",
   "lists.col.name": "Name",
   "lists.col.kind": "Typ",
@@ -10161,6 +10173,11 @@ export const de = {
   "lists.ownerless.body":
     "Niemand ist mehr verantwortlich, oder es war nie jemand. Wer die Liste \u00e4ndern darf, sollte sie \u00fcbernehmen.",
   "lists.ownerless.takeOver": "\u00dcbernehmen",
+  "lists.retiredField.title": "Dieser Filter nutzt ein stillgelegtes Feld",
+  "lists.retiredField.body_one":
+    "{fields} wurde stillgelegt. Die Liste funktioniert weiter mit den gespeicherten Werten, neue kommen dort nicht mehr hinzu. Wer die Liste verantwortet, sollte diese Bedingung im Filter ersetzen.",
+  "lists.retiredField.body_other":
+    "{fields} wurden stillgelegt. Die Liste funktioniert weiter mit den gespeicherten Werten, neue kommen dort nicht mehr hinzu. Wer die Liste verantwortet, sollte diese Bedingungen im Filter ersetzen.",
   "lists.members.title": "Mitglieder",
   "lists.members.loading": "Mitglieder werden geladen",
   "lists.members.emptyLive":
@@ -10219,6 +10236,9 @@ export const de = {
   "lists.views.empty":
     "Noch keine Ansichten. Erstelle einen Filter und klicke auf \u201eAnsicht speichern\u201c.",
   "lists.views.loading": "Gespeicherte Filter werden geladen",
+  "lists.myLists.title": "Meine Listen",
+  "lists.myLists.empty":
+    "Keine privaten Listen. Hier steht jede Liste, die nur du findest. Teilst du sie, wandert sie zu den geteilten Ansichten.",
   "lists.history.someone": "Jemand",
 
   // Die Oberfl\u00e4che \u201eFilter & Ansichten\u201c.
