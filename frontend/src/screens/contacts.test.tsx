@@ -210,12 +210,6 @@ describe("ContactsScreen (B-EP09.10a)", () => {
   });
 });
 
-// The dormant/no-interactions strength response — the default backstop for
-// every stubFetch call below that isn't itself exercising the strength card
-// (P-4): the Contact Overview now fires this GET unconditionally, and none of
-// those pre-existing tests care about its shape, so they get an honest
-// zero/dormant reading rather than a mismatched shape from the contact-fixture
-// catch-all.
 const dormantStrength = {
   score: 0,
   bucket: "none",
@@ -223,12 +217,9 @@ const dormantStrength = {
   last_interaction: null,
 };
 
-// A URL-capturing fetch stub shared across the P-14/15/16 wiring tests
-// below: every request is recorded so a test can assert the params it
-// carried, and a caller-supplied responder decides what comes back. Strength
-// requests are answered with the dormant default up front (overridable via
-// `strength`) so tests that don't care about relationship strength don't have
-// to plumb a branch for it.
+// A URL-capturing fetch stub shared across the wiring tests below: every
+// request is recorded so a test can assert the params it carried, and a
+// caller-supplied responder decides what comes back.
 function stubFetch(
   responder: (
     url: string,
@@ -236,7 +227,6 @@ function stubFetch(
     request: Request,
   ) => Promise<Response>,
   options?: Readonly<{
-    strength?: unknown;
     // The deals this contact sits on and the buying role they hold on each —
     // the identity rail's own section, empty for every test that isn't about it.
     dealRoles?: readonly components["schemas"]["Contact360DealRole"][];
@@ -246,15 +236,12 @@ function stubFetch(
   const fetchMock = vi.fn(async (request: Request) => {
     urls.push(request.url);
     const pathname = new URL(request.url).pathname;
-    if (pathname.endsWith("/strength")) {
-      return jsonResponse(options?.strength ?? dormantStrength);
-    }
     if (pathname.endsWith("/360")) {
       return jsonResponse({
         as_of: "2026-08-04T09:00:00Z",
         contact: anna,
         sections_omitted: [],
-        strength: options?.strength ?? dormantStrength,
+        strength: dormantStrength,
         last_inbound_at: "2026-07-01T09:00:00Z",
         last_outbound_at: "2026-06-20T09:00:00Z",
         network: { colleagues: [] },

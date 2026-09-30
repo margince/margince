@@ -109,6 +109,9 @@ var erasureCascadeFiles = []string{
 	// this cascade — and a spelling per arm is how the cascade came to have
 	// none at all.
 	"internal/modules/privacy/activityidentityretire.go",
+	// The duplicate-pair evidence snapshot, which holds the subject's name,
+	// address and phone number as the detector read them.
+	"internal/modules/privacy/dedupeevidencescrub.go",
 	// The subject's traces in the relationship graph — the interaction
 	// participants, the imported LinkedIn ghosts, and the projection folded out
 	// of both. Same Art. 17 transaction, its own file for the same size reason

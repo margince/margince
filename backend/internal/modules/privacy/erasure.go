@@ -371,6 +371,12 @@ func anonymizeSubjectRows(
 	if err := deleteSubjectListMemberships(ctx, tx, contactID, wiped); err != nil {
 		return nil, err
 	}
+	// The duplicate-pair snapshots naming either end, which hold the name,
+	// address and phone number as the detector read them. Both ends, because a
+	// promoted subject is a contact AND the lead twins just wiped.
+	if err := scrubDedupeEvidence(ctx, tx, []ids.UUID{contactID.UUID}, wiped); err != nil {
+		return nil, err
+	}
 	if err := purgeContactDerivedRows(ctx, tx, contactID, subjects); err != nil {
 		return nil, err
 	}
