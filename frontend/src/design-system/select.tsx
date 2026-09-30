@@ -366,8 +366,8 @@ function SelectPopup({
   animate: boolean;
 }>) {
   return (
-    // The listbox is the element that scrolls: a scroller needs no tab stop of
-    // its own only when it is the combobox's popup.
+    // The scroller is the listbox, so it takes no tab stop. Divs, as ul/li
+    // would announce twice; no name, as the combobox is named.
     <div
       ref={listbox.popup}
       className="select-popup"
@@ -383,11 +383,6 @@ function SelectPopup({
       // `contentSizedPopupBox` and the cap in select.css.
       style={contentSizedPopupBox(frame)}
     >
-      {/* Divs rather than ul/li: `role="listbox"` and `role="option"` are the
-          semantics, and a list element that also claims an interactive role is
-          announced twice over. The listbox carries no name of its own either —
-          the combobox that owns it is named, and a second name on the popup is
-          read out on top of it. */}
       <div className="select-list">
         {options.map((option, index) => (
           // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path is the combobox trigger's own keydown handling

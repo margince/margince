@@ -65,7 +65,7 @@
   flex: none;
 }
 .urlnote.err {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 .urlnote.ok {
   color: var(--successText);

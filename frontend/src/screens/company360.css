@@ -931,7 +931,7 @@
    reading itself, and a reader who has to check whether it is coloured has
    already read it. */
 .fin-amount-hero {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 .fin-lede {
   margin: 0;
@@ -1222,32 +1222,6 @@
    (design-system/panel.tsx) is that plate, and it is the whole device: a
    reader can tell which part of the panel is what IS from which part is what
    to DO before reading a word of either. */
-/* Whose move it is, at the top and in its own weight: the one thing a reader
-   must know before the moves under it mean anything. */
-.today-lead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-2);
-  margin: 0;
-}
-/* The mark carries the state's colour so the block reads before it is read.
-   It is 6px of ink rather than a token step: a dot sized off the spacing
-   scale is either a full stop or a bullet, and this is neither. */
-.today-lead-mark {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  corner-shape: round;
-  background: currentColor;
-  flex: none;
-}
-.today-lead-warning {
-  color: var(--warning);
-}
-.today-lead-danger {
-  color: var(--danger);
-}
 /* How long it has stood that way — quieter than the state, and never so long
    that it becomes the sentence.
 

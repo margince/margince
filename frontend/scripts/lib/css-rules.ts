@@ -7,6 +7,7 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { extensionLayers } from "./source-tree";
 
 export function stylesheets(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -20,6 +21,16 @@ export function stylesheets(dir: string): string[] {
   });
 }
 
+// Every sheet the bundle ships: the core's and each extension's frontend layer.
+export function appStylesheets(frontendRoot: string): string[] {
+  return [
+    ...stylesheets(join(frontendRoot, "src")),
+    ...extensionLayers(join(frontendRoot, "..", "extensions")).flatMap(
+      stylesheets,
+    ),
+  ];
+}
+
 export type Rule = { file: string; selector: string; body: string };
 
 export function rules(root: string): Rule[] {
@@ -29,6 +40,10 @@ export function rules(root: string): Rule[] {
       `no stylesheet under ${root} — a rule walk over none reports a clean tree`,
     );
   }
+  return rulesOf(sheets);
+}
+
+export function rulesOf(sheets: readonly string[]): Rule[] {
   const all: Rule[] = [];
   for (const file of sheets) {
     const sheet = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
@@ -313,5 +328,13 @@ export function subjectClasses(selector: string): Set<string> {
 export function inks(body: string): string[] {
   return [...body.matchAll(/(?:^|[;{\s])color:\s*var\((--[\w-]+)\)/g)].map(
     ([, ink]) => ink,
+  );
+}
+
+// Every value a rule's body gives `color`, whatever it is spelled as: a
+// fallback, a `color-mix()` or a second declaration all read here.
+export function colorValues(body: string): string[] {
+  return [...body.matchAll(/(?:^|[;{\s])color\s*:\s*([^;]+)/g)].map(
+    ([, value]) => value.trim(),
   );
 }

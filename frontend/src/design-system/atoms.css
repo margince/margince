@@ -2285,16 +2285,8 @@ span.error-line {
   border-radius: inherit;
   background: var(--success);
 }
-/* A reading whose figure carries a tone carries it into the bar too, in the
-   SAME state: the bar is the same claim at a glance, and a bar in another state
-   than the figure above it is the card disagreeing with itself about how it
-   went. A reading with no tone is not a neutral reading, it is one that is
-   fine, so the untoned bar takes --success with the toned ones
-   (`.stat-card-meter-fill` above) — a row of identical grey tracks made the
-   reader compare lengths to find the one that is wrong, when the colour
-   already knows. The brand accent said the same thing in the colour of a
-   primary action, which is how a bar that reports came to look like one a
-   reader could press. */
+/* The bar reads its figure's state in the base token; an untoned bar reads
+   --success, because a reading nobody toned is one that is fine. */
 .stat-card-warning ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--warning);
 }

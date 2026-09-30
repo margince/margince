@@ -1708,13 +1708,18 @@ test.describe("WCAG 2.2 AA (axe), the cold start's ignition at 390px", () => {
     }) => {
       await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
       await mockApi(page, { journey: "unconfigured" });
+      await page.clock.install();
       await page.goto("/#/onboarding");
       await page.getByLabel(de["firstRun.ai.key"]).fill("AIza-not-a-real-key");
       await page.getByRole("button", { name: de["firstRun.continue"] }).click();
-      const can = page.getByRole("list").filter({
+      // By tag rather than role, so a list that lost its role still reaches
+      // the scan and axe's own listitem rule is what refuses it.
+      const can = page.locator("ul").filter({
         hasText: de["firstRun.ignite.canNow"],
       });
-      await expect(can.getByRole("listitem")).toHaveCount(3);
+      await expect(can.locator("li")).toHaveCount(3);
+      // Past the Core's last timed beat, so the scan reads the settled room.
+      await page.clock.runFor(4000);
       await settleAnimations(page);
       await expectNoAaViolations(
         page,

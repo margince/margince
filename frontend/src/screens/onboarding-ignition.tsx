@@ -117,12 +117,8 @@ export function Ignition({
       <p className="ob-ig-beat" data-beat="1">
         {t("firstRun.ignite.reaching")}
       </p>
-      {/* One live region for the sequence, and it is the LIST: what changed is
-          what the installation can and cannot do, and a screen reader hearing
-          three timed lines in four seconds hears an interruption rather than a
-          ceremony. The headline above is the stage's and announces itself.
-          Not role="status": a role on the <ul> replaces "list", and the items
-          are no longer counted. */}
+      {/* `aria-live` rather than `role="status"`: a role on the <ul> replaces
+          list and orphans its items. */}
       <ul className="ob-ig-can" aria-live="polite" aria-atomic="true">
         {CAPABILITIES.map((c) => (
           <li key={c.what} data-can={c.can}>

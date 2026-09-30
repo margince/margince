@@ -11,7 +11,7 @@ import { Ignition } from "./onboarding-ignition";
 afterEach(cleanup);
 
 describe("the ignition's capability lines", () => {
-  it("reach a screen reader as one list of three items that announces itself", () => {
+  it("reach a screen reader as one list of three items inside a polite, atomic live region", () => {
     render(
       <LocaleProvider initial="en">
         <Ignition vendor="Google Gemini" onDone={() => {}} />

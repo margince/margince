@@ -135,7 +135,7 @@
      compared with nothing, rather than lined up with the body's tabular
      figures. */
   font-family: var(--fontFamilyHeading);
-  color: var(--warning);
+  color: var(--warningText);
 }
 .co-spine-gap .co-spine-rail {
   border-block-start-style: dashed;

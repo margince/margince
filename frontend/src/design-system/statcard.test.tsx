@@ -1,11 +1,19 @@
 /** @vitest-environment happy-dom */
 
-import { readFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  alternativesOf,
+  appStylesheets,
+  classesOf,
+  colorValues,
+  type Rule,
+  rulesOf,
+  subjectOf,
+} from "../../scripts/lib/css-rules";
 import {
   extensionFrontendFiles,
   filesMatching,
@@ -13,7 +21,6 @@ import {
 } from "../../scripts/lib/source-tree";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { rulesIn } from "../testing/css";
 import { STAT_CARD_TONES, StatCard } from "./statcard";
 
 // THE DOOR OUT OF A READING SAYS "Open", AND NOTHING ELSE EVER.
@@ -134,47 +141,86 @@ describe("no reading names its own door", () => {
   });
 });
 
-describe("a toned figure is read, so it takes the ink that clears contrast", () => {
-  const rules = filesMatching(sourceRoot, /\.css$/).flatMap((path) =>
-    rulesIn(readFileSync(path, "utf8")).map((rule) => ({
-      ...rule,
-      at: `${relative(sourceRoot, path)}:${rule.line}`,
-    })),
+// The figure's ink is spelled once, in atoms.css, so a sheet that colours the
+// figure anywhere else is a second author of it whatever token it picks.
+function figureInks(all: readonly Rule[]) {
+  return all.flatMap((rule) =>
+    alternativesOf(rule.selector).flatMap((selector) => {
+      const classes = classesOf(subjectOf(selector));
+      const tone = STAT_CARD_TONES.find((one) =>
+        classes.has(`stat-card-${one}`),
+      );
+      if (tone === undefined && !classes.has("stat-card-value")) return [];
+      const home = basename(rule.file) === "atoms.css";
+      return colorValues(rule.body)
+        .filter((value) => !home || (tone && value !== `var(--${tone}Text)`))
+        .map(
+          (value) => `${basename(rule.file)} ${selector} { color: ${value} }`,
+        );
+    }),
   );
+}
+
+describe("a toned figure is read, so it takes the ink that clears contrast", () => {
+  const all = rulesOf(appStylesheets(join(here, "..", "..")));
   const declared = (selector: string) =>
-    rules
-      .filter((rule) => rule.selector.trim() === selector)
+    all
+      .filter(
+        (rule) =>
+          basename(rule.file) === "atoms.css" && rule.selector === selector,
+      )
       .map((rule) => rule.body)
       .join("\n");
 
   it.each(STAT_CARD_TONES)(
     "letters a %s figure in its Text token and fills its bar with the base",
     (tone) => {
-      expect(declared(`.stat-card-${tone}`)).toMatch(
-        new RegExp(`color:\\s*var\\(--${tone}Text\\)`),
-      );
+      expect(colorValues(declared(`.stat-card-${tone}`))).toEqual([
+        `var(--${tone}Text)`,
+      ]);
       expect(
         declared(`.stat-card-${tone} ~ .stat-card-meter .stat-card-meter-fill`),
       ).toMatch(new RegExp(`background:\\s*var\\(--${tone}\\);`));
     },
   );
 
-  it("colours no toned figure with anything but its Text token, in any sheet", () => {
-    const figure = new RegExp(`\\.stat-card-(${STAT_CARD_TONES.join("|")})$`);
-    const inked = rules.flatMap((rule) =>
-      rule.selector.split(",").flatMap((part) => {
-        const tone = figure.exec(part.trim().split(/\s+/).at(-1) ?? "")?.[1];
-        const ink = /(?:^|[;\s])color:\s*([^;]+)/.exec(rule.body)?.[1].trim();
-        return tone && ink
-          ? [{ tone, ink, at: `${rule.at} ${part.trim()}` }]
-          : [];
-      }),
-    );
-    expect(inked.length).toBeGreaterThanOrEqual(STAT_CARD_TONES.length);
+  it("colours the figure nowhere but atoms.css, in any sheet the app ships", () => {
+    expect(figureInks(all)).toEqual([]);
+  });
+
+  const at = (file: string, selector: string, body: string): Rule[] => [
+    { file: join(here, file), selector, body },
+  ];
+  it.each([
+    [
+      "atoms.css",
+      ".stat-card-warning.stat-card-value",
+      "color: var(--warning);",
+    ],
+    ["atoms.css", ".stat-card-danger:hover", "color: var(--danger);"],
+    ["atoms.css", ":where(.stat-card-info)", "color: var(--successText);"],
+    [
+      "atoms.css",
+      ".stat-card-success",
+      "color: var(--successText); color: var(--success);",
+    ],
+    ["brief.css", ".brief .stat-card-value", "color: var(--textPrimary);"],
+    ["brief.css", ".brief .stat-card-warning", "color: var(--warningText);"],
+  ])("refuses %s %s { %s }", (file, selector, body) => {
+    expect(figureInks(at(file, selector, body))).toHaveLength(1);
+  });
+
+  it("lets atoms.css spell the untoned figure and each toned one once", () => {
     expect(
-      inked
-        .filter(({ tone, ink }) => ink !== `var(--${tone}Text)`)
-        .map(({ at, ink }) => `${at} { color: ${ink} }`),
+      figureInks([
+        ...at("atoms.css", ".stat-card-value", "color: var(--textPrimary);"),
+        ...at("atoms.css", ".stat-card-warning", "color: var(--warningText);"),
+        ...at(
+          "brief.css",
+          ".stat-card-warning ~ .stat-card-meter",
+          "color: red;",
+        ),
+      ]),
     ).toEqual([]);
   });
 });
