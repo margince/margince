@@ -2817,6 +2817,7 @@ const (
 	BulkRecordTypeCompany BulkRecordType = "company"
 	BulkRecordTypeContact BulkRecordType = "contact"
 	BulkRecordTypeDeal    BulkRecordType = "deal"
+	BulkRecordTypeLead    BulkRecordType = "lead"
 )
 
 // Valid indicates whether the value is a known member of the BulkRecordType enum.
@@ -2827,6 +2828,8 @@ func (e BulkRecordType) Valid() bool {
 	case BulkRecordTypeContact:
 		return true
 	case BulkRecordTypeDeal:
+		return true
+	case BulkRecordTypeLead:
 		return true
 	default:
 		return false
@@ -2883,22 +2886,31 @@ func (e BulkSkipReason) Valid() bool {
 
 // Defines values for BulkVerb.
 const (
+	BulkVerbAddTag         BulkVerb = "add_tag"
 	BulkVerbAddToList      BulkVerb = "add_to_list"
 	BulkVerbArchive        BulkVerb = "archive"
+	BulkVerbCreateTask     BulkVerb = "create_task"
 	BulkVerbReassignOwner  BulkVerb = "reassign_owner"
 	BulkVerbRemoveFromList BulkVerb = "remove_from_list"
+	BulkVerbRemoveTag      BulkVerb = "remove_tag"
 )
 
 // Valid indicates whether the value is a known member of the BulkVerb enum.
 func (e BulkVerb) Valid() bool {
 	switch e {
+	case BulkVerbAddTag:
+		return true
 	case BulkVerbAddToList:
 		return true
 	case BulkVerbArchive:
 		return true
+	case BulkVerbCreateTask:
+		return true
 	case BulkVerbReassignOwner:
 		return true
 	case BulkVerbRemoveFromList:
+		return true
+	case BulkVerbRemoveTag:
 		return true
 	default:
 		return false
@@ -23991,13 +24003,23 @@ type BulkChangeExecuteRequest struct {
 	// OwnerId The new owner. Required for `reassign_owner` and refused for every other verb.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
-	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
+	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
 	RecordType BulkRecordType `json:"record_type"`
+
+	// TagId The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
+	TagId *openapi_types.UUID `json:"tag_id,omitempty"`
+
+	// Task The task `create_task` files under every record of the selection.
+	Task *BulkTask `json:"task,omitempty"`
 
 	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
 	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
 	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
+	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
+	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
+	// under each record, exactly as `createTask` does.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -24018,7 +24040,8 @@ type BulkChangePreview struct {
 	// ExpiresAt When `confirm_token` stops being accepted.
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 
-	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
+	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
 	RecordType BulkRecordType `json:"record_type"`
 
 	// RequiresConfirmation True above 10 records: executing needs `confirm_token`.
@@ -24029,6 +24052,9 @@ type BulkChangePreview struct {
 	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
 	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
+	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
+	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
+	// under each record, exactly as `createTask` does.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -24045,13 +24071,23 @@ type BulkChangePreviewRequest struct {
 	// OwnerId The new owner. Required for `reassign_owner` and refused for every other verb.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
-	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
+	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
 	RecordType BulkRecordType `json:"record_type"`
+
+	// TagId The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
+	TagId *openapi_types.UUID `json:"tag_id,omitempty"`
+
+	// Task The task `create_task` files under every record of the selection.
+	Task *BulkTask `json:"task,omitempty"`
 
 	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
 	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
 	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
+	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
+	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
+	// under each record, exactly as `createTask` does.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -24108,9 +24144,16 @@ type BulkOperation struct {
 	// OwnerId The new owner a reassignment named.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
-	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
+	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
 	RecordType BulkRecordType `json:"record_type"`
 	Skipped    []BulkSkip     `json:"skipped"`
+
+	// TagId The tag a tag verb named.
+	TagId *openapi_types.UUID `json:"tag_id,omitempty"`
+
+	// Task The task `create_task` files under every record of the selection.
+	Task *BulkTask `json:"task,omitempty"`
 
 	// UndoOf Set on an undo: the change it put back.
 	UndoOf *openapi_types.UUID `json:"undo_of,omitempty"`
@@ -24122,6 +24165,9 @@ type BulkOperation struct {
 	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
 	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
+	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
+	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
+	// under each record, exactly as `createTask` does.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -24132,9 +24178,16 @@ type BulkRecordState struct {
 	// Listed For a list verb, whether the record is on the Shortlist.
 	Listed  *bool               `json:"listed,omitempty"`
 	OwnerId *openapi_types.UUID `json:"owner_id"`
+
+	// Tagged For a tag verb, whether the record carries the tag.
+	Tagged *bool `json:"tagged,omitempty"`
+
+	// TaskId For `create_task`, the task filed under the record, once the change ran.
+	TaskId *openapi_types.UUID `json:"task_id,omitempty"`
 }
 
-// BulkRecordType The kind of record a bulk change acts on. One change acts on one kind.
+// BulkRecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
+// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
 type BulkRecordType string
 
 // BulkSampleRow One record the change would alter, as it is and as it would be.
@@ -24165,8 +24218,8 @@ type BulkSkip struct {
 
 	// Reason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
 	// archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
-	// its version moved since the caller read it. `no_change`: it already has this owner, or is
-	// already on (or already off) the Shortlist.
+	// its version moved since the caller read it. `no_change`: it already has this owner, is
+	// already on (or already off) the Shortlist, or already carries (or already lacks) the tag.
 	// `anchor_company`: it is the installation's own company, which is never archived.
 	// `not_previewed`: the preview whose token this execution presents did not list it.
 	// `refused`: a single-record rule refuses it; `code` says which.
@@ -24174,14 +24227,15 @@ type BulkSkip struct {
 	// An undo adds five. `changed_since_batch`: the record changed after the change being undone.
 	// `merged`: it was merged into another record. `erased`: its personal data was erased or
 	// purged. `value_taken`: another live record now holds its email or domain.
-	// `no_previous_owner`: it had no owner before the reassignment.
+	// `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
+	// each task the change created, and skips one completed or edited since as `changed_since_batch`.
 	Reason BulkSkipReason `json:"reason"`
 }
 
 // BulkSkipReason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
 // archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
-// its version moved since the caller read it. `no_change`: it already has this owner, or is
-// already on (or already off) the Shortlist.
+// its version moved since the caller read it. `no_change`: it already has this owner, is
+// already on (or already off) the Shortlist, or already carries (or already lacks) the tag.
 // `anchor_company`: it is the installation's own company, which is never archived.
 // `not_previewed`: the preview whose token this execution presents did not list it.
 // `refused`: a single-record rule refuses it; `code` says which.
@@ -24189,8 +24243,21 @@ type BulkSkip struct {
 // An undo adds five. `changed_since_batch`: the record changed after the change being undone.
 // `merged`: it was merged into another record. `erased`: its personal data was erased or
 // purged. `value_taken`: another live record now holds its email or domain.
-// `no_previous_owner`: it had no owner before the reassignment.
+// `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
+// each task the change created, and skips one completed or edited since as `changed_since_batch`.
 type BulkSkipReason string
+
+// BulkTask The task `create_task` files under every record of the selection.
+type BulkTask struct {
+	// AssigneeId Who owes it. Defaults to the caller; must name a colleague the caller may hand work to.
+	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+
+	// DueAt When it is due. Optional.
+	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// Subject What has to be done, as one line.
+	Subject string `json:"subject"`
+}
 
 // BulkUndoRequest defines model for BulkUndoRequest.
 type BulkUndoRequest struct {
@@ -24202,6 +24269,9 @@ type BulkUndoRequest struct {
 // `archive` retires it exactly as the single-record archive does. `add_to_list` and
 // `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
 // `addListMember` and `removeListMember` do, and change nothing on the record itself.
+// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
+// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
+// under each record, exactly as `createTask` does.
 type BulkVerb string
 
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room
@@ -32461,13 +32531,13 @@ type FilterVocabularyFieldReferences string
 // a folded value has no fragment to match against.
 type FilterVocabularyFieldType string
 
-// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported) or a `list_id` (a Live List whose filter is exported). The slice is always row-scoped to the caller through the one filter engine.
+// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported) or a `list_id` (a Live List's matches or a Shortlist's members). The slice is always row-scoped to the caller through the one filter engine.
 type FilteredExportRequest struct {
 	// Filter The canonical §13.5 predicate tree (nested and/or groups over typed leaves). Required with `object`.
 	Filter *map[string]interface{}     `json:"filter,omitempty"`
 	Format FilteredExportRequestFormat `json:"format"`
 
-	// ListId Export the members of a Live List the caller may find, as its filter selects them now. Mutually exclusive with object/view_id.
+	// ListId Export the members of a list the caller may find — a Live List's as its filter selects them now, a Shortlist's as they were chosen — that the caller may see. Mutually exclusive with object/view_id.
 	ListId *openapi_types.UUID `json:"list_id,omitempty"`
 
 	// Object The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.

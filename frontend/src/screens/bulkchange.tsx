@@ -15,7 +15,7 @@ import {
   useState,
 } from "react";
 import type { components } from "../api/schema";
-import { Badge, Button, Modal, PendingBody } from "../design-system/atoms";
+import { Button, Modal, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
@@ -23,17 +23,21 @@ import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { dealRecordKeys, derivedRecordKeys } from "./activitykeys";
 import { executeBulkChange, previewBulkChange } from "./bulkchangeapi";
-import { OwnerName } from "./entityref";
+import {
+  dialogWords,
+  RECORD_KINDS,
+  type RecordKind,
+  SampleState,
+  SkipReason,
+} from "./bulkwords";
+import { LISTS_KEY } from "./lists.queries";
 
 type BulkRecordType = components["schemas"]["BulkRecordType"];
 type BulkVerb = components["schemas"]["BulkVerb"];
 type BulkChangePreview = components["schemas"]["BulkChangePreview"];
-type BulkSampleRow = components["schemas"]["BulkSampleRow"];
-type BulkSkip = components["schemas"]["BulkSkip"];
-type BulkSkipReason = components["schemas"]["BulkSkipReason"];
+type BulkTask = components["schemas"]["BulkTask"];
 export type BulkChangeResult = components["schemas"]["BulkChangeResult"];
 
 /** One selected row as its list holds it: the version it was shown, and its name. */
@@ -52,68 +56,16 @@ export type BulkChangeRequest = Readonly<{
   ownerId?: string;
   /** The Shortlist a list verb adds to or takes off, and its name. */
   list?: Readonly<{ id: string; name: string }>;
+  /** The tag a tag verb puts on or takes off, and its name. */
+  tag?: Readonly<{ id: string; name: string }>;
+  /** The task create_task files under every record. */
+  task?: BulkTask;
   openId: string;
   /** Set when this press undoes the change with that batch id. */
   undoOf?: string;
 }>;
 
 export type Translate = ReturnType<typeof useT>;
-
-type RecordKind = Readonly<{
-  list: string;
-  record: string;
-  unit: MessageKey;
-  done: PluralBase;
-  undone: PluralBase;
-}>;
-
-const RECORD_KINDS: Readonly<Record<BulkRecordType, RecordKind>> = {
-  contact: {
-    list: "contacts",
-    record: "contact",
-    unit: "unit.contacts",
-    done: "bulk.doneContacts",
-    undone: "bulk.undoneContacts",
-  },
-  company: {
-    list: "companies",
-    record: "company",
-    unit: "unit.companies",
-    done: "bulk.doneCompanies",
-    undone: "bulk.undoneCompanies",
-  },
-  deal: {
-    list: "deals",
-    record: "deal",
-    unit: "unit.deals",
-    done: "bulk.doneDeals",
-    undone: "bulk.undoneDeals",
-  },
-};
-
-const SKIP_REASONS: Readonly<Record<BulkSkipReason, MessageKey>> = {
-  not_found: "bulk.reason.not_found",
-  not_writable: "bulk.reason.not_writable",
-  changed_since_preview: "bulk.reason.changed_since_preview",
-  no_change: "bulk.reason.no_change",
-  anchor_company: "bulk.reason.anchor_company",
-  not_previewed: "bulk.reason.not_previewed",
-  refused: "bulk.reason.refused",
-  changed_since_batch: "bulk.reason.changed_since_batch",
-  merged: "bulk.reason.merged",
-  erased: "bulk.reason.erased",
-  value_taken: "bulk.reason.value_taken",
-  no_previous_owner: "bulk.reason.no_previous_owner",
-};
-
-// The single-record rules a `refused` skip names by code. A code missing here
-// falls back to the server's English `message`.
-const REFUSAL_CODES: Readonly<Record<string, MessageKey>> = {
-  sole_project_company: "bulk.refusal.sole_project_company",
-  locked: "bulk.refusal.locked",
-  anchor_protected: "bulk.refusal.anchor_protected",
-  required: "bulk.refusal.required",
-};
 
 /**
  * Opens the undo of a change that just ran. The undo is its own press of the
@@ -160,43 +112,6 @@ function recordKeysOf(kind: RecordKind, id: string) {
   return kind.record === "deal"
     ? dealRecordKeys(id)
     : [[kind.record, id], ...derivedRecordKeys(kind.record, id)];
-}
-
-function SkipReason({ skip }: Readonly<{ skip: BulkSkip }>) {
-  const t = useT();
-  if (skip.reason !== "refused") {
-    return <span>{t(SKIP_REASONS[skip.reason])}</span>;
-  }
-  const known =
-    skip.code && Object.hasOwn(REFUSAL_CODES, skip.code)
-      ? REFUSAL_CODES[skip.code]
-      : undefined;
-  if (known) {
-    return <span>{t(known)}</span>;
-  }
-  return <span>{skip.message ?? t(SKIP_REASONS.refused)}</span>;
-}
-
-function SampleState({
-  verb,
-  state,
-}: Readonly<{ verb: BulkVerb; state: BulkSampleRow["before"] }>) {
-  const t = useT();
-  if (verb === "reassign_owner") {
-    return <OwnerName ownerId={state.owner_id} unowned={t("list.unowned")} />;
-  }
-  if (verb === "add_to_list" || verb === "remove_from_list") {
-    return (
-      <span>
-        {state.listed ? t("bulk.stateListed") : t("bulk.stateNotListed")}
-      </span>
-    );
-  }
-  return state.archived ? (
-    <Badge tone="warning">{t("record.archived")}</Badge>
-  ) : (
-    <span>{t("bulk.stateActive")}</span>
-  );
 }
 
 function PreviewBody({
@@ -277,7 +192,9 @@ function PreviewBody({
               {
                 key: "reason",
                 header: t("bulk.colReason"),
-                render: (skip) => <SkipReason skip={skip} />,
+                render: (skip) => (
+                  <SkipReason skip={skip} verb={preview.verb} />
+                ),
               },
             ]}
           />
@@ -285,44 +202,6 @@ function PreviewBody({
       )}
     </>
   );
-}
-
-// The dialog's heading and confirm verb: an undo, an archive or a handover.
-function dialogWords(request: BulkChangeRequest, t: Translate) {
-  const unit = t(RECORD_KINDS[request.recordType].unit);
-  if (request.undoOf !== undefined) {
-    return {
-      title: t("bulk.titleUndo", { unit }),
-      confirm: t("bulk.confirmUndo"),
-      danger: false,
-    };
-  }
-  if (request.verb === "archive") {
-    return {
-      title: t("bulk.titleArchive", { unit }),
-      confirm: t("bulk.confirmArchive", { unit }),
-      danger: true,
-    };
-  }
-  if (request.verb === "add_to_list" || request.verb === "remove_from_list") {
-    const list = request.list?.name ?? "";
-    return request.verb === "add_to_list"
-      ? {
-          title: t("bulk.titleAddToList", { unit, list }),
-          confirm: t("bulk.confirmAddToList"),
-          danger: false,
-        }
-      : {
-          title: t("bulk.titleRemoveFromList", { unit, list }),
-          confirm: t("bulk.confirmRemoveFromList"),
-          danger: true,
-        };
-  }
-  return {
-    title: t("bulk.titleReassign", { unit }),
-    confirm: t("bulk.confirmReassign"),
-    danger: false,
-  };
 }
 
 /**
@@ -374,7 +253,13 @@ export function BulkChangeDialog({
         queryClient.invalidateQueries({ queryKey });
       }
     }
-    await queryClient.invalidateQueries({ queryKey: [kind.list] });
+    // A list page reads its members from the record list, and a task lands
+    // on the task lists: both go stale with the change.
+    await Promise.all(
+      [[kind.list], [LISTS_KEY], ["tasks"], ["activities"]].map((queryKey) =>
+        queryClient.invalidateQueries({ queryKey }),
+      ),
+    );
   };
 
   // What a change or its undo did, in one sentence per fact.

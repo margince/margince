@@ -160,9 +160,10 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 		t.Fatalf("visits answered %v then %v", firstVisit, secondVisit)
 	}
 
-	// The Live List exported, then named among its uses.
+	// Both kinds export — a Shortlist its members — and the Live List is then
+	// named among its uses.
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": live.ID, "format": "json"}, http.StatusOK, nil)
-	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": short.ID, "format": "json"}, http.StatusUnprocessableEntity, nil)
+	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": short.ID, "format": "json"}, http.StatusOK, nil)
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": "not-a-uuid", "format": "json"}, http.StatusUnprocessableEntity, nil)
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": live.ID, "object": "contact", "format": "json"}, http.StatusUnprocessableEntity, nil)
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"object": "contact", "format": "json"}, http.StatusUnprocessableEntity, nil)

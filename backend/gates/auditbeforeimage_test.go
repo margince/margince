@@ -156,7 +156,7 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 
 	"internal/modules/collections/tags.go:applyTagTx": "the tag row is untouched; the write inserts a taggable link, " +
 		"and the after image names the record it now points at.",
-	"internal/modules/collections/tags.go:RemoveTag": "the tag row is untouched; the write deletes a taggable link, " +
+	"internal/modules/collections/tagremove.go:removeTagTx": "the tag row is untouched; the write deletes a taggable link, " +
 		"and the after image names the record it stopped pointing at.",
 	"internal/modules/collections/memberwrite.go:recordMemberChange": "the list row is untouched; the write adds or " +
 		"removes a Shortlist membership, and the after image names the record that joined or left.",

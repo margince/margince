@@ -1349,8 +1349,8 @@ public.bulk_confirmation_pkey CREATE UNIQUE INDEX bulk_confirmation_pkey ON publ
 public.bulk_operation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.bulk_operation.bulk_operation_counts_check CHECK (((changed_count >= 0) AND (skipped_count >= 0)))
 public.bulk_operation.bulk_operation_pkey PRIMARY KEY (id)
-public.bulk_operation.bulk_operation_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text])))
-public.bulk_operation.bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text, 'add_to_list'::text, 'remove_from_list'::text])))
+public.bulk_operation.bulk_operation_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text])))
+public.bulk_operation.bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text, 'add_to_list'::text, 'remove_from_list'::text, 'add_tag'::text, 'remove_tag'::text, 'create_task'::text])))
 public.bulk_operation.changed_count integer NOT NULL gen=- def=-
 public.bulk_operation.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.bulk_operation.id uuid NOT NULL gen=- def=uuidv7()

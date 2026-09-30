@@ -65,8 +65,12 @@ export const shortlist: List = {
 };
 
 export const members = [
-  { id: MEMBER_ID, display_name: "MiTek" },
-  { id: "01a0f000-0000-7000-8000-000000000004", display_name: "Nordfracht" },
+  { id: MEMBER_ID, display_name: "MiTek", version: 4 },
+  {
+    id: "01a0f000-0000-7000-8000-000000000004",
+    display_name: "Nordfracht",
+    version: 2,
+  },
 ];
 
 export const liveWhy: ListExplanation = {

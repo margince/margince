@@ -192,9 +192,7 @@ describe("changing a list from its page", () => {
       }),
     );
     await user.click(screen.getByRole("button", { name: en["lists.archive"] }));
-    expect(
-      await screen.findByRole("button", { name: en["lists.members.more"] }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("MiTek")).toBeInTheDocument();
     await vi.waitFor(() => expect(calls).toContain("archive"));
     expect(calls.some((c) => c.startsWith("steward:"))).toBe(true);
   });
