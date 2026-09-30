@@ -6,53 +6,24 @@ package companybrief
 // Every language the product ships writes the whole company floor.
 
 import (
-	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
+// companyVerbs is the placeholder count TestASingleKnownContactIsNotWrittenAsAPlural
+// holds StrengthOverOne to, below — the census in
+// TestEveryShippedLanguageWritesTheCompanyFloor owns the same check for every
+// other sentence.
 var companyVerbs = regexp.MustCompile(`%[a-zA-Z]|%%`)
 
 func TestEveryShippedLanguageWritesTheCompanyFloor(t *testing.T) {
-	shape := reflect.TypeOf(floor)
-	value := reflect.ValueOf(floor)
-	for i := range shape.NumField() {
-		name := shape.Field(i).Name
-		if table, ok := value.Field(i).Interface().(map[string]phrase); ok {
-			for key, p := range table {
-				checkPhrase(t, name+"["+key+"]", p)
-			}
-			continue
-		}
-		checkPhrase(t, name, value.Field(i).Interface().(phrase))
-	}
-}
-
-func checkPhrase(t *testing.T, name string, p phrase) {
-	t.Helper()
-	english := p.In(textlang.English)
-	if strings.TrimSpace(english) == "" {
-		t.Errorf("%s has no English sentence, so there is nothing to translate against", name)
-		return
-	}
-	for _, lang := range textlang.Shipped {
-		text := p.In(lang)
-		if strings.TrimSpace(text) == "" {
-			t.Errorf("%s leaves %s unwritten, which renders as a missing sentence", lang, name)
-			continue
-		}
-		if name == "DateLayout" {
-			continue // a Go reference layout, not a format string
-		}
-		if got, want := companyVerbs.FindAllString(text, -1), companyVerbs.FindAllString(english, -1); !reflect.DeepEqual(got, want) {
-			t.Errorf("%s writes %s with placeholders %v, but the sentence is given %v.\n  %s",
-				lang, name, got, want, text)
-		}
-	}
+	t.Parallel()
+	langcopytest.Census(t, floor)
 }
 
 // englishMonths are what time.Format writes for the `Jan` token — in English,

@@ -10,26 +10,16 @@ package companydossier
 // carry fewer statements in that language than in English.
 
 import (
-	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestEveryShippedLanguageLabelsTheDossier(t *testing.T) {
-	if len(dossierLabels) == 0 {
-		t.Fatal("the label table is empty; this census would certify nothing")
-	}
-	for field, p := range dossierLabels {
-		for _, lang := range textlang.Shipped {
-			if strings.TrimSpace(p.In(lang)) == "" {
-				t.Errorf("%s has no label for %s, and fieldSentence SKIPS a field it cannot "+
-					"label — the dossier silently carries one statement fewer in that language",
-					lang, field)
-			}
-		}
-	}
+	t.Parallel()
+	langcopytest.Census(t, dossierLabels)
 }
 
 func TestAnUnshippedLanguageFallsBackToTheEnglishDossierLabels(t *testing.T) {
