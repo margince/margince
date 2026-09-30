@@ -117,11 +117,37 @@ func TestABatchWithNothingToFoldTouchesNothing(t *testing.T) {
 	envs := []kevents.Envelope{
 		envelopeFor(v.e.WS, "deal.created", "deal", ids.NewV7()),
 		envelopeFor(v.e.WS, "activity.restricted", "activity", ids.NewV7()),
+		envelopeFor(v.e.WS, "activity.captured", "activity", ids.Nil),
 	}
 	if err := gen.HandleBatch(context.Background(), envs); err != nil {
 		t.Fatalf("a batch of events this projection ignores errored: %v", err)
 	}
 	if err := gen.HandleBatch(context.Background(), nil); err != nil {
 		t.Fatalf("an empty batch errored: %v", err)
+	}
+	// The per-entry path a failed batch falls back to ignores the same events.
+	if err := gen.HandleEvent(context.Background(), envs[1]); err != nil {
+		t.Fatalf("an activity event the projection ignores errored one at a time: %v", err)
+	}
+}
+
+// A batch that cannot fold must say so, because the error is what sends its
+// entries down the per-entry path instead of acking them unfolded.
+func TestABatchThatCannotFoldReturnsTheError(t *testing.T) {
+	v := edgeEnv{integration.Setup(t)}
+	c := v.contact(t, "Unfolded")
+	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC(), "inbound", "from")
+	gen := search.NewGraphEdgeGen(search.NewStore(v.e.DB()))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := gen.HandleBatch(ctx, []kevents.Envelope{
+		envelopeFor(v.e.WS, "activity.captured", "activity", activity),
+		envelopeFor(v.e.WS, "contact.updated", "contact", c.UUID),
+	}); err == nil {
+		t.Fatal("a batch whose transaction could not run reported success, so its entries would be acked unfolded")
+	}
+	if edges := v.edgesFor(t, c); len(edges) != 0 {
+		t.Errorf("a failed batch left %d edges behind", len(edges))
 	}
 }
