@@ -53,11 +53,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// approvalNotifyActor names this consumer in the audit rows it causes. A line
-// placed in somebody's queue has to say what placed it there, and the answer is
-// never the reader themselves.
-const approvalNotifyActor = "system:approval-notify"
-
 // unsummarisedProposal is what a seat is shown for a staging that composed no
 // summary. The store refuses a notice with no subject, and the honest sentence
 // is that something is waiting rather than a guess at what.
@@ -101,37 +96,94 @@ func NewApprovalNotify(pool *pgxpool.Pool, db *database.DB, mail noticeMailQueue
 	}
 }
 
-// HandleEvent announces one staged approval. Anything else answers nil so the
-// group keeps flowing rather than wedging on traffic this consumer ignores.
+// HandleEvent announces one staged approval and takes those lines back the
+// moment it is decided. Anything else answers nil so the group keeps flowing
+// rather than wedging on traffic this consumer ignores.
 func (a *ApprovalNotify) HandleEvent(ctx context.Context, env events.Envelope) error {
-	// The generated constant, not a hand-typed event name: a spelling that
-	// drifts from the contract makes this consumer silently never fire, and
-	// nothing fails when a consumer does nothing.
-	if env.Type != string(crmcontracts.ApprovalRequested) || env.Entity.ID == ids.Nil {
+	if env.Entity.ID == ids.Nil {
 		return nil
 	}
+	// The generated constants, not hand-typed event names: a spelling that
+	// drifts from the contract makes this consumer silently never fire, and
+	// nothing fails when a consumer does nothing.
+	switch env.Type {
+	case string(crmcontracts.ApprovalRequested):
+		return a.announceRequested(ctx, env)
+	case string(crmcontracts.ApprovalDecided):
+		return a.takeBackDecided(ctx, env)
+	}
+	return nil
+}
+
+// announceRequested tells every seat that could decide this staging about it.
+func (a *ApprovalNotify) announceRequested(ctx context.Context, env events.Envelope) error {
 	var staged crmcontracts.PublicEventApprovalRequested
 	if err := json.Unmarshal(env.Payload, &staged); err != nil {
 		return fmt.Errorf("approval notify: approval.requested payload: %w", err)
 	}
-	ws, err := a.db.Workspace(ctx)
+	sysCtx, wsID, err := a.systemContext(ctx, env)
 	if err != nil {
 		return err
 	}
-	// A subscriber carries no workspace, no actor and no trace. Without the
-	// workspace every read is refused; without the actor the audited write below
-	// has nobody to name; without the causing event the audit row cannot be tied
-	// back to the staging that produced it.
-	sysCtx := principal.WithWorkspaceID(ctx, ws.UUID)
-	sysCtx = principal.WithCausationEvent(sysCtx, env.EventID)
-	sysCtx = principal.WithActor(sysCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: approvalNotifyActor,
-	})
 	seats, err := a.candidateSeats(sysCtx)
 	if err != nil {
 		return err
 	}
-	return a.announce(sysCtx, ws.UUID, ids.From[ids.ApprovalKind](env.Entity.ID), staged, seats)
+	return a.announce(sysCtx, wsID, ids.From[ids.ApprovalKind](env.Entity.ID), staged, seats)
+}
+
+// takeBackDecided stops every line about this approval standing, the instant a
+// colleague decides it.
+//
+// THE PAYLOAD CARRIES decided_by AND THIS IGNORES IT. Three of the five routes
+// to a terminal approval emit nothing at all, so the backstop pass has to read
+// the row anyway, and believing the payload here and the row there would be two
+// answers to one question. The payload is also wrong under redelivery: an
+// at-least-once event can arrive after somebody else superseded the row.
+func (a *ApprovalNotify) takeBackDecided(ctx context.Context, env events.Envelope) error {
+	sysCtx, _, err := a.systemContext(ctx, env)
+	if err != nil {
+		return err
+	}
+	// One trace for the whole take-back, unlike the fan-out's per-seat ones:
+	// this is a single act over every line, not a decision made seat by seat.
+	sysCtx = principal.WithCorrelationID(sysCtx, ids.NewV7())
+	approvalID := ids.From[ids.ApprovalKind](env.Entity.ID)
+	terminal, err := a.approvals.TerminalAmong(sysCtx, []ids.ApprovalID{approvalID})
+	if err != nil {
+		return fmt.Errorf("approval notify: asking whether %s can still be decided: %w", approvalID, err)
+	}
+	// Nothing back means the row is pending again or gone — an envelope with no
+	// standing decision behind it, and never a licence to take lines back.
+	if len(terminal) == 0 {
+		return nil
+	}
+	overtaken := make([]notices.Overtaking, len(terminal))
+	for i, decided := range terminal {
+		overtaken[i] = notices.Overtaking{Approval: decided.ID, By: decided.DecidedBy}
+	}
+	if _, err := a.notices.OvertakeApprovalNotices(sysCtx, overtaken); err != nil {
+		return fmt.Errorf("approval notify: taking back the lines about %s: %w", approvalID, err)
+	}
+	return nil
+}
+
+// systemContext is what a subscriber carries none of. Without the workspace
+// every read is refused; without the actor the audited writes have nobody to
+// name; without the causing event their rows cannot be tied back to the
+// approval that produced them.
+func (a *ApprovalNotify) systemContext(
+	ctx context.Context, env events.Envelope,
+) (context.Context, ids.UUID, error) {
+	ws, err := a.db.Workspace(ctx)
+	if err != nil {
+		return nil, ids.Nil, err
+	}
+	sysCtx := principal.WithWorkspaceID(ctx, ws.UUID)
+	sysCtx = principal.WithCausationEvent(sysCtx, env.EventID)
+	return principal.WithActor(sysCtx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: approvals.NotifyActor,
+	}), ws.UUID, nil
 }
 
 // candidateSeats is the roster the predicate is then asked about: the live,

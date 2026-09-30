@@ -21,6 +21,7 @@ import (
 	"slices"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
@@ -231,21 +232,27 @@ func (a approvalNotifyEnv) read(t *testing.T, fn func(context.Context, pgx.Tx) e
 // than through the recipient's own inbox: the claim is what was WRITTEN, and a
 // read filtered by the reader could hide a notice addressed to the wrong seat.
 type deliveredNotice struct {
-	id         ids.UUID
-	recipient  ids.UUID
-	kind       string
-	subject    string
-	dedupeKey  string
-	targetType *string
-	targetID   *ids.UUID
+	id          ids.UUID
+	recipient   ids.UUID
+	kind        string
+	subject     string
+	dedupeKey   string
+	targetType  *string
+	targetID    *ids.UUID
+	overtakenAt *time.Time
+	overtakenBy *ids.UUID
 }
+
+// standing reports whether this line still claims a decision waits on its
+// reader.
+func (n deliveredNotice) standing() bool { return n.overtakenAt == nil }
 
 func (a approvalNotifyEnv) delivered(t *testing.T) []deliveredNotice {
 	t.Helper()
 	var out []deliveredNotice
 	a.read(t, func(ctx context.Context, tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT id, recipient_user_id, kind, subject,
-			coalesce(dedupe_key, ''), target_type, target_id
+			coalesce(dedupe_key, ''), target_type, target_id, overtaken_at, overtaken_by
 			 FROM notice ORDER BY recipient_user_id`)
 		if err != nil {
 			return err
@@ -254,7 +261,8 @@ func (a approvalNotifyEnv) delivered(t *testing.T) []deliveredNotice {
 		for rows.Next() {
 			var n deliveredNotice
 			if err := rows.Scan(&n.id, &n.recipient, &n.kind, &n.subject,
-				&n.dedupeKey, &n.targetType, &n.targetID); err != nil {
+				&n.dedupeKey, &n.targetType, &n.targetID,
+				&n.overtakenAt, &n.overtakenBy); err != nil {
 				return err
 			}
 			out = append(out, n)
@@ -420,5 +428,147 @@ func TestApprovalNotifyOnASelfOnlyKindReachesOnlyTheSeatItWasStagedFor(t *testin
 	}
 	if rows[0].targetType != nil || rows[0].targetID != nil {
 		t.Fatalf("a staging about no record was given a target: %+v", rows[0])
+	}
+}
+
+// decidedEnvelope is the verdict as the outbox recorded it. Read back rather
+// than composed, because the take-back arm's whole claim is that it settles
+// from the approval ROW and not from what this payload says.
+func (a approvalNotifyEnv) decidedEnvelope(t *testing.T, id ids.ApprovalID) kevents.Envelope {
+	t.Helper()
+	var env kevents.Envelope
+	a.read(t, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT envelope FROM event_outbox
+			 WHERE envelope->>'type' = 'approval.decided'
+			   AND envelope->'entity'->>'id' = $1`, id.String()).Scan(&env)
+	})
+	return env
+}
+
+// linesBySeat indexes the recorded lines by their reader, so a case can ask
+// about one colleague's without depending on the order they came back in.
+func linesBySeat(rows []deliveredNotice) map[ids.UUID]deliveredNotice {
+	by := make(map[ids.UUID]deliveredNotice, len(rows))
+	for _, row := range rows {
+		by[row.recipient] = row
+	}
+	return by
+}
+
+// tellTwoSeats stages one correction and announces it, leaving two colleagues
+// each holding a standing line about it.
+//
+// Two rather than one because the defect being fixed is only visible with a
+// bystander: a single decider taking back their own line says nothing about
+// the colleague the product left waiting on a decision already taken.
+func (a approvalNotifyEnv) tellTwoSeats(t *testing.T) (ids.ApprovalID, kevents.Envelope) {
+	t.Helper()
+	a.grantRole(t, a.e.AdminUser)
+	a.grantRole(t, a.e.Rep2)
+	approvalID, env := a.stageCorrection(t)
+	a.deliver(t, env)
+	rows := a.delivered(t)
+	if len(rows) != 2 {
+		t.Fatalf("two seats could decide this; %d line(s) were written: %+v", len(rows), rows)
+	}
+	for _, row := range rows {
+		if !row.standing() {
+			t.Fatalf("a line stopped standing before anybody decided: %+v", row)
+		}
+	}
+	return approvalID, env
+}
+
+// Two seats were told a decision waited on them. One decides; the other's line
+// stops standing and names the colleague who decided.
+func TestADecisionTakesBackEveryOtherSeatsLine(t *testing.T) {
+	a := newApprovalNotifyEnv(t)
+	approvalID, _ := a.tellTwoSeats(t)
+
+	reason := "the close date stands as it is"
+	if _, err := a.svc.Decide(a.e.Admin(), approvalID, false, &reason); err != nil {
+		t.Fatalf("deciding the staged correction: %v", err)
+	}
+	a.deliver(t, a.decidedEnvelope(t, approvalID))
+
+	lines := linesBySeat(a.delivered(t))
+	if len(lines) != 2 {
+		t.Fatalf("the take-back added or removed lines: %+v", lines)
+	}
+	// The colleague who decided NOTHING is the case this exists for. The
+	// decider's own line goes with it, because nothing waits on them either.
+	for seat, line := range lines {
+		if line.standing() {
+			t.Errorf("%s is still told a decision waits on them", seat)
+		}
+		if line.overtakenBy == nil || *line.overtakenBy != a.e.AdminUser {
+			t.Errorf("%s's line names %v rather than the colleague who decided it", seat, line.overtakenBy)
+		}
+	}
+}
+
+// The clock decided it, so nobody is named — a human's name on a refusal they
+// never made is the one thing this must not write.
+func TestAnExpiredVerdictTakesTheLinesBackAndNamesNobody(t *testing.T) {
+	a := newApprovalNotifyEnv(t)
+	approvalID, _ := a.tellTwoSeats(t)
+
+	// Backdated rather than waited out: the window is the predicate under test,
+	// and a case that slept for a real TTL would be slow and prove less.
+	a.e.WsExec(t, `UPDATE approval SET expires_at = now() - interval '1 hour' WHERE id = $1`, approvalID)
+	expired, err := a.svc.ExpireDue(expiryCtx(a.e))
+	if err != nil {
+		t.Fatalf("closing the window on the staged correction: %v", err)
+	}
+	if len(expired) != 1 || expired[0].ID != approvalID {
+		t.Fatalf("the sweep expired %v rather than the staged correction", expired)
+	}
+	a.deliver(t, a.decidedEnvelope(t, approvalID))
+
+	for _, line := range a.delivered(t) {
+		if line.standing() {
+			t.Errorf("%s is still told a decision waits on them after the window closed", line.recipient)
+		}
+		if line.overtakenBy != nil {
+			t.Errorf("%s's line names %s as deciding it; the clock did, and nobody else", line.recipient, line.overtakenBy)
+		}
+	}
+}
+
+// The bus is at-least-once and the row is what the handler believes. An event
+// redelivered after the row moved on still settles from the row.
+func TestARedeliveredDecisionStillSettlesFromTheRow(t *testing.T) {
+	a := newApprovalNotifyEnv(t)
+	approvalID, requested := a.tellTwoSeats(t)
+
+	reason := "this was handled off-system"
+	if _, err := a.svc.Decide(a.e.Admin(), approvalID, false, &reason); err != nil {
+		t.Fatalf("deciding the staged correction: %v", err)
+	}
+	decided := a.decidedEnvelope(t, approvalID)
+	a.deliver(t, decided)
+	settled := linesBySeat(a.delivered(t))
+	for seat, line := range settled {
+		if line.standing() || line.overtakenBy == nil {
+			t.Fatalf("%s's line was not taken back at all, so redelivery proves nothing: %+v", seat, line)
+		}
+	}
+
+	// Both envelopes come round again, which is the bus behaving normally. The
+	// staging one must not stand a line back up that the decision took down,
+	// and the decision one must not stamp over the stamp already there.
+	a.deliver(t, requested)
+	a.deliver(t, decided)
+
+	replayed := linesBySeat(a.delivered(t))
+	if len(replayed) != len(settled) {
+		t.Fatalf("redelivery changed which seats hold a line: %+v", replayed)
+	}
+	for seat, before := range settled {
+		after := replayed[seat]
+		if after.id != before.id || after.standing() || !after.overtakenAt.Equal(*before.overtakenAt) ||
+			after.overtakenBy == nil || *after.overtakenBy != *before.overtakenBy {
+			t.Errorf("%s's line moved under redelivery: %+v became %+v", seat, before, after)
+		}
 	}
 }
