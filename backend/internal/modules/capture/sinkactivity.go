@@ -438,6 +438,22 @@ func (s *Sink) upsertActivity(
 // visibility probe (H1) — a connector cannot plant a link to a row its
 // granting human could not see.
 func (s *Sink) linkActivity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, links []datasource.EntityRef) error {
+	// A backlog catching up is a parallel writer onto the same accounts, so
+	// the reach is locked in the shared order before the first probe.
+	var targets storekit.LastActivityTargets
+	for _, link := range links {
+		switch link.Type {
+		case datasource.EntityContact:
+			targets.Contacts = append(targets.Contacts, link.ID)
+		case datasource.EntityCompany:
+			targets.Companies = append(targets.Companies, link.ID)
+		case datasource.EntityDeal:
+			targets.Deals = append(targets.Deals, link.ID)
+		}
+	}
+	if err := storekit.LockLastActivityTargets(ctx, tx, targets); err != nil {
+		return fmt.Errorf("capture: %w", err)
+	}
 	for _, link := range links {
 		column, ok := map[datasource.EntityType]string{
 			datasource.EntityContact: "contact_id",

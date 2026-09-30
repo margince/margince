@@ -128,9 +128,15 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// with its own 307 before any registered handler runs, and that redirect
 	// echoes the cleaned path — credential segment and all — into a Location
 	// header. Mounted deeper, the middleware never saw those answers.
+	//
+	// ResolveClientIP sits just inside the panic guard and outside everything
+	// else, so every per-IP limiter behind it — /v1, /oauth, /mcp, the
+	// webhooks, the extension inbound routes — keys on the one address it
+	// decided rather than on whichever proxy the request happened to arrive by.
 	return httpserver.RecoverPanics(log,
-		httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
-			httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))
+		httpserver.ResolveClientIP(srv.trustedProxies,
+			httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
+				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is

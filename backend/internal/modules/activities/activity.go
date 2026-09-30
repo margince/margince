@@ -165,7 +165,7 @@ func (s *Store) LogActivity(ctx context.Context, in LogActivityInput) (crmcontra
 	}
 	var out crmcontracts.Activity
 	created := true
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.txRetryingLockCycles(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, created, err = s.logActivityAndReadTranscript(ctx, tx, in)
 		return err

@@ -95,6 +95,7 @@ func Groups() []Group {
 		// what happened to the proposal, so a wedged extraction must not stop
 		// the measurement that says whether the feature may stay on.
 		{Name: "cg:stage-progression-outcome", Streams: forEntities(approvalStreamEntity)},
+		{Name: "cg:approval-notice-retract", Streams: forEntities(approvalStreamEntity)},
 		// Telling the seats that could decide a staged proposal that it is
 		// waiting on them. The APPROVAL stream, where approval.requested
 		// rides.

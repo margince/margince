@@ -245,6 +245,11 @@ type Server struct {
 	// credential to carry over an untrusted network. See gateMetrics in
 	// routes.go.
 	metricsToken string
+	// trustedProxies are the direct peers whose X-Forwarded-For names the
+	// client every per-IP limiter keys on, injected by WithTrustedProxies from
+	// --trusted-proxies. The zero value trusts nobody and keys on the TCP peer.
+	trustedProxies httpserver.TrustedProxies
+
 	// metricsOpen serves /metrics to any caller, set by WithOpenMetrics from an
 	// explicit --metrics-access=open for a deployment whose network boundary
 	// already contains the port.
