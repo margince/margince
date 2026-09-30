@@ -122,6 +122,16 @@ export const OnHome: Story = {
         [`GET /deals/${automaticStageReceipt.subject?.id}`]: () =>
           jsonResponse({ name: "PIM Rollout" }),
         "GET /digest": () => jsonResponse(digest),
+        "GET /projects/01a00000-0000-7000-8000-000000000001": () =>
+          jsonResponse({
+            id: "01a00000-0000-7000-8000-000000000001",
+            name: "ERP replacement",
+          }),
+        "GET /projects/01a00000-0000-7000-8000-000000000002": () =>
+          jsonResponse({
+            id: "01a00000-0000-7000-8000-000000000002",
+            name: "Depot rollout",
+          }),
       },
       { deal: ["read", "update"] },
     );

@@ -46,9 +46,14 @@ export function MagicLaneSection({
                 <LineSentence line={row} />
                 <LineMeta line={row} since={since} zone={zone} />
               </div>
-              <div className="magic-line-back">
-                <LineWayBack line={row} />
-              </div>
+              {/* Only a done line changed something there is a way back
+                  from; on the others the answer is always "nothing to put
+                  back", which said once per line is noise. */}
+              {lane === "done" && (
+                <div className="magic-line-back">
+                  <LineWayBack line={row} />
+                </div>
+              )}
             </li>
           ))}
         </ul>

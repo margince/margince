@@ -550,9 +550,15 @@
   gap: var(--space-1) var(--space-2);
 }
 
+/* A record's name and the control that opens its changes stand apart. */
+.magic-line-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .magic-line-meta > span + span::before {
   content: "·";
-  margin-inline-end: var(--space-2);
 }
 
 .magic-line-back {

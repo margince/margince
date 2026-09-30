@@ -230,6 +230,12 @@ describe("the receipt draws every lane it promises", () => {
       within(waiting).getByText("Nothing happens until you decide."),
     ).toBeTruthy();
     expect(within(waiting).queryAllByRole("button")).toEqual([]);
+    // Nothing changed yet, so a way back is not a question this line asks.
+    expect(
+      within(waiting).queryByText(
+        "Nothing changed, so there is nothing to put back.",
+      ),
+    ).toBeNull();
   });
 
   it("says why a change cannot be taken back instead of greying a control", async () => {
