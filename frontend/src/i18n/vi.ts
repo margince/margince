@@ -10073,6 +10073,8 @@ export const vi = {
     "{field} kh\u00f4ng th\u1ec3 so s\u00e1nh theo c\u00e1ch \u0111\u00f3.",
   "filters.propose.reason.value":
     "{field} kh\u00f4ng nh\u1eadn gi\u00e1 tr\u1ecb \u0111\u00f3.",
+  "filters.propose.reason.notVerifiable":
+    "{field} c\u00f3 c\u00e1c l\u1ef1a ch\u1ecdn b\u1ea1n kh\u00f4ng \u0111\u01b0\u1ee3c xem, n\u00ean kh\u00f4ng th\u1ec3 ki\u1ec3m tra gi\u00e1 tr\u1ecb.",
   "filters.propose.reason.tooMany":
     "B\u1ed9 l\u1ecdc \u0111\u00e3 ch\u1ee9a nhi\u1ec1u \u0111i\u1ec1u ki\u1ec7n nh\u1ea5t c\u00f3 th\u1ec3.",
   "lists.page": "Danh s\u00e1ch",

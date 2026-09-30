@@ -20,7 +20,13 @@ const (
 	CodeOperatorNotAllowed = "operator_not_allowed"
 	CodeValueNotAllowed    = "value_not_allowed"
 	CodeTooManyConditions  = "too_many_conditions"
+	CodeValueNotVerifiable = "value_not_verifiable"
 )
+
+// errOptionsWithheld answers a picklist value this caller cannot be shown the
+// options of: accepting it unchecked would propose a filter that matches nothing
+// and reads as a settled answer, so it is declined instead.
+var errOptionsWithheld = errors.New("the options of this field are not visible to you, so the value cannot be checked")
 
 // Dropped is one phrase the proposal cannot use, and why.
 type Dropped struct {
@@ -101,6 +107,9 @@ func admit(
 		return drop(CodeOperatorNotAllowed, fmt.Sprintf("%q does not take the %q operator", field.Name, clause.Op))
 	}
 	value, err := operand(clause, field)
+	if errors.Is(err, errOptionsWithheld) {
+		return drop(CodeValueNotVerifiable, err.Error())
+	}
 	if err != nil {
 		return drop(CodeValueNotAllowed, err.Error())
 	}
@@ -208,15 +217,29 @@ func listOperand(list []string, field Field) (any, error) {
 // option answers a value as the picklist spells it. The engine compiles a value
 // outside the options and matches nothing, which a reader would take for a
 // settled answer, so this is where such a value is refused instead.
+//
+// An exact match wins; a case-insensitive one is taken only when it names
+// exactly one option, because options ["US", "us"] are two values.
 func option(value string, field Field) (string, error) {
 	kind := storekit.FieldType(field.Type)
-	if len(field.Options) == 0 || (kind != storekit.FieldPicklist && kind != storekit.FieldMultiselect) {
+	if kind != storekit.FieldPicklist && kind != storekit.FieldMultiselect {
 		return value, nil
 	}
+	if len(field.Options) == 0 {
+		return "", errOptionsWithheld
+	}
+	value = strings.TrimSpace(value)
+	var folded []string
 	for _, offered := range field.Options {
-		if strings.EqualFold(strings.TrimSpace(value), offered) {
+		if offered == value {
 			return offered, nil
 		}
+		if strings.EqualFold(value, offered) {
+			folded = append(folded, offered)
+		}
+	}
+	if len(folded) == 1 {
+		return folded[0], nil
 	}
 	return "", fmt.Errorf("%q is not one of the options of %q", value, field.Name)
 }

@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // filterProposalMaxRunes is the contract's maxLength for the sentence: a list
@@ -112,7 +113,12 @@ func (h filterProposalHandlers) ProposeFilter(w http.ResponseWriter, r *http.Req
 		Resource: resource, Text: text, Fields: fields,
 		Today: h.now().UTC(), Lang: h.language(ctx, req.Locale),
 	}
-	res, err := ai.Ask(ctx, h.lane, filterpropose.Request(in), func(reply string) error {
+	ask, err := withCompanyContextIfReadable(ctx, filterpropose.Request(in))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	res, err := ai.Ask(ctx, h.lane, ask, func(reply string) error {
 		_, err := filterpropose.Parse(reply)
 		return err
 	})
@@ -126,6 +132,21 @@ func (h filterProposalHandlers) ProposeFilter(w http.ResponseWriter, r *http.Req
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, wireProposal(req.Resource, filterpropose.Gate(answer, fields), res.ServedModel))
+}
+
+// withCompanyContextIfReadable asks for our offer and market only when the
+// caller may read the company it is read from. The context helps a sentence like
+// "our target market" and is never needed, so a caller without company read
+// still gets a proposal rather than the context read's 403.
+func withCompanyContextIfReadable(ctx context.Context, req model.Request) (model.Request, error) {
+	err := auth.Require(ctx, "company", principal.ActionRead)
+	switch {
+	case err == nil:
+		req.IncludeCompanyContext = true
+	case !errors.Is(err, apperrors.ErrPermissionDenied):
+		return model.Request{}, err
+	}
+	return req, nil
 }
 
 // proposalText is the sentence, trimmed and bounded the way the contract

@@ -49,7 +49,10 @@ const PROPOSAL = {
 
 type Answer = Readonly<{ status: number; body: unknown }>;
 
-function mount(proposal: Answer = { status: 200, body: PROPOSAL }) {
+function mount(
+  proposal: Answer = { status: 200, body: PROPOSAL },
+  answered: Promise<void> = Promise.resolve(),
+) {
   const previews: unknown[] = [];
   const asked: unknown[] = [];
   vi.stubGlobal(
@@ -75,6 +78,7 @@ function mount(proposal: Answer = { status: 200, body: PROPOSAL }) {
       }
       if (url.includes("/filters/propose")) {
         asked.push(await body());
+        await answered;
         return json(proposal.body, proposal.status);
       }
       if (url.includes("/filters/preview")) {
@@ -165,6 +169,29 @@ it("asks before a proposal touches a filter the reader already built", async () 
   expect(
     screen.getAllByLabelText("Value").map((v) => (v as HTMLInputElement).value),
   ).toEqual(["Ann", "Lee"]);
+});
+
+it("asks when the reader built a filter while the proposal was being read", async () => {
+  let answer = () => {};
+  const { wrapper } = mount(
+    undefined,
+    new Promise<void>((resolve) => {
+      answer = resolve;
+    }),
+  );
+  const user = userEvent.setup();
+  render(<FiltersScreen />, { wrapper });
+
+  // Asked on an empty builder, and the reader keeps working while it is read.
+  await describeList(user);
+  await user.click(screen.getByRole("button", { name: "Add clause" }));
+  await user.type(screen.getByLabelText("Value"), "Ann");
+  answer();
+
+  expect(await screen.findByText("A filter is ready")).toBeTruthy();
+  expect(
+    screen.getAllByLabelText("Value").map((v) => (v as HTMLInputElement).value),
+  ).toEqual(["Ann"]);
 });
 
 it("replaces the reader's filter only when they choose to", async () => {

@@ -30976,12 +30976,14 @@ export interface components {
              *     `reason` is its explanation in the reader's language. Every other code is
              *     a clause the model proposed and the server dropped: a field this caller
              *     cannot filter on, an operator the field's type refuses, a value the field
-             *     does not accept (including one outside a picklist's options), or a clause
-             *     past the engine's limit. For those `reason` is the server's English detail,
-             *     and `field` names the field so a client can say it in its own words.
+             *     does not accept (including one outside a picklist's options), a picklist
+             *     value this caller may not see the options of and so cannot be checked
+             *     (`value_not_verifiable`), or a clause past the engine's limit. For those
+             *     `reason` is the server's English detail, and `field` names the field so a
+             *     client can say it in its own words.
              * @enum {string}
              */
-            code: "not_expressible" | "unknown_field" | "operator_not_allowed" | "value_not_allowed" | "too_many_conditions";
+            code: "not_expressible" | "unknown_field" | "operator_not_allowed" | "value_not_allowed" | "value_not_verifiable" | "too_many_conditions";
             reason: string;
             /** @description The field a dropped clause named. Absent for `not_expressible`. */
             field?: string;

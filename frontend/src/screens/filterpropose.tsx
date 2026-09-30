@@ -10,7 +10,7 @@
 // clauses somebody chose with one a model guessed is not an undoable glance.
 
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field, Textarea } from "../design-system/atoms";
@@ -92,6 +92,13 @@ export function PlainWordsFilter({
   const [text, setText] = useState("");
   const [pending, setPending] = useState<Pending | null>(null);
   const [unreadable, setUnreadable] = useState(false);
+  // The tree as it stands when the answer ARRIVES. The reader may have added a
+  // clause or loaded a view while the model was reading, and replace-or-ask is
+  // decided against what is on screen then, not what was there at submit.
+  const current = useRef(tree);
+  useEffect(() => {
+    current.current = tree;
+  }, [tree]);
   const propose = useFilterProposal();
   const askable = proposalResource(resource);
   if (askable === null) {
@@ -109,7 +116,7 @@ export function PlainWordsFilter({
       setUnreadable(true);
       return;
     }
-    if (isEmptyTree(tree)) {
+    if (isEmptyTree(current.current)) {
       onApply(proposed, proposal.unsupported);
       return;
     }
@@ -211,6 +218,7 @@ const UNUSED_REASON: Record<
   unknown_field: "filters.propose.reason.unknownField",
   operator_not_allowed: "filters.propose.reason.operator",
   value_not_allowed: "filters.propose.reason.value",
+  value_not_verifiable: "filters.propose.reason.notVerifiable",
   too_many_conditions: "filters.propose.reason.tooMany",
 };
 

@@ -8945,6 +8945,7 @@ const (
 	FilterProposalUnsupportedCodeTooManyConditions  FilterProposalUnsupportedCode = "too_many_conditions"
 	FilterProposalUnsupportedCodeUnknownField       FilterProposalUnsupportedCode = "unknown_field"
 	FilterProposalUnsupportedCodeValueNotAllowed    FilterProposalUnsupportedCode = "value_not_allowed"
+	FilterProposalUnsupportedCodeValueNotVerifiable FilterProposalUnsupportedCode = "value_not_verifiable"
 )
 
 // Valid indicates whether the value is a known member of the FilterProposalUnsupportedCode enum.
@@ -8959,6 +8960,8 @@ func (e FilterProposalUnsupportedCode) Valid() bool {
 	case FilterProposalUnsupportedCodeUnknownField:
 		return true
 	case FilterProposalUnsupportedCodeValueNotAllowed:
+		return true
+	case FilterProposalUnsupportedCodeValueNotVerifiable:
 		return true
 	default:
 		return false
@@ -32579,9 +32582,11 @@ type FilterProposalUnsupported struct {
 	// `reason` is its explanation in the reader's language. Every other code is
 	// a clause the model proposed and the server dropped: a field this caller
 	// cannot filter on, an operator the field's type refuses, a value the field
-	// does not accept (including one outside a picklist's options), or a clause
-	// past the engine's limit. For those `reason` is the server's English detail,
-	// and `field` names the field so a client can say it in its own words.
+	// does not accept (including one outside a picklist's options), a picklist
+	// value this caller may not see the options of and so cannot be checked
+	// (`value_not_verifiable`), or a clause past the engine's limit. For those
+	// `reason` is the server's English detail, and `field` names the field so a
+	// client can say it in its own words.
 	Code FilterProposalUnsupportedCode `json:"code"`
 
 	// Field The field a dropped clause named. Absent for `not_expressible`.
@@ -32596,9 +32601,11 @@ type FilterProposalUnsupported struct {
 // `reason` is its explanation in the reader's language. Every other code is
 // a clause the model proposed and the server dropped: a field this caller
 // cannot filter on, an operator the field's type refuses, a value the field
-// does not accept (including one outside a picklist's options), or a clause
-// past the engine's limit. For those `reason` is the server's English detail,
-// and `field` names the field so a client can say it in its own words.
+// does not accept (including one outside a picklist's options), a picklist
+// value this caller may not see the options of and so cannot be checked
+// (`value_not_verifiable`), or a clause past the engine's limit. For those
+// `reason` is the server's English detail, and `field` names the field so a
+// client can say it in its own words.
 type FilterProposalUnsupportedCode string
 
 // FilterVocabulary What a filter may say about one record type (LVS-EXT-8). Read from the

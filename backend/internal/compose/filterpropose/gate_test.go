@@ -205,3 +205,56 @@ func TestAClausePastTheEngineLimitIsNamedRatherThanFailingTheTree(t *testing.T) 
 		t.Errorf("want %d clauses kept, got %+v", storekit.PredicateMaxLeaves, got.Tree)
 	}
 }
+
+func TestAPicklistValueMatchesExactlyBeforeItFoldsCase(t *testing.T) {
+	regions := []Field{{
+		Name: "cf_region", Type: "picklist", Operators: []string{"eq"},
+		Options: []string{"US", "us", "EU"}, Custom: true,
+	}}
+	cases := map[string]struct {
+		value string
+		want  string
+		code  string
+	}{
+		"an exact value is kept as written":        {value: "us", want: "us"},
+		"an unambiguous case variant is respelled": {value: "eu", want: "EU"},
+		"an ambiguous case variant is refused":     {value: "Us", code: CodeValueNotAllowed},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := Gate(oneClause(Clause{Field: "cf_region", Op: "eq", Text: text(tc.value)}), regions)
+			if tc.code != "" {
+				if len(got.Unsupported) != 1 || got.Unsupported[0].Code != tc.code {
+					t.Fatalf("want one %s, got %+v", tc.code, got.Unsupported)
+				}
+				return
+			}
+			want := storekit.Predicate{Field: "cf_region", Op: "eq", Value: tc.want}
+			if leaf := leafOf(t, got.Tree); !reflect.DeepEqual(leaf, want) {
+				t.Errorf("got %+v, want %+v", leaf, want)
+			}
+		})
+	}
+}
+
+// A reader without custom_field:read is sent a custom picklist with no options.
+// Any value would then pass unchecked and could match nothing, so it is declined.
+func TestAPicklistValueWhoseOptionsAreWithheldIsDeclined(t *testing.T) {
+	withheld := []Field{{Name: "cf_tier", Type: "picklist", Operators: []string{"eq", "in", "exists"}, Custom: true}}
+	for name, clause := range map[string]Clause{
+		"eq": {Phrase: "gold tier", Field: "cf_tier", Op: "eq", Text: text("gold")},
+		"in": {Phrase: "gold or silver", Field: "cf_tier", Op: "in", List: []string{"gold", "silver"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := Gate(oneClause(clause), withheld)
+			if got.Tree != nil || len(got.Unsupported) != 1 || got.Unsupported[0].Code != CodeValueNotVerifiable {
+				t.Errorf("want the clause declined as value_not_verifiable, got tree %+v, unsupported %+v", got.Tree, got.Unsupported)
+			}
+		})
+	}
+	// exists asks nothing of the options, so it still stands.
+	got := Gate(oneClause(Clause{Field: "cf_tier", Op: "exists", Flag: flag(true)}), withheld)
+	if got.Tree == nil || len(got.Unsupported) != 0 {
+		t.Errorf("an exists clause on a withheld picklist was refused: %+v", got.Unsupported)
+	}
+}

@@ -49,6 +49,14 @@ func (l *recordingLane) prompts() []string {
 	return out
 }
 
+// askedForCompanyContext answers whether the last request opted into the
+// company context, which the model path then reads under company read.
+func (l *recordingLane) askedForCompanyContext() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return len(l.sent) > 0 && l.sent[len(l.sent)-1].IncludeCompanyContext
+}
+
 func (l *recordingLane) firstSystem() string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -134,6 +142,9 @@ func TestAPlainWordsProposalIsCheckedAndPreviewable(t *testing.T) {
 	if !strings.Contains(lane.firstSystem(), "German") {
 		t.Error("the reasons are not asked for in the reader's language")
 	}
+	if !lane.askedForCompanyContext() {
+		t.Error("a caller who may read the company was not given the company context")
+	}
 	if after := ledgers(t, e); after != before {
 		t.Errorf("a proposal wrote to the ledgers: before %+v, after %+v", before, after)
 	}
@@ -189,5 +200,67 @@ func TestAPlainWordsProposalRefusesAnEmptyOrOversizedSentence(t *testing.T) {
 	}
 	if len(lane.prompts()) != 0 {
 		t.Error("a refused sentence still reached the model")
+	}
+}
+
+// revokeObjectRead drops read on one object from every system role, so the
+// session's own caller loses it.
+func revokeObjectRead(t *testing.T, e *apptest.AppEnv, object string) {
+	t.Helper()
+	if _, err := e.Owner.Exec(context.Background(), `
+		UPDATE role SET permissions = jsonb_set(
+			permissions, ARRAY['objects', $1::text],
+			'{"create": false, "read": false, "update": false, "delete": false}'::jsonb, true)
+		 WHERE is_system`, object); err != nil {
+		t.Fatalf("revoking %s.read: %v", object, err)
+	}
+}
+
+// The company context is a help and never a precondition: a caller who may read
+// contacts and lists but not companies still gets a contact proposal, without it.
+func TestAPlainWordsProposalNeedsNoCompanyRead(t *testing.T) {
+	lane := &recordingLane{reply: `{"groups":[],"join":"and","unsupported":[]}`}
+	e := proposalEnv(t, lane)
+	revokeObjectRead(t, e, "company")
+
+	var got proposalBody
+	if status := e.Call(t, "POST", "/v1/filters/propose", integration.AnyMap{
+		"resource": "contact", "text": "contacts in Germany",
+	}, nil, &got); status != http.StatusOK {
+		t.Fatalf("status=%d body=%+v, want 200", status, got)
+	}
+	if lane.askedForCompanyContext() {
+		t.Error("the company context was asked for on behalf of a caller who may not read the company")
+	}
+}
+
+// A reader without custom_field:read is sent a custom picklist with no options,
+// so a value on it cannot be checked, and is declined rather than trusted.
+func TestAPlainWordsProposalDeclinesAPicklistValueItCannotCheck(t *testing.T) {
+	lane := &recordingLane{}
+	e := proposalEnv(t, lane)
+	var field integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
+		"object": "contact", "label": "Route", "type": "picklist",
+		"options": []string{"direct", "partner"}, "source": "manual",
+	}, nil, &field); status != http.StatusCreated {
+		t.Fatalf("create custom field: status=%d body=%v", status, field)
+	}
+	column, _ := field["column_name"].(string)
+	lane.reply = `{"groups":[{"join":"and","clauses":[{"phrase":"direct route","field":"` + column +
+		`","op":"eq","text":"direct","number":null,"flag":null,"list":null,"days_ago":null}]}],"join":"and","unsupported":[]}`
+	revokeObjectRead(t, e, "custom_field")
+
+	var got proposalBody
+	if status := e.Call(t, "POST", "/v1/filters/propose", integration.AnyMap{
+		"resource": "contact", "text": "contacts on the direct route",
+	}, nil, &got); status != http.StatusOK {
+		t.Fatalf("status=%d body=%+v", status, got)
+	}
+	if string(got.Filter) != "null" || len(got.Unsupported) != 1 || got.Unsupported[0].Code != "value_not_verifiable" {
+		t.Errorf("filter=%s unsupported=%+v, want the clause declined as value_not_verifiable", got.Filter, got.Unsupported)
+	}
+	if strings.Contains(strings.Join(lane.prompts(), "\n"), "partner") {
+		t.Error("the withheld options reached the model")
 	}
 }

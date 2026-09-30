@@ -10327,6 +10327,8 @@ export const en = {
     "No field you can filter on here records this.",
   "filters.propose.reason.operator": "{field} cannot be compared that way.",
   "filters.propose.reason.value": "{field} does not take that value.",
+  "filters.propose.reason.notVerifiable":
+    "{field} lists options you cannot see, so the value could not be checked.",
   "filters.propose.reason.tooMany":
     "The filter already holds as many conditions as it can.",
   "lists.page": "List",
