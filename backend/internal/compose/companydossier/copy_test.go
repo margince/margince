@@ -23,7 +23,7 @@ func TestEveryShippedLanguageLabelsTheDossier(t *testing.T) {
 	}
 	for field, p := range dossierLabels {
 		for _, lang := range textlang.Shipped {
-			if strings.TrimSpace(p.in(lang)) == "" {
+			if strings.TrimSpace(p.In(lang)) == "" {
 				t.Errorf("%s has no label for %s, and fieldSentence SKIPS a field it cannot "+
 					"label — the dossier silently carries one statement fewer in that language",
 					lang, field)
@@ -38,7 +38,7 @@ func TestAnUnshippedLanguageFallsBackToTheEnglishDossierLabels(t *testing.T) {
 	if !ok {
 		t.Fatalf("%s is not labelled at all", field)
 	}
-	if want := dossierLabels[field].in(textlang.English); got != want {
+	if want := dossierLabels[field].In(textlang.English); got != want {
 		t.Fatalf("an unshipped language answered %q, want the English %q", got, want)
 	}
 }

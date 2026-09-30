@@ -403,7 +403,7 @@ func TestDeterministicClosesWithWhatTheCompanyIs(t *testing.T) {
 func TestDeterministicSaysNothingAboutACompanyItKnowsNothingAbout(t *testing.T) {
 	for _, sentence := range Deterministic("company-1", Input{Name: "Acme"}, "en") {
 		for _, label := range floor.ProfileLabels {
-			if strings.Contains(sentence.Text, label.in(textlang.English)) {
+			if strings.Contains(sentence.Text, label.In(textlang.English)) {
 				t.Errorf("sentence %q talks about the company with no profile to talk from", sentence.Text)
 			}
 		}

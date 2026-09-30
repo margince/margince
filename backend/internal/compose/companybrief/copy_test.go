@@ -34,13 +34,13 @@ func TestEveryShippedLanguageWritesTheCompanyFloor(t *testing.T) {
 
 func checkPhrase(t *testing.T, name string, p phrase) {
 	t.Helper()
-	english := p.in(textlang.English)
+	english := p.In(textlang.English)
 	if strings.TrimSpace(english) == "" {
 		t.Errorf("%s has no English sentence, so there is nothing to translate against", name)
 		return
 	}
 	for _, lang := range textlang.Shipped {
-		text := p.in(lang)
+		text := p.In(lang)
 		if strings.TrimSpace(text) == "" {
 			t.Errorf("%s leaves %s unwritten, which renders as a missing sentence", lang, name)
 			continue
@@ -77,7 +77,7 @@ func TestNoLanguageWritesAnEnglishMonthName(t *testing.T) {
 		if lang == textlang.English {
 			continue
 		}
-		layout := floor.DateLayout.in(lang)
+		layout := floor.DateLayout.In(lang)
 		for month := time.January; month <= time.December; month++ {
 			rendered := time.Date(2026, month, 2, 0, 0, 0, 0, time.UTC).Format(layout)
 			for _, name := range englishMonths {
@@ -97,7 +97,7 @@ func TestNoLanguageWritesAnEnglishMonthName(t *testing.T) {
 func TestEveryLanguageDateLayoutRendersADate(t *testing.T) {
 	when := time.Date(2026, time.November, 2, 15, 4, 5, 0, time.UTC)
 	for _, lang := range textlang.Shipped {
-		layout := floor.DateLayout.in(lang)
+		layout := floor.DateLayout.In(lang)
 		got := when.Format(layout)
 		if !strings.Contains(got, "2026") || got == layout {
 			t.Errorf("%s renders the reference instant as %q, which is not a date", lang, got)
@@ -109,7 +109,7 @@ func TestEveryLanguageDateLayoutRendersADate(t *testing.T) {
 // German, and the same shape is wrong in every language that inflects.
 func TestASingleKnownContactIsNotWrittenAsAPlural(t *testing.T) {
 	for _, lang := range textlang.Shipped {
-		if got := companyVerbs.FindAllString(floor.StrengthOverOne.in(lang), -1); len(got) != 1 {
+		if got := companyVerbs.FindAllString(floor.StrengthOverOne.In(lang), -1); len(got) != 1 {
 			t.Errorf("%s writes StrengthOverOne with %v — it takes the strength and nothing else, "+
 				"because the count it would print is always one", lang, got)
 		}
@@ -117,7 +117,7 @@ func TestASingleKnownContactIsNotWrittenAsAPlural(t *testing.T) {
 }
 
 func TestAnUnshippedLanguageFallsBackToTheEnglishCompanyFloor(t *testing.T) {
-	if got := companyPhrasesFor("kl").say(floor.OpenDealOne); got != floor.OpenDealOne.in(textlang.English) {
+	if got := companyPhrasesFor("kl").Say(floor.OpenDealOne); got != floor.OpenDealOne.In(textlang.English) {
 		t.Fatalf("an unshipped language answered %q, want the English floor", got)
 	}
 }
