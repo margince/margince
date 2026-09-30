@@ -46,14 +46,9 @@ const (
 	// spec reuses across four positions: the advertised grant type, the
 	// grant_type of a renewal, the RFC 7009 token_type_hint, and the token
 	// response's own member. One spelling for all four.
-	oauthRefreshToken = "refresh_token"
-	// oauthGrantAuthorizationCode is the grant a consented code is exchanged
-	// under — the one grant a connection begins with.
-	oauthGrantAuthorizationCode = "authorization_code"
-	// oauthAuthMethodNone is the one token endpoint auth method served: public
-	// clients, with PKCE as the proof of possession.
-	oauthAuthMethodNone = "none"
-	// RFC 7591 §3.2.2's two registration refusals.
+	oauthRefreshToken             = "refresh_token"
+	oauthGrantAuthorizationCode   = "authorization_code"
+	oauthAuthMethodNone           = "none"
 	oauthErrInvalidClientMetadata = "invalid_client_metadata"
 	oauthErrInvalidRedirectURI    = "invalid_redirect_uri"
 	// oauthParamError is RFC 6749's error member, which this server writes in

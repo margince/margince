@@ -470,8 +470,6 @@ func sha256Hex(raw string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// A general-purpose MCP client registers with every member RFC 7591 defines
-// and some it does not; the server keeps what it reads and ignores the rest.
 func TestOAuthRegistersAClientSendingStandardMetadata(t *testing.T) {
 	o := setupOAuth(t)
 

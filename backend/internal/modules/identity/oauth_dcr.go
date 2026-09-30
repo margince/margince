@@ -32,11 +32,8 @@ type dcrRefusal struct {
 	code, description string
 }
 
-// parseDCR reads the members this server acts on, by their exact names, and
-// ignores every other one — §2 obliges it to, and a client registering with
-// several servers sends the union of what they all understand. A member it
-// does read is held to what this server can honour: accepting a grant it
-// never issues would tell the client a promise it will find broken later.
+// parseDCR ignores every member it does not read: a client registering with
+// several servers sends the union of what they all understand.
 func parseDCR(members map[string]json.RawMessage) (dcrRequest, *dcrRefusal) {
 	var req dcrRequest
 	var err *dcrRefusal

@@ -55,11 +55,8 @@ func (h Handlers) OAuthRouter() http.Handler {
 }
 
 func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
-	// The bound is httperr's and the ANSWER is RFC 7591's: a registration
-	// endpoint speaks `{"error": …}`, and a problem+json body here would be a
-	// document no conforming client parses. Decoded as a member bag rather
-	// than a struct because the struct decode refuses unknown keys, which is
-	// exactly what §2 forbids a registration endpoint to do.
+	// The bound is httperr's and the answer RFC 7591's `{"error": …}`. A member
+	// map, because the struct decode refuses the unknown keys §2 says to ignore.
 	var members map[string]json.RawMessage
 	if err := httperr.DecodeOrRefusal(w, r, &members); err != nil {
 		if httperr.BodyTooLarge(err) {

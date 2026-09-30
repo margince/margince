@@ -143,9 +143,6 @@ func TestRegistrationRefusesWhatItCannotHonour(t *testing.T) {
 	}
 }
 
-// Past the metadata checks, a conforming document reaches the workspace
-// binding — which a workspace-less handler refuses as invalid_request, not
-// as a malformed document.
 func TestRegisterEndpointAcceptsAThirdPartyDocument(t *testing.T) {
 	rec := httptest.NewRecorder()
 	workspacelessHandlers().oauthRegister(rec,

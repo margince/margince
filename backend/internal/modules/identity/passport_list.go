@@ -101,8 +101,6 @@ const listPassportsSQL = `
 // whose agents act for whom.
 func (s *Service) ListPassports(ctx context.Context, id Identity) ([]PassportRow, error) {
 	ctx = actorCtx(ctx, id)
-	// Which agents act for a seat is the seat's own to see: no agent lists
-	// them, and no buyer holds any.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return nil, err
 	}

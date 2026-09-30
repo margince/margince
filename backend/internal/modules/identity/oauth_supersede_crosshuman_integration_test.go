@@ -262,9 +262,6 @@ func (e *revocationEnv) connectOAuthWithClient(t *testing.T, consenter Identity,
 	return out
 }
 
-// Two colleagues on one published client each hold their own connection, so
-// one of them disconnecting ends theirs alone — and neither sees the other's
-// in their own list.
 func TestOneHumanDisconnectingLeavesAColleaguesConnectionAlive(t *testing.T) {
 	e := setupRevocationEnv(t, "oauth-disconnect-cross-human")
 
