@@ -137,6 +137,13 @@ func settleStoredOriginal[C storedOriginalCandidate](
 // transaction. A row that no longer exists is reported as not found rather than
 // as a fault: an erasure or a retention sweep may remove an original between
 // the offer and its turn, and that is not a reason to fail the batch.
+//
+// It composes no audience, and the passes that call it may not. They run as the
+// system principal, and what survives their transaction is participant rows,
+// a meeting status or a display name, never the original's text. Several of
+// them establish the participant rows the audience test itself reads, so
+// gating them on that answer would leave a limited activity permanently
+// unreadable by the very contacts and colleagues who were on it.
 func readStoredOriginal(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]byte, bool, error) {
 	var payload []byte
 	err := tx.QueryRow(ctx, `SELECT payload FROM raw_capture WHERE id = $1`, id).Scan(&payload)
