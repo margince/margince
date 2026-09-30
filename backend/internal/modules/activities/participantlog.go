@@ -49,7 +49,7 @@ const (
 // A row that names its source author was not logged by the caller: an import
 // writes another system's history, and the caller is whoever ran the import.
 // Our side is then the author's seat when the source names one, and nobody when
-// it names only a person with no seat here (an inbound mail's external sender,
+// it names only an author with no seat here (an inbound mail's external sender,
 // a departed rep the source spelled by name). The backfill skips these rows for
 // the same reason (participantbackfill.go, class 3).
 func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, direction *string, links []ActivityLinkInput, author storekit.SourceAuthorInput) error {
