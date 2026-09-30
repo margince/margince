@@ -109,19 +109,29 @@ const (
 // this reader may see.
 func doneSince(
 	ctx context.Context, tx pgx.Tx, since time.Time, limit int,
-) ([]entry, map[string]int, error) {
+) ([]entry, map[string]int, map[string]bool, error) {
 	notShown := map[string]int{}
 	found := make([]entry, 0, limit)
+	// An arm that came back full was CUT: readCap is a LIMIT, so the rows it
+	// did not return are indistinguishable from rows that do not exist, and
+	// every count grouped out of it is a floor rather than a total.
+	capped := map[string]bool{}
 	for entityType, table := range scopedTypes {
 		rows, err := doneForType(ctx, tx, entityType, table, since, limit)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
+		}
+		if len(rows) == readCap {
+			capped[entityType] = true
 		}
 		found = append(found, rows...)
 	}
 	activities, err := doneForActivities(ctx, tx, since, limit)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+	if len(activities) == readCap {
+		capped["activity"] = true
 	}
 	found = append(found, activities...)
 	// WHAT THIS READ COULD NOT PLACE, counted rather than guessed at. `update`
@@ -131,12 +141,12 @@ func doneSince(
 	// claim the field exists to refuse.
 	unplaceable, err := unplaceableSince(ctx, tx, since)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if unplaceable > 0 {
 		notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnknownEntityType)] = unplaceable
 	}
-	return found, notShown, nil
+	return found, notShown, capped, nil
 }
 
 // doneForType reads one owner-scoped entity type's machine actions.

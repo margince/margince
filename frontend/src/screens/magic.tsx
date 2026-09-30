@@ -375,16 +375,25 @@ function LineSubject({
   const opens = line.lane === "done" && line.entity !== undefined && since;
   // ONE line for a job that touched many records: the most recent one by
   // name, and how many more.
-  if (count > 1 || (!line.entity && line.count !== undefined)) {
-    const summary =
-      label && count > 1
-        ? plural("magic.aboutMany", count - 1, {
-            label,
-            others: formatNumber(count - 1, locale),
-          })
-        : plural("magic.aboutCount", count, {
-            count: formatNumber(count, locale),
-          });
+  // The read behind a line can be cut short, and then its count is the most
+  // that read could see rather than what the job did. A floor line therefore
+  // never renders as an exact number — including the one that stands for a
+  // single record, which is a group that MIGHT have more beyond the cut.
+  const floor = line.count_is_floor === true;
+  if (count > 1 || floor || (!line.entity && line.count !== undefined)) {
+    let summary: string;
+    if (label && count > 1) {
+      summary = plural(floor ? "magic.aboutManyAtLeast" : "magic.aboutMany", count - 1, {
+        label,
+        others: formatNumber(count - 1, locale),
+      });
+    } else if (label && floor) {
+      summary = t("magic.aboutNamedAtLeast", { label });
+    } else {
+      summary = plural(floor ? "magic.aboutCountAtLeast" : "magic.aboutCount", count, {
+        count: formatNumber(count, locale),
+      });
+    }
     return opens ? (
       <LineRecordsOpener line={line} since={since} summary={summary} />
     ) : (

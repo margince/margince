@@ -11328,6 +11328,11 @@ export const de = {
   "magic.aboutMany_other": "{label} und {others} weitere",
   "magic.aboutCount_one": "{count} Datensatz",
   "magic.aboutCount_other": "{count} Datensätze",
+  "magic.aboutManyAtLeast_one": "{label} und mindestens {others} weiterer",
+  "magic.aboutManyAtLeast_other": "{label} und mindestens {others} weitere",
+  "magic.aboutCountAtLeast_one": "mindestens {count} Datensatz",
+  "magic.aboutCountAtLeast_other": "mindestens {count} Datensätze",
+  "magic.aboutNamedAtLeast": "{label} und möglicherweise weitere",
   "magic.action.mail_filed": "Erfasste E-Mail diesem Kontakt zugeordnet",
   "magic.action.company_profile_read":
     "Technisches Profil des Unternehmens gelesen",

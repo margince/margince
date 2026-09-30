@@ -29,7 +29,7 @@ import (
 // FOLDED BEFORE CUT. One background job writes one audit row per record it
 // touched; the page shows the job once, with a count, and cutting at the line
 // limit first would have counted a hundred of twelve hundred.
-func linesOf(mask imageMask, entries []entry, limit int) (lines []crmcontracts.MagicLine, housekeeping int) {
+func linesOf(mask imageMask, entries []entry, capped map[string]bool, limit int) (lines []crmcontracts.MagicLine, housekeeping int) {
 	sort.Slice(entries, func(a, b int) bool {
 		if !entries[a].OccurredAt.Equal(entries[b].OccurredAt) {
 			return entries[a].OccurredAt.After(entries[b].OccurredAt)
@@ -63,6 +63,13 @@ func linesOf(mask imageMask, entries []entry, limit int) (lines []crmcontracts.M
 		}
 		group[key] = len(out)
 		records[len(out)] = map[ids.UUID]bool{e.EntityID: true}
+		if capped[e.EntityType] {
+			// Its arm was cut, so this line's records were counted out of a
+			// partial read: what it shows is the floor, whether it ends up
+			// standing for one record or five thousand.
+			floor := true
+			line.CountIsFloor = &floor
+		}
 		out = append(out, line)
 	}
 	if len(out) > limit {

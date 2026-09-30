@@ -59,7 +59,7 @@ func (s *Service) LineRecords(
 	offset := pos.offset
 	out := crmcontracts.MagicLineRecords{Data: []crmcontracts.MagicLineRecord{}}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		entries, _, err := doneSince(ctx, tx, from, maxLimit)
+		entries, _, _, err := doneSince(ctx, tx, from, maxLimit)
 		if err != nil {
 			return err
 		}

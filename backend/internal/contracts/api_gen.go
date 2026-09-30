@@ -34878,8 +34878,11 @@ type MagicLine struct {
 	// Consequence What this means for the reader, where the action has one to state. A key, not a sentence: the product ships three languages.
 	Consequence *string `json:"consequence,omitempty"`
 
-	// Count How many records this line stands for. One background job that did the same thing to many records is ONE line with a count, not one line per record: a receipt of 1,200 identical rows says nothing a reader can use. Absent means one; `entity` then names the most recent of them.
+	// Count How many records this line stands for. One background job that did the same thing to many records is ONE line with a count, not one line per record: a receipt of 1,200 identical rows says nothing a reader can use. Absent means one; `entity` then names the most recent of them. Read with `count_is_floor`, which says whether this number is the whole of it.
 	Count *int `json:"count,omitempty"`
+
+	// CountIsFloor True when the line's records were counted from a read that was cut short, so `count` is a lower bound and the job touched at least that many. Lines are grouped from the audit rows one read returns, and that read is capped; a job over more records than the cap reports the cap. Absent or false means the count is exact. A reader deciding whether a machine went too far needs to know which of the two they are looking at.
+	CountIsFloor *bool `json:"count_is_floor,omitempty"`
 
 	// Entity The record this line is about, where it names one.
 	Entity *MagicEntityRef `json:"entity,omitempty"`
