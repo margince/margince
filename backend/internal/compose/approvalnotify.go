@@ -327,7 +327,7 @@ func approvalNoticeFor(
 		Recipient: ids.From[ids.UserKind](seat),
 		Kind:      notices.KindApprovalPending,
 		Subject:   subject,
-		DedupeKey: notices.KindApprovalPending + ":" + approvalID.String(),
+		DedupeKey: notices.ApprovalDedupeKey(approvalID),
 		Target:    approvalNoticeTarget(staged),
 	}
 }
