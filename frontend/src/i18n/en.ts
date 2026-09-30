@@ -10371,9 +10371,9 @@ export const en = {
   "lists.members.selectAll_other": "Select all {count} members",
   "lists.members.selectionFullTitle": "The selection is full",
   "lists.members.selectionFull_one":
-    "{count} member is selected, the most one change takes. Untick one to select another.",
+    "One change can include at most {count} member. Untick one to select another.",
   "lists.members.selectionFull_other":
-    "{count} members are selected, the most one change takes. Untick one to select another.",
+    "One change can include at most {count} members. Untick one to select another.",
   "lists.members.selectAllCappedTitle": "Not every member is selected",
   "lists.members.selectAllCapped_one":
     "Only the first {count} member can be selected at once. Act on it, then select the rest.",
