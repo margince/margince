@@ -215,7 +215,13 @@ func (s *Service) waitingCustomers(
 	if s.waiting == nil {
 		return waitingRead{}, nil
 	}
-	rows, cut, err := s.waiting.Unanswered(ctx, asOf)
+	var rows []WaitingCustomer
+	var cut bool
+	err := s.degradable(ctx, func(ctx context.Context) error {
+		var err error
+		rows, cut, err = s.waiting.Unanswered(ctx, asOf)
+		return err
+	})
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
