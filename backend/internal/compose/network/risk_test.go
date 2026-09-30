@@ -14,11 +14,17 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // testNow is the fixed instant every fold in this file is judged at. A real
 // clock would make the going-cold assertions pass or fail by the day.
 var testNow = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+
+// testEnglish is the language every threshold test in this file was already
+// asserting on before the fold took a language — English, verbatim.
+var testEnglish = langcopy.For(string(textlang.English))
 
 func seat(engaged bool, role string) deals.DealStakeholder {
 	return deals.DealStakeholder{ContactID: ids.NewV7(), Role: role, Engaged: engaged}
@@ -42,7 +48,7 @@ func TestSingleThreadedIsTheReportingRuleVerbatim(t *testing.T) {
 	one := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
 		seat(true, roleChampion), seat(false, "user"), seat(false, "legal"),
 	}}
-	if !kinds(foldRisks(one, testNow))[RiskSingleThreadedTheirs] {
+	if !kinds(foldRisks(one, testNow, testEnglish))[RiskSingleThreadedTheirs] {
 		t.Error("a deal with one engaged contact and two idle seats is not flagged single-threaded")
 	}
 
@@ -50,7 +56,7 @@ func TestSingleThreadedIsTheReportingRuleVerbatim(t *testing.T) {
 	two := DealCoverage{DealID: ids.NewV7(), Stakeholders: []deals.DealStakeholder{
 		seat(true, roleChampion), seat(true, "user"),
 	}}
-	if kinds(foldRisks(two, testNow))[RiskSingleThreadedTheirs] {
+	if kinds(foldRisks(two, testNow, testEnglish))[RiskSingleThreadedTheirs] {
 		t.Errorf("two engaged contacts flagged single-threaded — the floor is %d, and a flag that fires at the boundary contradicts every other surface", reportThreadingFloor)
 	}
 }
@@ -66,7 +72,7 @@ func TestOurSideConcentrationNeedsBothVolumeAndDominance(t *testing.T) {
 	young := DealCoverage{DealID: ids.NewV7(), Stakeholders: base, OurSide: []ColleagueEdge{
 		{UserID: rep, ContactID: champion.ContactID, Count90d: 2},
 	}}
-	if kinds(foldRisks(young, testNow))[RiskSingleThreadedOurs] {
+	if kinds(foldRisks(young, testNow, testEnglish))[RiskSingleThreadedOurs] {
 		t.Errorf("a deal with %d total interactions flagged as concentrated; the minimum is %d",
 			2, ourSideMinInteractions)
 	}
@@ -76,7 +82,7 @@ func TestOurSideConcentrationNeedsBothVolumeAndDominance(t *testing.T) {
 		{UserID: rep, ContactID: champion.ContactID, Count90d: 18},
 		{UserID: ids.NewV7(), ContactID: other.ContactID, Count90d: 1},
 	}}
-	risks := foldRisks(concentrated, testNow)
+	risks := foldRisks(concentrated, testNow, testEnglish)
 	if !kinds(risks)[RiskSingleThreadedOurs] {
 		t.Fatal("18 of 19 interactions by one colleague is not flagged as our-side concentration")
 	}
@@ -94,7 +100,7 @@ func TestOurSideConcentrationNeedsBothVolumeAndDominance(t *testing.T) {
 		{UserID: rep, ContactID: champion.ContactID, Count90d: 10},
 		{UserID: ids.NewV7(), ContactID: other.ContactID, Count90d: 10},
 	}}
-	if kinds(foldRisks(shared, testNow))[RiskSingleThreadedOurs] {
+	if kinds(foldRisks(shared, testNow, testEnglish))[RiskSingleThreadedOurs] {
 		t.Error("evenly shared contact flagged as carried by one colleague")
 	}
 }
@@ -106,7 +112,7 @@ func TestACoverageGapIsAboutTheChampionNotTheCount(t *testing.T) {
 	noChampion := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
 		seat(true, "user"), seat(true, "legal"), seat(true, "finance"),
 	}}
-	got := kinds(foldRisks(noChampion, testNow))
+	got := kinds(foldRisks(noChampion, testNow, testEnglish))
 	if !got[RiskCoverageGap] {
 		t.Error("three engaged contacts with no champion is not flagged as a coverage gap")
 	}
@@ -119,7 +125,7 @@ func TestACoverageGapIsAboutTheChampionNotTheCount(t *testing.T) {
 	quietChampion := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
 		seat(false, roleChampion), seat(true, "user"), seat(true, "legal"),
 	}}
-	if !kinds(foldRisks(quietChampion, testNow))[RiskCoverageGap] {
+	if !kinds(foldRisks(quietChampion, testNow, testEnglish))[RiskCoverageGap] {
 		t.Error("an unengaged champion counted as an engaged one — a name on a seat is not advocacy")
 	}
 }
@@ -139,7 +145,7 @@ func TestTheEngagementRulesWaitForTheFirstTouch(t *testing.T) {
 		seat(false, roleChampion), seat(false, "user"), seat(false, "legal"),
 	}
 	untouched := DealCoverage{DealID: ids.NewV7(), Stakeholders: seats}
-	got := kinds(foldRisks(untouched, testNow))
+	got := kinds(foldRisks(untouched, testNow, testEnglish))
 	if got[RiskSingleThreadedTheirs] {
 		t.Error("a deal nobody has contacted yet is flagged single-threaded, which is true of every new deal")
 	}
@@ -150,7 +156,7 @@ func TestTheEngagementRulesWaitForTheFirstTouch(t *testing.T) {
 	// One captured touch and the same seats: both findings now mean what they
 	// say, and both are reported.
 	touched := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: seats}
-	got = kinds(foldRisks(touched, testNow))
+	got = kinds(foldRisks(touched, testNow, testEnglish))
 	if !got[RiskSingleThreadedTheirs] {
 		t.Error("a contacted deal with no engaged seat is not flagged single-threaded")
 	}
@@ -172,7 +178,7 @@ func TestALongSilentDealStillReportsItsEngagementFindings(t *testing.T) {
 			seat(false, roleChampion), seat(false, "user"),
 		},
 	}
-	got := kinds(foldRisks(old, testNow))
+	got := kinds(foldRisks(old, testNow, testEnglish))
 	if !got[RiskSingleThreadedTheirs] {
 		t.Error("a deal silent for 120 days is not flagged single-threaded")
 	}
@@ -186,7 +192,7 @@ func TestADealWithNoSeatsAtAllRaisesNoCoverageGap(t *testing.T) {
 	// on every deal the moment it is created, and a warning that is always on
 	// is a warning nobody reads.
 	empty := DealCoverage{DealID: ids.NewV7()}
-	if kinds(foldRisks(empty, testNow))[RiskCoverageGap] {
+	if kinds(foldRisks(empty, testNow, testEnglish))[RiskCoverageGap] {
 		t.Error("a deal with no stakeholders yet is flagged for having no champion")
 	}
 }
@@ -212,7 +218,7 @@ func TestGoingColdMeasuresAgainstTheClockThatStampedTheTouch(t *testing.T) {
 
 	for _, skew := range []time.Duration{-24 * time.Hour, 0, 24 * time.Hour} {
 		days := 0
-		for _, r := range foldRisks(cover, testNow.Add(skew)) {
+		for _, r := range foldRisks(cover, testNow.Add(skew), testEnglish) {
 			if r.Kind == RiskGoingCold {
 				days = r.DaysSinceTouch
 			}
@@ -238,7 +244,7 @@ func TestGoingColdJudgesNothingWithoutTheDatabaseClock(t *testing.T) {
 		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
 	}
 
-	if kinds(foldRisks(cover, testNow))[RiskGoingCold] {
+	if kinds(foldRisks(cover, testNow, testEnglish))[RiskGoingCold] {
 		t.Error("a coverage carrying no database clock was judged going cold anyway")
 	}
 }
@@ -254,13 +260,13 @@ func TestGoingColdFiresOnTheReportingWindowAndOnlyWhileTheDealIsOpen(t *testing.
 
 	// One day inside the window is not cold. A flag that fires at 29 days
 	// contradicts every other surface that reads REPORT-PARAM-2.
-	if kinds(foldRisks(cover(dealStatusOpen, goingColdDays-1), testNow))[RiskGoingCold] {
+	if kinds(foldRisks(cover(dealStatusOpen, goingColdDays-1), testNow, testEnglish))[RiskGoingCold] {
 		t.Errorf("a deal touched %d days ago flagged going cold; the window is %d",
 			goingColdDays-1, goingColdDays)
 	}
 
 	// Exactly at the window is.
-	risks := foldRisks(cover(dealStatusOpen, goingColdDays), testNow)
+	risks := foldRisks(cover(dealStatusOpen, goingColdDays), testNow, testEnglish)
 	if !kinds(risks)[RiskGoingCold] {
 		t.Fatalf("a deal untouched for %d days is not flagged going cold", goingColdDays)
 	}
@@ -274,7 +280,7 @@ func TestGoingColdFiresOnTheReportingWindowAndOnlyWhileTheDealIsOpen(t *testing.
 
 	// A closed deal is silent because it is finished.
 	for _, status := range []string{"won", "lost"} {
-		if kinds(foldRisks(cover(status, 400), testNow))[RiskGoingCold] {
+		if kinds(foldRisks(cover(status, 400), testNow, testEnglish))[RiskGoingCold] {
 			t.Errorf("a %s deal untouched for 400 days flagged going cold — it was delivered, not lost", status)
 		}
 	}
@@ -303,7 +309,7 @@ func TestGoingColdCountsTheCalendarSoTheChipAndTheCardAgree(t *testing.T) {
 		TouchedAsOf:  testNow,
 		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
 	}
-	risks := foldRisks(cover, testNow)
+	risks := foldRisks(cover, testNow, testEnglish)
 	if !kinds(risks)[RiskGoingCold] {
 		t.Fatalf("a deal last touched at 23:00 thirty calendar days ago is not flagged going cold; "+
 			"the window is counted by the calendar, and %d whole days have passed by it", goingColdDays)
@@ -324,7 +330,7 @@ func TestGoingColdSaysNothingAboutADealWhoseTouchWasNeverGathered(t *testing.T) 
 		DealID: ids.NewV7(), Status: dealStatusOpen,
 		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
 	}
-	if kinds(foldRisks(ungathered, testNow))[RiskGoingCold] {
+	if kinds(foldRisks(ungathered, testNow, testEnglish))[RiskGoingCold] {
 		t.Error("a coverage view with no gathered last touch was flagged going cold")
 	}
 }
@@ -339,7 +345,7 @@ func TestAChampionLeavingIsNotTheSameFindingAsAnyoneElseLeaving(t *testing.T) {
 		DealID: ids.NewV7(), Stakeholders: []deals.DealStakeholder{champion, legal, user},
 		DepartedContactIDs: []ids.UUID{champion.ContactID},
 	}
-	risks := foldRisks(championGone, testNow)
+	risks := foldRisks(championGone, testNow, testEnglish)
 	got := kinds(risks)
 	if !got[RiskChampionLeft] {
 		t.Error("the champion leaving the account is not flagged as champion_left")
@@ -362,7 +368,7 @@ func TestAChampionLeavingIsNotTheSameFindingAsAnyoneElseLeaving(t *testing.T) {
 		DealID: ids.NewV7(), Stakeholders: []deals.DealStakeholder{champion, legal, user},
 		DepartedContactIDs: []ids.UUID{user.ContactID, legal.ContactID},
 	}
-	risks = foldRisks(othersGone, testNow)
+	risks = foldRisks(othersGone, testNow, testEnglish)
 	got = kinds(risks)
 	if !got[RiskStakeholderLeft] {
 		t.Error("two stakeholders leaving the account is not flagged as stakeholder_left")
@@ -398,7 +404,7 @@ func TestADepartureIsOnlyReportedForASeatTheDealActuallyHas(t *testing.T) {
 		Stakeholders:       []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
 		DepartedContactIDs: []ids.UUID{stranger},
 	}
-	got := kinds(foldRisks(c, testNow))
+	got := kinds(foldRisks(c, testNow, testEnglish))
 	if got[RiskChampionLeft] || got[RiskStakeholderLeft] {
 		t.Error("a departure was reported for somebody who holds no seat on this deal")
 	}
@@ -412,7 +418,7 @@ func TestEveryRiskCarriesADealAndAReason(t *testing.T) {
 		Stakeholders: []deals.DealStakeholder{seat(true, "user")},
 		OurSide:      []ColleagueEdge{{UserID: ids.NewV7(), Count90d: 20}},
 	}
-	risks := foldRisks(c, testNow)
+	risks := foldRisks(c, testNow, testEnglish)
 	if len(risks) == 0 {
 		t.Fatal("the fixture produced no risks; the assertions below would pass vacuously")
 	}
