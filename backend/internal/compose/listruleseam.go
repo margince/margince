@@ -20,15 +20,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// listRulesAdapter is automation.Lists over the collections store.
-type listRulesAdapter struct{ store *collections.Store }
+// ListRules is automation.Lists over the collections store.
+type ListRules struct{ store *collections.Store }
+
+var _ automation.Lists = ListRules{}
 
 // NewListRules binds automation rules to the lists they name.
-func NewListRules(pool *pgxpool.Pool) automation.Lists {
-	return listRulesAdapter{store: NewCollectionsStore(pool)}
+func NewListRules(pool *pgxpool.Pool) ListRules {
+	return ListRules{store: NewCollectionsStore(pool)}
 }
 
-func (a listRulesAdapter) Find(ctx context.Context, id ids.UUID) (automation.ListRef, error) {
+// Find reads a list the caller can find.
+func (a ListRules) Find(ctx context.Context, id ids.UUID) (automation.ListRef, error) {
 	l, err := a.store.ListForRule(ctx, ids.From[ids.ListKind](id))
 	if err != nil {
 		return automation.ListRef{}, err
@@ -39,7 +42,8 @@ func (a listRulesAdapter) Find(ctx context.Context, id ids.UUID) (automation.Lis
 	}, nil
 }
 
-func (a listRulesAdapter) ObservedChanges(ctx context.Context, id ids.UUID, version int64, checkedAt time.Time, actions []string, limit int) ([]automation.ListChange, int, error) {
+// ObservedChanges reads what one check saw change, as the caller may see it.
+func (a ListRules) ObservedChanges(ctx context.Context, id ids.UUID, version int64, checkedAt time.Time, actions []string, limit int) ([]automation.ListChange, int, error) {
 	changes, total, err := a.store.ObservedChanges(ctx, ids.From[ids.ListKind](id), version, checkedAt, actions, limit)
 	if err != nil {
 		return nil, 0, err
@@ -54,11 +58,13 @@ func (a listRulesAdapter) ObservedChanges(ctx context.Context, id ids.UUID, vers
 	return out, total, nil
 }
 
-func (a listRulesAdapter) CheckShortlist(ctx context.Context, id ids.UUID, entityType string) error {
+// CheckShortlist asks whether the caller may change the Shortlist.
+func (a ListRules) CheckShortlist(ctx context.Context, id ids.UUID, entityType string) error {
 	return a.store.CheckShortlistChange(ctx, ids.From[ids.ListKind](id), entityType)
 }
 
-func (a listRulesAdapter) AddMember(ctx, admit context.Context, id ids.UUID, record datasource.EntityRef) (bool, error) {
+// AddMember adds the record as an automation, admitted as the rule owner.
+func (a ListRules) AddMember(ctx, admit context.Context, id ids.UUID, record datasource.EntityRef) (bool, error) {
 	return a.store.AddMemberOnBehalf(ctx, admit, ids.From[ids.ListKind](id), collections.MemberChange{
 		EntityType: string(record.Type), EntityID: record.ID, Reason: collections.ReasonAutomation,
 	})

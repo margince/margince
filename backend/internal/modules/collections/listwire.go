@@ -62,8 +62,12 @@ func (s *Store) view(ctx context.Context, l listRow) (crmcontracts.List, error) 
 	if summary.Joined, err = s.joinedSinceVisit(ctx, l); err != nil {
 		return crmcontracts.List{}, err
 	}
-	if summary.Changes, err = s.changesSinceVisit(ctx, l); err != nil {
+	changes, found, err := s.changesSinceVisit(ctx, l)
+	if err != nil {
 		return crmcontracts.List{}, err
+	}
+	if found {
+		summary.Changes = &changes
 	}
 	if summary.Dependencies, err = s.Dependencies(ctx, l.ID); err != nil {
 		return crmcontracts.List{}, err

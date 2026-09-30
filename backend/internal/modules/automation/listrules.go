@@ -137,29 +137,41 @@ func validateListRuleParams(extra map[string]any) func(map[string]any) error {
 }
 
 func validateListRuleParam(params map[string]any, key string, extra map[string]any) error {
-	field, value := "params."+key, params[key]
+	field := "params." + key
 	switch key {
-	case paramListID, paramShortlistID:
-		if key == paramShortlistID && extra[paramShortlistID] == nil {
+	case paramListID:
+		return validateListRef(params, key)
+	case paramShortlistID:
+		if extra[paramShortlistID] == nil {
 			return &ParamError{Field: field, Reason: errNotAParameter}
 		}
-		if text, ok := value.(string); !ok || !isUUID(text) {
-			return &ParamError{Field: field, Reason: "must name a list"}
-		}
+		return validateListRef(params, key)
 	case paramDirection:
-		if d, ok := value.(string); !ok || actionsFor(d) == nil {
+		if d, ok := params[key].(string); !ok || actionsFor(d) == nil {
 			return &ParamError{Field: field, Reason: "must be entered, left or either"}
 		}
+		return nil
 	case paramDueInDays:
-		n, ok := value.(float64)
 		if extra[paramDueInDays] == nil {
 			return &ParamError{Field: field, Reason: errNotAParameter}
 		}
-		if !ok || n != math.Trunc(n) || n < minParamDays || n > 30 {
-			return &ParamError{Field: field, Reason: "must be a whole number of days between 1 and 30"}
-		}
+		return validateListTaskDays(params, key)
 	default:
 		return &ParamError{Field: field, Reason: errNotAParameter}
+	}
+}
+
+func validateListRef(params map[string]any, key string) error {
+	if text, ok := params[key].(string); !ok || !isUUID(text) {
+		return &ParamError{Field: "params." + key, Reason: "must name a list"}
+	}
+	return nil
+}
+
+func validateListTaskDays(params map[string]any, key string) error {
+	n, ok := params[key].(float64) // decoded JSON numbers arrive as float64
+	if !ok || n != math.Trunc(n) || n < minParamDays || n > 30 {
+		return &ParamError{Field: "params." + key, Reason: "must be a whole number of days between 1 and 30"}
 	}
 	return nil
 }

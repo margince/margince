@@ -32,7 +32,7 @@ func (s *Server) publishListsAvailability(pool *pgxpool.Pool) {
 	s.dealsHandlers = s.dealsHandlers.WithListMembers(lists.MemberFilter)
 	s.bulkHandlers.engine.withLists(lists)
 	s.customfieldsHandlers = s.WithLiveLists(lists.LiveListsUsingField)
-	s.automationHandlers = s.automationHandlers.WithLists(NewListRules(pool))
+	s.automationHandlers = s.WithLists(NewListRules(pool))
 	if s.company360Svc != nil {
 		s.company360Svc.ShowListMemberships()
 	}

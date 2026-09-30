@@ -40,17 +40,17 @@ func (s *AutomationStore) RulesOnList(ctx context.Context, listID ids.UUID) ([]L
 	var out []ListRuleUse
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// A list the caller cannot find has no rules to tell them about.
-		if err := auth.EnsureVisible(ctx, tx, "list", listID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, rbacObjList, listID); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			SELECT id, name, CASE WHEN params ->> 'list_id' = @list THEN @watches ELSE @writes END, created_at
+			SELECT id, name, CASE WHEN params ->> 'list_id' = @list_id THEN @watches ELSE @writes END, created_at
 			FROM automation
 			WHERE enabled AND archived_at IS NULL AND key = ANY(@keys)
-			  AND (params ->> 'list_id' = @list OR params ->> 'shortlist_id' = @list)
+			  AND (params ->> 'list_id' = @list_id OR params ->> 'shortlist_id' = @list_id)
 			ORDER BY created_at, id`,
 			pgx.StrictNamedArgs{
-				"list": listID.String(), "keys": listRuleKeys,
+				"list_id": listID.String(), "keys": listRuleKeys,
 				"watches": RuleWatchesList, "writes": RuleWritesList,
 			})
 		if err != nil {

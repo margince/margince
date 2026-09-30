@@ -43,7 +43,7 @@ func newListRuleFixture(t *testing.T) *listRuleFixture {
 	}
 }
 
-// author is Rep1 as the person who writes rules: may author automations, and
+// author is Rep1 as the seat that writes rules: may author automations, and
 // may read and change lists and the contacts on them.
 func (f *listRuleFixture) author() context.Context {
 	p := RepPerms
@@ -152,7 +152,7 @@ func TestALeaveRuleFiresOnlyForRecordsThatLeft(t *testing.T) {
 	goes := f.contactTitled(t, "Goes", "Buyer")
 	f.rule(t, "list_membership_task", map[string]any{"direction": "left", "due_in_days": float64(3)})
 	f.check(t)
-	f.retitle(t, goes, "Seller")
+	f.retitle(t, goes, "Partner")
 	f.contactTitled(t, "Arrives", "Buyer")
 	f.check(t)
 	f.deliver(t, "list.evaluated")

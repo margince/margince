@@ -162,13 +162,16 @@ var listRuleKeys = []string{listTaskName, listNotifyName, listShortlistName}
 // PauseRulesOnList pauses every active list rule that watches the list or
 // adds to it.
 func (p *RulePauser) PauseRulesOnList(ctx context.Context, listID ids.UUID, reason string) error {
-	return p.pause(ctx, `key = ANY(@keys) AND (params ->> 'list_id' = @list OR params ->> 'shortlist_id' = @list)`,
-		pgx.StrictNamedArgs{"keys": listRuleKeys, "list": listID.String()}, rulePause{reason: reason}, listID)
+	return p.pause(ctx, `key = ANY(@keys) AND (params ->> 'list_id' = @list_id OR params ->> 'shortlist_id' = @list_id)`,
+		pgx.StrictNamedArgs{"keys": listRuleKeys, "list_id": listID.String()}, rulePause{reason: reason}, listID)
 }
 
 func (p *RulePauser) pauseRule(ctx context.Context, id ids.AutomationID, pause rulePause, listID ids.UUID) error {
 	return p.pause(ctx, `id = @id`, pgx.StrictNamedArgs{"id": id}, pause, listID)
 }
+
+// auditEnabled is the audit image key a rule's on/off state is recorded under.
+const auditEnabled = "enabled"
 
 // pausedRule is one rule a pause stopped.
 type pausedRule struct {
@@ -201,7 +204,7 @@ func (p *RulePauser) pause(ctx context.Context, where string, args pgx.StrictNam
 		}
 		for _, rule := range stopped {
 			if _, err := storekit.Audit(ctx, tx, "update", "automation", rule.ID,
-				map[string]any{"enabled": true}, map[string]any{"enabled": false, "paused_reason": pause.reason}); err != nil {
+				map[string]any{auditEnabled: true}, map[string]any{auditEnabled: false, "paused_reason": pause.reason}); err != nil {
 				return err
 			}
 		}
@@ -226,7 +229,7 @@ func (p *RulePauser) tellOwner(ctx context.Context, rule pausedRule, pause ruleP
 	}
 	var target datasource.EntityRef
 	if !listID.IsZero() {
-		target = datasource.EntityRef{Type: "list", ID: listID}
+		target = datasource.EntityRef{Type: rbacObjList, ID: listID}
 	}
 	return p.notifier.Notify(ctx, *rule.Owner, "Paused: "+rule.Name, pauseSentence(pause), target,
 		fmt.Sprintf("automation_paused:%s:%d", rule.ID, rule.Version), nil)

@@ -46,13 +46,14 @@ type namedRecord struct {
 }
 
 // changesSinceVisit summarizes a Live List's changes since this reader's last
-// visit; nil for a Shortlist, a first visit, or a reader who is not a person.
-func (s *Store) changesSinceVisit(ctx context.Context, l listRow) (*changeSummary, error) {
+// visit; false for a Shortlist, a first visit, or a reader who is not signed in.
+func (s *Store) changesSinceVisit(ctx context.Context, l listRow) (changeSummary, bool, error) {
 	p, ok := principal.Actor(ctx)
 	if l.ListType != listTypeDynamic || !ok || p.UserID == (ids.UUID{}) {
-		return nil, nil
+		return changeSummary{}, false, nil
 	}
-	var out *changeSummary
+	var out changeSummary
+	found := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var since *time.Time
 		err := tx.QueryRow(ctx, `SELECT `+visitBaseline+` FROM list_visit v WHERE v.user_id = @user_id AND v.list_id = @list_id`,
@@ -63,8 +64,8 @@ func (s *Store) changesSinceVisit(ctx context.Context, l listRow) (*changeSummar
 		if err != nil {
 			return err
 		}
-		out = &changeSummary{Since: *since}
-		if err := movedSince(ctx, tx, l, *since, out); err != nil {
+		out, found = changeSummary{Since: *since}, true
+		if err := movedSince(ctx, tx, l, *since, &out); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx, `
@@ -73,7 +74,7 @@ func (s *Store) changesSinceVisit(ctx context.Context, l listRow) (*changeSummar
 			WHERE r.list_id = @list_id AND r.changed_at > @since AND r.definition IS DISTINCT FROM p.definition`,
 			pgx.StrictNamedArgs{listIDField: l.ID, "since": *since}).Scan(&out.FilterChanges)
 	})
-	return out, err
+	return out, found, err
 }
 
 // movedSince counts the distinct records the reader can see that joined and

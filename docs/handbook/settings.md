@@ -250,19 +250,11 @@ started with.
 **Provider keys** — your own keys for whichever provider you use. Margince can
 also run entirely against a local model with no cloud key at all.
 
-**Automations** — the trigger-and-action catalogue. Where lists are switched
-on, three of its rules watch a Live List: follow up with a task, send the
-rule's owner a notice, or add the record to a Shortlist of the same record type,
-when a record joins the list, leaves it, or either. They fire from the list's
-check every 15 minutes, once for each record the rule's owner can see; a record
-that joins and leaves between two checks is not seen. A rule pauses itself and
-tells its owner when one check moves more than 100 records, when its list is
-archived, or when the list's filter stops working. Restoring or fixing the list
-does not resume the rule: resume it here. A list's **Edit list** dialog names
-the automations that use it, and archiving the list names them before it pauses
-them.
-
-**Monthly AI allowance** — Admin and Ops set it; Management can read it and not
+**Automations** — the trigger-and-action catalogue. Three rules watch a Live
+List and, when a record joins or leaves it, add a task, notify the rule's owner,
+or add the record to a Shortlist. They run from the 15-minute check, once per
+record the owner can see. More than 100 changes in one check, an archived list
+or a broken filter pause the rule until its owner resumes it. **Monthly AI allowance** — Admin and Ops set it; Management can read it and not
 change it. The default is **12 million tokens per active full user each month**,
 pooled across the company. It is not an individual quota and not a spending cap
 in money. You can override the calculation with a fixed company total, which
