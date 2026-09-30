@@ -174,6 +174,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Regional notation must preserve explicit timezone and midnight fixtures.",
   },
   {
+    file: "screens/magic.timeline.test.ts",
+    why: "The receipt's axis names whole hours and midnights on the reader's own clock, so its expected instants exist only for a named zone: UTC for the plain arithmetic, and Berlin to prove the ticks follow the viewer's offset rather than the server's. A zone read off the runner would move every expected tick with the machine.",
+  },
+  {
     file: "screens/worklist.leadfacts.test.ts",
     why: "Proves a date-only provisional close keeps its day east and west of UTC.",
   },

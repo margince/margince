@@ -1,0 +1,178 @@
+/** @vitest-environment happy-dom */
+import { cleanup, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatTimeOfDay } from "../format/format";
+import { viewerZone } from "../format/timezone";
+import { line, receipt, renderMagic, stub } from "./magic.testkit";
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+const mailFiling = {
+  type: "system",
+  id: "link-reconcile",
+  label: { key: "magic.by.mail_filing" },
+} as const;
+
+// Each reading as a reader sees it: its name, its figure, and who did it.
+function readings(strip: HTMLElement): string[][] {
+  return Array.from(strip.querySelectorAll(".stat-card")).map((card) =>
+    [".stat-card-label-text", ".stat-card-value", ".stat-card-detail"].map(
+      (part) => card.querySelector(part)?.textContent ?? "",
+    ),
+  );
+}
+
+describe("the receipt at a glance", () => {
+  it("counts what got done by kind, in records, largest first", async () => {
+    stub(
+      receipt({
+        done: [
+          line({ id: "00000000-0000-7000-8000-000000000001" }),
+          line({
+            id: "00000000-0000-7000-8000-000000000002",
+            summary: { key: "magic.action.mail_filed" },
+            actor: mailFiling,
+            count: 1200,
+          }),
+          line({
+            id: "00000000-0000-7000-8000-000000000003",
+            summary: {
+              key: "magic.action.fields_changed",
+              values: { fields: "phone" },
+            },
+            count: 5,
+          }),
+          line({
+            id: "00000000-0000-7000-8000-000000000004",
+            summary: { key: "magic.action.update" },
+          }),
+          line({ id: "00000000-0000-7000-8000-000000000005" }),
+          // A sentence this build predates counts toward no reading.
+          line({
+            id: "00000000-0000-7000-8000-000000000006",
+            summary: { key: "magic.action.something_newer" },
+            count: 99,
+          }),
+        ],
+      }),
+    );
+    renderMagic();
+    const glance = await screen.findByRole("region", { name: "What got done" });
+    expect(readings(glance)).toEqual([
+      ["Emails filed", "1,200", "Mail filing"],
+      ["Records updated", "6", ""],
+      ["Deals moved on", "2", ""],
+    ]);
+  });
+
+  it("folds the done lines under the changes they stand for, and counts those", async () => {
+    stub(
+      receipt({
+        done: [
+          line({ id: "00000000-0000-7000-8000-000000000001", count: 42 }),
+          line({ id: "00000000-0000-7000-8000-000000000002" }),
+        ],
+      }),
+    );
+    renderMagic();
+    const fold = (
+      await screen.findByText("All 43 changes, one by one")
+    ).closest("details");
+    expect(fold?.open).toBe(false);
+    // The summary counts the same records the fold does, not the lines.
+    expect(
+      within(screen.getByRole("list", { name: "Summary" })).getByText(
+        "43 done for you",
+      ),
+    ).toBeTruthy();
+    expect(
+      within(fold ?? document.body).getByRole("list", { name: "Done for you" }),
+    ).toBeTruthy();
+  });
+
+  it("places each line on the window's clock, coloured by who acted", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            id: "00000000-0000-7000-8000-000000000001",
+            occurred_at: "2026-09-13T02:00:00Z",
+          }),
+          line({
+            id: "00000000-0000-7000-8000-000000000002",
+            occurred_at: "2026-09-12T20:00:00Z",
+            summary: { key: "magic.action.mail_filed" },
+            actor: mailFiling,
+            count: 42,
+          }),
+        ],
+        needs_you: [
+          line({
+            id: "00000000-0000-7000-8000-000000000003",
+            lane: "needs_you",
+            occurred_at: "2026-09-13T05:00:00Z",
+            summary: { key: "magic.action.approval_send_email" },
+          }),
+        ],
+        could_not_complete: [
+          line({
+            id: "00000000-0000-7000-8000-000000000004",
+            lane: "could_not_complete",
+            occurred_at: "2026-09-12T14:00:00Z",
+            summary: { key: "magic.action.automation_troubled" },
+          }),
+        ],
+        // Dated when it was SEEN, so it has no place on the clock.
+        watching: [
+          line({
+            id: "00000000-0000-7000-8000-000000000005",
+            lane: "watching",
+            summary: { key: "magic.action.capture_sync_failing" },
+          }),
+        ],
+      }),
+    );
+    renderMagic();
+    const zone = viewerZone();
+    const plot = await screen.findByRole("img", {
+      name: `When each line in this receipt happened, from ${formatTimeOfDay("2026-09-12T08:00:00Z", "en", zone)} to now`,
+    });
+    const marks = Array.from(plot.querySelectorAll<HTMLElement>(".magic-mark"));
+    expect(
+      marks.map((mark) => [
+        mark.dataset.kind,
+        mark.style.getPropertyValue("--at"),
+      ]),
+    ).toEqual([
+      ["failed", "25.00%"],
+      ["sync", "50.00%"],
+      ["agent", "75.00%"],
+      ["waiting", "87.50%"],
+    ]);
+    expect(marks[1].dataset.shape).toBe("bar");
+    expect(marks[1].title).toBe(
+      `Filed captured email under this contact · 42 records · ${formatTimeOfDay("2026-09-12T20:00:00Z", "en", zone)}`,
+    );
+    expect(
+      within(screen.getByRole("figure"))
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual([
+      "Agents",
+      "Sync and rules",
+      "Waiting on you",
+      "Could not be finished",
+    ]);
+  });
+
+  it("draws neither readings nor a clock when nothing ran", async () => {
+    stub(receipt());
+    renderMagic();
+    await screen.findByText("Nothing done for you");
+    expect(screen.queryByRole("region", { name: "What got done" })).toBeNull();
+    expect(screen.queryByRole("figure")).toBeNull();
+  });
+});

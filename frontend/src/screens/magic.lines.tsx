@@ -6,6 +6,7 @@
 
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
+import { Disclosure } from "../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -19,44 +20,58 @@ import type { MagicLane, MagicLine } from "./magic.queries";
 import { LineRecordsOpener } from "./magic.records";
 import { MagicUndoButton } from "./magic.undo";
 
-/** One lane with lines in it: its heading, then each line. */
+/**
+ * One lane with lines in it: its heading, then each line, folded under `fold`
+ * where the panel already said it at a glance.
+ */
 export function MagicLaneSection({
   lane,
   title,
   rows,
   since,
   zone,
+  fold,
 }: Readonly<{
   lane: MagicLane;
   title: string;
   rows: readonly MagicLine[];
   since: string | undefined;
   zone: string;
+  fold?: string;
 }>) {
+  const lines = (
+    <ul className="magic-lines" aria-label={title}>
+      {rows.map((row) => (
+        // The lanes mint their ids independently, so an id alone can name a
+        // row in a lane the reader was not looking at.
+        <li className="magic-line" key={`${lane}-${row.id}`}>
+          <div className="magic-line-text">
+            <LineSentence line={row} />
+            <LineMeta line={row} since={since} zone={zone} />
+          </div>
+          {/* Only a done line changed something there is a way back
+              from; on the others the answer is always "nothing to put
+              back", which said once per line is noise. */}
+          {lane === "done" && (
+            <div className="magic-line-back">
+              <LineWayBack line={row} />
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
   return (
     <>
       <PanelGroupHead title={title} level="h3" />
       <PanelBody>
-        <ul className="magic-lines" aria-label={title}>
-          {rows.map((row) => (
-            // The lanes mint their ids independently, so an id alone can name a
-            // row in a lane the reader was not looking at.
-            <li className="magic-line" key={`${lane}-${row.id}`}>
-              <div className="magic-line-text">
-                <LineSentence line={row} />
-                <LineMeta line={row} since={since} zone={zone} />
-              </div>
-              {/* Only a done line changed something there is a way back
-                  from; on the others the answer is always "nothing to put
-                  back", which said once per line is noise. */}
-              {lane === "done" && (
-                <div className="magic-line-back">
-                  <LineWayBack line={row} />
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+        {fold ? (
+          <Disclosure summary={fold} className="magic-fold">
+            {lines}
+          </Disclosure>
+        ) : (
+          lines
+        )}
       </PanelBody>
     </>
   );

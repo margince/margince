@@ -6,6 +6,7 @@ import { BriefChanges } from "./brief.changes";
 import { digest } from "./brief.fixtures";
 import { OvernightDigest } from "./brief.rail.overnight";
 import { MagicPanel } from "./magic";
+import { BUSY_NIGHT } from "./magic.fixtures";
 import type { MagicReceipt } from "./magic.queries";
 import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 import { automaticStageReceipt } from "./worklist.receiptreview.fixtures";
@@ -112,7 +113,7 @@ export const OnHome: Story = {
   render: () => {
     stubWithSession(
       {
-        "GET /magic": () => jsonResponse(EVERY_LANE),
+        "GET /magic": () => jsonResponse(BUSY_NIGHT),
         "GET /worklist/handled": () =>
           jsonResponse({
             as_of: "2026-09-13T08:00:00Z",

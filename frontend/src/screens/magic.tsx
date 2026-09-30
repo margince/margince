@@ -18,6 +18,10 @@
 // top, each in its own words, and only a lane with lines in it draws a
 // section: four headings over "nothing" said less than one line saying so.
 //
+// THE PICTURE BEFORE THE LIST. What got done is counted by kind and every line
+// is placed on the window's clock, so a morning of 1,200 filed emails reads in
+// one glance; the done lines themselves fold under that, one press away.
+//
 // A PLAIN PANEL, and Home's only receipt: the page hands in the changes that
 // wait for a word and the night's digest, so "what happened while I was away"
 // is answered in one place rather than three.
@@ -32,6 +36,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { MagicGlance } from "./magic.glance";
 import { MagicLaneSection } from "./magic.lines";
 import {
   MAGIC_WINDOWS,
@@ -42,6 +47,7 @@ import {
   type MagicWindow,
   useMagic,
 } from "./magic.queries";
+import { MagicTimeline } from "./magic.timeline";
 import { sourceUnavailableText } from "./worklist.copy";
 import "./brief.css";
 
@@ -122,6 +128,7 @@ export function MagicPanel({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   // The READER's own zone. A receipt says when something happened to them, and
   // an instant rendered in UTC asks them to do the arithmetic.
   const zone = viewerZone();
@@ -141,6 +148,8 @@ export function MagicPanel({
   // answer cached, and drawing it would offer undos under "did not load".
   const shown = state === "ready" ? receipt : undefined;
   const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
+  const done = rowsOf(shown?.done);
+  const doneRecords = recordsOf(done);
   return (
     <Panel
       title={t(WINDOW_HEADING[span])}
@@ -184,6 +193,8 @@ export function MagicPanel({
             // different answers, and only one of them is good news.
             canReportEmpty={withheld.length === 0}
           />
+          <MagicGlance done={done} />
+          {shown && <MagicTimeline receipt={shown} zone={zone} />}
         </SurfaceState>
       </PanelBody>
       {lead}
@@ -195,6 +206,13 @@ export function MagicPanel({
           rows={shown?.[lane] ?? []}
           since={shown?.since}
           zone={zone}
+          fold={
+            lane === "done"
+              ? plural("magic.done.all", doneRecords, {
+                  count: formatNumber(doneRecords, locale),
+                })
+              : undefined
+          }
         />
       ))}
       {(shown?.not_shown?.length ?? 0) > 0 && (
@@ -210,7 +228,16 @@ export function MagicPanel({
 // A lane off a payload this client cannot read is not an empty one: absent is
 // version skew, and only a list the server sent can say there is nothing in it.
 function hasLines(rows: readonly MagicLine[] | undefined): boolean {
-  return Array.isArray(rows) && rows.length > 0;
+  return rowsOf(rows).length > 0;
+}
+
+function rowsOf(rows: readonly MagicLine[] | undefined): readonly MagicLine[] {
+  return Array.isArray(rows) ? rows : [];
+}
+
+// How many records the lines stand for; a line without a count is one.
+function recordsOf(rows: readonly MagicLine[]): number {
+  return rows.reduce((sum, row) => sum + (row.count ?? 1), 0);
 }
 
 /**
@@ -239,9 +266,9 @@ function LaneSummary({
     if (rows.length === 0) {
       return { lane, tone: "success" as const, text: t(LANE_CLEAR[lane]) };
     }
-    // THIS PAGE's count, which is all the endpoint promises, and the rows
-    // themselves when a server older or newer than this client sends none.
-    const count = receipt.totals?.[lane] ?? rows.length;
+    // Records on THIS PAGE, which is all the endpoint promises: one line may
+    // stand for 1,200 filed emails, and the tiles and the fold count it so.
+    const count = recordsOf(rows);
     return {
       lane,
       tone: LANE_TONE[lane],

@@ -513,6 +513,10 @@
   color: inherit;
 }
 
+.magic-glance {
+  margin-top: var(--space-4);
+}
+
 /* A line: what happened with its why and meaning under it, then the record,
    who acted and when; the way back on the trailing edge. */
 .magic-lines {
@@ -563,6 +567,14 @@
 
 .magic-line-back {
   flex: none;
+}
+
+/* The done lines fold under their own group head, which already draws the
+   seam a disclosure would draw again. */
+.magic-fold {
+  border-top: 0;
+  padding-top: 0;
+  margin-bottom: 0;
 }
 
 /* The two caveats: what could not be read, above the summary, and what was
