@@ -318,3 +318,36 @@ func TestMetricsAccessIsTokenByDefaultAndRefusesAContradiction(t *testing.T) {
 		}
 	})
 }
+
+// The trusted-proxy list is a boot fault when it cannot be honoured safely,
+// never a silent empty set: an operator who set it believes the limits key on
+// the client, and an ignored value would leave them keyed on the proxy.
+func TestParseAPIFlags_TrustedProxies(t *testing.T) {
+	t.Run("unset trusts nobody", func(t *testing.T) {
+		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !cfg.trustedProxies.Empty() {
+			t.Fatalf("default must trust nobody; got %s", cfg.trustedProxies)
+		}
+	})
+	t.Run("env value is parsed", func(t *testing.T) {
+		t.Setenv("MARGINCE_TRUSTED_PROXIES", "10.0.0.0/16")
+		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := cfg.trustedProxies.String(); got != "10.0.0.0/16" {
+			t.Fatalf("got %q", got)
+		}
+	})
+	for _, bad := range []string{"0.0.0.0/0", "ingress-nginx"} {
+		t.Run("refuses "+bad, func(t *testing.T) {
+			_, err := parseAPIFlags([]string{"--dsn", testDSN, "--trusted-proxies", bad})
+			if err == nil || !strings.Contains(err.Error(), "--trusted-proxies") {
+				t.Fatalf("want a --trusted-proxies boot fault, got %v", err)
+			}
+		})
+	}
+}
