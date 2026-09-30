@@ -10197,6 +10197,16 @@ paths:
           in: query
           description: Matches the name or purpose, case-insensitively.
           schema: { type: string }
+        - name: sharing
+          in: query
+          description: >-
+            Only lists with one of these sharing settings. `private` alone reads the caller's own
+            private lists; `team` and `workspace` together read the lists shared with others.
+          schema:
+            type: array
+            items: { type: string, enum: [private, team, workspace] }
+          style: form
+          explode: true
         - $ref: '#/components/parameters/IncludeArchived'
       responses:
         '200':
@@ -17927,6 +17937,28 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /custom-fields/{id}/lists:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [CustomFields]
+      operationId: listCustomFieldLiveLists
+      summary: The Live Lists whose filter names this custom field.
+      description: |
+        What retiring the field would leave behind, asked before the retire is confirmed. A list
+        the caller may find is named; the ones they may not find are only counted, so a private
+        list's name never leaves its owner and steward. Archived lists are left out. Needs the
+        grant that retires a field.
+      responses:
+        '200':
+          description: The Live Lists that filter on the field.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomFieldLiveLists' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /custom-fields/{id}/retire:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -17940,7 +17972,11 @@ paths:
         drops a column as a side effect (CUSTOM-FIELDS-AC-13). 🟡 (mirrors `archiveContact`'s
         posture: an irreversible-feeling state change users must confirm) — an agent caller
         must supply `X-Approval-Token`. Not the generic archive shape: this is a status flip
-        on a still-fetchable row, not `archived_at` (which stays null).
+        on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
+        refused because a Live List filters on the field: the list keeps evaluating on the kept
+        values and reports health `retired_field`. Which lists those are is read, for the
+        caller's own visibility, from `listCustomFieldLiveLists` rather than carried here: a
+        replayed answer would otherwise repeat list names the caller may no longer find.
       x-mcp-tool: { verb: update_record, record_type: custom_field, tier: confirmation_required, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -32717,7 +32753,9 @@ components:
             no name of their own (fact, profile_field) and never invented: the
             writer either already knew the name from the record it read, or
             leaves this out. Descriptive only — grounding checks type and id,
-            never the name.
+            never the name. Withheld with `quote` when the reader may not read
+            the record's content: an activity's name is its subject line, which
+            belongs to the message's audience.
         quote:
           type: string
           description: |
@@ -41679,11 +41717,19 @@ components:
             evaluated (health `invalid`). Never the list's whole size.
         health:
           type: string
-          enum: [ok, ownerless, invalid]
+          enum: [ok, ownerless, invalid, retired_field]
           description: >-
             `ownerless` when nobody looks after the list — no steward, or one who can no longer
             sign in — so somebody should take it over. `invalid` when a Live List's filter no
-            longer compiles.
+            longer compiles. `retired_field` when a Live List's filter names a custom field that
+            has been retired: the list still evaluates on the kept values, and its steward should
+            replace the clause. `invalid` outranks `ownerless`, which outranks `retired_field`.
+        retired_fields:
+          type: array
+          items: { type: string }
+          description: >-
+            The retired custom fields a Live List's filter names, by column name. Absent when it
+            names none.
         can_edit: { type: boolean, description: 'Whether this caller holds list authority over the list.' }
         dependencies:
           type: array
@@ -42565,6 +42611,9 @@ components:
       required:
       - metrics
       properties:
+        schedule_ready:
+          type: boolean
+          description: Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors.
         metrics:
           type: array
           items:
@@ -42606,7 +42655,8 @@ components:
         edition_count: { type: integer, minimum: 0 }
         latest_captured_at: { type: string, format: date-time }
         next_due_at: { type: string, format: date-time }
-        cadence: { type: string }
+        cadence: { type: string, description: Comma-separated frequencies of all schedules including paused schedules. }
+        paused_schedule_count: { type: integer, minimum: 0 }
         last_status: { type: string }
         can_manage:
           type: boolean
@@ -42643,6 +42693,9 @@ components:
       - value
       - reason
       properties:
+        retired:
+          type: boolean
+          description: Excludes this allocation from live progress while preserving its revisions and saved snapshots.
         metric:
           $ref: '#/components/schemas/ReportingMetricID'
         scope:
@@ -42676,6 +42729,11 @@ components:
       - version
       - created_at
       properties:
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingTargetInput'
+          description: All definitions including the current revision, returned in revision order on the individual target read.
         allocated_value: {type: integer, format: int64}
         allocation_difference: {type: integer, format: int64}
         id: *id002
@@ -45684,6 +45742,28 @@ components:
             Base envelope field (DM-CONV-3); stays null even when `status=retired` — retire
             is a status flip, not an archive.
         version: { $ref: '#/components/schemas/RowVersion' }
+
+    CustomFieldLiveLists:
+      type: object
+      description: >-
+        The Live Lists whose filter names a custom field: the ones the caller may find by name,
+        and how many more exist that they may not find.
+      required: [lists, unseen_count]
+      properties:
+        lists:
+          type: array
+          items: { $ref: '#/components/schemas/CustomFieldLiveList' }
+        unseen_count:
+          type: integer
+          description: Live Lists that name the field but that this caller may not find.
+
+    CustomFieldLiveList:
+      type: object
+      required: [id, name, sharing]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        sharing: { type: string, enum: [private, team, workspace] }
 
     CustomFieldListResponse:
       type: object
@@ -52199,6 +52279,15 @@ components:
           type: string
           enum: [mine, unassigned, team, all]
           description: 'Whose work this read answered for.'
+        scope_truncated:
+          type: boolean
+          description: |
+            True when `scope` is `team` and the roster behind it came back at its cap, so
+            rows owned by teammates past the cap were never weighed. The same admission
+            `/worklist/team` makes with its own `truncated`, and for the same reason: a
+            page short by a colleague's whole queue is still a page, and one that did not
+            say so would read as a clear day. Absent or false means the scope was answered
+            whole.
         scope_options:
           type: array
           items: { type: string, enum: [mine, unassigned, team, all] }
@@ -52306,6 +52395,25 @@ components:
           type: integer
           minimum: 0
           description: 'How many of them the queue is carrying after folding, filtering and the page cut.'
+        personal:
+          type: boolean
+          description: |
+            True when this source answers for the ACTING USER only, whatever `scope` was
+            asked for. `team` and `all` widen the record-bearing sources, because a wider
+            row scope is what reaches a colleague's work; they cannot widen a source bound
+            to the reader inside the module that owns it — notices filter on the recipient,
+            the capture and AI health lanes refuse a principal with no human behind them,
+            and an introduction ask names one colleague, so there is no wider tier for it to
+            widen to.
+
+            A reader asking for `all` therefore gets every shared record they may see PLUS
+            their own personal queue, and this field is which half each source answered.
+            Without it a manager reading `all` believes they have seen everything, and the
+            parts that stayed personal are invisible rather than named.
+
+            It is a fact about the SOURCE, not about this read, so it is true under `mine`
+            as well — where it happens to tell the reader nothing new, because everything
+            is theirs. Absent from an older server, which a client reads as false.
         more_available:
           type: boolean
           description: |
@@ -53614,7 +53722,17 @@ components:
             How many records this line stands for. One background job that did the same
             thing to many records is ONE line with a count, not one line per record: a
             receipt of 1,200 identical rows says nothing a reader can use. Absent means one;
-            `entity` then names the most recent of them.
+            `entity` then names the most recent of them. Read with `count_is_floor`, which
+            says whether this number is the whole of it.
+        count_is_floor:
+          type: boolean
+          description: >-
+            True when the line's records were counted from a read that was cut short, so
+            `count` is a lower bound and the job touched at least that many. Lines are
+            grouped from the audit rows one read returns, and that read is capped; a job
+            over more records than the cap reports the cap. Absent or false means the
+            count is exact. A reader deciding whether a machine went too far needs to
+            know which of the two they are looking at.
 
     MagicSentence:
       type: object

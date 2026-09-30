@@ -93,6 +93,39 @@ describe("the receipt at a glance", () => {
     ).toBeTruthy();
   });
 
+  it("carries a cut-short count as a floor into every sum it joins", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            id: "00000000-0000-7000-8000-000000000001",
+            summary: { key: "magic.action.mail_filed" },
+            actor: mailFiling,
+            count: 5000,
+            count_is_floor: true,
+          }),
+          line({ id: "00000000-0000-7000-8000-000000000002" }),
+        ],
+      }),
+    );
+    renderMagic();
+    const glance = await screen.findByRole("region", { name: "What got done" });
+    expect(readings(glance)).toEqual([
+      ["Emails filed", "5,000+", "Mail filing"],
+      ["Deals moved on", "1", ""],
+    ]);
+    expect(
+      within(screen.getByRole("list", { name: "Summary" })).getByText(
+        "5,001+ done for you",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("All 5,001+ changes, one by one")).toBeTruthy();
+    const bulk = screen
+      .getByRole("img", { name: /When each line in this receipt happened/ })
+      .querySelector<HTMLElement>('.magic-mark[data-shape="bar"]');
+    expect(bulk?.title).toMatch(/ · at least 5,000 records · /);
+  });
+
   it("places each line on the window's clock, coloured by who acted", async () => {
     stub(
       receipt({

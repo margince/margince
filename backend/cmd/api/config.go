@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/cliflags"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -72,6 +73,10 @@ type apiConfig struct {
 	// the only one today. Carried so they join the faults found after parsing
 	// rather than pre-empting them.
 	envFaults []string
+	// trustedProxies is --trusted-proxies as parsed, filled only once parsing
+	// found it valid — a malformed list is a boot fault, never an empty set.
+	trustedProxiesRaw string
+	trustedProxies    httpserver.TrustedProxies
 }
 
 // apiFlagSet registers this role's flags and their environment bindings, and
@@ -118,6 +123,7 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 	env.String(fs, &cfg.webhookKey, "webhook-key", "MARGINCE_WEBHOOK_KEY", "", "base64 32-byte key sealing outbound-webhook signing secrets; enables the mutating /webhook-subscriptions surface, and (with --inline-relay) the cg:webhooks delivery consumer. Empty = those paths answer 503 and no inline delivery runs. Re-attempting a parked delivery is the worker role's River job, never this one's.")
 	env.String(fs, &cfg.metricsToken, "metrics-token", "MARGINCE_METRICS_TOKEN", "", "shared secret /metrics requires as a Bearer credential. Empty (the default) configures none, and /metrics then refuses every scrape unless --metrics-access=open")
 	env.String(fs, &cfg.metricsAccess, "metrics-access", "MARGINCE_METRICS_ACCESS", metricsAccessToken, "who /metrics serves: token (the default) requires --metrics-token as a Bearer credential and refuses every scrape without one; open serves anyone who reaches the port, for a scraper that discovers its targets by annotation and cannot carry a credential. Choose open only where a private listener, a NetworkPolicy or an ingress that does not route /metrics already contains the port — the exposition names every route and carries workspace ids")
+	env.String(fs, &cfg.trustedProxiesRaw, "trusted-proxies", "MARGINCE_TRUSTED_PROXIES", "", "comma-separated CIDR prefixes (or addresses) of the reverse proxies in front of this process. X-Forwarded-For is believed ONLY from a direct peer inside one of them, walked from the right to the first hop outside them, and that hop is what every per-IP rate limit keys on. Empty (the default) believes no header and keys on the TCP peer — behind a proxy that is the PROXY, so every client shares one bucket. Name the proxies' own networks, never 0.0.0.0/0, which is refused")
 	env.String(fs, &cfg.vatCheckBaseURL, "vat-check-base-url", "MARGINCE_VAT_CHECK_BASE_URL", "", "same variable the worker reads to reach VIES; read here only to decide whether this role queues a consultation at all. Set on both roles together, or a stated VAT number goes unverified and /vat-check answers 404")
 	env.String(fs, &cfg.geocodeBaseURL, "geocode-base-url", "MARGINCE_GEOCODE_BASE_URL", "", "same variable the worker reads to reach Nominatim; read here only to decide whether this role queues a coordinate lookup at all. Set on both roles together, or every address write queues a lookup no worker can answer and the row lands as a geocode failure naming the wrong cause")
 	// A malformed TTL is CARRIED rather than returned, so it can be reported
@@ -191,6 +197,11 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 	// this flag, so an operator configuring multi-directory sign-in has a
 	// reason to reach for the more prominent variable and break capture with it.
 	faults = append(faults, metricsAccessFaults(cfg.metricsAccess, cfg.metricsToken)...)
+	if trusted, err := httpserver.ParseTrustedProxies(cfg.trustedProxiesRaw); err != nil {
+		faults = append(faults, "--trusted-proxies: "+err.Error())
+	} else {
+		cfg.trustedProxies = trusted
+	}
 	if strings.Contains(cfg.graphTenant, ",") {
 		faults = append(faults, "--graph-tenant takes ONE authority (a directory id, or common) and got a list: "+
 			cfg.graphTenant+" — several directories is a SIGN-IN posture, so put them in --microsoft-signin-tenant")

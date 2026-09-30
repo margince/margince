@@ -41,6 +41,7 @@ configurable logger.
 | `--vat-check-requester` | `MARGINCE_VAT_CHECK_REQUESTER` | — | This installation's OWN VAT ID (e.g. `DE123456789`), on the worker role. VIES issues a consultation number — the receipt a business shows to say it verified a counterpart before treating a supply as intra-community — only for a check made under a requester's number. Unset still checks and still answers; the answer just carries no proof. |
 | `--certlog-base-url` | `MARGINCE_CERTLOG_BASE_URL` | — | certificate-transparency base URL, on the worker role. It enables the whole technical lookup — what a company publicly runs, read from its DNS records, its certificate history and one polite fetch of its own homepage. Unset = the lane is off: the company record keeps no technical profile and the button on it answers 501, which is honest for an installation that should make no outbound lookups. `public` uses crt.sh, which is free and needs no key but is one small service run on goodwill — the reader paces itself to one query every five seconds and caches every answer for that reason. |
 | `--technical-backfill-interval` | — | `6h` | how often the worker looks for companies whose technical profile is missing or stale. Unlike geocoding there is no write to trigger on — a company's mail provider changes at the COMPANY — so this pass is the only thing that ever observes a move. Runs on start; `0` turns the sweep off and leaves the button working. |
+| `--trusted-proxies` | `MARGINCE_TRUSTED_PROXIES` | — (none) | comma-separated CIDR prefixes (a bare address is its own `/32`) of the reverse proxies in front of the api. Every per-IP rate limit — sign-in (30/min per IP, 10 failures/min per email+IP), password reset, OIDC, `/oauth/token`, the MCP edge, the public booking/preference/deal-room pages, extension inbound routes — keys on ONE client address, and this decides which. **Unset** (the default), no forwarding header is believed and the key is the TCP peer: right for a directly-reached process, and wrong behind a proxy, where the peer is the PROXY and every client shares its bucket — one abuser at 30 sign-ins a minute then locks out everyone. **Set**, `X-Forwarded-For` is read only when the direct peer is inside one of these prefixes, and walked from the RIGHT to the first hop outside them: each proxy appends the address it received from, so anything a client wrote itself lies to the left of the address its own connection arrived from and is never reached. Include EVERY proxy hop (e.g. both the load balancer's and the ingress controller's networks) or the key stops at the untrusted proxy. A malformed hop keys on the peer rather than a guess. `0.0.0.0/0` / `::/0` (which would make the header attacker-chosen) and an unparseable entry are boot errors. The api logs at boot which posture it took |
 | `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` requires as a Bearer credential. Unset (the default), `/metrics` refuses every scrape with the same 401 a wrong token gets, unless `--metrics-access=open`. The api logs one line at boot saying which posture it took. Note the api serves **plain HTTP** (`ListenAndServe`, no TLS) and terminates TLS ahead of itself, so a token set here is carried in cleartext over whatever hop reaches the pod — private by construction in-cluster, and the same hop the session cookie and every OAuth passport already take, but it is not a credential to hand to a scraper across an untrusted network |
 | `--metrics-access` | `MARGINCE_METRICS_ACCESS` | `token` | who `/metrics` serves. `token` requires `--metrics-token`. `open` serves whatever reaches the port, which is what a Prometheus that discovers its targets by annotation (`prometheus.io/scrape`) needs: it reads a target's address and metrics path off the Kubernetes API and has nowhere to carry a credential. Choose `open` only where the port is already contained — a private listener, a NetworkPolicy, an ingress that does not route `/metrics` — because this listener is the one `/v1` is served on and the exposition names every route and carries workspace ids plus a declared-catalogue info metric. The api warns at boot whenever it is open, and refuses to boot with `open` and a token together (the token would authenticate nothing). `cmd/worker`'s own `/metrics` is served on `--observe-addr`, a separate listener that is off unless set |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns.** The binding is a stored setting: declared for a fresh install under `seeds.ai_routing` in `margince.yaml`, changed on a running one through Settings → AI / `PUT /v1/ai/routing`, no restart — with one exception: a role that STARTED with nothing bound wired no model path, so it has no watcher to notice the first binding and must be restarted once after it is saved. The flag stays registered so an existing command line does not die on an unknown one; nothing reads a routing file any more. What a bound installation lights up is unchanged: the cold-start read-back, per-org enrichment, the Morning-Brief L2 re-order, and AI-drafted offer regeneration |
@@ -461,6 +462,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--deepread-max-bytes` | `MARGINCE_DEEPREAD_MAX_BYTES` | `0` (= built-in 32 MiB) | deep-read crawl aggregate byte cap |
 | `--deepread-wall` | `MARGINCE_DEEPREAD_WALL` | `0` (= built-in 4m) | deep-read crawl wall clock |
 | `--observe-addr` | `MARGINCE_OBSERVE_ADDR` | — (off) | address to serve this worker's `/healthz`, `/readyz` and `/metrics` on, e.g. `127.0.0.1:9101`. Empty serves nothing — see below |
+| `--observe-pprof` | `MARGINCE_OBSERVE_PPROF` | `false` | `true` also serves Go's `net/http/pprof` profiles under `/debug/pprof/` on that same listener; requires `--observe-addr`. Enable temporarily — see below |
 
 ### The worker's own operator surface
 
@@ -534,6 +536,47 @@ and process capacity, so exposing it is an operator decision, and so is the
 interface it binds. Bind it to a loopback or a private interface, never a public
 one. An address that cannot be bound is a **boot error** naming it — a worker
 that could not serve its probes must not carry on looking healthy.
+
+### Profiling a running worker — `--observe-pprof`
+
+`MARGINCE_OBSERVE_PPROF=true` mounts Go's standard `net/http/pprof` handlers
+under `/debug/pprof/` on the observe listener. It exists for the problem the
+metrics above can show but not explain: a worker whose heap bursts, or whose CPU
+pins, inside one process where nothing outside can see which code path did it.
+`go_memstats_*` says the heap grew; a heap profile says **what holds it**.
+
+**Off by default, and meant to be switched on temporarily** — for the rollout
+that has to catch a problem, then back off. It adds no listener and no port: the
+profiles are served on the same address, with the same absence of
+authentication and the same in-cluster containment, as `/healthz` and
+`/metrics`. That is also why it is not on by default — the surface it adds is
+wider than the probes. A goroutine dump names every goroutine's stack, and
+`/debug/pprof/cmdline` answers the process's command line, including any flag
+passed there rather than through the environment (a `--dsn` carries its
+password). The worker logs a `WARN` line naming the address at every boot with
+it on.
+
+It is a **boot error** to set it `true` with no `--observe-addr` — there would
+be no listener to serve it on, and a setting that silently does nothing is the
+worse failure — and a value `strconv.ParseBool` rejects is a boot error too,
+rather than being read as off.
+
+From a pod's own network (the listener binds a private interface):
+
+```sh
+# the heap as it is right now — what a memory burst is diagnosed from
+curl -s http://<pod>:9101/debug/pprof/heap > heap.pb.gz
+# allocations over the next 10s, as a delta — what is being allocated DURING a burst
+curl -s 'http://<pod>:9101/debug/pprof/allocs?seconds=10' > allocs.pb.gz
+go tool pprof -top heap.pb.gz
+```
+
+`/debug/pprof/` lists every named profile (`heap`, `allocs`, `goroutine`,
+`block`, `mutex`, `threadcreate`); `profile` and `trace` are CPU profiling and
+the execution trace. The listener keeps its 10s write timeout for everything
+else; a request that samples over `?seconds=N` extends its own deadline by `N`,
+so `profile?seconds=30` works as it does anywhere else. A heap snapshot is
+immediate.
 
 ### `worker siteread` — the deep-read debug loop (no DB)
 

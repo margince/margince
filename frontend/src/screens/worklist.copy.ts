@@ -5,6 +5,7 @@ export { sourceName } from "./worklist.sources";
 import { ENTITY, recordRoute } from "../app/entity";
 import { routeHash } from "../app/router";
 import { calendarDay, middayInstant } from "../format/calendarday";
+import { floorFigure } from "../format/figure";
 import {
   formatDate,
   formatDateTime,
@@ -660,12 +661,8 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     return item.subject.label;
   }
   if (item.batch) {
-    // "200+" where the read stopped at its own bound. A floor printed as a
-    // total is a wrong number rather than a bounded one, and the reader has no
-    // way to tell the two apart.
-    const count = item.batch.at_least
-      ? `${formatNumber(item.batch.count, locale)}+`
-      : formatNumber(item.batch.count, locale);
+    const figure = formatNumber(item.batch.count, locale);
+    const count = floorFigure(figure, item.batch.at_least === true);
     // An incident names WHAT is broken; a hygiene group names its kind.
     //
     // From `label`, never from `cause`. The cause is the identity the group was

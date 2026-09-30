@@ -76,7 +76,7 @@ describe("custom fields on the record edit form", () => {
         fields={[
           coreField,
           divider,
-          customFieldToFormField(ceilingCf, { yes: "Yes", no: "No" }),
+          customFieldToFormField(ceilingCf, { yes: "Yes", no: "No" }, () => ""),
         ]}
         // bigint minor units on the wire; the form shows major units.
         record={{
@@ -126,7 +126,7 @@ describe("custom fields on the record edit form", () => {
         fields={[
           coreField,
           divider,
-          customFieldToFormField(ceilingCf, { yes: "Yes", no: "No" }),
+          customFieldToFormField(ceilingCf, { yes: "Yes", no: "No" }, () => ""),
         ]}
         // The deal carries no value for the field, which is the ordinary state
         // of a field somebody added to the workspace last week.

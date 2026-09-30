@@ -164,6 +164,9 @@ func wireList(l listSummary) crmcontracts.List {
 	if len(l.Definition) > 0 {
 		out.Definition = &l.Definition
 	}
+	if len(l.RetiredFields) > 0 {
+		out.RetiredFields = &l.RetiredFields
+	}
 	if l.TeamID != nil {
 		team := openapi_types.UUID(l.TeamID.UUID)
 		out.TeamId = &team

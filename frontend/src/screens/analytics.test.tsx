@@ -16,19 +16,11 @@ type Stage = components["schemas"]["Stage"];
 import { AnalyticsScreen, buildStageAggregates } from "./analytics";
 import { sectionFromAddress } from "./analytics.address";
 
-// D2 acceptance: a report picker over deals-by-stage (unchanged), forecast
-// (unweighted category tiles + a weighted-vs-unweighted banner), and
-// open-deals-per-company (a DataTable) — all driven by the same typed
-// `runReport` POST, keyed on the report.
-
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
-// The pipeline reports live behind their own tab now, and Forecast is the
-// section a reader lands on. A test that wants deals-by-stage opens the tab
-// the way a reader does, rather than asserting against a default that moved.
 async function openPipeline() {
   await userEvent
     .setup()
@@ -71,9 +63,11 @@ describe("the delivery section", () => {
     render(<AnalyticsScreen />);
     await userEvent
       .setup()
+      .click(await screen.findByRole("button", { name: "More analysis" }));
+    await userEvent
+      .setup()
       .click(await screen.findByRole("button", { name: "Delivery" }));
 
-    // Server-converted money, only formatted here.
     expect(
       await screen.findByText(formatMoney(400000, "EUR", "en")),
     ).toBeTruthy();
@@ -107,6 +101,9 @@ describe("the delivery section", () => {
       }),
     );
     render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "More analysis" }));
     await userEvent
       .setup()
       .click(await screen.findByRole("button", { name: "Delivery" }));
@@ -147,6 +144,9 @@ describe("the data coverage section", () => {
     render(<AnalyticsScreen />);
     await userEvent
       .setup()
+      .click(await screen.findByRole("button", { name: "More analysis" }));
+    await userEvent
+      .setup()
       .click(await screen.findByRole("button", { name: "Data coverage" }));
     expect(await screen.findByText("Checked")).toBeTruthy();
     // The source column speaks the reader's words, not the wire's.
@@ -160,6 +160,9 @@ describe("the data coverage section", () => {
   it("says a fresh installation was never looked at, in words", async () => {
     vi.stubGlobal("fetch", reportsStub({ coverage: { status: 404 } }));
     render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "More analysis" }));
     await userEvent
       .setup()
       .click(await screen.findByRole("button", { name: "Data coverage" }));
@@ -1056,9 +1059,6 @@ describe("sectionFromAddress", () => {
   });
 });
 
-// Pipeline draws deals-by-stage and open-deals-per-company, so its captions
-// come in pairs. Named rather than written as a bare 2, so a third report
-// added to the section reads as a deliberate change here.
 const SECTION_REPORT_COUNT_PIPELINE = 3;
 
 describe("the report frame", () => {

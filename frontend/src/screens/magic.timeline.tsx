@@ -244,10 +244,14 @@ export function MagicTimeline({
       sentence
         ? t(sentence, mark.line.summary.values)
         : t(MARK_LABEL[mark.kind]),
-      count > 1
-        ? plural("magic.aboutCount", count, {
-            count: formatNumber(count, locale),
-          })
+      count > 1 || mark.line.count_is_floor === true
+        ? plural(
+            mark.line.count_is_floor === true
+              ? "magic.aboutCountAtLeast"
+              : "magic.aboutCount",
+            count,
+            { count: formatNumber(count, locale) },
+          )
         : null,
       markWhen(mark.line.occurred_at, spansDays, locale, zone),
     ]

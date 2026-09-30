@@ -209,6 +209,13 @@
   height: 16px;
   background: var(--borderSubtle);
 }
+/* One item, so a wrapping band never strands the hairline beside the claim. */
+.ob-stage-pref {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: inherit;
+}
 
 /* Whose software this is and what it costs sit at the two ends of the band, and
    the second of those is a control the reader can open. */
@@ -612,5 +619,32 @@
      phone's width, and the dashes are the half that still works at a glance. */
   .ob-stage-where {
     display: none;
+  }
+}
+
+@media (width < 64rem) {
+  /* Below a laptop width the end slot outgrows its third, so it takes row two;
+     the dashes leave the centre, which would halve the step name's room. */
+  .ob-stage-band {
+    grid-template-columns: 1fr auto;
+    row-gap: var(--space-2);
+  }
+  /* `safe`: what outgrows the row spills past its end, never off the start. */
+  .ob-stage-end {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    flex-wrap: wrap;
+    justify-content: safe flex-end;
+    gap: var(--space-2);
+  }
+  .ob-stage-corestate {
+    margin-inline-end: auto;
+  }
+  /* An aside wider than the row narrows to it and wraps its own words. */
+  .ob-stage-end > :not(.ob-stage-corestate, .ob-stage-pref) {
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
 }

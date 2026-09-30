@@ -1,8 +1,10 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
+import { useCan } from "../app/capability";
+import { navigate } from "../app/router";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
@@ -36,9 +38,19 @@ export function ReportingScheduleDialog({
       frequency: "weekly",
       day: 1,
       local_time: "09:00",
-      enabled: true,
+      enabled: false,
     },
   );
+  const canRetention = useCan("retention_policy", "read");
+  const readiness = useQuery({
+    queryKey: ["reporting-catalog"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/analytics/metrics");
+      if (error) throwProblem(error);
+      return data;
+    },
+  });
+  const ready = readiness.data?.schedule_ready === true;
   const revisionValue = String(definition.report_revision);
   const dayValue = String(definition.day);
   const revisionOptions = [
@@ -78,6 +90,7 @@ export function ReportingScheduleDialog({
       await client.invalidateQueries({
         queryKey: ["reporting-schedules", report.id],
       });
+      await client.invalidateQueries({ queryKey: ["reporting-reports"] });
       onClose();
     },
   });
@@ -115,6 +128,18 @@ export function ReportingScheduleDialog({
           {timezone}
         </p>
         <p className="t-caption">{t("reporting.scheduleBasis")}</p>
+        {readiness.isSuccess && !ready && (
+          <p role="status">{t("reporting.scheduleSetup")}</p>
+        )}
+        {readiness.isSuccess && !ready && canRetention && (
+          <Button
+            variant="link"
+            onClick={() => navigate({ screen: "settings", id: "retention" })}
+          >
+            {t("reporting.retentionSettings")}
+          </Button>
+        )}
+        <ErrorLine error={readiness.error} />
         <Field
           label={t("reporting.revision", {
             revision: formatNumber(definition.report_revision, locale),
@@ -174,6 +199,7 @@ export function ReportingScheduleDialog({
         <Checkbox
           label={t("reporting.enabled")}
           checked={definition.enabled}
+          disabled={!ready && !definition.enabled}
           onChange={(event) =>
             setDefinition({ ...definition, enabled: event.target.checked })
           }
@@ -183,7 +209,10 @@ export function ReportingScheduleDialog({
           <Button variant="ghost" onClick={onClose}>
             {t("reporting.cancel")}
           </Button>
-          <Button type="submit" disabled={write.isPending}>
+          <Button
+            type="submit"
+            disabled={write.isPending || (definition.enabled && !ready)}
+          >
             {t("reporting.schedule")}
           </Button>
         </div>

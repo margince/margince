@@ -204,3 +204,20 @@ export const IndependentOutcomes: Story = {
     />
   ),
 };
+
+export const NoComparisonHistory: Story = {
+  render: () => (
+    <CumulativeChart
+      readings={trend.map((reading) => ({ ...reading, comparison: undefined }))}
+      label="Won deal value"
+      dataLabel="View chart as table"
+      valueLabel="Actual"
+      axisLabel={money}
+    />
+  ),
+};
+
+export const OwnerTargetsDark: Story = {
+  ...OwnerTargets,
+  globals: { theme: "dark" },
+};

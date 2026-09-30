@@ -10,6 +10,7 @@ import { Disclosure } from "../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import type { Locale } from "../i18n/locale";
 import {
   magicByKey,
   magicConsequenceKey,
@@ -148,6 +149,44 @@ function LineWhen({ line, zone }: Readonly<{ line: MagicLine; zone: string }>) {
 }
 
 /**
+ * How a line that stands for more than the record it names says so.
+ *
+ * `floor` is the receipt's own warning that the read behind the count was cut
+ * short, so every wording it picks is an "at least": the exact one would
+ * understate how far a machine went, which is the direction a reader of this
+ * page cannot recover from.
+ */
+function manySummary({
+  t,
+  plural,
+  locale,
+  label,
+  count,
+  floor,
+}: Readonly<{
+  t: ReturnType<typeof useT>;
+  plural: ReturnType<typeof usePlural>;
+  locale: Locale;
+  label: string | undefined;
+  count: number;
+  floor: boolean;
+}>) {
+  if (label && count > 1) {
+    return plural(
+      floor ? "magic.aboutManyAtLeast" : "magic.aboutMany",
+      count - 1,
+      { label, others: formatNumber(count - 1, locale) },
+    );
+  }
+  if (label && floor) {
+    return t("magic.aboutNamedAtLeast", { label });
+  }
+  return plural(floor ? "magic.aboutCountAtLeast" : "magic.aboutCount", count, {
+    count: formatNumber(count, locale),
+  });
+}
+
+/**
  * Which record the line is about, as a link where the app has a page for it.
  *
  * The subject is its own value rather than a word inside the sentence:
@@ -169,16 +208,13 @@ function LineSubject({
   const opens = line.lane === "done" && line.entity !== undefined && since;
   // ONE line for a job that touched many records: the most recent one by
   // name, and how many more.
-  if (count > 1 || (!line.entity && line.count !== undefined)) {
-    const summary =
-      label && count > 1
-        ? plural("magic.aboutMany", count - 1, {
-            label,
-            others: formatNumber(count - 1, locale),
-          })
-        : plural("magic.aboutCount", count, {
-            count: formatNumber(count, locale),
-          });
+  // The read behind a line can be cut short, and then its count is the most
+  // that read could see rather than what the job did. A floor line therefore
+  // never renders as an exact number — including the one that stands for a
+  // single record, which is a group that MIGHT have more beyond the cut.
+  const floor = line.count_is_floor === true;
+  if (count > 1 || floor || (!line.entity && line.count !== undefined)) {
+    const summary = manySummary({ t, plural, locale, label, count, floor });
     return opens ? (
       <LineRecordsOpener line={line} since={since} summary={summary} />
     ) : (

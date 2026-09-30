@@ -1,9 +1,8 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { pickOption } from "../design-system/select-testing";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { forecastEvaluation, sdrEvaluation } from "./reporting.scenarios";
@@ -79,8 +78,7 @@ it("renders forecast support and reconciled movement with boundary evidence", as
   expect(screen.getByText(/Manager call/)).toBeVisible();
 });
 
-it("changes forecast pipeline context and removes whole-scope snapshot sharing", async () => {
-  const user = userEvent.setup({ delay: null });
+it("labels snapshot selection as sharing and keeps the forecast at one quarterly scope", async () => {
   installFetchStub(reportingStoryRoutes(forecastEvaluation));
   const fetch = vi.spyOn(globalThis, "fetch");
   render(
@@ -89,32 +87,17 @@ it("changes forecast pipeline context and removes whole-scope snapshot sharing",
     </StoryProviders>,
   );
   expect(
-    await screen.findByRole("combobox", { name: "Frozen edition" }),
+    await screen.findByRole("combobox", { name: "Snapshot to share" }),
   ).toBeVisible();
-  await pickOption(
-    user,
-    screen.getByRole("combobox", { name: "Pipeline" }),
-    "Sales",
-  );
-  await waitFor(() =>
-    expect(
-      fetch.mock.calls.some(
-        ([input]) =>
-          input instanceof Request && input.url.includes("pipeline_id=sales"),
-      ),
-    ).toBe(true),
-  );
   expect(
-    screen.queryByRole("combobox", { name: "Frozen edition" }),
+    screen.queryByRole("combobox", { name: "Pipeline" }),
   ).not.toBeInTheDocument();
-  await pickOption(
-    user,
-    screen.getByRole("combobox", { name: "Pipeline" }),
-    "All pipelines",
-  );
   expect(
-    await screen.findByRole("combobox", { name: "Frozen edition" }),
-  ).toBeVisible();
+    fetch.mock.calls.some(
+      ([input]) =>
+        input instanceof Request && input.url.includes("period=this_quarter"),
+    ),
+  ).toBe(true);
 });
 
 it("shows missing capture history as unavailable instead of drawing a fabricated bridge", () => {
@@ -206,9 +189,7 @@ it("opens the at-risk worklist from stage age while frozen editions remain histo
       <ReportingCharts evaluation={forecastEvaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
-  await user.click(
-    screen.getByRole("button", { name: /Review at-risk deals/ }),
-  );
+  await user.click(screen.getByRole("button", { name: /Open my worklist/ }));
   expect(window.location.hash).toContain("deals_at_risk");
   view.rerender(
     <StoryProviders>
@@ -220,6 +201,34 @@ it("opens the at-risk worklist from stage age while frozen editions remain histo
     </StoryProviders>,
   );
   expect(
-    screen.queryByRole("button", { name: /Review at-risk deals/ }),
+    screen.queryByRole("button", { name: /Open my worklist/ }),
   ).not.toBeInTheDocument();
+});
+
+it("shows accepted handoffs alone and hides targets without an allocation", async () => {
+  const evaluation = {
+    ...sdrEvaluation,
+    metrics: sdrEvaluation.metrics.filter(
+      (metric) => metric.id === "accepted_opportunities",
+    ),
+    charts: sdrEvaluation.charts
+      .filter((chart) => chart.metric === "accepted_opportunities")
+      .map((chart) => ({
+        ...chart,
+        points: chart.points.map((point) => ({ ...point, target: undefined })),
+      })),
+  };
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(
+    screen.getByRole("heading", { name: "Accepted handoffs" }),
+  ).toBeVisible();
+  expect(
+    document.querySelectorAll(".report-chart-column").length,
+  ).toBeGreaterThan(0);
+  expect(screen.queryByText("Progress against target")).not.toBeInTheDocument();
 });

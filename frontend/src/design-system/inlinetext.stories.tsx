@@ -39,6 +39,27 @@ function Example({ multiline = false }: { multiline?: boolean }) {
   );
 }
 export const FractionalNumber: Story = { render: () => <Example /> };
+
+export const FormattedReading: Story = {
+  render: () => (
+    <InlineText
+      label="Budget"
+      placeholder="Not set"
+      value="48000"
+      display="€48,000.00"
+      type="number"
+      canEdit
+      onSave={async () => undefined}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Change Budget" }),
+    );
+    await expect(await canvas.findByRole("spinbutton")).toHaveValue(48000);
+  },
+};
 export const Paragraph: Story = { render: () => <Example multiline /> };
 
 // A refused save keeps the draft open and says why as the field's error beneath it.

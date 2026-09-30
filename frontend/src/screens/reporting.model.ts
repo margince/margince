@@ -1,5 +1,10 @@
 import type { components } from "../api/schema";
-import { formatMoney, formatNumber } from "../format/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+} from "../format/format";
 import type { Locale, Translator } from "../i18n";
 
 export type ReportingSelection = components["schemas"]["ReportingSelection"];
@@ -51,4 +56,30 @@ export function blockLabel(block: ReportingBlockKind, t: Translator): string {
 
 export function reportingMoneyUnit(unit: string, currency: string): boolean {
   return unit === "money" || (/^[A-Z]{3}$/.test(unit) && unit === currency);
+}
+
+export function editionLabel(
+  edition: ReportingEdition,
+  locale: Locale,
+): string {
+  const context = edition.evaluation.context;
+  return `${formatDate(context.interval.start_at, locale, context.timezone)} – ${formatDate(new Date(Date.parse(context.interval.end_at) - 1).toISOString(), locale, context.timezone)} · ${formatDateTime(edition.captured_at, locale, context.timezone)} · r${edition.report_revision} · ${edition.id.slice(-8)}`;
+}
+
+export function executionLabel(
+  status: string | undefined,
+  t: Translator,
+): string {
+  switch (status) {
+    case "pending":
+    case "running":
+    case "succeeded":
+    case "partial":
+    case "failed":
+    case "suspended":
+    case "skipped":
+      return t(`reporting.execution.${status}`);
+    default:
+      return "";
+  }
 }

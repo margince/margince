@@ -1019,7 +1019,7 @@ public.assurance_exception.assurance_exception_amount_currency_pair CHECK (((aff
 public.assurance_exception.assurance_exception_pkey PRIMARY KEY (id)
 public.assurance_exception.assurance_exception_seen_ordered CHECK ((last_seen_at >= first_seen_at))
 public.assurance_exception.assurance_exception_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))
-public.assurance_exception.assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text, 'condition_cleared'::text])))
+public.assurance_exception.assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text, 'condition_cleared'::text, 'subject_departed'::text])))
 public.assurance_exception.assurance_exception_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))
 public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
@@ -4572,6 +4572,16 @@ public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=-
      AND a.origin NOT IN ('system_remediation', 'system_notice')
    WHERE l.project_id = pid
 
+public.last_activity_reach(contact_ids uuid[], deal_ids uuid[], company_ids uuid[]) secdef=false cfg=- acl=- 
+  SELECT 'contact', named FROM unnest(contact_ids) named WHERE named IS NOT NULL
+  UNION SELECT 'deal', named FROM unnest(deal_ids) named WHERE named IS NOT NULL
+  UNION SELECT 'company', named FROM unnest(company_ids) named WHERE named IS NOT NULL
+  UNION SELECT 'company', d.company_id FROM deal d
+         WHERE d.id = ANY (deal_ids) AND d.company_id IS NOT NULL
+  UNION SELECT 'company', r.company_id FROM relationship r
+         WHERE r.contact_id = ANY (contact_ids) AND r.kind = 'employment'
+           AND r.ended_at IS NULL AND r.archived_at IS NULL
+
 public.lead acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead.archived_at timestamp with time zone gen=- def=-
 public.lead.candidate_company_key text gen=- def=-
@@ -4810,6 +4820,24 @@ public.list_revision.team_id uuid gen=- def=-
 public.list_revision.version bigint NOT NULL gen=- def=-
 public.list_revision_pkey CREATE UNIQUE INDEX list_revision_pkey ON public.list_revision USING btree (id)
 public.list_revision_version_key CREATE UNIQUE INDEX list_revision_version_key ON public.list_revision USING btree (list_id, version)
+public.lock_last_activity_targets(contact_ids uuid[], deal_ids uuid[], company_ids uuid[], project_ids uuid[]) secdef=false cfg=- acl=- 
+DECLARE
+  reached record;
+BEGIN
+  FOR reached IN
+     SELECT reach.kind, reach.id FROM last_activity_reach(contact_ids, deal_ids, company_ids) reach
+     UNION SELECT 'project', named FROM unnest(project_ids) named WHERE named IS NOT NULL
+     ORDER BY 1, 2
+  LOOP
+    CASE reached.kind
+      WHEN 'company' THEN PERFORM 1 FROM company WHERE id = reached.id FOR UPDATE;
+      WHEN 'contact' THEN PERFORM 1 FROM contact WHERE id = reached.id FOR UPDATE;
+      WHEN 'deal' THEN PERFORM 1 FROM deal WHERE id = reached.id FOR UPDATE;
+      WHEN 'project' THEN PERFORM 1 FROM project WHERE id = reached.id FOR UPDATE;
+    END CASE;
+  END LOOP;
+END;
+
 public.mail_draft acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mail_draft.anchor_id uuid NOT NULL gen=- def=-
 public.mail_draft.anchor_type text NOT NULL gen=- def=-
@@ -4956,6 +4984,7 @@ public.notice.notice_target_paired CHECK (((target_type IS NULL) = (target_id IS
 public.notice.origin jsonb gen=- def=-
 public.notice.read_at timestamp with time zone gen=- def=-
 public.notice.recipient_user_id uuid NOT NULL gen=- def=-
+public.notice.retracted_at timestamp with time zone gen=- def=-
 public.notice.subject text NOT NULL gen=- def=-
 public.notice.target_id uuid gen=- def=-
 public.notice.target_type text gen=- def=-
@@ -5656,16 +5685,9 @@ DECLARE
   reached record;
 BEGIN
   FOR reached IN
-     SELECT kind, id FROM (
-       SELECT 'contact' AS kind, cid AS id WHERE cid IS NOT NULL
-       UNION SELECT 'deal', did WHERE did IS NOT NULL
-       UNION SELECT 'company', oid WHERE oid IS NOT NULL
-       UNION SELECT 'company', d.company_id FROM deal d
-              WHERE d.id = did AND d.company_id IS NOT NULL
-       UNION SELECT 'company', r.company_id FROM relationship r
-              WHERE r.contact_id = cid AND r.kind = 'employment'
-                AND r.ended_at IS NULL AND r.archived_at IS NULL
-     ) reach ORDER BY kind, id
+     SELECT reach.kind, reach.id
+       FROM last_activity_reach(ARRAY[cid], ARRAY[did], ARRAY[oid]) reach
+      ORDER BY reach.kind, reach.id
   LOOP
     PERFORM move_last_activity(reached.kind::regclass, reached.id);
   END LOOP;

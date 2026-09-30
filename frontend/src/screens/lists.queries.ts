@@ -32,7 +32,15 @@ export type ListQuery = Readonly<{
   entityType?: ListRecordType;
   listType?: List["list_type"];
   q?: string;
+  /** Only lists with one of these settings; absent is every one. */
+  sharing?: readonly List["sharing"][];
 }>;
+
+/** The reader's own lists, which only they and the steward can find. */
+export const PRIVATE_LISTS: readonly List["sharing"][] = ["private"];
+
+/** The lists shared with a team or with everyone. */
+export const SHARED_LISTS: readonly List["sharing"][] = ["team", "workspace"];
 
 export function useLists(query: ListQuery, enabled = true) {
   return useQuery({
@@ -45,6 +53,7 @@ export function useLists(query: ListQuery, enabled = true) {
             entity_type: query.entityType,
             list_type: query.listType,
             q: query.q || undefined,
+            sharing: query.sharing ? [...query.sharing] : undefined,
           },
         },
       });

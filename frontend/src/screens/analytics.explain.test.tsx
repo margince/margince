@@ -71,7 +71,7 @@ async function openRowDrawer(user: User) {
 
 describe("the result's explain panel", () => {
   it("fetches the derivation and renders source rows, not raw JSON", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const derivationUrls: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -94,7 +94,7 @@ describe("the result's explain panel", () => {
   // recomputed at a NEW moment, so a rate sheet effective in between makes them
   // disagree with the number they explain.
   it("says the figures were recalculated when the link pinned no instant", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.stubGlobal(
       "fetch",
       reportsStub({ derivation: derivation({ as_of_pinned: false }) }),
@@ -108,7 +108,7 @@ describe("the result's explain panel", () => {
 
   // A caveat on every drill-through is a caveat nobody reads.
   it("stays silent when the link pinned the headline's instant", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.stubGlobal(
       "fetch",
       reportsStub({ derivation: derivation({ as_of_pinned: true }) }),
@@ -122,7 +122,7 @@ describe("the result's explain panel", () => {
 
 describe("a row's explain drawer", () => {
   it("requests the row's own handle, not the result's", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const derivationUrls: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -183,7 +183,7 @@ describe("a row's explain drawer", () => {
   // A row whose group key is NULL binds it as `isnull`, once per unset key; a
   // client keeping only the last would explain a broader slice than the row.
   it("forwards every unset group key of a no-company, unpriced row", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const derivationUrls: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -212,7 +212,7 @@ describe("a row's explain drawer", () => {
   });
 
   it("binds a forecast tile's missing category as isnull", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const derivationUrls: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -270,7 +270,7 @@ describe("a row's explain drawer", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await openPipeline(user);
     expect(
       await screen.findByRole("button", { name: "Explain No company EUR" }),
@@ -278,6 +278,7 @@ describe("a row's explain drawer", () => {
     expect(
       screen.getByRole("button", { name: "Explain No company USD" }),
     ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "More analysis" }));
     await user.click(screen.getByRole("button", { name: "Delivery" }));
     expect(
       await screen.findByRole("button", { name: "Explain Project" }),
@@ -287,7 +288,7 @@ describe("a row's explain drawer", () => {
   // The frame travels with the handle: rows opened under EUR stay written in
   // EUR when a refetch reports the installation in another base currency.
   it("keeps the frame it opened with across a refetch", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const opts: ReportsStubOpts = {
       stageRows: [stageRow({ derivation_url: ROW_HANDLE })],
       derivation: derivation({
@@ -317,7 +318,7 @@ describe("a row's explain drawer", () => {
   // The report refetches on focus and mints a new handle with a new instant;
   // an open drawer keeps explaining the figure the reader opened it on.
   it("keeps the handle it opened with across a refetch", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const derivationUrls: string[] = [];
     const rows = [stageRow({ derivation_url: ROW_HANDLE })];
     let runs = 0;
@@ -354,7 +355,7 @@ describe("a row's explain drawer", () => {
   });
 
   it("closes on Escape and hands focus back to its trigger", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.stubGlobal(
       "fetch",
       reportsStub({
@@ -379,7 +380,7 @@ describe("what the explanation owns up to", () => {
     extra: Record<string, unknown>,
     settled = "Fleet retrofit",
   ) {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.stubGlobal(
       "fetch",
       reportsStub({

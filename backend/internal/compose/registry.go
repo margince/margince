@@ -139,7 +139,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterCommitmentTool(registry, commitmentLister(pool))
 	agents.RegisterHandoffTool(registry, handoffReader(pool))
 	agents.RegisterProject360Tool(registry, project360Reader(pool))
-	agents.RegisterNetworkTools(registry, whoKnowsLister(pool), coverageReader(pool, contacts.NewStore(InstallationDB(pool))),
+	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, contacts.NewStore(InstallationDB(pool))), coverageReader(pool, contacts.NewStore(InstallationDB(pool))),
 		introPathLister(pool),
 		atRiskLister(pool, contacts.NewStore(InstallationDB(pool))))
 	agents.RegisterCommsTools(registry, newCommsAdapter(pool, drafter, send), provider)

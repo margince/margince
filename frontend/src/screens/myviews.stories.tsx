@@ -2,12 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { listsMe } from "./lists.fixtures";
+import { listsMe, shortlist } from "./lists.fixtures";
 import { MyViews } from "./myviews";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// My views: the reader's own saved filters, one group per record type. A row
-// opens the builder with that view loaded; an empty group says how to add one.
+// My views: the reader's private lists, then their saved filters, one group per
+// record type. A list row opens its page, a view row opens the builder with
+// that view loaded; an empty group says how to add one.
 const meta: Meta = { title: "Patterns/My views" };
 export default meta;
 
@@ -19,6 +20,11 @@ export const SomeViews: Story = {
   render: () => {
     installFetchStub({
       "GET /me": listsMe(true),
+      "GET /lists": () =>
+        jsonResponse({
+          data: [{ ...shortlist, name: "Dinner guests", sharing: "private" }],
+          page: { has_more: false },
+        }),
       "GET /views": () =>
         jsonResponse({
           data: [

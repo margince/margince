@@ -367,6 +367,40 @@ describe("the brief readings strip", () => {
     expect(markedFigures()).toContain("8+");
   });
 
+  // A CAPPED TEAM ROSTER cuts the scope, not a lane. Every figure was counted
+  // over the colleagues the roster could name, so all of them are floors — and
+  // none of the rows behind them looks short, which is why the page has to be
+  // told rather than work it out.
+  it("marks every figure when the team scope was answered over a capped roster", () => {
+    const day = readingsDay(
+      { more_available: false, prospecting: 2, review: 8 },
+      [],
+      [wholeMeetings(3)],
+      { urgent: 4 },
+    );
+    day.scope_truncated = true;
+    drawDay(day);
+
+    expect(markedFigures()).toContain("3+");
+    expect(markedFigures()).toContain("2+");
+    expect(markedFigures()).toContain("8+");
+  });
+
+  // The other half: a whole roster leaves the figures exact, so the mark cannot
+  // become something every team page carries.
+  it("leaves the figures exact when the scope was answered whole", () => {
+    const day = readingsDay(
+      { more_available: false, prospecting: 2, review: 8 },
+      [],
+      [wholeMeetings(3)],
+      { urgent: 4 },
+    );
+    day.scope_truncated = false;
+    drawDay(day);
+
+    expect(markedFigures()).toEqual([]);
+  });
+
   // Each lane keeps its own mark, asked one lane at a time. The tests above set
   // the decisions lane bounded, so a `floorOf` wired to that lane alone would
   // satisfy them while leaving leads and meetings permanently exact — the

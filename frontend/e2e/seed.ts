@@ -2646,21 +2646,8 @@ export async function mockApi(
         ],
       });
     }
-    // Phase-3/4 reads the 360 fires: strength (P-4), partner (P-6), roll-up
-    // (P-7). Without these the catch-all's list-envelope shape reaches a
-    // record card that expects an entity, so mock them explicitly.
-    if (path.endsWith("/strength")) {
-      return json({
-        score: 0,
-        bucket: "none",
-        factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
-        inbound_90d: 0,
-        outbound_90d: 0,
-        last_interaction: null,
-        contributing_activity_ids: [],
-        computed_at: "2026-07-13T00:00:00Z",
-      });
-    }
+    // Entity reads the 360 fires: the catch-all's list envelope would reach a
+    // card that expects an entity.
     if (path.endsWith("/partner") && method === "GET") {
       return json({ code: "not_found", title: "no partner" }, 404);
     }

@@ -17,8 +17,8 @@ func reportingGroups(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 	chart.ContextId = reportingState
 	chart.StateAt = &frame.StateAt
 	if owners {
-		chart.ContextId = reportingTarget
-		chart.Interval = frame.TargetInterval
+		chart.ContextId = reportingInterval
+		chart.Interval = &frame.Interval
 		chart.StateAt = nil
 	}
 	if !owners && frame.PipelineId == nil {
@@ -34,7 +34,7 @@ func reportingGroups(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 		if owners {
 			key, label = fact.OwnerID.String(), fact.OwnerLabel
 			if fact.OwnerID.IsZero() {
-				label = "Unassigned"
+				label = "Owner not recorded"
 			}
 		}
 		groups[key] = append(groups[key], fact)
@@ -72,7 +72,8 @@ func reportingTrend(out *reporting.Evaluation, chart crmcontracts.ReportingChart
 	chart.ContextId = reportingInterval
 	chart.Interval = &frame.Interval
 	previous := reportingPrevious(frame)
-	if !previous.StartAt.IsZero() {
+	baselineAvailable := chart.Coverage.Status == "ok" && len(metricFacts(out.Facts, chart.Metric, "previous")) > 0
+	if baselineAvailable && !previous.StartAt.IsZero() {
 		chart.ComparisonInterval = &previous
 	}
 	currentFacts := metricFacts(out.Facts, chart.Metric, reportingInterval)
@@ -86,7 +87,7 @@ func reportingTrend(out *reporting.Evaluation, chart crmcontracts.ReportingChart
 		}
 		value := sumFactsBefore(currentFacts, end)
 		var comparison *float64
-		if previousDay.Before(previous.EndAt) {
+		if baselineAvailable && previousDay.Before(previous.EndAt) {
 			priorEnd := previousDay.AddDate(0, 0, 1)
 			if priorEnd.After(previous.EndAt) {
 				priorEnd = previous.EndAt
@@ -112,15 +113,15 @@ func sumFactsBefore(facts []reporting.Fact, end time.Time) *float64 {
 
 func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChart) crmcontracts.ReportingChart {
 	frame := out.Result.Context
-	chart.ContextId = reportingMonthContext
-	month := reportingMonth(frame)
-	chart.Interval = &month
-	facts := metricFacts(out.Facts, chart.Metric, reportingMonthContext)
-	for start := month.StartAt; start.Before(month.EndAt) && start.Before(frame.EvaluatedAt); {
+	chart.ContextId = reportingInterval
+	interval := frame.Interval
+	chart.Interval = &interval
+	facts := metricFacts(out.Facts, chart.Metric, reportingInterval)
+	for start := interval.StartAt; start.Before(interval.EndAt) && start.Before(frame.EvaluatedAt); {
 		days := 7 - (int(start.Weekday())+6)%7
 		end := start.AddDate(0, 0, days)
-		if end.After(month.EndAt) {
-			end = month.EndAt
+		if end.After(interval.EndAt) {
+			end = interval.EndAt
 		}
 		if end.After(frame.EvaluatedAt) {
 			end = frame.EvaluatedAt
@@ -138,7 +139,7 @@ func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 			label += " (partial)"
 		}
 		group := "week:" + key
-		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: key, Label: label, At: &start, Value: value, Status: chart.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: reportingMonthContext, GroupKey: &group}})
+		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: key, Label: label, At: &start, Value: value, Status: chart.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: reportingInterval, GroupKey: &group}})
 		start = end
 	}
 	return chart

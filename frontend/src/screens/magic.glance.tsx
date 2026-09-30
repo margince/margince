@@ -6,6 +6,7 @@
 
 import { StatCard } from "../design-system/statcard";
 import { StatStrip } from "../design-system/statstrip";
+import { floorFigure } from "../format/figure";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -60,6 +61,8 @@ const GLANCE_SLOTS = 3;
 type GlanceReading = Readonly<{
   label: MessageKey;
   total: number;
+  // A line counted into it was cut short, so the total is only a floor.
+  floor: boolean;
   // The job that did most of it, named the way the line below names it.
   actor: MagicLine["actor"];
   actorShare: number;
@@ -85,6 +88,7 @@ function glanceReadings(done: readonly MagicLine[]): readonly GlanceReading[] {
     byLabel.set(label, {
       label,
       total: (seen?.total ?? 0) + count,
+      floor: seen?.floor === true || line.count_is_floor === true,
       actor: leads ? line.actor : seen.actor,
       actorShare: leads ? count : seen.actorShare,
     });
@@ -113,7 +117,10 @@ export function MagicGlance({
           <StatCard
             key={reading.label}
             label={t(reading.label)}
-            value={formatNumber(reading.total, locale)}
+            value={floorFigure(
+              formatNumber(reading.total, locale),
+              reading.floor,
+            )}
             detail={by ? t(by, reading.actor.label?.values) : undefined}
           />
         );

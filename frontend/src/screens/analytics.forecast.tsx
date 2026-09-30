@@ -34,24 +34,20 @@ import {
   type ForecastPeriod,
   useForecastReadings,
 } from "./forecast.queries";
-// The section's layout classes (toolbar, the checks-and-receipt pair) live in
-// the screen's sheet; imported here too so the view draws the same when it is
-// rendered on its own.
+import { ReportingForecastGraphs } from "./reporting.forecast";
 import "./analytics.css";
 
 type Readings = components["schemas"]["ForecastReadings"];
 
-// The forecast section: what the period is expected to bring in, what the
-// figure does not cover, and what a contact believes instead.
-//
-// The three readings are not equal tiles by accident. A CALL is somebody's
-// judgement, EVIDENCE is the part with confirmed dates behind it, and ALREADY
-// WON is money that arrived — three different kinds of claim, and a reader who
-// takes them for one number has been told something untrue.
 export function ForecastView({
   selection,
   canSubmit,
-}: Readonly<{ selection: AnalyticsSelection; canSubmit: boolean }>) {
+  reportingEnabled = false,
+}: Readonly<{
+  selection: AnalyticsSelection;
+  canSubmit: boolean;
+  reportingEnabled?: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const [period, setPeriod] = useState<ForecastPeriod>("quarter");
@@ -95,6 +91,9 @@ export function ForecastView({
         {(data) => (
           <>
             <ForecastAnswer readings={data} locale={locale} />
+            {reportingEnabled && period === "quarter" && (
+              <ReportingForecastGraphs scope={selection.scope} />
+            )}
             {canCall && editing ? (
               <ForecastCallEditor
                 readings={data}

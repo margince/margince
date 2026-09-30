@@ -10,13 +10,12 @@ type Company360 = components["schemas"]["Company360"];
 
 // What the server answers a company record with, in ONE place.
 //
-// Mounting `CompanyScreen` fires the same five reads on every render — the
-// composite 360, the hierarchy roll-up, the deterministic brief, the
-// relationship strength, the assistant's context — before a suite can assert
-// anything about the one card or tab it is actually about. A suite that carries
-// its own copy of those answers is making a second claim about the same wire,
-// free to drift from this one, and the next read the screen grows reaches only
-// the copy whose file the author happened to have open.
+// Mounting `CompanyScreen` fires the same reads on every render — the ones
+// `backstopAnswer` below answers — before a suite can assert anything about the
+// one card or tab it is actually about. A suite that carries its own copy of
+// those answers is making a second claim about the same wire, free to drift
+// from this one, and the next read the screen grows reaches only the copy whose
+// file the author happened to have open.
 //
 // This module answers the WIRE and nothing else: response bodies for real
 // endpoints, and the stub that routes a request to one. It never stands in for
@@ -119,18 +118,6 @@ export const emptyBrief = {
 };
 
 /**
- * The dormant/no-interactions strength response. The Company Overview fires
- * this GET unconditionally, so it is the default for every suite that is not
- * itself about the strength card.
- */
-export const dormantStrength = {
-  score: 0,
-  bucket: "none",
-  factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
-  last_interaction: null,
-};
-
-/**
  * Answers the record read the page shell needs and an empty page for everything
  * else, so a suite exercising one card does not have to plumb every other
  * request the screen fires.
@@ -148,17 +135,6 @@ function rollupResponse(rollup: unknown): Response {
   return jsonResponse(rollup ?? emptyRollup);
 }
 
-/**
- * A URL-capturing fetch stub for the company surfaces: every request is
- * recorded so a test can assert the params it carried, and a caller-supplied
- * responder decides what comes back.
- *
- * The reads the page shell fires on every render are answered up front from
- * their quiet defaults, so a suite that does not care about relationship
- * strength or the roll-up never plumbs a branch for them. A suite that IS about
- * one of them passes its own body through `options` — or, for the roll-up, a
- * whole `Response` when what it asserts is a refusal.
- */
 // A reader who has never asked for this account's scan: the state the page
 // meets on a first open, before its own ensure answers. The server merges
 // the rules' live advice into every scan it wires, a never-read one included,
@@ -200,7 +176,6 @@ function neverScannedEchoing(view: unknown): typeof neverScanned {
 // rather than a chain in the mock, so a suite reads what the backstop
 // answers as a table.
 type BackstopOptions = Readonly<{
-  strength?: unknown;
   company360?: unknown;
   scan?: unknown;
   rollup?: unknown;
@@ -215,9 +190,6 @@ function backstopAnswer(
   pathname: string,
   options?: BackstopOptions,
 ): Response | undefined {
-  if (pathname.endsWith("/strength")) {
-    return jsonResponse(options?.strength ?? dormantStrength);
-  }
   if (pathname.endsWith("/context")) {
     return jsonResponse({
       anchor: { type: "company", id: "o-1" },
@@ -246,6 +218,17 @@ function backstopAnswer(
   return undefined;
 }
 
+/**
+ * A URL-capturing fetch stub for the company surfaces: every request is
+ * recorded so a test can assert the params it carried, and a caller-supplied
+ * responder decides what comes back.
+ *
+ * The reads the page shell fires on every render are answered up front from
+ * their quiet defaults, so a suite that does not care about the brief or the
+ * roll-up never plumbs a branch for them. A suite that IS about one of them
+ * passes its own body through `options` — or, for the roll-up, a whole
+ * `Response` when what it asserts is a refusal.
+ */
 export function stubFetch(
   responder: (
     url: string,

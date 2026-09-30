@@ -55,7 +55,7 @@ export function groupValue(
         case "repeatable":
           return repeatableValue(field, rows);
         case "multiselect":
-          return splitMultiselectValue(value)
+          return splitMultiselectValue(value, field.multiselectEncoding)
             .map((item) => optionLabel(field, item, values, t))
             .join(", ");
         case "select":

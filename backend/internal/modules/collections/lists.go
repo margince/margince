@@ -204,7 +204,9 @@ type ListFilter struct {
 	EntityType *string
 	ListType   *string
 	// Query matches name or purpose, case-insensitively.
-	Query    *string
+	Query *string
+	// Sharing keeps lists with one of these settings; empty keeps every one.
+	Sharing  []string
 	Archived storekit.ArchivedFilter
 }
 
@@ -213,11 +215,19 @@ func (s *Store) ListLists(ctx context.Context, filter ListFilter) ([]listRow, bo
 	if err := auth.Require(ctx, listObject, principal.ActionRead); err != nil {
 		return nil, false, err
 	}
+	for _, sharing := range filter.Sharing {
+		if err := checkSharing(sharing); err != nil {
+			return nil, false, err
+		}
+	}
 	var out []listRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := []string{"true"}
+		if len(filter.Sharing) > 0 {
+			where = append(where, fmt.Sprintf("l.sharing = ANY($%d)", arg(filter.Sharing)))
+		}
 		if filter.EntityType != nil {
 			where = append(where, fmt.Sprintf("l.entity_type = $%d", arg(*filter.EntityType)))
 		}

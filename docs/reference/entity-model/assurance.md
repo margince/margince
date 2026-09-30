@@ -45,7 +45,7 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `observed` | `jsonb` | yes | Required `jsonb`, defaulting to `'{}'::jsonb`. |
 | `owner_id` | `uuid` |  | Optional `uuid`. |
 | `severity` | `text` | yes | One of `low`, `medium`, `high`. |
-| `status` | `text` | yes | One of `open`, `resolved`, `expired`, `condition_cleared`. |
+| `status` | `text` | yes | One of `open`, `resolved`, `expired`, `condition_cleared`, `subject_departed`. |
 | `subject_id` | `uuid` | yes | Required `uuid`. |
 | `subject_kind` | `text` | yes | One of `deal`, `signal`, `offer`, `contract`. |
 | `type` | `text` | yes | Required `text`. |
@@ -59,7 +59,7 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_exception_amount_currency_pair` — `CHECK (((affected_minor IS NULL) = (currency IS NULL)))`
 - `assurance_exception_seen_ordered` — `CHECK ((last_seen_at >= first_seen_at))`
 - `assurance_exception_severity_check` — `CHECK ((severity = ANY (ARRAY['low', 'medium', 'high'])))`
-- `assurance_exception_status_check` — `CHECK ((status = ANY (ARRAY['open', 'resolved', 'expired', 'condition_cleared'])))`
+- `assurance_exception_status_check` — `CHECK ((status = ANY (ARRAY['open', 'resolved', 'expired', 'condition_cleared', 'subject_departed'])))`
 - `assurance_exception_subject_kind_check` — `CHECK ((subject_kind = ANY (ARRAY['deal', 'signal', 'offer', 'contract'])))`
 - `uq_assurance_exception_logical_key` — `UNIQUE (logical_key)`
 

@@ -14,9 +14,61 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "reporting.retiredHelp":
+    "Mục tiêu đã ngừng vẫn được lưu trong lịch sử. Sửa mục tiêu này và bỏ trạng thái ngừng để sử dụng lại cùng phân bổ.",
+  "reporting.pausedSchedules_one": "Lịch đã tạm dừng: {count}",
+  "reporting.pausedSchedules_other": "Lịch đã tạm dừng: {count}",
+  "reporting.moreMetrics": "Thêm chỉ số và chi tiết",
+  "reporting.selectedValue": "Giá trị đã chọn",
+  "reporting.pageRecords_one": "Bản ghi trên trang này: {count}",
+  "reporting.pageRecords_other": "Bản ghi trên trang này: {count}",
+  "reporting.currentState": "Trạng thái hiện tại",
+  "reporting.attainment": "{percent}% mục tiêu",
+  "reporting.remaining": "Còn lại",
+  "reporting.ownerMetric": "{metric} theo chủ sở hữu",
+  "reporting.quarterStart": "Chọn tháng đầu quý tài chính.",
+  "reporting.additional": "Phân tích khác",
+  "reporting.settings": "Cài đặt báo cáo",
+  "reporting.execution.skipped": "Đã bỏ qua",
+  "reporting.execution.suspended": "Tạm dừng",
+  "reporting.execution.failed": "Chụp thất bại",
+  "reporting.execution.partial": "Đã lưu chưa đủ",
+  "reporting.execution.succeeded": "Đã lưu",
+  "reporting.execution.running": "Đang chụp…",
+  "reporting.execution.pending": "Đang chờ",
+  "reporting.targetHistory": "Lịch sử mục tiêu",
+  "reporting.unit": "Đơn vị",
+  "reporting.amountUnit": "Giá trị",
+  "reporting.daysUnit": "Ngày",
+  "reporting.countUnit": "Số lượng",
+  "reporting.wholeCount": "Nhập số nguyên.",
+  "reporting.retired": "Mục tiêu đã ngừng",
+  "reporting.comparisonHelp":
+    "Chọn các kỳ hoàn thành liền kề. Ảnh chụp cùng kỳ không thể hiện thay đổi giữa các kỳ.",
+  "reporting.loadOlder": "Tải ảnh chụp cũ",
+  "reporting.historicalBenchmark": "Mốc lịch sử",
+  "reporting.retentionSettings": "Cài đặt lưu giữ",
+  "reporting.scheduleSetup":
+    "Bật lưu giữ ảnh chụp để lên lịch. Có thể lưu lịch ở trạng thái tạm dừng.",
+  "reporting.shareSnapshot": "Ảnh chụp để chia sẻ",
+  "reporting.capturePending": "Đã xếp hàng chụp. Kết quả sẽ xuất hiện tại đây.",
+  "reporting.createReport": "Tạo báo cáo",
+  "reporting.observations_one": "Quan sát: {count}",
+  "reporting.observations_other": "Quan sát: {count}",
+  "reporting.observationsUnavailable": "Chưa có cỡ mẫu",
+  "reporting.definition": "Cách đo lường",
+  "reporting.viewRecords": "Xem bản ghi",
+  "reporting.copyName": "Bản sao của {name}",
+  "reporting.back": "Trang trước",
+  "reporting.status.insufficient_sample": "Chưa đủ quan sát",
+  "reporting.status.unavailable": "Không khả dụng",
+  "reporting.status.unsupported": "Không hỗ trợ",
+  "reporting.status.not_configured": "Cần thiết lập",
+  "reporting.status.no_data": "Không có bản ghi",
+  "reporting.status.partial": "Dữ liệu chưa đầy đủ",
+  "reporting.status.ok": "Dữ liệu đầy đủ",
   "retention.scopeReportEdition": "Bản báo cáo đã lưu",
-  "reporting.reviewQueue":
-    "Xem cơ hội có rủi ro trong danh sách công việc của bạn",
+  "reporting.reviewQueue": "Mở danh sách công việc của tôi",
   "reporting.lastCapture": "Lần ghi nhận thành công gần nhất {at}",
   "reporting.allocationDifference": "Mục tiêu nhóm trừ mục tiêu đã phân bổ",
   "reporting.allocatedTarget": "Mục tiêu đã phân bổ",
@@ -50,9 +102,9 @@ export const vi = {
     "Lưu trữ báo cáo này và tạm dừng lịch chạy? Các phiên bản đã lưu vẫn có thể truy cập.",
   "reporting.archive": "Lưu trữ báo cáo",
   "reporting.schedule": "Lịch chạy",
-  "reporting.editions": "Phiên bản đã lưu",
+  "reporting.editions": "Ảnh chụp đã lưu",
   "reporting.executions": "Lịch sử chạy",
-  "reporting.freeze": "Chốt phiên bản",
+  "reporting.freeze": "Lưu ảnh chụp",
   "reporting.all": "Tất cả báo cáo",
   "reporting.scheduled": "Đã lên lịch",
   "reporting.frequency": "Tần suất",
@@ -67,7 +119,7 @@ export const vi = {
   "reporting.nextRun": "Lần chạy tiếp: {at}",
   "reporting.pause": "Tạm dừng",
   "reporting.resume": "Tiếp tục",
-  "reporting.compare": "So sánh phiên bản",
+  "reporting.compare": "So sánh ảnh chụp",
   "reporting.left": "Phiên bản trước",
   "reporting.right": "Phiên bản sau",
   "reporting.reason": "Lý do sửa đổi",
@@ -79,8 +131,6 @@ export const vi = {
   "reporting.up": "Di chuyển lên",
   "reporting.down": "Di chuyển xuống",
   "reporting.periodStart": "Ngày đầu của kỳ mục tiêu",
-  "reporting.moneyUnit":
-    "Nhập số tiền theo {currency} hoặc số nguyên cho mục tiêu hoạt động.",
   "reporting.noComparison": "Không có phiên bản trước tương thích.",
   "reporting.noSource": "Không có chi tiết nguồn.",
   "reporting.framework": "Khung báo cáo",
@@ -99,7 +149,7 @@ export const vi = {
     "Xem tiến độ, kiểm tra dữ liệu và lưu lịch sử có thể so sánh.",
   "reporting.save": "Lưu báo cáo",
   "reporting.advanced": "Phân tích nâng cao",
-  "reporting.period": "Kỳ sự kiện",
+  "reporting.period": "Khoảng thời gian",
   "reporting.pipeline": "Quy trình bán hàng",
   "reporting.allPipelines": "Tất cả pipeline",
   "reporting.this_month": "Tháng này",
@@ -109,16 +159,16 @@ export const vi = {
   "reporting.custom": "Khoảng thời gian tùy chọn",
   "reporting.start": "Ngày bắt đầu",
   "reporting.end": "Ngày kết thúc (không bao gồm)",
-  "reporting.bookings_trend": "Chúng ta có tiến bộ không?",
+  "reporting.bookings_trend": "Giá trị cơ hội đã thắng theo thời gian",
   "reporting.stage_distribution": "Pipeline đang ở đâu?",
-  "reporting.owner_attainment": "Ai cần hỗ trợ?",
+  "reporting.owner_attainment": "Giá trị cơ hội đã thắng theo phụ trách",
   "reporting.stage_age": "Deal đang chậm ở đâu?",
   "reporting.sdr_outcomes": "Cuộc họp và cơ hội được chấp nhận",
-  "reporting.target_progress": "Tiến độ so với mục tiêu",
+  "reporting.target_progress": "Tiến độ mục tiêu đã phân bổ",
   "reporting.forecast_support": "Điều gì hỗ trợ dự báo?",
   "reporting.pipeline_movement": "Pipeline đã thay đổi thế nào?",
   "reporting.metric_reading": "Chi tiết chỉ số",
-  "reporting.bookings_won": "Doanh thu đã thắng",
+  "reporting.bookings_won": "Giá trị cơ hội đã thắng",
   "reporting.closed_win_rate": "Tỷ lệ thắng deal đã đóng",
   "reporting.open_pipeline": "Pipeline đang mở",
   "reporting.qualified_pipeline_created": "Pipeline đủ điều kiện mới",
@@ -135,14 +185,13 @@ export const vi = {
   "reporting.all_open": "Tất cả deal đang mở",
   "reporting.median": "Số ngày trung vị",
   "reporting.upper": "Phân vị 75",
-  "reporting.data": "Hiển thị dữ liệu gốc",
+  "reporting.data": "Xem biểu đồ dạng bảng",
   "reporting.evidence": "Bằng chứng",
-  "reporting.details": "Thêm chỉ số và chi tiết",
+  "reporting.details": "Chi tiết",
   "reporting.noTarget": "Chưa đặt mục tiêu",
   "reporting.unavailable": "Không có dữ liệu",
   "reporting.stateAt": "Trạng thái hiện tại lúc {at}",
   "reporting.interval": "{start} đến {end} · {zone}",
-  "reporting.coverage": "Độ bao phủ: {status}",
   "reporting.restricted": "Bản ghi bị hạn chế",
   "reporting.next": "Trang tiếp",
   "reporting.name": "Tên báo cáo",
@@ -161,7 +210,7 @@ export const vi = {
   "reporting.managerCall": "Dự báo của quản lý",
   "reporting.independent":
     "Số sự kiện độc lập; đây không phải phễu chuyển đổi.",
-  "reporting.frozen": "Phiên bản đã chốt",
+  "reporting.frozen": "Ảnh chụp đã lưu",
   "reporting.redacted": "Đã áp dụng ẩn dữ liệu riêng tư",
   "reporting.withheld": "Một số đóng góp bị ẩn theo quyền hiện tại của bạn.",
   "scheduling.back": "Quay lại Margince",
@@ -927,6 +976,8 @@ export const vi = {
   "record.edit": "Sửa",
 
   "record.fieldRequired": "Trường này là bắt buộc.",
+  "record.amountTooPrecise":
+    "Số tiền này có nhiều chữ số thập phân hơn mức {currency} cho phép.",
   "record.registration": "Thông tin đăng ký",
   "record.leadProfileReadOnly":
     "Không thể thay đổi LinkedIn của khách hàng tiềm năng.",
@@ -7372,20 +7423,10 @@ export const vi = {
   "auto.preview.explainer":
     "Một lượt chạy thử chỉ đọc — không bản ghi nào bị thay đổi và không gì được gửi đi.",
 
-  "strength.title": "Độ bền quan hệ",
-  "strength.score": "Điểm {score}/100",
   "strength.bucket.none": "Tạm lắng",
   "strength.bucket.weak": "Yếu",
   "strength.bucket.moderate": "Thân thiết",
   "strength.bucket.strong": "Bền chặt",
-  "strength.factor.recency": "Độ gần đây",
-  "strength.factor.frequency": "Tần suất",
-  "strength.factor.reciprocity": "Mức qua lại",
-  "strength.factor.direction": "Chiều trao đổi",
-  "strength.lastInteraction": "Tương tác gần nhất: {when}",
-  "strength.none": "Chưa có tương tác nào",
-  "strength.inout": "{in} vào · {out} ra (90 ngày)",
-  "strength.computedFrom": "Tính từ {count} hoạt động",
 
   // The relationship-graph coverage card (ADR-0078).
   "coverage.engaged": "Đang trao đổi",
@@ -7479,6 +7520,17 @@ export const vi = {
   "cf.noPermission":
     "Bạn chỉ có quyền đọc trường tùy chỉnh — thêm, sửa và lưu trữ không thuộc quyền của bạn ở đây.",
   "cf.retired": "Đã ngừng dùng",
+  "cf.retire.title": "Lưu trữ “{label}”?",
+  "cf.retire.body":
+    "Trường sẽ bị ẩn khỏi bản ghi mới và bộ lọc. Các giá trị đã lưu được giữ lại.",
+  "cf.retire.lists":
+    "Các danh sách động này lọc theo trường này. Chúng vẫn hoạt động với giá trị đã lưu và sẽ nhắc thành viên phụ trách thay điều kiện:",
+  "cf.retire.unseen_one":
+    "{count} danh sách động khác mà bạn không mở được cũng lọc theo trường này.",
+  "cf.retire.unseen_other":
+    "{count} danh sách động khác mà bạn không mở được cũng lọc theo trường này.",
+  "cf.retire.noLists": "Không có danh sách động nào lọc theo trường này.",
+  "cf.retire.checking": "Đang kiểm tra danh sách nào dùng trường này",
   // "Chung" thay vì "Tổ chức" cho mục đầu tiên: tiêu đề nhóm phía trên đã nói
   // từ đó, và một dòng lặp lại tiêu đề của chính nó thì không gọi tên được gì.
   "settings.home": "T\u1ed5ng quan",
@@ -9970,13 +10022,15 @@ export const vi = {
   "lists.health.ownerless": "C\u1ea7n ph\u1ee5 tr\u00e1ch",
   "lists.health.invalid":
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
+  "lists.health.retiredField":
+    "D\u00f9ng tr\u01b0\u1eddng \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng",
   "lists.library.title":
     "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
   "lists.library.search": "T\u00ecm danh s\u00e1ch",
   "lists.library.all": "T\u1ea5t c\u1ea3",
   "lists.library.kind": "Lo\u1ea1i danh s\u00e1ch",
   "lists.library.empty":
-    "Ch\u01b0a c\u00f3 danh s\u00e1ch n\u00e0o. H\u00e3y l\u01b0u m\u1ed9t b\u1ed9 l\u1ecdc th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng ho\u1eb7c t\u1ea1o danh s\u00e1ch ch\u1ecdn.",
+    "Ch\u01b0a c\u00f3 danh s\u00e1ch \u0111\u01b0\u1ee3c chia s\u1ebb n\u00e0o. H\u00e3y l\u01b0u m\u1ed9t b\u1ed9 l\u1ecdc th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng ho\u1eb7c t\u1ea1o danh s\u00e1ch ch\u1ecdn.",
   "lists.library.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
   "lists.col.name": "T\u00ean",
   "lists.col.kind": "Lo\u1ea1i",
@@ -10022,6 +10076,12 @@ export const vi = {
   "lists.ownerless.body":
     "Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch \u0111\u00e3 r\u1eddi \u0111i ho\u1eb7c ch\u01b0a t\u1eebng \u0111\u01b0\u1ee3c ch\u1ec9 \u0111\u1ecbnh. Ai c\u00f3 quy\u1ec1n s\u1eeda danh s\u00e1ch n\u00ean nh\u1eadn ph\u1ee5 tr\u00e1ch.",
   "lists.ownerless.takeOver": "Nh\u1eadn ph\u1ee5 tr\u00e1ch",
+  "lists.retiredField.title":
+    "B\u1ed9 l\u1ecdc n\u00e0y d\u00f9ng m\u1ed9t tr\u01b0\u1eddng \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng",
+  "lists.retiredField.body_one":
+    "{fields} \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng. Danh s\u00e1ch v\u1eabn ho\u1ea1t \u0111\u1ed9ng v\u1edbi c\u00e1c gi\u00e1 tr\u1ecb \u0111\u00e3 l\u01b0u, nh\u01b0ng s\u1ebd kh\u00f4ng c\u00f3 gi\u00e1 tr\u1ecb m\u1edbi. Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch n\u00ean thay \u0111i\u1ec1u ki\u1ec7n \u0111\u00f3 trong b\u1ed9 l\u1ecdc.",
+  "lists.retiredField.body_other":
+    "{fields} \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng. Danh s\u00e1ch v\u1eabn ho\u1ea1t \u0111\u1ed9ng v\u1edbi c\u00e1c gi\u00e1 tr\u1ecb \u0111\u00e3 l\u01b0u, nh\u01b0ng s\u1ebd kh\u00f4ng c\u00f3 gi\u00e1 tr\u1ecb m\u1edbi. Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch n\u00ean thay c\u00e1c \u0111i\u1ec1u ki\u1ec7n \u0111\u00f3 trong b\u1ed9 l\u1ecdc.",
   "lists.members.title": "Th\u00e0nh vi\u00ean",
   "lists.members.loading": "\u0110ang t\u1ea3i th\u00e0nh vi\u00ean",
   "lists.members.emptyLive":
@@ -10087,6 +10147,9 @@ export const vi = {
     "Ch\u01b0a c\u00f3 ch\u1ebf \u0111\u1ed9 xem n\u00e0o. H\u00e3y t\u1ea1o b\u1ed9 l\u1ecdc r\u1ed3i b\u1ea5m L\u01b0u b\u1ed9 l\u1ecdc.",
   "lists.views.loading":
     "\u0110ang t\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
+  "lists.myLists.title": "Danh s\u00e1ch c\u1ee7a t\u00f4i",
+  "lists.myLists.empty":
+    "Ch\u01b0a c\u00f3 danh s\u00e1ch ri\u00eang t\u01b0 n\u00e0o. Danh s\u00e1ch ch\u1ec9 b\u1ea1n t\u00ecm th\u1ea5y s\u1ebd hi\u1ec7n \u1edf \u0111\u00e2y. Khi chia s\u1ebb, danh s\u00e1ch s\u1ebd chuy\u1ec3n sang ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb.",
   "lists.history.someone": "Ai \u0111\u00f3",
 
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.
@@ -11186,6 +11249,11 @@ export const vi = {
   "magic.aboutMany_other": "{label} và {others} bản ghi khác",
   "magic.aboutCount_one": "{count} bản ghi",
   "magic.aboutCount_other": "{count} bản ghi",
+  "magic.aboutManyAtLeast_one": "{label} và ít nhất {others} bản ghi khác",
+  "magic.aboutManyAtLeast_other": "{label} và ít nhất {others} bản ghi khác",
+  "magic.aboutCountAtLeast_one": "ít nhất {count} bản ghi",
+  "magic.aboutCountAtLeast_other": "ít nhất {count} bản ghi",
+  "magic.aboutNamedAtLeast": "{label} và có thể còn nữa",
   "magic.action.mail_filed": "Đã xếp email thu thập vào liên hệ này",
   "magic.action.company_profile_read": "Đã đọc hồ sơ kỹ thuật của công ty",
   "magic.action.fields_changed": "Đã thay đổi {fields}",

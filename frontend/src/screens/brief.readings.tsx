@@ -6,6 +6,7 @@ import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { useTooltip } from "../design-system/tooltip";
+import { floorFigure } from "../format/figure";
 import {
   formatDateTime,
   formatMoneyCompact,
@@ -25,10 +26,11 @@ import {
   sourceComplete,
 } from "./brief.facts";
 import {
-  boundedCategories,
   DECISIONS,
   decisionsBlocking,
+  floorTest,
   LEADS,
+  scopeWasCut,
 } from "./brief.readings.honesty";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
 import type {
@@ -176,7 +178,7 @@ function LaneReading({
   const card = (
     <StatCard
       label={label}
-      value={readingFigure(figure, marked)}
+      value={floorFigure(figure, marked)}
       tone={warning ? "warning" : undefined}
       // The basis says what the figure was taken over. With no figure there was
       // nothing to take it over, so the line says what failed instead.
@@ -214,12 +216,9 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   // the server maps a source to its lane. Re-deriving that here would be a
   // second copy of it, so an unavailable lane marks the whole strip — which
   // over-marks rather than calling a figure exact over work nobody could see.
-  const bounded = boundedCategories(day);
-  const unread = day.sources_unavailable.length > 0;
-  const floorOf = (category: string): boolean =>
-    day.sources_unavailable.some(
-      (entry) => entry.category === category || !entry.category,
-    ) || bounded.has(category);
+  const scopeCut = scopeWasCut(day);
+  const unread = day.sources_unavailable.length > 0 || scopeCut;
+  const floorOf = floorTest(day);
   return (
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
       <StatStrip testId="brief-readings">
@@ -259,6 +258,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // it begins. The count of meetings itself is neither good nor bad.
           warning={meetings.unready !== null && meetings.unready > 0}
           floor={
+            scopeCut ||
             day.reach?.find((entry) => entry.source === "meeting")
               ?.more_available ||
             day.sources_unavailable.some(
@@ -436,10 +436,6 @@ function meetingsReading(day: Worklist): MeetingsReading {
   };
 }
 
-function readingFigure(value: string, lowerBound: boolean) {
-  return lowerBound ? `${value}+` : value;
-}
-
 // This value describes the same scoped work as the rest of the brief.
 function RiskReading({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
@@ -467,7 +463,7 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
       label={t("brief.readings.risk")}
       value={
         amount != null && currency
-          ? readingFigure(
+          ? floorFigure(
               formatMoneyCompact(amount, currency, locale),
               incomplete,
             )

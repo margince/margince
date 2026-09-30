@@ -308,7 +308,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 		return crmcontracts.Project360{}, errSeamReached
 	})
 	RegisterNetworkTools(r,
-		func(context.Context, ids.UUID) ([]KnownColleague, bool, error) { return nil, false, errSeamReached },
+		func(context.Context, ids.UUID) (WhoKnowsReading, error) { return WhoKnowsReading{}, errSeamReached },
 		func(context.Context, ids.UUID) (DealCoverageAnswer, error) {
 			return DealCoverageAnswer{}, errSeamReached
 		},

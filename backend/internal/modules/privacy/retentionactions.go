@@ -278,6 +278,11 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, payload
 			DELETE FROM capture_pending_counterparty WHERE email = ANY($1)`, subjectEmails)
 	}
 	if err == nil {
+		// The duplicate-pair snapshot, which no cascade reaches because this is
+		// an anonymize: it holds the address and phone number cleared above.
+		err = scrubDedupeEvidence(ctx, tx, []ids.UUID{id}, nil)
+	}
+	if err == nil {
 		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
 	}
 	return err

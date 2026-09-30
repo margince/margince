@@ -26,6 +26,9 @@ const (
 	healthOK        = "ok"
 	healthOwnerless = "ownerless"
 	healthInvalid   = "invalid"
+	// healthRetiredField is a Live List still evaluating on a retired custom
+	// field's kept values, whose clause its steward should replace.
+	healthRetiredField = "retired_field"
 )
 
 // ExportDetailListID is the system_log detail key a filtered export of a list
@@ -43,6 +46,8 @@ type listSummary struct {
 	Health       string
 	CanEdit      bool
 	Dependencies []listDependency
+	// RetiredFields is the retired custom fields a Live List's filter names.
+	RetiredFields []string
 }
 
 type listDependency struct {
@@ -53,7 +58,9 @@ type listDependency struct {
 
 // summarize counts what this reader may see of a list and judges its health.
 // A Live List whose filter no longer compiles reports invalid and no count
-// rather than failing the read, so the library still opens.
+// rather than failing the read, so the library still opens. A list nobody
+// looks after reports that before a retired field, which only its steward can
+// replace.
 func (s *Store) summarize(ctx context.Context, l listRow) (listSummary, error) {
 	out := listSummary{listRow: l, Health: healthOK, CanEdit: mayEditList(ctx, l)}
 	count, err := s.CountMembers(ctx, l.ID)
@@ -69,12 +76,17 @@ func (s *Store) summarize(ctx context.Context, l listRow) (listSummary, error) {
 	if out.Health != healthOK {
 		return out, nil
 	}
-	gone, err := s.stewardGone(ctx, l)
-	if err != nil {
+	if out.RetiredFields, err = s.retiredFieldsOf(ctx, l); err != nil {
 		return listSummary{}, err
 	}
-	if gone {
+	gone, err := s.stewardGone(ctx, l)
+	switch {
+	case err != nil:
+		return listSummary{}, err
+	case gone:
 		out.Health = healthOwnerless
+	case len(out.RetiredFields) > 0:
+		out.Health = healthRetiredField
 	}
 	return out, nil
 }

@@ -32,6 +32,7 @@ import { type ReactNode, useState } from "react";
 import { SegmentedControl } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
+import { floorFigure } from "../format/figure";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
@@ -209,7 +210,10 @@ export function MagicPanel({
           fold={
             lane === "done"
               ? plural("magic.done.all", doneRecords, {
-                  count: formatNumber(doneRecords, locale),
+                  count: floorFigure(
+                    formatNumber(doneRecords, locale),
+                    anyFloor(done),
+                  ),
                 })
               : undefined
           }
@@ -238,6 +242,11 @@ function rowsOf(rows: readonly MagicLine[] | undefined): readonly MagicLine[] {
 // How many records the lines stand for; a line without a count is one.
 function recordsOf(rows: readonly MagicLine[]): number {
   return rows.reduce((sum, row) => sum + (row.count ?? 1), 0);
+}
+
+// A sum over a line whose read was cut short is itself only a floor.
+function anyFloor(rows: readonly MagicLine[]): boolean {
+  return rows.some((row) => row.count_is_floor === true);
 }
 
 /**
@@ -273,7 +282,7 @@ function LaneSummary({
       lane,
       tone: LANE_TONE[lane],
       text: plural(LANE_COUNT[lane], count, {
-        count: formatNumber(count, locale),
+        count: floorFigure(formatNumber(count, locale), anyFloor(rows)),
       }),
     };
   });
