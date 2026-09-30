@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { throwProblem } from "./common";
@@ -21,22 +22,25 @@ const OUTCOME_TONE = {
   updated: "success",
   unchanged: "default",
   not_available: "info",
+  not_listed: "warning",
   unreachable: "danger",
   not_bound: "default",
-} as const satisfies Record<Outcome, "success" | "default" | "info" | "danger">;
+} as const satisfies Record<
+  Outcome,
+  "success" | "default" | "info" | "warning" | "danger"
+>;
 
 /**
- * RefreshModelPrices re-prices the models this installation calls from the
- * provider's own catalogue and lists what happened per provider.
+ * The refresh mutation, held by the Providers card so its button sits in the
+ * header and each vendor's answer reaches that vendor's sheet.
  *
  * It runs inline, so unlike the currency sheet's refresh the answer is here
  * rather than in the approvals inbox: a price the catalogue states is written
  * to the sheet, and the report says which providers had nothing to say.
  */
-export function RefreshModelPrices() {
-  const t = useT();
+export function useRefreshModelPrices() {
   const queryClient = useQueryClient();
-  const refresh = useMutation({
+  return useMutation({
     mutationFn: async () => {
       const { data, error } = await api.POST("/ai-model-rates/refresh");
       if (error) {
@@ -48,34 +52,87 @@ export function RefreshModelPrices() {
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["ai-model-rates"] }),
   });
+}
+
+export type ModelPriceRefresh = ReturnType<typeof useRefreshModelPrices>;
+
+export function RefreshModelPricesButton({
+  refresh,
+}: Readonly<{ refresh: ModelPriceRefresh }>) {
+  const t = useT();
   return (
-    <span className="rates-refresh">
-      <Button
-        variant="ghost"
-        onClick={() => refresh.mutate()}
-        // `pending`, not `disabled`: the reader who just pressed it keeps their
-        // focus, and the repeat press is still blocked.
-        pending={refresh.isPending}
-      >
-        {t("aiRates.refresh.button")}
-      </Button>
-      {refresh.data ? (
-        <ul
-          className="rates-refresh-report"
-          aria-label={t("aiRates.refresh.report")}
-        >
-          {refresh.data.providers.map((p) => (
-            <li key={p.provider}>
-              <Badge tone={OUTCOME_TONE[p.outcome]}>
-                {t(`aiRates.refresh.outcome.${p.outcome}` as const)}
-              </Badge>
-              <span>{p.provider}</span>
-              <ProviderCounts provider={p} />
-            </li>
-          ))}
-        </ul>
+    <Button
+      variant="ghost"
+      onClick={() => refresh.mutate()}
+      // `pending`, not `disabled`: the reader who just pressed it keeps their
+      // focus, and the repeat press is still blocked.
+      pending={refresh.isPending}
+    >
+      {t("aiRates.refresh.button")}
+    </Button>
+  );
+}
+
+/**
+ * What the last refresh did overall, on the list where the button was pressed:
+ * a refusal, or how many prices moved and which vendors could not be reached.
+ * The per-vendor answer stays in that vendor's sheet.
+ */
+export function RefreshSummary({
+  refresh,
+}: Readonly<{ refresh: ModelPriceRefresh }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const plural = usePlural();
+  if (refresh.error) {
+    return (
+      <PanelBody>
+        <ErrorLine error={refresh.error} />
+      </PanelBody>
+    );
+  }
+  if (!refresh.data) {
+    return null;
+  }
+  const updated = refresh.data.providers.reduce((n, p) => n + p.updated, 0);
+  const unreachable = refresh.data.providers
+    .filter((p) => p.outcome === "unreachable")
+    .map((p) => p.provider);
+  return (
+    <PanelBody>
+      <p className="t-caption" role="status">
+        {plural("aiRates.refresh.updatedCount", updated, {
+          count: formatNumber(updated, locale),
+        })}
+        {unreachable.length > 0
+          ? ` · ${t("aiRates.refresh.outcome.unreachable")}: ${unreachable.join(", ")}`
+          : ""}
+      </p>
+    </PanelBody>
+  );
+}
+
+/** What the last refresh did for ONE vendor, or nothing before there was one. */
+export function ProviderRefreshLine({
+  refresh,
+  provider,
+}: Readonly<{ refresh: ModelPriceRefresh; provider: string }>) {
+  const t = useT();
+  const line = refresh.data?.providers.find((p) => p.provider === provider);
+  if (!line) {
+    return <ErrorLine error={refresh.error} inline />;
+  }
+  return (
+    <span className="rates-refresh-detail" role="status">
+      <Badge tone={OUTCOME_TONE[line.outcome]}>
+        {t(`aiRates.refresh.outcome.${line.outcome}` as const)}
+      </Badge>
+      <ProviderCounts provider={line} />
+      {line.unlisted.length > 0 ? (
+        <span className="t-caption">
+          {t("aiRates.refresh.unlisted", { ids: line.unlisted.join(", ") })}
+        </span>
       ) : null}
-      <ErrorLine error={refresh.error} inline />
     </span>
   );
 }

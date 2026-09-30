@@ -20,6 +20,7 @@ package aicert_test
 
 import (
 	"maps"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -51,9 +52,6 @@ type aiCertPreset struct {
 	Bands    aiCertBands `json:"bands"`
 	Untested int         `json:"untested"`
 	Unbound  int         `json:"unbound"`
-	// NotServed counts the local-only tasks this preset binds only hosted
-	// models for: the router refuses them, so no grade describes them.
-	NotServed int `json:"not_served"`
 	// Unrecognised counts rows whose band this rollup has no column for. Always
 	// zero today; a nonzero one means the verdict vocabulary grew and this
 	// section is reporting less than it reads.
@@ -80,9 +78,15 @@ type aiCertPresetTask struct {
 	Model aiCertBindingRef `json:"model"`
 	Band  string           `json:"band"`
 	State string           `json:"state"`
-	// NotServed says the task is local-only and every rung this preset binds
-	// for it is hosted; Tier stays empty, since no rung serves it.
-	NotServed bool `json:"not_served,omitempty"`
+	// Fallback is the rung a failed call on Tier falls to, or nil when the
+	// ladder binds no further rung.
+	Fallback *aiCertFallback `json:"fallback,omitempty"`
+	// Abandoned counts the measured runs the upstream broke off mid-answer:
+	// each is a call the router would have handed to Fallback.
+	Abandoned int `json:"abandoned"`
+	// SendsPrivateMailTo names where a local-only task's mail goes when the
+	// model answering it is not on the operator's own machine.
+	SendsPrivateMailTo string `json:"sends_private_mail_to,omitempty"`
 	// Runs and Passed are the record's pooled counts over every case of the
 	// task, and the two case counts say which half of the rule held a grade
 	// down: a case failing too many of its own runs, or its answers' quality.
@@ -93,6 +97,18 @@ type aiCertPresetTask struct {
 	// siteThinking is the measuring record's per-site levels, which a rung
 	// must serve too before the record grades it.
 	siteThinking map[string]string
+}
+
+// aiCertFallback is the next bound rung of a task's ladder and what the
+// committed record for its model on this task says.
+type aiCertFallback struct {
+	Tier  string           `json:"tier"`
+	Model aiCertBindingRef `json:"model"`
+	// SameModel says the rung binds the model that just failed, so the walk
+	// asks it again rather than reaching another.
+	SameModel bool   `json:"same_model"`
+	Band      string `json:"band"`
+	State     string `json:"state"`
 }
 
 // loadAICertPresets reads every preset in the directory through the same
@@ -159,13 +175,9 @@ func attributeAICertPresets(presets []aiCertPreset, doc aiCertDoc, records []aic
 	measured := aiCertTaskVerdicts(doc, records)
 	filled := make([]aiCertPreset, 0, len(presets))
 	for _, preset := range presets {
-		bound := map[string]aiCertPresetTier{}
-		for _, tier := range preset.Tiers {
-			bound[tier.Tier] = tier
-		}
 		preset.Tasks = []aiCertPresetTask{}
 		for _, task := range aiCertTasksOf(doc) {
-			preset.Tasks = append(preset.Tasks, presetTaskRow(task, preset, bound, measured))
+			preset.Tasks = append(preset.Tasks, presetTaskRow(task, preset, measured))
 		}
 		for _, row := range preset.Tasks {
 			countPresetTask(&preset, row)
@@ -175,46 +187,79 @@ func attributeAICertPresets(presets []aiCertPreset, doc aiCertDoc, records []aic
 	return filled
 }
 
-func presetTaskRow(task string, preset aiCertPreset,
-	bound map[string]aiCertPresetTier, measured map[string]aiCertPresetTask,
-) aiCertPresetTask {
+// presetTaskRow walks the task's ladder as a routed certification run does:
+// the first rung the preset binds answers, and the next is where a failed call
+// falls. A task whose primary tier the preset leaves unbound is served by the
+// next one down, so reporting the primary would credit a model it never reaches.
+func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertPresetTask) aiCertPresetTask {
 	row := aiCertPresetTask{Task: task, Label: ai.DisplayName(ai.Task(task))}
-	// The FIRST rung the preset binds, not the first rung the ladder names: a
-	// task whose primary tier this preset leaves unbound is served by the next
-	// one down, and reporting the primary would credit the preset with a model
-	// it never reaches. A local-only task skips hosted rungs, as the router does.
-	localOnly := ai.LocalOnly(ai.Task(task))
-	for _, tier := range ai.TaskLadder(ai.Task(task)) {
-		rung, ok := bound[string(tier)]
-		if !ok {
-			continue
-		}
-		if localOnly && !ai.ProviderIsLocal(rung.Provider) {
-			row.NotServed = true
-			continue
-		}
-		row.NotServed = false
-		row.Tier = rung.Tier
-		row.Model = aiCertBindingRef{
-			Provider: rung.Provider, Model: rung.Model, Env: preset.Profile, ThinkingLevel: rung.ThinkingLevel,
-		}
-		// A record grades the rung only where every site ran at the level this
-		// rung serves it: the contract's site levels move with the build, and
-		// a record from before one was declared measured a different call.
-		serves := ai.SiteThinkingLevels(rung.binding, ai.Task(task))
-		if seen, ok := measured[task+"\x00"+row.Model.label()]; ok && maps.Equal(seen.siteThinking, serves) {
-			row.Band, row.State, row.Runs, row.Passed = seen.Band, seen.State, seen.Runs, seen.Passed
-			row.CasesFailingOften, row.CasesBelowQualityBar = seen.CasesFailingOften, seen.CasesBelowQualityBar
-		}
+	rungs := aicert.RungsBound(preset.routing(), ai.Task(task))
+	if len(rungs) == 0 {
 		return row
+	}
+	first := rungs[0]
+	row.Tier, row.Model = string(first.Tier), presetBindingRef(first.Binding, preset.Profile)
+	if seen, ok := measuredOn(task, first.Binding, row.Model, measured); ok {
+		row.Band, row.State, row.Runs, row.Passed = seen.Band, seen.State, seen.Runs, seen.Passed
+		row.CasesFailingOften, row.CasesBelowQualityBar = seen.CasesFailingOften, seen.CasesBelowQualityBar
+		row.Abandoned = seen.Abandoned
+	}
+	if ai.LocalOnly(ai.Task(task)) && !ai.ProviderIsLocal(first.Binding.Provider) {
+		row.SendsPrivateMailTo = aiCertDestination(first.Binding)
+	}
+	if len(rungs) > 1 {
+		next := rungs[1]
+		row.Fallback = &aiCertFallback{
+			Tier: string(next.Tier), Model: presetBindingRef(next.Binding, preset.Profile),
+			SameModel: next.Binding.Provider == first.Binding.Provider && next.Binding.Model == first.Binding.Model,
+		}
+		if seen, ok := measuredOn(task, next.Binding, row.Fallback.Model, measured); ok {
+			row.Fallback.Band, row.Fallback.State = seen.Band, seen.State
+		}
 	}
 	return row
 }
 
+// measuredOn is the record that grades a rung: one at the rung's binding, and
+// only where every site ran at the level this rung serves it — the contract's
+// site levels move with the build, and a record from before one was declared
+// measured a different call.
+func measuredOn(task string, binding ai.ProviderConfig, ref aiCertBindingRef,
+	measured map[string]aiCertPresetTask,
+) (aiCertPresetTask, bool) {
+	seen, ok := measured[aiCertRouteKey(task, ref)]
+	if !ok || !maps.Equal(seen.siteThinking, ai.SiteThinkingLevels(binding, ai.Task(task))) {
+		return aiCertPresetTask{}, false
+	}
+	return seen, true
+}
+
+func presetBindingRef(binding ai.ProviderConfig, profile string) aiCertBindingRef {
+	return aiCertBindingRef{
+		Provider: binding.Provider, Model: binding.Model, Env: profile, ThinkingLevel: binding.ThinkingLevel,
+	}
+}
+
+// routing is the preset as the router reads it: its profile and its rungs.
+func (p aiCertPreset) routing() ai.RoutingConfig {
+	cfg := ai.RoutingConfig{Profile: ai.Profile(p.Profile), Tiers: map[ai.Tier]ai.ProviderConfig{}}
+	for _, tier := range p.Tiers {
+		cfg.Tiers[ai.Tier(tier.Tier)] = tier.binding
+	}
+	return cfg
+}
+
+// aiCertDestination is where a hosted rung sends a prompt: the host an
+// operator configured, or the provider when it is reached at its own address.
+func aiCertDestination(binding ai.ProviderConfig) string {
+	if parsed, err := url.Parse(binding.BaseURL); err == nil && parsed.Hostname() != "" {
+		return parsed.Hostname()
+	}
+	return binding.Provider
+}
+
 func countPresetTask(preset *aiCertPreset, row aiCertPresetTask) {
 	switch {
-	case row.NotServed:
-		preset.NotServed++
 	case row.Tier == "":
 		preset.Unbound++
 	case row.Band == "":
@@ -242,12 +287,12 @@ func countPresetTask(preset *aiCertPreset, row aiCertPresetTask) {
 func aiCertTaskVerdicts(doc aiCertDoc, records []aicert.Record) map[string]aiCertPresetTask {
 	byKey := map[string]aicert.Record{}
 	for _, rec := range records {
-		byKey[rec.Task+"\x00"+bindingRefOf(rec).label()] = rec
+		byKey[aiCertRouteKey(rec.Task, bindingRefOf(rec))] = rec
 	}
 	verdicts := map[string]aiCertPresetTask{}
 	for _, site := range doc.Sites {
 		for _, siteRec := range site.Records {
-			key := site.Task + "\x00" + siteRec.Binding.label()
+			key := aiCertRouteKey(site.Task, siteRec.Binding)
 			if seen, found := verdicts[key]; found {
 				if aiCertStateRank(siteRec.State) < aiCertStateRank(seen.State) {
 					seen.State = siteRec.State
@@ -259,11 +304,20 @@ func aiCertTaskVerdicts(doc aiCertDoc, records []aicert.Record) map[string]aiCer
 			failing, belowQuality := aiCertCasesHoldingDown(rec)
 			verdicts[key] = aiCertPresetTask{
 				Band: rec.Verdict, State: siteRec.State, Runs: rec.Runs, Passed: rec.Passed,
-				CasesFailingOften: failing, CasesBelowQualityBar: belowQuality, siteThinking: rec.SiteThinking,
+				CasesFailingOften: failing, CasesBelowQualityBar: belowQuality, Abandoned: aiCertAbandoned(rec),
+				siteThinking: rec.SiteThinking,
 			}
 		}
 	}
 	return verdicts
+}
+
+func aiCertAbandoned(rec aicert.Record) int {
+	abandoned := 0
+	for _, sc := range rec.Scenarios {
+		abandoned += sc.Abandoned
+	}
+	return abandoned
 }
 
 // aiCertCasesHoldingDown counts the cases that miss each per-case half of the
@@ -439,49 +493,146 @@ func TestAPresetIsCreditedOnlyByARecordAtTheLevelsItServesEachSite(t *testing.T)
 	}
 }
 
-// A local-only task is refused on every hosted rung, so a cloud preset shows it
-// as not served — never the grade its old hosted record earned — and a preset
-// binding a local model grades it as usual.
-func TestALocalOnlyTaskReadsNotServedOnACloudPreset(t *testing.T) {
-	task := ai.LocalOnlyTasks()[0]
+// attributeOneTask is one preset, binding tiers under profile, over a document
+// that ships task alone and carries records as its current measurements.
+func attributeOneTask(task ai.Task, profile ai.Profile, tiers map[ai.Tier]ai.ProviderConfig,
+	records ...aicert.Record,
+) aiCertPreset {
+	site := aiCertSite{Task: string(task)}
+	for _, rec := range records {
+		site.Records = append(site.Records, aiCertRecord{Binding: bindingRefOf(rec), State: aicert.StatusCurrent})
+	}
+	preset := aiCertPreset{File: "p.yaml", Profile: string(profile), Tiers: tiersOfPreset(ai.RoutingConfig{Tiers: tiers})}
+	return attributeAICertPresets([]aiCertPreset{preset}, aiCertDoc{Sites: []aiCertSite{site}}, records)[0]
+}
+
+func measuredRecord(task ai.Task, binding ai.ProviderConfig, profile ai.Profile, verdict string, abandoned int) aicert.Record {
+	return aicert.Record{
+		Task: string(task), Provider: binding.Provider, ServedModel: binding.Model, EnvClass: string(profile),
+		Verdict: verdict, Runs: 6, Passed: 6 - abandoned,
+		Scenarios: []aicert.ScenarioRecord{{Runs: 6, Passed: 6 - abandoned, Abandoned: abandoned}},
+	}
+}
+
+// A preset's row names the model that answers a feature and the model a failed
+// call falls to, graded on the feature by that model's own record or said to be
+// unmeasured; a rung binding the same model is no fallback, and a ladder with
+// no further bound rung names none.
+func TestAPresetRowNamesTheModelThatAnswersAndTheOneAFailedCallFallsTo(t *testing.T) {
+	task := ai.TaskSummarize
+	ladder := ai.TaskLadder(task)
+	if len(ladder) != 2 {
+		t.Fatalf("%s's ladder is %v; this test needs two rungs", task, ladder)
+	}
+	first, next := ladder[0], ladder[1]
+	profile := ai.ProfileCloudFrontier
+	cheap := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/cheap-1"}
+	dear := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/dear-2"}
+	cheapRecord := measuredRecord(task, cheap, profile, aicert.VerdictSupportedDegraded, 0)
 	cases := []struct {
-		name, provider, profile string
-		wantNotServed           bool
-		wantBand                string
+		name    string
+		tiers   map[ai.Tier]ai.ProviderConfig
+		records []aicert.Record
+		want    string
 	}{
-		{"a cloud preset does not serve it", "gemini", string(ai.ProfileCloudFrontier), true, ""},
-		{"a local preset grades it", "ollama", string(ai.ProfileSovereign), false, aicert.VerdictCertified},
+		{
+			"a measured fallback",
+			map[ai.Tier]ai.ProviderConfig{first: cheap, next: dear},
+			[]aicert.Record{cheapRecord, measuredRecord(task, dear, profile, aicert.VerdictCertified, 0)},
+			"cheap-1 · " + string(first) + " → dear-2, " + aiCertReady,
+		},
+		{
+			"an unmeasured fallback",
+			map[ai.Tier]ai.ProviderConfig{first: cheap, next: dear},
+			[]aicert.Record{cheapRecord},
+			"cheap-1 · " + string(first) + " → dear-2, not measured on this feature",
+		},
+		{
+			"a fallback binding the same model",
+			map[ai.Tier]ai.ProviderConfig{first: cheap, next: cheap},
+			[]aicert.Record{cheapRecord},
+			"cheap-1 · " + string(first) + " → " + string(next) + " is the same model, so no separate fallback",
+		},
+		{
+			"no further bound rung",
+			map[ai.Tier]ai.ProviderConfig{first: cheap},
+			[]aicert.Record{cheapRecord},
+			"cheap-1 · " + string(first),
+		},
+		{
+			"runs that broke off",
+			map[ai.Tier]ai.ProviderConfig{first: cheap, next: dear},
+			[]aicert.Record{measuredRecord(task, cheap, profile, aicert.VerdictNotSupported, 2)},
+			"cheap-1 · " + string(first) + " → dear-2, not measured on this feature; 2 of 6 runs broke off and would have gone to dear-2",
+		},
+		{
+			"runs that broke off with no other model",
+			map[ai.Tier]ai.ProviderConfig{first: cheap},
+			[]aicert.Record{measuredRecord(task, cheap, profile, aicert.VerdictNotSupported, 2)},
+			"cheap-1 · " + string(first) + "; 2 of 6 runs broke off, with no other model to take them",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			rec := aicert.Record{
-				Task: string(task), Provider: tc.provider, ServedModel: "m", EnvClass: tc.profile,
-				Verdict: aicert.VerdictCertified, Runs: 3, Passed: 3,
+			row := attributeOneTask(task, profile, tc.tiers, tc.records...).Tasks[0]
+			if got := aiCertRouteLine(row); got != tc.want {
+				t.Errorf("route line = %q\nwant         %q", got, tc.want)
 			}
-			doc := aiCertDoc{Sites: []aiCertSite{{
-				Task:    rec.Task,
-				Records: []aiCertRecord{{Binding: bindingRefOf(rec), State: aicert.StatusCurrent}},
-			}}}
-			tiers := []aiCertPresetTier{}
+			if cell := aiCertGradeCell(row); cell != aiCertGrade(row)+"<br><sub>"+tc.want+"</sub>" {
+				t.Errorf("grade cell = %q, want the grade with the route line under it", cell)
+			}
+		})
+	}
+}
+
+// A local-only task reads private mail. A cloud preset still serves it, so the
+// page grades it from its record like any other feature and says where the mail
+// goes; a preset answering it on the operator's own machine says nothing.
+func TestALocalOnlyTaskOnACloudPresetIsGradedAndSaysWhereTheMailGoes(t *testing.T) {
+	task := ai.LocalOnlyTasks()[0]
+	cases := []struct {
+		name     string
+		binding  ai.ProviderConfig
+		profile  ai.Profile
+		wantNote string
+	}{
+		{
+			"a brokered cloud model names its host",
+			ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/m", BaseURL: "https://broker.example/api"},
+			ai.ProfileCloudFrontier, "broker.example",
+		},
+		{
+			"a vendor's own endpoint names the provider",
+			ai.ProviderConfig{Provider: "gemini", Model: "m"},
+			ai.ProfileCloudFrontier, "gemini",
+		},
+		{
+			"a local model sends nothing off the machine",
+			ai.ProviderConfig{Provider: "ollama", Model: "m"},
+			ai.ProfileSovereign, "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tiers := map[ai.Tier]ai.ProviderConfig{}
 			for _, tier := range ai.TaskLadder(task) {
-				tiers = append(tiers, aiCertPresetTier{Tier: string(tier), Provider: tc.provider, Model: "m"})
+				tiers[tier] = tc.binding
 			}
-			preset := attributeAICertPresets([]aiCertPreset{{File: "p.yaml", Profile: tc.profile, Tiers: tiers}},
-				doc, []aicert.Record{rec})[0]
+			preset := attributeOneTask(task, tc.profile, tiers,
+				measuredRecord(task, tc.binding, tc.profile, aicert.VerdictCertified, 0))
 			row := preset.Tasks[0]
-			if row.NotServed != tc.wantNotServed || row.Band != tc.wantBand {
-				t.Fatalf("row = not_served %v band %q, want %v and %q", row.NotServed, row.Band, tc.wantNotServed, tc.wantBand)
+			if aiCertGrade(row) != aiCertReady || preset.Bands.Certified != 1 {
+				t.Errorf("grade = %q with %d certified, want %q from its record", aiCertGrade(row), preset.Bands.Certified, aiCertReady)
 			}
-			if tc.wantNotServed {
-				if preset.NotServed != 1 || preset.Bands.Certified != 0 || preset.Untested != 0 || preset.Unbound != 0 {
-					t.Errorf("counts = %+v, want the task counted as not served and nowhere else", preset)
-				}
-				if got := aiCertBottomLine(preset); got != "0 of 0 features ready, 1 not served (local-only data)" {
-					t.Errorf("bottom line = %q", got)
-				}
-				if aiCertGrade(row) != aiCertNotServed {
-					t.Errorf("grade = %q, want %q", aiCertGrade(row), aiCertNotServed)
-				}
+			if row.SendsPrivateMailTo != tc.wantNote {
+				t.Errorf("sends private mail to %q, want %q", row.SendsPrivateMailTo, tc.wantNote)
+			}
+			note := "; sends private mail to " + tc.wantNote
+			if got := aiCertRouteLine(row); strings.HasSuffix(got, note) != (tc.wantNote != "") {
+				t.Errorf("route line = %q; want the privacy note only for a hosted model", got)
+			}
+			if got := aiCertBottomLine(preset); got != "1 of 1 features ready" {
+				t.Errorf("bottom line = %q", got)
 			}
 		})
 	}

@@ -71,6 +71,12 @@ function backendFor(allow: GrantSpec, answer: () => Response) {
         if (req.method === "PUT") return new Response(null, { status: 204 });
         return jsonResponse({ providers: PROVIDERS });
       }
+      if (
+        req.url.includes("/ai/routing") ||
+        req.url.includes("/ai-model-rates")
+      ) {
+        return jsonResponse({}, 404);
+      }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
   );
@@ -94,6 +100,9 @@ async function testRow(
   user: ReturnType<typeof userEvent.setup>,
   provider: string,
 ) {
+  await user.click(
+    await screen.findByRole("button", { name: `Manage ${provider}` }),
+  );
   const row = await screen.findByTestId(`ai-provider-key-${provider}`);
   await user.click(within(row).getByRole("button", { name: /^test$/i }));
   return row;
@@ -172,15 +181,17 @@ describe("testing a provider key", () => {
     );
     render();
 
-    await screen.findByTestId("ai-provider-key-gemini");
-    for (const provider of ["gemini", "jev", "jev_compatible"]) {
-      const row = screen.getByTestId(`ai-provider-key-${provider}`);
-      expect(within(row).getByRole("button", { name: /^test$/i })).toBeTruthy();
+    const user = userEvent.setup();
+    for (const provider of ["gemini", "jev", "jev_compatible", "openai"]) {
+      await user.click(
+        await screen.findByRole("button", { name: `Manage ${provider}` }),
+      );
+      const row = await screen.findByTestId(`ai-provider-key-${provider}`);
+      const test = within(row).queryByRole("button", { name: /^test$/i });
+      // Only the vendor that holds no key and may not skip one has no Test.
+      expect(test !== null).toBe(provider !== "openai");
+      await user.keyboard("{Escape}");
     }
-    const unkeyed = screen.getByTestId("ai-provider-key-openai");
-    expect(
-      within(unkeyed).queryByRole("button", { name: /^test$/i }),
-    ).toBeNull();
   });
 
   // A broker's key endpoint and the decision probe answer yes or no and list

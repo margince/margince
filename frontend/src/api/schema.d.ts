@@ -17009,7 +17009,17 @@ export interface paths {
          *     (x-agent-access: human-only). Transparency-only: model prices never gate routing.
          */
         post: operations["setAiModelRate"];
-        delete?: never;
+        /**
+         * Remove a model's entry from the price sheet, every effective date of it.
+         * @description Admin/ops-only. Removes a model's whole entry from the sheet, every effective date of
+         *     it, history included; one date is never removed on its own. `lane` names the lane the
+         *     sheet files the model under (its latest row's), and a key the sheet does not hold is a
+         *     404. Past calls of that model become unpriced in cost estimates rather than priced at 0.
+         *     Gated on the same `ai_model_rate` update grant that corrects a price. The key travels as
+         *     query parameters because a model id carries slashes. Human session only
+         *     (x-agent-access: human-only). Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        delete: operations["deleteAiModelRate"];
         options?: never;
         head?: never;
         patch?: never;
@@ -17050,8 +17060,9 @@ export interface paths {
         /**
          * Re-price the models this installation calls from the providers' own catalogues.
          * @description Admin/ops-only. Reads OpenRouter's public model list and writes today's price for each
-         *     OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and
-         *     each `openai_compatible` model already on the sheet that the list still names. A model
+         *     OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and,
+         *     while something is bound at OpenRouter, each `openai_compatible` model already on the
+         *     sheet that the list still names. A self-hosted model priced by hand is never touched. A model
          *     whose price already matches is left alone and leaves no audit row; a future-dated manual
          *     price is not touched. Runs inline and answers with what happened per provider. A provider
          *     that publishes no price list reports `not_available`: its prices are set by hand.
@@ -17449,17 +17460,21 @@ export interface components {
             /**
              * @description `updated` wrote at least one price; `unchanged` found every priced model already
              *     current; `not_available` means the provider (or the catalogue, for these models)
-             *     publishes no price to read; `unreachable` means the catalogue could not be read;
+             *     publishes no price to read; `not_listed` means a bound model is absent from the
+             *     catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
+             *     could not be read;
              *     `not_bound` means nothing this provider serves is bound or on the sheet.
              * @enum {string}
              */
-            outcome: "updated" | "unchanged" | "not_available" | "unreachable" | "not_bound";
+            outcome: "updated" | "unchanged" | "not_available" | "not_listed" | "unreachable" | "not_bound";
             /** @description Prices written today. */
             updated: number;
             /** @description Models already at the catalogue price. */
             unchanged: number;
             /** @description Model ids written this run. */
             models: string[];
+            /** @description Bound model ids the catalogue does not name. */
+            unlisted: string[];
         };
         SetAiModelRateRequest: {
             provider: string;
@@ -65152,6 +65167,32 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteAiModelRate: {
+        parameters: {
+            query: {
+                provider: string;
+                model_id: string;
+                lane: "chat" | "embeddings" | "decisions";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entry is removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

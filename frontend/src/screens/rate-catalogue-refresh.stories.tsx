@@ -3,36 +3,28 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { useT } from "../i18n";
-import { RefreshModelPrices } from "./rate-catalogue-refresh";
+import { meFixture } from "../app/mefixture";
+import {
+  ProviderRefreshLine,
+  RefreshModelPricesButton,
+  RefreshSummary,
+  useRefreshModelPrices,
+} from "./rate-catalogue-refresh";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// RE-PRICING THE MODELS THIS INSTALLATION CALLS, on its own.
-//
-// The control answers in the same breath, so the frames are about the REPORT:
-// one line per provider, each with the outcome the server reached. It sits in a
-// Panel's action band on the model sheet, so that is the frame here; the report
-// drops under the button rather than beside it, and the band is what shows
-// whether it does.
-
-const REFRESH = "POST /ai-model-rates/refresh";
+// Re-pricing the models this installation calls from the broker's catalogue:
+// the button, the one-line summary on the list, and each vendor's own answer
+// inside its sheet.
 
 const REPORT = {
   providers: [
     {
       provider: "openai_compatible",
       outcome: "updated",
-      updated: 3,
+      updated: 2,
       unchanged: 1,
-      models: ["mistralai/mistral-small-2603", "google/gemma-4-31b-it"],
-    },
-    {
-      provider: "jev_compatible",
-      outcome: "unchanged",
-      updated: 0,
-      unchanged: 1,
-      models: [],
+      models: ["a/b"],
+      unlisted: ["e/typo"],
     },
     {
       provider: "gemini",
@@ -40,124 +32,93 @@ const REPORT = {
       updated: 0,
       unchanged: 0,
       models: [],
+      unlisted: [],
     },
     {
-      provider: "anthropic",
-      outcome: "not_available",
-      updated: 0,
-      unchanged: 0,
-      models: [],
-    },
-    {
-      provider: "ollama",
-      outcome: "not_available",
-      updated: 0,
-      unchanged: 0,
-      models: [],
-    },
-  ],
-};
-
-const UNREACHABLE = {
-  providers: [
-    {
-      provider: "openai_compatible",
+      provider: "jev_compatible",
       outcome: "unreachable",
       updated: 0,
       unchanged: 0,
       models: [],
-    },
-    {
-      provider: "gemini",
-      outcome: "not_available",
-      updated: 0,
-      unchanged: 0,
-      models: [],
+      unlisted: [],
     },
   ],
 };
 
-function band(routes: Parameters<typeof installFetchStub>[0]) {
-  return () => {
-    installFetchStub(routes);
-    return (
-      <StoryProviders>
-        <Band />
-      </StoryProviders>
-    );
-  };
-}
-
-function Band() {
-  const t = useT();
+function Panels() {
+  const refresh = useRefreshModelPrices();
   return (
-    <Panel
-      title={t("settings.rates.modelTitle")}
-      actions={<RefreshModelPrices />}
-    >
-      <PanelBody>
-        <PanelIntro>{t("settings.rates.modelIntro")}</PanelIntro>
-      </PanelBody>
-    </Panel>
+    <>
+      <RefreshModelPricesButton refresh={refresh} />
+      <RefreshSummary refresh={refresh} />
+      <ProviderRefreshLine refresh={refresh} provider="openai_compatible" />
+      <ProviderRefreshLine refresh={refresh} provider="gemini" />
+    </>
   );
 }
 
-const meta: Meta<typeof RefreshModelPrices> = {
+function Demo() {
+  return (
+    <StoryProviders>
+      <Panels />
+    </StoryProviders>
+  );
+}
+
+const meta: Meta<typeof Demo> = {
   title: "Settings/AI/Models and routing/Refresh model prices",
-  component: RefreshModelPrices,
-  parameters: { layout: "padded" },
+  component: Demo,
 };
 export default meta;
+type Story = StoryObj<typeof Demo>;
 
-type Story = StoryObj<typeof RefreshModelPrices>;
+function stub(refuse = false) {
+  installFetchStub({
+    "GET /me": () =>
+      jsonResponse(
+        meFixture({ allow: { ai_model_rate: ["read", "create", "update"] } }),
+      ),
+    "POST /ai-model-rates/refresh": () =>
+      refuse
+        ? jsonResponse(
+            {
+              type: "https://errors.gradion.com/forbidden",
+              title: "Forbidden",
+              status: 403,
+              code: "permission_denied",
+              detail: "Refreshing prices needs the rates grant.",
+            },
+            403,
+          )
+        : jsonResponse(REPORT),
+  });
+}
 
 const press: Story["play"] = async ({ canvasElement }) => {
-  const canvas = within(canvasElement);
   await userEvent.click(
-    await canvas.findByRole("button", { name: "Refresh model prices" }),
+    await within(canvasElement).findByRole("button", {
+      name: "Refresh model prices",
+    }),
   );
 };
 
-/** At rest: one ghost verb in the band, and nothing claimed beside it. */
 export const AtRest: Story = {
-  render: band({ [REFRESH]: () => jsonResponse(REPORT) }),
+  render: () => {
+    stub();
+    return <Demo />;
+  },
 };
-
-/**
- * The report after a run: the broker's models written or found current, and
- * every vendor that publishes no price list saying so instead of staying silent.
- */
 export const Report: Story = {
-  render: band({ [REFRESH]: () => jsonResponse(REPORT) }),
+  render: () => {
+    stub();
+    return <Demo />;
+  },
   play: press,
 };
-
-/** The catalogue could not be read: the broker's line says so, nothing was written. */
-export const CatalogueUnreachable: Story = {
-  render: band({ [REFRESH]: () => jsonResponse(UNREACHABLE) }),
-  play: press,
-};
-
-/** Refused, in the server's own words; the retry is the button beside it. */
 export const Refused: Story = {
-  render: band({
-    [REFRESH]: () =>
-      jsonResponse(
-        {
-          type: "https://errors.gradion.com/forbidden",
-          title: "Forbidden",
-          status: 403,
-          code: "permission_denied",
-          detail: "Refreshing prices needs the rates grant.",
-        },
-        403,
-      ),
-  }),
-  play: press,
-};
-
-/** The write in flight: `pending`, never `disabled`. */
-export const RefreshInFlight: Story = {
-  render: band({ [REFRESH]: () => new Promise<Response>(() => {}) }),
+  render: () => {
+    stub(true);
+    return <Demo />;
+  },
   play: press,
 };

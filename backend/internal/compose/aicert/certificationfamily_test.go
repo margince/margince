@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -51,7 +52,8 @@ type aiCertFamily struct {
 	UsableWithCare int `json:"usable_with_care"`
 	NotReliableYet int `json:"not_reliable_yet"`
 	RecheckPending int `json:"recheck_pending"`
-	// Models are the family's bindings as the by-model table has them.
+	// Models are the family's bindings folded over only the features a preset
+	// routes to them, so a model no preset reaches is not in any family.
 	Models []aiCertBinding `json:"models"`
 	// Sites are keyed the way a record is, by feature, so a reader can also ask
 	// which model in a family serves one feature best.
@@ -72,13 +74,16 @@ type aiCertFamilySite struct {
 
 // buildAICertFamilies folds the document's records by model family. A family is
 // graded on its best model per feature, the model a buyer picking that family
-// would run, so a weak model in the family cannot hide a strong one.
-func buildAICertFamilies(doc aiCertDoc) []aiCertFamily {
+// would run, so a weak model in the family cannot hide a strong one. Only what a
+// preset routes counts: a retired or one-off binding is a model no buyer is
+// given, and grading a family on it answers a question nobody asked.
+func buildAICertFamilies(doc aiCertDoc, rows []aicert.ReadinessRow) []aiCertFamily {
+	routed, measured := aiCertPresetRoutes(doc.Presets), aiCertMeasuredRoutes(doc.Presets)
 	byName := map[string]*aiCertFamily{}
 	for _, site := range doc.Sites {
 		best := map[string]aiCertRecord{}
 		count := map[string]int{}
-		for _, rec := range eligibleFamilyRecords(site) {
+		for _, rec := range eligibleFamilyRecords(site, measured) {
 			name := aicert.ModelFamily(rec.Binding.Model)
 			count[name]++
 			if held, ok := best[name]; !ok || beatsAICertRecord(rec, held) {
@@ -97,7 +102,13 @@ func buildAICertFamilies(doc aiCertDoc) []aiCertFamily {
 			})
 		}
 	}
-	for _, b := range doc.Bindings {
+	var routedRows []aicert.ReadinessRow
+	for _, row := range rows {
+		if routed[aiCertRouteKey(string(row.Site.Task), bindingRefOf(row.Record))] {
+			routedRows = append(routedRows, row)
+		}
+	}
+	for _, b := range foldAICertBindings(routedRows) {
 		if fam := byName[aicert.ModelFamily(b.Binding.Model)]; fam != nil {
 			fam.Models = append(fam.Models, b)
 		}
@@ -111,20 +122,55 @@ func buildAICertFamilies(doc aiCertDoc) []aiCertFamily {
 	return out
 }
 
-// eligibleFamilyRecords drops what the product never serves: a local-only task
-// skips hosted bindings, as the preset view does, so a hosted record cannot
-// lift a family's answer for a feature a buyer would not get from it.
-func eligibleFamilyRecords(site aiCertSite) []aiCertRecord {
-	if !ai.LocalOnly(ai.Task(site.Task)) {
-		return site.Records
-	}
+// eligibleFamilyRecords keeps the site's records that grade a route some preset
+// takes, so a record no buyer's preset reaches cannot lift or sink a family.
+func eligibleFamilyRecords(site aiCertSite, routed map[string]bool) []aiCertRecord {
 	var eligible []aiCertRecord
 	for _, rec := range site.Records {
-		if ai.ProviderIsLocal(rec.Binding.Provider) {
+		if routed[aiCertRouteKey(site.Task, rec.Binding)] {
 			eligible = append(eligible, rec)
 		}
 	}
 	return eligible
+}
+
+// aiCertPresetRoutes marks a task and binding when some preset sends it a call:
+// the rung that answers it, or the one a failed call falls to.
+func aiCertPresetRoutes(presets []aiCertPreset) map[string]bool {
+	routed := map[string]bool{}
+	for _, p := range presets {
+		for _, row := range p.Tasks {
+			if row.Tier != "" {
+				routed[aiCertRouteKey(row.Task, row.Model)] = true
+			}
+			if row.Fallback != nil {
+				routed[aiCertRouteKey(row.Task, row.Fallback.Model)] = true
+			}
+		}
+	}
+	return routed
+}
+
+// aiCertMeasuredRoutes marks the routes a preset row actually grades: a rung is
+// routed but unmeasured when its record ran the sites at other thinking levels
+// (measuredOn), and that record must not grade the family the row says nothing of.
+func aiCertMeasuredRoutes(presets []aiCertPreset) map[string]bool {
+	measured := map[string]bool{}
+	for _, p := range presets {
+		for _, row := range p.Tasks {
+			if row.Band != "" {
+				measured[aiCertRouteKey(row.Task, row.Model)] = true
+			}
+			if row.Fallback != nil && row.Fallback.Band != "" {
+				measured[aiCertRouteKey(row.Task, row.Fallback.Model)] = true
+			}
+		}
+	}
+	return measured
+}
+
+func aiCertRouteKey(task string, binding aiCertBindingRef) string {
+	return task + "\x00" + binding.label()
 }
 
 func countAICertFamily(fam *aiCertFamily) {
@@ -216,6 +262,12 @@ func familyPlainWords(fam aiCertFamily) string {
 	return words + "."
 }
 
+// aiCertShortModel is a served model without its broker's publisher prefix,
+// which is how a reader of the page's top half knows the model.
+func aiCertShortModel(model string) string {
+	return model[strings.LastIndex(model, "/")+1:]
+}
+
 // familyModelNames names the models behind a family's answer, without the
 // broker prefix or the environment, because a family name alone misleads: "GPT"
 // here is an open-weight model, not the vendor's flagship.
@@ -223,7 +275,7 @@ func familyModelNames(fam aiCertFamily) string {
 	var names []string
 	seen := map[string]bool{}
 	for _, m := range fam.Models {
-		name := m.Binding.Model[strings.LastIndex(m.Binding.Model, "/")+1:]
+		name := aiCertShortModel(m.Binding.Model)
 		if !seen[name] {
 			seen[name] = true
 			names = append(names, "`"+name+"`")
@@ -247,13 +299,17 @@ func writeAICertFamilySummary(page *strings.Builder, families []aiCertFamily) {
 	fmt.Fprintf(page, "**Yes** means ready for every feature we tested. **Mostly** means at least %d in every 100 "+
 		"tested features are ready or work with a check. **Not yet** means fewer. **Not enough tested yet** "+
 		"means we tested it on under half of the features, so we do not say. A family is judged on its best "+
-		"model for each feature.\n\n", familyMostlyPercent)
+		"model for each feature, and only on the models a preset uses, each on the features that preset "+
+		"sends to it.\n\n", familyMostlyPercent)
 }
 
 // writeAICertFamilyDetail is the engineers' half: every model in each family and
 // its best result on every feature it was measured on.
 func writeAICertFamilyDetail(page *strings.Builder, families []aiCertFamily) {
 	writeAICertFolded(page, "See the detail behind each family", func(page *strings.Builder) {
+		page.WriteString("A family counts a model only on the features some preset sends it, as the answering\n")
+		page.WriteString("model or its fallback. A record no preset reaches is left out here and still listed\n")
+		page.WriteString("under [Certification by provider and model](#certification-by-provider-and-model) and its site.\n\n")
 		for _, fam := range families {
 			writeAICertFamilySection(page, fam)
 		}
@@ -301,8 +357,9 @@ func staleMark(state string) string {
 
 // assertAICertFamiliesCoverEveryRecord holds the fold to the trees: a builder
 // that dropped a record would still match the committed page rendered by the
-// same builder, so every record of every site must land in exactly one family
-// and every measured binding in exactly one family's model table.
+// same builder, so every routed record of every site must land in exactly one
+// family, every binding with one in exactly one family's model table, and a
+// binding without one in none.
 func assertAICertFamiliesCoverEveryRecord(t *testing.T, doc aiCertDoc, page string) {
 	t.Helper()
 	rows := map[string]map[string]aiCertFamilySite{}
@@ -315,10 +372,13 @@ func assertAICertFamiliesCoverEveryRecord(t *testing.T, doc aiCertDoc, page stri
 			t.Errorf("family %s has no row in the summary table", fam.Name)
 		}
 	}
+	measured := aiCertMeasuredRoutes(doc.Presets)
+	counted := map[string]bool{}
 	for _, site := range doc.Sites {
 		perFamily := map[string]int{}
-		for _, rec := range eligibleFamilyRecords(site) {
+		for _, rec := range eligibleFamilyRecords(site, measured) {
 			perFamily[aicert.ModelFamily(rec.Binding.Model)]++
+			counted[rec.Binding.label()] = true
 		}
 		for name, n := range perFamily {
 			if got := rows[name][site.Key].Records; got != n {
@@ -333,8 +393,12 @@ func assertAICertFamiliesCoverEveryRecord(t *testing.T, doc aiCertDoc, page stri
 		}
 	}
 	for _, b := range doc.Bindings {
-		if seen[b.Binding.label()] != 1 {
-			t.Errorf("binding %s is in %d families' model tables, want 1", b.Binding.label(), seen[b.Binding.label()])
+		want := 0
+		if counted[b.Binding.label()] {
+			want = 1
+		}
+		if seen[b.Binding.label()] != want {
+			t.Errorf("binding %s is in %d families' model tables, want %d", b.Binding.label(), seen[b.Binding.label()], want)
 		}
 	}
 }
@@ -358,15 +422,75 @@ func TestFamilyAnswerNeedsCoverageBeforeItGrades(t *testing.T) {
 	}
 }
 
-func TestAHostedRecordDoesNotGradeAFamilyOnALocalOnlyTask(t *testing.T) {
-	hosted := aiCertRecord{Binding: aiCertBindingRef{Provider: "gemini", Model: "gemini-3.5-flash"}, Band: aicert.VerdictCertified}
-	local := aiCertRecord{Binding: aiCertBindingRef{Provider: "ollama", Model: "gemma4:12b"}, Band: aicert.VerdictCertified}
-	localOnly := aiCertSite{Task: "capture_counterparty_verdict", Records: []aiCertRecord{hosted, local}}
-	if got := eligibleFamilyRecords(localOnly); len(got) != 1 || got[0].Binding.Provider != "ollama" {
-		t.Errorf("a local-only task kept %+v, want only the local record", got)
+// A family is graded only on the models a preset routes a feature to: a record
+// for a binding no preset reaches — a retired model, a one-off run under another
+// profile — neither counts toward the family's answer nor lists its model.
+func TestAFamilyCountsOnlyTheBindingsAPresetRoutes(t *testing.T) {
+	task := ai.TaskSummarize
+	profile := ai.ProfileEUHosted
+	bound := ai.ProviderConfig{Provider: "openai_compatible", Model: "mistralai/ministral-14b-2512"}
+	retired := ai.ProviderConfig{Provider: "openai_compatible", Model: "mistralai/mistral-large-2512"}
+	records := []aicert.Record{
+		measuredRecord(task, bound, profile, aicert.VerdictCertified, 0),
+		measuredRecord(task, retired, profile, aicert.VerdictNotSupported, 0),
+		measuredRecord(task, bound, ai.ProfileCloudFrontier, aicert.VerdictNotSupported, 0),
 	}
-	open := aiCertSite{Task: "site_triage", Records: []aiCertRecord{hosted, local}}
-	if got := eligibleFamilyRecords(open); len(got) != 2 {
-		t.Errorf("a task with no locality rule kept %d records, want both", len(got))
+	tiers := map[ai.Tier]ai.ProviderConfig{}
+	for _, tier := range ai.TaskLadder(task) {
+		tiers[tier] = bound
+	}
+	preset := attributeOneTask(task, profile, tiers, records...)
+	doc := aiCertDoc{Presets: []aiCertPreset{preset}, Sites: []aiCertSite{{Task: string(task), Key: string(task) + "/brief"}}}
+	var rows []aicert.ReadinessRow
+	for _, rec := range records {
+		doc.Sites[0].Records = append(doc.Sites[0].Records, aiCertRecord{
+			Binding: bindingRefOf(rec), State: aicert.StatusCurrent, Band: rec.Verdict, Runs: rec.Runs, Passed: rec.Passed,
+		})
+		rows = append(rows, aicert.ReadinessRow{
+			Site: aitasks.Site{Task: task, Variant: "brief"}, Record: rec, Certified: true,
+			Tally: aicert.SiteTally{Verdict: rec.Verdict, Runs: rec.Runs, Passed: rec.Passed},
+		})
+	}
+	families := buildAICertFamilies(doc, rows)
+	if len(families) != 1 {
+		t.Fatalf("families = %+v, want Mistral alone", families)
+	}
+	fam := families[0]
+	if fam.Ready != 1 || fam.NotReliableYet != 0 || fam.Sites[0].Records != 1 {
+		t.Errorf("Mistral counts ready %d, not reliable %d over %d record(s); want only the routed record, ready",
+			fam.Ready, fam.NotReliableYet, fam.Sites[0].Records)
+	}
+	if len(fam.Models) != 1 || fam.Models[0].Binding.label() != bindingRefOf(records[0]).label() {
+		t.Errorf("Mistral lists %+v, want only the routed binding", fam.Models)
+	}
+	if got := familyModelNames(fam); got != "`ministral-14b-2512`" {
+		t.Errorf("models we tested = %s, want only the routed model", got)
+	}
+}
+
+// A record at a routed binding that ran the sites at other thinking levels is
+// one the preset row calls unmeasured, so it grades no family either.
+func TestAFamilyIgnoresARecordThePresetCallsUnmeasured(t *testing.T) {
+	task := ai.TaskSummarize
+	profile := ai.ProfileEUHosted
+	bound := ai.ProviderConfig{Provider: "openai_compatible", Model: "mistralai/ministral-14b-2512"}
+	stale := measuredRecord(task, bound, profile, aicert.VerdictCertified, 0)
+	stale.SiteThinking = map[string]string{"brief": "high"}
+	tiers := map[ai.Tier]ai.ProviderConfig{}
+	for _, tier := range ai.TaskLadder(task) {
+		tiers[tier] = bound
+	}
+	preset := attributeOneTask(task, profile, tiers, stale)
+	if preset.Tasks[0].Band != "" {
+		t.Fatalf("the preset row graded a record measured at other thinking levels: %q", preset.Tasks[0].Band)
+	}
+	doc := aiCertDoc{Presets: []aiCertPreset{preset}, Sites: []aiCertSite{{
+		Task: string(task), Key: string(task) + "/brief",
+		Records: []aiCertRecord{{Binding: bindingRefOf(stale), State: aicert.StatusCurrent, Band: stale.Verdict, Runs: stale.Runs, Passed: stale.Passed}},
+	}}}
+	for _, fam := range buildAICertFamilies(doc, nil) {
+		if fam.Ready != 0 || len(fam.Sites) != 0 {
+			t.Errorf("family %s counted a record its preset calls unmeasured: ready %d over %d site(s)", fam.Name, fam.Ready, len(fam.Sites))
+		}
 	}
 }

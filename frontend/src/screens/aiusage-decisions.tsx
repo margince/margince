@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import { EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable } from "../design-system/datatable";
+import { Popover } from "../design-system/popover";
 import { SettingRow } from "../design-system/settingrow";
 import { formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -13,9 +14,34 @@ import { attemptReasonLabel } from "./ai-decision-labels";
 
 type DecisionSummary = components["schemas"]["AiDecisionSummary"];
 
-// A task's fallbacks one reason per line, largest first, each under the reason
-// label the call trace uses — so an operator reads the same words on both
-// screens.
+// A task's fallback rate, and where the number comes from: a button that opens
+// the reasons one per line, largest first, each under the reason label the call
+// trace uses — so an operator reads the same words on both screens. A task that
+// never fell back has nothing to explain, so its rate is plain text.
+function FallbackRate({
+  row,
+  locale,
+}: Readonly<{ row: DecisionSummary; locale: Locale }>) {
+  const t = useT();
+  const shown = rate(fallbackCount(row.fallbacks), row.asked, locale);
+  if (fallbackCount(row.fallbacks) === 0) return shown;
+  return (
+    <Popover
+      className="evmark-trigger"
+      label={
+        <>
+          <span aria-hidden>{shown}</span>
+          <span className="sr-only">
+            {t("aiusage.decisions.reasonsFor", { rate: shown })}
+          </span>
+        </>
+      }
+    >
+      {fallbackLines(row.fallbacks, locale, t)}
+    </Popover>
+  );
+}
+
 function fallbackLines(
   fallbacks: DecisionSummary["fallbacks"],
   locale: Locale,
@@ -25,7 +51,6 @@ function fallbackLines(
   const entries = Object.entries(fallbacks).sort(
     ([a, left], [b, right]) => right - left || (a < b ? -1 : a > b ? 1 : 0),
   );
-  if (entries.length === 0) return "—";
   return (
     <CellStack>
       {entries.map(([reason, calls]) => (
@@ -80,13 +105,7 @@ export function DecisionSummaryRow({
       // From the fallbacks rather than asked minus decided: a consultation
       // that neither stood nor handed a reason on is neither, and folding it
       // into either rate would claim to know which it was.
-      render: (r: DecisionSummary) =>
-        rate(fallbackCount(r.fallbacks), r.asked, locale),
-    },
-    {
-      key: "reasons",
-      header: t("aiusage.decisions.col.reasons"),
-      render: (r: DecisionSummary) => fallbackLines(r.fallbacks, locale, t),
+      render: (r: DecisionSummary) => <FallbackRate row={r} locale={locale} />,
     },
   ];
   return (

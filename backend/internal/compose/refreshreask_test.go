@@ -3,9 +3,9 @@
 
 package compose
 
-// The two pricing-page extractors ask through ai.Ask, so a reply their own
-// parse refuses goes back to the model rather than leaving the sheet unrefreshed
-// with a warning nobody reads.
+// The FX extractor asks through ai.Ask, so a reply its own parse refuses goes
+// back to the model rather than leaving the sheet unrefreshed with a warning
+// nobody reads.
 
 import (
 	"context"

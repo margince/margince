@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { DecisionSummaryRow } from "./aiusage-decisions";
 import { StoryProviders } from "./story-utils";
@@ -33,7 +34,23 @@ const meta: Meta<typeof DecisionSummaryRow> = {
 export default meta;
 type Story = StoryObj<typeof DecisionSummaryRow>;
 
-// One reason per line, largest first, and a dash where a task never fell back.
+// The fallback rate is the button that explains itself; a task that never fell
+// back shows its rate as plain text.
 export const Fallbacks: Story = {};
 export const FallbacksDark: Story = { globals: { theme: "dark" } };
+
+// Opened: the reasons one per line, largest first.
+export const ReasonsOpen: Story = {
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Fallbacks by reason for 78%",
+      }),
+    );
+  },
+};
+export const ReasonsOpenDark: Story = {
+  ...ReasonsOpen,
+  globals: { theme: "dark" },
+};
 export const NothingAsked: Story = { args: { decisions: [] } };

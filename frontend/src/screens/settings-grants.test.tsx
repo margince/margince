@@ -333,17 +333,18 @@ describe("the grant that opens one settings page", () => {
 
   it("opens both AI diagnostics pages for a lone ai_diagnostics read", async () => {
     // `ai_diagnostics` is the object the server moved these reads onto, and
-    // `AiUsageCard`, `AiCallsCard` and `AiHealthCard` all ask for it now. They
-    // used to ask `automation:update` — a write verb guarding a GET, from when
-    // the runtime's spend was operator information.
+    // `AiUsageCard`, `AiCallsCard` and the health column of the Model tiers
+    // card all ask for it now. They used to ask `automation:update` — a write
+    // verb guarding a GET, from when the runtime's spend was operator
+    // information.
     //
-    // One grant opens two pages, which is what makes granting it alone worth
+    // One grant opens the pages, which is what makes granting it alone worth
     // asserting: a Model calls wired to some other object would be invisible
     // here and everywhere else.
     //
-    // THREE pages, not two: `AiHealthCard` reads on this object too and Models
-    // is the only page that renders it, so a Models shut on `ai_routing` alone
-    // put that card behind a door its own reader could not open. Management is
+    // THREE pages, not two: the Model tiers card answers this read with the
+    // lanes' health alone, so a Models shut on `ai_routing` alone put that
+    // reading behind a door its own reader could not open. Management is
     // seeded diagnostics WITHOUT routing, which is exactly that reader.
     vi.stubGlobal(
       "fetch",

@@ -10,6 +10,7 @@ package ai
 
 import (
 	"context"
+	"maps"
 	"slices"
 	"sort"
 
@@ -29,6 +30,9 @@ const (
 	RefreshUnchanged RefreshOutcome = "unchanged"
 	// RefreshNotAvailable means the provider publishes no price to read.
 	RefreshNotAvailable RefreshOutcome = "not_available"
+	// RefreshNotListed means a bound model is absent from the catalogue, so
+	// there is nothing to read for it and nothing to set by hand either.
+	RefreshNotListed RefreshOutcome = "not_listed"
 	// RefreshUnreachable means the catalogue could not be read.
 	RefreshUnreachable RefreshOutcome = "unreachable"
 	// RefreshNotBound means nothing the provider serves is bound or on the sheet.
@@ -41,6 +45,10 @@ type ProviderRefresh struct {
 	Outcome   RefreshOutcome
 	Updated   int
 	Unchanged int
+	// Unlisted is the bound models the catalogue does not name at all, in id
+	// order: a misspelt id, or a model the broker retired. Not the same as a
+	// model it names without a price, which is a price to set by hand.
+	Unlisted []string
 	// Models is the ids written this run, in id order.
 	Models []string
 }
@@ -66,7 +74,12 @@ var brokerProviders = []string{providerOpenAICompatible, providerJevCompatible}
 // routing document binds, plus the openai_compatible models already on the
 // sheet. The sheet rows are kept because a model unbound last week still shows
 // a price somewhere, and an unbound price left to rot misleads the usage page.
-// Sorted by provider then model so a run is reproducible.
+//
+// They are kept only while something is bound at OpenRouter. Without that, an
+// openai_compatible row belongs to a host this refresh knows nothing about (a
+// self-hosted server priced 0 by hand), and an id it happens to share with an
+// OpenRouter model is a coincidence, not a price. Tiers are visited in name
+// order and the result is sorted by provider then model, so a run is reproducible.
 func catalogueTargets(cfg RoutingConfig, sheet []ModelRateRow) []catalogueTarget {
 	byKey := map[[2]string]catalogueTarget{}
 	add := func(t catalogueTarget) {
@@ -79,19 +92,22 @@ func catalogueTargets(cfg RoutingConfig, sheet []ModelRateRow) []catalogueTarget
 		}
 		byKey[key] = t
 	}
-	for _, tier := range cfg.Tiers {
-		if openRouterChat(tier) {
+	atOpenRouter := false
+	for _, name := range slices.Sorted(maps.Keys(cfg.Tiers)) {
+		if tier := cfg.Tiers[name]; openRouterChat(tier) {
+			atOpenRouter = true
 			add(catalogueTarget{tier.Provider, tier.Model, LaneChat})
 		}
 	}
 	if openRouterChat(cfg.Embeddings.ProviderConfig) {
+		atOpenRouter = true
 		add(catalogueTarget{cfg.Embeddings.Provider, cfg.Embeddings.Model, LaneEmbeddings})
 	}
 	if d := cfg.Decisions; d != nil && decisionHostFor(d.Provider, d.BaseURL) == decisionHostOpenRouter {
 		add(catalogueTarget{d.Provider, d.Model, LaneDecisions})
 	}
 	for _, row := range sheet {
-		if row.Provider == providerOpenAICompatible {
+		if atOpenRouter && row.Provider == providerOpenAICompatible {
 			add(catalogueTarget{provider: row.Provider, modelID: row.ModelID})
 		}
 	}
@@ -185,6 +201,9 @@ func (s *RateStore) RefreshFromCatalogue(ctx context.Context, cfg RoutingConfig,
 		}
 		entry, ok := listed[t.modelID]
 		if !ok {
+			if t.lane != "" && catalogue.Unavailable == "" {
+				line.Unlisted = append(line.Unlisted, t.modelID)
+			}
 			continue
 		}
 		next, ok := cataloguePrice(entry, t)
@@ -235,11 +254,16 @@ func reportProviders(lines map[string]*ProviderRefresh, catalogueDown bool) Rate
 			line.Outcome = RefreshUpdated
 		case line.Unchanged > 0:
 			line.Outcome = RefreshUnchanged
+		case len(line.Unlisted) > 0:
+			line.Outcome = RefreshNotListed
 		default:
 			line.Outcome = RefreshNotAvailable
 		}
 		if line.Models == nil {
 			line.Models = []string{}
+		}
+		if line.Unlisted == nil {
+			line.Unlisted = []string{}
 		}
 		out = append(out, *line)
 	}

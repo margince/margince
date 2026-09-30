@@ -35,13 +35,30 @@ import (
 // (ai.ServableTiers walks that closure) and want their own runs — a sweep, not a
 // pooled record that could not say which model answered.
 func resolveBinding(routing ai.RoutingConfig, task ai.Task) (ai.ProviderConfig, ai.Tier, bool) {
+	rungs := boundLadder(routing, task)
+	if len(rungs) == 0 {
+		return ai.ProviderConfig{}, "", false
+	}
+	return rungs[0].Binding, rungs[0].Tier, true
+}
+
+// boundRung is one rung of a task's ladder and the model a deployment binds it to.
+type boundRung struct {
+	Tier    ai.Tier
+	Binding ai.ProviderConfig
+}
+
+// boundLadder is task's ladder reduced to the rungs routing binds, in the order
+// the router walks them: the first answers, and a failed call falls to the next.
+func boundLadder(routing ai.RoutingConfig, task ai.Task) []boundRung {
+	var rungs []boundRung
 	for _, tier := range ai.TaskLadder(task) {
 		binding, bound := routing.Tiers[tier]
 		if bound && binding.Provider != "" && binding.Model != "" {
-			return binding, tier, true
+			rungs = append(rungs, boundRung{Tier: tier, Binding: binding})
 		}
 	}
-	return ai.ProviderConfig{}, "", false
+	return rungs
 }
 
 // taskBindings is the candidate one task is certified against and the judge

@@ -222,7 +222,6 @@ export const vi = {
     "Chỉ người có cả quyền đọc chẩn đoán AI và quyền đọc hạn mức AI mới xem được các tính năng đang hoạt động.",
   "aiAdmin.save": "Lưu hạn mức",
   "aiAdmin.cancel": "Hủy",
-  "aiAdmin.calls": "Xem các lời gọi mô hình thực tế",
   "aiAdmin.website": "Đọc website",
   "aiAdmin.scans": "Quét tài khoản",
   "aiAdmin.voice": "Tạo giọng văn",
@@ -238,10 +237,7 @@ export const vi = {
   "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",
   "aiAdmin.activity": "Hoạt động",
   "aiAdmin.model": "Mô hình được chính sách chọn",
-  "aiAdmin.cloud": "Nhà cung cấp đám mây",
-  "aiAdmin.endpoint": "Điểm cuối đã cấu hình; vị trí chưa xác minh",
-  "aiAdmin.decisionFirst":
-    "Mô hình quyết định trước ({provider} · {model} · {processing}) → sau đó {ladder}",
+  "aiAdmin.thenLadder": "sau đó",
   "aiAdmin.decisionSkip.unbound":
     "Không dùng mô hình quyết định: chưa liên kết mô hình nào.",
   "aiAdmin.decisionSkip.uncertified":
@@ -5856,20 +5852,11 @@ export const vi = {
   "overnightGrant.writeFailedTitle": "Thay đổi chưa được lưu",
   "overnightGrant.renewScope":
     "Margince nay làm được nhiều hơn so với khi bạn đồng ý. Tắt rồi bật lại tùy chọn này để mở rộng — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
-  "aiHealth.title": "Tình trạng gọi theo tầng",
-  "aiHealth.sub":
-    "Mỗi tầng mô hình có đang trả lời hay không. Một tầng đã ngừng và một tầng chỉ đang thận trọng trông giống hệt nhau ở mọi nơi khác — thư đã thu thập vẫn bị giữ lại trong cả hai trường hợp.",
   "aiHealth.noCalls": "không có mô hình nào được gọi trong {hours} giờ qua",
-  "aiHealth.colTier": "Tầng",
-  "aiHealth.colState": "Trạng thái",
-  "aiHealth.colCalls": "{hours} giờ qua",
-  "aiHealth.colLatency": "Trung vị",
-  "aiHealth.colLast": "Trả lời gần nhất",
   "aiHealth.answering": "Đang trả lời",
   "aiHealth.notAnswering": "Không trả lời",
   "aiHealth.callCounts_one": "{count} lượt gọi, {failures} thất bại",
   "aiHealth.callCounts_other": "{count} lượt gọi, {failures} thất bại",
-  "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Đang giữ lại khỏi nhóm",
   "heldThreads.sub":
     "Những chuỗi thư hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi cho phép mọi đồng nghiệp đọc nó; không ai khác có thể chia sẻ chuỗi của bạn.",
@@ -8379,7 +8366,7 @@ export const vi = {
   "aiusage.decisions.col.asked": "Đã hỏi",
   "aiusage.decisions.col.passRate": "Tỷ lệ đạt",
   "aiusage.decisions.col.fallbackRate": "Tỷ lệ chuyển tiếp",
-  "aiusage.decisions.col.reasons": "Chuyển tiếp theo lý do",
+  "aiusage.decisions.reasonsFor": "Chuyển tiếp theo lý do cho {rate}",
 
   "aibanner.degraded": "Đã đạt ngưỡng 80% hạn mức AI — xem tác động",
   "aibanner.queued": "Đã hết hạn mức AI — xem công việc bị hoãn",
@@ -8394,8 +8381,6 @@ export const vi = {
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":
     "Chỉ người vận hành mới đọc được dấu vết từng lượt gọi. Nó ghi lại mọi lượt gọi mô hình của bản cài đặt, nên không hiển thị rộng hơn.",
-  "aiHealth.withheld":
-    "Chỉ người vận hành mới xem được các tầng mô hình có đang trả lời hay không. Đó là hệ thống của bản cài đặt, không phải điều gì về công việc của bạn.",
   "aicalls.sub":
     "Mọi lượt gọi mô hình — danh tính định tuyến, token, số lần thử lại, nội dung đã ghi.",
   "aicalls.col.detail": "Chi tiết",
@@ -8630,9 +8615,9 @@ export const vi = {
     "Câu hỏi có kiểu, hỏi trước các tầng khi đã chứng nhận",
   "aiRouting.decisions.add": "Thêm mô hình quyết định",
   "aiRouting.decisions.remove": "Gỡ mô hình quyết định",
-  "aiRouting.decisions.preset.openrouter": "Dùng OpenRouter",
+  "aiRouting.decisions.preset.openrouter": "Mẫu: OpenRouter",
   "aiRouting.decisions.preset.openrouterKey":
-    "Điền sẵn endpoint và mô hình của OpenRouter. JEV_COMPATIBLE_API_KEY nhận khóa OpenRouter của bạn.",
+    "Điền sẵn host và mô hình. Khóa đặt trong JEV_COMPATIBLE_API_KEY.",
   "aiRouting.decisions.absent":
     "Chưa có mô hình quyết định. Mọi tác vụ dùng các tầng.",
   "aiRouting.priceSheet": "Bảng giá",
@@ -8681,27 +8666,26 @@ export const vi = {
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Máy chủ",
   "aiRouting.baseUrl.help":
-    "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
+    "Gốc host; /v1 được thêm vào. Bắt buộc: bộ chuyển này không có mặc định.",
   "aiRouting.baseUrl.help.jev":
-    "URL endpoint đầy đủ, dùng đúng như đã nhập. Để trống để dùng API của chính TypeSafe, https://api.typesafe.ai/v1/systemone.",
+    "URL endpoint đầy đủ. Để trống để dùng API của chính TypeSafe.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
   "aiRouting.baseUrl.help.jevCompatible":
-    "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc: OpenRouter là https://openrouter.ai/api/alpha/decisions, còn máy chủ tự vận hành có dạng http://127.0.0.1:8767/v1/systemone.",
+    "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
   "aiRouting.models.noKey":
-    "Chỉ hiện bảng giá — nhà cung cấp này chưa có khoá nên không thể hỏi nó phục vụ những gì. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
-  "aiRouting.models.noEndpoint":
-    "Chỉ hiện bảng giá — điền host ở trên rồi mới hỏi được nhà cung cấp này. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
+    "Chưa có khóa nên không có danh sách mô hình. Hãy nhập ID bất kỳ.",
+  "aiRouting.models.noEndpoint": "Nhập host ở trên để tải danh sách mô hình.",
   "aiRouting.models.profileForbids":
-    "Chỉ hiện bảng giá — hồ sơ triển khai này không cho phép tiếp cận nhà cung cấp đó.",
+    "Hồ sơ này không cho phép nhà cung cấp này.",
   "aiRouting.models.notPublished":
-    "Chỉ hiện bảng giá — nhà cung cấp này không công bố danh sách mô hình.",
+    "Nhà cung cấp này không công bố danh sách mô hình.",
   "aiRouting.models.unreachable":
-    "Chỉ hiện bảng giá — nhà cung cấp này không phản hồi. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
+    "Nhà cung cấp không phản hồi. Hãy nhập ID bất kỳ.",
   "aiRouting.model.label": "Mô hình",
   "aiRouting.model.help":
-    "Danh sách là những mô hình mà bản cài đặt này biết giá, trên mỗi triệu token, đầu vào → đầu ra. Mọi ID khác mà nhà cung cấp của bạn phục vụ cũng dùng được — hãy nhập vào.",
+    "Chọn một mô hình trong danh sách, hoặc nhập bất kỳ ID nào mà nhà cung cấp phục vụ.",
   "aiRouting.saving": "Đang lưu ràng buộc…",
   "aiRouting.saveFailed": "Không thể lưu định tuyến",
   "aiRouting.adminOnly":
@@ -8733,6 +8717,17 @@ export const vi = {
     "Chọn nhà cung cấp và mô hình cho từng tầng, cho embeddings và, nếu muốn, cho mô hình quyết định. Ràng buộc đã lưu áp dụng cho mọi tiến trình trong vòng một phút, không cần khởi động lại.",
   "aiRouting.profileLine":
     "Hồ sơ triển khai: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một tầng được dùng và do bộ phận vận hành đặt.",
+  "aiRouting.notBound": "Chưa gắn",
+  "aiRouting.lastResponse": "Phản hồi gần nhất {when}",
+  "aiTerms.provider": "Nhà cung cấp",
+  "aiTerms.providerGloss": "bên chúng tôi gọi",
+  "aiTerms.tier": "Bậc",
+  "aiTerms.tierGloss": "một loại công việc, gắn với một mô hình",
+  "aiTerms.task": "Tác vụ",
+  "aiTerms.taskGloss": "việc sản phẩm làm",
+  "aiRouting.taskCount_one": "{count} tác vụ",
+  "aiRouting.taskCount_other": "{count} tác vụ",
+  "aiRouting.noPrice": "Chưa có giá. Thêm ở nhà cung cấp.",
   "aiRouting.edit": "Sửa",
   "aiRouting.editTitle": "Sửa ràng buộc {lane}",
   "aiRouting.saveBinding": "Lưu ràng buộc",
@@ -8744,9 +8739,6 @@ export const vi = {
   "aiRouting.notListed":
     "Không có trong danh sách mô hình công bố của {provider}. Bạn vẫn có thể lưu nếu nhà cung cấp phục vụ ID này.",
   "aiRouting.median": "Trung vị {ms} ms",
-  "aiRouting.untracked": "Tình trạng gọi chỉ được theo dõi cho các tầng.",
-  "aiRouting.taskCount_one": "{count} tác vụ",
-  "aiRouting.taskCount_other": "{count} tác vụ",
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
     "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng bắt đầu bằng mô hình nó đang chạy.",
@@ -10800,16 +10792,54 @@ export const vi = {
   "aiRates.proposedBasis":
     "Bấm Làm mới giá mô hình để ghi giá này vào bảng giá; sau đó mức dùng và chi phí sẽ tính theo giá đó.",
   "aiRates.refresh.button": "Làm mới giá mô hình",
-  "aiRates.refresh.report": "Kết quả làm mới giá mô hình",
   "aiRates.refresh.outcome.updated": "Đã cập nhật",
   "aiRates.refresh.outcome.unchanged": "Đã mới nhất",
   "aiRates.refresh.outcome.not_available": "Đặt thủ công",
   "aiRates.refresh.outcome.unreachable": "Không truy cập được",
   "aiRates.refresh.outcome.not_bound": "Không dùng",
+  "aiRates.refresh.outcome.not_listed": "Không có trong danh sách",
+  "aiRates.refresh.unlisted":
+    "Không có trong danh sách của nhà môi giới: {ids}",
   "aiRates.refresh.updatedCount_one": "Đã ghi {count} giá",
   "aiRates.refresh.updatedCount_other": "Đã ghi {count} giá",
   "aiRates.refresh.unchangedCount_one": "{count} giá đã mới nhất",
   "aiRates.refresh.unchangedCount_other": "{count} giá đã mới nhất",
+  "aiProviders.state.active": "Đang dùng",
+  "aiProviders.state.ready": "Sẵn sàng",
+  "aiProviders.state.needsKey": "Thiếu khóa",
+  "aiProviders.state.inactive": "Không hoạt động",
+  "aiProviders.usedBy": "Được dùng bởi {roles}",
+  "aiProviders.notUsed": "Chưa dùng",
+  "aiProviders.opensNewTab": "(Mở trong tab mới)",
+  "aiProviders.inUse": "Đang dùng",
+  "aiProviders.unpriced": "{model} đang được dùng và chưa có giá.",
+  "aiProviders.setPrice": "Đặt giá",
+  "aiProviders.manage": "Quản lý",
+  "aiProviders.connection": "Kết nối",
+  "aiProviders.prices": "Giá",
+  "aiProviders.addPrice": "Thêm giá",
+  "aiProviders.backToPrices": "← Giá",
+  "aiProviders.priceUnit": "USD trên 1 triệu token",
+  "aiProviders.priceSource": "Bảng giá của nhà cung cấp ↗",
+  "aiProviders.noPrices": "Nhà cung cấp này chưa có giá.",
+  "aiProviders.colInput": "Đầu vào",
+  "aiProviders.colOutput": "Đầu ra",
+  "aiProviders.colCacheRead": "Đọc cache",
+  "aiProviders.colCacheWrite": "Ghi cache",
+  "aiRates.manual.editing": "Đang sửa {model} · dùng cho {lane}",
+  "aiRates.manual.from": "từ {date}",
+  "aiRates.manual.edit": "Sửa",
+  "aiRates.manual.malformed":
+    "Giá là số thường như 5 hoặc 0.25, tối đa sáu chữ số thập phân.",
+  "aiRates.manual.lane": "Dùng cho",
+  "aiRates.manual.laneChat": "Trò chuyện",
+  "aiRates.manual.laneEmbeddings": "Nhúng",
+  "aiRates.manual.laneDecisions": "Quyết định",
+  "aiRates.remove.verb": "Xóa {model}",
+  "aiRates.remove.title": "Xóa giá của {model} ({lane})?",
+  "aiRates.remove.body":
+    "Giá của {model} dùng cho {lane} sẽ bị xóa và ước tính chi phí cho các lần gọi trước đây của mô hình này trở thành chưa có giá.",
+  "aiRates.remove.confirm": "Xóa",
   "firstRun.ai.foot":
     "Chưa có gì gửi tới nhà cung cấp của bạn cho tới khi bạn bấm Tiếp tục.",
   "contact.readings.title": "Vị thế của liên hệ này",

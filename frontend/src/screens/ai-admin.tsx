@@ -6,7 +6,6 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
-import { routeHash } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
   Badge,
@@ -25,10 +24,11 @@ import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { formatTokens } from "../format/tokens";
 import { useLocale, useT } from "../i18n";
-import { decisionSkipLabel, processingLabel } from "./ai-decision-labels";
+import { decisionSkipLabel } from "./ai-decision-labels";
 import { decisionFirstOrder } from "./ai-feature-order";
+import { TaskState } from "./ai-lane-state";
+import { ModelChain, ModelRef } from "./ai-terms";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { settingsHref } from "./settingsrouting";
 
 type Budget = components["schemas"]["AiBudgetSnapshot"];
 type Change = components["schemas"]["AiBudgetChange"];
@@ -332,32 +332,6 @@ export function AiFeaturesWithheldPanel() {
   );
 }
 
-export function AiFeaturesCard() {
-  const t = useT();
-  const canSee = useCan("ai_diagnostics", "read");
-  const canBudget = useCan("ai_budget", "read");
-  const canRoute = useCan("ai_routing", "read");
-  const query = useAiStatus(canSee && canBudget);
-  if (!canSee || !canBudget) return <AiFeaturesWithheldPanel />;
-  return (
-    <Panel title={t("aiAdmin.features")}>
-      <PanelBody>
-        <QueryGate query={query} pendingLabel={t("aiAdmin.features")}>
-          {(status) => (
-            <>
-              {canRoute && <AiFeatureTable rows={status.features} />}
-              <DeferredWork rows={status.deferred_work} />
-              <a href={routeHash(settingsHref("model-calls"))}>
-                {t("aiAdmin.calls")}
-              </a>
-            </>
-          )}
-        </QueryGate>
-      </PanelBody>
-    </Panel>
-  );
-}
-
 function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -387,7 +361,14 @@ function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
 
 // Read-only by design: a task's tier is fixed by the task contract, and the
 // binding a tier names is edited on the Model tiers card.
-export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
+export function AiFeatureTable({
+  rows,
+  health,
+}: Readonly<{
+  rows: Feature[];
+  // Present for a reader who may see how the lanes answer.
+  health?: components["schemas"]["AiHealth"];
+}>) {
   const t = useT();
   // Only a departure from the default is worth a badge; the unchanged case is
   // what every quiet row already says.
@@ -411,38 +392,24 @@ export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
     }
   };
   // Which model answers, and where the decision model stands in front of the
-  // ladder. Only the lead is summarized: the ladder behind it opens below.
+  // ladder. Only the lead is summarized: the rungs behind it are the tiers
+  // above, and repeating them per task is the same list said again.
   const summary = (row: Feature) => {
     const lead = row.effective_candidates[0];
-    const ladder = `${lead.provider} · ${lead.model}`;
+    const ladder = <ModelRef provider={lead.provider} model={lead.model} />;
     const decision = row.decision_candidate;
     if (!row.decision_first || !decision) {
       return ladder;
     }
-    return t("aiAdmin.decisionFirst", {
-      provider: decision.provider,
-      model: decision.model,
-      processing: processingLabel(decision.processing, t),
-      ladder,
-    });
-  };
-  const modelCell = (row: Feature) => {
-    if (!row.effective_candidates.length) return "—";
-    const [, ...fallbacks] = row.effective_candidates;
-    if (!fallbacks.length) return summary(row);
     return (
-      <Disclosure summary={summary(row)}>
-        <ol>
-          {fallbacks.map((candidate) => (
-            <li key={candidate.tier}>
-              {candidate.provider} · {candidate.model} ·{" "}
-              {processingLabel(candidate.processing, t)}
-            </li>
-          ))}
-        </ol>
-      </Disclosure>
+      <ModelChain
+        steps={[decision, lead]}
+        connector={t("aiAdmin.thenLadder")}
+      />
     );
   };
+  const modelCell = (row: Feature) =>
+    row.effective_candidates.length ? summary(row) : "—";
   return (
     <DataTable
       label={t("aiAdmin.features")}
@@ -463,6 +430,11 @@ export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
                 {row.decision_first ? (
                   <Badge>{t("aiTasks.decisionFirst")}</Badge>
                 ) : null}
+                <TaskState
+                  health={health}
+                  tier={row.leading_tier}
+                  decisionFirst={row.decision_first === true}
+                />
                 {changed ? (
                   <Badge
                     tone={

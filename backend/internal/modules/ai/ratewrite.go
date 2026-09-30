@@ -145,27 +145,46 @@ func (s *RateStore) prepareModelRate(ctx context.Context, in SetModelRateInput) 
 	if err := auth.RequireAny(ctx, "ai_model_rate", principal.ActionCreate, principal.ActionUpdate); err != nil {
 		return preparedModelRate{}, err
 	}
-	provider := strings.TrimSpace(in.Provider)
-	modelID := strings.TrimSpace(in.ModelID)
-	if provider == "" {
-		return preparedModelRate{}, rateInvalid("provider", "rate_provider_required", "provider is required")
-	}
-	if modelID == "" {
-		return preparedModelRate{}, rateInvalid("model_id", "rate_model_required", "model_id is required")
+	provider, modelID, err := modelRateIdentity(in.Provider, in.ModelID)
+	if err != nil {
+		return preparedModelRate{}, err
 	}
 	input, output, cacheRead, cacheWrite, err := modelRateMicroUSD(in)
 	if err != nil {
 		return preparedModelRate{}, err
 	}
-	if in.Lane != "" && in.Lane != LaneChat && in.Lane != LaneEmbeddings && in.Lane != LaneDecisions {
-		return preparedModelRate{}, rateInvalid("lane", "rate_lane_unknown",
-			"lane must be chat, embeddings or decisions")
+	if in.Lane != "" && !knownLane(in.Lane) {
+		return preparedModelRate{}, unknownLane()
 	}
 	return preparedModelRate{
 		provider: provider, modelID: modelID,
 		input: input, output: output, cacheRead: cacheRead, cacheWrite: cacheWrite,
 		lane: in.Lane,
 	}, nil
+}
+
+// modelRateIdentity is the trimmed (provider, model_id) a write names, or the
+// 422 for the half it left blank. The set and the delete share it, so a blank
+// key is refused with one sentence whichever way the sheet is written.
+func modelRateIdentity(provider, modelID string) (string, string, error) {
+	provider, modelID = strings.TrimSpace(provider), strings.TrimSpace(modelID)
+	if provider == "" {
+		return "", "", rateInvalid("provider", "rate_provider_required", "provider is required")
+	}
+	if modelID == "" {
+		return "", "", rateInvalid("model_id", "rate_model_required", "model_id is required")
+	}
+	return provider, modelID, nil
+}
+
+// knownLane reports whether the sheet files models under lane; unknownLane is
+// the 422 for one it does not.
+func knownLane(lane Lane) bool {
+	return lane == LaneChat || lane == LaneEmbeddings || lane == LaneDecisions
+}
+
+func unknownLane() error {
+	return rateInvalid("lane", "rate_lane_unknown", "lane must be chat, embeddings or decisions")
 }
 
 // filedLane resolves what this write files the model as: the caller's lane when
