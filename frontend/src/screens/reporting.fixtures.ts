@@ -53,7 +53,7 @@ export const reportingStoryEvaluation: ReportingEvaluation = {
   metrics: [
     {
       id: "bookings_won",
-      version: "1",
+      version: "2",
       unit: "EUR",
       value: 21600000,
       target: 30000000,
@@ -315,7 +315,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
           supports_target: metric.id === "bookings_won",
           definition:
             metric.id === "bookings_won"
-              ? "Won deals credited to their owner at closing, in the selected close interval."
+              ? "Won deals grouped by their current owner, in the selected close interval."
               : "Current authorized observations at the capture time.",
           blocks: reportingStoryEvaluation.charts
             .filter((chart) => chart.metric === metric.id)
@@ -334,7 +334,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
       },
       {
         id: "meetings_held",
-        version: "1",
+        version: "2",
         unit: "count",
         temporal_basis: "event_period",
         supports_target: true,

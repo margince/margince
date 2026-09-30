@@ -209,3 +209,67 @@ it("shows a refused reporting setup instead of an empty editor", async () => {
   );
   expect(await screen.findByText("Reporting access has changed")).toBeVisible();
 });
+
+it("does not describe an old snapshot with the current ownership rule", async () => {
+  const user = userEvent.setup({ delay: null });
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    metrics: reportingStoryEvaluation.metrics.map((metric) => ({
+      ...metric,
+      version: "1",
+    })),
+  };
+  const routes = reportingStoryRoutes(evaluation);
+  installFetchStub({
+    ...routes,
+    "GET /analytics/editions/old/evidence": routes["GET /analytics/evidence"],
+  });
+  render(
+    <StoryProviders>
+      <ReportingEvidenceDrawer
+        evaluation={evaluation}
+        editionId="old"
+        reference={{ metric: "bookings_won", context_id: "interval" }}
+        onClose={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await screen.findByText("Northstar rollout");
+  await user.click(
+    screen.getByRole("button", { name: "How this is measured" }),
+  );
+  expect(
+    await screen.findByText(
+      "This snapshot uses an earlier metric definition. Its saved figures have not been recalculated.",
+    ),
+  ).toBeVisible();
+  expect(
+    screen.queryByText(
+      "Won deals grouped by their current owner, in the selected close interval.",
+    ),
+  ).not.toBeInTheDocument();
+});
+
+it("closes the evidence drawer when opening its underlying deal", async () => {
+  const user = userEvent.setup({ delay: null });
+  const close = vi.fn();
+  installFetchStub(reportingStoryRoutes());
+  render(
+    <StoryProviders>
+      <ReportingEvidenceDrawer
+        evaluation={reportingStoryEvaluation}
+        reference={{ metric: "bookings_won", context_id: "interval" }}
+        onClose={close}
+      />
+    </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Northstar rollout",
+    }),
+  );
+  expect(close).toHaveBeenCalledOnce();
+  expect(window.location.hash).toBe(
+    "#/deals/00000000-0000-4000-8000-000000000012",
+  );
+});

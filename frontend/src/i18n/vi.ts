@@ -92,6 +92,8 @@ export const vi = {
   "reporting.observations_one": "Quan sát: {count}",
   "reporting.observations_other": "Quan sát: {count}",
   "reporting.observationsUnavailable": "Chưa có cỡ mẫu",
+  "reporting.earlierDefinition":
+    "Bản chụp này sử dụng định nghĩa chỉ số trước đây. Các số liệu đã lưu chưa được tính lại.",
   "reporting.definition": "Cách đo lường",
   "reporting.viewRecords": "Xem bản ghi",
   "reporting.copyName": "Bản sao của {name}",

@@ -8,7 +8,9 @@ Choose **Sales** for sales won, pipeline stages, sales by salesperson and time i
 scope and period. Stage charts require a single pipeline. A rep's personal scope
 shows their own results; wider access is required to compare owners.
 
-Sales won follows the selected event period. Open pipeline and stage age describe
+Sales won follows the selected close period and the current deal owner. Reassigning
+a deal moves its live sales and target results to the new owner; saved snapshots
+keep the owner and results captured then. Open pipeline and stage age describe
 the current pipeline, with their expected-close window printed beside the chart.
 Salesperson targets use the containing month or fiscal quarter, with that period's own
 actual. Changing the event period does not turn today's pipeline into history.
@@ -27,7 +29,8 @@ Stage-age records stay within the selected reporting scope.
 - **Stage age:** median and 75th percentile for current open deals. Small cohorts
   are withheld. A percentile describes the population; it is not a stalled-deal alarm.
 - **SDR outcomes:** weekly held meetings and accepted opportunities, counted
-  separately. Acceptance stays credited to the originating SDR after ownership
+  separately. Older confirmed meetings without attribution history use their
+  current host and customer links; the metric’s coverage details explain this fallback. Acceptance stays credited to the originating SDR after ownership
   transfers. These two series are not a conversion rate.
 - **Forecast:** won, supported open and additional upside are separate segments.
   The manager's forecast is a separate marker. Movement uses stored captures with their
@@ -81,3 +84,15 @@ to use Margince's governed reporting tools.
 The Sales and SDR summaries show period totals above their trends. Target progress appears only for assigned targets; SDRs without targets see totals without a quota column. Exact amounts, timezones and attribution remain available in reporting details. Export CSV is beside Save report.
 
 Metric definitions are available to readers. Administrators open **Reporting setup** separately to configure qualification stages and daily pipeline history.
+
+
+## Why can Weekly figures differ?
+
+Weekly sales and held-customer-meeting totals use the same metrics as Analytics.
+The lead funnel counts recorded status transitions for the rep’s leads during the
+week; it is a different population and date basis from meetings hosted during the
+week. Older partial transitions are excluded from that funnel.
+
+Saved reports keep their metric versions. When using MCP, compare those versions
+with the catalog before applying its current definitions to an older edition.
+Weekly comparisons also require matching metric versions.

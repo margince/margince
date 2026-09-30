@@ -84,6 +84,8 @@ export const de = {
   "reporting.observations_one": "Beobachtung: {count}",
   "reporting.observations_other": "Beobachtungen: {count}",
   "reporting.observationsUnavailable": "Stichprobengröße nicht verfügbar",
+  "reporting.earlierDefinition":
+    "Dieser Snapshot verwendet eine frühere Kennzahldefinition. Die gespeicherten Werte wurden nicht neu berechnet.",
   "reporting.definition": "Berechnung anzeigen",
   "reporting.viewRecords": "Datensätze anzeigen",
   "reporting.copyName": "Kopie von {name}",

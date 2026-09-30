@@ -83,6 +83,8 @@ export function reportingStoryRoutes(
         rows: [
           {
             key: "deal",
+            source_type: "deal",
+            source_id: "00000000-0000-4000-8000-000000000012",
             label: "Northstar rollout",
             value: 6400000,
             occurred_at: "2026-09-08T10:00:00Z",

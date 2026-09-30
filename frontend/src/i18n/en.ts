@@ -82,6 +82,8 @@ export const en = {
   "reporting.observations_one": "Observation: {count}",
   "reporting.observations_other": "Observations: {count}",
   "reporting.observationsUnavailable": "Sample size unavailable",
+  "reporting.earlierDefinition":
+    "This snapshot uses an earlier metric definition. Its saved figures have not been recalculated.",
   "reporting.definition": "How this is measured",
   "reporting.viewRecords": "View records",
   "reporting.copyName": "Copy of {name}",

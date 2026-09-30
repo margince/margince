@@ -22,7 +22,7 @@ export const sdrEvaluation: ReportingEvaluation = {
   metrics: [
     {
       id: "meetings_held",
-      version: "1",
+      version: "2",
       unit: "count",
       value: 34,
       target: 40,

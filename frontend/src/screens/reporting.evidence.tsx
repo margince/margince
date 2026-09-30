@@ -105,9 +105,11 @@ export function ReportingEvidenceDrawer({
         <Heading ref={heading} tabIndex={-1} id={title} as="h2" size="medium">
           {metricLabel(reference.metric, t)}
         </Heading>
-        <Popover onHover label={t("reporting.definition")}>
-          <p>{definition?.definition}</p>
-        </Popover>
+        <MetricDefinition
+          definition={definition}
+          version={metric?.version}
+          frozen={Boolean(editionId)}
+        />
         <p className="t-caption">
           {evaluation.context.scope.label}
           {point?.label ? ` · ${point.label}` : ""}
@@ -193,9 +195,10 @@ export function ReportingEvidenceDrawer({
                       ) : row.source_id && row.source_type === "deal" ? (
                         <Button
                           variant="link"
-                          onClick={() =>
-                            navigate({ screen: "deals", id: row.source_id })
-                          }
+                          onClick={() => {
+                            onClose();
+                            navigate({ screen: "deals", id: row.source_id });
+                          }}
                         >
                           {row.label}
                         </Button>
@@ -290,4 +293,24 @@ function evidenceSelection(
         ? undefined
         : evaluation.context.interval);
   return { metric, point, interval, selectedValue };
+}
+
+function MetricDefinition({
+  definition,
+  version,
+  frozen,
+}: Readonly<{
+  definition?: { version: string; definition: string };
+  version?: string;
+  frozen: boolean;
+}>) {
+  const t = useT();
+  const changed = frozen && definition && version !== definition.version;
+  return (
+    <Popover onHover label={t("reporting.definition")}>
+      <p>
+        {changed ? t("reporting.earlierDefinition") : definition?.definition}
+      </p>
+    </Popover>
+  );
 }
