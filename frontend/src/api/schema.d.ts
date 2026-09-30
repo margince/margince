@@ -12197,7 +12197,9 @@ export interface paths {
          *     must supply `X-Approval-Token`. Not the generic archive shape: this is a status flip
          *     on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
          *     refused because a Live List filters on the field: the list keeps evaluating on the kept
-         *     values, reports health `retired_field`, and the response names it in `live_lists`.
+         *     values and reports health `retired_field`. Which lists those are is read, for the
+         *     caller's own visibility, from `listCustomFieldLiveLists` rather than carried here: a
+         *     replayed answer would otherwise repeat list names the caller may no longer find.
          */
         post: operations["retireCustomField"];
         delete?: never;
@@ -33120,8 +33122,6 @@ export interface components {
              */
             archived_at?: string | null;
             version?: components["schemas"]["RowVersion"];
-            /** @description Only on the retire answer: the Live Lists whose filter names the field. Every other read leaves it out. */
-            live_lists?: components["schemas"]["CustomFieldLiveLists"];
         };
         /** @description The Live Lists whose filter names a custom field: the ones the caller may find by name, and how many more exist that they may not find. */
         CustomFieldLiveLists: {
@@ -59584,7 +59584,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The retired custom field (`status: "retired"`, `archived_at` still null), and the Live Lists whose filter names it. */
+            /** @description The retired custom field (`status: "retired"`, `archived_at` still null). */
             200: {
                 headers: {
                     [name: string]: unknown;

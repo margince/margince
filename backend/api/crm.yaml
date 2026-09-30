@@ -17974,7 +17974,9 @@ paths:
         must supply `X-Approval-Token`. Not the generic archive shape: this is a status flip
         on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
         refused because a Live List filters on the field: the list keeps evaluating on the kept
-        values, reports health `retired_field`, and the response names it in `live_lists`.
+        values and reports health `retired_field`. Which lists those are is read, for the
+        caller's own visibility, from `listCustomFieldLiveLists` rather than carried here: a
+        replayed answer would otherwise repeat list names the caller may no longer find.
       x-mcp-tool: { verb: update_record, record_type: custom_field, tier: confirmation_required, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -17982,8 +17984,7 @@ paths:
       responses:
         '200':
           description: >-
-            The retired custom field (`status: "retired"`, `archived_at` still null), and the
-            Live Lists whose filter names it.
+            The retired custom field (`status: "retired"`, `archived_at` still null).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CustomField' }
@@ -45741,11 +45742,6 @@ components:
             Base envelope field (DM-CONV-3); stays null even when `status=retired` — retire
             is a status flip, not an archive.
         version: { $ref: '#/components/schemas/RowVersion' }
-        live_lists:
-          allOf: [{ $ref: '#/components/schemas/CustomFieldLiveLists' }]
-          description: >-
-            Only on the retire answer: the Live Lists whose filter names the field. Every
-            other read leaves it out.
 
     CustomFieldLiveLists:
       type: object

@@ -72,7 +72,9 @@ export function RetireFieldConfirm({
 function FieldLiveLists({ fieldId }: Readonly<{ fieldId: string }>) {
   const t = useT();
   const lists = useQuery({
-    queryKey: ["custom-fields", "live-lists", fieldId],
+    // Under the lists key, so every list write that can move the answer
+    // (sharing, archive, a new Live List) refetches it.
+    queryKey: [LISTS_KEY, "field-use", fieldId],
     queryFn: async () => {
       const { data, error } = await api.GET("/custom-fields/{id}/lists", {
         params: { path: { id: fieldId } },

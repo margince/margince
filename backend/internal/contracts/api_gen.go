@@ -30577,9 +30577,6 @@ type CustomField struct {
 	// Label Display label; the only thing a rename updates.
 	Label string `json:"label"`
 
-	// LiveLists Only on the retire answer: the Live Lists whose filter names the field. Every other read leaves it out.
-	LiveLists *CustomFieldLiveLists `json:"live_lists,omitempty"`
-
 	// Object The existing core object this field is added to (CUSTOM-FIELDS-PARAM-2).
 	Object CustomFieldObject `json:"object"`
 

@@ -5,13 +5,15 @@
 
 package customfields
 
-// Retiring a field a Live List filters on is allowed, and says so: the retire
-// names the list, and the list keeps evaluating while it reports the retired
-// field its steward should replace.
+// Retiring a field a Live List filters on is allowed, and says so: the read
+// asked before the retire names the list, and the list keeps evaluating while
+// it reports the retired field its steward should replace.
 
 import (
+	"encoding/json"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -69,19 +71,26 @@ func TestRetiringAFieldALiveListFiltersOnNamesTheListAndKeepsItEvaluating(t *tes
 	if status := e.Call(t, "GET", "/v1/custom-fields/"+field.ID+"/lists", nil, nil, &before); status != http.StatusOK {
 		t.Fatalf("read the field's lists → %d", status)
 	}
-	assertNamesOnly(t, "before the retire", before, "Gold band")
+	if len(before.Lists) != 1 || before.Lists[0].Name != "Gold band" || before.UnseenCount != 0 {
+		t.Fatalf("before the retire the field's lists are %+v, want only Gold band", before)
+	}
 
-	var retired struct {
-		customFieldWire
-		LiveLists liveListsWire `json:"live_lists"`
+	// The retire answer is replayed from storage for a repeated Idempotency-Key,
+	// with no visibility check, so it must carry no list at all.
+	key := map[string]string{"Idempotency-Key": "retire-" + field.ID}
+	for _, attempt := range []string{"first", "replayed"} {
+		var raw json.RawMessage
+		if status := e.Call(t, "POST", "/v1/custom-fields/"+field.ID+"/retire", nil, key, &raw); status != http.StatusOK {
+			t.Fatalf("%s retire → %d", attempt, status)
+		}
+		var retired customFieldWire
+		if err := json.Unmarshal(raw, &retired); err != nil || retired.Status != "retired" {
+			t.Fatalf("%s retire answered %s (%v)", attempt, raw, err)
+		}
+		if strings.Contains(string(raw), "Gold band") || strings.Contains(string(raw), list.ID) {
+			t.Fatalf("the %s retire answer names the list: %s", attempt, raw)
+		}
 	}
-	if status := e.Call(t, "POST", "/v1/custom-fields/"+field.ID+"/retire", nil, nil, &retired); status != http.StatusOK {
-		t.Fatalf("retire → %d", status)
-	}
-	if retired.Status != "retired" {
-		t.Fatalf("retired field status = %q", retired.Status)
-	}
-	assertNamesOnly(t, "the retire response", retired.LiveLists, "Gold band")
 
 	var after listWire
 	if status := e.Call(t, "GET", "/v1/lists/"+list.ID, nil, nil, &after); status != http.StatusOK {
@@ -92,12 +101,5 @@ func TestRetiringAFieldALiveListFiltersOnNamesTheListAndKeepsItEvaluating(t *tes
 	}
 	if after.VisibleCount == nil || *after.VisibleCount != 1 {
 		t.Fatalf("the list counts %v members, want the one gold contact still evaluated", after.VisibleCount)
-	}
-}
-
-func assertNamesOnly(t *testing.T, where string, got liveListsWire, name string) {
-	t.Helper()
-	if len(got.Lists) != 1 || got.Lists[0].Name != name || got.UnseenCount != 0 {
-		t.Fatalf("%s names %+v, want only %q and nothing unseen", where, got, name)
 	}
 }
