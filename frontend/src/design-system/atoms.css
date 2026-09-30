@@ -1927,15 +1927,8 @@ span.error-line {
 .overflow-menu-items .t-caption {
   padding-inline: 9px;
 }
-/* One left x for every LABEL, in a menu whose items are mixed. An item leading
-   with a glyph starts its words a glyph-and-a-gap in; an item without one
-   starts them at the inset — so the words run down two columns and the menu
-   reads as ragged. The glyph-less rows reserve the same column, empty, and
-   only in a panel that actually holds a glyph: reserving it unconditionally
-   would indent every label in every menu for an icon none of them has.
-
-   A glyph is a Button's FIRST child by construction — the atom draws icons
-   leading — so the test is simply whether the row carries one. */
+/* One left x for every label while an item is in flight: a pending Button
+   leads with its busy mark, so the other rows reserve that column, empty. */
 .overflow-menu-items:has(.btn > svg) .btn:not(:has(> svg))::before {
   content: "";
   flex: none;

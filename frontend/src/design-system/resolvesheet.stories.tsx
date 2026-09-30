@@ -61,7 +61,7 @@ const labels: ResolveSheetLabels = {
 const noop = () => {};
 
 /**
- * The sheet with the control that opens it, the way `atoms.stories.tsx` frames
+ * The sheet with the control that opens it, the way `modal.stories.tsx` frames
  * a dialog.
  *
  * The trigger is not decoration: `Modal` portals to the document body, so a

@@ -10,7 +10,9 @@ import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { vocabularyQueryKey } from "./filterdata";
 import { FiltersScreen } from "./filters";
+import { savedViewsKey } from "./savedviews.manage";
 
 // What this screen owns is the WIRING and one judgement: how a count that is a
 // moment behind should read. So these tests are about which request went out for
@@ -50,6 +52,7 @@ function mount(
     rows?: readonly Record<string, unknown>[];
   },
   views: readonly Record<string, unknown>[] = [],
+  viewsAnswered: Promise<void> = Promise.resolve(),
 ) {
   const seen: string[] = [];
   const written: unknown[] = [];
@@ -119,6 +122,7 @@ function mount(
           );
           return json({ id: "v-new", ...(views[0] ?? {}) });
         }
+        await viewsAnswered;
         return json({
           data: views,
           page: { next_cursor: null, has_more: false },
@@ -135,7 +139,7 @@ function mount(
       <LocaleProvider>{children}</LocaleProvider>
     </QueryClientProvider>
   );
-  return { seen, written, wrapper };
+  return { seen, written, wrapper, client };
 }
 
 /** A stored view row, with whatever `query` blob the test is about. */
@@ -265,6 +269,70 @@ it("restores a saved filter, count and all, without a clause being retyped", asy
   // engine would refuse is a view that fails the moment it is opened.
   expect(await screen.findByDisplayValue("ann")).toBeTruthy();
   expect(await screen.findByText("7 contacts match")).toBeTruthy();
+});
+
+it("opens the saved view the address names, already loaded", async () => {
+  const { wrapper } = mount({ match_count: 4 }, [
+    viewRow("Other", {
+      filter: { and: [{ field: "full_name", op: "contains", value: "bob" }] },
+    }),
+    viewRow("Berliners", {
+      filter: { and: [{ field: "full_name", op: "contains", value: "ann" }] },
+    }),
+  ]);
+  render(<FiltersScreen id="contacts" view="v-Berliners" />, { wrapper });
+
+  expect(await screen.findByDisplayValue("ann")).toBeTruthy();
+  expect(screen.queryByDisplayValue("bob")).toBeNull();
+  expect(await screen.findByText("4 contacts match")).toBeTruthy();
+});
+
+it("holds the builder until the addressed view is read, so no edit is overwritten", async () => {
+  let answer = () => {};
+  const answered = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  const { wrapper, client } = mount(
+    { match_count: 4 },
+    [
+      viewRow("Berliners", {
+        filter: { and: [{ field: "full_name", op: "contains", value: "ann" }] },
+      }),
+    ],
+    answered,
+  );
+  render(<FiltersScreen id="contacts" view="v-Berliners" />, { wrapper });
+
+  // The vocabulary has answered, which alone would make the builder editable.
+  await waitFor(() =>
+    expect(client.getQueryState(vocabularyQueryKey("contact"))?.status).toBe(
+      "success",
+    ),
+  );
+  expect(screen.queryByRole("button", { name: "Add clause" })).toBeNull();
+  answer();
+  expect(await screen.findByDisplayValue("ann")).toBeTruthy();
+});
+
+it("reads the views again when the cached ones predate the addressed view", async () => {
+  const berliners = viewRow("Berliners", {
+    filter: { and: [{ field: "full_name", op: "contains", value: "ann" }] },
+  });
+  const { wrapper, client } = mount({ match_count: 4 }, [berliners]);
+  client.setQueryData(savedViewsKey("contacts"), []);
+  render(<FiltersScreen id="contacts" view="v-Berliners" />, { wrapper });
+
+  expect(await screen.findByDisplayValue("ann")).toBeTruthy();
+});
+
+it("opens an empty builder when the addressed view is gone", async () => {
+  const { wrapper } = mount({ match_count: 4 }, []);
+  render(<FiltersScreen id="contacts" view="v-Gone" />, { wrapper });
+
+  expect(
+    await screen.findByRole("button", { name: "Add clause" }),
+  ).toBeTruthy();
+  expect(screen.queryByDisplayValue("ann")).toBeNull();
 });
 
 it("does not offer a view whose stored filter it cannot read", async () => {

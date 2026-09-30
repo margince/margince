@@ -8,24 +8,38 @@
 import { useState } from "react";
 import { Button, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
-import { SHARING_LABEL } from "./listlibrary";
+import { problemMessageOf, useMe } from "./common";
 import { type List, useUpdateList } from "./lists.queries";
-
-const SHARINGS = ["private", "team", "workspace"] as const;
+import { type ListAudience, ListAudienceFields } from "./listsharing";
 
 export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(list.name);
   const [purpose, setPurpose] = useState(list.purpose ?? "");
-  const [sharing, setSharing] = useState<List["sharing"]>(list.sharing);
+  const [audience, setAudience] = useState<ListAudience>(audienceOf(list));
+  // What the form opened with, version included. A refetch while it is open
+  // must not decide what is sent: sharing and team go only when the reader
+  // moved them, so nobody else's change is undone by a save of the name.
+  const [started, setStarted] = useState<ListAudience>(audienceOf(list));
+  const [version, setVersion] = useState(list.version);
+  const me = useMe();
   const update = useUpdateList();
+  const sharingChanged = audience.sharing !== started.sharing;
+  const teamChanged =
+    audience.sharing === "team" && audience.teamId !== started.teamId;
+  const openForm = () => {
+    setName(list.name);
+    setPurpose(list.purpose ?? "");
+    setAudience(audienceOf(list));
+    setStarted(audienceOf(list));
+    setVersion(list.version);
+    setOpen(true);
+  };
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{t("lists.settings")}</Button>
+      <Button onClick={openForm}>{t("lists.settings")}</Button>
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
@@ -38,10 +52,11 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
           update.mutate(
             {
               id: list.id,
-              version: list.version,
+              version,
               name: name.trim(),
               purpose: purpose.trim() === "" ? null : purpose.trim(),
-              sharing,
+              sharing: sharingChanged ? audience.sharing : undefined,
+              teamId: teamChanged ? audience.teamId : undefined,
             },
             { onSuccess: () => setOpen(false) },
           )
@@ -65,20 +80,16 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
             />
           )}
         </Field>
-        <Field label={t("lists.sharingLabel")} hint={t("lists.sharingHint")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={sharing}
-              onChange={(next) => setSharing(next as List["sharing"])}
-              options={SHARINGS.map((value) => ({
-                value,
-                label: t(SHARING_LABEL[value]),
-              }))}
-            />
-          )}
-        </Field>
+        <ListAudienceFields
+          value={audience}
+          onChange={setAudience}
+          ownerIsReader={list.owner_id === me.data?.user.id}
+        />
       </ConfirmModal>
     </>
   );
+}
+
+function audienceOf(list: List): ListAudience {
+  return { sharing: list.sharing, teamId: list.team_id ?? null };
 }

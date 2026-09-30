@@ -332,6 +332,30 @@ it("names the task filter from its row, and stacks the trace under its own label
   expect(screen.getByText("Recent calls")).toBeTruthy();
 });
 
+// A task row on the models page links here with the task on the address, so the
+// filter is read from it and written back to it.
+it("narrows the trace to the task the address names, and writes a new pick back", async () => {
+  const user = userEvent.setup();
+  globalThis.location.hash = "#/settings/model-calls?task=account_scan";
+  mount();
+  const filter = await screen.findByRole("combobox", { name: "Task" });
+  // No call for it yet, so the server's set lacks it; the select still says it.
+  expect(filter.textContent).toContain("account_scan");
+  const asked = vi
+    .mocked(fetch)
+    .mock.calls.map(([input]) =>
+      input instanceof Request ? input.url : String(input),
+    );
+  expect(asked.some((url) => url.includes("task=account_scan"))).toBe(true);
+
+  await user.click(filter);
+  await user.click(await screen.findByRole("option", { name: summary.task }));
+  expect(globalThis.location.hash).toBe(
+    `#/settings/model-calls?task=${summary.task}`,
+  );
+  globalThis.location.hash = "";
+});
+
 it("distinguishes capture disabled from a call without payload", async () => {
   mount(false, false);
   await userEvent.click(

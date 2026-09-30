@@ -840,7 +840,6 @@ describe("the conversational company act", () => {
 
     // The decision scene answers with a radio and a Continue, never a
     // message composed and sent.
-    expect(document.querySelector(".mw-composer")).toBeNull();
     expect(screen.queryAllByRole("textbox")).toHaveLength(0);
 
     await userEvent.click(screen.getByRole("radio", { name: /Gradion GmbH/ }));
@@ -849,7 +848,7 @@ describe("the conversational company act", () => {
 
     // The review's own textboxes are the deck's field controls — an answer
     // to a specific, asked question — never a free-text composer beside it.
-    expect(document.querySelector(".mw-composer")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^send\b/i })).toBeNull();
   });
 
   // The dead-end this guards against: the server can hand back several open

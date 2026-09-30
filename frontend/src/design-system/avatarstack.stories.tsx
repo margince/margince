@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Avatar } from "./atoms";
 import { AvatarStack } from "./avatarstack";
 
 // A committee of contacts as overlapping monograms, folding into a "+N" once
@@ -38,4 +39,24 @@ export const OverTheMax: Story = {
     ],
     max: 5,
   },
+};
+
+// The ring costs the chip no size, so a folded face sits on the line a lone
+// one does.
+export const BesideALoneAvatar: StoryObj = {
+  render: () => (
+    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+      <AvatarStack
+        contacts={[
+          { name: "Alice Müller", identity: "Alice Müller" },
+          { name: "Bob Schmidt", identity: "Bob Schmidt" },
+          { name: "Carol Wagner", identity: "Carol Wagner" },
+          { name: "Dara O'Brien", identity: "Dara O'Brien" },
+          { name: "Eve Lindqvist", identity: "Eve Lindqvist" },
+          { name: "Frank Osei", identity: "Frank Osei" },
+        ]}
+      />
+      <Avatar name="Alice Müller" identity="Alice Müller" />
+    </div>
+  ),
 };

@@ -48,6 +48,9 @@ const SAMPLES: readonly Sample[] = [
   { name: "李小龍", meta: "No case to split on" },
   { name: "Ana-Sofía Ruiz", meta: "Hyphenated given name" },
   { name: "van der Berg", meta: "Lower-case particle" },
+  { name: "Dara O'Brien", meta: "An apostrophe in the name" },
+  { name: "Müller", meta: "One word with a diacritic" },
+  { name: "李", meta: "A single glyph" },
   { name: "Voltaq Systems", meta: "Industrial IoT · Munich" },
   { name: "Nordwind Energie AG", meta: "Utilities · Kiel" },
   { name: "Kessler Bau GmbH", meta: "Construction · Leipzig" },
@@ -165,6 +168,16 @@ export const Gallery: Story = {
           />
         </div>
       </section>
+    </div>
+  ),
+};
+
+// Keyed on the record id, so a rename does not move the mesh.
+export const KeyedOnTheRecord: Story = {
+  render: () => (
+    <div style={wall}>
+      <Avatar identity="company_7f3" name="Voltaq Systems" />
+      <Avatar identity="company_7f3" name="Voltaq Systems GmbH" size="md" />
     </div>
   ),
 };

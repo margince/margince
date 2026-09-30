@@ -30,9 +30,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 287 |
-| Columns | 3461 |
-| Foreign keys | 466 |
+| Tables | 290 |
+| Columns | 3473 |
+| Foreign keys | 468 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -41,7 +41,7 @@ Ranked by how many foreign keys point at them, so this list follows the schema r
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 22 | 124 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 22 | 125 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 33 | 41 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 40 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 32 |
@@ -110,7 +110,7 @@ erDiagram
 | [deals](deals.md) | 22 |
 | [finance](finance.md) | 5 |
 | [forecasting](forecasting.md) | 4 |
-| [identity](identity.md) | 19 |
+| [identity](identity.md) | 22 |
 | [integrations](integrations.md) | 4 |
 | [introductions](introductions.md) | 1 |
 | [knowledge](knowledge.md) | 3 |
@@ -158,7 +158,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 14 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 22 | 124 |
+| [`app_user`](identity.md#app_user) | identity | 22 | 125 |
 | [`approval`](approvals.md#approval) | approvals | 30 | 3 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
@@ -312,6 +312,8 @@ erDiagram
 | [`maskable_field`](identity.md#maskable_field) | identity | 2 | 1 |
 | [`meeting_invitation`](activities.md#meeting_invitation) | activities | 19 | 1 |
 | [`meeting_proposal`](activities.md#meeting_proposal) | activities | 9 | 0 |
+| [`mfa_challenge_spent`](identity.md#mfa_challenge_spent) | identity | 2 | 0 |
+| [`mfa_recovery_code`](identity.md#mfa_recovery_code) | identity | 5 | 0 |
 | [`notice`](notices.md#notice) | notices | 14 | 0 |
 | [`notification_digest_run`](notices.md#notification_digest_run) | notices | 4 | 0 |
 | [`notification_preference`](notices.md#notification_preference) | notices | 5 | 0 |
@@ -390,6 +392,7 @@ erDiagram
 | [`team_weekly_review_rep`](compose.md#team_weekly_review_rep) | compose | 12 | 0 |
 | [`technical_lookup_cache`](contacts.md#technical_lookup_cache) | contacts | 6 | 0 |
 | [`transcript_read`](activities.md#transcript_read) | activities | 12 | 0 |
+| [`user_mfa`](identity.md#user_mfa) | identity | 5 | 1 |
 | [`user_record_view`](compose.md#user_record_view) | compose | 5 | 0 |
 | [`vault_secret`](platform.md#vault_secret) | platform | 4 | 0 |
 | [`voice_build`](ai.md#voice_build) | ai | 21 | 0 |

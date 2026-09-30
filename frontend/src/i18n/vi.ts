@@ -6561,7 +6561,6 @@ export const vi = {
     "Không tìm thấy liên hệ nào trên website của bạn.",
   "ob.conv.triage.factsLabel": "Dữ kiện",
   "ob.conv.triage.factsCount": "tìm được {count}",
-  "ob.rail.tokensUnit": "tok",
   "ob.conv.scene.step": "Bước {n} / {m} · {label}",
   "ob.conv.scene.detour": "Rẽ ngang một chút",
   "ob.conv.scene.decisionSub":
@@ -7530,7 +7529,7 @@ export const vi = {
   "settings.page.company.sub":
     "T\u00ean, ti\u1ec1n t\u1ec7 v\u00e0 b\u1ed1i c\u1ea3nh m\u00e0 m\u1ecdi b\u1ea3n ghi \u0111\u01b0\u1ee3c \u0111\u1ecdc theo.",
   "settings.page.authentication.sub":
-    "C\u00e1ch m\u1ecdi ng\u01b0\u1eddi \u0111\u0103ng nh\u1eadp v\u00e0o b\u1ea3n tri\u1ec3n khai n\u00e0y, v\u00e0 \u1ee9ng d\u1ee5ng n\u00e0o \u0111\u01b0\u1ee3c thay m\u1eb7t n\u00f3.",
+    "C\u00e1ch m\u1ecdi ng\u01b0\u1eddi \u0111\u0103ng nh\u1eadp v\u00e0o b\u1ea3n tri\u1ec3n khai n\u00e0y, \u1ee9ng d\u1ee5ng n\u00e0o \u0111\u01b0\u1ee3c thay m\u1eb7t n\u00f3, v\u00e0 nh\u00f3m IdP n\u00e0o c\u1ea5p vai tr\u00f2.",
   "settings.page.members.sub":
     "M\u1ecdi ng\u01b0\u1eddi c\u00f3 gh\u1ebf, v\u00e0 m\u1ed7i ng\u01b0\u1eddi t\u1edbi \u0111\u01b0\u1ee3c \u0111\u00e2u.",
   "settings.page.teams.sub":
@@ -7612,10 +7611,10 @@ export const vi = {
   "settings.tab.tags": "Thẻ",
   "settings.tab.products": "Sản phẩm & báo giá",
   "settings.tab.import": "Nhập dữ liệu",
-  "settings.tab.models": "Mô hình & định tuyến",
+  "settings.tab.models": "Mô hình AI",
   "settings.tab.automations": "Tự động hoá",
   "settings.tab.usage": "Mức dùng AI",
-  "settings.tab.model-calls": "Lượt gọi mô hình",
+  "settings.tab.model-calls": "Nhật ký gọi AI",
   "settings.tab.audit": "Nhật ký kiểm toán",
   "settings.tab.system-health": "Tình trạng hệ thống",
   "settings.tab.reset": "Đặt lại dữ liệu",
@@ -8677,6 +8676,28 @@ export const vi = {
     "Cung cấp nhà cung cấp này trên màn hình đăng nhập. Tắt đi sẽ dừng cả những lượt đăng nhập đang diễn ra; các phiên hiện có không bị ảnh hưởng.",
   "signInMethods.noneConfigured":
     "Bản triển khai này chưa cấu hình nhà cung cấp bên ngoài nào, nên ngoài mật khẩu không có lựa chọn khác.",
+  "groupRoles.title": "Cấp vai trò theo nhóm",
+  "groupRoles.sub":
+    "Cấp một vai trò khi đăng nhập doanh nghiệp cho mọi thành viên đã được mời thuộc một nhóm IdP. Viết tên nhóm đúng như claim groups trong ID token. Cách này không tạo tài khoản: email chưa được mời vẫn bị từ chối, dù có nhóm hay không.",
+  "groupRoles.grantOnlyTitle": "Chỉ cấp: thư mục không bao giờ thu hồi",
+  "groupRoles.grantOnly":
+    "Mỗi lần đăng nhập cấp các vai trò đã ánh xạ và không bao giờ gỡ vai trò nào. Xóa một thành viên khỏi nhóm IdP không thu hồi vai trò ở đây: việc thu hồi vẫn là hành động chủ động của quản trị viên trên tài khoản của chính thành viên đó.",
+  "groupRoles.adminGrant":
+    "Ánh xạ một nhóm vào vai trò Admin sẽ cấp quyền quản trị cho mọi thành viên đã được mời của nhóm đó ở lần đăng nhập kế tiếp.",
+  "groupRoles.group": "Nhóm IdP",
+  "groupRoles.groupPlaceholder": "Tên nhóm, đúng như ID token ghi",
+  "groupRoles.role": "Vai trò được cấp",
+  "groupRoles.add": "Thêm nhóm",
+  "groupRoles.remove": "Gỡ ánh xạ nhóm này",
+  "groupRoles.removeNamed": "Gỡ ánh xạ {group}",
+  "groupRoles.save": "Lưu cấp vai trò theo nhóm",
+  "groupRoles.empty":
+    "Chưa có nhóm nào được ánh xạ. Đăng nhập doanh nghiệp không cấp thêm gì ngoài những gì mỗi thành viên đang có.",
+  "groupRoles.blankGroup": "Mỗi ánh xạ cần một tên nhóm.",
+  "groupRoles.whitespaceGroup":
+    "Tên nhóm không được bắt đầu hay kết thúc bằng khoảng trắng. Tên phải khớp chính xác với ID token.",
+  "groupRoles.duplicateGroup": "Mỗi nhóm chỉ được ánh xạ một lần.",
+  "groupRoles.tooMany": "Chỉ có thể ánh xạ tối đa 64 nhóm.",
   "oauthApp.google.title": "Ứng dụng Google",
   "oauthApp.google.sub":
     "Hộp thư được kết nối, và mọi người đăng nhập bằng Google, thông qua một ứng dụng Google OAuth của bạn. Thông tin xác thực của tổ chức bạn được dùng thay vì của chúng tôi.",
@@ -8742,8 +8763,6 @@ export const vi = {
   "aiSettings.withheld": "Không thuộc quyền xem của bạn",
   "aiSettings.unread": "Không đọc được",
   "aiSettings.pending": "Đang đọc…",
-  "aiSettings.spend.label": "Chi tiêu tháng này",
-  "aiSettings.spend.value": "{spent} trên {budget} token",
   "aiSettings.spend.estimated": "≈ {amount} ước tính",
   "aiSettings.spend.notPriced": "Chưa có giá",
   "aiSettings.providers.label": "Nhà cung cấp",
@@ -8897,8 +8916,9 @@ export const vi = {
   "aiRouting.median": "Trung vị {ms} ms",
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
-    "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng bắt đầu bằng mô hình nó đang chạy.",
+    "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng hiển thị tầng và mô hình nó đang chạy.",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
+  "aiTasks.viewCalls": "Xem lượt gọi",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
   "workingHours.sub":
     "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",
@@ -9930,7 +9950,8 @@ export const vi = {
   "lists.page": "Danh s\u00e1ch",
   "lists.section.label": "Hi\u1ec3n th\u1ecb",
   "lists.section.views": "Ch\u1ebf \u0111\u1ed9 xem c\u1ee7a t\u00f4i",
-  "lists.section.lists": "Danh s\u00e1ch c\u1ee7a nh\u00f3m",
+  "lists.section.lists":
+    "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
   "lists.section.build": "T\u1ea1o b\u1ed9 l\u1ecdc",
   "lists.kind.live": "Danh s\u00e1ch \u0111\u1ed9ng",
   "lists.kind.shortlist": "Danh s\u00e1ch ch\u1ecdn",
@@ -9940,15 +9961,25 @@ export const vi = {
   "lists.type.lead": "Kh\u00e1ch ti\u1ec1m n\u0103ng",
   "lists.type.project": "D\u1ef1 \u00e1n",
   "lists.sharing.private": "Ch\u1ec9 m\u00ecnh t\u00f4i",
-  "lists.sharing.team": "Nh\u00f3m c\u1ee7a t\u00f4i",
+  "lists.sharing.team": "M\u1ed9t nh\u00f3m",
   "lists.sharing.workspace": "To\u00e0n c\u00f4ng ty",
   "lists.sharingLabel": "Ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y",
   "lists.sharingHint":
     "Chia s\u1ebb danh s\u00e1ch kh\u00f4ng cho ai xem b\u1ea3n ghi m\u00e0 h\u1ecd v\u1ed1n kh\u00f4ng \u0111\u01b0\u1ee3c xem.",
+  "lists.teamLabel": "Nh\u00f3m n\u00e0o",
+  "lists.team.allMine": "T\u1ea5t c\u1ea3 c\u00e1c nh\u00f3m c\u1ee7a t\u00f4i",
+  "lists.team.allOwners":
+    "T\u1ea5t c\u1ea3 c\u00e1c nh\u00f3m c\u1ee7a ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch",
+  "lists.audience.yourTeams": "C\u00e1c nh\u00f3m c\u1ee7a b\u1ea1n",
+  "lists.audience.ownerTeams":
+    "C\u00e1c nh\u00f3m c\u1ee7a ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch",
+  "lists.audience.unknownTeam":
+    "M\u1ed9t nh\u00f3m b\u1ea1n kh\u00f4ng xem \u0111\u01b0\u1ee3c",
   "lists.health.ownerless": "C\u1ea7n ph\u1ee5 tr\u00e1ch",
   "lists.health.invalid":
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
-  "lists.library.title": "Danh s\u00e1ch c\u1ee7a nh\u00f3m",
+  "lists.library.title":
+    "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
   "lists.library.search": "T\u00ecm danh s\u00e1ch",
   "lists.library.all": "T\u1ea5t c\u1ea3",
   "lists.library.kind": "Lo\u1ea1i danh s\u00e1ch",
@@ -9981,7 +10012,7 @@ export const vi = {
     "Danh s\u00e1ch n\u00e0y kh\u00f4ng t\u1ed3n t\u1ea1i ho\u1eb7c kh\u00f4ng \u0111\u01b0\u1ee3c chia s\u1ebb v\u1edbi b\u1ea1n.",
   "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
   "lists.head.facts":
-    "{type} \u00b7 b\u1ea1n th\u1ea5y {visible} \u00b7 chia s\u1ebb v\u1edbi {sharing} \u00b7 ph\u1ee5 tr\u00e1ch: {steward}",
+    "{type} \u00b7 b\u1ea1n th\u1ea5y {visible} \u00b7 ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y: {sharing} \u00b7 ph\u1ee5 tr\u00e1ch: {steward}",
   "lists.head.exported_one":
     "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
   "lists.head.exported_other":
@@ -10061,7 +10092,7 @@ export const vi = {
   "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",
   "lists.pickShortlist": "Ch\u1ecdn danh s\u00e1ch",
   "lists.views.empty":
-    "Ch\u01b0a c\u00f3 b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u cho lo\u1ea1i b\u1ea3n ghi n\u00e0y.",
+    "Ch\u01b0a c\u00f3 ch\u1ebf \u0111\u1ed9 xem n\u00e0o. H\u00e3y t\u1ea1o b\u1ed9 l\u1ecdc r\u1ed3i b\u1ea5m L\u01b0u b\u1ed9 l\u1ecdc.",
   "lists.views.loading":
     "\u0110ang t\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
   "lists.history.someone": "Ai \u0111\u00f3",

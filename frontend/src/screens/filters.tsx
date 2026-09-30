@@ -36,8 +36,10 @@ import { useListsAvailable } from "./lists.queries";
 import { MyViews } from "./myviews";
 import "./filters.css";
 import {
+  filterTreeOf,
   LoadFilterViewMenu,
   SaveFilterViewAction,
+  useSavedViews,
   type ViewResource,
 } from "./savedviews";
 import { fieldsNamed, type Node, newGroup } from "./segmentpredicate";
@@ -104,7 +106,7 @@ function tabFromRoute(id: string | undefined): ObjectTab {
 
 /**
  * The library's three sections, while lists are switched on: the reader's own
- * views, the team's lists, and the builder a Live List is made in. Each is an
+ * views, the shared views, and the builder a Live List is made in. Each is an
  * address — `#/filters/lists`, `#/filters/views`, or an object tab for Build —
  * so Back returns to the section the reader left.
  */
@@ -118,7 +120,8 @@ function sectionFromRoute(id: string | undefined): Section {
 export function FiltersScreen({
   id,
   list,
-}: Readonly<{ id?: string; list?: string }>) {
+  view,
+}: Readonly<{ id?: string; list?: string; view?: string }>) {
   const t = useT();
   const listsOn = useListsAvailable();
   // One opened list. It loads with the library that opens it, as one chunk.
@@ -128,7 +131,7 @@ export function FiltersScreen({
   if (!listsOn) {
     return (
       <div className="wrap">
-        <FilterBuildScreen id={id} />
+        <FilterBuildScreen id={id} view={view} />
       </div>
     );
   }
@@ -155,12 +158,15 @@ export function FiltersScreen({
       </div>
       {section === "lists" && <ListLibrary />}
       {section === "views" && <MyViews />}
-      {section === "build" && <FilterBuildScreen id={id} />}
+      {section === "build" && <FilterBuildScreen id={id} view={view} />}
     </div>
   );
 }
 
-function FilterBuildScreen({ id }: Readonly<{ id?: string }>) {
+function FilterBuildScreen({
+  id,
+  view,
+}: Readonly<{ id?: string; view?: string }>) {
   const t = useT();
   // The ADDRESS is which object is being filtered. It was read once, on mount,
   // and never written back — so pressing a tab moved the screen and left the
@@ -171,6 +177,7 @@ function FilterBuildScreen({ id }: Readonly<{ id?: string }>) {
   // nothing on a deal — carrying the tree across would offer the human a filter
   // the new vocabulary refuses.
   const [tree, setTree] = useState<Node>(() => newGroup("and"));
+  const opening = useOpenViewFromAddress(VIEW_OF[tab], view, setTree);
 
   const resource = RESOURCE_OF[tab];
   const vocabulary = useFilterVocabulary(resource);
@@ -246,7 +253,11 @@ function FilterBuildScreen({ id }: Readonly<{ id?: string }>) {
         </PanelBody>
         <PanelBody>
           <SurfaceState
-            state={vocabularyState(vocabulary.isPending, vocabulary.isError)}
+            state={
+              opening
+                ? "loading"
+                : vocabularyState(vocabulary.isPending, vocabulary.isError)
+            }
             emptyLabel={t("filters.noFields")}
             loadingLabel={t("filters.loadingVocabulary")}
             // The builder that lands here is a condition row plus its verbs.
@@ -269,6 +280,38 @@ function FilterBuildScreen({ id }: Readonly<{ id?: string }>) {
       />
     </div>
   );
+}
+
+/**
+ * Loads the saved view the address names into the builder, and answers true
+ * while it is still being read. The builder stays a skeleton until then, so
+ * nothing the reader types can be replaced by the view arriving late. The
+ * views are read afresh, because a cached list may predate the view; one that
+ * is gone or unreadable leaves an empty builder once that read has settled.
+ * The screen remounts per address, so this loads at most once.
+ */
+function useOpenViewFromAddress(
+  resource: ViewResource,
+  viewId: string | undefined,
+  load: (tree: Node) => void,
+): boolean {
+  const views = useSavedViews(resource, viewId !== undefined);
+  const [opened, setOpened] = useState(false);
+  if (viewId === undefined || opened) {
+    return false;
+  }
+  const found = views.data?.find((row) => row.id === viewId);
+  const tree = found ? filterTreeOf(found) : null;
+  if (tree) {
+    setOpened(true);
+    load(tree);
+    return false;
+  }
+  const settled = !views.isFetching && (views.isSuccess || views.isError);
+  if (settled) {
+    setOpened(true);
+  }
+  return !settled;
 }
 
 /**

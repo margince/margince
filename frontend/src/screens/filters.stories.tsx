@@ -116,8 +116,11 @@ const SAVED_VIEWS = {
   page: { next_cursor: null, has_more: false },
 };
 
+// The builder stories draw the screen as it is with lists switched off: the
+// builder alone, without the library's section control above it.
 function routes(): void {
   installFetchStub({
+    "GET /me": listsMe(false),
     "GET /filters/vocabulary": () => jsonResponse(CONTACT_VOCAB),
     "POST /filters/preview": () => jsonResponse(PREVIEW),
     "GET /views": () => jsonResponse(SAVED_VIEWS),
@@ -201,6 +204,7 @@ export const PreviewRefusedToAReadSeat: Story = {
   // retry land in the results card, which is the only row wide enough for both.
   render: () => {
     installFetchStub({
+      "GET /me": listsMe(false),
       "GET /filters/vocabulary": () => jsonResponse(CONTACT_VOCAB),
       "GET /views": () => jsonResponse(SAVED_VIEWS),
       "POST /filters/preview": () =>
@@ -247,9 +251,9 @@ export const WithAClause: Story = {
 };
 
 // With lists switched on the destination becomes the library: the reader's
-// views, the team's lists, and the builder a Live List is saved from. This is
-// the Team lists section.
-export const TeamListsLibrary: Story = {
+// views, the shared views, and the builder a Live List is saved from. This is
+// the Shared views section.
+export const SharedViewsLibrary: Story = {
   render: () => {
     installFetchStub({
       "GET /me": listsMe(true),

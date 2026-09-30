@@ -143,7 +143,7 @@ import { VoiceDnaCard } from "./voice-dna";
 import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
-import { ProvidersStat, SpendStat } from "./ai-settings";
+import { ProvidersStat } from "./ai-settings";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 // The catalog, the addresses and the visibility predicate moved to
@@ -339,10 +339,9 @@ export function tabContent(id: SettingsPageId): ReactNode {
     case "usage":
       return (
         <>
-          {/* What the month cost, then the breakdown, then which activity ran
-              on what. */}
+          {/* The allowance with the month's spend in it, then where it went, then
+              the prices the estimate is drawn from. */}
           <AiBudgetCard />
-          <SpendStat />
           <AiUsageCard />
           <ModelPriceDetails />
         </>

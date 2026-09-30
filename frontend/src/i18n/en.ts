@@ -6795,7 +6795,6 @@ export const en = {
   "ob.conv.triage.contactsEmpty": "No contacts found on your site.",
   "ob.conv.triage.factsLabel": "Facts",
   "ob.conv.triage.factsCount": "{count} found",
-  "ob.rail.tokensUnit": "tok",
   "ob.conv.scene.step": "Step {n} of {m} · {label}",
   "ob.conv.scene.detour": "Decision needed",
   "ob.conv.scene.decisionSub":
@@ -7781,7 +7780,7 @@ export const en = {
   "settings.page.company.sub":
     "Company name, currency and business context used across all records.",
   "settings.page.authentication.sub":
-    "How people sign in to this installation, and which apps may act for it.",
+    "How people sign in to this installation, which apps may act for it, and which IdP groups grant roles.",
   "settings.page.members.sub":
     "Everyone with a seat, and what each can access.",
   "settings.page.teams.sub":
@@ -7855,10 +7854,10 @@ export const en = {
   "settings.tab.tags": "Tags",
   "settings.tab.products": "Products and offers",
   "settings.tab.import": "Data import",
-  "settings.tab.models": "Models and routing",
+  "settings.tab.models": "AI models",
   "settings.tab.automations": "Automations",
   "settings.tab.usage": "AI usage",
-  "settings.tab.model-calls": "Model calls",
+  "settings.tab.model-calls": "AI call log",
   "settings.tab.audit": "Audit log",
   "settings.tab.system-health": "System health",
   "settings.tab.reset": "Reset data",
@@ -8903,6 +8902,28 @@ export const en = {
     "Shows this provider on the sign-in screen. Turning it off stops sign-ins in progress; existing sessions continue.",
   "signInMethods.noneConfigured":
     "This installation has no external provider configured. Password is the only sign-in method.",
+  "groupRoles.title": "Group role grants",
+  "groupRoles.sub":
+    "Grant a role at corporate sign-in to every invited member of an IdP group. Spell the group exactly as the ID token’s groups claim does. No account is created this way: an email nobody invited is refused, whether they have groups or not.",
+  "groupRoles.grantOnlyTitle": "Grants only: the directory never revokes",
+  "groupRoles.grantOnly":
+    "Each sign-in grants the mapped roles and never removes any. Removing a member from an IdP group does not take the role away here: revocation stays a deliberate admin action on the member’s own account.",
+  "groupRoles.adminGrant":
+    "Mapping a group onto Admin grants admin to every invited member of that group at their next sign-in.",
+  "groupRoles.group": "IdP group",
+  "groupRoles.groupPlaceholder": "Group, exactly as the ID token spells it",
+  "groupRoles.role": "Granted role",
+  "groupRoles.add": "Add group",
+  "groupRoles.remove": "Remove this group mapping",
+  "groupRoles.removeNamed": "Remove the {group} mapping",
+  "groupRoles.save": "Save group grants",
+  "groupRoles.empty":
+    "No groups are mapped. Corporate sign-in grants nothing beyond what each member already holds.",
+  "groupRoles.blankGroup": "Every mapping needs a group name.",
+  "groupRoles.whitespaceGroup":
+    "A group name cannot begin or end with a space. It must match the ID token exactly.",
+  "groupRoles.duplicateGroup": "Each group can be mapped only once.",
+  "groupRoles.tooMany": "At most 64 groups can be mapped.",
   "oauthApp.google.title": "Google app",
   "oauthApp.google.sub":
     "Mailboxes are connected, and people sign in with Google, through a Google OAuth app your company owns, using its own credentials.",
@@ -8969,8 +8990,6 @@ export const en = {
   "aiSettings.withheld": "Restricted",
   "aiSettings.unread": "Unavailable",
   "aiSettings.pending": "Loading…",
-  "aiSettings.spend.label": "Tokens · this month",
-  "aiSettings.spend.value": "{spent} of {budget}",
   "aiSettings.spend.estimated": "≈ {amount} spent",
   "aiSettings.spend.notPriced": "Not priced",
   "aiSettings.providers.label": "Provider keys",
@@ -9119,8 +9138,9 @@ export const en = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
-    "Read-only: each task’s tier is fixed by contract. Each row leads with the model it runs on now.",
+    "Read-only: each task’s tier is fixed by contract. Each row shows the tier and the model it runs on now.",
   "aiTasks.decisionFirst": "Decision model first",
+  "aiTasks.viewCalls": "View calls",
   "workingHours.title": "Bookable hours",
   "workingHours.sub": "Personal setting. Only you set your hours.",
   "workingHours.unsetTitle": "Not set yet",
@@ -10189,7 +10209,7 @@ export const en = {
   "lists.page": "List",
   "lists.section.label": "Show",
   "lists.section.views": "My views",
-  "lists.section.lists": "Team lists",
+  "lists.section.lists": "Shared views",
   "lists.section.build": "Build",
   "lists.kind.live": "Live List",
   "lists.kind.shortlist": "Shortlist",
@@ -10199,14 +10219,20 @@ export const en = {
   "lists.type.lead": "Leads",
   "lists.type.project": "Projects",
   "lists.sharing.private": "Only me",
-  "lists.sharing.team": "My team",
+  "lists.sharing.team": "A team",
   "lists.sharing.workspace": "Everyone",
   "lists.sharingLabel": "Who can find it",
   "lists.sharingHint":
     "Sharing a list shows nobody a record they could not already see.",
+  "lists.teamLabel": "Which team",
+  "lists.team.allMine": "All my teams",
+  "lists.team.allOwners": "All the owner’s teams",
+  "lists.audience.yourTeams": "Your teams",
+  "lists.audience.ownerTeams": "The owner’s teams",
+  "lists.audience.unknownTeam": "A team you cannot see",
   "lists.health.ownerless": "Needs a steward",
   "lists.health.invalid": "Filter no longer works",
-  "lists.library.title": "Team lists",
+  "lists.library.title": "Shared views",
   "lists.library.search": "Search lists",
   "lists.library.all": "All",
   "lists.library.kind": "List type",
@@ -10236,7 +10262,7 @@ export const en = {
   "lists.gone": "This list is not there, or it is not shared with you.",
   "lists.unnamed": "Unnamed",
   "lists.head.facts":
-    "{type} · {visible} you can see · shared with {sharing} · looked after by {steward}",
+    "{type} · {visible} you can see · who can find it: {sharing} · looked after by {steward}",
   "lists.head.exported_one": "Exported {count} time, last on {when}",
   "lists.head.exported_other": "Exported {count} times, last on {when}",
   "lists.archived.title": "This list is archived",
@@ -10302,7 +10328,7 @@ export const en = {
   "lists.add": "Add",
   "lists.shortlist": "Shortlist",
   "lists.pickShortlist": "Pick a Shortlist",
-  "lists.views.empty": "No saved filters for this record type.",
+  "lists.views.empty": "No views yet. Build a filter and press Save view.",
   "lists.views.loading": "Loading saved filters",
   "lists.history.someone": "Someone",
 

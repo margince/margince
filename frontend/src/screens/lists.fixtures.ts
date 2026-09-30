@@ -11,6 +11,16 @@ import { jsonResponse } from "./story-utils";
 export const LIVE_ID = "01a0f000-0000-7000-8000-000000000001";
 export const SHORTLIST_ID = "01a0f000-0000-7000-8000-000000000002";
 export const MEMBER_ID = "01a0f000-0000-7000-8000-000000000003";
+/** The reader `listsMe` signs in as, who owns and looks after `liveList`. */
+export const READER_ID = "00000000-0000-4000-8000-000000000001";
+export const TEAM_ID = "01a0f000-0000-7000-8000-000000000020";
+export const OTHER_OWNER_ID = "01a0f000-0000-7000-8000-000000000021";
+
+/** The team the reader belongs to, as `/teams` names it. */
+export const teamsPage = {
+  data: [{ id: TEAM_ID, name: "Team Germany" }],
+  page: { has_more: false },
+};
 
 export const liveList: List = {
   id: LIVE_ID,
@@ -25,7 +35,8 @@ export const liveList: List = {
     ],
   },
   sharing: "team",
-  steward_id: "00000000-0000-4000-8000-000000000001",
+  owner_id: READER_ID,
+  steward_id: READER_ID,
   steward_name: "Lena Vogt",
   version: 3,
   visible_count: 42,
@@ -106,16 +117,20 @@ export const history: ListHistoryEntry[] = [
   },
 ];
 
-/** The session probe of a reader on an installation with lists on or off. */
-export function listsMe(on: boolean) {
+/**
+ * The session probe of a reader on an installation with lists on or off, a
+ * member of the given teams.
+ */
+export function listsMe(on: boolean, teams: readonly string[] = []) {
   return () =>
-    jsonResponse(
-      meFixture({
+    jsonResponse({
+      ...meFixture({
         allow: {
           list: ["read", "create", "update", "delete"],
           company: ["read"],
         },
         settingsAvailability: { lists: on },
       }),
-    );
+      teams,
+    });
 }

@@ -4,11 +4,8 @@
 import { useCan } from "../app/capability";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
-import {
-  AiFeaturesWithheldPanel,
-  AiFeatureTable,
-  useAiStatus,
-} from "./ai-admin";
+import { AiFeaturesWithheldPanel, useAiStatus } from "./ai-admin";
+import { AiFeatureTable } from "./ai-feature-table";
 import { useAiHealth } from "./ai-health";
 import { PanelTitle } from "./ai-terms";
 import { QueryGate } from "./common";
@@ -39,7 +36,11 @@ export function AiTasksCard() {
         <PanelIntro>{t("aiTasks.intro")}</PanelIntro>
         <QueryGate query={status} pendingLabel={t("aiTasks.title")}>
           {(current) => (
-            <AiFeatureTable rows={current.features} health={health} />
+            <AiFeatureTable
+              rows={current.features}
+              health={health}
+              canTrace={canDiagnose}
+            />
           )}
         </QueryGate>
       </PanelBody>

@@ -290,8 +290,8 @@ popover teaches the reader to stop opening them.
 
 `MarginceCoreScene` (`design-system/margince-core.tsx`, WDS-CORE-1..4 /
 ADR-0076) is the product's one piece of AI identity, shown by the
-unauthenticated surface, the session splash, onboarding and the in-app
-workbench. Four things about it are load-bearing rather than stylistic:
+unauthenticated surface, the session splash, onboarding and the agent
+rail. Four things about it are load-bearing rather than stylistic:
 
 - **One implementation.** A caller passes `state` and never restyles. Sizing
   through the documented `--coreSize` / `--coreGlass` custom properties is
@@ -380,7 +380,7 @@ frontend lane is separate from the Go merge gate and needs node + pnpm. Run
 | Atoms, trust vocabulary, composed surfaces | `frontend/src/design-system/{atoms,trust,composed}.tsx` |
 | The provenance mark | `frontend/src/design-system/evidencemark.tsx` |
 | The Core primitive + its renderers | `frontend/src/design-system/margince-core{,-liquid,-feed}.tsx` |
-| The AI workbench frame | `frontend/src/design-system/margince-workbench.tsx` |
+| The AI runtime chip | `frontend/src/design-system/airuntimechip.tsx` |
 | Design gates (tests) | `frontend/src/design-system/{conformance,tokens}.test.ts` |
 | Design gates (fail-closed greps) | `frontend/scripts/check-*.sh` |
 | Change-scoped render UAT | `frontend/scripts/fe-uat.mjs` |

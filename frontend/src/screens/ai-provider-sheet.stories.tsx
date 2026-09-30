@@ -105,7 +105,7 @@ function stub(allow: GrantSpec = WRITER) {
 }
 
 const meta: Meta<typeof AiProviderKeysCard> = {
-  title: "Settings/AI/Models and routing/Providers and prices",
+  title: "Settings/AI/AI models/Providers and prices",
   component: AiProviderKeysCard,
   parameters: { layout: "padded" },
 };

@@ -2,8 +2,8 @@
  * First run, on the shared onboarding stage.
  *
  * The room, the Core's column and the type scale belong to
- * `design-system/onboarding-stage.css`, which every screen before the workbench
- * now stands in. What is left here is what is true of THIS surface only: a card
+ * `design-system/onboarding-stage.css`, which every onboarding screen stands
+ * in, the conversation's own room included. What is left here is what is true of THIS surface only: a card
  * holding a stack of questions, and the price plate attached to the two fields
  * that decide it.
  *

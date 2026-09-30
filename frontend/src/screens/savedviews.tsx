@@ -155,8 +155,12 @@ function filterStateFrom(tree: Node): Record<string, unknown> {
   return { [FILTER_KEY]: encode(tree) };
 }
 
-/** The caller's saved views for one resource, newest last. */
-export function useSavedViews(resource: ViewResource) {
+/**
+ * The caller's saved views for one resource, newest last. `fresh` reads them
+ * again on mount even when the cache holds a recent answer, for a caller that
+ * must not decide from a list that predates a view it was just sent to.
+ */
+export function useSavedViews(resource: ViewResource, fresh = false) {
   return useQuery({
     queryKey: savedViewsKey(resource),
     queryFn: async (): Promise<SavedView[]> => {
@@ -169,6 +173,7 @@ export function useSavedViews(resource: ViewResource) {
       return data.data;
     },
     staleTime: 60_000,
+    refetchOnMount: fresh ? "always" : true,
   });
 }
 

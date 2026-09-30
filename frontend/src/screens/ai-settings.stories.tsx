@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type GrantSpec, meFixture } from "../app/mefixture";
-import { ProvidersStat, SpendStat } from "./ai-settings";
+import { ProvidersStat, SpendEstimate } from "./ai-settings";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 /** The pair, composed here because no single page carries both any more. */
 const AiReadings = () => (
   <>
-    <SpendStat />
+    <SpendEstimate />
     <ProvidersStat />
   </>
 );
@@ -155,7 +155,7 @@ function story(
 }
 
 // Across pages, not on one: `ProvidersStat` renders on Models & routing and
-// `SpendStat` on AI usage. The pair is the point — the two readings an operator
+// `SpendEstimate` in the allowance card. The pair is the point — the two readings an operator
 // opens AI settings for — so the title says across rather than picking one and
 // misplacing the other.
 const meta: Meta<typeof AiReadings> = {

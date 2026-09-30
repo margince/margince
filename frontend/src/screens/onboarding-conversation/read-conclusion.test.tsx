@@ -293,7 +293,7 @@ describe("the read conclusion ordering contract", () => {
         },
       ),
     ).toBeTruthy();
-    expect(document.querySelector(".mw-composer")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^send\b/i })).toBeNull();
   }, 20000);
 
   it("a poll error mid-read that recovers into the terminal still reaches review", async () => {
