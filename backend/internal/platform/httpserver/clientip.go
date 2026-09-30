@@ -61,6 +61,16 @@ func parseTrustedEntry(field string) (netip.Prefix, error) {
 		if err != nil {
 			return netip.Prefix{}, fmt.Errorf("trusted proxy %q is not a CIDR prefix: %w", field, err)
 		}
+		// Addresses are compared unmapped, so a v4-mapped prefix is rebased onto
+		// IPv4 or it would never match anything. One shorter than the mapping's
+		// own 96 bits reaches outside ::ffff:0:0/96 and names no IPv4 network.
+		if prefix.Addr().Is4In6() {
+			if prefix.Bits() < 96 {
+				return netip.Prefix{}, fmt.Errorf("trusted proxy %q is a v4-mapped prefix shorter than /96: "+
+					"write the IPv4 network instead", field)
+			}
+			prefix = netip.PrefixFrom(prefix.Addr().Unmap(), prefix.Bits()-96)
+		}
 		return prefix.Masked(), nil
 	}
 	addr, err := netip.ParseAddr(field)

@@ -125,7 +125,10 @@ func TestParseTrustedProxies(t *testing.T) {
 	if got := mustTrust(t, " 10.0.96.0/19 ,10.0.1.1, 10.0.128.7/19").String(); got != "10.0.96.0/19,10.0.1.1/32,10.0.128.0/19" {
 		t.Fatalf("bare address is its own /32 and a prefix is masked; got %q", got)
 	}
-	for _, bad := range []string{"0.0.0.0/0", "::/0", "10.0.0.0/33", "ingress", "10.0.0.0/16,nope"} {
+	if got := mustTrust(t, "::ffff:10.0.0.0/112").String(); got != "10.0.0.0/16" {
+		t.Fatalf("a v4-mapped prefix is rebased onto IPv4, or unmapped peers never match it; got %q", got)
+	}
+	for _, bad := range []string{"0.0.0.0/0", "::/0", "::ffff:0:0/80", "::ffff:0.0.0.0/96", "10.0.0.0/33", "ingress", "10.0.0.0/16,nope"} {
 		if _, err := ParseTrustedProxies(bad); err == nil {
 			t.Errorf("ParseTrustedProxies(%q) must refuse", bad)
 		}
