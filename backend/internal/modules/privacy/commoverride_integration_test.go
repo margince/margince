@@ -127,7 +127,7 @@ func TestRetentionAnonymizeDeletesTheContactsOverride(t *testing.T) {
 		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text)`, contact, user)
 	seedOverride(ctx, t, tx, &contact.UUID, nil)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, noPayloads{t: t}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
