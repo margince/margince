@@ -98,7 +98,7 @@ func repairMeetingAttendeesBatch(ctx context.Context, pool *pgxpool.Pool, limit 
 // replay already applied.
 func selectMeetingRepairCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.payload,
+		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.id,
 		       coalesce((
 		         SELECT c.account_label
 		           FROM capture_connection c
@@ -127,7 +127,7 @@ func selectMeetingRepairCandidates(ctx context.Context, tx pgx.Tx, limit int) ([
 	var out []replayCandidate
 	for rows.Next() {
 		var c replayCandidate
-		if err := rows.Scan(&c.activityID, &c.kind, &c.source, &c.payload, &c.owner); err != nil {
+		if err := rows.Scan(&c.activityID, &c.kind, &c.source, &c.rawCaptureID, &c.owner); err != nil {
 			return nil, fmt.Errorf("compose: reading a meeting repair candidate: %w", err)
 		}
 		out = append(out, c)
@@ -146,11 +146,11 @@ func selectMeetingRepairCandidates(ctx context.Context, tx pgx.Tx, limit int) ([
 // must not stop the pass reaching the rest. It is recorded as unreadable, which
 // the rollout check counts as UNRESOLVED — the honest answer, since nobody has
 // been bound to that meeting.
-func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error) {
+func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate, payload []byte) (string, error) {
 	if c.owner == "" {
 		return repairUnreadable, nil
 	}
-	raw, decodeErr := decodeStoredOriginal(c.payload)
+	raw, decodeErr := decodeStoredOriginal(payload)
 	if decodeErr != nil {
 		return repairUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
