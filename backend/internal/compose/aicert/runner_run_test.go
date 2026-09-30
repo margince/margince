@@ -477,3 +477,35 @@ func TestStaleOnlyOffMeasuresACurrentRecord(t *testing.T) {
 		t.Fatalf("with STALE_ONLY off the run certified %d (%v), want the record again", len(again), err)
 	}
 }
+
+// The preset report reads a record the run just wrote as current, and the rung
+// no run measured as absent: the same judgement STALE_ONLY skips on.
+func TestThePresetReportReadsTheRecordARunWrote(t *testing.T) {
+	dir := t.TempDir()
+	corpusDir := filepath.Join(dir, "corpus")
+	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
+	if _, err := staleOnlyRun(t, dir, true); err != nil {
+		t.Fatal(err)
+	}
+	census := censusFor(t, ai.TaskSummarize)
+	corpus, err := aicert.LoadCorpus(corpusDir, census)
+	if err != nil {
+		t.Fatal(err)
+	}
+	records, err := aicert.LoadRecords(filepath.Join(dir, "records"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ladder := ai.TaskLadder(ai.TaskSummarize)
+	routing := ai.RoutingConfig{Profile: ai.ProfileCloudFrontier, Tiers: map[ai.Tier]ai.ProviderConfig{
+		ladder[0]: {Provider: ai.ProviderFake, Model: "fake"},
+		ladder[1]: {Provider: ai.ProviderFake, Model: "unmeasured"},
+	}}
+	rungs, err := aicert.PresetRungs(context.Background(), routing, corpus, census, records)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rungs) != 1 || rungs[0].FirstState != aicert.StatusCurrent || rungs[0].FallbackState != aicert.StatusAbsent {
+		t.Fatalf("rungs = %+v, want summarize current on its first rung and absent on its fallback", rungs)
+	}
+}

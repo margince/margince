@@ -50,7 +50,7 @@ func currentBindings(ctx context.Context, cfg RunnerConfig, byTask map[ai.Task][
 			continue // certifyAndWrite reports it, per task
 		}
 		for _, c := range cands {
-			if everySiteCurrent(rows, scenarios, c.Binding, cfg.recordProfile(), task) {
+			if rungState(rows, scenarios, c.Binding, cfg.recordProfile(), task) == StatusCurrent {
 				current[candidateKey(task, c.Binding)] = true
 				log.InfoContext(ctx, "aicert: skipped — record current; STALE_ONLY=0 to re-measure",
 					"task", string(task), "model", c.Binding.Model)
@@ -74,24 +74,6 @@ func readinessOf(ctx context.Context, census *aitasks.Registry, task ai.Task, sc
 	}
 	rows, _ := Readiness(Census{Sites: sites, Scopes: census.Scopes()}, taskStamps, perSite, records)
 	return rows, nil
-}
-
-// everySiteCurrent is true when a record grading binding is current on every
-// site task's scenarios run on; a site without its row is not.
-func everySiteCurrent(rows []ReadinessRow, scenarios []Scenario, binding ai.ProviderConfig, profile ai.Profile, task ai.Task) bool {
-	for _, site := range scenarioSites(scenarios) {
-		found := false
-		for _, row := range rows {
-			if row.Site.Variant == site && row.Certified && recordMeasures(row.Record, binding, profile, task) {
-				found = row.Status() == StatusCurrent
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
 }
 
 func scenarioSites(scenarios []Scenario) []string {
