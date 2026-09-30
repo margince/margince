@@ -44975,6 +44975,24 @@ type WorklistReach struct {
 	// "200+" rather than "200".
 	MoreAvailable bool `json:"more_available"`
 
+	// Personal True when this source answers for the ACTING USER only, whatever `scope` was
+	// asked for. `team` and `all` widen the record-bearing sources, because a wider
+	// row scope is what reaches a colleague's work; they cannot widen a source bound
+	// to the reader inside the module that owns it — notices filter on the recipient,
+	// the capture and AI health lanes refuse a principal with no human behind them,
+	// and an introduction ask names one colleague, so there is no wider tier for it to
+	// widen to.
+	//
+	// A reader asking for `all` therefore gets every shared record they may see PLUS
+	// their own personal queue, and this field is which half each source answered.
+	// Without it a manager reading `all` believes they have seen everything, and the
+	// parts that stayed personal are invisible rather than named.
+	//
+	// It is a fact about the SOURCE, not about this read, so it is true under `mine`
+	// as well — where it happens to tell the reader nothing new, because everything
+	// is theirs. Absent from an older server, which a client reads as false.
+	Personal *bool `json:"personal,omitempty"`
+
 	// Shown How many of them the queue is carrying after folding, filtering and the page cut.
 	Shown int `json:"shown"`
 
