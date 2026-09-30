@@ -16,6 +16,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -53,46 +54,32 @@ func (h Handlers) OAuthRouter() http.Handler {
 	return mux
 }
 
-type dcrRequest struct {
-	RedirectURIs            []string `json:"redirect_uris"`
-	ClientName              string   `json:"client_name"`
-	TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method"`
-}
-
 func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
-	var req dcrRequest
 	// The bound is httperr's and the ANSWER is RFC 7591's: a registration
 	// endpoint speaks `{"error": …}`, and a problem+json body here would be a
-	// document no conforming client parses. Public and unauthenticated, which
-	// is why the bound matters most on this one — before this it had no bound
-	// of its own at all and rode whatever the chassis happened to apply.
-	if err := httperr.DecodeOrRefusal(w, r, &req); err != nil {
+	// document no conforming client parses. Decoded as a member bag rather
+	// than a struct because the struct decode refuses unknown keys, which is
+	// exactly what §2 forbids a registration endpoint to do.
+	var members map[string]json.RawMessage
+	if err := httperr.DecodeOrRefusal(w, r, &members); err != nil {
 		if httperr.BodyTooLarge(err) {
 			oauthError(w, http.StatusRequestEntityTooLarge, "invalid_client_metadata",
 				"registration document exceeds the 1 MiB cap")
 			return
 		}
-		oauthError(w, http.StatusBadRequest, "invalid_client_metadata", "malformed registration document")
-		return
-	}
-	// Public clients only: PKCE is the proof of possession. A client
-	// asking for a secret-based method is asking to be privileged —
-	// refused, and there is no column to store a secret in anyway.
-	if req.TokenEndpointAuthMethod != "" && req.TokenEndpointAuthMethod != "none" {
 		oauthError(w, http.StatusBadRequest, "invalid_client_metadata",
-			"only public clients register here (token_endpoint_auth_method must be none)")
+			"the registration document must be one JSON object")
 		return
 	}
-	if req.ClientName == "" || len(req.RedirectURIs) == 0 {
-		oauthError(w, http.StatusBadRequest, "invalid_client_metadata", "client_name and redirect_uris are required")
-		return
-	}
-	for _, raw := range req.RedirectURIs {
-		if !validRedirectURI(raw) {
-			oauthError(w, http.StatusBadRequest, "invalid_redirect_uri",
-				fmt.Sprintf("%q: redirect uris must be https, or http on localhost", raw))
+	req, err := parseDCR(members)
+	if err != nil {
+		var refusal *dcrMetadataError
+		if errors.As(err, &refusal) {
+			oauthError(w, http.StatusBadRequest, refusal.code, refusal.description)
 			return
 		}
+		httperr.Write(w, r, err)
+		return
 	}
 
 	clientID, err := randomToken()
@@ -117,12 +104,7 @@ func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusCreated, map[string]any{
-		"client_id":                  clientID,
-		"client_name":                req.ClientName,
-		"redirect_uris":              req.RedirectURIs,
-		"token_endpoint_auth_method": "none",
-	})
+	httperr.WriteJSON(w, http.StatusCreated, req.registered(clientID))
 }
 
 // authorizePath is the consent endpoint. Four things have to agree on it and

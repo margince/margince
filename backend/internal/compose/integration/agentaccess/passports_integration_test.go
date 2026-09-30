@@ -110,9 +110,9 @@ func (e *passportsEnv) ctx() context.Context {
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
 
-// A user lists exactly their own passports; the admin role sees the
-// workspace's; the rows are metadata only.
-func TestListPassportsScopesToOwnerUnlessAdmin(t *testing.T) {
+// A user lists exactly their own passports, an administrator included: which
+// agents act for a human is that human's own business; the rows are metadata only.
+func TestListPassportsScopesToOwnerEvenForAdmin(t *testing.T) {
 	e := setupPassports(t)
 	ctx := e.ctx()
 
@@ -145,8 +145,8 @@ func TestListPassportsScopesToOwnerUnlessAdmin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("admin list: %v", err)
 	}
-	if len(adminRows) != 2 {
-		t.Fatalf("admin sees %d passports, want the workspace's 2", len(adminRows))
+	if len(adminRows) != 1 || adminRows[0].ID != aliceIssued.ID {
+		t.Fatalf("alice as admin sees %d passports, want only her own", len(adminRows))
 	}
 }
 

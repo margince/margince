@@ -47,6 +47,9 @@ const (
 	// grant_type of a renewal, the RFC 7009 token_type_hint, and the token
 	// response's own member. One spelling for all four.
 	oauthRefreshToken = "refresh_token"
+	// oauthGrantAuthorizationCode is the grant a consented code is exchanged
+	// under — the one grant a connection begins with.
+	oauthGrantAuthorizationCode = "authorization_code"
 	// oauthParamError is RFC 6749's error member, which this server writes in
 	// two disjoint positions: the §5.2 JSON error body an endpoint answers, and
 	// the §4.1.2.1 error redirect a refused authorization sends to the client.

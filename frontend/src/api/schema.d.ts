@@ -361,12 +361,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Agent Seat Passports — the caller's own, or the workspace's for a member administrator (metadata only — no token re-disclosure).
-         * @description Enumerates Agent Seat Passports so Settings can show them and offer revoke (feedback/13). A
-         *     user sees the passports minted on their own behalf; a holder of the `user_admin` read grant
-         *     sees every passport in the workspace, because which agents act for whom is a read of member
-         *     administration — strictly narrower than revoking, and the same authority split the revoke
-         *     (`DELETE /passports/{id}`) enforces. **Never re-discloses a token** — the plaintext is shown
+         * List the caller's own Agent Seat Passports (metadata only — no token re-disclosure).
+         * @description Enumerates Agent Seat Passports so Settings can show them and offer revoke (feedback/13). Every
+         *     caller, an administrator included, sees only the passports minted on their own behalf: which
+         *     agents act for a human is that human's personal data. An administrator's authority to revoke a
+         *     colleague's passport (`DELETE /passports/{id}`) is offboarding and does not widen this list.
+         *     **Never re-discloses a token** — the plaintext is shown
          *     once at mint time only. Pairs with the mint (`POST`) below.
          *
          *     Two kinds of row arrive together and `connection` is what tells them apart: a passport the
@@ -41738,7 +41738,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The passports in scope for the caller — their own, or the workspace's for a `user_admin` reader (metadata). */
+            /** @description The caller's own passports (metadata). */
             200: {
                 headers: {
                     [name: string]: unknown;
