@@ -31,7 +31,7 @@ func liveListReaderPerms() principal.Permissions {
 }
 
 // liveListFixture is a workspace Live List of contacts titled "Buyer", and the
-// clock its checks run on.
+// clock its checks run on, at the microsecond precision Postgres stores.
 type liveListFixture struct {
 	e     *Env
 	store *collections.Store
@@ -50,7 +50,7 @@ func newLiveListFixture(t *testing.T) *liveListFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &liveListFixture{e: e, store: store, list: list.ID, clock: time.Now().UTC()}
+	return &liveListFixture{e: e, store: store, list: list.ID, clock: time.Now().UTC().Truncate(time.Microsecond)}
 }
 
 func titleIs(title string) map[string]any {
