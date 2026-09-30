@@ -158,12 +158,12 @@
             "model": "google/gemma-4-26b-a4b-it",
             "env": "cloud_frontier"
           },
-          "band": "certified",
-          "state": "current",
+          "band": "",
+          "state": "",
           "abandoned": 0,
           "sends_private_mail_to": "openrouter.ai",
-          "runs": 48,
-          "passed": 45,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -176,13 +176,13 @@
             "model": "google/gemma-4-26b-a4b-it",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
-          "state": "current",
+          "band": "",
+          "state": "",
           "abandoned": 0,
           "sends_private_mail_to": "openrouter.ai",
-          "runs": 63,
-          "passed": 57,
-          "cases_failing_often": 1,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
         {
@@ -340,8 +340,8 @@
             "model": "google/gemma-4-26b-a4b-it",
             "env": "cloud_frontier"
           },
-          "band": "certified",
-          "state": "current",
+          "band": "",
+          "state": "",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -354,8 +354,8 @@
             "state": ""
           },
           "abandoned": 0,
-          "runs": 12,
-          "passed": 12,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -798,11 +798,11 @@
         }
       ],
       "bands": {
-        "certified": 16,
-        "supported_degraded": 6,
+        "certified": 14,
+        "supported_degraded": 5,
         "not_supported": 6
       },
-      "untested": 1,
+      "untested": 4,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -5482,9 +5482,9 @@
       "answer": "mostly",
       "sites_shipped": 46,
       "sites_measured": 45,
-      "ready": 26,
-      "usable_with_care": 16,
-      "not_reliable_yet": 3,
+      "ready": 25,
+      "usable_with_care": 15,
+      "not_reliable_yet": 5,
       "recheck_pending": 0,
       "models": [
         {
@@ -5623,29 +5623,29 @@
           "key": "capture_confidentiality_verdict/thread",
           "task": "capture_confidentiality_verdict",
           "best": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
           },
-          "band": "certified",
+          "band": "not_supported",
           "state": "current",
-          "runs": 48,
-          "passed": 45,
-          "records": 2
+          "runs": 42,
+          "passed": 36,
+          "records": 1
         },
         {
           "key": "capture_counterparty_verdict/verdict",
           "task": "capture_counterparty_verdict",
           "best": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
           },
-          "band": "supported_degraded",
+          "band": "not_supported",
           "state": "current",
-          "runs": 63,
-          "passed": 57,
-          "records": 2
+          "runs": 72,
+          "passed": 53,
+          "records": 1
         },
         {
           "key": "cert_judge/judge",
@@ -5833,15 +5833,15 @@
           "key": "enrich/signature",
           "task": "enrich",
           "best": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
           },
           "band": "certified",
           "state": "current",
           "runs": 12,
           "passed": 12,
-          "records": 2
+          "records": 1
         },
         {
           "key": "growth_fit/growth_fit",

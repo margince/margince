@@ -12,15 +12,18 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"reflect"
+	"slices"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // recordMeasures reports whether rec grades binding as a rung of task under
-// profile: the same provider, model, profile and thinking level, with every
-// site run at the level this binding serves it — a record from before a site
-// declared its level measured a different call.
+// profile: the same provider, model, profile, thinking level and broker upstream
+// preferences, with every site run at the level this binding serves it — a
+// record from before a site declared its level measured a different call.
 func recordMeasures(rec Record, binding ai.ProviderConfig, profile ai.Profile, task ai.Task) bool {
 	return rec.Kind != KindDecision &&
 		rec.Task == string(task) &&
@@ -28,7 +31,8 @@ func recordMeasures(rec Record, binding ai.ProviderConfig, profile ai.Profile, t
 		rec.ServedModel == binding.Model &&
 		rec.EnvClass == string(profile) &&
 		rec.ThinkingLevel == binding.ThinkingLevel &&
-		maps.Equal(rec.SiteThinking, ai.SiteThinkingLevels(binding, task))
+		maps.Equal(rec.SiteThinking, ai.SiteThinkingLevels(binding, task)) &&
+		reflect.DeepEqual(rec.CandidateUpstream, ai.UpstreamPreferencesFor(binding))
 }
 
 // currentBindings marks, per task and binding, the candidates whose committed
@@ -49,7 +53,16 @@ func currentBindings(ctx context.Context, cfg RunnerConfig, byTask map[ai.Task][
 		if err != nil {
 			continue // certifyAndWrite reports it, per task
 		}
+		decisions, err := decisionsCurrent(cfg, task, scenarios, records)
+		if err != nil {
+			return nil, err
+		}
 		for _, c := range cands {
+			// The answering rung carries the decision leg, so it is current only
+			// with its decision records.
+			if c.Rung == 0 && !decisions {
+				continue
+			}
 			if rungState(rows, scenarios, c.Binding, cfg.recordProfile(), task) == StatusCurrent {
 				current[candidateKey(task, c.Binding)] = true
 				log.InfoContext(ctx, "aicert: skipped — record current; STALE_ONLY=0 to re-measure",
@@ -74,6 +87,32 @@ func readinessOf(ctx context.Context, census *aitasks.Registry, task ai.Task, sc
 	}
 	rows, _ := Readiness(Census{Sites: sites, Scopes: census.Scopes()}, taskStamps, perSite, records)
 	return rows, nil
+}
+
+// decisionsCurrent reports whether every decision site task's scenarios reach
+// has a current record from the run's decisions lane; true when none is bound.
+func decisionsCurrent(cfg RunnerConfig, task ai.Task, scenarios []Scenario, records []Record) (bool, error) {
+	lane := cfg.decisionLane()
+	if lane == nil {
+		return true, nil
+	}
+	stamps, err := CurrentDecisionStamps(scenarios, cfg.Census)
+	if err != nil {
+		return false, fmt.Errorf("task %s: stamping its decision scenarios: %w", task, err)
+	}
+	rows := DecisionReadiness(stamps, records)
+	for site := range stamps {
+		if !strings.HasPrefix(site, string(task)+"/") {
+			continue
+		}
+		if !slices.ContainsFunc(rows, func(row DecisionRow) bool {
+			return row.Site == site && row.Record.Provider == lane.Provider && row.Record.Model == lane.Model &&
+				row.Record.EnvClass == string(cfg.recordProfile()) && row.Status() == StatusCurrent
+		}) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func scenarioSites(scenarios []Scenario) []string {

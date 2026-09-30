@@ -6,14 +6,19 @@ package aicert
 import (
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/ports/decision"
 )
 
 // A record grades a rung only when it measured that binding, under that profile,
 // at the levels this build serves it; anything else is re-measured.
 func TestRecordMeasuresMatchesTheRungItGrades(t *testing.T) {
 	binding := candidateA
-	base := Record{Task: string(ai.TaskSummarize), Provider: binding.Provider, ServedModel: binding.Model, EnvClass: string(ai.ProfileCloudFrontier)}
+	base := Record{
+		Task: string(ai.TaskSummarize), Provider: binding.Provider, ServedModel: binding.Model, EnvClass: string(ai.ProfileCloudFrontier),
+		CandidateUpstream: ai.UpstreamPreferencesFor(binding),
+	}
 	for name, tc := range map[string]struct {
 		mutate func(*Record)
 		want   bool
@@ -25,6 +30,7 @@ func TestRecordMeasuresMatchesTheRungItGrades(t *testing.T) {
 		"another thinking level": {func(r *Record) { r.ThinkingLevel = "high" }, false},
 		"other site thinking":    {func(r *Record) { r.SiteThinking = map[string]string{"brief": "high"} }, false},
 		"a decision record":      {func(r *Record) { r.Kind = KindDecision }, false},
+		"another upstream":       {func(r *Record) { r.CandidateUpstream = &ai.OpenRouterRouting{Only: []string{"mistral/eu"}} }, false},
 	} {
 		t.Run(name, func(t *testing.T) {
 			rec := base
@@ -49,5 +55,69 @@ func TestARunWithEveryCandidateCurrentProbesNothing(t *testing.T) {
 	cfg.current = nil
 	if probes := preflightProbes(cfg, []ai.Task{ai.TaskSummarize}, &certifyHooks{}); len(probes) != 2 {
 		t.Errorf("pre-flight probes = %d, want the candidate and the judge", len(probes))
+	}
+}
+
+// laneRouted is a routing binding every tier to the fake candidate beside lane.
+func laneRouted(census *aitasks.Registry, recordDir string) RunnerConfig {
+	fake := ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}
+	routing := &ai.RoutingConfig{Profile: ai.ProfileCloudFrontier, Decisions: &jevLane, Tiers: map[ai.Tier]ai.ProviderConfig{}}
+	for _, tier := range ai.AllTiers() {
+		routing.Tiers[tier] = fake
+	}
+	return RunnerConfig{
+		Census: census, Routing: routing, RecordDir: recordDir,
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+	}
+}
+
+// With a decisions lane bound, the rung that answers carries the decision leg,
+// so it is current only when its decision records are too: a changed lane must
+// not be skipped because the LLM record beside it did not move.
+func TestTheAnsweringRungIsCurrentOnlyWithItsDecisionRecords(t *testing.T) {
+	scenario := decidingScenario("basic", ai.TaskSiteTriage)
+	run := certifyWithLane(t, &jevLane, &scriptedDecider{replies: []decision.Response{answer(labelWidget, 0.9, "jev")}}, scenario)
+	if run.err != nil || len(run.decisions) == 0 {
+		t.Fatalf("the decision leg wrote %d record(s) (%v), want one", len(run.decisions), run.err)
+	}
+	llm := run.llm
+	llm.ServedModel = "candidate" // the fake serves as "fake"; the binding under test is "candidate"
+	census := decidingCensus(t, ai.TaskSiteTriage, defaultWidgetForm())
+	byTask := map[ai.Task][]Scenario{ai.TaskSiteTriage: {scenario}}
+	key := candidateKey(ai.TaskSiteTriage, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"})
+
+	withDecisions := t.TempDir()
+	for _, rec := range append([]Record{llm}, run.decisions...) {
+		if err := WriteRecord(withDecisions, rec); err != nil {
+			t.Fatal(err)
+		}
+	}
+	current, err := currentBindings(wsContext(t), laneRouted(census, withDecisions), byTask, quietLogger())
+	if err != nil || !current[key] {
+		t.Fatalf("with current LLM and decision records the rung is not current (%v): %v", err, current)
+	}
+	llmOnly := t.TempDir()
+	if err := WriteRecord(llmOnly, llm); err != nil {
+		t.Fatal(err)
+	}
+	current, err = currentBindings(wsContext(t), laneRouted(census, llmOnly), byTask, quietLogger())
+	if err != nil || current[key] {
+		t.Errorf("a rung whose decision record is missing was skipped as current (%v)", err)
+	}
+}
+
+// A task whose answering rung is current asks the decisions lane nothing: its
+// decision leg will not run, so its pre-flight would be a paid call for nothing.
+func TestTheDecisionPreflightSkipsATaskWhoseRungIsCurrent(t *testing.T) {
+	census := decidingCensus(t, ai.TaskSiteTriage, defaultWidgetForm())
+	cfg := laneRouted(census, t.TempDir())
+	cfg.current = map[string]bool{candidateKey(ai.TaskSiteTriage, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}): true}
+	decider := &scriptedDecider{replies: []decision.Response{answer(labelWidget, 0.9, "jev")}}
+	scenarios := map[ai.Task][]Scenario{ai.TaskSiteTriage: {decidingScenario("basic", ai.TaskSiteTriage)}}
+	if err := preflightDecisions(wsContext(t), cfg, scenarios, &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(decider)}}, quietLogger()); err != nil {
+		t.Fatal(err)
+	}
+	if decider.called() != 0 {
+		t.Errorf("the decision pre-flight asked the lane %d time(s) for a task that will not run", decider.called())
 	}
 }

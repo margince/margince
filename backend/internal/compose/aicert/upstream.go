@@ -178,8 +178,8 @@ func preflightDecisions(ctx context.Context, cfg RunnerConfig, byTask map[ai.Tas
 	}
 	for _, task := range sortedTasks(byTask) {
 		candidate, _, bound := resolveBinding(*cfg.Routing, task)
-		if !bound {
-			continue // taskCandidates reports it, per task
+		if !bound || cfg.current[candidateKey(task, candidate)] {
+			continue // unbound: taskCandidates reports it; current: its decision leg will not run
 		}
 		sc, found := firstDecisionScenario(byTask[task], cfg.Census)
 		if !found {
