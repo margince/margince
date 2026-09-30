@@ -42,14 +42,9 @@ const introductionPath = join(
 const { roots, categories, topics } = readDesignCatalog(frontendRoot);
 
 // The documented roots the shape arms do not hold, each with the reason.
-const UNSHAPED = new Map([
-  [
-    "Design System",
-    "its own name and the RecordView sheet fail the case arm; it holds the two kitchen-sink sheets and the agent workbench",
-  ],
-]);
+const UNSHAPED = new Map<string, string>();
 const SHAPED_ROOTS = roots.filter((root) => !UNSHAPED.has(root));
-// The titles an exemption may take out of the arms: the sheets it was written for.
+// The most titles one exemption may take out of the arms.
 const EXEMPT_CEILING = 3;
 
 // Spellings that hold wherever they stand in a segment, each with its reason.
@@ -300,7 +295,7 @@ describe("the sidebar is shelved the way the catalog says", () => {
     ).toEqual([]);
   });
 
-  it("exempts no more titles than the sheets it names", () => {
+  it("exempts no more titles than the ceiling allows", () => {
     expect(exemptionFindings(filed, UNSHAPED, EXEMPT_CEILING)).toEqual([]);
   });
 
@@ -371,12 +366,12 @@ describe("the sidebar detectors report what they are for", () => {
 
   it("sees an exemption that takes a product root out of the arms", () => {
     const planted = [
-      { path: "a", title: "Design System/Atoms" },
+      { path: "a", title: "Sheets/Atoms" },
       { path: "b", title: "Records/Contacts" },
       { path: "c", title: "Records/Companies" },
     ];
     expect(
-      exemptionFindings(planted, new Map([["Design System", "sheets"]]), 1),
+      exemptionFindings(planted, new Map([["Sheets", "sheets"]]), 1),
     ).toEqual([]);
     expect(
       exemptionFindings(planted, new Map([["Records", "unshaped"]]), 1),

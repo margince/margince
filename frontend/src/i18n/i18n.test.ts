@@ -229,7 +229,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "voice.history.versionRow",
   "voice.history.deltaRow",
   "ob.conv.triage.omittedField",
-  "ob.rail.tokensUnit",
   "share.ceiling.post",
 
   // Tab and section labels that are proper nouns in the product. The settings

@@ -168,3 +168,13 @@ export const Gallery: Story = {
     </div>
   ),
 };
+
+// Keyed on the record id, so a rename does not move the mesh.
+export const KeyedOnTheRecord: Story = {
+  render: () => (
+    <div style={wall}>
+      <Avatar identity="company_7f3" name="Voltaq Systems" />
+      <Avatar identity="company_7f3" name="Voltaq Systems GmbH" size="md" />
+    </div>
+  ),
+};

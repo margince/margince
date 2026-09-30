@@ -173,6 +173,46 @@ function rendersMarkup(node: ts.Node): boolean {
   return markup;
 }
 
+// A bare ✅ is met by the module's co-located story, or by a story named for a
+// component the row's first cell names that imports the row's module.
+function falseStoryClaims(
+  rows: string[][],
+  read: (story: string) => string | null,
+): string[] {
+  return rows.flatMap(([primitive, , file, story]) => {
+    if (story?.trim() !== "✅") return [];
+    const module = file.trim().replace(/`/g, "");
+    if (!module.endsWith(".tsx") || module.includes("/")) return [];
+    const stem = module.replace(/\.tsx$/, "");
+    const named = [...primitive.matchAll(/`([A-Z][A-Za-z0-9]*)`/g)].map(
+      ([, name]) => `${name.toLowerCase()}.stories.tsx`,
+    );
+    const met =
+      read(`${stem}.stories.tsx`) !== null ||
+      named.some((candidate) => importsModule(candidate, read, stem));
+    return met
+      ? []
+      : [
+          `${primitive.trim()} claims ✅ but no story imports ${module}: ${[`${stem}.stories.tsx`, ...named].join(", ")}`,
+        ];
+  });
+}
+
+function importsModule(
+  story: string,
+  read: (story: string) => string | null,
+  stem: string,
+): boolean {
+  const text = read(story);
+  if (text === null) return false;
+  return parseSource(join(dsDir, story), text).statements.some(
+    (statement) =>
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === `./${stem}`,
+  );
+}
+
 const { catalogTable, rootsSection, roots, categories } =
   readDesignCatalog(frontendRoot);
 const documentedRoots = new Set(roots);
@@ -238,19 +278,13 @@ describe("the catalog indexes this directory", () => {
   // about. So the arm holds the one claim that is unambiguous, and the
   // qualified rows are the author's word.
   it("claims a story of its own only where one exists", () => {
-    const lying = tableRows(catalogTable, "Primitive").flatMap((cells) => {
-      const [primitive, , file, story] = cells;
-      if (story?.trim() !== "✅") return [];
-      const module = file.trim().replace(/`/g, "");
-      if (!module.endsWith(".tsx") || module.includes("/")) return [];
-      const stories = join(dsDir, module.replace(/\.tsx$/, ".stories.tsx"));
-      return existsSync(stories)
-        ? []
-        : [
-            `${primitive.trim()} claims ✅ but ${basename(stories)} does not exist`,
-          ];
-    });
-    expect(lying).toEqual([]);
+    const read = (story: string) => {
+      const path = join(dsDir, story);
+      return existsSync(path) ? readFileSync(path, "utf8") : null;
+    };
+    expect(
+      falseStoryClaims(tableRows(catalogTable, "Primitive"), read),
+    ).toEqual([]);
   });
 
   it("reads a title off every story file", () => {
@@ -341,6 +375,40 @@ describe("the detectors report what they are for", () => {
     expect(
       componentsIn(probe, "export function row() {\n  return <tr />;\n}"),
     ).toEqual([]);
+  });
+
+  it("holds a bare ✅ to a story that imports the row's module", () => {
+    const stories: Record<string, string> = {
+      "panel.stories.tsx": "export default {};",
+      "button.stories.tsx": 'import { Button } from "./atoms";',
+      "badge.stories.tsx": 'import { Badge } from "./badge-lookalike";',
+    };
+    const read = (story: string) => stories[story] ?? null;
+    const row = (primitive: string, file: string, story = "✅") => [
+      ` ${primitive} `,
+      " for ",
+      ` ${file} `,
+      ` ${story} `,
+    ];
+    expect(
+      falseStoryClaims(
+        [
+          row("`Panel`", "`panel.tsx`"),
+          row("**`Button`**", "`atoms.tsx`"),
+          row("`Checkbox` / `Button`", "`atoms.tsx`"),
+          row("`Badge`", "`atoms.tsx`"),
+          row("`Kbd`", "`atoms.tsx`"),
+          row("`useScrollRegion`", "`atoms.tsx`"),
+          row("`Kbd`", "`atoms.tsx`", "✅ (`Button`)"),
+          row("`.link-button`", "`atoms.css`"),
+        ],
+        read,
+      ),
+    ).toEqual([
+      "`Badge` claims ✅ but no story imports atoms.tsx: atoms.stories.tsx, badge.stories.tsx",
+      "`Kbd` claims ✅ but no story imports atoms.tsx: atoms.stories.tsx, kbd.stories.tsx",
+      "`useScrollRegion` claims ✅ but no story imports atoms.tsx: atoms.stories.tsx",
+    ]);
   });
 
   it("reads every table under its header, whatever its kind", () => {

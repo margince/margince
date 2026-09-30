@@ -6617,7 +6617,6 @@ export const de = {
   "ob.conv.triage.contactsEmpty": "Keine Kontakte auf deiner Website gefunden.",
   "ob.conv.triage.factsLabel": "Fakten",
   "ob.conv.triage.factsCount": "Gefunden: {count}",
-  "ob.rail.tokensUnit": "Tokens",
   "ob.conv.scene.step": "Schritt {n} von {m} · {label}",
   "ob.conv.scene.detour": "Entscheidung nötig",
   "ob.conv.scene.decisionSub":

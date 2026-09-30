@@ -6555,7 +6555,6 @@ export const vi = {
     "Không tìm thấy liên hệ nào trên website của bạn.",
   "ob.conv.triage.factsLabel": "Dữ kiện",
   "ob.conv.triage.factsCount": "tìm được {count}",
-  "ob.rail.tokensUnit": "tok",
   "ob.conv.scene.step": "Bước {n} / {m} · {label}",
   "ob.conv.scene.detour": "Rẽ ngang một chút",
   "ob.conv.scene.decisionSub":

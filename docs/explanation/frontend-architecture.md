@@ -380,7 +380,7 @@ frontend lane is separate from the Go merge gate and needs node + pnpm. Run
 | Atoms, trust vocabulary, composed surfaces | `frontend/src/design-system/{atoms,trust,composed}.tsx` |
 | The provenance mark | `frontend/src/design-system/evidencemark.tsx` |
 | The Core primitive + its renderers | `frontend/src/design-system/margince-core{,-liquid,-feed}.tsx` |
-| The AI workbench frame | `frontend/src/design-system/margince-workbench.tsx` |
+| The AI runtime chip | `frontend/src/design-system/airuntimechip.tsx` |
 | Design gates (tests) | `frontend/src/design-system/{conformance,tokens}.test.ts` |
 | Design gates (fail-closed greps) | `frontend/scripts/check-*.sh` |
 | Change-scoped render UAT | `frontend/scripts/fe-uat.mjs` |

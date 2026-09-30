@@ -35,7 +35,7 @@ import { WorkbenchEntranceScope } from "./workbench";
 
 // The conversational onboarding shell — THE onboarding experience: one pure
 // machine owns where the conversation is, and each act renders inside the
-// shared Margince workbench. On mount the shell reads the server truth
+// shared onboarding stage. On mount the shell reads the server truth
 // (wizard state, company, voice) and restores through START + RESUME; the
 // wizard state's `path` field is THE member signal, with company-exists only
 // the fallback when no state row exists.
@@ -153,7 +153,7 @@ function RestoreGate({ lookups }: Readonly<{ lookups: RestoreLookup[] }>) {
   const t = useT();
   const failed = lookups.filter((lookup) => lookup.isError);
   return (
-    <div className="ob-page ob-conv-page">
+    <div className="ob-page">
       {failed.length > 0 ? (
         <div className="readfail warning" role="alert">
           <p>{t("ob.conv.loadFailed")}</p>
@@ -341,7 +341,7 @@ export function OnboardingConversationScreen() {
   }
 
   return (
-    <div className="ob-page ob-conv-page">
+    <div className="ob-page">
       {/* Above the act switch on purpose: this is the one level that survives an
           act change, so it is the only place that can know whether the workbench
           frame has already introduced itself. */}
