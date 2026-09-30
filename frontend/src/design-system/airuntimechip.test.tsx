@@ -4,9 +4,17 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockInstance,
+  vi,
+} from "vitest";
 import { AiRuntimeChip, type AiRuntimeLabels } from "./airuntimechip";
 import { Heading } from "./heading";
 import { Modal } from "./modal";
@@ -120,30 +128,72 @@ describe("the runtime chip", () => {
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });
 
-  it("lets Tab into a popover whose rows run past the screen, and Escape back out", async () => {
+  describe("with rows taller than the room below it", () => {
     // happy-dom lays nothing out, so the popover is given a height it cannot hold.
-    const scrollHeight = vi
-      .spyOn(Element.prototype, "scrollHeight", "get")
-      .mockImplementation(function (this: Element) {
-        return this.classList.contains("mw-aistat-pop") ? 1200 : 0;
+    let scrollHeight: MockInstance<() => number>;
+    beforeEach(() => {
+      scrollHeight = vi
+        .spyOn(Element.prototype, "scrollHeight", "get")
+        .mockImplementation(function (this: Element) {
+          return this.classList.contains("mw-aistat-pop") ? 1200 : 0;
+        });
+    });
+    afterEach(() => scrollHeight.mockRestore());
+
+    it("lets Tab into the popover, named by its own heading, and Escape back out", async () => {
+      render(chip());
+      const button = screen.getByRole("button", {
+        name: new RegExp(LABELS.chip),
       });
+
+      await userEvent.tab();
+      await userEvent.tab();
+
+      const region = screen.getByRole("region", { name: LABELS.answering });
+      expect(region).toHaveFocus();
+      expect(button).toHaveAttribute("aria-expanded", "true");
+      expect(region).toHaveTextContent(LABELS.scope);
+
+      await userEvent.keyboard("{Escape}");
+      expect(button).toHaveFocus();
+      expect(button).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("stays open when the window loses focus while the reader is in it", async () => {
+      render(chip());
+      await userEvent.tab();
+      await userEvent.tab();
+      const region = screen.getByRole("region", { name: LABELS.answering });
+
+      // What a window blur delivers: focus leaves for nowhere, yet stays put.
+      act(() => {
+        region.dispatchEvent(
+          new FocusEvent("focusout", { bubbles: true, relatedTarget: null }),
+        );
+      });
+
+      expect(region).toHaveFocus();
+      expect(
+        screen.getByRole("button", { name: new RegExp(LABELS.chip) }),
+      ).toHaveAttribute("aria-expanded", "true");
+    });
+  });
+
+  it("stays closed when the pointer leaves a chip its press closed", async () => {
+    const user = userEvent.setup();
     render(chip());
     const button = screen.getByRole("button", {
       name: new RegExp(LABELS.chip),
     });
 
-    await userEvent.tab();
-    await userEvent.tab();
+    await user.hover(button);
+    await user.click(button);
+    await user.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "false");
 
-    const region = screen.getByRole("region", { name: LABELS.chip });
-    expect(region).toHaveFocus();
-    expect(button).toHaveAttribute("aria-expanded", "true");
-    expect(region).toHaveTextContent(LABELS.scope);
-
-    await userEvent.keyboard("{Escape}");
+    await user.unhover(button);
     expect(button).toHaveFocus();
     expect(button).toHaveAttribute("aria-expanded", "false");
-    scrollHeight.mockRestore();
   });
 
   it("opens again after focus leaves and comes back", async () => {

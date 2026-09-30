@@ -15,8 +15,8 @@ import type { components } from "../api/schema";
 import { formatNumber, INTL_LOCALE } from "../format/format";
 import type { Locale } from "../i18n";
 import "./airuntimechip.css";
-import { useScrollRegion } from "./atoms";
 import { coveredByDialog } from "./dialogfocus";
+import { useScrollRegion } from "./scrollregion";
 
 type AiRunSummary = components["schemas"]["AiRunSummary"];
 
@@ -56,12 +56,13 @@ export function AiRuntimeChip({
   // until the reader leaves and comes back, or the button looks dead.
   const [dismissed, setDismissed] = useState(false);
   const popoverId = useId();
+  const headingId = useId();
   const wrapper = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const popover = useRef<HTMLDivElement>(null);
   const open = !dismissed && (pinned || hovered || focused);
-  const room = useRoomBelow(wrapper, open);
-  const region = useScrollRegion(popover, labels.chip, "block");
+  const room = useRoomBelow(wrapper, popover, open);
+  const region = useScrollRegion(popover, { labelledBy: headingId }, "block");
 
   // On the wrapper, so the pointer can travel onto the popover; native
   // listeners keep the wrapper a plain layout element rather than a control.
@@ -70,27 +71,46 @@ export function AiRuntimeChip({
     if (!root) {
       return;
     }
+    // The suppression lifts when the pointer or focus arrives, or once neither
+    // is left holding the popover, so coming back opens it again.
+    let hovering = false;
+    let focusWithin = false;
     const enter = () => {
+      hovering = true;
       setHovered(true);
       setDismissed(false);
     };
     const leave = () => {
+      hovering = false;
       setHovered(false);
-      setDismissed(false);
+      if (!focusWithin) {
+        setDismissed(false);
+      }
     };
     // Focus inside the wrapper, so Tab can move from the chip into a popover
     // that scrolls without closing it.
-    const focusIn = () => setFocused(true);
+    const focusIn = (event: FocusEvent) => {
+      focusWithin = true;
+      setFocused(true);
+      const from = event.relatedTarget;
+      if (!(from instanceof Node && root.contains(from))) {
+        setDismissed(false);
+      }
+    };
     const focusOut = (event: FocusEvent) => {
+      const next = event.relatedTarget;
+      // A window losing focus keeps it on the element it was on.
       if (
-        event.relatedTarget instanceof Node &&
-        root.contains(event.relatedTarget)
+        (next instanceof Node && root.contains(next)) ||
+        root.contains(document.activeElement)
       ) {
         return;
       }
+      focusWithin = false;
       setFocused(false);
-      // Leaving resets the suppression, so coming back opens again.
-      setDismissed(false);
+      if (!hovering) {
+        setDismissed(false);
+      }
     };
     root.addEventListener("mouseenter", enter);
     root.addEventListener("mouseleave", leave);
@@ -171,7 +191,9 @@ export function AiRuntimeChip({
         style={room}
         {...region}
       >
-        <p className="mw-aistat-h">{labels.answering}</p>
+        <p className="mw-aistat-h" id={headingId}>
+          {labels.answering}
+        </p>
         <dl className="mw-aistat-rows">
           <RuntimeRow label={labels.configured} value={configured} />
           <RuntimeRow
@@ -220,31 +242,64 @@ export function AiRuntimeChip({
 
 type RoomBelow = CSSProperties & Readonly<{ "--aistatRoom": string }>;
 
+// Where the popover stops being painted: the viewport's foot, or higher where an
+// ancestor clips (the onboarding stage hides its overflow above a phone's width).
+function paintedFoot(from: HTMLElement): number {
+  let foot = globalThis.innerHeight;
+  for (
+    let at = from.parentElement;
+    at && at !== document.body;
+    at = at.parentElement
+  ) {
+    const style = getComputedStyle(at);
+    if (style.overflowY !== "visible" && style.display !== "contents") {
+      const inner = at.getBoundingClientRect().bottom;
+      foot = Math.min(foot, inner - Number.parseFloat(style.borderBottomWidth));
+    }
+  }
+  return foot;
+}
+
+function roomBelow(anchor: HTMLElement): number {
+  const chipFoot = anchor.getBoundingClientRect().bottom;
+  return Math.max(paintedFoot(anchor) - chipFoot, 0);
+}
+
 // Not useAnchoredToTrigger: for a low trigger it measures the room ABOVE it,
 // and this popover always opens below.
 function useRoomBelow(
   anchor: RefObject<HTMLElement | null>,
+  popover: RefObject<HTMLElement | null>,
   open: boolean,
 ): RoomBelow | undefined {
   const [room, setRoom] = useState<number | null>(null);
+  // Every render while open, because the chip moves for reasons no event
+  // reports: the band re-wrapping, a font arriving.
   useLayoutEffect(() => {
+    if (open && anchor.current) {
+      setRoom(roomBelow(anchor.current));
+    }
+  });
+  useEffect(() => {
     if (!open) {
       return;
     }
-    const measure = () => {
-      const foot = anchor.current?.getBoundingClientRect().bottom;
-      if (foot !== undefined) {
-        setRoom(Math.max(globalThis.innerHeight - foot, 0));
+    const measure = (event: Event) => {
+      const moved = event.target;
+      if (moved instanceof Node && popover.current?.contains(moved)) {
+        return;
+      }
+      if (anchor.current) {
+        setRoom(roomBelow(anchor.current));
       }
     };
-    measure();
     globalThis.addEventListener("resize", measure);
     globalThis.addEventListener("scroll", measure, true);
     return () => {
       globalThis.removeEventListener("resize", measure);
       globalThis.removeEventListener("scroll", measure, true);
     };
-  }, [open, anchor]);
+  }, [open, anchor, popover]);
   return room === null ? undefined : { "--aistatRoom": `${room}px` };
 }
 

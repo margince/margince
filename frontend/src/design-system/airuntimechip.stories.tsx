@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useEffect } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { AiRuntimeChip, type AiRuntimeLabels } from "./airuntimechip";
 
@@ -149,10 +149,10 @@ export const PhoneLargeText: Story = {
   ],
   play: async (context) => {
     await openPopover?.(context);
-    await expect(
-      await within(context.canvasElement).findByRole("region", {
-        name: LABELS.chip,
-      }),
-    ).toBeVisible();
+    const region = await within(context.canvasElement).findByRole("region", {
+      name: LABELS.answering,
+    });
+    // The popover fades in, so it is visible once the entrance has run.
+    await waitFor(() => expect(region).toBeVisible());
   },
 };
