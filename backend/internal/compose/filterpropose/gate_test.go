@@ -6,6 +6,7 @@ package filterpropose
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -256,5 +257,30 @@ func TestAPicklistValueWhoseOptionsAreWithheldIsDeclined(t *testing.T) {
 	got := Gate(oneClause(Clause{Field: "cf_tier", Op: "exists", Flag: flag(true)}), withheld)
 	if got.Tree == nil || len(got.Unsupported) != 0 {
 		t.Errorf("an exists clause on a withheld picklist was refused: %+v", got.Unsupported)
+	}
+}
+
+func TestARelativeDateIsTakenOnlyAsABoundCountingBack(t *testing.T) {
+	for _, op := range []string{"gt", "gte", "lt", "lte"} {
+		got := Gate(oneClause(Clause{Field: "last_activity_at", Op: op, DaysAgo: days(0)}), vocabulary)
+		if len(got.Unsupported) != 0 {
+			t.Errorf("%s days_ago 0 was refused: %+v", op, got.Unsupported)
+		}
+	}
+	cases := map[string]Clause{
+		"eq":       {Phrase: "exactly 45 days ago", Field: "last_activity_at", Op: "eq", DaysAgo: days(45)},
+		"neq":      {Phrase: "not 45 days ago", Field: "last_activity_at", Op: "neq", DaysAgo: days(45)},
+		"negative": {Phrase: "in 3 days", Field: "last_activity_at", Op: "lt", DaysAgo: days(-3)},
+	}
+	for name, clause := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := Gate(oneClause(clause), vocabulary)
+			if got.Tree != nil || len(got.Unsupported) != 1 || got.Unsupported[0].Code != CodeValueNotAllowed {
+				t.Fatalf("want the clause named back as value_not_allowed, got tree %+v unsupported %+v", got.Tree, got.Unsupported)
+			}
+			if name == "negative" && !strings.Contains(got.Unsupported[0].Reason, "counts back from today") {
+				t.Errorf("a date in the future is named back as %q, not as one counting back from today", got.Unsupported[0].Reason)
+			}
+		})
 	}
 }

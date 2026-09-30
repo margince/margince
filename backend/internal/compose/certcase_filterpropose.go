@@ -192,27 +192,62 @@ func canonicalNode(p storekit.Predicate) string {
 		return canonicalNode(children[0])
 	}
 	var parts []string
-	membership := map[string][]string{}
+	membership := map[string]map[string]bool{}
 	for _, child := range flatten(join, children) {
-		if join == canonicalOr && child.Op == storekit.OpEq && child.Field != "" {
-			membership[child.Field] = append(membership[child.Field], canonicalValue(child.Value))
+		if join == canonicalOr && isMembership(child) {
+			if membership[child.Field] == nil {
+				membership[child.Field] = map[string]bool{}
+			}
+			for _, value := range membersOf(child.Value) {
+				membership[child.Field][value] = true
+			}
 			continue
 		}
 		parts = append(parts, canonicalNode(child))
 	}
-	for field, values := range membership {
-		if len(values) == 1 {
-			parts = append(parts, fmt.Sprintf("%s eq %s", field, values[0]))
-			continue
-		}
-		sort.Strings(values)
-		parts = append(parts, fmt.Sprintf("%s in [%s]", field, strings.Join(values, ",")))
+	for field, set := range membership {
+		parts = append(parts, membershipLeaf(field, set))
 	}
 	if len(parts) == 1 {
 		return parts[0]
 	}
 	sort.Strings(parts)
 	return join + "(" + strings.Join(parts, "; ") + ")"
+}
+
+// isMembership says a leaf asks "is the field one of these": an equality or an
+// `in`, which an or-group unions into one set per field.
+func isMembership(p storekit.Predicate) bool {
+	return p.Field != "" && (p.Op == storekit.OpEq || p.Op == storekit.OpIn)
+}
+
+// membersOf is a membership leaf's values in canonical spelling.
+//
+//craft:ignore naked-any value is a predicate leaf's operand, a JSON scalar or list by the engine's own contract
+func membersOf(value any) []string {
+	list, ok := value.([]any)
+	if !ok {
+		return []string{canonicalValue(value)}
+	}
+	out := make([]string, 0, len(list))
+	for _, member := range list {
+		out = append(out, canonicalValue(member))
+	}
+	return out
+}
+
+// membershipLeaf renders one field's value set: a single value is an equality,
+// several are an `in`, deduplicated and sorted.
+func membershipLeaf(field string, set map[string]bool) string {
+	values := make([]string, 0, len(set))
+	for value := range set {
+		values = append(values, value)
+	}
+	sort.Strings(values)
+	if len(values) == 1 {
+		return fmt.Sprintf("%s eq %s", field, values[0])
+	}
+	return fmt.Sprintf("%s in [%s]", field, strings.Join(values, ","))
 }
 
 // flatten lifts a child group joined the same way as its parent into the
@@ -234,16 +269,12 @@ func flatten(join string, children []storekit.Predicate) []storekit.Predicate {
 
 //craft:ignore naked-any value is a predicate leaf's operand, a JSON scalar, list or relative date by the engine's own contract
 func canonicalLeaf(field, op string, value any) string {
-	if list, ok := value.([]any); ok {
-		values := make([]string, 0, len(list))
-		for _, member := range list {
-			values = append(values, canonicalValue(member))
+	if op == storekit.OpIn {
+		set := map[string]bool{}
+		for _, member := range membersOf(value) {
+			set[member] = true
 		}
-		sort.Strings(values)
-		if op == storekit.OpIn && len(values) == 1 {
-			return fmt.Sprintf("%s eq %s", field, values[0])
-		}
-		return fmt.Sprintf("%s %s [%s]", field, op, strings.Join(values, ","))
+		return membershipLeaf(field, set)
 	}
 	return fmt.Sprintf("%s %s %s", field, op, canonicalValue(value))
 }

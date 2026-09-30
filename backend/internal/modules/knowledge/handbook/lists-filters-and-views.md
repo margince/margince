@@ -212,7 +212,8 @@ To build a filter from a sentence in Margince, open **Filters and views**, type 
 1. The proposed conditions appear in the builder as ordinary clauses you can edit. If your filter already has conditions, choose **Replace current filter** or **Add to current filter**.
 2. Anything the fields cannot express, such as "likely to buy", is listed under **Could not use** with the reason.
 3. Check the match count, then save. Nothing is saved until you press **Save view** or **Save as Live List**.
-This needs an AI model configured under **Settings** → **AI models**; the AI never sees your records, only the field list.
+This needs an AI model configured under **Settings** → **AI models**.
+The AI never receives your CRM records. It is sent your sentence, the record type, today's date, your language, and the fields you can filter on (names, types, operators and picklist options, with the custom-field labels you may read). If you can read companies, it is also sent your own company's offer and market, so a phrase like "our target market" can be read.
 Also called: natural-language filter, AI filter, describe a segment.
 
 ### What can I filter on in Filters and views?

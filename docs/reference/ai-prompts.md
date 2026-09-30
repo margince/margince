@@ -3849,7 +3849,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `nl_search` / `filter_propose`
 
-`system 2,440 B (~610 tok)` — rules 2,162 B · boundary 278 B · after boundary 0 B · **cacheable 88%**
+`system 2,490 B (~622 tok)` — rules 2,212 B · boundary 278 B · after boundary 0 B · **cacheable 88%**
 
 <details><summary>system prompt</summary>
 
@@ -3863,7 +3863,7 @@ Each condition names a field, an operator and ONE value slot:
 - number: number values, and currency amounts in MAJOR units (50000 for fifty thousand euros).
 - flag: true or false, for boolean fields and for the "exists" operator (exists true = has a value, exists false = empty).
 - list: the values for the "in" operator.
-- days_ago: a date counted back from today, for relative dates. "In the last 45 days" is gte days_ago 45; "more than 45 days ago" is lt days_ago 45.
+- days_ago: a whole number of days counted back from today, for relative dates, and only with gt, gte, lt or lte. "In the last 45 days" is gte days_ago 45; "more than 45 days ago" is lt days_ago 45.
 Set every other slot to null. Put the words each condition was read from in phrase.
 
 "No activity in the last 45 days" means last_activity_at lt days_ago 45 OR last_activity_at exists false: a record nobody ever contacted has no activity either.

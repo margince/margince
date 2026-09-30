@@ -10174,7 +10174,7 @@ export const de = {
   "filters.propose.reason.operator": "{field} lässt sich so nicht vergleichen.",
   "filters.propose.reason.value": "{field} nimmt diesen Wert nicht an.",
   "filters.propose.reason.notVerifiable":
-    "{field} hat Optionen, die du nicht sehen darfst, deshalb ließ sich der Wert nicht prüfen.",
+    "{field} hat Optionen, die du nicht sehen kannst, deshalb ließ sich der Wert nicht prüfen.",
   "filters.propose.reason.tooMany":
     "Der Filter enthält schon so viele Bedingungen, wie er fassen kann.",
   "lists.page": "Liste",

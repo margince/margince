@@ -153,7 +153,7 @@ func operand(clause Clause, field Field) (any, error) {
 	case clause.Op == storekit.OpIn:
 		return listOperand(clause.List, field)
 	case storekit.FieldType(field.Type) == storekit.FieldDate && clause.DaysAgo != nil:
-		return map[string]any{"days_ago": float64(*clause.DaysAgo)}, nil
+		return relativeDay(clause, field)
 	}
 	switch storekit.FieldType(field.Type) {
 	case storekit.FieldNumber:
@@ -176,6 +176,26 @@ func operand(clause Clause, field Field) (any, error) {
 		return nil, fmt.Errorf("%q takes a value", field.Name)
 	}
 	return option(*clause.Text, field)
+}
+
+// relativeOrdering are the operators a relative date is proposed with: "in the
+// last N days" and "more than N days ago" are bounds, never one exact day.
+var relativeOrdering = map[string]bool{
+	storekit.OpGt: true, storekit.OpGte: true, storekit.OpLt: true, storekit.OpLte: true,
+}
+
+// relativeDay is a days_ago operand, taken only as a bound and only counting
+// back from today. Zero is today itself, which "since today" means.
+//
+//craft:ignore naked-any the return is a predicate leaf's operand, the engine's relative-date map
+func relativeDay(clause Clause, field Field) (any, error) {
+	if !relativeOrdering[clause.Op] {
+		return nil, fmt.Errorf("a relative date on %q is a bound (before or since), not %q", field.Name, clause.Op)
+	}
+	if *clause.DaysAgo < 0 {
+		return nil, fmt.Errorf("a relative date on %q counts back from today, so %d days is not one", field.Name, *clause.DaysAgo)
+	}
+	return map[string]any{"days_ago": float64(*clause.DaysAgo)}, nil
 }
 
 // listOperand is an `in` list, each member read the way a single value of the
