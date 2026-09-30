@@ -88,7 +88,7 @@
 }
 
 .lists-why-unmet {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 .lists-why-unknown {

@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { createContext, type ReactNode, useContext, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { ThemeToggle } from "../app/theme-toggle";
 import { AmbientWaves } from "./ambient-waves";
@@ -10,6 +16,7 @@ import { Logomark } from "./logomark";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
 import "./onboarding-stage.css";
 import { Heading } from "./heading";
+import { useScrollRegion } from "./scrollregion";
 
 /**
  * The room every onboarding question is asked in.
@@ -310,6 +317,12 @@ export function OnboardingStage({
   // The rail's action cell, handed to whichever step is on the board so it
   // can put its own way onward there — see StageActions.
   const [actsSlot, setActsSlot] = useState<HTMLElement | null>(null);
+  const board = useRef<HTMLDivElement>(null);
+  const boardRegion = useScrollRegion(
+    board,
+    { labelledBy: STAGE_TITLE_ID },
+    "block",
+  );
   return (
     <div className="ob-page">
       {/* The ground the card stands on, the same one the sign-in surface has.
@@ -354,7 +367,11 @@ export function OnboardingStage({
               feed={coreFeed}
             />
           </div>
-          <div className="ob-stage-board arrive-stack">
+          <div
+            ref={board}
+            className="ob-stage-board arrive-stack"
+            {...boardRegion}
+          >
             {eyebrow === undefined ? null : (
               <Eyebrow as="h2">{eyebrow}</Eyebrow>
             )}

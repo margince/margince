@@ -220,7 +220,7 @@ func TestALiveListExportHoldsOnlyTheRowsItsReaderMaySee(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		result, err := compose.NewFilteredExportWriter(e.Pool).WriteListExport(tc.reader, engine, src.Predicate, "json", list.ID)
+		result, err := compose.NewFilteredExportWriter(e.Pool).WriteListExport(tc.reader, engine, src, "json", list.ID)
 		if err != nil || result.RowCount != tc.want {
 			t.Errorf("%s exported %d rows (%v), want %d", who, result.RowCount, err, tc.want)
 		}

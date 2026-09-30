@@ -29,6 +29,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
@@ -38,7 +39,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // bulkToolName is the agent verb both doors admit a bulk change as.
@@ -56,11 +56,15 @@ type bulkChange struct {
 	verb       crmcontracts.BulkVerb
 	items      []crmcontracts.BulkItem
 	ownerID    *ids.UUID
-	// listID and note are a list verb's Shortlist and why; lists is the store
-	// its rows are written through, set when the change is admitted.
-	listID       *ids.UUID
-	note         *string
-	lists        *collections.Store
+	// listID and note are a list verb's Shortlist and why, tagID a tag verb's
+	// tag, and task what create_task files under each record.
+	listID *ids.UUID
+	note   *string
+	tagID  *ids.UUID
+	task   *crmcontracts.BulkTask
+	// writers are the stores the verb's rows are written through, set when
+	// the change is admitted.
+	writers      bulkWriters
 	confirmToken string
 	// previewed is the set the spent confirmation's preview listed as
 	// affected; nil when the change presented none. A record outside it is
@@ -73,7 +77,7 @@ type bulkChange struct {
 	pendingLinks []storekit.LeftBehind
 }
 
-// bulkEngine runs bulk changes over the three record types.
+// bulkEngine runs bulk changes over the four record types.
 type bulkEngine struct {
 	db      *database.DB
 	targets map[crmcontracts.BulkRecordType]bulkTarget
@@ -81,6 +85,9 @@ type bulkEngine struct {
 	now     func() time.Time
 	// lists writes the list verbs' memberships; nil while lists are off.
 	lists *collections.Store
+	// tags and tasks write the tag verbs and create_task.
+	tags  *collections.Store
+	tasks *activities.Store
 }
 
 // bulkRun is what one pass over the rows produced.
@@ -224,25 +231,20 @@ func (e *bulkEngine) admit(ctx context.Context, change *bulkChange) (bulkRecords
 	target, ok := e.targets[change.recordType]
 	if !ok {
 		return bulkRecords{}, httperr.Validation("record_type", "unknown_record_type",
-			fmt.Sprintf("record_type %q is none of contact, company or deal", change.recordType))
+			fmt.Sprintf("record_type %q is none of contact, company, deal or lead", change.recordType))
 	}
 	if change.undo == nil {
 		if err := validateBulkChange(*change); err != nil {
 			return bulkRecords{}, err
 		}
 	}
-	action := principal.ActionUpdate
-	switch {
-	case change.verb == crmcontracts.BulkVerbArchive:
-		action = principal.ActionDelete
-	case isListVerb(change.verb):
-		// A membership changes the list, not the record: reading the record
-		// is what naming it on a list takes.
-		action = principal.ActionRead
-		if err := e.admitListVerb(ctx, *change); err != nil {
-			return bulkRecords{}, err
-		}
-		change.lists = e.lists
+	if _, archives := target.(bulkArchiver); change.verb == crmcontracts.BulkVerbArchive && !archives {
+		return bulkRecords{}, httperr.Validation("verb", "verb_not_for_record_type",
+			fmt.Sprintf("a %s has no archive; archive is none of its verbs", change.recordType))
+	}
+	action, err := e.admitVerb(ctx, change)
+	if err != nil {
+		return bulkRecords{}, err
 	}
 	if err := auth.Require(ctx, string(change.recordType), action); err != nil {
 		return bulkRecords{}, err
@@ -279,8 +281,11 @@ func (e *bulkEngine) rehearse(ctx context.Context, tx pgx.Tx, target bulkTarget,
 
 // apply changes every row in id order, each in its own savepoint.
 func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange) (bulkRun, error) {
-	if change.ownerID != nil {
-		if err := auth.EnsureAssignee(ctx, tx, *change.ownerID); err != nil {
+	for _, assignee := range []*ids.UUID{change.ownerID, taskAssignee(change)} {
+		if assignee == nil {
+			continue
+		}
+		if err := auth.EnsureAssignee(ctx, tx, *assignee); err != nil {
 			return bulkRun{}, err
 		}
 	}
@@ -350,8 +355,13 @@ func applyOne(
 	if change.undo != nil {
 		return undoOne(ctx, tx, target, change, item)
 	}
-	if isListVerb(change.verb) {
+	switch {
+	case isListVerb(change.verb):
 		return applyMembership(ctx, tx, target, change, item, change.verb == crmcontracts.BulkVerbAddToList)
+	case isTagVerb(change.verb):
+		return applyTagging(ctx, tx, target, change, item, change.verb == crmcontracts.BulkVerbAddTag)
+	case change.verb == crmcontracts.BulkVerbCreateTask:
+		return applyTask(ctx, tx, target, change, item)
 	}
 	id := ids.UUID(item.Id)
 	row, err := target.lock(ctx, tx, id)
@@ -376,7 +386,10 @@ func applyOne(
 		err = target.reassign(ctx, tx, id, ids.From[ids.UserKind](*change.ownerID), item.Version)
 	case crmcontracts.BulkVerbArchive:
 		sample.After.Archived = true
-		err = target.archive(ctx, tx, id, item.Version)
+		var archiver bulkArchiver
+		if archiver, err = archiverOf(target); err == nil {
+			err = archiver.archive(ctx, tx, id, item.Version)
+		}
 	}
 	if err != nil {
 		skip, classifyErr := bulkSkipFor(err)
@@ -451,38 +464,4 @@ func wireOwner(id *ids.UUID) *openapi_types.UUID {
 	}
 	wire := openapi_types.UUID(*id)
 	return &wire
-}
-
-// validateBulkChange refuses what the contract refuses, for the tool door
-// whose arguments no generated decoder has checked, and one thing it cannot
-// say: a record named twice.
-func validateBulkChange(change bulkChange) error {
-	switch change.verb {
-	case crmcontracts.BulkVerbReassignOwner:
-		if change.ownerID == nil {
-			return httperr.Validation("owner_id", "required", "reassign_owner needs owner_id, the colleague to hand the records to")
-		}
-	case crmcontracts.BulkVerbArchive:
-		if change.ownerID != nil {
-			return httperr.Validation("owner_id", "not_allowed", "archive takes no owner_id")
-		}
-	case crmcontracts.BulkVerbAddToList, crmcontracts.BulkVerbRemoveFromList:
-		if err := validateListVerb(change); err != nil {
-			return err
-		}
-	default:
-		return httperr.Validation("verb", "unknown_verb", fmt.Sprintf("verb %q is none of reassign_owner, archive, add_to_list or remove_from_list", change.verb))
-	}
-	if len(change.items) == 0 || len(change.items) > bulkMaxItems {
-		return httperr.Validation("items", "out_of_range",
-			fmt.Sprintf("items names between 1 and %d records; this change names %d", bulkMaxItems, len(change.items)))
-	}
-	seen := make(map[openapi_types.UUID]bool, len(change.items))
-	for _, item := range change.items {
-		if seen[item.Id] {
-			return httperr.Validation("items", "duplicate_id", fmt.Sprintf("record %s is named more than once", item.Id))
-		}
-		seen[item.Id] = true
-	}
-	return nil
 }

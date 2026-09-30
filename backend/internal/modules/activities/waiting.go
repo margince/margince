@@ -279,9 +279,10 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 		if err != nil {
 			return err
 		}
-		// The horizon this installation's own answering implies, measured in
-		// the same transaction as the scan it bounds — so the cutoff and the
-		// rows it judges come from one snapshot.
+		// The horizon this installation's own answering implies, read ONCE for
+		// this scan so every row it judges is judged by one cutoff. Remembered
+		// for up to an hour rather than re-measured here (waitinghorizoncache.go
+		// says what that trades).
 		horizon, err := s.waitingHorizonFor(ctx, tx, asOf)
 		if err != nil {
 			return err

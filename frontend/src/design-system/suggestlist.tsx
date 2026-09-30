@@ -295,9 +295,13 @@ export function SuggestPopup({
   }
   const frame = list.frame;
   return createPortal(
+    // The scroller is the listbox, so it takes no tab stop. Divs, as ul/li
+    // would announce twice; no name, as the combobox is named.
     <div
       ref={list.popupRef}
       className="suggest-popup"
+      id={list.listboxId}
+      role="listbox"
       data-above={frame.above ? "true" : undefined}
       style={{
         left: frame.left,
@@ -307,10 +311,7 @@ export function SuggestPopup({
         maxHeight: frame.maxHeight,
       }}
     >
-      {/* Divs rather than ul/li, and no name on the listbox — the same reasoning
-          as Select's popup: the control that owns it is named, and a list
-          element claiming an interactive role is announced twice over. */}
-      <div className="suggest-list" id={list.listboxId} role="listbox">
+      <div className="suggest-list">
         {list.matches.map((row, index) => (
           // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path is the driving text box's own keydown handling
           // biome-ignore lint/a11y/useFocusableInteractive: an option in an aria-activedescendant listbox must NOT be focusable — focus stays in the text box, which is what keeps typing working

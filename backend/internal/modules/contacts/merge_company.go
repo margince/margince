@@ -296,15 +296,29 @@ func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	// records carry program state the survivor's stands and the
 	// source's rides its archived company untouched (recoverable, never
 	// silently blended).
+	//
+	// THE MOVE IS UNFILTERED AND THE VERDICT IS NOT. A retired row still
+	// occupies the 1:1 slot, so the vacancy check has to see it or two rows
+	// would land on one company — but carrying it over says nothing about
+	// whether the survivor runs a partner programme. Typed from the row's mere
+	// existence, the survivor carries `partner` while its own partner endpoint
+	// answers 404, which is the half-state the relationship-type invariant
+	// exists to make impossible.
+	//
+	// Both arms read liveness the way GetPartner reads it. The moved row is
+	// judged from RETURNING rather than re-read: this statement's SELECT sees
+	// the pre-update snapshot, so a row it just moved is not on the target yet,
+	// and the second arm is the row the target already had.
 	var targetIsPartner bool
 	if err := tx.QueryRow(ctx, `
 		WITH moved AS (
 		  UPDATE partner SET company_id = $2
 		  WHERE company_id = $1
 		    AND NOT EXISTS (SELECT 1 FROM partner WHERE company_id = $2)
-		  RETURNING 1)
-		SELECT EXISTS (SELECT 1 FROM moved)
-		    OR EXISTS (SELECT 1 FROM partner WHERE company_id = $2)`,
+		  RETURNING archived_at)
+		SELECT EXISTS (SELECT 1 FROM moved WHERE `+livePartnerSQL("")+`)
+		    OR EXISTS (SELECT 1 FROM partner
+		                WHERE company_id = $2 AND `+livePartnerSQL("")+`)`,
 		sourceID, targetID).Scan(&targetIsPartner); err != nil {
 		return false, fmt.Errorf("move partner extension: %w", err)
 	}

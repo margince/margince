@@ -200,7 +200,7 @@ func availableSummary(
 	if activity.Direction != nil && *activity.Direction == crmcontracts.ActivityDirectionInbound {
 		far = parties.from
 	}
-	summary.Counterparty = counterpartyOf(far)
+	summary.Counterparty, summary.CounterpartyContactId = counterpartyOf(far)
 	if activity.EmailSummary != nil {
 		summary.Move = activity.EmailSummary.Move
 	}

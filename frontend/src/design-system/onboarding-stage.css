@@ -434,6 +434,11 @@
 .ob-stage[data-core="work"] .ob-stage-board {
   padding-left: var(--ob-board-inset-work);
 }
+/* Inset, because the room clips anything drawn outside the board. */
+.ob-stage-board:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
 /*
  * `start` is for a surface that GROWS while somebody reads it: the read theatre
  * gains a tile per page, and a centred board re-centres on every arrival, so the
@@ -441,6 +446,12 @@
  */
 .ob-stage[data-anchor="start"] .ob-stage-board {
   align-content: start;
+}
+
+/* The stage's own lines: a word longer than the board breaks rather than
+   running past its edge, whichever face the reader's system substitutes. */
+.ob-stage-board > :is(.ob-stage-title, .t-eyebrow, .ob-stage-sub) {
+  overflow-wrap: break-word;
 }
 
 .ob-stage-title {
@@ -587,21 +598,39 @@
     box-shadow: none;
     max-width: none;
   }
+  /* Stretched, not centred: a centred board as wide as its longest line hangs
+     off both edges of the window. */
   .ob-stage-scene {
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
   }
   .ob-stage-core {
     position: static;
+    align-self: center;
     transform: scale(var(--ob-core-scale, 1));
     padding-top: var(--space-6);
   }
+  /* And its one track may shrink below that line, or the stretch is undone. */
   .ob-stage-board {
     align-content: start;
+    grid-template-columns: minmax(0, 1fr);
     padding: var(--space-6);
   }
   .ob-stage[data-core="work"] .ob-stage-board {
     padding-left: var(--space-6);
+  }
+  /* The way onward drops under the hint, never past the window's edge; the hint
+     keeps a readable floor, so the drop happens only when both cannot fit. */
+  .ob-stage-foot {
+    flex-wrap: wrap;
+  }
+  .ob-stage-hint {
+    flex: 1 1 0;
+    min-width: min(100%, 6rem);
+  }
+  .ob-stage-acts {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   /* Back inside the component's own cap. The wide layout opts out of it because
      it reserved the Core's place; this one did not, and a 300px sphere on a
@@ -614,6 +643,10 @@
   .ob-stage-title,
   .ob-stage-sub {
     max-width: none;
+  }
+  /* The headings' long words break at a syllable; `lang` is on <html>. */
+  .ob-stage-board > :is(.ob-stage-title, .t-eyebrow) {
+    hyphens: auto;
   }
   /* The mark alone: a step name, a sub-step and a row of dashes do not fit a
      phone's width, and the dashes are the half that still works at a glance. */

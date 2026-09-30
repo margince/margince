@@ -861,6 +861,13 @@
                     "owner_id": {
                       "type": "string",
                       "format": "uuid"
+                    },
+                    "tagged": {
+                      "type": "boolean"
+                    },
+                    "task_id": {
+                      "type": "string",
+                      "format": "uuid"
                     }
                   },
                   "required": [
@@ -877,6 +884,13 @@
                       "type": "boolean"
                     },
                     "owner_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "tagged": {
+                      "type": "boolean"
+                    },
+                    "task_id": {
                       "type": "string",
                       "format": "uuid"
                     }

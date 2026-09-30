@@ -233,15 +233,25 @@ On **Leads**, pick the colleague under **Choose owner** and press **Assign**.
 Also called: bulk reassign, hand over accounts, transfer deals, a colleague left, reassign all their contacts.
 
 ### What can I do to several records at once?
-The bulk bar on **Contacts** and **Companies** offers **Assign owner** and **Archive**; on **Deals** also **Move to stage** (open stages only); on **Leads** **Assign** and **Disqualify** (with a **Reason**).
-**Archive** first shows what it will do; your own company is never archived. A change of more than 10 records carries a "Large change" warning. You cannot win or lose deals in bulk.
-Nothing else can be changed in bulk, such as tags or custom fields.
+The bulk bar on **Contacts**, **Companies** and **Deals** offers **Assign owner**, **Add tag**, **Remove tag**, **Create task** and **Archive**; on **Deals** also **Move to stage** (open stages only). On **Leads** it offers **Assign** and **Disqualify** (with a **Reason**).
+Every change first shows what it will do; your own company is never archived. A change of more than 10 records carries a "Large change" warning. You cannot win or lose deals in bulk.
+After a change, the message that says how many changed has an **Undo** button.
+Custom fields cannot be changed in bulk.
 Also called: bulk actions, mass archive, bulk disqualify.
 
 ### Can I tag several records at once?
-No. Margince has no bulk tagging: the bulk bars offer only owner changes, archiving, stage moves on **Deals** and disqualifying on **Leads**. To tag several records, open each one and choose **Add tag** in its **Tags** panel.
+Yes. To tag several records in Margince, tick them on the **Contacts**, **Companies** or **Deals** table, choose **Pick a tag** in the bulk bar, and press **Add tag** or **Remove tag**.
+1. A window shows how many records will change, and each record left unchanged with its reason, such as "Already has or lacks this tag" or "No permission to change".
+2. Press **Add tag** or **Remove tag** to confirm. **Undo** in the message takes the tag off only the records this change tagged.
 To work with the tagged records afterwards, use **Filter** → **Tags** on the list.
 Also called: bulk tag, mass tag, tag many contacts, label several deals at once.
+
+### Can I create a task for several records at once?
+Yes. Tick the records on the **Contacts**, **Companies** or **Deals** table and press **Create task** in the bulk bar.
+1. Fill in **What has to be done**, and if you want a **Due date** and an **Assignee**. Without an assignee the tasks are yours.
+2. Press **Preview**, check the window, and press **Create tasks**. Each record gets its own task.
+**Undo** in the message archives the tasks this change created. A task someone has completed or edited since is left alone.
+Also called: bulk task, follow up with many, mass follow-up.
 
 ## Exporting a list
 

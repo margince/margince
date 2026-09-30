@@ -7,7 +7,12 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { selectorList } from "../../scripts/lib/css-rules";
-import { filesMatching, sourceFileAt } from "../../scripts/lib/source-tree";
+import {
+  classNameLiterals,
+  extensionFrontendFiles,
+  filesMatching,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 import { type CssRule, rulesIn } from "../testing/css";
 
 // ONE MENU ANATOMY, and this is what holds it.
@@ -144,15 +149,6 @@ const SURFACES: readonly Surface[] = [
     ceiling: "60vh, because it drops inside the rail rather than over the page",
   },
 ];
-
-/**
- * A class the census will meet that is not a menu surface and not a row.
- *
- * Each is a container INSIDE a surface — the element the listbox role sits on,
- * the wrapper a menu's parentage needs — with no box of its own. Named so the
- * census below can be exhaustive rather than filtered.
- */
-const NOT_A_BOX: readonly string[] = ["select-list", "suggest-list"];
 
 /** Every stylesheet under `src/`, by its path relative to `src/`. */
 const sheets = new Map<string, CssRule[]>(
@@ -322,8 +318,8 @@ describe("one menu anatomy", () => {
   // written by hand because the mapping from a class to "this is a menu" is not
   // in any file to read off; what IS readable is every element in the tree that
   // claims a menu or listbox role. A new option list therefore cannot be added
-  // without either joining the roster or being named as a container with no box
-  // — there is no third outcome where it is simply not looked at.
+  // without joining the roster — there is no outcome where it is simply not
+  // looked at.
   // Reads every .tsx in src/ and in the extension frontends to find the roles.
   it("knows every option surface and row in the tree", {
     timeout: 60_000,
@@ -334,7 +330,6 @@ describe("one menu anatomy", () => {
         ...surface.rows,
         ...(surface.head ? [surface.head.selector] : []),
       ]).map((selector) => selector.split(" ").at(-1)?.slice(1) ?? ""),
-      ...NOT_A_BOX,
     ]);
     const unknown = classesUnderAnOptionRole().filter(
       (className) => !known.has(className),
@@ -348,7 +343,13 @@ const OPTION_ROLES = new Set(["menu", "listbox", "menuitem", "option"]);
 /** Every class name the tree puts on an element claiming a menu-ish role. */
 function classesUnderAnOptionRole(): string[] {
   const found = new Set<string>();
-  for (const path of filesMatching(srcRoot, /\.tsx$/)) {
+  const tsx = [
+    ...filesMatching(srcRoot, /\.tsx$/),
+    ...extensionFrontendFiles(join(srcRoot, "..", "..", "extensions")).filter(
+      (path) => path.endsWith(".tsx"),
+    ),
+  ];
+  for (const path of tsx) {
     if (/\.(test|stories|testkit)\.tsx$/.test(path)) continue;
     const source = sourceFileAt(path);
     const visit = (node: ts.Node) => {
@@ -365,7 +366,7 @@ function classesUnderAnOptionRole(): string[] {
           const className = attributes.find(
             (attribute) => attribute.name.getText(source) === "className",
           );
-          for (const literal of stringsIn(className)) {
+          for (const literal of classNameLiterals(className)) {
             for (const one of literal.split(/\s+/).filter(Boolean)) {
               found.add(one);
             }
@@ -380,24 +381,6 @@ function classesUnderAnOptionRole(): string[] {
   // ride the same attribute and say nothing about a box.
   const states = /^(is-|active$|selected$|open$|right$)/;
   return [...found].filter((one) => !states.test(one)).sort();
-}
-
-/** Every string literal inside a `className`, however the caller composed it. */
-function stringsIn(attribute: ts.JsxAttribute | undefined): string[] {
-  if (!attribute?.initializer) return [];
-  const out: string[] = [];
-  const visit = (node: ts.Node) => {
-    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-      out.push(node.text);
-    }
-    if (ts.isTemplateExpression(node)) {
-      out.push(node.head.text);
-      for (const span of node.templateSpans) out.push(span.literal.text);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(attribute.initializer);
-  return out;
 }
 
 // The two sizes are TOKENS, and every call site spells the value as a fallback

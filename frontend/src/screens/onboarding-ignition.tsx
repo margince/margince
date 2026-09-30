@@ -112,16 +112,16 @@ export function Ignition({
       {/* The wash is the STAGE's — it comes from the orb, which is in the other
           column, and the stage is what knows where the orb is. */}
       <p className="ob-ig-sealed">
-        <Badge tone="accent">{t("firstRun.ignite.sealed", { vendor })}</Badge>
+        <Badge tone="accent" wrap>
+          {t("firstRun.ignite.sealed", { vendor })}
+        </Badge>
       </p>
       <p className="ob-ig-beat" data-beat="1">
         {t("firstRun.ignite.reaching")}
       </p>
-      {/* One live region for the sequence, and it is the LIST: what changed is
-          what the installation can and cannot do, and a screen reader hearing
-          three timed lines in four seconds hears an interruption rather than a
-          ceremony. The headline above is the stage's and announces itself. */}
-      <ul className="ob-ig-can" role="status">
+      {/* One region, so three timed lines are heard as one change; aria-live,
+          as a role on the <ul> replaces list and orphans its items. */}
+      <ul className="ob-ig-can" aria-live="polite" aria-atomic="true">
         {CAPABILITIES.map((c) => (
           <li key={c.what} data-can={c.can}>
             <b className="t-eyebrow">

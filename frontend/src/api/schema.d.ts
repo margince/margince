@@ -3278,10 +3278,11 @@ export interface paths {
         put?: never;
         /**
          * Say what one change over a selection of records would do, without doing it.
-         * @description The first half of a bulk change. The caller names up to 500 contacts, companies or deals,
-         *     each with the `version` it was shown, and one verb: `reassign_owner` (with `owner_id`),
-         *     `archive`, or `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`, while lists
-         *     are switched on). The answer says which records the change would alter (`affected`), which it
+         * @description The first half of a bulk change. The caller names up to 500 contacts, companies, deals or
+         *     leads, each with the `version` it was shown, and one verb: `reassign_owner` (with
+         *     `owner_id`), `archive`, `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`,
+         *     while lists are switched on), `add_tag` / `remove_tag` (with `tag_id`), or `create_task`
+         *     (with `task`). The answer says which records the change would alter (`affected`), which it
          *     would leave alone and why (`excluded`), and up to three before/after rows to show the user.
          *
          *     Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
@@ -3315,9 +3316,10 @@ export interface paths {
         /**
          * Apply one change to a selection of records, record by record.
          * @description The second half of a bulk change. Each record is changed exactly as the single-record
-         *     operation would change it (`updateContact`, `updateCompany`, `updateDeal` for an owner;
-         *     `archiveContact`, `archiveCompany`, `archiveDeal` for an archive), with its own `audit_log`
-         *     row and its own event. Every audit row the change writes carries the same `batch_id`, which
+         *     operation would change it (`updateContact`, `updateCompany`, `updateDeal`, `updateLead` for
+         *     an owner; `archiveContact`, `archiveCompany`, `archiveDeal` for an archive; `applyTag` and
+         *     `removeTag` for a tag; `createTask` for a task), with its own `audit_log` row and its own
+         *     event. Every audit row the change writes carries the same `batch_id`, which
          *     the answer returns.
          *
          *     A record is skipped, not overwritten, when its version is no longer the one the caller
@@ -3417,7 +3419,8 @@ export interface paths {
          * Put back what one bulk change did, record by record.
          * @description A compensating bulk change with its own `batch_id`. A reassignment hands each record back to
          *     the owner it had before; an archive brings each record back with the child rows, list
-         *     memberships and tags its archive took down. Each record gets its own audit row, carrying
+         *     memberships and tags its archive took down; a Shortlist or tag change is reversed on each
+         *     record it changed; and `create_task` archives each task it created. Each record gets its own audit row, carrying
          *     the undo's `batch_id`, and its own event (`contact.restored`, `company.restored`,
          *     `deal.restored` for an archive).
          *
@@ -7465,8 +7468,9 @@ export interface paths {
          * @description First-class filtered export (features/10 §3): emits exactly the rows that match the active
          *     filter AND that the caller may see (row-scoped through the same one filter engine that drives
          *     lists and saved views), rendered to CSV or JSON. Supply exactly one source — an inline `object`
-         *     with a `filter` (the canonical §13.5 predicate), a `view_id`, or the `list_id` of a Live List
-         *     (while lists are switched on; the export is then listed on the list as a use). Bulk record read
+         *     with a `filter` (the canonical §13.5 predicate), a `view_id`, or a `list_id` (while lists are
+         *     switched on): a Live List exports the records its filter matches, a Shortlist its members, and
+         *     the export is then listed on the list as a use. Bulk record read
          *     that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
          *     export writes one `audit_log` entry (who exported what slice, when — P7/P12).
          */
@@ -19661,6 +19665,17 @@ export interface components {
              *     see — the row then says the direction alone rather than inventing a stranger.
              */
             counterparty?: string | null;
+            /**
+             * Format: uuid
+             * @description The contact `counterparty` names, when the party it was taken from resolved to one
+             *     this caller may see. Present so a client can key a face on the RECORD rather than on
+             *     the phrase: the phrase cannot be turned back into a contact, and matching it by name
+             *     is wrong in both directions — a contact renamed since capture stops matching and
+             *     draws a second colour, and two contacts sharing a name cannot be told apart. Absent
+             *     when the far side resolved to no contact, which is a face the client has nothing
+             *     better to key than the words.
+             */
+            counterparty_contact_id?: string;
             /** @description How many files came with it. Zero when withheld, like every other count. */
             attachment_count: number;
             /**
@@ -20198,6 +20213,15 @@ export interface components {
         /** @description The folders or labels one mailbox has, as a picker offers them. */
         ConnectorContainers: {
             containers: components["schemas"]["ConnectorContainer"][];
+            /**
+             * @description True when the walk stopped short of the whole mailbox — a page or depth budget
+             *     spent before the folders ran out. The list is still worth showing: a long one
+             *     that stops beats no list at all. What it must not do is read as complete, because
+             *     somebody whose folder is missing would conclude the mailbox has no such folder
+             *     rather than that nobody looked. Absent or false means the whole mailbox was
+             *     enumerated.
+             */
+            truncated?: boolean;
         };
         /** @description One folder or label: the provider's own token, and the name its owner reads. */
         ConnectorContainer: {
@@ -26983,18 +27007,37 @@ export interface components {
             to_owner_id: string;
         };
         /**
-         * @description The kind of record a bulk change acts on. One change acts on one kind.
+         * @description The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
+         *     verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
          * @enum {string}
          */
-        BulkRecordType: "contact" | "company" | "deal";
+        BulkRecordType: "contact" | "company" | "deal" | "lead";
         /**
          * @description What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
          *     `archive` retires it exactly as the single-record archive does. `add_to_list` and
          *     `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
          *     `addListMember` and `removeListMember` do, and change nothing on the record itself.
+         *     `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
+         *     as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
+         *     under each record, exactly as `createTask` does.
          * @enum {string}
          */
-        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list";
+        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list" | "add_tag" | "remove_tag" | "create_task";
+        /** @description The task `create_task` files under every record of the selection. */
+        BulkTask: {
+            /** @description What has to be done, as one line. */
+            subject: string;
+            /**
+             * Format: date-time
+             * @description When it is due. Optional.
+             */
+            due_at?: string;
+            /**
+             * Format: uuid
+             * @description Who owes it. Defaults to the caller; must name a colleague the caller may hand work to.
+             */
+            assignee_id?: string;
+        };
         /** @description One selected record and the version the caller was shown. */
         BulkItem: {
             /** Format: uuid */
@@ -27021,6 +27064,12 @@ export interface components {
             list_id?: string;
             /** @description Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes. */
             note?: string;
+            /**
+             * Format: uuid
+             * @description The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
+             */
+            tag_id?: string;
+            task?: components["schemas"]["BulkTask"];
         };
         BulkChangeExecuteRequest: {
             record_type: components["schemas"]["BulkRecordType"];
@@ -27038,14 +27087,20 @@ export interface components {
             list_id?: string;
             /** @description Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes. */
             note?: string;
+            /**
+             * Format: uuid
+             * @description The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
+             */
+            tag_id?: string;
+            task?: components["schemas"]["BulkTask"];
             /** @description The token a preview of exactly this selection returned. Required above 10 records. */
             confirm_token?: string;
         };
         /**
          * @description Why a record is left alone. `not_found`: the caller cannot see it, or it is already
          *     archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
-         *     its version moved since the caller read it. `no_change`: it already has this owner, or is
-         *     already on (or already off) the Shortlist.
+         *     its version moved since the caller read it. `no_change`: it already has this owner, is
+         *     already on (or already off) the Shortlist, or already carries (or already lacks) the tag.
          *     `anchor_company`: it is the installation's own company, which is never archived.
          *     `not_previewed`: the preview whose token this execution presents did not list it.
          *     `refused`: a single-record rule refuses it; `code` says which.
@@ -27053,7 +27108,8 @@ export interface components {
          *     An undo adds five. `changed_since_batch`: the record changed after the change being undone.
          *     `merged`: it was merged into another record. `erased`: its personal data was erased or
          *     purged. `value_taken`: another live record now holds its email or domain.
-         *     `no_previous_owner`: it had no owner before the reassignment.
+         *     `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
+         *     each task the change created, and skips one completed or edited since as `changed_since_batch`.
          * @enum {string}
          */
         BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "not_previewed" | "refused" | "changed_since_batch" | "merged" | "erased" | "value_taken" | "no_previous_owner";
@@ -27080,6 +27136,13 @@ export interface components {
             archived: boolean;
             /** @description For a list verb, whether the record is on the Shortlist. */
             listed?: boolean;
+            /** @description For a tag verb, whether the record carries the tag. */
+            tagged?: boolean;
+            /**
+             * Format: uuid
+             * @description For `create_task`, the task filed under the record, once the change ran.
+             */
+            task_id?: string;
         };
         /** @description One record the change would alter, as it is and as it would be. */
         BulkSampleRow: {
@@ -27163,6 +27226,12 @@ export interface components {
              * @description The Shortlist a list verb named.
              */
             list_id?: string;
+            /**
+             * Format: uuid
+             * @description The tag a tag verb named.
+             */
+            tag_id?: string;
+            task?: components["schemas"]["BulkTask"];
             /** @description The number of records changed. */
             changed: number;
             skipped: components["schemas"]["BulkSkip"][];
@@ -31570,7 +31639,7 @@ export interface components {
             data: components["schemas"]["SavedView"][];
             page: components["schemas"]["PageInfo"];
         };
-        /** @description A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported) or a `list_id` (a Live List whose filter is exported). The slice is always row-scoped to the caller through the one filter engine. */
+        /** @description A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported) or a `list_id` (a Live List's matches or a Shortlist's members). The slice is always row-scoped to the caller through the one filter engine. */
         FilteredExportRequest: {
             /**
              * @description The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
@@ -31588,7 +31657,7 @@ export interface components {
             view_id?: string;
             /**
              * Format: uuid
-             * @description Export the members of a Live List the caller may find, as its filter selects them now. Mutually exclusive with object/view_id.
+             * @description Export the members of a list the caller may find — a Live List's as its filter selects them now, a Shortlist's as they were chosen — that the caller may see. Mutually exclusive with object/view_id.
              */
             list_id?: string;
             /** @enum {string} */

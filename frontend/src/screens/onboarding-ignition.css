@@ -43,6 +43,8 @@
 .ob-ig-sealed {
   margin: 0;
   align-self: flex-start;
+  /* Bounded, so the badge never runs past the board's edge. */
+  max-width: 100%;
   animation: ob-ig-appear var(--ig-beat) var(--ease-out) 150ms both;
 }
 
@@ -101,6 +103,11 @@
    tracking and the case). What is left here is what belongs to THIS list: a
    label column the two rows align down, and indigo because the state it names
    is the agent's. */
+/* A long word breaks rather than pushing the line past the board's edge. */
+.ob-ig-can li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .ob-ig-can li b {
   flex: none;
   min-width: 6.5ch;

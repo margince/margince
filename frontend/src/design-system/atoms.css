@@ -40,6 +40,16 @@
 .badge > svg {
   flex: none;
 }
+/* A label whose every word is read wraps instead. It takes a box's radius, so
+   two lines leave the end letters clear of the curve; one line still reads as
+   the pill. */
+.badge-wrap,
+.badge-wrap .badge-label {
+  white-space: normal;
+}
+.badge-wrap {
+  border-radius: var(--r-sm);
+}
 /* The status tints are TRANSLUCENT by canon, so a badge painted with one
    takes its contrast from whatever it lands on: --success on --successBg read
    4.54:1 over --bgElevated and failed AA at 4.05:1 over a PanelPlate's
@@ -2285,15 +2295,8 @@ span.error-line {
   border-radius: inherit;
   background: var(--success);
 }
-/* A reading whose figure carries a tone carries it into the bar too, in the
-   SAME token: the bar is the same claim at a glance, and a bar a shade off the
-   figure above it is the card disagreeing with itself about how it went. A
-   reading with no tone is not a neutral reading, it is one that is fine, so the
-   untoned bar takes --success with the toned ones (`.stat-card-meter-fill`
-   above) — a row of identical grey tracks made the reader compare lengths to
-   find the one that is wrong, when the colour already knows. The brand accent
-   said the same thing in the colour of a primary action, which is how a bar
-   that reports came to look like one a reader could press. */
+/* The bar reads its figure's state in the base token; an untoned bar reads
+   --success, because a reading nobody toned is one that is fine. */
 .stat-card-warning ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--warning);
 }
@@ -2308,26 +2311,24 @@ span.error-line {
 }
 
 /* The four tones a reading's figure can carry, and the ONE place each is
-   spelled: the figure and its bar read the same token, so the two parts of one
-   claim cannot come out two colours. The BASE status token and not its Text
-   sibling: this is a 17-20px display figure and a 4px bar, which is the role
-   the base hue is for — the Text tokens are the ink for anything smaller. */
+   spelled. A figure is read, so it takes its state's Text ink, which clears
+   4.5:1; the bar is only seen, and keeps the base. */
 .stat-card-success {
-  color: var(--success);
+  color: var(--successText);
 }
 
 /* The reading a job has not finished writing — a figure still being counted,
    a lane the read has not reached. */
 .stat-card-info {
-  color: var(--info);
+  color: var(--infoText);
 }
 
 .stat-card-warning {
-  color: var(--warning);
+  color: var(--warningText);
 }
 
 .stat-card-danger {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The whole-tile variant: the slot itself is bad news, not just its figure —

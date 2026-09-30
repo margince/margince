@@ -62,8 +62,8 @@ var (
 )
 
 // bulkBinding hashes what a confirmation covers: who asked, the record type,
-// the verb, the new owner or the Shortlist and note, every item with its
-// version in id order, and the change an undo reverses.
+// the verb, its parameters, every item with its version in id order, and the
+// change an undo reverses.
 func bulkBinding(requestedBy string, change bulkChange) ([]byte, error) {
 	items := slices.Clone(change.items)
 	slices.SortFunc(items, func(a, b crmcontracts.BulkItem) int { return strings.Compare(a.Id.String(), b.Id.String()) })
@@ -78,9 +78,11 @@ func bulkBinding(requestedBy string, change bulkChange) ([]byte, error) {
 		OwnerID     *ids.UUID                   `json:"owner_id"`
 		ListID      *ids.UUID                   `json:"list_id,omitempty"`
 		Note        *string                     `json:"note,omitempty"`
+		TagID       *ids.UUID                   `json:"tag_id,omitempty"`
+		Task        *crmcontracts.BulkTask      `json:"task,omitempty"`
 		Items       []crmcontracts.BulkItem     `json:"items"`
 		UndoOf      *ids.UUID                   `json:"undo_of,omitempty"`
-	}{requestedBy, change.recordType, change.verb, change.ownerID, change.listID, change.note, items, undoOf})
+	}{requestedBy, change.recordType, change.verb, change.ownerID, change.listID, change.note, change.tagID, change.task, items, undoOf})
 	if err != nil {
 		return nil, fmt.Errorf("hash the previewed change: %w", err)
 	}

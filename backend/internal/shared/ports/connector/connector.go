@@ -236,8 +236,15 @@ type NamedContainer struct {
 // one would be deciding what its own mailbox keeps out.
 type ContainerLister interface {
 	// ListContainers returns the mailbox's folders or labels, in the order the
-	// provider gives them.
-	ListContainers(ctx context.Context, auth Auth) ([]NamedContainer, error)
+	// provider gives them, and whether the walk STOPPED SHORT of the whole
+	// mailbox.
+	//
+	// The bool is the honest half. A listing bounded by a page or depth budget
+	// is still worth serving — a long list that stops beats no list at all —
+	// but a picker that showed it as complete tells somebody their folder does
+	// not exist when the truth is that nobody looked. A connector that
+	// enumerates everything answers false, and means it.
+	ListContainers(ctx context.Context, auth Auth) ([]NamedContainer, bool, error)
 }
 
 // NormalizedRecord — a provider record mapped onto the clean relational

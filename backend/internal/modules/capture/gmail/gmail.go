@@ -480,14 +480,19 @@ func reportRemovals(ctx context.Context, sink connector.Sink, deleted []string) 
 // the reason Sync does it: the refresh token is this connector's to hold, and a
 // registry that opened the blob to mint a token would be a second place that
 // knows what shape it has.
-func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]connector.NamedContainer, error) {
+// Never truncated: the labels endpoint answers the whole set in one call, so
+// there is no budget for this walk to run out of.
+func (c *Connector) ListContainers(
+	ctx context.Context, auth connector.Auth,
+) ([]connector.NamedContainer, bool, error) {
 	var st authState
 	if err := json.Unmarshal(auth, &st); err != nil {
-		return nil, fmt.Errorf("gmail: malformed auth state: %w", err)
+		return nil, false, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
 	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return c.api.ListLabels(ctx, access)
+	labels, err := c.api.ListLabels(ctx, access)
+	return labels, false, err
 }

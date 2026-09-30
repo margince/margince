@@ -30,7 +30,7 @@ func TestListContainersReturnsTheAccountsMailboxesWithTheirPaths(t *testing.T) {
 	}
 	c := NewStanding().withDialer(plainDialer(addr))
 
-	got, err := c.ListContainers(context.Background(), standingAuth(t))
+	got, _, err := c.ListContainers(context.Background(), standingAuth(t))
 	if err != nil {
 		t.Fatalf("ListContainers: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestListContainersDropsMailboxesThatCannotBeOpened(t *testing.T) {
 	addr := listenNoselect(t)
 	c := NewStanding().withDialer(plainDialer(addr))
 
-	got, err := c.ListContainers(context.Background(), standingAuth(t))
+	got, _, err := c.ListContainers(context.Background(), standingAuth(t))
 	if err != nil {
 		t.Fatalf("ListContainers: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestListContainersSurfacesADialFailure(t *testing.T) {
 
 	creds := standingCreds(t)
 	creds.Password = "not-the-password"
-	_, err := c.ListContainers(context.Background(), sealCreds(t, creds))
+	_, _, err := c.ListContainers(context.Background(), sealCreds(t, creds))
 	if !errors.Is(err, ErrLoginRejected) {
 		t.Fatalf("err = %v, want the dial's refusal", err)
 	}
@@ -93,7 +93,7 @@ func TestListContainersMarksAFailedListAsUnreachable(t *testing.T) {
 	addr := listenRefusingList(t)
 	c := NewStanding().withDialer(plainDialer(addr))
 
-	_, err := c.ListContainers(context.Background(), standingAuth(t))
+	_, _, err := c.ListContainers(context.Background(), standingAuth(t))
 	if !errors.Is(err, connector.ErrUnreachable) {
 		t.Fatalf("err = %v, want it marked unreachable", err)
 	}

@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { extensionLayers, filesMatching } from "../../scripts/lib/source-tree";
+import { appStylesheets } from "../../scripts/lib/css-rules";
 import { withoutComments } from "../testing/css";
 
 // One stylesheet per class namespace.
@@ -22,16 +22,10 @@ import { withoutComments } from "../testing/css";
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const sheets = filesMatching(join(frontendRoot, "src"), /\.css$/)
-  .concat(
-    extensionLayers(join(frontendRoot, "..", "extensions")).flatMap((layer) =>
-      filesMatching(layer, /\.css$/),
-    ),
-  )
-  .map((file) => ({
-    path: relative(frontendRoot, file).replace(/\\/g, "/"),
-    file,
-  }));
+const sheets = appStylesheets(frontendRoot).map((file) => ({
+  path: relative(frontendRoot, file).replace(/\\/g, "/"),
+  file,
+}));
 
 const namespaces = [
   { prefix: "archive-", home: "screens/archive.css" },

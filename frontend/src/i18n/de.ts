@@ -3437,6 +3437,35 @@ export const de = {
     "{count} Verknüpfung, Tag oder Listenzuordnung kam nicht zurück.",
   "bulk.undoLeftBehind_other":
     "{count} Verknüpfungen, Tags oder Listenzuordnungen kamen nicht zurück.",
+  "bulk.reason.no_change_list": "Schon auf oder nicht auf der Shortlist",
+  "bulk.reason.no_change_tag": "Hat diesen Tag schon oder hat ihn nicht",
+  "bulk.tag": "Tag",
+  "bulk.tagPick": "Tag wählen",
+  "bulk.addTag": "Tag hinzufügen",
+  "bulk.removeTag": "Tag entfernen",
+  "bulk.titleAddTag": "Ausgewählte {unit} mit {tag} taggen?",
+  "bulk.titleRemoveTag": "{tag} von ausgewählten {unit} entfernen?",
+  "bulk.confirmAddTag": "Tag hinzufügen",
+  "bulk.confirmRemoveTag": "Tag entfernen",
+  "bulk.stateTagged": "Getaggt",
+  "bulk.stateNotTagged": "Nicht getaggt",
+  "bulk.createTask": "Aufgabe anlegen",
+  "bulk.taskTitle": "Eine Aufgabe je ausgewähltem Datensatz",
+  "bulk.taskSubject": "Was zu tun ist",
+  "bulk.taskDue": "Fällig am",
+  "bulk.taskAssignee": "Zuständig",
+  "bulk.taskAssigneeMe": "Du selbst",
+  "bulk.taskNext": "Vorschau",
+  "bulk.titleCreateTask":
+    "Für jeden ausgewählten Datensatz in {unit} eine Aufgabe anlegen?",
+  "bulk.confirmCreateTask": "Aufgaben anlegen",
+  "bulk.stateNewTask": "Neue Aufgabe",
+  "bulk.stateNoTask": "Keine neue Aufgabe",
+  "bulk.removeFromThisShortlist": "Von dieser Shortlist entfernen",
+  "bulk.doneLeads_one": "{count} Lead geändert.",
+  "bulk.doneLeads_other": "{count} Leads geändert.",
+  "bulk.undoneLeads_one": "{count} Lead zurückgesetzt.",
+  "bulk.undoneLeads_other": "{count} Leads zurückgesetzt.",
 
   "deal.offers": "Angebote",
   "deal.newOffer": "Neues Angebot",
@@ -9334,6 +9363,9 @@ export const de = {
   "captureExclusions.containerLabel": "Ordner oder Label",
   "captureExclusions.noContainers":
     "Dieses Postfach hat keine Ordner gemeldet. Verbinde ein Postfach mit Ordnern, oder schließe Absender nach Adresse oder Domain aus.",
+  "captureExclusions.containersPartial": "Diese Ordnerliste ist unvollständig",
+  "captureExclusions.containersPartialBody":
+    "Dein Postfach hat mehr Ordner, als diese Liste lesen konnte. Ein gesuchter Ordner fehlt möglicherweise. Gib seinen Namen unten ein, oder schließe Absender per Adresse oder Domain aus.",
   "captureExclusions.containersUnreadable":
     "Deine Ordner konnten nicht gelesen werden",
   "captureExclusions.containersUnreadableBody":
@@ -10328,7 +10360,18 @@ export const de = {
     "Projektlisten zeigen ihre Mitglieder in der Projektliste.",
   "lists.members.whyColumn": "Warum",
   "lists.members.why": "Warum?",
-  "lists.members.more": "Mehr anzeigen",
+  "lists.members.selectAll_one": "{count} Mitglied auswählen",
+  "lists.members.selectAll_other": "Alle {count} Mitglieder auswählen",
+  "lists.members.selectionFullTitle": "Die Auswahl ist voll",
+  "lists.members.selectionFull_one":
+    "Eine Änderung umfasst höchstens {count} Mitglied, weitere lassen sich nicht auswählen. Entferne zuerst eines, um ein anderes auszuwählen.",
+  "lists.members.selectionFull_other":
+    "Eine Änderung umfasst höchstens {count} Mitglieder, weitere lassen sich nicht auswählen. Entferne zuerst eines, um ein anderes auszuwählen.",
+  "lists.members.selectAllCappedTitle": "Nicht alle Mitglieder ausgewählt",
+  "lists.members.selectAllCapped_one":
+    "Nur {count} Mitglied lässt sich auf einmal auswählen. Bearbeite es, dann wähle den Rest.",
+  "lists.members.selectAllCapped_other":
+    "Nur die ersten {count} Mitglieder lassen sich auf einmal auswählen. Bearbeite diese, dann wähle den Rest.",
   "lists.history.title": "Was sich ge\u00e4ndert hat",
   "lists.history.empty": "Bisher hat sich nichts ge\u00e4ndert.",
   "lists.history.loading": "Verlauf wird geladen",

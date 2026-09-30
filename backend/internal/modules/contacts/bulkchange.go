@@ -84,3 +84,27 @@ func (s *Store) ReassignCompanyTx(ctx context.Context, tx pgx.Tx, id ids.Company
 	_, err := s.updateCompanyInTx(ctx, tx, id, UpdateCompanyInput{OwnerID: &owner, IfVersion: ifVersion}, nil)
 	return err
 }
+
+// LockLeadForBulkTx is LockContactForBulkTx for a lead.
+func (s *Store) LockLeadForBulkTx(ctx context.Context, tx pgx.Tx, id ids.LeadID) (BulkRow, error) {
+	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
+		return BulkRow{}, err
+	}
+	// A lead may carry only an address, so its label falls back to the email
+	// and then to nothing rather than scanning a NULL into the label.
+	return lockForBulk(ctx, tx, "lead", id.UUID,
+		`SELECT COALESCE(NULLIF(btrim(full_name), ''), email::text, ''), version, owner_id
+		   FROM lead WHERE id = $1 AND archived_at IS NULL FOR UPDATE`)
+}
+
+// ReassignLeadTx hands one lead to owner, conditioned on ifVersion — the write
+// UpdateLead makes when owner_id is the only field named, so an ownerless lead
+// in the queue can be handed on exactly as a single assignment hands it on.
+// An owner-only patch touches no custom field, so no catalog is needed.
+func (s *Store) ReassignLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, owner ids.UserID, ifVersion *int64) error {
+	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+		return err
+	}
+	_, err := s.updateLeadTx(ctx, tx, id, UpdateLeadInput{OwnerID: &owner, IfVersion: ifVersion}, nil)
+	return err
+}

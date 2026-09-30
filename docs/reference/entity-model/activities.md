@@ -115,6 +115,8 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `activity_meeting_no_overlap` — `gist (host_user_id, tsrange(timezone('UTC', occurred_at), (timezone('UTC', occurred_at) + (( CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)::double precision * '00:00:01'::interval)), '[)')) WHERE ((kind = 'meeting') AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled'))`
 - `activity_pkey` — `unique, btree (id)`
+- `idx_activity_answer_mail` — `btree (counterparty_email, kind, occurred_at) WHERE ((direction = 'outbound') AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
+- `idx_activity_answer_touch` — `btree (id, occurred_at) WHERE (((kind = 'call') OR ((kind = 'meeting') AND (meeting_status = 'held'))) AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
 - `idx_activity_channel_thread` — `btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)`
 - `idx_activity_counterparty_email` — `btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)`
 - `idx_activity_direction` — `btree (direction, occurred_at DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))`

@@ -369,14 +369,18 @@ func boundedWindow(requested int) uint32 {
 // \Noselect mailboxes are dropped. They are hierarchy nodes rather than places
 // mail sits — a folder that cannot be opened cannot hold a message to exclude —
 // and offering one gives somebody a choice that excludes nothing.
-func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]connector.NamedContainer, error) {
+// Never truncated: LIST "" "*" is one command for the whole account, so this
+// walk has no budget to run out of.
+func (c *Connector) ListContainers(
+	ctx context.Context, auth connector.Auth,
+) ([]connector.NamedContainer, bool, error) {
 	var creds Credentials
 	if err := json.Unmarshal(auth, &creds); err != nil {
-		return nil, fmt.Errorf("imap: malformed auth bundle: %w", err)
+		return nil, false, fmt.Errorf("imap: malformed auth bundle: %w", err)
 	}
 	client, _, err := c.dial(ctx, creds)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	//craft:ignore swallowed-errors best-effort close of the listing session — the LIST below answered the question
 	defer func() { _ = client.Close() }()
@@ -386,7 +390,7 @@ func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]
 		// Joined with ErrUnreachable like every other failed command on this
 		// transport: a LIST that did not answer is the server not answering,
 		// and the caller tells "we could not ask" apart from "no folders".
-		return nil, fmt.Errorf("imap: listing the account's mailboxes: %w",
+		return nil, false, fmt.Errorf("imap: listing the account's mailboxes: %w",
 			errors.Join(ErrUnreachable, err))
 	}
 	out := make([]connector.NamedContainer, 0, len(mailboxes))
@@ -399,5 +403,5 @@ func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]
 		// its path, so there is no opaque token to hide behind a label.
 		out = append(out, connector.NamedContainer{ID: m.Mailbox, Name: m.Mailbox})
 	}
-	return out, nil
+	return out, false, nil
 }
