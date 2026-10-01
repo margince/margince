@@ -488,8 +488,9 @@ const (
 	//
 	// 113: consent.revokeOverrideAdmittedTx asks whether the vouch being revoked
 	// belongs to the contact named or to the survivor a merge folded it into. A
-	// vouch chain spans records by construction (a re-vouch after a merge
-	// supersedes a row filed under the predecessor), so the lookup reaches
+	// vouch chain spans records by construction (a merge copies the vouch
+	// onto the survivor and leaves the original on the predecessor, linked by
+	// carried_from), so the lookup reaches
 	// contact_id across several rows and no single row scope can bound it.
 	// auth.EnsureRetractable has already been taken on both the named contact
 	// and its survivor in the same transaction, so the caller was shown to reach
