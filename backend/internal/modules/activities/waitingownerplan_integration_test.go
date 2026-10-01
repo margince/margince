@@ -67,7 +67,7 @@ func TestTheWaitingQueryKeysEachReplyOwnerLookupOnItsLink(t *testing.T) {
 	var plans []struct {
 		Plan planNode `json:"Plan"` //nolint:tagliatelle // fixed by the server's plan format
 	}
-	if err := json.Unmarshal([]byte(planUnderProductionCosts(t, e.pool, sent)), &plans); err != nil || len(plans) != 1 {
+	if err := json.Unmarshal([]byte(planWithoutKeyedJoins(t, e.pool, sent)), &plans); err != nil || len(plans) != 1 {
 		t.Fatalf("reading the plan: %v (%d plans)", err, len(plans))
 	}
 	owners := map[string]string{
@@ -87,13 +87,13 @@ func TestTheWaitingQueryKeysEachReplyOwnerLookupOnItsLink(t *testing.T) {
 	}
 }
 
-// planUnderProductionCosts plans the statement as production's planner saw it.
-// An empty queue makes every join cheap, so the planner is told what
-// production's misestimate told it: index probes are dear and hash or merge
-// joins unavailable. A plain join over an owner table then leaves the link
-// comparison in a join filter; only a lookup keyed on its link carries it into
-// its own scan.
-func planUnderProductionCosts(t *testing.T, pool *pgxpool.Pool, sent *waitingStatement) string {
+// planWithoutKeyedJoins plans the statement with every way to key a join taken
+// away: no index or bitmap probe, no hash or merge join. A plain join over an
+// owner table can then only leave the link comparison in a join filter, which
+// is the rescan production's misestimate chose; only a lateral keyed on its
+// link still carries the comparison into its own scan. Neither depends on the
+// seeded rows or the statistics.
+func planWithoutKeyedJoins(t *testing.T, pool *pgxpool.Pool, sent *waitingStatement) string {
 	t.Helper()
 	ctx := context.Background()
 	tx, err := pool.Begin(ctx)
@@ -106,7 +106,8 @@ func planUnderProductionCosts(t *testing.T, pool *pgxpool.Pool, sent *waitingSta
 		}
 	}()
 	if _, err := tx.Exec(ctx, `SET LOCAL enable_hashjoin = off; SET LOCAL enable_mergejoin = off;
-		SET LOCAL enable_bitmapscan = off; SET LOCAL random_page_cost = 1000`); err != nil {
+		SET LOCAL enable_indexscan = off; SET LOCAL enable_indexonlyscan = off;
+		SET LOCAL enable_bitmapscan = off`); err != nil {
 		t.Fatalf("setting the planner's costs: %v", err)
 	}
 	var raw string
