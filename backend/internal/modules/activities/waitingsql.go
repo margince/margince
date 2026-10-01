@@ -156,8 +156,8 @@ var waitingRepliesSQL = `
 	  LEFT JOIN deal openDeal ON openDeal.id = wl.deal_id
 	                         AND %[8]s
 	  -- The ownership walk, all four off the gated link join above. Each is a
-	  -- primary-key probe behind OFFSET 0: as plain joins the planner, under-
-	  -- counting the candidates, rescanned whole tables once per row.
+	  -- lateral keyed on its link, fenced by OFFSET 0: flattened into joins, the
+	  -- planner under-counted the candidates and rescanned whole tables per row.
 	  LEFT JOIN LATERAL (SELECT ownerDeal.id, ownerDeal.owner_id FROM deal ownerDeal
 	                    WHERE ownerDeal.id = wl.deal_id OFFSET 0) ownerDeal ON true
 	  LEFT JOIN LATERAL (SELECT ownerLead.id, ownerLead.owner_id FROM lead ownerLead

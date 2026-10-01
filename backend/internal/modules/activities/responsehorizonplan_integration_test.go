@@ -34,6 +34,7 @@ type planNode struct {
 	Alias     string     `json:"Alias"`
 	IndexName string     `json:"Index Name"`
 	IndexCond string     `json:"Index Cond"`
+	Filter    string     `json:"Filter"`
 	Plans     []planNode `json:"Plans"`
 }
 
