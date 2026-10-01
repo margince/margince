@@ -1,11 +1,11 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { BriefScreen } from "./brief";
 import { readingsDay } from "./brief.fixtures";
-import { OvernightPanel } from "./brief.rail.overnight";
+import { OvernightDigest } from "./brief.rail.overnight";
 import { fleetDeal, jsonResponse, render, stubApi } from "./brief.testkit";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -113,6 +113,37 @@ describe("BriefScreen — the context rail", () => {
     ).toBeTruthy();
     await user.click(screen.getByText("Duplicates to review"));
     expect(window.location.hash).toBe("#/worklist");
+  });
+
+  it("draws the night inside Home's receipt rather than beside it", async () => {
+    stubApi({
+      "GET /digest": () => jsonResponse({ ...digestBase, connectors: [] }),
+    });
+    render(<BriefScreen />);
+
+    const receipt = await screen.findByRole("region", {
+      name: "Since your last brief",
+    });
+    expect(
+      await within(receipt).findByRole("heading", { name: "Overnight" }),
+    ).toBeTruthy();
+    expect(within(receipt).getByText("Emails synced")).toBeTruthy();
+  });
+
+  it("names the night over a digest read that failed", async () => {
+    stubApi({
+      "GET /digest": () =>
+        jsonResponse({ title: "Server error", code: "internal" }, 500),
+    });
+    render(<BriefScreen />);
+
+    const receipt = await screen.findByRole("region", {
+      name: "Since your last brief",
+    });
+    // Not a bare failure at the foot of the receipt: it says what failed.
+    expect(
+      await within(receipt).findByRole("heading", { name: "Overnight" }),
+    ).toBeTruthy();
   });
 
   // /digest is a specified operation an installation may not implement yet, so
@@ -285,10 +316,10 @@ function taskRow(id: string, title: string): WorklistItem {
   };
 }
 
-describe("the overnight panel with no digest", () => {
+describe("the overnight group with no digest", () => {
   // /v1/digest answers 404 before the first nightly run and 501 where the
   // installation does not implement it. Both mean the same thing to a reader,
-  // and the panel draws NOTHING for either — not a row of zeros, which a reader
+  // and the group draws NOTHING for either — not a row of zeros, which a reader
   // cannot tell from a real count, and not a skeleton, which never resolves.
   for (const [status, code] of [
     [404, "no_digest_yet"],
@@ -298,7 +329,7 @@ describe("the overnight panel with no digest", () => {
       stubApi({
         "GET /digest": () => jsonResponse({ title: "Absent", code }, status),
       });
-      const { container } = render(<OvernightPanel />);
+      const { container } = render(<OvernightDigest />);
 
       await waitFor(() =>
         expect(container.querySelector("[aria-busy='true']")).toBeNull(),

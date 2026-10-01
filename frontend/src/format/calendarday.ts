@@ -96,6 +96,13 @@ export function calendarDay(at: Date, zone: string): string {
   return `${year}-${month}-${day}`;
 }
 
+// Whether two instants share a day on `zone`'s wall clock. Asked in the zone
+// the row is drawn in, never the runner's: a meeting at 23:30 in Berlin, read
+// on a machine set to UTC, is still tonight's meeting to the reader.
+export function sameCalendarDay(a: Date, b: Date, zone: string): boolean {
+  return calendarDay(a, zone) === calendarDay(b, zone);
+}
+
 // The reader's own today, for a form whose date box opens on it and refuses
 // anything earlier: the sheets it feeds read their effective dates against
 // the reader's calendar rather than UTC's, so the floor is read the same way.

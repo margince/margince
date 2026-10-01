@@ -4,7 +4,8 @@ export { sourceName } from "./worklist.sources";
 
 import { ENTITY, recordRoute } from "../app/entity";
 import { routeHash } from "../app/router";
-import { calendarDay, middayInstant } from "../format/calendarday";
+import { middayInstant, sameCalendarDay } from "../format/calendarday";
+import { floorFigure } from "../format/figure";
 import {
   formatDate,
   formatDateTime,
@@ -476,22 +477,9 @@ function momentText(
   zone: string,
   now: Date,
 ): string {
-  return sameDayInZone(dueAt, now, zone)
+  return sameCalendarDay(new Date(dueAt), now, zone)
     ? formatTimeOfDay(dueAt, locale, zone)
     : formatDateTime(dueAt, locale, zone);
-}
-
-// Whether an instant falls on the reader's own calendar day.
-//
-// Through `calendarDay`, which already answers "which day is this, there" — a
-// second formatter spelled here would be a second answer to that question, and
-// the two would drift the first time either changed.
-//
-// Compared in the VIEWER's zone rather than the runner's, because the whole row
-// is drawn in that zone: a meeting at 23:30 in Berlin, read on a machine set to
-// UTC, is still tonight's meeting to the reader reading it.
-function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
-  return calendarDay(new Date(utcIso), zone) === calendarDay(now, zone);
 }
 
 // Where the row's suggested step leads.
@@ -660,12 +648,8 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     return item.subject.label;
   }
   if (item.batch) {
-    // "200+" where the read stopped at its own bound. A floor printed as a
-    // total is a wrong number rather than a bounded one, and the reader has no
-    // way to tell the two apart.
-    const count = item.batch.at_least
-      ? `${formatNumber(item.batch.count, locale)}+`
-      : formatNumber(item.batch.count, locale);
+    const { count: size, at_least } = item.batch;
+    const count = floorFigure(formatNumber(size, locale), !!at_least, size);
     // An incident names WHAT is broken; a hygiene group names its kind.
     //
     // From `label`, never from `cause`. The cause is the identity the group was

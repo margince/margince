@@ -21,7 +21,7 @@ import { BriefGlance } from "./brief.glance";
 import { PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
-import { OvernightPanel } from "./brief.rail.overnight";
+import { OvernightDigest } from "./brief.rail.overnight";
 import { BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefTeamBoard } from "./brief.teamboard";
@@ -257,10 +257,9 @@ function PersonalMorning({
           </p>
         </div>
       )}
-      {/* THE FOLLOW-THROUGH under it, in two columns: what was done for the
-          reader and the day's notices on the left, and on the right the
-          context the work is read against — the schedule as the day's line,
-          and the night. */}
+      {/* THE FOLLOW-THROUGH under it, in two columns: the day's notices and
+          what happened while the reader was away on the left, and on the right
+          the schedule the work is read against. */}
       <PageZones
         shape="aside"
         className="brief-followthrough"
@@ -269,22 +268,16 @@ function PersonalMorning({
         asideLabel={t("brief.rail")}
         main={
           <>
-            <BriefChanges />
             <BriefUpdates day={day} />
-            {/* THE RECEIPT, last and open. Everything above asks the reader for
-                something; this asks for nothing, and it is the reason the acts
-                above it are safe to take at all. It goes last because a reader
-                opens this page to find what to do next and a list of what is
-                already finished answers a different question. */}
-            <MagicPanel />
+            {/* THE RECEIPT, last and open, and the page's only one: the changes
+                still waiting for a word, what the machinery did and the night's
+                digest, in one card. It goes last because a reader opens this
+                page to find what to do next, and a list of what is already
+                finished answers a different question. */}
+            <MagicPanel lead={<BriefChanges />} foot={<OvernightDigest />} />
           </>
         }
-        aside={
-          <>
-            <SchedulePanel day={day} state={state} />
-            <OvernightPanel />
-          </>
-        }
+        aside={<SchedulePanel day={day} state={state} />}
       />
       {context && opensActivity ? (
         <TaskDetailModal
