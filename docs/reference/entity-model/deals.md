@@ -434,7 +434,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_stage_history_deal_id_id_key` — `unique, btree (deal_id, id)`
 - `deal_stage_history_pkey` — `unique, btree (id)`
 - `idx_deal_stage_history_changed` — `btree (changed_at)`
-- `idx_dsh_deal` — `btree (deal_id, changed_at)`
 - `reporting_stage_events` — `btree (deal_id, changed_at, id)`
 
 ## deal_suggestion

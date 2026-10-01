@@ -131,7 +131,6 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 **Indexes**
 
 - `idx_list_member_entity` — `btree (entity_type, entity_id)`
-- `idx_list_member_list` — `btree (list_id)`
 - `list_member_pkey` — `unique, btree (id)`
 - `list_member_unique` — `unique, btree (list_id, entity_type, entity_id)`
 
@@ -324,6 +323,5 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 **Indexes**
 
 - `idx_taggable_entity` — `btree (entity_type, entity_id)`
-- `idx_taggable_tag` — `btree (tag_id)`
 - `taggable_pkey` — `unique, btree (id)`
 - `taggable_unique` — `unique, btree (tag_id, entity_type, entity_id)`

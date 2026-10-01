@@ -452,7 +452,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `idx_record_grant_record` — `btree (record_type, record_id)`
 - `idx_record_grant_subject` — `btree (subject_type, subject_id)`
 - `record_grant_pkey` — `unique, btree (id)`
 - `record_grant_unique` — `unique, btree (record_type, record_id, subject_type, subject_id)`
@@ -633,7 +632,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `idx_team_membership_team` — `btree (team_id)`
 - `idx_team_membership_user` — `btree (user_id)`
 - `team_membership_pkey` — `unique, btree (id)`
 - `team_membership_unique` — `unique, btree (team_id, user_id)`

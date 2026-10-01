@@ -226,7 +226,6 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_counterparty_hold_pkey` — `unique, btree (id)`
-- `capture_counterparty_hold_user_idx` — `btree (user_id, kind)`
 - `capture_counterparty_hold_user_value_key` — `unique, btree (user_id, kind, value)`
 
 ## capture_digest

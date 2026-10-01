@@ -1476,7 +1476,6 @@ public.capture_counterparty_hold.kind text NOT NULL gen=- def=-
 public.capture_counterparty_hold.user_id uuid NOT NULL gen=- def=-
 public.capture_counterparty_hold.value text NOT NULL gen=- def=-
 public.capture_counterparty_hold_pkey CREATE UNIQUE INDEX capture_counterparty_hold_pkey ON public.capture_counterparty_hold USING btree (id)
-public.capture_counterparty_hold_user_idx CREATE INDEX capture_counterparty_hold_user_idx ON public.capture_counterparty_hold USING btree (user_id, kind)
 public.capture_counterparty_hold_user_value_key CREATE UNIQUE INDEX capture_counterparty_hold_user_value_key ON public.capture_counterparty_hold USING btree (user_id, kind, value)
 public.capture_digest acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_digest.capture_digest_pkey PRIMARY KEY (id)
@@ -4038,7 +4037,6 @@ public.idx_agent_task_passport CREATE INDEX idx_agent_task_passport ON public.ag
 public.idx_ai_call_agent_run CREATE INDEX idx_ai_call_agent_run ON public.ai_call USING btree (agent_run_id)
 public.idx_ai_call_correlation CREATE INDEX idx_ai_call_correlation ON public.ai_call USING btree (correlation_id)
 public.idx_ai_call_occurred CREATE INDEX idx_ai_call_occurred ON public.ai_call USING btree (occurred_at DESC)
-public.idx_ai_feedback_subject CREATE INDEX idx_ai_feedback_subject ON public.ai_feedback USING btree (subject_type, subject_id)
 public.idx_alink_company CREATE INDEX idx_alink_company ON public.activity_link USING btree (company_id) WHERE (company_id IS NOT NULL)
 public.idx_alink_contact CREATE INDEX idx_alink_contact ON public.activity_link USING btree (contact_id) WHERE (contact_id IS NOT NULL)
 public.idx_alink_deal CREATE INDEX idx_alink_deal ON public.activity_link USING btree (deal_id) WHERE (deal_id IS NOT NULL)
@@ -4143,10 +4141,8 @@ public.idx_contact_name_keyset_desc CREATE INDEX idx_contact_name_keyset_desc ON
 public.idx_contact_name_trgm CREATE INDEX idx_contact_name_trgm ON public.contact USING gin (f_fold_apostrophes(lower(full_name)) gin_trgm_ops)
 public.idx_contact_owner CREATE INDEX idx_contact_owner ON public.contact USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_contact_phone_contact CREATE INDEX idx_contact_phone_contact ON public.contact_phone USING btree (contact_id)
-public.idx_contact_profile_field CREATE INDEX idx_contact_profile_field ON public.contact_profile_field USING btree (contact_id)
 public.idx_contact_search CREATE INDEX idx_contact_search ON public.contact USING gin (search_tsv)
 public.idx_contact_signature_enrich_state_activity CREATE INDEX idx_contact_signature_enrich_state_activity ON public.contact_signature_enrich_state USING btree (activity_id)
-public.idx_contact_social_contact CREATE INDEX idx_contact_social_contact ON public.contact_social USING btree (contact_id)
 public.idx_contact_updated_keyset CREATE INDEX idx_contact_updated_keyset ON public.contact USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_conversation_claim_contact CREATE INDEX idx_conversation_claim_contact ON public.conversation_claim USING btree (contact_id)
 public.idx_conversation_claim_source_activity CREATE INDEX idx_conversation_claim_source_activity ON public.conversation_claim USING btree (source_activity_id)
@@ -4203,14 +4199,12 @@ public.idx_dedupe_candidate_right_contact CREATE INDEX idx_dedupe_candidate_righ
 public.idx_dedupe_candidate_right_lead CREATE INDEX idx_dedupe_candidate_right_lead ON public.dedupe_candidate USING btree (right_lead_id)
 public.idx_domain_disposition_admission CREATE INDEX idx_domain_disposition_admission ON public.company_domain_disposition USING btree (admission_at DESC) WHERE (admission IS NOT NULL)
 public.idx_domain_disposition_unevidenced CREATE INDEX idx_domain_disposition_unevidenced ON public.company_domain_disposition USING btree (updated_at DESC) WHERE (pending_reason = 'unevidenced'::text)
-public.idx_dsh_deal CREATE INDEX idx_dsh_deal ON public.deal_stage_history USING btree (deal_id, changed_at)
 public.idx_dsr_open CREATE INDEX idx_dsr_open ON public.data_subject_request USING btree (due_at) WHERE (status = ANY (ARRAY['open'::text, 'in_progress'::text]))
 public.idx_event_outbox_unpublished CREATE INDEX idx_event_outbox_unpublished ON public.event_outbox USING btree (seq) WHERE (published_at IS NULL)
 public.idx_field_provenance_object CREATE INDEX idx_field_provenance_object ON public.field_provenance USING btree (object_type, object_id, field_name, captured_at DESC)
 public.idx_forecast_call_period CREATE INDEX idx_forecast_call_period ON public.forecast_call USING btree (period_start, period_end, scope_kind, scope_id)
 public.idx_forecast_contribution_audit CREATE INDEX idx_forecast_contribution_audit ON public.forecast_contribution USING btree (audit_id) WHERE (audit_id IS NOT NULL)
 public.idx_forecast_contribution_deal CREATE INDEX idx_forecast_contribution_deal ON public.forecast_contribution USING btree (deal_id, created_at DESC)
-public.idx_forecast_contribution_snapshot CREATE INDEX idx_forecast_contribution_snapshot ON public.forecast_contribution USING btree (snapshot_id)
 public.idx_forecast_snapshot_context CREATE INDEX idx_forecast_snapshot_context ON public.forecast_snapshot USING btree (scope_kind, scope_id, pipeline_id, taken_at DESC)
 public.idx_forecast_snapshot_period CREATE INDEX idx_forecast_snapshot_period ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, taken_at DESC)
 public.idx_graph_contact_edge_b CREATE INDEX idx_graph_contact_edge_b ON public.graph_contact_edge USING btree (contact_b)
@@ -4243,12 +4237,10 @@ public.idx_list_live_member_entity CREATE INDEX idx_list_live_member_entity ON p
 public.idx_list_member_entity CREATE INDEX idx_list_member_entity ON public.list_member USING btree (entity_type, entity_id)
 public.idx_list_member_event_entity CREATE INDEX idx_list_member_event_entity ON public.list_member_event USING btree (entity_type, entity_id)
 public.idx_list_member_event_list CREATE INDEX idx_list_member_event_list ON public.list_member_event USING btree (list_id, occurred_at DESC, id DESC)
-public.idx_list_member_list CREATE INDEX idx_list_member_list ON public.list_member USING btree (list_id)
 public.idx_list_steward CREATE INDEX idx_list_steward ON public.list USING btree (steward_id)
 public.idx_list_visit_list CREATE INDEX idx_list_visit_list ON public.list_visit USING btree (list_id)
 public.idx_mfa_challenge_spent_expires CREATE INDEX idx_mfa_challenge_spent_expires ON public.mfa_challenge_spent USING btree (expires_at)
 public.idx_mfa_recovery_code_user CREATE INDEX idx_mfa_recovery_code_user ON public.mfa_recovery_code USING btree (user_id)
-public.idx_notice_recipient_user CREATE INDEX idx_notice_recipient_user ON public.notice USING btree (recipient_user_id)
 public.idx_oauth_authorization_code_user CREATE INDEX idx_oauth_authorization_code_user ON public.oauth_authorization_code USING btree (user_id)
 public.idx_oauth_grant_user CREATE INDEX idx_oauth_grant_user ON public.oauth_grant USING btree (user_id)
 public.idx_offer_deal CREATE INDEX idx_offer_deal ON public.offer USING btree (deal_id, revision DESC) WHERE (archived_at IS NULL)
@@ -4276,7 +4268,6 @@ public.idx_record_assignment_deal CREATE INDEX idx_record_assignment_deal ON pub
 public.idx_record_assignment_project CREATE INDEX idx_record_assignment_project ON public.record_assignment USING btree (project_id)
 public.idx_record_assignment_team CREATE INDEX idx_record_assignment_team ON public.record_assignment USING btree (team_id) WHERE ((team_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_record_assignment_user CREATE INDEX idx_record_assignment_user ON public.record_assignment USING btree (user_id) WHERE ((user_id IS NOT NULL) AND (archived_at IS NULL))
-public.idx_record_grant_record CREATE INDEX idx_record_grant_record ON public.record_grant USING btree (record_type, record_id)
 public.idx_record_grant_subject CREATE INDEX idx_record_grant_subject ON public.record_grant USING btree (subject_type, subject_id)
 public.idx_rel_employer_contacts CREATE INDEX idx_rel_employer_contacts ON public.relationship USING btree (company_id, contact_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL))
 public.idx_rel_history_company CREATE INDEX idx_rel_history_company ON public.relationship USING btree (company_id)
@@ -4319,8 +4310,6 @@ public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_l
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
 public.idx_tag_search CREATE INDEX idx_tag_search ON public.tag USING gin (search_tsv)
 public.idx_taggable_entity CREATE INDEX idx_taggable_entity ON public.taggable USING btree (entity_type, entity_id)
-public.idx_taggable_tag CREATE INDEX idx_taggable_tag ON public.taggable USING btree (tag_id)
-public.idx_team_membership_team CREATE INDEX idx_team_membership_team ON public.team_membership USING btree (team_id)
 public.idx_team_membership_user CREATE INDEX idx_team_membership_user ON public.team_membership USING btree (user_id)
 public.idx_team_weekly_review_rep_review CREATE INDEX idx_team_weekly_review_rep_review ON public.team_weekly_review_rep USING btree (team_weekly_review_id, display_name)
 public.idx_team_weekly_review_team CREATE INDEX idx_team_weekly_review_team ON public.team_weekly_review USING btree (team_id, local_week_start DESC)
@@ -4335,7 +4324,6 @@ public.idx_weekly_plan_commitment_help CREATE INDEX idx_weekly_plan_commitment_h
 public.idx_weekly_plan_commitment_plan CREATE INDEX idx_weekly_plan_commitment_plan ON public.weekly_plan_commitment USING btree (plan_id, "position", created_at)
 public.idx_weekly_plan_owner CREATE INDEX idx_weekly_plan_owner ON public.weekly_plan USING btree (owner_id, local_week_start DESC)
 public.idx_weekly_review_deal_review CREATE INDEX idx_weekly_review_deal_review ON public.weekly_review_deal USING btree (weekly_review_id, occurred_at DESC)
-public.idx_weekly_review_driver_bar CREATE INDEX idx_weekly_review_driver_bar ON public.weekly_review_driver USING btree (weekly_review_id, period_kind, bar)
 public.idx_weekly_review_user CREATE INDEX idx_weekly_review_user ON public.weekly_review USING btree (user_id, local_week_start DESC)
 public.idx_withdrawal_credential_contact CREATE INDEX idx_withdrawal_credential_contact ON public.withdrawal_credential USING btree (contact_id) WHERE (contact_id IS NOT NULL)
 public.idx_withdrawal_credential_lead CREATE INDEX idx_withdrawal_credential_lead ON public.withdrawal_credential USING btree (lead_id) WHERE (lead_id IS NOT NULL)
@@ -6909,7 +6897,6 @@ public.voice_corpus_source.weight numeric(4,3) NOT NULL gen=- def=1.0
 public.voice_corpus_source.word_count integer NOT NULL gen=- def=-
 public.voice_corpus_source_manifest CREATE INDEX voice_corpus_source_manifest ON public.voice_corpus_source USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.voice_corpus_source_pkey CREATE UNIQUE INDEX voice_corpus_source_pkey ON public.voice_corpus_source USING btree (id)
-public.voice_corpus_source_profile_fk CREATE INDEX voice_corpus_source_profile_fk ON public.voice_corpus_source USING btree (voice_profile_id)
 public.voice_learning_signal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.voice_learning_signal.archived_at timestamp with time zone gen=- def=-
 public.voice_learning_signal.captured_by text NOT NULL gen=- def=-
@@ -6990,7 +6977,6 @@ public.voice_profile_delta.voice_profile_delta_to_version_check CHECK ((to_versi
 public.voice_profile_delta.voice_profile_id uuid NOT NULL gen=- def=-
 public.voice_profile_delta_history CREATE INDEX voice_profile_delta_history ON public.voice_profile_delta USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.voice_profile_delta_pkey CREATE UNIQUE INDEX voice_profile_delta_pkey ON public.voice_profile_delta USING btree (id)
-public.voice_profile_delta_profile_fk CREATE INDEX voice_profile_delta_profile_fk ON public.voice_profile_delta USING btree (voice_profile_id)
 public.voice_profile_owner_fk CREATE INDEX voice_profile_owner_fk ON public.voice_profile USING btree (owner_id) WHERE (owner_id IS NOT NULL)
 public.voice_profile_pkey CREATE UNIQUE INDEX voice_profile_pkey ON public.voice_profile USING btree (id)
 public.voice_profile_team_fk CREATE INDEX voice_profile_team_fk ON public.voice_profile USING btree (team_id) WHERE (team_id IS NOT NULL)
@@ -7031,7 +7017,6 @@ public.voice_profile_version.voice_profile_version_status_check CHECK ((status =
 public.voice_profile_version_history CREATE INDEX voice_profile_version_history ON public.voice_profile_version USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.voice_profile_version_one_active CREATE UNIQUE INDEX voice_profile_version_one_active ON public.voice_profile_version USING btree (voice_profile_id) WHERE (status = 'active'::text)
 public.voice_profile_version_pkey CREATE UNIQUE INDEX voice_profile_version_pkey ON public.voice_profile_version USING btree (id)
-public.voice_profile_version_profile_fk CREATE INDEX voice_profile_version_profile_fk ON public.voice_profile_version USING btree (voice_profile_id)
 public.webhook_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.webhook_delivery.attempts integer NOT NULL gen=- def=0
 public.webhook_delivery.created_at timestamp with time zone NOT NULL gen=- def=now()

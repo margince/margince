@@ -695,7 +695,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `contact_profile_field_pkey` — `unique, btree (id)`
-- `idx_contact_profile_field` — `btree (contact_id)`
 - `uq_contact_profile_field` — `unique, btree (contact_id, field, value_key)`
 
 **Triggers**
@@ -794,7 +793,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_social_contact_id_platform_key` — `unique, btree (contact_id, platform)`
 - `contact_social_pkey` — `unique, btree (id)`
-- `idx_contact_social_contact` — `btree (contact_id)`
 
 ## conversation_claim
 

@@ -42,7 +42,6 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 **Indexes**
 
-- `idx_notice_recipient_user` — `btree (recipient_user_id)`
 - `notice_history` — `btree (recipient_user_id, created_at DESC, id DESC)`
 - `notice_pkey` — `unique, btree (id)`
 - `notice_unread` — `btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)`

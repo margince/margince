@@ -992,7 +992,6 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
-- `idx_weekly_review_driver_bar` — `btree (weekly_review_id, period_kind, bar)`
 - `uq_weekly_review_driver_deal` — `unique, btree (weekly_review_id, period_kind, bar, deal_id)`
 - `weekly_review_driver_pkey` — `unique, btree (id)`
 
