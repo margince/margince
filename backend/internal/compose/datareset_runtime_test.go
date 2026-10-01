@@ -218,12 +218,11 @@ func (s *pauseWatchingStore) DeletePrefix(ctx context.Context, prefix string) (i
 	return s.Store.DeletePrefix(ctx, prefix)
 }
 
-// TestTheObjectSweepReachesOfferPDFsKeyedBeforeTheWorkspacePrefix: an offer PDF
-// rendered under the old offers/<ws>/... shape is the workspace's bytes as much
-// as one under <ws>/..., and a reset that left it would leave an object whose
-// only reference it just deleted. A sibling tenant's objects, in either shape,
-// stay.
-func TestTheObjectSweepReachesOfferPDFsKeyedBeforeTheWorkspacePrefix(t *testing.T) {
+// TestTheObjectSweepReachesOfferPDFsKeyedOutsideTheWorkspacePrefix: an offer PDF
+// keyed offers/<ws>/... is the workspace's bytes as much as one under <ws>/...,
+// and a reset that left it would leave an object whose only reference it just
+// deleted. A sibling tenant's objects, in either shape, stay.
+func TestTheObjectSweepReachesOfferPDFsKeyedOutsideTheWorkspacePrefix(t *testing.T) {
 	ctx := context.Background()
 	ws, sibling := ids.NewV7(), ids.NewV7()
 	store := blobstore.NewMemory()

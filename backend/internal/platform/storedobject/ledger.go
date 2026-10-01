@@ -37,8 +37,8 @@ type Column struct {
 	Name  string
 }
 
-// Orphan is one key the reap may delete: provisional past its kind's grace, and
-// named by none of its kind's columns.
+// Orphan is one key the reap may delete: provisional past its kind's grace (or
+// already condemned), and named by none of its kind's columns.
 type Orphan struct {
 	StorageKey string
 	RecordedAt time.Time
@@ -90,7 +90,9 @@ func validate(refs []Reference) error {
 	return nil
 }
 
-// Orphans answers the keys the reap may delete, oldest first.
+// Orphans answers the keys the reap may delete, oldest first. It is a listing,
+// not a decision: Condemn re-asks the same question of each key under its row
+// lock before anything is deleted.
 //
 // THE COLUMN JOINS ARE THE SECOND LOCK, not the first. The first is that a key
 // is in the ledger at all — nothing but a writer's own declaration puts one
@@ -127,20 +129,76 @@ func (l *Ledger) Orphans(ctx context.Context, now time.Time, limit int) ([]Orpha
 	return out, nil
 }
 
-// orphansQuery spells one arm per declared kind; a key matching no arm is never
-// listed, so an undeclared kind is the safe failure — kept, never deleted.
+// Condemn commits the reap to deleting one key, and reports whether it did.
+//
+// The listing is a snapshot, and an import source can be claimed for a run
+// after it: so the key is re-checked here, under a row lock, and stamped
+// reaping_since in the same short transaction. The bytes are deleted only
+// after this commits, outside any transaction, and Claim refuses a stamped
+// key — so the lock orders a claim and a reap, and whichever lands second
+// sees the first. A key a claim holds locked is skipped, not waited on.
+func (l *Ledger) Condemn(ctx context.Context, now time.Time, key string) (bool, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return false, err
+	}
+	statement, args := l.condemnQuery(now, key)
+	condemned := false
+	err := l.db.Tx(ctx, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, statement, args...)
+		if err != nil {
+			return fmt.Errorf("condemn a provisional object: %w", err)
+		}
+		condemned = tag.RowsAffected() == 1
+		return nil
+	})
+	return condemned, err
+}
+
+// orphansQuery lists what orphanPredicate admits, oldest first, bounded.
+func (l *Ledger) orphansQuery(now time.Time, limit int) (string, []any) {
+	var args []any
+	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	predicate := l.orphanPredicate(now, arg)
+	return `SELECT i.storage_key, i.recorded_at
+		  FROM stored_object_intent i
+		 WHERE ` + predicate + `
+		 ORDER BY i.recorded_at
+		 LIMIT ` + arg(limit), args
+}
+
+// condemnQuery stamps one key the predicate still admits. A stamp already
+// there is kept, so it records when the reap first committed to the key.
+func (l *Ledger) condemnQuery(now time.Time, key string) (string, []any) {
+	var args []any
+	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	predicate := l.orphanPredicate(now, arg)
+	return `UPDATE stored_object_intent
+		   SET reaping_since = coalesce(reaping_since, ` + arg(now) + `)
+		 WHERE storage_key = (
+		       SELECT i.storage_key
+		         FROM stored_object_intent i
+		        WHERE i.storage_key = ` + arg(key) + `
+		          AND (` + predicate + `)
+		          FOR UPDATE SKIP LOCKED)`, args
+}
+
+// orphanPredicate spells one arm per declared kind; a key matching no arm is
+// never listed, so an undeclared kind is the safe failure — kept, never deleted.
+//
+// A STAMPED key skips the grace and nothing else. Its grace was already past
+// when it was stamped, and Claim cannot refresh it, so the grace has nothing
+// left to protect; the columns are still consulted, because they are the
+// second lock and a stamp is no reason to drop one.
 //
 // The kind is parsed IN SQL, inside the same predicate the limit bounds. Parsed
 // in Go after the limit, keys of an undeclared kind would sit at the head of
 // the oldest-first order forever and starve every later pass.
-func (l *Ledger) orphansQuery(now time.Time, limit int) (string, []any) {
-	var args []any
-	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+func (l *Ledger) orphanPredicate(now time.Time, arg func(any) string) string {
 	arms := make([]string, 0, len(l.refs))
 	for _, ref := range l.refs {
 		var arm strings.Builder
 		arm.WriteString("(split_part(i.storage_key, '/', 2) = " + arg(ref.Kind) +
-			" AND i.recorded_at < " + arg(now.Add(-ref.Grace)))
+			" AND (i.reaping_since IS NOT NULL OR i.recorded_at < " + arg(now.Add(-ref.Grace)) + ")")
 		for _, col := range ref.Columns {
 			arm.WriteString(" AND NOT EXISTS (SELECT 1 FROM " + pgx.Identifier{col.Table}.Sanitize() +
 				" r WHERE r." + pgx.Identifier{col.Name}.Sanitize() + " = i.storage_key)")
@@ -148,23 +206,26 @@ func (l *Ledger) orphansQuery(now time.Time, limit int) (string, []any) {
 		arm.WriteString(")")
 		arms = append(arms, arm.String())
 	}
-	return `SELECT i.storage_key, i.recorded_at
-		  FROM stored_object_intent i
-		 WHERE ` + strings.Join(arms, "\n		    OR ") + `
-		 ORDER BY i.recorded_at
-		 LIMIT ` + arg(limit), args
+	return strings.Join(arms, "\n		    OR ")
 }
 
-// Retire removes one key from the ledger once its bytes are gone.
+// Retire removes one condemned key from the ledger once its bytes are gone.
 //
-// Called AFTER the object-store delete, so a failed delete leaves the key here
-// and the next pass tries again. The other order would forget an object that is
-// still there, which is the state this whole ledger exists to make impossible.
+// Called AFTER the object-store delete, so a failed delete leaves the key here,
+// still stamped, and the next pass tries again. The other order would forget an
+// object that is still there, which is the state this whole ledger exists to
+// make impossible. Only a stamped row is removed: a key Condemn did not commit
+// to is not this call's to forget.
 func (l *Ledger) Retire(ctx context.Context, key string) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
 	return l.db.Tx(ctx, func(tx pgx.Tx) error {
-		return Clear(ctx, tx, key)
+		if _, err := tx.Exec(ctx, `
+			DELETE FROM stored_object_intent
+			 WHERE storage_key = $1 AND reaping_since IS NOT NULL`, key); err != nil {
+			return fmt.Errorf("retire a reaped object: %w", err)
+		}
+		return nil
 	})
 }

@@ -343,8 +343,8 @@ func TestOfferRenderSetPdfAssetRef_PersistsAndAuditsExactlyOnce(t *testing.T) {
 
 	before := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'offer' AND action = 'update'`)
 
-	// The shape keys had before they began with the workspace: rows still carry
-	// them, and the store treats a ref as opaque.
+	// An offer PDF keyed offers/<ws>/..., outside the workspace prefix: rows
+	// carry that shape too, and the store treats a ref as opaque.
 	ref := "offers/" + e.WS.String() + "/" + ids.UUID(created.Id).String() + "/1/" + ids.NewV7().String() + ".pdf"
 	updated, oldRef, err := e.Deals.SetPdfAssetRef(ctx, offerID, ref, *created.Version)
 	if err != nil {

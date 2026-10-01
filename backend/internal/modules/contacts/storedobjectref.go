@@ -14,9 +14,9 @@ import (
 // confirmed as one.
 const CompanyLogoObjectKind = "company_logo"
 
-// StoredObjectReference declares every column a mark's key is recorded in. All
-// four, because a site read's mark is adopted by its company by naming the same
-// key, so a key may be live in either table.
+// StoredObjectReference declares the columns a mark's key is recorded in, in
+// both tables: a site read's mark is adopted by its company by naming the same
+// key, so a key may be live in either.
 func StoredObjectReference() storedobject.Reference {
 	return storedobject.Reference{
 		Kind: CompanyLogoObjectKind,

@@ -15,25 +15,25 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A store with no database proves the refusal comes before the intent is
-// recorded as well as before the bytes are put: reaching either would panic.
+// Refused at the trim, which comes before the intent is recorded and before the
+// bytes are put: the error is the decode's own, and the store holds nothing.
 func TestPutLogoRefusesBytesThatAreNotAnImageAndStoresNothing(t *testing.T) {
 	blob := blobstore.NewMemory()
-	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem, ID: "agent:deepread"})
-	key, err := new(Store).PutLogo(ctx, blob, "ws/company_logo/c/2", []byte("not a png"))
-	if err == nil {
-		t.Fatalf("PutLogo stored undecodable bytes at %q", key)
-	}
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("PutLogo refused the caller, not the bytes: %v", err)
+	ctx := principal.SystemActing(context.Background(), "deepread")
+	const base = "ws/company_logo/c/2"
+	key, err := new(Store).PutLogo(ctx, blob, base, []byte("not a png"))
+	if !errors.Is(err, imagenorm.ErrUnsupported) {
+		t.Fatalf("PutLogo answered %v, want the bytes refused as no image", err)
 	}
 	if key != "" {
 		t.Fatalf("a refused trim answered key %q, want none: nothing was written to collect", key)
+	}
+	if _, _, err := blob.Get(ctx, base+trimmedLogoSuffix); !errors.Is(err, blobstore.ErrNotFound) {
+		t.Fatalf("a refused trim left an object behind: %v", err)
 	}
 }
 

@@ -224,6 +224,12 @@ func (h importHandlers) stageRun(
 		return crmcontracts.ImportRun{}, err
 	}
 
+	// Claimed BEFORE the bytes are read: the source has waited on somebody for
+	// as long as mapping took, and a reap that condemned it first must refuse
+	// this run rather than have it read bytes the reap is about to delete.
+	if err := storedobject.Claim(ctx, h.db, req.SourceRef); err != nil {
+		return crmcontracts.ImportRun{}, err
+	}
 	source, err := checkedSource(ctx, h.blobs, req.SourceRef, mapping)
 	if err != nil {
 		return crmcontracts.ImportRun{}, err

@@ -26,12 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// provisional reports whether the ledger still holds key.
-func provisional(t *testing.T, e *integration.Env, key string) bool {
-	t.Helper()
-	return e.WsCount(t, `SELECT count(*) FROM stored_object_intent WHERE storage_key = $1`, key) > 0
-}
-
 // intentWitnessBlobstore notes, at each Put, whether the key was already
 // provisional: the order is the invariant, and the end state cannot show it.
 type intentWitnessBlobstore struct {
@@ -48,7 +42,7 @@ func newIntentWitnessBlobstore(t *testing.T, e *integration.Env) *intentWitnessB
 }
 
 func (b *intentWitnessBlobstore) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
-	b.recordedAtPut[key] = provisional(b.t, b.e, key)
+	b.recordedAtPut[key] = provisionalKeys(b.t, b.e)[key]
 	if err := b.Store.Put(ctx, key, r, size, contentType); err != nil {
 		return err
 	}
@@ -81,7 +75,7 @@ func TestAnUploadedMarkIsProvisionalUntilTheCompanyWearsIt(t *testing.T) {
 		t.Fatalf("the company wears no mark after its own upload: %v", err)
 	}
 	blob.requireRecordedBeforePut(t, key)
-	if provisional(t, e, key) {
+	if provisionalKeys(t, e)[key] {
 		t.Fatalf("the mark the company wears at %q is still provisional; the reap would delete it", key)
 	}
 }
@@ -110,7 +104,7 @@ func TestAnUploadWhoseLogoWriteFailsLeavesItsBytesForTheReap(t *testing.T) {
 	}
 	for key := range blob.recordedAtPut {
 		blob.requireRecordedBeforePut(t, key)
-		if !provisional(t, e, key) {
+		if !provisionalKeys(t, e)[key] {
 			t.Fatalf("the bytes at %q no row names are not provisional; nothing could ever collect them", key)
 		}
 	}
@@ -152,7 +146,7 @@ func TestAResolvedMarkIsProvisionalUntilTheCompanyWearsIt(t *testing.T) {
 	if written, _, err := e.Contacts.SetCompanyLogo(ctx, company.CompanyID, key, seedURL+"/touch.png"); err != nil || !written {
 		t.Fatalf("SetCompanyLogo = %v, %v; want the mark written", written, err)
 	}
-	if provisional(t, e, key) {
+	if provisionalKeys(t, e)[key] {
 		t.Fatalf("the mark the company wears at %q is still provisional; the reap would delete it", key)
 	}
 }
@@ -168,7 +162,7 @@ func TestAMarkTheDossierParksIsNoLongerProvisional(t *testing.T) {
 		t.Fatal("the dossier parked no mark")
 	}
 	blob.requireRecordedBeforePut(t, *parked)
-	if provisional(t, e, *parked) {
+	if provisionalKeys(t, e)[*parked] {
 		t.Fatalf("the parked mark at %q is still provisional; the reap would delete it", *parked)
 	}
 
@@ -179,7 +173,7 @@ func TestAMarkTheDossierParksIsNoLongerProvisional(t *testing.T) {
 	if err != nil || worn != *parked {
 		t.Fatalf("the anchor wears %q (%v), want the adopted mark at %q", worn, err, *parked)
 	}
-	if provisional(t, e, worn) {
+	if provisionalKeys(t, e)[worn] {
 		t.Fatalf("the adopted mark at %q became provisional again", worn)
 	}
 }

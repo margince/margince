@@ -10,10 +10,9 @@ package gates
 // A put and the row that names its bytes are two writes to two systems, and the
 // object left behind when the row's transaction fails is one nothing can find
 // again: an erasure reads a key off a row. platform/storedobject closes that by
-// recording the key BEFORE the put, so the reap can find it. Four writers once
-// skipped the record and nothing failed, because the protocol was a convention.
-// This census is what makes it an obligation: each put gets a verdict, and the
-// "records" verdict is checked against the code rather than taken on trust.
+// recording the key BEFORE the put, so the reap can find it. Each put either
+// records its key first, which is read off the code rather than listed, or
+// carries a stated exemption.
 //
 // A put is found by TYPE, not by spelling: the receiver is blob, blobs, h.blob
 // or a parameter, and what they share is that the method is blobstore's Put.
@@ -48,8 +47,6 @@ import (
 const (
 	blobstorePath   = modulePath + "/internal/platform/blobstore"
 	storedObjectPkg = modulePath + "/internal/platform/storedobject"
-	// recordsIntent is the verdict a put earns by recording its key first.
-	recordsIntent = "records"
 )
 
 // blobPutRoots are the trees production Go lives in, relative to the module
@@ -57,27 +54,16 @@ const (
 // same.
 var blobPutRoots = []string{"internal", "pkg", "cmd", "../extensions"}
 
-// blobPutVerdicts holds, per function that puts into the object store, either
-// recordsIntent or the reason its put declares nothing. Keyed by file and
-// function, because a line moves with every edit above it.
+// blobPutExemptions holds, per function whose put records nothing, why its key
+// is not provisional. Keyed by file and function, because a line moves with
+// every edit above it.
 //
-// gatekit:fixture the verdict each writer earns — expected data about the tree.
-var blobPutVerdicts = map[string]string{
-	"internal/modules/activities/attachmentupload.go Store.storeAttachmentBytes": recordsIntent,
-	"internal/modules/activities/capturedfiles.go Store.StageCapturedFiles":      recordsIntent,
-	"internal/modules/knowledge/document.go Store.UploadDocument":                recordsIntent,
-	"internal/compose/csvimport.go importHandlers.profileAndStore":               recordsIntent,
-	"internal/modules/contacts/companylogostore.go Store.PutLogo":                recordsIntent,
-	"internal/modules/deals/handlers_offertemplates.go Handlers.storeOfferPDF":   recordsIntent,
-
-	// Overwrites a key a company row ALREADY names with a trimmed copy of the
-	// same mark: nothing is provisional, and recording it would let the reap
-	// delete a live logo once the grace ran out.
-	"internal/modules/contacts/handlers_companylogo.go Handlers.writeBackTrimmedLogo": "exempt: overwrites a key a row already names",
-	// Deliberately row-less and outside every workspace prefix: hash-only
-	// entries that must survive a restore, rewritten idempotently. The reap must
-	// never touch them, which a record would invite.
-	"internal/modules/privacy/suppressionjournal.go Eraser.ExportSuppressions": "exempt: the suppression journal is row-less by design and must survive a restore",
+// gatekit:fixture the reason each exempt writer gives — expected data about the tree.
+var blobPutExemptions = map[string]string{
+	"internal/modules/contacts/handlers_companylogo.go Handlers.writeBackTrimmedLogo": "overwrites a key a company row " +
+		"already names with a trimmed copy of the same mark; recording it would let the reap delete a live logo",
+	"internal/modules/privacy/suppressionjournal.go Eraser.ExportSuppressions": "the suppression journal is row-less " +
+		"by design, outside every workspace prefix, and must survive a restore; the reap must never reach it",
 }
 
 func TestEveryBlobPutRecordsItsIntentOrSaysWhyNot(t *testing.T) {
@@ -88,7 +74,7 @@ func TestEveryBlobPutRecordsItsIntentOrSaysWhyNot(t *testing.T) {
 	if len(sites) == 0 {
 		t.Fatal("no blobstore Put call sites found, but the tree has several — the sweep has gone blind")
 	}
-	for _, problem := range judgeBlobPuts(sites, blobPutVerdicts) {
+	for _, problem := range judgeBlobPuts(sites, blobPutExemptions) {
 		t.Error(problem)
 	}
 }
@@ -127,15 +113,14 @@ func TestTheBlobPutCensusCanFail(t *testing.T) {
 		t.Errorf("found %d planted puts, want %d: %v", len(sites), len(want), sites)
 	}
 
-	verdicts := map[string]string{}
-	for _, site := range sites {
-		verdicts[site.key()] = recordsIntent
+	exemptions := map[string]string{
+		"planted/writers.go writer.putWithoutRecord": "planted exemption that holds",
+		"planted/writers.go writer.recordThenPut":    "planted stale exemption",
+		"planted/writers.go gone":                    "planted exemption on a function that puts nothing",
 	}
-	verdicts["planted/writers.go writer.recordThenPut"] = "exempt: planted stale exemption"
-	verdicts["planted/writers.go gone"] = recordsIntent
-	if problems := judgeBlobPuts(sites, verdicts); len(problems) != 8 {
-		t.Errorf("judging the planted writers raised %d problems, want 8 — six unrecorded puts, one "+
-			"stale exemption and one stale entry: %q", len(problems), problems)
+	if problems := judgeBlobPuts(sites, exemptions); len(problems) != 7 {
+		t.Errorf("judging the planted writers raised %d problems, want 7 — five unrecorded puts with no "+
+			"exemption, one stale exemption and one exemption that puts nothing: %q", len(problems), problems)
 	}
 }
 
@@ -219,31 +204,29 @@ type blobPutSite struct {
 
 func (s blobPutSite) key() string { return s.path + " " + s.function }
 
-// judgeBlobPuts compares the sites against their verdicts in both directions.
-func judgeBlobPuts(sites []blobPutSite, verdicts map[string]string) []string {
+// judgeBlobPuts holds the sites and the exemptions to each other: a put that
+// records needs no entry, and one that does not needs a reason.
+func judgeBlobPuts(sites []blobPutSite, exemptions map[string]string) []string {
 	var problems []string
 	seen := map[string]bool{}
 	for _, site := range sites {
 		seen[site.key()] = true
-		verdict, declared := verdicts[site.key()]
+		_, exempt := exemptions[site.key()]
 		switch {
-		case !declared:
-			problems = append(problems, site.describe("puts into the object store and has no entry in "+
-				"blobPutVerdicts. Call storedobject.Record(ctx, db, key) on its own transaction before the "+
-				"put and storedobject.Clear on the row's, then add it as recordsIntent — or, if the key is "+
-				"not provisional, add it as \"exempt: <why>\""))
-		case verdict == recordsIntent && !site.records:
-			problems = append(problems, site.describe("is declared recordsIntent, but no storedobject.Record "+
-				"of the put's key precedes the put in this function — record it first"))
-		case verdict != recordsIntent && site.records:
-			problems = append(problems, site.describe("records its intent, so its exemption is stale: "+
-				"declare it recordsIntent"))
+		case !site.records && !exempt:
+			problems = append(problems, site.describe("puts into the object store and no storedobject.Record of "+
+				"the put's key precedes it in this function. Record it on its own transaction before the put and "+
+				"storedobject.Clear it on the row's — or, if the key is not provisional, add the function to "+
+				"blobPutExemptions with why"))
+		case site.records && exempt:
+			problems = append(problems, site.describe("records its intent, so its entry in blobPutExemptions is "+
+				"stale: drop it"))
 		}
 	}
-	for key := range verdicts {
+	for key := range exemptions {
 		if !seen[key] {
-			problems = append(problems, key+" is in blobPutVerdicts but puts nothing into the object "+
-				"store any more: drop the entry, or the census stops describing the tree")
+			problems = append(problems, key+" is in blobPutExemptions but puts nothing into the object "+
+				"store any more: drop the entry")
 		}
 	}
 	slices.Sort(problems)
@@ -286,12 +269,7 @@ func sweepBlobPuts(t *testing.T, roots []string) []blobPutSite {
 	}
 	var sites []blobPutSite
 	for dir, files := range byDir {
-		// Every reference to a method is a selector naming it, so a package
-		// with no Put candidate has no put to judge; skipping its type check
-		// cannot under-read.
-		if slices.ContainsFunc(files, mayPut) {
-			sites = append(sites, blobPutsInPackage(gatekit.SourceFileSet(), dir, files)...)
-		}
+		sites = append(sites, blobPutsInPackage(gatekit.SourceFileSet(), dir, files)...)
 	}
 	slices.SortFunc(sites, func(a, b blobPutSite) int { return strings.Compare(a.key(), b.key()) })
 	return sites
@@ -306,17 +284,6 @@ func plantedBlobPuts(t *testing.T, name, src string) []blobPutSite {
 		t.Fatalf("parsing planted %s: %v", name, err)
 	}
 	return blobPutsInPackage(fset, filepath.Dir(name), []*ast.File{file})
-}
-
-func mayPut(file *ast.File) bool {
-	found := false
-	ast.Inspect(file, func(n ast.Node) bool {
-		if sel, ok := n.(*ast.SelectorExpr); ok && sel.Sel.Name == "Put" {
-			found = true
-		}
-		return !found
-	})
-	return found
 }
 
 // blobPutsInPackage type-checks one package and returns each put it makes.

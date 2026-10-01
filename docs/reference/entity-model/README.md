@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 293 |
-| Columns | 3482 |
+| Columns | 3483 |
 | Foreign keys | 472 |
 | Owning areas | 36 |
 
@@ -383,7 +383,7 @@ erDiagram
 | [`stage_exit_criterion`](deals.md#stage_exit_criterion) | deals | 12 | 1 |
 | [`stage_progression_outcome`](deals.md#stage_progression_outcome) | deals | 19 | 0 |
 | [`stage_progression_policy`](deals.md#stage_progression_policy) | deals | 18 | 0 |
-| [`stored_object_intent`](platform.md#stored_object_intent) | platform | 2 | 0 |
+| [`stored_object_intent`](platform.md#stored_object_intent) | platform | 3 | 0 |
 | [`suggestion_dismissal`](compose.md#suggestion_dismissal) | compose | 4 | 0 |
 | [`system_log`](platform.md#system_log) | platform | 8 | 0 |
 | [`tag`](collections.md#tag) | collections | 9 | 2 |

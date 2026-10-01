@@ -10,7 +10,7 @@ import (
 )
 
 // ImportSourceObjectKind is the key segment an uploaded import source is
-// stored under, beside attachments and logos.
+// stored under.
 const ImportSourceObjectKind = "import"
 
 // importSourceGrace is a day rather than an hour because the row does not

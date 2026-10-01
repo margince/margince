@@ -10,9 +10,55 @@ package integration
 // An upload nobody maps keeps its intent, which is what lets the reap find it.
 
 import (
+	"context"
 	"net/http"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/storedobject"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// A source the reap condemned is gone or going, so staging a run from it is
+// refused as not found — the caller uploads again — rather than reading bytes
+// the reap is deleting and parking a run whose file no longer exists.
+func TestStagingFromASourceTheReapCondemnedIsRefused(t *testing.T) {
+	e := setupImportApp(t)
+	staged, status := uploadCSV(t, e, "lead", prospectCSV)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	ledger, err := storedobject.NewLedger(compose.InstallationDB(e.Pool), compose.StoredObjectReferences()...)
+	if err != nil {
+		t.Fatalf("building the reap's ledger: %v", err)
+	}
+	system := principal.SystemActing(context.Background(), "stored_object_reap_test")
+	if condemned, err := ledger.Condemn(system, time.Now().Add(48*time.Hour), staged.SourceRef); err != nil || !condemned {
+		t.Fatalf("condemning the unmapped source: condemned=%v, err %v", condemned, err)
+	}
+
+	before := importRunCount(t, e)
+	var refusal struct {
+		Detail string `json:"detail"`
+	}
+	status = e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+		"connector": "csv", "object": "lead", "source_ref": staged.SourceRef, "mapping": staged.SuggestedMapping,
+	}, nil, &refusal)
+	if status != http.StatusNotFound {
+		t.Fatalf("staging from a condemned source → %d, want 404", status)
+	}
+	if !strings.Contains(refusal.Detail, "upload it again") {
+		t.Errorf("the refusal does not tell the caller to upload the file again: %q", refusal.Detail)
+	}
+	if after := importRunCount(t, e); after != before {
+		t.Errorf("a refused staging still opened %d run(s) on the condemned source", after-before)
+	}
+	if !keyIsProvisional(t, e.DB(), staged.SourceRef) {
+		t.Error("the refused staging cleared the condemned key, so the reap would never retire it")
+	}
+}
 
 func TestCSVImportSourceIsProvisionalUntilARunNamesIt(t *testing.T) {
 	e := setupImportApp(t)

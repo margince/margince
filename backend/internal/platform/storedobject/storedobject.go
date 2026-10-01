@@ -30,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -60,6 +61,49 @@ func Record(ctx context.Context, db *database.DB, key string) error {
 			INSERT INTO stored_object_intent (storage_key) VALUES ($1)
 			ON CONFLICT (storage_key) DO NOTHING`, key); err != nil {
 			return fmt.Errorf("record a provisional object: %w", err)
+		}
+		return nil
+	})
+}
+
+// ErrExpired is a claim on a key the reap has already committed to deleting:
+// the bytes are gone or going, and the caller has to store them again.
+var ErrExpired = fmt.Errorf("the stored file has expired; upload it again: %w", apperrors.ErrNotFound)
+
+// Claim restarts a provisional key's grace, for a writer whose row follows the
+// put after an open-ended wait (an import source is staged only once somebody
+// has mapped its columns). It answers ErrExpired for a key the reap condemned.
+//
+// Called BEFORE the claimant reads the bytes, on its OWN transaction for the
+// reason Record gives. The row lock orders it against Ledger.Condemn: a claim
+// that commits first leaves the key inside its grace when the reap re-checks
+// it, and a condemnation that commits first is what this refuses. A key with
+// no row is already referenced (its clear ran) or predates the ledger; neither
+// is the reap's to delete, so there is nothing to hold.
+func Claim(ctx context.Context, db *database.DB, key string) error {
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return fmt.Errorf("claim a provisional object: %w", database.ErrNoWorkspace)
+	}
+	ctx = database.Detached(ctx)
+	return db.ForWorkspace(ids.From[ids.WorkspaceKind](ws)).Tx(ctx, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `
+			UPDATE stored_object_intent SET recorded_at = now()
+			 WHERE storage_key = $1 AND reaping_since IS NULL`, key)
+		if err != nil {
+			return fmt.Errorf("claim a provisional object: %w", err)
+		}
+		if tag.RowsAffected() == 1 {
+			return nil
+		}
+		var condemned bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM stored_object_intent WHERE storage_key = $1)`, key,
+		).Scan(&condemned); err != nil {
+			return fmt.Errorf("claim a provisional object: %w", err)
+		}
+		if condemned {
+			return ErrExpired
 		}
 		return nil
 	})

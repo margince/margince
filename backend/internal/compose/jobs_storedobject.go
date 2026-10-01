@@ -56,12 +56,14 @@ func (StoredObjectReapArgs) FleetWide() {}
 // have waited longest.
 const storedObjectReapBatch = 500
 
-// storedObjectReferences is every module's declaration of where it records the
+// StoredObjectReferences is every module's declaration of where it records the
 // keys of its stored objects. A kind missing here is never reaped, which keeps
-// its orphans rather than deleting live bytes.
+// its orphans rather than deleting live bytes. Exported for the schema census
+// that holds every key-shaped column to one of these declarations.
 //
 // Held by: TestEveryModulesStoredObjectReferenceIsReaped (backend/internal/compose/jobs_storedobject_test.go)
-func storedObjectReferences() []storedobject.Reference {
+// and TestEveryStoredObjectKeyColumnIsDeclaredToTheReap (backend/gates/storedobjectcolumns_test.go)
+func StoredObjectReferences() []storedobject.Reference {
 	return []storedobject.Reference{
 		activities.StoredObjectReference(),
 		contacts.StoredObjectReference(),
@@ -74,11 +76,10 @@ func storedObjectReferences() []storedobject.Reference {
 // storedObjectReapWorker deletes the bytes of provisional objects past their
 // kind's grace period.
 //
-// ONE pass for the installation rather than one per workspace: the ledger
-// carries no workspace column — the key's own prefix names it — so a pass per
-// workspace ran the same query once per tenant, and the first run reaped
-// everyone's. Archived workspaces' objects are reached like any other, since
-// archiving un-stores nothing.
+// ONE pass for the installation: the ledger carries no workspace column — the
+// key's own prefix names it — so the query has no tenant to scope by. Archived
+// workspaces' objects are reached like any other, since archiving un-stores
+// nothing.
 type storedObjectReapWorker struct {
 	pool *pgxpool.Pool
 	blob blobstore.Store
@@ -95,24 +96,33 @@ func (w *storedObjectReapWorker) reap(ctx context.Context) error {
 	// no actor, and every read and write below is RBAC-gated. The pass is the
 	// installation's own bookkeeping, not any seat's.
 	ctx = principal.SystemActing(ctx, "stored_object_reap_worker")
-	ledger, err := storedobject.NewLedger(InstallationDB(w.pool), storedObjectReferences()...)
+	ledger, err := storedobject.NewLedger(InstallationDB(w.pool), StoredObjectReferences()...)
 	if err != nil {
 		return err
 	}
-	orphans, err := ledger.Orphans(ctx, w.now().UTC(), storedObjectReapBatch)
+	now := w.now().UTC()
+	orphans, err := ledger.Orphans(ctx, now, storedObjectReapBatch)
 	if err != nil {
 		return err
 	}
 	for _, orphan := range orphans {
-		// The BYTES first, then the ledger row. The other order would forget an
-		// object that is still there, which is the state this whole ledger
-		// exists to make impossible — a failed delete leaves the key and the
-		// next pass tries again.
+		// Condemned first, in its own short transaction, because the listing
+		// is a snapshot and the delete holds no lock: a key claimed or named
+		// since the listing is passed over here rather than deleted live.
+		condemned, err := ledger.Condemn(ctx, now, orphan.StorageKey)
+		if err != nil {
+			return err
+		}
+		if !condemned {
+			continue
+		}
+		// The BYTES next, then the ledger row. The other order would forget an
+		// object that is still there; a failed delete leaves the key condemned
+		// and the next pass tries again.
 		if err := w.blob.Delete(ctx, orphan.StorageKey); err != nil {
 			// One key that will not delete must not stop the rest: a bucket
 			// that refuses one object still holds the others, and every one of
-			// them is a subject's file an erasure cannot reach. The key stays
-			// in the ledger, so nothing is forgotten.
+			// them is a subject's file an erasure cannot reach.
 			w.log.ErrorContext(ctx, "an orphaned object could not be deleted",
 				"storage_key", orphan.StorageKey, "err", err)
 			continue

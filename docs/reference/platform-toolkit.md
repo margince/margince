@@ -81,11 +81,17 @@ Every writer puts the bytes before the row, so a failed row transaction leaves a
 and no erasure can reach. The ledger is how that object is found again.
 - `Record(ctx, db, key)` — on its own transaction, BEFORE the put; `Clear(ctx, tx, key)` — on the
   transaction that writes the referencing row.
+- `Claim(ctx, db, key)` — for a writer whose row follows the put after an open-ended wait (an import
+  source being mapped): restarts the grace before the bytes are read, and answers `ErrExpired` (a
+  not-found) for a key the reap has condemned.
 - `Reference{Kind, Columns []Column{Table, Name}, Grace}` — declared by the module that owns the
-  referencing table (`<module>.StoredObjectReference()`) and collected in `compose/jobs_storedobject.go`.
-- `NewLedger(db, refs...)`, `Ledger.Orphans(ctx, now, limit)`, `Ledger.Retire(ctx, key)` — the reap's
-  system-only view: a key of an undeclared kind is never listed, and one named by any declared column is
-  never listed either.
+  referencing table (`<module>.StoredObjectReference()`) and collected in `compose/jobs_storedobject.go`;
+  `gates/storedobjectcolumns_test.go` holds every key-shaped column in the schema to a declaration.
+- `NewLedger(db, refs...)`, `Ledger.Orphans(ctx, now, limit)`, `Ledger.Condemn(ctx, now, key)`,
+  `Ledger.Retire(ctx, key)` — the reap's system-only view: a key of an undeclared kind is never listed,
+  and one named by any declared column is never listed either. Condemn re-checks one key under its row
+  lock and stamps `reaping_since` before the bytes are deleted outside any transaction; Retire removes
+  only a condemned key.
 - **Reach for it when:** adding a writer that stores bytes under `WorkspaceKey` — record the key, clear it
   with the row, and declare the kind's columns.
 

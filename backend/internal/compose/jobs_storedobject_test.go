@@ -20,18 +20,18 @@ import (
 // kind with.
 const storedObjectDeclarer = "StoredObjectReference"
 
-// TestEveryModulesStoredObjectReferenceIsReaped holds storedObjectReferences to
+// TestEveryModulesStoredObjectReferenceIsReaped holds StoredObjectReferences to
 // the tree: a module that declares a kind the reap is not handed keeps every
 // orphan of that kind forever, and nothing else would notice.
 func TestEveryModulesStoredObjectReferenceIsReaped(t *testing.T) {
 	t.Parallel()
 	declaring := modulesDeclaringStoredObjects(t)
-	refs := storedObjectReferences()
+	refs := StoredObjectReferences()
 	// One per declaring module, and every kind distinct: a module listed twice
 	// repeats its kind, which NewLedger refuses, so equal counts mean each
 	// declaring module is listed exactly once.
 	if len(refs) != len(declaring) {
-		t.Errorf("storedObjectReferences hands the reap %d declarations; these modules declare one: %v",
+		t.Errorf("StoredObjectReferences hands the reap %d declarations; these modules declare one: %v",
 			len(refs), declaring)
 	}
 	if _, err := storedobject.NewLedger(nil, refs...); err != nil {

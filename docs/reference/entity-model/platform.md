@@ -175,10 +175,11 @@ The 10 tables owned by `platform`, as the migrations build them. [Back to the en
 
 ## stored_object_intent
 
-2 columns · primary key `(storage_key)` · referenced by 0 foreign keys
+3 columns · primary key `(storage_key)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
+| `reaping_since` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `recorded_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 | `storage_key` | `text` | yes | Required `text`. |
 

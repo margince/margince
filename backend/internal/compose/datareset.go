@@ -356,8 +356,8 @@ func (h dataResetHandlers) purgeUnjoinableSurfaces(ctx context.Context, logger *
 		if err != nil {
 			return err
 		}
-		// Offer PDFs rendered before their keys moved under the workspace
-		// prefix still live at offers/<ws>/..., which the sweep above misses.
+		// An offer PDF keyed offers/<ws>/... lies outside the workspace prefix,
+		// so the sweep above cannot reach it.
 		legacy, err := h.blob.DeletePrefix(ctx, "offers/"+wsID.String()+"/")
 		if err != nil {
 			return err
