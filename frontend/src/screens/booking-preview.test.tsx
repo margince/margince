@@ -284,7 +284,9 @@ it("says when a month has no free time rather than hiding availability", async (
     await screen.findByText("No free times this month. Try the next month."),
   ).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Monday, 5 October 2026" }),
+    screen.getByRole("button", {
+      name: "Monday, 5 October 2026, nothing free",
+    }),
   ).toHaveProperty("disabled", true);
   expect(screen.queryByRole("button", { name: CONFIRM })).toBeNull();
 });
