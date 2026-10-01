@@ -171,16 +171,20 @@ function StageBand({
             {coreStateLabel}
           </p>
         )}
-        {aside}
-        {/* Setup is railless: no top bar, so without this the reader meets nine
-            screens in a row with no way to change a theme they can already see.
-            The STAGE owns it rather than each screen passing one, because it is
-            true of every onboarding screen and a per-caller prop is a rule that
-            holds until the screen that forgets it. */}
-        <span className="ob-stage-pref">
-          <span className="ob-stage-rule" aria-hidden="true" />
-          <ThemeToggle />
-        </span>
+        {/* One item, so a wrapping slot breaks after the state in words and
+            never strands the theme toggle on a line of its own. */}
+        <div className="ob-stage-tools">
+          {aside}
+          {/* Setup is railless: no top bar, so without this the reader meets
+              nine screens in a row with no way to change a theme they can
+              already see. The STAGE owns it rather than each screen passing one,
+              because it is true of every onboarding screen and a per-caller prop
+              is a rule that holds until the screen that forgets it. */}
+          <span className="ob-stage-pref">
+            <span className="ob-stage-rule" aria-hidden="true" />
+            <ThemeToggle />
+          </span>
+        </div>
       </div>
     </div>
   );
