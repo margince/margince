@@ -71,6 +71,27 @@ func TestLift_TheEmbeddingsLaneKeepsItsOwnLocation(t *testing.T) {
 	}
 }
 
+// With no tier on Vertex, a provider entry that already names a location is
+// the provider's answer, and the embeddings lane's differing one stays its own.
+func TestLift_AnEmbeddingsOnlyProviderKeepsTheLanesOwnLocation(t *testing.T) {
+	cfg := RoutingConfig{
+		Profile:    ProfileEUHosted,
+		Tiers:      map[Tier]ProviderConfig{},
+		Embeddings: EmbeddingsConfig{Provider: providerGeminiVertex, Model: "gemini-embedding-001", Location: "europe-west4"},
+		Providers:  map[string]ProviderSettings{providerGeminiVertex: {Location: "eu"}},
+	}
+	log, _ := warnings()
+
+	lifted := cfg.liftLaneProviderFields(log)
+
+	if got := lifted.Providers[providerGeminiVertex].Location; got != "eu" {
+		t.Errorf("provider location = %q, want its stored eu", got)
+	}
+	if got := lifted.Embeddings.Location; got != "europe-west4" {
+		t.Errorf("embeddings location = %q, want its own europe-west4 kept", got)
+	}
+}
+
 func TestResolve_EveryVertexLaneReadsItsProvidersLocation(t *testing.T) {
 	cfg := vertexRouting("")
 	cfg.Providers = map[string]ProviderSettings{providerGeminiVertex: {Location: "europe-west4"}}

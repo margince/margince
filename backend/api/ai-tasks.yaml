@@ -90,6 +90,10 @@
 #                     (observed-unit and denominator functions, the work-shape
 #                     floor) is behaviour and stays in code; naming the rule
 #                     here lets the build prove the mapping is total.
+#   summary           what the task does, in plain words, for the reader of a
+#                     settings or usage screen deciding which model serves it.
+#                     Required, ends with a full stop, short enough for a
+#                     tooltip.
 #
 # Deliberately NOT declared here (ADR-0074): answer schemas — two sites build
 # theirs per call (one varies its very shape) and four tasks send none at all,

@@ -21705,7 +21705,7 @@ type AiFeatureRoute struct {
 	LeadingTier      string             `json:"leading_tier"`
 	NormalCandidates []AiRouteCandidate `json:"normal_candidates"`
 
-	// Summary What the task does, in one plain sentence.
+	// Summary What the task does, in plain words.
 	Summary *string `json:"summary,omitempty"`
 	Task    string  `json:"task"`
 }
@@ -22148,7 +22148,7 @@ type AiUsage struct {
 			Task            string  `json:"task"`
 			TaskDisplayName *string `json:"task_display_name,omitempty"`
 
-			// TaskSummary What the task does, in one plain sentence, for a reader deciding what it costs.
+			// TaskSummary What the task does, in plain words, for a reader deciding what it costs.
 			TaskSummary *string `json:"task_summary,omitempty"`
 
 			// Tier local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane).

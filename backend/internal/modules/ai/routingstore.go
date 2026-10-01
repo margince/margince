@@ -13,6 +13,7 @@ package ai
 import (
 	"cmp"
 	"context"
+	"errors"
 	"log/slog"
 	"maps"
 	"net/url"
@@ -125,39 +126,39 @@ func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (Routing
 	return s.ReplaceIfVersion(ctx, next, "")
 }
 
-// probeBeforeWrite asks Google about each Vertex binding the save adds or
-// changes. It runs before the write's lock is taken, because a network call
-// must not hold it; the write then validates again under the lock. A save
-// that names no gemini_vertex lane reads and asks nothing, and a stale one is
-// refused as stale before Google is asked.
-func (s *RoutingStore) probeBeforeWrite(ctx context.Context, next RoutingConfig, expected string) error {
-	if len(vertexProbesOf(next)) == 0 {
-		return nil
+// probedWrite runs a write that must not store a Vertex binding Google was not
+// asked about. The probe runs before the lock, because a network call must not
+// hold it, and the write stores only if the document under the lock is the one
+// probed: one another write moved meanwhile is probed again, and a document
+// that keeps moving is refused as stale.
+func (s *RoutingStore) probedWrite(ctx context.Context, probe func(stored RoutingConfig) error, settle func(current RoutingConfig) (stored, served RoutingConfig, err error)) (RoutingConfig, error) {
+	for range probeAttempts {
+		stored, err := settings.Get(ctx, s.settings, Routing)
+		if err != nil {
+			return RoutingConfig{}, err
+		}
+		if err := probe(stored); err != nil {
+			return RoutingConfig{}, err
+		}
+		probed := stored.Revision()
+		written, err := s.write(ctx, func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {
+			if current.Revision() != probed {
+				return RoutingConfig{}, RoutingConfig{}, errProbedStale
+			}
+			return settle(current)
+		})
+		if !errors.Is(err, errProbedStale) {
+			return written, err
+		}
 	}
-	stored, err := settings.Get(ctx, s.settings, Routing)
-	if err != nil {
-		return err
-	}
-	if expected != "" && stored.Revision() != expected {
-		return apperrors.ErrVersionSkew
-	}
-	return s.probeCandidate(ctx, stored, next)
+	return RoutingConfig{}, apperrors.ErrVersionSkew
 }
 
-// probeBeforeProviderWrite is probeBeforeWrite for a provider-settings write:
-// only a Vertex provider moves a Vertex binding, so any other reads nothing.
-// Like probeBeforeWrite it runs before the lock, so a routing write landing
-// between the probe and this write is not probed against the new location.
-func (s *RoutingStore) probeBeforeProviderWrite(ctx context.Context, provider string, next ProviderSettings) error {
-	if provider != providerGeminiVertex {
-		return nil
-	}
-	stored, err := settings.Get(ctx, s.settings, Routing)
-	if err != nil {
-		return err
-	}
-	return s.probeProviderSettings(ctx, stored, provider, next)
-}
+// probeAttempts bounds how often a save re-probes a document other writes keep
+// moving before it gives up as stale.
+const probeAttempts = 3
+
+var errProbedStale = errors.New("ai: routing: the document changed while its bindings were being probed")
 
 // probeProviderSettings asks Google about each Vertex binding that one
 // provider's new settings would move, as probeCandidate does for a whole
@@ -220,17 +221,23 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
 		return RoutingConfig{}, err
 	}
-	if !next.Unconfigured() {
-		if err := s.probeBeforeWrite(ctx, next, expected); err != nil {
-			return RoutingConfig{}, err
-		}
-	}
-	return s.write(ctx, func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {
+	settle := func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {
 		if expected != "" && current.Revision() != expected {
 			return RoutingConfig{}, RoutingConfig{}, apperrors.ErrVersionSkew
 		}
 		return next.replacing(current)
-	})
+	}
+	// A save that names no gemini_vertex lane reads and asks nothing, and a
+	// stale one is refused as stale before Google is asked.
+	if next.Unconfigured() || len(vertexProbesOf(next)) == 0 {
+		return s.write(ctx, settle)
+	}
+	return s.probedWrite(ctx, func(stored RoutingConfig) error {
+		if expected != "" && stored.Revision() != expected {
+			return apperrors.ErrVersionSkew
+		}
+		return s.probeCandidate(ctx, stored, next)
+	}, settle)
 }
 
 // SetProviderSettings replaces one provider's entry and re-validates the whole
@@ -246,12 +253,16 @@ func (s *RoutingStore) SetProviderSettings(ctx context.Context, provider string,
 	if _, known := providerByName(provider); !known {
 		return RoutingConfig{}, apperrors.ErrNotFound
 	}
-	if err := s.probeBeforeProviderWrite(ctx, provider, next); err != nil {
-		return RoutingConfig{}, err
-	}
-	return s.write(ctx, func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {
+	settle := func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {
 		return current.withProviderSettings(provider, next)
-	})
+	}
+	// Only a Vertex provider moves a Vertex binding.
+	if provider != providerGeminiVertex {
+		return s.write(ctx, settle)
+	}
+	return s.probedWrite(ctx, func(stored RoutingConfig) error {
+		return s.probeProviderSettings(ctx, stored, provider, next)
+	}, settle)
 }
 
 // write runs one routing write under the setting's row lock: settle derives the

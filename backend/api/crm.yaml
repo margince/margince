@@ -30388,7 +30388,7 @@ components:
       properties:
         task: { type: string }
         display_name: { type: string }
-        summary: { type: string, description: 'What the task does, in one plain sentence.' }
+        summary: { type: string, description: 'What the task does, in plain words.' }
         execution_mode: { type: string }
         leading_tier: { type: string }
         normal_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
@@ -30458,7 +30458,7 @@ components:
                   properties:
                     task: { type: string, description: 'capture_classify, enrich, summarize, …' }
                     task_display_name: { type: string }
-                    task_summary: { type: string, description: 'What the task does, in one plain sentence, for a reader deciding what it costs.' }
+                    task_summary: { type: string, description: 'What the task does, in plain words, for a reader deciding what it costs.' }
                     tier: { type: string, description: 'local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane).' }
                     calls: { type: integer }
                     cached_hits: { type: integer }

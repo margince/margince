@@ -382,7 +382,7 @@ func writeTaskTexts(b *strings.Builder, c contract, taskNames []string) {
 	b.WriteString("// served saying nothing than showing the key it was handed.\n")
 	b.WriteString("func DisplayName(t Task) string { return taskDisplayNames[t] }\n\n")
 
-	b.WriteString("// taskSummaries say in one plain sentence what each task does, for a reader\n")
+	b.WriteString("// taskSummaries say in plain words what each task does, for a reader\n")
 	b.WriteString("// deciding which model should serve it.\n")
 	b.WriteString("var taskSummaries = map[Task]string{\n")
 	for _, name := range taskNames {
@@ -390,7 +390,7 @@ func writeTaskTexts(b *strings.Builder, c contract, taskNames []string) {
 	}
 	b.WriteString("}\n\n")
 
-	b.WriteString("// Summary is what this task does, in one sentence; empty for an unknown task.\n")
+	b.WriteString("// Summary is what this task does, in plain words; empty for an unknown task.\n")
 	b.WriteString("func Summary(t Task) string { return taskSummaries[t] }\n\n")
 }
 

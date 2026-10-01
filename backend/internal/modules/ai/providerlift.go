@@ -153,9 +153,9 @@ func (l providerLift) location(label, provider, location string) string {
 // embeddingsLocation is the embeddings lane's own location after the lift.
 // Vertex serves an embedding model at fewer locations than a chat model, so
 // the lane may sit elsewhere, as it may sit on a server of its own; it decides
-// the provider's location only for a provider no tier binds.
+// the provider's location only when neither a tier nor the stored entry has.
 func (l providerLift) embeddingsLocation(provider, location string) string {
-	if !l.tierBound[provider] {
+	if _, decided := l.placeFrom[provider]; !decided && !l.tierBound[provider] {
 		return l.location(embeddingsLaneLabel, provider, location)
 	}
 	if location == l.providers[provider].Location {

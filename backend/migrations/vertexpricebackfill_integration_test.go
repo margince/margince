@@ -24,6 +24,18 @@ func seedRate(ctx context.Context, t *testing.T, conn *pgx.Conn, provider, model
 	}
 }
 
+// seedFullRate plants a Gemini row with every price bucket and lane distinct,
+// so a copy that drops or swaps a column cannot match it by accident.
+func seedFullRate(ctx context.Context, t *testing.T, conn *pgx.Conn, model, lane, day string) {
+	t.Helper()
+	if _, err := conn.Exec(ctx, `
+		INSERT INTO ai_model_rate (provider, model_id, lane, input_per_mtok_microusd, output_per_mtok_microusd,
+		                           cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date)
+		VALUES ('gemini', $1, $2, 11, 22, 33, 44, $3)`, model, lane, day); err != nil {
+		t.Fatalf("seeding gemini/%s: %v", model, err)
+	}
+}
+
 func runFile(ctx context.Context, t *testing.T, conn *pgx.Conn, path string) {
 	t.Helper()
 	sql, err := os.ReadFile(path)
@@ -91,6 +103,69 @@ func TestAnEmptyVertexSheetTakesACopyOfGeminisPricesOnce(t *testing.T) {
 	runFile(ctx, t, conn, vertexBackfill+".down.sql")
 	if got := vertexRates(ctx, t, conn); len(got) != 1 || got["gemini-3.5-flash@2026-08-01"] != 1_600_000 {
 		t.Errorf("Vertex rows after rollback = %v, want only the price an admin wrote", got)
+	}
+}
+
+// A copy carries the lane and all four price buckets, and its audit row
+// records the price the upgrade wrote.
+func TestACopiedVertexRowCarriesEveryPriceColumn(t *testing.T) {
+	dsn, _ := dsns(t)
+	conn := connect(t, dsn)
+	headSchema(t, conn)
+	ctx := context.Background()
+	if _, err := conn.Exec(ctx, `DELETE FROM ai_model_rate`); err != nil {
+		t.Fatal(err)
+	}
+	seedFullRate(ctx, t, conn, "gemini-embedding-001", "embeddings", "2026-08-01")
+
+	runFile(ctx, t, conn, vertexBackfill+".up.sql")
+
+	var row, audited string
+	if err := conn.QueryRow(ctx, `
+		SELECT concat_ws(',', lane, input_per_mtok_microusd, output_per_mtok_microusd,
+		                 cache_read_per_mtok_microusd, cache_write_per_mtok_microusd)
+		  FROM ai_model_rate WHERE provider = 'gemini_vertex'`).Scan(&row); err != nil {
+		t.Fatal(err)
+	}
+	if row != "embeddings,11,22,33,44" {
+		t.Errorf("copied row = %s, want embeddings,11,22,33,44", row)
+	}
+	if err := conn.QueryRow(ctx, `
+		SELECT concat_ws(',', after->>'input_per_mtok_microusd', after->>'output_per_mtok_microusd',
+		                 after->>'cache_read_per_mtok_microusd', after->>'cache_write_per_mtok_microusd')
+		  FROM audit_log WHERE after->>'copied_from' = 'gemini'`).Scan(&audited); err != nil {
+		t.Fatal(err)
+	}
+	if audited != "11,22,33,44" {
+		t.Errorf("audited prices = %s, want 11,22,33,44", audited)
+	}
+}
+
+// A copy an administrator edited after the upgrade is theirs: rolling back
+// keeps it, whatever order the two audit ids happen to sort in.
+func TestRollingBackKeepsACopyEditedSince(t *testing.T) {
+	dsn, _ := dsns(t)
+	conn := connect(t, dsn)
+	headSchema(t, conn)
+	ctx := context.Background()
+	if _, err := conn.Exec(ctx, `DELETE FROM ai_model_rate`); err != nil {
+		t.Fatal(err)
+	}
+	seedRate(ctx, t, conn, "gemini", "gemini-2.5-flash", "2026-08-01", 300_000)
+	runFile(ctx, t, conn, vertexBackfill+".up.sql")
+	// The edit's audit id sorts BELOW the migration's, as a same-millisecond
+	// id from another backend may.
+	if _, err := conn.Exec(ctx, `
+		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, before, after)
+		SELECT '00000000-0000-7000-8000-000000000000', 'human', 'admin', 'update', 'ai_model_rate', id, NULL, '{}'::jsonb
+		  FROM ai_model_rate WHERE provider = 'gemini_vertex'`); err != nil {
+		t.Fatal(err)
+	}
+
+	runFile(ctx, t, conn, vertexBackfill+".down.sql")
+
+	if got := vertexRates(ctx, t, conn); len(got) != 1 {
+		t.Errorf("Vertex rows after rollback = %v, want the edited copy kept", got)
 	}
 }
 

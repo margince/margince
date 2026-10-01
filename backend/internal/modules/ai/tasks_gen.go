@@ -114,7 +114,7 @@ var taskDisplayNames = map[Task]string{
 // served saying nothing than showing the key it was handed.
 func DisplayName(t Task) string { return taskDisplayNames[t] }
 
-// taskSummaries say in one plain sentence what each task does, for a reader
+// taskSummaries say in plain words what each task does, for a reader
 // deciding which model should serve it.
 var taskSummaries = map[Task]string{
 	TaskAccountScan:                   "Reads an account's recent emails and pipeline to find what it needs from you.",
@@ -150,7 +150,7 @@ var taskSummaries = map[Task]string{
 	TaskWeeklyReview:                  "Writes the one or two sentences that open your weekly review.",
 }
 
-// Summary is what this task does, in one sentence; empty for an unknown task.
+// Summary is what this task does, in plain words; empty for an unknown task.
 func Summary(t Task) string { return taskSummaries[t] }
 
 // ExecutionMode distinguishes request-bound work from work carried by a
@@ -178,7 +178,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "6872f7b2bcd7886e9cf20f245a2c47eb03fab6ebedb96fb23cc41e1fd808ac53"
+const TaskContractHash = "3b41073ae5919983eb4aa9520dd3f20d467e8d2e6e45c629e91a09956d810a85"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed

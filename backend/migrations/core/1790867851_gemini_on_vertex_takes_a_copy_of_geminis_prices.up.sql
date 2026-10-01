@@ -13,10 +13,15 @@ WITH copied AS (
    WHERE g.provider = 'gemini'
      AND NOT EXISTS (SELECT 1 FROM ai_model_rate v WHERE v.provider = 'gemini_vertex')
   ON CONFLICT (provider, model_id, effective_date) DO NOTHING
-  RETURNING id, model_id, lane, effective_date
+  RETURNING id, model_id, lane, effective_date, input_per_mtok_microusd, output_per_mtok_microusd,
+            cache_read_per_mtok_microusd, cache_write_per_mtok_microusd
 )
 INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after)
 SELECT 'system', 'migration', 'create', 'ai_model_rate', copied.id, NULL,
        jsonb_build_object('provider', 'gemini_vertex', 'model_id', copied.model_id, 'lane', copied.lane,
-                          'effective_date', copied.effective_date, 'copied_from', 'gemini')
+                          'effective_date', copied.effective_date, 'copied_from', 'gemini',
+                          'input_per_mtok_microusd', copied.input_per_mtok_microusd,
+                          'output_per_mtok_microusd', copied.output_per_mtok_microusd,
+                          'cache_read_per_mtok_microusd', copied.cache_read_per_mtok_microusd,
+                          'cache_write_per_mtok_microusd', copied.cache_write_per_mtok_microusd)
   FROM copied;

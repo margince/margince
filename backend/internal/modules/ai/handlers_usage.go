@@ -93,7 +93,7 @@ type aiUsageTask = struct {
 	Task            string  `json:"task"`
 	TaskDisplayName *string `json:"task_display_name,omitempty"`
 
-	// TaskSummary What the task does, in one plain sentence, for a reader deciding what it costs.
+	// TaskSummary What the task does, in plain words, for a reader deciding what it costs.
 	TaskSummary *string `json:"task_summary,omitempty"`
 
 	// Tier local_small, cheap_cloud, premium, frontier, local_large.
