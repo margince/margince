@@ -53,6 +53,7 @@ func TestAVertexRungIsGradedByTheGeminiRecordForItsModel(t *testing.T) {
 	for name, rec := range map[string]Record{
 		"another model": {Task: studio.Task, Provider: "gemini", ServedModel: "gemini-3.1-flash-lite", EnvClass: studio.EnvClass},
 		"another wire":  {Task: studio.Task, Provider: "openai", ServedModel: vertex.Model, EnvClass: studio.EnvClass},
+		"another level": {Task: studio.Task, Provider: "gemini", ServedModel: vertex.Model, EnvClass: studio.EnvClass, ThinkingLevel: "low"},
 	} {
 		if recordMeasures(rec, vertex, ai.ProfileEUHosted, ai.TaskSummarize) {
 			t.Errorf("%s grades the Vertex rung", name)

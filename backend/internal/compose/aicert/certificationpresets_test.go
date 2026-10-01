@@ -109,6 +109,9 @@ type aiCertFallback struct {
 	SameModel bool   `json:"same_model"`
 	Band      string `json:"band"`
 	State     string `json:"state"`
+	// MeasuredOn is as on aiCertPresetTask: the binding whose record grades
+	// this rung when it is not the rung's own.
+	MeasuredOn *aiCertBindingRef `json:"measured_on,omitempty"`
 }
 
 // loadAICertPresets reads every preset in the directory through the same
@@ -211,8 +214,8 @@ func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertP
 			Tier: string(next.Tier), Model: presetBindingRef(next.Binding, preset.Profile),
 			SameModel: next.Binding.Provider == first.Binding.Provider && next.Binding.Model == first.Binding.Model,
 		}
-		if seen, _, ok := measuredOn(task, next.Binding, row.Fallback.Model, measured); ok {
-			row.Fallback.Band, row.Fallback.State = seen.Band, seen.State
+		if seen, on, ok := measuredOn(task, next.Binding, row.Fallback.Model, measured); ok {
+			row.Fallback.Band, row.Fallback.State, row.Fallback.MeasuredOn = seen.Band, seen.State, on
 		}
 	}
 	return row

@@ -1727,7 +1727,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 12,
@@ -1761,7 +1767,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 18,
@@ -1795,7 +1807,12 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
           },
           "abandoned": 0,
           "runs": 9,
@@ -1829,7 +1846,12 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
           },
           "abandoned": 0,
           "runs": 21,
@@ -1907,7 +1929,12 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
           },
           "abandoned": 0,
           "runs": 12,
@@ -1942,7 +1969,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 42,
@@ -2000,7 +2033,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 21,
@@ -2058,7 +2097,13 @@
             },
             "same_model": false,
             "band": "supported_degraded",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 45,
@@ -2091,7 +2136,12 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
           },
           "abandoned": 0,
           "runs": 12,
@@ -2125,7 +2175,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 12,
@@ -2188,7 +2244,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 15,
@@ -2221,7 +2283,12 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
           },
           "abandoned": 0,
           "runs": 12,
@@ -2255,7 +2322,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 21,
@@ -2289,7 +2362,12 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
           },
           "abandoned": 0,
           "runs": 12,
@@ -2323,7 +2401,12 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
           },
           "abandoned": 0,
           "runs": 12,
@@ -2357,7 +2440,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 12,
@@ -2415,7 +2504,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 9,
@@ -2449,7 +2544,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 15,
@@ -2483,7 +2584,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 27,
@@ -2517,7 +2624,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 72,
@@ -2551,7 +2664,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 9,
@@ -2585,7 +2704,13 @@
             },
             "same_model": false,
             "band": "supported_degraded",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 15,
@@ -2619,7 +2744,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 12,
@@ -2653,7 +2784,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
           },
           "abandoned": 0,
           "runs": 45,

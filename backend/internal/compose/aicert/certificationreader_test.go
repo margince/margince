@@ -327,6 +327,9 @@ func aiCertRouteLine(row aiCertPresetTask) string {
 		line += " → " + aiCertShortModel(fallback.Model.Model) + ", not measured on this feature"
 	default:
 		line += " → " + aiCertShortModel(fallback.Model.Model) + ", " + bandGrade(fallback.Band) + staleMark(fallback.State)
+		if fallback.MeasuredOn != nil {
+			line += ", measured on `" + fallback.MeasuredOn.Provider + "`"
+		}
 	}
 	if row.Abandoned > 0 {
 		line += fmt.Sprintf("; %d of %d runs broke off", row.Abandoned, row.Runs)
