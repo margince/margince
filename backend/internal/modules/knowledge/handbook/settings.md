@@ -242,17 +242,13 @@ tokens, and a tier name proves nothing about where data is processed or what it
 costs — read the binding. Each row in **AI tasks** names its tier, and **View
 calls** opens the **AI call log** narrowed to that task.
 
-Changes take effect without a restart, within about a minute; a call in flight
-keeps the binding it started with. A binding names only its provider and
-model; where the provider is reached is set on the provider.
+Changes take effect within about a minute; a call in flight keeps its binding.
 
-**Providers** — each provider's sheet holds its key and where it is reached:
-the **Host** for an OpenAI-compatible broker or a decision server, which
-**OpenRouter hosts** may serve it (pin EU hosts here for EU residency), and for
-**Gemini on Vertex AI** the **Location** where Google processes the work —
-under `eu_hosted` only the EU ones can be chosen, and saving checks that the
-location serves every bound model. Gemini on Vertex AI takes a Google Cloud
-**service-account key** file. Margince can also run on a local model with no key.
+**Providers** — each sheet holds the key and where the provider is reached: the
+**Host**, the **OpenRouter hosts** that may serve it (pin EU hosts for EU
+residency), and for **Gemini on Vertex AI** the **Location** — under
+`eu_hosted` only EU ones, checked against every bound model. Vertex takes a
+Google Cloud **service-account key** file. Margince can also run on a local model with no key.
 
 **Automations** — the trigger-and-action catalogue. Three rules watch a Live
 List and, when a record joins or leaves it, add a task, notify the rule's owner,
