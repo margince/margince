@@ -545,3 +545,50 @@ func TestTheReturnedIdIsWhatTheRevokeDoorTakes(t *testing.T) {
 		t.Error("the override the door named is still live after it was revoked")
 	}
 }
+
+// TestARevokeThroughAMergedAwayContactReachesTheRowAllowMovedToTheSurvivor
+// closes the pair of doors over each other. Allow settles its subject against
+// a merge and writes the row on the survivor, then answers with that row's id
+// so the caller can take it back. A revoke that pinned the row to the contact
+// in the URL would answer 404 to the very id it just handed out.
+func TestARevokeThroughAMergedAwayContactReachesTheRowAllowMovedToTheSurvivor(t *testing.T) {
+	e := setupChannelConsent(t)
+	survivor := ids.New[ids.ContactKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact (id, full_name, source, captured_by, visibility, owner_id)
+		VALUES ($1, 'Merge Survivor', 'test', 'human:x', 'workspace', $2)`, survivor, e.user); err != nil {
+		t.Fatal(err)
+	}
+	// The merge's one durable mark, written the way mergeContactTx leaves it.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE contact SET merged_into_id = $1 WHERE id = $2`, survivor, e.contact); err != nil {
+		t.Fatal(err)
+	}
+
+	recorded, err := e.store.Allow(e.ctx, AllowInput{
+		ContactID: e.contact, Category: "marketing", Reason: "confirmed on a call after the merge",
+	})
+	if err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+	// The premise: Allow settled the row onto the survivor, not the named contact.
+	if category, _, _ := liveOverrideRow(t, e, survivor); category != "marketing" {
+		t.Fatalf("the row on the survivor is for %q, want marketing", category)
+	}
+
+	if err := e.store.RevokeOverride(e.ctx, RevokeOverrideInput{
+		ContactID: e.contact, OverrideID: recorded, Reason: "the buyer withdrew it",
+	}); err != nil {
+		t.Fatalf("revoking through the contact the vouch was recorded through: %v", err)
+	}
+
+	var live int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM communication_override
+		 WHERE contact_id = $1 AND revoked_at IS NULL`, survivor).Scan(&live); err != nil {
+		t.Fatal(err)
+	}
+	if live != 0 {
+		t.Errorf("the survivor still holds %d live override(s), want 0", live)
+	}
+}

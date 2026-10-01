@@ -305,6 +305,15 @@ func (s *Store) revokeOverrideAdmittedTx(
 	if err := auth.EnsureRetractable(ctx, tx, sub.entityType, sub.id); err != nil {
 		return err
 	}
+	// SETTLED AGAINST A MERGE, as Allow settles its write: the row Allow
+	// returned may sit on the survivor of the contact this caller named.
+	// Either home is accepted — the original recorded before a merge still
+	// sits on the retired record — and nothing else is, so a row on a
+	// stranger's contact stays as unreachable as before.
+	surviving, err := survivingSubject(ctx, tx, sub.id)
+	if err != nil {
+		return err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
@@ -313,12 +322,13 @@ func (s *Store) revokeOverrideAdmittedTx(
 	var decided string
 	err = tx.QueryRow(ctx, `
 		SELECT decided_by_level FROM communication_override
-		 WHERE id = $1 AND contact_id = $2 AND revoked_at IS NULL
-		 FOR UPDATE`, in.OverrideID, sub.id).Scan(&decided)
+		 WHERE id = $1 AND contact_id IN ($2, $3) AND revoked_at IS NULL
+		 FOR UPDATE`, in.OverrideID, sub.id, surviving).Scan(&decided)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// A row that is already revoked, belongs to another subject, or never
-		// existed all answer alike: a caller learns nothing about rows they were
-		// not going to be allowed to touch.
+		// A row that is already revoked, belongs to another subject than the
+		// one named or its survivor, or never existed all answer alike: a
+		// caller learns nothing about rows they were not going to be allowed
+		// to touch.
 		return apperrors.ErrNotFound
 	}
 	if err != nil {
