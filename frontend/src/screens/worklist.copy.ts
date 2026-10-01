@@ -661,12 +661,8 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     return item.subject.label;
   }
   if (item.batch) {
-    const figure = formatNumber(item.batch.count, locale);
-    const count = floorFigure(
-      figure,
-      item.batch.at_least === true,
-      item.batch.count,
-    );
+    const { count: size, at_least } = item.batch;
+    const count = floorFigure(formatNumber(size, locale), !!at_least, size);
     // An incident names WHAT is broken; a hygiene group names its kind.
     //
     // From `label`, never from `cause`. The cause is the identity the group was
