@@ -8,57 +8,143 @@ import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Select } from "../design-system/select";
-import { TokenInput } from "../design-system/tokeninput";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { isOpenRouter } from "./ai-provider-links";
 import { ROUTING_KEY } from "./ai-routing-query";
 import { problemMessageOf, throwProblem } from "./common";
 import { VERTEX_PROVIDER, VertexLocationField } from "./vertex-location";
 
-// Where a provider is reached, and for a broker which of its hosts may serve
-// the request. Set once here; every lane that binds the provider reads them.
+// Where a provider is reached. Set once here; every lane that binds the
+// provider reads it. A known service fills its own host, so the reader picks a
+// name rather than remembering a URL; Other asks for the URL with an example.
 
 type Routing = components["schemas"]["AiRouting"];
 type ProviderSettings = components["schemas"]["AiProviderSettings"];
-type Upstream = components["schemas"]["AiOpenRouterUpstream"];
 
-// The host each provider takes, and what it does with it: the chat broker gets
-// /v1 appended, while a decision endpoint is the full URL, used as written.
-type HostField = Readonly<{
-  help: MessageKey;
-  placeholder: MessageKey;
-  preset?: string;
+// The guide a reader setting up a service by hand is pointed at.
+const HOST_GUIDE =
+  "https://github.com/margince/margince/blob/main/docs/how-to/connect-a-cloud-model-provider.md";
+
+type Service = Readonly<{
+  id: string;
+  label: MessageKey;
+  // The host it saves; empty means the adapter's compiled default.
+  host: string;
+  note?: MessageKey;
+  noteLink?: string;
 }>;
-const HOST_FIELDS: ReadonlyMap<string, HostField> = new Map([
+
+// What the Other service asks for on each provider: the chat broker gets /v1
+// appended, while a decision endpoint is the full URL, used as written.
+type OtherHost = Readonly<{ help: MessageKey; placeholder: MessageKey }>;
+
+type ProviderServices = Readonly<{
+  services: readonly Service[];
+  other: OtherHost & { label: MessageKey };
+}>;
+
+const OTHER = "other";
+
+const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
   [
     "openai_compatible",
     {
-      help: "aiRouting.baseUrl.help",
-      placeholder: "aiRouting.baseUrl.placeholder",
-      preset: "https://openrouter.ai/api",
-    },
-  ],
-  [
-    "jev",
-    {
-      help: "aiRouting.baseUrl.help.jev",
-      placeholder: "aiRouting.baseUrl.placeholder.jev",
+      services: [
+        {
+          id: "openrouter",
+          label: "aiProviderSettings.service.openrouter",
+          host: "https://openrouter.ai/api",
+        },
+        {
+          id: "openrouter-eu",
+          label: "aiProviderSettings.service.openrouterEu",
+          host: "https://eu.openrouter.ai/api",
+          note: "aiProviderSettings.service.openrouterEu.note",
+          noteLink: "https://openrouter.ai/docs/guides/features/sovereign-ai",
+        },
+        {
+          id: "mistral",
+          label: "aiProviderSettings.service.mistral",
+          host: "https://api.mistral.ai",
+        },
+        {
+          id: "together",
+          label: "aiProviderSettings.service.together",
+          host: "https://api.together.xyz",
+        },
+        {
+          id: "groq",
+          label: "aiProviderSettings.service.groq",
+          host: "https://api.groq.com/openai",
+        },
+        {
+          id: "deepseek",
+          label: "aiProviderSettings.service.deepseek",
+          host: "https://api.deepseek.com",
+        },
+      ],
+      other: {
+        label: "aiProviderSettings.service.otherChat",
+        help: "aiRouting.baseUrl.help",
+        placeholder: "aiRouting.baseUrl.placeholder",
+      },
     },
   ],
   [
     "jev_compatible",
     {
-      help: "aiRouting.baseUrl.help.jevCompatible",
-      placeholder: "aiRouting.baseUrl.placeholder.jevCompatible",
-      preset: "https://openrouter.ai/api/alpha/decisions",
+      services: [
+        {
+          id: "openrouter",
+          label: "aiProviderSettings.service.openrouter",
+          host: "https://openrouter.ai/api/alpha/decisions",
+        },
+      ],
+      other: {
+        label: "aiProviderSettings.service.otherDecisions",
+        help: "aiRouting.baseUrl.help.jevCompatible",
+        placeholder: "aiRouting.baseUrl.placeholder.jevCompatible",
+      },
+    },
+  ],
+  [
+    "jev",
+    {
+      services: [
+        {
+          id: "typesafe",
+          label: "aiProviderSettings.service.typesafe",
+          host: "",
+        },
+      ],
+      other: {
+        label: "aiProviderSettings.service.otherAddress",
+        help: "aiRouting.baseUrl.help.jev",
+        placeholder: "aiRouting.baseUrl.placeholder.jev",
+      },
     },
   ],
 ]);
 
 /** Whether a provider has anything this sheet can set. */
 export function hasProviderSettings(provider: string): boolean {
-  return HOST_FIELDS.has(provider) || provider === VERTEX_PROVIDER;
+  return SERVICES.has(provider) || provider === VERTEX_PROVIDER;
+}
+
+// Two spellings of one address name one service: case and a trailing slash
+// are what a hand edit varies without meaning to.
+function sameHost(a: string, b: string): boolean {
+  const norm = (h: string) => h.trim().replace(/\/+$/, "").toLowerCase();
+  return norm(a) === norm(b);
+}
+
+/** The service a stored host belongs to: a known one, or Other. */
+export function serviceOf(provider: string, host: string): string {
+  const known = SERVICES.get(provider)?.services ?? [];
+  if (host.trim() === "") return known[0]?.id ?? OTHER;
+  return (
+    known.find((s) => s.host !== "" && sameHost(s.host, host))?.id ?? OTHER
+  );
 }
 
 export function useSetProviderSettings() {
@@ -84,23 +170,18 @@ export function useSetProviderSettings() {
   });
 }
 
-// What the sheet sends: only what is set. An upstream with no pins is no
-// upstream at all — the provider then pins nothing — so it is left off.
-function settingsBody(draft: ProviderSettings): ProviderSettings {
+// What the sheet sends: the host and location it shows, and the stored pins it
+// does not — a write replaces the whole entry, so pins set elsewhere ride along
+// rather than being wiped by a save that never showed them.
+function settingsBody(
+  stored: ProviderSettings,
+  host: string,
+  location: string,
+): ProviderSettings {
   const body: ProviderSettings = {};
-  if (draft.base_url?.trim()) body.base_url = draft.base_url.trim();
-  if (draft.location) body.location = draft.location;
-  const upstream = draft.upstream;
-  if (upstream?.only?.length) body.upstream = { only: upstream.only };
-  if (upstream?.ignore?.length) {
-    body.upstream = { ...body.upstream, ignore: upstream.ignore };
-  }
-  if (upstream?.allow_fallbacks !== undefined) {
-    body.upstream = {
-      ...body.upstream,
-      allow_fallbacks: upstream.allow_fallbacks,
-    };
-  }
+  if (host.trim()) body.base_url = host.trim();
+  if (location) body.location = location;
+  if (stored.upstream) body.upstream = stored.upstream;
   return body;
 }
 
@@ -115,55 +196,84 @@ export function ProviderSettingsForm({
 }>) {
   const t = useT();
   const stored = routing.providers?.[provider] ?? {};
-  const [draft, setDraft] = useState<ProviderSettings>(stored);
+  const catalog = SERVICES.get(provider);
+  const [service, setService] = useState(() =>
+    serviceOf(provider, stored.base_url ?? ""),
+  );
+  const [typed, setTyped] = useState(stored.base_url ?? "");
+  const [location, setLocation] = useState(stored.location ?? "");
   const save = useSetProviderSettings();
-  const host = HOST_FIELDS.get(provider);
   const disabled = !canManage || save.isPending;
-  const broker =
-    provider === "openai_compatible" && isOpenRouter(draft.base_url ?? "");
+  const known = catalog?.services.find((s) => s.id === service);
+  const host = known ? known.host : typed;
   return (
     <div className="ai-provider-settings">
-      {host && (
-        <div className="binding-provider-row">
-          <Field label={t("aiRouting.baseUrl.label")} hint={t(host.help)}>
+      {catalog && (
+        <Field label={t("aiProviderSettings.service.label")}>
+          {(control) => (
+            <Select
+              {...control}
+              value={service}
+              disabled={disabled}
+              options={[
+                ...catalog.services.map((s) => ({
+                  value: s.id,
+                  label: t(s.label),
+                })),
+                { value: OTHER, label: t(catalog.other.label) },
+              ]}
+              onChange={setService}
+            />
+          )}
+        </Field>
+      )}
+      {known && (
+        <p className="t-caption ai-provider-host">
+          {known.host
+            ? t("aiProviderSettings.host.line", { host: known.host })
+            : t("aiProviderSettings.host.default")}
+        </p>
+      )}
+      {known?.note && (
+        <p className="t-caption">
+          {t(known.note)}{" "}
+          <a href={known.noteLink} target="_blank" rel="noreferrer">
+            {t("aiProviderSettings.service.learnMore")}
+          </a>
+        </p>
+      )}
+      {catalog && !known && (
+        <>
+          <Field
+            label={t("aiRouting.baseUrl.label")}
+            hint={t(catalog.other.help)}
+          >
             {(control) => (
               <TextInput
                 {...control}
-                value={draft.base_url ?? ""}
+                value={typed}
                 disabled={disabled}
-                placeholder={t(host.placeholder)}
-                onChange={(e) =>
-                  setDraft({ ...draft, base_url: e.target.value })
-                }
+                placeholder={t(catalog.other.placeholder)}
+                onChange={(e) => setTyped(e.target.value)}
               />
             )}
           </Field>
-          {host.preset && (
-            <span className="binding-preset-action">
-              <Button
-                variant="link"
-                disabled={disabled}
-                onClick={() => setDraft({ ...draft, base_url: host.preset })}
-              >
-                {t("aiProviderSettings.preset.openrouter")}
-              </Button>
-            </span>
-          )}
-        </div>
+          <a
+            className="t-caption"
+            href={HOST_GUIDE}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t("aiProviderSettings.host.guide")}
+          </a>
+        </>
       )}
       {provider === VERTEX_PROVIDER && (
         <VertexLocationField
-          value={draft.location ?? ""}
+          value={location}
           profile={routing.profile}
           disabled={disabled}
-          onChange={(location) => setDraft({ ...draft, location })}
-        />
-      )}
-      {broker && (
-        <UpstreamFields
-          upstream={draft.upstream ?? {}}
-          disabled={disabled}
-          onChange={(upstream) => setDraft({ ...draft, upstream })}
+          onChange={setLocation}
         />
       )}
       <div className="ai-provider-settings-foot">
@@ -173,7 +283,10 @@ export function ProviderSettingsForm({
           disabled={!canManage}
           reason={canManage ? undefined : t("aiProviderKeys.adminOnly")}
           onClick={() =>
-            save.mutate({ provider, settings: settingsBody(draft) })
+            save.mutate({
+              provider,
+              settings: settingsBody(stored, host, location),
+            })
           }
         >
           {t("aiProviderSettings.save")}
@@ -189,76 +302,5 @@ export function ProviderSettingsForm({
         </Callout>
       ) : null}
     </div>
-  );
-}
-
-const FALLBACK_OPTIONS = ["default", "yes", "no"] as const;
-type Fallback = (typeof FALLBACK_OPTIONS)[number];
-
-function fallbackOf(upstream: Upstream): Fallback {
-  if (upstream.allow_fallbacks === undefined) return "default";
-  return upstream.allow_fallbacks ? "yes" : "no";
-}
-
-// Which of OpenRouter's hosts may serve this provider's requests, for every
-// lane on it: a residency pin lives here. How one model is served stays on the
-// tier.
-function UpstreamFields({
-  upstream,
-  disabled,
-  onChange,
-}: Readonly<{
-  upstream: Upstream;
-  disabled: boolean;
-  onChange: (next: Upstream) => void;
-}>) {
-  const t = useT();
-  return (
-    <fieldset className="ai-provider-upstream">
-      <legend className="t-h3">{t("aiProviderSettings.upstream.label")}</legend>
-      <p className="t-caption">{t("aiProviderSettings.upstream.help")}</p>
-      <Field label={t("aiProviderSettings.upstream.only")}>
-        {(control) => (
-          <TokenInput
-            {...control}
-            values={upstream.only ?? []}
-            disabled={disabled}
-            onChange={(only) => onChange({ ...upstream, only: [...only] })}
-          />
-        )}
-      </Field>
-      <Field label={t("aiProviderSettings.upstream.ignore")}>
-        {(control) => (
-          <TokenInput
-            {...control}
-            values={upstream.ignore ?? []}
-            disabled={disabled}
-            onChange={(ignore) =>
-              onChange({ ...upstream, ignore: [...ignore] })
-            }
-          />
-        )}
-      </Field>
-      <Field label={t("aiProviderSettings.upstream.fallbacks")}>
-        {(control) => (
-          <Select
-            {...control}
-            value={fallbackOf(upstream)}
-            disabled={disabled}
-            options={FALLBACK_OPTIONS.map((value) => ({
-              value,
-              label: t(`aiProviderSettings.upstream.fallbacks.${value}`),
-            }))}
-            onChange={(value) =>
-              onChange({
-                ...upstream,
-                allow_fallbacks:
-                  value === "default" ? undefined : value === "yes",
-              })
-            }
-          />
-        )}
-      </Field>
-    </fieldset>
   );
 }

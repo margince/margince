@@ -169,9 +169,12 @@ async function open(
   provider: string,
 ) {
   await user.click(
-    await screen.findByRole("button", { name: `Manage ${provider}` }),
+    within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
+      "button",
+      { name: /^Manage/ },
+    ),
   );
-  return screen.findByRole("dialog", { name: provider });
+  return screen.findByRole("dialog");
 }
 
 describe("the Providers list", () => {

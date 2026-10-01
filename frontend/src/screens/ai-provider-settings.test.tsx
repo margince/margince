@@ -111,6 +111,17 @@ const render = (ui: ReactNode) => {
   );
 };
 
+async function pickService(
+  user: ReturnType<typeof userEvent.setup>,
+  sheet: HTMLElement,
+  name: string,
+) {
+  await user.click(
+    await within(sheet).findByRole("combobox", { name: "Service" }),
+  );
+  await user.click(await screen.findByRole("option", { name }));
+}
+
 async function openSheet(
   user: ReturnType<typeof userEvent.setup>,
   provider: string,
@@ -126,6 +137,20 @@ afterEach(() => {
 });
 
 describe("a provider's settings on its sheet", () => {
+  // A provider reads by its product name; the variable its key may arrive in
+  // stays on the sheet, where the key is managed.
+  it("names each provider the way its vendor does", async () => {
+    backend(routingWith({}));
+    render(<AiProviderKeysCard />);
+
+    const row = await screen.findByTestId("ai-provider-row-openai_compatible");
+    expect(row).toHaveTextContent("OpenAI-compatible");
+    expect(within(row).queryByText("OPENAI_COMPATIBLE_API_KEY")).toBeNull();
+    expect(
+      screen.getByTestId("ai-provider-row-gemini_vertex"),
+    ).toHaveTextContent("Gemini on Vertex AI");
+  });
+
   it("shows the stored host and saves a new one through the provider", async () => {
     const puts = backend(
       routingWith({ openai_compatible: { base_url: "https://old.example" } }),
@@ -176,44 +201,66 @@ describe("a provider's settings on its sheet", () => {
     );
   });
 
-  it("fills OpenRouter's host from the preset", async () => {
+  it("fills a known service's host when it is chosen", async () => {
     const puts = backend(routingWith({}));
     const user = userEvent.setup();
     render(<AiProviderKeysCard />);
 
     const sheet = await openSheet(user, "openai_compatible");
-    await user.click(
-      await within(sheet).findByRole("button", { name: "Preset: OpenRouter" }),
-    );
+    await pickService(user, sheet, "Mistral");
+    expect(
+      within(sheet).getByText(/https:\/\/api\.mistral\.ai/),
+    ).toBeInTheDocument();
+    expect(within(sheet).queryByLabelText("Host")).toBeNull();
     await user.click(within(sheet).getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
-      expect(puts[0]?.body.base_url).toBe("https://openrouter.ai/api"),
+      expect(puts[0]?.body).toEqual({ base_url: "https://api.mistral.ai" }),
     );
   });
 
-  it("offers the upstream pins only for an OpenRouter host", async () => {
+  it("opens on the service its stored host belongs to", async () => {
     backend(
       routingWith({
-        openai_compatible: { base_url: "https://gateway.example" },
+        openai_compatible: { base_url: "https://openrouter.ai/api/" },
       }),
     );
     const user = userEvent.setup();
     render(<AiProviderKeysCard />);
 
     const sheet = await openSheet(user, "openai_compatible");
-    await within(sheet).findByLabelText("Host");
     expect(
-      within(sheet).queryByRole("group", { name: "OpenRouter hosts" }),
-    ).toBeNull();
+      await within(sheet).findByRole("combobox", { name: "Service" }),
+    ).toHaveTextContent("OpenRouter");
   });
 
-  it("pins the hosts listed, and sends no upstream when none are", async () => {
+  // OpenRouter's EU address keeps processing inside the EU; it needs a plan
+  // OpenRouter sells, which the sheet says before Save rather than after.
+  it("offers OpenRouter's EU address with what it requires", async () => {
+    const puts = backend(routingWith({}));
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    const sheet = await openSheet(user, "openai_compatible");
+    await pickService(user, sheet, "OpenRouter (EU)");
+    expect(
+      within(sheet).getByText(/Business or Enterprise plan/),
+    ).toBeInTheDocument();
+    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(puts[0]?.body.base_url).toBe("https://eu.openrouter.ai/api"),
+    );
+  });
+
+  // The pins are no longer on this sheet; ones already stored are not wiped by
+  // a save that never showed them.
+  it("keeps stored pins it does not show", async () => {
     const puts = backend(
       routingWith({
         openai_compatible: {
           base_url: "https://openrouter.ai/api",
-          upstream: { ignore: ["deepinfra"] },
+          upstream: { only: ["mistral/eu"] },
         },
       }),
     );
@@ -221,29 +268,16 @@ describe("a provider's settings on its sheet", () => {
     render(<AiProviderKeysCard />);
 
     const sheet = await openSheet(user, "openai_compatible");
-    const hosts = await within(sheet).findByRole("group", {
-      name: "OpenRouter hosts",
-    });
-    await user.type(
-      within(hosts).getByLabelText("Only these hosts"),
-      "mistral/eu{Enter}",
-    );
+    await within(sheet).findByRole("combobox", { name: "Service" });
+    expect(within(sheet).queryByText("Only these hosts")).toBeNull();
     await user.click(within(sheet).getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(puts).toHaveLength(1));
-    expect(puts[0]?.body).toEqual({
-      base_url: "https://openrouter.ai/api",
-      upstream: { only: ["mistral/eu"], ignore: ["deepinfra"] },
-    });
 
-    await user.click(
-      within(hosts).getByRole("button", { name: "Remove mistral/eu" }),
+    await waitFor(() =>
+      expect(puts[0]?.body).toEqual({
+        base_url: "https://openrouter.ai/api",
+        upstream: { only: ["mistral/eu"] },
+      }),
     );
-    await user.click(
-      within(hosts).getByRole("button", { name: "Remove deepinfra" }),
-    );
-    await user.click(within(sheet).getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(puts).toHaveLength(2));
-    expect(puts[1]?.body).toEqual({ base_url: "https://openrouter.ai/api" });
   });
 
   it("sets a Vertex location on the provider", async () => {

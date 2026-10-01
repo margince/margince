@@ -133,3 +133,23 @@ func TestAStoredEUHostedBrokerLaneLoadsButIsRefusedOnWrite(t *testing.T) {
 		t.Error("validateStoredRouting accepted the unpinned lane a settings write must refuse")
 	}
 }
+
+// OpenRouter's EU address processes every request inside the EU and routes it
+// only to providers there, so a lane on it is EU-resident with no pins; the
+// global address still needs them.
+func TestOpenRoutersEUAddressIsResidentWithoutPins(t *testing.T) {
+	doc := func(host string) string {
+		return "profile: eu_hosted\nproviders:\n  openai_compatible: {base_url: '" + host + "'}\n" +
+			"tiers:\n  premium: {provider: openai_compatible, model: m}\n" +
+			"embeddings: {provider: openai_compatible, model: e}\n"
+	}
+	if _, err := ParseRouting([]byte(doc("https://eu.openrouter.ai/api"))); err != nil {
+		t.Errorf("a lane on OpenRouter's EU address was refused under eu_hosted: %v", err)
+	}
+	if _, err := ParseRouting([]byte(doc("https://openrouter.ai/api"))); err == nil {
+		t.Error("an unpinned lane on OpenRouter's global address was admitted under eu_hosted")
+	}
+	if gap := EURegionPinGap(ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://EU.OpenRouter.ai/api/"}); gap != "" {
+		t.Errorf("EURegionPinGap on the EU address = %q, want none", gap)
+	}
+}

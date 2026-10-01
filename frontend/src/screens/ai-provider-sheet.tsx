@@ -13,6 +13,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useAiModelCatalogue } from "./ai-models";
 import { pricingPageFor } from "./ai-provider-links";
+import { providerName } from "./ai-provider-names";
 import type { ProviderUse } from "./ai-routing-query";
 import {
   type ModelPriceRefresh,
@@ -91,7 +92,7 @@ export function ProviderSheet({
     >
       <div className="drawer-head">
         <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {status.provider}
+          {providerName(status.provider, t)}
         </Heading>
         <p className="t-caption ai-sheet-status">
           <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>

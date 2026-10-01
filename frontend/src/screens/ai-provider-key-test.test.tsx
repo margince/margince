@@ -101,7 +101,10 @@ async function testRow(
   provider: string,
 ) {
   await user.click(
-    await screen.findByRole("button", { name: `Manage ${provider}` }),
+    within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
+      "button",
+      { name: /^Manage/ },
+    ),
   );
   const row = await screen.findByTestId(`ai-provider-key-${provider}`);
   await user.click(within(row).getByRole("button", { name: /^test$/i }));
@@ -184,7 +187,9 @@ describe("testing a provider key", () => {
     const user = userEvent.setup();
     for (const provider of ["gemini", "jev", "jev_compatible", "openai"]) {
       await user.click(
-        await screen.findByRole("button", { name: `Manage ${provider}` }),
+        within(
+          await screen.findByTestId(`ai-provider-row-${provider}`),
+        ).getByRole("button", { name: /^Manage/ }),
       );
       const row = await screen.findByTestId(`ai-provider-key-${provider}`);
       const test = within(row).queryByRole("button", { name: /^test$/i });

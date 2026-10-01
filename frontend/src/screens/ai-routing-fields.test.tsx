@@ -94,7 +94,8 @@ describe("a lane's fields", () => {
   });
 });
 
-// The Host field on the provider's sheet says what THIS adapter does with the
+// The Host field on the provider's sheet (its Other service) says what THIS
+// adapter does with the
 // address it is given. A chat broker, OpenRouter's decisions endpoint and a
 // local decision server each append a different path, and only one of them has
 // a default — so one sentence copied across all three tells two of them the
@@ -104,10 +105,12 @@ function mountSheet(provider: string) {
   wrap(
     <ProviderSettingsForm
       provider={provider}
+      // A host no known service has, so the sheet opens on Other and asks.
       routing={{
         profile: "cloud_frontier",
         tiers: {},
         embeddings: { provider: "gemini", model: "e" },
+        providers: { [provider]: { base_url: "https://custom.example" } },
       }}
       canManage
     />,

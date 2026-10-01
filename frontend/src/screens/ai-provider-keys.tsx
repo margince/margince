@@ -24,6 +24,7 @@ import {
   KeyTestOutcome,
   useTestProviderKey,
 } from "./ai-provider-key-test";
+import { providerName } from "./ai-provider-names";
 import {
   hasProviderSettings,
   ProviderSettingsForm,
@@ -184,10 +185,7 @@ function ProviderRow({
         data-testid={`ai-provider-row-${status.provider}`}
       >
         <span className="ai-provider-who">
-          <span>{status.provider}</span>
-          <span className="ai-provider-env">
-            {status.env_var === "" ? "\u2014" : status.env_var}
-          </span>
+          <span>{providerName(status.provider, t)}</span>
         </span>
         <span
           className="t-caption ai-provider-used"
@@ -200,7 +198,7 @@ function ProviderRow({
         <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>
         <Button onClick={onOpen}>
           {t("aiProviders.manage")}
-          <span className="sr-only"> {status.provider}</span>
+          <span className="sr-only"> {providerName(status.provider, t)}</span>
         </Button>
       </div>
     </PanelRow>
