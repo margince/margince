@@ -22,7 +22,9 @@ func (c *collector) WritePrometheus(w io.Writer) {
 	snap := c.snapshot()
 
 	writeRequests(w, counterHeader(w, "margince_connector_requests_total",
-		"Provider API calls since process start, by op and result."), snap.requests)
+		"Provider API calls since process start, by op and result."), "result", snap.requests)
+	writeRequests(w, counterHeader(w, "margince_connector_rate_limited_total",
+		"Provider API calls refused for a rate limit since process start, by op and the limit the provider named."), "reason", snap.rateLimited)
 	writeHistograms(w, histogramHeader(w, "margince_connector_request_duration_seconds",
 		"Wall time of one provider API call, in seconds."), "op", snap.requestTime)
 	writeCounters(w, counterHeader(w, "margince_capture_backfill_messages_total",
@@ -50,6 +52,7 @@ func histogramHeader(w io.Writer, name, help string) string {
 
 type snapshot struct {
 	requests            map[requestKey]uint64
+	rateLimited         map[requestKey]uint64
 	requestTime, stages map[pair]httpserver.Histogram
 	messages, pages     map[pair]uint64
 	snoozed             map[pair]float64
@@ -63,6 +66,7 @@ func (c *collector) snapshot() snapshot {
 	defer c.mu.Unlock()
 	return snapshot{
 		requests:    copyMap(c.requests),
+		rateLimited: copyMap(c.rateLimited),
 		requestTime: copyHistograms(c.requestTime),
 		stages:      copyHistograms(c.stages),
 		messages:    copyMap(c.messages),
@@ -107,11 +111,13 @@ func pairLabels(label string) func(pair) string {
 	}
 }
 
-func writeRequests(w io.Writer, name string, family map[requestKey]uint64) {
+// writeRequests renders a family keyed by provider, op and one label of its
+// own, which requestKey carries as result.
+func writeRequests(w io.Writer, name, label string, family map[requestKey]uint64) {
 	keys, labels := sortedLabels(family, func(k requestKey) string {
 		return "provider=" + httpserver.Label(k.provider) +
 			",op=" + httpserver.Label(k.op) +
-			",result=" + httpserver.Label(k.result)
+			"," + label + "=" + httpserver.Label(k.result)
 	})
 	for _, k := range keys {
 		httpserver.WriteLine(w, "%s{%s} %d\n", name, labels[k], family[k])

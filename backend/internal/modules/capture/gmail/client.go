@@ -427,7 +427,9 @@ func classifyStatus(resp *http.Response, op string, body []byte) error {
 	switch {
 	case resp.StatusCode == http.StatusTooManyRequests,
 		resp.StatusCode == http.StatusForbidden && googleconn.RateLimitBody(body):
-		return &connector.RateLimitedError{RetryAfter: rateLimitWait(resp, body)}
+		return &connector.RateLimitedError{
+			RetryAfter: rateLimitWait(resp, body), Reason: googleconn.RateLimitReason(body), Status: resp.StatusCode,
+		}
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		return &connector.ProviderError{
 			Op: op, Status: resp.StatusCode, Reason: googleconn.Reason(body), Class: ErrAuthRejected,
