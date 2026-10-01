@@ -56,6 +56,15 @@ export const OnAPhone: Story = {
   args: { ...Lit.args, coreStateLabel: "Core · reading input" },
 };
 
+// A room short against its own text: a phone on its side here, and any phone
+// read at large text. The Core folds away so the question keeps the height, and
+// its state stays in words on the band.
+export const OnAShortPhone: Story = {
+  globals: { viewport: { value: "phoneOnItsSide" } },
+  tags: ["uat-phone-on-its-side"],
+  args: OnAPhone.args,
+};
+
 // The read theatre's anchor. A surface that gains a tile per page cannot be
 // centred: the column would re-centre on every arrival and carry the line
 // somebody is reading upward while they read it.
