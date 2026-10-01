@@ -207,7 +207,7 @@ func TestArt17ErasureDeletesAMergedPredecessorsOverride(t *testing.T) {
 }
 
 // TestArt17ErasureDeletesAMergedPredecessorsSuppression is the suppression twin:
-// a stop and a vouch are the same statement about the same person.
+// a stop and a vouch are the same statement about the same contact.
 func TestArt17ErasureDeletesAMergedPredecessorsSuppression(t *testing.T) {
 	e := setupSARIdentifiers(t)
 	predecessor := seedMergedPredecessor(e.ctx, t, e, e.contact)
