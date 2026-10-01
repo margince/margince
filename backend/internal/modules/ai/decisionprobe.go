@@ -236,11 +236,14 @@ func decisionLaneForbidden(profile Profile, lane DecisionsConfig) bool {
 }
 
 // boundDecisionLane is the decision binding a test or a list uses for
-// provider: the stored lane when it names this provider, otherwise the
-// adapter's default endpoint — which `jev_compatible`, having none, refuses.
+// provider: the stored lane when it names this provider, at the provider's
+// endpoint — else the adapter's default, which `jev_compatible`, having none,
+// refuses.
 func boundDecisionLane(cfg RoutingConfig, provider string) DecisionsConfig {
+	lane := DecisionsConfig{Provider: provider}
 	if cfg.Decisions != nil && cfg.Decisions.Provider == provider {
-		return *cfg.Decisions
+		lane = *cfg.Decisions
 	}
-	return DecisionsConfig{Provider: provider}
+	lane.BaseURL = cfg.canonical().Providers[provider].BaseURL
+	return lane
 }

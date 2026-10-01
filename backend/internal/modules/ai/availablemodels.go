@@ -6,7 +6,6 @@ package ai
 import (
 	"context"
 	"errors"
-	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -100,19 +99,16 @@ type AvailableModels struct {
 
 // ListAvailableModels asks one vendor what it serves.
 //
-// The provider and the LANE are named; the endpoint is not. Both are closed
-// vocabularies — the adapter names this build accepts, and the tiers the stored
+// The provider and the lane are named; the endpoint is not. Both are closed
+// vocabularies — the adapter names this build accepts, and the lanes the stored
 // document already binds — and the host is read from that document or from the
 // adapter's compiled default, never from the request. A URL accepted here would
 // be a destination chosen by a caller holding only READ on this setting, while
 // the stored one had to be written by someone holding update and passed the
 // endpoint rule on the way in (outboundegress.go).
 //
-// The lane matters because one vendor may be bound at two hosts: a broker on one
-// tier and a self-hosted gateway on another is a configuration the routing
-// validator permits. Asked without it, this read answered for whichever host it
-// happened to find, which is not necessarily the one the lane being edited
-// points at.
+// The host is the provider's, so the lane matters only for the embeddings
+// lane, which may sit on a server of its own (providerConfigFor).
 //
 // top asks for a shortlist: honoured only for the one vendor (OpenRouter) that
 // publishes the benchmark it ranks by. Every other vendor answers its full
@@ -148,7 +144,7 @@ func (s *RoutingStore) ListAvailableModels(
 		}
 		return s.catalogue.List(ctx, top), nil
 	}
-	client, err := SelectBrain(boundProviderConfig(cfg, provider, tier), s.resolvedKeys(ctx))
+	client, err := SelectBrain(providerConfigFor(cfg, provider, tier), s.resolvedKeys(ctx))
 	if err != nil {
 		out.Unavailable = unavailableFor(err)
 		return out, nil
@@ -253,59 +249,15 @@ func unavailableFor(err error) ModelAvailability {
 	return AvailabilityNotPublished
 }
 
-// boundProviderConfig is the binding this installation would call `provider`
-// with, as far as an availability read needs it.
-//
-// The LANE decides, where the caller named one: a vendor bound at two hosts is
-// asked at the one the lane being edited points at, rather than at whichever the
-// map yielded. A lane that names a different vendor — the reader has just
-// re-pointed it and has not saved — falls through to the rest, because the
-// question is about the vendor.
-//
-// Failing that, the tiers are walked in a FIXED order. Which of two hosts wins
-// is then arbitrary; that the same one wins every time is not, and Go randomises
-// map iteration, so ranging the map directly changed the picker's list under a
-// reader who had touched nothing.
-//
-// A vendor the routing does not name at all falls back to the adapter's compiled
-// default, which is what makes the picker useful before anything is bound. No
-// model id: this asks what the vendor serves, not what one lane names.
-func boundProviderConfig(cfg RoutingConfig, provider, tier string) ProviderConfig {
-	// The named lane is the answer WHENEVER it names this vendor, empty host
-	// included: an empty BaseURL means "the adapter's own default", which is
-	// where that lane is actually reached. Reading it as "this lane binds
-	// nothing" fell through to a sibling lane's override and asked the wrong
-	// host — the defect naming the lane exists to prevent, inverted.
-	if binding, ok := cfg.Tiers[Tier(tier)]; ok && binding.Provider == provider {
-		return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL}
+// providerConfigFor is where an availability read asks `provider`: its own
+// host, read through the lift so a document still in the per-lane shape gives
+// the same answer every time. No lane decides it, with one exception: the
+// embeddings lane may sit on a server of its own, and a picker opened on that
+// lane asks there. No model id: this asks what the vendor serves.
+func providerConfigFor(cfg RoutingConfig, provider, lane string) ProviderConfig {
+	lifted := cfg.canonical()
+	if embeddings := lifted.Embeddings; lane == string(LaneEmbeddings) && embeddings.Provider == provider && embeddings.BaseURL != "" {
+		return ProviderConfig{Provider: provider, BaseURL: embeddings.BaseURL}
 	}
-	if tier == string(LaneEmbeddings) && cfg.Embeddings.Provider == provider {
-		return ProviderConfig{Provider: provider, BaseURL: cfg.Embeddings.BaseURL}
-	}
-	for _, t := range sortedTiers(cfg.Tiers) {
-		binding := cfg.Tiers[t]
-		if binding.Provider == provider && binding.BaseURL != "" {
-			return ProviderConfig{Provider: provider, BaseURL: binding.BaseURL}
-		}
-	}
-	if cfg.Embeddings.Provider == provider && cfg.Embeddings.BaseURL != "" {
-		return ProviderConfig{Provider: provider, BaseURL: cfg.Embeddings.BaseURL}
-	}
-	return ProviderConfig{Provider: provider}
-}
-
-// sortedTiers is the tier names in a stable order.
-//
-// Sorted rather than ranked by the cost ladder: this picks WHICH HOST to ask a
-// vendor about, and the ladder ranks how capable a lane is, which says nothing
-// about that. A rank borrowed here would read as a preference the code does not
-// actually hold, and would be a second copy of an order that lives in the task
-// contract.
-func sortedTiers(tiers map[Tier]ProviderConfig) []Tier {
-	out := make([]Tier, 0, len(tiers))
-	for tier := range tiers {
-		out = append(out, tier)
-	}
-	slices.Sort(out)
-	return out
+	return ProviderConfig{Provider: provider, BaseURL: lifted.Providers[provider].BaseURL}
 }

@@ -11,6 +11,7 @@ package ai
 // binding nobody vetted, or one stored and never served.
 
 import (
+	"cmp"
 	"context"
 	"net/url"
 	"strings"
@@ -155,45 +156,61 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 	return next, nil
 }
 
-// keepingStoredUpstream carries each stored lane's upstream preferences and
+// keepingStoredUpstream carries each stored lane's serving preferences and
 // thinking level onto the same lane of next when next declares none and binds
-// the same provider, host and model. A value next declares always wins.
+// the same provider and model. A value next declares always wins.
 //
 // A write that omits them — a client that predates the contract's `routing` or
-// `thinking_level` field, or a settings seed — would otherwise drop an `only:`
-// residency pin, and the broker would go back to serving that lane from any
-// region. The routing editor applies the same rule from its side (rebind in
-// frontend/src/screens/ai-routing-fields.tsx). Keyed on the model as well as
-// the host because a pin names hosts that serve ONE model, and a level is
-// refused on a model that predates it — carried onto another, either would
-// fail the lane with nothing in the form able to lift it.
+// `thinking_level` field, or a settings seed — would otherwise reset how the
+// lane's model is served. The routing editor applies the same rule from its
+// side (rebind in frontend/src/screens/ai-routing-fields.tsx). Keyed on the
+// model because a preference or a level is refused on a model that predates
+// it, and carried onto another it would fail the lane with nothing in the form
+// able to lift it.
+//
+// Both documents are read lifted, so the pins — the provider's — are never
+// carried onto a lane, and the host is the provider's rather than part of the
+// key. Preferences are carried only where next still serves the lane at the
+// broker, and the embeddings lane, the one with a server of its own, keeps
+// them only on the same server.
 //
 // A thinking level of thinkingLevelDefault is the explicit clear, as an empty
 // `routing` object is for upstream preferences: it is stored as no level.
 func (cfg RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingConfig {
-	carry := func(lane, kept ProviderConfig) ProviderConfig {
+	next, kept := cfg.canonical(), stored.canonical()
+	carry := func(lane, keptLane ProviderConfig, prefsApply bool) ProviderConfig {
 		cleared := lane.ThinkingLevel == thinkingLevelDefault
 		if cleared {
 			lane.ThinkingLevel = ""
 		}
-		if lane.Provider != kept.Provider || !sameEndpoint(lane.BaseURL, kept.BaseURL) || lane.Model != kept.Model {
+		if lane.Provider != keptLane.Provider || lane.Model != keptLane.Model {
 			return lane
 		}
-		if lane.Routing == nil {
-			lane.Routing = kept.Routing
+		if lane.Routing == nil && prefsApply {
+			lane.Routing = keptLane.Routing.clone()
 		}
 		if lane.ThinkingLevel == "" && !cleared {
-			lane.ThinkingLevel = kept.ThinkingLevel
+			lane.ThinkingLevel = keptLane.ThinkingLevel
 		}
 		return lane
 	}
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
 	for tier, binding := range cfg.Tiers {
-		tiers[tier] = carry(binding, stored.Tiers[tier])
+		tiers[tier] = carry(binding, kept.Tiers[tier], next.servedAtBroker(next.Tiers[tier]))
 	}
 	cfg.Tiers = tiers
-	cfg.Embeddings.ProviderConfig = carry(cfg.Embeddings.ProviderConfig, stored.Embeddings.ProviderConfig)
+	embeddings := next.Embeddings.ProviderConfig
+	sameServer := sameEndpoint(embeddings.BaseURL, kept.Embeddings.BaseURL)
+	cfg.Embeddings.ProviderConfig = carry(cfg.Embeddings.ProviderConfig, kept.Embeddings.ProviderConfig,
+		sameServer && next.servedAtBroker(embeddings))
 	return cfg
+}
+
+// servedAtBroker is whether a lane of this lifted document is served at
+// OpenRouter: at its own server when it names one, else at its provider's.
+func (cfg RoutingConfig) servedAtBroker(lane ProviderConfig) bool {
+	host := cmp.Or(lane.BaseURL, cfg.Providers[lane.Provider].BaseURL)
+	return UpstreamPreferencesApply(ProviderConfig{Provider: lane.Provider, BaseURL: host})
 }
 
 // sameEndpoint reports whether two base URLs name one endpoint, ignoring the

@@ -80,7 +80,10 @@ var brokerProviders = []string{providerOpenAICompatible, providerJevCompatible}
 // self-hosted server priced 0 by hand), and an id it happens to share with an
 // OpenRouter model is a coincidence, not a price. Tiers are visited in name
 // order and the result is sorted by provider then model, so a run is reproducible.
+// Each lane is read at its provider's host, resolved through the lift so a
+// document in either shape is judged the same way.
 func catalogueTargets(cfg RoutingConfig, sheet []ModelRateRow) []catalogueTarget {
+	cfg = cfg.canonical().resolveProviders()
 	byKey := map[[2]string]catalogueTarget{}
 	add := func(t catalogueTarget) {
 		if t.modelID == "" {

@@ -66,6 +66,65 @@ func TestAKeyTheVendorAcceptsReportsHowManyModelsItServes(t *testing.T) {
 	}
 }
 
+// listingServer answers every request with a two-model OpenAI-wire list.
+func listingServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte(`{"data":[{"id":"gpt-a"},{"id":"gpt-b"}]}`)); err != nil {
+			t.Errorf("writing the fixture body: %v", err)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// A key is tested where its provider is configured, before any lane binds it:
+// setting the host and pressing Test comes before picking models.
+func TestKeyTest_UsesTheProviderHostWithNoBinding(t *testing.T) {
+	srv := listingServer(t)
+	cfg := RoutingConfig{
+		Profile:   ProfileCloudFrontier,
+		Providers: map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: srv.URL}},
+	}
+	got := probeProviderKey(context.Background(), cfg, providerOpenAICompatible,
+		cloudKeyFor(providerOpenAICompatible, "k"), stubBuilder)
+	if !got.OK || got.ModelCount != 2 {
+		t.Fatalf("the provider's own host was not tried: %+v", got)
+	}
+}
+
+// A lane naming the provider lends it no host: with no entry the provider has
+// none, and the answer is the address to fill in.
+func TestKeyTest_NoHostIsNoEndpoint(t *testing.T) {
+	cfg := RoutingConfig{
+		Profile:   ProfileCloudFrontier,
+		Providers: map[string]ProviderSettings{providerOllama: {BaseURL: "http://gpu.internal.test:11434"}},
+		Tiers:     map[Tier]ProviderConfig{TierPremium: {Provider: providerOpenAICompatible, Model: "m"}},
+	}
+	got := probeProviderKey(context.Background(), cfg, providerOpenAICompatible,
+		cloudKeyFor(providerOpenAICompatible, "k"), stubBuilder)
+	if got.OK || got.Reason != KeyTestNoEndpoint {
+		t.Fatalf("got %+v, want no_endpoint", got)
+	}
+}
+
+// An installation whose only openai_compatible use is a separate embeddings
+// server tests the key there rather than answering no_endpoint.
+func TestKeyTest_ReachesAnEmbeddingsOnlyServer(t *testing.T) {
+	srv := listingServer(t)
+	cfg := RoutingConfig{
+		Profile:    ProfileCloudFrontier,
+		Providers:  map[string]ProviderSettings{providerGemini: {}},
+		Tiers:      map[Tier]ProviderConfig{TierPremium: {Provider: providerGemini, Model: "g"}},
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerOpenAICompatible, Model: "e", BaseURL: srv.URL}},
+	}
+	got := probeProviderKey(context.Background(), cfg, providerOpenAICompatible,
+		cloudKeyFor(providerOpenAICompatible, "k"), stubBuilder)
+	if !got.OK || got.ModelCount != 2 {
+		t.Fatalf("the embeddings server was not tried: %+v", got)
+	}
+}
+
 // The distinction the button exists for: a refused credential, a throttled
 // one and a vendor that is down are three different things to do next.
 func TestAVendorRefusalIsToldApartByItsStatus(t *testing.T) {

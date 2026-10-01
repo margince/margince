@@ -93,9 +93,8 @@ func (s *RoutingStore) TestProviderKey(ctx context.Context, provider string) (Ke
 
 // probeProviderKey is the test itself, over a routing document already read.
 //
-// The host comes from boundProviderConfig with no lane: a key belongs to the
-// vendor, not to one tier, so whichever stored binding names the vendor — or
-// the adapter's default — is where it is tried.
+// The host is the provider's: a key belongs to the vendor, not to one lane, so
+// it is tried where the provider is configured, or at the adapter's default.
 func probeProviderKey(
 	ctx context.Context,
 	cfg RoutingConfig,
@@ -111,7 +110,7 @@ func probeProviderKey(
 	if isDecisionProvider(provider) {
 		return probeDecisionKey(ctx, cfg, provider, keys, build.decider)
 	}
-	client, err := build.brain(boundProviderConfig(cfg, provider, ""), keys)
+	client, err := build.brain(providerConfigFor(cfg, provider, ""), keys)
 	if err != nil {
 		out.Reason = keyTestRefusal(unavailableFor(err))
 		return out
