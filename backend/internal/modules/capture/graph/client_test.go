@@ -105,7 +105,9 @@ func msStub(t *testing.T) *httptest.Server {
 			return
 		}
 		writeJSON(w, map[string]any{
-			"value":           []map[string]any{{"id": "m1", "parentFolderId": "inbox-folder"}},
+			"value": []map[string]any{{
+				"id": "m1", "parentFolderId": "inbox-folder", "receivedDateTime": "2020-09-13T12:26:40Z",
+			}},
 			"@odata.nextLink": srv.URL + "/me/messages?%24skiptoken=p2",
 		})
 	})
@@ -367,6 +369,11 @@ func TestListAfterCarriesTheParentFolderAgainstSentItems(t *testing.T) {
 	}
 	if len(inbox) != 1 || inbox[0].ParentFolderID == sent {
 		t.Fatalf("first page = %v, want one message filed outside %q", inbox, sent)
+	}
+	// Exchange's own arrival time rides the listing, so the backfill can prove
+	// the mail was held before the mailbox was connected.
+	if want := time.Date(2020, 9, 13, 12, 26, 40, 0, time.UTC); !inbox[0].ReceivedAt.Equal(want) {
+		t.Errorf("ReceivedAt = %v, want %v", inbox[0].ReceivedAt, want)
 	}
 	outbox, _, err := api.ListAfter(context.Background(), "access-2", time.Time{}, next, 100)
 	if err != nil {

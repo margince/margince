@@ -44,3 +44,40 @@ func writtenToBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (b
 	}
 	return held, nil
 }
+
+// receivedBeforeConnectedTx reports that this address was on the To or Cc line
+// of mail a seat's mailbox already held before that seat connected it.
+//
+// The reason is the one writtenToBeforeConnectedTx gives. Somebody a customer
+// copied on a thread years ago, or a fellow recipient of the same message, sat
+// in the company's mailbox long before the CRM read it. Reading that mailbox
+// is not a new acquisition of them.
+//
+// The proof is the PROVIDER's arrival time in that seat's mailbox
+// (capture_import.provider_received_at: Gmail's internalDate, Graph's
+// receivedDateTime), never the Date header, which the sender writes. The import
+// row binds it to the mailbox that delivered the message, and it is compared
+// with that same seat's FIRST connection. Bulk mail does not count, as it does
+// not for a reply: a list copying everybody is not correspondence the company
+// held with them. A row with no provider time, or a seat with no connection,
+// compares against NULL and matches nothing, which keeps the duty owed.
+//
+// The settling migration
+// (1790871110_mail_a_mailbox_already_held_owes_no_notice) spells the same rule
+// in SQL.
+func receivedBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	var held bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM activity_participant p
+		    JOIN activity a ON a.id = p.activity_id
+		    JOIN capture_import ci ON ci.activity_id = a.id
+		   WHERE p.address = lower(trim($1)) AND p.role IN ('to', 'cc')
+		     AND a.kind = 'email' AND a.direction = 'inbound'
+		     AND NOT a.bulk_mail_attested AND a.archived_at IS NULL
+		     AND ci.provider_received_at < (SELECT min(cc.created_at) FROM capture_connection cc
+		                                     WHERE cc.user_id = ci.user_id))`, email).Scan(&held); err != nil {
+		return false, fmt.Errorf("contacts: did a mailbox already hold mail to this address: %w", err)
+	}
+	return held, nil
+}

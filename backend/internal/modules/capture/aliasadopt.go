@@ -218,7 +218,7 @@ func adoptOneMessageTx(
 	if err := recordImportTx(ctx, tx, msg.id, seat, birthDecision{
 		posture:       posture,
 		verdictStatus: status,
-	}); err != nil {
+	}, time.Time{}); err != nil {
 		return err
 	}
 	// The seat's own participant row, so they can actually read what they now
