@@ -1,5 +1,5 @@
-import { CornerDownLeft, Sparkles } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   EmptyState,
@@ -9,10 +9,8 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
-import { EmailReference } from "../design-system/emailreference";
 import { usePresence } from "../design-system/presence";
 import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import type { SettingsPageId } from "../screens/settingscatalog";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
@@ -24,6 +22,7 @@ import {
   resolveCustomLabel,
 } from "./custom";
 import { CREATE_ID, NAV } from "./nav";
+import { PaletteRow } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 import { navigate, type Route } from "./router";
 import { openAsk } from "./urlstate";
@@ -204,12 +203,6 @@ export function useBuiltinCommands(): Command[] {
     ];
   }, [t, visible, locale, isAdmin]);
 }
-
-const TYPE_KEY: Record<Command["type"], MessageKey> = {
-  screen: "palette.typeScreen",
-  action: "palette.typeAction",
-  record: "palette.typeRecord",
-};
 
 export function CommandPalette({
   open,
@@ -424,47 +417,13 @@ export function CommandPalette({
             <EmptyState>{t("palette.empty")}</EmptyState>
           )}
           {rows.map((command, index) => (
-            <Fragment key={command.id}>
-              {/* A heading where the group changes, outside the row: the
-                  arrow keys walk rows, and a heading is not somewhere to go. */}
-              {command.group && command.group !== rows[index - 1]?.group && (
-                <p className="palette-group t-caption">{command.group}</p>
-              )}
-              <button
-                type="button"
-                className={
-                  index === selected
-                    ? "palette-row t-body selected"
-                    : "palette-row t-body"
-                }
-                onClick={() => run(command)}
-                ref={(element) => {
-                  if (index === selected) {
-                    element?.scrollIntoView?.({ block: "nearest" });
-                  }
-                }}
-              >
-                {command.id === "ask-ai" ? (
-                  <Sparkles aria-hidden />
-                ) : (
-                  <CornerDownLeft aria-hidden />
-                )}
-                {command.cite ? (
-                  <EmailReference
-                    subject={command.cite.subject}
-                    occurredAt={command.cite.occurredAt}
-                  />
-                ) : (
-                  <>
-                    <span className="label">{command.label}</span>
-                    {command.subtitle && (
-                      <span className="sub t-caption">{command.subtitle}</span>
-                    )}
-                  </>
-                )}
-                {!command.group && <Badge>{t(TYPE_KEY[command.type])}</Badge>}
-              </button>
-            </Fragment>
+            <PaletteRow
+              key={command.id}
+              command={command}
+              previous={rows[index - 1]}
+              selected={index === selected}
+              onRun={run}
+            />
           ))}
         </div>
       </div>
