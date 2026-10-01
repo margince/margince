@@ -158,7 +158,9 @@ it("withdraws an invitation by archiving it, then reads the list and the timelin
   client.setQueryData(["contact360", "p-1"], view);
   // The rare verb is folded into the row's own menu.
   await user.click(
-    within(row).getByRole("button", { name: "More for Project discovery" }),
+    within(row).getByRole("button", {
+      name: "More actions for Project discovery",
+    }),
   );
   await user.click(await screen.findByRole("button", { name: "Withdraw" }));
   const dialog = await screen.findByRole("dialog");
@@ -187,7 +189,9 @@ it("returns focus to the Withdraw button when the withdrawal is cancelled", asyn
   const row = (await screen.findByText("Project discovery")).closest("article");
   if (!row) throw new Error("Each proposal is drawn as its own card");
   await user.click(
-    within(row).getByRole("button", { name: "More for Project discovery" }),
+    within(row).getByRole("button", {
+      name: "More actions for Project discovery",
+    }),
   );
   const opener = await screen.findByRole("button", { name: "Withdraw" });
   await user.click(opener);

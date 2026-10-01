@@ -254,9 +254,7 @@ describe("a record timeline you can work in", () => {
       first: { data: [NEWEST], page: { has_more: true, next_cursor: "c-2" } },
     });
     vi.stubGlobal("fetch", feed.fetcher);
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const client = newQueryClient();
     const { result, rerender } = renderHook(
       ({ enabled }: { enabled: boolean }) =>
         useRecordTimeline("contact", "p-1", { enabled }),

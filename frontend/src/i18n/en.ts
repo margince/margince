@@ -521,7 +521,7 @@ export const en = {
   "contact.meetings.sentExpires": "Sent {sent} · expires {expires}",
   "contact.meetings.resend": "Resend",
   "contact.meetings.withdraw": "Withdraw",
-  "contact.meetings.moreFor": "More for {subject}",
+  "contact.meetings.moreFor": "More actions for {subject}",
   "contact.meetings.withdrawTitle": "Withdraw this invitation?",
   "contact.meetings.withdrawBody":
     "The link stops working and the guest can no longer book through it.",

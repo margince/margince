@@ -406,13 +406,7 @@ function SourceActivity({
   const recordZone = useRecordZone();
   const titleId = useId();
   const query = useActivity(activityId);
-  // The CURRENT read decides what is shown, never the cache alone. A refused
-  // read leaves the last answer in `data`: this reader shares its query key
-  // with `SourceEvidence`, whose observer outlives the drawer, so an eviction
-  // that `gcTime: 0` would otherwise perform does not happen while a task is
-  // open. Rendering `data` beside the error paragraph would then show a
-  // transcript whose access had just been revoked.
-  const meeting: Activity | undefined = query.isError ? undefined : query.data;
+  const meeting: Activity | undefined = query.data;
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
       <Heading size="large" id={titleId} className="t-h2 modal-title">

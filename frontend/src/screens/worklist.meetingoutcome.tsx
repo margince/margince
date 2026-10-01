@@ -206,7 +206,9 @@ function MeetingOutcomeDialog({
         <p className="t-caption">{t("worklist.verb.meetingReading")}</p>
       )}
       <ErrorLine error={meeting.error} />
-      {draft && (
+      {/* Only while the read holds the meeting: a refused re-read withdraws
+          what the draft was seeded from, and the version a save needs. */}
+      {draft && meeting.data && (
         <form
           className="form-stack"
           onSubmit={(event) => {
