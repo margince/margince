@@ -15,6 +15,14 @@ the current pipeline, with their expected-close window printed beside the chart.
 Salesperson targets use the containing month or fiscal quarter, with that period's own
 actual. Changing the event period does not turn today's pipeline into history.
 
+“This month” and “This quarter” follow the installation’s calendar and reset when
+that period begins. The dates beside the figures identify the period measured.
+Custom ranges may span up to twelve months. If the end date is today or later,
+actual results stop at the current reporting cutoff, shown above the charts;
+future sales are not counted. Entirely future ranges cannot show actual results.
+Targets use the month or fiscal quarter containing the actual cutoff, even when
+the requested custom end date is later. Saved editions keep their captured cutoff.
+
 Every chart has a numeric alternative. Focus or select a mark to open its evidence;
 press Escape to close the drawer. Restricted source records stay restricted.
 Stage-age records stay within the selected reporting scope.

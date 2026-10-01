@@ -179,6 +179,8 @@ export const vi = {
   "reporting.period": "Khoảng thời gian",
   "reporting.pipeline": "Quy trình bán hàng",
   "reporting.allPipelines": "Tất cả pipeline",
+  "reporting.resultsThrough": "Kết quả đến {at}",
+  "reporting.noSalesWon": "Chưa có giao dịch thắng",
   "reporting.this_month": "Tháng này",
   "reporting.last_month": "Tháng trước",
   "reporting.last_week": "Tuần hoàn chỉnh trước",

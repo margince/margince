@@ -17,3 +17,32 @@ export const Sales: Story = {
   ),
 };
 export const Dark: Story = { ...Sales, globals: { theme: "dark" } };
+
+export const NoSalesThisPeriod: Story = {
+  render: () => (
+    <StoryProviders>
+      <ResultsSummary
+        evaluation={{
+          ...reportingStoryEvaluation,
+          metrics: reportingStoryEvaluation.metrics.map((metric) => ({
+            ...metric,
+            value: 0,
+            coverage: {
+              ...metric.coverage,
+              status: "no_data",
+              eligible_count: 0,
+            },
+            target: undefined,
+            target_actual: undefined,
+          })),
+        }}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>
+  ),
+};
+
+export const NoSalesThisPeriodDark: Story = {
+  ...NoSalesThisPeriod,
+  globals: { theme: "dark" },
+};

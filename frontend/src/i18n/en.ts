@@ -168,6 +168,8 @@ export const en = {
   "reporting.period": "Date range",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "All pipelines",
+  "reporting.resultsThrough": "Results through {at}",
+  "reporting.noSalesWon": "No sales won",
   "reporting.this_month": "This month",
   "reporting.last_month": "Last month",
   "reporting.last_week": "Last completed week",

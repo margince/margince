@@ -165,3 +165,48 @@ export const TeamPerformanceDark: Story = {
   ...TeamPerformance,
   globals: { theme: "dark" },
 };
+
+export const InvalidDateRange: Story = {
+  render: () => {
+    globalThis.location.hash =
+      "#/analytics/performance?period=custom&from=2025-01-01&through=2026-10-31";
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/evaluate": () =>
+        jsonResponse(
+          {
+            status: 400,
+            code: "reporting_interval_invalid",
+            detail: "choose an interval of no more than twelve months",
+          },
+          400,
+        ),
+    });
+    return (
+      <StoryProviders>
+        <ReportingOverview scope={reportingStoryScope} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const CustomRangeThroughFutureMonthEnd: Story = {
+  render: () => {
+    globalThis.location.hash =
+      "#/analytics/performance?period=custom&from=2026-01-01&through=2026-10-31";
+    installFetchStub(reportingStoryRoutes(reportingStoryEvaluation));
+    return (
+      <StoryProviders>
+        <ReportingOverview scope={reportingStoryScope} />
+      </StoryProviders>
+    );
+  },
+};
+export const CustomRangeThroughFutureMonthEndDark: Story = {
+  ...CustomRangeThroughFutureMonthEnd,
+  globals: { theme: "dark" },
+};
+export const InvalidDateRangeDark: Story = {
+  ...InvalidDateRange,
+  globals: { theme: "dark" },
+};

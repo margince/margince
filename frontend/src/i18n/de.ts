@@ -170,6 +170,8 @@ export const de = {
   "reporting.period": "Zeitraum",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Alle Pipelines",
+  "reporting.resultsThrough": "Ergebnisse bis {at}",
+  "reporting.noSalesWon": "Keine gewonnenen Abschlüsse",
   "reporting.this_month": "Dieser Monat",
   "reporting.last_month": "Letzter Monat",
   "reporting.last_week": "Letzte abgeschlossene Woche",
