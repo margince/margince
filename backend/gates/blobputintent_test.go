@@ -90,14 +90,15 @@ func TestTheBlobPutCensusCanFail(t *testing.T) {
 		byFunc[site.function] = site
 	}
 	want := map[string]bool{
-		"writer.putWithoutRecord": false,
-		"writer.recordAfterPut":   false,
-		"writer.recordOtherKey":   false,
-		"putThroughParameter":     false,
-		"putThroughOtherPackage":  false,
-		"writer.methodValue":      false,
-		"writer.recordThenPut":    true,
-		"writer.declareThenPut":   true,
+		"writer.putWithoutRecord":      false,
+		"writer.recordAfterPut":        false,
+		"writer.recordOtherKey":        false,
+		"putThroughParameter":          false,
+		"putThroughOtherPackage":       false,
+		"writer.methodValue":           false,
+		"writer.declareSiblingThenPut": false,
+		"writer.recordThenPut":         true,
+		"writer.declareThenPut":        true,
 	}
 	for function, records := range want {
 		site, found := byFunc[function]
@@ -115,12 +116,14 @@ func TestTheBlobPutCensusCanFail(t *testing.T) {
 
 	exemptions := map[string]string{
 		"planted/writers.go writer.putWithoutRecord": "planted exemption that holds",
+		"planted/writers.go writer.recordAfterPut":   " ",
 		"planted/writers.go writer.recordThenPut":    "planted stale exemption",
 		"planted/writers.go gone":                    "planted exemption on a function that puts nothing",
 	}
-	if problems := judgeBlobPuts(sites, exemptions); len(problems) != 7 {
-		t.Errorf("judging the planted writers raised %d problems, want 7 — five unrecorded puts with no "+
-			"exemption, one stale exemption and one exemption that puts nothing: %q", len(problems), problems)
+	if problems := judgeBlobPuts(sites, exemptions); len(problems) != 8 {
+		t.Errorf("judging the planted writers raised %d problems, want 8 — five unrecorded puts with no "+
+			"exemption, one exemption with no reason, one stale exemption and one exemption that puts "+
+			"nothing: %q", len(problems), problems)
 	}
 }
 
@@ -189,6 +192,17 @@ func (w writer) declareThenPut(ctx context.Context, key string, r io.Reader) err
 	}
 	return w.blobs.Put(ctx, key, r, 1, "text/plain")
 }
+
+func (w writer) declareSibling(ctx context.Context, key string) error {
+	return so.Record(ctx, w.db, key+".tmp")
+}
+
+func (w writer) declareSiblingThenPut(ctx context.Context, key string, r io.Reader) error {
+	if err := w.declareSibling(ctx, key); err != nil {
+		return err
+	}
+	return w.blobs.Put(ctx, key, r, 1, "text/plain")
+}
 `
 
 // blobPutSite is one put into the object store and what precedes it.
@@ -211,8 +225,11 @@ func judgeBlobPuts(sites []blobPutSite, exemptions map[string]string) []string {
 	seen := map[string]bool{}
 	for _, site := range sites {
 		seen[site.key()] = true
-		_, exempt := exemptions[site.key()]
+		reason, exempt := exemptions[site.key()]
 		switch {
+		case !site.records && exempt && strings.TrimSpace(reason) == "":
+			problems = append(problems, site.describe("is in blobPutExemptions with no reason: say why its key "+
+				"is not provisional"))
 		case !site.records && !exempt:
 			problems = append(problems, site.describe("puts into the object store and no storedobject.Record of "+
 				"the put's key precedes it in this function. Record it on its own transaction before the put and "+
@@ -422,7 +439,7 @@ func (pkg blobPackage) recordsBefore(put blobPut) bool {
 		if found || !ok || call.Pos() >= put.sel.Pos() {
 			return !found
 		}
-		if takesArg(call, key) && pkg.records(call, map[*ast.FuncDecl]bool{}) {
+		if pkg.recordsKey(call, key, map[*ast.FuncDecl]bool{}) {
 			found = true
 		}
 		return !found
@@ -430,19 +447,18 @@ func (pkg blobPackage) recordsBefore(put blobPut) bool {
 	return found
 }
 
-func takesArg(call *ast.CallExpr, spelled string) bool {
-	return slices.ContainsFunc(call.Args, func(arg ast.Expr) bool { return types.ExprString(arg) == spelled })
-}
-
-// records reports whether call is storedobject.Record, or a call to a function
-// of this package whose body makes one — a wrapper is verified, not listed.
-func (pkg blobPackage) records(call *ast.CallExpr, seen map[*ast.FuncDecl]bool) bool {
+// recordsKey reports whether call is storedobject.Record of the key spelled
+// key, or a call to a function of this package that hands the key on to one —
+// a wrapper is verified down to the parameter the key arrives in, not listed.
+func (pkg blobPackage) recordsKey(call *ast.CallExpr, key string, seen map[*ast.FuncDecl]bool) bool {
 	var name *ast.Ident
 	switch fun := call.Fun.(type) {
 	case *ast.SelectorExpr:
 		if qualifier, ok := fun.X.(*ast.Ident); ok {
 			if imported, ok := pkg.info.Uses[qualifier].(*types.PkgName); ok {
-				return imported.Imported().Path() == storedObjectPkg && fun.Sel.Name == "Record"
+				// Record(ctx, db, key): the key is the third argument.
+				return imported.Imported().Path() == storedObjectPkg && fun.Sel.Name == "Record" &&
+					len(call.Args) == 3 && types.ExprString(call.Args[2]) == key
 			}
 		}
 		name = fun.Sel
@@ -460,14 +476,35 @@ func (pkg blobPackage) records(call *ast.CallExpr, seen map[*ast.FuncDecl]bool) 
 		return false
 	}
 	seen[decl] = true
+	params := paramNames(decl)
 	found := false
-	ast.Inspect(decl.Body, func(n ast.Node) bool {
-		if inner, ok := n.(*ast.CallExpr); ok && !found && pkg.records(inner, seen) {
-			found = true
+	for i, arg := range call.Args {
+		if found || i >= len(params) || types.ExprString(arg) != key || params[i] == "_" {
+			continue
 		}
-		return !found
-	})
+		ast.Inspect(decl.Body, func(n ast.Node) bool {
+			if inner, ok := n.(*ast.CallExpr); ok && !found && pkg.recordsKey(inner, params[i], seen) {
+				found = true
+			}
+			return !found
+		})
+	}
 	return found
+}
+
+// paramNames lists a function's parameters by position, as its callers pass
+// arguments: the receiver is not one of them.
+func paramNames(decl *ast.FuncDecl) []string {
+	var names []string
+	for _, field := range decl.Type.Params.List {
+		if len(field.Names) == 0 {
+			names = append(names, "_")
+		}
+		for _, ident := range field.Names {
+			names = append(names, ident.Name)
+		}
+	}
+	return names
 }
 
 // blobstoreFromSource stands every import in empty, as typeCheckLoosely does,

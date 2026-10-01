@@ -80,10 +80,10 @@ func TestTheKeyColumnCensusCanFail(t *testing.T) {
 	}
 	problems := judgeKeyColumns(columns,
 		map[string]bool{"upload.declared_asset_ref": true, "upload.retired_object_key": true},
-		map[string]string{"upload.gone_object_key": "planted stale reason"})
+		map[string]string{"upload.gone_object_key": "planted stale reason", "upload.wrapped_object_key": ""})
 	if len(problems) != 4 {
-		t.Errorf("judging the planted schema raised %d problems, want 4 — two undeclared columns, one declaration "+
-			"and one reason naming a column the schema lacks: %q", len(problems), problems)
+		t.Errorf("judging the planted schema raised %d problems, want 4 — an undeclared column, one excused with "+
+			"no reason, one declaration and one reason naming a column the schema lacks: %q", len(problems), problems)
 	}
 }
 
@@ -116,8 +116,11 @@ func judgeKeyColumns(columns []string, declared map[string]bool, reasons map[str
 	inSchema := map[string]bool{}
 	for _, column := range columns {
 		inSchema[column] = true
-		_, excused := reasons[column]
+		reason, excused := reasons[column]
 		switch {
+		case !declared[column] && excused && strings.TrimSpace(reason) == "":
+			problems = append(problems, column+" is in keyShapedColumnsNotReferences with no reason: say why it "+
+				"holds no stored object's key")
 		case declared[column] && excused:
 			problems = append(problems, column+" is declared to the reap and also excused in "+
 				"keyShapedColumnsNotReferences: drop the excuse")

@@ -208,10 +208,96 @@ func agedImportSource(t *testing.T, e *integration.Env, blob blobstore.Store) st
 	t.Helper()
 	source := storedKey(e.WS, migration.ImportSourceObjectKind)
 	provisionalObject(t, e, blob, source)
-	age := 2 * graceOf(t, migration.ImportSourceObjectKind)
-	e.WsExec(t, `UPDATE stored_object_intent SET recorded_at = now() - make_interval(secs => $2)
-		WHERE storage_key = $1`, source, age.Seconds())
+	ageKey(t, e, source, 2*graceOf(t, migration.ImportSourceObjectKind))
 	return source
+}
+
+// ageKey backdates when key was recorded, in the row and so on the database's
+// own clock, the one Record, Claim and Condemn's grace re-check all read.
+func ageKey(t *testing.T, e *integration.Env, key string, by time.Duration) {
+	t.Helper()
+	e.WsExec(t, `UPDATE stored_object_intent SET recorded_at = now() - make_interval(secs => $2)
+		WHERE storage_key = $1`, key, by.Seconds())
+}
+
+// condemnedAttachment is a provisional attachment past its grace, condemned by
+// the reap, as a pass leaves it the moment before its delete.
+func condemnedAttachment(t *testing.T, e *integration.Env, blob blobstore.Store) string {
+	t.Helper()
+	key := storedKey(e.WS, attachmentKind)
+	provisionalObject(t, e, blob, key)
+	ageKey(t, e, key, 2*graceOf(t, attachmentKind))
+	ledger, system := reapLedger(t, e)
+	if condemned, err := ledger.Condemn(system, time.Now(), key); err != nil || !condemned {
+		t.Fatalf("condemning an aged, unreferenced attachment: condemned=%v, err %v", condemned, err)
+	}
+	return key
+}
+
+// TestARowNamingACondemnedKeyIsRefusedItsCommit is a writer whose transaction
+// outlived its grace: the reap's re-check could not see the uncommitted row, so
+// the clear is what has to stop it naming bytes about to be deleted.
+func TestARowNamingACondemnedKeyIsRefusedItsCommit(t *testing.T) {
+	e := integration.Setup(t)
+	key := condemnedAttachment(t, e, newReapBlobstore())
+
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return storedobject.Clear(e.Admin(), tx, key)
+	})
+
+	if !errors.Is(err, storedobject.ErrExpired) {
+		t.Fatalf("clearing a condemned key answered %v, want ErrExpired so the row's transaction aborts", err)
+	}
+	if !condemned(t, e, key) {
+		t.Error("the clear forgot a condemned key, so the reap deletes bytes and nothing tries the key again")
+	}
+}
+
+func TestARecordOfACondemnedKeyIsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	key := condemnedAttachment(t, e, newReapBlobstore())
+
+	err := storedobject.Record(e.Admin(), e.DB(), key)
+
+	if !errors.Is(err, storedobject.ErrExpired) {
+		t.Fatalf("recording a condemned key answered %v, want ErrExpired: a put after it lands on bytes being deleted", err)
+	}
+}
+
+func TestARecordedKeyRecordedAgainWaitsAWholeGrace(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	key := storedKey(e.WS, attachmentKind)
+	provisionalObject(t, e, blob, key)
+	ageKey(t, e, key, 2*graceOf(t, attachmentKind))
+
+	declareProvisional(t, e, key)
+	reapAt(t, e, blob, time.Now())
+
+	if blob.deleted[key] {
+		t.Error("a retried put of a recorded key was reaped on the first attempt's clock")
+	}
+}
+
+// TestAKeyTheReapLastTriedGoesBehindOneThatHasWaitedLonger holds the listing's
+// order: a delete that keeps failing must not hold the head of every pass.
+func TestAKeyTheReapLastTriedGoesBehindOneThatHasWaitedLonger(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	grace := graceOf(t, attachmentKind)
+	failing := condemnedAttachment(t, e, blob)
+	ageKey(t, e, failing, 3*grace)
+	waiting := storedKey(e.WS, attachmentKind)
+	provisionalObject(t, e, blob, waiting)
+	ageKey(t, e, waiting, 2*grace)
+	ledger, system := reapLedger(t, e)
+
+	orphans, err := ledger.Orphans(system, time.Now(), 1)
+
+	if err != nil || len(orphans) != 1 || orphans[0].StorageKey != waiting {
+		t.Fatalf("a one-key pass listed %v (err %v), want the key never tried ahead of the one recorded "+
+			"earlier and already tried", orphans, err)
+	}
 }
 
 // reapLedger is the ledger the reap builds, under the principal it binds.

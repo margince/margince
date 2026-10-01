@@ -80,7 +80,8 @@ DB row stays system-of-record; the store holds opaque bytes at a workspace-prefi
 Every writer puts the bytes before the row, so a failed row transaction leaves an object nothing names
 and no erasure can reach. The ledger is how that object is found again.
 - `Record(ctx, db, key)` — on its own transaction, BEFORE the put; `Clear(ctx, tx, key)` — on the
-  transaction that writes the referencing row.
+  transaction that writes the referencing row. Both answer `ErrExpired` for a key the reap has
+  condemned, so nothing starts naming bytes that are being deleted.
 - `Claim(ctx, db, key)` — for a writer whose row follows the put after an open-ended wait (an import
   source being mapped): restarts the grace before the bytes are read, and answers `ErrExpired` (a
   not-found) for a key the reap has condemned.

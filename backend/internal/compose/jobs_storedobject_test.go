@@ -9,7 +9,8 @@ import (
 	"go/token"
 	"io/fs"
 	"path/filepath"
-	"sort"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -26,21 +27,24 @@ const storedObjectDeclarer = "StoredObjectReference"
 func TestEveryModulesStoredObjectReferenceIsReaped(t *testing.T) {
 	t.Parallel()
 	declaring := modulesDeclaringStoredObjects(t)
-	refs := StoredObjectReferences()
-	// One per declaring module, and every kind distinct: a module listed twice
-	// repeats its kind, which NewLedger refuses, so equal counts mean each
-	// declaring module is listed exactly once.
-	if len(refs) != len(declaring) {
-		t.Errorf("StoredObjectReferences hands the reap %d declarations; these modules declare one: %v",
-			len(refs), declaring)
+	collected := modulesCollectedForTheReap(t)
+	// Matched module by module, so a declaration left out cannot be hidden by
+	// some other reference standing in its slot.
+	if !slices.Equal(collected, declaring) {
+		t.Errorf("StoredObjectReferences collects the declarations of %v; these modules declare one: %v",
+			collected, declaring)
 	}
-	if _, err := storedobject.NewLedger(nil, refs...); err != nil {
+	if refs := StoredObjectReferences(); len(refs) != len(collected) {
+		t.Errorf("StoredObjectReferences hands the reap %d declarations but collects %d modules' — every "+
+			"element must be a module's %s()", len(refs), len(collected), storedObjectDeclarer)
+	}
+	if _, err := storedobject.NewLedger(nil, StoredObjectReferences()...); err != nil {
 		t.Errorf("the collected declarations do not form a ledger: %v", err)
 	}
 }
 
 // modulesDeclaringStoredObjects walks every module for a package-level
-// StoredObjectReference function.
+// StoredObjectReference function, and answers each as modules/<dir>.
 func modulesDeclaringStoredObjects(t *testing.T) []string {
 	t.Helper()
 	found := map[string]bool{}
@@ -55,7 +59,7 @@ func modulesDeclaringStoredObjects(t *testing.T) []string {
 		}
 		for _, decl := range file.Decls {
 			if fn, isFunc := decl.(*ast.FuncDecl); isFunc && fn.Recv == nil && fn.Name.Name == storedObjectDeclarer {
-				found[filepath.ToSlash(filepath.Dir(path))] = true
+				found[strings.TrimPrefix(filepath.ToSlash(filepath.Dir(path)), "../")] = true
 			}
 		}
 		return nil
@@ -63,10 +67,54 @@ func modulesDeclaringStoredObjects(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("walking %s: %v", root, err)
 	}
-	modules := make([]string, 0, len(found))
-	for dir := range found {
-		modules = append(modules, dir)
+	return sortedKeysOf(found, strings.Compare)
+}
+
+// modulesCollectedForTheReap reads StoredObjectReferences' source and answers
+// the module of each `<module>.StoredObjectReference()` it returns, as
+// modules/<dir>.
+func modulesCollectedForTheReap(t *testing.T) []string {
+	t.Helper()
+	const source = "jobs_storedobject.go"
+	file, err := parser.ParseFile(token.NewFileSet(), source, nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", source, err)
 	}
-	sort.Strings(modules)
-	return modules
+	imports := map[string]string{}
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err != nil {
+			t.Fatalf("reading an import of %s: %v", source, err)
+		}
+		name := filepath.Base(path)
+		if spec.Name != nil {
+			name = spec.Name.Name
+		}
+		imports[name] = path
+	}
+	found := map[string]bool{}
+	for _, decl := range file.Decls {
+		fn, isFunc := decl.(*ast.FuncDecl)
+		if !isFunc || fn.Name.Name != "StoredObjectReferences" {
+			continue
+		}
+		ast.Inspect(fn.Body, func(n ast.Node) bool {
+			call, isCall := n.(*ast.CallExpr)
+			if !isCall {
+				return true
+			}
+			if sel, isSel := call.Fun.(*ast.SelectorExpr); isSel && sel.Sel.Name == storedObjectDeclarer {
+				if qualifier, isIdent := sel.X.(*ast.Ident); isIdent {
+					if _, module, cut := strings.Cut(imports[qualifier.Name], "/internal/"); cut {
+						found[module] = true
+					}
+				}
+			}
+			return true
+		})
+	}
+	if len(found) == 0 {
+		t.Fatalf("no %s() call found in StoredObjectReferences in %s: the read has gone blind", storedObjectDeclarer, source)
+	}
+	return sortedKeysOf(found, strings.Compare)
 }

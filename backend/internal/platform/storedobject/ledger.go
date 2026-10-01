@@ -90,9 +90,9 @@ func validate(refs []Reference) error {
 	return nil
 }
 
-// Orphans answers the keys the reap may delete, oldest first. It is a listing,
-// not a decision: Condemn re-asks the same question of each key under its row
-// lock before anything is deleted.
+// Orphans answers the keys the reap may delete, longest-waiting first. It is a
+// listing, not a decision: Condemn re-asks the same question of each key under
+// its row lock before anything is deleted.
 //
 // THE COLUMN JOINS ARE THE SECOND LOCK, not the first. The first is that a key
 // is in the ledger at all — nothing but a writer's own declaration puts one
@@ -154,7 +154,9 @@ func (l *Ledger) Condemn(ctx context.Context, now time.Time, key string) (bool, 
 	return condemned, err
 }
 
-// orphansQuery lists what orphanPredicate admits, oldest first, bounded.
+// orphansQuery lists what orphanPredicate admits, bounded, longest-waiting
+// first: an unstamped key by when it was recorded, a stamped one by when the
+// reap last tried it.
 func (l *Ledger) orphansQuery(now time.Time, limit int) (string, []any) {
 	var args []any
 	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
@@ -162,18 +164,19 @@ func (l *Ledger) orphansQuery(now time.Time, limit int) (string, []any) {
 	return `SELECT i.storage_key, i.recorded_at
 		  FROM stored_object_intent i
 		 WHERE ` + predicate + `
-		 ORDER BY i.recorded_at
+		 ORDER BY coalesce(i.reaping_since, i.recorded_at)
 		 LIMIT ` + arg(limit), args
 }
 
-// condemnQuery stamps one key the predicate still admits. A stamp already
-// there is kept, so it records when the reap first committed to the key.
+// condemnQuery stamps one key the predicate still admits, with the time of
+// THIS attempt: the listing orders a stamped key by it, so a key whose delete
+// keeps failing goes behind the rest instead of holding the head of every pass.
 func (l *Ledger) condemnQuery(now time.Time, key string) (string, []any) {
 	var args []any
 	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
 	predicate := l.orphanPredicate(now, arg)
 	return `UPDATE stored_object_intent
-		   SET reaping_since = coalesce(reaping_since, ` + arg(now) + `)
+		   SET reaping_since = ` + arg(now) + `
 		 WHERE storage_key = (
 		       SELECT i.storage_key
 		         FROM stored_object_intent i
@@ -192,7 +195,7 @@ func (l *Ledger) condemnQuery(now time.Time, key string) (string, []any) {
 //
 // The kind is parsed IN SQL, inside the same predicate the limit bounds. Parsed
 // in Go after the limit, keys of an undeclared kind would sit at the head of
-// the oldest-first order forever and starve every later pass.
+// the listing's order forever and starve every later pass.
 func (l *Ledger) orphanPredicate(now time.Time, arg func(any) string) string {
 	arms := make([]string, 0, len(l.refs))
 	for _, ref := range l.refs {

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -37,10 +38,35 @@ func TestPutLogoRefusesBytesThatAreNotAnImageAndStoresNothing(t *testing.T) {
 	}
 }
 
+// countingBlobs reports how many bytes the handler read out of the store.
+type countingBlobs struct {
+	blobstore.Store
+	read int64
+}
+
+func (c *countingBlobs) Get(ctx context.Context, key string) (io.ReadCloser, blobstore.Object, error) {
+	rc, object, err := c.Store.Get(ctx, key)
+	if err != nil {
+		return nil, object, err
+	}
+	return countedReader{ReadCloser: rc, read: &c.read}, object, nil
+}
+
+type countedReader struct {
+	io.ReadCloser
+	read *int64
+}
+
+func (r countedReader) Read(p []byte) (int, error) {
+	n, err := r.ReadCloser.Read(p)
+	*r.read += int64(n)
+	return n, err
+}
+
 func TestALegacyMarkLargerThanAnyLogoWriterStoresIsRefusedNotBuffered(t *testing.T) {
-	blob := blobstore.NewMemory()
+	blob := &countingBlobs{Store: blobstore.NewMemory()}
 	const key = "ws/company_logo/c/legacy.png"
-	oversized := bytes.Repeat([]byte{0}, MaxLogoBytes+1)
+	oversized := bytes.Repeat([]byte{0}, 4*MaxLogoBytes)
 	if err := blob.Put(context.Background(), key, bytes.NewReader(oversized), int64(len(oversized)), imagenorm.ContentType); err != nil {
 		t.Fatalf("seeding the oversized object: %v", err)
 	}
@@ -56,6 +82,11 @@ func TestALegacyMarkLargerThanAnyLogoWriterStoresIsRefusedNotBuffered(t *testing
 	}
 	if got := rec.Header().Get("Content-Type"); got == imagenorm.ContentType {
 		t.Fatal("an oversized object was answered as a logo")
+	}
+	// One byte past the cap tells an oversized object from one that fits.
+	if blob.read > MaxLogoBytes+1 {
+		t.Fatalf("the handler read %d bytes of an oversized object, want at most %d: it buffered past the cap",
+			blob.read, MaxLogoBytes+1)
 	}
 }
 

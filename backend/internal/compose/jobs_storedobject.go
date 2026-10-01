@@ -52,8 +52,8 @@ func (StoredObjectReapArgs) FleetWide() {}
 // A pass that could run unbounded over a large backlog holds a worker for as
 // long as the backlog is deep, and the cadence is hourly — so a capped pass
 // that leaves work behind is picked up an hour later rather than never. The
-// oldest keys go first, so a capped pass still makes progress on the ones that
-// have waited longest.
+// longest-waiting keys go first, and a key whose delete failed waits again
+// from that attempt, so a capped pass still reaches the ones behind it.
 const storedObjectReapBatch = 500
 
 // StoredObjectReferences is every module's declaration of where it records the

@@ -35,7 +35,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Record declares a key provisional, before its bytes are put.
+// Record declares a key provisional, before its bytes are put, and answers
+// ErrExpired for a key the reap condemned: its bytes are gone or going.
 //
 // It commits on its OWN transaction, and that is the whole point rather than an
 // oversight: the row has to survive the failure of the transaction that was
@@ -54,20 +55,24 @@ func Record(ctx context.Context, db *database.DB, key string) error {
 	}
 	ctx = database.Detached(ctx)
 	return db.ForWorkspace(ids.From[ids.WorkspaceKind](ws)).Tx(ctx, func(tx pgx.Tx) error {
-		// ON CONFLICT because a retried upload of the same key is not an error
-		// worth failing a caller's file over, and the row it would insert is
-		// the row already there.
-		if _, err := tx.Exec(ctx, `
+		// A key already recorded restarts its grace, so a retried put is not
+		// reaped on the first attempt's clock; a stamped one matches nothing.
+		tag, err := tx.Exec(ctx, `
 			INSERT INTO stored_object_intent (storage_key) VALUES ($1)
-			ON CONFLICT (storage_key) DO NOTHING`, key); err != nil {
+			ON CONFLICT (storage_key) DO UPDATE SET recorded_at = now()
+			 WHERE stored_object_intent.reaping_since IS NULL`, key)
+		if err != nil {
 			return fmt.Errorf("record a provisional object: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrExpired
 		}
 		return nil
 	})
 }
 
-// ErrExpired is a claim on a key the reap has already committed to deleting:
-// the bytes are gone or going, and the caller has to store them again.
+// ErrExpired is a key the reap has already committed to deleting: the bytes
+// are gone or going, and the caller has to store them again.
 var ErrExpired = fmt.Errorf("the stored file has expired; upload it again: %w", apperrors.ErrNotFound)
 
 // Claim restarts a provisional key's grace, for a writer whose row follows the
@@ -96,29 +101,44 @@ func Claim(ctx context.Context, db *database.DB, key string) error {
 		if tag.RowsAffected() == 1 {
 			return nil
 		}
-		var condemned bool
-		if err := tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM stored_object_intent WHERE storage_key = $1)`, key,
-		).Scan(&condemned); err != nil {
-			return fmt.Errorf("claim a provisional object: %w", err)
-		}
-		if condemned {
-			return ErrExpired
-		}
-		return nil
+		return refuseCondemned(ctx, tx, key)
 	})
 }
 
-// Clear retires a key, on the caller's transaction.
+// Clear retires a key, on the caller's transaction, and answers ErrExpired for
+// a key the reap condemned, so that transaction aborts rather than commit a
+// row naming bytes being deleted.
 //
 // ON THE CALLER'S, so the clear and the referencing row commit together: a
 // clear that committed separately could land while the row's transaction then
 // failed, which is the orphan this ledger exists to catch, re-created one step
-// along.
+// along. The stamp matters because the reap's re-check cannot see a row not yet
+// committed, so a writer that outlives its kind's grace can be condemned.
 func Clear(ctx context.Context, tx pgx.Tx, key string) error {
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM stored_object_intent WHERE storage_key = $1`, key); err != nil {
+	tag, err := tx.Exec(ctx,
+		`DELETE FROM stored_object_intent WHERE storage_key = $1 AND reaping_since IS NULL`, key)
+	if err != nil {
 		return fmt.Errorf("retire a provisional object: %w", err)
+	}
+	if tag.RowsAffected() == 1 {
+		return nil
+	}
+	return refuseCondemned(ctx, tx, key)
+}
+
+// refuseCondemned answers ErrExpired when key is still in the ledger after a
+// statement that matched only an unstamped row, since the row left is stamped.
+// No row at all is a key already referenced or older than the ledger, and
+// neither is the reap's to delete.
+func refuseCondemned(ctx context.Context, tx pgx.Tx, key string) error {
+	var condemned bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM stored_object_intent WHERE storage_key = $1)`, key,
+	).Scan(&condemned); err != nil {
+		return fmt.Errorf("read a provisional object: %w", err)
+	}
+	if condemned {
+		return ErrExpired
 	}
 	return nil
 }
