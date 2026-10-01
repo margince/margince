@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { Badge, Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -101,12 +102,25 @@ const CAPABILITIES: ReadonlyArray<{ what: MessageKey; can: boolean }> = [
  * `vendor` is the label of the vendor whose key was just sealed — named on the
  * chip, because "sealed in the vault" without saying whose key is a sentence
  * about a mechanism rather than about what the reader just did.
+ *
+ * `onDone` is the way out, and it may have to ask the server first: the press
+ * is held while it runs, so a second press is not a second ask, and a refusal
+ * is said here with the ignition still standing and the press as the retry.
  */
 export function Ignition({
   vendor,
   onDone,
-}: Readonly<{ vendor: string; onDone: () => void }>) {
+}: Readonly<{ vendor: string; onDone: () => Promise<void> }>) {
   const t = useT();
+  const [leaving, setLeaving] = useState(false);
+  const [refused, setRefused] = useState<unknown>(null);
+  const leave = () => {
+    setLeaving(true);
+    setRefused(null);
+    void onDone()
+      .catch((error: unknown) => setRefused(error))
+      .finally(() => setLeaving(false));
+  };
   return (
     <div className="ob-ig">
       {/* The wash is the STAGE's — it comes from the orb, which is in the other
@@ -133,7 +147,8 @@ export function Ignition({
         ))}
       </ul>
       <div className="ob-ig-go">
-        <Button variant="primary" onClick={onDone}>
+        <ErrorLine error={refused} />
+        <Button variant="primary" pending={leaving} onClick={leave}>
           {t("firstRun.ignite.carryOn")}
         </Button>
       </div>

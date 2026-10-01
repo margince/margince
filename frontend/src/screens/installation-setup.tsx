@@ -822,9 +822,8 @@ function head(
       };
 }
 
-// Which board is up, said once for the render, the room and the focus. The
-// ignition holds only while the report still asks for the model, so the
-// refetch that moves past it ends it on the same frame.
+// Which board is up, for the render, the room and the focus. The ignition
+// holds only while the report asks for the model, so moving past it ends it.
 function boardOf(
   step: Step | undefined,
   ignited: string | null,
@@ -937,13 +936,14 @@ export function InstallationSetup() {
       ) : (
         <Ignition
           vendor={ignited}
-          onDone={() => {
-            // NOW the server is asked again, and the answer is what moves the
-            // screen. Let go of the ignition before it lands and the stale
-            // report draws the model form again for the round trip.
-            void queryClient
-              .invalidateQueries({ queryKey: ["installation-setup"] })
-              .then(() => setIgnited(null));
+          onDone={async () => {
+            // NOW the server is asked again, and only its answer lets go of
+            // the ignition: the stale report would draw the model form again.
+            await queryClient.invalidateQueries(
+              { queryKey: ["installation-setup"] },
+              { throwOnError: true },
+            );
+            setIgnited(null);
           }}
         />
       )}

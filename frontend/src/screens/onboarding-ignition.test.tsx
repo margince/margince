@@ -17,7 +17,7 @@ describe("the ignition's capability lines", () => {
   it("are one plain list of three items", () => {
     render(
       <LocaleProvider initial="en">
-        <Ignition vendor="Google Gemini" onDone={() => {}} />
+        <Ignition vendor="Google Gemini" onDone={async () => {}} />
       </LocaleProvider>,
     );
 

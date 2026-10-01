@@ -169,6 +169,39 @@ async function reportArrived(qc: QueryClient) {
   );
 }
 
+/** Binds Gemini through the model form and waits for the ignition. */
+async function igniteGemini(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(await screen.findByLabelText("API key"), "AIza-secret");
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("heading", { name: "Model connected" });
+}
+
+/**
+ * Holds every later read of the setup report until `answer()`, counting them,
+ * so a test can look at the screen while the re-read is in flight. With
+ * `refuseFirst`, the first read the server answers is a 500.
+ */
+function holdSetupReads({ refuseFirst = false } = {}) {
+  const serve = globalThis.fetch;
+  let answer = () => {};
+  const held = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  let reads = 0;
+  vi.stubGlobal("fetch", async (request: Request, init?: RequestInit) => {
+    if (!new URL(request.url).pathname.endsWith("/installation/setup")) {
+      return serve(request, init);
+    }
+    reads += 1;
+    await held;
+    if (refuseFirst && reads === 1) {
+      return jsonResponse({ title: "refused" }, 500);
+    }
+    return serve(request, init);
+  });
+  return { answer, count: () => reads };
+}
+
 describe("the first-run setup gate", () => {
   // The model binding is the one thing a cold start cannot proceed without, so
   // it is the one thing asked for here.
@@ -417,35 +450,54 @@ describe("the first-run setup gate", () => {
     const user = userEvent.setup();
     const report = setupReport(false, false);
     mount(report);
-    await user.type(await screen.findByLabelText("API key"), "AIza-secret");
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-    await screen.findByRole("heading", { name: "Model connected" });
+    await igniteGemini(user);
 
-    const serve = globalThis.fetch;
-    let answer = () => {};
-    const held = new Promise<void>((resolve) => {
-      answer = resolve;
-    });
-    vi.stubGlobal("fetch", async (request: Request, init?: RequestInit) => {
-      if (new URL(request.url).pathname.endsWith("/installation/setup")) {
-        await held;
-      }
-      return serve(request, init);
-    });
+    const reads = holdSetupReads();
     report.steps[0].configured = true;
     report.complete = true;
     await user.click(screen.getByRole("button", { name: "Continue" }));
+    // Held while the server is asked, so a second press is not a second ask.
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(reads.count()).toBe(1);
     expect(
       screen.getByRole("heading", { name: "Model connected" }),
     ).toBeTruthy();
     expect(screen.queryByText("Choose a model provider")).toBeNull();
 
-    answer();
+    reads.answer();
     const next = await screen.findByRole("heading", {
       name: "What does your company run on?",
     });
     expect(document.activeElement).toBe(next);
     expect(screen.queryByText("Choose a model provider")).toBeNull();
+  });
+
+  // A failed re-read leaves the stale report, which still asks for a model
+  // that is bound. The ignition stands, says so, and the press is the retry.
+  it("keeps the ignition standing when the re-read fails, and the press retries", async () => {
+    const user = userEvent.setup();
+    const report = setupReport(false, false);
+    mount(report);
+    await igniteGemini(user);
+
+    const reads = holdSetupReads({ refuseFirst: true });
+    report.steps[0].configured = true;
+    report.complete = true;
+    reads.answer();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Model connected" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Choose a model provider")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      await screen.findByRole("heading", {
+        name: "What does your company run on?",
+      }),
+    ).toBeTruthy();
+    expect(reads.count()).toBe(2);
   });
 
   // Every chat tier, not just one. A half-bound installation answers for one
