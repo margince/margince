@@ -10203,8 +10203,6 @@ export const vi = {
     "Ch\u01b0a ch\u1ecdn g\u00ec. Th\u00eam b\u1ea3n ghi t\u1eeb trang b\u1ea3n ghi ho\u1eb7c t\u1eeb m\u1ed9t l\u1ef1a ch\u1ecdn.",
   "lists.members.projects":
     "Danh s\u00e1ch d\u1ef1 \u00e1n hi\u1ec3n th\u1ecb th\u00e0nh vi\u00ean trong danh s\u00e1ch D\u1ef1 \u00e1n.",
-  "lists.members.whyColumn": "L\u00fd do",
-  "lists.members.why": "V\u00ec sao?",
   "lists.members.selectAll_one": "Chọn tất cả {count} thành viên",
   "lists.members.selectAll_other": "Chọn tất cả {count} thành viên",
   "lists.members.selectionFullTitle": "Đã chọn tối đa",
@@ -10233,7 +10231,6 @@ export const vi = {
     "v\u00ec b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef",
   "lists.history.reason.restored":
     "v\u00ec b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c kh\u00f4i ph\u1ee5c",
-  "lists.why.title": "V\u00ec sao {name}",
   "lists.why.loading": "\u0110ang t\u00ecm l\u00fd do",
   "lists.why.liveMember":
     "C\u00f3 trong danh s\u00e1ch: b\u1ed9 l\u1ecdc hi\u1ec7n \u0111ang ch\u1ecdn b\u1ea3n ghi n\u00e0y.",
@@ -10252,18 +10249,24 @@ export const vi = {
   "lists.why.hidden": "Gi\u00e1 tr\u1ecb b\u1ecb \u1ea9n v\u1edbi b\u1ea1n",
   "lists.why.daysAgo_one": "{count} ng\u00e0y tr\u01b0\u1edbc",
   "lists.why.daysAgo_other": "{count} ng\u00e0y tr\u01b0\u1edbc",
-  "lists.why.chosen": "\u0110\u01b0\u1ee3c {who} ch\u1ecdn v\u00e0o {when}.",
-  "lists.why.someone": "ai \u0111\u00f3",
-  "lists.why.notChosen":
-    "B\u1ea3n ghi n\u00e0y kh\u00f4ng c\u00f3 trong danh s\u00e1ch ch\u1ecdn.",
+  "lists.why.today": "h\u00f4m nay",
+  "lists.why.inDays_one": "trong {count} ng\u00e0y n\u1eefa",
+  "lists.why.inDays_other": "trong {count} ng\u00e0y n\u1eefa",
   "lists.remove": "G\u1ee1 kh\u1ecfi danh s\u00e1ch ch\u1ecdn",
   "lists.removeTitle":
     "G\u1ee1 b\u1ea3n ghi n\u00e0y kh\u1ecfi danh s\u00e1ch ch\u1ecdn?",
   "lists.note": "L\u00fd do (kh\u00f4ng b\u1eaft bu\u1ed9c)",
   "lists.noteHint":
     "\u0110\u01b0\u1ee3c l\u01b0u c\u00f9ng thay \u0111\u1ed5i \u0111\u1ec3 \u0111\u1ed3ng nghi\u1ec7p bi\u1ebft l\u00fd do.",
+  "lists.record.title": "Danh s\u00e1ch",
+  "lists.record.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
+  "lists.record.empty":
+    "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch n\u00e0o b\u1ea1n c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y.",
+  "lists.record.check": "Ki\u1ec3m tra m\u1ed9t danh s\u00e1ch \u0111\u1ed9ng",
+  "lists.record.checkPick": "Ch\u1ecdn m\u1ed9t danh s\u00e1ch \u0111\u1ed9ng",
+  "lists.record.truncated":
+    "V\u00e0 c\u00f2n danh s\u00e1ch kh\u00e1c kh\u00f4ng hi\u1ec3n th\u1ecb \u1edf \u0111\u00e2y.",
   "lists.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
-  "lists.onShortlists": "C\u00f3 trong danh s\u00e1ch ch\u1ecdn",
   "lists.add": "Th\u00eam",
   "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",
   "lists.pickShortlist": "Ch\u1ecdn danh s\u00e1ch",
@@ -10284,6 +10287,10 @@ export const vi = {
     "Kiểm tra lần cuối {when}. Danh sách khớp quá nhiều bản ghi nên không ghi nhận được bản ghi nào vào hay rời đi.",
   "lists.head.pulse": "Kể từ lần bạn xem trước: {entered} vào, {left} rời đi",
   "lists.members.new": "Mới",
+  "lists.members.hidden": "\u0110\u00e3 \u1ea9n",
+  "lists.members.addedBy": "Th\u00eam b\u1edfi",
+  "lists.members.addedOn": "Ng\u00e0y th\u00eam",
+  "lists.members.note": "Ghi ch\u00fa",
   "lists.history.entered": "Đã vào, tính đến {when}",
   "lists.history.left": "Đã rời đi, tính đến {when}",
   "lists.history.reason.filterChanged": "sau khi bộ lọc thay đổi",

@@ -10335,9 +10335,25 @@ paths:
         cannot see is absent, and nothing says it was there. For member rows with their record's
         own columns, read the record list (`listContacts`, `listCompanies`, `listDeals`,
         `listLeads`) with `list_id`.
+
+        A Live List member carries `values`: what each field its filter names holds on that
+        record, read the way the explanation reads it, so a masked field, a fact on a linked
+        record or a reference to a row this caller cannot open is `hidden`. A Shortlist member
+        carries the name of who added it.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - name: entity_id
+          in: query
+          description: >-
+            Only these records, at most 200, answered in one page; a record that is not a member,
+            or that this caller cannot see, is absent. Takes no cursor.
+          schema:
+            type: array
+            maxItems: 200
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
       responses:
         '200':
           description: One page of members.
@@ -10414,6 +10430,36 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ListMemberExplanation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /records/{entity_type}/{entity_id}/lists:
+    parameters:
+      - name: entity_type
+        in: path
+        required: true
+        schema: { type: string, enum: [contact, company, deal, lead] }
+      - name: entity_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Lists]
+      operationId: getRecordLists
+      summary: The lists one record is on that this caller may find.
+      description: |
+        Every Shortlist the record was chosen for, and every Live List whose filter selects it
+        now, evaluated by the same SQL the member read uses. Only lists this caller may find, and
+        not archived ones; a Live List whose filter no longer compiles is left out. A record that
+        does not exist, is archived, or that this caller cannot see answers `404`. Each list carries its identity, kind and sharing; read
+        `getList` for its counts and health.
+      responses:
+        '200':
+          description: The lists the record is on, by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordListsResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -41985,8 +42031,23 @@ components:
         entity_type: { type: string, enum: [contact, company, deal, lead, project] }
         entity_id: { type: string, format: uuid }
         added_by: { type: string, description: 'The principal that added a Shortlist member; `dynamic` for a Live List member.' }
+        added_by_name: { type: [string, 'null'], description: 'For a Shortlist member, the display name of the user who added it; null for any other principal.' }
         created_at: { type: string, format: date-time }
         note: { type: [string, 'null'] }
+        values:
+          type: object
+          description: >-
+            For a Live List member: each field the list's filter names, by field name, with what it
+            holds on this record for this caller. Absent for a Shortlist member.
+          additionalProperties: { $ref: '#/components/schemas/ListFieldValue' }
+
+    ListFieldValue:
+      type: object
+      required: [hidden]
+      properties:
+        value: { type: [string, 'null'], description: 'The value as text, as the explanation states it; null when the record holds none.' }
+        hidden: { type: boolean, description: 'The value is not shown to this caller.' }
+        label: { type: [string, 'null'], description: 'For a reference to a company or project this caller may open, its name.' }
 
     CreateListRequest:
       type: object
@@ -42051,6 +42112,7 @@ components:
         result: { type: [boolean, 'null'] }
         value: { type: [string, 'null'], description: 'The record''s current value of the field, as text.' }
         hidden: { type: boolean, description: 'The value is not shown to this caller.' }
+        value_label: { type: [string, 'null'], description: 'For a reference to a company or project this caller may open, its name.' }
 
     ListMemberExplanation:
       type: object
@@ -42094,6 +42156,13 @@ components:
         name: { type: [string, 'null'] }
         definition: { type: [object, 'null'], additionalProperties: true }
         sharing: { type: [string, 'null'] }
+
+    RecordListsResponse:
+      type: object
+      required: [data, truncated]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/List' } }
+        truncated: { type: boolean, description: 'More lists hold the record than one answer carries; `data` is the first 1000 by name.' }
 
     ListHistoryResponse:
       type: object

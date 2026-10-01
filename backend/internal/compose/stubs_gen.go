@@ -2487,6 +2487,10 @@ func (stubs) UpdateRecordRole(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "UpdateRecordRole")
 }
 
+func (stubs) GetRecordLists(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetRecordLists")
+}
+
 func (stubs) GetRecordTags(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetRecordTags")
 }

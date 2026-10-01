@@ -306,7 +306,7 @@ Also called: static list, hand-picked list, target list, account list.
 ### Who can find a list?
 Each list in Margince says **Who can find it**: **Only me**, **A team** (one of your teams, or all of the owner's teams) or **Everyone**. Change it with **Edit list** on the list's page.
 Sharing a list shows nobody a record they could not already see. Each reader sees only the members they are allowed to see, and the count says how many that is ("12 you can see"), so two colleagues can see different numbers on the same list.
-A company's page shows the Shortlists it is on under **On Shortlists**, again only those you can find.
+A contact, company, deal or lead page shows the lists that record is on under **Lists**, again only those you can find.
 Also called: share a list, list permissions, private list, team list.
 
 ### What is a list's steward?
@@ -314,11 +314,13 @@ The steward looks after a list; it is whoever made it, unless it is handed on. T
 When the steward leaves, the list shows **Needs a steward** and "Nobody looks after this list". Someone whose role sees every record can press **Look after it** to become its steward.
 Also called: list owner, who manages this list.
 
-### Why is this record on the list?
-To see why a record is on a Margince list, open the list and press **Why?** on the record's row.
-- On a Live List, it shows each clause of the filter as **Met**, **Not met** or **No value to judge**, with the record's current value. A value you may not see shows as "Value hidden from you".
-- On a Shortlist, it says who chose the record and when, with the note they left.
-Also called: why is this contact here, list membership reason.
+### Why is this record on the list, or not on it?
+A Margince list's page shows why each member is there in its own columns.
+- On a Live List, each field the filter uses is a column with the member's current value, such as "52 days ago". The first four are shown; **Display** offers the rest. A value you may not see shows as **Hidden**.
+- On a Shortlist, **Added by**, **Added on** and **Note** say who chose the record, when, and why.
+To see why a record is not on a Live List, open the record's page and, under **Lists**, pick the list in **Check a Live List**. It shows each clause of the filter as **Met**, **Not met** or **No value to judge**, with the record's current value; a value you may not see shows as "Value hidden from you".
+To take one record off a Shortlist, press **Take off the Shortlist** beside it under **Lists** on the record's page and add a note if you like, or tick it on the list's page and use the bulk bar.
+Also called: why is this contact here, why is this record missing, list membership reason.
 
 ### How often does a Live List update?
 A Live List's members are worked out again every time you open it, so the list itself is always current. Separately, Margince checks every Live List every 15 minutes and records who joined and who left; that record is what **What changed** and "since your last visit" show.
