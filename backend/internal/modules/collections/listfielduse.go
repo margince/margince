@@ -24,26 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// referencedFields is the fields a filter tree's leaves name, once each, in
-// the order the tree first names them.
-func referencedFields(p storekit.Predicate) []string {
-	var out []string
-	var walk func(storekit.Predicate)
-	walk = func(node storekit.Predicate) {
-		for _, branch := range node.And {
-			walk(branch)
-		}
-		for _, branch := range node.Or {
-			walk(branch)
-		}
-		if node.Field != "" && !slices.Contains(out, node.Field) {
-			out = append(out, node.Field)
-		}
-	}
-	walk(p)
-	return out
-}
-
 // retiredColumns is the custom columns of one record type that a filter may
 // still name but a builder no longer offers: the retired ones.
 func (s *Store) retiredColumns(ctx context.Context, entityType string) (map[string]bool, error) {
@@ -82,7 +62,7 @@ func (s *Store) retiredFieldsOf(ctx context.Context, l listRow) ([]string, error
 		return nil, err
 	}
 	var out []string
-	for _, field := range referencedFields(pred) {
+	for _, field := range storekit.FieldsNamed(pred) {
 		if retired[field] {
 			out = append(out, field)
 		}
@@ -143,7 +123,7 @@ func liveListsNaming(ctx context.Context, tx pgx.Tx, entityType, field string) (
 	var out []listRow
 	for _, l := range all {
 		pred, err := predicateFromDefinition(l.Definition)
-		if err == nil && slices.Contains(referencedFields(pred), field) {
+		if err == nil && slices.Contains(storekit.FieldsNamed(pred), field) {
 			out = append(out, l)
 		}
 	}

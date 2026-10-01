@@ -274,15 +274,11 @@ func withholdUnseenReferences(ctx context.Context, tx pgx.Tx, leaves []explainLe
 		if leaf.references == "" || leaf.node.Value == nil {
 			continue
 		}
-		id, err := ids.Parse(*leaf.node.Value)
+		unseen, err := unseenReferences(ctx, tx, leaf.references, []string{*leaf.node.Value})
 		if err != nil {
-			return fmt.Errorf("explain: a %s reference is not an id: %w", leaf.references, err)
+			return fmt.Errorf("explain: %w", err)
 		}
-		visible, err := auth.VisibleSubset(ctx, tx, leaf.references, []ids.UUID{id})
-		if err != nil {
-			return err
-		}
-		if !visible[id] {
+		if unseen[*leaf.node.Value] {
 			leaf.node.Value, leaf.node.Hidden = nil, true
 		}
 	}

@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // One list, opened: what it is for, who looks after it, how many of its
-// members this reader can see, the members themselves, why each is there, and
-// what changed. The members are the record list's own rows, narrowed by
+// members this reader can see, the members themselves with what put each
+// there, and what changed. The members are the record list's own rows, narrowed by
 // list_id, so the page is never one request per member (listmembers.tsx).
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { navigate } from "../app/router";
-import { Badge, Button } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -25,13 +25,8 @@ import {
   ListKindBadge,
   RECORD_TYPE_LABEL,
 } from "./listlibrary";
-import {
-  MEMBER_SOURCES,
-  type MemberRow,
-  MemberRows,
-  type MemberSource,
-  memberName,
-} from "./listmembers";
+import { useMemberColumns } from "./listmembercolumns";
+import { MEMBER_SOURCES, MemberRows, type MemberSource } from "./listmembers";
 import { ArchiveListAction } from "./listrules";
 import {
   type List,
@@ -44,7 +39,6 @@ import {
 } from "./lists.queries";
 import { ListSettingsAction } from "./listsettings";
 import { useListAudienceLabel } from "./listsharing";
-import { ListWhy } from "./listwhy";
 import "./lists.css";
 
 function isMemberSource(type: ListRecordType): type is MemberSource {
@@ -289,11 +283,11 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
 
 function MembersPanel({ list }: Readonly<{ list: List }>) {
   const t = useT();
-  const [why, setWhy] = useState<MemberRow | null>(null);
   const joined = useMemo(
     () => new Set(list.joined_since_visit ?? []),
     [list.joined_since_visit],
   );
+  const columns = useMemberColumns(list, joined);
   if (!isMemberSource(list.entity_type)) {
     return (
       <Panel title={t("lists.members.title")}>
@@ -311,47 +305,9 @@ function MembersPanel({ list }: Readonly<{ list: List }>) {
           list={list}
           source={list.entity_type}
           onOpen={(row) => navigate({ screen: source.screen, id: row.id })}
-          columns={[
-            {
-              key: "name",
-              header: t("lists.col.name"),
-              fixed: true,
-              cell: (row) =>
-                joined.has(row.id) ? (
-                  <span className="lists-member-name">
-                    {memberName(row, t)}
-                    <Badge tone="accent">{t("lists.members.new")}</Badge>
-                  </span>
-                ) : (
-                  memberName(row, t)
-                ),
-            },
-            {
-              key: "why",
-              header: t("lists.members.whyColumn"),
-              verbs: true,
-              cell: (row) => (
-                <span className="cell-actions">
-                  <Button
-                    variant="ghost"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setWhy(row);
-                    }}
-                  >
-                    {t("lists.members.why")}
-                  </Button>
-                </span>
-              ),
-            },
-          ]}
+          columns={columns}
         />
       </PanelBody>
-      <ListWhy
-        list={list}
-        record={why ? { id: why.id, name: memberName(why, t) } : null}
-        onClose={() => setWhy(null)}
-      />
     </Panel>
   );
 }

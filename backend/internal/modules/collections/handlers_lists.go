@@ -143,8 +143,23 @@ func (h Handlers) ListListMembers(w http.ResponseWriter, r *http.Request, id crm
 		return
 	}
 	limit, cursor := pageParams(params.Limit, params.Cursor)
-	page, err := h.store.MembersPage(r.Context(), pathID[ids.ListKind](id), limit, cursor)
+	read := MemberRead{Limit: limit, Cursor: cursor}
+	if params.EntityId != nil {
+		for _, recordID := range *params.EntityId {
+			read.Only = append(read.Only, ids.UUID(recordID))
+		}
+	}
+	page, err := h.store.MembersPage(r.Context(), pathID[ids.ListKind](id), read)
 	respond(w, r, http.StatusOK, page, err)
+}
+
+// GetRecordLists serves GET /records/{entity_type}/{entity_id}/lists.
+func (h Handlers) GetRecordLists(w http.ResponseWriter, r *http.Request, entityType string, entityID openapi_types.UUID) {
+	if h.listsOff(w, r) {
+		return
+	}
+	lists, err := h.store.RecordListsFor(r.Context(), entityType, ids.UUID(entityID))
+	respond(w, r, http.StatusOK, crmcontracts.RecordListsResponse{Data: lists}, err)
 }
 
 // AddListMember serves POST /lists/{id}/members.

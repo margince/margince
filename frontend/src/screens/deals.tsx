@@ -164,6 +164,7 @@ import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
 import { RecordFields, rawRecord } from "./recordfields";
 import { tagsColumn } from "./recordlist";
+import { RecordListsPanel } from "./recordlists";
 import { useRecordOwners } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
@@ -2638,8 +2639,6 @@ type DealTab = (typeof DEAL_TABS)[number];
 
 // The deal 360's "overview" pane, split out of DealScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
-// Every prop here is a value already resolved by DealScreen — no new
-// fetches, no behavior change from the pre-tab layout.
 
 /**
  * The deal's tags, drawn by the SHARED panel.
@@ -3189,6 +3188,7 @@ function DealContext({
       <DealDetails deal={deal} companies={companies} meId={meId} />
       <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
       <DealTagsSection deal={deal} />
+      <RecordListsPanel entityType="deal" entityId={deal.id} />
       <DealEmailAside dealId={deal.id} />
     </>
   );

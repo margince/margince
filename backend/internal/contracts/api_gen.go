@@ -35177,6 +35177,15 @@ type ListDependencyKind string
 // ListDependencyRole For an automation: whether it watches this Live List or adds to this Shortlist.
 type ListDependencyRole string
 
+// ListFieldValue defines model for ListFieldValue.
+type ListFieldValue struct {
+	// Hidden The value is not shown to this caller.
+	Hidden bool `json:"hidden"`
+
+	// Value The value as text, as the explanation states it; null when the record holds none.
+	Value *string `json:"value,omitempty"`
+}
+
 // ListHistoryEntry defines model for ListHistoryEntry.
 type ListHistoryEntry struct {
 	Actor      string                  `json:"actor"`
@@ -35222,13 +35231,19 @@ type ListListResponse struct {
 // ListMember defines model for ListMember.
 type ListMember struct {
 	// AddedBy The principal that added a Shortlist member; `dynamic` for a Live List member.
-	AddedBy    *string              `json:"added_by,omitempty"`
-	CreatedAt  *time.Time           `json:"created_at,omitempty"`
-	EntityId   openapi_types.UUID   `json:"entity_id"`
-	EntityType ListMemberEntityType `json:"entity_type"`
-	Id         openapi_types.UUID   `json:"id"`
-	ListId     openapi_types.UUID   `json:"list_id"`
-	Note       *string              `json:"note,omitempty"`
+	AddedBy *string `json:"added_by,omitempty"`
+
+	// AddedByName For a Shortlist member, the display name of the user who added it; null for any other principal.
+	AddedByName *string              `json:"added_by_name,omitempty"`
+	CreatedAt   *time.Time           `json:"created_at,omitempty"`
+	EntityId    openapi_types.UUID   `json:"entity_id"`
+	EntityType  ListMemberEntityType `json:"entity_type"`
+	Id          openapi_types.UUID   `json:"id"`
+	ListId      openapi_types.UUID   `json:"list_id"`
+	Note        *string              `json:"note,omitempty"`
+
+	// Values For a Live List member: each field the list's filter names, by field name, with what it holds on this record for this caller. Absent for a Shortlist member.
+	Values *map[string]ListFieldValue `json:"values,omitempty"`
 }
 
 // ListMemberEntityType defines model for ListMember.EntityType.
@@ -38775,6 +38790,11 @@ type RecordGrantRecordType string
 
 // RecordGrantSubjectType defines model for RecordGrant.SubjectType.
 type RecordGrantSubjectType string
+
+// RecordListsResponse defines model for RecordListsResponse.
+type RecordListsResponse struct {
+	Data []List `json:"data"`
+}
 
 // RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
 type RecordQualifyingEventRequest struct {
@@ -49409,6 +49429,9 @@ type ListListMembersParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// EntityId Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor.
+	EntityId *[]openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
 }
 
 // GetMagicParams defines parameters for GetMagic.
@@ -64761,6 +64784,9 @@ type ServerInterface interface {
 	// Relabel, reorder, re-scope or retire a responsibility role.
 	// (PATCH /record-roles/{id})
 	UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams)
+	// The lists one record is on that this caller may find.
+	// (GET /records/{entity_type}/{entity_id}/lists)
+	GetRecordLists(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
 	// The tags on one record, and who put them there.
 	// (GET /records/{entity_type}/{entity_id}/tags)
 	GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
@@ -68898,6 +68924,12 @@ func (_ Unimplemented) CreateRecordRole(w http.ResponseWriter, r *http.Request, 
 // Relabel, reorder, re-scope or retire a responsibility role.
 // (PATCH /record-roles/{id})
 func (_ Unimplemented) UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The lists one record is on that this caller may find.
+// (GET /records/{entity_type}/{entity_id}/lists)
+func (_ Unimplemented) GetRecordLists(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -90345,6 +90377,19 @@ func (siw *ServerInterfaceWrapper) ListListMembers(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// ------------- Optional query parameter "entity_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity_id", r.URL.Query(), &params.EntityId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListListMembers(w, r, id, params)
 	}))
@@ -95909,6 +95954,49 @@ func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateRecordRole(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetRecordLists operation middleware
+func (siw *ServerInterfaceWrapper) GetRecordLists(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_type" -------------
+	var entityType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_type", chi.URLParam(r, "entity_type"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", chi.URLParam(r, "entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRecordLists(w, r, entityType, entityId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -104427,6 +104515,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/record-roles/{id}", wrapper.UpdateRecordRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/lists", wrapper.GetRecordLists)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/tags", wrapper.GetRecordTags)
