@@ -4,10 +4,10 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Field, TextInput } from "../design-system/atoms";
+import { ServiceAccountKeyField } from "../design-system/serviceaccountkeyfield";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
-import { ServiceAccountKeyField } from "./service-account-key";
 import type { SetupProvider } from "./setup-providers";
 import { VertexLocationField } from "./vertex-location";
 

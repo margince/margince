@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useRef, useState } from "react";
-import { Field, Textarea } from "../design-system/atoms";
-import { FileDropzone } from "../design-system/filedropzone";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { Field, Textarea } from "./atoms";
+import { FileDropzone } from "./filedropzone";
 
 // A Google service-account key file, pasted or picked, for the one vendor that
 // takes one. Settings and onboarding both write this credential, so the control

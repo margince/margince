@@ -162,10 +162,9 @@ embeddings:    {provider: gemini}
   model runs: `eu_hosted` (partner-operated EU inference), `sovereign` (zero
   egress by construction), `cloud_frontier` (a vendor's cloud, wherever it
   serves). It constrains, it never leaks: under `eu_hosted` a lane on the
-  OpenRouter broker must pin EU-region hosts with `routing: {only: [...]}`,
-  because an unpinned broker serves from any region, and a `gemini_vertex` lane
-  must name an EU `location`, because Google processes the call where that
-  names; otherwise the config is refused.
+  OpenRouter broker must pin EU-region hosts (`routing: {only: [...]}`), as an
+  unpinned broker serves from any region, and a `gemini_vertex` lane must name
+  an EU `location`, where Google processes the call — or the config is refused.
 - **No key ever lives in the binding.** A provider names only itself, and a stray
   `api_key:` is a *boot error* rather than a convenience. Where the key comes from
   depends on who is asking: a served installation resolves it from the **key

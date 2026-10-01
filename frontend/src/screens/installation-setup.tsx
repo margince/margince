@@ -49,12 +49,12 @@ import { Ignition, useIgnitionCore } from "./onboarding-ignition";
 // so a first-run sheet named after its component would style the coldest screen
 // in the product from outside the censuses that keep the rest of it honest.
 import "./onboarding-first-run.css";
+import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import {
   AiKeyFields,
   choiceLabel,
   useBindModels,
 } from "./installation-setup.ai-key";
-import { serviceAccountProblem } from "./service-account-key";
 import {
   SETUP_PROVIDER_IDS,
   SETUP_PROVIDERS,

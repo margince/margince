@@ -4,9 +4,9 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Field, TextInput } from "../design-system/atoms";
+import { ServiceAccountKeyField } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { ServiceAccountKeyField } from "./service-account-key";
 
 // How one vendor's credential is typed in and how its state reads. A vendor
 // takes either a pasted API key or a service-account key file, and the row

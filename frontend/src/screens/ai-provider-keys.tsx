@@ -7,6 +7,7 @@ import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -36,7 +37,6 @@ import {
   RefreshSummary,
   useRefreshModelPrices,
 } from "./rate-catalogue-refresh";
-import { serviceAccountProblem } from "./service-account-key";
 import "./ai-settings.css";
 
 // The vendor credentials this installation calls models with.

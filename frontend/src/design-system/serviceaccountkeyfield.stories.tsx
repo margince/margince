@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { ServiceAccountKeyField } from "./service-account-key";
-import { StoryProviders } from "./story-utils";
+import { LocaleProvider } from "../i18n";
+import { ServiceAccountKeyField } from "./serviceaccountkeyfield";
 
 // The key-file control Settings and onboarding share. What a reviewer checks
 // here: the box starts empty, the picker sits under it, and a refusal reads as
@@ -16,7 +16,7 @@ function Harness({
 }: Readonly<{ initial?: string; error?: string; disabled?: boolean }>) {
   const [value, setValue] = useState(initial);
   return (
-    <StoryProviders>
+    <LocaleProvider initial="en">
       <div style={{ maxWidth: "560px" }}>
         <ServiceAccountKeyField
           value={value}
@@ -26,12 +26,12 @@ function Harness({
           error={error}
         />
       </div>
-    </StoryProviders>
+    </LocaleProvider>
   );
 }
 
 const meta: Meta<typeof ServiceAccountKeyField> = {
-  title: "Settings/AI/AI models/Service-account key",
+  title: "Components/Forms and input/Service-account key field",
   component: ServiceAccountKeyField,
 };
 export default meta;
