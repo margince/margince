@@ -64,7 +64,7 @@ export type TimelineMark = Readonly<{
 
 // A watching line is dated when the condition was OBSERVED, so placing it
 // would date every outage to this page load; its own section says since when.
-function markKind(line: MagicLine): MarkKind | null {
+export function markKind(line: MagicLine): MarkKind | null {
   switch (line.lane) {
     case "needs_you":
       return "waiting";
@@ -186,9 +186,13 @@ export function axisTicks(
   return ticks;
 }
 
-// The axis names days past a day, since "03:00" alone would not say which; a
-// mark's own label keeps the time either way.
-function axisLabel(
+// Past a day "03:00" alone would not say which day, so the axis, and a line's
+// own time beside the list, name the day instead.
+export function spansDays(since: string, asOf: string): boolean {
+  return Date.parse(asOf) - Date.parse(since) > DAY_HOURS * HOUR_MS;
+}
+
+export function axisLabel(
   iso: string,
   day: boolean,
   locale: Locale,
@@ -231,9 +235,8 @@ export function MagicTimeline({
   if (marks.length === 0) {
     return null;
   }
-  const spansDays =
-    Date.parse(receipt.as_of) - Date.parse(receipt.since) > DAY_HOURS * HOUR_MS;
-  const from = axisLabel(receipt.since, spansDays, locale, zone);
+  const days = spansDays(receipt.since, receipt.as_of);
+  const from = axisLabel(receipt.since, days, locale, zone);
   const drawn = MARK_KINDS.filter((kind) =>
     marks.some((mark) => mark.kind === kind),
   );
@@ -253,7 +256,7 @@ export function MagicTimeline({
             { count: formatNumber(count, locale) },
           )
         : null,
-      markWhen(mark.line.occurred_at, spansDays, locale, zone),
+      markWhen(mark.line.occurred_at, days, locale, zone),
     ]
       .filter(Boolean)
       .join(" · ");

@@ -4,7 +4,7 @@
 import { useRecordZone } from "../app/recordzone";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatDayMonth } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { EntityRef } from "./entityref";
@@ -21,6 +21,7 @@ export function BriefChanges() {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  const zone = viewerZone();
   const query = useHandledForYou();
   const receipts = query.data?.receipts;
   const state = listReadState(query, receipts);
@@ -39,19 +40,27 @@ export function BriefChanges() {
         >
           <ul className="magic-lines" aria-label={t("brief.changes.title")}>
             {receipts?.map((receipt) => (
+              // The receipt's own row, with no mark: a change carries no
+              // actor, and the mark's colour is a claim about who acted.
               <li className="magic-line" key={receipt.id}>
-                <div className="magic-line-text">
+                <p className="magic-line-text">
+                  {receiptSummary(receipt, t, locale, recordZone)}
                   {receipt.subject?.type === "deal" && (
-                    <EntityRef kind="deal" id={receipt.subject.id} />
+                    <span className="magic-line-subject">
+                      <EntityRef kind="deal" id={receipt.subject.id} />
+                    </span>
                   )}
-                  <p>{receiptSummary(receipt, t, locale, recordZone)}</p>
-                  <p className="t-caption">
-                    {formatDateTime(receipt.occurred_at, locale, viewerZone())}
-                  </p>
-                </div>
-                <div className="magic-line-back">
+                </p>
+                <div className="magic-line-controls">
                   <ReceiptReview receipt={receipt} />
                 </div>
+                <time
+                  className="t-caption magic-line-when"
+                  dateTime={receipt.occurred_at}
+                  title={formatDateTime(receipt.occurred_at, locale, zone)}
+                >
+                  {formatDayMonth(receipt.occurred_at, locale, zone)}
+                </time>
               </li>
             ))}
           </ul>

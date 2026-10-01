@@ -69,6 +69,12 @@
   border: 1.5px dashed var(--ai);
 }
 
+/* A source to restore is off the clock, so only the list draws this one: the
+   receipt's summary line wears the same warning. */
+.magic-mark[data-kind="restore"] {
+  --mark: var(--warning);
+}
+
 .magic-timeline-plot > .magic-mark {
   position: absolute;
   inset-inline-start: var(--at);
@@ -176,4 +182,12 @@
   bottom: 100%;
   block-size: 6px;
   border-inline-start: 1px solid var(--borderStrong);
+}
+
+/* A phone has room for the two ends and not for the hours between them, which
+   printed over each other; the marks still stand at their share of the night. */
+@media (max-width: 600px) {
+  .magic-timeline-tick {
+    display: none;
+  }
 }

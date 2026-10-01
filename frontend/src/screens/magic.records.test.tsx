@@ -89,7 +89,6 @@ describe("a done line standing for many records", () => {
     stubOpenedLine();
     renderMagic();
 
-    expect(await screen.findByText("Undo each record inside")).toBeTruthy();
     await userEvent.click(
       await screen.findByRole("button", { name: "GEM and 1 more" }),
     );

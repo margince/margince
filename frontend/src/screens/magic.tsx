@@ -48,7 +48,7 @@ import {
   type MagicWindow,
   useMagic,
 } from "./magic.queries";
-import { MagicTimeline } from "./magic.timeline";
+import { MagicTimeline, spansDays } from "./magic.timeline";
 import { sourceUnavailableText } from "./worklist.copy";
 import "./brief.css";
 
@@ -151,8 +151,10 @@ export function MagicPanel({
   const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
+  const byDay = shown ? spansDays(shown.since, shown.as_of) : false;
   return (
     <Panel
+      className="magic-panel"
       title={t(WINDOW_HEADING[span])}
       titleAction={
         <SegmentedControl
@@ -207,6 +209,7 @@ export function MagicPanel({
           rows={shown?.[lane] ?? []}
           since={shown?.since}
           zone={zone}
+          byDay={byDay}
           fold={
             lane === "done"
               ? plural("magic.done.all", doneRecords, {

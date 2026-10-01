@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// One line of the receipt: what happened, why and what it means, then the
-// record it is about, who acted and when, with the way back beside it.
+// One line of the receipt, on one row: its mark in the clock's own colours,
+// what happened and the record it is about, then the undo where there is one
+// and the time, in columns the whole list shares. Who acted, why, and why a
+// change cannot be put back are the line's detail: on hover, and read out.
 
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
@@ -15,11 +17,13 @@ import {
   magicByKey,
   magicConsequenceKey,
   magicSentenceKey,
+  magicUndoReasonKey,
   magicWhyKey,
 } from "./magic.keys";
 import type { MagicLane, MagicLine } from "./magic.queries";
 import { LineRecordsOpener } from "./magic.records";
-import { MagicUndoButton } from "./magic.undo";
+import { axisLabel, markKind } from "./magic.timeline";
+import { MagicUndoButton, undoPress } from "./magic.undo";
 
 /**
  * One lane with lines in it: its heading, then each line, folded under `fold`
@@ -31,6 +35,7 @@ export function MagicLaneSection({
   rows,
   since,
   zone,
+  byDay,
   fold,
 }: Readonly<{
   lane: MagicLane;
@@ -38,6 +43,8 @@ export function MagicLaneSection({
   rows: readonly MagicLine[];
   since: string | undefined;
   zone: string;
+  // The window runs past a day, so a line names its day rather than its hour.
+  byDay: boolean;
   fold?: string;
 }>) {
   const lines = (
@@ -45,20 +52,13 @@ export function MagicLaneSection({
       {rows.map((row) => (
         // The lanes mint their ids independently, so an id alone can name a
         // row in a lane the reader was not looking at.
-        <li className="magic-line" key={`${lane}-${row.id}`}>
-          <div className="magic-line-text">
-            <LineSentence line={row} />
-            <LineMeta line={row} since={since} zone={zone} />
-          </div>
-          {/* Only a done line changed something there is a way back
-              from; on the others the answer is always "nothing to put
-              back", which said once per line is noise. */}
-          {lane === "done" && (
-            <div className="magic-line-back">
-              <LineWayBack line={row} />
-            </div>
-          )}
-        </li>
+        <MagicLineRow
+          key={`${lane}-${row.id}`}
+          line={row}
+          since={since}
+          zone={zone}
+          byDay={byDay}
+        />
       ))}
     </ul>
   );
@@ -78,54 +78,107 @@ export function MagicLaneSection({
   );
 }
 
-/**
- * The record the line is about, who acted, and when: each its own element, so
- * the separators between them are the stylesheet's and never part of a value.
- */
-function LineMeta({
+function MagicLineRow({
   line,
   since,
   zone,
-}: Readonly<{ line: MagicLine; since: string | undefined; zone: string }>) {
+  byDay,
+}: Readonly<{
+  line: MagicLine;
+  since: string | undefined;
+  zone: string;
+  byDay: boolean;
+}>) {
   const t = useT();
-  const by = line.actor.label ? magicByKey(line.actor.label.key) : null;
+  const sentence = magicSentenceKey(line.summary.key);
+  const detail = lineDetail(line, t);
   return (
-    <p className="t-caption magic-line-meta">
-      <span>
+    <li className="magic-line" title={detail.join(" · ") || undefined}>
+      {/* A watching line is off the clock, so its mark is its lane's. */}
+      <span
+        className="magic-mark"
+        data-kind={markKind(line) ?? "restore"}
+        aria-hidden="true"
+      />
+      <p className="magic-line-text">
+        {/* A sentence this build has no key for is DROPPED rather than
+            printed: `magic.action.something` on a receipt is worse than a row
+            that says only what it was about and when. */}
+        {sentence && t(sentence, line.summary.values)}
         <LineSubject line={line} since={since} />
-      </span>
-      {by && <span>{t(by, line.actor.label?.values)}</span>}
-      <span>
-        <LineWhen line={line} zone={zone} />
-      </span>
-    </p>
+        {detail.length > 0 && (
+          <span className="sr-only">
+            {detail.map((part) => (
+              <span key={part}>{part} </span>
+            ))}
+          </span>
+        )}
+      </p>
+      <LineUndo line={line} />
+      <LineWhen line={line} zone={zone} byDay={byDay} />
+    </li>
   );
 }
 
 /**
- * What happened, and what it means for the reader.
- *
- * A sentence this build has no key for is DROPPED rather than printed: a newer
- * server mints keys this client predates, and `magic.action.something` on a
- * receipt is worse than a row that says only what it was about and when.
+ * Who acted, why, what it means, and for a done change that cannot be put
+ * back, why not: true of the line and not needed to scan it, so it is the
+ * row's tooltip and is read out rather than printed under every line. A key
+ * this build predates says nothing, for the reason an unknown sentence does.
  */
-function LineSentence({ line }: Readonly<{ line: MagicLine }>) {
-  const t = useT();
-  const sentence = magicSentenceKey(line.summary.key);
+function lineDetail(line: MagicLine, t: ReturnType<typeof useT>): string[] {
+  const by = line.actor.label ? magicByKey(line.actor.label.key) : null;
+  const why = line.reason ? magicWhyKey(line.reason.key) : null;
   const consequence = line.consequence
     ? magicConsequenceKey(line.consequence)
     : null;
-  // WHY the machinery did it, under what it did. A reason key this build
-  // predates draws nothing, for the reason an unknown sentence does.
-  const why = line.reason ? magicWhyKey(line.reason.key) : null;
+  return [
+    by && t(by, line.actor.label?.values),
+    why && t(why, line.reason?.values),
+    consequence && t(consequence),
+    noWayBack(line, t),
+  ].filter((part): part is string => Boolean(part));
+}
+
+// Why a done change to one record cannot be put back, said rather than shown as
+// a greyed control. A line standing for many says it per record inside, and on
+// the other lanes nothing changed, so "nothing to put back" would be noise.
+function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
+  const entity = line.entity;
+  if (line.lane !== "done" || ((line.count ?? 1) > 1 && entity)) {
+    return null;
+  }
+  if (undoPress(line.undo, entity?.type ?? "", entity?.id ?? "")) {
+    return null;
+  }
+  const reason = magicUndoReasonKey(line.undo?.reason);
+  return reason ? t(reason) : null;
+}
+
+/**
+ * The undo for a done change to one record, the one control a line carries.
+ * A line standing for many offers its undos inside, one per record: one press
+ * that put back 150 changes nobody had looked at would be the same unasked
+ * bulk write this page exists to report.
+ */
+function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
+  const entity = line.entity;
+  if (
+    line.lane !== "done" ||
+    !entity ||
+    (line.count ?? 1) > 1 ||
+    !undoPress(line.undo, entity.type, entity.id)
+  ) {
+    return null;
+  }
   return (
-    <>
-      {sentence && <span>{t(sentence, line.summary.values)}</span>}
-      {why && line.reason && (
-        <p className="t-caption">{t(why, line.reason.values)}</p>
-      )}
-      {consequence && <p className="t-caption">{t(consequence)}</p>}
-    </>
+    <div className="magic-line-controls">
+      <MagicUndoButton
+        undo={line.undo}
+        entityType={entity.type}
+        entityId={entity.id}
+      />
+    </div>
   );
 }
 
@@ -136,16 +189,31 @@ function LineSentence({ line }: Readonly<{ line: MagicLine }>) {
  * it alone would date every outage to this page load. Where the condition has a
  * beginning the server sends it, and that is the figure a reader acts on.
  */
-function LineWhen({ line, zone }: Readonly<{ line: MagicLine; zone: string }>) {
+function LineWhen({
+  line,
+  zone,
+  byDay,
+}: Readonly<{ line: MagicLine; zone: string; byDay: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const began = line.summary.values?.failing_since;
   if (line.lane === "watching" && began) {
-    return t("magic.failingSince", {
-      when: formatDateTime(began, locale, zone),
-    });
+    return (
+      <span className="t-caption magic-line-when">
+        {t("magic.failingSince", { when: formatDateTime(began, locale, zone) })}
+      </span>
+    );
   }
-  return formatDateTime(line.occurred_at, locale, zone);
+  // Short, as the clock's axis spells it; the full instant is one hover away.
+  return (
+    <time
+      className="t-caption magic-line-when"
+      dateTime={line.occurred_at}
+      title={formatDateTime(line.occurred_at, locale, zone)}
+    >
+      {axisLabel(line.occurred_at, byDay, locale, zone)}
+    </time>
+  );
 }
 
 /**
@@ -202,10 +270,6 @@ function LineSubject({
   const { locale } = useLocale();
   const label = subjectLabel(line);
   const count = line.count ?? 1;
-  // A done line about records OPENS: to every record it stands for, what
-  // changed on each, and an undo per record. Retention names no record, and a
-  // line from another lane is not a change to inspect.
-  const opens = line.lane === "done" && line.entity !== undefined && since;
   // ONE line for a job that touched many records: the most recent one by
   // name, and how many more.
   // The read behind a line can be cut short, and then its count is the most
@@ -213,51 +277,29 @@ function LineSubject({
   // never renders as an exact number — including the one that stands for a
   // single record, which is a group that MIGHT have more beyond the cut.
   const floor = line.count_is_floor === true;
-  if (count > 1 || floor || (!line.entity && line.count !== undefined)) {
-    const summary = manySummary({ t, plural, locale, label, count, floor });
-    return opens ? (
-      <LineRecordsOpener line={line} since={since} summary={summary} />
-    ) : (
-      summary
-    );
+  const many = count > 1 || floor || (!line.entity && line.count !== undefined);
+  const shown = many
+    ? manySummary({ t, plural, locale, label, count, floor })
+    : label;
+  // No record to name says nothing: the sentence stands alone.
+  if (!shown) {
+    return null;
   }
-  if (!label) {
-    return t("magic.noRecord");
-  }
-  const href = recordHref(line);
+  // A done change about records OPENS, to every record it touched, what
+  // changed on each and an undo per record; inside, each links to its page.
+  // Retention names no record, and another lane's line changed nothing.
+  const opens = line.lane === "done" && line.entity !== undefined && since;
+  const href = many ? undefined : recordHref(line);
   return (
-    <>
-      {href ? <a href={href}>{label}</a> : label}
-      {opens && (
-        <LineRecordsOpener
-          line={line}
-          since={since}
-          summary={t("magic.records.show")}
-        />
+    <span className="magic-line-subject">
+      {opens ? (
+        <LineRecordsOpener line={line} since={since} summary={shown} />
+      ) : href ? (
+        <a href={href}>{shown}</a>
+      ) : (
+        shown
       )}
-    </>
-  );
-}
-
-/**
- * The way back: an undo for a change to one record, done here with one press.
- * A line standing for many records offers its undos inside, one per record —
- * one button that put back 150 changes nobody had looked at would be the same
- * unasked bulk write this page exists to report.
- */
-function LineWayBack({ line }: Readonly<{ line: MagicLine }>) {
-  const t = useT();
-  if ((line.count ?? 1) > 1 && line.entity) {
-    return <span className="t-caption">{t("magic.undo.perRecord")}</span>;
-  }
-  // A line naming no record still says why it cannot be taken back; it offers
-  // no press, because the restore route needs a record to name.
-  return (
-    <MagicUndoButton
-      undo={line.undo}
-      entityType={line.entity?.type ?? ""}
-      entityId={line.entity?.id ?? ""}
-    />
+    </span>
   );
 }
 

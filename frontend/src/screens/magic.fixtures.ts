@@ -48,7 +48,7 @@ export const BUSY_NIGHT: MagicReceipt = {
       summary: { key: "magic.action.send_email" },
       consequence: "magic.consequence.message_sent",
       entity: record("contact", "01", "Mira Scholz"),
-      undo: { undoable: false, reason: "no_completed_change" },
+      undo: { undoable: false, reason: "not_a_replayable_verb" },
       actor: agent("magic.by.overnight_agent"),
     },
     {
