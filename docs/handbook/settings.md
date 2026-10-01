@@ -244,11 +244,8 @@ calls** opens the **AI call log** narrowed to that task.
 
 Changes take effect within about a minute; a call in flight keeps its binding.
 
-**Providers** — each sheet holds the key and where the provider is reached: the
-**Host**, the **OpenRouter hosts** that may serve it (pin EU hosts for EU
-residency), and for **Gemini on Vertex AI** the **Location** — under
-`eu_hosted` only EU ones, checked against every bound model. Vertex takes a
-Google Cloud **service-account key** file. Margince can also run on a local model with no key.
+**Providers** — each provider's key, and where it is reached: a host, OpenRouter
+hosts, or a Vertex location. See [AI providers](ai-providers.md).
 
 **Automations** — the trigger-and-action catalogue. Three rules watch a Live
 List and, when a record joins or leaves it, add a task, notify the rule's owner,

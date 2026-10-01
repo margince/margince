@@ -29,6 +29,7 @@ Settings in Margince, by page:
 - How do I connect my mailbox or calendar? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
 - My mailbox stopped syncing, or emails stopped coming in: what do I do? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
 - How do I invite a colleague or change a role? → [Seats, roles and who can see what](seats-roles-and-access.md)
+- How do I add an AI provider's key, connect OpenRouter, or choose a Vertex location? → [AI providers](ai-providers.md)
 
 Records, deals and mail in Margince, by page:
 - How do I create a contact or company, merge, archive or tag one? → [Contacts, companies, leads, deals and projects](records.md)
@@ -108,6 +109,9 @@ Records, deals and mail in Margince, by page:
 - **[What the AI does, and what it does not](what-the-ai-does.md)** — what the
   AI produces for you: drafts, document reads, the overnight brief, and how
   every derived claim carries its evidence.
+- **[AI providers](ai-providers.md)** — what each provider needs: a key, a
+  host for an OpenAI-compatible service or decision model, OpenRouter's hosts
+  for EU residency, and a location for Gemini on Vertex AI.
 - **[Agents, passports and what they may do](agents-and-passports.md)** — the
   two tiers and where the line actually falls, why sending is not held behind a
   confirmation and what protects it instead, the rule that human edits win field
