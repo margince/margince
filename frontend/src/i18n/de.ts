@@ -843,7 +843,7 @@ export const de = {
   "history.undo.confirmEdgeBody":
     "Damit ändert sich die Verknüpfung mit {other}. Beide Datensätze bleiben bestehen, nur die Verknüpfung zwischen ihnen ändert sich.",
   "history.undo.confirmCreateBody":
-    "Der Datensatz wird archiviert. Über seinen Verlauf können Sie ihn zurückholen.",
+    "Der Datensatz wird archiviert. Über seinen Verlauf kannst du ihn zurückholen.",
   "history.undo.confirmArchiveBody":
     "Der Datensatz wird aus dem Archiv zurückgeholt.",
   "history.undo.confirmPromoteBody":
@@ -1170,7 +1170,7 @@ export const de = {
   "record.archive": "Archivieren",
   "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
-    "Diesen Datensatz archivieren? Über seinen Verlauf können Sie ihn zurückholen.",
+    "Diesen Datensatz archivieren? Über seinen Verlauf kannst du ihn zurückholen.",
   "record.archived": "Archiviert",
   "record.archivedReadOnly":
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
@@ -3332,7 +3332,7 @@ export const de = {
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
   "deal.archive": "Deal archivieren",
   "deal.archiveConfirm":
-    "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über seinen Verlauf können Sie ihn zurückholen.",
+    "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über seinen Verlauf kannst du ihn zurückholen.",
   "deal.archivedReadOnly":
     "Dieser Deal ist archiviert und lässt keine Änderungen zu.",
   "deal.notYoursToChange":

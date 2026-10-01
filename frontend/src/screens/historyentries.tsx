@@ -239,7 +239,8 @@ function UndoButton({
 
   // An undo that archives, un-archives or demotes says so first: it moves the
   // whole record rather than a field.
-  const verbBody = INVERSE_CONFIRM[entry.action];
+  // A link's own entries keep the link's wording.
+  const verbBody = entry.edge ? undefined : INVERSE_CONFIRM[entry.action];
   const upFront = advisory.undoable
     ? undefined
     : (refusalSentence(advisory.reason, advisory.detail, t) ??
