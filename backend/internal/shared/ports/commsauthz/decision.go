@@ -142,6 +142,24 @@ type Decision struct {
 	// LegacyVerdict is what the old purpose gate said, so a disagreement is
 	// visible in the row rather than only in a metric.
 	LegacyVerdict string
+	// OverrideID names the communication_override that flipped a machine
+	// refusal to allow, or the zero UUID when none did.
+	//
+	// IN-MEMORY ONLY, and no production reader consumes it today: the durable
+	// trail is reason_code 'allowed_by_override' on communication_decision plus
+	// the vouching seat and level in audit_log from the Allow write, which
+	// survives erasure. What earns the field its place is that it is the only
+	// observable of WHICH row answered, and a subject can hold several live
+	// vouches for one category after a merge — so the tests pinning
+	// liveOverride's strongest-by-authority ordering assert on this and nothing
+	// else could. A recency-ordered read passed every other assertion.
+	//
+	// The day an operator needs that answer off a stored row rather than a
+	// decision in flight, this becomes a communication_decision column; until
+	// then it is deliberately not one, because a column nothing reads is a
+	// column the next author takes for a specification.
+	OverrideID ids.UUID
+
 	// PurposeID is the purpose this send itself resolved to, when resolution
 	// read one off a purpose key (legacyVerdictFor, decideLeadOnItsRecord) —
 	// nil on the evidence arms, which never consult a purpose key at all. It
@@ -174,6 +192,16 @@ func (s DecisionSet) Allowed() bool {
 		}
 	}
 	return true
+}
+
+// AllowedByOverride returns this decision flipped to allow, naming the override
+// row that did it. The caller has already checked CanBeOverruled and that a
+// qualifying override exists; this only records the outcome.
+func (d Decision) AllowedByOverride(id ids.UUID) Decision {
+	d.Verdict = VerdictAllow
+	d.ReasonCode = ReasonAllowedByOverride
+	d.OverrideID = id
+	return d
 }
 
 // Denied returns the decisions that refused, for a message that names them.

@@ -65,7 +65,7 @@ func (e *SatelliteCarrierNotWiredError) Error() string {
 
 // FieldFault names the source record, the one holding the rows.
 func (e *SatelliteCarrierNotWiredError) FieldFault() (field, code, message string) {
-	return "source_id", "satellite_carrier_not_wired", e.Error()
+	return fieldSourceID, "satellite_carrier_not_wired", e.Error()
 }
 
 // carryConsentSatellitesTx refuses only when an unwired seam would strand a

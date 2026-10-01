@@ -183,7 +183,7 @@ func RecordHardBounceTx(ctx context.Context, tx pgx.Tx, fact HardBounceFact) err
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", entityType, entityID,
 		map[string]any{
 			auditFieldSuppressionKind: kindHardBounce,
-			"decided_by_level":        string(commsauthz.LevelMachine),
+			auditFieldDecidedByLevel:  string(commsauthz.LevelMachine),
 		})
 	if err != nil {
 		return err
