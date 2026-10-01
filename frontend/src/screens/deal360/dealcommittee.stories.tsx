@@ -16,7 +16,7 @@ import { CommitteeReading } from "./dealcommittee";
 type DealCoverage = components["schemas"]["DealCoverage"];
 
 const meta: Meta<typeof CommitteeReading> = {
-  title: "Records/Deal committee",
+  title: "Records/Deal 360/Committee",
   component: CommitteeReading,
   parameters: { layout: "padded" },
   decorators: [

@@ -2,7 +2,8 @@
 
 English is the source catalog. Every German and Vietnamese string is translated
 from `frontend/src/i18n/en.ts`, so a defect in the English text becomes three.
-This page is the standard the English catalog is held to.
+This page is the standard the English catalog is held to; German adds its own
+rules in [ui-copy-style-de.md](ui-copy-style-de.md).
 
 Part of it is mechanical and held by `frontend/src/i18n/copy-style.test.ts`,
 which fails on any `en` value that breaks one of those rules and names the key.

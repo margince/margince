@@ -295,6 +295,9 @@ func readContact(ctx context.Context, tx pgx.Tx, id ids.ContactID, archived stor
 	if err := attachContactChildren(ctx, tx, contacts); err != nil {
 		return crmcontracts.Contact{}, err
 	}
+	if err := attachBoughtFields(ctx, tx, &contacts[0]); err != nil {
+		return crmcontracts.Contact{}, err
+	}
 	return contacts[0], nil
 }
 

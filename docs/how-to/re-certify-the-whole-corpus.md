@@ -58,8 +58,8 @@ cd backend
 make e2e-ai ROUTING=config/presets/gemini_cloud.yaml \
   TRACE="$PWD/../.tmp/aicert/gemini" RESUME="$PWD/../.tmp/aicert/gemini/resume"
 
-# openrouter_cloud binds gpt-oss-120b, the default judge, so it takes a Gemini one.
-make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml JUDGE=gemini:gemini-3.1-flash-lite \
+# openrouter_cloud: the default judge grades it too, as no task it certifies leads on Claude.
+make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
   TRACE="$PWD/../.tmp/aicert/openrouter" RESUME="$PWD/../.tmp/aicert/openrouter/resume"
 ```
 
@@ -82,14 +82,13 @@ working directory set to the package under test, so `../.tmp/…` typed here wou
 land under `backend/internal/compose/` rather than beside the repo.
 
 **One judge grades every task of a run, and a model never grades itself.** The
-default is `openai_compatible:openai/gpt-oss-120b` on OpenRouter, for cost
-(`OPENAI_COMPATIBLE_API_KEY`); `JUDGE=gemini:gemini-3.1-flash-lite` or
-`JUDGE=gemini:gemini-3.5-flash` picks a Gemini one (`GEMINI_API_KEY`). A judge
-swap flips verdicts on the same candidate, so keep one judge across a sweep where
-you can, and `judge_served_model` names it on every record. A run in which any
-task it certifies has the judge as its candidate is refused **before the first
-paid call**, naming those tasks — which is why `openrouter_cloud`, binding
-gpt-oss-120b itself, runs with the Gemini judge above.
+default is `claude_cli:claude-sonnet-4-6`, graded through `claude -p` on a Claude
+Code subscription (`CLAUDE_CODE_OAUTH_TOKEN`); `JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}'`
+pays OpenRouter for the same model, and `JUDGE=gemini:gemini-3.5-flash` picks a
+Gemini one. A judge swap flips verdicts on the same candidate, so keep one judge
+across a sweep, and `judge_served_model` names it on every record. A run in which
+any task it certifies has the judge's family as its candidate is refused **before
+the first paid call**, naming those tasks.
 
 Two further rules the commands above encode:
 
@@ -107,9 +106,16 @@ Two outcomes are expected rather than wrong:
   only, so the adapter refuses the PDF rather than dropping it. The run's other
   tasks still write their records. Tracked as a gap, not a regression; the
   preset's own README states it.
-- **Neither sweep measures the `frontier` rung.** A routed run certifies the
-  LEADING bound rung per task, and no shipped task's ladder leads at frontier —
-  so a preset can bind a frontier model that the sweep never reaches.
+- **A sweep measures each task's fallback too.** A routed run certifies every
+  distinct model a task's ladder binds, so a preset whose tiers bind different
+  models costs about twice a single-model one. `frontier` is on no shipped
+  task's ladder, so a model bound only there is never reached.
+- **A sweep skips what is already current** (`STALE_ONLY`, on by default). A
+  tree-wide change leaves records stale, so they run anyway; `STALE_ONLY=0` is
+  for re-sampling current ones, such as a same-prompt variance check.
+- **`make e2e-ai-report` ends with a table per preset**: each task's first rung
+  and fallback with its record's state, `same model` or `none`. A fallback
+  `absent` there is the gap a buyer meets on the first failed call.
 
 ## 3. Analyse before you call anything a regression
 

@@ -1,12 +1,10 @@
 /* SurfaceState — the message lines the nine-state vocabulary draws when a
  * surface has something other than content to report.
  *
- * The 6px top margin on the two message lines is an optical value, not a
- * rhythm one: it sets a sentence against the heading or rows immediately
- * above it inside a card that has already paid for its own padding, and on
- * the --space-* scale the step below it disappears while the step above it
- * reads as a gap. It came over from the record page unchanged so promoting
- * this component changed nothing on screen. */
+ * No state sentence carries a margin above it, so "none", "hidden" and "could
+ * not be loaded" sit at one offset under one heading. The arm pays the
+ * interval: the body or plate around an unnamed part, a named part's step
+ * under its heading, the foot a partial read's note stands in. */
 
 /* A SENTENCE A CARD SHOWS INSTEAD OF CONTENT IS CARD BODY TEXT.
    It stands where the rows would have stood, so it is read as part of the card
@@ -19,9 +17,6 @@
    and voice rather than size: "there is none" is ordinary secondary prose,
    "you may not see this" is set apart in the italic voice below so a reader
    never mistakes a permission boundary for an empty account. */
-.surfacestate-empty {
-  margin-top: 6px;
-}
 /* What would be here, under the line saying there is none. Not italic: it is a
    fact about the RECORD — what puts a row here — where the italic voice below
    is the surface talking about itself. */
@@ -37,7 +32,6 @@
    the surface is talking about ITSELF rather than about the record. What
    tells them apart is the words, which is where that belongs. */
 .surfacestate-withheld {
-  margin-top: 6px;
   font-style: italic;
 }
 
@@ -48,7 +42,6 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: var(--space-2);
 }
 
 /* THE FOUR STATES THAT ARE A VERDICT CARRY A STATE COLOUR; THE REST DO NOT.
@@ -73,9 +66,13 @@
 }
 
 /* A truncation the surface NAMES. The info ink rather than a warning: the read
-   answered, and the remainder is a report with a way to the rest of it. */
+   answered, and the remainder is a report with a way to the rest of it. Its
+   foot, not the sentence, holds it off the rows it counts. */
 .surfacestate-info {
   color: var(--infoText);
+}
+.surfacestate-partial-foot {
+  padding-block-start: var(--space-2);
 }
 
 /* A surface holding two independently-governed parts labels each one, so a
@@ -83,6 +80,10 @@
    rather than floating under a heading that covers both. */
 .surfacestate-part + .surfacestate-part {
   margin-top: var(--space-3);
+}
+/* The part's own step between its heading and whatever the state drew. */
+.surfacestate-part > .t-eyebrow + * {
+  margin-block-start: var(--space-2);
 }
 
 /* A state sentence set straight into a panel, with no PanelBody around it.
@@ -92,7 +93,8 @@
 .panel > .surfacestate-empty,
 .panel > .surfacestate-withheld,
 .panel > .surfacestate-failed,
-.panel > .surfacestate-stale {
+.panel > .surfacestate-stale,
+.panel > .surfacestate-partial-foot {
   padding: var(--space-5);
 }
 .panel > .surfacestate-empty + .surfacestate-empty-detail {

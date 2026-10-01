@@ -163,7 +163,7 @@ function useAddDocument(roomId: string) {
         body: {
           attachment_id: input.attachmentId,
           group_key: input.group,
-          source: "ui",
+          source: "manual",
         },
       });
       if (error) {

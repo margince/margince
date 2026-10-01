@@ -6,11 +6,8 @@ import "./factlist.css";
 
 // FactList: label→value pairs a reader scans rather than edits.
 //
-// It exists because ten sheets already style the same `<dl> > div > dt + dd`
-// shape, and two sites style none at all — `contact360.tsx` applies a
-// `.fact-list` class no stylesheet has ever declared, so those rows render with
-// the browser's 40px `dd` indent and no alignment at all. A primitive that
-// nobody can forget to style is the fix; a eleventh sheet would not be.
+// Ten sheets already style the same `<dl> > div > dt + dd` shape; a primitive
+// nobody can forget to style is the fix, and an eleventh sheet would not be.
 
 /**
  * One row. `term` is what the value is, `value` is the value, and `note` is the
@@ -38,9 +35,9 @@ export type Fact = Readonly<{
  * a row must be shown as unknown, the caller passes the honest words as
  * `value`.
  *
- * `numeric` sets tabular figures on every value, for the case the workbench
- * runtime rows already handle by hand: a column of counts that would otherwise
- * shift as digits change width.
+ * `numeric` sets tabular figures on every value, for the case the runtime
+ * chip's rows (`.mw-aistat-r dd`) already handle by hand: a column of counts
+ * that would otherwise shift as digits change width.
  */
 export function FactList({
   facts,

@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -157,4 +158,13 @@ func bookMeetingCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, bo
 		Subject:    in.Subject,
 		Links:      in.Links,
 	}), nil
+}
+
+//nolint:ireturn // both transports resolve the same invitation command.
+func meetingInvitationCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+	in, err := commandBody[crmcontracts.MeetingInvitationRequest](body)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewMeetingInvitationCall(deps.records, deps.language, in), nil
 }

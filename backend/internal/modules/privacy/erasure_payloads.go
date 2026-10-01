@@ -39,9 +39,13 @@ func erasePayloads(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, paylo
 	if len(activityIDs) == 0 {
 		return nil
 	}
+	args := []any{activityIDs}
+	bound := fmt.Sprintf("$%d", len(args))
 	rows, err := tx.Query(ctx, `
 		SELECT payload_ref FROM comms_outbound
-		 WHERE activity_id = ANY($1) AND payload_ref IS NOT NULL`, activityIDs)
+		 WHERE activity_id = ANY(`+bound+`) AND payload_ref IS NOT NULL
+ UNION ALL SELECT management_ref FROM meeting_invitation WHERE activity_id=ANY(`+bound+`) AND management_ref<>''
+ UNION ALL SELECT link_ref FROM meeting_proposal WHERE activity_id=ANY(`+bound+`)`, args...)
 	if err != nil {
 		return fmt.Errorf("privacy: reading the subject's link material: %w", err)
 	}
@@ -57,6 +61,7 @@ func erasePayloads(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, paylo
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("privacy: reading the subject's link material: %w", err)
 	}
+	rows.Close()
 	if len(refs) == 0 {
 		return nil
 	}
@@ -73,8 +78,16 @@ func erasePayloads(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, paylo
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE comms_outbound SET payload_ref = NULL
-		 WHERE activity_id = ANY($1) AND payload_ref IS NOT NULL`, activityIDs); err != nil {
+		 WHERE activity_id = ANY(`+bound+`) AND payload_ref IS NOT NULL`, args...); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's link references: %w", err)
+	}
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE meeting_invitation SET
+ appointment=jsonb_build_object('CalendarID',calendar_id,'RequestID',appointment->>'RequestID'),
+ receipt=CASE WHEN receipt IS NULL THEN NULL ELSE jsonb_build_object('event_id',receipt->>'event_id') END,
+ public_intent=NULL,status='erased',command='cancel',reminder_status='off',management_ref='',management_hash='erased:'||activity_id::text,
+ version=version+1,next_attempt_at=now(),updated_at=now()
+ WHERE activity_id=ANY($%d) AND status<>'erased'`, len(args)), args...); err != nil {
+		return err
 	}
 	return nil
 }

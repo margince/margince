@@ -114,7 +114,7 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 	//
 	// A source that declines ownership is saying it has no replay to protect
 	// and no assignment to make; LeadFields.Unowned carries the reason.
-	owner := storekit.OwnerOrActor(ctx, nil)
+	owner := storekit.OwnerOrActor(ctx)
 	if fields.Unowned {
 		owner = nil
 	}

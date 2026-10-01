@@ -147,6 +147,7 @@ func (c controllerPayloads) Delete(ctx context.Context, ref string) error {
 // link it minted and did not send — which is the honest answer for an
 // installation that cannot mail one.
 func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
+	s.rewirePrivacyVault(pool)
 	if s.controllerRelay == nil || s.vault == nil || s.confirmLinkBase == "" || s.confirmRunner == nil {
 		return
 	}

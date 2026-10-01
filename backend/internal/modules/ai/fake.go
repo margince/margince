@@ -122,7 +122,7 @@ func (f *FakeClient) Complete(ctx context.Context, req model.Request) (model.Res
 	if err := attachmentUnsupported("fake", req.Attachments, f.Caps().AttachmentMIMEs); err != nil {
 		return model.Response{}, err
 	}
-	payload, report, err := sendablePayload(ctx, fakeWire(req), req.SecretStripper)
+	payload, report, err := SendablePayload(ctx, fakeWire(req), req.SecretStripper)
 	if err != nil {
 		return model.Response{}, err
 	}
@@ -157,7 +157,7 @@ func (f *FakeClient) Stream(ctx context.Context, req model.Request) (model.Token
 	if err := attachmentUnsupported("fake", req.Attachments, f.Caps().AttachmentMIMEs); err != nil {
 		return nil, err
 	}
-	payload, report, err := sendablePayload(ctx, fakeWire(req), req.SecretStripper)
+	payload, report, err := SendablePayload(ctx, fakeWire(req), req.SecretStripper)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (f *FakeClient) Stream(ctx context.Context, req model.Request) (model.Token
 }
 
 func (f *FakeClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
-	payload, _, err := sendablePayload(ctx, req.Inputs, nil)
+	payload, _, err := SendablePayload(ctx, req.Inputs, nil)
 	if err != nil {
 		return model.Embeddings{}, err
 	}

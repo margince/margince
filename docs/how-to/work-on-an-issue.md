@@ -41,6 +41,10 @@ yours to resume** — no re-claim, no comment, just carry on. An issue that is
 merely old is free too: there is no expiry here, and nothing takes a claim over
 on its own.
 
+A **reopened** issue keeps the assignee who closed it but not the label — a
+record of who did the work, not a claim on what is left. The first bullet still
+applies, so ask them first; if they are not back on it, claim it afresh.
+
 ## It is taken
 
 Do not work it. Say so, in this order, to whoever asked you:
@@ -100,8 +104,19 @@ replaced without being told.
 
 ## Release it when you stop
 
-Finishing is nothing extra: a merged pull request whose body says `Closes #N`
-closes the issue and retires the claim with it.
+Finishing is nothing extra. GitHub closes the issue when a pull request whose
+body says `Closes #N` merges, but it keeps the labels, so
+[`issue-closed.yml`](../../.github/workflows/issue-closed.yml) strips
+`status: in progress` from an issue the moment it closes. A close no event
+reports — one a workflow makes with its own token — or a failed run is caught
+instead by the next daily sweep that runs, best-effort, since GitHub can delay
+or drop a scheduled run. The assignee stays: it is the record of who did the
+work. Closing one by hand needs nothing extra either; the workflow owns the
+label.
+
+**A `status: in progress` on a closed issue is always stale** — take it off. On
+an open issue the rules under [Before you start](#before-you-start) apply
+unchanged.
 
 Stopping **without** finishing is the case that needs you. Unassign yourself and
 say where you stopped, always:

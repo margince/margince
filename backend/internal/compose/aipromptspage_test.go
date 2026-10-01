@@ -35,7 +35,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -99,6 +101,19 @@ type promptEntry struct {
 	BoundaryBytes      int `json:"boundary_bytes"`
 	AfterBoundaryBytes int `json:"after_boundary_bytes"`
 	CacheablePercent   int `json:"cacheable_percent"`
+	// DecisionQuestions is the site's decision form, for a site whose task
+	// declares one: the questions a decision model is asked before the ladder.
+	// The state each one reads is per scenario and is not published.
+	DecisionQuestions []decisionQuestion `json:"decision_questions,omitempty"`
+}
+
+// decisionQuestion is one question of a site's decision form, as its adapter
+// builds it from the committed fixture.
+type decisionQuestion struct {
+	Name         string            `json:"name"`
+	Type         string            `json:"type"`
+	Instructions string            `json:"instructions"`
+	Criteria     map[string]string `json:"criteria"`
 }
 
 // isolation is what the page publishes about a site's exposure to a hostile
@@ -160,6 +175,11 @@ type sitePrompt struct {
 	requests int
 	// shape is what this site does with untrusted items.
 	shape isolation
+	// decisions holds the DISTINCT decision questions the site's decision form
+	// asked across its scenarios, for the same reason systems holds every
+	// distinct instruction: a question that varied by scenario and was shown
+	// once would leave the rest unpublished.
+	decisions []decisionQuestion
 }
 
 func TestTheAIPromptsPageIsCurrent(t *testing.T) {
@@ -218,6 +238,7 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 				}
 				continue
 			}
+			got.decisions = appendDistinctQuestions(got.decisions, one.decisions)
 			for _, system := range one.systems {
 				if seenSystem[system] {
 					continue
@@ -270,6 +291,7 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 		if p.schema != "" {
 			entry.AnswerSchema = json.RawMessage(p.schema)
 		}
+		entry.DecisionQuestions = p.decisions
 		doc.Sites = append(doc.Sites, entry)
 	}
 	encoded, err := json.MarshalIndent(doc, "", "  ")
@@ -347,13 +369,44 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 		spans += fencedSpansIn(first.System, msg.Content)
 	}
 	return sitePrompt{
-		task:     sc.Task,
-		variant:  sc.Site,
-		systems:  systems,
-		schema:   canonicalSchema(first.ResponseSchema),
-		spans:    spans,
-		requests: len(recorder.requests),
+		task:      sc.Task,
+		variant:   sc.Site,
+		systems:   systems,
+		schema:    canonicalSchema(first.ResponseSchema),
+		spans:     spans,
+		requests:  len(recorder.requests),
+		decisions: decisionQuestionsOf(prepared),
 	}, refused, nil
+}
+
+// decisionQuestionsOf reads a case's decision form, by the same interface the
+// certification lane asks it through, sorted by question name; nil for a site
+// with no decision form.
+func decisionQuestionsOf(prepared aitasks.PreparedCase) []decisionQuestion {
+	form, decides := prepared.(aitasks.DecisionCase)
+	if !decides {
+		return nil
+	}
+	req := form.DecisionRequest()
+	questions := make([]decisionQuestion, 0, len(req.Questions))
+	for name, q := range req.Questions {
+		questions = append(questions, decisionQuestion{
+			Name: name, Type: string(q.Type), Instructions: q.Instructions, Criteria: q.Criteria,
+		})
+	}
+	sort.Slice(questions, func(i, j int) bool { return questions[i].Name < questions[j].Name })
+	return questions
+}
+
+// appendDistinctQuestions adds each question of more that held differs from
+// every one already held, compared as a whole.
+func appendDistinctQuestions(held, more []decisionQuestion) []decisionQuestion {
+	for _, q := range more {
+		if !slices.ContainsFunc(held, func(h decisionQuestion) bool { return reflect.DeepEqual(h, q) }) {
+			held = append(held, q)
+		}
+	}
+	return held
 }
 
 // mintedID matches a record id in its canonical spelling. Some sites build the
@@ -439,6 +492,12 @@ func renderAIPromptsPage(doc promptDocument) string {
 	}
 
 	b.WriteString("\n## The instructions\n\n")
+	b.WriteString("A site whose task declares a decision form also shows its **decision\n")
+	b.WriteString("question**: what the decision model is asked before the task's LLM ladder,\n")
+	b.WriteString("read from the site's adapter over the same fixture. The question is\n")
+	b.WriteString("instructions plus one criterion per label; the structured state it reads is\n")
+	b.WriteString("per call and not shown. How the lane is chosen and when it falls back is in\n")
+	b.WriteString("[ai-runtime.md](../explanation/ai-runtime.md#the-decision-lane).\n\n")
 	for _, p := range doc.Sites {
 		fmt.Fprintf(&b, "### `%s` / `%s`\n\n", p.Task, p.Site)
 		if p.SystemBytes > 0 {
@@ -461,8 +520,28 @@ func renderAIPromptsPage(doc promptDocument) string {
 			b.WriteString(strings.TrimRight(string(p.AnswerSchema), "\n"))
 			b.WriteString("\n```\n\n</details>\n\n")
 		}
+		for _, q := range p.DecisionQuestions {
+			writeDecisionQuestion(&b, q)
+		}
 	}
 	return b.String()
+}
+
+// writeDecisionQuestion renders one decision question: its instructions and a
+// criterion per label, in label order. Inside a code block, because a
+// criterion is prose that may carry any markdown character.
+func writeDecisionQuestion(b *strings.Builder, q decisionQuestion) {
+	fmt.Fprintf(b, "<details><summary>decision question <code>%s</code> (%s)</summary>\n\n```\n", q.Name, q.Type)
+	fmt.Fprintf(b, "instructions:\n  %s\n\ncriteria:\n", strings.TrimSpace(q.Instructions))
+	labels := make([]string, 0, len(q.Criteria))
+	for label := range q.Criteria {
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+	for _, label := range labels {
+		fmt.Fprintf(b, "  %s: %s\n", label, strings.TrimSpace(q.Criteria[label]))
+	}
+	b.WriteString("```\n\n</details>\n\n")
 }
 
 // promptParts splits one instruction into the three parts prompt-shape.md

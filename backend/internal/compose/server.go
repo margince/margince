@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
-	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
@@ -56,33 +55,58 @@ import (
 func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// The fieldcatalog seam for deals (newContactsHandlers carries the full
 	// note): active cf_* deal columns ride deal payloads on both surfaces.
-	dealsH := deals.NewHandlers(InstallationDB(pool), DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil))
+	dealsH := deals.NewHandlers(InstallationDB(pool), DealsInstallation()).
+		WithFieldCatalog(customfields.NewService(pool, nil)).
+		WithSuggestionEffects(dealSuggestionEffects{})
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
 	// serves the already-bound singleton company.
-	identitySvc := identity.NewService(pool)
+	// The login path reads the enforced-SSO policy fresh per attempt, so an
+	// admin turning the mode on or off takes effect without a restart. A
+	// dedicated settings-store handle rather than the one the settings HANDLERS
+	// hold: both are stateless readers over the same rows, and the login service
+	// is composed here while that store is assembled elsewhere.
+	authPolicy := identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool))
+	identitySvc := identity.NewService(pool).
+		WithRequireSSO(authPolicy.SSOEnforced).
+		WithRequireMFA(authPolicy.MFARequired).
+		WithGroupRoleMap(authPolicy.GroupRoleMap)
 	// The standing-grant edge: identity mints the credential, agents/runner
 	// stores the answer, and neither may import the other. Both halves of one
 	// fact, committed in one transaction — agentgrantseam.go says why.
+	anchor := contacts.NewStore(InstallationDB(pool))
 	authH := identity.NewHandlers(identitySvc).
-		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames())
+		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames()).
+		WithInstallationDescribed(installationDescribed(anchor)).
+		WithInstallationBrand(installationBrand(anchor))
 
 	// The transport directory, loaded on the REAL assembly path rather than in
 	// newServer: route-level tests construct that one directly with a pool that
 	// was never dialled, and a struct constructor is the wrong place to reach a
 	// database anyway. Every role that serves /v1 comes through here.
 	loadChannelProviderDirectoryOrLog(pool, log)
+	// Said once, where an operator reads it: whether this build knows what the
+	// law requires it to keep.
+	announceStatutoryFloor(log)
 
 	srv := newServer(pool, log, authH, dealsH)
 	for _, opt := range opts {
 		opt(&srv, pool)
 	}
 	srv.applySendPath(pool)
+	srv.publishListsAvailability(pool)
+	srv.authHandlers = srv.WithReportingAvailable(srv.reportingEnabled)
+	if srv.reportingEnabled {
+		srv.reportMetrics = srv.service
+	}
 	// The tool registry is built HERE, after the options, on the Server that is
 	// actually served — so every engine an option installed is one the tools can
 	// reach. The rebuild each option performs keeps a half-configured Server
 	// coherent while the loop runs; this one is what the surface ends up with.
 	srv.rebuildToolRegistry(pool)
+	// Bound here for the same reason, and on the same Server: deactivation has
+	// to be able to destroy the provider secrets it withdrew.
+	installCaptureCredentialReaper(&srv, log)
 	// Wired unconditionally, not inside WithKeyvault: a role composed with no
 	// vault still serves /installation/setup (every step reads "not
 	// configured"), and the anonymous capabilities probe must report the same
@@ -104,9 +128,15 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// with its own 307 before any registered handler runs, and that redirect
 	// echoes the cleaned path — credential segment and all — into a Location
 	// header. Mounted deeper, the middleware never saw those answers.
+	//
+	// ResolveClientIP sits just inside the panic guard and outside everything
+	// else, so every per-IP limiter behind it — /v1, /oauth, /mcp, the
+	// webhooks, the extension inbound routes — keys on the one address it
+	// decided rather than on whichever proxy the request happened to arrive by.
 	return httpserver.RecoverPanics(log,
-		httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
-			httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))
+		httpserver.ResolveClientIP(srv.trustedProxies,
+			httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
+				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is
@@ -152,7 +182,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// deliberately left unbounded here.
 		searchHandlers: search.NewHandlers(
 			InstallationDB(pool).Bounded(database.CallerPredicateBudget),
-			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch),
+			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated
 		// read rather than answer anything at all.
@@ -243,6 +273,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		strengthHandlers: strengthHandlers{
 			contacts: contacts.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,
 		},
+		recordAccessHandlers: recordAccessHandlers{access: NewRecordAccessReads(pool)},
 		// The schema-change pool is boot-optional; nil
 		// here means Create/SetOptions stay their generated 501 until the
 		// api role's WithSchemaPool rebuilds this over the real pool.
@@ -287,20 +318,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// released into another would read, from the human's side, as an approval
 	// that did nothing.
 	srv.approvalsHandlers = approvalsHandlersWithEffects(pool, srv.volumeMeter, log)
-	// The day's surface reads the SAME approvals engine the inbox decides
-	// through, so a card here and a row there are one queue rather than two
-	// readings of it.
-	srv.attentionHandlers = newAttentionHandlers(pool, approvalsServiceWithEffects(pool))
-	// The machinery's receipt: what ran without being asked, in the window since
-	// the reader last looked. It reads the same clock the rest of the surface
-	// does, so "since your brief" means the same instant everywhere.
-	srv.magicService = newMagicService(pool, time.Now)
-	srv.magicHandlers = magic.NewHandlers(srv.magicService)
-	srv.wireAnalyticsSurface(pool)
-	srv.wireCaptureSettingsSurface(pool)
-	srv.wireExportSurface(pool, log)
-	srv.wireOnboardingSurface(pool)
-	srv.wireSystemOfRecordReads(pool)
+	srv.wireSurfaces(pool, log)
 	// toolRegistry backs ListAgentTools AND the MCP tool transport.
 	//
 	// The tool registry is NOT built here: newServer returns by value and New

@@ -149,7 +149,7 @@ func shippedLocales(t *testing.T, dir string) []string {
 	// by nothing, while the gate reports PASS. That is the same
 	// under-recognition this file exists to refuse, one level up.
 	machinery := map[string]bool{
-		"index.ts": true, "publiclocale.ts": true,
+		"index.ts": true, "publiclocale.ts": true, "locale.ts": true,
 		// A register of catalogue KEYS, not a catalogue: it ships no copy a
 		// user reads, and asking it for a phrasing of "nothing sends without
 		// your approval" would be asking a list of identifiers to speak.

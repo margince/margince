@@ -41,6 +41,8 @@ export function IconAction({
   disabled,
   pending,
   pressed,
+  disclosure,
+  inline,
   onClick,
   testId,
 }: Readonly<{
@@ -88,6 +90,19 @@ export function IconAction({
    * got.
    */
   pressed?: boolean;
+  /**
+   * For a glyph that OPENS a region rather than setting a state — the
+   * derivation under a report. Drawn as `aria-expanded` with `aria-controls`
+   * naming the region, which is what tells a reader both that something
+   * appeared and where; `pressed` would claim a setting that stays on.
+   */
+  disclosure?: Readonly<{ expanded: boolean; controls: string }>;
+  /**
+   * For a glyph that sits IN a line of text (a table cell, a reading's label
+   * row) rather than in a row of verbs: the square keeps its whole target but
+   * takes one line box of its host, so the line it joins keeps its height.
+   */
+  inline?: boolean;
   onClick?: () => void;
   /** Passed through, for a control a test already reaches by its own handle. */
   testId?: string;
@@ -97,7 +112,11 @@ export function IconAction({
     hint === undefined ? label : `${label}. ${hint}`,
   );
   return (
-    <span className="icon-action" ref={ref} {...trigger}>
+    <span
+      className={inline ? "icon-action icon-action-inline" : "icon-action"}
+      ref={ref}
+      {...trigger}
+    >
       <Button
         iconOnly
         variant={variant}
@@ -108,6 +127,8 @@ export function IconAction({
         aria-label={label}
         aria-describedby={hint === undefined ? undefined : hintId}
         aria-pressed={pressed}
+        aria-expanded={disclosure?.expanded}
+        aria-controls={disclosure?.controls}
         data-testid={testId}
         onClick={onClick}
       >

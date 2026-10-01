@@ -2,17 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent } from "storybook/test";
 
 import { Badge, Button } from "./atoms";
+import { Popover } from "./popover";
 import { VisibilityBadge, VisibilityLine } from "./visibility";
 
 // Who may read a thing, drawn the same way on every surface. The states worth
 // a picture are all six side by side, because a reader tells them apart at a
-// glance or not at all — and the line with its verb, which is the shape the
-// drawer and the contact panel both draw.
+// glance or not at all — the line with its verb, which is the shape the mail
+// drawer draws, and the chip that opens, which is the record header's.
 
 const meta: Meta<typeof VisibilityBadge> = {
-  title: "Design System/Visibility",
+  title: "Components/Labels/Visibility",
   component: VisibilityBadge,
   parameters: { layout: "padded" },
 };
@@ -37,18 +39,36 @@ export const EveryState: Story = {
   ),
 };
 
-/** The record header's own pairing: the fact a company is shared, and the
- * verb that narrows it. "Shared" reads as the opposite of "Make private",
- * which is why the record states are worded as a pair. */
-export const ASharedRecord: Story = {
+/** The record header's access chip: the mark as the face of a popover, with
+ * a caret saying it opens. Beside a plain badge it keeps the badge's height,
+ * so a row of the record's marks stays one line. */
+export const ItOpens: Story = {
   render: () => (
-    <div style={{ maxWidth: 480 }}>
-      <VisibilityLine
-        state="workspace"
-        action={<Button variant="link">Make private</Button>}
-      />
+    <div
+      style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}
+    >
+      <Badge tone="warning">Thin</Badge>
+      <Popover label={<VisibilityBadge state="workspace" opens />}>
+        All users in the company can see this contact.
+      </Popover>
+      <Popover label={<VisibilityBadge state="private" opens />}>
+        Only you and the users or teams it was shared with can see this contact.
+      </Popover>
     </div>
   ),
+};
+
+/** The chip reached by Tab: the ring is drawn round the pill itself, at the
+ * pill's radius, and not round the button's box it sits in. */
+export const ItOpensFocused: Story = {
+  render: () => (
+    <Popover label={<VisibilityBadge state="private" opens />}>
+      Only you and the users or teams it was shared with can see this contact.
+    </Popover>
+  ),
+  play: async () => {
+    await userEvent.tab();
+  },
 };
 
 /** The mark beside the verb that changes it, as the mail drawer draws it for

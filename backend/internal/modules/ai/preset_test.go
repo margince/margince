@@ -54,7 +54,7 @@ defaults: &brokered
   base_url: https://openrouter.ai/api
 seeds:
   ai_routing:
-    profile: eu_hosted
+    profile: cloud_frontier
     tiers:
       cheap_cloud:
         <<: *brokered

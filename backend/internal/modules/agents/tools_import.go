@@ -153,6 +153,7 @@ func (t readImportRun) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_import_run", Title: "Read an import run", Version: toolVersionV1,
 		Description:   readImportRunCopy.render(),
+		Instead:       readImportRunCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "getImportRun",
 		InputSchema:  schema(`{"type":"object","required":["run_id"],"properties":{"run_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
@@ -178,6 +179,7 @@ func (t readImportReport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_import_report", Title: "Read an import report", Version: toolVersionV1,
 		Description:   readImportReportCopy.render(),
+		Instead:       readImportReportCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "getImportRunReport",
 		InputSchema:  schema(`{"type":"object","required":["run_id"],"properties":{"run_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
@@ -206,6 +208,7 @@ func (t commitImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "commit_import", Title: "Commit an import", Version: toolVersionV1,
 		Description:   commitImportCopy.render(),
+		Instead:       commitImportCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "approveImportRun",
 		InputSchema: schema(`{"type":"object","required":["run_id"],"properties":{

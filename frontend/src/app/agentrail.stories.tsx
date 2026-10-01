@@ -98,6 +98,7 @@ function callRow(task: string, minutesAgo: number, index: number) {
   return {
     id: `call-${index}`,
     occurred_at: new Date(NOW - minutesAgo * 60_000).toISOString(),
+    kind: "completion",
     task,
     tier: "cheap_cloud",
     provider: "anthropic",
@@ -110,6 +111,7 @@ function callRow(task: string, minutesAgo: number, index: number) {
     cached_tokens: 0,
     latency_ms: 840,
     has_payload: false,
+    decision_attempted: false,
   };
 }
 

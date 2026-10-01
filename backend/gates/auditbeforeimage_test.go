@@ -91,6 +91,7 @@ const (
 // Empty is a result, not a default: it would mean every audited update in the
 // tree records what it changed from.
 var eventShapedUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/consent/satellitecarry.go:auditSatelliteCarry":  "a merge moved the retired record's consent links and bases onto the survivor, so rows were ADDED to a record that did not hold them. No field of the survivor changed, and there is no prior state to record. What it has instead is the count moved, and evidence naming every moved row by table and the record it came from — so an auditor asking why an old unsubscribe link now withdraws this contact reaches the merge that brought it",
 	"internal/modules/consent/stopcarry.go:CarryStopsTx":              "a merge retired one record and the stop it held now also applies to the survivor, so a stop was ADDED to a record that had none. There is no prior state to record because the survivor had no such row: this is not a field of theirs changing, it is a fact about the merge landing on them. What it has instead is the count of stops carried, and the row itself names its origin in carried_from — so an auditor asking why this contact is suppressed reaches the record that actually objected, and the merge that brought it here, without needing a before-image of a row that did not exist",
 	"internal/modules/consent/lift.go:liftAdmittedTx":                 "somebody with the authority to do so took back a stop, so mail may resume. An OCCURRENCE and not a replacement: no field of the contact changes, and the row it revokes is not edited — revoked_at is set and the row stands, because a stop that was lifted is still a thing that happened. What it has instead of a prior state is the level the stop was recorded at and the level that lifted it, which together say the comparison that permitted this and let an auditor check it without re-deriving it from a row that no longer says what it was",
 	"internal/modules/consent/bouncesuppress.go:RecordHardBounceTx":   "the receiving mail system said an address is permanently gone, so this installation stops writing to it. An OCCURRENCE and not a replacement: no field of anybody's record changes, the row is created and never edited, and a lift revokes it rather than rewriting it. The entity is named at runtime because a bounce is a fact about an ADDRESS and the address may belong to a contact, to a lead, or to nobody at all — so the audit hangs from the contact when one owns the address and from the delivery that died when none does, which is the only other identity this fact has. What it carries instead of a prior state is the kind of stop and the level it was decided at, which is what an auditor asking why mail to this address is refused needs. The address itself is deliberately NOT in the payload: audit_log is append-only, so an address written there would outlive the Art. 17 erase that clears the row",
@@ -155,10 +156,10 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 
 	"internal/modules/collections/tags.go:applyTagTx": "the tag row is untouched; the write inserts a taggable link, " +
 		"and the after image names the record it now points at.",
-	"internal/modules/collections/tags.go:RemoveTag": "the tag row is untouched; the write deletes a taggable link, " +
+	"internal/modules/collections/tagremove.go:removeTagTx": "the tag row is untouched; the write deletes a taggable link, " +
 		"and the after image names the record it stopped pointing at.",
-	"internal/modules/collections/members.go:AddMember": "the list row is untouched; the write inserts a membership, " +
-		"and the after image names the record that joined.",
+	"internal/modules/collections/memberwrite.go:recordMemberChange": "the list row is untouched; the write adds or " +
+		"removes a Shortlist membership, and the after image names the record that joined or left.",
 	"internal/modules/webhooks/store.go:RotateSecret": "the new signing secret replaces a value that must never be " +
 		"copied into audit_log, so the after image carries the fact of the rotation and neither secret.",
 	"internal/modules/webhooks/deliverystore.go:requireReplay": "the subscription is unchanged; the write records that " +
@@ -183,6 +184,8 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 // gate impossible to green over wrappers that are correct; merely counting them
 // would let a real defect through in silence.
 var unresolvableAuditActions = gatekit.Waive(map[string]string{
+	"internal/modules/reporting/persistence.go:recordChange":            "The shared mutation writer requires a non-nil before image for every non-create action before invoking Audit.",
+	"internal/modules/forecasting/capturestatus.go:RecordCaptureStatus": "The locked capture-status row is the before image; only its absence selects create, while update always carries the previously stored status.",
 	// The seam that routes an extension's own change, choosing the door from
 	// what the change carries rather than from a verb it cannot read.
 	"internal/compose/extledger.go:recordExtensionChange": "the verb is the unit's own, and the seam picks the door from whether the change declared a before-image, so an update either carries one or is recorded as the occurrence it says it is",
@@ -500,7 +503,7 @@ func isAbsentImageExpr(call *ast.CallExpr) bool {
 func packageConstants(t *testing.T, files []gatekit.ParsedFile) map[string]map[string]string {
 	t.Helper()
 	byPackage := map[string]map[string]string{}
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, parsed := range files {
 		dir := filepath.Dir(parsed.Path)
 		if byPackage[dir] != nil {

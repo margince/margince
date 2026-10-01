@@ -227,7 +227,7 @@ func TestLinkFederatedIdentityTransfersAStaleSubjectFromANonLiveUser(t *testing.
 	// (Google-side email reassignment) — resolveFederatedUser falls through
 	// the dead link to resolve liveUserID by email, and linking must not
 	// fail on the stale row's hold over (provider, subject).
-	if _, err := svc.LoginViaFederatedIdentity(context.Background(), "google", "sub-recycled", liveEmail); err != nil {
+	if _, err := svc.LoginViaFederatedIdentity(context.Background(), "google", "sub-recycled", liveEmail, nil); err != nil {
 		t.Fatalf("LoginViaFederatedIdentity: %v", err)
 	}
 
@@ -256,7 +256,7 @@ func TestLoginViaFederatedIdentityRelinksOnSubjectChange(t *testing.T) {
 	// A different Google account now presents the same verified, previously
 	// linked email — the recycling case linkFederatedIdentity's ON CONFLICT
 	// clause exists for.
-	if _, err := svc.LoginViaFederatedIdentity(context.Background(), "google", "sub-new-after-recycle", email); err != nil {
+	if _, err := svc.LoginViaFederatedIdentity(context.Background(), "google", "sub-new-after-recycle", email, nil); err != nil {
 		t.Fatalf("LoginViaFederatedIdentity: %v", err)
 	}
 

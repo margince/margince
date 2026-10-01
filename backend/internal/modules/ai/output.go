@@ -20,6 +20,17 @@ import (
 // from this same constant — one source for the reasoning-headroom ceiling.
 const ReasoningOutputMaxTokens = 8192
 
+// unsetMaxOutputTokens is the output ceiling every adapter sends when a
+// request set none.
+//
+// An unset MaxTokens is a caller bug rather than a lane, and without this the
+// wires disagree about what the bug costs: Anthropic refuses a request with no
+// max_tokens, while an OpenAI-compatible host takes an omitted one to mean the
+// model's own limit and bills a runaway completion to the end. One constant so
+// every wire gives the same answer, small enough that the bug surfaces as a
+// short reply rather than as spend.
+const unsetMaxOutputTokens = 1024
+
 // Unfence is kernel/modelreply.Unfence, re-exported: the reduction lives in
 // shared/kernel because the agents module may not import this one, and the name
 // stays here because every model-reply parser in this tier spells it.

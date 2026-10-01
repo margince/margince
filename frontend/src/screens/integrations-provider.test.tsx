@@ -618,3 +618,114 @@ describe("ProviderCard write posture", () => {
     RENDER_TEST_MS,
   );
 });
+
+describe("ProviderCard across connections and deletions", () => {
+  const AUTOMATIC_LOOKUP = en["provider.automaticLookup"];
+
+  function mountWith(
+    fetch: ReturnType<typeof vi.fn>,
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  ) {
+    vi.stubGlobal("fetch", fetch);
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ProviderCard />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    return client;
+  }
+
+  it(
+    "draws the installation's lookup switch once, however many providers are connected",
+    async () => {
+      const second = { ...CONNECTION, provider: "second_provider" };
+      mountWith(
+        vi.fn(async (input: RequestInfo | URL) => {
+          const request = input instanceof Request ? input : undefined;
+          const path = new URL(String(request ? request.url : input)).pathname;
+          const body =
+            path === "/v1/provider-connections"
+              ? { data: [CONNECTION, second] }
+              : routeBody(path, ME_OPERATOR, CONNECTION);
+          return new Response(JSON.stringify(body), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }),
+      );
+      await screen.findByRole(
+        "heading",
+        { name: "second_provider" },
+        { timeout: SETTLE_MS },
+      );
+      expect(
+        screen.getByRole("heading", { name: CONNECTION.provider }),
+      ).toBeTruthy();
+      expect(
+        await screen.findAllByRole("switch", { name: AUTOMATIC_LOOKUP }),
+      ).toHaveLength(1);
+    },
+    RENDER_TEST_MS,
+  );
+
+  it(
+    "makes every cached contact read stale once the bought data is deleted",
+    async () => {
+      const user = userEvent.setup();
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      // A contact page already open in this session, with its bought marks.
+      const cached = [
+        ["contact360", "p-1"],
+        ["contact", "p-1"],
+        ["contactEmployments", "p-1", "cursor"],
+      ];
+      for (const key of cached) {
+        client.setQueryData(key, { bought_fields: [{ target: "title" }] });
+      }
+      mountWith(
+        vi.fn(async (input: RequestInfo | URL) => {
+          const request = input instanceof Request ? input : undefined;
+          if (request?.method === "DELETE") {
+            return new Response(null, { status: 204 });
+          }
+          const path = new URL(String(request ? request.url : input)).pathname;
+          return new Response(
+            JSON.stringify(routeBody(path, ME_OPERATOR, CONNECTION)),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        }),
+        client,
+      );
+      await screen.findByRole(
+        "heading",
+        { name: CONNECTION.provider },
+        { timeout: SETTLE_MS },
+      );
+      await user.click(screen.getByRole("button", { name: "More actions" }));
+      await user.click(
+        screen.getByRole("button", { name: en["provider.deleteData"] }),
+      );
+      await user.type(
+        screen.getByLabelText(en["provider.deleteDataConfirm.typed"]),
+        CONNECTION.provider,
+      );
+      const confirms = screen.getAllByRole("button", {
+        name: en["provider.deleteData"],
+      });
+      await user.click(confirms[confirms.length - 1]);
+
+      await waitFor(
+        () => {
+          for (const key of cached) {
+            expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+          }
+        },
+        { timeout: SETTLE_MS },
+      );
+    },
+    WRITE_TEST_MS,
+  );
+});

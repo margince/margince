@@ -203,7 +203,7 @@ export const RestartAfterCancel: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: /Start another import/ }),
+      await canvas.findByRole("button", { name: /Start a new import/ }),
     );
     await canvas.findByText(/About 4,820 messages/);
   },

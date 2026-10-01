@@ -46,7 +46,7 @@ const testRepeats = 3
 // exercise the replay it came to test.
 func withJournal(t *testing.T, dir string, now time.Time, fn func(*runJournal)) {
 	t.Helper()
-	j, err := openRunJournal(context.Background(), dir, ai.ProfileCloudHosted, now, quietLogger())
+	j, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, now, quietLogger())
 	if err != nil {
 		t.Fatalf("openRunJournal: %v", err)
 	}
@@ -80,7 +80,7 @@ func certifyOnce(t *testing.T, dir string, sc Scenario, candidate, judge *ai.Fak
 	var err error
 	withJournal(t, dir, fixedResumeNow, func(j *runJournal) {
 		rec, err = certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
-			testCandidateBinding, testJudgeBinding, ai.ProfileCloudHosted, testRepeats, quietLogger(), &certifyHooks{
+			testCandidateBinding, testJudgeBinding, ai.ProfileEUHosted, testRepeats, quietLogger(), &certifyHooks{
 				candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 				judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 				journal:       j.forTask(ai.TaskSummarize, testCandidateBinding, testJudgeBinding),
@@ -89,12 +89,13 @@ func certifyOnce(t *testing.T, dir string, sc Scenario, candidate, judge *ai.Fak
 	return rec, err
 }
 
-// answeringFakes are a candidate and judge that certify every run.
+// answeringFakes are a candidate and judge that certify every run a case can
+// reach, its adaptive extensions included.
 func answeringFakes() (*ai.FakeClient, *ai.FakeClient) {
 	candidate, judge := ai.NewFakeClient(), ai.NewFakeClient()
-	for range testRepeats {
+	for range adaptiveMaxRuns {
 		candidate.Script(containsWidget)
-		judge.Script(scoreJSON(90))
+		judge.Script(opinionsOf(90, 1)...)
 	}
 	return candidate, judge
 }
@@ -105,7 +106,7 @@ func answeringFakes() (*ai.FakeClient, *ai.FakeClient) {
 func refusingFakes(t *testing.T) (*ai.FakeClient, *ai.FakeClient) {
 	t.Helper()
 	var steps []ai.FakeStep
-	for range ladderRungs(t) * runAttempts * testRepeats {
+	for range ladderRungs(t) * runAttempts * adaptiveMaxRuns {
 		steps = append(steps, ai.FakeStep{Err: errDroppedConnection})
 	}
 	return ai.NewFakeClient().ScriptSteps(steps...), ai.NewFakeClient().ScriptSteps(steps...)
@@ -119,6 +120,10 @@ func TestAJournaledRunIsReplayedInsteadOfPaidForAgain(t *testing.T) {
 	first, err := certifyOnce(t, dir, sc, candidate, judge)
 	if err != nil {
 		t.Fatalf("first certification: %v", err)
+	}
+	if first.Runs != adaptiveMaxRuns {
+		t.Fatalf("the first certification made %d runs, want its case extended to %d — the replay below must cover the extensions too",
+			first.Runs, adaptiveMaxRuns)
 	}
 
 	// Nothing here can answer. Every run of this record must come off the
@@ -291,11 +296,11 @@ func TestAJournaledRunCarriesEveryFieldOfARunOutcome(t *testing.T) {
 			Output: "the widget is blue", Outcome: "accepted", LatencyMS: 1234,
 			TokensIn: 11, TokensOut: 22, CachedTokens: 33, CacheWriteTokens: 44,
 			Degraded: true, HardPass: true, Score: 87, Ungraded: true, JudgeScores: []int{12, 87, 90},
-			Withheld: "SAFETY",
+			Withheld: "SAFETY", Abandoned: true,
 		},
 		Provider: "openai_compatible", ServedModel: "z-ai/glm-5.2",
 		ServedIdentitySource: "provider_reported", JudgeServedModel: "claude-haiku-4.5",
-		CertifiedScope: "full_invocation", JudgeDegraded: true,
+		CertifiedScope: "full_invocation", JudgeDegraded: true, ContextApplied: true,
 	}
 	assertNoZeroField(t, reflect.ValueOf(want), "runOutcome")
 
@@ -393,7 +398,7 @@ func TestAJournaledRunIsNotReplayedUnderADifferentProfile(t *testing.T) {
 		t.Fatalf("closing the other profile's journal: %v", cerr)
 	}
 	if replayed {
-		t.Fatalf("a run measured under %s was offered as a replay under %s", ai.ProfileCloudHosted, ai.ProfileCloudFrontier)
+		t.Fatalf("a run measured under %s was offered as a replay under %s", ai.ProfileEUHosted, ai.ProfileCloudFrontier)
 	}
 	if !replayable(t, dir, fixedResumeNow, sc, testCandidateBinding) {
 		t.Fatal("opening under another profile deleted this one's live runs")
@@ -486,7 +491,7 @@ func TestAJournaledRunIsNotReplayedByADifferentBinary(t *testing.T) {
 
 func TestASecondRunIsRefusedTheResumeDirectoryRatherThanDestroyingIt(t *testing.T) {
 	dir := t.TempDir()
-	first, err := openRunJournal(context.Background(), dir, ai.ProfileCloudHosted, fixedResumeNow, quietLogger())
+	first, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
 	if err != nil {
 		t.Fatalf("openRunJournal: %v", err)
 	}
@@ -501,7 +506,7 @@ func TestASecondRunIsRefusedTheResumeDirectoryRatherThanDestroyingIt(t *testing.
 	// compaction renames a fresh file over the first's, leaving the first
 	// appending into an unlinked inode — every run it journals from then on is
 	// written where nobody will read it, silently.
-	_, second := openRunJournal(context.Background(), dir, ai.ProfileCloudHosted, fixedResumeNow, quietLogger())
+	_, second := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
 	if second == nil {
 		t.Fatal("a second run took the same resume directory — the first's journal is now write-only garbage")
 	}
@@ -512,7 +517,7 @@ func TestASecondRunIsRefusedTheResumeDirectoryRatherThanDestroyingIt(t *testing.
 
 func TestTheResumeDirectoryIsReleasedForTheNextRun(t *testing.T) {
 	dir := t.TempDir()
-	first, err := openRunJournal(context.Background(), dir, ai.ProfileCloudHosted, fixedResumeNow, quietLogger())
+	first, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
 	if err != nil {
 		t.Fatalf("openRunJournal: %v", err)
 	}
@@ -521,7 +526,7 @@ func TestTheResumeDirectoryIsReleasedForTheNextRun(t *testing.T) {
 	}
 	// A claim that outlived its run would make resuming a one-shot feature and
 	// send every later run to the manual-cleanup message.
-	second, err := openRunJournal(context.Background(), dir, ai.ProfileCloudHosted, fixedResumeNow, quietLogger())
+	second, err := openRunJournal(context.Background(), dir, ai.ProfileEUHosted, fixedResumeNow, quietLogger())
 	if err != nil {
 		t.Fatalf("the resume directory was not released by the run that closed it: %v", err)
 	}
@@ -586,5 +591,17 @@ func TestAJournaledRunIsNotReplayedUnderOtherUpstreamPreferences(t *testing.T) {
 	}
 	if bindingKey(spelledDefault) != bindingKey(broker) {
 		t.Error("the product default spelled out keys apart from the same default inherited — one upstream, two keys")
+	}
+}
+
+// A thinking level changes how a model answers, so a run at one level is never
+// replayed as a run at another, nor as the adapter's default.
+func TestAJournaledRunIsNotReplayedAtAnotherThinkingLevel(t *testing.T) {
+	lite := ai.ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
+	low, high := lite, lite
+	low.ThinkingLevel, high.ThinkingLevel = "low", "high"
+	keys := map[string]string{bindingKey(lite): "default", bindingKey(low): "low", bindingKey(high): "high"}
+	if len(keys) != 3 {
+		t.Errorf("three thinking levels rendered %d journal keys: %v", len(keys), keys)
 	}
 }

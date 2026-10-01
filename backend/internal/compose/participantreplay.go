@@ -37,9 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -50,8 +48,14 @@ import (
 const (
 	replayWroteParticipants = "participants"
 	replayFoundNone         = "none"
-	replayUnreadable        = "unreadable"
-	replayNoOwner           = "no_owner"
+	// replayCapped is an original whose party list the cap refused — it named
+	// more than MaxParticipants further parties, so the parser withheld all of
+	// them. Its own outcome for the reason the attendee repair's is: the marker
+	// settles the activity permanently, and recorded as `none` a message whose
+	// parties were refused is indistinguishable from one that named nobody.
+	replayCapped     = "capped"
+	replayUnreadable = "unreadable"
+	replayNoOwner    = "no_owner"
 )
 
 // The connectors whose stored originals this pass can re-read. A connector
@@ -81,8 +85,10 @@ type replayCandidate struct {
 	// which format its stored payload is in. Not the natural-key system: mail
 	// from every adapter shares one identity now, so that column no longer
 	// distinguishes an RFC822 original from the demo generator's JSON.
-	source  string
-	payload []byte
+	source string
+	// rawCaptureID names the stored original. The payload itself is read by
+	// the drain when this candidate's turn comes, never by the offer.
+	rawCaptureID ids.UUID
 	// owner is the mailbox address the connection reads, taken from the
 	// connection's own account label rather than the granting user's login
 	// address — those differ, and it is the MAILBOX the headers name.
@@ -98,6 +104,10 @@ type replayCandidate struct {
 // activity names the row this candidate is about, satisfying
 // storedOriginalCandidate.
 func (c replayCandidate) activity() ids.ActivityID { return c.activityID }
+
+// original names the stored original this candidate is read from, satisfying
+// storedOriginalCandidate.
+func (c replayCandidate) original() ids.UUID { return c.rawCaptureID }
 
 // partyListIsAttested is this candidate's answer to the question
 // capture.ParticipantListAttested asks of a live record: did the PROVIDER state
@@ -130,80 +140,6 @@ func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int,
 	})
 }
 
-// storedOriginalPass is one sweep over stored provider originals: which rows to
-// offer, what to do with each, and where the outcome is recorded.
-//
-// Two passes share this shape — the participant replay and the meeting attendee
-// repair — and they share the DRAIN rather than each spelling it. The parts they
-// have in common are the parts that are easy to get subtly wrong: one bounded
-// transaction, one correlation id for the whole batch (an audited write is
-// refused without one, which would fail the batch and re-select the same rows
-// forever), and a marker written for every row the pass touched so a settled row
-// is never offered twice.
-// It is generic in the CANDIDATE because each pass needs a different set of
-// facts about the row it is judging, and reading the extra ones back per row
-// would be another read of `activity` per pass — another place to gate, and
-// another chance to forget one. The harness itself needs only the id, which is
-// what storedOriginalCandidate asks for.
-type storedOriginalPass[C storedOriginalCandidate] struct {
-	// name and unit are what the debug line says: which pass ran, and what its
-	// count is counting.
-	name string
-	unit string
-	// offer answers which rows this pass still owes work on.
-	offer  func(ctx context.Context, tx pgx.Tx, limit int) ([]C, error)
-	settle func(ctx context.Context, tx pgx.Tx, c C) (string, error)
-	mark   func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, outcome string) error
-}
-
-// storedOriginalCandidate is the one thing every pass's candidate must answer:
-// which activity this is. The marker is written against it, so a candidate that
-// could not name its row could not be settled.
-type storedOriginalCandidate interface{ activity() ids.ActivityID }
-
-// unitMeetings is what a meeting-shaped pass counts. Both meeting passes report
-// through it, so their debug lines describe the same kind of work in the same
-// word.
-const unitMeetings = "meetings"
-
-// drainStoredOriginals runs one bounded batch of a stored-original pass and
-// answers how many rows it settled — written, empty or refused alike, because
-// every one of them is progress the next pass will not repeat.
-func drainStoredOriginals[C storedOriginalCandidate](
-	ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger, pass storedOriginalPass[C],
-) (int, error) {
-	if limit <= 0 {
-		return 0, fmt.Errorf("compose: the %s needs a positive batch limit, got %d", pass.name, limit)
-	}
-	// One correlation id per batch. Naming an attendee is an audited write, and
-	// storekit refuses to emit its event without one — a refusal that would
-	// take the whole batch down with it and re-select the same rows forever.
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	var settled int
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		candidates, err := pass.offer(ctx, tx, limit)
-		if err != nil {
-			return err
-		}
-		for _, c := range candidates {
-			outcome, err := pass.settle(ctx, tx, c)
-			if err != nil {
-				return err
-			}
-			if err := pass.mark(ctx, tx, c.activity(), outcome); err != nil {
-				return err
-			}
-			settled++
-		}
-		if settled > 0 {
-			log.DebugContext(ctx, "compose: settled a batch of stored originals",
-				"pass", pass.name, pass.unit, settled)
-		}
-		return nil
-	})
-	return settled, err
-}
-
 // selectReplayCandidates finds interaction activities whose original is still
 // stored and which have not been re-read yet.
 //
@@ -232,8 +168,12 @@ func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replay
 	// guessing when two mailboxes share a provider. A stamp naming a seat never
 	// reaches the fallback, so a workspace with two Gmail mailboxes resolves both
 	// of its NEW rows, which the single-connection rule alone could not do.
+	// The stored LINK first, the key join only for a row carrying none: a
+	// mailbox that could prove nothing about a colliding Message-ID files its
+	// activity under a key scoped to its own seat, and a key join alone would
+	// leave exactly those rows unreplayed.
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.payload,
+		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.id,
 		       coalesce(a.counterparty_outbound_attested, false),
 		       coalesce((
 		         SELECT c.account_label
@@ -247,7 +187,9 @@ func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replay
 		          LIMIT 1), '')
 		  FROM activity a
 		  JOIN raw_capture rc
-		    ON rc.source_system = a.source_system AND rc.source_id = a.source_id
+		    ON rc.id = a.raw_capture_id
+		    OR (a.raw_capture_id IS NULL
+		        AND rc.source_system = a.source_system AND rc.source_id = a.source_id)
 		 WHERE a.archived_at IS NULL
 		   AND a.source_system <> ''
 		   AND a.captured_by LIKE 'connector:%'
@@ -263,7 +205,7 @@ func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replay
 	var out []replayCandidate
 	for rows.Next() {
 		var c replayCandidate
-		if err := rows.Scan(&c.activityID, &c.kind, &c.source, &c.payload,
+		if err := rows.Scan(&c.activityID, &c.kind, &c.source, &c.rawCaptureID,
 			&c.ourHeaderIsTrusted, &c.owner); err != nil {
 			return nil, fmt.Errorf("compose: reading a replay candidate: %w", err)
 		}
@@ -281,7 +223,7 @@ func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replay
 // A parse failure is a verdict, not an error: the payload is years-old
 // provider output, and one message this parser cannot decompose must not stop
 // the pass from reaching the rest.
-func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error) {
+func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate, payload []byte) (string, error) {
 	if c.owner == "" {
 		return replayNoOwner, nil
 	}
@@ -297,11 +239,11 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 	// years-old provider originals; failing the batch on one of them would
 	// stop the pass reaching every message after it, and the marker is what
 	// makes the attempt not repeat forever.
-	raw, decodeErr := decodeStoredOriginal(c.payload)
+	raw, decodeErr := decodeStoredOriginal(payload)
 	if decodeErr != nil {
 		return replayUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
-	var participants []connector.MessageParticipant
+	var parties connector.Parties
 	var parseErr error
 	switch c.source {
 	case sourceGmail, sourceIMAP, sourceGraph:
@@ -311,25 +253,29 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 		// shares the mail IDENTITY but not the format — the offline demo, which
 		// stores JSON — falls to the default arm rather than being fed to this
 		// parser, which is why the switch reads the connector and not the key.
-		participants, parseErr = mailmap.ParticipantsOf(raw, c.owner)
+		parties, parseErr = mailmap.ParticipantsOf(raw, c.owner)
 	case sourceGCal:
-		participants, parseErr = gcal.ParticipantsOf(raw, c.owner)
+		parties, parseErr = gcal.ParticipantsOf(raw, c.owner)
 	case sourceGraphCal:
-		participants, parseErr = graphcal.ParticipantsOf(raw, c.owner)
+		parties, parseErr = graphcal.ParticipantsOf(raw, c.owner)
 	default:
 		return replayUnreadable, nil
 	}
 	if parseErr != nil {
 		return replayUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
-	if len(participants) == 0 {
+	// BEFORE the empty branch, because a capped list arrives as an empty one.
+	if parties.Capped() {
+		return replayCapped, nil
+	}
+	if len(parties.Participants) == 0 {
 		return replayFoundNone, nil
 	}
 	// No transport: this pass re-reads stored MAIL and CALENDAR originals, whose
 	// parties are addresses. A party named by a channel account arrives from a
 	// live record and has no stored original to replay.
 	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind, "",
-		c.partyListIsAttested(), participants); err != nil {
+		c.partyListIsAttested(), parties.Participants); err != nil {
 		return "", err
 	}
 	// The rows just written carry whatever name the original gave, so the

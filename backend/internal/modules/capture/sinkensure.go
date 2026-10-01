@@ -214,7 +214,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		return decision, err
 	}
 	decision.subject = subject
-	private, err := threadIsPrivateTx(ctx, tx, rec)
+	private, _, err := threadIsPrivateTx(ctx, tx, rec)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}

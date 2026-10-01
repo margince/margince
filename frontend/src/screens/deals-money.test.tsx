@@ -6,13 +6,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
-import {
-  buildColumns,
-  buildStageTotals,
-  type CompanyNaming,
-  FxLine,
-  OffersPanel,
-} from "./deals";
+import type { CompanyNaming } from "./dealcompanymarks";
+import { buildColumns, buildStageTotals, FxLine, OffersPanel } from "./deals";
 
 // The board's money, and the two ways it can be absent.
 //

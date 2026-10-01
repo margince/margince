@@ -15,7 +15,7 @@
 // reason this is a spine rather than a fourth card: the rule below draws the
 // waiting itself, at a size that reads before the words around it.
 
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 
 import { useRecordZone } from "../../app/recordzone";
 import { EmailReference } from "../../design-system/emailreference";
@@ -23,8 +23,10 @@ import { PanelBody } from "../../design-system/panel";
 import {
   contactsOn,
   mergeContacts,
+  namesOf,
   withWhom,
 } from "../../design-system/participants";
+import { useScrollRegion } from "../../design-system/scrollregion";
 import {
   calendarDaysBetween,
   formatDateAbbrev,
@@ -164,6 +166,8 @@ export function RecordSpine({
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
+  const axis = useRef<HTMLDivElement>(null);
+  const axisRegion = useScrollRegion(axis, t("record.timeline"));
   if (!source) {
     return null;
   }
@@ -183,13 +187,7 @@ export function RecordSpine({
   // the one stop with no record behind it, and on a horizontal axis the WIDTH
   // is the waiting — a silence drawn the same width as the meeting before it
   // says the two took the same amount of time.
-  const columns = stops
-    .map((stop) =>
-      // The marker is a line rather than a stop, so it takes only the width
-      // of the word on it.
-      todayColumn(stop),
-    )
-    .join(" ");
+  const columns = stops.map(todayColumn).join(" ");
   return (
     <PanelBody className="co-spine">
       {/* The axis runs ACROSS, not down: a reader takes the account's shape —
@@ -198,7 +196,7 @@ export function RecordSpine({
           give. It scrolls rather than wraps, because a time axis that wrapped
           onto a second line would put a later stop to the left of an earlier
           one. */}
-      <div className="co-spine-scroll">
+      <div ref={axis} className="co-spine-scroll" {...axisRegion}>
         <ol className="co-spine-track" style={{ gridTemplateColumns: columns }}>
           {stops.map((stop) => (
             <li
@@ -679,8 +677,7 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
       continue;
     }
     // The two key spaces never meet: a provider whose thread ids look like our
-    // own fallback would otherwise merge an unrelated conversation into one it
-    // has nothing to do with.
+    // own fallback would otherwise fold an unrelated conversation into it.
     const key = entry.thread_key
       ? `thread:${entry.thread_key}`
       : // Lowercased against the invariant locale, never the machine's: this is
@@ -689,7 +686,7 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
         // from every other reader's.
         `subject:${subject.toLowerCase()}`;
     const seen = conversations.get(key);
-    const contacts = contactsOn(entry.links, ctx.nameOf);
+    const contacts = namesOf(contactsOn(entry.links, ctx.nameOf));
     // The list arrives newest-first, so the first row of a conversation is its
     // latest message: that is the date the thread shows it at, and its subject
     // is the one the conversation currently goes by after a mid-thread rename.

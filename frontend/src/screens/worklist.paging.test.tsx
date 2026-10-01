@@ -2,10 +2,23 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { day, renderWorklist, row, stub, stubWalk } from "./worklist.testkit";
+import { de } from "../i18n/de";
+import { en } from "../i18n/en";
+import { vi as viCatalog } from "../i18n/vi";
+import {
+  day,
+  panelNamed,
+  renderWorklist,
+  row,
+  stub,
+  stubWalk,
+} from "./worklist.testkit";
+
+const MORE = en["worklist.more"];
 
 // Reaching the whole backlog.
 //
@@ -35,7 +48,7 @@ describe("walking to the rest of the queue", () => {
     renderWorklist();
 
     await screen.findByText("First thing");
-    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+    await userEvent.click(screen.getByRole("button", { name: MORE }));
 
     // BOTH, not just the newest page: a walk that replaced the list would lose
     // the rows the reader already worked through.
@@ -55,7 +68,7 @@ describe("walking to the rest of the queue", () => {
     await screen.findByText("Only thing");
     // A final page carries no cursor. A control offered here would ask the
     // server for a page it already said does not exist.
-    expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+    expect(screen.queryByRole("button", { name: MORE })).toBeNull();
   });
 
   // THE case the contract warns about. A walk is not a snapshot: the day is
@@ -78,7 +91,7 @@ describe("walking to the rest of the queue", () => {
     renderWorklist();
 
     await screen.findByText("Served twice");
-    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+    await userEvent.click(screen.getByRole("button", { name: MORE }));
 
     await screen.findByText("Genuinely new");
     expect(screen.getAllByText("Served twice")).toHaveLength(1);
@@ -109,7 +122,7 @@ describe("walking to the rest of the queue", () => {
     renderWorklist();
 
     await screen.findByText("A task");
-    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+    await userEvent.click(screen.getByRole("button", { name: MORE }));
 
     await screen.findByText("A notice");
     expect(screen.getByText("A task")).toBeTruthy();
@@ -158,7 +171,7 @@ describe("walking to the rest of the queue", () => {
     renderWorklist();
 
     await screen.findByText(/3 urgent/);
-    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+    await userEvent.click(screen.getByRole("button", { name: MORE }));
 
     await screen.findByText("Second thing");
     await waitFor(() => {
@@ -233,10 +246,175 @@ describe("walking to the rest of the queue", () => {
     renderWorklist();
 
     await screen.findByText("Already read");
-    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+    await userEvent.click(screen.getByRole("button", { name: MORE }));
 
     // The row survives, and the failure is stated where it happened.
     await screen.findByText(/More items did not load/);
     expect(screen.getByText("Already read")).toBeTruthy();
+  });
+});
+
+// A next page's rows land in whichever panel their destination names, so the
+// control that asks for it belongs to neither.
+describe("the way to the rest of the day speaks for both panels", () => {
+  const judgement = row({
+    id: "pair-1",
+    source: "dedupe_candidate",
+    destination: "review",
+    title: "Two records for one company",
+  });
+
+  it("stands below To review, outside both panels", async () => {
+    stub(
+      day({
+        queue: [
+          row({ id: "t1", destination: "today", title: "A task" }),
+          judgement,
+        ],
+        next_cursor: "page-2",
+      }),
+    );
+    renderWorklist();
+
+    const today = panelNamed(await screen.findByText(en["worklist.queue"]));
+    const review = panelNamed(screen.getByText(en["worklist.review"]));
+    const more = screen.getByRole("button", { name: MORE });
+    expect(within(today).queryByRole("button", { name: MORE })).toBeNull();
+    expect(within(review).queryByRole("button", { name: MORE })).toBeNull();
+    expect(
+      review.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    expect(more).toHaveAccessibleDescription(
+      "More of the day: new items can land in “Today” or “To review”.",
+    );
+  });
+
+  it("lands a page of only review rows in To review and stays in reach", async () => {
+    stubWalk([
+      day({
+        queue: [row({ id: "t1", destination: "today", title: "A task" })],
+        next_cursor: "page-2",
+      }),
+      day({ queue: [judgement], next_cursor: "page-3" }),
+    ]);
+    renderWorklist();
+    const user = userEvent.setup();
+
+    await screen.findByText("A task");
+    await user.click(screen.getByRole("button", { name: MORE }));
+
+    const review = panelNamed(await screen.findByText(en["worklist.review"]));
+    expect(
+      within(review).getByText("Two records for one company"),
+    ).toBeTruthy();
+    const more = screen.getByRole("button", { name: MORE });
+    expect(
+      review.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+  });
+});
+
+describe("the header states the split", () => {
+  it("names the two panels' halves, a zero half included", async () => {
+    stub(
+      day({
+        queue: [row({ id: "pair-1", destination: "review" })],
+        summary: {
+          urgent: 0,
+          due: 0,
+          lower_priority: 5,
+          total: 5,
+          buckets: { urgent: 0, due_today: 0, planned: 0, review: 5 },
+        },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("0 today · 5 to review");
+    // No bare total: it would count both panels as one.
+    expect(screen.queryByText(/\d total/)).toBeNull();
+  });
+
+  it("keeps the five-figure sentence for a server without the partition", async () => {
+    stub(
+      day({
+        queue: [row({ id: "a" })],
+        summary: { urgent: 1, due: 2, in_play: 0, lower_priority: 3, total: 6 },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText(
+      "1 urgent · 2 due · 0 in play · 3 routine · 6 total",
+    );
+    expect(screen.queryByText(/to review/)).toBeNull();
+  });
+
+  // Today is all three of its parts at once: the bands under it break it down.
+  it("counts every part of Today in its half", async () => {
+    stub(
+      day({
+        queue: [row({ id: "a" })],
+        summary: {
+          urgent: 1,
+          due: 2,
+          lower_priority: 3,
+          total: 10,
+          buckets: { urgent: 1, due_today: 2, planned: 3, review: 4 },
+        },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("6 today · 4 to review");
+  });
+
+  // Like the five-figure sentence, the split is the DAY's and is read off page
+  // one: a later page's partition describes only its own slice.
+  it("keeps the split still while the rows grow", async () => {
+    stubWalk([
+      day({
+        queue: [row({ id: "a", title: "First thing" })],
+        summary: {
+          urgent: 1,
+          due: 2,
+          lower_priority: 6,
+          total: 14,
+          buckets: { urgent: 1, due_today: 2, planned: 6, review: 5 },
+        },
+        next_cursor: "page-2",
+      }),
+      day({
+        queue: [row({ id: "b", title: "Second thing" })],
+        summary: {
+          urgent: 0,
+          due: 0,
+          lower_priority: 1,
+          total: 1,
+          buckets: { urgent: 0, due_today: 0, planned: 1, review: 0 },
+        },
+      }),
+    ]);
+    renderWorklist();
+    const user = userEvent.setup();
+
+    await screen.findByText("9 today · 5 to review");
+    await user.click(screen.getByRole("button", { name: MORE }));
+
+    await screen.findByText("Second thing");
+    expect(screen.getByText("9 today · 5 to review")).toBeTruthy();
+    expect(screen.queryByText("1 today · 0 to review")).toBeNull();
+  });
+
+  // Two names for one panel is how a reader stops trusting the header, so each
+  // half is its panel's heading, in every locale.
+  it.each([
+    ["en", en],
+    ["de", de],
+    ["vi", viCatalog],
+  ])("names both halves with the %s panel headings", (_, catalog) => {
+    expect(catalog["worklist.summary.split"]).toBe(
+      `{today} ${catalog["worklist.queue"].toLowerCase()} · {review} ${catalog["worklist.review"].toLowerCase()}`,
+    );
   });
 });

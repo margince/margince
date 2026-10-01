@@ -4,20 +4,11 @@
 package compose
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"go/ast"
-	"go/importer"
-	"go/parser"
-	"go/token"
 	"go/types"
-	"io"
-	"os"
-	"os/exec"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
@@ -218,114 +209,6 @@ func isRunnerNamed(t types.Type, name string) bool {
 // runnerPackagePath is derived from the type rather than typed, so a move of the
 // runner package moves the census with it.
 var runnerPackagePath = reflect.TypeFor[runner.Job]().PkgPath()
-
-// typeCheckedSources is parsed source with the type information the census
-// resolves both halves through.
-type typeCheckedSources struct {
-	fset  *token.FileSet
-	files []*ast.File
-	info  *types.Info
-	pkg   *types.Package
-}
-
-// composeLoad is what type-checking this package needs from the go command: its
-// production file list, honouring build tags, and an importer reading the export
-// data its imports already compiled to for this test binary.
-type composeLoad struct {
-	fset     *token.FileSet
-	goFiles  []string
-	importer types.Importer
-}
-
-// loadCompose runs once per test binary; the importer caches what it reads, so
-// the planted fixtures resolve runner to the same package the real files do.
-var loadCompose = sync.OnceValues(func() (*composeLoad, error) {
-	out, err := goList("-json=GoFiles,Imports", ".")
-	if err != nil {
-		return nil, err
-	}
-	var listed struct{ GoFiles, Imports []string }
-	if err := json.Unmarshal(out, &listed); err != nil {
-		return nil, fmt.Errorf("decoding go list for this package: %w", err)
-	}
-	out, err = goList(append([]string{"-export", "-deps", "-f", "{{if .Export}}{{.ImportPath}}\t{{.Export}}{{end}}"},
-		listed.Imports...)...)
-	if err != nil {
-		return nil, err
-	}
-	exports := map[string]string{}
-	for line := range strings.Lines(string(out)) {
-		if path, file, ok := strings.Cut(strings.TrimSpace(line), "\t"); ok {
-			exports[path] = file
-		}
-	}
-	fset := token.NewFileSet()
-	imp := importer.ForCompiler(fset, "gc", func(path string) (io.ReadCloser, error) {
-		file, ok := exports[path]
-		if !ok {
-			return nil, fmt.Errorf("go list reported no export data for %s", path)
-		}
-		return os.Open(file)
-	})
-	return &composeLoad{fset: fset, goFiles: listed.GoFiles, importer: imp}, nil
-})
-
-func goList(args ...string) ([]byte, error) {
-	cmd := exec.Command("go", append([]string{"list"}, args...)...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("go list %s: %w\n%s", strings.Join(args, " "), err, stderr.String())
-	}
-	return out, nil
-}
-
-// typeCheckedComposeSources type-checks this package's production files.
-func typeCheckedComposeSources(t *testing.T) *typeCheckedSources {
-	t.Helper()
-	load, err := loadCompose()
-	if err != nil {
-		t.Fatalf("loading this package for type-checking: %v", err)
-	}
-	files := make([]*ast.File, 0, len(load.goFiles))
-	for _, name := range load.goFiles {
-		parsed, err := parser.ParseFile(load.fset, name, nil, 0)
-		if err != nil {
-			t.Fatalf("parse %s: %v", name, err)
-		}
-		files = append(files, parsed)
-	}
-	return typeCheck(t, load, "compose", files)
-}
-
-// typeCheckPlanted type-checks one planted file against the same imports.
-func typeCheckPlanted(t *testing.T, src string) *typeCheckedSources {
-	t.Helper()
-	load, err := loadCompose()
-	if err != nil {
-		t.Fatalf("loading this package for type-checking: %v", err)
-	}
-	parsed, err := parser.ParseFile(load.fset, "planted.go", src, 0)
-	if err != nil {
-		t.Fatalf("parse the planted file: %v", err)
-	}
-	return typeCheck(t, load, "planted", []*ast.File{parsed})
-}
-
-func typeCheck(t *testing.T, load *composeLoad, path string, files []*ast.File) *typeCheckedSources {
-	t.Helper()
-	info := &types.Info{
-		Types: map[ast.Expr]types.TypeAndValue{}, Selections: map[*ast.SelectorExpr]*types.Selection{},
-		Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{},
-	}
-	pkg, err := (&types.Config{Importer: load.importer}).Check(path, load.fset, files, info)
-	if err != nil {
-		// A file the checker cannot resolve is a file the census cannot clear.
-		t.Fatalf("type-checking %s: %v", path, err)
-	}
-	return &typeCheckedSources{fset: load.fset, files: files, info: info, pkg: pkg}
-}
 
 // The two shipped agents are the reason the allowlist exists, so the property
 // that motivated it is asserted rather than left to the reader: what each goal

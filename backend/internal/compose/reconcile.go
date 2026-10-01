@@ -58,7 +58,8 @@ type followUpStager struct {
 	// owner resolves the authority the DRAFT is read under. The reply carries a
 	// counterparty's address and the message it answers, both of which end up
 	// stored on the card — so they are read as the contact the card is for, never
-	// under the sweep's own unbounded principal.
+	// under the sweep's own unbounded principal. Its handle is also the
+	// transaction the owner is read and the proposal staged in.
 	owner dealOwnerAuthority
 	// pool reads the installation's base language the drafted reply's card is
 	// written in.
@@ -98,22 +99,60 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 	// mail the rep sent — and approving it creates another outbound email,
 	// which becomes the next night's latest evidence. The deal would then
 	// propose a reply every night, forever.
+	var draft *followUpDraft
 	if s.draft != nil && answerableThread(proposal) {
-		staged, err := s.stageDraftedReply(ctx, dealID, proposal)
+		composed, ok, err := s.composeDraftedReply(ctx, dealID, proposal)
 		if err != nil {
 			return err
 		}
-		if staged {
-			return nil
+		if ok {
+			draft = &composed
 		}
 	}
+	task, err := followUpTaskStaging(dealID, summary, proposal)
+	if err != nil {
+		return err
+	}
+	// The owner is read and the proposal staged in ONE transaction, under a
+	// lock a reassignment waits behind, so the card cannot name a seat the deal
+	// already left. The draft was composed before it, because a drafting call
+	// must not hold a lock on the deal.
+	return s.owner.db.Tx(ctx, func(tx pgx.Tx) error {
+		owner, err := lockedDealOwner(ctx, tx, dealID)
+		if err != nil {
+			return err
+		}
+		// A draft composed for someone who no longer owns the deal is text in
+		// their name. It is dropped and nothing is staged, so the deal stays
+		// eligible and the next sweep drafts for the new owner; a task staged
+		// here would hold that draft back until the task was decided.
+		if draft != nil {
+			if draft.owner != owner {
+				return nil
+			}
+			return stageFollowUpDraft(onBehalfOf(ctx, owner), tx, s.svc, draft.summary,
+				dealID, proposal.EvidenceActivityID.UUID, draft.proposal)
+		}
+		// An unowned deal records nobody, which is what it honestly is: the
+		// proposal stays shared rather than being withheld from everyone.
+		staged := ctx
+		if !owner.IsZero() {
+			staged = onBehalfOf(ctx, owner)
+		}
+		_, _, err = s.svc.StageUnlessDeclinedTx(staged, tx, task)
+		return err
+	})
+}
+
+// followUpTaskStaging builds the task proposal's staging input.
+func followUpTaskStaging(dealID ids.UUID, summary string, proposal deals.FollowUpProposal) (approvals.StageInput, error) {
 	raw, err := json.Marshal(proposal)
 	if err != nil {
-		return fmt.Errorf("compose: marshal follow-up proposal: %w", err)
+		return approvals.StageInput{}, fmt.Errorf("compose: marshal follow-up proposal: %w", err)
 	}
 	canonical, hash, err := diffhash.Canonical(raw)
 	if err != nil {
-		return fmt.Errorf("compose: canonicalize follow-up proposal: %w", err)
+		return approvals.StageInput{}, fmt.Errorf("compose: canonicalize follow-up proposal: %w", err)
 	}
 	// The logical identity is the deal AND the interaction the proposal was
 	// drawn from — the two fields that say WHICH follow-up this is.
@@ -141,34 +180,17 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 		"evidence_activity_id": proposal.EvidenceActivityID.String(),
 	})
 	if err != nil {
-		return fmt.Errorf("compose: marshal follow-up identity: %w", err)
+		return approvals.StageInput{}, fmt.Errorf("compose: marshal follow-up identity: %w", err)
 	}
 	// The task proposal records the deal's owner as the human it is FOR, the
-	// same as the drafted reply beside it.
+	// same as the drafted reply beside it (the caller names them).
 	//
 	// It is one rep's morning work: the follow-up it asks for lands on their
 	// deal, and approvals narrows a proposal to the seat it names. Staged under
-	// the sweep alone — as this path did — the row named nobody, so it appeared
-	// on every colleague's queue who held the grant, and a manager could answer
-	// a question the rep never saw.
-	//
-	// Only the owner's IDENTITY is needed here, not their authority: nothing in
-	// this staging reads under it. That is why this asks dealOwner rather than
-	// contextFor, which also resolves grants and would refuse a deal whose owner
-	// has since been suspended — a card that should still be filed for them.
-	staged := ctx
-	if s.owner.db != nil {
-		owner, err := s.owner.dealOwner(ctx, dealID)
-		if err != nil {
-			return err
-		}
-		// An unowned deal records nobody, which is what it honestly is: the
-		// proposal stays shared rather than being withheld from everyone.
-		if !owner.IsZero() {
-			staged = onBehalfOf(ctx, owner)
-		}
-	}
-	_, _, err = s.svc.StageUnlessDeclined(staged, approvals.StageInput{
+	// the sweep alone the row named nobody, so it appeared on every colleague's
+	// queue who held the grant, and a manager could answer a question the rep
+	// never saw.
+	return approvals.StageInput{
 		Kind:           deals.FollowUpReconcileKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
@@ -177,8 +199,7 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 		Summary:        summary,
 		Identity:       identity,
 		JoinPending:    true,
-	})
-	return err
+	}, nil
 }
 
 // answerableThread reports whether the evidence is a message somebody is
@@ -188,13 +209,21 @@ func answerableThread(proposal deals.FollowUpProposal) bool {
 		proposal.EvidenceDirection == string(crmcontracts.ActivityDirectionInbound)
 }
 
-// stageDraftedReply offers the drafted reply, and reports whether it was
-// taken. A thread with no answerable counterparty falls back to the task
-// proposal rather than dropping the candidate — the rep is still told about
-// the deal, they simply get "write a follow-up" instead of a draft to send.
-func (s followUpStager) stageDraftedReply(
+// followUpDraft is a drafted reply composed for one owner, waiting to be
+// staged for them.
+type followUpDraft struct {
+	owner    ids.UUID
+	summary  string
+	proposal automation.HeldDraftProposal
+}
+
+// composeDraftedReply drafts the reply, and reports whether there is one. A
+// thread with no answerable counterparty falls back to the task proposal rather
+// than dropping the candidate — the rep is still told about the deal, they
+// simply get "write a follow-up" instead of a draft to send.
+func (s followUpStager) composeDraftedReply(
 	ctx context.Context, dealID ids.UUID, proposal deals.FollowUpProposal,
-) (bool, error) {
+) (followUpDraft, bool, error) {
 	// The draft is composed under the DEAL OWNER's authority, not the sweep's.
 	//
 	// ReplyAddress resolves the counterparty's email off the contact record,
@@ -216,9 +245,9 @@ func (s followUpStager) stageDraftedReply(
 	ownerCtx, err := s.owner.contextFor(ctx, dealID)
 	if err != nil {
 		if errors.Is(err, errNoDealOwner) || errors.Is(err, apperrors.ErrNotFound) {
-			return false, nil
+			return followUpDraft{}, false, nil
 		}
-		return false, err
+		return followUpDraft{}, false, err
 	}
 	draft, answerable, err := draftFollowUpReply(ownerCtx, s.draft, proposal)
 	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
@@ -231,10 +260,10 @@ func (s followUpStager) stageDraftedReply(
 		// draftFollowUpReply itself treats a denial as a failure, correctly: it
 		// is handed an authority and cannot know whose. Only here is it known
 		// to be the deal owner's, which is what makes a refusal ordinary.
-		return false, nil
+		return followUpDraft{}, false, nil
 	}
 	if err != nil || !answerable {
-		return false, err
+		return followUpDraft{}, false, err
 	}
 	// Its OWN summary rather than the task proposal's with a clause appended.
 	// The task's line names a task ("Draft a follow-up on …"), and a reply
@@ -244,38 +273,13 @@ func (s followUpStager) stageDraftedReply(
 	// The draft's own subject is what the rep recognises: it is the thread
 	// they are answering, in the words the counterparty used.
 	replySummary := fmt.Sprintf(approvalSummaryCopyOver(ctx, s.pool).draftedReplyWaiting, draft.Subject)
-	// Staged as the SWEEP, recording the OWNER as the human it acts for.
-	//
-	// The two halves answer different questions and both are load-bearing. The
-	// acting principal stays the sweep's, which is what keeps the row a server
-	// proposal (a NULL passport) the release executor may run, and what keeps
-	// its provenance honest — no rep asked for this card. on_behalf_of names
-	// the contact the card is FOR, and approvals narrows a held draft to them:
-	// releasing one sends it from the approver's own mailbox, so a colleague
-	// who released it would be answering a customer under their own name.
-	//
-	// Recorded under the sweep alone, as it was, the row named nobody — and a
-	// held draft naming nobody is decidable by nobody.
-	if err := stageFollowUpDraft(onBehalfOfOwner(ctx, ownerCtx), s.svc, replySummary,
-		dealID, proposal.EvidenceActivityID.UUID, draft); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-// onBehalfOfOwner returns the sweep's own principal, recording the owner it
-// resolved as the human this staging acts for.
-//
-// The owner is taken from the context the draft was composed under rather than
-// re-read, so the card is filed for exactly the contact whose authority wrote it.
-// A context carrying no human leaves the principal untouched: the staging then
-// records nobody, which is what an ownerless deal honestly is.
-func onBehalfOfOwner(sweepCtx, ownerCtx context.Context) context.Context {
+	// Filed for exactly the contact whose authority wrote it. The caller stages
+	// it only while that contact still owns the deal.
 	owner, ok := principal.Actor(ownerCtx)
 	if !ok || owner.UserID.IsZero() {
-		return sweepCtx
+		return followUpDraft{}, false, nil
 	}
-	return onBehalfOf(sweepCtx, owner.UserID)
+	return followUpDraft{owner: owner.UserID, summary: replySummary, proposal: draft}, true, nil
 }
 
 // onBehalfOf stamps one member as the human a staging acts for, leaving the

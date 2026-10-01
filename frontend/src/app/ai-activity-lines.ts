@@ -54,11 +54,10 @@ const SITE_READ_WATCHED_WHERE_IT_RUNS = notDisplayed(
 /**
  * The line for one (kind, state), by literal key — or the reason there is none.
  *
- * LITERAL, not `t(`agent.activity.${kind}.${state}`)`. The orphan guard in
- * i18n.test.ts counts a key as rendered when it starts with a template STEM,
- * and its regex stops at the first `${` — so an interpolated key would vouch
- * for the whole `agent.activity.` namespace forever, and a retired kind's copy
- * would sit in three catalogs with nothing to flag it.
+ * LITERAL, not `t(`agent.activity.${kind}.${state}`)`: the orphan guard counts
+ * every key under a template's head as rendered, so an interpolated key would
+ * vouch for the whole `agent.activity.` namespace and a retired kind's copy
+ * would never be flagged.
  *
  * TOTAL over the contract's kinds, and the compiler is what holds it there: a
  * new kind fails the build until somebody either writes its copy in every
@@ -241,7 +240,7 @@ export const ACTIVITY_LINE: Readonly<
     "declared in api/ai-tasks.yaml and not built: no site runs it, so nothing reports it yet",
   ),
   nl_search: notDisplayed(
-    "declared in api/ai-tasks.yaml and not built: no site runs it, so nothing reports it yet",
+    "a plain-words filter answers in the builder the reader pressed it from, under their own eyes; a rail line would announce a result already on screen",
   ),
   transcript: notDisplayed(
     "declared in api/ai-tasks.yaml and not built: no site runs it, so nothing reports it yet",

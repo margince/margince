@@ -6,12 +6,12 @@ import { fileURLToPath } from "node:url";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { verticalPlacement } from "./anchored";
 import {
   Checkbox,
   Field,
+  Modal,
   OverflowMenu,
   PendingBody,
   Radio,
@@ -20,6 +20,8 @@ import {
   Textarea,
   TextInput,
 } from "./atoms";
+import { Heading } from "./heading";
+import { holdExits } from "./presence-testing";
 import { Select } from "./select";
 
 // The dropdown these cases pair with a Field is the Select from select.tsx — a
@@ -161,24 +163,29 @@ it("stays open when the item chosen sets something rather than doing it", async 
   expect(trigger.getAttribute("aria-expanded")).toBe("true");
 });
 
+function DialogAction() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Merge with…
+      </button>
+      <Modal open={open} onClose={() => setOpen(false)} labelledBy="merge">
+        <Heading size="large" id="merge">
+          Merge with…
+        </Heading>
+      </Modal>
+    </>
+  );
+}
+
 // The one item that must NOT close the menu under itself: one whose whole job
 // is to put a dialog up. A dialog restores focus, on close, to the control that
 // opened it — so hiding that control first strands the reader on <body>. The
-// menu reads the same `.overlay` its Escape handler reads, one commit after the
+// menu asks `coveredByDialog` as its Escape handler does, one commit after the
 // press, which is the first moment the answer exists.
 it("stays open when the item it just ran opened a dialog", async () => {
   const user = userEvent.setup();
-  function DialogAction() {
-    const [open, setOpen] = useState(false);
-    return (
-      <>
-        <button type="button" onClick={() => setOpen(true)}>
-          Merge with…
-        </button>
-        {open && createPortal(<div className="overlay" />, document.body)}
-      </>
-    );
-  }
   render(
     <OverflowMenu label="More actions">
       <DialogAction />
@@ -190,6 +197,62 @@ it("stays open when the item it just ran opened a dialog", async () => {
   await user.click(screen.getByRole("button", { name: "Merge with…" }));
 
   expect(trigger.getAttribute("aria-expanded")).toBe("true");
+});
+
+// A dialog on its way out is no longer up: a reader who dismissed it and picked
+// a verb before its exit ended has chosen that verb, and the menu is finished.
+it("closes when an item is chosen while the dialog it opened is leaving", async () => {
+  const exits = holdExits();
+  try {
+    const user = userEvent.setup();
+    render(
+      <OverflowMenu label="More actions">
+        <DialogAction />
+        <button type="button">Archive</button>
+      </OverflowMenu>,
+    );
+    const trigger = screen.getByRole("button", { name: "More actions" });
+    await user.click(trigger);
+    await user.click(screen.getByRole("button", { name: "Merge with…" }));
+    await user.keyboard("{Escape}");
+    expect(document.querySelector(".overlay")?.hasAttribute("inert")).toBe(
+      true,
+    );
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+
+    await user.click(screen.getByRole("button", { name: "Archive" }));
+
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  } finally {
+    exits.mockRestore();
+  }
+});
+
+// A menu drawn INSIDE a dialog is not under it: the dialog is the page it sits
+// on, so Escape and a chosen verb still close the menu, and only the menu.
+it("closes on Escape and on a chosen verb when it sits inside a dialog", async () => {
+  const onDialogClose = vi.fn();
+  const user = userEvent.setup();
+  render(
+    <Modal open onClose={onDialogClose} labelledBy="deal">
+      <Heading size="large" id="deal">
+        Deal
+      </Heading>
+      <OverflowMenu label="More actions">
+        <button type="button">Archive</button>
+      </OverflowMenu>
+    </Modal>,
+  );
+  const trigger = screen.getByRole("button", { name: "More actions" });
+
+  await user.click(trigger);
+  await user.keyboard("{Escape}");
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+
+  await user.click(trigger);
+  await user.click(screen.getByRole("button", { name: "Archive" }));
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(onDialogClose).not.toHaveBeenCalled();
 });
 
 // The trigger's own geometry, asserted here because this is the design system's

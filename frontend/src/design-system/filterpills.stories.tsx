@@ -13,7 +13,7 @@ import { FilterPills } from "./filterpills";
 // whose count is absent, which is not a zero — it is a cut nobody has finished
 // counting yet.
 const meta: Meta<typeof FilterPills> = {
-  title: "Design System/FilterPills",
+  title: "Components/Forms and input/Filter pills",
   component: FilterPills,
   parameters: { layout: "padded" },
   decorators: [

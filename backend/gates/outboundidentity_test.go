@@ -24,8 +24,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"sort"
@@ -50,7 +48,6 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 	// no harder than putting them side by side.
 	byDir := map[string][]*ast.File{}
 	paths := map[*ast.File]string{}
-	fset := token.NewFileSet()
 	for _, root := range identitySurfaceRoots {
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
@@ -66,7 +63,7 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 				strings.HasSuffix(path, "_gen.go") {
 				return nil
 			}
-			file, parseErr := parser.ParseFile(fset, path, nil, 0)
+			file, parseErr := gatekit.ParseFile(path, 0)
 			if parseErr != nil {
 				return parseErr
 			}

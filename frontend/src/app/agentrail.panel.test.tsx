@@ -63,6 +63,7 @@ const PRICED_USAGE = {
 const AI_CALL = {
   id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
   occurred_at: "2026-07-20T10:00:00Z",
+  kind: "completion",
   task: "capture_classify",
   tier: "cheap_cloud",
   provider: "gemini",
@@ -75,6 +76,7 @@ const AI_CALL = {
   cached_tokens: 0,
   latency_ms: 400,
   has_payload: false,
+  decision_attempted: false,
 };
 
 /** The administrator's seat: the only one the month's figure is served to. */

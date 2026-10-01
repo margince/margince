@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
 import { OnboardingScreen } from "../onboarding";
 
@@ -265,6 +266,10 @@ function stubApi(options: StubOptions = {}) {
           return jsonResponse(options.afterConfirmAttempt.read);
         }
         return jsonResponse(options.read ?? readyRead);
+      }
+      // GET /company answers only an admin, so the journey's session is one.
+      if (path.endsWith("/me") && request.method === "GET") {
+        return jsonResponse(meFixture());
       }
       if (path.endsWith("/company") && request.method === "GET") {
         if (confirmAttempted && options.companyAlreadyExists) {
@@ -835,7 +840,6 @@ describe("the conversational company act", () => {
 
     // The decision scene answers with a radio and a Continue, never a
     // message composed and sent.
-    expect(document.querySelector(".mw-composer")).toBeNull();
     expect(screen.queryAllByRole("textbox")).toHaveLength(0);
 
     await userEvent.click(screen.getByRole("radio", { name: /Gradion GmbH/ }));
@@ -844,7 +848,7 @@ describe("the conversational company act", () => {
 
     // The review's own textboxes are the deck's field controls — an answer
     // to a specific, asked question — never a free-text composer beside it.
-    expect(document.querySelector(".mw-composer")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^send\b/i })).toBeNull();
   });
 
   // The dead-end this guards against: the server can hand back several open

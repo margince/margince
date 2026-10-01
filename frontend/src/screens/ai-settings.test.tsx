@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { ProvidersStat, SpendStat } from "./ai-settings";
+import { ProvidersStat, SpendEstimate } from "./ai-settings";
 
 // Settings → AI, as one page: two readings above a strip that chooses between
 // five bodies.
@@ -112,7 +112,12 @@ function backendFor(
   allow: GrantSpec,
   fail: { usage?: boolean; keys?: boolean } = {},
   routing: unknown = ROUTING,
-  reads: { usage?: unknown; calls?: unknown[]; callsFail?: boolean } = {},
+  reads: {
+    usage?: unknown;
+    calls?: unknown[];
+    callsFail?: boolean;
+    keys?: unknown;
+  } = {},
 ) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req =
@@ -128,7 +133,7 @@ function backendFor(
     if (req.url.includes("/ai/provider-keys")) {
       return fail.keys
         ? jsonResponse({ title: "upstream" }, 500)
-        : jsonResponse(KEYS);
+        : jsonResponse(reads.keys ?? KEYS);
     }
     if (req.url.includes("/ai/routing")) {
       return jsonResponse(routing);
@@ -180,28 +185,10 @@ afterEach(() => {
 // the confirm dialog that guarded a routing draft across a shared address —
 // behaviour that no longer exists, because leaving the routing page is an
 // address change the app's own unsaved guard sees.
-// The tokens reading, with the compact markers' CASE left to ICU.
-//
-// compactTokens renders through `Intl.NumberFormat("en-GB", { notation:
-// "compact" })`, and whether the thousands marker comes out "k" or "K" is the
-// ICU build Node ships with — ICU 76 draws "k", later builds "K". Pinning the
-// exact string held only on the builds that agree with it, and would have gone
-// red on every pull request the day `setup-node` resolved `node-version: 24` to
-// one that does not. format.test.ts folds the same suffix for the sibling
-// formatter and says so there.
-//
-// ANCHORED, and exact in everything but case. The digits, the separator and the
-// unit are this screen's to promise, and they are what tells "214k of 1m" apart
-// from "214.0k of 1m" and from the uncompacted "214,000 of 1m" — which is why
-// these assert a whole reading rather than a substring of one.
-//
-// Folded HERE and not in compactTokens: the same formatter draws "1 Mio." for
-// `de`, where the case carries meaning.
-const TOKENS_READING = /^214k of 1m$/i;
 
 const BothStats = () => (
   <>
-    <SpendStat />
+    <SpendEstimate />
     <ProvidersStat />
   </>
 );
@@ -231,15 +218,44 @@ describe("the AI readings", () => {
     vi.stubGlobal("fetch", backendFor(OPERATOR));
     render(<BothStats />);
 
-    // Tokens are the budget the runtime actually enforces, so they ARE the
-    // figure and the unit is in the label; the money is the estimate priced on
-    // read and rides the line under it.
-    expect(screen.getByText(en["aiSettings.spend.label"])).toBeTruthy();
-    expect(await screen.findByText(TOKENS_READING)).toBeTruthy();
-    expect(screen.getByText(/US\$4\.12 spent/)).toBeTruthy();
+    // The money is the estimate priced on read; the tokens it qualifies are
+    // the allowance card's, beside it.
+    expect(await screen.findByText(/US\$4\.12 spent/)).toBeTruthy();
     // One vendor keyed OUT OF the vendors this installation knows about, and
     // the one the routing binds without a key named as the thing to act on.
     expect(await screen.findByText("1 of 2")).toBeTruthy();
+    expect(await screen.findByText(/1 bound, no key/)).toBeTruthy();
+  });
+
+  // The decision model is bound apart from the tiers, and TypeSafe's own API
+  // demands its key like any vendor; a jev_compatible key is optional, so a
+  // lane on it counts toward nothing missing.
+  it("counts the decision model's key as bound, unless that key is optional", async () => {
+    const keys = (optional: boolean, provider: string) => ({
+      providers: [
+        ...KEYS.providers,
+        { provider, configured: false, env_var: "K", optional },
+      ],
+    });
+    const routing = (provider: string) => ({
+      ...ROUTING,
+      decisions: { provider, model: "m" },
+    });
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, {}, routing("jev"), { keys: keys(false, "jev") }),
+    );
+    const official = render(<BothStats />);
+    expect(await screen.findByText(/2 bound, no key/)).toBeTruthy();
+    official.unmount();
+
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, {}, routing("jev_compatible"), {
+        keys: keys(true, "jev_compatible"),
+      }),
+    );
+    render(<BothStats />);
     expect(await screen.findByText(/1 bound, no key/)).toBeTruthy();
   });
 
@@ -267,7 +283,7 @@ describe("the AI readings", () => {
     vi.stubGlobal("fetch", backendFor(BOTH_READINGS));
     render(<BothStats />);
 
-    expect(await screen.findByText(TOKENS_READING)).toBeTruthy();
+    expect(await screen.findByText(/US\$4\.12 spent/)).toBeTruthy();
     expect(await screen.findByText("1 of 2")).toBeTruthy();
     expect(screen.queryByText("Restricted")).toBeNull();
   });
@@ -293,10 +309,11 @@ describe("the AI readings", () => {
       "fetch",
       backendFor(OPERATOR, {}, ROUTING, { usage: UNPRICED_USAGE }),
     );
-    render(<SpendStat />);
+    render(<SpendEstimate />);
 
-    expect(await screen.findByText(TOKENS_READING)).toBeTruthy();
-    expect(screen.getByText(en["aiSettings.spend.notPriced"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["aiSettings.spend.notPriced"]),
+    ).toBeTruthy();
     expect(screen.queryByText(/spent/)).toBeNull();
   });
 

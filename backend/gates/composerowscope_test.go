@@ -45,7 +45,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"maps"
@@ -106,6 +105,14 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the company it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
 	"internal/compose:conversationCTE":    "the signal extractor's conversation fold, read by the sweep under the system principal and by the pipeline trace for the message whose ladder is already gated: the single company a thread resolves to is what an extraction is filed against, and the rows go to the model lane or to a rung that names no company",
 
+	// Deal Scout's evidence reads, inside dealScoutWorker, which binds
+	// PrincipalSystem "agent:deal-scout" before any of them (jobs_dealscout.go).
+	// The company each names is what a suggestion is ABOUT and goes to
+	// deals.RecordSuggestionTx, never to a reader; a rep sees the suggestion
+	// only through deals' suggestion visibility clause, which applies the
+	// company's row scope and every evidence item's content gate.
+	"internal/compose:dealScoutSQL": "the scout's one read of meetings, signal pairs and sent documents, under the deal-scout sweep's system principal: every company it names is one a suggestion is filed against, handed to deals.RecordSuggestionTx and never to a reader",
+
 	// The company rollup's tree walk, found by the aliased-column pass:
 	// `parent_company_id` is an FK to company named for its role, so the
 	// name-derived extractor could not see it at all.
@@ -152,7 +159,8 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// decision not to write.
 	"internal/compose/company360:seatedNow": "the pre-write committee re-read: an unseen seat is still a human's answer, so scoping this would let a reading overwrite the seats it may not see; no id or role escapes the function, only the decision not to write",
 
-	"internal/compose:employerOf": "the contact auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/contactautoenrich.go): it answers which company's published site may describe this contact, and the id is spent inside the same transaction choosing that site — a caller never sees it",
+	"internal/compose:settleWhenSubjectWrote": "the notice consumer's settle pass, under the system principal HandleEvent binds (compose/noticecaseopen.go): it resolves which contacts a connector-captured mail came FROM, and each id is spent inside the same transaction recording that the contact wrote to us and closing their capture-unknown notice cases — a caller never sees it",
+	"internal/compose:employerOf":             "the contact auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/contactautoenrich.go): it answers which company's published site may describe this contact, and the id is spent inside the same transaction choosing that site — a caller never sees it",
 
 	// The project reports' company columns. The scope IS applied — by
 	// referenceScopeClauses (reportsql.go), which renders
@@ -226,6 +234,9 @@ var rowScopeSpellings = map[string]bool{
 	// unscoped, and the fix a reader would reach for from that message is a
 	// second, weaker call over the same row.
 	"EnsureWritable": true, "EnsureWritableLive": true, "HoldWritableLive": true,
+	// The whole-record admissions open with the object grant and then call
+	// EnsureVisible and EnsureWritableLive, so they bound the row the same way.
+	"EnsureReadable": true, "EnsureChangeable": true,
 }
 
 // referenceSite is one SQL select list in the compose tier that names a
@@ -951,14 +962,14 @@ func (p tierFile) Line(pos token.Pos) int { return p.fset.Position(pos).Line }
 // exclude them: the obligation binds code that can reach a shipped binary.
 func tierFiles(t *testing.T, root string) []tierFile {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	var files []tierFile
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 			return err
 		}
-		parsed, parseErr := parser.ParseFile(fset, path, nil, 0)
+		parsed, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			return parseErr
 		}

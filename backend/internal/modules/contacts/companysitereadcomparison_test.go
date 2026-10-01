@@ -33,13 +33,13 @@ func TestCompareCompanySiteReadClassifiesEveryRefreshRelationship(t *testing.T) 
 	}
 	company := Company{
 		DisplayName:   "Acme",
-		CompanySource: companySourceHuman,
+		CompanySource: CompanySourceHuman,
 		ProfileFields: []CompanyProfileField{
-			{Field: fieldIndustry, Value: "Manufacturing", Source: companySourceHuman},
+			{Field: fieldIndustry, Value: "Manufacturing", Source: CompanySourceHuman},
 			{Field: fieldOfferSummary, Value: "Boilers", Source: companySourceSiteRead},
 		},
 		Facts: []CompanyFact{
-			{Category: "proof", Field: "customer_proof", Value: "100 sites", ValueKey: "", Source: companySourceHuman},
+			{Category: "proof", Field: "customer_proof", Value: "100 sites", ValueKey: "", Source: CompanySourceHuman},
 		},
 	}
 
@@ -73,8 +73,8 @@ func TestResolveSiteReadConflictsRequiresAndAppliesExplicitDecisions(t *testing.
 		Facts:         []DeepReadFact{{Category: "proof", Field: "customer_proof", Value: "500 sites"}},
 	}
 	company := Company{
-		ProfileFields: []CompanyProfileField{{Field: fieldIndustry, Value: "Manufacturing", Source: companySourceHuman}},
-		Facts:         []CompanyFact{{Category: "proof", Field: "customer_proof", Value: "100 sites", Source: companySourceHuman}},
+		ProfileFields: []CompanyProfileField{{Field: fieldIndustry, Value: "Manufacturing", Source: CompanySourceHuman}},
+		Facts:         []CompanyFact{{Category: "proof", Field: "customer_proof", Value: "100 sites", Source: CompanySourceHuman}},
 	}
 	base := ConfirmCompanySiteReadInput{
 		DisplayName: "Acme",
@@ -114,7 +114,7 @@ func TestResolveSiteReadConflictsRequiresAndAppliesExplicitDecisions(t *testing.
 
 func TestResolveSiteReadConflictsRejectsStaleAndDuplicateKeys(t *testing.T) {
 	read := SiteRead{ProfileFields: []DeepReadField{{Field: fieldIndustry, Value: "Industrial automation"}}}
-	company := Company{ProfileFields: []CompanyProfileField{{Field: fieldIndustry, Value: "Manufacturing", Source: companySourceHuman}}}
+	company := Company{ProfileFields: []CompanyProfileField{{Field: fieldIndustry, Value: "Manufacturing", Source: CompanySourceHuman}}}
 	cases := map[string][]SiteReadResolution{
 		"stale":     {{Key: fieldOfferSummary, Action: siteReadResolutionKeep}},
 		"duplicate": {{Key: fieldIndustry, Action: siteReadResolutionKeep}, {Key: fieldIndustry, Action: siteReadResolutionAccept}},
@@ -146,14 +146,14 @@ func TestResolveSiteReadConflictsAppliesEveryResolutionAction(t *testing.T) {
 	}
 	company := Company{
 		DisplayName:   "Acme GmbH",
-		CompanySource: companySourceHuman,
+		CompanySource: CompanySourceHuman,
 		ProfileFields: []CompanyProfileField{
-			{Field: fieldIndustry, Value: "Manufacturing", Source: companySourceHuman},
-			{Field: fieldOfferSummary, Value: "Factory software", Source: companySourceHuman},
+			{Field: fieldIndustry, Value: "Manufacturing", Source: CompanySourceHuman},
+			{Field: fieldOfferSummary, Value: "Factory software", Source: CompanySourceHuman},
 		},
 		Facts: []CompanyFact{
-			{Category: "proof", Field: "customer_proof", Value: "100 sites", Source: companySourceHuman},
-			{Category: "market", Field: "geographies", Value: "Germany", ValueKey: "dach", Source: companySourceHuman},
+			{Category: "proof", Field: "customer_proof", Value: "100 sites", Source: CompanySourceHuman},
+			{Category: "market", Field: "geographies", Value: "Germany", ValueKey: "dach", Source: CompanySourceHuman},
 		},
 	}
 	customIndustry := "Factory intelligence"
@@ -192,7 +192,7 @@ func TestResolveSiteReadConflictsAppliesEveryResolutionAction(t *testing.T) {
 
 func TestResolveSiteReadConflictsRejectsInvalidResolutionValues(t *testing.T) {
 	read := SiteRead{ProfileFields: []DeepReadField{{Field: fieldIndustry, Value: "Industrial automation"}}}
-	company := Company{ProfileFields: []CompanyProfileField{{Field: fieldIndustry, Value: "Manufacturing", Source: companySourceHuman}}}
+	company := Company{ProfileFields: []CompanyProfileField{{Field: fieldIndustry, Value: "Manufacturing", Source: CompanySourceHuman}}}
 	value := "unexpected"
 	blank := "   "
 	cases := map[string]SiteReadResolution{
@@ -464,8 +464,8 @@ func TestApplyResolvedHumanFactsWritesAuditableValues(t *testing.T) {
 	if got := tx.calls[1].args[4]; got != NormalizeFactValueKey("New Customer") {
 		t.Fatalf("multi-value key = %v, want normalized custom value", got)
 	}
-	if got := applied[0][auditKeySource]; got != companySourceHuman {
-		t.Fatalf("audit source = %v, want %q", got, companySourceHuman)
+	if got := applied[0][auditKeySource]; got != CompanySourceHuman {
+		t.Fatalf("audit source = %v, want %q", got, CompanySourceHuman)
 	}
 }
 

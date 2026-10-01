@@ -46,8 +46,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -128,6 +126,9 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:RestoreContactTx": "an un-archive writes archived child rows on purpose: it brings back exactly the rows the contact's archive retired, matched on that archive's own archived_at stamp, and storekit.Unarchive patches the contact row with IncludeArchived",
+	"internal/modules/contacts:RestoreCompanyTx": "the company un-archive, which brings back exactly the rows the company's archive retired, matched on that archive's own stamp",
+	"internal/modules/deals:RestoreDealTx":       "the deal un-archive, which brings back exactly the relationships the deal's archive retired, matched on that archive's own stamp",
 	// ERASURE AND RETENTION MUST WRITE ARCHIVED ROWS. This is the family that
 	// makes a row-level trigger impossible, and the reason each entry gives is
 	// the specific destruction it performs rather than a restatement of that
@@ -343,7 +344,6 @@ func TestEveryByIDWriteOfARetirableRowAnswersForLiveness(t *testing.T) {
 	t.Parallel()
 	defer livenessUnstated.AssertAllMatched(t)
 	retirable := retirableTables(t)
-	fset := token.NewFileSet()
 	heldCache := map[string]map[string][]string{}
 	judged := 0
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform"} {
@@ -353,7 +353,7 @@ func TestEveryByIDWriteOfARetirableRowAnswersForLiveness(t *testing.T) {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(fset, path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}

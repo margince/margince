@@ -21,12 +21,6 @@ const KEY_OWNERS = [
     writers: ["src/screens/companyprojects.tsx"],
     invalidates: '["company360", companyId]',
   },
-  {
-    page: "src/screens/contact360.tsx",
-    key: '["contact360", id]',
-    writers: ["src/screens/contactprojects.tsx"],
-    invalidates: '["contact360", contactId]',
-  },
 ];
 
 describe("the project-link sections invalidate the keys their pages read", () => {

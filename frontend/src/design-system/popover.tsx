@@ -24,6 +24,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAnchoredToTrigger } from "./anchored";
 import { Button, type ButtonVariant } from "./atoms";
+import { coveredByDialog } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
 import { usePortalPanelFocus } from "./portalfocus";
 import "./popover.css";
@@ -136,7 +137,7 @@ export function Popover({
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") {
+      if (event.key !== "Escape" || coveredByDialog(trigger.current)) {
         return;
       }
       event.preventDefault();

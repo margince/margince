@@ -3,7 +3,7 @@
 
 package compose
 
-// The three routes a share has: issue it, open it, close it.
+// The four routes a share has: issue it, list your own, open it, close it.
 //
 // Opening is the one that carries the whole design. The caller is a colleague
 // signed in as themselves, so the reading is computed under THEIR grants and
@@ -70,6 +70,28 @@ func (h analyticsShareHandlers) CreateForecastShare(w http.ResponseWriter, r *ht
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, out)
+}
+
+// ListForecastShares implements GET /forecast/shares.
+func (h analyticsShareHandlers) ListForecastShares(w http.ResponseWriter, r *http.Request) {
+	var data []crmcontracts.ForecastShare
+	if err := h.forecast.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
+		shares, err := h.shares.ListIssued(ctx, tx)
+		if err != nil {
+			return err
+		}
+		data = make([]crmcontracts.ForecastShare, 0, len(shares))
+		for _, share := range shares {
+			data = append(data, shareToWire(share))
+		}
+		return nil
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, struct {
+		Data []crmcontracts.ForecastShare `json:"data"`
+	}{Data: data})
 }
 
 // RevokeForecastShare implements DELETE /forecast/shares/{id}.
@@ -241,17 +263,15 @@ func shareFromBody(in crmcontracts.NewForecastShare) (NewShare, error) {
 	return out, nil
 }
 
-// issuedShareToWire renders the share with its token, which is the only moment
-// the token exists outside the caller that asked for it.
-func issuedShareToWire(in Share, token string) crmcontracts.IssuedForecastShare {
-	scopeKind := crmcontracts.IssuedForecastShareScopeKind(in.Scope.Kind)
-	out := crmcontracts.IssuedForecastShare{
+// shareToWire renders a share without its token. A workspace share names no
+// scope subject and a live one no snapshot, so both are absent rather than null.
+func shareToWire(in Share) crmcontracts.ForecastShare {
+	out := crmcontracts.ForecastShare{
 		Id:        openapi_types.UUID(in.ID),
-		Kind:      crmcontracts.IssuedForecastShareKind(in.Kind),
+		Kind:      crmcontracts.ForecastShareKind(in.Kind),
 		Target:    in.Target,
-		ScopeKind: &scopeKind,
+		ScopeKind: crmcontracts.ForecastShareScopeKind(in.Scope.Kind),
 		ExpiresAt: in.ExpiresAt,
-		Token:     token,
 		CreatedAt: in.CreatedAt,
 	}
 	if in.Scope.ID != nil {
@@ -263,6 +283,24 @@ func issuedShareToWire(in Share, token string) crmcontracts.IssuedForecastShare 
 		out.SnapshotId = &id
 	}
 	return out
+}
+
+// issuedShareToWire renders the share with its token, which is the only moment
+// the token exists outside the caller that asked for it.
+func issuedShareToWire(in Share, token string) crmcontracts.IssuedForecastShare {
+	listed := shareToWire(in)
+	scopeKind := crmcontracts.IssuedForecastShareScopeKind(listed.ScopeKind)
+	return crmcontracts.IssuedForecastShare{
+		Id:         listed.Id,
+		Kind:       crmcontracts.IssuedForecastShareKind(listed.Kind),
+		Target:     listed.Target,
+		ScopeKind:  &scopeKind,
+		ScopeId:    listed.ScopeId,
+		SnapshotId: listed.SnapshotId,
+		ExpiresAt:  listed.ExpiresAt,
+		CreatedAt:  listed.CreatedAt,
+		Token:      token,
+	}
 }
 
 // ExportForecastShare implements GET /forecast/shared/{token}/export.csv.

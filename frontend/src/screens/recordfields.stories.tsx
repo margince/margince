@@ -4,7 +4,7 @@ import { type FieldRecord, RecordFields } from "./recordfields";
 import { StoryProviders } from "./story-utils";
 
 const meta: Meta = {
-  title: "Records/Details fields",
+  title: "Records/Record 360/Details fields",
   parameters: { layout: "padded" },
 };
 export default meta;

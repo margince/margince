@@ -191,9 +191,53 @@ jobs:
               - *backend_db
               - 'AGENTS.md'
               - 'CLAUDE.md'
-              - 'frontend/AGENTS.md'
-              - 'frontend/CLAUDE.md'
               - 'docs/**'
+              # The SPA and the launcher, because 48 gates under backend/gates/
+              # READ them: the vocabulary gate reads frontend comments, the
+              # design-system gates read its components, and the launcher's
+              # platform files are walked for build tags. Listed as whole trees
+              # rather than as the files those gates happen to name today — a
+              # scope that lists individual files stops covering the next one,
+              # which is how one frontend path came to sit in backend_db alone.
+              #
+              # A gate must RUN in a lane every path it reads can trigger. It
+              # did not: a frontend-only PR broke the vocabulary gate and merged
+              # green, and the red then surfaced on unrelated backend branches
+              # where it read as their fault — three sessions found and fixed it
+              # independently, two of them paying a full integration lane.
+              # backend/gates/gatelanetrigger_test.go fails when a gate reads a
+              # path this scope does not cover.
+              #
+              # In `backend` and NOT in backend_db: these gates are Go unit
+              # tests, so a frontend edit runs them and still boots no Postgres
+              # shard — the cut this split exists to make.
+              - 'frontend/**'
+              - 'desktop/**'
+              # And everything else a gate opens. This list is DERIVED, not
+              # remembered: gatelanetrigger_test.go resolves every path literal
+              # in the suite against the tree and fails on one no pattern here
+              # covers, so the next file a gate reaches for fails on the branch
+              # that added it. The first version of that census enumerated seven
+              # directory prefixes and missed `.github/labels.yml` and this
+              # `package.json`, which is why it derives now.
+              - '.github/**'
+              - '.coderabbit.yaml'
+              - '.env.example'
+              - '.tool-versions'
+              - 'config/**'
+              - 'e2e/**'
+              - 'tools/**'
+              - 'user-guide/**'
+              - 'Dockerfile*'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'renovate.json'
+              - 'README.md'
+              - 'CHANGELOG.md'
+              - 'CODE_OF_CONDUCT.md'
+              - 'CONTRIBUTING.md'
+              - 'SECURITY.md'
+              - 'SUPPORT.md'
             frontend:
               - 'frontend/**'
               - 'backend/api/**'
@@ -425,7 +469,7 @@ jobs:
         working-directory: .
         run: make test-desktop-launcher LAUNCHER_COVER_OUT=desktop/launcher/coverage.out
       - name: Upload launcher coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-artifact-retried
         with:
           name: go-coverage-launcher
           path: desktop/launcher/coverage.out
@@ -504,7 +548,7 @@ jobs:
         working-directory: .
         run: make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
       - name: Upload extension coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-artifact-retried
         with:
           name: go-coverage-extensions
           path: backend/coverage-extensions.out
@@ -925,7 +969,7 @@ jobs:
         # not verifying the scanner binary at all, trading an occasional lost
         # scan for permanently trusting an unverified download.
         timeout-minutes: 8
-        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         with:
           # WHICH BRANCH THIS ANALYSIS IS FILED UNDER, said for every event
           # rather than for one.

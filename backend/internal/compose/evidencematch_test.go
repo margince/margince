@@ -45,7 +45,7 @@ func TestGateEvidenceKeepsNormalizedQuotesAndReportsEveryDropReason(t *testing.T
 		{"field":"not_a_field","value":"x","evidence_snippet":"Ihr Partner","confidence":0.9},
 		{"field":"usp","value":"Partner","evidence_snippet":"Ihr Partner für Automatisierung","confidence":1.5}]}`
 
-	fields, dropped := gateEvidence(reply, page, "https://acme.example", coldStartFieldValid)
+	fields, dropped := gateEvidence(reply, page, "https://acme.example", coldStartFieldValid, nil)
 
 	if len(fields) != 1 || fields[0].Field != "display_name" {
 		t.Fatalf("the normalized-quote snippet should be the one survivor, got %+v", fields)

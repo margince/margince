@@ -8,6 +8,10 @@
  * also the filled one below, so it still stands out in a column of open rows. */
 
 .visibility {
+  /* Badge's type and box, so its 20px floor is the height it draws at rather
+     than one inherited line box taller wherever it lands in body type. */
+  font: var(--fontBodySmall);
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -69,4 +73,50 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+/* The mark that opens more about itself. The caret trims the pill's trailing
+   inset, since the glyph carries its own side bearing. The pressable state is
+   read off the button the mark sits in: the edge takes the accent, as a
+   `.chip-link` does, while the pointer rests on it and while its panel is
+   open, and nothing else on the line moves. */
+.visibility-opens {
+  padding-inline-end: var(--space-1);
+  transition: border-color var(--dur-state) var(--ease-out);
+}
+
+.visibility-opens > svg:last-child {
+  color: var(--textSecondary);
+}
+
+:is(button:hover, button[aria-expanded="true"]) > .visibility-opens {
+  border-color: var(--accent);
+}
+
+/* The focus ring is drawn on the pill, not on the button around it: the
+   popover trigger's own ring is a square-cornered box, and under a coarse
+   pointer the button is a 44px target the pill floats in. The trigger rule is
+   matched with one class more so the pill's ring wins in either file order. */
+.popover-trigger:not(.btn):has(> .visibility-opens):focus-visible {
+  outline: none;
+}
+
+button:focus-visible > .visibility-opens {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* The product's touch floor (see `.stat-card-open` in atoms.css): the button
+   grows to a thumb's target and the pill stays centred in it at its own
+   height, so a row of marks keeps one line of pills. */
+@media (pointer: coarse) {
+  button:has(> .visibility-opens) {
+    min-block-size: max(var(--controlHeight), 44px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visibility-opens {
+    transition: none;
+  }
 }

@@ -20,9 +20,10 @@ var (
 	readOnly   = grant{Read: true}
 	readUpdate = grant{Read: true, Update: true}
 	// writeNoDelete is the append-forward config posture: create + read +
-	// same-day-correct (update), never delete. The rate sheets (fx_rate,
-	// ai_model_rate) have no delete surface at all — a past-dated row prices
-	// historical rollups and must never disappear — so no role holds delete.
+	// same-day-correct (update), never delete. A past-dated row on a rate sheet
+	// (fx_rate, ai_model_rate) prices historical rollups and must never
+	// disappear on its own, so no role holds delete; removing a model's WHOLE
+	// entry is a correction of the sheet and takes update.
 	writeNoDelete = grant{Create: true, Read: true, Update: true}
 	// createRead is the posture of a record nobody edits: it is recorded, and a
 	// later one supersedes it rather than replacing it in place, so neither
@@ -127,8 +128,8 @@ func grid(base grant, overrides map[string]grant) map[string]grant {
 const (
 	// The rate sheets. Append-forward on every role that holds them —
 	// create, read, same-day-correct, never delete — because a past-dated row
-	// prices a historical rollup and must not disappear. No delete surface
-	// exists at all, so no role holds one.
+	// prices a historical rollup and must not disappear. The one removal the
+	// product offers, a model's whole entry, is gated on update.
 	objAiModelRate = "ai_model_rate"
 	// Which vendor this installation's text is sent to (ai-operational-spec
 	// §1.4). Deliberately NOT folded into installation_settings: whoever may
@@ -282,6 +283,15 @@ const (
 	// construction: the licensee, the entitlement and the contract terms stay
 	// on objLicense, so Management can plan headcount without reading them.
 	objSeatUsage = "seat_usage"
+	// Every team's coaching week, read by a seat that leads none of them. A
+	// lead reads their own team's week without it. Admin and management hold
+	// read; read_only holds nothing, because reaching every record is not a
+	// claim to read a manager's verdict on a named colleague.
+	objTeamOversight = "team_oversight"
+	// Leading the teams a seat is on: create raises a coaching notice for a
+	// teammate, read opens a led team's week. Admin, management and manager
+	// hold both; a rep on a team does not coach their teammates.
+	objTeamLead = "team_lead"
 )
 
 // AdministrationObjects are the grants that reach back and change who may do

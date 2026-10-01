@@ -11,6 +11,8 @@ import {
   firstWeek,
   narratedWeek,
   PRIOR_WEEK_START,
+  sharedWeeklyNumbers,
+  unavailableWeeklyNumbers,
   WEEK_START,
   type WeeklyReview,
   weeklyLearnings,
@@ -133,7 +135,7 @@ function OutlookFrame({
 }
 
 const meta: Meta<typeof WeeklySection> = {
-  title: "Shell/Home weekly review",
+  title: "Shell/Home/Weekly review",
   component: WeeklySection,
 };
 export default meta;
@@ -421,6 +423,28 @@ export const CompletedUndatedWork: Story = {
             tasks_due: 0,
             tasks_done: 0,
           },
+        }),
+      [WEEK_START],
+    ),
+  ),
+};
+
+export const SharedMetricDefinitions: Story = {
+  render: panel(
+    weekly(
+      () =>
+        jsonResponse({ ...narratedWeek, numeric_summary: sharedWeeklyNumbers }),
+      [WEEK_START],
+    ),
+  ),
+};
+export const SharedMetricsUnavailable: Story = {
+  render: panel(
+    weekly(
+      () =>
+        jsonResponse({
+          ...narratedWeek,
+          numeric_summary: unavailableWeeklyNumbers,
         }),
       [WEEK_START],
     ),

@@ -197,7 +197,7 @@ func humanVerdictPatch(
 	if value != nil {
 		p.Set(auditKeyValue, before.Value, *value)
 	}
-	p.Set(auditKeySource, before.Source, companySourceHuman)
+	p.Set(auditKeySource, before.Source, CompanySourceHuman)
 	p.Set(auditKeyVerifiedAt, before.VerifiedAt, now)
 	p.Set(auditKeyVerifiedBy, before.VerifiedBy, by)
 	// The row changes HANDS, not just provenance. Both enrichment upserts

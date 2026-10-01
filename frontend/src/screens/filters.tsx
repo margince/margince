@@ -13,11 +13,9 @@
 import { useState } from "react";
 import { navigate } from "../app/router";
 import { Badge, SegmentedControl } from "../design-system/atoms";
-import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type PluralBase, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryStates } from "./common";
 import { FilterBuilder } from "./filterbuilder";
@@ -28,41 +26,64 @@ import {
   type VocabularyField,
 } from "./filterdata";
 import { canExportFilter, ExportFilterMenu } from "./filterexport";
+import { SaveFilterListAction } from "./filterlist";
+import {
+  buildTabOf,
+  EDIT_LIST_SEGMENT,
+  EditingListNotice,
+  SaveToListAction,
+  useOpenListFromAddress,
+} from "./filterlistedit";
+import { MatchCount } from "./filtermatchcount";
+import {
+  PlainWordsFilter,
+  type UnusedPhrase,
+  UnusedPhrases,
+} from "./filterpropose";
 import { FilterResults } from "./filterresults";
+import { ListLibrary } from "./listlibrary";
+import { ListScreen } from "./listpage";
+import { useList, useListsAvailable } from "./lists.queries";
+import { MyViews } from "./myviews";
 import "./filters.css";
 import {
+  filterTreeOf,
   LoadFilterViewMenu,
   SaveFilterViewAction,
+  useSavedViews,
   type ViewResource,
 } from "./savedviews";
 import { fieldsNamed, type Node, newGroup } from "./segmentpredicate";
 
 /**
- * The three object tabs AC-1 names, and the record type each reads.
+ * The object tabs, and the record type each reads.
  *
  * The tab says "Contacts" and the vocabulary says "contact": the wire's word and
  * the product's word differ, and this is the one place that correspondence is
  * written down rather than assumed at each call site.
  */
-const OBJECT_TABS = ["contacts", "companies", "deals"] as const;
+const OBJECT_TABS = ["contacts", "companies", "deals", "leads"] as const;
 type ObjectTab = (typeof OBJECT_TABS)[number];
 
 const RESOURCE_OF: Record<ObjectTab, FilterResource> = {
   contacts: "contact",
   companies: "company",
   deals: "deal",
+  leads: "lead",
 };
 
 const TAB_LABEL: Record<ObjectTab, MessageKey> = {
   contacts: "filters.tab.contacts",
   companies: "filters.tab.companies",
   deals: "filters.tab.deals",
+  leads: "filters.tab.leads",
 };
 
-const MATCH_LABEL: Record<ObjectTab, MessageKey> = {
+const MATCH_LABEL: Record<ObjectTab, PluralBase> = {
   contacts: "filters.matchContacts",
   companies: "filters.matchCompanies",
   deals: "filters.matchDeals",
+  leads: "filters.matchLeads",
 };
 
 /** The plural noun the results table counts and names its empty state by. */
@@ -70,6 +91,7 @@ const UNIT_LABEL: Record<ObjectTab, MessageKey> = {
   contacts: "unit.contacts",
   companies: "unit.companies",
   deals: "unit.deals",
+  leads: "unit.leads",
 };
 
 /**
@@ -85,6 +107,7 @@ const VIEW_OF: Record<ObjectTab, ViewResource> = {
   contacts: "contacts",
   companies: "companies",
   deals: "deals",
+  leads: "leads",
 };
 
 /** A resource this screen can address, or the default when the route names none. */
@@ -92,7 +115,88 @@ function tabFromRoute(id: string | undefined): ObjectTab {
   return OBJECT_TABS.find((tab) => tab === id) ?? "contacts";
 }
 
-export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
+/**
+ * The library's three sections, while lists are switched on: the reader's own
+ * views, the shared views, and the builder a Live List is made in. Each is an
+ * address — `#/filters/lists`, `#/filters/views`, or an object tab for Build —
+ * so Back returns to the section the reader left.
+ */
+const SECTIONS = ["views", "lists", "build"] as const;
+type Section = (typeof SECTIONS)[number];
+
+function sectionFromRoute(id: string | undefined): Section {
+  return id === "lists" || id === "views" ? id : "build";
+}
+
+export function FiltersScreen({
+  id,
+  list,
+  view,
+}: Readonly<{ id?: string; list?: string; view?: string }>) {
+  const t = useT();
+  const listsOn = useListsAvailable();
+  // One opened list. It loads with the library that opens it, as one chunk.
+  if (list !== undefined) {
+    return <ListScreen listID={list} />;
+  }
+  if (!listsOn) {
+    return (
+      <div className="wrap">
+        <FilterBuildScreen id={id} view={view} />
+      </div>
+    );
+  }
+  const section = sectionFromRoute(id);
+  return (
+    <div className="wrap filters-screen">
+      <div className="filters-object-row">
+        <SegmentedControl
+          options={SECTIONS}
+          value={section}
+          onChange={(next) =>
+            navigate({
+              screen: "filters",
+              id: next === "build" ? undefined : next,
+            })
+          }
+          labels={{
+            views: t("lists.section.views"),
+            lists: t("lists.section.lists"),
+            build: t("lists.section.build"),
+          }}
+          label={t("lists.section.label")}
+        />
+      </div>
+      {section === "lists" && <ListLibrary />}
+      {section === "views" && <MyViews />}
+      {section === "build" &&
+        (id === EDIT_LIST_SEGMENT && view ? (
+          <ListFilterBuild listID={view} />
+        ) : (
+          <FilterBuildScreen id={id} view={view} />
+        ))}
+    </div>
+  );
+}
+
+/**
+ * `#/filters/list/<id>`: the builder on that Live List's filter, on the tab of
+ * its record type once the list has been read.
+ */
+function ListFilterBuild({ listID }: Readonly<{ listID: string }>) {
+  const list = useList(listID);
+  if (list.isPending) {
+    return null;
+  }
+  const tab = list.data ? buildTabOf(list.data.entity_type) : undefined;
+  return <FilterBuildScreen id={tab} editList={tab ? listID : undefined} />;
+}
+
+function FilterBuildScreen({
+  id,
+  view,
+  editList,
+}: Readonly<{ id?: string; view?: string; editList?: string }>) {
   const t = useT();
   // The ADDRESS is which object is being filtered. It was read once, on mount,
   // and never written back — so pressing a tab moved the screen and left the
@@ -103,6 +207,16 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
   // nothing on a deal — carrying the tree across would offer the human a filter
   // the new vocabulary refuses.
   const [tree, setTree] = useState<Node>(() => newGroup("and"));
+  // What the last plain-words proposal could not use, kept until the next one
+  // or until the reader puts it away.
+  const [unused, setUnused] = useState<readonly UnusedPhrase[]>([]);
+  const openingView = useOpenViewFromAddress(VIEW_OF[tab], view, setTree);
+  const { edited, opening: openingList } = useOpenListFromAddress(
+    editList,
+    tab,
+    setTree,
+  );
+  const opening = openingView || openingList;
 
   const resource = RESOURCE_OF[tab];
   const vocabulary = useFilterVocabulary(resource);
@@ -114,10 +228,11 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
     // address changed, not beside it — `id` is what this screen renders from.
     navigate({ screen: "filters", id: next });
     setTree(newGroup("and"));
+    setUnused([]);
   };
 
   return (
-    <div className="wrap filters-screen">
+    <div className="filters-screen">
       {/* The object control alone. The page's name and its subtitle belong to
           the shell's page head, which names every rail destination — a screen
           that printed them again would put two page titles in one document, and
@@ -131,11 +246,13 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
             contacts: t(TAB_LABEL.contacts),
             companies: t(TAB_LABEL.companies),
             deals: t(TAB_LABEL.deals),
+            leads: t(TAB_LABEL.leads),
           }}
           label={t("filters.objectLabel")}
         />
       </div>
 
+      {edited && <EditingListNotice edited={edited} />}
       <Panel
         title={t("filters.builderTitle")}
         // Below the builder, not beside the count: the export takes the filter
@@ -162,7 +279,7 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
             menus — measured 614px at a 390px viewport. */}
         <PanelBody className="filters-count-row">
           <MatchCount
-            tab={tab}
+            label={MATCH_LABEL[tab]}
             count={preview.data?.match_count}
             stale={preview.isFetching}
             failed={preview.isError}
@@ -173,10 +290,31 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
           <Badge tone="accent">{t("filters.dynamic")}</Badge>
           <LoadFilterViewMenu resource={VIEW_OF[tab]} onLoad={setTree} />
           <SaveFilterViewAction resource={VIEW_OF[tab]} tree={tree} />
+          {edited && <SaveToListAction edited={edited} tree={tree} />}
+          <SaveFilterListAction resource={resource} tree={tree} />
+        </PanelBody>
+        <PanelBody>
+          {/* Keyed by object so a sentence typed for contacts is not offered
+              to deals, whose vocabulary it was never read against. */}
+          <PlainWordsFilter
+            key={resource}
+            resource={resource}
+            tree={tree}
+            onApply={(next, phrases) => {
+              if (next !== null) {
+                setTree(next);
+              }
+              setUnused(phrases);
+            }}
+          />
         </PanelBody>
         <PanelBody>
           <SurfaceState
-            state={vocabularyState(vocabulary.isPending, vocabulary.isError)}
+            state={
+              opening
+                ? "loading"
+                : vocabularyState(vocabulary.isPending, vocabulary.isError)
+            }
             emptyLabel={t("filters.noFields")}
             loadingLabel={t("filters.loadingVocabulary")}
             // The builder that lands here is a condition row plus its verbs.
@@ -189,6 +327,15 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
             />
           </SurfaceState>
         </PanelBody>
+        {unused.length > 0 && (
+          <PanelBody>
+            <UnusedPhrases
+              unused={unused}
+              fields={vocabulary.data?.fields ?? []}
+              onDismiss={() => setUnused([])}
+            />
+          </PanelBody>
+        )}
       </Panel>
 
       <PreviewSection
@@ -199,6 +346,38 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
       />
     </div>
   );
+}
+
+/**
+ * Loads the saved view the address names into the builder, and answers true
+ * while it is still being read. The builder stays a skeleton until then, so
+ * nothing the reader types can be replaced by the view arriving late. The
+ * views are read afresh, because a cached list may predate the view; one that
+ * is gone or unreadable leaves an empty builder once that read has settled.
+ * The screen remounts per address, so this loads at most once.
+ */
+function useOpenViewFromAddress(
+  resource: ViewResource,
+  viewId: string | undefined,
+  load: (tree: Node) => void,
+): boolean {
+  const views = useSavedViews(resource, viewId !== undefined);
+  const [opened, setOpened] = useState(false);
+  if (viewId === undefined || opened) {
+    return false;
+  }
+  const found = views.data?.find((row) => row.id === viewId);
+  const tree = found ? filterTreeOf(found) : null;
+  if (tree) {
+    setOpened(true);
+    load(tree);
+    return false;
+  }
+  const settled = !views.isFetching && (views.isSuccess || views.isError);
+  if (settled) {
+    setOpened(true);
+  }
+  return !settled;
 }
 
 /**
@@ -257,64 +436,6 @@ function PreviewSection({
         />
       </PanelBody>
     </Panel>
-  );
-}
-
-/**
- * The count, and whether it is behind.
- *
- * Four readings, and keeping them apart is the point. A count the server has
- * answered reads plainly. A count being recomputed reads as the LAST answer,
- * marked stale — not as a spinner, because a number that vanishes on every
- * keystroke is harder to read than one that lags a moment. A tree with no
- * complete clause has no count at all, which is different from a count of zero:
- * zero means "nothing matches", and this means "you have not asked yet". And a
- * count the server was asked for and refused says exactly that.
- *
- * The refusal outranks the other three. It is read first because the previous
- * answer survives a failed refetch, so a stale number would otherwise be
- * presented as current, and because "you have not asked yet" over a finished
- * clause blames the reader for the server's refusal.
- */
-function MatchCount({
-  tab,
-  count,
-  stale,
-  failed,
-}: Readonly<{
-  tab: ObjectTab;
-  count: number | undefined;
-  stale: boolean;
-  failed: boolean;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  if (failed) {
-    // Silent: the results card below carries the reason in an assertive live
-    // region, and announcing the same failure twice fragments it.
-    return (
-      <span className="filters-count">
-        <ErrorLine inline standing>
-          {t("filters.countUnavailable")}
-        </ErrorLine>
-      </span>
-    );
-  }
-  if (count === undefined) {
-    return <span className="filters-count">{t("filters.noFilterYet")}</span>;
-  }
-  return (
-    <span
-      className="filters-count"
-      // Spoken, because the count changing is the feedback for every edit — a
-      // sighted reader sees the number move and a screen-reader user would
-      // otherwise get nothing back from adding a clause.
-      role="status"
-      aria-busy={stale}
-      data-stale={stale ? "true" : undefined}
-    >
-      {t(MATCH_LABEL[tab], { count: formatNumber(count, locale) })}
-    </span>
   );
 }
 

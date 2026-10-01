@@ -36,7 +36,13 @@ const FIELDS = Object.keys(LABELS) as CompanyFieldName[];
  */
 function Deck({
   prefilled = {},
-}: Readonly<{ prefilled?: Readonly<Partial<Record<string, string>>> }>) {
+  settled = 0,
+  openQuestions = 0,
+}: Readonly<{
+  prefilled?: Readonly<Partial<Record<string, string>>>;
+  settled?: number;
+  openQuestions?: number;
+}>) {
   const [typed, setTyped] = useState<Readonly<Record<string, string>>>({});
   const cardFor = (field: CompanyFieldName): DeckCard => ({
     field,
@@ -51,7 +57,7 @@ function Deck({
       <ReviewDeck
         cards={all.filter((entry) => entry.value === "")}
         cardOf={cardFor}
-        settled={0}
+        settled={settled}
         onField={(field, value) =>
           setTyped((current) => ({ ...current, [field]: value }))
         }
@@ -59,7 +65,7 @@ function Deck({
         pending={false}
         blockers={[]}
         held={false}
-        openQuestions={0}
+        openQuestions={openQuestions}
         digest={() => null}
       />
     </LocaleProvider>
@@ -100,4 +106,25 @@ it("drops a field the read settled ahead of the cursor, and keeps one behind it"
     <Deck prefilled={{ display_name: "Gradion", offer_summary: "Tools" }} />,
   );
   expect(screen.getByText("1 of 2 left")).toBeInTheDocument();
+});
+
+it.each([
+  [1, "1 fact added from evidence", "1 unanswered question. The record"],
+  [2, "2 facts added from evidence", "2 unanswered questions. The record"],
+])(
+  "counts the settled facts and open questions in the tray (%i)",
+  (count, settledLine, openLine) => {
+    render(<Deck settled={count} openQuestions={count} />);
+    expect(screen.getByText(settledLine)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(openLine))).toBeInTheDocument();
+  },
+);
+
+it.each([
+  [1, "Nothing left to decide. 1 fact on record."],
+  [2, "Nothing left to decide. 2 facts on record."],
+])("says how many facts a cleared deck holds (%i)", (count, line) => {
+  const answered = Object.fromEntries(FIELDS.map((field) => [field, "set"]));
+  render(<Deck prefilled={answered} settled={count} />);
+  expect(screen.getByText(line)).toBeInTheDocument();
 });

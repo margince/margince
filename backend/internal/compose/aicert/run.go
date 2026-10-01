@@ -16,60 +16,11 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
-
-// runScenario drives repeats runs of one scenario, folding each into acc, and
-// returns its run set for certifyTask to judge beside its siblings. The per-run
-// degrade gates sit here rather than inside certifyTask because they void the
-// WHOLE task: a demoted answer or a demoted grader anywhere in the set means no
-// record, not a lower band.
-func runScenario(ctx context.Context, task ai.Task, sc Scenario, stamp string, census *aitasks.Registry, repeats int,
-	candidateRouter *ai.Router, candidateRec *traceRecorder, judgeRouter *ai.Router, judgeRec *traceRecorder,
-	log *slog.Logger, acc *taskAccumulation, trace *payloadTrace, journal taskJournal,
-) ([]RunResult, error) {
-	scenarioResults := make([]RunResult, 0, repeats)
-	for i := 0; i < repeats; i++ {
-		run := i + 1
-		outcome, replayed := journal.lookup(sc, stamp, run)
-		if replayed {
-			log.InfoContext(ctx, "aicert: replaying a journaled run — not paying for it again",
-				"task", string(task), "scenario", sc.Name, "run", run)
-		} else {
-			var runErr error
-			outcome, runErr = driveRun(ctx, candidateRouter, candidateRec, judgeRouter, judgeRec, sc, task, census, log, trace, journal, run)
-			if runErr != nil {
-				return nil, fmt.Errorf("aicert: task %s scenario %s run %d: %w", task, sc.Name, run, runErr)
-			}
-		}
-		// Applied to a replayed run too, though only a run that already passed
-		// it is ever journaled: one gate over both paths is one answer to
-		// "may this run be certified", rather than two that can drift apart.
-		if err := degradeGate(task, sc, run, outcome); err != nil {
-			return nil, err
-		}
-		// Journaled only once the accumulation ACCEPTS it, never before. addRun
-		// enforces served-identity uniformity across the whole set, which is a
-		// property of the set and not of this run: journaling first would store a
-		// run that was then rejected, and every restart inside the window would
-		// replay it and fail the task again — a transient provider drift made
-		// sticky for six hours, escapable only by throwing away the whole
-		// journal with RESUME=.
-		if err := acc.addRun(task, sc, i, outcome); err != nil {
-			return nil, err
-		}
-		if !replayed {
-			journal.append(ctx, sc, stamp, run, outcome, nowFunc(), log)
-		}
-		scenarioResults = append(scenarioResults, outcome.RunResult)
-	}
-	acc.scenarios = append(acc.scenarios, scenarioRow(sc, stamp, scenarioResults))
-	return scenarioResults, nil
-}
 
 // degradeGate voids the whole task when a run was served, or graded, on a
 // budget-degraded route. It is a gate rather than a lower band on purpose: a
@@ -91,111 +42,37 @@ func degradeGate(task ai.Task, sc Scenario, run int, outcome runOutcome) error {
 	return nil
 }
 
-// runAttempts is how many times one run is driven before its task is given up.
-//
-// The router itself retries nothing: ai.attemptLadder walks each bound rung
-// exactly once, and the cert lane binds ONE model to every rung, so a dropped
-// connection burns the whole ladder in milliseconds and returns. Three attempts
-// here is what stands between a transient fault and discarding every run the
-// task had already paid for.
-const runAttempts = 3
-
-// runRetryBackoff is the wait before each re-drive, indexed by the attempt
-// about to be made. It rises because the fault worth retrying — a connection
-// dropped under an idle HTTP/2 ping, a broker shedding load — clears on its own
-// timescale rather than instantly, and an immediate re-drive usually just buys
-// the same failure at the price of another call.
-var runRetryBackoff = [runAttempts - 1]time.Duration{2 * time.Second, 8 * time.Second}
-
-// sleepFunc is this file's injectable delay, the seam a test swaps so a retry
-// path is exercised without a real wait — the same pattern runner.go's nowFunc
-// uses, and for the same reason: a test that slept for real would be the sort of
-// clock-dependent flake this repo forbids.
-var sleepFunc = func(ctx context.Context, d time.Duration) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-time.After(d):
-		return nil
-	}
-}
-
-// driveRun drives one run, re-driving it whole when the router came back having
-// failed on every bound rung.
-//
-// The retry is at RUN granularity and not call granularity because a run is the
-// smallest thing this lane can repeat honestly: a site may turn a multi-turn
-// conversation or a whole tool loop, and there is no resuming one of those from
-// the middle. Re-driving costs one run; the alternative — what happens today —
-// costs every run the task had already paid for.
-//
-// Only an exhausted ladder is retried. A validator failure, a mixed-model
-// refusal or a caps miss is a measurement, and repeating it until it reads
-// better is how a certification lane starts lying.
-func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceRecorder, judge *ai.Router, judgeRec *traceRecorder,
-	sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, journal taskJournal, run int,
-) (runOutcome, error) {
-	var lastErr error
-	for attempt := 1; attempt <= runAttempts; attempt++ {
-		if attempt > 1 {
-			log.WarnContext(ctx, "aicert: re-driving a run after the router exhausted every bound tier — the calls the failed attempt made are paid for and discarded",
-				"task", string(task), "scenario", sc.Name, "run", run, "attempt", attempt, "err", lastErr)
-			if err := sleepFunc(ctx, runRetryBackoff[attempt-2]); err != nil {
-				return runOutcome{}, errors.Join(err, lastErr)
-			}
-		}
-		outcome, err := runOnce(ctx, candidate, candidateRec, judge, judgeRec, sc, task, census, log, trace, run, attempt)
-		if err == nil {
-			return outcome, nil
-		}
-		if !worthRedriving(err) {
-			return runOutcome{}, err
-		}
-		lastErr = err
-	}
-	return runOutcome{}, fmt.Errorf(
-		"every bound tier failed on all %d attempts — re-run the same command once the provider is reachable%s: %w",
-		runAttempts, journal.restartHint(), lastErr,
-	)
-}
-
-// worthRedriving reports whether err is the router having exhausted its ladder,
-// which is the one failure a later attempt could get past.
-//
-// An exhausted ACCOUNT is excluded by the sentinel itself rather than by a
-// second test here: ai.attemptLadder stops that walk at the refusing rung and
-// returns the refusal alone, never ErrAllTiersFailed, so a spending cap can
-// never be retried into — and one place decides what "the ladder ran out" means.
-// A throttle keeps the sentinel and stays retryable, because backoff is exactly
-// what it asks for. A withheld answer and a rejected request never carry it:
-// the ladder returns an outcome bare. A preference no host meets may, as the
-// last rung's cause, and is excluded: it fails every attempt alike.
-func worthRedriving(err error) bool {
-	return errors.Is(err, ai.ErrAllTiersFailed) && !errors.Is(err, ai.ErrNoUpstreamHost)
-}
-
 // scenarioRow is what this scenario's own runs did, for the record to carry
 // beside the task's pooled numbers. Passed and the reported outcomes are
 // counted separately because they answer different questions: whether the run
 // did what the scenario asked, and what came back when it did not.
-func scenarioRow(sc Scenario, stamp string, results []RunResult) ScenarioRecord {
+func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
+	results := set.Runs
 	tally := tallyOutcomes(results)
-	verdict, _ := Verdict(ScenarioRuns{Runs: results, Bands: sc.Expect.Bands})
+	stats := caseOf(set)
 	row := ScenarioRecord{
 		Scenario:            sc.Name,
 		Site:                sc.Site,
 		Stamp:               stamp,
-		Verdict:             verdict,
-		JudgeBand:           judgeBand(results, sc.Expect.Bands),
+		Verdict:             caseVerdict(stats),
+		JudgeBand:           caseJudgeBand(stats),
+		JudgeScores:         stats.scores,
+		JudgeNone:           set.Mechanical,
 		Runs:                len(results),
 		ReportedAccepted:    tally.accepted,
 		ReportedWrongAnswer: tally.wrongAnswer,
 		ReportedInvalid:     tally.invalid,
 		ReportedAbstained:   tally.abstained,
 	}
+	if !set.Mechanical {
+		row.Bands = &RowBands{CertifiedMin: set.Bands.CertifiedMin, DegradedMin: set.Bands.DegradedMin, Floor: set.Bands.Floor}
+	}
 	for _, r := range results {
 		if r.HardPass {
 			row.Passed++
+		}
+		if r.Abandoned {
+			row.Abandoned++
 		}
 		if r.Withheld != "" {
 			row.Withheld++
@@ -215,7 +92,8 @@ func scenarioRow(sc Scenario, stamp string, results []RunResult) ScenarioRecord 
 // both before ever trusting an outcome.
 // CertifiedScope is read off the CASE rather than the scenario's name for the
 // site, because the case is what drives the invocation and so what knows how
-// much of it a run reaches.
+// much of it a run reaches. ContextApplied says the case served the company
+// context production prepends, read off the request it built.
 //
 // The json tags are the resume journal's on-disk shape — see RunResult, which
 // this embeds.
@@ -227,6 +105,7 @@ type runOutcome struct {
 	JudgeServedModel     string `json:"judge_served_model"`
 	CertifiedScope       string `json:"certified_scope"`
 	JudgeDegraded        bool   `json:"judge_degraded"`
+	ContextApplied       bool   `json:"context_applied"`
 }
 
 // runOnce drives exactly one prepared case and its judge score, cache off, so
@@ -264,10 +143,10 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	if pooled.Degraded {
 		return runOutcome{RunResult: RunResult{Degraded: true}}, nil
 	}
-	// A withheld run has no reply to validate: the site's own path reads it as
-	// no usable answer, which runEntry records as invalid.
+	// A withheld or abandoned run has no reply to validate: the site's own path
+	// reads it as no usable answer, which runEntry records as invalid.
 	var validated validation
-	if pooled.Withheld == "" {
+	if pooled.Withheld == "" && !pooled.Abandoned {
 		if validated, err = validateRun(ctx, prepared, caseTrace, sc, task, pooled, log); err != nil {
 			return runOutcome{}, err
 		}
@@ -277,15 +156,22 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 		output: validated.output, outcome: entry.outcome, passed: entry.passed,
 		scope: aitasks.ScopeOf(factory), pooled: pooled,
 	})
+	outcome.ContextApplied = len(caseTrace.Requests) > 0 && caseTrace.Requests[0].ContextFingerprint != ""
 	if !entry.graded {
 		log.WarnContext(ctx, "aicert: this run has no whole answer, so it fails and is not sent to the judge",
-			"task", string(task), "scenario", sc.Name, "site", sc.Site, "withheld", pooled.Withheld, "truncated", pooled.Truncated)
+			"task", string(task), "scenario", sc.Name, "site", sc.Site, "withheld", pooled.Withheld, "abandoned", pooled.Abandoned, "truncated", pooled.Truncated)
+		outcome.Ungraded = true
+		return outcome, nil
+	}
+	// A case declaring judge: none is graded by the check above alone, so no
+	// judge is asked and the run carries no opinion.
+	if !sc.Expect.Judged() {
 		outcome.Ungraded = true
 		return outcome, nil
 	}
 
 	judgeMark := judgeRec.mark()
-	judged, err := judgeScore(ctx, judge, judgeRec, sc, caseTrace, validated.output, log)
+	judged, err := judgeScore(ctx, judge, judgeRec, asGraded(sc, census), caseTrace, validated.output, log)
 	if err != nil {
 		// The same debt the candidate side settles: a judge call that failed
 		// still spent, and driveRun may discard this whole attempt, so the
@@ -359,15 +245,17 @@ type tallyEntry struct {
 // rule: only a run with a whole answer is graded or can pass.
 //
 // A withheld answer counts as invalid, which is what the site's own path reads
-// it as. A cut-off answer counts as whatever the validator made of the fragment
-// and is NOT a pass, however it read: a run that counted toward reliability
+// it as, and so does an answer the upstream broke off (driveRun re-drives it
+// first, and keeps it only when every attempt broke off). A cut-off answer
+// counts as whatever the validator made of the fragment and is NOT a pass,
+// however it read: a run that counted toward reliability
 // while withholding its score would raise a certified median above what the
 // binding earned. Neither is sent to the judge, whose score is an opinion OF AN
 // ANSWER — asked about a fragment, it returned 0 with an entirely positive
 // reason, a number that reads like quality and is not.
 func runEntry(pooled runCalls, validated validation) tallyEntry {
 	switch {
-	case pooled.Withheld != "":
+	case pooled.Withheld != "" || pooled.Abandoned:
 		return tallyEntry{outcome: aitasks.OutcomeInvalid}
 	case pooled.Truncated:
 		return tallyEntry{outcome: validated.outcome}
@@ -395,6 +283,7 @@ func candidateSideRun(in candidateSide) runOutcome {
 			CacheWriteTokens: in.pooled.CacheWriteTokens,
 			HardPass:         in.passed,
 			Withheld:         in.pooled.Withheld,
+			Abandoned:        in.pooled.Abandoned,
 		},
 		Provider:             in.pooled.Provider,
 		ServedModel:          in.pooled.ServedModel,
@@ -427,10 +316,11 @@ func driveCandidate(ctx context.Context, prepared aitasks.PreparedCase, candidat
 	mark := candidateRec.mark()
 	caseTrace, runErr := prepared.Run(ctx, routedCompleter{router: candidate, task: task})
 	withheld := withheldReason(runErr)
+	abandoned := errors.Is(runErr, ai.ErrAnswerAbandoned)
 	if runErr != nil {
 		traceSpentCalls(ctx, trace, "candidate", task, sc, run, attempt, candidateRec, mark, log)
 	}
-	if runErr != nil && withheld == "" {
+	if runErr != nil && withheld == "" && !abandoned {
 		return aitasks.Trace{}, runCalls{}, fmt.Errorf("candidate call: %w", unservable(candidateRole, runErr))
 	}
 	calls, err := candidateRec.terminalsSince(mark)
@@ -443,8 +333,9 @@ func driveCandidate(ctx context.Context, prepared aitasks.PreparedCase, candidat
 	}
 	// Already traced above, and exempt from the uniformity check: a call that
 	// delivered nothing names the binding it was sent to, not a model that served.
-	if withheld != "" {
+	if runErr != nil {
 		pooled.Withheld = withheld
+		pooled.Abandoned = abandoned
 		return aitasks.Trace{}, pooled, nil
 	}
 	traceCalls(ctx, trace, "candidate", task, sc, run, attempt, calls, log)

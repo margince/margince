@@ -50,9 +50,9 @@ expect:
   outcome: accepted
   # A stylometric floor, the same instrument and the same shape eval_draft
   # beside it uses. Deliberately NOT a phrase from the corpus: this call answers
-  # a fixed hypothetical about unspecified work and is forbidden from inventing
-  # particulars, so a correct draft has no reason to reach for one — asking for
-  # it would reward parroting an exemplar and fail the drafts that did the job.
+  # a fixed sample task whose facts the prompt supplies and forbids adding to,
+  # so a correct draft has no reason to reach for one — asking for it would
+  # reward parroting an exemplar and fail the drafts that did the job.
   answer: 0.6
   rubric: >
     The card exists so a member can read one line of their built voice and judge
@@ -62,7 +62,10 @@ expect:
     competent, or that opens with pleasantries, or that reaches for vocabulary
     this corpus never produces, defeats the step: the member looks at the card
     and sees a model, which is the one outcome that makes a voice build
-    worthless. The deterministic half of the score is how close the draft's own
+    worthless. The task supplies three sample facts and a status reply's
+    length; a draft that uses them and adds no fact of its own is doing what
+    it was asked, and one that invents a name, figure or date the task did not
+    give has put words in the member's mouth. The deterministic half of the score is how close the draft's own
     sentence rhythm and punctuation rates sit to the corpus fingerprint; this
     rubric is the other half.
   bands:

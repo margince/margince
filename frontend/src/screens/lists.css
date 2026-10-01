@@ -1,0 +1,126 @@
+.lists-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.lists-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lists-head-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.lists-note {
+  margin: 0;
+}
+
+/* The library's search and its type switch share one row, wrapping on a
+   phone rather than scrolling. */
+.lists-library-dials {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.lists-library-name,
+.lists-library-steward {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.lists-library-count,
+.lists-member-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lists-library-steward {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lists-why {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.lists-why-clauses {
+  list-style: none;
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lists-why-group > p,
+.lists-why-clause {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.lists-why-group svg,
+.lists-why-clause svg {
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+  flex: none;
+}
+
+/* A met clause, an unmet one and an unknown one differ by glyph first;
+   the colour repeats what the glyph already says. */
+.lists-why-met {
+  color: var(--successText);
+}
+
+.lists-why-unmet {
+  color: var(--dangerText);
+}
+
+.lists-why-unknown {
+  color: var(--textSecondary);
+}
+
+/* A record's lists, one per line: the list's name as a link, its kind, and
+   for a Shortlist the reader may change, the way to take the record off. */
+.lists-record {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.lists-record-set {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.lists-record-set > li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.lists-record-check {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}

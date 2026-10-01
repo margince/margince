@@ -96,10 +96,10 @@ test("renders the German words under a German locale", async () => {
   stubContacts(contactsFixture());
   render(<CompanyContactsList companyId="o-1" />, "de");
 
-  // The engagement WORDS, not the column head: "Kontaktstand" labels both the
+  // The engagement WORDS, not the column head: "Engagement" labels both the
   // column and its filter, and asserting it would pass on the chrome alone.
   await waitFor(() => expect(screen.getByText("Beantwortet")).not.toBeNull());
-  expect(screen.getByText("Antwort fällig")).not.toBeNull();
+  expect(screen.getByText("Antwort nötig")).not.toBeNull();
 });
 
 test("a second press on a column asks for the reverse, and the server accepts it", async () => {

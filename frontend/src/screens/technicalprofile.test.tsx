@@ -81,7 +81,7 @@ describe("the technical profile card", () => {
     renderCard();
     expect(await screen.findByText("Microsoft 365")).toBeTruthy();
     expect(screen.getByText("Webshop")).toBeTruthy();
-    expect(screen.getByText("Mail")).toBeTruthy();
+    expect(screen.getByText("E-Mail")).toBeTruthy();
     expect(screen.getByText("Dienste")).toBeTruthy();
   });
 
@@ -98,7 +98,7 @@ describe("the technical profile card", () => {
     });
     renderCard();
     expect(
-      await screen.findByText(/Noch nichts Technisches gelesen/),
+      await screen.findByText(/Noch keine technischen Daten/),
     ).toBeTruthy();
   });
 

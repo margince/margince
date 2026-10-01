@@ -94,6 +94,7 @@ func TestNoActivityReminderReachesTheOwnersTasksScreenThroughTheRealRiverJob(t *
 	backdateCreatedAt(t, owner, "deal", dealID, staleTouch)
 
 	seedTaskCreatePermission(t, owner, e.WS, sam)
+	connectCaughtUpMailbox(t, e, sam)
 	params := json.RawMessage(fmt.Sprintf(`{"no_activity_days":%d}`, noActivityDays))
 	seedOwnedAutomation(t, owner, "no_activity_reminder", "No Activity Reminder",
 		`{"schedule":"clock"}`, `{"kind":"create_task"}`, params, sam)

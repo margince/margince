@@ -16,6 +16,7 @@ import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { Button, Checkbox, OverflowMenu, Radio } from "./atoms";
+import { coveredByDialog } from "./dialogfocus";
 import { ChipValueList } from "./listfiltervalues";
 import {
   type ListChip,
@@ -27,6 +28,7 @@ import {
 } from "./listsurface.dials";
 import "./listtable.css";
 import { Heading } from "./heading";
+import { useTruncationTooltip } from "./tooltip";
 
 // The list surface's shell: the header (view tabs, count, primary action),
 // the caption and the toolbar (search, filter chips, an archived toggle and
@@ -178,15 +180,10 @@ export function ListSurface({
             ))}
           </div>
         )}
-        {/* Wrapped here rather than by the caller, so every body's count sits
-            in the same place: pushed right of the view tabs, left of the
-            action. */}
-        {/* Always rendered, even with nothing to say yet: this element carries
-            the margin that pushes itself and the action to the right, so a
-            count that only arrives with the rows would otherwise let the action
-            start at the left and jump across once they land. */}
-        <span className="lt-count">{count}</span>
-        <HeadActions>{action}</HeadActions>
+        <div className="lt-head-end">
+          <HeadCount>{count}</HeadCount>
+          <HeadActions>{action}</HeadActions>
+        </div>
       </div>
 
       {caption && <p className="lt-caption">{caption}</p>}
@@ -216,13 +213,6 @@ export function ListSurface({
 /**
  * A list header's verbs, folded into ONE menu once the row stops holding them.
  *
- * The header is view tabs, a count sentence and the verbs, and the sentence is
- * the part that grows: "1–25 of 200 contacts loaded so far, sorted by Created"
- * does not wrap and does not shrink, so below about a laptop's width it ran
- * straight through the buttons and the three verbs on the contacts list drew on
- * top of each other. Widths do not fix that — the sentence is a translated
- * string and German runs a third longer again.
- *
  * The SAME nodes move into the menu; nothing is rendered twice. That is what
  * `OverflowMenu` is for — it takes the caller's own controls as children and
  * never unmounts them once they are up, so a verb that opens a dialog still has
@@ -243,16 +233,30 @@ export function ListSurface({
 function HeadActions({ children }: Readonly<{ children: ReactNode }>) {
   const t = useT();
   const narrow = useNarrowViewport();
-  if (!children) {
-    return null;
-  }
-  if (!narrow) {
-    return children;
-  }
-  return (
+  const verbs = narrow ? (
     <OverflowMenu label={t("list.headActions")} keepMounted>
       {children}
     </OverflowMenu>
+  ) : (
+    children
+  );
+  return children ? <span className="lt-actions">{verbs}</span> : null;
+}
+
+/**
+ * The count sentence: the one thing on the header row that gives way, since the
+ * tabs and verbs are what a reader presses (listtable.css `.lt-head-end`). It
+ * arrives as a node, so the truncation tip reads the words the node rendered.
+ */
+function HeadCount({ children }: Readonly<{ children: ReactNode }>) {
+  const [text, setText] = useState("");
+  const tip = useTruncationTooltip<HTMLSpanElement>(text);
+  useEffect(() => setText(tip.ref.current?.textContent ?? ""));
+  return (
+    <span className="lt-count" ref={tip.ref} {...tip.trigger}>
+      {children}
+      {tip.tip}
+    </span>
   );
 }
 
@@ -798,10 +802,9 @@ export function Menu({
 /**
  * Escape closes the open popup and hands focus back to whatever opened it.
  *
- * Without it the only way out of a filter or column menu is a pointer click
- * elsewhere — and a reader who tabbed into the menu would be returned to the
- * top of the document when it closed, rather than to the control they were
- * standing on.
+ * Without it the only way out of a filter or column menu is a click elsewhere,
+ * and a reader who tabbed in would land at the top of the document when it
+ * closed rather than on the control they were standing on.
  *
  * Keyed on WHICH popup is open rather than on whether one is: moving straight
  * from one trigger to the next never passes through a closed state, so a
@@ -820,7 +823,7 @@ export function useCloseOnEscape(openKey: string | null, close: () => void) {
     }
     opener.current = document.activeElement;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") {
+      if (event.key !== "Escape" || coveredByDialog(opener.current)) {
         return;
       }
       latest.current();

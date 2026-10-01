@@ -10,6 +10,7 @@ import { navigate } from "../app/router";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useT } from "../i18n";
+import { AddToShortlistAction } from "./addtoshortlist";
 import { useMe } from "./common";
 import { ContactRecordActions } from "./contactrecordactions";
 import { contactTabRoute } from "./contacttab";
@@ -130,7 +131,11 @@ export function ContactActions({
       {/* A hairline between reaching the record and recording what happened
           to it: two groups of verbs, not one toolbar. */}
       <span className="record-actions-sep" aria-hidden="true" />
-      {logRefused && <p id={logRefusedId}>{t("record.logActivityRefused")}</p>}
+      {logRefused && (
+        <p className="t-caption" id={logRefusedId}>
+          {t("record.logActivityRefused")}
+        </p>
+      )}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in; the moment card offers the same form
           when its rung decides logging is the thing to do next. */}
@@ -168,11 +173,21 @@ export function ContactActions({
               {/* Companies, deals, leads and projects all carry this. A contact
                   did not, so the one record type most likely to be private to
                   one seat was the one with no way to hand it to a colleague. */}
+              <Button
+                onClick={() =>
+                  navigate({ screen: "book", id: `contact-${contactId}` })
+                }
+                disabled={logPending}
+                reasonId={logRefused}
+              >
+                {t("scheduling.new")}
+              </Button>
               <ShareAction
                 recordType="contact"
                 recordId={contactId}
                 disabledReasonId={refusedReasonId}
               />
+              <AddToShortlistAction entityType="contact" entityId={contactId} />
               <Button
                 onClick={() => navigate(contactTabRoute(contactId, "timeline"))}
               >

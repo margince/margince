@@ -1220,7 +1220,7 @@ export function AgentRail({
       },
       said,
     ),
-    restingTips(route.screen, t),
+    restingTips(route.screen, t, navigator.platform),
   );
 
   // Two things can hold the line, and this is their order: whatever the state

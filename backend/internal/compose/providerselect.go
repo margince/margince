@@ -4,7 +4,7 @@
 package compose
 
 // Which provider adapter a process boots with, read from the environment once
-// at startup (the websearchhttp.FromEnv pattern). Both roles read the same
+// at startup. Both roles read the same
 // variable, so the api that queues a run and the worker that executes it can
 // never disagree about who they are talking to.
 

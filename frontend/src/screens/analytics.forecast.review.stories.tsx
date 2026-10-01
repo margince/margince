@@ -21,6 +21,7 @@ import {
 
 type Assurance = components["schemas"]["ForecastAssurance"];
 type InputCheck = components["schemas"]["InputCheck"];
+type Preview = components["schemas"]["ForecastAssurancePreview"];
 
 const RUN: Assurance = {
   run_id: "33333333-3333-4333-8333-333333333333",
@@ -85,6 +86,18 @@ const FINDINGS: InputCheck[] = [
   }),
 ];
 
+const PREVIEW: Preview = {
+  started: false,
+  eligible_deals: RUN.eligible_deals,
+  findings: FINDINGS.map(({ type, severity }) => ({
+    type,
+    severity,
+    count: 1,
+  })),
+  readiness: RUN.readiness,
+  sources: RUN.sources,
+};
+
 function routes(
   run: Assurance | null,
   findings: readonly InputCheck[],
@@ -93,6 +106,7 @@ function routes(
     "GET /me": meRoute({}),
     "GET /forecast/assurance": () =>
       run === null ? jsonResponse({}, 404) : jsonResponse(run),
+    "GET /forecast/assurance/preview": () => jsonResponse(PREVIEW),
     "GET /forecast/assurance/exceptions": () =>
       jsonResponse({
         data: findings,
@@ -102,7 +116,7 @@ function routes(
 }
 
 const meta: Meta<typeof ForecastReview> = {
-  title: "Records/Forecast section/Review",
+  title: "Records/Reports/Forecast/Review",
   component: ForecastReview,
 };
 export default meta;

@@ -249,31 +249,46 @@ func groupShape(p Predicate) (kind string, children []Predicate, isGroup bool, e
 	}
 }
 
-func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves *int) (string, error) {
+// admitLeaf finds a leaf's field and refuses a leaf the engine may not compile:
+// one too many, an unknown field, or an operator its type or shape cannot take.
+func admitLeaf(p Predicate, fields map[string]Field, leaves *int) (Field, error) {
 	*leaves++
 	if *leaves > PredicateMaxLeaves {
-		return "", &PredicateError{
+		return Field{}, &PredicateError{
 			Field: p.Field, Code: CodeFilterTooLarge,
 			Message: fmt.Sprintf("filter has more than the maximum of %d conditions", PredicateMaxLeaves),
 		}
 	}
 	field, ok := fields[p.Field]
 	if !ok {
-		return "", &PredicateError{
+		return Field{}, &PredicateError{
 			Field: p.Field, Code: CodeFilterFieldNotAllowed,
 			Message: fmt.Sprintf("field %q is not filterable on this resource", p.Field),
 		}
 	}
 	if !operatorsByType[field.Type][p.Op] {
-		return "", &PredicateError{
+		return Field{}, &PredicateError{
 			Field: p.Field, Code: CodeFilterOpNotAllowed,
 			Message: fmt.Sprintf("operator %q does not apply to the %s field %q", p.Op, field.Type, p.Field),
 		}
 	}
-
-	if field.Link != "" {
-		return compileLinkLeaf(p, field, arg)
+	// Asked before a withheld field answers FALSE, so a withheld link refuses
+	// exactly the operators its vocabulary entry leaves out.
+	if field.Link != "" && !linkOperators[p.Op] {
+		return Field{}, linkOperatorRefusal(p)
 	}
+	return field, nil
+}
+
+func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves *int) (string, error) {
+	field, err := admitLeaf(p, fields, leaves)
+	if err != nil {
+		return "", err
+	}
+	if sql, shaped, err := compileShapedLeaf(p, field, arg); shaped {
+		return sql, err
+	}
+	compared := comparedExpr(field)
 
 	switch p.Op {
 	case OpExists:
@@ -297,7 +312,7 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 		if field.Type == FieldMultiselect {
 			return fmt.Sprintf("%s && $%d::text[]", field.Expr, arg(values)), nil
 		}
-		return fmt.Sprintf("%s = ANY($%d)", field.Expr, arg(values)), nil
+		return fmt.Sprintf("%s = ANY($%d)", compared, arg(values)), nil
 
 	case OpContains:
 		text, ok := p.Value.(string)
@@ -313,30 +328,65 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 		return fmt.Sprintf("%s ILIKE $%d", field.Expr, arg("%"+EscapeLike(text)+"%")), nil
 
 	default: // eq, neq, gt, gte, lt, lte — scalar comparisons.
-		value, err := scalarOperand(p.Value, field, p.Field, p.Op)
-		if err != nil {
-			return "", err
-		}
-		if field.Type == FieldMultiselect {
-			member := fmt.Sprintf("COALESCE($%d = ANY(%s), false)", arg(value), field.Expr)
-			if p.Op == OpNeq {
-				return "NOT " + member, nil
-			}
-			return member, nil
-		}
+		return compileScalarLeaf(p, field, compared, arg)
+	}
+}
+
+// compileShapedLeaf compiles a leaf whose field is not a plain column: a
+// withheld one, a linked one, or a day read off a timestamp. shaped is false
+// for a plain column, which the caller compiles itself.
+func compileShapedLeaf(p Predicate, field Field, arg func(any) int) (sql string, shaped bool, err error) {
+	switch {
+	case field.Withheld:
+		return "FALSE", true, nil
+	case field.Link != "":
+		sql, err = compileLinkLeaf(p, field, arg)
+		return sql, true, err
+	case field.Instant && p.Op != OpExists:
+		sql, err = compileInstantLeaf(p, field, arg)
+		return sql, true, err
+	default:
+		return "", false, nil
+	}
+}
+
+// compileScalarLeaf compiles eq, neq, gt, gte, lt and lte against a column.
+func compileScalarLeaf(p Predicate, field Field, compared string, arg func(any) int) (string, error) {
+	value, err := scalarOperand(p.Value, field, p.Field, p.Op)
+	if err != nil {
+		return "", err
+	}
+	if field.Type == FieldMultiselect {
+		member := fmt.Sprintf("COALESCE($%d = ANY(%s), false)", arg(value), field.Expr)
 		if p.Op == OpNeq {
-			// IS DISTINCT FROM rather than <>: a column that is UNSET is
-			// distinct from every value, and three-valued logic would otherwise
-			// drop those rows from an answer the caller reads as "everything
-			// that is not X".
-			//
-			// It is also what the rest of this package answers. A `neq` on a
-			// LINKED field compiles to NOT EXISTS(... = ...), which is true for a
-			// record with no linked row at all; `<>` here would make one operator
-			// mean two things depending on where the field lives.
-			return fmt.Sprintf("%s IS DISTINCT FROM $%d", field.Expr, arg(value)), nil
+			return "NOT " + member, nil
 		}
-		return fmt.Sprintf("%s %s $%d", field.Expr, comparisonSQL[p.Op], arg(value)), nil
+		return member, nil
+	}
+	if p.Op == OpNeq {
+		// IS DISTINCT FROM rather than <>: a column that is UNSET is
+		// distinct from every value, and three-valued logic would otherwise
+		// drop those rows from an answer the caller reads as "everything
+		// that is not X".
+		//
+		// It is also what the rest of this package answers. A `neq` on a
+		// LINKED field compiles to NOT EXISTS(... = ...), which is true for a
+		// record with no linked row at all; `<>` here would make one operator
+		// mean two things depending on where the field lives.
+		return fmt.Sprintf("%s IS DISTINCT FROM %s", compared, operandSQL(value, arg)), nil
+	}
+	return fmt.Sprintf("%s %s %s", compared, comparisonSQL[p.Op], operandSQL(value, arg)), nil
+}
+
+// linkOperatorRefusal is the answer to an operator the link shape cannot
+// express: the comparison builds inside an EXISTS subquery, where ordering and
+// substring match have no spelling. No surface OFFERS one — OperatorsFor narrows
+// a linked field's set to linkOperators — so this guards a filter that NAMES one
+// anyway (a saved segment, a hand-written body).
+func linkOperatorRefusal(p Predicate) error {
+	return &PredicateError{
+		Field: p.Field, Code: CodeFilterOpNotAllowed,
+		Message: fmt.Sprintf("operator %q does not apply to the linked field %q", p.Op, p.Field),
 	}
 }
 
@@ -378,18 +428,19 @@ func compileLinkLeaf(p Predicate, field Field, arg func(any) int) (string, error
 		if err != nil {
 			return "", err
 		}
-		inner, negate = fmt.Sprintf("%s = $%d", field.Expr, arg(value)), p.Op == OpNeq
+		inner, negate = fmt.Sprintf("%s = %s", field.Expr, operandSQL(value, arg)), p.Op == OpNeq
 	default:
-		// An operator that the link shape cannot express: the comparison builds
-		// inside an EXISTS subquery where only certain operators make sense.
-		// linkOperators names exactly the cases above, and no surface OFFERS an
-		// operator this branch would refuse — OperatorsFor narrows a linked
-		// field's advertised set to that same map. So this is the guard for a
-		// filter that NAMES one anyway (a saved segment, a hand-written body),
-		// not a state a picker can put a reader in.
-		return "", &PredicateError{
-			Field: p.Field, Code: CodeFilterOpNotAllowed,
-			Message: fmt.Sprintf("operator %q does not apply to the linked field %q", p.Op, p.Field),
+		// linkOperators names exactly the cases above and compileLeaf refuses
+		// every other one first; this is the switch's own guard.
+		return "", linkOperatorRefusal(p)
+	}
+	if field.LinkScope != nil {
+		bound, err := field.LinkScope(arg)
+		if err != nil {
+			return "", err
+		}
+		if bound != "" {
+			inner = "(" + inner + ") AND " + bound
 		}
 	}
 	sql := fmt.Sprintf(field.Link, inner)

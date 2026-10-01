@@ -22,14 +22,14 @@ func TestCertifyTaskCountsAnAcceptedRunThatFailedItsScenarioAsFailed(t *testing.
 	candidateFake := ai.NewFakeClient().Script(
 		"the widget is blue and durable", "the widget is blue and durable", "the widget is blue and durable",
 	)
-	judgeFake := ai.NewFakeClient().Script(scoreJSON(90), scoreJSON(90), scoreJSON(90))
+	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 3)...)
 
 	sc := testScenario("expects silence", wideBands)
 	sc.Expect.Outcome = aitasks.OutcomeAbstained
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
-		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileCloudHosted, 3, quietLogger(), &certifyHooks{
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		})
@@ -52,15 +52,12 @@ func TestCertifyTaskRecordsEachScenariosOwnCounts(t *testing.T) {
 		"the widget is blue", "the widget is blue", "the widget is blue", // scenario 1: every run answers
 		"off topic, no keyword here", "off topic, no keyword here", "off topic, no keyword here", // scenario 2: none does
 	)
-	judgeFake := ai.NewFakeClient().Script(
-		scoreJSON(90), scoreJSON(90), scoreJSON(90),
-		scoreJSON(90), scoreJSON(90), scoreJSON(90),
-	)
+	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 6)...)
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize,
 		[]Scenario{testScenario("answers", wideBands), testScenario("wanders", wideBands)},
 		testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
-		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileCloudHosted, 3, quietLogger(), &certifyHooks{
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		})
@@ -75,6 +72,7 @@ func TestCertifyTaskRecordsEachScenariosOwnCounts(t *testing.T) {
 		byName[row.Scenario] = row
 	}
 	answers, wanders := byName["answers"], byName["wanders"]
+	// A row is held to the per-case gates, which three passing runs at 90 clear.
 	if answers.Runs != 3 || answers.Passed != 3 || answers.Verdict != VerdictCertified {
 		t.Errorf("the passing scenario reads %+v, want 3 of 3 passed and %s", answers, VerdictCertified)
 	}

@@ -42,6 +42,9 @@ export type ReportsStubOpts = {
   // only one of the three fields passes against it, and the caption then
   // renders with an undefined zone.
   partialFrame?: boolean;
+  // The base currency results carry, read per request so a suite can change
+  // it between two runs of one report, as a reconfigured installation does.
+  baseCurrency?: string;
   stageRows?: Record<string, unknown>[];
   forecastRows?: Record<string, unknown>[];
   companyRows?: Record<string, unknown>[];
@@ -166,7 +169,7 @@ function reportAnswer(key: string, opts: ReportsStubOpts) {
     ? {}
     : {
         timezone: "Europe/Berlin",
-        base_currency: "EUR",
+        base_currency: opts.baseCurrency ?? "EUR",
         fiscal_year_start_month: 1,
       };
   return {

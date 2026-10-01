@@ -11,7 +11,7 @@ import {
 } from "./passportselect";
 
 const meta: Meta<typeof PassportSelect> = {
-  title: "Design System/Passport select",
+  title: "Components/Forms and input/Passport select",
   component: PassportSelect,
   parameters: { layout: "padded" },
   decorators: [

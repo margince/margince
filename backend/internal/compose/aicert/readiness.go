@@ -287,14 +287,24 @@ func (r ReadinessRow) ClaimedScope() string {
 	return r.Record.CertifiedScope
 }
 
-// Binding names the (provider, model, env) this row was measured on — the whole
-// of what a band green-lights. Empty for an absent row, which was measured on
-// nothing.
+// Binding names the (provider, model, env) this row was measured on, plus the
+// thinking level where the run set one — the whole of what a band green-lights.
+// Empty for an absent row, which was measured on nothing.
 func (r ReadinessRow) Binding() string {
 	if !r.Certified {
 		return ""
 	}
-	return r.Record.Provider + " · " + r.Record.ServedModel + " · " + r.Record.EnvClass
+	return BindingLabel(r.Record.Provider, r.Record.ServedModel, r.Record.EnvClass, r.Record.ThinkingLevelAt(r.Site.Variant))
+}
+
+// BindingLabel is a binding as every surface spells it — the report, the
+// certification page and a preset's rung — so a row and its record match by it.
+func BindingLabel(provider, model, env, thinking string) string {
+	label := provider + " · " + model + " · " + env
+	if thinking != "" {
+		label += " · thinking " + thinking
+	}
+	return label
 }
 
 // SiteKey is the site's name as every tree here spells it.
@@ -315,6 +325,11 @@ func (r ReadinessRow) SiteKey() string { return string(r.Site.Task) + "/" + r.Si
 func Readiness(census Census, taskStamps map[string]string, perScenario map[string]map[string]string, records []Record) (rows []ReadinessRow, unclaimed []Record) {
 	byTask := map[string][]Record{}
 	for _, rec := range records {
+		// A decision record measured the decision lane, never the site's LLM
+		// prompt: DecisionReadiness judges it, and it is nobody's unclaimed row.
+		if rec.Kind == KindDecision {
+			continue
+		}
 		byTask[rec.Task] = append(byTask[rec.Task], rec)
 	}
 
@@ -345,7 +360,7 @@ func Readiness(census Census, taskStamps map[string]string, perScenario map[stri
 	}
 
 	for _, rec := range records {
-		if !claimed[RecordKey(rec)] {
+		if rec.Kind != KindDecision && !claimed[RecordKey(rec)] {
 			unclaimed = append(unclaimed, rec)
 		}
 	}
@@ -446,7 +461,12 @@ func CurrentStamps(ctx context.Context, corpus []Scenario, census *aitasks.Regis
 }
 
 // RecordKey identifies one record the way its own file path does — the four
-// fields that make it a distinct measurement.
+// fields that make it a distinct measurement, and for a decision record its
+// site and configured model, so it never collides with the completion record
+// of the same binding.
 func RecordKey(rec Record) string {
+	if rec.Kind != "" {
+		return rec.Task + "/" + rec.Kind + ":" + rec.Site + "/" + rec.Provider + "/" + rec.Model + "/" + rec.EnvClass
+	}
 	return rec.Task + "/" + rec.Provider + "/" + rec.ServedModel + "/" + rec.EnvClass
 }

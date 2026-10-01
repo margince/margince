@@ -1,10 +1,11 @@
 # yaml-language-server: $schema=../margince.schema.json
 # config/presets/gemini_vertex_eu.yaml — every lane on Gemini served by Vertex AI
-# at the `eu` multi-region, under the enforced eu_resident profile.
+# at an EU location, under eu_hosted.
 #
 # What it guarantees: Google processes every prompt, and every text embedded,
-# in EU member states. The `eu` multi-region excludes the UK (europe-west2) and
-# Switzerland (europe-west6); eu_resident refuses those, `global` and `us` at save.
+# in EU member states. The chat tiers use the `eu` multi-region; the embeddings
+# lane uses europe-west4, because `eu` serves no embedding model. eu_hosted
+# refuses London (europe-west2), Zürich (europe-west6), `global` and `us` at save.
 # It covers AI inference only — docs/how-to/connect-a-cloud-model-provider.md §5.
 #
 # Needs one service-account JSON key, from GEMINI_VERTEX_SA_JSON or Settings →
@@ -14,17 +15,17 @@ version: 1
 
 seeds:
   ai_routing:
-    profile: eu_resident        # eu_hosted | eu_resident | sovereign | cloud_frontier
-    # The same models as gemini_cloud.yaml, each served in the `eu` multi-region.
+    profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+    # gemini_cloud.yaml's Flash and Flash-Lite. Vertex serves no Pro model in
+    # the EU, so frontier takes Flash too.
     tiers:
       local_small: { provider: gemini_vertex, location: eu, model: gemini-3.1-flash-lite }
       cheap_cloud: { provider: gemini_vertex, location: eu, model: gemini-3.1-flash-lite }
       premium:     { provider: gemini_vertex, location: eu, model: gemini-3.5-flash }
-      frontier:    { provider: gemini_vertex, location: eu, model: gemini-3.1-pro-preview }
-    # gemini_vertex speaks the gemini wire, so 1536 is a request for that output
-    # width exactly as it is in gemini_cloud.yaml.
+      frontier:    { provider: gemini_vertex, location: eu, model: gemini-3.5-flash }
+    # The width is asked of the model as outputDimensionality, as on gemini.
     embeddings:
       provider: gemini_vertex
-      location: eu
+      location: europe-west4
       model: gemini-embedding-001
       dimensions: 1536

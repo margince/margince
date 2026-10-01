@@ -90,7 +90,7 @@ function tab(record: Contact360 | undefined) {
 }
 
 const meta: Meta<typeof ContactTimelineTab> = {
-  title: "Records/Contact record/History tab",
+  title: "Records/Contact 360/History tab",
   component: ContactTimelineTab,
   parameters: { layout: "padded" },
 };

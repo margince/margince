@@ -21,8 +21,8 @@ import (
 // servesEverything answers every probe verb as served, at every location.
 func servesEverything(t *testing.T) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, ":embedContent") {
-			writeBody(t, w, `{"embedding":{"values":[0.5]}}`)
+		if strings.HasSuffix(r.URL.Path, ":predict") {
+			writeBody(t, w, `{"predictions":[{"embeddings":{"values":[0.5]}}]}`)
 			return
 		}
 		writeBody(t, w, `{"totalTokens":1}`)
@@ -177,7 +177,7 @@ func TestAModelIDThatWouldReshapeTheVertexPathIsRefused(t *testing.T) {
 			t.Errorf("probe of %q: want an invalid-argument refusal, got %v", id, err)
 		}
 		binding := ProviderConfig{Provider: providerGeminiVertex, Location: "eu", Model: id}
-		if err := ValidateTierBinding(ProfileCloudHosted, TierPremium, binding); err == nil {
+		if err := ValidateTierBinding(ProfileEUHosted, TierPremium, binding); err == nil {
 			t.Errorf("a binding naming model %q was admitted", id)
 		}
 	}
@@ -196,7 +196,7 @@ func TestAVertexListWithNoLocationHasNoEndpoint(t *testing.T) {
 	t.Parallel()
 	selector, google := googleAt(t, servesEverything(t))
 	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
-	for _, profile := range []Profile{ProfileEUResident, ProfileCloudHosted} {
+	for _, profile := range []Profile{ProfileEUHosted, ProfileCloudFrontier} {
 		got := store.availableModels(context.Background(), RoutingConfig{Profile: profile}, AvailableModelsQuery{Provider: providerGeminiVertex, Tier: "premium"})
 		if got.Unavailable != AvailabilityNoEndpoint {
 			t.Errorf("%s: unavailable = %q, want no_endpoint", profile, got.Unavailable)
@@ -205,7 +205,7 @@ func TestAVertexListWithNoLocationHasNoEndpoint(t *testing.T) {
 	if n := google.requests.Load(); n != 0 {
 		t.Errorf("%d request(s) left with no location to send them to", n)
 	}
-	stored := RoutingConfig{Profile: ProfileEUResident, Tiers: map[Tier]ProviderConfig{
+	stored := RoutingConfig{Profile: ProfileEUHosted, Tiers: map[Tier]ProviderConfig{
 		TierFrontier: {Provider: providerGeminiVertex, Location: "europe-west4", Model: "gemini-3.5-flash"},
 	}}
 	if got := store.availableModels(context.Background(), stored, AvailableModelsQuery{Provider: providerGeminiVertex, Tier: "premium"}); got.Unavailable != AvailabilityOK {
@@ -218,7 +218,7 @@ func TestAVertexListWithNoLocationHasNoEndpoint(t *testing.T) {
 func TestAnUnusableServiceAccountKeyReadsAsNoKey(t *testing.T) {
 	t.Parallel()
 	store := &RoutingStore{keys: cloudKeyFor(providerGeminiVertex, `{"type":"authorized_user"}`)}
-	if got := store.providerLocations(routingReader(), ProfileCloudHosted, providerGeminiVertex); got.Unavailable != AvailabilityNoKey {
+	if got := store.providerLocations(routingReader(), ProfileEUHosted, providerGeminiVertex); got.Unavailable != AvailabilityNoKey {
 		t.Errorf("locations: %+v; want no_key", got)
 	}
 	bound := ProviderConfig{Provider: providerGeminiVertex, Location: "eu"}

@@ -31,6 +31,8 @@ const HEADS_ITSELF_WITHOUT_THE_HOOK: Readonly<Record<string, string>> = {
   home: "greets the reader by name",
   // The tag's own name, which the shell cannot know from the route alone.
   tags: "heads itself with the tag",
+  // The list's own name, for the same reason.
+  lists: "heads itself with the list",
 };
 
 const screensDir = resolve(

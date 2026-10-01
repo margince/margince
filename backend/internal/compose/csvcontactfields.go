@@ -40,6 +40,9 @@ func contactCreateFrom(fields map[string]string, source string) contacts.CreateC
 		FullName:    contactFullName(fields),
 		Source:      source,
 	}
+	sourceSystem := csvSourceSystem()
+	in.SourceSystem = &sourceSystem
+	in.Author = authorFrom(fields)
 	in.FirstName = importString(fields, "first_name")
 	in.LastName = importString(fields, "last_name")
 	in.Title = importString(fields, fieldTitle)

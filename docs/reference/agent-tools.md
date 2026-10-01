@@ -110,9 +110,11 @@ Columns:
 | `annotate_brief` | 🟢 | `write` | — |
 | `apply_tag` | 🟢 | `write` | — |
 | `book_meeting` | 🟢 | `send` | yes |
+| `bulk_update_records` | 🟢 | `write` | — |
+| `invite_meeting` | 🟡 | `send` | yes |
 | `catch_me_up_on` | 🟢 | `read` | — |
+| `change_lists` | 🟢 | `write` | — |
 | `check_availability` | 🟢 | `read` | — |
-| `check_location_support` | 🟢 | `read` | — |
 | `commit_import` | 🟢 | `write` | — |
 | `create_record` | 🟢 / 🟡 | `write` | — |
 | `create_tag` | 🟢 | `write` | — |
@@ -149,6 +151,7 @@ Columns:
 | `read_approval` | 🟢 | `read` | — |
 | `read_import_report` | 🟢 | `read` | — |
 | `read_import_run` | 🟢 | `read` | — |
+| `read_lists` | 🟢 | `read` | — |
 | `read_project_360` | 🟢 | `read` | — |
 | `query_workspace` | 🟢 | `read` | — |
 | `relink_activity` | dynamic | `write` | — |
@@ -159,6 +162,7 @@ Columns:
 | `review_commitments` | 🟢 | `read` | — |
 | `run_analytics_query` | 🟢 | `read` | — |
 | `run_report` | 🟢 | `read` | — |
+| `read_reporting` | 🟢 | `read` | Reporting catalog, metrics, evidence and saved editions; enabled with reporting. |
 | `compose_analytics_report` | 🟢 | `read` | — |
 | `forecast_readings` | 🟢 | `read` | — |
 | `forecast_movement` | 🟢 | `read` | — |

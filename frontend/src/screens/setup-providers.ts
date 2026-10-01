@@ -46,8 +46,10 @@ export type SetupProvider = {
   readonly credential: "api_key" | "service_account";
   /** The profile onboarding binds under — the one this choice was offered as. */
   readonly profile: components["schemas"]["AiRouting"]["profile"];
-  /** Where Google processes the calls, for the one vendor bound by location. */
+  /** Where Google processes the chat calls, for the one vendor bound by location. */
   readonly location?: string;
+  /** Where it processes the embeddings: a location may serve no embedder. */
+  readonly embedLocation?: string;
 };
 
 /**
@@ -72,7 +74,7 @@ const PRESETS: Readonly<Record<SetupProviderId, SetupProvider>> = {
     chatModel: "gemini-3.1-flash-lite",
     embedModel: "gemini-embedding-001",
     credential: "api_key",
-    profile: "eu_hosted",
+    profile: "cloud_frontier",
   },
   openrouter: {
     label: "OpenRouter",
@@ -82,10 +84,11 @@ const PRESETS: Readonly<Record<SetupProviderId, SetupProvider>> = {
     chatModel: "mistralai/mistral-small-3.2-24b-instruct",
     embedModel: "openai/text-embedding-3-small",
     credential: "api_key",
-    profile: "eu_hosted",
+    profile: "cloud_frontier",
   },
-  // The one choice that PROMISES something: eu_resident refuses any binding
-  // that processes outside the EU, and Vertex at `eu` is one that does not.
+  // The one choice that keeps processing in the EU: Vertex at an EU location,
+  // under eu_hosted, which refuses any other location. `eu` serves no
+  // embedding model, so the embedder sits in europe-west4.
   gemini_vertex: {
     label: "Gemini on Vertex AI",
     provider: "gemini_vertex",
@@ -93,8 +96,9 @@ const PRESETS: Readonly<Record<SetupProviderId, SetupProvider>> = {
     chatModel: "gemini-3.1-flash-lite",
     embedModel: "gemini-embedding-001",
     credential: "service_account",
-    profile: "eu_resident",
+    profile: "eu_hosted",
     location: "eu",
+    embedLocation: "europe-west4",
   },
 };
 

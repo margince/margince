@@ -52,7 +52,7 @@ function wizardState(step: "confirm" | "results") {
 
 function FullScreenStory({ step }: Readonly<{ step: "confirm" | "results" }>) {
   installFetchStub({
-    "GET /me": meRoute({}),
+    "GET /me": meRoute({ automation: ["update"] }),
     "GET /ai/profile": () => jsonResponse(configuredAiProfile),
     "GET /company/context/capabilities": () =>
       jsonResponse({ onboarding_enabled: true, read_enabled: true }),

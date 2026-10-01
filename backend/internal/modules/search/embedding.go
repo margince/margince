@@ -165,6 +165,12 @@ type VectorHit struct {
 // identity. Object RBAC and row scope gate every branch, exactly like
 // the lexical union — a vector hit is a read too.
 func (s *Store) SimilarEntities(ctx context.Context, queryVec []float32, identity string, limit int, types ...string) ([]VectorHit, error) {
+	return s.similarEntitiesWithin(ctx, queryVec, identity, limit, nil, types...)
+}
+
+// similarEntitiesWithin is SimilarEntities bounded to the records in within, with
+// withinClause's reading of nil and of an empty set.
+func (s *Store) similarEntitiesWithin(ctx context.Context, queryVec []float32, identity string, limit int, within []ids.UUID, types ...string) ([]VectorHit, error) {
 	// A zero query vector makes every cosine distance 0/0 = NaN, and a
 	// naive ORDER BY sim DESC sorts NaN FIRST — the same trap the write
 	// path guards. There is nothing to rank against it, so return no vector
@@ -191,8 +197,11 @@ func (s *Store) SimilarEntities(ctx context.Context, queryVec []float32, identit
 		if len(branches) == 0 {
 			return nil
 		}
-		sql := "SELECT rtype, id, title, sim FROM (" + strings.Join(branches, " UNION ALL ") +
-			fmt.Sprintf(") ranked ORDER BY sim DESC, rtype, id LIMIT $%d", arg(limit))
+		sql := "SELECT rtype, id, title, sim FROM (" + strings.Join(branches, " UNION ALL ") + ") ranked"
+		if bound := withinClause(within, arg); bound != "" {
+			sql += " WHERE " + bound
+		}
+		sql += fmt.Sprintf(" ORDER BY sim DESC, rtype, id LIMIT $%d", arg(limit))
 		rows, err := tx.Query(ctx, sql, args...)
 		if err != nil {
 			return fmt.Errorf("search: similarity query: %w", err)

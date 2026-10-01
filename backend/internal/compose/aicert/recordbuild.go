@@ -27,9 +27,8 @@ import (
 
 // buildRecord folds one task's pooled runs (across every scenario, every
 // repeat) and its already-folded taskVerdict into the on-disk Record
-// shape. Score/latency percentiles are computed directly here (not via
-// Verdict, which is scoped to one scenario's odd-N run set and would
-// panic on a multi-scenario task's pooled, possibly-even count).
+// shape. Score/latency percentiles are computed directly here: Verdict answers
+// a grade, not the pooled percentiles a record reports beside it.
 //
 // The run set arrives as the accumulation certifyTask folded it into, rather
 // than as one parameter per number: the record IS that accumulation written
@@ -80,7 +79,7 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 		ReportedInvalid:      tally.invalid,
 		ReportedAbstained:    tally.abstained,
 		CertifiedScope:       acc.certifiedScope,
-		ContextApplied:       certLaneAppliesCompanyContext,
+		ContextApplied:       n > 0 && acc.contextServed == n,
 		ContextScopes:        declaredCompanyContextScopes(task),
 		JudgeScoreP50:        judgeP50,
 		JudgeScoreMin:        judgeMin,
@@ -142,14 +141,6 @@ func declaredCompanyContextScopes(task ai.Task) []string {
 	}
 	return slices.Clone(policy.Scopes)
 }
-
-// certLaneAppliesCompanyContext is false because this lane has no database.
-// The company context production prepends is assembled from stored workspace
-// facts, and every certification run here is DB-less — so the requests scored
-// are the site's own prompt without it. Spelled as a named constant so the
-// record's claim is a stated fact of the lane rather than a literal a reader
-// has to interpret.
-const certLaneAppliesCompanyContext = false
 
 // outcomeTally is the per-outcome run count a record carries. It is a struct
 // rather than four returns so the four numbers cannot be transposed at a call

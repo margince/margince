@@ -47,27 +47,39 @@ func storedLinkedinHandle(ctx context.Context, t *testing.T, e *dedupeEnv, conta
 	return handle
 }
 
+// fillLinkedinFromSite has the employer's site publish this contact's LinkedIn
+// address, through the writer that fills it in production. The match itself is
+// not under test here, so a site that fails to match the contact fails the test.
+func fillLinkedinFromSite(ctx context.Context, t *testing.T, e *dedupeEnv, companyID ids.CompanyID, name, url string) {
+	t.Helper()
+	matched, err := e.store.ApplySiteContactFields(ctx, companyID, SiteContactFields{
+		Name:            name,
+		LinkedinURL:     url,
+		EvidenceSnippet: name + " — team page",
+		SourceURL:       "https://slotfill.test/team",
+	})
+	if err != nil {
+		t.Fatalf("ApplySiteContactFields: %v", err)
+	}
+	if !matched {
+		t.Fatalf("the site did not match %s, so this test proves nothing about the slot", name)
+	}
+}
+
 func TestALandedLinkedinFillReachesTheSocialSlot(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	contactID, _ := e.seedEmployedContact(ctx, t,
+	contactID, companyID := e.seedEmployedContact(ctx, t,
 		"Nora Vik", "nora@slotfill.test", "Vik AS", "slotfill.test")
 
 	// The trailing slash is deliberate: the slot stores the normalized
 	// spelling (the dedupe key's), not the verbatim evidence value.
 	const observed = "https://www.linkedin.com/in/nora-vik/"
 	const normalized = "https://www.linkedin.com/in/nora-vik"
-	applied, err := e.store.ApplyDiscoveredFields(ctx, contactID, []DiscoveredField{{
-		Field:           "linkedin",
-		Value:           observed,
-		EvidenceSnippet: "Nora Vik — Vik AS",
-		SourceRef:       "search:slotfill",
-	}})
-	if err != nil {
-		t.Fatalf("ApplyDiscoveredFields: %v", err)
-	}
-	if len(applied) != 1 {
-		t.Fatalf("applied = %v, want the linkedin fill to land", applied)
+	fillLinkedinFromSite(ctx, t, e, companyID, "Nora Vik", observed)
+
+	if got := readStoredClaim(ctx, t, e, contactID, "linkedin").value; got != observed {
+		t.Fatalf("linkedin evidence = %q, want the fill to land %q", got, observed)
 	}
 	if got := storedLinkedinHandle(ctx, t, e, contactID); got != normalized {
 		t.Errorf("linkedin slot = %q, want %q: the evidence row landed without reaching the record", got, normalized)
@@ -77,30 +89,23 @@ func TestALandedLinkedinFillReachesTheSocialSlot(t *testing.T) {
 func TestAFillNeverReplacesAHandleAlreadyOnTheRecord(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
+	contactID, companyID := e.seedEmployedContact(ctx, t,
+		"Ida Holm", "ida@slotfill.test", "Holm AS", "slotfill.test")
 	const typed = "https://www.linkedin.com/in/the-one-somebody-typed"
-	contact, err := e.store.CreateContact(ctx, CreateContactInput{
-		FullName: "Ida Holm",
-		Source:   "manual",
-		Social:   map[string]any{"linkedin": typed},
-	})
-	if err != nil {
-		t.Fatalf("seed contact: %v", err)
+	if _, err := e.store.UpdateContact(ctx, contactID, UpdateContactInput{
+		Social: map[string]any{"linkedin": typed},
+		Source: "manual",
+	}); err != nil {
+		t.Fatalf("type the handle: %v", err)
 	}
-	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
 
-	applied, err := e.store.ApplyDiscoveredFields(ctx, contactID, []DiscoveredField{{
-		Field:           "linkedin",
-		Value:           "https://www.linkedin.com/in/somebody-a-search-found",
-		EvidenceSnippet: "Ida Holm — profile",
-		SourceRef:       "search:slotfill",
-	}})
-	if err != nil {
-		t.Fatalf("ApplyDiscoveredFields: %v", err)
-	}
-	// The evidence row may land — the sidecar was unanswered — but the slot
+	const published = "https://www.linkedin.com/in/somebody-a-site-named"
+	fillLinkedinFromSite(ctx, t, e, companyID, "Ida Holm", published)
+
+	// The evidence row lands — the sidecar was unanswered — but the slot
 	// carries somebody's statement and the fill has no grounds to replace it.
-	if len(applied) != 1 {
-		t.Fatalf("applied = %v, want the evidence row to land", applied)
+	if got := readStoredClaim(ctx, t, e, contactID, "linkedin").value; got != published {
+		t.Fatalf("linkedin evidence = %q, want the evidence row to land %q", got, published)
 	}
 	if got := storedLinkedinHandle(ctx, t, e, contactID); got != typed {
 		t.Errorf("linkedin slot = %q, want the typed handle %q kept", got, typed)
@@ -110,20 +115,14 @@ func TestAFillNeverReplacesAHandleAlreadyOnTheRecord(t *testing.T) {
 func TestAValueThatIsNotAProfileLinkStaysEvidenceOnly(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	contactID, _ := e.seedEmployedContact(ctx, t,
+	contactID, companyID := e.seedEmployedContact(ctx, t,
 		"Sofie Dahl", "sofie@slotfill.test", "Dahl AS", "slotfill.test")
 
-	applied, err := e.store.ApplyDiscoveredFields(ctx, contactID, []DiscoveredField{{
-		Field:           "linkedin",
-		Value:           "https://dahl.example/team/sofie",
-		EvidenceSnippet: "Sofie Dahl — Dahl AS",
-		SourceRef:       "search:slotfill",
-	}})
-	if err != nil {
-		t.Fatalf("ApplyDiscoveredFields: %v", err)
-	}
-	if len(applied) != 1 {
-		t.Fatalf("applied = %v, want the evidence row to land", applied)
+	const offHost = "https://dahl.example/team/sofie"
+	fillLinkedinFromSite(ctx, t, e, companyID, "Sofie Dahl", offHost)
+
+	if got := readStoredClaim(ctx, t, e, contactID, "linkedin").value; got != offHost {
+		t.Fatalf("linkedin evidence = %q, want the evidence row to land %q", got, offHost)
 	}
 	if got := storedLinkedinHandle(ctx, t, e, contactID); got != "" {
 		t.Errorf("linkedin slot = %q, want empty: a URL off LinkedIn's host is not a profile link", got)
@@ -134,39 +133,22 @@ func TestAValueThatIsNotAProfileLinkStaysEvidenceOnly(t *testing.T) {
 //
 // The caller's audit row attests to the EVIDENCE write and reads the same
 // whether the slot was empty or already held somebody's statement, so a reader
-// asking when this contact gained its profile link had nothing to read. The
-// LinkedIn-match decision has recorded it since it shipped; both writers now
-// land on the same helper, so the answer does not depend on which filled it.
+// asking when this contact gained its profile link had nothing to read.
 func TestAFilledSlotIsNamedInAnAuditRowOfItsOwn(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	contactID, _ := e.seedEmployedContact(ctx, t,
+	contactID, companyID := e.seedEmployedContact(ctx, t,
 		"Tuva Lien", "tuva@slotfill.test", "Lien AS", "slotfill.test")
 
-	if _, err := e.store.ApplyDiscoveredFields(ctx, contactID, []DiscoveredField{{
-		Field:           "linkedin",
-		Value:           "https://www.linkedin.com/in/tuva-lien",
-		EvidenceSnippet: "Tuva Lien — Lien AS",
-		SourceRef:       "search:slotfill",
-	}}); err != nil {
-		t.Fatalf("ApplyDiscoveredFields: %v", err)
-	}
+	fillLinkedinFromSite(ctx, t, e, companyID, "Tuva Lien", "https://www.linkedin.com/in/tuva-lien")
 	if got := countAuditRowsHolding(ctx, t, e.store, "contact", contactID.UUID, "social"); got != 1 {
 		t.Errorf("audit rows naming the social write = %d, want 1 — a fill nothing records is a "+
 			"change to what the rail, the resolver and the SAR export answer, with no trace of when", got)
 	}
 
-	// The control, and the half the finding was actually about: a SECOND
-	// discovery against the now-occupied slot writes evidence and no handle,
-	// and must not claim the social write a third reader would then look for.
-	if _, err := e.store.ApplyDiscoveredFields(ctx, contactID, []DiscoveredField{{
-		Field:           "linkedin",
-		Value:           "https://www.linkedin.com/in/tuva-lien-2",
-		EvidenceSnippet: "Tuva Lien — a second reading",
-		SourceRef:       "search:slotfill-again",
-	}}); err != nil {
-		t.Fatalf("second ApplyDiscoveredFields: %v", err)
-	}
+	// The control: a SECOND fill against the now-occupied slot writes no
+	// handle, and must not claim the social write a reader would then look for.
+	fillLinkedinFromSite(ctx, t, e, companyID, "Tuva Lien", "https://www.linkedin.com/in/tuva-lien-2")
 	if got := countAuditRowsHolding(ctx, t, e.store, "contact", contactID.UUID, "social"); got != 1 {
 		t.Errorf("audit rows naming the social write = %d after a fill that found the slot occupied, "+
 			"want the original 1 — the two writes must not read alike", got)

@@ -3,14 +3,14 @@
 
 package privacy
 
-// The two executors that DELETE a row rather than scrub one, and why that is
-// the same act twice rather than two.
+// The executors that DELETE a row rather than scrub one, and why that is one
+// act rather than several.
 //
 // Every other erase in this engine leaves a record standing and empties it: an
 // activity keeps its source key and loses its text, a contact keeps its row and
-// loses its name. These two tables have no metadata half to keep — the row IS
-// the content — so emptying one would leave an empty row saying nothing, and
-// the delete is the whole of the action.
+// loses its name. These tables have no metadata half to keep — the row IS the
+// content — so emptying one would leave an empty row saying nothing, and the
+// delete is the whole of the action.
 //
 // What survives each is the record the row hangs off: ai_call keeps its routing
 // and spend after its payload goes, and the activity keeps the source key that
@@ -18,8 +18,8 @@ package privacy
 // to reach that half, which is what makes both of them one-line statements.
 //
 // They live beside each other rather than in the table file because that file
-// is the dispatch and the authorable set; these are the only executors whose
-// shape is shared, and the shape is the point.
+// is the dispatch and the authorable set, and the shape they share is the
+// point.
 
 import (
 	"context"
@@ -50,5 +50,13 @@ func (*RetentionService) erasePayload(ctx context.Context, tx pgx.Tx, id ids.UUI
 // the record it belongs to.
 func (*RetentionService) eraseRawCapture(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	_, err := tx.Exec(ctx, `DELETE FROM raw_capture WHERE id = $1`, id)
+	return err
+}
+
+// eraseRiskDay deletes one recorded risk day, and its verdicts go with it by
+// ON DELETE CASCADE. The deals they name survive: what ages out is the record
+// of what the queue judged on that day.
+func (*RetentionService) eraseRiskDay(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	_, err := tx.Exec(ctx, `DELETE FROM deal_risk_day WHERE id = $1`, id)
 	return err
 }

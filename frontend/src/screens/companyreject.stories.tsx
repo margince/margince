@@ -17,7 +17,7 @@ import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 // halves plainly and ask for the sentence that makes the refusal reviewable.
 
 const meta: Meta<typeof CompanyRejectAction> = {
-  title: "Records/Company header/Not a company",
+  title: "Records/Company 360/Not a company",
   component: CompanyRejectAction,
   parameters: { layout: "padded" },
 };

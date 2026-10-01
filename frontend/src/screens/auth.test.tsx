@@ -2,11 +2,13 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { THEME_KEY } from "../app/theme";
+import { STORAGE_KEYS } from "../app/storage";
 import { resetTheme } from "../app/theme-reset";
 import { LOCALES, localeNameKey, translate } from "../i18n";
 import { AuthScreen, AvailabilityScreen } from "./auth";
 import { ok, render, stubApi, t } from "./auth.testkit";
+
+const THEME_KEY = STORAGE_KEYS.theme.name;
 
 // The unauthenticated surface (A107/ADR-0061 §12): login is the default —
 // no signup mode, no workspace field, no tenant selector on the wire — and
@@ -643,6 +645,14 @@ describe("AuthScreen reset deep link", () => {
 
 describe("AvailabilityScreen", () => {
   it("presents connectivity and installation problems as availability with a retry", async () => {
+    // The connection screen checks the session on mount; that check must meet
+    // a refused network rather than a real one.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+    );
     const onRetry = vi.fn();
     render(<AvailabilityScreen kind="connection" onRetry={onRetry} />);
     expect(screen.getByText("Margince could not be reached")).toBeTruthy();

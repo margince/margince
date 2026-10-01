@@ -7,20 +7,16 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { EvidenceMark } from "./evidencemark";
+import { Heading } from "./heading";
+import { armHoverIntent } from "./hoverintent-testing";
+import { Modal } from "./modal";
 
-// EVERY ASSERTION AFTER AN INTERACTION IS AWAITED, and the reason is the
-// component rather than the test runner. The panel settles against a
-// hover-intent poll on the REAL clock — a 25ms tick with a 260ms ceiling, the
-// one the last case here already documents — so its open state is not a
-// function of the click alone. `await userEvent.click` guarantees the events
-// were dispatched, never that React has re-rendered and that poll has settled,
-// and an immediate assertion reads the DOM in between. On a loaded machine that
-// gap is wide enough to observe: this file failed a full run on
-// `aria-expanded` still being "false" one line after the click that opens it
-// (issue 2661).
+// Hover intent is inert here unless a case arms it (vitest.setup.ts), so a
+// click alone decides whether the panel is open. The cases that arm it wait for
+// the settle and leave the trigger before they end.
 //
 // The one provenance affordance. What it has to get right:
 //
@@ -101,6 +97,35 @@ describe("evidence mark", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it("leaves Escape to a dialog raised over it", async () => {
+    const onDialogClose = vi.fn();
+    const page = (dialogOpen: boolean) => (
+      <LocaleProvider initial="en">
+        <EvidenceMark
+          value="1998"
+          source={{
+            provenance: { kind: "agent", agent: "capture" },
+            snippet: "Founded in 1998",
+          }}
+        />
+        <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+          <Heading size="large" id="edit">
+            Edit deal
+          </Heading>
+        </Modal>
+      </LocaleProvider>
+    );
+    const user = userEvent.setup();
+    const { rerender } = render(page(false));
+    await user.click(screen.getByRole("button", { name: /1998/ }));
+    rerender(page(true));
+
+    await user.keyboard("{Escape}");
+
+    expect(onDialogClose).toHaveBeenCalledOnce();
+    expect(screen.getByText("Founded in 1998")).toBeTruthy();
+  });
+
   it("offers no full-history link when there is nowhere to send the reader", async () => {
     show(
       <EvidenceMark
@@ -130,12 +155,6 @@ describe("evidence mark", () => {
     const trigger = screen.getByRole("button", { name: /1998/ });
     await userEvent.click(trigger);
     await userEvent.click(screen.getByText("Full history"));
-    // The pointer leaves, which is what a reader who has navigated away has
-    // done. Without it the hover-intent poll this click armed is still running
-    // on the real clock — a 25ms tick with a 260ms ceiling that settles
-    // whatever the pointer is doing — and it re-opens the panel a moment after
-    // the assertion below, or a moment before it on a loaded machine.
-    await userEvent.unhover(trigger);
 
     expect(opened).toBe(true);
     // The panel closes on the way out, so the reader does not return to a
@@ -164,6 +183,7 @@ describe("evidence mark", () => {
   });
 
   it("leaves focus on the value when the panel opened under a settled pointer", async () => {
+    armHoverIntent();
     show(
       <EvidenceMark
         value="1998"
@@ -217,6 +237,7 @@ describe("evidence mark", () => {
 // A claim is checked by resting on it: the receipt opens under a pointer that
 // has settled on the value and closes once it has left, without a click.
 it("opens under a settled pointer and closes when it leaves", async () => {
+  armHoverIntent();
   show(
     <EvidenceMark
       value="1998"
@@ -234,4 +255,30 @@ it("opens under a settled pointer and closes when it leaves", async () => {
   await waitFor(() => expect(screen.getByRole("region")).toBeTruthy());
   fireEvent.pointerLeave(mark);
   await waitFor(() => expect(screen.queryByRole("region")).toBeNull());
+});
+
+// A mark beside its value shows a word ("bought", "read") rather than the value,
+// and a voice user targets a control by the words on screen: the name has to
+// open with that word (WCAG 2.5.3), then say which value it explains.
+describe("evidence mark beside its value", () => {
+  const source = {
+    provenance: { kind: "connector" as const, connector: "Surfe" },
+  };
+  for (const [locale, word] of [
+    ["en", "bought"],
+    ["de", "gekauft"],
+  ] as const) {
+    it(`opens its name with the word it shows (${locale})`, () => {
+      render(
+        <LocaleProvider initial={locale}>
+          <EvidenceMark value={word} subject="Head of Sales" source={source} />
+        </LocaleProvider>,
+      );
+      const trigger = screen.getByRole("button");
+      const name = trigger.getAttribute("aria-label") ?? "";
+      expect(trigger.textContent).toBe(word);
+      expect(name.startsWith(word)).toBe(true);
+      expect(name).toContain("Head of Sales");
+    });
+  }
 });

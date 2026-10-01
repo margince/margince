@@ -40,13 +40,14 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -123,7 +124,7 @@ func functionsWritingTheBackfillLedger(t *testing.T) map[string]string {
 		if !strings.Contains(source, ledgerTable) {
 			return nil
 		}
-		fset := token.NewFileSet()
+		fset := gatekit.SourceFileSet()
 		file, parseErr := parser.ParseFile(fset, path, source, 0)
 		if parseErr != nil {
 			return parseErr

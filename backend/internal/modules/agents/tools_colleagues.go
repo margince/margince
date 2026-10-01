@@ -58,6 +58,7 @@ func (t listColleagues) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "list_colleagues", Title: "List colleagues", Version: toolVersionV1,
 		Description:   listColleaguesCopy.render(),
+		Instead:       listColleaguesCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listUsers",
 		InputSchema: schema(`{"type":"object","properties":{

@@ -25,8 +25,6 @@ package gates_test
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"regexp"
 	"strings"
@@ -144,7 +142,7 @@ func TestTheSignedFieldsAreOrderedTheSameWay(t *testing.T) {
 func signingPayloadArgOrder(t *testing.T) []string {
 	t.Helper()
 	const seamFile = "pkg/extension/inbound.go"
-	file, err := parser.ParseFile(token.NewFileSet(), seamFile, nil, 0)
+	file, err := gatekit.ParseFile(seamFile, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", seamFile, err)
 	}
@@ -273,7 +271,7 @@ func canonicalShellField(t *testing.T, token string) string {
 func signingPayloadFormat(t *testing.T) string {
 	t.Helper()
 	const seamFile = "pkg/extension/inbound.go"
-	file, err := parser.ParseFile(token.NewFileSet(), seamFile, nil, 0)
+	file, err := gatekit.ParseFile(seamFile, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", seamFile, err)
 	}
@@ -351,7 +349,7 @@ const inboundHeaderFile = "pkg/extension/inbound.go"
 // is read here rather than assumed.
 func headerConstantValues(t *testing.T) map[string]string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), inboundHeaderFile, nil, 0)
+	file, err := gatekit.ParseFile(inboundHeaderFile, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", inboundHeaderFile, err)
 	}

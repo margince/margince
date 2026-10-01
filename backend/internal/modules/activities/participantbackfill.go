@@ -31,10 +31,9 @@ package activities
 //	attributed to a coin flip. A wrong edge is worse than a missing one: it
 //	tells someone to ask a colleague who has never met the contact.
 //
-//	Class 3 — an activity whose author was repaired from the system it was
-//	imported from (POST /records/attribution). It is EXCLUDED, and the reason
-//	is not that its participants are settled: nothing on the attribution path
-//	writes a participant row. It is that its `captured_by` names whoever ran
+//	Class 3 — an activity whose importer named its author in the system it
+//	came from. It is EXCLUDED, and the reason is not that its participants are
+//	settled: naming an author writes no participant row. It is that its `captured_by` names whoever ran
 //	the import rather than whoever wrote the message, so class 1 would attribute
 //	it to the importing seat — a wrong edge, which is the thing class 2 already
 //	refuses to guess at.
@@ -169,11 +168,15 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 		       AND a.kind IN (`+relstrength.ParticipantKindSQLList()+`)
 		       AND NOT EXISTS (
 		           SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id)
-		       -- Class 3: a row whose author was repaired from its own source.
-		       -- Its captured_by names whoever ran the IMPORT, so class 1 would
-		       -- read that seat as the author and write an edge to the wrong
-		       -- human. Skipped because this job cannot answer for it — not
-		       -- because the work is done.
+		       -- Class 3: a row an importer landed with its author stated. Its
+		       -- captured_by names whoever ran the IMPORT, so class 1 would read
+		       -- that seat as the author and write an edge to the wrong human.
+		       -- Authorship stands in for import here, not for participant work
+		       -- having finished: the create that admits these columns writes
+		       -- the participants it could resolve in the same transaction, so a
+		       -- row with none of them has zero as its answer rather than work
+		       -- outstanding. A writer that stated an author and left the
+		       -- participants to this job would owe a marker of its own.
 		       AND a.source_author_id IS NULL
 		       AND a.source_author_name IS NULL
 		     ORDER BY a.id

@@ -5,27 +5,20 @@ package capture
 
 // The capture insert's columns, placeholders and arguments agree.
 //
-// The statement is hand-numbered, which the rulebook allows nobody to add and
-// this one predates. Nothing in Go or Postgres checks that a column list, its
-// $N placeholders and the argument slice stay the same length — a mismatch is
-// caught at execution, on a real capture, as an error nobody sees until a
-// mailbox stops syncing. This reads the statement itself and counts.
-
 import (
-	"os"
+	"context"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func TestTheCaptureInsertCountsItsOwnPlaceholders(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile("sinkactivity.go")
-	if err != nil {
-		t.Fatalf("reading the sink: %v", err)
-	}
-	statement := insertStatement(t, string(source))
+	seconds := 9000
+	statement, args := capturedActivityInsert(context.Background(), connector.NormalizedRecord{}, ActivityFields{Kind: "meeting", DurationSeconds: &seconds}, birthDecision{})
 
 	listStart := strings.Index(statement, "(")
 	listEnd := strings.Index(statement, ")")
@@ -34,6 +27,9 @@ func TestTheCaptureInsertCountsItsOwnPlaceholders(t *testing.T) {
 	}
 	columns := strings.Count(statement[listStart:listEnd], ",") + 1
 
+	if columns != len(args) {
+		t.Fatalf("%d columns, %d arguments", columns, len(args))
+	}
 	highest := 0
 	for _, match := range regexp.MustCompile(`\$(\d+)`).FindAllStringSubmatch(statement, -1) {
 		n, convErr := strconv.Atoi(match[1])
@@ -62,19 +58,4 @@ func TestTheCaptureInsertCountsItsOwnPlaceholders(t *testing.T) {
 			t.Errorf("the capture insert skips $%d, so every argument after it lands in the wrong column", n)
 		}
 	}
-}
-
-// insertStatement is the INSERT INTO activity text, from the sink's source.
-func insertStatement(t *testing.T, source string) string {
-	t.Helper()
-	start := strings.Index(source, "INSERT INTO activity (")
-	if start < 0 {
-		t.Fatal("the sink no longer holds an `INSERT INTO activity (` — if it moved, point this gate at it")
-	}
-	rest := source[start:]
-	end := strings.Index(rest, "ON CONFLICT")
-	if end < 0 {
-		t.Fatal("the capture insert no longer carries its ON CONFLICT clause; this gate reads up to it")
-	}
-	return rest[:end]
 }

@@ -11,7 +11,13 @@ import {
   TranscriptReadCard,
 } from "../screens/transcriptread";
 import type { TimelineEntry } from "./composed";
-import { contactsOn, type NameOf, withWhom } from "./participants";
+import {
+  type ContactOn,
+  contactsOn,
+  type NameOf,
+  namesOf,
+  withWhom,
+} from "./participants";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -81,6 +87,16 @@ function dealChip(activity: Activity, nameOf: NameOf): ReactNode {
   return name ? <span className="tl-about">{name}</span> : undefined;
 }
 
+// With no name resolved, the server's phrase — keyed on the CONTACT the server
+// says it names, so one contact draws one face wherever the phrase differs.
+// Absent when the far side resolved to no contact, and the row then keys the
+// phrase on itself, which is all the words can honestly key.
+function phraseContact(activity: Activity): ContactOn[] | undefined {
+  const name = activity.email_summary?.counterparty?.trim();
+  const key = activity.email_summary?.counterparty_contact_id;
+  return name && key ? [{ key, name }] : undefined;
+}
+
 export function activityTimeline(
   // Optional because a 200 with no body is a shape the contract permits and
   // the mirror actually returns: `isSuccess` is true while `data.data` is
@@ -119,8 +135,12 @@ export function activityTimeline(
       body: activity.body,
       direction: activity.direction,
       counterparts:
-        contacts && who ? withWhom(contacts, who.t, who.locale) : undefined,
-      counterpartNames: contacts,
+        contacts && who
+          ? withWhom(namesOf(contacts), who.t, who.locale)
+          : undefined,
+      counterpartContacts: contacts?.length
+        ? contacts
+        : phraseContact(activity),
       // What this exchange was ABOUT, when it is filed against a deal. A
       // chronology of an account runs several deals through one list, and the
       // row that does not say which one is a row a reader has to open to place.

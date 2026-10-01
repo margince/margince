@@ -14,7 +14,7 @@ import (
 // wire: where a model is addressed and how a request is authorised. The body,
 // the stream and the error shapes are the wire's own and are shared.
 type geminiTransport interface {
-	// modelURL is the absolute URL of one verb (generateContent, embedContent,
+	// modelURL is the absolute URL of one verb (generateContent, countTokens,
 	// …) on one model, given its bare id.
 	modelURL(model, verb string) string
 	// modelsURL is the absolute URL of the model collection this host lists.

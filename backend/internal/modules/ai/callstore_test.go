@@ -55,3 +55,16 @@ func TestClassifyError(t *testing.T) {
 		})
 	}
 }
+
+// The health read excludes answeredSentinels by spelling, so the sentinels the
+// answered errors classify to and that list must be one set: a sentinel
+// renamed on one side alone would count every withheld answer as an outage,
+// or hide a real failure from the health read.
+func TestTheAnsweredErrorsClassifyToExactlyTheAnsweredSentinels(t *testing.T) {
+	answered := []error{model.ErrOutputWithheld, model.ErrRequestRejected, errMeteringFailed}
+	classified := make([]string, 0, len(answered))
+	for _, err := range answered {
+		classified = append(classified, classifyError(fmt.Errorf("wrap: %w", err)))
+	}
+	assertSetEqual(t, "answered sentinels", classified, answeredSentinels)
+}

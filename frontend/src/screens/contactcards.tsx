@@ -164,7 +164,11 @@ export function ContactCommercialCard({
             {commercial.committee.map((member) => (
               <div className="pe-committee-row" key={member.contact_id}>
                 <span className="pe-committee-contact">
-                  <Avatar name={member.full_name} src={member.photo_url} />
+                  <Avatar
+                    name={member.full_name}
+                    identity={member.contact_id}
+                    src={member.photo_url}
+                  />
                   <span>{member.full_name}</span>
                 </span>
                 <span className="t-sub">{readableRole(member.role)}</span>

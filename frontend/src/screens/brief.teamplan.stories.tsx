@@ -83,7 +83,7 @@ const openThePlan = async ({
 };
 
 const meta: Meta<typeof TeamPlanReview> = {
-  title: "Shell/Home team plan",
+  title: "Shell/Home/Team plan",
   component: TeamPlanReview,
 };
 export default meta;

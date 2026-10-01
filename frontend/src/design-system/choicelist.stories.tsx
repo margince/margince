@@ -11,7 +11,7 @@ import { ChoiceList } from "./choicelist";
 // and a group a reader may look at but not change.
 
 const meta: Meta<typeof ChoiceList> = {
-  title: "Design System/ChoiceList",
+  title: "Components/Forms and input/Choice list",
   component: ChoiceList,
   parameters: { layout: "padded" },
 };
@@ -71,6 +71,20 @@ export const Disabled: Story = {
     value: "everyone_except",
     choices: REACH,
     disabled: true,
+    onChange: () => {},
+  },
+};
+
+// One answer refused while the other stays open, with the reason as its help
+// line, so the reader sees what the refused answer would do and why not yet.
+export const OneAnswerRefused: Story = {
+  args: {
+    legend: "Which conversations go into the CRM?",
+    value: "only_chosen",
+    choices: [
+      { ...REACH[0], disabled: true, description: "Connect a mailbox first." },
+      REACH[1],
+    ],
     onChange: () => {},
   },
 };

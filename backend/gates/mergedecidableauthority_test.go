@@ -27,10 +27,11 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -148,7 +149,7 @@ func qualifiedCallee(fun ast.Expr) string {
 // does rather than what its comments say.
 func methodBody(t *testing.T, file, method string) *ast.BlockStmt {
 	t.Helper()
-	parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, 0)
+	parsed, err := gatekit.ParseFile(file, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", file, err)
 	}

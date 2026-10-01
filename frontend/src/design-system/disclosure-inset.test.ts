@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { appStylesheets, selectorList } from "../../scripts/lib/css-rules";
 import { withoutComments } from "../testing/css";
 
 // Fitness function for a disclosure nested inside a disclosure.
@@ -35,34 +36,23 @@ import { withoutComments } from "../testing/css";
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-function stylesheets(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "node_modules" || entry.name === "dist"
-        ? []
-        : stylesheets(path);
-    }
-    return entry.name.endsWith(".css") ? [path] : [];
-  });
-}
-
 /** One selector mentioning `.disclosure-body`, and where it was written. */
 type Mention = Readonly<{ sheet: string; selector: string }>;
 
 // Every selector in the tree that reaches a disclosure's body. Selector
 // preludes, one per comma, comments blanked first — a rule spelt out in the
 // paragraph above it is prose, and a commented-out rule styles nothing.
-const mentions: Mention[] = stylesheets(srcRoot).flatMap((sheet) => {
-  const css = withoutComments(readFileSync(sheet, "utf8"));
-  return [...css.matchAll(/([^{}]+)\{[^{}]*\}/g)].flatMap((rule) =>
-    rule[1]
-      .split(",")
-      .map((one) => one.trim().replace(/\s+/g, " "))
-      .filter((one) => one.includes(".disclosure-body"))
-      .map((selector) => ({ sheet: relative(srcRoot, sheet), selector })),
-  );
-});
+const mentions: Mention[] = appStylesheets(join(srcRoot, "..")).flatMap(
+  (sheet) => {
+    const css = withoutComments(readFileSync(sheet, "utf8"));
+    return [...css.matchAll(/([^{}]+)\{[^{}]*\}/g)].flatMap((rule) =>
+      selectorList(rule[1])
+        .map((one) => one.replace(/\s+/g, " "))
+        .filter((one) => one.includes(".disclosure-body"))
+        .map((selector) => ({ sheet: relative(srcRoot, sheet), selector })),
+    );
+  },
+);
 
 // The atom's own rule is the one selector that names the body with nothing to
 // its left; every other mention scopes it to something, and scoping is what
@@ -77,7 +67,7 @@ describe("a section's inset stops at that section's own body", () => {
   // the sheets, the atom's own rule, and the scoped mentions the rule below
   // exists for.
   it("reads the whole tree of stylesheets", () => {
-    expect(stylesheets(srcRoot).length).toBeGreaterThan(20);
+    expect(appStylesheets(join(srcRoot, "..")).length).toBeGreaterThan(20);
     expect(
       mentions.some((one) => /^\.disclosure-body\b/.test(one.selector)),
       "the scan did not find the atom's own `.disclosure-body` rule, so it is " +

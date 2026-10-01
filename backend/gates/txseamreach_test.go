@@ -58,13 +58,14 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // declaredFunc is one named function or method, with the pgx spelling of the
@@ -124,7 +125,6 @@ func indexPackageFunctions(t *testing.T, roots []string) funcIndex {
 	tree := moduleRoot(t)
 	holders, declared := txHoldingReceivers(t, roots)
 	idx := funcIndex{}
-	fset := token.NewFileSet()
 	counted := 0
 	for _, root := range roots {
 		err := filepath.WalkDir(filepath.Join(tree, root),
@@ -133,7 +133,7 @@ func indexPackageFunctions(t *testing.T, roots []string) funcIndex {
 					strings.HasSuffix(p, "_test.go") {
 					return err
 				}
-				file, parseErr := parser.ParseFile(fset, p, nil, 0)
+				file, parseErr := gatekit.ParseFile(p, 0)
 				if parseErr != nil {
 					return parseErr
 				}

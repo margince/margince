@@ -136,14 +136,9 @@ func countVisibleTagged(ctx context.Context, tx pgx.Tx, id ids.TagID, entityType
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	tagPos, typePos := arg(id), arg(entityType)
-	scope, err := auth.ScopeClauseFor(ctx, entityType, "r", arg)
+	scope, err := recordScope(ctx, entityType, "r", arg)
 	if err != nil {
 		return 0, fmt.Errorf("collections: scoping %s tag usage: %w", entityType, err)
-	}
-	if scope == "" {
-		// An unbounded caller sees every row, and the empty clause is how the
-		// helper says so — not a missing predicate to be defaulted open.
-		scope = "TRUE"
 	}
 	var n int
 	query := fmt.Sprintf(`
@@ -203,12 +198,9 @@ func countVisibleTaggedBatch(ctx context.Context, tx pgx.Tx, tagIDs []ids.TagID,
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idsPos, typePos := arg(tagIDs), arg(entityType)
-	scope, err := auth.ScopeClauseFor(ctx, entityType, "r", arg)
+	scope, err := recordScope(ctx, entityType, "r", arg)
 	if err != nil {
 		return nil, fmt.Errorf("collections: scoping %s tag usage: %w", entityType, err)
-	}
-	if scope == "" {
-		scope = "TRUE"
 	}
 	query := fmt.Sprintf(`
 		SELECT tg.tag_id, count(*)

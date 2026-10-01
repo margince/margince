@@ -19,6 +19,7 @@ const agentLoopFirstStepOnly = "FIRST step only"
 
 // An agent_loop case grades one step of a multi-step turn, so a rubric that does
 // not say so lets the judge mark a right first call down for the steps it never saw.
+// A case its mechanical check grades alone has no rubric to say it in.
 func TestEveryAgentLoopRubricGradesTheFirstStepOnly(t *testing.T) {
 	census, err := compose.NewTaskCensus()
 	if err != nil {
@@ -34,6 +35,9 @@ func TestEveryAgentLoopRubricGradesTheFirstStepOnly(t *testing.T) {
 			continue
 		}
 		found++
+		if !sc.Expect.Judged() {
+			continue
+		}
 		if rubric := strings.Join(strings.Fields(sc.Expect.Rubric), " "); !strings.Contains(rubric, agentLoopFirstStepOnly) {
 			t.Errorf("agent_loop scenario %s: its rubric never says it grades the turn's %q; "+
 				"open it with the sentence its siblings carry", sc.Name, agentLoopFirstStepOnly)

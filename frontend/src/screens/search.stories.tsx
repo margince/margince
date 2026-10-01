@@ -102,6 +102,15 @@ export const EveryKind: Story = {
           data: [
             { type: "contact", id: "p1", title: "Dana Buyer", score: 0.91 },
             { type: "company", id: "o1", title: "Acme GmbH", score: 0.88 },
+            // A partner beside a plain company, because the mark only reads by
+            // contrast: it says which of the two accounts is a partner.
+            {
+              type: "company",
+              id: "o2",
+              title: "Brandt GmbH",
+              score: 0.86,
+              is_partner: true,
+            },
             {
               type: "deal",
               id: "d1",
@@ -214,6 +223,13 @@ export const EveryKindGerman: Story = {
           data: [
             { type: "contact", id: "p1", title: "Dana Buyer", score: 0.91 },
             { type: "company", id: "o1", title: "Acme GmbH", score: 0.88 },
+            {
+              type: "company",
+              id: "o2",
+              title: "Brandt GmbH",
+              score: 0.86,
+              is_partner: true,
+            },
             {
               type: "product",
               id: "pr1",

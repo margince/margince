@@ -32,7 +32,7 @@ func (s *memCallStore) EnsureConfig(context.Context, ConfigSnapshot) error { ret
 // the shape every NewLocalRouter test starts from.
 func localFakeConfig() RoutingConfig {
 	return RoutingConfig{
-		Profile:    ProfileCloudHosted,
+		Profile:    ProfileEUHosted,
 		Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: ProviderFake}},
 		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}},
 	}
@@ -209,5 +209,32 @@ func TestALocalRouterSendsTheBrokerDefaultsProductionWould(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A provider with no adapter is refused, unless the caller hands the DB-less
+// router the client that serves it — which then serves every tier and the
+// embed lane bound to it, under the provider's own name in the trace.
+func TestNewLocalRouterServesAHarnessProviderWithTheCallersClient(t *testing.T) {
+	cfg := RoutingConfig{
+		Profile:    ProfileCloudFrontier,
+		Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: "harness_cli", Model: "m"}},
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: "harness_cli", Model: "m"}},
+	}
+	if _, err := NewLocalRouter(cfg); err == nil || !strings.Contains(err.Error(), "unknown provider") {
+		t.Fatalf("err = %v, want a provider with no adapter refused", err)
+	}
+	stub := NewFakeClient().Script("served by the harness")
+	store := &memCallStore{}
+	r, err := NewLocalRouter(cfg, WithHarnessClient("harness_cli", stub), WithCallStore(store), WithoutResultCache())
+	if err != nil {
+		t.Fatalf("a harness-served binding could not be built: %v", err)
+	}
+	resp, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "hi"}}})
+	if err != nil || resp.Text != "served by the harness" {
+		t.Fatalf("resp = %q, err = %v, want the harness client's answer", resp.Text, err)
+	}
+	if len(store.calls) != 1 || store.calls[0].Provider != "harness_cli" {
+		t.Errorf("calls = %+v, want one traced under harness_cli", store.calls)
 	}
 }

@@ -41,15 +41,16 @@ import (
 // disclose what a row would not. A read that skipped it would print on the
 // Worklist the number the record page refuses to show.
 //
-// The money pair goes together. A withheld amount takes its currency with it,
-// because a currency alone says a deal is priced and in what units, which is
-// half of what the mask was hiding.
+// Not auth.ApplyFieldMasks: a card is not a wire record. It carries no id of
+// its own and no masked_fields, so the shared pass would take this map apart
+// and rebuild it to state a list of names there is nowhere to put. What is
+// shared is the question — MaskedFields answers it once, group closed — and
+// this spends the answer on the columns a card carries.
 //
-// Unlike a Deal on the wire, DealFigures carries no masked_fields list, so a
-// withheld amount is indistinguishable from an unpriced deal. That is the same
-// answer the card already gives for a deal with no amount, and it is the safe
-// direction: it says less rather than claiming a figure is absent when it is
-// merely withheld.
+// A withheld figure is therefore indistinguishable from an unpriced deal. That
+// is the same answer the card already gives for a deal with no amount, and it
+// is the safe direction: it says less rather than claiming a figure is absent
+// when it is merely withheld.
 func maskFigures(ctx context.Context, tx pgx.Tx, figures map[ids.UUID]DealFigures) error {
 	p, err := storekit.Actor(ctx)
 	if err != nil {
@@ -57,7 +58,7 @@ func maskFigures(ctx context.Context, tx pgx.Tx, figures map[ids.UUID]DealFigure
 	}
 	// Cheap exit for the common case — no mask on deals at all, which is how
 	// every installation ships until an operator authors one.
-	if len(auth.MaskedFields(p, "deal", false)) == 0 {
+	if len(auth.MaskedFields(p, maskObject, false)) == 0 {
 		return nil
 	}
 	dealIDs := make([]ids.UUID, 0, len(figures))
@@ -69,10 +70,9 @@ func maskFigures(ctx context.Context, tx pgx.Tx, figures map[ids.UUID]DealFigure
 		return err
 	}
 	for id, row := range figures {
-		for _, field := range auth.MaskedFields(p, "deal", writable[id]) {
-			if field == dealAmountField {
-				row.AmountMinor = nil
-				row.Currency = ""
+		for _, field := range auth.MaskedFields(p, maskObject, writable[id]) {
+			if withhold, carried := dealFigureWithholds[field]; carried {
+				withhold(&row)
 			}
 		}
 		figures[id] = row
@@ -80,9 +80,22 @@ func maskFigures(ctx context.Context, tx pgx.Tx, figures map[ids.UUID]DealFigure
 	return nil
 }
 
-// dealAmountField is the masked field this read can actually withhold. The
-// others in dealMaskableFields name columns it does not select.
-const dealAmountField = "amount_minor"
+// The deal's money as a mask NAMES it, which is the wire vocabulary and not
+// the column one: renaming a column would not rename an installation's stored
+// mask.
+const (
+	dealAmountField   = "amount_minor"
+	dealCurrencyField = "currency"
+)
+
+// dealFigureWithholds is how a CARD withholds each field it carries — the
+// deal's own registry asked of a different row shape. A name absent here is a
+// column this read does not select, and the census beside it is what holds
+// that true rather than a claim in this comment.
+var dealFigureWithholds = map[string]func(*DealFigures){
+	dealAmountField:   func(f *DealFigures) { f.AmountMinor = nil },
+	dealCurrencyField: func(f *DealFigures) { f.Currency = "" },
+}
 
 // DealFigures is one deal's commercial face: what it is worth, when it was
 // meant to land, and who answers for it.
@@ -90,10 +103,23 @@ type DealFigures struct {
 	CloseDateProvisional *bool
 	ForecastCategory     *string
 	StageID              ids.UUID
-	OwnerID              ids.UUID
-	AmountMinor          *int64
-	Currency             string
-	ExpectedCloseDate    *time.Time
+	// StageWinProbability is the probability recorded on the deal's stage, read
+	// in the one query this already performs rather than through a second call.
+	//
+	// A POINTER because 0 is a real probability and not an absence: a lost
+	// stage scores exactly 0, so a plain int would make "nobody said" and
+	// "certain to lose" the same answer. Today the schema fills it for every
+	// deal — `deal.stage_id` and `stage.win_probability` are both NOT NULL —
+	// so it arrives set; the pointer is what stops a future nullable column
+	// being reported as 0% of a deal nobody scored.
+	//
+	// It is NOT a weighting. Nothing here multiplies it into AmountMinor, and
+	// the contract forbids a reader doing so.
+	StageWinProbability *int
+	OwnerID             ids.UUID
+	AmountMinor         *int64
+	Currency            string
+	ExpectedCloseDate   *time.Time
 	// CloseOverdue is CloseIsOverdue's own verdict for this deal — the ONE
 	// place that comparison is made (closedate.go), called here rather than
 	// re-spelled. Meaningless where ExpectedCloseDate is nil.
@@ -104,6 +130,49 @@ type DealFigures struct {
 // and a caller that hands over more than this is asking a different question
 // than the one this answers.
 const figuresScanCap = 200
+
+// scanFigures reads the figures rows into out, keyed by deal id.
+//
+// Every column but the id is optional in the scan even where the schema fills
+// it: a LEFT JOIN and an outer read make a nullable shape the scan must accept,
+// and a pointer that is always set costs nothing while a wrong assumption costs
+// a panic on the first row that breaks it.
+func scanFigures(rows pgx.Rows, out map[ids.UUID]DealFigures, now time.Time, loc *time.Location) error {
+	for rows.Next() {
+		var (
+			id          ids.UUID
+			stage       *ids.UUID
+			owner       *ids.UUID
+			amount      *int64
+			code        *string
+			closes      *time.Time
+			provisional *bool
+			category    *string
+			winProb     *int
+		)
+		if err := rows.Scan(&id, &stage, &owner, &amount, &code, &closes, &provisional, &category, &winProb); err != nil {
+			return err
+		}
+		figures := DealFigures{
+			AmountMinor: amount, ExpectedCloseDate: closes, CloseDateProvisional: provisional,
+			ForecastCategory: category, StageWinProbability: winProb,
+		}
+		if closes != nil {
+			figures.CloseOverdue = CloseIsOverdue(*closes, now, loc)
+		}
+		if stage != nil {
+			figures.StageID = *stage
+		}
+		if owner != nil {
+			figures.OwnerID = *owner
+		}
+		if code != nil {
+			figures.Currency = *code
+		}
+		out[id] = figures
+	}
+	return rows.Err()
+}
 
 // Figures answers the stated figures of the given deals, keyed by id.
 //
@@ -150,8 +219,9 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 			return err
 		}
 		query := storekit.SQLf(
-			`SELECT d.id, d.stage_id, d.owner_id, d.amount_minor, d.currency, d.expected_close_date, d.close_date_provisional, d.forecast_category
+			`SELECT d.id, d.stage_id, d.owner_id, d.amount_minor, d.currency, d.expected_close_date, d.close_date_provisional, d.forecast_category, s.win_probability
 			   FROM deal d
+			   LEFT JOIN stage s ON s.id = d.stage_id
 			  WHERE d.id = ANY($%d) AND d.archived_at IS NULL`, idsPos,
 		)
 		if scope != "" {
@@ -162,37 +232,7 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 			return err
 		}
 		defer rows.Close()
-		now := s.clock()
-		for rows.Next() {
-			var (
-				id          ids.UUID
-				stage       *ids.UUID
-				owner       *ids.UUID
-				amount      *int64
-				code        *string
-				closes      *time.Time
-				provisional *bool
-				category    *string
-			)
-			if err := rows.Scan(&id, &stage, &owner, &amount, &code, &closes, &provisional, &category); err != nil {
-				return err
-			}
-			figures := DealFigures{AmountMinor: amount, ExpectedCloseDate: closes, CloseDateProvisional: provisional, ForecastCategory: category}
-			if closes != nil {
-				figures.CloseOverdue = CloseIsOverdue(*closes, now, loc)
-			}
-			if stage != nil {
-				figures.StageID = *stage
-			}
-			if owner != nil {
-				figures.OwnerID = *owner
-			}
-			if code != nil {
-				figures.Currency = *code
-			}
-			out[id] = figures
-		}
-		if err := rows.Err(); err != nil {
+		if err := scanFigures(rows, out, s.clock(), loc); err != nil {
 			return err
 		}
 		return maskFigures(ctx, tx, out)

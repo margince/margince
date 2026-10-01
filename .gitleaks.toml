@@ -38,9 +38,9 @@ useDefault = true
 
 # Tests and Storybook stories hold fabricated fixtures — stand-in passports and
 # approval tokens, demo ids, and deliberately malformed URLs. The credentialed
-# URLs in the websearch and contact-discovery tests are the clearest case: they
-# exist so the code under test can refuse them, so the literal HAS to look like
-# a credential for the test to mean anything.
+# URLs in the fetch-policy tests are the clearest case: they exist so the code
+# under test can refuse them, so the literal HAS to look like a credential for
+# the test to mean anything.
 [[allowlists]]
 description = "Fabricated fixtures in tests and Storybook stories"
 paths = [

@@ -8,7 +8,7 @@ import {
   SearchField,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { useDialogFocus } from "../design-system/dialogfocus";
+import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -16,6 +16,7 @@ import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import type { SettingsPageId } from "../screens/settingscatalog";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
 import { settingsHref } from "../screens/settingsrouting";
+import { useHoldsAdminRole } from "./capability";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
@@ -94,6 +95,9 @@ export function useBuiltinCommands(): Command[] {
   // The same table the settings rail walks, not a second opinion about it: a
   // palette reading its own list offers a page the rail no longer lists.
   const visible = useVisibleSettingsPages();
+  // Company profile draws its website card for an admin seat only, so only an
+  // admin finds the page by that card's words; any other seat would land on none.
+  const isAdmin = useHoldsAdminRole();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
@@ -128,12 +132,6 @@ export function useBuiltinCommands(): Command[] {
         route: { screen: "deals", id: CREATE_ID },
       },
       {
-        id: "action:read-company",
-        label: t("action.readCompany"),
-        type: "action",
-        route: { screen: "onboarding", id: "company" },
-      },
-      {
         id: "action:booking",
         label: t("action.booking"),
         type: "action",
@@ -146,13 +144,19 @@ export function useBuiltinCommands(): Command[] {
     // shelving can open, where deriving brings a new tab here for free.
     //
     // Gated on the SAME predicate the settings level uses, because that level
-    // falls back to Account for an entry the principal may not open — so an
-    // ungated command would be a shortcut that silently goes somewhere else.
+    // answers an entry the principal may not open with the access boundary — so
+    // an ungated command would be a shortcut to a refusal.
     // Only the admin half has a predicate; the `you` half is every reader's.
     const settingsScreens: Command[] = visible.map((page) => ({
       id: `screen:settings-${page.id}`,
       label: t(`settings.tab.${page.id}`),
-      keywords: [page.id, ...(SETTINGS_ALIASES[page.id] ?? [])],
+      keywords: [
+        page.id,
+        ...(SETTINGS_ALIASES[page.id] ?? []),
+        ...(page.id === "company" && isAdmin
+          ? [t("settings.companyRefresh")]
+          : []),
+      ],
       type: "screen",
       route: settingsHref(page.id),
     }));
@@ -189,7 +193,7 @@ export function useBuiltinCommands(): Command[] {
       ...offRailScreens,
       ...settingsScreens,
     ];
-  }, [t, visible, locale]);
+  }, [t, visible, locale, isAdmin]);
 }
 
 const TYPE_KEY: Record<Command["type"], MessageKey> = {
@@ -462,15 +466,22 @@ export function paletteHotkeyCaps(platform: string): readonly string[] {
   return /mac|iphone|ipad|ipod/i.test(platform) ? ["⌘", "K"] : ["Ctrl", "K"];
 }
 
-export function usePaletteHotkey(toggle: () => void) {
+export function usePaletteHotkey(
+  open: boolean,
+  setOpen: (open: boolean) => void,
+) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        toggle();
+        // An open dialog makes the rest of the app unreachable, the palette with
+        // it; asked only while closed, so the palette's own box never blocks it.
+        if (open || liveDialogs().length === 0) {
+          setOpen(!open);
+        }
       }
     };
     globalThis.addEventListener("keydown", onKey);
     return () => globalThis.removeEventListener("keydown", onKey);
-  }, [toggle]);
+  }, [open, setOpen]);
 }

@@ -57,12 +57,12 @@
 //   read therefore reads as absent, and the answer is to lift the gutter to the
 //   screen's own root rather than to teach the gate an exception.
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { sourceFileAt } from "../../scripts/lib/source-tree";
+import { resolveRelative, sourceFileAt } from "../../scripts/lib/source-tree";
 
 const srcRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROUTER = join(srcRoot, "app/router.tsx");
@@ -132,19 +132,6 @@ type Binding = { file: string; exported: string };
 
 const imports = new Map<string, ReadonlyMap<string, Binding>>();
 
-function moduleFor(from: string, specifier: string): string | undefined {
-  if (!specifier.startsWith(".")) {
-    return undefined;
-  }
-  const base = resolve(dirname(from), specifier);
-  return [
-    `${base}.tsx`,
-    `${base}.ts`,
-    join(base, "index.tsx"),
-    join(base, "index.ts"),
-  ].find((candidate) => existsSync(candidate));
-}
-
 /**
  * Which module each name in a file comes from: static imports, `export … from`
  * re-exports, and the `lazy(routed(() => import("./x").then((m) => ({ default:
@@ -180,7 +167,7 @@ function readImport(
   ) {
     return;
   }
-  const target = moduleFor(file.fileName, statement.moduleSpecifier.text);
+  const target = resolveRelative(file.fileName, statement.moduleSpecifier.text);
   if (!target) {
     return;
   }
@@ -213,7 +200,7 @@ function readReExport(
   ) {
     return;
   }
-  const target = moduleFor(file.fileName, specifier.text);
+  const target = resolveRelative(file.fileName, specifier.text);
   if (!target) {
     return;
   }
@@ -235,7 +222,7 @@ function readLazyImport(
       continue;
     }
     const specifier = dynamicImportSpecifier(declaration.initializer);
-    const target = specifier ? moduleFor(file.fileName, specifier) : undefined;
+    const target = specifier ? resolveRelative(file.fileName, specifier) : null;
     if (!target) {
       continue;
     }

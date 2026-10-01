@@ -2,17 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Info } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Badge, StatCard } from "./atoms";
 import { FactList } from "./factlist";
+import { IconAction } from "./iconaction";
 
 // StatCard — one reading with the basis it was drawn from.
 //
-// Split out of `atoms.stories.tsx`, where its frames sat among two dozen
-// unrelated atoms: this is the one control in that file whose whole argument is
-// COMPARISON — every tile the same size, in the same face, with its figure in
-// the same place — and that argument is only readable when the frames are read
-// as a set rather than found one at a time down a page of chips and badges.
+// Its frames argue by COMPARISON — every tile the same size, in the same face,
+// with its figure in the same place — so they are read together, as a set.
 //
 // Read every frame in BOTH themes with the toolbar's Theme control. Each tone
 // and the alert tint are `color-mix()`es of canonical tokens, so a tile can be
@@ -27,7 +26,7 @@ const row: CSSProperties = {
 };
 
 const meta: Meta<typeof StatCard> = {
-  title: "Design System/StatCard",
+  title: "Components/Text and data display/Stat card",
   component: StatCard,
 };
 export default meta;
@@ -149,6 +148,28 @@ export const ReadingsAtOneSize: Story = {
         detail="Across 14 closed deals"
         meter={{ filled: 11, total: 14 }}
       />
+    </div>
+  ),
+};
+
+// A glyph verb in the source slot beside a tile without one: the square takes
+// one line of the label row, so both labels and both figures sit level.
+export const IconSource: Story = {
+  render: () => (
+    <div style={row}>
+      <StatCard
+        label="No category"
+        value="€12.4k"
+        detail="3 deals"
+        source={
+          <IconAction
+            inline
+            label="Explain No category"
+            icon={<Info aria-hidden />}
+          />
+        }
+      />
+      <StatCard label="Commit" value="€28k" detail="4 deals" />
     </div>
   ),
 };

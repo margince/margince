@@ -29,8 +29,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"path/filepath"
 	"sort"
 	"testing"
@@ -115,7 +113,7 @@ func TestEveryRouteBelowTheAuthGateIsDeclared(t *testing.T) {
 // handler never reaches the session middleware.
 func routesBelowTheGate(t *testing.T) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), filepath.Join(repoRoot, "backend", routingTable), nil, 0)
+	file, err := gatekit.ParseFile(filepath.Join(repoRoot, "backend", routingTable), 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", routingTable, err)
 	}

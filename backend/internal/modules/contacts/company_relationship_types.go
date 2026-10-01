@@ -142,13 +142,13 @@ func readLiveRelationshipTypes(ctx context.Context, tx pgx.Tx, companyID ids.Com
 // extension — the other half of the invariant this file guards.
 func hasPartnerRow(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (bool, error) {
 	var exists bool
-	// LIVE rows only, matching what the partner API itself calls a partner
-	// (partner.go:298). Counting archived ones would force a company to
-	// keep a `partner` type its own partner endpoint says it does not have —
-	// the invariant would be true of the table and false of the product.
+	// LIVE rows only, through the same predicate the partner reads use.
+	// Counting archived ones would force a company to keep a `partner` type its
+	// own partner endpoint says it does not have — the invariant would be true
+	// of the table and false of the product.
 	err := tx.QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM partner
-		                 WHERE company_id = $1 AND archived_at IS NULL)`, companyID).Scan(&exists)
+		                 WHERE company_id = $1 AND `+livePartnerSQL("")+`)`, companyID).Scan(&exists)
 	return exists, err
 }
 

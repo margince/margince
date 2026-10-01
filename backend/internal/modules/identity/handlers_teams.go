@@ -41,7 +41,7 @@ func (h Handlers) UpdateTeam(w http.ResponseWriter, r *http.Request, id crmcontr
 	}
 	team, err := h.svc.UpdateTeam(r.Context(), actor, ids.UUID(id), UpdateTeamInput{Name: req.Name, Archived: req.Archived})
 	if err != nil {
-		httperr.Write(w, r, err)
+		httperr.Write(w, r, teamMembershipRefusal(err))
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, wireAdminTeam(team))
@@ -61,7 +61,7 @@ func (h Handlers) setTeamMember(w http.ResponseWriter, r *http.Request, id crmco
 		return
 	}
 	if err := h.svc.SetTeamMember(r.Context(), actor, ids.UUID(id), ids.UUID(userID), on); err != nil {
-		httperr.Write(w, r, err)
+		httperr.Write(w, r, teamMembershipRefusal(err))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -164,4 +164,11 @@ func wireAccess(a Access) crmcontracts.AccessPreview {
 		FieldMasks:   masks,
 		Teams:        teams,
 	}
+}
+
+// teamMembershipRefusal names the refusal a non-admin gets for changing who is
+// on a team, so a client can say why the grant they hold was not enough.
+func teamMembershipRefusal(err error) error {
+	return refuseAs(err, errTeamMembershipRequiresAdmin, http.StatusForbidden, "team_membership_requires_admin",
+		"only an admin changes who is on a team, or archives or restores one; you may create and rename teams")
 }

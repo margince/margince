@@ -35,7 +35,7 @@ import (
 // into ApplyActions, whether or not this particular starter's own
 // effect ever exercises every seam in it.
 func StarterWorkflows(ex Executors) []workflow.Handler {
-	return []workflow.Handler{
+	return append([]workflow.Handler{
 		stageChangeCreateTask{ex: ex},
 		stageChangeNotify{ex: ex},
 		postMeetingRecap{ex: ex},
@@ -43,7 +43,7 @@ func StarterWorkflows(ex Executors) []workflow.Handler {
 		checkInCadence{ex: ex},
 		renewalReminder{ex: ex},
 		routeLeadCreateTask{ex: ex},
-	}
+	}, listRuleWorkflows(ex)...)
 }
 
 // stageChangeCreateTaskName is the catalog key Task 6 seeds this

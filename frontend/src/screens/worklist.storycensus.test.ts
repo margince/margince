@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { isDocsPage, storyCensus } from "../../scripts/lib/story-files";
 import { KNOWN_SOURCES } from "./worklist.copy";
 
 // Every source the queue can draw has a story that draws it.
@@ -30,11 +30,12 @@ const storiesDir = join(__dirname);
 const standsForOtherRows = "batch";
 
 function everySourceDrawnInAStory(): Set<string> {
-  const files = readdirSync(storiesDir)
-    .filter(
-      (file) => file.startsWith("worklist.") && file.endsWith(".stories.tsx"),
-    )
-    .map((file) => join(storiesDir, file));
+  const files = storyCensus(join(storiesDir, "../..")).files.filter(
+    (file) =>
+      dirname(file) === storiesDir &&
+      basename(file).startsWith("worklist.") &&
+      !isDocsPage(file),
+  );
   const configPath = join(storiesDir, "../../tsconfig.app.json");
   const config = ts.readConfigFile(configPath, ts.sys.readFile);
   const parsed = ts.parseJsonConfigFileContent(

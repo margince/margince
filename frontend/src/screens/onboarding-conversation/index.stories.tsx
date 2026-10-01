@@ -29,7 +29,8 @@ import { OnboardingConversationScreen } from "./index";
 // stub's list shape, which reads as a MALFORMED session rather than an absent
 // one, and the shell then renders a refusal none of these stories is named for.
 
-const session = () => jsonResponse(meFixture({ allow: {} }));
+const session = () =>
+  jsonResponse(meFixture({ allow: { automation: ["update"] } }));
 
 /** The wizard row as the server stores it, at a named step. */
 function wizardAt(step: string, path: "creator" | "member" = "creator") {

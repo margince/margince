@@ -151,7 +151,7 @@ const FULL: RelationshipMapModel = {
 };
 
 const meta = {
-  title: "Design System/Relationship map",
+  title: "Components/Text and data display/Relationship map",
   component: RelationshipMap,
   parameters: { layout: "padded" },
   args: {

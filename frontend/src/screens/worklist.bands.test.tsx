@@ -112,7 +112,7 @@ describe("a band holding nothing says so", () => {
 describe("a page with more to load claims no band is empty", () => {
   // The pagination trap. The queue arrives band-sorted, so a band missing from
   // page one may hold rows on page three — and "nothing needs you today" over
-  // a Show more button is the page claiming to have looked at work it has not
+  // a Load more button is the page claiming to have looked at work it has not
   // fetched. The reassurance waits until the whole day is loaded.
   it("draws no empty-band line while a page is still unfetched", async () => {
     stub(banded({ next_cursor: "page-two" }));

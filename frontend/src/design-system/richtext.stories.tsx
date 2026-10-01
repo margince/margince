@@ -7,7 +7,7 @@ import { LocaleProvider } from "../i18n";
 import { RichText } from "./richtext";
 
 const meta: Meta<typeof RichText> = {
-  title: "Design System/RichText",
+  title: "Components/Forms and input/Rich text",
   component: RichText,
   parameters: { layout: "padded" },
   decorators: [

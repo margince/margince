@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
   House,
@@ -29,6 +28,7 @@ import {
   meRoute,
   type RouteMap,
   StoryProviders,
+  WithInstallationBrand,
 } from "../screens/story-utils";
 import type { GrantSpec } from "./mefixture";
 import type { NavSection } from "./nav";
@@ -95,8 +95,8 @@ function stubSession(allow: GrantSpec = {}, about: RouteMap = {}) {
   });
 }
 
-// The brand block reads the installation profile from the cache the onboarding
-// gate fills in the real app; a story seeds the same entry so the company heads
+// The brand block reads the installation's brand off /me in the real app; a
+// story puts it on the stubbed /me so the company heads
 // the rail the way it does for every reader of a live installation. Without it
 // the block honestly falls back to the product's own mark and name.
 //
@@ -112,16 +112,17 @@ function SeedInstallation({
   logoUrl?: string;
   logoIconUrl?: string;
 }>) {
-  const client = useQueryClient();
-  if (client.getQueryData(["company"]) === undefined) {
-    client.setQueryData(["company"], {
-      company_id: "company-1",
-      display_name: "Gradion GmbH",
-      logo_url: logoUrl,
-      logo_icon_url: logoIconUrl,
-    });
-  }
-  return <>{children}</>;
+  return (
+    <WithInstallationBrand
+      brand={{
+        display_name: "Gradion GmbH",
+        logo_url: logoUrl,
+        logo_icon_url: logoIconUrl,
+      }}
+    >
+      {children}
+    </WithInstallationBrand>
+  );
 }
 
 /**

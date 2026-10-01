@@ -64,7 +64,6 @@ test.describe("Analytics sections", () => {
       "analytics.sectionForecast",
       "analytics.sectionPipeline",
       "analytics.sectionPerformance",
-      "analytics.sectionDelivery",
     ] as const) {
       await expect(
         strip.getByRole("button", { name: t(key) }),
@@ -79,7 +78,14 @@ test.describe("Analytics sections", () => {
       ["analytics.sectionPerformance", "analytics.reportStageAge"],
       ["analytics.sectionDelivery", "analytics.reportProjectsByPhase"],
     ] as const) {
-      await strip.getByRole("button", { name: t(key) }).click();
+      if (key === "analytics.sectionDelivery") {
+        await page
+          .getByRole("button", { name: t("reporting.additional") })
+          .click();
+        await page.getByRole("button", { name: t(key), exact: true }).click();
+      } else {
+        await strip.getByRole("button", { name: t(key) }).click();
+      }
       await expect(
         page.getByText(t(expected)).first(),
         `pressing ${t(key)} drew no ${t(expected)} — the control routes nowhere`,
@@ -233,4 +239,45 @@ test.describe("Analytics sections", () => {
       "the page scrolls sideways at 390px — a column is out of reach",
     ).toEqual([]);
   });
+});
+
+test.describe("Explain a cell", () => {
+  const trigger = (figure: string) =>
+    de["explain.cell"].replace("{figure}", figure);
+
+  for (const width of [390, 1440]) {
+    test(`a row opens its own explanation in a drawer at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await openAnalytics(page, "performance");
+      const opener = page.getByRole("button", { name: trigger("Qualify") });
+      const asked = page.waitForRequest(/\/reports\/stage-age\/derivation/);
+      await opener.click();
+      // The ROW's handle reached the server, with its own group key bound.
+      const request = new URL((await asked).url());
+      expect(request.searchParams.get("stage_id")).toBe("s1");
+      expect(request.searchParams.getAll("by")).toEqual(["stage_id"]);
+
+      // The drawer answers for THIS row: its source rows and the notice the
+      // fixture's mask puts there, not the card's result-level panel.
+      const drawer = page.getByRole("dialog");
+      await expect(
+        drawer.getByText("Brandt Automotive, Flottenumrüstung"),
+      ).toBeVisible();
+      await expect(drawer.getByText(de["explain.excluded_one"])).toBeVisible();
+
+      await page.keyboard.press("Escape");
+      await expect(drawer).toBeHidden();
+      await expect(
+        opener,
+        "Escape closed the drawer but left focus nowhere near the row",
+      ).toBeFocused();
+
+      // The unmeasured stage came back without a handle, so it offers none.
+      await expect(
+        page.getByRole("button", { name: trigger("Proposal") }),
+      ).toHaveCount(0);
+    });
+  }
 });

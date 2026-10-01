@@ -10,7 +10,8 @@ import { Heading } from "./heading";
 // screenshots as an empty canvas. The trigger stays so the reader can reopen it
 // after dismissing, which is also the only way to see the surface arrive.
 const meta: Meta = {
-  title: "Design System/Modal",
+  title: "Components/Overlays and layering/Modal",
+  component: Modal,
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -27,12 +28,7 @@ function ModalDemo() {
         Open the dialog
       </Button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
-        <Heading
-          size="large"
-          id={titleId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           Merge these companies?
         </Heading>
         <p className="t-caption">
@@ -84,12 +80,7 @@ function DrawerDemo() {
         labelledBy={titleId}
         placement="right"
       >
-        <Heading
-          size="large"
-          id={titleId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           Write to Anna Brandt
         </Heading>
         <p className="t-caption">

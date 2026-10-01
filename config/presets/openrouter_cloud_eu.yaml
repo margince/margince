@@ -1,6 +1,12 @@
 # yaml-language-server: $schema=../margince.schema.json
-# config/presets/openrouter_cloud_eu.yaml — every CHAT tier on Mistral's EU
-# endpoint. The embeddings lane cannot carry the pin; see the gap noted below.
+# config/presets/openrouter_cloud_eu.yaml — every lane, chat and embeddings, on
+# Mistral's EU endpoint.
+#
+# The `eu_hosted` profile this preset declares is a promise, and
+# TestAResidencyPresetPinsEveryLaneToAnEURegion holds it: every lane here must name an EU-region endpoint in `only:`. A lane
+# that inherits the product default or writes `routing: {}` lets the broker serve
+# the model from any region — including a model with no EU endpoint at all, which
+# it then serves from somewhere else without failing.
 #
 # The sibling openrouter_cloud.yaml picks the best model per tier and lets the
 # broker choose a host. This file inverts that: the host is fixed first, and the
@@ -9,10 +15,19 @@
 # which matches every region and so is a vendor preference rather than a
 # location one.
 #
-# What the pin costs, stated plainly: mistralai/mistral-medium-3-5 is Mistral's
-# strongest current model and has NO EU endpoint, so `premium` and `frontier`
-# both name mistral-small-2603. Two tiers naming one model is the honest
-# reading of a region whose top rung does not exist in it.
+# `premium` names mistralai/mistral-medium-3-5, Mistral's flagship, served from
+# the EU endpoint since the broker added `mistral/eu` for it (read 2026-09-29).
+# `frontier` names mistral-small-2603 rather than the flagship a second time. No
+# shipped task leads at frontier, so it is only ever premium's fallback, and a
+# fallback to the same model is the same upstream endpoint: one 429 there would
+# burn both rungs. A different model is a different capacity pool.
+#
+# That 429 is rarely ours. Without a key of its own the broker serves Mistral
+# from ITS key, one capacity pool shared by every account on it. Each model
+# here has exactly one EU endpoint, so the pool is an account setting: attach a
+# Mistral API key to the OpenRouter account (its "bring your own key"
+# integration) and calls draw on that key's limits. A deployment on this preset
+# should, before it relies on premium or frontier.
 #
 # `cheap_cloud` deliberately does NOT join them — see the note on that tier.
 #
@@ -26,8 +41,8 @@
 #
 #     make e2e-ai ROUTING=config/presets/openrouter_cloud_eu.yaml
 #
-# The default judge, gpt-oss-120b, is bound on no tier here; mistral-small-2603
-# would grade its own premium and frontier tasks, and the runner refuses that.
+# The default judge (Claude, through `claude -p`) is bound on no tier here, so
+# it grades every task this preset certifies.
 #
 # On the `routing:` block's fields and the measurements behind them:
 # docs/reference/openrouter.md.
@@ -35,8 +50,6 @@ version: 1
 
 seeds:
   ai_routing:
-    # Not eu_resident: the broker itself reads every prompt outside the EU, so
-    # pinning the upstream to an EU host bounds only half of the path.
     profile: eu_hosted
     tiers:
       # Every tier writes `routing:` out rather than inheriting the product
@@ -77,7 +90,7 @@ seeds:
           require_parameters: true
       premium:
         provider: openai_compatible
-        model: mistralai/mistral-small-2603
+        model: mistralai/mistral-medium-3-5
         base_url: https://openrouter.ai/api
         routing:
           only: [mistral/eu]
@@ -89,12 +102,10 @@ seeds:
         routing:
           only: [mistral/eu]
           require_parameters: true
-    # KNOWN GAP: the embeddings lane cannot carry the pin. `routing:` is not a
-    # field on an embeddings binding and the parser refuses one there, so this
-    # lane reaches Mistral the vendor and the broker picks which of its regions
-    # serves the call. A deployment that needs the embedding text to stay in
-    # region binds this lane straight to https://api.mistral.ai instead of to
-    # the broker, and accepts a second credential for it.
+    # The embeddings lane carries the same pin. It reads every document the
+    # chat tiers do, so a lane left to the broker's choice of region would be
+    # the one place the preset's promise did not reach. Only the host-selection
+    # fields are legal on this lane; the pin is all it needs.
     #
     # KNOWN GAP: like its sibling, this preset cannot serve document_extract.
     # That task sends a PDF, and the OpenAI-compatible wire's declarable
@@ -106,3 +117,7 @@ seeds:
       model: mistralai/mistral-embed-2312
       base_url: https://openrouter.ai/api
       dimensions: 1024
+      routing:
+        only: [mistral/eu]
+    # No `decisions:` lane: eu_hosted refuses an OpenRouter or TypeSafe decision
+    # endpoint, since neither can be pinned to an EU host.

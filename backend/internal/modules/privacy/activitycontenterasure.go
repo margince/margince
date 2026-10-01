@@ -53,6 +53,9 @@ import (
 // retention window is scoped to time — so an unwired seam is not a degraded
 // mode, it is an erasure that reports success over an intact original.
 func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.UUID, act erasureAct) error {
+	if err := redactReportingSource(ctx, tx, "activity", []ids.UUID{id}); err != nil {
+		return err
+	}
 	if e.purgeRawCaptures == nil {
 		return fmt.Errorf("%w: this eraser was built without a raw-capture purger, so it can destroy "+
 			"an activity's text and not the provider original behind it", ErrRetentionSeamMissing)
@@ -70,18 +73,6 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	}
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM field_provenance WHERE object_type = 'activity' AND object_id = $1`, id); err != nil {
-		return err
-	}
-	// The byline the author repair wrote into its own bookkeeping. Every arm
-	// that reaches here has just cleared `source_author_name` off the activity,
-	// and the ledger holds a second copy of that same free text about the same
-	// human — so an erasure that stopped at the message would leave the erased
-	// name standing in a table anything can read.
-	//
-	// Here rather than beside each of those column writes, for the reason this
-	// function exists at all: the sweep and the lift both run this, and a clear
-	// spelled separately at each of them is the second list that goes short.
-	if err := clearAttributionLedgerNames(ctx, tx, "activity", []ids.UUID{id}); err != nil {
 		return err
 	}
 	// What a classifier concluded the message MEANT, and every human correction

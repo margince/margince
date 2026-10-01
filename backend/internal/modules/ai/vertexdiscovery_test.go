@@ -65,7 +65,7 @@ func TestTheLocationListIsGooglesOptionsStampedWithThisBuildsResidency(t *testin
 	})
 	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
 
-	got := store.providerLocations(routingReader(), ProfileCloudHosted, providerGeminiVertex)
+	got := store.providerLocations(routingReader(), ProfileEUHosted, providerGeminiVertex)
 	if got.Unavailable != AvailabilityOK {
 		t.Fatalf("listing: %+v", got)
 	}
@@ -108,7 +108,7 @@ func TestTheLocationListSaysWhyItIsEmpty(t *testing.T) {
 		"an unknown asker": {"nobody", allCloudKeys(t), AvailabilityNotPublished},
 	} {
 		store := &RoutingStore{keys: tc.keys, selectBrain: selector}
-		got := store.providerLocations(routingReader(), ProfileCloudHosted, tc.provider)
+		got := store.providerLocations(routingReader(), ProfileEUHosted, tc.provider)
 		if got.Unavailable != tc.want || len(got.Locations) != 0 {
 			t.Errorf("%s: %+v; want %q and no locations", name, got, tc.want)
 		}
@@ -151,13 +151,13 @@ func TestTheLocationListNeedsTheRoutingReadGrant(t *testing.T) {
 func servedAt(t *testing.T) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		served := strings.HasPrefix(r.URL.Path, "/v1/projects/margince-eu-1/locations/europe-west4/publishers/google/models/") &&
-			(strings.HasSuffix(r.URL.Path, "/gemini-3.5-flash:countTokens") || strings.HasSuffix(r.URL.Path, "/gemini-embedding-001:embedContent"))
+			(strings.HasSuffix(r.URL.Path, "/gemini-3.5-flash:countTokens") || strings.HasSuffix(r.URL.Path, "/gemini-embedding-001:predict"))
 		switch {
 		case !served:
 			w.WriteHeader(http.StatusNotFound)
 			writeBody(t, w, `{"error":{"code":404,"status":"NOT_FOUND","message":"Publisher Model `+"`projects/margince-eu-1/locations/eu/publishers/google/models/x`"+` was not found or your project does not have access to it."}}`)
-		case strings.HasSuffix(r.URL.Path, ":embedContent"):
-			writeBody(t, w, `{"embedding":{"values":[0.5]}}`)
+		case strings.HasSuffix(r.URL.Path, ":predict"):
+			writeBody(t, w, `{"predictions":[{"embeddings":{"values":[0.5]}}]}`)
 		default:
 			writeBody(t, w, `{"totalTokens":1}`)
 		}
@@ -168,7 +168,7 @@ func TestAProbeSaysWhetherALocationServesOneModel(t *testing.T) {
 	t.Parallel()
 	selector, _ := googleAt(t, servedAt(t))
 	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
-	cfg := RoutingConfig{Profile: ProfileEUResident}
+	cfg := RoutingConfig{Profile: ProfileEUHosted}
 	for name, tc := range map[string]struct {
 		q    AvailableModelsQuery
 		want ModelAvailability
@@ -194,14 +194,14 @@ func TestAProbeSaysWhetherALocationServesOneModel(t *testing.T) {
 	}
 }
 
-// The residency refusal comes before any client is built: not one request —
-// not even the token exchange — reaches Google for a location eu_resident
-// refuses, whether the screen lists models there or probes one.
-func TestEUResidentAsksGoogleNothingAboutANonResidentLocation(t *testing.T) {
+// The EU refusal comes before any client is built: not one request — not even
+// the token exchange — reaches Google for a location eu_hosted refuses,
+// whether the screen lists models there or probes one.
+func TestEUHostedAsksGoogleNothingAboutALocationOutsideTheEU(t *testing.T) {
 	t.Parallel()
 	selector, google := googleAt(t, servedAt(t))
 	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
-	cfg := RoutingConfig{Profile: ProfileEUResident}
+	cfg := RoutingConfig{Profile: ProfileEUHosted}
 	for _, q := range []AvailableModelsQuery{
 		{Provider: providerGeminiVertex, Tier: "premium", Location: "europe-west2"},
 		{Provider: providerGeminiVertex, Tier: "premium", Location: "us", Model: "gemini-3.5-flash"},
@@ -212,7 +212,7 @@ func TestEUResidentAsksGoogleNothingAboutANonResidentLocation(t *testing.T) {
 		}
 	}
 	if n := google.requests.Load(); n != 0 {
-		t.Errorf("%d request(s) reached Google for locations eu_resident refuses", n)
+		t.Errorf("%d request(s) reached Google for locations eu_hosted refuses", n)
 	}
 	// The control: the same store does reach Google for a resident location.
 	store.availableModels(context.Background(), cfg, AvailableModelsQuery{Provider: providerGeminiVertex, Location: "europe-west4", Model: "gemini-3.5-flash"})
@@ -232,7 +232,7 @@ func TestAMalformedLocationIsRefusedAsTheCallersFault(t *testing.T) {
 
 func vertexRouting(location string) RoutingConfig {
 	return RoutingConfig{
-		Profile: ProfileEUResident,
+		Profile: ProfileEUHosted,
 		Tiers: map[Tier]ProviderConfig{
 			TierPremium:    {Provider: providerGeminiVertex, Location: location, Model: "gemini-3.5-flash"},
 			TierLocalSmall: {Provider: providerOllama, Model: "gemma3"},

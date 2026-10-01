@@ -93,7 +93,9 @@ import { sourcePickOptions, useLeadSources } from "./leadsources";
 export { promoteEligible, scoreTone } from "./leadpresentation";
 export { terminalBadge } from "./leadstanding";
 
+import { AddToShortlistAction } from "./addtoshortlist";
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
+import { RecordListsPanel } from "./recordlists";
 
 export { LeadsScreen } from "./leads.list";
 
@@ -762,19 +764,9 @@ type PromotionRecord = {
  * every other one rather than fetching a history nothing renders.
  */
 function usePromotionRecord(id: string, promoted: boolean): PromotionRecord {
-  // ONE row, asked for by verb. The history endpoint takes an `action` filter
-  // now (#1611), so the promotion is the answer to the read rather than
-  // something found by walking towards it.
-  //
-  // What that replaced is worth remembering, because it was a real wrong
-  // answer and not merely a slow one: the trail is 20 rows to a page, so a lead
-  // worked long enough to collect other audit rows carried its promotion on a
-  // later page, and a reader that took the first page reported the outcome as
-  // unknowable on exactly the leads somebody had worked hardest. Paging on
-  // until it turned up fixed the answer and cost a round trip per page.
-  //
-  // A filtered read has at most one promote row — a lead is promoted once —
-  // so there is no page after the first and nothing to walk.
+  // ONE row, asked for by verb: the history read filtered by `action` answers
+  // with the promotion itself, wherever in a long trail it sits. A lead is
+  // promoted once, so there is no page after the first and nothing to walk.
   const history = useRecordHistory("lead", id, promoted, "promote");
   // `page?.data` for the same reason getNextPageParam needs it: a 200 with no
   // body is a shape the contract permits, and this read runs on every promoted
@@ -1094,6 +1086,7 @@ function LeadOverviewPane({
             />
           </PanelBody>
         </Panel>
+        <RecordListsPanel entityType="lead" entityId={id} />
       </RecordReading>
     </div>
   );
@@ -1251,19 +1244,17 @@ function LeadActions({
           square the only row a reader has to hover to identify.
 
           A terminal lead keeps these controls, DISABLED with the reason
-          (STATE-4a): the reason is the information, and hiding the control
-          hides a fact the reader needs. Both closures reach this page — a
-          disqualified lead and, since ADR-0119/A170, a promoted one — and the
-          band above names which, so these controls point at that one
-          sentence rather than guessing at it. The band is also WHY the
-          sentence is passed in rather than minted here: a reason living in
-          the panel would not exist until the menu was first opened. */}
+          (STATE-4a): hiding the control hides a fact the reader needs. Both
+          closures reach this page — disqualified and promoted — and the band
+          above names which. The sentence is passed in because a reason minted
+          in the panel would not exist until the menu was first opened. */}
       <OverflowMenu label={t("record.moreActions")}>
         <ShareAction
           recordType="lead"
           recordId={lead.id}
           disabledReasonId={refusedReasonId}
         />
+        <AddToShortlistAction entityType="lead" entityId={lead.id} />
         {/* Last: it is the one verb here a reader cannot walk back from
                 the header, so it does not sit where a pointer sliding down
                 the list reaches it on the way to something routine. It asks
@@ -1409,7 +1400,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         }
         asideOpen={details.open}
         name={leadIdentityName(lead) || t("lead.unnamed")}
-        avatarSrc={null}
+        identity={lead.id}
         // The role and the company, on the name's own line: the contact
         // page's register for the same two facts (ContactSubtitle). A lead
         // carries no company FK, so unlike the contact's this is never a link.

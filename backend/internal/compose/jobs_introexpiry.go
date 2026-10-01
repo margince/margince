@@ -45,11 +45,10 @@ func (IntroExpiryArgs) Kind() string { return "intro_expiry" }
 // reach is still due then — the predicate is a clock, and a clock does not need
 // a second rung to come back to something.
 func (IntroExpiryArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{
-		Queue:       river.QueueDefault,
+	return *jobs.QueuedAs[IntroExpiryArgs](&river.InsertOpts{
 		MaxAttempts: 1,
 		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
-	}
+	})
 }
 
 type introExpiryWorker struct {

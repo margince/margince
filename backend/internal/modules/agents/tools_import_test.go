@@ -410,3 +410,45 @@ func TestACancelledPreviewStillTakesItsFile(t *testing.T) {
 			"file would outlive the call that stored it")
 	}
 }
+
+// commit_import's copy must not describe an approval as somebody else's answer.
+//
+// The state it starts from is called awaiting_approval, and that name invites a
+// sentence saying a human has to give the approval first. Nothing stages one:
+// the same passport that produced the dry-run report commits it, so such a
+// sentence describes a control that does not exist — and a caller under an
+// injected instruction has no reason to honour prose. The tier is deliberate
+// (#3018: a passport whose holder could run the import in the app commits it
+// directly), so the honest copy states the SEQUENCING the code actually
+// enforces, which refuseUncommittableRun holds above.
+//
+// This test pins wording because the defect was wording. A regression here is
+// somebody re-explaining the state as an approval rather than as the report
+// requirement.
+func TestCommitImportCopyStatesSequencingRatherThanAnApproval(t *testing.T) {
+	rendered := commitImportCopy.render()
+
+	// The precondition that is real: a run reaches the state by producing a
+	// report, so requiring the state requires the report.
+	if !strings.Contains(rendered, "dry-run report") {
+		t.Errorf("commit_import no longer says the state is reached by producing a dry-run "+
+			"report, which is the only precondition it actually has:\n%s", rendered)
+	}
+	// The irreversibility is what earns the dry run its turn, and it is the one
+	// reason to show the counts that does not depend on a control.
+	if !strings.Contains(rendered, "cannot be undone") {
+		t.Errorf("commit_import no longer says the write cannot be undone from this surface:\n%s", rendered)
+	}
+	for _, claim := range []string{
+		"not this call's to give",
+		"CONTACT's approval",
+		"contact's approval",
+	} {
+		if strings.Contains(rendered, claim) {
+			t.Errorf("commit_import's copy claims %q. Nothing stages that approval — the same "+
+				"passport previews and commits — so this describes a gate the surface does not "+
+				"have. Say what the state means (a report was produced) rather than whose answer "+
+				"it is.", claim)
+		}
+	}
+}

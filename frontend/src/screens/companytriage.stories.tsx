@@ -25,7 +25,7 @@ import {
 const COMPANY_ID = "01a02000-0000-7000-8000-000000000001";
 
 const meta: Meta<typeof CompanyTriageSection> = {
-  title: "Records/Company rail/Capture triage",
+  title: "Records/Company 360/Rail/Capture triage",
   component: CompanyTriageSection,
   parameters: { layout: "padded" },
 };

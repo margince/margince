@@ -55,7 +55,7 @@ function Panel() {
 }
 
 const meta: Meta<typeof Panel> = {
-  title: "Records/Record history/Changes list",
+  title: "Records/Record 360/Record history/Changes list",
   component: Panel,
   parameters: { layout: "padded" },
 };

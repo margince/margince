@@ -27,7 +27,7 @@ import { ThreadFailed } from "./threadfailed";
 // which is the one thing this component wires.
 
 const meta: Meta<typeof ThreadFailed> = {
-  title: "Records/Company 360/Thread could not be read",
+  title: "Records/Record 360/Thread could not be read",
   component: ThreadFailed,
   parameters: { layout: "padded" },
   args: { onRetry: fn() },

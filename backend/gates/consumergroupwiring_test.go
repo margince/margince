@@ -20,13 +20,13 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
@@ -79,12 +79,11 @@ func subscribedGroupNames(t *testing.T) map[string]string {
 		t.Fatalf("reading the worker package: %v", err)
 	}
 	found := map[string]string{}
-	fset := token.NewFileSet()
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".go" {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(dir, entry.Name()), nil, 0)
+		file, err := gatekit.ParseFile(filepath.Join(dir, entry.Name()), 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", entry.Name(), err)
 		}

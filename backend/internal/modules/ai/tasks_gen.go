@@ -20,7 +20,7 @@ const (
 	TaskCaptureCounterpartyVerdict Task = "capture_counterparty_verdict"
 	// TaskCertJudge is the aicert quality judge — pinned to its own router in the cert lane, never the candidate's binding
 	TaskCertJudge Task = "cert_judge"
-	// TaskColdStart is Four sites, not one: three conversational onboarding lanes plus the evidence-extraction pass the read-back rides. The extraction site is the consequential one and had no name before ADR-0074.
+	// TaskColdStart is Four sites, not one: three conversational onboarding lanes plus the evidence-extraction pass the read-back rides. The extraction site is the consequential one and had no name before ADR-0074. The two company conversations think at low: they share one prompt whose gate decides whether a yes authorizes a change, and gemini-3.1-flash-lite at its own default proposed a change after a plain question in five of six runs and in no run at low, for about 0.3s more at p50. acts and field_extract measured clean without it, so they keep the binding's level.
 	TaskColdStart Task = "cold_start"
 	// TaskCorpusAsk is corpus_ask — one bounded document corpus, asked in free text and answered only from what the workspace filed in it. Everything a REFUSAL rests on is decided before this task is reached: readiness, the embed binding, and the grounding floor are settled deterministically, so the model is asked only when passages already cleared the floor. Its whole job is prose, and its answer is a list of claims each carrying a citation and a verbatim quote checked against the retrieved text — a claim whose quote is not found is dropped, and an answer with no surviving claim is not_covered. The ladder leads premium as a PREFERENCE and not a contract, because the guardrail is verbatim quoting and cheaper tiers paraphrase; a demoted rung is not trusted, it is checked like any other and falls back only if it actually fails. A missing chat lane, or a reply the guardrail refuses, degrades to the retrieved passages themselves with generated_by saying deterministic — deal_health's rule, for deal_health's reason, and honest because the grounded part of a grounded answer was never the prose. Over budget is NOT a separate outcome: an interactive task is never refused on budget, it is pinned to the on-box rung and asked, and whichever answer survives the quote check is what generated_by reports. What is invariant, and what the test asserts, is narrower: an over-budget ask never refuses and never spends a cloud rung.
 	TaskCorpusAsk Task = "corpus_ask"
@@ -30,17 +30,18 @@ const (
 	TaskDocumentExtract Task = "document_extract"
 	// TaskDraftReply is Six sites, one task: the reply to an activity, the contact page's composer, the company page's first-touch outbound, the message that opens a conversation from a stated intent alone, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them.
 	TaskDraftReply Task = "draft_reply"
-	TaskEnrich     Task = "enrich"
+	// TaskEnrich is Read a contact's own mail signature into contact fields - title, phone, linkedin, company_name, address, website - each quoting the signature line it was read from; a quote not in the signature is dropped in code. Floor 0.6. phone is a list: the reply carries one phone entry per number the signature lists, and each number is its own evidence row. A newer signature replaces only the older number of the same country and type; a number it leaves out is kept, because a trimmed signature is not a retired number.
+	TaskEnrich Task = "enrich"
 	// TaskGrowthFit is How well one company fits what we sell. The only site on the company view that must read OUR offering as well as theirs — a fit is a claim about two companies, and judging one against a guess about the other is what the DOSS-AC-13 band cap exists to stop. Our own context is never citable: evidence is target-side only, so a factor drawn from what we sell is labelled an assessment and still cites their records, or the grounding filter drops it (DOSS-AC-6). The band the model proposes is not the band served — the deterministic completeness gate can lower it to `unknown` or cap it at `moderate`, and never raises it.
 	TaskGrowthFit Task = "growth_fit"
-	// TaskNlSearch is Declared, not built (ADR-0074).
+	// TaskNlSearch is A list described in plain words, read into filter clauses the builder shows for a human to edit and save. The model is handed the record type, the sentence, the caller's own filter vocabulary, today's date and the reader's language, and never a record: it proposes a predicate tree and the deterministic engine decides membership, exactly as for a hand-built filter. Every proposed clause is checked in code before it is answered - a field the caller cannot filter on, an operator its type refuses, a value outside a picklist's options or of the wrong type is dropped and named back as unsupported rather than failing the proposal, and so is a phrase the model could not express. The company context is our own offer and market, so 'companies in our target market' has something to be read against; it is conditional because reading it needs company read, and a caller filtering contacts without that grant still gets a proposal, just without it. Nothing is saved: Save stays a human's press. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic reading of a sentence to fall back to.
 	TaskNlSearch   Task = "nl_search"
 	TaskOfferDraft Task = "offer_draft"
-	// TaskOwedVerdict is Whether an unanswered inbound message actually asks its recipient side for something — asks_us or informs_us. The waiting queue can prove somebody wrote and nobody replied; it cannot tell a question from a report, a receipt or a monthly statement, which is most of what a rep wanted to know. Judged over what SURVIVES the queue's own rules rather than over all unjudged mail, so the pass costs one call per ten messages a rep would otherwise have read. The prompt carries the recipient line and whether a calendar part came with it, because a report sent to a desk address with the reader merely copied reads exactly like a direct request without them. Below the confidence floor after a solo re-ask the message stays UNJUDGED, and unjudged is a real answer: the queue ranks such a row exactly as it did before this pass existed, so there is never a reason to guess. A verdict may only DEMOTE a row within the queue — never delete, archive or hide one (ADR-0063 §3.2, the floor the capture label sits under). The reason is sharper here than there: this is one model call's opinion about a customer's mail, so being wrong has to cost a rep a scroll rather than a customer. No cost_unit, and the omission is a decision rather than a gap: cost_unit names a task the connect-time backfill prices, and this pass deliberately does not run at backfill. Its candidates are the LIVE waiting queue, so judging a mailbox's history would spend a call per message on years of mail nobody will ever be shown — the hourly pass reaches everything the queue can surface, and reaches it when a rep is actually looking at it.
+	// TaskOwedVerdict is Whether an unanswered inbound message actually asks its recipient side for something — asks_us or informs_us. The waiting queue can prove somebody wrote and nobody replied; it cannot tell a question from a report, a receipt or a monthly statement, which is most of what a rep wanted to know. Judged over what SURVIVES the queue's own rules rather than over all unjudged mail, so the pass costs one call per ten messages a rep would otherwise have read. The prompt carries the recipient line and whether a calendar part came with it, because a report sent to a desk address with the reader merely copied reads exactly like a direct request without them. Below the confidence floor after a solo re-ask the message stays UNJUDGED, and unjudged is a real answer: the queue ranks such a row exactly as it did before this pass existed, so there is never a reason to guess. An informs_us verdict ends the obligation and hides the row from the queue, never deletes or archives it, and every row it hides is counted and listed under its own figure in /worklist/hidden. It never outranks a human: a request somebody accepted stays owed whatever the verdict says. The figure is what keeps this safe: this is one model call's opinion about a customer's mail, so a wrong verdict has to be visible to the lead who reads that figure. No cost_unit, and the omission is a decision rather than a gap: cost_unit names a task the connect-time backfill prices, and this pass deliberately does not run at backfill. Its candidates are the LIVE waiting queue, so judging a mailbox's history would spend a call per message on years of mail nobody will ever be shown — the hourly pass reaches everything the queue can surface, and reaches it when a rep is actually looking at it.
 	TaskOwedVerdict Task = "owed_verdict"
 	// TaskProposeRoles is Read the buying roles out of what a contact has actually written - who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and the contact who WROTE that message must be the contact the role is proposed for - both contacts sit in one prompt, so evidence unbound from its author lets one sender hand a role to a colleague they have never spoken for. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the evidence lives on the audit row so a reader can check it, and the ai_suggested mark stays until a human confirms. Degrade is the budget answer but there is no deterministic floor: with no lane the endpoint declares 501 rather than guessing a role from a title.
 	TaskProposeRoles Task = "propose_roles"
-	// TaskRateExtract is extract per-model AI pricing (per-MTok buckets) from a fetched pricing page, evidence-gated; feeds the model-cost refresh proposal producer. Two sites — the pricing-page pass and the FX pass — a distinction the build has carried unnamed (two prompt builders, two byte-pin tests, three corpus scenarios) since it was written.
+	// TaskRateExtract is extract foreign-exchange rates from a fetched rates page, evidence-gated; feeds the FX refresh proposal producer. Model prices are not extracted: a broker's catalogue states them.
 	TaskRateExtract Task = "rate_extract"
 	// TaskRequestSettlement is Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests carrying a later outbound message on the same thread, so a conversation nobody has answered is never judged here and costs nothing. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill.
 	TaskRequestSettlement Task = "request_settlement"
@@ -93,7 +94,7 @@ var taskDisplayNames = map[Task]string{
 	TaskOfferDraft:                    "Offer drafting",
 	TaskOwedVerdict:                   "Unanswered-message triage",
 	TaskProposeRoles:                  "Buying-role reading",
-	TaskRateExtract:                   "Model pricing extraction",
+	TaskRateExtract:                   "Exchange rate extraction",
 	TaskRequestSettlement:             "Did our reply settle it",
 	TaskSignalExtract:                 "Signal extraction",
 	TaskSiteExtract:                   "Website deep read",
@@ -138,7 +139,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "7ff168a36f9d4cfee0be283a90c84c9dc4f5e43158ed8b5f35430fc78226c8be"
+const TaskContractHash = "63f5cb255ed46204722aef9a6d513d43a073a8ecc9bd81a450833bfa979ea19f"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -295,7 +296,7 @@ var taskStatus = map[Task]string{
 	TaskDraftReply:                    "shipped",
 	TaskEnrich:                        "shipped",
 	TaskGrowthFit:                     "shipped",
-	TaskNlSearch:                      "planned",
+	TaskNlSearch:                      "shipped",
 	TaskOfferDraft:                    "shipped",
 	TaskOwedVerdict:                   "shipped",
 	TaskProposeRoles:                  "shipped",
@@ -319,12 +320,15 @@ var taskStatus = map[Task]string{
 func Status(t Task) string { return taskStatus[t] }
 
 // Site is one named model-invocation site of a task. A task is NOT one
-// prompt: rate_extract has two, cold_start four. Kind says how the site
+// prompt: cold_start and voice_build have four each. Kind says how the site
 // invokes the model, because an agent loop is a cumulative tool-fed
-// window and must not be described as a request factory.
+// window and must not be described as a request factory. Thinking is the
+// level the router asks the site's requests to think at, empty for the
+// binding's own (sitethinking.go says who may override it).
 type Site struct {
-	Name string
-	Kind string
+	Name     string
+	Kind     string
+	Thinking string
 }
 
 const (
@@ -357,8 +361,8 @@ var taskSites = map[Task][]Site{
 		{Name: "judge", Kind: "one_shot"},
 	},
 	TaskColdStart: {
-		{Name: "company_message", Kind: "multi_turn"},
-		{Name: "sitereadmessage", Kind: "multi_turn"},
+		{Name: "company_message", Kind: "multi_turn", Thinking: "low"},
+		{Name: "sitereadmessage", Kind: "multi_turn", Thinking: "low"},
 		{Name: "acts", Kind: "multi_turn"},
 		{Name: "field_extract", Kind: "one_shot"},
 	},
@@ -385,6 +389,9 @@ var taskSites = map[Task][]Site{
 	TaskGrowthFit: {
 		{Name: "growth_fit", Kind: "one_shot"},
 	},
+	TaskNlSearch: {
+		{Name: "filter_propose", Kind: "one_shot"},
+	},
 	TaskOfferDraft: {
 		{Name: "draft", Kind: "one_shot"},
 	},
@@ -395,7 +402,6 @@ var taskSites = map[Task][]Site{
 		{Name: "committee", Kind: "one_shot"},
 	},
 	TaskRateExtract: {
-		{Name: "pricing", Kind: "one_shot"},
 		{Name: "fx", Kind: "one_shot"},
 	},
 	TaskRequestSettlement: {
@@ -486,6 +492,53 @@ var noPayloadTasks = map[Task]bool{
 // NoPayload reports the contract's payload prohibition for a task.
 func NoPayload(t Task) bool { return noPayloadTasks[t] }
 
+// localOnlyTasks are the tasks whose prompt must never leave this
+// machine, whatever an operator binds the rungs of their ladder to.
+//
+// DECLARED, never inferred from a tier NAME. `local_small` is a rung and
+// which provider serves it is the operator's to set, so a guarantee
+// resting on the name holds only until somebody rebinds it — and the
+// rebinding is legal under every profile but sovereign.
+var localOnlyTasks = map[Task]bool{
+	TaskCaptureConfidentialityVerdict: true,
+	TaskCaptureCounterpartyVerdict:    true,
+}
+
+// LocalOnly reports the contract's egress prohibition for a task: its
+// prompt may be served only by a provider running on this machine.
+func LocalOnly(t Task) bool { return localOnlyTasks[t] }
+
+// localOnlyTaskList is the same set in contract order.
+var localOnlyTaskList = []Task{
+	TaskCaptureConfidentialityVerdict,
+	TaskCaptureCounterpartyVerdict,
+}
+
+// LocalOnlyTasks returns the local-only tasks in contract order.
+func LocalOnlyTasks() []Task { return localOnlyTaskList }
+
+// taskDecisions are the tasks that declare a decision form. DECLARED,
+// because a decision site needs an adapter that builds the typed question
+// from the same inputs its prompt reads, and the census holds the two in step.
+var taskDecisions = map[Task]bool{
+	TaskCaptureConfidentialityVerdict: true,
+	TaskCaptureCounterpartyVerdict:    true,
+	TaskSiteTriage:                    true,
+}
+
+// TaskDecides reports whether a task declares a decision form.
+func TaskDecides(t Task) bool { return taskDecisions[t] }
+
+// decisionTaskList is the same set in sorted name order.
+var decisionTaskList = []Task{
+	TaskCaptureConfidentialityVerdict,
+	TaskCaptureCounterpartyVerdict,
+	TaskSiteTriage,
+}
+
+// DecisionTasks returns the decision tasks in sorted name order.
+func DecisionTasks() []Task { return decisionTaskList }
+
 // CompanyContextPolicy is the ADR-0065 anchor-company policy: which
 // scopes ride the prompt, under what character budget, and whether the
 // caller must ask for them. Scopes are contract NAMES; the composition
@@ -512,7 +565,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskDraftReply:                    {Scopes: []string{"positioning", "sales", "proof", "market"}, TokenBudget: 1400, Conditional: false},
 	TaskEnrich:                        {TokenBudget: 0, Conditional: false},
 	TaskGrowthFit:                     {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false},
-	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: false},
+	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: true},
 	TaskOfferDraft:                    {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},
 	TaskOwedVerdict:                   {TokenBudget: 0, Conditional: false},
 	TaskProposeRoles:                  {TokenBudget: 0, Conditional: false},

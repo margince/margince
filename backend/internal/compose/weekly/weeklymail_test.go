@@ -189,7 +189,7 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 		{
 			language: "de",
 			subject:  "Deine Woche",
-			labels:   []string{"Aufgaben erledigt", "7 von 9", "Von dir entschieden", "Morgen-Liste", "Übernommen", "gewonnen"},
+			labels:   []string{"Aufgaben erledigt", "7 von 9", "Entschiedene Vorschläge", "Einträge im Morgenbericht", "Übertragen", "gewonnen"},
 		},
 		{
 			language: "vi",

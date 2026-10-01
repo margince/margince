@@ -175,24 +175,10 @@ func dealRecord(dealID openapi_types.UUID) *crmcontracts.ContactMomentDestinatio
 	}
 }
 
-// bookMeeting offers the move this rung is actually about, and blocks it.
-//
-// Pointing "Book a meeting" at the deal record would satisfy every check —
-// a real surface, a real entity id, a client that navigates — and still lie.
-// The reader presses a button that says it books a meeting and lands on a deal
-// page, which is a worse kind of dead button than one that does nothing: it
-// does something, and something else.
-//
-// Nothing in the destination vocabulary opens a scheduler, so blocked is the
-// honest state. Opening the deal stays offered beside it, under its own label,
-// where it is true.
 func bookMeeting() crmcontracts.ContactMomentAction {
-	reason := "Booking a meeting from here isn't available yet"
 	return crmcontracts.ContactMomentAction{
-		Kind:          crmcontracts.ContactMomentActionKindScheduleMeeting,
-		Label:         "Book a meeting",
-		State:         crmcontracts.ContactMomentActionStateBlocked,
-		BlockedReason: &reason,
+		Kind:  crmcontracts.ContactMomentActionKindScheduleMeeting,
+		Label: "Book a meeting", State: crmcontracts.ContactMomentActionStateAvailable, Destination: &crmcontracts.ContactMomentDestination{Surface: "booking"},
 	}
 }
 

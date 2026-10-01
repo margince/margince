@@ -34,9 +34,10 @@ var ErrNoUpstreamHost = errors.New("ai: the broker has no upstream host that can
 // never the raw response body, which may be unstructured HTML/text — so a logged
 // failure can't echo the request or leak provider internals (the anthropic /
 // openai pattern). Three structured shapes exist on this generic wire: OpenAI's
-// nested {"error":{type,message}}, vLLM's top-level {"object":"error", type,
-// message}, and a broker's {"error":{message,metadata:{raw,provider_name}}};
-// a body that can't be read falls back to the HTTP status.
+// nested {"error":{type,message}}, which current vLLM (0.30) also answers with,
+// the top-level {"object":"error", type, message} older vLLM releases sent, and
+// a broker's {"error":{message,metadata:{raw,provider_name}}}; a body that
+// can't be read falls back to the HTTP status.
 //
 // The broker shape is the reason metadata is read at all. A gateway in front of
 // several vendors answers with its OWN message — OpenRouter says "Provider

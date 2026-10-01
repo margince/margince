@@ -25,24 +25,8 @@ fixture:
 expect:
   outcome: accepted
   answer: ordinary
-  rubric: >
-    A conference registration in the mailbox owner's own name, paid by him, for
-    an event he is speaking at on the company's behalf. The receipt names a
-    contact; the activity is the company's.
-    Whose ACTIVITY the money is for decides, not whose name the receipt carries.
-    A business trip, a work tool and a trade-fair ticket are the company's trade
-    however they were paid, and the team needs to see the panel, the date and
-    the slide deadline. "ordinary" scores high.
-    "personal" is the failure this scenario exists to catch and scores zero at
-    any confidence. It is the overreach that the household-bill rule invites: an
-    invoice addressed to a contact, an amount he paid himself, a reimbursement to
-    come — the same surface as a private phone bill. If a classifier holds this,
-    the fix for the privacy defect has started hiding ordinary business, and the
-    speaking commitment disappears from the CRM of the company being
-    represented.
-    Read the purpose. The badge, the panel and the slides are the company's
-    work, and nothing here concerns the owner's household.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The rubric
+    only ranked the other kinds by the harm each does, which the check fails
+    outright.

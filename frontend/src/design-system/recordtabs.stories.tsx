@@ -13,7 +13,7 @@ import { RecordTabs } from "./recordtabs";
 // not a list of things and so carries no count at all, and a tab carrying the
 // unread mark — something waiting behind it that nobody has taken up.
 const meta: Meta<typeof RecordTabs> = {
-  title: "Design System/RecordTabs",
+  title: "Components/Navigation/Record tabs",
   component: RecordTabs,
   parameters: { layout: "padded" },
   decorators: [

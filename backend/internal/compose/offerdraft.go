@@ -47,6 +47,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -87,6 +88,7 @@ Return ONLY a JSON object: {"lines":[{"description":...,"quantity":"1","tax_rate
 - description, quantity, tax_rate, evidence_snippet, source_id are required for every line.
 - evidence_snippet MUST be text copied VERBATIM from the numbered context items below, and source_id MUST be that item's id.
 - conversation_price_minor is an INTEGER count of minor currency units (e.g. cents) and is set ONLY when the evidence itself states a price the customer discussed — omit it otherwise.
+- conversation_price_minor is the price of ONE unit of the line's quantity; the line's total is quantity × conversation_price_minor.
 - product_id is set ONLY when a rate-card product below is the clear match for the line — omit it otherwise.
 - Never invent a price: a line with neither a conversation price nor a matching product is still returned, just without either field.
 - OMIT any line you cannot evidence — never guess a line into existence.`
@@ -365,7 +367,8 @@ func renderCatalogBlock(products []crmcontracts.Product) string {
 
 // groundOfferLines is the no-guess gate: an accepted candidate must carry
 // a non-empty description, a source_id that names a REAL context item,
-// and an evidence_snippet that is VERBATIM within THAT item's own text —
+// and an evidence_snippet that is VERBATIM within THAT item's own text, up to
+// whitespace (claims.Quoted: a quote spanning a line break is still verbatim) —
 // mirrors enrichextract.go's gateEvidence, strengthened to tie the
 // citation to the specific source it claims rather than any text
 // anywhere in the assembled context (there are many sources here, unlike
@@ -390,7 +393,7 @@ func (d offerDrafter) groundOfferLines(ctx context.Context, candidates []offerLi
 			continue
 		}
 		sourceText, known := bySource[sourceID]
-		if !known || !strings.Contains(sourceText, snippet) {
+		if !known || !claims.Quoted(sourceText, snippet) {
 			continue // ungrounded: the model cited a source that does not say this — drop it, never fabricate
 		}
 		// Quantity must be a store-valid decimal AND strictly positive — a

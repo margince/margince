@@ -84,15 +84,6 @@ export function ChronologyFilter({
   // threads alone, drawn as conversations rather than as chronicle rows.
   // Opt-in per page: the pill only stands where the page renders the cut.
   conversations?: boolean;
-  // Whether the caller has narrowed the exchanges — by kind, by words, by a
-  // date range. A narrowed read is a question about what was SAID, and a field
-  // edit is not a meeting: leaving the changes in answered a question nobody
-  // asked, and the reader who picked Meetings got a list of record edits with
-  // two meetings in it.
-  //
-  // It also stops the change read from being made at all, which is the honest
-  // consequence: a feed whose rows cannot appear should not be fetched.
-  narrowed?: boolean;
   onFilter: (next: TimelineFilter) => void;
 }>) {
   const t = useT();

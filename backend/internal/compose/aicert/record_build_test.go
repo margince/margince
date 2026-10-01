@@ -47,7 +47,7 @@ func TestBuildRecordPricesPerBucketMeansAgainstTheSeedRateSheet(t *testing.T) {
 	withFixedNow(t, time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC))
 
 	acc := ratedAccumulation()
-	rec := buildRecord(ai.TaskSummarize, VerdictCertified, acc, ai.ProfileCloudHosted, "p000000000000")
+	rec := buildRecord(ai.TaskSummarize, VerdictCertified, acc, ai.ProfileEUHosted, "p000000000000")
 
 	if rec.MeanTokensIn != 1500 || rec.MeanTokensOut != 250 || rec.MeanCachedTokens != 200 || rec.MeanCacheWriteTokens != 100 {
 		t.Fatalf("mean buckets = in=%d out=%d cached=%d cache_write=%d, want 1500/250/200/100",
@@ -74,7 +74,7 @@ func TestBuildRecordUnpricedWhenNoSeedRateMatchesTheServedModel(t *testing.T) {
 	acc.passed = 1
 	acc.tokensInTotal, acc.tokensOutTotal, acc.cachedTokensTotal, acc.cacheWriteTokensTotal = 1000, 200, 0, 0
 	acc.servedModel = "claude-does-not-exist"
-	rec := buildRecord(ai.TaskSummarize, VerdictCertified, acc, ai.ProfileCloudHosted, "p000000000000")
+	rec := buildRecord(ai.TaskSummarize, VerdictCertified, acc, ai.ProfileEUHosted, "p000000000000")
 
 	if rec.EstCostMicroUSD != 0 {
 		t.Fatalf("est_cost_microusd = %d, want 0 for an unrated served model", rec.EstCostMicroUSD)
@@ -95,7 +95,7 @@ func TestBuildRecordIsByteForByteDeterministicForIdenticalInputs(t *testing.T) {
 
 	call := func() Record {
 		return buildRecord(ai.TaskSummarize, VerdictCertified, ratedAccumulation(),
-			ai.ProfileCloudHosted, "p000000000000")
+			ai.ProfileEUHosted, "p000000000000")
 	}
 
 	first, err := json.Marshal(call())
@@ -131,7 +131,7 @@ func TestBuildRecordCountsWhatEachRunActuallyProduced(t *testing.T) {
 	acc.latencies = []int64{100, 100, 100, 100, 100}
 	acc.passed = 3
 	acc.certifiedScope = aitasks.ScopeSingleTurn
-	rec := buildRecord(ai.TaskSummarize, VerdictSupportedDegraded, acc, ai.ProfileCloudHosted, "p000000000000")
+	rec := buildRecord(ai.TaskSummarize, VerdictSupportedDegraded, acc, ai.ProfileEUHosted, "p000000000000")
 
 	if rec.ReportedAccepted != 2 || rec.ReportedWrongAnswer != 1 || rec.ReportedInvalid != 1 || rec.ReportedAbstained != 1 {
 		t.Fatalf("reported outcome counts = accepted=%d wrong_answer=%d invalid=%d abstained=%d, want 2/1/1/1",
@@ -152,14 +152,14 @@ func TestBuildRecordCountsWhatEachRunActuallyProduced(t *testing.T) {
 			rec.CertifiedScope, aitasks.ScopeSingleTurn)
 	}
 	if rec.ContextApplied {
-		t.Fatal("context_applied is true, but the cert lane runs without a database and never applies the company context prompt")
+		t.Fatal("context_applied is true, but no run of this set was served the company context")
 	}
 }
 
-// context_applied is one fact about the LANE: it is false on every record,
-// because assembling the company context reads a database no certification run
-// has. WHICH records that costs something is a fact about the task, and only the
-// task's own declared scopes say it — a task production always prepends scopes
+// context_applied is false wherever no run was served the company context,
+// which a DB-less lane serves only from a case's own fixture. WHICH records
+// that costs something is a fact about the task, and only the task's own
+// declared scopes say it — a task production always prepends scopes
 // to was certified without reference data every real call carries, and a task
 // that declares none went without nothing.
 //
@@ -178,9 +178,9 @@ func TestEveryRecordNamesTheCompanyContextItsTaskWentWithout(t *testing.T) {
 			scoped++
 		}
 		rec := buildRecord(task, VerdictCertified, ratedAccumulation(),
-			ai.ProfileCloudHosted, "p000000000000")
+			ai.ProfileEUHosted, "p000000000000")
 		if rec.ContextApplied {
-			t.Errorf("the %s record claims the company context was applied, and this lane has no database to assemble it from", task)
+			t.Errorf("the %s record claims the company context was applied, and no run of it was served one", task)
 		}
 		if !slices.Equal(rec.ContextScopes, policy.Scopes) {
 			t.Errorf("the %s record names context scopes %v, and the contract has production prepend %v",
@@ -192,13 +192,37 @@ func TestEveryRecordNamesTheCompanyContextItsTaskWentWithout(t *testing.T) {
 	}
 }
 
+// context_applied is a claim about EVERY run: one run served the company
+// context among several that were not still certifies a prompt production
+// never sends as though it were the one it does.
+func TestContextAppliedHoldsOnlyWhenEveryRunWasServedTheContext(t *testing.T) {
+	withFixedNow(t, time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC))
+	runs := len(ratedAccumulation().allResults)
+	for _, tc := range []struct {
+		served int
+		want   bool
+	}{
+		{served: 0, want: false},
+		{served: runs - 1, want: false},
+		{served: runs, want: true},
+	} {
+		acc := ratedAccumulation()
+		acc.contextServed = tc.served
+		rec := buildRecord(ai.TaskOfferDraft, VerdictCertified, acc, ai.ProfileEUHosted, "p000000000000")
+		if rec.ContextApplied != tc.want {
+			t.Errorf("%d of %d runs served the company context: context_applied = %v, want %v",
+				tc.served, runs, rec.ContextApplied, tc.want)
+		}
+	}
+}
+
 // The contract's scope list is package state shared by every reader of it. A
 // record handed the original would let anything holding one edit what the next
 // record claims production prepends.
 func TestARecordDoesNotHandOutTheContractsOwnScopes(t *testing.T) {
 	withFixedNow(t, time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC))
 	rec := buildRecord(ai.TaskOfferDraft, VerdictCertified, ratedAccumulation(),
-		ai.ProfileCloudHosted, "p000000000000")
+		ai.ProfileEUHosted, "p000000000000")
 	if len(rec.ContextScopes) == 0 {
 		t.Fatal("offer_draft declares no company-context scope, so this record has nothing to share")
 	}

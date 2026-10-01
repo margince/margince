@@ -49,7 +49,7 @@ function presentation(overrides: Record<string, unknown>) {
 }
 
 const meta = {
-  title: "Design System/Source email panel",
+  title: "Components/AI and provenance/Source email panel",
   component: SourceEmailPanel,
 } satisfies Meta<typeof SourceEmailPanel>;
 export default meta;

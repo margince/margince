@@ -109,6 +109,17 @@ type preparedSource struct {
 	Stats      CorpusIngestStats
 }
 
+// IsVoiceRegister reports whether a register is one a stored corpus source can
+// carry — the closed vocabulary ingest enforces.
+func IsVoiceRegister(register string) bool {
+	switch register {
+	case voiceRegisterEmail, voiceRegisterSocial, voiceRegisterLongForm,
+		voiceRegisterSpoken, voiceRegisterGeneral:
+		return true
+	}
+	return false
+}
+
 // validateDeclaredSource enforces the declared-field contract of one ingest
 // request and returns the two fields that carry a default: the register
 // (per-kind default when the caller named none) and the weight (1.0 when
@@ -125,10 +136,7 @@ func validateDeclaredSource(in IngestSourceInput) (register string, weight float
 	if register == "" {
 		register = DefaultRegister(in.Kind)
 	}
-	switch register {
-	case voiceRegisterEmail, voiceRegisterSocial, voiceRegisterLongForm,
-		voiceRegisterSpoken, voiceRegisterGeneral:
-	default:
+	if !IsVoiceRegister(register) {
 		return "", 0, &CorpusIngestError{Field: voiceKeyRegister, Reason: "must be one of email, social, long_form, spoken, general"}
 	}
 	weight = in.Weight

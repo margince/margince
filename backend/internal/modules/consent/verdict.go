@@ -45,8 +45,8 @@ const (
 	// business relationship exists.
 	ClassTransactional Class = "transactional"
 	// ClassMarketing is »Werbung« read broadly: newsletters, campaigns, and
-	// feedback requests. Express consent with double-opt-in proof, or the
-	// §7(3) existing-customer flag.
+	// feedback requests. Express consent with double-opt-in proof; the §7(3)
+	// existing-customer exception is not offered.
 	ClassMarketing Class = "marketing"
 	// ClassPhoneOutreach is specced and dormant — no call provider is wired.
 	// The purpose exists so the model is complete, not because a path uses it.
@@ -272,8 +272,8 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, pur
 }
 
 // marketingVerdict is the strict arm, unchanged in strictness by ADR-0098:
-// express consent with the DOI round-trip, or the §7(3) existing-customer flag
-// with all four of its conditions on the record. There is no legitimate-interest
+// express consent with the DOI round-trip. The §7(3) existing-customer exception
+// a pack may grant is refused below, with its own reason. There is no legitimate-interest
 // escape for marketing email, B2C or B2B, and the product does not offer the
 // toggle.
 func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, marketing MarketingContext) (Verdict, error) {
@@ -297,12 +297,12 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose 
 			Code:   BlockUnconfirmedDOI,
 		}, nil
 	}
-	allowed, err := existingCustomerAllows(ctx, tx, contactID, marketing.Exception)
-	if err != nil {
-		return Verdict{}, err
-	}
-	if allowed {
-		return Verdict{State: VerdictAllowed, Reason: "existing customer under the jurisdiction's own exception, with the sale and the opt-out notice on file"}, nil
+	// The existing-customer exception a jurisdiction may grant (UWG §7(3)) is
+	// not offered: nothing here can answer its similarity condition, since no
+	// send names the goods it advertises. It refuses whatever the pack declares,
+	// and says so rather than reading as a plain absence of consent.
+	if marketing.Exception != nil {
+		return Verdict{State: VerdictUnknown, Reason: "no consent recorded, and the existing-customer exception is not offered"}, nil
 	}
 	return Verdict{State: VerdictUnknown, Reason: "no consent recorded"}, nil
 }

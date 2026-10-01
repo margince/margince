@@ -17,7 +17,7 @@ import { useTruncationTooltip } from "./tooltip";
  * Flip the Theme toolbar to see the dark rendering; every value is a token.
  */
 const meta = {
-  title: "Design System/Tooltip",
+  title: "Components/Overlays and layering/Tooltip",
   parameters: { layout: "padded" },
 } satisfies Meta;
 export default meta;

@@ -130,8 +130,9 @@ func (h Handlers) DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Requ
 			"this installation cannot assemble a subject-access package here")
 		return
 	}
-	// GetDSR takes the queue's own gate — admin, human, contact.read — so
-	// reaching the request is already what reaching any request takes.
+	// GetDSR takes the queue's own gate — the privacy_request grant and a human
+	// principal (requireDSRAdmin) — so reaching the request is already what
+	// reaching any request takes.
 	//
 	// That gate is the narrow one and it has to stay in front. AssembleSAR
 	// admits any unbounded human holding contact.delete, which the seeded

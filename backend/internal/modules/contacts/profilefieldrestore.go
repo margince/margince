@@ -58,7 +58,13 @@ const restoreSource = "human_restore"
 // Those are different answers on purpose — "there was no undo to make" and
 // "there was, but somebody has answered since" send a reader to different
 // places.
-func (s *Store) RestoreProfileField(ctx context.Context, contactID ids.ContactID, field string) error {
+//
+// valueKey names the row for a field that holds several, which is a phone: one
+// row per number, each with its own undo. Empty is enough while only one row of
+// the field has something to restore, and a validation refusal (422) when
+// several do, because guessing would bring back a number the reader was not
+// looking at.
+func (s *Store) RestoreProfileField(ctx context.Context, contactID ids.ContactID, field, valueKey string) error {
 	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
 		return err
 	}
@@ -72,29 +78,11 @@ func (s *Store) RestoreProfileField(ctx context.Context, contactID ids.ContactID
 		if err := auth.HoldWritableLive(ctx, tx, entityContact, contactID.UUID); err != nil {
 			return err
 		}
-		// FOR UPDATE: the row is held from the moment it is read until the
-		// restore lands, so a statement arriving mid-undo cannot slip between
-		// the "is this still ours" test and the write it authorises.
-		var current, superseded, evidence, sourceRef string
-		var supersededBy *string
-		var confidence *float64
-		if err := tx.QueryRow(ctx, `
-			SELECT value, superseded_value, superseded_captured_by, evidence_snippet,
-			       source_ref, confidence
-			  FROM contact_profile_field
-			 WHERE contact_id = $1 AND field = $2 AND superseded_value IS NOT NULL
-			 FOR UPDATE`,
-			contactID, field).Scan(&current, &superseded, &supersededBy, &evidence,
-			&sourceRef, &confidence); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				// Either the field was never replaced or it never existed. One
-				// answer for both, deliberately: telling them apart would
-				// report whether a contact this caller may not read carries a
-				// particular field.
-				return apperrors.ErrNotFound
-			}
-			return fmt.Errorf("contacts: reading the field to restore: %w", err)
+		undo, err := readUndo(ctx, tx, contactID, field, valueKey)
+		if err != nil {
+			return err
 		}
+		current, superseded, supersededBy, sourceRef := undo.current, undo.superseded, undo.supersededBy, undo.sourceRef
 
 		// Is this still ours? The column carries the display value for a
 		// mirrored field, so it has to agree too — a title somebody retyped
@@ -124,6 +112,15 @@ func (s *Store) RestoreProfileField(ctx context.Context, contactID ids.ContactID
 		if field == fieldPhone {
 			if err := restoreSupersededPhone(ctx, tx, contactID, superseded); err != nil {
 				return err
+			}
+			// The replacement's evidence goes with its number. The row below
+			// is keyed by the number being brought back, so leaving this one
+			// would go on presenting a retired number as current.
+			if _, err := tx.Exec(ctx, `
+				DELETE FROM contact_profile_field
+				 WHERE contact_id = $1 AND field = $2 AND value_key = $3`,
+				contactID, field, undo.valueKey); err != nil {
+				return fmt.Errorf("contacts: withdrawing the replaced number's evidence: %w", err)
 			}
 		}
 
@@ -177,15 +174,73 @@ func (s *Store) RestoreProfileField(ctx context.Context, contactID ids.ContactID
 	})
 }
 
+// profileFieldUndo is the row a restore acts on.
+type profileFieldUndo struct {
+	current, valueKey, superseded, sourceRef string
+	supersededBy                             *string
+}
+
+// readUndo reads and locks the one row of a field that has something to
+// restore, refusing when there is none or when the caller left open which of
+// several it means.
+//
+// FOR UPDATE: the row is held from the moment it is read until the restore
+// lands, so a statement arriving mid-undo cannot slip between the "is this
+// still ours" test and the write it authorises.
+func readUndo(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, field, valueKey string) (profileFieldUndo, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT value, value_key, superseded_value, superseded_captured_by, source_ref
+		  FROM contact_profile_field
+		 WHERE contact_id = $1 AND field = $2 AND superseded_value IS NOT NULL
+		   AND ($3 = '' OR value_key = $3)
+		 ORDER BY value_key
+		 LIMIT 2
+		 FOR UPDATE`,
+		contactID, field, profileFieldValueKey(field, valueKey))
+	if err != nil {
+		return profileFieldUndo{}, fmt.Errorf("contacts: reading the field to restore: %w", err)
+	}
+	var found []profileFieldUndo
+	for rows.Next() {
+		var u profileFieldUndo
+		if err := rows.Scan(&u.current, &u.valueKey, &u.superseded, &u.supersededBy, &u.sourceRef); err != nil {
+			rows.Close()
+			return profileFieldUndo{}, fmt.Errorf("contacts: reading the field to restore: %w", err)
+		}
+		found = append(found, u)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return profileFieldUndo{}, fmt.Errorf("contacts: reading the field to restore: %w", err)
+	}
+	switch len(found) {
+	case 0:
+		// Either the field was never replaced or it never existed. One answer
+		// for both, deliberately: telling them apart would report whether a
+		// contact this caller may not read carries a particular field.
+		return profileFieldUndo{}, apperrors.ErrNotFound
+	case 1:
+		return found[0], nil
+	}
+	return profileFieldUndo{}, &values.ParseError{
+		Field: "value_key", Code: "value_key_required",
+		Message: "several numbers of this field can be restored; name the one to restore by its value_key",
+	}
+}
+
 // RestoreContactProfileField implements POST /contacts/{id}/profile-fields/{field}/restore.
-func (h Handlers) RestoreContactProfileField(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, field crmcontracts.ContactProfileFieldKey) {
+func (h Handlers) RestoreContactProfileField(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, field crmcontracts.ContactProfileFieldKey, params crmcontracts.RestoreContactProfileFieldParams) {
 	// No body. The field's own read overlays a human's verdict onto the stored
 	// value (contact360's readProfileFields), and answering with the row this
 	// write just made would serve the value UNDER that overlay — the one
 	// surface a reader would trust most, showing a claim they may already have
 	// overridden. The page re-reads through the door that consults the ledger.
+	valueKey := ""
+	if params.ValueKey != nil {
+		valueKey = *params.ValueKey
+	}
 	if err := h.store.RestoreProfileField(r.Context(),
-		ids.From[ids.ContactKind](ids.UUID(id)), string(field)); err != nil {
+		ids.From[ids.ContactKind](ids.UUID(id)), string(field), valueKey); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

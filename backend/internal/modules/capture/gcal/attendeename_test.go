@@ -26,7 +26,7 @@ func TestAnAttendeeKeepsTheNameTheInviteGave(t *testing.T) {
 		t.Fatalf("ParticipantsOf: %v", err)
 	}
 	names := map[string]string{}
-	for _, p := range parties {
+	for _, p := range parties.Participants {
 		names[p.Email] = p.DisplayName
 	}
 	if got := names["chris@erlerventures.org"]; got != "Chris Erler" {
@@ -51,7 +51,7 @@ func TestAnUnnamedAttendeeCarriesNoName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParticipantsOf: %v", err)
 	}
-	for _, p := range parties {
+	for _, p := range parties.Participants {
 		if p.DisplayName != "" {
 			t.Errorf("%s carries the name %q, which the invitation never gave", p.Email, p.DisplayName)
 		}

@@ -15,6 +15,8 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -37,7 +39,87 @@ func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontra
 		return crmcontracts.CaptureHealth{}, err
 	}
 	out.Classifier = classifier
+	held, err := captureHeldMeetings(ctx, tx, now)
+	if err != nil {
+		return crmcontracts.CaptureHealth{}, err
+	}
+	out.HeldMeetings = held
+	sweeps, err := captureSweepHealth(ctx, tx)
+	if err != nil {
+		return crmcontracts.CaptureHealth{}, err
+	}
+	out.Sweeps = sweeps
 	return out, nil
+}
+
+// captureHeldMeetings counts what the nightly pass has still to lift, by the
+// pass's own selector and without its per-tick bound.
+func captureHeldMeetings(
+	ctx context.Context, tx pgx.Tx, now time.Time,
+) (crmcontracts.CaptureHeldMeetings, error) {
+	var (
+		args   []any
+		out    crmcontracts.CaptureHeldMeetings
+		oldest *time.Time
+	)
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*), min(a.created_at)
+		  FROM activity a
+		 WHERE `+filedMeetingHeldClause("a", arg), args...).Scan(&out.Count, &oldest); err != nil {
+		return crmcontracts.CaptureHeldMeetings{}, fmt.Errorf(
+			"compose: counting the filed meetings still held: %w", err)
+	}
+	out.OldestAgeSeconds = ageSeconds(now, oldest)
+	return out, nil
+}
+
+// sweepJobKinds names the job that runs each pass, for its declared cadence.
+var sweepJobKinds = map[capture.Sweep]string{
+	capture.SweepSettledThreadVerdicts: ConfidentialityVerdictArgs{}.Kind(),
+	capture.SweepStrandedContacts:      LinkReconcileArgs{}.Kind(),
+	capture.SweepFiledMeetingHolds:     LinkReconcileArgs{}.Kind(),
+}
+
+// captureSweepHealth reports every pass's latest receipt and last success.
+func captureSweepHealth(ctx context.Context, tx pgx.Tx) ([]crmcontracts.CaptureSweepHealth, error) {
+	states, err := capture.SweepStatesTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]crmcontracts.CaptureSweepHealth, 0, len(states))
+	for _, state := range states {
+		row := crmcontracts.CaptureSweepHealth{
+			Sweep:           crmcontracts.CaptureSweepHealthSweep(state.Sweep),
+			LastSucceededAt: utcOrNil(state.LastSucceededAt),
+		}
+		if spec, ok := jobs.SpecFor(sweepJobKinds[state.Sweep]); ok && spec.Cadence.Fixed > 0 {
+			seconds := int(spec.Cadence.Fixed.Seconds())
+			row.CadenceSeconds = &seconds
+		}
+		if last := state.Latest; last != nil {
+			run := crmcontracts.CaptureSweepRun{
+				Outcome:    crmcontracts.CaptureSweepRunOutcome(last.Outcome),
+				FinishedAt: last.FinishedAt.UTC(),
+				Processed:  last.Processed,
+				CapHit:     last.CapHit,
+			}
+			if class := vettedSweepClass(last.ErrorClass); class != "" {
+				run.ErrorClass = &class
+			}
+			row.LastRun = &run
+		}
+		out = append(out, row)
+	}
+	return out, nil
+}
+
+func utcOrNil(at *time.Time) *time.Time {
+	if at == nil {
+		return nil
+	}
+	utc := at.UTC()
+	return &utc
 }
 
 // captureMailboxHealth counts what is waiting per mailbox owner.
@@ -48,8 +130,8 @@ func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontra
 //
 // Contacts are counted as owner-private rows with no settled answer in the
 // sender ledger. That is the same pair of facts the promotion reads — a contact
-// stays `owner` until a verdict widens it — rather than a second definition of
-// "waiting" that could disagree with the thing doing the waiting.
+// stays `owner` until a verdict widens it — and the same clause the owner's own
+// list reads, so the count is exactly what each owner is shown.
 func captureMailboxHealth(
 	ctx context.Context, tx pgx.Tx, now time.Time,
 ) ([]crmcontracts.CaptureMailboxHealth, error) {
@@ -57,14 +139,7 @@ func captureMailboxHealth(
 		WITH waiting_contacts AS (
 		  SELECT p.owner_id AS user_id, count(*) AS n, min(p.created_at) AS oldest
 		    FROM contact p
-		   WHERE p.archived_at IS NULL
-		     AND p.visibility = 'owner'
-		     AND p.captured_by LIKE 'connector:%'
-		     AND NOT EXISTS (
-		           SELECT 1 FROM capture_pending_counterparty q
-		            JOIN contact_email pe ON pe.contact_id = p.id AND pe.archived_at IS NULL
-		           WHERE q.email = pe.email
-		             AND q.status IN ('real', 'noise', 'suppressed', 'rejected'))
+		   WHERE `+capture.AwaitingSenderDecisionClause("p")+`
 		   GROUP BY p.owner_id),
 		waiting_threads AS (
 		  SELECT v.user_id, count(*) AS n, min(v.created_at) AS oldest
@@ -84,7 +159,9 @@ func captureMailboxHealth(
 	}
 	defer rows.Close()
 
-	var out []crmcontracts.CaptureMailboxHealth
+	// Empty rather than nil: the wire field is a required array, and null
+	// would make a client refuse the whole report on a calm installation.
+	out := []crmcontracts.CaptureMailboxHealth{}
 	for rows.Next() {
 		var (
 			userID                 ids.UUID

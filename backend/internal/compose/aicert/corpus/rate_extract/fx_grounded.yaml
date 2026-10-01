@@ -18,16 +18,9 @@ expect:
   answer:
     USD: '0.9259259259'
     GBP: '1.1764705882'
-  rubric: >
-    This rates page states two pairs, both anchored on EUR. The first passage
-    grounds 1 EUR = 1.08 USD; the second grounds 1 EUR = 0.85 GBP. Score how
-    faithfully the two pairs are extracted VERBATIM in the direction the page
-    shows (from EUR), with the RIGHT citing passage id and the rate as a plain
-    decimal string (not a range, not a number, not a currency symbol) — the
-    model must NOT invert or convert. confidence must be a decimal string within
-    0.0-1.0. Penalize any invented pair, an inverted or converted rate, an
-    out-of-range confidence, or a rate not drawn from the cited passage.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    Every value the sheet stores is compared exactly, and the cited passage must
+    print it. The gate drops an uncited, untracked or low-confidence row before
+    the sheet sees it, so nothing else the rubric asked reaches an
+    administrator.

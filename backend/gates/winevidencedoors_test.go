@@ -30,6 +30,8 @@ import (
 	"go/token"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // buildsAMove reports whether a composite literal constructs the deal-move
@@ -80,7 +82,7 @@ func winEvidenceDoors(path string, file *ast.File) map[string]bool {
 func TestEveryDealMoveCarriesTheWinEvidenceClaim(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	doors := map[string]bool{}
 	// The whole backend tree: a deal move is wherever somebody builds the
 	// input, and the estate import already owns one outside internal/modules.
@@ -117,7 +119,7 @@ func moveIt(args a) error {
 	})
 	return err
 }`
-	file, err := parser.ParseFile(token.NewFileSet(), "probe.go", door, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", door, 0)
 	if err != nil {
 		t.Fatalf("parsing the probe: %v", err)
 	}
@@ -143,7 +145,7 @@ func moveIt(args a) error {
 func TestTheToolSurfaceSpellsTheWinEvidenceOnce(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	var declarations []string
 	for path, file := range parseTreeFiles(t, fset, "internal/modules/agents") {
 		for _, decl := range file.Decls {

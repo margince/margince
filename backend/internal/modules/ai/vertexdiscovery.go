@@ -205,7 +205,7 @@ func (c vertexClient) verifyCredential(ctx context.Context) error {
 
 // probeModel asks this client's location whether it serves one model, with
 // the cheapest call that names the model: countTokens for chat, one
-// embedContent for the embeddings lane. errModelNotFound means it does not.
+// embedding for the embeddings lane. errModelNotFound means it does not.
 func (c *geminiClient) probeModel(ctx context.Context, id, lane string) error {
 	if lane == model.LaneEmbeddings {
 		_, err := c.Embed(ctx, model.EmbedRequest{Model: id, Inputs: []string{vertexProbeWord}})
@@ -214,7 +214,7 @@ func (c *geminiClient) probeModel(ctx context.Context, id, lane string) error {
 	wire := struct {
 		Contents []geminiContent `json:"contents"`
 	}{Contents: []geminiContent{{Role: roleUser, Parts: []geminiPart{{Text: vertexProbeWord}}}}}
-	payload, _, err := sendablePayload(ctx, wire, nil)
+	payload, _, err := SendablePayload(ctx, wire, nil)
 	if err != nil {
 		return err
 	}

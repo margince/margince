@@ -6,7 +6,9 @@ package compose
 import (
 	"go/ast"
 	"maps"
+	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -123,17 +125,67 @@ func TestPeriodicForNeedsEveryFieldOfADeclaredConjunction(t *testing.T) {
 	}
 }
 
-// TestPeriodicForOmitsTheScheduleWhenTheIntervalIsNotPositive covers the third
-// posture on the one kind that declares it with no registration gate in front
-// of it, so the omission can only be the interval's doing.
-func TestPeriodicForOmitsTheScheduleWhenTheIntervalIsNotPositive(t *testing.T) {
-	if got := periodicFor(JobRunnerConfig{}, PrivacyRetentionArgs{}); len(got) != 0 {
-		t.Errorf("got %d periodic jobs, want 0 — a non-positive interval declares the schedule absent while the workers stay registered", len(got))
+// Every kind that DECLARES schedule-when-positive honours it, and the subjects
+// are the declarations rather than a list beside them.
+//
+// This covered one kind of the six. A kind whose wiring stopped honouring its
+// own declaration failed no unit test, and only two of the rest were watched at
+// all — by the slower integration suites, which is a long way to travel to
+// learn that a boolean was read.
+//
+// scheduleInterval rather than periodicFor, deliberately: periodicFor consults
+// the registration gate first, so for a kind that registers only when some
+// dependency was supplied, "no entry" under a zero config proves nothing about
+// the interval. Asking the cadence directly leaves the interval as the only
+// thing that can answer, which is what the assertion claims.
+//
+// Both directions per kind, because the negative half alone cannot tell a kind
+// that omits its schedule on a non-positive interval from one that has no
+// schedule to place at all.
+func TestEveryKindDeclaringScheduleWhenPositiveOmitsItsScheduleWithoutOne(t *testing.T) {
+	declaring := 0
+	for kind, spec := range jobs.Declared() {
+		if spec.Cadence.ScheduleWhenPositive == "" {
+			continue
+		}
+		declaring++
+		t.Run(kind, func(t *testing.T) {
+			if _, scheduled := scheduleInterval(JobRunnerConfig{}, spec); scheduled {
+				t.Errorf("a zero %s still placed a schedule — the declaration says a non-positive "+
+					"interval means no pass, and an operator who set it to zero is still swept",
+					spec.Cadence.ScheduleWhenPositive)
+			}
+			cfg := JobRunnerConfig{}
+			setInterval(t, &cfg, spec.Cadence.ScheduleWhenPositive, time.Hour)
+			if _, scheduled := scheduleInterval(cfg, spec); !scheduled {
+				t.Errorf("a positive %s placed no schedule — then the assertion above holds for a "+
+					"kind that never schedules, and says nothing about the interval",
+					spec.Cadence.ScheduleWhenPositive)
+			}
+		})
 	}
-	cfg := JobRunnerConfig{PrivacyRetention: PrivacyRetentionConfig{Interval: time.Hour}}
-	if got := periodicFor(cfg, PrivacyRetentionArgs{}); len(got) != 1 {
-		t.Errorf("with a positive interval: got %d periodic jobs, want 1", len(got))
+	if declaring == 0 {
+		t.Fatal("no kind declares schedule_when_positive — the specs moved, or this test has " +
+			"stopped reading the field it derives its subjects from")
 	}
+}
+
+// setInterval writes a duration to the JobRunnerConfig field a cadence NAMES,
+// so the corpus above needs nothing but the declaration. The paths are the ones
+// operatorIntervals answers, one or two segments deep.
+func setInterval(t *testing.T, cfg *JobRunnerConfig, path string, d time.Duration) {
+	t.Helper()
+	field := reflect.ValueOf(cfg).Elem()
+	for _, segment := range strings.Split(path, ".") {
+		field = field.FieldByName(segment)
+		if !field.IsValid() {
+			t.Fatalf("the cadence names JobRunnerConfig.%s, which has no field %q", path, segment)
+		}
+	}
+	if field.Type() != reflect.TypeOf(time.Duration(0)) {
+		t.Fatalf("JobRunnerConfig.%s is %s, not a duration — a cadence names an interval", path, field.Type())
+	}
+	field.Set(reflect.ValueOf(d))
 }
 
 // TestPeriodicForKeepsAScheduleTheDeclarationDidNotMakeConditional is the

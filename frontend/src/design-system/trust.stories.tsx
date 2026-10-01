@@ -1,20 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, type ReactNode, useState } from "react";
-import { userEvent, within } from "storybook/test";
 import { identifierNumber } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import {
-  ApprovalGate,
   AutonomyDot,
   ConfidenceMeter,
   confidenceLevel,
   EvidenceChip,
   FieldDiff,
-  PassportChip,
-  type Proposal,
   ProvenanceTag,
-  type Resolution,
-  StagedProposal,
   StagingCard,
 } from "./trust";
 
@@ -27,7 +21,7 @@ import {
 // rather than left to the reviewing machine's browser: the catalog has to say
 // the same words on every screenshot.
 const meta: Meta = {
-  title: "Design System/Trust",
+  title: "Components/AI and provenance/Trust",
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -111,61 +105,6 @@ export const Signals: Story = {
   ),
 };
 
-const DEMO_USERS: Record<string, string> = { usr_7f2: "Carol Wagner" };
-
-// Every shape `captured_by` can take, including the two the tag exists to keep
-// apart: a value the reader typed themselves and one a colleague typed. Both
-// used to read as the reader's own handiwork, which is a false statement about
-// who to ask. The unattributed row says so plainly rather than guessing, and it
-// says it about NOBODY else — a buyer has a source, so it has its own arm.
-export const Provenance: Story = {
-  render: () => (
-    <div style={stack}>
-      <div style={row}>
-        <ProvenanceTag provenance={{ kind: "agent", agent: "capture" }} />
-        <PassportChip id="psp_7Q3fa91" />
-        {/* The same kind with nothing to name: a passport call stamps an opaque
-            id, and no lookup here turns it into a word, so the tag says what the
-            wire said and prints no identifier. */}
-        <ProvenanceTag provenance={{ kind: "agent" }} />
-      </div>
-      <div style={row}>
-        <ProvenanceTag provenance={{ kind: "connector", connector: "gmail" }} />
-      </div>
-      {/* A job the installation ran itself. Beside the agent row on purpose:
-          these two are what a reader most needs told apart, and only the
-          wording and the ground say which is which. */}
-      <div style={row}>
-        <ProvenanceTag
-          provenance={{ kind: "system", job: "contact_auto_enrich" }}
-        />
-        <ProvenanceTag provenance={{ kind: "system" }} />
-      </div>
-      <div style={row}>
-        <ProvenanceTag provenance={{ kind: "human", self: true }} />
-        <ProvenanceTag
-          provenance={{ kind: "human", self: false, userId: "usr_7f2" }}
-          renderUser={(userId) => (
-            <strong>{DEMO_USERS[userId] ?? userId}</strong>
-          )}
-        />
-        {/* No renderUser: the design system has no record lookups, so the tag
-            says a contact entered it without claiming which one. */}
-        <ProvenanceTag
-          provenance={{ kind: "human", self: false, userId: "usr_7f2" }}
-        />
-      </div>
-      {/* A contact from outside the company, beside the unattributed row
-          on purpose: reading a buyer as "source not recorded" was the defect,
-          and both are the neutral badge, so only the wording tells them apart. */}
-      <div style={row}>
-        <ProvenanceTag provenance={{ kind: "buyer" }} />
-        <ProvenanceTag provenance={{ kind: "unknown" }} />
-      </div>
-    </div>
-  ),
-};
-
 const WEB_EVIDENCE = {
   snippet: "Series B led by Atlas Ventures, closed 14 May.",
   source: "https://www.example.com/press/2026/series-b-funding-announcement",
@@ -240,17 +179,7 @@ export const Diffs: Story = {
   ),
 };
 
-const TRIAD_OUTCOMES: Record<string, string> = {
-  accept: "Accepted — the value keeps its agent provenance.",
-  edit: "Edited — the value is human-typed, the evidence stays attached.",
-  dismiss: "Dismissed — nothing was written.",
-};
-
-// The gate is three buttons and no state of its own, so the story owns the
-// outcome and says what each verb means. The universal triad is Accept / Edit
-// / Dismiss (§4.4) and it never varies by surface.
 function StagingDemo() {
-  const [outcome, setOutcome] = useState<string | null>(null);
   return (
     <StagingCard>
       <div style={row}>
@@ -261,71 +190,10 @@ function StagingDemo() {
         Headquarters: <span className="staged-value">Munich, Germany</span>
       </p>
       <EvidenceChip evidence={WEB_EVIDENCE} />
-      <ApprovalGate
-        onAccept={() => setOutcome(TRIAD_OUTCOMES.accept)}
-        onEdit={() => setOutcome(TRIAD_OUTCOMES.edit)}
-        onDismiss={() => setOutcome(TRIAD_OUTCOMES.dismiss)}
-      />
-      {outcome && <p className="t-caption">{outcome}</p>}
     </StagingCard>
   );
 }
 
 export const Staging: Story = {
   render: () => <StagingDemo />,
-};
-
-const EVIDENCED_PROPOSAL: Proposal = {
-  description: "Employee count",
-  value: "1,200",
-  agent: "enrich",
-  confidence: "high",
-  evidence: WEB_EVIDENCE,
-};
-
-// Evidence is optional on a proposal, and the version WITHOUT it is the one
-// worth cataloguing: a low-confidence value with nothing behind it is exactly
-// what a reader must be able to spot before accepting it.
-const BARE_PROPOSAL: Proposal = {
-  description: "Industry",
-  value: "Logistics",
-  agent: "capture",
-  confidence: "low",
-};
-
-// StagedProposal drives one proposal through the triad itself — accept, edit
-// or dismiss it in the canvas and the card resolves in place. Persisting the
-// outcome is the caller's job, which is what onResolve reports here.
-function ProposalDemo() {
-  const [resolution, setResolution] = useState<Resolution | null>(null);
-  return (
-    <div style={stack}>
-      <StagedProposal proposal={EVIDENCED_PROPOSAL} onResolve={setResolution} />
-      {resolution && (
-        <span className="t-caption">
-          onResolve fired: {resolution.outcome}
-          {resolution.outcome === "dismissed" ? "" : ` (${resolution.value})`}
-        </span>
-      )}
-      {/* No onResolve: the callback is optional and the card still runs its
-          own state machine. */}
-      <StagedProposal proposal={BARE_PROPOSAL} />
-    </div>
-  );
-}
-
-export const Proposals: Story = {
-  render: () => <ProposalDemo />,
-};
-
-// What a proposal SETTLES into. Accepted through the gate rather than set as a
-// prop, because the settled card is the machine's own next state and a story
-// that reached past it would document a shape the product does not have.
-export const Resolved: Story = {
-  render: () => <ProposalDemo />,
-  play: async ({ canvasElement }) => {
-    const page = within(canvasElement);
-    const [accept] = await page.findAllByRole("button", { name: "Accept" });
-    await userEvent.click(accept);
-  },
 };

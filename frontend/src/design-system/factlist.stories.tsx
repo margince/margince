@@ -11,7 +11,7 @@ import { FactList } from "./factlist";
 // sidebar entry with its name on it — had nothing under F, and the README's ✅
 // pointed at a page about a different component.
 const meta: Meta<typeof FactList> = {
-  title: "Design System/FactList",
+  title: "Components/Text and data display/Fact list",
   component: FactList,
   parameters: { layout: "padded" },
   decorators: [

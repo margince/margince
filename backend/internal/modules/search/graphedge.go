@@ -182,6 +182,11 @@ func DropEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) err
 // read-modify-write: the fold has to be atomic with respect to concurrent
 // capture, and a Go-side loop would leave a window in which a pair is
 // half-updated.
+//
+// The upsert writes in key order. Worker replicas share the consumer group, a
+// batch can name thousands of pairs, and two batches for the same colleague
+// name mostly the same ones; taking the row locks in one global order is what
+// makes the second batch wait for the first instead of deadlocking with it.
 func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 	if len(pairs) == 0 {
 		return nil
@@ -224,6 +229,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		SELECT f.user_id, f.contact_id, f.last_at, f.last_inbound_at, f.last_outbound_at,
 		       f.count_90d, f.in_90d, f.out_90d, f.count_total, now()
 		  FROM folded f
+		 ORDER BY f.user_id, f.contact_id
 		ON CONFLICT (user_id, contact_id) DO UPDATE SET
 		    last_at          = EXCLUDED.last_at,
 		    last_inbound_at  = EXCLUDED.last_inbound_at,

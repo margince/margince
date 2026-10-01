@@ -337,7 +337,7 @@ func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword
 		// token IS the authority here (see the doc comment above), so the
 		// cascade is attributed to the account owner themselves — there is
 		// no admin actor on this call the way DeactivateUser has one.
-		if err := endCredentialAuthority(passwordOwnerCtx(ctx, userID), tx, userID, passwordResetRevokeReason); err != nil {
+		if err := endCredentialAuthority(selfActorCtx(ctx, userID), tx, userID, passwordResetRevokeReason); err != nil {
 			return err
 		}
 		if err := logAuthEvent(ctx, tx, userID, "password_reset", "password reset completed; every borrowed credential revoked"); err != nil {
@@ -357,13 +357,13 @@ func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword
 		if priorStatus != userStatusInvited {
 			return nil
 		}
-		auditID, err := storekit.Audit(passwordOwnerCtx(ctx, userID), tx, "update", "user", userID.UUID,
+		auditID, err := storekit.Audit(selfActorCtx(ctx, userID), tx, "update", "user", userID.UUID,
 			map[string]any{userAuditKeyStatus: priorStatus},
 			map[string]any{userAuditKeyStatus: userStatusActive})
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEvent(passwordOwnerCtx(ctx, userID), tx, auditID, userID.UUID,
+		return storekit.EmitEvent(selfActorCtx(ctx, userID), tx, auditID, userID.UUID,
 			userActivatedPayload(userID))
 	})
 }
@@ -467,17 +467,6 @@ const (
 	passwordResetRevokeReason = "the account was recovered via password reset"
 	operatorResetRevokeReason = "the account was recovered via an operator-issued password reset"
 )
-
-// passwordOwnerCtx binds the account owner as the storekit actor for the
-// credential cascade a self-service reset triggers. There is no session or
-// resolved Identity on this call — the redeemed token IS the authority
-// (ResetPassword's doc comment) — so this carries only what the audit trail
-// and the passport.revoked event need: which human it was.
-func passwordOwnerCtx(ctx context.Context, userID ids.UserID) context.Context {
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + userID.String(), UserID: userID.UUID,
-	})
-}
 
 // operatorCtx binds the operator-driven system actor, the target workspace,
 // and a correlation id for the credential cascade OperatorResetPassword

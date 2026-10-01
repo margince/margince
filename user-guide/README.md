@@ -21,8 +21,8 @@ to end.
 - [run-a-partner-program.md](run-a-partner-program.md) — what a partner program is,
   and one deal followed from the introduction to the money it earns.
 
-The field-by-field references these walkthroughs assume are how-to pages, because
+The one-answer lookups these walkthroughs assume live in the handbook, because
 they are what you come back to rather than read once:
-[set-up-projects.md](../docs/how-to/set-up-projects.md),
-[run-a-project.md](../docs/how-to/run-a-project.md) and
-[set-up-a-partner-program.md](../docs/how-to/set-up-a-partner-program.md).
+[leads-deals-and-projects.md](../docs/handbook/leads-deals-and-projects.md),
+[capture.md](../docs/handbook/capture.md) and
+[partners.md](../docs/handbook/partners.md).

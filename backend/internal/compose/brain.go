@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/decision"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -60,7 +61,7 @@ type ModelPath struct {
 	// AccountScan reads one account for one reader and says what needs a
 	// contact, quoting the exchanges it read (companyscan).
 	AccountScan  completer
-	RateExtract  completer // the model-cost refresh pricing-page extraction lane
+	RateExtract  completer // the FX refresh rates-page extraction lane
 	BriefRanking completer // the Morning-Brief L2 re-order (B-E05.2)
 	// Summarize serves both of the company view's grounded-prose sites: the
 	// standing account brief and the prepared "Ask Margince" questions. Both
@@ -163,6 +164,10 @@ type ModelPath struct {
 	// the only thing left to read it from would be the job title, which is the
 	// inference the contract forbids. So its endpoint declares 501 instead.
 	ProposeRoles completer
+	// NlSearch reads a list described in plain words into filter clauses. No
+	// floor: a sentence has no deterministic reading, so its endpoint answers
+	// 409 without a lane rather than guessing one.
+	NlSearch completer
 	// VoiceBuild is the durable Voice DNA build lane: the builder pass and
 	// its evaluation drafts ride the same task label and budget.
 	VoiceBuild completer
@@ -318,6 +323,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		DealHealth:                    brain(ai.TaskDealHealth),
 		AccountScan:                   brain(ai.TaskAccountScan),
 		ProposeRoles:                  brain(ai.TaskProposeRoles),
+		NlSearch:                      brain(ai.TaskNlSearch),
 		CorpusAsk:                     brain(ai.TaskCorpusAsk),
 		GrowthFit:                     brain(ai.TaskGrowthFit),
 		DraftReply:                    brain(ai.TaskDraftReply),
@@ -440,4 +446,19 @@ func (b routerBrain) CompleteValidated(ctx context.Context, req model.Request, v
 	}
 	resp, _, err := b.router.CompleteStructured(ctx, b.task, prepared, validate)
 	return resp, err
+}
+
+// CompleteDecided serves a decision site on the lane's own task: the decision
+// model first and the ladder after, as one logical call. The ladder's request is
+// prepared exactly as Complete prepares it, so a decision that falls back sends
+// the same prompt a lane without the decision form would have sent.
+func (b routerBrain) CompleteDecided(ctx context.Context, site string, dreq decision.Request,
+	req model.Request, validate ai.Validator, gate ai.DecisionGate,
+) (ai.DecideOutcome, error) {
+	prepared, err := prepareOrAnnounce(ctx, b.router, b.companyContext, b.task, req)
+	if err != nil {
+		return ai.DecideOutcome{}, err
+	}
+	out, _, err := b.router.Decide(ctx, b.task, site, dreq, prepared, validate, gate)
+	return out, err
 }

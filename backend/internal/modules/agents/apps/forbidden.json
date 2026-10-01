@@ -23,6 +23,7 @@
     "navigator.sendBeacon",
     "RTCPeerConnection",
     "location.replace",
+    "navigator.geolocation",
     "WebAssembly",
     "blob:",
     "javascript:",

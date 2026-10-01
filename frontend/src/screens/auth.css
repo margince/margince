@@ -547,10 +547,7 @@
 .auth-statement {
   position: relative;
   /* No margin of its own: a heading's surrounding space belongs to the passage
-     it opens, and `.heading` zeroes it at the same specificity this rule has —
-     so a margin here is settled by whichever sheet the bundler emitted last.
-     The 4px that used to sit above it held it against a kicker this region no
-     longer carries. */
+     it opens. */
   color: var(--textPrimary);
 }
 /* ZERO layout shift while typing. The ghost is the full sentence rendered

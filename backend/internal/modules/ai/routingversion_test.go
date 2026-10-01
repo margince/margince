@@ -134,8 +134,8 @@ func TestTheVersionIsStableAcrossRepeatedParses(t *testing.T) {
 
 // Every installation's cached briefs, dossiers and growth-fits are keyed on
 // these digests, so a change to how a binding marshals regenerates them all
-// through paid models. The hex values are pinned, not recomputed: a renamed
-// constant or a new field without omitempty fails here instead of in a bill.
+// through paid models. The hex values are pinned, not recomputed: a new field
+// without omitempty fails here instead of in a bill.
 func TestAnExistingBindingKeepsItsPinnedVersion(t *testing.T) {
 	for name, tc := range map[string]struct{ doc, want string }{
 		"a single-vendor cloud binding": {
@@ -143,13 +143,13 @@ func TestAnExistingBindingKeepsItsPinnedVersion(t *testing.T) {
 			want: "9f63f2eed1f2f0fa302b9b5c3ff0a5ffe2022324f5bf3d041dd8cd53b9c180f2",
 		},
 		"a brokered binding with a defaulted upstream and a narrowed input": {
-			doc: `profile: eu_hosted
+			doc: `profile: cloud_frontier
 tiers:
   premium: {provider: openai_compatible, base_url: https://openrouter.ai/api, model: mistralai/mistral-small-2603}
   frontier: {provider: anthropic, model: claude-sonnet-4-5, input: [text, image]}
 embeddings: {provider: gemini, model: gemini-embedding-001}
 `,
-			want: "e9c868909349fac6f7aadea107a94281362a37b95f1f7cc5a320193142972377",
+			want: "755bd31e8639b5284183cb5b556acdb78cc8434d33a4ea504d33d62e516a951f",
 		},
 		"a Vertex binding, which alone marshals a location": {
 			doc: `profile: eu_hosted

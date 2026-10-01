@@ -45,6 +45,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -113,6 +114,17 @@ func (e *exportBadRequest) FieldFault() (field, code, message string) {
 // vocabulary, which only the collections store can answer for, and resolving
 // it here instead would let an export disagree with the list it exports.
 func (w *FilteredExportWriter) WriteFiltered(ctx context.Context, engine storekit.Query, pred storekit.Predicate, format exportFileFormat) (FilteredExportResult, error) {
+	return w.write(ctx, engine, collections.FilterSource{Predicate: pred}, format, nil)
+}
+
+// WriteListExport is WriteFiltered for a list — a Live List's filter or a
+// Shortlist's members — and records the list on the export's log row, which is
+// what lists the export among the list's dependencies.
+func (w *FilteredExportWriter) WriteListExport(ctx context.Context, engine storekit.Query, src collections.FilterSource, format exportFileFormat, list ids.ListID) (FilteredExportResult, error) {
+	return w.write(ctx, engine, src, format, &list)
+}
+
+func (w *FilteredExportWriter) write(ctx context.Context, engine storekit.Query, src collections.FilterSource, format exportFileFormat, list *ids.ListID) (FilteredExportResult, error) {
 	if format != exportFmtCSV && format != exportFmtJSON {
 		return FilteredExportResult{}, &exportBadRequest{field: "format", reason: "must be csv or json"}
 	}
@@ -121,7 +133,7 @@ func (w *FilteredExportWriter) WriteFiltered(ctx context.Context, engine storeki
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		// The scope-forcing executor: the object RBAC gate + row-scope
 		// clause + the predicate, composed in one place, hard-capped.
-		matched, err := engine.SelectIDs(ctx, tx, pred, storekit.PredicateRowLimit)
+		matched, err := exportedIDs(ctx, tx, engine, src)
 		if err != nil {
 			return err
 		}
@@ -151,13 +163,13 @@ func (w *FilteredExportWriter) WriteFiltered(ctx context.Context, engine storeki
 		// in system_log (the non-entity operational ledger), not the audit_log
 		// record-mutation spine. The exported table, filter, and row count
 		// stand in for "what slice".
-		_, err = storekit.LogSystem(ctx, tx, "export", map[string]any{
+		_, err = storekit.LogSystem(ctx, tx, "export", withListSource(list, map[string]any{
 			"kind":      "filtered",
 			"table":     engine.Table,
 			"format":    string(format),
 			"row_count": len(rows),
-			"filter":    pred,
-		})
+			"filter":    exportedSlice(src),
+		}))
 		return err
 	})
 	if err != nil {
@@ -325,6 +337,8 @@ type filteredExportDoc struct {
 type filteredExportHandlers struct {
 	writer      *FilteredExportWriter
 	collections *collections.Store
+	// listsOn admits a list_id source; off, a list id names nothing.
+	listsOn bool
 }
 
 // filteredExportRequest is the export body: exactly one source — an inline
@@ -334,6 +348,7 @@ type filteredExportRequest struct {
 	Object string              `json:"object"`
 	Filter *storekit.Predicate `json:"filter"`
 	ViewID string              `json:"view_id"`
+	ListID string              `json:"list_id"`
 	Format string              `json:"format"`
 }
 
@@ -343,13 +358,13 @@ func (h filteredExportHandlers) CreateFilteredExport(w http.ResponseWriter, r *h
 		return
 	}
 
-	resource, pred, err := h.resolveSource(r.Context(), req)
+	src, list, err := h.resolveSource(r.Context(), req)
 	if err != nil {
 		writeFilteredExportError(w, r, err)
 		return
 	}
 
-	engine, ok, err := h.collections.SegmentEngine(r.Context(), resource)
+	engine, ok, err := h.collections.SegmentEngine(r.Context(), src.Resource)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -357,12 +372,17 @@ func (h filteredExportHandlers) CreateFilteredExport(w http.ResponseWriter, r *h
 	if !ok {
 		httperr.Write(w, r, &exportBadRequest{
 			field:  objectSourceField,
-			reason: fmt.Sprintf("%q is not a filter-exportable object", resource),
+			reason: fmt.Sprintf("%q is not a filter-exportable object", src.Resource),
 		})
 		return
 	}
 
-	result, err := h.writer.WriteFiltered(r.Context(), engine, pred, exportFileFormat(req.Format))
+	var result FilteredExportResult
+	if list != nil {
+		result, err = h.writer.WriteListExport(r.Context(), engine, src, exportFileFormat(req.Format), *list)
+	} else {
+		result, err = h.writer.WriteFiltered(r.Context(), engine, src.Predicate, exportFileFormat(req.Format))
+	}
 	if err != nil {
 		writeFilteredExportError(w, r, err)
 		return
@@ -383,45 +403,50 @@ func (h filteredExportHandlers) CreateFilteredExport(w http.ResponseWriter, r *h
 	}
 }
 
-// resolveSource turns the request's chosen source into the (resource,
-// predicate) pair the engine runs. Exactly one of object / view_id must be
-// set; an inline object additionally requires a filter (this is filtered
-// export — an unfiltered whole-object dump is the export bundle's job, not
-// this path).
-func (h filteredExportHandlers) resolveSource(ctx context.Context, req filteredExportRequest) (string, storekit.Predicate, error) {
+// resolveSource turns the request's chosen source into what the engine runs —
+// a (resource, predicate) pair, or a Shortlist's members — and the list it
+// names when it is one. Exactly one of object / view_id / list_id must be set;
+// an inline object additionally requires a filter (this is filtered export — an
+// unfiltered whole-object dump is the export bundle's job, not this path).
+func (h filteredExportHandlers) resolveSource(ctx context.Context, req filteredExportRequest) (collections.FilterSource, *ids.ListID, error) {
 	sources := 0
-	if req.Object != "" {
-		sources++
-	}
-	if req.ViewID != "" {
-		sources++
-	}
-	if sources != 1 {
-		return "", storekit.Predicate{}, &exportBadRequest{
-			field:  objectSourceField,
-			reason: "supply exactly one of object or view_id",
+	for _, named := range []string{req.Object, req.ViewID, req.ListID} {
+		if named != "" {
+			sources++
 		}
 	}
-
+	if sources != 1 {
+		return collections.FilterSource{}, nil, &exportBadRequest{
+			field:  objectSourceField,
+			reason: "supply exactly one of object, view_id or list_id",
+		}
+	}
 	switch {
 	case req.Object != "":
 		if req.Filter == nil {
-			return "", storekit.Predicate{}, &exportBadRequest{
+			return collections.FilterSource{}, nil, &exportBadRequest{
 				field:  "filter",
 				reason: "a filtered export of an object needs a filter",
 			}
 		}
-		return req.Object, *req.Filter, nil
-	default:
+		return collections.FilterSource{Resource: req.Object, Predicate: *req.Filter}, nil, nil
+	case req.ViewID != "":
 		id, err := ids.ParseAs[ids.SavedViewKind](req.ViewID)
 		if err != nil {
-			return "", storekit.Predicate{}, &exportBadRequest{field: "view_id", reason: "must be a UUID"}
+			return collections.FilterSource{}, nil, &exportBadRequest{field: "view_id", reason: "must be a UUID"}
 		}
 		src, err := h.collections.SavedViewFilterSource(ctx, id)
-		if err != nil {
-			return "", storekit.Predicate{}, err
+		return src, nil, err
+	default:
+		if !h.listsOn {
+			return collections.FilterSource{}, nil, apperrors.ErrNotFound
 		}
-		return src.Resource, src.Predicate, nil
+		id, err := ids.ParseAs[ids.ListKind](req.ListID)
+		if err != nil {
+			return collections.FilterSource{}, nil, &exportBadRequest{field: "list_id", reason: "must be a UUID"}
+		}
+		src, err := h.collections.ListFilterSource(ctx, id)
+		return src, &id, err
 	}
 }
 

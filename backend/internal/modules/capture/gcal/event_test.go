@@ -406,3 +406,16 @@ func TestAnEventWithNoICalUIDCarriesNoIdentity(t *testing.T) {
 		t.Fatalf("ICalUID is %q, want empty — nothing stated one", ev.ICalUID)
 	}
 }
+
+func TestCalendarCapturePreservesTheProviderDuration(t *testing.T) {
+	raw := []byte(`{"id":"event-duration","start":{"dateTime":"2026-10-05T10:00:00Z"},"end":{"dateTime":"2026-10-05T12:30:00Z"},"organizer":{"email":"host@company.test"},"attendees":[{"email":"guest@customer.test"}]}`)
+	event, err := decodeEvent(raw, "host@company.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := meetingmap.Classify(event, "host@company.test").ToRecord("gcal", raw)
+	fields, ok := record.Fields.(capture.ActivityFields)
+	if !ok || fields.DurationSeconds == nil || *fields.DurationSeconds != 9000 {
+		t.Fatalf("lost duration: %+v", record.Fields)
+	}
+}

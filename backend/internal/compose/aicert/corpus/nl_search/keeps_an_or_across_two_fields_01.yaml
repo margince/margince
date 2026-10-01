@@ -1,0 +1,34 @@
+name: nl_search_keeps_an_or_across_two_fields
+task: nl_search
+site: filter_propose
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  resource: lead
+  text: leads from the webinar or with a score of at least 80
+  today: '2026-09-30'
+  lang: en
+  fields:
+  - {name: name, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: email, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: source, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: score, type: number, operators: [eq, neq, gt, gte, lt, lte, in, exists]}
+  - {name: created_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+expect:
+  outcome: accepted
+  answer:
+    filter:
+      or:
+      - field: source
+        op: eq
+        value: webinar
+      - field: score
+        op: gte
+        value: 80
+    unsupported: 0
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: 'The passing filter is ONE or-group: source equals webinar, or score of at least 80 (gte 80). Joining
+    the two with ''and'' selects a different, smaller list and fails. ''At least 80'' includes 80, so gt 80 fails.'

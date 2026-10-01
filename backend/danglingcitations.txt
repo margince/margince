@@ -65,7 +65,6 @@ backend/internal/compose/companydossier/growthfit.go migration 0194
 backend/internal/compose/companyrollup_test.go core 0006
 backend/internal/compose/contact360/handlers.go migration 0184
 backend/internal/compose/contact360/sectionstimeline.go core 0225
-backend/internal/compose/contactsearchdiscover.go migration 0097
 backend/internal/compose/datareset_integration_test.go migration 1787032690
 backend/internal/compose/datareset_integration_test.go migration 1787226902
 backend/internal/compose/datareset_integration_test.go migration 1787320000

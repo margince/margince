@@ -202,12 +202,12 @@ func TestOfferTemplateUpdate_HappyVersionSkewAndDefaultConflict(t *testing.T) {
 	v1 := int64(1)
 	updated, err := e.Deals.UpdateOfferTemplate(ctx, id, deals.UpdateOfferTemplateInput{
 		Name: "Editable v2", Locale: "de-DE", IsDefault: false,
-		Layout: map[string]any{"footer_text": "v2"}, IfVersion: &v1,
+		Layout: map[string]any{"footer": "v2"}, IfVersion: &v1,
 	})
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	if updated.Name != "Editable v2" || updated.Layout["footer_text"] != "v2" || updated.Version == nil || *updated.Version != 2 {
+	if updated.Name != "Editable v2" || updated.Layout["footer"] != "v2" || updated.Version == nil || *updated.Version != 2 {
 		t.Fatalf("update must apply the full replacement and bump version to 2, got %+v", updated)
 	}
 	if n := e.WsCount(t,
@@ -250,7 +250,7 @@ func TestOfferTemplateUpdate_HappyVersionSkewAndDefaultConflict(t *testing.T) {
 		t.Fatalf("renaming onto a live sibling's name must answer DuplicateTemplateNameError, got %v", err)
 	}
 	unchanged, err := e.Deals.UpdateOfferTemplate(ctx, id, deals.UpdateOfferTemplateInput{
-		Name: "Editable v2", Locale: "de-DE", Layout: map[string]any{"footer_text": "v2"}, IfVersion: &v2,
+		Name: "Editable v2", Locale: "de-DE", Layout: map[string]any{"footer": "v2"}, IfVersion: &v2,
 	})
 	if err != nil || *unchanged.Version != 3 {
 		t.Fatalf("keeping the row's own name/layout must succeed as a real PUT (version bumps to 3), got %+v, %v", unchanged, err)

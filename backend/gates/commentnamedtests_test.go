@@ -33,7 +33,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -41,6 +40,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // commentTestName is a Go test name as prose writes one. `Test` followed by an
@@ -227,7 +228,7 @@ func goCommentCensus(t *testing.T) (declared, testFuncs map[string]bool, comment
 			}
 			t.Fatalf("reading %s: %v", f.path, err)
 		}
-		parsed, _ := parser.ParseFile(token.NewFileSet(), f.path, src, parser.ParseComments|parser.SkipObjectResolution)
+		parsed, _ := parser.ParseFile(gatekit.SourceFileSet(), f.path, src, parser.ParseComments|parser.SkipObjectResolution)
 		if parsed == nil {
 			continue
 		}

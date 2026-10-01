@@ -20,10 +20,10 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // contractGen is the generated contract surface every response type is declared in.
@@ -31,8 +31,7 @@ const contractGen = "internal/contracts/api_gen.go"
 
 func TestEveryListResponseCarriesADataSlice(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, contractGen, nil, 0)
+	file, err := gatekit.ParseFile(contractGen, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", contractGen, err)
 	}

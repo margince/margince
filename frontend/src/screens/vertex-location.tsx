@@ -127,7 +127,7 @@ export function VertexLocationField({
 }>) {
   const t = useT();
   const locations = useProviderLocations(VERTEX_PROVIDER, true);
-  const euResident = profile === "eu_resident";
+  const euResident = profile === "eu_hosted";
   return (
     <Field
       label={t("aiRouting.location.label")}

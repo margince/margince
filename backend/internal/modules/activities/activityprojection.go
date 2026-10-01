@@ -25,6 +25,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // activityScan holds one row mid-flight: the contract record being built, and
@@ -49,7 +50,7 @@ type activityScan struct {
 	language *string
 	kind     string
 	// The nullable strings that become typed contract enums.
-	channelProvider, direction, meetingStatus, threadKey, captureLabel *string
+	channelProvider, direction, meetingStatus, invitationStatus, threadKey, captureLabel *string
 	// audienceReason says why a derived audience is what it is. It travels with
 	// the content, not with the markers: "held because personnel" describes
 	// what the message is about.
@@ -104,6 +105,7 @@ var activityProjection = []activityColumn{
 	{"a.done_at", func(s *activityScan) any { return &s.a.DoneAt }},
 	{"a.duration_seconds", func(s *activityScan) any { return &s.a.DurationSeconds }},
 	{"a.meeting_status", func(s *activityScan) any { return &s.meetingStatus }},
+	{"(SELECT status FROM meeting_invitation WHERE activity_id=a.id AND status<>'erased')", func(s *activityScan) any { return &s.invitationStatus }},
 	{"a.host_user_id", func(s *activityScan) any { return &s.hostUserID }},
 	{"a.source_system", func(s *activityScan) any { return &s.a.SourceSystem }},
 	{"a.source_id", func(s *activityScan) any { return &s.a.SourceId }},
@@ -188,7 +190,7 @@ func SourceAuthorOf(id *ids.UUID, seatName, sourceName, sourceSystem *string) *c
 	return &crmcontracts.SourceAuthor{
 		UserId:      uuidPtr(id),
 		DisplayName: name,
-		Via:         sourceSystem,
+		Via:         provenance.DisplayVia(sourceSystem),
 	}
 }
 
@@ -280,6 +282,10 @@ func (s *activityScan) record() crmcontracts.Activity {
 	if s.direction != nil {
 		d := crmcontracts.ActivityDirection(*s.direction)
 		a.Direction = &d
+	}
+	if s.invitationStatus != nil {
+		status := crmcontracts.ActivityInvitationStatus(*s.invitationStatus)
+		a.InvitationStatus = &status
 	}
 	if s.meetingStatus != nil {
 		m := crmcontracts.ActivityMeetingStatus(*s.meetingStatus)

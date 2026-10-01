@@ -102,9 +102,15 @@ GOWORK_ROOT := GOWORK=$(abspath ../go.work)
 # two cannot drift apart.
 UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
 
+# TEST_EXEC=<wrapper> runs every cached test binary through a `go test -exec`
+# wrapper, uncached. cache-warm sets it to scripts/testlog-exec.sh, which logs
+# what each package read, and backend/tools/check-test-inputs judges the logs:
+# the census over the same packages the cached pass replays.
+TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
+
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc help check build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
+.PHONY: perfdoc help check build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -137,7 +143,7 @@ check: ## The merge gate: everything a PR must pass
 	$(MAKE) build
 	@bash ../scripts/phase-timer.sh stop
 	@bash ../scripts/phase-timer.sh start "backend: vet/lint/arch-lint/test/test-extensions (-j4)"
-	$(MAKE) -j4 vet lint arch-lint test test-extensions
+	$(MAKE) -j4 test lint vet arch-lint test-extensions
 	@bash ../scripts/phase-timer.sh stop
 	@bash ../scripts/phase-timer.sh start "backend: contract drift"
 	$(MAKE) drift
@@ -171,7 +177,7 @@ test-extensions: composition ## Every enabled extension's own test lane (each un
 			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test -coverprofile="$$tmp" -coverpkg=./... ./...); \
 			if [ -s "$$out" ]; then tail -n +2 "$$tmp" >> "$$out"; else cp "$$tmp" "$$out"; fi; \
 		else \
-			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test ./...); \
+			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) ./...); \
 		fi; \
 	done; \
 	[ "$$found" = "1" ] || echo "test-extensions: no enabled Go extensions"
@@ -206,7 +212,12 @@ vet: composition ## Run go vet over every package, untagged (composed workspace)
 	# is excluded there and read here and nowhere else.
 	$(GOWORK_COMPOSED) $(GO) vet ./...
 
-test: composition ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached
+# The two passes are separate targets so `-j4` runs them side by side: the
+# uncached gates package is the longest single leg of the gate, and queued
+# behind the cached pass it put that pass's whole wall time on the critical path.
+test: test-uncached test-cached ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached
+
+test-cached: composition
 	# ./... covers UNCACHED_TEST_PKGS too, and the result it computes for them
 	# is thrown away by the uncached pass seconds later. That wasted pass was
 	# the single biggest line in the gate: 316 s of a 648 s check-backend, all
@@ -231,11 +242,13 @@ test: composition ## Unit tests — every package exactly once, UNCACHED_TEST_PK
 	    exit 1; \
 	  fi; \
 	  echo "go test: $$(printf '%s\n' "$$cached" | wc -l | tr -d ' ') cached packages + $$want uncached"; \
-	  $(GOWORK_COMPOSED) $(GO) test $$cached
+	  $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $$cached
 	# The tool chain is its own module, so ./... above never reaches it —
 	# its tests (generator determinism, scaffold behavior) run here or
 	# nowhere.
-	$(GOWORK_COMPOSED) $(GO) test ./tools/...
+	$(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) ./tools/...
+
+test-uncached: composition
 	# Uncached, for the reason UNCACHED_TEST_PKGS is declared: their subjects
 	# are files outside the package, so a green here can otherwise be replayed
 	# over a tree that has since changed. Verified once from the other end —
@@ -273,22 +286,24 @@ e2e-siteread: composition ## Deep-read quality floor vs the real gradion.com (pa
 # JUDGE is a SECOND model on purpose: one grading itself is certified by
 # construction. ONE judge grades every task of a run — a judge swap flips
 # verdicts on the same candidate — and a task whose candidate is the judge is
-# refused before the first paid call. The default is gpt-oss-120b on OpenRouter
-# for cost; `JUDGE=gemini:gemini-3.1-flash-lite` grades a run that certifies it.
+# refused before the first paid call. The default is claude-sonnet-4-6 through
+# `claude -p` on a Claude Code subscription (CLAUDE_CODE_OAUTH_TOKEN), which
+# costs nothing per run; a run certifying a Claude candidate names another judge.
 # The defaults sit on the exported names, so an operator's environment wins;
 # JUDGE* default to those and override both, and `?=` keeps an explicit empty one
-# empty. BASE_URL carries a broker host — openai_compatible fails closed without
-# one — so the OpenRouter host is the default only while JUDGE is the default
-# model: a native vendor judge leaves it empty.
-AICERT_DEFAULT_JUDGE           := openai_compatible:openai/gpt-oss-120b
+# empty. An openai_compatible judge fails closed without a broker host: it gets
+# the OpenRouter host only when neither BASE_URL nor MARGINCE_AICERT_BASE_URL is
+# set, and otherwise the lane hands it the candidate's broker. A native vendor
+# judge, and a claude_cli one (the CLI dials its own host), leaves it empty.
+AICERT_DEFAULT_JUDGE           := claude_cli:claude-sonnet-4-6
 MARGINCE_AICERT_ROUTING        ?=
 MARGINCE_AICERT_MODEL          ?=
 MARGINCE_AICERT_BASE_URL       ?=
 MARGINCE_AICERT_JUDGE_MODEL    ?= $(AICERT_DEFAULT_JUDGE)
-MARGINCE_AICERT_JUDGE_BASE_URL ?= $(if $(filter $(AICERT_DEFAULT_JUDGE),$(JUDGE)),https://openrouter.ai/api)
+MARGINCE_AICERT_JUDGE_BASE_URL ?= $(if $(filter openai_compatible:%,$(JUDGE)),$(if $(BASE_URL)$(MARGINCE_AICERT_BASE_URL),,https://openrouter.ai/api))
 JUDGE                          ?= $(MARGINCE_AICERT_JUDGE_MODEL)
 JUDGE_BASE_URL                 ?= $(MARGINCE_AICERT_JUDGE_BASE_URL)
-MARGINCE_AICERT_PROFILE        ?= eu_hosted
+MARGINCE_AICERT_PROFILE        ?= cloud_frontier
 MARGINCE_AICERT_UPSTREAM       ?=
 MARGINCE_AICERT_JUDGE_UPSTREAM ?=
 JUDGE_UPSTREAM                 ?= $(MARGINCE_AICERT_JUDGE_UPSTREAM)
@@ -314,6 +329,9 @@ endif
 # `RESUME=<dir>` picks a directory; `RESUME=` (empty) turns it off, which is how
 # a run is forced to measure everything fresh.
 RESUME ?= 1
+# STALE_ONLY skips a model whose committed record is already current for this
+# build, so a sweep pays only for what changed. `STALE_ONLY=0` re-measures it.
+STALE_ONLY ?= 1
 ifeq ($(RESUME),1)
 override RESUME := $(CURDIR)/../.tmp/aicert/resume
 endif
@@ -330,9 +348,9 @@ endif
 AICERT_TIMEOUT ?= 90m
 
 # ROUTING= certifies a DEPLOYMENT rather than a model: it reads that config's
-# `seeds.ai_routing` and certifies each task against the model bound at the task's
-# LEADING ladder rung — the one that would actually serve it. One run therefore
-# writes records across several models, which is what the config binds.
+# `seeds.ai_routing` and certifies each task against every distinct model its
+# ladder binds — the rung that answers, then each fallback a failed call falls
+# to. One run therefore writes records across several models.
 #
 # It is mutually exclusive with MODEL=, and the run refuses both: one names a
 # deployment, the other one candidate to A/B a prompt fix against. Under ROUTING=
@@ -343,7 +361,13 @@ AICERT_TIMEOUT ?= 90m
 # itself a task and leads at premium, so a config binding claude-haiku-4.5 there
 # makes the grader collide with every premium-led candidate — the run checks that
 # for every resolved task up front rather than failing mid-corpus after paying.
-e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=openai_compatible:openai/gpt-oss-120b by default, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies that model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<odd n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=eu_hosted (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
+#
+# Cost ceiling: the judge grades a run once, again within 10 points of a band or
+# anywhere below the floor plus 10, and a third time when those two differ by more
+# than 5 — about 1.4 calls a run, more on a model that scores low. A
+# borderline scenario extends from 3 runs to at most 9, so one scenario costs at
+# most 9 candidate and 27 judge calls; a settled one 3 runs and about 4.
+e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-4-6 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run. Under ROUTING= every distinct rung of a task's ladder is certified, fallback included; STALE_ONLY=0 re-measures records already current
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
 	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \
@@ -352,7 +376,7 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 	  MARGINCE_AICERT_PROFILE=$(if $(PROFILE),$(PROFILE),$(MARGINCE_AICERT_PROFILE)) \
 	  MARGINCE_AICERT_UPSTREAM='$(if $(UPSTREAM),$(UPSTREAM),$(MARGINCE_AICERT_UPSTREAM))' \
 	  MARGINCE_AICERT_JUDGE_UPSTREAM='$(JUDGE_UPSTREAM)' \
-	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" \
+	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" MARGINCE_AICERT_STALE_ONLY=$(STALE_ONLY) \
 	  $(GOWORK_COMPOSED) $(GO) test -tags e2e_llm ./internal/compose/aicert/ -run TestE2ECertify -v -count=1 -timeout $(AICERT_TIMEOUT)
 
 e2e-ai-report: ## Print the certification readiness report — every shipped site, its band, and whether its record is current, stale or absent — from internal/compose/aicert/{corpus,records}/.
@@ -636,6 +660,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-jobs -contract api/jobs.yaml \
 		-out-specs internal/platform/jobs/specs_gen.go \
 		-out-kinds internal/compose/jobkinds_gen.go
+	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go
 
 drift: gen perfdoc ## Fail when a committed generated file drifted from what its generator produces
 	# gen regenerates the committed per-unit manifests too (via composition);

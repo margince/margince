@@ -11,10 +11,10 @@ package aicert
 // the run was pointed at a config instead of a model.
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -31,40 +31,101 @@ import (
 // deployment runs every day. One invariant, spelled on both sides: production
 // picks the first bound rung, so certification certifies the first bound rung.
 //
-// The rungs BELOW it are reachable too, under budget pressure
-// (ai.ServableTiers walks that closure) and want their own runs — a sweep, not a
+// The rungs BELOW it are reachable too, on a failed call or under budget
+// pressure, and taskCandidates gives each distinct one its own run — not a
 // pooled record that could not say which model answered.
 func resolveBinding(routing ai.RoutingConfig, task ai.Task) (ai.ProviderConfig, ai.Tier, bool) {
+	rungs := boundLadder(routing, task)
+	if len(rungs) == 0 {
+		return ai.ProviderConfig{}, "", false
+	}
+	return rungs[0].Binding, rungs[0].Tier, true
+}
+
+// boundRung is one rung of a task's ladder and the model a deployment binds it to.
+type boundRung struct {
+	Tier    ai.Tier
+	Binding ai.ProviderConfig
+}
+
+// boundLadder is task's ladder reduced to the rungs routing binds, in the order
+// the router walks them: the first answers, and a failed call falls to the next.
+func boundLadder(routing ai.RoutingConfig, task ai.Task) []boundRung {
+	var rungs []boundRung
 	for _, tier := range ai.TaskLadder(task) {
 		binding, bound := routing.Tiers[tier]
 		if bound && binding.Provider != "" && binding.Model != "" {
-			return binding, tier, true
+			rungs = append(rungs, boundRung{Tier: tier, Binding: binding})
 		}
 	}
-	return ai.ProviderConfig{}, "", false
+	return rungs
 }
 
-// taskBindings is the candidate one task is certified against and the judge
-// that grades it. An error costs that task its record and no other: another
-// task's rung may be bound perfectly well, and one gap must not cost every
-// record.
-func taskBindings(ctx context.Context, cfg RunnerConfig, task ai.Task, log *slog.Logger) (candidate, judge ai.ProviderConfig, err error) {
-	candidate = cfg.Binding
-	if cfg.Routing != nil {
-		resolved, rung, ok := resolveBinding(*cfg.Routing, task)
-		if !ok {
-			return ai.ProviderConfig{}, ai.ProviderConfig{}, fmt.Errorf("aicert: task %s: no rung of its ladder %v is bound in the supplied routing, so there is no model to certify it against — and production could not serve it either",
-				task, ai.TaskLadder(task))
+// candidate is one model a run certifies a task against, and the judge that
+// grades it. Rung 0 is the model that answers; a higher rung is a fallback.
+type candidate struct {
+	Binding ai.ProviderConfig
+	Tier    ai.Tier
+	Rung    int
+	Judge   ai.ProviderConfig
+}
+
+// skippedCandidate is a fallback the run cannot grade, named so the gap is read
+// rather than silent.
+type skippedCandidate struct {
+	Task   ai.Task
+	Model  string
+	Reason string
+}
+
+// taskCandidates lists the models a run certifies task against, in the order the
+// router walks them. A routed run measures each distinct bound rung, because a
+// failed call on the first reaches the next and a buyer's answer then comes from
+// it; a rung binding a model above it has no record of its own. A fallback the
+// judge cannot grade is skipped, while the answering rung still refuses the run.
+func taskCandidates(cfg RunnerConfig, task ai.Task) ([]candidate, []skippedCandidate, error) {
+	if cfg.Routing == nil {
+		judge, err := cfg.judgeFor(cfg.Binding)
+		if err != nil || cfg.current[candidateKey(task, cfg.Binding)] {
+			return nil, nil, taskErr(task, err)
 		}
-		candidate = resolved
-		log.InfoContext(ctx, "aicert: routed", "task", string(task), "tier", string(rung), "model", resolved.Model)
+		return []candidate{{Binding: cfg.Binding, Judge: judge}}, nil, nil
 	}
-	judge, err = cfg.judgeFor(candidate)
-	if err != nil {
-		return ai.ProviderConfig{}, ai.ProviderConfig{}, fmt.Errorf("task %s: %w", task, err)
+	rungs := boundLadder(*cfg.Routing, task)
+	if len(rungs) == 0 {
+		return nil, nil, fmt.Errorf("aicert: task %s: no rung of its ladder %v is bound in the supplied routing, so there is no model to certify it against — and production could not serve it either",
+			task, ai.TaskLadder(task))
 	}
-	log.InfoContext(ctx, "aicert: judged by", "task", string(task), "judge", judge.Model)
-	return candidate, judge, nil
+	var cands []candidate
+	var skipped []skippedCandidate
+	for i, rung := range rungs {
+		if slices.ContainsFunc(rungs[:i], func(above boundRung) bool { return sameModel(above.Binding, rung.Binding) }) {
+			continue
+		}
+		judge, err := cfg.judgeFor(rung.Binding)
+		switch {
+		case err != nil && i == 0:
+			return nil, nil, fmt.Errorf("task %s: %w", task, err)
+		case err != nil:
+			skipped = append(skipped, skippedCandidate{Task: task, Model: rung.Binding.Model, Reason: "the judge's own family"})
+			continue
+		case i > 0 && cfg.unservable[bindingKey(rung.Binding)]:
+			skipped = append(skipped, skippedCandidate{Task: task, Model: rung.Binding.Model, Reason: "the pre-flight could not serve it"})
+			continue
+		}
+		if cfg.current[candidateKey(task, rung.Binding)] {
+			continue // STALE_ONLY: its record is current, and currentBindings said so
+		}
+		cands = append(cands, candidate{Binding: rung.Binding, Tier: rung.Tier, Rung: i, Judge: judge})
+	}
+	return cands, skipped, nil
+}
+
+func taskErr(task ai.Task, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("task %s: %w", task, err)
 }
 
 // validateRoutedBindings refuses a routed run that could not produce a
@@ -87,6 +148,9 @@ func validateRoutedBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger)
 			"a record is filed under it, so a run states which one it measured", cfg.Routing.Profile)
 	}
 	warnUnboundDegradeTargets(cfg, log)
+	if err := refuseInvalidDecisionLane(cfg); err != nil {
+		return err
+	}
 	return refuseSelfJudgedTasks(cfg, tasks)
 }
 
@@ -122,7 +186,7 @@ var errSelfJudged = errors.New("a model grading itself is certified by construct
 // one place the candidate-is-not-the-judge rule is spelled: both validations and
 // the run itself ask it, so what was checked up front is what grades.
 func (c RunnerConfig) judgeFor(candidate ai.ProviderConfig) (ai.ProviderConfig, error) {
-	if sameModel(candidate, c.JudgeBinding) {
+	if sameModel(candidate, c.JudgeBinding) || cliJudgesOwnFamily(candidate, c.JudgeBinding) {
 		return ai.ProviderConfig{}, errSelfJudged
 	}
 	return c.JudgeBinding, nil

@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
 import { OnboardingScreen } from "../onboarding";
 import { resolutionsFromAnswers } from "./company-proposal";
@@ -13,7 +14,6 @@ import {
   conversationReducer,
   initialConversationState,
 } from "./conversation-machine";
-import { QuestionCard } from "./entries";
 
 // Humans outrank the reader: every clarify carries a local dismiss escape,
 // so an implausible question (page chrome glued into entity names) can never
@@ -118,29 +118,6 @@ describe("the machine's dismissal path", () => {
         dismissed: true,
       }),
     ).toBe(speakerAsk);
-  });
-});
-
-describe("option chip clamping", () => {
-  it("is presentation-only: the full value stays the accessible name and title", () => {
-    const garbage =
-      "Gradion GmbH Imprint Privacy Cookie Settings Accept All Continue Reading Hauptstrasse 1";
-    rtlRender(
-      <LocaleProvider initial="en">
-        <QuestionCard
-          question={{
-            id: "q",
-            i18nKey: "ob.conv.clarify.question",
-            params: { question: "Which entity?" },
-            options: [{ value: "g", label: garbage }],
-          }}
-          onAnswer={() => undefined}
-        />
-      </LocaleProvider>,
-    );
-    const chip = screen.getByRole("button", { name: garbage });
-    expect(chip.title).toBe(garbage);
-    expect(chip.className).toContain("ob-conv-option");
   });
 });
 
@@ -293,6 +270,10 @@ function stubApi(read: CompanySiteRead, proposal: Proposal) {
       }
       if (path.includes("/company/site-reads/") && request.method === "GET") {
         return jsonResponse(read);
+      }
+      // GET /company answers only an admin, so the journey's session is one.
+      if (path.endsWith("/me") && request.method === "GET") {
+        return jsonResponse(meFixture());
       }
       if (path.endsWith("/company") && request.method === "GET") {
         return jsonResponse({ detail: "no company yet" }, 404);

@@ -147,7 +147,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	defer observe.Stop()
 
 	//nolint:contextcheck // boot-time wiring: the model path outlives any request context (cmd/api resolves the same path under the same waiver)
-	modelPath, boundModels, err := selectModelPath(ctx, workerModelPathSpec(cfg, deployCfg), pool, logger)
+	modelPath, err := selectModelPath(ctx, workerModelPathSpec(cfg, deployCfg), pool, logger)
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
 	stopJobs, err := startJobRunner(ctx, pool, vault,
-		logger, cfg, modelPath, boundModels, lanes, weeklyMail, stdout)
+		logger, cfg, modelPath, lanes, weeklyMail, stdout)
 	if err != nil {
 		return err
 	}
@@ -279,6 +279,7 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 		return workerBoot{}, err
 	}
 	cfg.captureConfig = compose.CaptureConfigFromDeploy(deployCfg.Capture, log)
+	compose.WarnStaleRates(deployCfg.Rates, log)
 	// See cmd/api/main.go's identical comment: AllowTestMailbox is an
 	// operations.* kill switch, not a capture.* tuning knob.
 	cfg.captureConfig.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
@@ -319,16 +320,39 @@ func runResumeSubscriber(ctx context.Context, rdb *redis.Client, svc *compose.Ru
 // reclaim window for a group whose handler runs longer than the default;
 // zero keeps it.
 func runSubscriber(ctx context.Context, rdb *redis.Client, groupName string, handler events.Handler, log *slog.Logger, minIdle time.Duration) {
+	if g, ok := catalogGroup(groupName, log); ok {
+		runGroupSubscriber(ctx, rdb, g, handler, log, minIdle)
+	}
+}
+
+// runCoalescingSubscriber is runSubscriber for a group whose effect can fold a
+// whole read at once (events.Subscriber.WithBatch): batch takes each read's
+// entries in one call, and handler stays the path a single-entry read and a
+// failed batch take. Both are Dedupe-wrapped over the same per-event marks.
+func runCoalescingSubscriber(ctx context.Context, rdb *redis.Client, groupName string, handler events.Handler, batch events.BatchHandler, log *slog.Logger) {
+	g, ok := catalogGroup(groupName, log)
+	if !ok {
+		return
+	}
+	sub := events.NewSubscriber(rdb, g, events.Dedupe(rdb, g.Name, handler), log).
+		WithBatch(events.DedupeBatch(rdb, g.Name, batch))
+	if err := sub.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		log.Error("subscriber "+g.Name, "err", err)
+	}
+}
+
+// catalogGroup finds a consumer group the catalog declares by name.
+func catalogGroup(groupName string, log *slog.Logger) (kevents.Group, bool) {
 	for _, g := range kevents.Groups() {
 		if g.Name == groupName {
-			runGroupSubscriber(ctx, rdb, g, handler, log, minIdle)
-			return
+			return g, true
 		}
 	}
 	// A name no catalog group answers to is a typo in this role's wiring. Said
 	// out loud rather than run: the zero Group subscribes to no streams, so the
 	// lane would come up, log nothing, and deliver nothing forever.
 	log.Error("worker: no such consumer group, so this lane delivers nothing", "group", groupName)
+	return kevents.Group{}, false
 }
 
 // runGroupSubscriber consumes one consumer group, whether the catalog declared

@@ -46,10 +46,10 @@ import {
 } from "./contactpage.address";
 import { ContactRail, contactStanding, standingSentences } from "./contactrail";
 import { ContactResearchTab } from "./contactresearch";
+import { ContactSubtitle } from "./contactsubtitle";
 import { CONTACT_TABS, type ContactTab, contactTabRoute } from "./contacttab";
 import { ContactTimelineTab } from "./contacttabs";
 import { transportForActivity, useTransports } from "./contacttransports";
-import { currentEmployer } from "./employmentcurrency";
 import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
@@ -63,12 +63,6 @@ import {
 } from "./writeto";
 import "./contact360.css";
 import { buyingRoleLabel } from "./companycontacts/summary";
-
-// The contact record page V2 (ADR-0096, concept contact-record-page-v2).
-//
-// It opens on a REASON, not a record: the moment the server selected leads,
-// the facts that change how you read it sit above the fold, and the database
-// view of the contact is a tab away rather than the first thing on screen.
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentAction = components["schemas"]["ContactMomentAction"];
@@ -231,6 +225,7 @@ function runContactMomentAction(
   action: ContactMomentAction,
   t: ReturnType<typeof useT>,
   handlers: Readonly<{
+    contactId: string;
     openComposer: (intent: string) => void;
     setDrawer: (drawer: Drawer) => void;
     openBrief: (activityId: string | null) => void;
@@ -251,6 +246,9 @@ function runContactMomentAction(
     return;
   }
   switch (destination.surface) {
+    case "booking":
+      navigate({ screen: "book", id: `contact-${handlers.contactId}` });
+      return;
     case "composer":
       handlers.openComposer(composerIntentOf(destination.prefill, t));
       return;
@@ -409,6 +407,7 @@ export function ContactPageV2({
   // so its switch's own branches are not this component's cognitive weight.
   const runAction = (action: ContactMomentAction) =>
     runContactMomentAction(action, t, {
+      contactId: id,
       openComposer,
       setDrawer,
       openBrief,
@@ -448,7 +447,7 @@ export function ContactPageV2({
             aside={narrow ? undefined : contactDetails}
             asideOpen={details.open}
             name={contact.full_name}
-            avatarSrc={null}
+            identity={contact.id}
             // One rung under the record scale: the name is still the largest
             // thing on the page, but beside a work column that opens on the
             // agent's ask it no longer needs to be the size of a masthead.
@@ -768,39 +767,10 @@ function useBriefedMeeting(): [
   return [params.get(BRIEF_PARAM) ?? null, setBriefed];
 }
 
-// The header's second line: what this contact does, and where. The company is a
-// link because it is a record of its own, not a label.
-function ContactSubtitle({ view }: Readonly<{ view: Contact360 }>): ReactNode {
-  const contact = view.contact;
-  const employment = currentEmployer(view.employments?.data);
-  return (
-    <div className="record-sub record-sub-inline">
-      {contact.title}
-      {employment?.company_name && (
-        <>
-          {contact.title ? " · " : ""}
-          <button
-            type="button"
-            className="pe-meta-link"
-            onClick={() =>
-              navigate({
-                screen: "companies",
-                id: employment.company_id,
-              })
-            }
-          >
-            {employment.company_name}
-          </button>
-        </>
-      )}
-    </div>
-  );
-}
-
 // The marks under the name: the relationship's standing (verdict and trend as
 // ONE badge, nothing when the touch dates are withheld from this reader) and
-// who may read the record, with its Share verb. Both are the values a rep
-// glances for before anything else, and both are pills, so they share a line.
+// who may read the record. Both are the values a rep glances for before
+// anything else, and both are pills, so they share a line.
 function ContactMarks({
   view,
   tab,

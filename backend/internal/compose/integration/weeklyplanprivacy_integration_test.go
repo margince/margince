@@ -291,6 +291,7 @@ func TestTheAnonymizeSweepRedactsACommitmentNamingTheSubject(t *testing.T) {
 	}
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	integration.SettleIntoInstall(t, e.Env)
 	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("retention pass: %v", err)
 	}

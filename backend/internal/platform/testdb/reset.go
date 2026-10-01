@@ -122,18 +122,23 @@ const resetTables = `
 // exactly what a new reference table did: the sweep kept it and the coverage
 // gate reported it as leaking.
 //
+// The report fence is one boot-seeded coordination row with no customer data.
+// Its generation is monotonic; no reader depends on a particular value.
+//
 // A gate derives its corpus from the owner it protects rather than restating
 // it, so the corpus lives here beside the reset that owns it.
 const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
 	`'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
 	`'currency_minor_digits', 'deal_acquisition_source', 'record_role', ` +
-	`'maskable_field', ` +
+	`'maskable_field', 'report_projection_fence', ` +
 	`'activity_review_template')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
 // TRUNCATEs it instead of DELETEing it. Growth, not absolute size, is the
-// signal: see reclaimBloat.
-const reclaimSlack = 256 << 10
+// signal: see reclaimBloat. It also has to clear the largest EMPTY table, since
+// reclaimBloat measures a table with no baseline against zero — indexing the
+// cascading keys put `relationship` within a page of the old 256 KiB.
+const reclaimSlack = 512 << 10
 
 // execQuerier is the pgx subset each reset step needs, so every step can run
 // inside Reset's single transaction rather than racing it on the bare

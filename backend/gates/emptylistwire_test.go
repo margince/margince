@@ -40,6 +40,8 @@ import (
 	"go/token"
 	"path/filepath"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The field WriteJSON reflects for. Spelled here because this census exists to
@@ -50,7 +52,7 @@ func TestEveryListEnvelopeCarriesItsRowsWhereTheWriterLooks(t *testing.T) {
 	t.Parallel()
 
 	path := filepath.Join(repoRoot, "backend", "internal", "contracts", "api_gen.go")
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing the generated contract: %v", err)
 	}
@@ -234,7 +236,7 @@ type Contact struct{ Name string }`,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", tc.source, 0)
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", tc.source, 0)
 			if err != nil {
 				t.Fatalf("parsing the probe: %v", err)
 			}

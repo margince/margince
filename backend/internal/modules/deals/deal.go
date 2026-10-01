@@ -22,7 +22,7 @@ import (
 // ensureOpenBirthStage guards create: deals are born open — AdvanceDeal
 // is the ONE path that derives won/lost and maintains the
 // closed_at/lost_reason/FX invariants. Creating straight onto a terminal
-// stage would put an "open" deal on a won column — silent forecast
+// stage would put an string(DealOpen) deal on a won column — silent forecast
 // corruption, no CHECK trips.
 func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID) error {
 	var semantic string
@@ -164,7 +164,7 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 	if in.ExpectedClose != nil {
 		// INV-CLOSE-PAST (formulas §11): an open deal never claims a past
 		// close date. Closed deals keep their historical dates editable.
-		if string(current.Status) == "open" {
+		if string(current.Status) == string(DealOpen) {
 			if err := s.rejectPastCloseDate(ctx, tx, in.ExpectedClose); err != nil {
 				return nil, err
 			}
@@ -346,7 +346,7 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	if err := refuseManualArrEdit(current, resultingArr, arrEditMove{Arr: arrMoved, Currency: currencyMoved}); err != nil {
 		return err
 	}
-	if string(current.Status) != "open" && resultingAmount != nil && (amountMoved || currencyMoved) {
+	if string(current.Status) != string(DealOpen) && resultingAmount != nil && (amountMoved || currencyMoved) {
 		// deal_closed_at guarantees ClosedAt on a non-open row.
 		rateBefore, rateDateBefore := frozenBefore(current)
 		if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*resultingCurrency),
@@ -389,7 +389,9 @@ func (s *Store) installationToday(ctx context.Context, tx pgx.Tx) (time.Time, er
 	// instead of a column on the row, so the DST rules and the date boundary
 	// stay where they were rather than being re-derived in Go.
 	var today time.Time
-	if err := tx.QueryRow(ctx, `SELECT (timezone($1, now()))::date`, zone).Scan(&today); err != nil {
+	//craft:ignore naked-any pgx binds the zone and injected clock as SQL parameters.
+	arguments := []any{zone, s.clock()}
+	if err := tx.QueryRow(ctx, "SELECT (timezone("+storekit.Placeholders(arguments)+"::timestamptz))::date", arguments...).Scan(&today); err != nil {
 		return time.Time{}, fmt.Errorf("resolve the installation's today: %w", err)
 	}
 	return dateOnly(today), nil

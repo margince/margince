@@ -13,7 +13,7 @@ import {
 import "./contact360.css";
 
 const meta: Meta = {
-  title: "Records/Contact record/Clarity",
+  title: "Records/Contact 360/Clarity",
   parameters: { layout: "fullscreen" },
 };
 export default meta;

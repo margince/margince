@@ -203,3 +203,140 @@ func forgeCursor(t *testing.T, pos contactCursorForTest) string {
 	}
 	return token
 }
+
+// A walk survives the contact it was resuming from leaving the account.
+//
+// The cursor named the previous page's last contact and the next page started
+// by FINDING it. A contact archived, or whose employment ended, between two
+// pages is no longer on the roster the next page reads, so the token this
+// service had just minted answered malformed — and the rep paging an active
+// account lost the rest of it, on a token nobody had mistyped.
+//
+// ASSERTED ON COVERAGE rather than on the error alone: answering something
+// other than malformed is easy to do wrongly, by resuming from the top and
+// serving the first page twice. What the anchor is for is that the walk covers
+// the account exactly once, so that is what this counts.
+func TestAContactWalkSurvivesItsAnchorLeavingTheAccount(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	owner := integration.OwnerConn(t)
+	clock := &movableClock{at: company360Clock}
+	svc := company360ServiceAt(e, clock)
+
+	company := e.SeedCompany(t, "Brandt GmbH", nil)
+	for i := range 5 {
+		contact := e.SeedContact(t, string(rune('A'+i))+" Contact", nil)
+		employ(t, e, contact, company, "Fleet")
+		mail := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: your proposal",
+			"inbound", company360Clock.AddDate(0, 0, -(i+1)))
+		integration.LinkActivity(t, owner, mail, "contact", contact)
+	}
+
+	limit := 2
+	first, err := svc.ContactPage(ctx, ids.CompanyID{UUID: company},
+		company360svc.ContactListQuery{Limit: &limit})
+	if err != nil {
+		t.Fatalf("the first page: %v", err)
+	}
+	if first.Page.NextCursor == nil {
+		t.Fatal("the first page carries no cursor, so there is no walk to resume and this proves nothing")
+	}
+
+	seen := map[ids.UUID]bool{}
+	for _, row := range first.Data {
+		seen[ids.UUID(row.ContactId)] = true
+	}
+
+	// The anchor is the contact the token resumes from, so this is the row the
+	// next page used to look for and will not find.
+	anchor := ids.UUID(first.Data[len(first.Data)-1].ContactId)
+	e.WsExec(t, `UPDATE relationship SET ended_at = DATE '2026-01-02'
+		WHERE kind = 'employment' AND contact_id = $1 AND company_id = $2`, anchor, company)
+
+	cursor := first.Page.NextCursor
+	for page := 0; page < 5 && cursor != nil; page++ {
+		got, err := svc.ContactPage(ctx, ids.CompanyID{UUID: company},
+			company360svc.ContactListQuery{Limit: &limit, Cursor: cursor})
+		if err != nil {
+			t.Fatalf("resuming from a contact who has left the account: %v — the token was minted by "+
+				"this service one page earlier, so refusing it loses the rest of a walk over an "+
+				"account that is still being read", err)
+		}
+		for _, row := range got.Data {
+			id := ids.UUID(row.ContactId)
+			if seen[id] {
+				t.Fatalf("the walk serves %s twice — resuming past a departed anchor restarted the "+
+					"walk rather than continuing it", id)
+			}
+			seen[id] = true
+		}
+		cursor = got.Page.NextCursor
+	}
+	if len(seen) != 5 {
+		t.Errorf("the walk covered %d of 5 contacts — a rep paging this account misses one and the "+
+			"page looks complete", len(seen))
+	}
+}
+
+// A token minted before the cursor carried its anchor's position still resumes.
+//
+// Those tokens are in flight across the deploy that adds the field: a rep holds
+// one on an open page, presses "next", and the reader has to answer the shape
+// it was handed rather than the shape it now mints. Absence of the field IS the
+// version here, so this pins both halves — the one that resumes, and the
+// refusal that is all a token without the anchor's sort values can honestly
+// give once the anchor is gone.
+func TestAContactWalkResumesATokenMintedBeforeTheAnchorCarriedItsPosition(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	owner := integration.OwnerConn(t)
+	clock := &movableClock{at: company360Clock}
+	svc := company360ServiceAt(e, clock)
+
+	company := e.SeedCompany(t, "Brandt GmbH", nil)
+	for i := range 3 {
+		contact := e.SeedContact(t, string(rune('A'+i))+" Contact", nil)
+		employ(t, e, contact, company, "Fleet")
+		mail := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: your proposal",
+			"inbound", company360Clock.AddDate(0, 0, -(i+1)))
+		integration.LinkActivity(t, owner, mail, "contact", contact)
+	}
+
+	limit := 1
+	first, err := svc.ContactPage(ctx, ids.CompanyID{UUID: company},
+		company360svc.ContactListQuery{Limit: &limit})
+	if err != nil {
+		t.Fatalf("the first page: %v", err)
+	}
+	anchor := ids.UUID(first.Data[0].ContactId)
+	legacy := forgeCursor(t, contactCursorForTest{
+		Sort: "recommended", ID: anchor, AsOf: computedAtOf(t, first.Data),
+	})
+
+	resumed, err := svc.ContactPage(ctx, ids.CompanyID{UUID: company},
+		company360svc.ContactListQuery{Limit: &limit, Cursor: &legacy})
+	if err != nil {
+		t.Fatalf("resuming a token minted before the anchor carried its position: %v", err)
+	}
+	if len(resumed.Data) == 0 {
+		t.Fatal("the resumed page is empty, so the old token resumed past the end of the account")
+	}
+	if got := ids.UUID(resumed.Data[0].ContactId); got == anchor {
+		t.Errorf("the resumed page starts at %s, the anchor itself — an old token resumed AT its "+
+			"position rather than after it, so the rep sees that contact twice", got)
+	}
+
+	// The anchor leaves, and the old token can no longer be placed: it carries
+	// no sort values, so there is nothing to resume from but the row itself.
+	e.WsExec(t, `UPDATE relationship SET ended_at = DATE '2026-01-02'
+		WHERE kind = 'employment' AND contact_id = $1 AND company_id = $2`, anchor, company)
+
+	_, err = svc.ContactPage(ctx, ids.CompanyID{UUID: company},
+		company360svc.ContactListQuery{Limit: &limit, Cursor: &legacy})
+	var malformed *storekit.MalformedCursorError
+	if !errors.As(err, &malformed) {
+		t.Errorf("an old token whose anchor has left answered %v, want a malformed-cursor refusal — "+
+			"without the anchor's sort values there is no position to resume from, and guessing "+
+			"one is how a page silently skips contacts", err)
+	}
+}

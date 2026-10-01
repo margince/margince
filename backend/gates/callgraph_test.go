@@ -20,7 +20,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"path/filepath"
 	"strconv"
@@ -215,13 +214,12 @@ func parsePackageFiles(t *testing.T, dir string) []*ast.File {
 	if err != nil {
 		t.Fatalf("listing %s: %v", dir, err)
 	}
-	fset := token.NewFileSet()
 	var files []*ast.File
 	for _, path := range sources {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			t.Fatalf("parsing %s: %v", path, parseErr)
 		}
@@ -237,6 +235,7 @@ func parsePackageFiles(t *testing.T, dir string) []*ast.File {
 // holds, keyed by the name that holds them.
 func packageLevelStatements(files []*ast.File) map[string][]string {
 	held := map[string][]string{}
+	constants := stringConstants(files)
 	for _, file := range files {
 		for _, decl := range file.Decls {
 			gen, isGen := decl.(*ast.GenDecl)
@@ -257,6 +256,12 @@ func packageLevelStatements(files []*ast.File) map[string][]string {
 					continue
 				}
 				for i, name := range value.Names {
+					// One more reading, with every named operand spelled out through
+					// stringConstants: the fold below reads a name as a hole, so a
+					// predicate arriving through a constant was invisible here.
+					if resolved, whole := gatekit.StringExpr(value.Values[i], constants, gatekit.FoldStrict); whole {
+						held[name.Name] = append(held[name.Name], resolved)
+					}
 					// Every string LITERAL in the value, not ONLY the folded
 					// whole. These statements are assembled — a raw string plus
 					// a helper's output — so folding them returns nothing, and a

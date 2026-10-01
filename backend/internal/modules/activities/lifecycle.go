@@ -26,15 +26,18 @@ import (
 )
 
 type UpdateActivityInput struct {
+	recordedAt         *time.Time
+	calendarSettlement bool
 	// Trail names what the audit trail calls this write; zero is an update.
-	Trail      storekit.AuditTrail
-	Subject    *string
-	Body       *string
-	OccurredAt *time.Time
-	DueAt      *time.Time
-	RemindAt   *time.Time
-	AssigneeID *ids.UserID
-	IsDone     *bool
+	Trail           storekit.AuditTrail
+	Subject         *string
+	Body            *string
+	OccurredAt      *time.Time
+	DurationSeconds *int
+	DueAt           *time.Time
+	RemindAt        *time.Time
+	AssigneeID      *ids.UserID
+	IsDone          *bool
 	// MeetingStatus is how the meeting went, and it is meaningful only on a
 	// meeting. The pairing is refused in the mapping against the kind the ROW
 	// carries — a patch cannot change a kind, so the stored one is the only
@@ -47,6 +50,8 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	at := s.now()
+	in.recordedAt = &at
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
@@ -96,6 +101,7 @@ func updateActivityInTx(
 		  assignee_id = coalesce($%[7]d, assignee_id),
 		  is_done = coalesce($%[8]d, is_done),
 		  meeting_status = coalesce($%[9]d, meeting_status),
+ duration_seconds = coalesce($%[10]d, duration_seconds),
 		  -- The language was READ from the text, so an edit to the text retires
 		  -- it. Cleared rather than recomputed: detection lives in Go, and a
 		  -- label that outlived the words it described would send a reply in
@@ -110,7 +116,7 @@ func updateActivityInTx(
 		    ELSE done_at END
 		WHERE id = $%[1]d`,
 		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
-		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus)),
+		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds)),
 		args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -125,6 +131,7 @@ func updateActivityInTx(
 	// already holds is somebody saving a form, and recording it would make
 	// "booked twice" a countable event.
 	if err := recordMeetingTransition(ctx, tx, meetingTransition{
+		RecordedAt:     in.recordedAt,
 		ActivityID:     id,
 		Status:         changedMeetingStatus(current, out),
 		ScheduledStart: &out.OccurredAt,
@@ -200,8 +207,24 @@ func admitActivityPatch(
 	if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
 		return crmcontracts.Activity{}, &MeetingStatusKindError{Kind: string(current.Kind)}
 	}
-	if err := ensureAssigneeCanHoldWork(ctx, tx, in.AssigneeID); err != nil {
-		return crmcontracts.Activity{}, err
+	if !held && !in.calendarSettlement && changesInvitation(*in) {
+		if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
+			return crmcontracts.Activity{}, err
+		}
+	}
+	if !held {
+		if err := validateActivityDuration(in.DurationSeconds); err != nil {
+			return crmcontracts.Activity{}, err
+		}
+	}
+	// Only a CHANGE of assignee is a routing decision. Re-sending the current
+	// one with an edit to the subject or due date must not be refused because
+	// that colleague is still invited.
+	unchanged := in.AssigneeID != nil && current.AssigneeId != nil && ids.UUID(*current.AssigneeId) == in.AssigneeID.UUID
+	if !unchanged {
+		if err := ensureAssigneeCanHoldWork(ctx, tx, in.AssigneeID); err != nil {
+			return crmcontracts.Activity{}, err
+		}
 	}
 	return current, nil
 }
@@ -278,42 +301,60 @@ func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID, ifVersio
 	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		held, err := lockActivityForWrite(ctx, tx, id.UUID)
-		if err != nil {
-			return err
-		}
-		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
-			return err
-		}
-		p := storekit.NewPatch()
-		p.Set("archived_at", nil, time.Now().UTC())
-		// held drops the filter AND the pin: the filter lets the UPDATE reach
-		// activity_refuse_restricted_mutation instead of a LiveOnly clause
-		// hiding the row again, and the pin — a CAS by WHERE clause that never
-		// reaches the trigger on a mismatch — would otherwise answer stale
-		// version skew (409) instead of the reachable 423 on a row nothing
-		// can write to regardless of version. Dropping it is safe: this
-		// transaction already holds the row FOR UPDATE via
-		// lockActivityForWrite, the guard an unpinned ApplyGuardedIn falls
-		// back to.
-		pin := ifVersion
-		if held {
-			pin = nil
-		}
-		if err := p.ApplyGuardedIn(ctx, tx, "activity", id.UUID, pin, activityArchivedFilter(held)); err != nil {
-			return err
-		}
-		auditID, err := storekit.Audit(ctx, tx, "archive", "activity", id.UUID, nil, nil)
-		if err != nil {
-			return err
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityArchived{}); err != nil {
-			return err
-		}
-		out, err = readActivity(ctx, tx, id, storekit.IncludeArchived)
+		var err error
+		out, err = archiveActivityInTx(ctx, tx, id, ifVersion)
 		return err
 	})
 	return out, err
+}
+
+// ArchiveActivityTx is ArchiveActivity inside a caller-opened transaction, for
+// a bulk undo that retires the tasks its change filed in one commit.
+func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
+	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+		return err
+	}
+	_, err := archiveActivityInTx(ctx, tx, id, ifVersion)
+	return err
+}
+
+func archiveActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) (crmcontracts.Activity, error) {
+	held, err := lockActivityForWrite(ctx, tx, id.UUID)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	p := storekit.NewPatch()
+	p.Set("archived_at", nil, time.Now().UTC())
+	// held drops the filter AND the pin: the filter lets the UPDATE reach
+	// activity_refuse_restricted_mutation instead of a LiveOnly clause
+	// hiding the row again, and the pin — a CAS by WHERE clause that never
+	// reaches the trigger on a mismatch — would otherwise answer stale
+	// version skew (409) instead of the reachable 423 on a row nothing
+	// can write to regardless of version. Dropping it is safe: this
+	// transaction already holds the row FOR UPDATE via
+	// lockActivityForWrite, the guard an unpinned ApplyGuardedIn falls
+	// back to.
+	pin := ifVersion
+	if held {
+		pin = nil
+	}
+	if err := p.ApplyGuardedIn(ctx, tx, "activity", id.UUID, pin, activityArchivedFilter(held)); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	auditID, err := storekit.Audit(ctx, tx, "archive", "activity", id.UUID, nil, nil)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityArchived{}); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	return readActivity(ctx, tx, id, storekit.IncludeArchived)
 }
 
 // activityUpdatedChangedFields projects the patch's touched/untouched decisions

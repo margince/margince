@@ -10,6 +10,11 @@
 // so the product read as either idle or spooky: changes appeared with no author
 // anybody could name. This is the receipt.
 //
+// A FAULT IS REPORTED ONCE. could-not-complete carries a FIRING that did not
+// land; watching carries the STANDING CONDITION of a source. An automation whose
+// last run failed belongs to the first and appears only there, because a fault
+// drawn in two lanes is two things for a reader to chase and one thing to fix.
+//
 // A RECEIPT AND A ROUTER, NEVER A SECOND INBOX. Nothing is answered from here. A
 // pending approval is decided where approvals are decided; an undo calls the
 // record's own restore route. The lanes report, and the surfaces that own each

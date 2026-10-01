@@ -65,7 +65,7 @@ function asks(rows: IntroRequest[]) {
 }
 
 const meta: Meta<typeof IntroAsksPanel> = {
-  title: "Records/Contact network/Introductions",
+  title: "Records/Contact 360/Network/Introductions",
   component: IntroAsksPanel,
   parameters: { layout: "padded" },
 };

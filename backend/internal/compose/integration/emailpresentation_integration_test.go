@@ -303,8 +303,10 @@ func TestEmailSummaryRidesEveryActivityRow(t *testing.T) {
 	if got.EmailSummary.Preview == nil || *got.EmailSummary.Preview != "Können wir Dienstag sprechen?" {
 		t.Errorf("preview = %v, want the sentence without the sign-off", got.EmailSummary.Preview)
 	}
-	if got.EmailSummary.Move != crmcontracts.EmailSummaryMoveNone {
-		t.Errorf("move = %v on an unclassified message; direction alone establishes no obligation", got.EmailSummary.Move)
+	// Unanswered inbound mail is owed until something answers it, judged or
+	// not: the waiting lane shows it, so the badge says the same.
+	if got.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
+		t.Errorf("move = %v on an unanswered inbound message the waiting lane would show", got.EmailSummary.Move)
 	}
 
 	subject := "a call"

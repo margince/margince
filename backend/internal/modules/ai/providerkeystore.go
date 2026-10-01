@@ -46,6 +46,9 @@ type ProviderKeyStatus struct {
 	// EnvVar is the variable the key may also arrive in, so a screen can tell
 	// an operator which export seeded it.
 	EnvVar string
+	// Optional reports that the adapter calls without a key when none is held,
+	// so an absent one is no gap.
+	Optional bool
 	// CredentialKind is which ProviderCredential field this vendor takes.
 	CredentialKind string
 }
@@ -58,7 +61,7 @@ const (
 )
 
 func credentialKindFor(provider string) string {
-	if provider == providerGeminiVertex {
+	if d, _ := providerByName(provider); d.serviceAccountKey {
 		return CredentialKindServiceAccount
 	}
 	return CredentialKindAPIKey
@@ -137,6 +140,7 @@ func (s *ProviderKeyStore) List(ctx context.Context) ([]ProviderKeyStatus, error
 			Provider:       provider,
 			Configured:     refs[provider] != "",
 			EnvVar:         KeyEnvVarFor(provider),
+			Optional:       keyIsOptional(provider),
 			CredentialKind: credentialKindFor(provider),
 		})
 	}

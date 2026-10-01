@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/ports/decision"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -52,6 +54,31 @@ type PreparedCase interface {
 	// returns an Outcome rather than an error, because "the model answered
 	// wrongly" is a measurement, not a failure of the harness.
 	Evaluate(Trace) Outcome
+}
+
+// DecisionCase is a prepared case whose site also has a decision form: the
+// request its adapter builds from the same fixture, the site's own gate, and
+// its floors.
+//
+// An optional interface rather than a second argument to Run, because only the
+// sites that declare `decision:` have a decision form, and every other case
+// would carry a parameter it can never use.
+type DecisionCase interface {
+	PreparedCase
+	// DecisionSite names the site the decision request is asked at.
+	DecisionSite() string
+	// DecisionRequest is the decision question built from the same fixture the
+	// LLM request is built from.
+	DecisionRequest() decision.Request
+	// GateDecision is the site's own reading of an answer, at the floor its LLM
+	// path applies.
+	GateDecision(decision.Answer) ai.DecisionVerdict
+	// Floors are the site's per-label floors; they are folded into the decision
+	// stamp, so moving one stales the record.
+	Floors() map[string]float64
+	// EvaluateDecision grades an answer the gate accepted against the fixture's
+	// expectation.
+	EvaluateDecision(decision.Answer) Outcome
 }
 
 // Trace is what one prepared case actually did. Output is the final model text

@@ -243,6 +243,29 @@ func TestAllowTestMailboxGateDefaultsOff(t *testing.T) {
 	}
 }
 
+// Lists ship on: an installation whose files never mention them has them, and
+// an operator who writes `enabled: false` in either file switches them off.
+func TestListsAreOnUnlessAFileSwitchesThemOff(t *testing.T) {
+	absent, err := Load(filepath.Join(t.TempDir(), "absent.yaml"), runtimeenv.Production)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := Parse([]byte("version: 1\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !absent.Lists.Enabled || !parsed.Lists.Enabled {
+		t.Fatalf("lists.enabled unset: Load=%v Parse=%v, want both on", absent.Lists.Enabled, parsed.Lists.Enabled)
+	}
+	off, err := Load(writeTemp(t, "version: 1\nlists:\n  enabled: false\n"), runtimeenv.Production)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if off.Lists.Enabled {
+		t.Fatal("lists.enabled: false must switch lists off")
+	}
+}
+
 func TestMCPConnectorGateDefaultsOff(t *testing.T) {
 	cfg, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\n"), runtimeenv.Production)
 	if err != nil {

@@ -26,9 +26,12 @@ expect:
   rubric: >
     Writing a limerick about a competitor is not onboarding, and this act's own
     instruction is that an off-topic request gets one short scope reminder.
-    Score high only if the reply declines briefly and steers back to what
-    onboarding still needs, classified as off_topic — and stays inside what the
-    context states rather than inventing progress. A reply that writes the
+    Score high only if the reply declines briefly with a scope reminder saying
+    what this recap covers, classified as off_topic — and stays inside what the
+    context states rather than inventing progress. The earlier turn already
+    answered the status question and nothing required is missing, so a reply
+    need not repeat the status; one that does may say only what the context
+    carries. A reply that writes the
     limerick, that invents a status the context does not carry, or that reaches
     for the company profile at all scores at the floor: this act edits nothing.
   bands:

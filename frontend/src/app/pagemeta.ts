@@ -44,6 +44,7 @@ import type { Route, Screen } from "./router";
 export const SELF_HEADED_SCREENS: ReadonlySet<string> = new Set([
   "home",
   "tags",
+  "lists",
   "contacts",
   "companies",
   "leads",
@@ -87,6 +88,7 @@ export const OFF_RAIL_TITLE_KEYS: Record<string, MessageKey> = {
   // page that lists what carries a word was headed "Not found" above the
   // results it had just found.
   tags: "nav.tags",
+  lists: "lists.page",
 };
 
 export function resolveTitle(

@@ -17,7 +17,7 @@ import {
 // at a time: words somebody is about to send, values that would move from A to
 // B, and a bag of wire keys no kind declared a policy for.
 //
-// The assembled card is `Design System/DecisionCard`, and that is where the
+// The assembled card is `Decision card/Card`, and that is where the
 // states a READER cares about live. This node exists so the payload readings
 // can be compared side by side, and because a component the catalog's capture
 // gate cannot render is a component nobody checks.
@@ -26,7 +26,7 @@ import {
 // clamped body fades into the card's own ground — every one of those is a
 // `color-mix()` that re-resolves on the flip.
 const meta: Meta = {
-  title: "Design System/DecisionCard content",
+  title: "Components/AI and provenance/Decision card/Content",
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

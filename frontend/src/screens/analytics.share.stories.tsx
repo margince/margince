@@ -85,3 +85,24 @@ export const ShareDialogLinkShownOnce: Story = {
     await screen.findByTestId("forecast-share-link");
   },
 };
+
+// The link closed from the dialog that issued it, while it is still in hand.
+export const ShareDialogLinkClosed: Story = {
+  render: () => <ShareButtonStory />,
+  beforeEach: () =>
+    installFetchStub({
+      ...shareRoutes,
+      "DELETE /forecast/shares/share-1": () =>
+        new Response(null, { status: 204 }),
+    }),
+  play: async ({ canvasElement }) => {
+    await openDialog(canvasElement);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Create link" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Close link" }),
+    );
+    await screen.findByText("Link closed");
+  },
+};

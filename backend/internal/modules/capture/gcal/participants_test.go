@@ -30,7 +30,7 @@ func TestParticipantsOfNamesTheOrganizerAndAttendees(t *testing.T) {
 		t.Fatalf("ParticipantsOf: %v", err)
 	}
 	roles := map[string]string{}
-	for _, p := range parties {
+	for _, p := range parties.Participants {
 		if _, dup := roles[p.Email]; dup {
 			t.Errorf("%s appears twice; one party is one row", p.Email)
 		}

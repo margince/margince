@@ -1,15 +1,14 @@
 import {
   type ComponentPropsWithoutRef,
   forwardRef,
+  type Ref,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
-import { BusyMark, Textarea, TextInput } from "./atoms";
-import { ErrorLine } from "./errorline";
+import { BusyMark, Button, Field, Textarea, TextInput } from "./atoms";
 import "./inlinechoice.css";
 
 // Free-text editing follows the same save/refusal contract as choices.
@@ -49,10 +48,12 @@ const InlineTextControl = forwardRef<
 // blank the row forgot to fill.
 function ReadOnlyText({
   value,
+  display,
   suggested,
   readOnlyReason,
 }: Readonly<{
   value: string;
+  display?: string;
   suggested?: string;
   readOnlyReason?: string;
 }>) {
@@ -64,14 +65,42 @@ function ReadOnlyText({
       }
       title={readOnlyReason}
     >
-      {value || suggested || t("field.unset")}
+      {(value && display) || value || suggested || t("field.unset")}
     </span>
+  );
+}
+
+// The edit verb beside a value its caller draws as something to follow.
+export function InlineEditVerb({
+  label,
+  disabled,
+  onClick,
+  ref,
+}: Readonly<{
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+  ref?: Ref<HTMLButtonElement>;
+}>) {
+  const t = useT();
+  return (
+    <Button
+      ref={ref}
+      variant="link"
+      className="inline-editable"
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {t("inlineChoice.change", { field: label })}
+    </Button>
   );
 }
 
 export function InlineText({
   label,
   value,
+  display,
+  verb,
   placeholder,
   suggested,
   maxLength,
@@ -86,6 +115,13 @@ export function InlineText({
 }: Readonly<{
   label: string;
   value: string;
+  // The resting reading of `value` when it is not the text the editor edits:
+  // a currency in its own code over the bare major-unit amount.
+  display?: string;
+  // The caller draws the value beside this as a link, so the resting trigger is
+  // the edit verb (disabled while `canEdit` is false): a link inside the trigger
+  // would be two controls in one.
+  verb?: boolean;
   placeholder: string;
   // A value the record carries elsewhere that stands in for this field until
   // one is written here (a contact's title, for the role at their current
@@ -140,8 +176,6 @@ export function InlineText({
   // deliberately does NOT set it: the reader is already somewhere else, and
   // dragging focus back here would undo the move they just made.
   const restoreFocus = useRef(false);
-  const fieldId = useId();
-  const errorId = useId();
 
   // The click that opened this asked to TYPE here, so the caret belongs in the
   // field without a second click. It is also what makes every exit rule below
@@ -162,11 +196,33 @@ export function InlineText({
   }, [editing, onEditingChange]);
 
   if (!canEdit || !editing) {
-    const shown = value || suggested || placeholder;
+    const shown = (value && display) || value || suggested || placeholder;
+    const change = t("inlineChoice.change", { field: label });
+    const open = () => {
+      setDraft(value);
+      setFailure(null);
+      // A previous Escape can leave this set if the browser never
+      // delivered the unmount's blur to this node's React handler — the
+      // one place `onBlur` below clears it. Cleared here too, the one
+      // path every new edit session always runs, so a stale flag cannot
+      // silently swallow this session's first blur commit.
+      cancelling.current = false;
+      setEditing(true);
+    };
+    if (verb)
+      return (
+        <InlineEditVerb
+          ref={trigger}
+          label={label}
+          disabled={!canEdit}
+          onClick={open}
+        />
+      );
     if (!canEdit) {
       return (
         <ReadOnlyText
           value={value}
+          display={display}
           suggested={suggested}
           readOnlyReason={readOnlyReason}
         />
@@ -181,19 +237,9 @@ export function InlineText({
         // with a value is a value, and dressing the fact as a link would say
         // it is a place to go.
         data-empty={value ? undefined : "true"}
-        aria-label={t("inlineChoice.change", { field: label })}
-        title={t("inlineChoice.change", { field: label })}
-        onClick={() => {
-          setDraft(value);
-          setFailure(null);
-          // A previous Escape can leave this set if the browser never
-          // delivered the unmount's blur to this node's React handler — the
-          // one place `onBlur` below clears it. Cleared here too, the one
-          // path every new edit session always runs, so a stale flag cannot
-          // silently swallow this session's first blur commit.
-          cancelling.current = false;
-          setEditing(true);
-        }}
+        aria-label={change}
+        title={change}
+        onClick={open}
       >
         {shown}
       </button>
@@ -241,60 +287,59 @@ export function InlineText({
   };
 
   return (
-    <span className="inlinetext-edit">
-      <label className="sr-only" htmlFor={fieldId}>
-        {label}
-      </label>
-      <InlineTextControl
-        multiline={multiline}
-        type={type}
-        step={step}
-        ref={field}
-        id={fieldId}
-        value={draft}
-        maxLength={maxLength}
-        // `readOnly`, not `disabled`, and this is the one that had to change.
-        // A disabled field leaves the tab order, so a reader who pressed Enter
-        // and then Tab was thrown to the far side of the form for as long as
-        // the write took. Read-only holds the field, holds the caret, and
-        // refuses the keystroke — which is the whole of what a write in flight
-        // needs. `aria-busy` carries the reason.
-        readOnly={saving}
-        aria-busy={saving || undefined}
-        aria-invalid={failure ? true : undefined}
-        aria-describedby={failure ? errorId : undefined}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          // In a paragraph Enter is a newline and the commit moves to
-          // Cmd/Ctrl+Enter; in a line Enter is still the commit.
-          if (
-            event.key === "Enter" &&
-            (!multiline || event.metaKey || event.ctrlKey)
-          ) {
-            event.preventDefault();
-            void commit(true);
-          }
-          if (event.key === "Escape") {
-            cancelling.current = true;
-            restoreFocus.current = true;
-            setDraft(value);
-            setEditing(false);
-          }
-        }}
-        onBlur={() => {
-          if (cancelling.current) {
-            cancelling.current = false;
-            return;
-          }
-          void commit();
-        }}
-      />
-      {saving && <BusyMark />}
-      {failure && (
-        <ErrorLine inline id={errorId}>
-          {failure}
-        </ErrorLine>
+    <Field
+      label={label}
+      labelHidden
+      error={failure ?? undefined}
+      className="inlinetext-edit"
+    >
+      {(control) => (
+        <>
+          <InlineTextControl
+            {...control}
+            multiline={multiline}
+            type={type}
+            step={step}
+            ref={field}
+            value={draft}
+            maxLength={maxLength}
+            // `readOnly`, not `disabled`, and this is the one that had to change.
+            // A disabled field leaves the tab order, so a reader who pressed Enter
+            // and then Tab was thrown to the far side of the form for as long as
+            // the write took. Read-only holds the field, holds the caret, and
+            // refuses the keystroke — which is the whole of what a write in flight
+            // needs. `aria-busy` carries the reason.
+            readOnly={saving}
+            aria-busy={saving || undefined}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              // In a paragraph Enter is a newline and the commit moves to
+              // Cmd/Ctrl+Enter; in a line Enter is still the commit.
+              if (
+                event.key === "Enter" &&
+                (!multiline || event.metaKey || event.ctrlKey)
+              ) {
+                event.preventDefault();
+                void commit(true);
+              }
+              if (event.key === "Escape") {
+                cancelling.current = true;
+                restoreFocus.current = true;
+                setDraft(value);
+                setEditing(false);
+              }
+            }}
+            onBlur={() => {
+              if (cancelling.current) {
+                cancelling.current = false;
+                return;
+              }
+              void commit();
+            }}
+          />
+          {saving && <BusyMark />}
+        </>
       )}
-    </span>
+    </Field>
   );
 }

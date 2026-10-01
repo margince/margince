@@ -50,16 +50,14 @@ func (h Handlers) CreatePipeline(w http.ResponseWriter, r *http.Request, _ crmco
 	}
 	if req.Stages != nil {
 		for i, st := range *req.Stages {
-			stage := StageInput{Name: st.Name, Position: st.Position, Semantic: "open"}
-			if stage.Position == 0 {
-				stage.Position = i + 1
+			stage := StageInput{Name: st.Name, Position: i + 1, Semantic: string(SemanticOpen)}
+			if st.Position != nil && *st.Position != 0 {
+				stage.Position = *st.Position
 			}
 			if st.Semantic != nil {
 				stage.Semantic = string(*st.Semantic)
 			}
-			if st.WinProbability != nil {
-				stage.WinProbability = *st.WinProbability
-			}
+			stage.WinProbability = stageProbability(stage.Semantic, st.WinProbability)
 			in.Stages = append(in.Stages, stage)
 		}
 	}
@@ -71,6 +69,51 @@ func (h Handlers) CreatePipeline(w http.ResponseWriter, r *http.Request, _ crmco
 	}
 	w.Header().Set("Location", "/v1/pipelines/"+pipeline.Id.String())
 	httperr.WriteJSON(w, http.StatusCreated, pipeline)
+}
+
+// ReorderPipelines answers the live catalog in its new order, the same page
+// listPipelines serves, so the caller holds what every picker now shows.
+func (h Handlers) ReorderPipelines(w http.ResponseWriter, r *http.Request, _ crmcontracts.ReorderPipelinesParams) {
+	var req crmcontracts.PipelineOrderRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if req.PipelineIds == nil {
+		httperr.Write(w, r, httperr.Validation("pipeline_ids", "required", "pipeline_ids is required"))
+		return
+	}
+	pipelines, err := h.store.ReorderPipelines(r.Context(), uuidArgs(&req.PipelineIds))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.PipelineListResponse{
+		Data: pipelines,
+		Page: crmcontracts.PageInfo{HasMore: false},
+	})
+}
+
+// ReorderStages answers the pipeline with its stages in their new order, pinned
+// by If-Match to the ladder the caller drew the order from.
+func (h Handlers) ReorderStages(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ReorderStagesParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	var req crmcontracts.StageOrderRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if req.StageIds == nil {
+		httperr.Write(w, r, httperr.Validation("stage_ids", "required", "stage_ids is required"))
+		return
+	}
+	pipeline, err := h.store.ReorderStages(r.Context(), pathID[ids.PipelineKind](id), uuidArgs(&req.StageIds), ifVersion)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, pipeline)
 }
 
 func (h Handlers) GetPipeline(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {

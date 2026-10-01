@@ -1,14 +1,14 @@
 import { type ReactNode, useState } from "react";
 import { useCan } from "../app/capability";
 import { StatCard } from "../design-system/atoms";
-import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
+import { formatMoney, formatNumber } from "../format/format";
 import { formatElapsed, useNow } from "../format/now";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useProviderKeys } from "./ai-provider-keys";
-import { useRouting } from "./ai-routing";
+import { boundProviders, useRouting } from "./ai-routing-query";
 import { type LastCall, useLastCallAt } from "./aicalls";
-import { bandTone, currentMonth, useAiUsage } from "./aiusage";
+import { currentMonth, useAiUsage } from "./aiusage";
 import "./ai-settings.css";
 
 // The company's AI as ONE page with five bodies, read in the order the
@@ -42,104 +42,52 @@ import "./ai-settings.css";
 // Exported rather than moved so the queries, the locale formatting and the
 // withheld-reading behaviour stay in one file with the cards that share them.
 
-// A token count for a SLOT: "1.2M" rather than "1,204,553".
-//
-// A month's tokens run to seven figures, and two of them in one value — spent
-// against budget — do not fit the one line a stat card holds: the figure clips,
-// and a clipped number is a different number rather than a shorter rendering of
-// the right one. The Usage tab below carries the exact count, which is where a
-// reader who needs the digits is going anyway.
-//
-// Here rather than in `format/` because this is the only reading in the product
-// denominated in tokens; through `INTL_LOCALE` because a locale reaches a
-// formatter that way or not at all (format/one-locale.test.ts).
-function compactTokens(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
-    // Below ten thousand the long form is no wider and carries every digit, the
-    // same threshold `formatMoneyCompact` abbreviates at, so the two readings
-    // on this page step at the same place.
-    notation: Math.abs(value) >= 10_000 ? "compact" : "standard",
-    maximumFractionDigits: Math.abs(value) >= 10_000 ? 1 : 0,
-  }).format(value);
-}
-
-// What this month has cost, in the denomination the runtime actually meters:
-// tokens against the monthly ceiling, with the priced estimate under it.
+// The month's priced estimate, drawn inside the allowance card under the token
+// meter it qualifies.
 //
 // Tokens are the budget and the money is the estimate, in that order, because
 // that is which of the two the runtime enforces — the band that degrades a lane
 // is drawn on tokens, and a lane never stops because a dollar figure was reached.
 // The estimate is priced on read from the workspace's sheet and a call outside it
-// carries no price at all, so the money line is absent rather than short when
-// nothing in the month priced.
-export function SpendStat() {
+// carries no price at all, so a month nothing priced says so in words: an absent
+// line there reads as a month that cost nothing.
+export function SpendEstimate() {
   const t = useT();
   const { locale } = useLocale();
   // The same gate the endpoint behind `useAiUsage` asks for
-  // (ai/usage.go: ai_diagnostics.read). Asking `automation.update` here read
-  // the header as withheld for a holder the server would have answered, and
-  // rendered the number for an automation editor it would have refused.
+  // (ai/usage.go: ai_diagnostics.read). A seat without it still has the
+  // allowance card; only this line is withheld, and says so — an absent
+  // estimate would read as a month that cost nothing.
   const canSee = useCan("ai_diagnostics", "read");
-  // The current month, fixed: the header reads "this month" while the Usage tab
-  // below it lets a reader step back through earlier ones, and a header that
-  // followed the stepper would stop answering the question it asks.
+  // The current month, fixed: the usage card below lets a reader step back
+  // through earlier ones, and an estimate that followed the stepper would stop
+  // answering "this month".
   const [month] = useState(currentMonth);
   const query = useAiUsage(month, canSee);
-
   if (!canSee) {
-    return (
-      <StatCard
-        label={t("aiSettings.spend.label")}
-        value={t("aiSettings.withheld")}
-      />
-    );
+    return <p>{t("aiSettings.withheld")}</p>;
   }
   const budget = query.data?.budget;
   if (!budget) {
-    return (
-      <StatCard
-        label={t("aiSettings.spend.label")}
-        value={readingState(query.isError, t)}
-      />
-    );
+    return <p>{readingState(query.isError, t)}</p>;
   }
-  const priced = (query.data?.days ?? []).reduce(
-    (sum, day) =>
-      sum +
-      day.tasks.reduce(
-        (dayTotal, task) => dayTotal + (task.cost_est_minor ?? 0),
-        0,
-      ),
+  const tasks = (query.data?.days ?? []).flatMap((day) => day.tasks);
+  const priced = tasks.reduce(
+    (sum, task) => sum + (task.cost_est_minor ?? 0),
     0,
   );
-  const anyPriced = (query.data?.days ?? []).some((day) =>
-    day.tasks.some((task) => task.cost_est_minor !== undefined),
-  );
+  const anyPriced = tasks.some((task) => task.cost_est_minor !== undefined);
+  // In FULL, unlike the token figures: a month's estimate is a handful of
+  // dollars as often as it is thousands, and the compact formatter carries no
+  // fraction below ten thousand — it would print forty cents as "US$0".
   return (
-    <StatCard
-      label={t("aiSettings.spend.label")}
-      value={t("aiSettings.spend.value", {
-        spent: compactTokens(budget.spent_tokens, locale),
-        budget: compactTokens(budget.monthly_tokens, locale),
-      })}
-      tone={bandTone(budget.band)}
-      meter={{ filled: budget.spent_tokens, total: budget.monthly_tokens }}
-      // The money is the ESTIMATE under the budget, and a month nothing priced
-      // says so in words: an absent line there reads as a month that cost
-      // nothing.
-      detail={
-        anyPriced
-          ? t("aiSettings.spend.estimated", {
-              // In FULL, unlike the token figures above it. A month's estimate
-              // is a handful of dollars as often as it is thousands, and the
-              // compact formatter carries no fraction below ten thousand — it
-              // would print forty cents of real spend as "US$0", which is the
-              // one claim this product must never make by accident.
-              amount: formatMoney(priced, budget.currency ?? "USD", locale),
-            })
-          : t("aiSettings.spend.notPriced")
-      }
-    />
+    <p>
+      {anyPriced
+        ? t("aiSettings.spend.estimated", {
+            amount: formatMoney(priced, budget.currency ?? "USD", locale),
+          })
+        : t("aiSettings.spend.notPriced")}
+    </p>
   );
 }
 
@@ -188,7 +136,9 @@ export function ProvidersStat() {
   const missing =
     bound === null
       ? null
-      : providers.filter((p) => bound.has(p.provider) && !p.configured).length;
+      : providers.filter(
+          (p) => bound.has(p.provider) && !p.configured && !p.optional,
+        ).length;
   return (
     <StatCard
       label={t("aiSettings.providers.label")}
@@ -283,33 +233,6 @@ function providersDetail(
       {called}
     </span>
   );
-}
-
-// The vendors the routing document names, chat lanes and the embedding lane
-// alike. The embedding lane is in here on purpose: retrieval binds separately
-// and can be the only thing pointing at an unkeyed vendor, which is exactly the
-// case a reader would otherwise find out about from a failed reindex.
-//
-// `null` for a body that is not the routing document. `tiers` and `embeddings`
-// are both REQUIRED of the response, so the type above says they are there —
-// but the type is a promise the WIRE does not keep: nothing validates a 200,
-// and reading `Object.values(undefined)` threw, which the error boundary turned
-// into the whole settings page saying "this view no longer works". A server too
-// old, a projection that lost a field or a proxy answering something else are
-// all real ways to get such a body, and none of them should cost a reader the
-// page. The caller already draws an unanswered read; this is one.
-function boundProviders(
-  routing: NonNullable<ReturnType<typeof useRouting>["data"]>["routing"],
-): Set<string> | null {
-  if (routing.tiers === undefined || routing.embeddings === undefined) {
-    return null;
-  }
-  const named = new Set<string>();
-  for (const binding of Object.values(routing.tiers)) {
-    named.add(binding.provider);
-  }
-  named.add(routing.embeddings.provider);
-  return named;
 }
 
 // What a reading says before it has one.

@@ -217,7 +217,11 @@ describe("putting one change back", () => {
     await user.click(await screen.findByRole("button", { name: /^undo$/i }));
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/before this change: 2/i)).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        "2 fields revert to their values before this change:",
+      ),
+    ).toBeTruthy();
     expect(within(dialog).getByText("Value")).toBeTruthy();
     expect(within(dialog).getByText("Name")).toBeTruthy();
     expect(restoreCalls(fetchMock)).toHaveLength(0);

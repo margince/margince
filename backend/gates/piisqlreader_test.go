@@ -22,7 +22,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"regexp"
 	"strconv"
@@ -71,8 +70,7 @@ func withoutComments(literal string) string {
 // write-target and read-target scans run over these.
 func sqlLiterals(t *testing.T, path string) []string {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}
@@ -99,6 +97,7 @@ func sqlLiterals(t *testing.T, path string) []string {
 // sweep satisfy "Art. 17 reaches this table" is exactly the confusion this test
 // exists to prevent.
 var erasureCascadeFiles = []string{
+	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/erasure.go",
 	// The subject's TIMELINE and everything derived from it — split out of
 	// erasure.go when that file crossed the size cap. It is the same Art. 17
@@ -110,6 +109,9 @@ var erasureCascadeFiles = []string{
 	// this cascade — and a spelling per arm is how the cascade came to have
 	// none at all.
 	"internal/modules/privacy/activityidentityretire.go",
+	// The duplicate-pair evidence snapshot, which holds the subject's name,
+	// address and phone number as the detector read them.
+	"internal/modules/privacy/dedupeevidencescrub.go",
 	// The subject's traces in the relationship graph — the interaction
 	// participants, the imported LinkedIn ghosts, and the projection folded out
 	// of both. Same Art. 17 transaction, its own file for the same size reason
@@ -212,6 +214,7 @@ var reachedButNotCascade = gatekit.Waive(map[string]string{
 // failure mode a glob buys here, and it is the one with no failing assertion
 // to notice it.
 var retentionSweepFiles = []string{
+	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/retention.go",
 	"internal/modules/privacy/retentionai.go",
 	"internal/modules/privacy/retention_graph.go",
@@ -558,8 +561,7 @@ func unreadableWriteOn(statements []string, assembledFragment string) string {
 // node is the only place the fact that more follows is written down.
 func assembledSweepTargets(t *testing.T, path string) map[string]string {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}

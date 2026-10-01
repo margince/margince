@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { EvidenceMark } from "./evidencemark";
+import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import { Popover } from "./popover";
 
 // A PORTALLED PANEL BEHAVES, FOR FOCUS, AS THOUGH IT SAT BY ITS TRIGGER.
@@ -149,15 +150,8 @@ describe.each(PANELS)(
     // than a copy of either — the claim here is about what happens after they
     // elapse, not about what they are.
     it("hands focus back to the trigger when a passing pointer closes it", () => {
-      vi.useFakeTimers({
-        toFake: [
-          "setTimeout",
-          "clearTimeout",
-          "setInterval",
-          "clearInterval",
-          "performance",
-        ],
-      });
+      takeHoverClock();
+      armHoverIntent();
       mount();
       const trigger = screen.getByRole("button", { name: triggerName });
       act(() => {
@@ -225,4 +219,24 @@ it("leaves focus where a closing control put it", async () => {
     expect(screen.queryByRole("button", { name: "Full history" })).toBeNull(),
   );
   expect(document.activeElement?.textContent).toBe("the drawer this opened");
+});
+
+// A refused control cannot take focus, so a panel that opens on one must land
+// on the first control that can, or the reader stays outside a panel of controls.
+it("takes focus past a refused control to the first one that answers", async () => {
+  const user = userEvent.setup();
+  render(
+    page(
+      <Popover label="Who can see this">
+        <button type="button" disabled>
+          Only the owner
+        </button>
+        <button type="button">Everyone</button>
+      </Popover>,
+    ),
+  );
+  await user.click(screen.getByRole("button", { name: "Who can see this" }));
+  await waitFor(() =>
+    expect(document.activeElement?.textContent).toBe("Everyone"),
+  );
 });

@@ -32,6 +32,7 @@ func (t runAnalyticsQuery) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "run_analytics_query", Title: "Run an analytics query", Version: toolVersionV1,
 		Description:   runAnalyticsQueryCopy.render(),
+		Instead:       runAnalyticsQueryCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "runAnalyticsQuery",
 		// The population/field vocabulary is NOT re-declared here — it is
@@ -73,6 +74,10 @@ type AnalyticsQueryResult struct {
 	SchemaVersion string `json:"schema_version"`
 	// RunID names the saved run, present exactly when save was set.
 	RunID *string `json:"run_id,omitempty"`
+	// PopulationNarrowed is present when a breakdown by owner was narrowed to
+	// the owners the caller may measure (`owners_you_may_measure`), so the
+	// rows read as some owners' rather than every owner's.
+	PopulationNarrowed *string `json:"population_narrowed,omitempty"`
 }
 
 func (t runAnalyticsQuery) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

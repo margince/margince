@@ -20,33 +20,21 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// maskExclusionClauses renders, per masked column of the spec's entity, the
-// predicate for the rows the caller may still aggregate — "" clauses (no mask
-// for this caller) yield (nil, false). The clauses AND into the query's WHERE;
-// their negation is the excluded_by_permission count's filter.
+// maskExclusionClauses renders the predicate for the rows of the spec's entity
+// this caller may still aggregate — no mask reaching the entity yields
+// (nil, false). The clauses AND into the query's WHERE; their negation is the
+// excluded_by_permission count's filter.
+//
+// Which fields the entity withholds is auth's closure to answer, never this
+// engine's to infer from the object a mask is configured under: a mask reaches
+// the record that republishes its fact, and a report over THAT record is where
+// an aggregate would hand the value back as a total.
 func maskExclusionClauses(ctx context.Context, spec reportSpec, arg func(any) int) ([]string, bool, error) {
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return nil, false, fmt.Errorf("compose: report mask check without an actor")
-	}
-	seen := map[string]bool{}
-	var clauses []string
-	for _, m := range p.Permissions.FieldMasks {
-		if m.Object != string(spec.entity) || seen[m.Field] {
-			continue
-		}
-		seen[m.Field] = true
-		clause, applies, err := auth.MaskExcludedClause(ctx, string(spec.entity), m.Field, "t", arg)
-		if err != nil {
-			return nil, false, err
-		}
-		if !applies || clause == "" {
-			continue
-		}
-		clauses = append(clauses, clause)
+	clauses, err := auth.MaskExclusionClauses(ctx, string(spec.entity), "t", arg)
+	if err != nil {
+		return nil, false, err
 	}
 	return clauses, len(clauses) > 0, nil
 }

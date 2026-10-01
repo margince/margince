@@ -101,6 +101,7 @@ func selectVertex(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (m
 		},
 		defaultModel:    cfg.Model,
 		attachmentMIMEs: narrowedCarriage(geminiCarries, cfg.Input),
+		thinkingLevel:   cfg.ThinkingLevel,
 	}, nil
 }
 
@@ -152,6 +153,42 @@ func (t vertexTransport) readModelPage(raw []byte) ([]model.Info, string, error)
 		}
 	}
 	return models, page.NextPageToken, nil
+}
+
+// vertexEmbedWire is the :predict body Vertex AI embeds through: one instance
+// per call, and the width as outputDimensionality when the caller names one.
+type vertexEmbedWire struct {
+	Instances  []vertexEmbedInstance `json:"instances"`
+	Parameters *vertexEmbedParams    `json:"parameters,omitempty"`
+}
+
+type vertexEmbedInstance struct {
+	Content string `json:"content"`
+}
+
+type vertexEmbedParams struct {
+	OutputDimensionality int `json:"outputDimensionality"` //nolint:tagliatelle // Google's wire format (camelCase)
+}
+
+func (c *geminiClient) predictEmbedding(ctx context.Context, t vertexTransport, embedModel, input string, dims int) ([]float32, error) {
+	wire := vertexEmbedWire{Instances: []vertexEmbedInstance{{Content: input}}}
+	if dims > 0 {
+		wire.Parameters = &vertexEmbedParams{OutputDimensionality: dims}
+	}
+	var out struct {
+		Predictions []struct {
+			Embeddings struct {
+				Values []float32 `json:"values"`
+			} `json:"embeddings"`
+		} `json:"predictions"`
+	}
+	if err := c.postEmbed(ctx, t.modelURL(embedModel, "predict"), wire, &out); err != nil {
+		return nil, err
+	}
+	if len(out.Predictions) != 1 {
+		return nil, fmt.Errorf("ai: gemini_vertex: embed answered %d predictions for one input", len(out.Predictions))
+	}
+	return out.Predictions[0].Embeddings.Values, nil
 }
 
 // wallClock is the production Clock for a token cache built inside

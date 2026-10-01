@@ -99,6 +99,11 @@ type EnsureCounterpartyInput struct {
 	// behaviour that existed before this field. The wrong direction to fail in
 	// is silently narrowing a record somebody expected to see.
 	OwnerScoped bool
+	// NarrowedBecause is why an owner-scoped ensure keeps the record the
+	// owner's: awaiting_verdict from the sink, a decision from the verdict path.
+	// Ignored unless OwnerScoped. The sink's value lands only on a row it
+	// creates, never over an incumbent's reason.
+	NarrowedBecause NarrowingReason
 }
 
 // EnsureCounterpartyResult reports what the ensure did — every flag maps to
@@ -191,7 +196,31 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 	if err := s.linkActivityToContact(ctx, tx, in.ActivityID, res.ContactID); err != nil {
 		return EnsureCounterpartyResult{}, err
 	}
+	if err := s.promoteLeadsByMailTx(ctx, tx, in, res.ContactID); err != nil {
+		return EnsureCounterpartyResult{}, err
+	}
 	return res, nil
+}
+
+// promoteLeadsByMailTx folds a lead holding this counterparty's address into
+// the contact the mail resolved to — the one it just minted, or one that
+// already stood beside the lead — once they have written to us.
+//
+// Only their own mail counts. Promotion needs engagement — a reply, a meeting,
+// or a seat's own judgement — and mail we sent that nobody answered is the cold outbound the trigger vocabulary
+// refuses, so it leaves the lead where it is. Their first reply reaches this
+// same call for the same contact and promotes it then, as an inbound_reply
+// with that message as the evidence.
+func (s *Store) promoteLeadsByMailTx(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, contactID ids.ContactID) error {
+	acquired, err := acquiredFromCaptureTx(ctx, tx, in.Replied, in.Email)
+	if err != nil {
+		return err
+	}
+	if acquired != AcquiredSubjectInitiated {
+		return nil
+	}
+	evidence := in.ActivityID
+	return s.promoteHeldLeadsTx(ctx, tx, contactID, TriggerInboundReply, &evidence, in.CapturedBy)
 }
 
 // ensureContact runs PO-F-1 and creates when it does not exactly match; a
@@ -239,6 +268,13 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		if err := promoteIfWorkspaceScoped(ctx, tx, match.ContactID, in.OwnerScoped); err != nil {
 			return err
 		}
+		if in.OwnerScoped && in.NarrowedBecause != "" && in.NarrowedBecause != NarrowedAwaitingVerdict {
+			// The sink usually minted this row before the decision arrived, so
+			// the decision's reason lands on the incumbent here.
+			if err := recordNarrowingTx(ctx, tx, match.ContactID, in.NarrowedBecause); err != nil {
+				return err
+			}
+		}
 		if quarantineSuspect(in.DisplayName, in.Domain) {
 			// The header carries an impersonation tell. A new record would be
 			// created quarantined for review; an EXISTING one has no such
@@ -249,27 +285,31 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		return fillMissingContactName(ctx, tx, match.ContactID, parsed, res)
 	}
 
+	acquired, acqErr := acquiredFromCaptureTx(ctx, tx, in.Replied, in.Email)
+	if acqErr != nil {
+		return acqErr
+	}
 	id, err := createContact(ctx, tx, match, ContactSpec{
 		FullName:    name,
 		FirstName:   nameColumn(parsed.First),
 		LastName:    nameColumn(parsed.Last),
 		OwnerID:     ownerFromUUID(&in.OwnerID),
 		Visibility:  visibilityFor(in.OwnerScoped),
+		Narrowing:   narrowingFor(in.OwnerScoped, in.NarrowedBecause),
 		Quarantined: quarantineSuspect(in.DisplayName, in.Domain),
 		Emails:      []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:      in.Source,
 		CapturedBy:  in.CapturedBy,
-		// Only a REPLY is the contact initiating contact. Capture also mints a
-		// record for somebody we wrote to twice who never answered, and
-		// recording that as subject_initiated would put the vocabulary's
-		// strongest claim on a cold prospect's file — the exact confusion this
-		// table exists to prevent, manufactured by the table itself.
+		// Only a message FROM them is the contact initiating contact: a reply,
+		// or any captured mail they sent us (acquiredFromCaptureTx). Capture
+		// also mints a record for somebody we wrote to twice who never
+		// answered, and recording that as subject_initiated would put the
+		// vocabulary's strongest claim on a cold prospect's file.
 		//
 		// The TIME comes from the earliest message this counterparty is a party
 		// to, not from this write: the sink runs after the capture commits and
 		// the verdict path can run days later. See acquiredwhen.go.
-		Acquisition: acquisitionFromCapture(ctx, tx,
-			acquiredFromCapture(in.Replied), in.Email, in.ActivityID),
+		Acquisition: acquisitionFromCapture(ctx, tx, acquired, in.Email, in.ActivityID),
 	})
 	if err != nil {
 		return err

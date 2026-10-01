@@ -18,7 +18,6 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"os"
@@ -28,6 +27,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // enumBindings maps "table.column" to the Go type that mirrors it.
@@ -50,6 +51,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"deal.status":                      {"internal/modules/deals", "DealStatus"},
 	"stage.semantic":                   {"internal/modules/deals", "StageSemantic"},
 	"contact_consent.state":            {"internal/modules/consent", "ConsentState"},
+	"consent_purpose.class":            {"internal/modules/consent", "Class"},
 	"offer_line_item.proposal_state":   {"internal/modules/deals", "ProposalState"},
 	"stage_exit_criterion.kind":        {"internal/modules/deals", "CriterionKind"},
 	"knowledge_document.ingest_status": {"internal/contracts", "KnowledgeDocumentIngestStatus"},
@@ -245,7 +247,6 @@ func tableCheckSets(t *testing.T) map[string][]string {
 func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 	t.Helper()
 	var vals []string
-	fset := token.NewFileSet()
 	entries, err := os.ReadDir(pkgDir)
 	if err != nil {
 		t.Fatal(err)
@@ -254,7 +255,7 @@ func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(pkgDir, e.Name()), nil, 0)
+		file, err := gatekit.ParseFile(filepath.Join(pkgDir, e.Name()), 0)
 		if err != nil {
 			t.Fatal(err)
 		}

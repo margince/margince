@@ -189,11 +189,11 @@ describe("the openchannel screen", () => {
     renderScreen();
     expect(await screen.findByText("No endpoint open")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Open my endpoint" }),
+      screen.getByRole("button", { name: "Open endpoint" }),
     ).toBeTruthy();
     // Nothing to mint against, so no control that would 404 on the way.
     expect(
-      screen.queryByRole("button", { name: "Mint a signing secret" }),
+      screen.queryByRole("button", { name: "Mint signing secret" }),
     ).toBeNull();
   });
 
@@ -213,7 +213,7 @@ describe("the openchannel screen", () => {
     renderScreen();
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Open my endpoint" }),
+      await screen.findByRole("button", { name: "Open endpoint" }),
     );
 
     await waitFor(() => {
@@ -225,7 +225,7 @@ describe("the openchannel screen", () => {
       // because the endpoint this opens is always the caller's own.
       expect(put?.body).toEqual({});
     });
-    expect(await screen.findByText("Accepting")).toBeTruthy();
+    expect(await screen.findByText("Accepting requests")).toBeTruthy();
   });
 
   // The address is what a contact hands to whoever configures the sender, so it
@@ -302,7 +302,7 @@ describe("the openchannel screen", () => {
     renderScreen();
     await screen.findByTestId("openchannel-curl");
     expect(
-      screen.getByText(/visible to them in the process list/),
+      screen.getByText(/can see it in the process list/),
     ).toBeTruthy();
   });
 
@@ -322,15 +322,15 @@ describe("the openchannel screen", () => {
     renderScreen();
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Mint a signing secret" }),
+      await screen.findByRole("button", { name: "Mint signing secret" }),
     );
 
     const shown = await screen.findByTestId("openchannel-signing-secret");
     expect(shown.textContent).toBe("b1946ac92492d2347c6235b4d2611184");
     // The caution's heading makes the claim; its body says what to do about
     // it, and a reader who sees only one half has been told half of it.
-    expect(screen.getByText(/only time it is shown/)).toBeTruthy();
-    expect(screen.getByText(/copy it into the sender now/)).toBeTruthy();
+    expect(screen.getByText(/Secret shown only once/)).toBeTruthy();
+    expect(screen.getByText(/Copy it into the sender now/)).toBeTruthy();
     const mint = calls.find(
       (call) => call.path === "/ext/openchannel/endpoint/secret",
     );
@@ -351,7 +351,7 @@ describe("the openchannel screen", () => {
     vi.stubGlobal("fetch", vi.fn(fetchStub));
 
     renderScreen();
-    await screen.findByText("Accepting");
+    await screen.findByText("Accepting requests");
     expect(screen.queryByText(/leaked_by_the_server/)).toBeNull();
   });
 
@@ -369,7 +369,7 @@ describe("the openchannel screen", () => {
     renderScreen();
     const user = userEvent.setup();
     await user.type(
-      await screen.findByLabelText("Where this connector talks back to"),
+      await screen.findByLabelText("Outbound address"),
       "https://example.com/hooks/crm",
     );
     await user.click(screen.getByRole("button", { name: "Register address" }));
@@ -460,7 +460,7 @@ describe("the openchannel screen", () => {
     expect(screen.getByText("Stopped")).toBeTruthy();
     // The class in this connector's own words, never a remote party's prose.
     expect(
-      screen.getByText(/posted a shape this connector does not accept/),
+      screen.getByText(/posted a format this connector does not accept/),
     ).toBeTruthy();
     // Both rows carry the same payload size, and both are drawn: a listing
     // that collapsed them would hide a redelivery.
@@ -534,10 +534,10 @@ describe("the openchannel screen", () => {
 
     renderScreen();
     expect(
-      await screen.findByText("Nothing has arrived on your endpoint yet."),
+      await screen.findByText("No requests have arrived at this endpoint yet."),
     ).toBeTruthy();
     expect(
-      screen.getByText("Nothing has been sent from your endpoint yet."),
+      screen.getByText("No messages have been sent from this endpoint yet."),
     ).toBeTruthy();
   });
 
@@ -563,7 +563,7 @@ describe("the openchannel screen", () => {
     // control being added.
     expect(screen.queryAllByRole("button")).toHaveLength(0);
     expect(
-      screen.queryByLabelText("Where this connector talks back to"),
+      screen.queryByLabelText("Outbound address"),
     ).toBeNull();
   });
 
@@ -579,10 +579,10 @@ describe("the openchannel screen", () => {
 
     renderScreen();
     expect(
-      await screen.findByText(/not been granted access to this connector/),
+      await screen.findByText(/no access to this connector’s endpoint/),
     ).toBeTruthy();
     expect(
-      await screen.findByText(/not been granted access to what arrives here/),
+      await screen.findByText(/no access to incoming requests/),
     ).toBeTruthy();
     expect(calls.filter((call) => call.path.startsWith("/ext/"))).toHaveLength(
       0,
@@ -608,7 +608,7 @@ describe("the openchannel screen", () => {
     ).toBeTruthy();
     expect(screen.queryByText("No endpoint open")).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Open my endpoint" }),
+      screen.queryByRole("button", { name: "Open endpoint" }),
     ).toBeNull();
   });
 
@@ -624,12 +624,12 @@ describe("the openchannel screen", () => {
     renderScreen();
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Open my endpoint" }),
+      await screen.findByRole("button", { name: "Open endpoint" }),
     );
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toBe(
-      "The endpoint may not have been opened. Check the state above before trying again.",
+      "The endpoint may not have opened. Check its state above before you retry.",
     );
   });
 

@@ -9,7 +9,8 @@ import { ProblemError } from "../screens/common";
 import { InlineText } from "./inlinetext";
 
 const meta: Meta = {
-  title: "Design System/Inline text editing",
+  title: "Components/Forms and input/Inline text editing",
+  component: InlineText,
   decorators: [
     (Story) => (
       <LocaleProvider>
@@ -38,9 +39,30 @@ function Example({ multiline = false }: { multiline?: boolean }) {
   );
 }
 export const FractionalNumber: Story = { render: () => <Example /> };
+
+export const FormattedReading: Story = {
+  render: () => (
+    <InlineText
+      label="Budget"
+      placeholder="Not set"
+      value="48000"
+      display="€48,000.00"
+      type="number"
+      canEdit
+      onSave={async () => undefined}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Change Budget" }),
+    );
+    await expect(await canvas.findByRole("spinbutton")).toHaveValue(48000);
+  },
+};
 export const Paragraph: Story = { render: () => <Example multiline /> };
 
-// A refused save keeps the draft open and says why on the ErrorLine beneath it.
+// A refused save keeps the draft open and says why as the field's error beneath it.
 export const RefusedSave: Story = {
   render: () => (
     <InlineText
@@ -61,8 +83,10 @@ export const RefusedSave: Story = {
     await userEvent.click(await canvas.findByRole("button"));
     const field = await canvas.findByRole("textbox");
     await userEvent.type(field, "s{Enter}");
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+    const refusal = await canvas.findByRole("alert");
+    await expect(refusal).toHaveTextContent(
       "Somebody else changed this record.",
     );
+    await expect(refusal).toHaveClass("field-error");
   },
 };

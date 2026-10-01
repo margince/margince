@@ -20,7 +20,7 @@ import { dotTier } from "../app/autonomy";
 import { useCan, useCanWrite } from "../app/capability";
 import { isEntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
-import { navigate, navigateReplacing, type Route } from "../app/router";
+import { navigateReplacing, type Route } from "../app/router";
 import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../app/theme";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
@@ -67,10 +67,10 @@ import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
-import { AiBudgetCard, AiFeaturesCard } from "./ai-admin";
-import { AiHealthCard } from "./ai-health";
+import { AiBudgetCard } from "./ai-admin";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
+import { AiTasksCard } from "./ai-tasks";
 import { AiCallsCard } from "./aicalls";
 import { AiUsageCard } from "./aiusage";
 import { ActorTag } from "./audit";
@@ -82,6 +82,7 @@ import { CaptureActivityTab } from "./capture-activity";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import { CaptureSendersCard } from "./capture-senders";
 import { CaptureSettingsCard } from "./capture-settings";
+import { CaptureHealthCard } from "./capturehealth";
 import {
   LoadMoreButton,
   problemMessageOf,
@@ -118,6 +119,8 @@ import { LinkedInImportCard } from "./linkedin-import";
 import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
+import { MeetingSettings } from "./meeting-settings";
+import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OvernightGrantCard } from "./overnight-grant";
@@ -127,19 +130,20 @@ import { ProductsAdmin } from "./products";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
+import { RolesSettings } from "./roles-settings";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { TagVocabularyCard } from "./tagadmin";
+import { ThisDevicePanel } from "./thisdevice";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
 import { WebhooksCard } from "./webhooks";
-import { WorkingHoursCard } from "./working-hours";
 import "./settings.css";
 
-import { ProvidersStat, SpendStat } from "./ai-settings";
+import { ProvidersStat } from "./ai-settings";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 // The catalog, the addresses and the visibility predicate moved to
@@ -153,7 +157,6 @@ import {
   SETTINGS_TABS,
   settingsAddress,
   settingsRouteTab,
-  useSettingsEntryVisibility,
   useSettingsReach,
   useSettingsSection,
   useVisibleSettingsPages,
@@ -170,7 +173,6 @@ export {
   SETTINGS_TABS,
   settingsAddress,
   settingsRouteTab,
-  useSettingsEntryVisibility,
   useSettingsSection,
 };
 
@@ -189,17 +191,21 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           <AccountCard />
-          {/* When this contact is bookable. Under the identity because it is a
-              statement about this reader rather than about the workspace: their
-              own week is theirs to set, and an admin setting it for them is the
-              shape the design refuses. */}
-          <WorkingHoursCard />
+          <ThisDevicePanel />
         </>
       );
+    case "meetings":
+      return <MeetingSettings />;
     case "voice":
       return <VoiceDnaCard />;
     case "agents":
       return <AgentsTab />;
+    // What the product may send this reader, and where. Beside the brief and
+    // weekly nudges on Account rather than merged into them: those two rows are
+    // about a digest the reader subscribes to, and these are about every notice
+    // the product raises whether or not anybody asked for it.
+    case "notifications":
+      return <NotificationSettingsCard />;
     case "connections":
       return <ConnectionsTab />;
     // Beside `connections` and after it on purpose: that page says what you are
@@ -245,6 +251,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
       // (RowScopeTeam) — so this is also where an admin decides whose records a
       // Team Lead's membership hands over, which is not the roster's question.
       return <TeamsCard />;
+    case "roles":
+      return <RolesSettings />;
     case "seats":
       return <LicenseCard />;
 
@@ -321,17 +329,9 @@ export function tabContent(id: SettingsPageId): ReactNode {
               the lanes it qualifies: a binding to a vendor holding no key is
               the thing an operator came here to fix. */}
           <ProvidersStat />
-          {/* The price sheet lives on Usage, so the routing card links there
-              rather than restating it. Dropping the callback silently removes
-              that link — the lane rows then name a model with no way to see
-              what it costs. */}
-          <AiRoutingCard onPriceSheet={() => navigate(settingsHref("usage"))} />
           <AiProviderKeysCard />
-          {/* Whether the vendors above are actually ANSWERING. It belongs with
-              the credentials rather than with the bindings, because the three
-              readings are one story told in order — which vendor a lane names,
-              whether we hold a key for it, whether it replied. */}
-          <AiHealthCard />
+          <AiRoutingCard />
+          <AiTasksCard />
         </>
       );
     case "automations":
@@ -339,10 +339,9 @@ export function tabContent(id: SettingsPageId): ReactNode {
     case "usage":
       return (
         <>
-          {/* What the month has cost, above the breakdown that explains it. */}
+          {/* The allowance with the month's spend in it, then where it went, then
+              the prices the estimate is drawn from. */}
           <AiBudgetCard />
-          <AiFeaturesCard />
-          <SpendStat />
           <AiUsageCard />
           <ModelPriceDetails />
         </>
@@ -368,10 +367,9 @@ export function tabContent(id: SettingsPageId): ReactNode {
               page. */}
           <EmbedReindexCard />
           <JobHealthCard />
-          {/* Beside the queue reading rather than under Extensions: both
-              answer "is something broken in the background", and an operator
-              chasing a quiet feed should not have to know that a connector is
-              an extension to find out. */}
+          {/* Beside the queue reading, not under Capture or Extensions: each
+              answers "is something broken in the background". */}
+          <CaptureHealthCard />
           <ExtensionIngestHealthCard />
         </>
       );
@@ -523,9 +521,8 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // Back would land on the address that redirects and trap them there.
   //
   // Keyed on the entry the route RESOLVED to rather than on the segment it
-  // carried, so a rewrite never invents an address: a rep following a link to
-  // an admin page falls back to their first visible entry, and this rewrites to
-  // THAT, which is where they actually are.
+  // carried, so a rewrite never invents an address: a legacy link to a page the
+  // reader may not open is left as typed, and the boundary answers it.
   useEffect(() => {
     if (legacy) {
       navigateReplacing(settingsHref(active.id));
@@ -648,17 +645,14 @@ function AccountCard() {
         <QueryGate query={query} pendingLabel={t("settings.accountCard")}>
           {(me) => (
             <div className="settings-identity">
-              {/* Both halves are required on the wire, so the `?? ""` is not a
+              {/* Both halves are required on the wire, so the `|| ""` is not a
                   default — it is the promise that a server answering with
                   neither costs the reader an unnamed chip rather than the whole
                   page: this block renders inside the app shell, and a throw here
-                  takes the navigation down with it. */}
-              {/* The address is the tint's key, so this reader keeps the same
-                  colour here as in the rail's account block and as their turns
-                  in the onboarding transcript — and keeps it after they change
-                  their display name. */}
+                  takes the navigation down with it. The chip is keyed on the
+                  user id, like every other chip drawn for this seat. */}
               <Avatar
-                identity={me.user.email || undefined}
+                identity={me.user.id}
                 name={me.user.display_name || me.user.email || ""}
               />
               <div className="settings-identity-id">
@@ -808,7 +802,7 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             if (dirty && !save.isPending) save.mutate(shown);
           }}
         >
-          <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3" id={titleId}>
             {t("settings.signature")}
           </Heading>
           <WriteRefused titleKey="settings.saveFailed" error={save.error} />
@@ -898,12 +892,6 @@ function AppearanceSettingRow() {
 /**
  * The name colleagues see you by.
  *
- * It was written once — by the invite, or by the installation's cold start —
- * and until now nothing could change it. `display_name` had exactly two
- * writers in the backend, both INSERTs, so somebody invited as "j.smith", or
- * married, or simply typed wrong, carried that name beside every record they
- * touched with no way to correct it.
- *
  * The saved answer is read back from `/me` rather than kept here, so the shell's
  * account chip and the roster agree with this row the moment it lands.
  */
@@ -927,11 +915,9 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       return data;
     },
     onSuccess: (saved) => {
-      // The DRAFT holds the saved answer until `/me` catches up. Clearing it
-      // here would fall back to the cached snapshot, which still carries the
-      // old name — the field would visibly revert for as long as the refetch
-      // takes, and stay reverted if the refetch itself fails.
+      // Keep the saved name visible if the account refetch is delayed or fails.
       setDraft(saved?.display_name ?? null);
+      void queryClient.invalidateQueries({ queryKey: ["scheduling-profile"] });
       toast.show(t("settings.saved"));
       void queryClient.invalidateQueries({ queryKey: ["me"] });
     },
@@ -944,27 +930,30 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   // what the server checks with `utf8.RuneCountInString`. `String.length` would
   // count UTF-16 units and refuse a name the server admits.
   const tooLong = [...trimmed].length > 255;
+  const refusal = save.error ? problemMessageOf(save.error, t) : undefined;
   return (
     <SettingRow
       label={t("settings.displayName")}
       description={t("settings.displayNameHelp")}
       layout="stack"
-      control={(control) => (
-        // The catalogued pairing for an input that commits: the field and the
-        // verb stacked at the row's own measure, the same shape the pipeline
-        // rows use.
+      control={(row) => (
+        // The catalogued pairing of field and verb, as the pipeline rows use.
         <div className="form-stack settingrow-measure">
-          {/* Beside this control, because the server's 422 names it. */}
-          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
-          <TextInput
-            {...control}
-            value={shown}
-            // No native `maxLength`: it counts UTF-16 code units, so a name of
-            // emoji or other supplementary characters would be cut at about
-            // half the 255 CHARACTERS the contract and the server admit. The
-            // bound is checked below in runes, the same way the server counts.
-            onChange={(event) => setDraft(event.target.value)}
-          />
+          <Field label={t("settings.displayName")} labelHidden error={refusal}>
+            {(field) => (
+              <TextInput
+                {...field}
+                aria-labelledby={row["aria-labelledby"]}
+                aria-describedby={[field, row]
+                  .map((owner) => owner["aria-describedby"])
+                  .filter(Boolean)
+                  .join(" ")}
+                value={shown}
+                // No `maxLength`: UTF-16 units, not the runes `tooLong` counts.
+                onChange={(event) => setDraft(event.target.value)}
+              />
+            )}
+          </Field>
           <Button
             disabled={!dirty || trimmed === "" || tooLong || save.isPending}
             onClick={() => save.mutate(trimmed)}
@@ -1253,7 +1242,7 @@ function PassportCard() {
         labelledBy={mintTitleId}
         placement="right"
       >
-        <Heading size="large" className="t-h2" id={mintTitleId}>
+        <Heading size="large" className="t-h2 modal-title" id={mintTitleId}>
           {t("settings.mint")}
         </Heading>
         {/* The token region is mounted for the whole life of the drawer rather

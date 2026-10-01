@@ -27,10 +27,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/companybrief"
+	"github.com/margince/margince/backend/internal/compose/contactbrief"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -65,7 +68,10 @@ type companyBriefActFixture struct {
 	Label   string `json:"label"`
 	Kind    string `json:"kind"`
 	Subject string `json:"subject"`
-	At      string `json:"at"`
+	// Direction is the contract's, or empty for a row that records none; the
+	// fold turns it into the speaker through the site's own function.
+	Direction string `json:"direction"`
+	At        string `json:"at"`
 }
 
 type companyBriefCases struct{}
@@ -138,6 +144,11 @@ func companyBriefInput(f companyBriefFixture) (companybrief.Input, map[string]st
 		Strength: f.Strength, ContactCount: f.Contacts,
 		SectionsOmitted: f.SectionsOmitted,
 	}
+	// A reader who can see deals is sent the 360's lost count, as foldDeals
+	// sends it; none of these accounts has lost one.
+	if !slices.Contains(f.SectionsOmitted, string(crmcontracts.Company360SectionsOmittedDeals)) {
+		in.LostCount = new(0)
+	}
 	// label maps a corpus label to the id minted for it, so Evaluate can ask
 	// "did the brief cite the stalled deal" without the corpus ever naming
 	// an id.
@@ -159,9 +170,16 @@ func companyBriefInput(f companyBriefFixture) (companybrief.Input, map[string]st
 		}
 		id := ids.NewV7().String()
 		label[act.Label] = id
-		in.Recent = append(in.Recent, companybrief.ActIn{
-			ID: id, Kind: act.Kind, Subject: act.Subject, At: act.At,
-		})
+		folded := companybrief.ActIn{ID: id, Kind: act.Kind, Subject: act.Subject, At: act.At}
+		if act.Direction != "" {
+			direction := crmcontracts.ActivityDirection(act.Direction)
+			if !direction.Valid() {
+				return in, nil, fmt.Errorf("activity %q has direction %q, which the contract does not carry",
+					act.Label, act.Direction)
+			}
+			folded.Speaker = contactbrief.SpeakerFor(direction)
+		}
+		in.Recent = append(in.Recent, folded)
 	}
 	return in, label, nil
 }

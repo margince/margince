@@ -65,6 +65,8 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 		SettingsAvailability: &crmcontracts.SettingsAvailability{
 			CompanyContext:   h.companyContextAvailable,
 			EmbeddingReindex: h.embedReindexAvailable,
+			Lists:            &h.listsAvailable,
+			Reporting:        &h.reportingAvailable,
 		},
 	}
 }

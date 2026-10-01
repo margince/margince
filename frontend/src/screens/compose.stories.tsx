@@ -192,7 +192,7 @@ async function fillAndSend() {
 }
 
 const meta: Meta = {
-  title: "Patterns/Compose mail",
+  title: "Patterns/Compose mail/Composer",
 };
 export default meta;
 
@@ -473,6 +473,7 @@ export const Default: Story = {
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
     await userEvent.type(dialog.getByRole("searchbox"), "Acme");
+    await dialog.findByRole("button", { name: "Acme renewal" });
   },
 };
 

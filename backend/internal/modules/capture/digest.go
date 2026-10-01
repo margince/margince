@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // DigestPayload is the stored CAP-DDL-6 payload — the wire shape verbatim.
@@ -188,17 +189,11 @@ func (r *Registry) digestReaderContext(ctx context.Context, userID ids.UUID) (co
 	if !ok {
 		return nil, errors.New("capture: digest build outside workspace context")
 	}
-	rbac, err := r.authority.EffectiveRBAC(ctx, wsID, userID)
+	reader, err := authz.MemberPrincipal(ctx, r.authority, wsID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("capture: resolving the digest reader's authority: %w", err)
 	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "human:" + userID.String(),
-		UserID:      userID,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	}), nil
+	return principal.WithActor(ctx, reader), nil
 }
 
 // ReadDigest serves the calling user's digest: the requested day, or the

@@ -39,10 +39,9 @@ const (
 	// staleEvidenceYears, so today's site is not evidence about the contacts
 	// who wrote then.
 	PendingStaleEvidence = "stale_evidence"
-	// PendingNearDuplicate — the name this domain resolved to is close to a
-	// company already here, without being the same name. Creating would put
-	// one company in the workspace twice, and merging on a near-match is a
-	// human's call rather than the machine's.
+	// PendingNearDuplicate — more than one company already carries the name
+	// this domain resolved to. Creating would add yet another, and which of
+	// them the domain belongs to is a human's call rather than the machine's.
 	PendingNearDuplicate = "near_duplicate"
 )
 

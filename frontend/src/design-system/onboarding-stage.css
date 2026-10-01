@@ -209,16 +209,40 @@
   height: 16px;
   background: var(--borderSubtle);
 }
+/* One item, so a wrapping band never strands the hairline beside the claim. */
+.ob-stage-pref {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: inherit;
+}
 
 /* Whose software this is and what it costs sit at the two ends of the band, and
-   the second of those is a control the reader can open. */
+   the second of those is a control the reader can open. Content wider than its
+   third wraps inside it rather than running past the card: a German chip label
+   alone outgrows the slot at a laptop width. `safe`: a line that still outgrows
+   it spills past its end, never off the start. */
 .ob-stage-end {
   grid-column: 3;
   justify-self: end;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: safe flex-end;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
   min-width: 0;
+}
+/* An aside wider than a line narrows to it and wraps its own words. */
+.ob-stage-tools,
+.ob-stage-tools > :not(.ob-stage-pref) {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.ob-stage-tools {
+  display: flex;
+  align-items: center;
+  gap: inherit;
 }
 
 /* The product's mark, which is what makes the band a masthead rather than a
@@ -427,6 +451,11 @@
 .ob-stage[data-core="work"] .ob-stage-board {
   padding-left: var(--ob-board-inset-work);
 }
+/* Inset, because the room clips anything drawn outside the board. */
+.ob-stage-board:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
 /*
  * `start` is for a surface that GROWS while somebody reads it: the read theatre
  * gains a tile per page, and a centred board re-centres on every arrival, so the
@@ -436,12 +465,29 @@
   align-content: start;
 }
 
+/* The stage's own lines: a word longer than the board breaks rather than
+   running past its edge, whichever face the reader's system substitutes. */
+.ob-stage-board > :is(.ob-stage-title, .t-eyebrow, .ob-stage-sub) {
+  overflow-wrap: break-word;
+}
+
 .ob-stage-title {
   margin: 0;
   color: var(--textPrimary);
   /* A measure, not a width: a hero line that runs the full board reads as a
      paragraph set large rather than as a title. */
   max-width: 20ch;
+}
+/* Focusable only so a step can hand the reader here. After a click the ring
+   would mark a control that is not one; after a key press it is the only sign
+   of where focus went, so the house ring stays. */
+.ob-stage-title:focus:not(:focus-visible) {
+  outline: none;
+}
+.ob-stage-title:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
 }
 
 .ob-stage-sub {
@@ -580,21 +626,39 @@
     box-shadow: none;
     max-width: none;
   }
+  /* Stretched, not centred: a centred board as wide as its longest line hangs
+     off both edges of the window. */
   .ob-stage-scene {
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
   }
   .ob-stage-core {
     position: static;
+    align-self: center;
     transform: scale(var(--ob-core-scale, 1));
     padding-top: var(--space-6);
   }
+  /* And its one track may shrink below that line, or the stretch is undone. */
   .ob-stage-board {
     align-content: start;
+    grid-template-columns: minmax(0, 1fr);
     padding: var(--space-6);
   }
   .ob-stage[data-core="work"] .ob-stage-board {
     padding-left: var(--space-6);
+  }
+  /* The way onward drops under the hint, never past the window's edge; the hint
+     keeps a readable floor, so the drop happens only when both cannot fit. */
+  .ob-stage-foot {
+    flex-wrap: wrap;
+  }
+  .ob-stage-hint {
+    flex: 1 1 0;
+    min-width: min(100%, 6rem);
+  }
+  .ob-stage-acts {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   /* Back inside the component's own cap. The wide layout opts out of it because
      it reserved the Core's place; this one did not, and a 300px sphere on a
@@ -608,9 +672,31 @@
   .ob-stage-sub {
     max-width: none;
   }
+  /* The headings' long words break at a syllable; `lang` is on <html>. */
+  .ob-stage-board > :is(.ob-stage-title, .t-eyebrow) {
+    hyphens: auto;
+  }
   /* The mark alone: a step name, a sub-step and a row of dashes do not fit a
      phone's width, and the dashes are the half that still works at a glance. */
   .ob-stage-where {
     display: none;
+  }
+}
+
+@media (width < 64rem) {
+  /* Below a laptop width the end slot outgrows its third, so it takes row two;
+     the dashes leave the centre, which would halve the step name's room. */
+  .ob-stage-band {
+    grid-template-columns: 1fr auto;
+    row-gap: var(--space-2);
+  }
+  .ob-stage-end {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    gap: var(--space-2);
+  }
+  .ob-stage-corestate {
+    margin-inline-end: auto;
   }
 }

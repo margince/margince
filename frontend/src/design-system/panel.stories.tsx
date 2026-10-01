@@ -27,7 +27,7 @@ import type { SectionDetail } from "./surfacestate";
 // two ways to fill the middle — padded prose in PanelBody, or full-bleed rows
 // that touch the panel's own edges in PanelRow.
 const meta: Meta<typeof Panel> = {
-  title: "Design System/Panel",
+  title: "Components/Layout and structure/Panel",
   component: Panel,
   parameters: { layout: "padded" },
   decorators: [

@@ -5,6 +5,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { storyCensus } from "../../scripts/lib/story-files";
 
 // Fitness function for a stylesheet a component BORROWS.
 //
@@ -28,6 +29,7 @@ const dir = dirname(fileURLToPath(import.meta.url));
 
 /** The stylesheet that defines the shared record shapes. */
 const SHARED_SHEET = "company360.css";
+const storyFiles = new Set(storyCensus(resolve(dir, "../..")).files);
 
 /**
  * The classes only `company360.css` defines.
@@ -50,7 +52,7 @@ function sourceFiles(base: string): string[] {
     if (
       entry.name.endsWith(".tsx") &&
       !entry.name.endsWith(".test.tsx") &&
-      !entry.name.endsWith(".stories.tsx")
+      !storyFiles.has(path)
     ) {
       out.push(path);
     }

@@ -22,9 +22,9 @@ In Margince you can:
 
 **This page walks one project from start to finish.** For who may do what,
 the key rules and the vocabulary, see
-[how-to/set-up-projects.md](../docs/how-to/set-up-projects.md). For the day-to-day
-lookup — including how email finds its project and what that means for
-retention — see [how-to/run-a-project.md](../docs/how-to/run-a-project.md).
+[handbook/leads-deals-and-projects.md](../docs/handbook/leads-deals-and-projects.md). For how
+email finds its project and what that means for retention, see
+[handbook/capture.md](../docs/handbook/capture.md).
 
 No code, no API. You need a sign-in, a company in Margince (the walkthrough
 uses a fictional customer, *Nordwind Logistik*, recorded as a company), and
@@ -115,7 +115,7 @@ the next one up, so a number released by archiving a project is used again.
 project's **name**. A name whose initials read well gives a key that reads
 well, and the key is what your customer will see in every subject line. That
 is the whole of the naming advice — see
-[how-to/set-up-projects.md](../docs/how-to/set-up-projects.md#naming-a-project-so-its-key-reads-well).
+[handbook/leads-deals-and-projects.md](../docs/handbook/leads-deals-and-projects.md#how-do-i-choose-a-good-project-key).
 
 Two properties worth knowing now, because both surface later:
 
@@ -160,7 +160,7 @@ Nordwind signs on a purchase order.
 2. A confirmation opens: **Move to Won?** Press **Confirm**.
 3. If the deal has no signed contract attached, the dialog stays open and
    asks **How was it won?** Pick **On a purchase order** and press **Confirm**
-   again. ([work-your-pipeline.md](../docs/how-to/work-your-pipeline.md#close-a-deal)
+   again. ([the-pipeline.md](../docs/handbook/the-pipeline.md#winning)
    explains why winning asks this.)
 
 The deal now reads **won**. Click the project chip.
@@ -379,7 +379,8 @@ Connecting a client is [how-to/connect-an-mcp-client.md](../docs/how-to/connect-
 
 ## Where to next
 
-- [how-to/set-up-projects.md](../docs/how-to/set-up-projects.md) — who can create,
-  edit, archive and share; key conventions; when to create a project.
-- [how-to/run-a-project.md](../docs/how-to/run-a-project.md) — the lookup page for
-  daily work, including every rule by which email finds its project.
+- [handbook/leads-deals-and-projects.md](../docs/handbook/leads-deals-and-projects.md) —
+  who can create, edit and archive a project; the key; the project page; starting
+  delivery.
+- [handbook/capture.md](../docs/handbook/capture.md) — every rule by which email
+  finds its project, and what filing does to retention.

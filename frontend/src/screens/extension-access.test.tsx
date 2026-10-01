@@ -14,6 +14,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ExtensionAccessCard } from "./extension-access";
+import { rolesKey } from "./roles.queries";
 
 // The extension-access card renders the composed unit inventory and one
 // role × CRUD matrix per registered object, and drives the grant seam. The
@@ -677,7 +678,7 @@ describe("ExtensionAccessCard", () => {
       ["extension-access", "extensions"],
       EXTENSIONS.extensions,
     );
-    client.setQueryData(["extension-access", "roles"], ROLES.roles);
+    client.setQueryData(rolesKey(false), ROLES.roles);
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -704,7 +705,7 @@ describe("ExtensionAccessCard", () => {
     expect(
       client.getQueryData(["extension-access", "extensions"]),
     ).toBeUndefined();
-    expect(client.getQueryData(["extension-access", "roles"])).toBeUndefined();
+    expect(client.getQueryData(rolesKey(false))).toBeUndefined();
   });
 
   it("disables every toggle for a read seat while still showing the grants", async () => {

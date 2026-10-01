@@ -268,17 +268,12 @@ func (e *ConfidentialityVerdictEngine) apply(
 		if err := e.retractPrivateContactsTx(ctx, tx, row, kind); err != nil {
 			return err
 		}
-		if err := recomputeJudgedMessageTx(ctx, tx, row); err != nil {
-			return err
-		}
-		// Each stamped sibling re-derived over every seat's contribution, so a
-		// colleague's mailbox still holding this message keeps holding it.
-		for _, id := range outcome.Stamped {
-			if err := activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](id)); err != nil {
-				return err
-			}
-		}
-		return nil
+		// The judged message and each stamped sibling, re-derived over every
+		// seat's contribution so a colleague's mailbox still holding one keeps
+		// holding it — as ONE set, because the anchor is an activity row like
+		// the rest and taking it first was a lock order nothing else agreed to.
+		return activities.RecomputeAudiencesTx(ctx, tx,
+			append(judgedMessageIDs(row), asActivityIDs(outcome.Stamped)...))
 	})
 	if err != nil {
 		// The thread key is workspace-internal and already in this workspace's
@@ -340,19 +335,26 @@ func threadAddressesTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread
 	return seen, nil
 }
 
-// recomputeJudgedMessageTx re-derives the audience of the message this verdict
-// was about, so the answer reaches the row it concerns.
+// judgedMessageIDs is the message this verdict was about, as a set of none or
+// one, so it can join the siblings in a single ordered recompute.
 //
-// One message, matching the stamp above. The thread's other messages were never
-// read by the classifier and keep whatever their own contributors ask for.
-func recomputeJudgedMessageTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread) error {
+// None when the message was erased while the question stood: there is nothing
+// to recompute, and the verdict is still worth recording for the threads that
+// inherit from it.
+func judgedMessageIDs(row capture.PendingThread) []ids.ActivityID {
 	if row.ActivityID == ids.Nil {
-		// The message was erased while the question stood. There is nothing to
-		// recompute, and the verdict is still worth recording for the threads
-		// that inherit from it.
 		return nil
 	}
-	return activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](row.ActivityID))
+	return []ids.ActivityID{ids.From[ids.ActivityKind](row.ActivityID)}
+}
+
+// asActivityIDs types a stamped set for the recompute.
+func asActivityIDs(raw []ids.UUID) []ids.ActivityID {
+	out := make([]ids.ActivityID, 0, len(raw))
+	for _, id := range raw {
+		out = append(out, ids.From[ids.ActivityKind](id))
+	}
+	return out
 }
 
 // RetireExhausted ends the threads that spent every attempt without an answer.
@@ -385,26 +387,34 @@ const confidentialityStragglerBatch = 200
 // could not: a thread retired without an apply, a thread judged before that
 // pass existed, and an apply that lost the claim race after the ledger was
 // written. Its subject is a query, so a workspace with none does nothing.
-func (e *ConfidentialityVerdictEngine) FinishSettledThreads(ctx context.Context) (int, error) {
+func (e *ConfidentialityVerdictEngine) FinishSettledThreads(ctx context.Context) (sweepTally, error) {
+	var tally sweepTally
+	err := e.finishSettledThreadsInto(ctx, &tally)
+	return tally, err
+}
+
+// finishSettledThreadsInto is the pass, counting into tally as each repair
+// commits.
+func (e *ConfidentialityVerdictEngine) finishSettledThreadsInto(ctx context.Context, tally *sweepTally) error {
 	// The pass's own provenance, taken once for the listing and again per
 	// thread below, so each repair's stamps and audience events trace together
 	// under a correlation id of their own.
 	settled, err := e.threads.ThreadsWithUndecidedMessages(
 		e.workspaceCtx(ctx), confidentialityStragglerBatch)
 	if err != nil {
-		return 0, fmt.Errorf("confidentiality: listing settled threads with undecided messages: %w", err)
+		return fmt.Errorf("confidentiality: listing settled threads with undecided messages: %w", err)
 	}
-	finished := 0
+	tally.capHit = len(settled) >= confidentialityStragglerBatch
 	for _, t := range settled {
 		done, err := e.finishOneSettledThread(ctx, t)
 		if err != nil {
-			return finished, err
+			return err
 		}
 		if done {
-			finished++
+			tally.processed++
 		}
 	}
-	return finished, nil
+	return nil
 }
 
 // finishOneSettledThread is one thread's repair, in one transaction.
@@ -430,10 +440,9 @@ func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 		if err != nil {
 			return err
 		}
-		for _, id := range outcome.Stamped {
-			if err := activities.RecomputeAudienceTx(wsCtx, tx, ids.From[ids.ActivityKind](id)); err != nil {
-				return err
-			}
+		if err := activities.RecomputeAudiencesTx(
+			wsCtx, tx, asActivityIDs(outcome.Stamped)); err != nil {
+			return err
 		}
 		done = len(outcome.Stamped) > 0 || outcome.Reopened != ids.Nil
 		return nil

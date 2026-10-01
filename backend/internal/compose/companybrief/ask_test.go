@@ -71,7 +71,7 @@ func TestEveryPreparedQuestionAnswersFromItsOwnRecords(t *testing.T) {
 
 	for _, question := range declaredQuestions(t) {
 		t.Run(string(question), func(t *testing.T) {
-			answered := deterministicAnswer(question, askCompanyID, in)
+			answered := deterministicAnswer(question, askCompanyID, in, "en")
 			if len(answered) == 0 {
 				t.Fatal("no answer from an account that carries the records this question is about")
 			}
@@ -95,7 +95,7 @@ func TestEveryPreparedQuestionAnswersFromItsOwnRecords(t *testing.T) {
 // TestWhatsOpenAnswersThePipelineNotTheHistory pins what the question means: it
 // names the open deals and the open tasks, and does not narrate the timeline.
 func TestWhatsOpenAnswersThePipelineNotTheHistory(t *testing.T) {
-	answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsOpen, askCompanyID, askInput())
+	answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsOpen, askCompanyID, askInput(), "en")
 	text := strings.Join(texts(answered), " ")
 	if !strings.Contains(text, "open deal") {
 		t.Errorf("answer %q never mentions the open pipeline", text)
@@ -117,7 +117,7 @@ func TestWhatsOpenAnswersThePipelineNotTheHistory(t *testing.T) {
 // cannot see it, so it does not claim to.
 func TestWhatsChangedTakesTheLeadingEntriesInOrder(t *testing.T) {
 	in := askInput()
-	answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsChanged, askCompanyID, in)
+	answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsChanged, askCompanyID, in, "en")
 	if len(answered) != 3 {
 		t.Fatalf("got %d sentences, want the three most recent entries", len(answered))
 	}
@@ -135,7 +135,7 @@ func TestWhatsChangedTakesTheLeadingEntriesInOrder(t *testing.T) {
 // the gap.
 func TestAnEmptyAccountAnswersNothingRatherThanSomethingEmpty(t *testing.T) {
 	bare := Input{Name: "Quiet GmbH"}
-	if answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsOpen, askCompanyID, bare); len(answered) != 0 {
+	if answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsOpen, askCompanyID, bare, "en"); len(answered) != 0 {
 		t.Errorf("answer %+v for an account with nothing open", answered)
 	}
 	// A single entry reaches both the loop body and the mostRecent bound, so this
@@ -143,13 +143,13 @@ func TestAnEmptyAccountAnswersNothingRatherThanSomethingEmpty(t *testing.T) {
 	one := Input{Name: "Quiet GmbH", Recent: []ActIn{
 		{ID: "018f0000-0000-7000-8000-0000000000b1", Kind: "call", At: "2026-07-01T09:00:00Z"},
 	}}
-	answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsChanged, askCompanyID, one)
+	answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsChanged, askCompanyID, one, "en")
 	if len(answered) != 1 || answered[0].Evidence[0].EntityID != one.Recent[0].ID {
 		t.Errorf("answer %+v for a one-entry timeline, want the one entry cited", answered)
 	}
 	// meeting_prep is different by design: the account itself is always
 	// something to prep from, and it cites the company.
-	prep := deterministicAnswer(crmcontracts.CompanyQuestionMeetingPrep, askCompanyID, bare)
+	prep := deterministicAnswer(crmcontracts.CompanyQuestionMeetingPrep, askCompanyID, bare, "en")
 	if len(prep) != 1 || prep[0].Evidence[0].EntityID != askCompanyID {
 		t.Errorf("meeting_prep = %+v, want one sentence about the account itself", prep)
 	}
@@ -237,7 +237,7 @@ func TestEveryPreparedQuestionCarriesItsOwnInstruction(t *testing.T) {
 		if _, err := ParseQuestion(question); err != nil {
 			t.Errorf("ParseQuestion(%q) refuses a question the contract declares: %v", question, err)
 		}
-		if len(deterministicAnswer(question, askCompanyID, askInput())) == 0 {
+		if len(deterministicAnswer(question, askCompanyID, askInput(), "en")) == 0 {
 			t.Errorf("question %q has an instruction but no deterministic answer", question)
 		}
 	}
@@ -317,7 +317,7 @@ func threeCheckIns() Input {
 // every sentence carrying exactly the one citation it is about.
 func TestOpenTasksAnswerIsOneSentencePerTask(t *testing.T) {
 	in := threeCheckIns()
-	answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsOpen, askCompanyID, in)
+	answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsOpen, askCompanyID, in, "en")
 	if len(answered) != 1+len(in.OpenTasks) {
 		t.Fatalf("got %d sentences for %d tasks, want one count sentence and one per task: %q",
 			len(answered), len(in.OpenTasks), texts(answered))
@@ -356,7 +356,7 @@ func TestOpenTasksAnswerCapsTheListButNotTheCount(t *testing.T) {
 			Name: fmt.Sprintf("Task %d", i),
 		})
 	}
-	answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsOpen, askCompanyID, in)
+	answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsOpen, askCompanyID, in, "en")
 	if len(answered) != 1+listedRecords {
 		t.Fatalf("got %d sentences, want the count plus %d listed tasks", len(answered), listedRecords)
 	}
@@ -371,7 +371,7 @@ func TestASingleOpenTaskIsOneSentence(t *testing.T) {
 	answered := deterministicAnswer(crmcontracts.CompanyQuestionWhatsOpen, askCompanyID, Input{
 		Name:      "Brandt Automotive GmbH",
 		OpenTasks: []TaskIn{{ID: "019fac6c-60d1-732b-ab2b-d93611745625", Name: "Call the CFO"}},
-	})
+	}, "en")
 	if len(answered) != 1 {
 		t.Fatalf("got %d sentences for one task: %q", len(answered), texts(answered))
 	}
@@ -422,7 +422,7 @@ func TestAnAnswerSpellingIDsFallsBackToTheFloor(t *testing.T) {
 // record id in the text, whichever question produced it.
 func TestNoDeterministicAnswerSpellsAnIDAtTheReader(t *testing.T) {
 	for _, question := range declaredQuestions(t) {
-		for _, sentence := range deterministicAnswer(question, askCompanyID, askInput()) {
+		for _, sentence := range deterministicAnswer(question, askCompanyID, askInput(), "en") {
 			if claims.SpellsRecordID(sentence.Text) {
 				t.Errorf("%s answered with an id in the text: %q", question, sentence.Text)
 			}

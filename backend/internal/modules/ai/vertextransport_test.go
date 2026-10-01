@@ -5,6 +5,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -89,8 +90,8 @@ func TestAVertexBindingCallsItsProjectAtItsLocation(t *testing.T) {
 		case strings.HasSuffix(r.URL.Path, ":streamGenerateContent"):
 			writeBody(t, w, `data: {"candidates":[{"content":{"parts":[{"text":"he"}]}}]}`+"\n\n")
 			writeBody(t, w, `data: {"candidates":[{"content":{"parts":[{"text":"llo"}]},"finishReason":"STOP"}]}`+"\n\n")
-		case strings.HasSuffix(r.URL.Path, ":embedContent"):
-			writeBody(t, w, `{"embedding":{"values":[0.5,0.25]}}`)
+		case strings.HasSuffix(r.URL.Path, ":predict"):
+			writeBody(t, w, `{"predictions":[{"embeddings":{"values":[0.5,0.25]}}]}`)
 		default:
 			writeBody(t, w, `{"candidates":[{"content":{"parts":[{"text":"ok"}]},"finishReason":"STOP"}],"modelVersion":"gemini-3.5-flash-001"}`)
 		}
@@ -126,7 +127,7 @@ func TestAVertexBindingCallsItsProjectAtItsLocation(t *testing.T) {
 	want := []string{
 		models + "gemini-3.5-flash:generateContent",
 		models + "gemini-3.5-flash:streamGenerateContent?alt=sse",
-		models + "gemini-embedding-001:embedContent",
+		models + "gemini-embedding-001:predict",
 	}
 	if strings.Join(recorder.calls, "\n") != strings.Join(want, "\n") {
 		t.Errorf("the calls went to\n%s\nwant\n%s", strings.Join(recorder.calls, "\n"), strings.Join(want, "\n"))
@@ -243,9 +244,47 @@ func TestOnlyAVertexBindingTakesALocation(t *testing.T) {
 		"a base_url on Vertex":    {ProviderConfig{Provider: providerGeminiVertex, Model: "m", Location: "eu", BaseURL: "https://x.example"}, "takes no base_url"},
 		"no location on Vertex":   {ProviderConfig{Provider: providerGeminiVertex, Model: "m"}, "needs a `location`"},
 	} {
-		err := ValidateTierBinding(ProfileCloudHosted, TierPremium, tc.binding)
+		err := ValidateTierBinding(ProfileEUHosted, TierPremium, tc.binding)
 		if err == nil || !strings.Contains(err.Error(), tc.names) {
 			t.Errorf("%s: want a refusal naming %q, got %v", name, tc.names, err)
 		}
+	}
+}
+
+// Vertex AI has no :embedContent; it embeds through :predict, one instance per
+// input, with the width the caller asked for.
+func TestAVertexEmbeddingIsOnePredictPerInputAtTheAskedWidth(t *testing.T) {
+	t.Parallel()
+	var bodies []vertexEmbedWire
+	client, recorder := vertexAt(t, "europe-west4", func(w http.ResponseWriter, r *http.Request) {
+		var body vertexEmbedWire
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("decode the embed body: %v", err)
+		}
+		bodies = append(bodies, body)
+		writeBody(t, w, `{"predictions":[{"embeddings":{"values":[0.5,0.25,0.125]}}]}`)
+	})
+	got, err := client.Embed(context.Background(), model.EmbedRequest{Model: "gemini-embedding-001", Inputs: []string{"a", "b"}, Dimensions: 3})
+	if err != nil || got.Dims != 3 || len(got.Vectors) != 2 {
+		t.Fatalf("embed: %+v, %v", got, err)
+	}
+	if len(recorder.calls) != 2 || !strings.HasSuffix(recorder.calls[0], "/gemini-embedding-001:predict") {
+		t.Fatalf("calls = %v, want one :predict per input", recorder.calls)
+	}
+	for i, want := range []string{"a", "b"} {
+		body := bodies[i]
+		if len(body.Instances) != 1 || body.Instances[0].Content != want || body.Parameters == nil || body.Parameters.OutputDimensionality != 3 {
+			t.Errorf("call %d sent %+v, want one instance %q at width 3", i, body, want)
+		}
+	}
+}
+
+func TestAVertexEmbeddingThatAnswersNoPredictionIsAnError(t *testing.T) {
+	t.Parallel()
+	client, _ := vertexAt(t, "europe-west4", func(w http.ResponseWriter, _ *http.Request) {
+		writeBody(t, w, `{"predictions":[]}`)
+	})
+	if _, err := client.Embed(context.Background(), model.EmbedRequest{Model: "gemini-embedding-001", Inputs: []string{"a"}}); err == nil || !strings.Contains(err.Error(), "0 predictions") {
+		t.Fatalf("want the empty answer refused, got %v", err)
 	}
 }

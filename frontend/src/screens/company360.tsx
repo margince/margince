@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, Skeleton, StatCard } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
@@ -258,216 +259,6 @@ function DealRow({ deal }: Readonly<{ deal: Deal360 }>) {
 }
 
 /**
- * CommercialPanel is the overview's own reading of the deals: the two
- * lifetime figures the deals section actually carries, then the open deals
- * themselves. It is deliberately not DealsCard reused wholesale — the Deals
- * tab keeps that card in full, and this is the shorter reading a rep gets
- * without leaving Overview.
- *
- * No open-deal total is drawn: nothing in Company360 sums the open
- * deals' amounts, and inventing one here would be exactly the fabricated
- * figure the deals section's own honesty rule forbids.
- */
-export function CommercialPanel({
-  view,
-  titleAction,
-  extra,
-  onAllDeals,
-  loading = false,
-  figuresOnly = false,
-}: Readonly<{
-  view?: Company360;
-  // The "new deal" verb, gated by the caller on the record being writable.
-  titleAction?: ReactNode;
-  // What else belongs to this account's commercial standing but is not read
-  // off its deals — the overview hands in what it is already under contract
-  // for, rather than a second card repeating "the commercial picture" under
-  // its own heading.
-  //
-  // Rendered OUTSIDE the deals branch below, unlike DealsCard's slot of the
-  // same name: the two readings answer to different grants, and a reader who
-  // may see contracts and not deals would otherwise lose theirs to somebody
-  // else's permission.
-  extra?: ReactNode;
-  onAllDeals?: () => void;
-  // The composite read's own pending flag — see sectionState's own doc.
-  loading?: boolean;
-  // Draw the FIGURES and the contract block without this card's own header
-  // band or its list of deals, for a caller that already lists them. The
-  // Company 360 card does: its work section names every open deal with the
-  // reason it needs a contact, and repeating them underneath would show each
-  // deal twice on one screen.
-  //
-  // The figures are what does not appear there — what the account has won
-  // over its life and how much it has lost — so this is the half of the
-  // reading the work list cannot carry, not a second copy of it.
-  figuresOnly?: boolean;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const deals = view?.deals;
-  const state = sectionState(
-    view,
-    "deals",
-    Boolean(deals),
-    deals?.data.length ?? 0,
-    loading,
-  );
-  const present = state === "ready" || state === "empty";
-  // The section is a page of `deals.data` with `has_more` beside it — past
-  // the cap this reads as every open deal unless it says otherwise.
-  const truncated = deals?.page.has_more === true;
-  const figures = state === "ready" && deals && (
-    <PanelBody className="co-figures">
-      <CommercialFigure
-        label={t("co.deals.wonLifetime")}
-        value={formatMoneyOrAbsent(
-          deals.won_lifetime?.amount_minor,
-          deals.won_lifetime?.currency,
-          locale,
-        )}
-      />
-      {/* The same figure as the deals card's, and the same door: one company,
-          status lost. Two spellings of one address is how the two figures come
-          to open different lists. */}
-      <CommercialFigure
-        label={t("co.commercial.lostFigure")}
-        value={
-          <a
-            className="link-button"
-            href={dealsFilteredBy("company_id", view.company.id, {
-              status: "lost",
-            })}
-          >
-            {formatNumber(deals.lost_count, locale)}
-          </a>
-        }
-      />
-    </PanelBody>
-  );
-  if (figuresOnly) {
-    // The contract block first, for the same reason it leads the whole card:
-    // what the account is already signed for frames the deals still moving.
-    return (
-      <>
-        {extra}
-        {figures}
-        {/* `figures` covers `ready` alone, and the work group under these
-            figures says "no deals" with its own plate, so `empty` says nothing
-            here — twice is a pane that names one absence as two. Every other
-            state still owes the reader a sentence: a withheld section is a
-            fact about the reader, and one that fell silently blank would be
-            read as an empty account. */}
-        {state !== "ready" && state !== "empty" && (
-          <PanelBody>
-            <SurfaceState
-              state={state}
-              emptyLabel={t("co.deals.empty")}
-              loadingLabel={t("co.deals.title")}
-            >
-              {null}
-            </SurfaceState>
-          </PanelBody>
-        )}
-      </>
-    );
-  }
-  return (
-    <Panel
-      title={t("co.commercial.title")}
-      titleAction={present ? titleAction : undefined}
-      footer={
-        present && (onAllDeals || truncated) ? (
-          <>
-            {truncated && (
-              <p className="co-row-meta">{t("co.commercial.truncated")}</p>
-            )}
-            {onAllDeals && (
-              <Button variant="ghost" onClick={onAllDeals}>
-                {t("co.commercial.allDeals")}
-              </Button>
-            )}
-          </>
-        ) : undefined
-      }
-    >
-      {/* Before the open deals, and before the panel's own deals footer: what
-          the account is already signed for frames the deals that are still
-          moving, and the Deals tab reads in that order too. */}
-      {extra}
-      {state === "ready" && deals ? (
-        <>
-          {figures}
-          {deals.data.map((deal) => (
-            <PanelRow key={deal.deal_id} className="co-commercial-row">
-              <button
-                type="button"
-                className="co-rowlink co-commercial-name"
-                onClick={() => navigate({ screen: "deals", id: deal.deal_id })}
-              >
-                <span>{deal.name}</span>
-                {deal.expected_close_date && (
-                  <span className="t-sub">
-                    {t("commercial.closes", {
-                      when: formatDate(
-                        deal.expected_close_date,
-                        locale,
-                        recordZone,
-                      ),
-                    })}
-                  </span>
-                )}
-              </button>
-              <span className="co-row-meta t-caption">
-                {deal.stage_name && <Badge>{deal.stage_name}</Badge>}
-                {deal.amount?.amount_minor != null && (
-                  <span className="t-num">
-                    {formatMoneyOrAbsent(
-                      deal.amount.amount_minor,
-                      deal.amount.currency,
-                      locale,
-                    )}
-                  </span>
-                )}
-              </span>
-            </PanelRow>
-          ))}
-        </>
-      ) : (
-        <PanelBody>
-          <SurfaceState
-            state={state}
-            emptyLabel={t("co.deals.empty")}
-            loadingLabel={t("co.deals.title")}
-          >
-            {null}
-          </SurfaceState>
-        </PanelBody>
-      )}
-    </Panel>
-  );
-}
-
-// One eyebrow-labelled figure. Shared shape with the finance panel, so the
-// two read as the same kind of reading rather than two different cards that
-// happen to sit near each other.
-function CommercialFigure({
-  label,
-  value,
-}: Readonly<{ label: string; value: ReactNode }>) {
-  return (
-    <div className="co-figure">
-      <Eyebrow>{label}</Eyebrow>
-      {/* A figure the page does not have still occupies its slot, as the
-          absence its formatter returned: the reader sees WHICH reading is
-          missing rather than a shorter row that reads as complete. */}
-      <span className="co-figure-value">{value}</span>
-    </div>
-  );
-}
-
-/**
  * NextSteps is the middle column's first block: the open tasks on this
  * account, overdue first, each showing what it is linked to.
  *
@@ -693,12 +484,12 @@ export function AskSection({
       </p>
       {ask.isPending && <Skeleton width="100%" height={40} />}
       {ask.isError && (
-        <p className="surfacestate-withheld">
+        <ErrorLine>
           {t("co.ask.failed")}
           {/* The server's own detail says WHICH failure — budget exhausted reads
               differently from a malformed request, and a rep can act on one. */}
           {` ${problemMessageOf(ask.error, t)}`}
-        </p>
+        </ErrorLine>
       )}
       {/* The previous answer is hidden while the next question is in flight.
           Leaving it under the spinner puts a finished answer next to a loading
@@ -1724,12 +1515,8 @@ export function nextCommitmentLine(
   };
 }
 
-// useSuggestionsBody is the advice section's data and rows, split out of the
-// Panel that used to own it: the daily brief now carries this chrome, so the
-// dismiss mutation and the "move" rows live here where both that panel and
-// the standalone `SuggestionsSection` (still used on its own in tests) can
-// reach them without a second, drifting copy. Exported so companytoday.tsx
-// composes the same rows rather than reimplementing them.
+// useSuggestionsBody is the advice section's data and rows: the dismiss
+// mutation and the "move" rows, which companytoday.tsx composes into the brief.
 export function useSuggestionsBody({
   companyId,
   view,
@@ -1870,18 +1657,16 @@ export function useSuggestionsBody({
         {/* The row staying put with no word reads as a click that missed,
             and the rep clicks again. */}
         {dismiss.isError && (
-          <p className="surfacestate-withheld">
-            {t("co.suggest.dismissFailed")}
-            {` ${problemMessageOf(dismiss.error, t)}`}
-          </p>
+          <ErrorLine>
+            {`${t("co.suggest.dismissFailed")} ${problemMessageOf(dismiss.error, t)}`}
+          </ErrorLine>
         )}
         {/* Same rule for the write, and it matters more: a rep who thinks the
             step was written stops looking for it. */}
         {write.isError && (
-          <p className="surfacestate-withheld">
-            {t("co.suggest.addTaskFailed")}
-            {` ${problemMessageOf(write.error, t)}`}
-          </p>
+          <ErrorLine>
+            {`${t("co.suggest.addTaskFailed")} ${problemMessageOf(write.error, t)}`}
+          </ErrorLine>
         )}
       </>
     ) : undefined;
@@ -1991,72 +1776,5 @@ export function ProposedNextSteps({
       {body.rows}
       {body.footer && <PanelBody>{body.footer}</PanelBody>}
     </>
-  );
-}
-
-/**
- * SuggestionsSection is the advice rows on their own, in their own Panel —
- * indigo, because a rule wrote every row under that head. Used standalone
- * where nothing else carries this chrome (the stories file, and the suites
- * that exercise the rows without the daily brief); the live record page mounts
- * the merged brief instead (`TodayOnThisAccount`, companytoday.tsx), which
- * composes the same body via `useSuggestionsBody` beside its context band.
- */
-export function SuggestionsSection({
-  companyId,
-  view,
-  onOpenRecord,
-  onOpenEmail,
-  onPerform,
-  onOpenTasks,
-}: Readonly<{
-  companyId: string;
-  view?: Company360;
-  onOpenRecord?: (entityType: string, entityId: string) => void;
-  onOpenEmail?: (activityId: string) => void;
-  onPerform?: (action: SuggestionAction) => void;
-  // Where the footer's commitment reading leads. Absent for a caller with no
-  // Tasks tab of its own (the stories file).
-  onOpenTasks?: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const body = useSuggestionsBody({
-    companyId,
-    view,
-    onOpenRecord,
-    onOpenEmail,
-    onPerform,
-  });
-  if (!body.ready) {
-    return null;
-  }
-  const commitment = nextCommitmentLine(view, locale, t);
-  const footer =
-    commitment || onOpenTasks || body.footer ? (
-      <>
-        {commitment && (
-          <Badge tone={commitment.overdue ? "warning" : undefined}>
-            {commitment.headline}
-          </Badge>
-        )}
-        {onOpenTasks && (
-          <Button variant="ghost" onClick={onOpenTasks}>
-            {t("co.suggest.viewTasks")}
-          </Button>
-        )}
-        {body.footer}
-      </>
-    ) : undefined;
-  return (
-    <Panel
-      title={t("co.suggest.title")}
-      footer={footer}
-      tone="ai"
-      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
-      className="co-lead"
-    >
-      {body.rows}
-    </Panel>
   );
 }

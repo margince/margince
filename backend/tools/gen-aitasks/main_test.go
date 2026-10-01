@@ -158,9 +158,9 @@ func TestParseContractAcceptsTheShippedDeclaration(t *testing.T) {
 		t.Errorf("status = %q, want shipped", verdict.Status)
 	}
 
-	// A task is not one prompt: rate_extract has always had two.
-	if got := len(c.Tasks["rate_extract"].Sites); got != 2 {
-		t.Errorf("rate_extract declares %d sites, want 2 (pricing, fx)", got)
+	// A task is not one prompt: voice_build has always had several.
+	if got := len(c.Tasks["voice_build"].Sites); got != 4 {
+		t.Errorf("voice_build declares %d sites, want 4", got)
 	}
 	if got := len(c.Tasks["cold_start"].Sites); got != 4 {
 		t.Errorf("cold_start declares %d sites, want 4", got)
@@ -598,5 +598,123 @@ func TestParseContractRefusesAMalformedAgentDeclaration(t *testing.T) {
 				t.Errorf("the refusal does not say what is wrong: want it to mention %q, got %v", tc.wantErr, err)
 			}
 		})
+	}
+}
+
+// contractWith declares one task t on a one-tier contract, its mode, budget
+// posture, status and any further fields given by def. A shipped task gets a
+// site so the status rule is satisfied and only the field under test decides.
+func contractWith(def string) string {
+	sites := ""
+	if strings.Contains(def, "status: shipped") {
+		sites = "\n    sites: [only]"
+	}
+	return `tiers: [cheap_cloud]
+degrade_to: {cheap_cloud: cheap_cloud}
+tasks:
+  t:
+    display_name: "Test task t"
+    ladder: [cheap_cloud]
+    ` + def + sites + "\n"
+}
+
+// A decision attempt is a network call before the ladder, and only a
+// background task's deadline has room for it; a planned task has no site for
+// an adapter to answer. Both are refused at generation, by name.
+func TestADecisionTaskMustShipAndRunInTheBackground(t *testing.T) {
+	for name, def := range map[string]string{
+		"interactive": "execution_mode: interactive\n    on_budget_exhausted: degrade\n    status: shipped",
+		"planned":     "execution_mode: background\n    on_budget_exhausted: queue\n    status: planned",
+	} {
+		_, err := parseContract([]byte(contractWith(def + "\n    decision: true")))
+		if err == nil || !strings.Contains(err.Error(), "decision: true needs") {
+			t.Errorf("%s: a decision task must be refused, got %v", name, err)
+		}
+	}
+	shipped := "execution_mode: background\n    on_budget_exhausted: queue\n    status: shipped\n    decision: true"
+	if _, err := parseContract([]byte(contractWith(shipped))); err != nil {
+		t.Errorf("a shipped background task may declare a decision form, got %v", err)
+	}
+}
+
+const decisionContract = `
+tiers: [alpha, beta]
+
+tasks:
+  zed: {display_name: "Test task zed", ladder: [alpha], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only], decision: true}
+  foo: {display_name: "Test task foo", ladder: [alpha, beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only]}
+  abe: {display_name: "Test task abe", ladder: [beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, sites: [only], decision: true, local_only: true}
+
+degrade_to:
+  beta: alpha
+  alpha: alpha
+`
+
+// The declaration reaches the binary as a map for the call site holding a task
+// and a list for a walk over every one, the list in sorted name order so the
+// generated file does not move between runs. An undeclared task is absent
+// from both, which is what keeps a decision lane off a site nobody adapted.
+func TestTheDecisionTableListsEveryDeclaredTaskInNameOrder(t *testing.T) {
+	c, err := parseContract([]byte(decisionContract))
+	if err != nil {
+		t.Fatalf("parseContract: %v", err)
+	}
+	out, err := emitGo(c, "deadbeef")
+	if err != nil {
+		t.Fatalf("emitGo: %v", err)
+	}
+	for _, want := range []string{
+		"var taskDecisions = map[Task]bool{\n\tTaskAbe: true,\n\tTaskZed: true,\n}",
+		"func TaskDecides(t Task) bool { return taskDecisions[t] }",
+		"var decisionTaskList = []Task{\n\tTaskAbe,\n\tTaskZed,\n}",
+		"func DecisionTasks() []Task { return decisionTaskList }",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("generated source missing %q:\n%s", want, out)
+		}
+	}
+}
+
+// The egress page answers for the decision lane too: a decision task's text
+// can reach the bound decision model, and a local-only one only a local
+// model. A task without the declaration says so.
+func TestTheEgressPageNamesEachTasksDecisionReachAndLocalOnlyDeclaration(t *testing.T) {
+	c, err := parseContract([]byte(decisionContract))
+	if err != nil {
+		t.Fatalf("parseContract: %v", err)
+	}
+	page := string(emitEgressDoc(c))
+	for task, want := range map[string]string{
+		"abe": "| `abe` | `beta` | no | no | yes | only a local decision provider | shipped |",
+		"foo": "| `foo` | `alpha` → `beta` | no | no | no | — | shipped |",
+		"zed": "| `zed` | `alpha` | no | no | no | the bound decision model | shipped |",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the egress row for %s is not %q:\n%s", task, want, page)
+		}
+	}
+}
+
+// A site's thinking level reaches the generated site table, and a site that
+// names none is emitted without one rather than with an empty string that
+// would read as a decision.
+func TestEmitGoCarriesASitesThinkingLevel(t *testing.T) {
+	contract := strings.Replace(minimalContract, "sites: [only]",
+		"sites: [only, {name: talk, kind: multi_turn, thinking: low}]", 1)
+	c, err := parseContract([]byte(contract))
+	if err != nil {
+		t.Fatalf("parseContract: %v", err)
+	}
+	out, err := emitGo(c, "deadbeef")
+	if err != nil {
+		t.Fatalf("emitGo: %v", err)
+	}
+	for _, want := range []string{
+		`{Name: "only", Kind: "one_shot"},`,
+		`{Name: "talk", Kind: "multi_turn", Thinking: "low"},`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("generated source missing %s:\n%s", want, out)
+		}
 	}
 }

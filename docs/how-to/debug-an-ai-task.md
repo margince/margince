@@ -12,11 +12,10 @@ verdict as numbers.
 | Does this site survive **this** input? | **`make ai-probe`** — one site, your input, no score, no record |
 | Which sites carry a certification record? | `make e2e-ai-report`, or the page generated from the same three trees: [reference/ai-certification.md](../reference/ai-certification.md) |
 
-The two are not interchangeable, and the gap between them is real. `rate_extract/pricing`
-was `certified` at reliability 1.00 on `openai_compatible mistralai/mistral-large-2512`
-while the model-cost refresh failed every single time against OpenRouter's live catalog.
-Certification was honest — it measured the corpus fixture, which is two lines. Production
-hands that site 530 KB. **A green record says nothing about an input the corpus never had.**
+The two are not interchangeable, and the gap between them is real. A site can be
+`certified` at reliability 1.00 on a corpus fixture of two lines and still fail every time
+on the half-megabyte page production hands it. Certification was honest — it measured the
+fixture. **A green record says nothing about an input the corpus never had.**
 
 The probe is cheap: `list`, `scaffold` and `fetch` cost nothing, and `run --ai-fake` costs
 nothing. Only `run` against a real binding calls a model, and it makes one call with no
@@ -30,7 +29,7 @@ make ai-probe ARGS='list'
 
 ```text
 SITE                                  KIND        SCOPE            LADDER                   CORPUS
-rate_extract/pricing                  one_shot    full_invocation  premium,cheap_cloud      yes
+rate_extract/fx                       one_shot    full_invocation  premium,cheap_cloud      yes
 agent_loop/morning_brief              agent_loop  single_turn      cheap_cloud,premium      yes
 capture_classify/classify             one_shot    full_invocation  local_small,cheap_cloud  yes
 ```
@@ -57,14 +56,14 @@ nothing web-shaped at all for `capture_classify`). Rather than read the Go types
 site's corpus scenario:
 
 ```bash
-make ai-probe ARGS='scaffold rate_extract/pricing'
-# → .tmp/aitask/rate_extract_pricing.yaml
+make ai-probe ARGS='scaffold rate_extract/fx'
+# → .tmp/aitask/rate_extract_fx.yaml
 ```
 
 Edit the `fixture:` block, keep the shape, then run it:
 
 ```bash
-make ai-probe ARGS='run --scenario ../.tmp/aitask/rate_extract_pricing.yaml --ai-fake'
+make ai-probe ARGS='run --scenario ../.tmp/aitask/rate_extract_fx.yaml --ai-fake'
 ```
 
 Artifacts land in the gitignored `.tmp/aitask/` **by design**: a fetched page or a real
@@ -78,15 +77,14 @@ content somewhere a commit would pick it up. `--out -` writes to stdout instead;
 HTML reduced by `StripTags`, markdown and JSON verbatim.
 
 That is not always what a site is finally handed. A route may reduce further before
-building its request — `rate_extract/pricing` narrows a JSON catalog to one passage
-per bound model (see below). `fetch` shows you the input to that step, not its output.
+building its request. `fetch` shows you the input to that step, not its output.
 
 ```bash
-make ai-probe ARGS='fetch https://openrouter.ai/api/v1/models'
+make ai-probe ARGS='fetch https://api.frankfurter.dev/v1/latest'
 ```
 
 ```text
-fetched  media=application/json  bytes=531321  passages=1  markdown=false  json=true
+fetched  media=application/json  bytes=214  passages=1  markdown=false  json=true
 ```
 
 **`passages=` is the number that earns its place here.** Passages are what
@@ -99,10 +97,10 @@ Then assemble a fixture and probe. `--fixture` takes JSON, so a large body never
 survive a YAML paste:
 
 ```bash
-jq -n --rawfile t .tmp/aitask/fetch-openrouter.ai_api_v1_models.txt \
-  '{provider:"openai_compatible",page_text:$t}' > .tmp/aitask/fx.json
+jq -n --rawfile t .tmp/aitask/fetch-api.frankfurter.dev_v1_latest.txt \
+  '{base_currency:"EUR",tracked_currencies:["USD","GBP"],page_text:$t}' > .tmp/aitask/fx.json
 
-make ai-probe ARGS='run --site rate_extract/pricing \
+make ai-probe ARGS='run --site rate_extract/fx \
   --fixture ../.tmp/aitask/fx.json \
   --expect  ../.tmp/aitask/expect.json \
   --model anthropic:claude-sonnet-4-6'
@@ -120,38 +118,6 @@ broker-served `openai_compatible:…` model cannot be probed: that binding fails
 closed without a base URL, by design. Pin a native vendor here, and use
 `make e2e-ai … BASE_URL=…` when the question is specifically about the broker.
 
-### A JSON catalog needs reducing first, or you are probing the wrong shape
-
-Read this before probing `rate_extract/pricing` against a broker catalog.
-
-Production does **not** hand that site a raw catalog. `modelCostRefresh.extract`
-reduces a JSON body to one passage per model and narrows it to the models this
-deployment's routing binds on that provider — and only then builds the request. That
-reduction lives in the crawl path, **outside** the certification seam the probe
-drives, so pasting the raw catalog in as `page_text` reproduces the shape production
-sent *before* the fix: one passage, hundreds of models, a truncated reply.
-
-That is useful exactly once — to see the old failure — and misleading afterwards.
-To probe what production now sends, reduce the body the same way first:
-
-```bash
-jq -c --argjson bound '["mistralai/mistral-large-2512","mistralai/ministral-14b-2512"]' \
-  '.data[] | select(.id as $i | $bound | index($i))' \
-  .tmp/aitask/fetch-openrouter.ai_api_v1_models.txt > .tmp/aitask/reduced.txt
-
-jq -n --rawfile t .tmp/aitask/reduced.txt \
-  '{provider:"openai_compatible",page_text:$t}' > .tmp/aitask/fx.json
-```
-
-The `passages` count on the request line is the quickest signal, but read it as a
-heuristic rather than a proof: a reduced catalog that matched exactly **one** bound
-model also yields one passage. Confirm by looking at the payload — the reduced form
-carries only the model ids you bound, the raw one carries every id the vendor lists.
-
-The reduction itself is covered by unit tests
-(`internal/compose/modelratecatalog_test.go`), not by the probe — so a probe of the
-raw catalog going red does **not** mean production is red.
-
 ### `--expect` is not optional for every site
 
 `--fixture` carries what production is given; `--expect` carries what you assert about the
@@ -160,7 +126,7 @@ reply. Several sites validate the expectation **before** calling the model —
 name no declared tool could reach. Those sites need `--expect` or `--scenario`:
 
 ```text
-failed    rate_extract/pricing: the expected answer is not a map of model id to its prices: unexpected end of JSON input
+failed    rate_extract/fx: the expected answer is not a map of currency code to its rate against the base: unexpected end of JSON input
           (no expectation was supplied; this site validates one — use --expect or --scenario)
 ```
 
@@ -169,16 +135,16 @@ That is the site's own message. The probe never invents an expectation to get pa
 ## 4. Read the report
 
 ```text
-site      rate_extract/pricing   kind=one_shot   scope=full_invocation
+site      rate_extract/fx   kind=one_shot   scope=full_invocation
 binding   model override anthropic:claude-sonnet-4-6   ladder [premium,cheap_cloud]
 caveat    company context not declared for this site
-fixture   589194 B
+fixture   241 B
 
 call 1
-  request   system 1182 B  payload 529955 B  passages 1  ~133k tok  max_tokens 8192  schema 588 B
-  response  in 175453 tok  out 8192 tok (HIT CAP)  20287 B  served=claude-sonnet-4-6  tier=premium  3m2.873s
+  request   system 1290 B  payload 268 B  passages 1  ~67 tok  max_tokens 1024  schema 402 B
+  response  in 702 tok  out 96 tok  388 B  served=claude-sonnet-4-6  tier=premium  2.114s
 
-evaluate  invalid — parse extraction: unexpected end of JSON input
+evaluate  accepted
 ```
 
 | line | what it tells you |
@@ -197,8 +163,7 @@ Three things worth knowing:
   at the ceiling looks identical to one that was cut off. It is printed as a flag beside the
   raw numbers, never as a claim about why the provider stopped — but a site whose answer
   scales with its input hits it long before anything else goes wrong.
-- **`~N tok` is `bytes/4`.** It under-reads by roughly a quarter on dense JSON (`~133k` above
-  against 175,453 billed). It exists to compare orders of magnitude against a context window
+- **`~N tok` is `bytes/4`.** It under-reads by roughly a quarter on dense JSON. It exists to compare orders of magnitude against a context window
   and an output cap, not to bill anyone.
 - **`served=` prefers what the provider said answered** over what the routing bound. A vendor
   that silently substitutes a model is exactly what a surprising result is explained by.
@@ -215,16 +180,16 @@ These are three different problems and the report keeps them apart:
 - **`wrong_answer`** — the validator ACCEPTED a well-formed reply that says something other
   than what you expected.
 
-`wrong_answer` frequently means **your expectation is wrong**, not the model's answer. When
-the OpenRouter fix was verified, the first run came back:
+`wrong_answer` frequently means **your expectation is wrong**, not the model's answer. A run
+against a euro-based page can come back:
 
 ```text
-evaluate  wrong_answer — cache-read 0.05 where the scenario expects cache-read 0
+evaluate  wrong_answer — "USD" is priced 0.9259259259 against the base where the scenario expects 1.08
 ```
 
-The catalog said `"input_cache_read":"0.00000005"` — 0.05 per MTok. The model had converted
-correctly and the hand-written expectation was wrong. Check the source before you blame the
-model.
+The page said `1 EUR = 1.08 USD`; the sheet stores one USD in euros, 0.9259259259. The
+reply and the site's anchor were right and the hand-written expectation, spelled in the
+page's direction, was wrong. Check the source before you blame the model.
 
 ## What a probe does not cover
 

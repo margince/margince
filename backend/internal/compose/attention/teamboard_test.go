@@ -10,6 +10,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -31,6 +32,46 @@ func (r roster) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, erro
 	return []TeamMember(r), false, nil
 }
 
+// cutRoster is the same reader answering at its cap. The bool is the interface's
+// own word for it, and that identity really sets it past the cap is held by
+// TestATeamLargerThanTheRosterCapIsReportedAsTruncated — what is unheld, and
+// what this double is for, is whether the worklist passes it on.
+type cutRoster []TeamMember
+
+func (r cutRoster) SharesLiveTeamWithCaller(context.Context, ids.UUID) (bool, error) {
+	return true, nil
+}
+
+func (r cutRoster) LiveTeammatesOfCaller(context.Context) ([]TeamMember, bool, error) {
+	return []TeamMember(r), true, nil
+}
+
+// A TEAM READ AGAINST A CAPPED ROSTER SAYS SO.
+//
+// The roster stops at its bound, so every row owned by a teammate past it is
+// dropped before the page is even ranked. The rows that survive are a perfectly
+// ordinary queue: nothing in them is short, wrong or marked, which is why the
+// page has to carry the admission itself.
+func TestTheTeamScopeReportsARosterThatCameBackAtItsCap(t *testing.T) {
+	t.Parallel()
+
+	svc := &Service{now: func() time.Time { return boardInstant }}
+	svc.teammates = cutRoster{{UserID: theColleague}}
+	rows := []ranked{{item: crmcontracts.WorklistItem{Id: "teammate"}, owner: theColleague}}
+
+	kept, note := svc.narrowToScope(boardReaderAt(principal.RowScopeTeam), rows, scopeTeam, ids.UUID{})
+	if len(kept) != 1 {
+		t.Fatalf("the capped roster kept %d row(s), want the teammate's own", len(kept))
+	}
+	if !note.truncated {
+		t.Error("a roster that came back at its cap was reported as a whole answer — " +
+			"the page then reads as the team's complete day")
+	}
+	if note.failed {
+		t.Error("a capped roster was reported as a failed one; the read answered, it just stopped short")
+	}
+}
+
 // waitingSaying is the who-is-waiting lane over a fixed list.
 type waitingSaying struct {
 	rows []WaitingCustomer
@@ -50,12 +91,18 @@ func (w waitingSaying) Unanswered(context.Context, time.Time) ([]WaitingCustomer
 // Nothing measured: these tests are about which rows the queue carries, and a
 // fake answering a response time would let a projection defect read as a
 // timing figure.
-func (w waitingSaying) Answered(context.Context, time.Time, time.Time) (AnsweredWork, error) {
+func (w waitingSaying) Answered(context.Context, time.Time, time.Time, LocalDays) (AnsweredWork, error) {
 	return AnsweredWork{}, nil
 }
 
 func (w waitingSaying) Hidden(context.Context, time.Time) (HiddenWork, error) {
 	return HiddenWork{Shown: len(w.rows)}, nil
+}
+
+// HiddenRows answers nothing: this fixture drives the team board, and a double
+// that returned rows would be asserting about a read the test never makes.
+func (w waitingSaying) HiddenRows(context.Context, time.Time, string) ([]WaitingCustomer, error) {
+	return nil, nil
 }
 
 // overdueSaying is the counting reader over a fixed tally.
@@ -65,10 +112,27 @@ func (o overdueSaying) OverduePerAssignee(context.Context, time.Time) (map[ids.U
 	return map[ids.UUID]int(o), nil
 }
 
+// boardService binds EVERY counting source, empty, and a case that cares about
+// one replaces it. The board refuses an unbound source outright — a required
+// column cannot draw absence, so a zero would read as a clear team — which
+// means a helper leaving one nil would make every case here a test of that
+// refusal rather than of the column it is about.
 func boardService(members ...TeamMember) *Service {
+	return boardServiceOver(roster(members))
+}
+
+// boardServiceOver is the same for a membership reader that is not a plain
+// roster — a cut one, or a lead-tier fixture. One place binds the sources, so a
+// fifth column added to the board does not leave a caller here reading as a
+// composition that dropped it.
+func boardServiceOver(teammates Teammates) *Service {
 	return &Service{
-		teammates: roster(members),
-		now:       func() time.Time { return boardInstant },
+		teammates:   teammates,
+		waiting:     waitingSaying{},
+		overdueLoad: overdueSaying{},
+		atRisk:      stubAtRisk{},
+		promiseLoad: &promisesSaying{per: map[ids.UUID]int{}},
+		now:         func() time.Time { return boardInstant },
 	}
 }
 
@@ -264,10 +328,7 @@ func TestTheAtRiskLanesOwnCutFlagDecidesRatherThanItsRowCount(t *testing.T) {
 func TestATeamLargerThanTheRosterCapIsReportedAsTruncated(t *testing.T) {
 	t.Parallel()
 
-	svc := &Service{
-		teammates: rosterCutAt{},
-		now:       func() time.Time { return boardInstant },
-	}
+	svc := boardServiceOver(rosterCutAt{})
 	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
 	if err != nil {
 		t.Fatalf("the board refused a team-scoped reader: %v", err)
@@ -351,8 +412,12 @@ func TestTheTeamScopeKeepsTheTeamsRowsAndNobodyElses(t *testing.T) {
 	}
 
 	kept := map[string]bool{}
-	for _, row := range svc.narrowToScope(boardReaderAt(principal.RowScopeTeam), rows, scopeTeam, ids.UUID{}) {
+	scoped, note := svc.narrowToScope(boardReaderAt(principal.RowScopeTeam), rows, scopeTeam, ids.UUID{})
+	for _, row := range scoped {
 		kept[row.item.Id] = true
+	}
+	if note.truncated || note.failed {
+		t.Errorf("a roster that answered whole reported a short answer: %+v", note)
 	}
 	if !kept["mine"] || !kept["teammate"] {
 		t.Errorf("the team scope dropped the reader's own or their teammate's row: %v", kept)
@@ -377,8 +442,15 @@ func TestTheTeamScopeFailsClosedWithoutTheMembershipReader(t *testing.T) {
 
 	svc := &Service{now: func() time.Time { return boardInstant }}
 	rows := []ranked{{item: crmcontracts.WorklistItem{Id: "somebody's"}, owner: theColleague}}
-	if got := svc.narrowToScope(boardReaderAt(principal.RowScopeTeam), rows, scopeTeam, ids.UUID{}); len(got) != 0 {
+	got, note := svc.narrowToScope(boardReaderAt(principal.RowScopeTeam), rows, scopeTeam, ids.UUID{})
+	if len(got) != 0 {
 		t.Fatalf("the team scope answered %d rows with no membership reader bound", len(got))
+	}
+	// The empty page has to SAY it is fail-closed. Silence here is the defect:
+	// a reader told their team has nothing cannot tell that from a roster that
+	// never answered.
+	if !note.failed {
+		t.Error("the team scope failed closed without reporting that it could not look")
 	}
 }
 
@@ -446,20 +518,46 @@ func TestTheBoardAsksAboutItsOwnRosterAndNoOneElse(t *testing.T) {
 	}
 }
 
-// An UNBOUND promise source leaves every count at zero, which is what the
-// contract now says: claims have a writer on every installation, so production
-// always binds this reader. Unbound is a test shape, not a deployment.
-func TestAnUnboundPromiseSourceLeavesTheColumnAtZero(t *testing.T) {
+// An UNBOUND source refuses the board rather than drawing a column of zeros.
+//
+// Every count on this board is `required` in the contract, so there is no way to
+// draw absence: an unbound reader's column arrives as zero, and zero is the
+// answer "they are clear". A source dropped from the composition would tell a
+// lead their team is up to date — the one thing this surface exists to stop
+// getting wrong, and the same reasoning the failing-source cases below follow.
+//
+// Derived from the four sources rather than written out once per column, so a
+// fifth added to the board without its guard fails here.
+func TestAnUnboundSourceRefusesRatherThanDrawingAColumnOfZeros(t *testing.T) {
 	t.Parallel()
 
-	svc := boardService(TeamMember{UserID: theReader, DisplayName: "Aa Reader"})
-
-	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
-	if err != nil {
-		t.Fatalf("the board refused a team-scoped reader: %v", err)
+	unbind := map[string]func(*Service){
+		"waiting":      func(s *Service) { s.waiting = nil },
+		"overdue":      func(s *Service) { s.overdueLoad = nil },
+		"at_risk":      func(s *Service) { s.atRisk = nil },
+		"promises_due": func(s *Service) { s.promiseLoad = nil },
 	}
-	if got := board.Members[0].Counts.PromisesDue; got != 0 {
-		t.Fatalf("an unread source drew %d, wanted 0", got)
+	full := boardService(TeamMember{UserID: theReader, DisplayName: "Aa Reader"})
+	if got := full.UnboundBoardSources(); len(got) > 0 {
+		t.Fatalf("the fully bound fixture reports %v unbound — every case below would pass "+
+			"on the wrong refusal", got)
+	}
+	for column, drop := range unbind {
+		t.Run(column, func(t *testing.T) {
+			t.Parallel()
+
+			svc := boardService(TeamMember{UserID: theReader, DisplayName: "Aa Reader"})
+			drop(svc)
+
+			_, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
+			if err == nil {
+				t.Fatal("the board was served with a source the composition never bound")
+			}
+			if !strings.Contains(err.Error(), column) {
+				t.Errorf("refusing an unbound %s reader said %q — a reader has to be told "+
+					"which column went missing", column, err)
+			}
+		})
 	}
 }
 
@@ -483,4 +581,81 @@ func (promisesFailing) DuePerOwner(
 	context.Context, []ids.UUID, time.Time,
 ) (map[ids.UUID]int, error) {
 	return nil, errors.New("counting promises due")
+}
+
+// THE ADMISSION REACHES THE PAGE, not just the narrowing that made it.
+//
+// The note is internal; what a reader gets is the response. A capped roster
+// that stopped at the filter would leave the page looking exactly as complete
+// as it does when the whole team answered.
+func TestAWorklistOverACappedRosterSaysTheScopeWasCut(t *testing.T) {
+	t.Parallel()
+
+	svc := &Service{now: func() time.Time { return boardInstant }}
+	svc.teammates = cutRoster{{UserID: theColleague}}
+	page := svc.worklistFrom(
+		boardReaderAt(principal.RowScopeTeam), crmcontracts.Attention{AsOf: boardInstant},
+		scopeTeam, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	if page.ScopeTruncated == nil || !*page.ScopeTruncated {
+		t.Error("a team page answered over a capped roster does not say its scope was cut")
+	}
+}
+
+// A whole roster makes no claim at all, so the field cannot become something
+// every team page carries regardless.
+func TestAWorklistOverAWholeRosterClaimsNoTruncation(t *testing.T) {
+	t.Parallel()
+
+	svc := &Service{now: func() time.Time { return boardInstant }}
+	svc.teammates = roster{{UserID: theColleague}}
+	page := svc.worklistFrom(
+		boardReaderAt(principal.RowScopeTeam), crmcontracts.Attention{AsOf: boardInstant},
+		scopeTeam, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	if page.ScopeTruncated != nil {
+		t.Errorf("a team page over a whole roster claims scope_truncated=%v", *page.ScopeTruncated)
+	}
+}
+
+// A roster that did not answer is NAMED, rather than folded into the empty page
+// it produced: the narrowing fails closed, so "nothing" and "I could not look"
+// are the same list without it.
+func TestAWorklistWhoseRosterDidNotAnswerNamesTheRefusal(t *testing.T) {
+	t.Parallel()
+
+	svc := &Service{now: func() time.Time { return boardInstant }}
+	page := svc.worklistFrom(
+		boardReaderAt(principal.RowScopeTeam), crmcontracts.Attention{AsOf: boardInstant},
+		scopeTeam, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	var named bool
+	for _, missing := range page.SourcesUnavailable {
+		if missing.Source == teamRosterSource && missing.Reason == crmcontracts.WorklistSourceUnavailableReasonFailed {
+			named = true
+		}
+	}
+	if !named {
+		t.Error("a team page whose roster never answered reports an empty day and no refusal")
+	}
+}
+
+// The roster refusal carries NO category, which is what makes it mark the whole
+// page. Categorised it would fall to `system` — the default for a source this
+// map does not know — and tell the reader their system lane was short while
+// every other figure read as exact over a team nobody could enumerate.
+func TestTheRosterRefusalNamesNoCategory(t *testing.T) {
+	t.Parallel()
+
+	svc := &Service{now: func() time.Time { return boardInstant }}
+	page := svc.worklistFrom(
+		boardReaderAt(principal.RowScopeTeam), crmcontracts.Attention{AsOf: boardInstant},
+		scopeTeam, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	for _, missing := range page.SourcesUnavailable {
+		if missing.Source != teamRosterSource {
+			continue
+		}
+		if missing.Category != nil {
+			t.Errorf("the roster refusal is filed under %q, so only that strip is marked", *missing.Category)
+		}
+		return
+	}
+	t.Fatal("the roster refusal is missing entirely")
 }

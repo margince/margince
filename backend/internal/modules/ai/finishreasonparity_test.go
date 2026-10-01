@@ -183,7 +183,18 @@ func finishWires(t *testing.T) map[string]finishWire {
 func (w finishWire) client(t *testing.T, body string) (model.Client, func() []string) {
 	t.Helper()
 	handler, received := replyWith(t, w.contentType, body)
-	srv := httptest.NewServer(handler)
+	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Ollama's adapter asks /api/show what the model accepts for `think`
+		// before its first chat call. That is not a request the retry sent, so it
+		// is answered here and kept out of what the test reads back.
+		if r.URL.Path == "/api/show" {
+			if _, err := rw.Write([]byte(`{"capabilities":["completion"]}`)); err != nil {
+				t.Errorf("writing fixture reply: %v", err)
+			}
+			return
+		}
+		handler(rw, r)
+	}))
 	t.Cleanup(srv.Close)
 	client, err := selectLocalBrain(ProviderConfig{Provider: w.provider, BaseURL: srv.URL, Model: "m"}, allCloudKeys(t))
 	if err != nil {
@@ -264,7 +275,7 @@ func TestEveryAdapterEngagesTheBrieferRetryOnACutOffReply(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			client, received := wire.client(t, wire.truncated(partialAnswer))
 			r := testRouter(map[Tier]model.Client{TierCheapCloud: client, TierPremium: client},
-				&memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
+				&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 			req := structuredReq()
 			req.MaxTokens = wire.maxTokens
 

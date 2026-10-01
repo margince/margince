@@ -145,6 +145,7 @@ func (t listApprovalsTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: listApprovalsToolName, Title: "List what is waiting for a decision", Version: toolVersionV1,
 		Description:   listApprovalsCopy.render(),
+		Instead:       listApprovalsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listApprovals",
 		InputSchema: schema(`{"type":"object","properties":{
@@ -193,6 +194,7 @@ func (t readApprovalTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_approval", Title: "Read one staged action in full", Version: toolVersionV1,
 		Description:   readApprovalCopy.render(),
+		Instead:       readApprovalCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getApproval",
 		InputSchema: schema(`{"type":"object","required":["staged_action_id"],"properties":{
@@ -235,12 +237,13 @@ func (t decideApprovalTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "decide_approval", Title: "Approve or reject one staged action", Version: toolVersionV1,
 		Description:   decideApprovalCopy.render(),
+		Instead:       decideApprovalCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "approveApproval/rejectApproval",
 		InputSchema: schema(`{"type":"object","required":["staged_action_id","decision"],"properties":{
 			"staged_action_id":{"type":"string","format":"uuid","description":"From list_approvals."},
 			"decision":{"type":"string","enum":["approve","reject"]},
-			"reason":{"type":"string","description":"Why, in the deciding contact's words. Recorded with the decision."}},
+			"reason":{"type":"string","description":"Why, in the decider's own words. Recorded with the decision."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[StagedApproval](),
 	}
@@ -280,12 +283,13 @@ func (t decideBundleTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "decide_approval_bundle", Title: "Approve or reject one act's proposals together", Version: toolVersionV1,
 		Description:   decideBundleCopy.render(),
+		Instead:       decideBundleCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "approveApprovalBundle/rejectApprovalBundle",
 		InputSchema: schema(`{"type":"object","required":["bundle_id","decision"],"properties":{
 			"bundle_id":{"type":"string","format":"uuid"},
 			"decision":{"type":"string","enum":["approve","reject"]},
-			"reason":{"type":"string","description":"Why, in the deciding contact's words. Recorded against every member."}},
+			"reason":{"type":"string","description":"Why, in the decider's own words. Recorded against every member."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[decideBundleAnswer](),
 	}

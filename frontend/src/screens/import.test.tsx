@@ -324,7 +324,7 @@ describe("the import card", () => {
       screen.getByRole("button", { name: "Import 2 rows" }),
     );
 
-    expect(await screen.findByText(/stopped after 2 rows/)).toBeInTheDocument();
+    expect(await screen.findByText(/Rows processed: 2\./)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Resume import" }),
     ).toBeInTheDocument();
@@ -714,7 +714,7 @@ describe("the import card", () => {
 
       const dialog = await screen.findByRole("dialog");
       expect(
-        within(dialog).getByText(/stopped after 2 rows/),
+        within(dialog).getByText(/Rows processed: 2\./),
       ).toBeInTheDocument();
       expect(
         within(dialog).getByRole("button", { name: "Resume import" }),

@@ -25,10 +25,11 @@ import {
   sourceComplete,
 } from "./brief.facts";
 import {
-  boundedCategories,
   DECISIONS,
   decisionsBlocking,
+  floorTest,
   LEADS,
+  scopeWasCut,
 } from "./brief.readings.honesty";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
 import type {
@@ -214,12 +215,9 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   // the server maps a source to its lane. Re-deriving that here would be a
   // second copy of it, so an unavailable lane marks the whole strip — which
   // over-marks rather than calling a figure exact over work nobody could see.
-  const bounded = boundedCategories(day);
-  const unread = day.sources_unavailable.length > 0;
-  const floorOf = (category: string): boolean =>
-    day.sources_unavailable.some(
-      (entry) => entry.category === category || !entry.category,
-    ) || bounded.has(category);
+  const scopeCut = scopeWasCut(day);
+  const unread = day.sources_unavailable.length > 0 || scopeCut;
+  const floorOf = floorTest(day);
   return (
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
       <StatStrip testId="brief-readings">
@@ -259,6 +257,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // it begins. The count of meetings itself is neither good nor bad.
           warning={meetings.unready !== null && meetings.unready > 0}
           floor={
+            scopeCut ||
             day.reach?.find((entry) => entry.source === "meeting")
               ?.more_available ||
             day.sources_unavailable.some(

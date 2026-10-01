@@ -27,27 +27,26 @@ expect:
   outcome: accepted
   answer: plain
   rubric: >
-    The message being answered is 241 days old, and the draft must be written
-    as though eight months have passed, because they have.
+    The message being answered is 241 days old; the draft is written BY Anna
+    Krüger TO Priya, as though eight months have passed, because they have.
 
-    Floor the draft if it greets or signs off to the wrong party. It is written
-    BY Anna Krüger TO Priya: a draft that opens "Hi Anna" is addressed to its own
-    author, whatever else it gets right.
+    Full marks (100): the draft says in one plain clause that time has passed,
+    names what the earlier exchange was about in its own words, and asks
+    whether the project is still live.
 
-    Floor the draft if it assumes shared memory of the earlier exchange:
-    "just circling back", "as discussed", "as promised", "following up on our
-    conversation" or any phrasing that treats the December walkthrough as
-    something the recipient still has in mind. The recipient has had eight
-    months of other work; a draft that assumes otherwise reads as a template.
+    Floor (40 or below), each on its own: it greets or signs off to Anna rather
+    than Priya; it gestures at the exchange without naming it ("just circling
+    back", "as discussed", "as promised", "our conversation"); or it asserts
+    what has happened since — that the budget round closed, that the project
+    moved — none of which is in the supplied data.
 
-    Floor it too if it asserts anything about what has happened since — whether
-    the budget round closed, whether the project moved — none of which is in the
-    supplied data.
+    Naming is correct, never a fault: "since we last spoke about the
+    integration timeline", the walkthrough, and their plan to revisit after the
+    budget round all name the exchange.
 
-    Full marks for a draft that names what the earlier conversation was about
-    rather than referring to it, acknowledges the elapsed time without
-    apologising at length, and asks whether the project is still live. Asking
-    rather than assuming is the correct behaviour here.
+    Deductions, at most 10 points each: an apology for the gap longer than a
+    clause (-10); a wellbeing opener (-10); a question that needs the history
+    reconstructed before it can be answered (-5).
   bands:
     certified_min: 70
     degraded_min: 50

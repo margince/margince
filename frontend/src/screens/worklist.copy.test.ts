@@ -383,6 +383,54 @@ describe("itemTitle — an incident names what broke, never an internal id", () 
   });
 });
 
+describe("itemTitle — a group counts in the reader's plural", () => {
+  const group = (
+    key: NonNullable<WorklistItem["batch"]>["key"],
+    count: number,
+  ): WorklistItem => ({
+    id: "g-1",
+    source: "automation_run",
+    level: 3,
+    category: "system",
+    title: "",
+    because: [],
+    consequence: "none",
+    actions: [],
+    batch: { key, count, label: "Recap draft" },
+  });
+
+  it.each([
+    ["duplicates", 1, "1 possible duplicate"],
+    ["duplicates", 3, "3 possible duplicates"],
+    ["system_incident", 1, "Recap draft failed 1 time"],
+    ["system_incident", 3, "Recap draft failed 3 times"],
+    ["company_match", 1, "1 address at a company you know"],
+    ["company_match", 3, "3 addresses at companies you know"],
+    ["held_draft", 1, "1 draft waiting to send"],
+    ["held_draft", 3, "3 drafts waiting to send"],
+    ["likely_automated", 1, "1 likely automated sender"],
+    ["likely_automated", 3, "3 likely automated senders"],
+    ["uncertain_contact", 1, "1 address to review"],
+    ["uncertain_contact", 3, "3 addresses to review"],
+  ] as const)("titles a %s group of %i", (key, count, title) => {
+    expect(itemTitle(group(key, count), t, "en")).toBe(title);
+  });
+
+  // A kind a newer server minted arrives through the wire untyped, which is
+  // exactly how the client meets it: named by its label, or generically.
+  it.each([
+    ["Four deals to advance", "Four deals to advance"],
+    [undefined, "Routine items to review"],
+  ])("titles a kind this build has no pair for by %s", (label, title) => {
+    const wire = JSON.stringify({
+      ...group("duplicates", 4),
+      batch: { key: "brief_pile", count: 4, label },
+    });
+    const skewed: WorklistItem = JSON.parse(wire);
+    expect(itemTitle(skewed, t, "en")).toBe(title);
+  });
+});
+
 describe("an unavailable source", () => {
   // All three shipped locales, because the frame is a per-language decision and
   // a check that reads only English proves the rule for the one translator who

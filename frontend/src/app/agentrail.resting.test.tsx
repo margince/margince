@@ -59,7 +59,8 @@ function said(line: SpokenLine): string {
  * missing from the catalog with every case here still green — the link would
  * simply stop being a link.
  */
-const t = (key: MessageKey) => translate("en", key);
+const t = (key: MessageKey, params?: Record<string, string>) =>
+  translate("en", key, params);
 
 afterEach(() => {
   cleanup();
@@ -163,15 +164,27 @@ describe("restingReadings", () => {
 
 describe("restingTips", () => {
   it("offers every tip in the catalog on a screen none of them names", () => {
-    expect(restingTips("deals", t)).toHaveLength(TIPS.length);
+    expect(restingTips("deals", t, "Win32")).toHaveLength(TIPS.length);
   });
 
   // A rail telling somebody on Home to go to Home is the one line that would
   // cost it the other three.
   it("drops the tip that names the screen the reader is standing on", () => {
-    const here = restingTips("home", t).map((line) => line.subject?.route);
+    const here = restingTips("home", t, "Win32").map(
+      (line) => line.subject?.route,
+    );
     expect(here).not.toContainEqual({ screen: "home" });
     expect(here).toHaveLength(TIPS.length - 1);
+  });
+
+  // The palette's shortcut is named in the keys the reader's keyboard has: a
+  // Windows reader told to press ⌘ is told to press a key that is not there.
+  it("names the palette's shortcut the way this keyboard spells it", () => {
+    const lines = restingTips("deals", t, "Win32").map(said);
+    expect(lines).toContain("Ask the agent with Ctrl K.");
+    expect(lines.join(" ")).not.toContain("⌘");
+    const mac = restingTips("deals", t, "MacIntel").map(said);
+    expect(mac).toContain("Ask the agent with ⌘ K.");
   });
 
   /**
@@ -192,7 +205,11 @@ describe("restingTips", () => {
   it.each(LOCALES)(
     "keeps every tip inside the rail's two lines in %s",
     (locale) => {
-      const tips = restingTips("deals", (key) => translate(locale, key));
+      const tips = restingTips(
+        "deals",
+        (key, params) => translate(locale, key, params),
+        "Win32",
+      );
       expect(tips.map(said).filter((line) => line.length > CEILING)).toEqual(
         [],
       );
@@ -414,9 +431,7 @@ describe("the rail's resting line", () => {
     await waitFor(() =>
       expect(shown(container)).toBe(en["agent.line.allClear"]),
     );
-    const tips = restingTips("companies", (key) => translate("en", key)).map(
-      said,
-    );
+    const tips = restingTips("companies", t, navigator.platform).map(said);
     await act(async () => {
       vi.advanceTimersByTime(7_000);
     });

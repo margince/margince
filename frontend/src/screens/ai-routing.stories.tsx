@@ -3,10 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { status } from "./ai-admin.testkit";
 import { AiRoutingCard } from "./ai-routing";
 import { AdapterFields, EmbeddingWidthField } from "./ai-routing-fields";
+import { TiersTable } from "./ai-routing-lane";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The installation's tier→model binding: which vendor serves each cost rung,
@@ -38,6 +40,18 @@ const BOUND = {
     frontier: { provider: "gemini", model: "gemini-3.1-pro-preview" },
   },
   embeddings: { provider: "gemini", model: "gemini-embedding-001" },
+};
+
+// Every bound rung answering, the state a working installation is in.
+const HEALTH: components["schemas"]["AiHealth"] = {
+  window_hours: 1,
+  rungs: Object.keys(BOUND.tiers).map((tier) => ({
+    tier,
+    healthy: true,
+    calls: 12,
+    failures: 0,
+    median_latency_ms: 840,
+  })),
 };
 
 // What the price sheet can cost a call on, and what each VENDOR says it serves.
@@ -97,6 +111,7 @@ const VENDOR_LIST: Record<string, unknown> = {
     ],
   },
   anthropic: { provider: "anthropic", models: [], unavailable: "no_key" },
+  vllm: { provider: "vllm", models: [], unavailable: "unreachable" },
 };
 
 const VERTEX_LOCATIONS = {
@@ -133,6 +148,7 @@ function story(
   routing: unknown,
   allow: GrantSpec = MANAGER,
   vendors: Record<string, unknown> = VENDOR_LIST,
+  aiStatus: unknown = status,
 ) {
   return () => {
     installFetchStub({
@@ -142,13 +158,8 @@ function story(
         response.headers.set("ETag", '"routing-v1"');
         return response;
       },
-      "GET /ai/status": () => jsonResponse(status),
-      "POST /ai/routing/preview": () =>
-        jsonResponse({
-          current_version: "routing-v1",
-          features: status.features,
-          unused_tiers: ["frontier"],
-        }),
+      "GET /ai/status": () => jsonResponse(aiStatus),
+      "GET /ai/health": () => jsonResponse(HEALTH),
       "GET /ai-model-rates": () => jsonResponse({ data: SHEET }),
       "GET /ai/provider-locations/gemini_vertex": () =>
         jsonResponse(VERTEX_LOCATIONS),
@@ -191,9 +202,9 @@ function story(
 }
 
 const meta: Meta<typeof AiRoutingCard> = {
-  title: "Settings/AI/Models and routing/Model routing",
+  title: "Settings/AI/AI models/Model tiers",
   component: AiRoutingCard,
-  subcomponents: { AdapterFields, EmbeddingWidthField },
+  subcomponents: { AdapterFields, EmbeddingWidthField, TiersTable },
 };
 export default meta;
 type Story = StoryObj<typeof AiRoutingCard>;
@@ -258,40 +269,63 @@ export const BoundDark: Story = {
   render: story(BOUND),
 };
 
-export const AdvancedBindings: Story = {
+// One lane's editor, open: provider, model and the vendor's own list. It owns
+// that one binding and saves it alone.
+export const EditingATier: Story = {
   render: story(BOUND),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByText(/advanced.*shared.*bindings/i),
-    );
-    await userEvent.click(
-      canvas.getAllByRole("button", { name: /change/i })[0],
+      (await canvas.findAllByRole("button", { name: /^edit$/i }))[0],
     );
   },
 };
 
-// Every lane on Gemini on Vertex at the EU multi-region, under the enforced
-// EU profile. Open a lane: the Location list refuses London and the US.
-export const VertexEuResident: Story = {
+// Every lane on Gemini on Vertex at an EU location, under eu_hosted. Edit a
+// lane: the Location list refuses London and the US.
+export const VertexEuHosted: Story = {
   render: story({
-    profile: "eu_resident",
+    profile: "eu_hosted",
     tiers: {
       cheap_cloud: {
         provider: "gemini_vertex",
-        model: "gemini-3.5-flash",
+        model: "gemini-3.1-flash-lite",
         location: "eu",
       },
       premium: {
         provider: "gemini_vertex",
         model: "gemini-3.5-flash",
-        location: "europe-west4",
+        location: "eu",
       },
     },
     embeddings: {
       provider: "gemini_vertex",
       model: "gemini-embedding-001",
-      location: "eu",
+      location: "europe-west4",
     },
+  }),
+};
+
+// A decision model bound in front of the ladder. The row offers only the
+// adapters that answer a decision, and says where the bound one processes text
+// from the server's own reading.
+const DECISION = {
+  provider: "jev_compatible",
+  model: "typesafe/jev-1.13",
+  base_url: "https://openrouter.ai/api/alpha/decisions",
+};
+export const DecisionModel: Story = {
+  render: story({ ...BOUND, decisions: DECISION }, MANAGER, VENDOR_LIST, {
+    ...status,
+    features: status.features.map((feature) => ({
+      ...feature,
+      decision_first: true,
+      decision_candidate: {
+        tier: "decide",
+        provider: DECISION.provider,
+        model: DECISION.model,
+        processing: "cloud_provider",
+      },
+    })),
   }),
 };

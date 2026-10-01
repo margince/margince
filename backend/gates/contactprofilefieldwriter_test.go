@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -77,7 +76,6 @@ func TestEveryProfileFieldWriteUsesTheOneWriter(t *testing.T) {
 	// been folded in, and leaving it quietly re-exempts whatever takes its name.
 	defer bulkRelinkIsNotAFill.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
 	var findings []string
 	judged := 0
 	for _, path := range handWrittenGoSources(t) {
@@ -94,7 +92,7 @@ func TestEveryProfileFieldWriteUsesTheOneWriter(t *testing.T) {
 		if strings.HasSuffix(filepath.Base(path), "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -213,7 +211,7 @@ func TestOnlyACarryOverIsRatifiedInTheMergeRelink(t *testing.T) {
 
 func TestTheProfileFieldWriteDetectorSeesWhatItClaimsTo(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, tc := range contactProfileFieldProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			file, err := parser.ParseFile(fset, "probe.go", "package probe\n"+tc.src, 0)

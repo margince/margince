@@ -103,7 +103,7 @@ func setupFixture(t *testing.T) fixture {
 func (f fixture) createTextField(t *testing.T, label string) (column string, id ids.UUID) {
 	t.Helper()
 	field, err := f.svc.Create(f.ctx, customfieldsmod.FieldSpec{
-		Object: "contact", Label: label, Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: label, Type: customfieldsmod.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("defining %q: %v", label, err)
@@ -134,7 +134,7 @@ func assertSoleMember(t *testing.T, f fixture, listID ids.ListID, want ids.UUID)
 func (f fixture) defineField(t *testing.T, spec customfieldsmod.FieldSpec) string {
 	t.Helper()
 	spec.Object = "contact"
-	spec.Source = "ui"
+	spec.Source = "manual"
 	field, err := f.svc.Create(f.ctx, spec)
 	if err != nil {
 		t.Fatalf("defining %q: %v", spec.Label, err)
@@ -314,7 +314,7 @@ func TestADynamicListFiltersOnACustomFieldValue(t *testing.T) {
 func TestAProjectCustomFieldIsFilterable(t *testing.T) {
 	f := setupFixture(t)
 	field, err := f.svc.Create(f.ctx, customfieldsmod.FieldSpec{
-		Object: "project", Label: "Engagement Model", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "project", Label: "Engagement Model", Type: customfieldsmod.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("defining the project field: %v", err)

@@ -5,6 +5,7 @@ package contactbrief
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -47,5 +48,34 @@ func TestASentenceCitingTheContactSurvivesGrounding(t *testing.T) {
 	if len(kept) == 0 {
 		t.Fatal("a sentence citing the contact by the id the summary supplied was dropped, so no " +
 			"model-written sentence about this contact can ever survive")
+	}
+}
+
+var summaryID = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
+
+// Every id the summary shows the model is one a sentence may cite. An id the
+// filter refuses is an invitation to a citation that is silently dropped, so
+// the census reads the encoded payload rather than a list of its fields.
+func TestEveryIDTheSummaryCarriesIsCitable(t *testing.T) {
+	t.Parallel()
+	in := inputFixture()
+	in.ID = briefContactID
+	in.Moment = &MomentIn{Rule: "unanswered_objection", Headline: "An objection waits.", Sources: []string{objectionID}}
+	payload, err := json.Marshal(in)
+	if err != nil {
+		t.Fatalf("encoding the summary: %v", err)
+	}
+	citable := map[string]bool{}
+	for record := range knownRecords(briefContactID, in) {
+		citable[record.EntityID] = true
+	}
+	found := summaryID.FindAllString(string(payload), -1)
+	if len(found) == 0 {
+		t.Fatal("the summary carries no id at all, so this census reads nothing")
+	}
+	for _, id := range found {
+		if !citable[id] {
+			t.Errorf("the summary carries %s, which no citation the filter accepts can name", id)
+		}
 	}
 }

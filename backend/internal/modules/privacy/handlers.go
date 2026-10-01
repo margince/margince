@@ -91,6 +91,10 @@ func (h Handlers) ListAuditLog(w http.ResponseWriter, r *http.Request, params cr
 		entityID := ids.UUID(*params.EntityId)
 		f.EntityID = &entityID
 	}
+	if params.BatchId != nil {
+		batchID := ids.UUID(*params.BatchId)
+		f.BatchID = &batchID
+	}
 
 	page, err := ListAuditLog(r.Context(), h.db, f)
 	if err != nil {
@@ -137,6 +141,10 @@ func auditEntryToWire(e AuditEntry) (crmcontracts.AuditLogEntry, error) {
 		id := openapi_types.UUID(e.OnBehalfOf.UUID)
 		out.OnBehalfOf = &id
 	}
+	if e.BatchID != nil {
+		id := openapi_types.UUID(*e.BatchID)
+		out.BatchId = &id
+	}
 	// entity_id is NOT NULL since 0075 (audit_log is record-mutations-only);
 	// the contract field is non-optional to match. The domain read model
 	// still carries a pointer for historical rows, so guard defensively.
@@ -167,4 +175,10 @@ func decodeJSONObject(raw []byte) (*map[string]interface{}, error) {
 		return nil, err
 	}
 	return &m, nil
+}
+
+// WithPayloadVault lets destructive actions retire sealed booking capabilities.
+func (s Handlers) WithPayloadVault(payloads PayloadPurger) Handlers {
+	s.eraser = s.eraser.WithPayloadVault(payloads)
+	return s
 }

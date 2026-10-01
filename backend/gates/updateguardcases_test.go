@@ -20,9 +20,10 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // marker is the write every case either sends or does not. Shared by all of
@@ -264,7 +265,7 @@ func TestTheGuardCensusJudgesEveryStatementAFunctionAnswersFor(t *testing.T) {
 	t.Parallel()
 	for _, tc := range statementReadingCases {
 		t.Run(tc.name, func(t *testing.T) {
-			fset := token.NewFileSet()
+			fset := gatekit.SourceFileSet()
 			file, err := parser.ParseFile(fset, "synthetic.go", tc.source, 0)
 			if err != nil {
 				t.Fatalf("parsing the case source: %v", err)

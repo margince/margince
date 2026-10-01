@@ -12,11 +12,11 @@ func TestGeneratedDeclarationAccessors(t *testing.T) {
 	if got := Status(TaskCaptureCounterpartyVerdict); got != StatusShipped {
 		t.Errorf("Status(verdict) = %q, want %q", got, StatusShipped)
 	}
-	// nl_search stands in for the planned half of the table. summarize and
-	// deal_health each used to: both shipped, which is exactly the
-	// transition this accessor exists to report.
-	if got := Status(TaskNlSearch); got != StatusPlanned {
-		t.Errorf("Status(nl_search) = %q, want %q", got, StatusPlanned)
+	// transcript stands in for the planned half of the table. summarize,
+	// deal_health and nl_search each used to: all three shipped, which is
+	// exactly the transition this accessor exists to report.
+	if got := Status(TaskTranscript); got != StatusPlanned {
+		t.Errorf("Status(transcript) = %q, want %q", got, StatusPlanned)
 	}
 	if !NoPayload(TaskCaptureCounterpartyVerdict) {
 		t.Error("NoPayload(verdict) = false; the contract pins it true")
@@ -26,8 +26,8 @@ func TestGeneratedDeclarationAccessors(t *testing.T) {
 	}
 
 	rate := SitesFor(TaskRateExtract)
-	if len(rate) != 2 || rate[0].Name != "pricing" || rate[1].Name != "fx" {
-		t.Fatalf("SitesFor(rate_extract) = %+v, want pricing then fx", rate)
+	if len(rate) != 1 || rate[0].Name != "fx" {
+		t.Fatalf("SitesFor(rate_extract) = %+v, want the fx site alone", rate)
 	}
 	if rate[0].Kind != SiteKindOneShot {
 		t.Errorf("a bare site got kind %q, want %q", rate[0].Kind, SiteKindOneShot)
@@ -43,7 +43,7 @@ func TestGeneratedDeclarationAccessors(t *testing.T) {
 			t.Errorf("agent_loop site %q has kind %q", site.Name, site.Kind)
 		}
 	}
-	if got := SitesFor(TaskNlSearch); len(got) != 0 {
+	if got := SitesFor(TaskTranscript); len(got) != 0 {
 		t.Errorf("a planned task declares sites: %+v", got)
 	}
 

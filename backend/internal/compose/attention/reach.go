@@ -33,7 +33,11 @@ func reachOf(considered, shown []ranked, bounds map[crmcontracts.WorklistItemSou
 		if row, ok := seen[source]; ok {
 			return row
 		}
-		row := &crmcontracts.WorklistReach{Source: crmcontracts.WorklistReachSource(source), MoreAvailable: bounds[source]}
+		personal := sourceAnswersForTheActorOnly[source]
+		row := &crmcontracts.WorklistReach{
+			Source: crmcontracts.WorklistReachSource(source), MoreAvailable: bounds[source],
+			Personal: &personal,
+		}
 		seen[source] = row
 		order = append(order, source)
 		return row
@@ -174,7 +178,7 @@ func categoryOfSource(source crmcontracts.WorklistItemSource) crmcontracts.Workl
 		return "meetings"
 	case sourceTask, sourceWeeklyCommitment, "conversation_claim":
 		return "tasks"
-	case "approval", sourceDuplicate, "introduction_request":
+	case "approval", sourceDuplicate, sourceDealSuggestion, "introduction_request":
 		// An introduction ask is a colleague waiting on this reader to decide,
 		// which classifyIntroduction files under decisions at levelBlocking.
 		// It reached the default and was reported as `system` — so a truncated

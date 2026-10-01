@@ -59,6 +59,7 @@ function Record() {
   const details = usePageAside();
   return (
     <RecordView
+      identity="r-1"
       name="Brandt Automotive GmbH"
       zone="UTC"
       tabs={
@@ -74,7 +75,7 @@ function Record() {
       asideOpen={details.open}
     >
       <Panel title={en["co.commercial.title"]}>
-        <PanelBody>{en["co.work.noDeals"]}</PanelBody>
+        <PanelBody>{en["co.deals.empty"]}</PanelBody>
       </Panel>
     </RecordView>
   );
@@ -85,6 +86,7 @@ function Record() {
 function PlainRecord() {
   return (
     <RecordView
+      identity="r-1"
       name="Brandt Automotive GmbH"
       zone="UTC"
       tabs={
@@ -98,7 +100,7 @@ function PlainRecord() {
       }
     >
       <Panel title={en["co.commercial.title"]}>
-        <PanelBody>{en["co.work.noDeals"]}</PanelBody>
+        <PanelBody>{en["co.deals.empty"]}</PanelBody>
       </Panel>
     </RecordView>
   );

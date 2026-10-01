@@ -87,8 +87,15 @@ func TestAICertificationPage(t *testing.T) {
 		aicert.Census{Sites: census.All(), Scopes: census.Scopes()}, stamps, perScenario, records,
 	)
 
+	_, decisionRows, err := aicert.DecisionCertTable(corpus, census, records)
+	if err != nil {
+		t.Fatalf("reading the decision records against this build: %v", err)
+	}
+
 	doc := buildAICertDoc(rows, unclaimed, corpus, records)
+	doc.Decisions = buildAICertDecisions(decisionRows)
 	doc.Presets = attributeAICertPresets(loadAICertPresets(t), doc, records)
+	doc.Families = buildAICertFamilies(doc, rows)
 	assertAICertDocCoversEverything(t, doc, rows, corpus, records)
 	assertAICertPresetsAreAttributed(t, doc.Presets, doc)
 	assertAICertPresetsReadTheRecords(t, doc.Presets, records)
@@ -101,6 +108,7 @@ func TestAICertificationPage(t *testing.T) {
 	assertAICertPageCoversEverything(t, string(page), doc)
 	assertAICertThresholdsStateTheRule(t, string(page), corpus)
 	assertAICertPresetSectionsCount(t, string(page), doc.Presets)
+	assertAICertFamiliesCoverEveryRecord(t, doc, string(page))
 	syncAICertFile(t, aiCertJSON, encoded)
 	syncAICertFile(t, aiCertPage, page)
 }
@@ -174,6 +182,9 @@ func assertAICertRecordsAllAccountedFor(t *testing.T, doc aiCertDoc, records []a
 	for _, rec := range doc.Unclaimed {
 		shown[rec.Task+"/"+rec.Binding.Provider+"/"+rec.Binding.Model+"/"+rec.Binding.Env] = true
 	}
+	for _, d := range doc.Decisions {
+		shown[decisionRecordKey(d)] = true
+	}
 	for _, rec := range records {
 		if !shown[aicert.RecordKey(rec)] {
 			t.Errorf("committed record %s is counted in the totals but appears in no table", aicert.RecordKey(rec))
@@ -193,7 +204,7 @@ func assertAICertCoverageMatchesTheLibrary(t *testing.T, doc aiCertDoc, rows []a
 	rendered := map[string]string{}
 	for _, site := range doc.Sites {
 		for _, rec := range site.Records {
-			rendered[site.Key+" "+rec.Binding.label()] = coverageCell(rec)
+			rendered[site.Key+" "+rec.siteLabel()] = coverageCell(rec)
 		}
 	}
 	for _, row := range rows {
@@ -246,10 +257,12 @@ func assertAICertPageCoversEverything(t *testing.T, page string, doc aiCertDoc) 
 func renderAICertPage(doc aiCertDoc, verdictRule string, bars []aiCertQualityBar) []byte {
 	var page strings.Builder
 	writeAICertHead(&page)
+	writeAICertFamilySummary(&page, doc.Families)
 	writeAICertPresetSummary(&page, doc.Presets)
 	writeAICertGrading(&page, verdictRule, doc.Totals.SelfJudged, bars)
 	page.WriteString("## For engineers\n\n")
 	page.WriteString("Everything the grades above are computed from, folded so the page stays short.\n\n")
+	writeAICertFamilyDetail(&page, doc.Families)
 	writeAICertFolded(&page, "Totals, and why the records went stale", func(page *strings.Builder) {
 		writeAICertTotals(page, doc.Totals, doc)
 	})
@@ -262,6 +275,9 @@ func renderAICertPage(doc aiCertDoc, verdictRule string, bars []aiCertQualityBar
 	})
 	writeAICertFolded(&page, "Stale records, and why", func(page *strings.Builder) {
 		writeAICertStale(page, doc.Sites)
+	})
+	writeAICertFolded(&page, "Decision models", func(page *strings.Builder) {
+		writeAICertDecisions(page, doc.Decisions)
 	})
 	writeAICertSites(&page, doc.Sites)
 	writeAICertUnclaimed(&page, doc.Unclaimed)
@@ -298,6 +314,7 @@ func writeAICertGlossary(page *strings.Builder) {
 	page.WriteString("| `absent` | Never tested, on any setup. Not a failure — an honest gap. Its columns are dashes because nothing has measured it. |\n\n")
 	page.WriteString("#### The numbers\n\n")
 	page.WriteString("| Column | What it says |\n|---|---|\n")
+	page.WriteString("| Quality | Who scores how good a test case's answers are: `judge`, a second model, or `checked mechanically`, where the case's own check sees everything a judge would and no judge is asked. |\n")
 	page.WriteString("| Runs, Passed | How many times the model was asked, and how often it did what the test case wanted. |\n")
 	page.WriteString("| Reliability | Passed divided by Runs. 1.00 is every attempt. |\n")
 	page.WriteString("| `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back — not a pass/fail split. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |\n")
@@ -346,13 +363,21 @@ func writeStaleCauses(page *strings.Builder, doc aiCertDoc) {
 	// task ships, so it appears once per site here — summing rows reported 95
 	// case-changed records against a tree holding a fraction of that, which is
 	// the kind of inflated figure this page exists to not print.
+	//
+	// rows is carried into the sentence for the reader's sake: the JSON beside
+	// this page holds one entry per site, so its stale_cause count is larger,
+	// and a reader comparing the two cannot otherwise tell a deliberate dedupe
+	// from the page understating stale certification — the one direction a
+	// certification summary must never be read as failing in.
 	type recordKey struct{ task, provider, model, env string }
 	cause := map[recordKey]staleCause{}
+	rows := 0
 	for _, site := range doc.Sites {
 		for _, rec := range site.Records {
 			if rec.StaleCause == nil {
 				continue
 			}
+			rows++
 			key := recordKey{site.Task, rec.Binding.Provider, rec.Binding.Model, rec.Binding.Env}
 			seen := cause[key]
 			seen.CaseChanged = append(seen.CaseChanged, rec.StaleCause.CaseChanged...)
@@ -382,8 +407,10 @@ func writeStaleCauses(page *strings.Builder, doc aiCertDoc) {
 	}
 	page.WriteString("#### Why the stale records went stale\n\n")
 	fmt.Fprintf(page, "Counted per record — one (task, binding) pair — over the %d stale record(s) "+
-		"this build can attribute. A record appears on more than one row when a change moved a case "+
-		"and the prompt built from it together.\n\n", len(cause))
+		"this build can attribute. A record covers every site its task ships, so the JSON beside this "+
+		"page carries it once per site: its %d `stale_cause` entries are these %d records. A record "+
+		"appears on more than one row below when a change moved a case and the prompt built from it "+
+		"together.\n\n", len(cause), rows, len(cause))
 	page.WriteString("| What moved | Records | What it means |\n|---|---:|---|\n")
 	fmt.Fprintf(page, "| the case | %d | Somebody rewrote the test. Re-certify: the old number "+
 		"measured a different question. |\n", cases)
@@ -565,12 +592,21 @@ func writeAICertScenarios(page *strings.Builder, scenarios []aiCertScenario) {
 		return
 	}
 	fmt.Fprintf(page, "Scenarios (%d):\n\n", len(scenarios))
-	page.WriteString("| Scenario | Expects | Case |\n|---|---|---|\n")
+	page.WriteString("| Scenario | Expects | Quality | Case |\n|---|---|---|---|\n")
 	for _, sc := range scenarios {
-		fmt.Fprintf(page, "| `%s` | `%s` | [%s](%s) |\n",
-			sc.Name, sc.Expects, filepath.Base(sc.File), corpusLinkPrefix+sc.File)
+		fmt.Fprintf(page, "| `%s` | `%s` | %s | [%s](%s) |\n",
+			sc.Name, sc.Expects, qualityCell(sc.GradedBy), filepath.Base(sc.File), corpusLinkPrefix+sc.File)
 	}
 	page.WriteString("\n")
+}
+
+// qualityCell says who grades a case's quality: a case its mechanical check
+// grades alone has no judge score to read.
+func qualityCell(gradedBy string) string {
+	if gradedBy == "mechanical" {
+		return "checked mechanically"
+	}
+	return "judge"
 }
 
 func writeAICertSiteRecords(page *strings.Builder, records []aiCertRecord) {
@@ -582,13 +618,21 @@ func writeAICertSiteRecords(page *strings.Builder, records []aiCertRecord) {
 	page.WriteString("| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |\n")
 	page.WriteString("|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, rec := range records {
-		fmt.Fprintf(page, "| `%s` | `%s` | %s | `%s` | %d | %d | %s | %s | %s | %d | %d | %d | %d |\n",
-			rec.Binding.label(), rec.State, coverageCell(rec), rec.Band,
+		fmt.Fprintf(page, "| `%s`%s | `%s` | %s | `%s` | %d | %d | %s | %s | %s | %d | %d | %d | %d |\n",
+			rec.Binding.label(), siteThinkingCell(rec), rec.State, coverageCell(rec), rec.Band,
 			rec.Runs, rec.Passed, reliabilityCell(rec.Reliability),
 			latencyCell(rec.LatencyP50MS), latencyCell(rec.LatencyP95MS),
 			rec.Reported.Accepted, rec.Reported.WrongAnswer, rec.Reported.Invalid, rec.Reported.Abstained)
 	}
 	page.WriteString("\n")
+}
+
+// siteThinkingCell names the level a site ran at when it is not the binding's.
+func siteThinkingCell(rec aiCertRecord) string {
+	if rec.SiteThinking == "" {
+		return ""
+	}
+	return " (this site: thinking " + rec.SiteThinking + ")"
 }
 
 // coverageCell is the scenario count behind a state: a `partial` is only

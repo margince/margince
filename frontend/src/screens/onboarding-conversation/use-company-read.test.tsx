@@ -123,4 +123,30 @@ describe("safeStartError", () => {
     expect(errorLog).toHaveBeenCalledTimes(1);
     expect(errorLog).toHaveBeenCalledWith(result.current.startRead.error);
   });
+
+  it("never surfaces a raw exception when the answer cannot be read, and reports it exactly once", async () => {
+    // The answer arrives and its body breaks off: a fault past the network.
+    const crash = new TypeError("Body stream was interrupted");
+    const answer = new Response("{}", {
+      headers: { "Content-Type": "application/json" },
+    });
+    Object.defineProperty(answer, "text", {
+      value: () => Promise.reject(crash),
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => answer),
+    );
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { result } = renderRead();
+
+    act(() => {
+      result.current.startRead.mutate("https://example.com");
+    });
+
+    await waitFor(() => expect(result.current.startRead.isError).toBe(true));
+    expect(safeStartError(result.current.startRead.error, t)).toBe("");
+    expect(errorLog).toHaveBeenCalledTimes(1);
+    expect(errorLog).toHaveBeenCalledWith(crash);
+  });
 });

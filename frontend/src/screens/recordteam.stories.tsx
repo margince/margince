@@ -19,7 +19,7 @@ import { installFetchStub, jsonResponse } from "./story-utils";
 // something there, or a reader takes it for a broken panel.
 
 const meta: Meta<typeof RecordTeam> = {
-  title: "Records/Shared/Responsible",
+  title: "Records/Record 360/Responsible",
   component: RecordTeam,
   parameters: { layout: "padded" },
 };

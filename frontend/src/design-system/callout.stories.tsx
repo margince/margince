@@ -10,7 +10,8 @@ import { Callout } from "./callout";
 import { FactList } from "./factlist";
 
 const meta: Meta = {
-  title: "Design System/Callout",
+  title: "Components/Messaging/Callout",
+  component: Callout,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

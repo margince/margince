@@ -117,7 +117,7 @@ jobs:
       # reads lane results, all of them successful) — main's analysis frozen with
       # nobody told, which is the failure this whole change is about.
       - name: Upload extension coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-artifact-retried
         with:
           name: go-coverage-extensions
           path: backend/coverage-extensions.out
@@ -295,7 +295,7 @@ jobs:
         # not verifying the scanner binary at all, trading an occasional lost
         # scan for permanently trusting an unverified download.
         timeout-minutes: 8
-        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         with:
           args: -Dsonar.branch.name=main
       - name: No token yet — scan skipped

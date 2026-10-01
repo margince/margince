@@ -14,7 +14,10 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // tagsSection reads the tags applied to the account.
@@ -44,4 +47,38 @@ func tagsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]crm
 		t.Id = openapi_types.UUID(id)
 		return t, nil
 	})
+}
+
+func (a *assembly) readTags() error {
+	if err := auth.Require(a.ctx, "tag", principal.ActionRead); err != nil {
+		return err
+	}
+	tags, err := tagsSection(a.ctx, a.tx, a.companyID)
+	if err != nil {
+		return err
+	}
+	a.out.Tags = &tags
+	return nil
+}
+
+// ShowListMemberships makes the page name the Shortlists the account is on.
+func (s *Service) ShowListMemberships() {
+	s.lists = true
+}
+
+// readListMemberships names the Shortlists the account is on that the caller
+// may find. Absent, not omitted, while lists are switched off.
+func (a *assembly) readListMemberships() error {
+	if !a.svc.lists {
+		return nil
+	}
+	if err := auth.Require(a.ctx, "list", principal.ActionRead); err != nil {
+		return err
+	}
+	lists, err := collections.ShortlistsHolding(a.ctx, a.tx, "company", a.companyID.UUID, sectionLimit+1)
+	if err != nil {
+		return err
+	}
+	a.out.ListMemberships = &lists
+	return nil
 }

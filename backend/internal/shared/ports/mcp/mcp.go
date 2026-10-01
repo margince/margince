@@ -60,7 +60,14 @@ type ToolSpec struct {
 	// keep for the follow-up. Governance is already answered by the fields below
 	// and appended by each serving surface, so a description restating it would
 	// explain policing to a model whose question is which tool to call.
-	Description   string
+	Description string
+	// Instead is the sentence of Description that sends a nearby goal to a
+	// neighbouring tool, repeated verbatim, and InsteadTools the registered
+	// tools it names (the registry fills it). A surface offering part of the
+	// catalog drops a pointer at a tool it does not offer: following one costs
+	// a run a refused step.
+	Instead       string
+	InsteadTools  []string
 	Version       string
 	RequiredScope principal.Scope
 	// Marks a tool answering who the CALLER is, which every passport may ask
@@ -106,11 +113,29 @@ type ToolSpec struct {
 	// RequiredScope are meaningless on a HumanOnly spec and must be left at
 	// their zero value by whatever registers one.
 	HumanOnly bool
+	// ConfirmsInConversation marks a tool whose confirmation happens in the
+	// conversation that asked for it, never in the approval inbox. An exhausted
+	// volume budget refuses such a call outright instead of asking the connecting
+	// human for a release, so no inbox question is ever opened on its behalf.
+	ConfirmsInConversation bool
 	// UI names the interactive view that renders this tool's result, and is
 	// nil on a tool that has none. It carries no authority: a view is a second
 	// renderer for an answer this tool already gives in text, never a second
 	// door onto the record. See ToolUI.
 	UI *ToolUI
+	// UnkeyedArguments declares, by path into InputSchema (`$.fields`), each
+	// object argument whose keys belong to the caller's data rather than to the
+	// tool — a record type's own fields, a query document in a per-workspace
+	// grammar, an uploaded file's column headers — with why it cannot name
+	// them.
+	//
+	// A schema-constrained decoder writes no key into an object whose schema
+	// lists none (Gemini's pads it with whitespace to the output ceiling), so a
+	// tool carrying one cannot be driven by such a model and is never attached
+	// to a scheduled agent. Empty on every tool whose objects all name their
+	// keys. Held to InputSchema in both directions, and to the agent catalog, by
+	// TestEveryServedToolNamesTheKeysOfItsObjects.
+	UnkeyedArguments map[string]string
 }
 
 // ReadOnly reports whether the tool only reads — the protocol's
@@ -173,6 +198,24 @@ const (
 // in its own voice: the schema prefixes "Optional.", the frame names the
 // argument and its type first.
 const ReservedIdempotencyKeyRule = "Same key, same result; a key reused with other arguments is refused."
+
+// ConflictingSourcesRule is what a model does when two things it was given
+// disagree. Without it a model smooths: measured on the use-case lane, the
+// strongest model invented a second customer complaint so that a September
+// email and a note saying "October" could both be true, and every citation in
+// that answer was real. The invention sat in the prose between them.
+//
+// Two surfaces state it: the agent runner's frame for this product's own
+// agents, and the MCP server instructions for a client's model, which never
+// reads that frame. One constant, so the two cannot drift apart.
+// Held by: TestTheFrameTellsAModelToNameADisagreementRatherThanReconcileIt
+// (backend/internal/modules/agents/runner/window_test.go) and
+// TestTheInstructionsTellAClientsModelToNameADisagreement
+// (backend/internal/modules/agents/modern_test.go).
+const ConflictingSourcesRule = "When two sources disagree, say that they disagree and name both; " +
+	"never invent an event that would reconcile them. Where a structured field on a record " +
+	"(a date, an amount, a status) disagrees with prose someone wrote, the field wins: " +
+	"say which one you relied on and why."
 
 // RiskTier is the autonomy class (A34/ADR-0026). AutoExecute and ConfirmationRequired are
 // static — the declared value is the tool's whole tier. Dynamic means the

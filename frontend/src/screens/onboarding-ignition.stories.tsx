@@ -54,7 +54,10 @@ function Scene() {
         }
       >
         {ignited ? (
-          <Ignition vendor="Google Gemini" onDone={() => setIgnited(false)} />
+          <Ignition
+            vendor="Google Gemini"
+            onDone={async () => setIgnited(false)}
+          />
         ) : (
           <Button variant="primary" onClick={() => setIgnited(true)}>
             Give it a pulse

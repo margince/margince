@@ -5,10 +5,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { meFixture } from "./app/mefixture";
-import { parseHash, routeHash } from "./app/router";
 import { pickOption } from "./design-system/select-testing";
 import { LocaleProvider } from "./i18n";
-import { memoryStorage, sessionOnlyFetch } from "./testing/appharness";
+import {
+  memoryStorage,
+  sessionOnlyFetch,
+  wizardRow,
+} from "./testing/appharness";
 
 // B-EP09.17: the locale switch flips the whole UI between DE and EN. With the
 // browser asking for a language we don't ship, the app mounts in the A100
@@ -38,22 +41,6 @@ beforeEach(() => {
   // handing each file a fresh jsdom.
   window.location.hash = "";
 });
-
-// A wizard row at the step named — the shape the shell's journey gate reads.
-function wizardRow(step: string) {
-  return {
-    path: "member",
-    step,
-    source_mode: null,
-    company_draft: {},
-    selected_fact_keys: [],
-    voice_skipped: false,
-    connect_skipped: false,
-    version: 1,
-    created_at: "2026-07-01T00:00:00Z",
-    updated_at: "2026-07-01T00:00:00Z",
-  };
-}
 
 afterEach(() => {
   cleanup();
@@ -710,215 +697,5 @@ describe("password-reset deep link", () => {
     expect(
       await screen.findByRole("navigation", { name: "Primary navigation" }),
     ).toBeTruthy();
-  });
-});
-
-// The onboarding gate (A107/ADR-0061 + the 0082 anchor): an installation that
-// has not saved its own company has nothing for any other screen to show, so
-// the shell sends the human to the company form. GET /company 404s until a
-// human saves it — that 404 IS the signal, which is why the gate lives here
-// rather than on the login path: a live session never passes through login, so
-// a reload would otherwise walk straight past onboarding.
-describe("onboarding gate", () => {
-  const mount = () => {
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    render(
-      <QueryClientProvider client={client}>
-        <LocaleProvider initial="en">
-          <App />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
-  };
-
-  // Every call the shell makes resolves; only /company's status and the
-  // journey's own row vary, so the gate is the single thing under test. The
-  // journey defaults to finished, which is what lets a described installation
-  // stay where it was asked to go.
-  const stubCompany = (
-    status: number,
-    journey: { row: unknown; status: number } = {
-      row: wizardRow("complete"),
-      status: 200,
-    },
-    seat: "full" | "read" = "full",
-  ) =>
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: Request | string | URL) => {
-        const url = String(input instanceof Request ? input.url : input);
-        if (url.endsWith("/v1/me")) {
-          return new Response(
-            JSON.stringify(meFixture({ roles: ["admin"], seat })),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        if (url.endsWith("/v1/onboarding/state")) {
-          return new Response(JSON.stringify(journey.row), {
-            status: journey.status,
-            headers: {
-              "Content-Type":
-                journey.status === 200
-                  ? "application/json"
-                  : "application/problem+json",
-            },
-          });
-        }
-        if (url.endsWith("/v1/company")) {
-          return status === 200
-            ? new Response(
-                JSON.stringify({
-                  company_id: "o1",
-                  display_name: "Acme GmbH",
-                }),
-                {
-                  status: 200,
-                  headers: { "Content-Type": "application/json" },
-                },
-              )
-            : new Response(JSON.stringify({ code: "not_found" }), {
-                status,
-                headers: { "Content-Type": "application/problem+json" },
-              });
-        }
-        return new Response(JSON.stringify({ data: [], page: {} }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }),
-    );
-
-  it("sends an installation that has not described itself to the company form", async () => {
-    stubCompany(404);
-    mount();
-    await waitFor(() =>
-      expect(window.location.hash).toBe("#/onboarding/company"),
-    );
-  });
-
-  it("holds on every navigation — steering away mid-onboarding lands back on the form", async () => {
-    stubCompany(404);
-    mount();
-    await waitFor(() =>
-      expect(window.location.hash).toBe("#/onboarding/company"),
-    );
-
-    // The palette, a typed hash, a stray link: any client-side navigation
-    // away from onboarding must be turned around, not just the first load.
-    window.location.hash = "#/contacts";
-    window.dispatchEvent(new HashChangeEvent("hashchange"));
-    await waitFor(() =>
-      expect(window.location.hash).toBe("#/onboarding/company"),
-    );
-  });
-
-  // The gate's second half: a described installation still walks every human
-  // whose own journey is unfinished through it. That is how a member invited
-  // later trains their voice and connects their mailbox as the creator did.
-  it("sends a human with no journey of their own to onboarding, company or not", async () => {
-    window.location.hash = "#/contacts";
-    stubCompany(200, { row: { code: "not_found" }, status: 404 });
-    mount();
-    await waitFor(() =>
-      expect(window.location.hash).toBe("#/onboarding/company"),
-    );
-  });
-
-  it("sends a human whose journey stopped short back into it", async () => {
-    window.location.hash = "#/contacts";
-    stubCompany(200, { row: wizardRow("voice"), status: 200 });
-    mount();
-    await waitFor(() =>
-      expect(window.location.hash).toBe("#/onboarding/company"),
-    );
-  });
-
-  // A read seat cannot write the checkpoint the journey ends on, so a gate
-  // that held it would hold it forever.
-  it("leaves a read seat alone, whatever its journey says", async () => {
-    window.location.hash = "#/contacts";
-    stubCompany(200, { row: { code: "not_found" }, status: 404 }, "read");
-    mount();
-    await screen.findByRole("navigation", { name: "Primary navigation" });
-    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
-  });
-
-  it("leaves a described installation on the route it asked for", async () => {
-    window.location.hash = "#/contacts";
-    stubCompany(200);
-    mount();
-    // The company resolves before this settles, so a gate that redirected
-    // would have replaced the hash by now.
-    await screen.findByRole("navigation", { name: "Primary navigation" });
-    // The SCREEN, not the whole address. A list spells its own opening dials
-    // into the hash on arrival, so contacts settles at `#/contacts?sort=…` a
-    // moment after the shell renders; an equality against the bare address
-    // holds only while that write is still pending. Where the gate left the
-    // reader is this test's claim — how the list is sorted is contacts.tsx's.
-    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
-  });
-
-  // A pending /oauth/authorize request lives entirely in the hash (the
-  // client_id/scope/consent-nonce query string) — navigate() rewrites
-  // location.hash, so a gate redirect here would destroy the request with no
-  // way to recover it, unlike an ordinary screen a human can simply re-visit.
-  it("does not redirect away from oauth-consent when the company is undescribed", async () => {
-    const pendingHash =
-      "#/oauth-consent?client_id=c1&scope=read&consent=nonce123";
-    window.location.hash = pendingHash;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: Request | string | URL) => {
-        const url = String(input instanceof Request ? input.url : input);
-        if (url.endsWith("/v1/me")) {
-          return new Response(
-            JSON.stringify({ user: { id: "u1" }, roles: ["admin"], teams: [] }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        if (url.endsWith("/v1/company")) {
-          return new Response(JSON.stringify({ code: "not_found" }), {
-            status: 404,
-            headers: { "Content-Type": "application/problem+json" },
-          });
-        }
-        if (url.includes("/oauth/consent-request")) {
-          return new Response(
-            JSON.stringify({
-              client_name: "Acme Client",
-              offline: false,
-              scopes: ["read"],
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        return new Response(JSON.stringify({ data: [], page: {} }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }),
-    );
-    mount();
-    // The consent screen itself is proof the gate never fired — an
-    // onboarding redirect would have replaced the hash before this renders.
-    expect(
-      await screen.findByRole("heading", { name: "Authorize access" }),
-    ).toBeTruthy();
-    expect(window.location.hash).toBe(pendingHash);
-  });
-
-  // The control for the exemption above: it must be scoped to the consent
-  // route, not a gate that stopped firing. This is the third premise the gate
-  // has to answer — an ordinary route named in the hash on FIRST load (the
-  // cases above cover an empty hash, and a hashchange after mount).
-  it("still redirects an ordinary screen away when the company is undescribed", async () => {
-    window.location.hash = "#/contacts";
-    stubCompany(404);
-    mount();
-    await waitFor(() =>
-      expect(window.location.hash).toBe("#/onboarding/company"),
-    );
   });
 });

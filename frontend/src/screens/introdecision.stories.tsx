@@ -74,7 +74,7 @@ function drawer(over: Partial<IntroRequest>) {
 // here drives a play that names what it expects. A rejecting play IS a failure
 // the gate reports, which is what makes these stories worth their green.
 const meta: Meta<typeof IntroDecisionDrawer> = {
-  title: "Records/Intro decision",
+  title: "Records/Contact 360/Network/Intro decision",
   component: IntroDecisionDrawer,
   play: async () => {
     const drawer = within(await screen.findByRole("dialog"));

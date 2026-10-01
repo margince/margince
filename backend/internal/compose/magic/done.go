@@ -51,7 +51,31 @@ type entry struct {
 	OnBehalfOf *ids.UUID
 	Before     []byte
 	After      []byte
+	// Label is the record's own name, read through the same join that scopes
+	// the row, so a reader is only ever told the name of a record they may see.
+	Label *string
+	// Evidence is the audit row's own account of why: the policy behind a
+	// retention action, the page a fact was read from.
+	Evidence []byte
 }
+
+// recordLabels is the name column of each placed record, the expression the
+// line's About column shows. An activity is named by its subject, read through
+// the content clause that already decided the reader may see it.
+var recordLabels = map[string]string{
+	typeDeal:    "e.name",
+	typeCompany: "e.display_name",
+	typeContact: "e.full_name",
+	typeLead:    "e.full_name",
+	typeProject: "e.name",
+	"activity":  "e.subject",
+}
+
+// readCap bounds the audit rows one arm reads before lines are grouped. The
+// page shows at most maxLimit LINES, but a background job writes one audit row
+// per record it touched, and grouping has to see the job's rows to say how many
+// there were: cutting at the line limit first counted 100 of 1,200.
+const readCap = 5000
 
 // scopedTypes are the entity types this build can place, and how.
 //
@@ -65,30 +89,49 @@ type entry struct {
 // serving a row this read cannot prove the reader may see, and the failure would
 // be invisible: the row looks like every other row.
 var scopedTypes = map[string]string{
-	"deal":    "deal",
-	"company": "company",
-	"contact": "contact",
-	"lead":    "lead",
-	"project": "project",
+	typeDeal:    typeDeal,
+	typeCompany: typeCompany,
+	typeContact: typeContact,
+	typeLead:    typeLead,
+	typeProject: typeProject,
 }
+
+// The record types the done lane places, each also the table it joins.
+const (
+	typeDeal    = "deal"
+	typeCompany = "company"
+	typeContact = "contact"
+	typeLead    = "lead"
+	typeProject = "project"
+)
 
 // doneSince reads the admitted machine actions in the window, for the records
 // this reader may see.
 func doneSince(
 	ctx context.Context, tx pgx.Tx, since time.Time, limit int,
-) ([]entry, map[string]int, error) {
+) ([]entry, map[string]int, map[string]bool, error) {
 	notShown := map[string]int{}
 	found := make([]entry, 0, limit)
+	// An arm that came back full was CUT: readCap is a LIMIT, so the rows it
+	// did not return are indistinguishable from rows that do not exist, and
+	// every count grouped out of it is a floor rather than a total.
+	capped := map[string]bool{}
 	for entityType, table := range scopedTypes {
 		rows, err := doneForType(ctx, tx, entityType, table, since, limit)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
+		}
+		if len(rows) == readCap {
+			capped[entityType] = true
 		}
 		found = append(found, rows...)
 	}
 	activities, err := doneForActivities(ctx, tx, since, limit)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+	if len(activities) == readCap {
+		capped["activity"] = true
 	}
 	found = append(found, activities...)
 	// WHAT THIS READ COULD NOT PLACE, counted rather than guessed at. `update`
@@ -98,12 +141,12 @@ func doneSince(
 	// claim the field exists to refuse.
 	unplaceable, err := unplaceableSince(ctx, tx, since)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if unplaceable > 0 {
 		notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnknownEntityType)] = unplaceable
 	}
-	return found, notShown, nil
+	return found, notShown, capped, nil
 }
 
 // doneForType reads one owner-scoped entity type's machine actions.
@@ -164,12 +207,13 @@ func doneForType(
 	// off a request — the one form of identifier interpolation this tree allows.
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
-		       a.actor_type, a.actor_id, a.on_behalf_of, a.before, a.after
+		       a.actor_type, a.actor_id, a.on_behalf_of, a.before, a.after,
+		       NULLIF(%s, ''), a.evidence
 		  FROM audit_log a
 		  JOIN %s e ON e.id = a.entity_id
 		 WHERE %s
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, table, where, arg(limit))
+		 LIMIT $%d`, recordLabels[entityType], table, where, arg(readCap))
 	return scanEntries(ctx, tx, query, args)
 }
 
@@ -217,12 +261,13 @@ func doneForActivities(
 	}
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
-		       a.actor_type, a.actor_id, a.on_behalf_of, a.before, a.after
+		       a.actor_type, a.actor_id, a.on_behalf_of, a.before, a.after,
+		       NULLIF(%s, ''), a.evidence
 		  FROM audit_log a
 		  JOIN activity e ON e.id = a.entity_id
 		 WHERE %s
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, where, arg(limit))
+		 LIMIT $%d`, recordLabels["activity"], where, arg(readCap))
 	return scanEntries(ctx, tx, query, args)
 }
 
@@ -239,6 +284,7 @@ func scanEntries(ctx context.Context, tx pgx.Tx, query string, args []any) ([]en
 		if err := rows.Scan(
 			&e.ID, &e.OccurredAt, &e.Action, &e.EntityType, &e.EntityID,
 			&e.ActorType, &e.ActorID, &e.OnBehalfOf, &e.Before, &e.After,
+			&e.Label, &e.Evidence,
 		); err != nil {
 			return nil, fmt.Errorf("read a machine action: %w", err)
 		}

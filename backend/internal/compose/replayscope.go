@@ -104,6 +104,17 @@ const (
 	// contract.
 	probeDealRoom = "deal_room"
 
+	// probeBulkBatch keys the bulk engine's own probe. A batch's answer names
+	// the records it left alone, and only the batch's stored result says
+	// which, so the probe reads it back (bulkwithhold.go).
+	probeBulkBatch = "bulk_batch"
+
+	// probeDealSuggestion keys the deals-owned suggestion probe. A suggestion
+	// has no owner column: it is visible only to a reader who may see its
+	// company and every piece of its evidence, a rule only the deals store
+	// evaluates.
+	probeDealSuggestion = "deal_suggestion"
+
 	// The fields a body names another record by, spelled where the table that
 	// uses them is.
 	offerDealField        = "deal_id"
@@ -151,6 +162,8 @@ const (
 // (workspace + request digest) before the header's promise can be honored;
 // until then the slot's natural key refuses a duplicate booking.
 var replayableOperations = map[string]replayTarget{
+	"POST /v1/scheduling/invitations": {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/scheduling/proposals":   {object: tableActivity, table: tableActivity, idPath: "id"},
 	// Row-scoped records: both gates apply, and the object and the table are
 	// the same word by construction (policy.coreObjects mirrors the table).
 	"POST /v1/contacts": {object: tableContact, table: tableContact, idPath: "id"},
@@ -191,6 +204,14 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/deals":              {object: tableDeal, table: tableDeal, idPath: "id"},
 	"PATCH /v1/deals/{id}":        {object: tableDeal, table: tableDeal, idPath: "id"},
 	"POST /v1/deals/{id}/advance": {object: tableDeal, table: tableDeal, idPath: "id"},
+	// A suggestion's decision answers the suggestion, evidence titles and all,
+	// so a replay clears the suggestion's own visibility rule again; the deal
+	// an acceptance opened rides beside it as a companion.
+	"POST /v1/deal-suggestions/{id}/accept": {
+		object: tableDeal, moduleProbe: probeDealSuggestion, idPath: "suggestion.id",
+		companions: []companionRef{{table: tableDeal, idPath: offerDealField}},
+	},
+	"POST /v1/deal-suggestions/{id}/dismiss": {object: tableDeal, moduleProbe: probeDealSuggestion, idPath: "id"},
 	// Taking back an automatic stage move answers the deal, and the deal's
 	// grant governs it — the progression ledger carries no authority of its
 	// own. A retried undo must replay rather than re-execute: the second run
@@ -199,11 +220,19 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/deals/{id}/stage-progressions/{approvalId}/revert": {
 		object: tableDeal, table: tableDeal, idPath: "id",
 	},
-	"POST /v1/contracts":                   {object: probeContract, moduleProbe: probeContract, idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or company, so the contracts store owns the probe"},
-	"POST /v1/deal-rooms":                  {object: probeDealRoom, moduleProbe: probeDealRoom, idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
-	"POST /v1/projects":                    {object: tableProject, table: tableProject, idPath: "id"},
-	"PATCH /v1/projects/{id}":              {object: tableProject, table: tableProject, idPath: "id"},
-	"POST /v1/projects/{id}/advance":       {object: tableProject, table: tableProject, idPath: "id"},
+	"POST /v1/contracts":             {object: probeContract, moduleProbe: probeContract, idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or company, so the contracts store owns the probe"},
+	"POST /v1/deal-rooms":            {object: probeDealRoom, moduleProbe: probeDealRoom, idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
+	"POST /v1/projects":              {object: tableProject, table: tableProject, idPath: "id"},
+	"PATCH /v1/projects/{id}":        {object: tableProject, table: tableProject, idPath: "id"},
+	"POST /v1/projects/{id}/advance": {object: tableProject, table: tableProject, idPath: "id"},
+	"POST /v1/bulk/execute": {
+		objectNote:  "one route over three record types: the change was gated per record on the caller's grant and write authority when it ran",
+		moduleProbe: probeBulkBatch, idPath: "batch_id",
+	},
+	"POST /v1/bulk/{id}/undo": {
+		objectNote:  "one route over three record types: the undo was gated per record on the caller's grant and write authority when it ran",
+		moduleProbe: probeBulkBatch, idPath: "batch_id",
+	},
 	"POST /v1/projects/transfer-ownership": {object: tableProject, rowNote: "the response is a count, not a record: the handover's rows were each gated on the caller's write authority when it ran, and a replay hands back the number alone"},
 	"POST /v1/leads":                       {object: tableLead, table: tableLead, idPath: "id"},
 	"PATCH /v1/leads/{id}":                 {object: tableLead, table: tableLead, idPath: "id"},
@@ -296,7 +325,13 @@ var replayableOperations = map[string]replayTarget{
 	},
 	"POST /v1/pipelines":       {object: objectPipeline, rowNote: "pipeline has no owner and is governed by object grants only (auth.EnsureVisible's own note)"},
 	"PATCH /v1/pipelines/{id}": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
-	"POST /v1/stages":          {object: objectPipeline, rowNote: noOwnerStage},
+	// A catalog reorder retried after a lost answer replays rather than laying
+	// the same order over one somebody set since.
+	"PUT /v1/pipelines/order": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
+	// A stage reorder moves the version its If-Match is judged against, so a
+	// retry must replay rather than re-execute into its own version_skew.
+	"PUT /v1/pipelines/{id}/stage-order": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
+	"POST /v1/stages":                    {object: objectPipeline, rowNote: noOwnerStage},
 	// A transition's automation rule is pipeline config, governed by the
 	// pipeline's object grant and owned by nobody. A retried save must replay:
 	// re-executing would bump the row's version, so an admin's own retry would

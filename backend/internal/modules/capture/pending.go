@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -479,10 +480,12 @@ func (s *PendingStore) TimesJudgedNotAContact(ctx context.Context, email string)
 	return n, nil
 }
 
-// normalizeEmail is the ONE spelling of the ledger's identity: lowercased and
-// trimmed, matching activity.counterparty_email and contact_email so the verdict,
-// the correspondence gate, and the dedupe chokepoint agree on what the same
-// address is.
+// normalizeEmail is this module's spelling of the ledger's identity, matching
+// activity.counterparty_email and contact_email so the verdict, the
+// correspondence gate and the dedupe chokepoint agree on what the same address
+// is. It delegates so that the correspondence LOCK, which compose and
+// activities also take, cannot come to fold differently from the rows it
+// guards.
 func normalizeEmail(email string) string {
-	return strings.ToLower(strings.TrimSpace(email))
+	return correspondence.Fold(email)
 }

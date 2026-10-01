@@ -58,6 +58,8 @@ var credentialPrefixes = []string{
 	// The cost is real and was weighed: the access log no longer names which
 	// booking page was hit. The booking it produces still does.
 	"/v1/public/booking/",
+	"/v1/public/meeting/",
+	"/v1/public/proposal/",
 }
 
 // Redact replaces the ONE path segment that follows a credential prefix and

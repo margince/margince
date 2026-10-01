@@ -27,6 +27,16 @@ describe("Field", () => {
     expect(screen.getByLabelText("Work address")).toHaveFocus();
   });
 
+  it("keeps a hidden label as the control's name", () => {
+    render(
+      <Field label="Industry" labelHidden>
+        {(control) => <TextInput {...control} />}
+      </Field>,
+    );
+    expect(screen.getByText("Industry")).toHaveClass("sr-only");
+    expect(screen.getByLabelText("Industry")).toBeTruthy();
+  });
+
   it("emits no shell when nothing has to sit inside the outline", () => {
     const { container } = render(
       <Field label="Deal name">

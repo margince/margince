@@ -41,13 +41,14 @@ configurable logger.
 | `--vat-check-requester` | `MARGINCE_VAT_CHECK_REQUESTER` | — | This installation's OWN VAT ID (e.g. `DE123456789`), on the worker role. VIES issues a consultation number — the receipt a business shows to say it verified a counterpart before treating a supply as intra-community — only for a check made under a requester's number. Unset still checks and still answers; the answer just carries no proof. |
 | `--certlog-base-url` | `MARGINCE_CERTLOG_BASE_URL` | — | certificate-transparency base URL, on the worker role. It enables the whole technical lookup — what a company publicly runs, read from its DNS records, its certificate history and one polite fetch of its own homepage. Unset = the lane is off: the company record keeps no technical profile and the button on it answers 501, which is honest for an installation that should make no outbound lookups. `public` uses crt.sh, which is free and needs no key but is one small service run on goodwill — the reader paces itself to one query every five seconds and caches every answer for that reason. |
 | `--technical-backfill-interval` | — | `6h` | how often the worker looks for companies whose technical profile is missing or stale. Unlike geocoding there is no write to trigger on — a company's mail provider changes at the COMPANY — so this pass is the only thing that ever observes a move. Runs on start; `0` turns the sweep off and leaves the button working. |
+| `--trusted-proxies` | `MARGINCE_TRUSTED_PROXIES` | — (none) | comma-separated CIDR prefixes (a bare address is its own `/32`) of the reverse proxies in front of the api. Every per-IP rate limit — sign-in (30/min per IP, 10 failures/min per email+IP), password reset, OIDC, `/oauth/token`, the MCP edge, the public booking/preference/deal-room pages, extension inbound routes — keys on ONE client address, and this decides which. **Unset** (the default), no forwarding header is believed and the key is the TCP peer: right for a directly-reached process, and wrong behind a proxy, where the peer is the PROXY and every client shares its bucket — one abuser at 30 sign-ins a minute then locks out everyone. **Set**, `X-Forwarded-For` is read only when the direct peer is inside one of these prefixes, and walked from the RIGHT to the first hop outside them: each proxy appends the address it received from, so anything a client wrote itself lies to the left of the address its own connection arrived from and is never reached. Include EVERY proxy hop (e.g. both the load balancer's and the ingress controller's networks) or the key stops at the untrusted proxy. A malformed hop keys on the peer rather than a guess. `0.0.0.0/0` / `::/0` (which would make the header attacker-chosen) and an unparseable entry are boot errors. The api logs at boot which posture it took |
 | `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` requires as a Bearer credential. Unset (the default), `/metrics` refuses every scrape with the same 401 a wrong token gets, unless `--metrics-access=open`. The api logs one line at boot saying which posture it took. Note the api serves **plain HTTP** (`ListenAndServe`, no TLS) and terminates TLS ahead of itself, so a token set here is carried in cleartext over whatever hop reaches the pod — private by construction in-cluster, and the same hop the session cookie and every OAuth passport already take, but it is not a credential to hand to a scraper across an untrusted network |
 | `--metrics-access` | `MARGINCE_METRICS_ACCESS` | `token` | who `/metrics` serves. `token` requires `--metrics-token`. `open` serves whatever reaches the port, which is what a Prometheus that discovers its targets by annotation (`prometheus.io/scrape`) needs: it reads a target's address and metrics path off the Kubernetes API and has nowhere to carry a credential. Choose `open` only where the port is already contained — a private listener, a NetworkPolicy, an ingress that does not route `/metrics` — because this listener is the one `/v1` is served on and the exposition names every route and carries workspace ids plus a declared-catalogue info metric. The api warns at boot whenever it is open, and refuses to boot with `open` and a token together (the token would authenticate nothing). `cmd/worker`'s own `/metrics` is served on `--observe-addr`, a separate listener that is off unless set |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns.** The binding is a stored setting: declared for a fresh install under `seeds.ai_routing` in `margince.yaml`, changed on a running one through Settings → AI / `PUT /v1/ai/routing`, no restart — with one exception: a role that STARTED with nothing bound wired no model path, so it has no watcher to notice the first binding and must be restarted once after it is saved. The flag stays registered so an existing command line does not die on an unknown one; nothing reads a routing file any more. What a bound installation lights up is unchanged: the cold-start read-back, per-org enrichment, the Morning-Brief L2 re-order, and AI-drafted offer regeneration |
 | `--ai-fake` | — | `false` | offline fake model (dev/test only), and a FALLBACK rather than an override: a servable stored binding outranks it and the flag is then inert. It serves when nothing is bound — or when the stored binding cannot be built, which is how a keyless dev stack still starts instead of refusing on a missing credential |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required to send marketing mail — a send refuses rather than derive the token-bearing link from the request Host — and for the Gmail/Graph OAuth callback. **Held to an address a RECIPIENT can open** whenever a real sender is configured (SMTP `email.enabled`, or a Gmail/Graph app): https only, and not localhost, a private address or an interface-scoped one. `MARGINCE_ENV=dev` or `test` admits the dev stack's `http://localhost`. Both the api and the worker refuse to boot on an unusable value, and a tokenized send refuses at send time; the configured value and whether it last answered are shown on Settings → Connections |
 | — (env-only) | `MARGINCE_AUTO_ENRICH_DAILY_CAP` | `0` (= built-in 500) | same knob `cmd/worker` reads (below) — `cmd/api` also boots on it (an invalid value is a boot error here too) because an approval accept on this role can queue a domain-triage read, which spends the same daily budget the worker's sweeps do |
-| — (env-only) | `MARGINCE_PROVIDER_SURFE` | `live` | which licensed-data-provider adapter this process carries: `live` (the default) the real Surfe adapter, `offline` the deterministic fake for a dev stack, `off` registers none at all. **Registering an adapter is not what permits egress** — a sealed credential is, and with no key there is no call any adapter could make (PI-AC-9): the surface stays fully available, renders `not_connected` honestly, and an admin can connect it themselves. Defaulting to `off` is what made the capability invisible, needing an environment variable and a restart to reach, which is a build flag wearing a setting's clothes. **Both `cmd/api` and `cmd/worker` read it and must agree**: the api queues a run and the worker executes it, so a split setting would submit to one vendor and poll another. An unknown value is a boot error rather than a silent `off` — a typo must not quietly disable a feature an operator asked for, or quietly enable egress. Needs a configured keyvault; without one the provider surface stays absent |
+| — (env-only) | `MARGINCE_PROVIDER_SURFE` | `live` | which licensed-data-provider adapter this process carries: `live` (the default) the real Surfe adapter, `offline` the deterministic fake for a dev stack, `off` registers none at all. **Registering an adapter is not what permits egress** — a sealed credential is, and with no key there is no call any adapter could make (PI-AC-9): the surface stays fully available, renders `not_connected` honestly, and an admin can connect it themselves. Defaulting to `off` is what made the capability invisible, needing an environment variable and a restart to reach, which is a build flag wearing a setting's clothes. **Both `cmd/api` and `cmd/worker` read it and must agree**: the api queues a run and the worker executes it, so a split setting would submit to one vendor and poll another. An unknown value is a boot error rather than a silent `off` — a typo must not quietly disable a feature an operator asked for, or quietly enable egress. Needs a configured keyvault; without one the provider surface stays absent. The provider is the automatic source of a contact's LinkedIn URL. Without one, a URL is still filled in when the employer's own website publishes it; otherwise nothing fills it automatically |
 | `--oauth-access-token-ttl` | `MARGINCE_OAUTH_ACCESS_TOKEN_TTL` | `0` (= the passport default, 720h / 30 days) | lifetime of the access token the MCP connector's OAuth handshake mints. That token IS an Agent Seat Passport, so unset it inherits the 30-day passport default, while connector norms are ~15 minutes plus refresh; set e.g. `15m` to run those norms without a code change — the refresh-rotation machinery is what makes a short lifetime cheap for a client. It applies to **both** mints of a connection's life, the code exchange and every rotation. Maximum `2160h` (90 days, the mint's own ceiling); an out-of-range or non-duration value is a boot error, never a silent default |
 
 With `--inline-relay` (the default) an unreachable Redis fails the boot:
@@ -408,6 +409,13 @@ same relay and the same sealed `email.smtp.password` for itself. A worker booted
 without `email.enabled` measures every rep's week and mails none; the review is
 on Home either way, and the boot line says which posture this process is in.
 
+**The privacy notice and the confirm links leave through the same relay.** The
+worker hands them to `email.smtp`, never to a rep's connected mailbox, because
+each carries a single-use link to the contact's own record. Without the relay
+both answer "cannot send mail" and a privacy-notice duty stays open. Which mail
+takes which path, and the `email:` block itself:
+[how-to/set-up-outbound-mail.md](../how-to/set-up-outbound-mail.md).
+
 **One attempt per rep per week, and the column says so.** `weekly_review.mail_attempted_at`
 is written *before* the relay is dialled, so every later tick of the six-hourly
 pass finds the attempt spent and sends nothing. That bounds duplicates at the
@@ -454,6 +462,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--deepread-max-bytes` | `MARGINCE_DEEPREAD_MAX_BYTES` | `0` (= built-in 32 MiB) | deep-read crawl aggregate byte cap |
 | `--deepread-wall` | `MARGINCE_DEEPREAD_WALL` | `0` (= built-in 4m) | deep-read crawl wall clock |
 | `--observe-addr` | `MARGINCE_OBSERVE_ADDR` | — (off) | address to serve this worker's `/healthz`, `/readyz` and `/metrics` on, e.g. `127.0.0.1:9101`. Empty serves nothing — see below |
+| `--observe-pprof` | `MARGINCE_OBSERVE_PPROF` | `false` | `true` also serves Go's `net/http/pprof` profiles under `/debug/pprof/` on that same listener; requires `--observe-addr`. Enable temporarily — see below |
 
 ### The worker's own operator surface
 
@@ -527,6 +536,47 @@ and process capacity, so exposing it is an operator decision, and so is the
 interface it binds. Bind it to a loopback or a private interface, never a public
 one. An address that cannot be bound is a **boot error** naming it — a worker
 that could not serve its probes must not carry on looking healthy.
+
+### Profiling a running worker — `--observe-pprof`
+
+`MARGINCE_OBSERVE_PPROF=true` mounts Go's standard `net/http/pprof` handlers
+under `/debug/pprof/` on the observe listener. It exists for the problem the
+metrics above can show but not explain: a worker whose heap bursts, or whose CPU
+pins, inside one process where nothing outside can see which code path did it.
+`go_memstats_*` says the heap grew; a heap profile says **what holds it**.
+
+**Off by default, and meant to be switched on temporarily** — for the rollout
+that has to catch a problem, then back off. It adds no listener and no port: the
+profiles are served on the same address, with the same absence of
+authentication and the same in-cluster containment, as `/healthz` and
+`/metrics`. That is also why it is not on by default — the surface it adds is
+wider than the probes. A goroutine dump names every goroutine's stack, and
+`/debug/pprof/cmdline` answers the process's command line, including any flag
+passed there rather than through the environment (a `--dsn` carries its
+password). The worker logs a `WARN` line naming the address at every boot with
+it on.
+
+It is a **boot error** to set it `true` with no `--observe-addr` — there would
+be no listener to serve it on, and a setting that silently does nothing is the
+worse failure — and a value `strconv.ParseBool` rejects is a boot error too,
+rather than being read as off.
+
+From a pod's own network (the listener binds a private interface):
+
+```sh
+# the heap as it is right now — what a memory burst is diagnosed from
+curl -s http://<pod>:9101/debug/pprof/heap > heap.pb.gz
+# allocations over the next 10s, as a delta — what is being allocated DURING a burst
+curl -s 'http://<pod>:9101/debug/pprof/allocs?seconds=10' > allocs.pb.gz
+go tool pprof -top heap.pb.gz
+```
+
+`/debug/pprof/` lists every named profile (`heap`, `allocs`, `goroutine`,
+`block`, `mutex`, `threadcreate`); `profile` and `trace` are CPU profiling and
+the execution trace. The listener keeps its 10s write timeout for everything
+else; a request that samples over `?seconds=N` extends its own deadline by `N`,
+so `profile?seconds=30` works as it does anywhere else. A heap snapshot is
+immediate.
 
 ### `worker siteread` — the deep-read debug loop (no DB)
 
@@ -814,9 +864,9 @@ table, so this pool never runs more than one `ALTER` against the same
 table at a time — concurrent `ALTER`s against different tables are not
 serialized against each other, just against races on their own table — a
 small, deliberate footprint next to the app pool's `MaxConns=16` default. The
-transaction runs the DDL as the owner role, then downgrades itself
-(`SET LOCAL ROLE margince_app`) before the catalog/audit write, so the
-credential this DSN names must be the same owner role `cmd/migrate` uses.
+transaction runs the DDL and the catalog/audit write as the owner role, so
+the credential this DSN names must be the same owner role `cmd/migrate` uses.
+It needs no membership in `margince_app`: the transaction never switches role.
 Configured, it also gains the api's `/readyz` `customfields-schema-pool`
 probe.
 
@@ -887,13 +937,14 @@ place keeps the api reading a password file that is no longer written. Use
 | `MARGINCE_TEST_BLOBSTORE_ENDPOINT`, `MARGINCE_TEST_BLOBSTORE_ACCESS_KEY`, `MARGINCE_TEST_BLOBSTORE_SECRET_KEY`, `MARGINCE_TEST_BLOBSTORE_BUCKET` | — | integration tests | the object store the blobstore lane runs against; exported by the Makefile at the `make db-up` MinIO, on its own `margince-test` bucket. The endpoint being unset **fails** the lane rather than skipping it — a skipped storage gate reads exactly like a passing one. |
 | `MARGINCE_AICERT` | — | `make e2e-ai` | the AI-certification lane's runtime switch. The `e2e_llm` build tag keeps this paid, live lane out of every ordinary lane; once the tag is set, an empty value here **fails** rather than skips, so the lane can never report success for having done nothing. |
 | `MARGINCE_AICERT_MODEL`, `MARGINCE_AICERT_JUDGE_MODEL` | — (`make e2e-ai` defaults the judge to `openai_compatible:openai/gpt-oss-120b`) | `make e2e-ai` | `provider:model` each. The run refuses without a judge, and without a candidate unless `MARGINCE_AICERT_ROUTING` names the bindings instead; `make e2e-ai` supplies the judge, so only the candidate is yours to name. The candidate is what the run certifies; the judge grades it and must be a DIFFERENT model, because one grading itself is certified by construction. ONE judge grades every task of a run, so a run in which any task it certifies has the judge as its candidate is refused before a single paid call, naming those tasks. The default is chosen for cost; `gemini:gemini-3.1-flash-lite` or `gemini:gemini-3.5-flash` are the documented alternatives. An exported `MARGINCE_AICERT_JUDGE_MODEL` replaces the Makefile default, and `JUDGE=` overrides both. Surfaced as `MODEL=` and `JUDGE=`. |
-| `MARGINCE_AICERT_ROUTING` | — | `make e2e-ai` | path to a deployment config whose `seeds.ai_routing` names the binding to certify. Certifies a DEPLOYMENT rather than a model: each task is measured against whatever is bound at its **leading ladder rung** (the rung that would actually serve it), so one run writes records across several models — which is what the config binds. Mutually exclusive with `MARGINCE_AICERT_MODEL`, and the run refuses both: one names a deployment, the other one candidate to A/B a prompt fix against. Under it `MARGINCE_AICERT_PROFILE` is ignored and the profile is the file's own, because a record's environment class must come from the config that named the models. The judge is still named separately and is never resolved from the routing — `cert_judge` is itself a task and leads at `premium`, so a config binding a model there would make the grader collide with every `premium`-led candidate. Surfaced as `ROUTING=`. |
-| `MARGINCE_AICERT_BASE_URL`, `MARGINCE_AICERT_JUDGE_BASE_URL` | — (`make e2e-ai` defaults the judge's to `https://openrouter.ai/api` while the judge is its default model, else empty) | `make e2e-ai` | endpoint host root for a broker or OpenAI-wire host. Required for `openai_compatible`, which fails closed without one; empty for a native vendor, which uses its own default. An `openai_compatible` judge left without its own falls back to the candidate's. Surfaced as `BASE_URL=`, `JUDGE_BASE_URL=`. |
-| `MARGINCE_AICERT_PROFILE` | — | `make e2e-ai` | the environment class a record is filed under (`eu_hosted` \| `eu_resident` \| `sovereign` \| `cloud_frontier`), default `eu_hosted`; ignored when `MARGINCE_AICERT_ROUTING` is set, which takes the profile from the config file instead. Not a label: it is part of a record's identity, and it is enforced — a binding the profile forbids, a cloud vendor under `sovereign` or `eu_resident`, is refused rather than run. Surfaced as `PROFILE=`. |
+| `MARGINCE_AICERT_ROUTING` | — | `make e2e-ai` | path to a deployment config whose `seeds.ai_routing` names the binding to certify. Certifies a DEPLOYMENT rather than a model: each task is measured against **every distinct model its ladder binds** — the rung that answers, then each fallback a failed call falls to — so one run writes records across several models — which is what the config binds. Mutually exclusive with `MARGINCE_AICERT_MODEL`, and the run refuses both: one names a deployment, the other one candidate to A/B a prompt fix against. Under it `MARGINCE_AICERT_PROFILE` is ignored and the profile is the file's own, because a record's environment class must come from the config that named the models. The judge is still named separately and is never resolved from the routing — `cert_judge` is itself a task and leads at `premium`, so a config binding a model there would make the grader collide with every `premium`-led candidate. Surfaced as `ROUTING=`. |
+| `MARGINCE_AICERT_BASE_URL`, `MARGINCE_AICERT_JUDGE_BASE_URL` | — (`make e2e-ai` defaults the judge's to `https://openrouter.ai/api` for an `openai_compatible` judge when neither `BASE_URL=` nor `MARGINCE_AICERT_BASE_URL` is set, else empty) | `make e2e-ai` | endpoint host root for a broker or OpenAI-wire host. Required for `openai_compatible`, which fails closed without one; empty for a native vendor, which uses its own default. An `openai_compatible` judge left without its own falls back to the candidate's. Surfaced as `BASE_URL=`, `JUDGE_BASE_URL=`. |
+| `MARGINCE_AICERT_PROFILE` | — | `make e2e-ai` | the environment class a record is filed under (`eu_hosted` \| `sovereign` \| `cloud_frontier`), default `cloud_frontier`; ignored when `MARGINCE_AICERT_ROUTING` is set, which takes the profile from the config file instead. Not a label: it is part of a record's identity, and it is enforced — a cloud vendor under `sovereign` is refused rather than run, and so is a broker candidate under `eu_hosted` that `MARGINCE_AICERT_UPSTREAM` does not pin to EU-region hosts. Surfaced as `PROFILE=`. |
 | `MARGINCE_VOICE_MODEL`, `MARGINCE_VOICE_BASE_URL` | — | `TestVoiceLiveSmoke` | the model the manual voice-live smoke drives, `provider:model`, plus an endpoint host root when it is on a broker. Manual-only: the smoke fails rather than skips without one, so a run that measured nothing is never mistaken for a pass. |
 | `MARGINCE_AICERT_UPSTREAM`, `MARGINCE_AICERT_JUDGE_UPSTREAM` | — | `make e2e-ai` | broker upstream-selection preferences to serve the candidate, and the judge, under, as the JSON of one `ai.OpenRouterRouting` (`only`, `ignore`, `quantizations`, `sort`, `require_parameters`, `allow_fallbacks`, `preferred_max_latency_p90`, `reasoning_effort`). Optional. Unset, a broker binding is served under the product default production applies (`sort: throughput`, `quantizations: [fp16, bf16]`, `require_parameters: true`); `{}` opts out and measures the broker's own price-weighted choice. That default is a hard filter, so a model no host serves at fp16 or bf16 cannot be reached under it — the run's pre-flight call finds that before the corpus and names the variable, and `{}` is the way through. Every record names the preferences each binding was served under (`candidate_upstream`, `judge_upstream`), since two records of one model are comparable only where those agree. The candidate's is read only alongside `MODEL=` — a deployment's tiers carry their own bindings, so passing it with `ROUTING=` is refused rather than accepted and applied to nothing; the judge's is read either way, because the judge is never resolved from the routing. Preferences on a binding that is not a broker on an OpenRouter host are refused, and so are unknown keys: a misspelt preference would be dropped in silence and the run would report the default's numbers under a tuned run's name. The field set, and the measurements behind the default, are in [openrouter.md](openrouter.md). Surfaced as `UPSTREAM=`, `JUDGE_UPSTREAM=`. |
 | `MARGINCE_AICERT_TASK`, `MARGINCE_AICERT_RUNS`, `MARGINCE_AICERT_TRACE` | — | `make e2e-ai` | narrow certification to one task / repeat count / directory for the request+response dump. All optional: unset certifies everything the corpus covers. Surfaced as `TASK=`, `RUNS=`, `TRACE=`. |
 | `MARGINCE_AICERT_RESUME` | — | `make e2e-ai` | directory for the resume journal: every scored run is appended to it as it is scored, so a run cut short by a dropped connection is restarted without paying for the runs it already made. A journaled run is replayed only for the same task and scenario, and only on the same candidate binding, judge, profile, corpus version, scenario stamp, BINARY and repeat index, within six hours — anything else is measured again. The binary is in that list because a stamp covers the requests, never the code that judges the replies. One run owns a resume directory at a time, held by a lock file. Empty turns it off, which forces a run to measure everything fresh. Surfaced as `RESUME=`, on by default. |
+| `MARGINCE_AICERT_STALE_ONLY` | `1` | `make e2e-ai` | `0` re-measures a model whose committed record is already current for this build; anything else skips it before any paid call, so a sweep pays only for what is missing or stale. "Current" is the judgement `make e2e-ai-report` prints. Surfaced as `STALE_ONLY=`, on by default. |
 | `MARGINCE_ANTHROPIC_KEY` | — | `ai` package smoke test | BYOK Anthropic key for the live Anthropic smoke test. Distinct from `ANTHROPIC_API_KEY`, which is what the **runtime** reads for a bound `anthropic` provider. |
 | `MARGINCE_BENCH_TIER` | — | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds — `smb` (default) or `mid_market`. An unrecognized value fails the bench loudly. |
 | `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness WRITE its record into `docs/reference/perfbench/`, which `make perfdoc` renders into the published budgets page. Off by default because a scheduled job runs the same suite weekly (`make bench-perf-check`), and a machine must never write its own numbers into the tree. The by-hand `bench-record`/`bench-capture`/`bench-mobile` targets need no switch — nothing but a human runs them. |
@@ -1081,7 +1132,7 @@ itself:
 | The base key is | The overlay | Why |
 |---|---|---|
 | a scalar (`connector_enabled: false`) | replaces it | one value, one answer |
-| a mapping (`model_pricing:`) | merges key by key | an overlay adds a provider without restating the others |
+| a mapping (`rates:`) | merges key by key | an overlay sets one key without restating its siblings |
 | a list (`fx_currencies: [USD, GBP]`) | replaces it entirely | half a list is not a list — `[SEK]` means SEK |
 
 The consequence worth knowing: an overlay can add a mapping key and change one,
@@ -1123,6 +1174,17 @@ enables the canonical read model and Company Context settings; `tasks` also
 injects bounded context into declared AI tasks; `onboarding` additionally enables
 the five-step first-run flow. The default is `onboarding`. Moving backward is a
 reversible operational kill switch and never deletes confirmed company data.
+
+`lists.enabled` switches Live Lists and Shortlists. The default is `true`. Set
+it to `false` to hide them: the `/v1/lists` routes answer 404, the `list_id`
+narrowing of the contact, company, deal and lead lists answers 404, the filtered export refuses a
+`list_id` source, the company page names no list, no agent list tool is
+registered, `/me` reports `settings_availability.lists: false`, so no screen
+offers them, and the worker's 15-minute Live List check records nothing, so no
+list history grows and no `list.evaluated` event is emitted. The worker reads
+the same file, so set it in the file both roles load. Switching it off hides
+lists without deleting any, and switching it back on shows them as they were;
+the first check after that records who joined and left since the last one.
 
 ### `POST /v1/connectors/test_mailbox/connect` — the QC-only fake mailbox
 
@@ -1278,26 +1340,31 @@ why an absent license is a supported posture rather than a refusal.
 
 ### Rates
 
-The `rates:` block configures the admin **"Refresh from sources"** jobs (worker
-role). A refresh never writes a rate directly — it stages **confirm-first
-proposals** into the approvals inbox, and a human approves each before it
-applies. It is read only by the worker (the api enqueues the job; the worker
-crawls and stages).
+The `rates:` block configures the admin **"Refresh from sources"** job for the
+currency sheet (worker role). A refresh never writes a rate directly — it stages
+**confirm-first proposals** into the approvals inbox, and a human approves each
+before it applies. It is read only by the worker (the api enqueues the job; the
+worker fetches and stages).
+
+Model prices are not configured here. **Refresh model prices** (Settings → AI)
+reads OpenRouter's public model list and writes today's price for each
+OpenRouter-hosted model the installation binds, in the request itself; every
+provider that publishes no price list is set by hand on the sheet.
 
 | field | default | effect |
 |---|---|---|
 | `fx_source` | `https://api.frankfurter.dev/v1/latest` | Base-relative FX JSON API (`{base,rates}`, queried `?base=&symbols=`). The default is the free, no-key ECB feed. |
 | `fx_currencies` | `[USD, GBP, CHF]` | Candidate foreign currencies the FX refresh proposes to **bootstrap an empty rate sheet** — a fresh install tracks none, so without a candidate set the refresh would have nothing to fetch. Once the sheet has rows, the refresh re-prices exactly those tracked currencies and this set is unused. Each entry must be **ISO 4217-shaped** (three uppercase letters) and unique, or boot fails — the same shape check as `base_currency`; existence is not verified, so a well-formed but unsupported code (`USX`) parses and is then skipped by the source with a logged warning rather than a staged proposal. |
-| `model_pricing` | *(none)* | Maps a provider name to its pricing-page URL the model-cost refresh crawls and AI-extracts (the `rate_extract` task — `make e2e-ai-report` says what any binding has been certified to). A plain `GET` must yield the price text — Google's docs page does; many JS-rendered marketing pages yield none. |
 
-The **model-cost refresh** needs both a `model_pricing` entry **and** a bound
-`rate_extract` model (in the installation's stored binding); absent either, it
-no-ops. The **FX
-refresh**, by contrast, has no such dependency — `fx_source` and `fx_currencies`
-both default, so it always has something to do even on an absent `rates:` block.
-Neither refresh ever auto-applies — a rate is proposed from the live source and
-applied only on human approval, so a non-EUR deal with no approved rate still
-fails closed (never a silent `rate=1`).
+The **FX refresh** needs a bound `rate_extract` model (in the installation's
+stored binding); absent one, it no-ops. `fx_source` and `fx_currencies` both
+default, so it always has something to do even on an absent `rates:` block. It
+never auto-applies — a rate is proposed from the live source and applied only on
+human approval, so a non-EUR deal with no approved rate still fails closed
+(never a silent `rate=1`).
+
+A `model_pricing:` key left in an older file is still read and ignored, with a
+warning at boot; remove it.
 
 Model credentials (BYOK cloud tiers) live in the **key vault**, put there by an
 admin under Settings → AI → Model provider keys. Neither is a binary flag, and
@@ -1328,8 +1395,9 @@ BYOK key is **read from an environment variable** at boot — the routing file
 names only the provider (a stray `api_key:` there is a startup error):
 
 A cloud provider's key lives in the **key vault**, and an admin puts one there
-at Settings → AI → Model provider keys (`PUT /v1/ai/provider-keys/{provider}`).
-The environment variable in the table below is a SEED, not the home: a key found
+at Settings → AI → Models, on the Providers card (`PUT /v1/ai/provider-keys/{provider}`).
+The same card's Test asks the vendor whether the stored key works — what it
+calls for each provider is in [ai-provider-key-test.md](ai-provider-key-test.md). The environment variable in the table below is a SEED, not the home: a key found
 there is sealed on the next boot and the variable can then be deleted. Both
 routes still fail closed — a bound provider with a key by neither is refused at
 construction, naming what is missing.
@@ -1343,7 +1411,12 @@ construction, naming what is missing.
 | `openai_compatible` | `OPENAI_COMPATIBLE_API_KEY` | **required** | BYOK cloud, generic OpenAI wire (OpenAI, Mistral, DeepSeek, Groq, Together, OpenRouter, …) |
 | `openai` | `OPENAI_API_KEY` | optional (default `api.openai.com`) | BYOK cloud, native Responses API |
 | `gemini` | `GEMINI_API_KEY` | optional (default `generativelanguage.googleapis.com/v1beta`) | BYOK cloud, native `generateContent` |
-| `gemini_vertex` | `GEMINI_VERTEX_SA_JSON` (the service-account key file's JSON) | **refused** — the host follows from `location` | BYOK cloud, the `gemini` wire served by Vertex AI; **`location` required**; the one cloud provider `eu_resident` admits |
+| `gemini_vertex` | `GEMINI_VERTEX_SA_JSON` (the service-account key file's JSON) | **refused** — the host follows from `location` | BYOK cloud, the `gemini` wire served by Vertex AI; **`location` required**, and an EU one under `eu_hosted` |
+| `jev` | `TYPESAFE_API_KEY` | optional (default `https://api.typesafe.ai/v1/systemone`, the FULL endpoint) | decisions lane only; TypeSafe's own API |
+| `jev_compatible` | `JEV_COMPATIBLE_API_KEY` (**optional**: sent when held, never demanded) | **required**, the FULL endpoint | decisions lane only; any server on the Jev wire — OpenRouter (`https://openrouter.ai/api/alpha/decisions`, key = your OpenRouter key) or a self-hosted server (`http://127.0.0.1:8767/v1/systemone`, usually keyless) |
+
+A decision provider's `base_url` is the whole endpoint URL and is posted to as
+written; nothing is appended.
 
 `base_url` for the OpenAI-wire providers (`openai_compatible`, `openai`, and
 `vllm`) is the vendor **host root with no version segment** — the adapter
@@ -1356,7 +1429,7 @@ would double it (`…/v1/v1/…` → 404). Use `https://api.mistral.ai`, not
 `embeddings:`, and refused on any other provider. It names the Vertex AI
 location that serves the call and processes the prompt: `eu`, `us`, `global`, or
 a region such as `europe-west4`. The API host follows from it, so no `base_url`
-is accepted. Under `profile: eu_resident` it must be `eu` or an EU region
+is accepted. Under `profile: eu_hosted` it must be `eu` or an EU region
 (`europe-west1`, `-west3`, `-west4`, `-west8`, `-west9`, `-west12`, `-north1`,
 `-central2`, `-southwest1`); London `europe-west2`, Zürich `europe-west6`,
 `global` and `us` are refused. Saving a `gemini_vertex` binding asks Google
@@ -1491,6 +1564,44 @@ curl -s https://openrouter.ai/api/v1/models \
   | jq '.data[] | select(.id=="<slug>") | .architecture.input_modalities'
 ```
 
+#### `thinking_level:` — how deeply a Gemini tier thinks
+
+A `gemini` tier may name the thinking level its requests are sent when the
+request names none of its own:
+
+```yaml
+cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite, thinking_level: low }
+```
+
+- **Omitted, the adapter decides**: a structured request thinks at `low`, and a
+  Flash-Lite keeps its own shallower default (`minimal`), so it is sent no level
+  at all. Naming `low` on a Flash-Lite therefore *raises* its thinking.
+- **It outranks a site's floor.** A site in `backend/api/ai-tasks.yaml` may
+  declare `thinking:` (cold_start's two company conversations declare `low`).
+  That is a floor — at least this much, never less than the adapter would send
+  without it — and it applies only where the binding names no level of its own.
+  On a structured request the adapter already sends `low`, under a Gemini 3
+  Flash or Pro model's own default, and a `low` floor does not undo that.
+- **A request's own level wins over both** (`ProviderOptions["gemini"].thinking_level`).
+  Strongest first: the request's own level, the binding's, the site floor, the
+  adapter's default. What every provider is sent for a floor, including the
+  broker's `routing.reasoning_effort`: [ai-thinking.md](ai-thinking.md).
+- **Accepted values are `minimal`, `low`, `medium` and `high`.** Anything else, the
+  field on a provider other than `gemini`, on the `embeddings:` lane, or on a
+  Gemini 2.5 model (which answers the field with a 400) is a startup error.
+  Which levels one Gemini 3 model takes is the vendor's to say:
+  `gemini-3.1-pro-preview` refuses `minimal`.
+- **Clearing it through the API takes `default`.** A routing save that omits
+  `thinking_level` keeps the stored level while provider, host and model are
+  unchanged; one that sends `thinking_level: default` clears it, and `default`
+  itself is never stored.
+- **Thinking is output.** Gemini charges it to the same `maxOutputTokens` as the
+  answer; the adapter reports it as reasoning tokens inside the output count, so
+  it is metered and priced, and a structured answer whose thinking ate the
+  ceiling is retried with more room.
+- Settings → AI has no field for it; re-saving a tier bound to the same model
+  keeps the stored level, and re-pointing the tier drops it.
+
 A cloud binding is refused at startup under `profile: sovereign` (zero
 egress by construction) — and so is a **local provider pointed at somebody
 else's host**, because the provider name alone would let a deployment declare
@@ -1508,9 +1619,10 @@ Two egress rules bind **every** profile, checked when the binding is written and
 again on the socket the call actually opens (so a name that resolves — or
 rebinds — to a refused address is stopped at connect time):
 
-- `ollama`, `vllm` and `openai_compatible` may reach loopback, a private range,
-  or a public host — the local model, the GPU box, the self-hosted gateway.
-- `anthropic`, `openai` and `gemini` may reach a **public host over https only**.
+- `ollama`, `vllm`, `openai_compatible` and `jev_compatible` may reach
+  loopback, a private range, or a public host — the local model, the GPU box,
+  the self-hosted gateway.
+- `anthropic`, `openai`, `gemini` and `jev` may reach a **public host over https only**.
   Their `base_url` overrides a vendor's own API host, and the call carries this
   installation's model key in a header (`x-api-key`, `x-goog-api-key`) that Go
   does not strip across hosts. To reach a gateway on your own network, or one
@@ -1601,3 +1713,11 @@ Two operator gotchas, verified against current vendor docs:
 2. **Vendor `-latest` model aliases drift and some are being deprecated**
    (e.g. Mistral). Pin an explicit versioned id, or resolve via the
    vendor's `/models` endpoint, rather than hardcoding an alias.
+
+## Sales reporting
+
+`analytics.performance_enabled` (default `false`) enables governed sales reporting
+in both API and worker. It controls availability, the metric MCP tool, scheduled
+editions and configured forecast captures. The legacy analytics and workspace
+forecast continue when disabled. [Operate reporting](../how-to/operate-reporting.md)
+covers pilot setup, durable pause, history gaps and rollback.

@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -69,19 +70,26 @@ var partnerSortFields = map[string]storekit.SortField{
 // ListPartners reads one page of the partner list, in the caller's order or the
 // house default. A partner row is a read of its company, so both grants are
 // asked for before anything is selected.
-func (s *Store) ListPartners(ctx context.Context, in ListPartnersInput) ([]partnerRow, storekit.Page, error) {
+func (s *Store) ListPartners(ctx context.Context, in ListPartnersInput) ([]crmcontracts.Partner, storekit.Page, error) {
 	if err := auth.Require(ctx, "partner", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if err := refuseMaskedPartnerSort(ctx, in.Sort); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	limit := storekit.ClampLimit(in.Limit)
-	var out []partnerRow
+	var out []crmcontracts.Partner
 	var page storekit.Page
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, page, err = listPartnersTx(ctx, tx, in, limit)
+		rows, p, err := listPartnersTx(ctx, tx, in, limit)
+		if err != nil {
+			return err
+		}
+		page = p
+		out, err = wirePartners(ctx, tx, rows)
 		return err
 	})
 	return out, page, err
@@ -168,7 +176,7 @@ func scanPartnerPage(row pgx.Row, sorted *storekit.ListSort) (partnerRow, ids.UU
 // (a partner row is a read of its company, so the company scope bounds
 // the list).
 func partnerListWhere(ctx context.Context, in ListPartnersInput, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-	where := []string{"p.archived_at IS NULL"}
+	where := []string{livePartnerSQL("p")}
 	if in.PartnerRole != nil {
 		where = append(where, storekit.SQLf("p.partner_role = $%d", arg(*in.PartnerRole)))
 	}
@@ -185,18 +193,14 @@ func partnerListWhere(ctx context.Context, in ListPartnersInput, sorted *storeki
 		}
 		where = append(where, keyset)
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
+	// A partner row is a read of its company, so the company bound is the
+	// list's too; the alias stays inside the EXISTS where it cannot collide
+	// with the partner's own columns.
+	visible, err := visibleCompanySQL(ctx, "o", arg)
 	if err != nil {
 		return nil, err
 	}
-	// The company's existence, its archival and its row scope in one clause:
-	// a partner row is a read of its company, so the company scope bounds the
-	// list, and the alias stays inside where it cannot collide with the
-	// partner's own columns.
-	company := "EXISTS (SELECT 1 FROM company o WHERE o.id = p.company_id AND o.archived_at IS NULL"
-	if scope != "" {
-		company += " AND " + scope
-	}
-	where = append(where, company+")")
+	where = append(where, storekit.SQLf(
+		"EXISTS (SELECT 1 FROM company o WHERE o.id = p.company_id AND %s)", visible))
 	return where, nil
 }

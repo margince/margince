@@ -202,9 +202,15 @@ func countWeekLeads(
 // is that contact's, and letting its recorder also claim it would count one
 // meeting twice across two reps.
 //
+// A row that names a source author is excluded from the fallback: an import
+// writes another system's history, and its recorder is whoever ran the import.
+// Such a row with no host names an author with no seat here, so nobody here
+// held it (activities.meetingHost).
+//
 // Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
 func meetingIsTheirsSQL(hostPos, capturedPos string) string {
-	return fmt.Sprintf("(m.host_user_id = %s OR (m.host_user_id IS NULL AND m.captured_by = %s))",
+	return fmt.Sprintf("(m.host_user_id = %s OR (m.host_user_id IS NULL AND m.captured_by = %s"+
+		" AND m.source_author_id IS NULL AND m.source_author_name IS NULL))",
 		hostPos, capturedPos)
 }
 
@@ -224,8 +230,12 @@ func countWeekMeetings(
 	if err != nil {
 		return 0, 0, err
 	}
+	// NULL admitted, because this window is a week that has already passed: a
+	// meeting nothing said was off, whose time has come and gone, is one that
+	// happened. A calendar connector records no status at all, so the strict
+	// form counted none of a rep's synced meetings in their own review.
 	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
-		      AND m.meeting_status = 'held'
+		      AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
 		      AND ` + meetingIsTheirsSQL("$%[5]d", "$%[3]d") + `
 		      AND m.occurred_at >= $%[1]d AND m.occurred_at < $%[2]d
 		      AND (%[4]s)`

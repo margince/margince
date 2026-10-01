@@ -2,21 +2,26 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Heading } from "../design-system/heading";
+import { Modal } from "../design-system/modal";
+import { holdExits } from "../design-system/presence-testing";
 import { LocaleProvider } from "../i18n";
-import { meFixture } from "./mefixture";
+import { type GrantSpec, meFixture } from "./mefixture";
 import { CREATE_ID } from "./nav";
 import {
   type Command,
   CommandPalette,
   paletteHotkeyCaps,
   useBuiltinCommands,
+  usePaletteHotkey,
 } from "./palette";
 
 // B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
@@ -352,6 +357,57 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(row.querySelector(".sub")?.textContent).toBe("Company");
   });
 
+  // A partner is a property of a company, so the second line says so where it
+  // would otherwise say the kind: the name finds the account, and the line
+  // says the account is a partner.
+  it("names a partner company as one on its second line", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "company",
+              id: "o1",
+              title: "Brandt GmbH",
+              is_partner: true,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "brandt");
+    const row = await screen.findByRole("button", { name: /Brandt GmbH/ });
+    expect(row.querySelector(".sub")?.textContent).toBe("Partner company");
+  });
+
+  // The marker means nothing off a company, so a hit of another kind keeps
+  // its own kind line whatever the server sent beside it.
+  it("keeps a non-company hit's kind line despite a partner marker", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: "contact",
+              id: "p1",
+              title: "Dana Buyer",
+              is_partner: true,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "dana");
+    const row = await screen.findByRole("button", { name: /Dana Buyer/ });
+    expect(row.querySelector(".sub")?.textContent).toBe("Contact");
+  });
+
   // A catalog row has no page of its own — it lives on the data-model settings
   // page — so that is where the hit goes. Being findable at all is the change;
   // an address of its own is worth having and is not this one.
@@ -499,6 +555,93 @@ describe("a palette that is leaving", () => {
   });
 });
 
+// The shell's wiring, with a dialog the page behind may be holding up.
+function ShellWithDialog({
+  dialogOpen,
+  onDialogClose = () => {},
+}: Readonly<{ dialogOpen: boolean; onDialogClose?: () => void }>) {
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  usePaletteHotkey(paletteOpen, setPaletteOpen);
+  return (
+    <>
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        commands={commands}
+      />
+      <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit-deal">
+        <Heading size="large" id="edit-deal">
+          Edit deal
+        </Heading>
+        <button type="button">Save</button>
+      </Modal>
+    </>
+  );
+}
+
+// An open dialog makes the rest of the app unreachable, and the palette is the
+// rest of the app: raised over one it sat under the dialog's keyboard, so
+// Escape closed the dialog and left the palette standing.
+describe("the palette hotkey", () => {
+  it("does nothing while a dialog is up, and Escape still closes the dialog", async () => {
+    const onDialogClose = vi.fn();
+    render(<ShellWithDialog dialogOpen onDialogClose={onDialogClose} />);
+    const user = userEvent.setup();
+
+    await user.keyboard("{Meta>}k{/Meta}");
+    expect(screen.queryByRole("searchbox")).toBeNull();
+    // The browser's own ⌘K is still withheld: the chord belongs to the product.
+    expect(fireEvent.keyDown(document.body, { key: "k", metaKey: true })).toBe(
+      false,
+    );
+
+    await user.keyboard("{Escape}");
+    expect(onDialogClose).toHaveBeenCalledOnce();
+  });
+
+  it("opens the palette and closes it again on the same chord", async () => {
+    render(<ShellWithDialog dialogOpen={false} />);
+    const user = userEvent.setup();
+
+    await user.keyboard("{Meta>}k{/Meta}");
+    expect(screen.getByRole("searchbox")).toBeTruthy();
+    await user.keyboard("{Meta>}k{/Meta}");
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+
+  it("opens the palette again while its own exit is still playing", async () => {
+    const exits = holdExits();
+    try {
+      render(<ShellWithDialog dialogOpen={false} />);
+      const user = userEvent.setup();
+      await user.keyboard("{Meta>}k{/Meta}");
+      await user.keyboard("{Escape}");
+      expect(document.querySelector(".palette-overlay[inert]")).not.toBeNull();
+
+      await user.keyboard("{Meta>}k{/Meta}");
+      const input = screen.getByRole("searchbox");
+      expect(input.closest("[inert]")).toBeNull();
+    } finally {
+      exits.mockRestore();
+    }
+  });
+
+  it("opens over a dialog that is already on its way out", async () => {
+    const exits = holdExits();
+    try {
+      const view = render(<ShellWithDialog dialogOpen />);
+      view.rerender(<ShellWithDialog dialogOpen={false} />);
+      expect(view.baseElement.querySelector("#edit-deal")).not.toBeNull();
+      const user = userEvent.setup();
+
+      await user.keyboard("{Meta>}k{/Meta}");
+      expect(screen.getByRole("searchbox")).toBeTruthy();
+    } finally {
+      exits.mockRestore();
+    }
+  });
+});
+
 describe("useBuiltinCommands", () => {
   function Probe() {
     return (
@@ -517,40 +660,25 @@ describe("useBuiltinCommands", () => {
     return render(<Probe />);
   }
 
-  // The company page rides a deployment flag as well as a grant, and the
-  // palette used to answer that half of the question differently from the rail:
-  // it passed `probeCompanyFlag: false` to avoid a network read, so the flag
-  // resolved to false here and to its real value there. One installation, two
-  // answers, and no test could see it because each surface was asserted alone.
-  //
-  // These three hold the claim that they now agree. The knob is the same
-  // `meFixture` field `settings-nav.test.tsx` drives, so a predicate that
-  // stopped reading it fails on both sides at once.
-  function renderProbeWithCompany(opts: { companyContext: boolean | null }) {
+  // Company profile opens on the catalog's installation grants, and the profile
+  // card on it is the admin's alone. A `company` grant opens nothing here,
+  // whatever the installation says — the palette reads the rail's table.
+  function renderProbeWithCompany(opts: { roles: string[]; allow: GrantSpec }) {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        jsonResponse(
-          meFixture({
-            roles: [],
-            // The write, which is what Company profile asks: the read is held
-            // by every seat and stopped opening the page when the four
-            // configuration pages moved off the reads.
-            allow: { company: ["read", "update"] },
-            settingsAvailability:
-              opts.companyContext === null
-                ? null
-                : { company_context: opts.companyContext },
-          }),
-        ),
+        jsonResponse(meFixture({ roles: opts.roles, allow: opts.allow })),
       ),
     );
     return render(<Probe />);
   }
+  const INSTALLATION_WRITER: GrantSpec = {
+    installation_settings: ["read", "update"],
+  };
 
-  it("offers the company shortcut when the installation has that surface", async () => {
+  it("offers the company shortcut to the installation's writer", async () => {
     const user = userEvent.setup();
-    renderProbeWithCompany({ companyContext: true });
+    renderProbeWithCompany({ roles: ["ops"], allow: INSTALLATION_WRITER });
     // Typed by its OLD name, which the palette keeps as a keyword: the page is
     // "Company profile" now, and a reader who learnt "General" should still
     // find it rather than concluding it was removed.
@@ -560,25 +688,60 @@ describe("useBuiltinCommands", () => {
     });
   });
 
-  it("withholds it when the installation does not, matching the rail", async () => {
+  it("withholds it from a company writer while the rollout is on", async () => {
     const user = userEvent.setup();
-    renderProbeWithCompany({ companyContext: false });
-    // The grant is held and the flag is not, which is exactly the state the old
-    // palette got wrong: it never read the flag, so it fell back to the grants
-    // beside it and offered a page this installation may not have.
-    await user.type(screen.getByRole("searchbox"), "general");
-    await waitFor(() => {
-      expect(screen.queryByText("Company profile")).toBeNull();
+    renderProbeWithCompany({
+      roles: ["rep"],
+      allow: {
+        company: ["create", "read", "update"],
+        // The witness: Capture rules proves /me has answered before the
+        // absence below is read.
+        capture_settings: ["read"],
+      },
     });
+    const box = screen.getByRole("searchbox");
+    await user.type(box, "capture");
+    await screen.findByText("Capture rules");
+    await user.clear(box);
+    await user.type(box, "general");
+    expect(screen.queryByText("Company profile")).toBeNull();
   });
 
-  it("withholds it when /me carries no availability at all", async () => {
+  // Reading the company's own website is Company profile's job, so no seat is
+  // offered a separate action for it.
+  it.each([["admin"], ["ops"]])(
+    "offers %s no separate read-a-company action",
+    async (role) => {
+      const user = userEvent.setup();
+      renderProbeWithCompany({ roles: [role], allow: INSTALLATION_WRITER });
+      await user.type(screen.getByRole("searchbox"), "company");
+      await screen.findByText("Company profile");
+      expect(screen.queryByText("Read a company")).toBeNull();
+    },
+  );
+
+  it("reaches Company profile by its refresh button's words for an admin", async () => {
     const user = userEvent.setup();
-    renderProbeWithCompany({ companyContext: null });
-    await user.type(screen.getByRole("searchbox"), "general");
+    renderProbeWithCompany({ roles: ["admin"], allow: INSTALLATION_WRITER });
+    await user.type(screen.getByRole("searchbox"), "website");
     await waitFor(() => {
-      expect(screen.queryByText("Company profile")).toBeNull();
+      expect(destinationRows()[0].textContent).toContain("Company profile");
     });
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/settings/company");
+  });
+
+  // Ops reaches Company profile for the installation and the rates, and its
+  // copy of the page draws no website card, so "website" leads it nowhere.
+  it("does not send ops to Company profile for the website", async () => {
+    const user = userEvent.setup();
+    renderProbeWithCompany({ roles: ["ops"], allow: INSTALLATION_WRITER });
+    const box = screen.getByRole("searchbox");
+    await user.type(box, "company");
+    await screen.findByText("Company profile");
+    await user.clear(box);
+    await user.type(box, "website");
+    expect(screen.queryByText("Company profile")).toBeNull();
   });
 
   // The two destinations that carry a word the rail no longer prints. A reader

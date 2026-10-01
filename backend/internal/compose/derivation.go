@@ -53,7 +53,7 @@ const asOfKey = "as_of"
 // reservedDerivationKeys are the query-string names a handle owns. Report
 // vocabularies may not squat on them, or a minted URL would be ambiguous.
 // Derived from here rather than restated, so adding a key updates the gate.
-var reservedDerivationKeys = []string{groupByKey, "agg", nullPredicateKey, asOfKey, reservedDerivationColumn}
+var reservedDerivationKeys = []string{groupByKey, "agg", nullPredicateKey, asOfKey, reservedDerivationColumn, reportingScopeKind, "scope_id", reportingHandleVersion}
 
 // groupByKey names the dimensions a handle groups by. Named because a refusal
 // quotes it back, and a refusal naming an argument the caller did not send is
@@ -65,6 +65,7 @@ const groupByKey = "by"
 // group-key values), which of those keys were grouping dimensions, and
 // the aggregates being explained.
 type derivationQuery struct {
+	Scope *RequestedScope
 	// Predicates bind field → value. The empty string means the empty string;
 	// an unset column is named in Unset instead.
 	Predicates map[string]string
@@ -76,34 +77,6 @@ type derivationQuery struct {
 	// converts the same way. Zero when the handle predates this key, which
 	// resolves at the current instant exactly as it always did.
 	AsOf time.Time
-}
-
-// derivationOutcome is a resolved handle: definition, drill-through
-// rows, and the aggregates recomputed over exactly those rows.
-type derivationOutcome struct {
-	Report     string
-	Definition string
-	Plan       map[string]any
-	Columns    []string
-	Rows       []map[string]any
-	Aggregates map[string]any
-	TotalRows  int
-	// ExcludedByPermission counts the visible rows a field mask withheld —
-	// nil when no mask applied, exactly like the report envelope it explains.
-	ExcludedByPermission *int
-	GeneratedAt          time.Time
-	// AsOf is the instant these figures were computed at: the headline's when
-	// the handle pinned one, and a fresh reading when it did not.
-	AsOf time.Time
-	// AsOfPinned says which of those it was.
-	//
-	// The pin makes a detail reconcile to its headline. It cannot do that for a
-	// link minted before the key existed, or saved before it — and there is no
-	// way to recover the instant such a link was made at. Recomputing is the
-	// only thing left, so the answer says it recomputed. Silence here is the
-	// failure the pin exists to prevent, arriving by a different route: figures
-	// that do not add up to the number above them, presented as though they do.
-	AsOfPinned bool
 }
 
 // boundExpr is one validated predicate: the vocabulary field, its fixed
@@ -123,6 +96,7 @@ type boundExpr struct {
 // drill-through SELECT list, the aggregate recompute list, and the
 // plain-language definition — everything but the execution.
 type derivationPlan struct {
+	scope *RequestedScope
 	preds []boundExpr
 	// predicates is the handle's raw field → value map, kept for the scoped
 	// filter gate the execution half runs before the WHERE side binds.
@@ -177,10 +151,11 @@ func (e *reportEngine) Derive(ctx context.Context, report string, q derivationQu
 		Report:     report,
 		Definition: plan.definition,
 		Plan: map[string]any{
-			"object":     string(spec.entity),
-			"predicates": q.Predicates,
-			"group_by":   q.GroupBy,
-			"aggregates": plan.aggregates,
+			"object":       string(spec.entity),
+			"predicates":   q.Predicates,
+			reportingScope: q.Scope,
+			"group_by":     q.GroupBy,
+			"aggregates":   plan.aggregates,
 		},
 		// The outcome's own slice: the fetch appends the label column to it
 		// when a row was named, while plan.columns still drives the scan.
@@ -211,7 +186,10 @@ func (e *reportEngine) Derive(ctx context.Context, report string, q derivationQu
 // compileDerivation validates a parsed handle against the report's
 // closed vocabulary and renders every SQL fragment and the definition.
 func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, error) {
-	plan := derivationPlan{aggregates: q.Aggregates, predicates: q.Predicates}
+	if err := checkReportScope(spec, q.Scope); err != nil {
+		return derivationPlan{}, err
+	}
+	plan := derivationPlan{scope: q.Scope, aggregates: q.Aggregates, predicates: q.Predicates}
 	if len(plan.aggregates) == 0 {
 		plan.aggregates = spec.defaultAggs
 	}
@@ -274,6 +252,14 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	// measure the vocabulary declares — a derived measure (e.g. the
 	// weighted value) sits NEXT TO its inputs, so the lineage bottoms
 	// out at base values with no opaque intermediate step.
+	//
+	// On an install-wide report these rows carry colleagues' owners and
+	// amounts, which adds no disclosure: deal and project are identity tables,
+	// deal values are open to every seat that may read the deal, and the
+	// ordinary read serves this caller the same owner and amount. What that
+	// read withholds, a field mask, is withheld here too (fetchDerivation's
+	// mask exclusion). Held by:
+	// TestADrillThroughShowsWhatTheOrdinaryReadShowsAndNoMore.
 	plan.columns = []string{"id"}
 	plan.selects = []string{"t.id AS id"}
 	for _, name := range sortedKeys(spec.dimensions) {

@@ -139,7 +139,7 @@ func (e *reportEngine) Run(ctx context.Context, report string, req reportRequest
 // than read off reportRequest's json tags because it is also the sentence the
 // refusal prints, and a list a reader can see is worth more than one derived
 // from a struct they cannot.
-var servedPlanArguments = map[string]bool{slotFilters: true, slotGroupBy: true, slotAggregates: true}
+var servedPlanArguments = map[string]bool{reportingScope: true, slotFilters: true, slotGroupBy: true, slotAggregates: true}
 
 // unservedPlanArguments names the plan keys this engine does not serve, sorted.
 //

@@ -5,6 +5,7 @@ import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { DateFieldSelect } from "./automations.datefield";
+import { ListParamSelect } from "./automations.lists";
 import {
   type ParamField,
   paramFields,
@@ -24,11 +25,14 @@ function ParamFieldControl({
   field,
   value,
   object,
+  watchedList,
   onChange,
 }: Readonly<{
   field: ParamField;
   value: string;
   object: string;
+  /** The Live List a list rule watches, which narrows its Shortlist picker. */
+  watchedList: string;
   onChange: (value: string) => void;
 }>) {
   if (field.kind === "boolean") {
@@ -42,6 +46,22 @@ function ParamFieldControl({
           }
         />
       </div>
+    );
+  }
+  if (field.kind === "live_list" || field.kind === "shortlist") {
+    const kind = field.kind;
+    return (
+      <Field label={field.key}>
+        {(control) => (
+          <ListParamSelect
+            kind={kind}
+            value={value}
+            watchedList={watchedList}
+            onChange={onChange}
+            control={control}
+          />
+        )}
+      </Field>
     );
   }
   return (
@@ -130,7 +150,7 @@ export function AutomationForm({
     >
       {/* The dialog covers the row that would otherwise have said which
           automation is open, so the heading says it instead. */}
-      <Heading size="large" className="t-h3 modal-title" id={titleId}>
+      <Heading size="large" className="t-h3" id={titleId}>
         {initialName}
       </Heading>
       <p className="t-caption">
@@ -151,6 +171,7 @@ export function AutomationForm({
           field={field}
           value={values[field.key] ?? field.initial}
           object={values.object ?? ""}
+          watchedList={values.list_id ?? ""}
           onChange={(next) =>
             setValues((current) => ({ ...current, [field.key]: next }))
           }

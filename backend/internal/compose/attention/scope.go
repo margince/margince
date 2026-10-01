@@ -16,6 +16,7 @@ import (
 	"context"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -348,20 +349,20 @@ func keepUnowned(rows []ranked) []ranked {
 // day and is not.
 func (s *Service) narrowToScope(
 	ctx context.Context, rows []ranked, scope string, owner ids.UUID,
-) []ranked {
+) ([]ranked, scopeNote) {
 	switch {
 	case !owner.IsZero():
-		return keepOwnedBy(rows, owner)
+		return keepOwnedBy(rows, owner), scopeNote{}
 	case mineOnly(scope):
-		return keepReadersOwn(ctx, rows)
+		return keepReadersOwn(ctx, rows), scopeNote{}
 	case scope == scopeUnassigned:
-		return keepUnowned(rows)
+		return keepUnowned(rows), scopeNote{}
 	case scope == scopeTeam:
 		return s.keepTeams(ctx, rows)
 	default:
 		// `all`, which narrows nothing: the reader reaches every row by tier,
 		// and every row here was already read under that tier.
-		return rows
+		return rows, scopeNote{}
 	}
 }
 
@@ -383,15 +384,15 @@ func (s *Service) narrowToScope(
 // for, and a queue that handed back every row it had read would be widening a
 // scope named `team` — the failure resolveOwner's own nil case exists to
 // prevent.
-func (s *Service) keepTeams(ctx context.Context, rows []ranked) []ranked {
+func (s *Service) keepTeams(ctx context.Context, rows []ranked) ([]ranked, scopeNote) {
 	if s.teammates == nil {
-		return nil
+		return nil, scopeNote{failed: true}
 	}
-	roster, _, err := s.teammates.LiveTeammatesOfCaller(ctx)
+	roster, cut, err := s.degradableRoster(ctx)
 	if err != nil {
-		return nil
+		return nil, scopeNote{failed: true}
 	}
-	return rowsForRoster(rows, roster)
+	return rowsForRoster(rows, roster), scopeNote{truncated: cut}
 }
 
 func rowsForRoster(rows []ranked, roster []TeamMember) []ranked {
@@ -453,6 +454,21 @@ func answersTo(row ranked) (ids.UUID, bool) {
 	return ids.UUID{}, false
 }
 
+// teamWeekFor answers which teams' frozen weeks this reader may open, on the
+// predicate the week is served on. Not a scope: the `team` scope is the team's
+// live work and follows row scope, while the week is a lead's verdict on named
+// colleagues, which a read-only seat reaching every row does not get.
+func teamWeekFor(ctx context.Context) crmcontracts.WorklistTeamWeek {
+	switch auth.TeamWeekReachOf(ctx) {
+	case auth.ReachesEveryTeam:
+		return crmcontracts.WorklistTeamWeekEveryTeam
+	case auth.ReachesTeamsLed:
+		return crmcontracts.WorklistTeamWeekTeamsLed
+	default:
+		return crmcontracts.WorklistTeamWeekNone
+	}
+}
+
 // scopeOptions puts the resolver's answer on the wire.
 func scopeOptions(options []string) []crmcontracts.WorklistScopeOptions {
 	out := make([]crmcontracts.WorklistScopeOptions, 0, len(options))
@@ -469,6 +485,10 @@ func (s *Service) forNoticeTeam(ctx context.Context) (*Service, error) {
 	if s.teammates == nil {
 		return &narrowed, nil
 	}
+	// The cap is not reported from here. This narrows the notice lane over the
+	// SAME roster read, under the same bound, that narrowToScope reads for the
+	// page — and on scope=team the page always narrows, so the admission is
+	// already made once where every other short answer is collected.
 	roster, _, err := s.teammates.LiveTeammatesOfCaller(ctx)
 	if err != nil {
 		return nil, err

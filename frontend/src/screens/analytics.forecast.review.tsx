@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { isEntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Button } from "../design-system/atoms";
+import { Badge, Button, Disclosure } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
@@ -14,6 +14,7 @@ import {
 } from "../design-system/resolvesheet";
 import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
 import { QueryGate, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 
@@ -64,14 +65,10 @@ export function ForecastReview() {
     <QueryGate query={assurance} pendingLabel={t("review.title")}>
       {(run) =>
         run === null ? (
-          <Panel title={t("review.title")}>
-            <PanelBody>
-              {/* Said plainly, because the alternative reading is dangerous: a
-                  reader who takes an unchecked pipeline for a clean one has
-                  been told the opposite of what happened. */}
-              <p>{t("review.notCheckedYet")}</p>
-            </PanelBody>
-          </Panel>
+          // 404 here is a workspace nobody has started, not a wait: the nightly
+          // pass skips it until somebody does. So the panel ASKS, with the
+          // preview that makes the ask answerable.
+          <FirstCheck title={t("review.title")} />
         ) : (
           <ReviewPanel run={run} locale={locale} title={t("review.title")} />
         )
@@ -104,10 +101,17 @@ function ReviewPanel({
   return (
     <Panel title={title} titleAction={<ReadinessBadge run={run} />}>
       <PanelBody>
-        {/* Coverage first and SEPARATE. A reader who takes "no findings" for a
-            clean pipeline when nobody could look has been told the opposite of
-            what happened. */}
-        <CoverageLine run={run} />
+        {run.sources?.some((source) => source.state !== "checked") ? (
+          <CoverageLine sources={run.sources} />
+        ) : (
+          <Disclosure summary={t("analytics.sectionCoverage")}>
+            <CoverageLine sources={run.sources} />
+          </Disclosure>
+        )}
+        {/* Beside the coverage line rather than in the header: a recheck is an
+            answer to what the coverage line just said, and the header already
+            carries the verdict. */}
+        <Recheck runId={run.run_id} />
       </PanelBody>
       <QueryGate query={checks} pendingLabel={title}>
         {(found) =>
@@ -153,11 +157,11 @@ function ReadinessBadge({ run }: Readonly<{ run: Assurance }>) {
 //
 // Named sources rather than a count: "2 of 6 sources" tells a reader a number,
 // and which two is what they need to fix it.
-function CoverageLine({ run }: Readonly<{ run: Assurance }>) {
+export function CoverageLine({
+  sources,
+}: Readonly<{ sources: Assurance["sources"] | undefined }>) {
   const t = useT();
-  const unread = (run.sources ?? []).filter(
-    (source) => source.state !== "checked",
-  );
+  const unread = (sources ?? []).filter((source) => source.state !== "checked");
   if (unread.length === 0) {
     return <p className="sub">{t("review.allSourcesRead")}</p>;
   }

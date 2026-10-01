@@ -60,7 +60,7 @@ function TeamPlanDialog({
   const headingId = useId();
   return (
     <Modal open labelledBy={headingId} onClose={onClose}>
-      <Heading size="large" id={headingId}>
+      <Heading size="large" id={headingId} className="modal-title">
         {t("brief.team.planFor", { name })}
       </Heading>
       {plan.data && (

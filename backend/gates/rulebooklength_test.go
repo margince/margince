@@ -80,7 +80,10 @@ var ceilings = map[string]int{
 	// same reason it cannot live only in `docs/`: a session that has not read the
 	// rule has no reason to open the page, and by the time it would, it has
 	// written the diff a colleague is already writing.
-	"AGENTS.md": 367,
+	//
+	// +1 for how a claim ends: closing strips the label, so a session finishing
+	// through `Closes #N` knows it owes no release.
+	"AGENTS.md": 368,
 	// Raised from 160 for the AI-hue rule: indigo marks agent-authored content,
 	// and a reader who does not know that paints the meaning onto a decoration.
 	// The reasoning lives in the design-system README; what is here is the twelve

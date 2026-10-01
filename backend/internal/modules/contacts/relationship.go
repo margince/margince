@@ -130,7 +130,7 @@ func anchorIDOf(row relationshipRow) (object string, id ids.UUID, err error) {
 // team's primary-employer edge, forge a partner edge on their company, or
 // staff their project, through POST/PATCH/DELETE /v1/relationships — reaching
 // past exactly the authority the dedicated verbs demand (ensureProjectWritable
-// on the stakeholder roster, auth.EnsureWritable in UpdateContact).
+// on the stakeholder roster, auth.EnsureChangeable in UpdateContact).
 //
 // Live, not merely visible: an edge is something NEW on the anchor, and
 // archived means frozen.

@@ -10,6 +10,7 @@
 // report card and its queries into the morning's bundle.
 
 import { navigate } from "../app/router";
+import { currentParams } from "../app/urlstate";
 
 // A SECTION is what the address names and what the tabs choose between; a
 // REPORT is one result inside it. They were the same thing while every section
@@ -21,12 +22,16 @@ import { navigate } from "../app/router";
 // section draws against this type, so a section cannot be addressable here and
 // missing there.
 export const SECTIONS = [
-  "forecast",
-  "pipeline",
   "performance",
+  "forecast",
+  "reports",
+  "targets",
+  "definitions",
+  "pipeline",
   "outcomes",
   "coverage",
   "delivery",
+  "questions",
 ] as const;
 
 export type Section = (typeof SECTIONS)[number];
@@ -54,14 +59,17 @@ const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
   "projects-gone-quiet": "delivery",
 };
 
-export function sectionFromAddress(segment: string | undefined): Section {
+export function sectionFromAddress(
+  segment: string | undefined,
+  fallback: Section = "forecast",
+): Section {
   if (isSection(segment)) {
     return segment;
   }
   if (segment && segment in SECTION_OF_REPORT) {
     return SECTION_OF_REPORT[segment];
   }
-  return "forecast";
+  return fallback;
 }
 
 /**
@@ -74,5 +82,13 @@ export function sectionFromAddress(segment: string | undefined): Section {
  * holding the rows their figure was read from.
  */
 export function openAnalyticsSection(section: Section): void {
-  navigate({ screen: "analytics", id: section });
+  navigate({ screen: "analytics", id: section }, currentParams());
+}
+
+/**
+ * Open one saved question, answered for whoever follows the link. The run id
+ * rides a segment below the section, so the address is the thing to share.
+ */
+export function openSavedQuestion(runId: string): void {
+  navigate({ screen: "analytics", id: "questions", id2: runId });
 }

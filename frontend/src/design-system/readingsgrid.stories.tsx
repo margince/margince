@@ -12,7 +12,7 @@ import { ReadingsGrid } from "./readingsgrid";
 // check is that the row reads as four cards of ONE record: one height across,
 // folding to fewer columns rather than to a ragged tail.
 const meta: Meta<typeof ReadingsGrid> = {
-  title: "Design System/ReadingsGrid",
+  title: "Components/Text and data display/Readings grid",
   component: ReadingsGrid,
   parameters: { layout: "padded" },
 };

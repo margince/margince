@@ -30,7 +30,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"os"
@@ -39,6 +38,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // outboundIdentities is the file that declares them, read rather than listed:
@@ -55,7 +56,7 @@ var identityConstant = regexp.MustCompile(`^([A-Z]\w*)Product$`)
 // declaredIdentities reads the product tokens out of the file that owns them.
 func declaredIdentities(t *testing.T) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), outboundIdentities, nil, 0)
+	file, err := gatekit.ParseFile(outboundIdentities, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", outboundIdentities, err)
 	}

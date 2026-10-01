@@ -42,7 +42,7 @@ func TestHitCapIsTheCeilingReached(t *testing.T) {
 // it is asserted on the rendered report rather than only on the predicate.
 func TestReportFlagsAReplyThatFilledItsBudget(t *testing.T) {
 	res := probeResult{
-		Site: "rate_extract/pricing", Kind: "one_shot", Scope: "full_invocation",
+		Site: "rate_extract/fx", Kind: "one_shot", Scope: "full_invocation",
 		Binding: "routing x.yaml", Ladder: "premium,cheap_cloud",
 		ContextCaveat: "company context not declared for this site",
 		FixtureBytes:  589194, HasExpectation: true,
@@ -58,7 +58,7 @@ func TestReportFlagsAReplyThatFilledItsBudget(t *testing.T) {
 		t.Fatalf("writeProbeReport: %v", err)
 	}
 	got := out.String()
-	for _, want := range []string{"rate_extract/pricing", "scope=full_invocation", "HIT CAP", "max_tokens 8192", "in 175453 tok"} {
+	for _, want := range []string{"rate_extract/fx", "scope=full_invocation", "HIT CAP", "max_tokens 8192", "in 175453 tok"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("report is missing %q:\n%s", want, got)
 		}

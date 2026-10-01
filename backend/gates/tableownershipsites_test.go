@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // declSite names the declaration a write sits in, for the waiver key.
@@ -137,7 +139,7 @@ func methodSitesOf(t *testing.T, filename, src string) []string {
 
 func sitesOf(t *testing.T, filename, src string, keep func(ast.Node) bool) []string {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	file, err := parser.ParseFile(fset, filename, src, 0)
 	if err != nil {
 		t.Fatalf("parse the fixture: %v", err)

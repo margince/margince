@@ -57,7 +57,7 @@ func TestTheModelMayAnswerEveryKindTheTaxonomyDefines(t *testing.T) {
 			} `json:"results"`
 		} `json:"properties"`
 	}
-	if err := json.Unmarshal(verdictSchema(), &shape); err != nil {
+	if err := json.Unmarshal(verdictSchema("r1"), &shape); err != nil {
 		t.Fatalf("decoding the verdict schema: %v", err)
 	}
 	got := make(map[string]bool, len(shape.Properties.Results.Items.Properties.Verdict.Enum))

@@ -21,12 +21,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // TestTheDisclosureLineAgreesAcrossTheSeam holds the claim in
@@ -52,7 +52,7 @@ func TestTheDisclosureLineAgreesAcrossTheSeam(t *testing.T) {
 // structFields answers the named struct's exported field names, sorted.
 func structFields(t *testing.T, path, name string) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

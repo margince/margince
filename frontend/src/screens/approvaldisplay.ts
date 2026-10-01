@@ -248,20 +248,6 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         as: "text",
       },
     ],
-    ai_model_rate_proposal: [
-      { field: "provider", label: "approval.field.provider", as: "text" },
-      { field: "model_id", label: "approval.field.model", as: "text" },
-      {
-        field: "input_per_mtok",
-        label: "approval.field.input_per_mtok",
-        as: "text",
-      },
-      {
-        field: "output_per_mtok",
-        label: "approval.field.output_per_mtok",
-        as: "text",
-      },
-    ],
     // A proposed stage move. `because` leads, because a rep deciding needs
     // the reason before the checklist: the criteria say WHAT is settled and
     // the sentence says why that adds up to a move.

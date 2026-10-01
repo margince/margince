@@ -166,12 +166,14 @@ test.describe("company record — the glance's page shape", () => {
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
-    const call = page.getByRole("heading", { name: "Kontobriefing" });
+    const call = page.getByRole("heading", { name: "Unternehmensbericht" });
     await expect(call).toHaveCount(1);
-    const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
+    const needs = page.getByRole("heading", { name: "Handlungsbedarf" });
     await expect(needs).toHaveCount(1);
-    const money = page.getByRole("heading", { name: "Kommerziell" });
-    const ask = page.getByRole("heading", { name: "Diesen Account befragen" });
+    const money = page.getByRole("heading", { name: "Geschäftliches" });
+    const ask = page.getByRole("heading", {
+      name: "Fragen zu diesem Unternehmen",
+    });
     await expect(ask).toHaveCount(1);
     // Next steps is gone from this page — its open tasks are the needs list
     // and the Tasks tab now.
@@ -198,7 +200,7 @@ test.describe("company record — the glance's page shape", () => {
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
-    const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
+    const needs = page.getByRole("heading", { name: "Handlungsbedarf" });
     await expect(needs).toBeVisible();
 
     await page.getByRole("button", { name: "Kontakte" }).click();
@@ -267,7 +269,7 @@ test.describe("company record — the glance's page shape", () => {
     // the sparse account quietly dropping part of the page again.
     await expect(page.locator(`${STRIP} > *`)).toHaveCount(5);
     await expect(
-      page.getByRole("heading", { name: "Kontobriefing" }),
+      page.getByRole("heading", { name: "Unternehmensbericht" }),
     ).toHaveCount(1);
   });
 

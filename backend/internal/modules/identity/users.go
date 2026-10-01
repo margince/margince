@@ -72,6 +72,11 @@ var (
 	// DIFFERENT 404: the admin mistyped a role, not a colleague. Wrapping keeps
 	// the status while letting the handler say which of the two happened.
 	errUnknownRole = fmt.Errorf("%w: no role with this key is defined", apperrors.ErrNotFound)
+	errOwnRole     = fmt.Errorf("%w: a member may not change their own role", apperrors.ErrPermissionDenied)
+	// A member holding an archived role gets it back the moment it is restored,
+	// with no assignment check. So nothing hands that account back to anybody
+	// until an admin gives them a live role.
+	errArchivedRoleHeld = fmt.Errorf("%w: the member holds an archived role", apperrors.ErrConflict)
 )
 
 // ReactivateUser returns a deactivated member to 'active' so they may sign in
@@ -83,9 +88,15 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		// Restoring an admin somebody removed is the mirror of removing one, so
 		// it carries the same ceiling.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID, reachDenial); err != nil {
+			return err
+		}
+		if err := refuseWhileHoldingArchivedRole(ctx, tx, userID); err != nil {
 			return err
 		}
 		var status, seat string
@@ -101,11 +112,8 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		if status == userStatusActive {
 			return nil
 		}
-		// Reactivation is the inverse of deactivation only — a 'suspended' member
-		// is held for a different reason (e.g. lockout) and must not be silently
-		// cleared by this path.
-		if status != userStatusDeactivated {
-			return errNotDeactivated
+		if err := refuseUnlessDeactivated(status); err != nil {
+			return err
 		}
 		// A deactivated member counts against nothing, so returning one to active
 		// takes a seat exactly as an invite does. Only a FULL one: read seats are
@@ -213,11 +221,14 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 	if err != nil {
 		return err
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		// A delegated holder must not lock out an administrator. The last-admin
 		// invariant below is a different question — it stops the LAST one going
 		// whoever asks — and neither substitutes for the other.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, in.UserID); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, in.UserID, reachDenial); err != nil {
 			return err
 		}
 		var status string
@@ -230,7 +241,7 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		if err != nil {
 			return err
 		}
-		if status == userStatusDeactivated {
+		if alreadyDeactivated(status) {
 			return nil
 		}
 		// Never deactivate the last active admin — it would lock the whole
@@ -256,7 +267,19 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, in.UserID.UUID,
 			userDeactivatedPayload(in.UserID, actor.UserID, in.Reason))
-	})
+	}); err != nil {
+		return err
+	}
+	// The withdrawal above committed, so the mailbox has already stopped being
+	// read. What is left is the secret it named, which lives in a vault this
+	// module cannot reach and which no transaction could have held anyway —
+	// destroying it before the commit would orphan a live connection if the
+	// transaction then rolled back. It reports nothing: see
+	// CaptureCredentialReaper for why a cleanup must not fail the departure.
+	if s.captureReaper != nil {
+		s.captureReaper(ctx, in.UserID)
+	}
+	return nil
 }
 
 // revokeBorrowedAuthority ends everything that answers to this human rather
@@ -275,8 +298,20 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 // endCredentialAuthority: a password reset or an operator recovery ends the
 // same credentials without the human leaving, and must not cost them their
 // address book.
+//
+// Their capture connections go for the same reason and on the same rule. The
+// credential a connector holds is the provider's, not this product's, so the
+// cascade above never touches it and the mailbox goes on being polled after
+// the seat is deactivated — "this colleague has left" and "we have stopped
+// reading their mail" stay two separate facts, only one of which anybody is
+// prompted to act on. It belongs HERE rather than in endCredentialAuthority
+// on exactly the address book's argument: a password reset must not cost
+// somebody a mailbox connection they then have to re-consent at the provider.
 func (s *Service) revokeBorrowedAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID) error {
 	if err := endCredentialAuthority(ctx, tx, userID, deactivatedUserRevokeReason); err != nil {
+		return err
+	}
+	if err := withdrawCaptureConnections(ctx, tx, userID); err != nil {
 		return err
 	}
 	_, err := tx.Exec(ctx, `DELETE FROM linkedin_connection WHERE owner_user_id = $1`, userID)
@@ -357,110 +392,5 @@ func userDeactivatedPayload(userID ids.UserID, by ids.UserID, reason *string) cr
 		UserId: openapi_types.UUID(userID.UUID),
 		By:     openapi_types.UUID(by.UUID),
 		Reason: reason,
-	}
-}
-
-// ChangeUserRole replaces the user's role assignments with the single
-// target system role and emits role.changed (§5.6a: {user_id, from_role?,
-// to_role, by}) so the effective-permission caches never serve a stale
-// grant. from_role rides the payload only when the previous state was a
-// single role — a multi-role history has no one "from". Admin-only.
-func (s *Service) ChangeUserRole(ctx context.Context, actor Identity, userID ids.UserID, toRole string) error {
-	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionUpdate)
-	if err != nil {
-		return err
-	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Both halves of the ceiling. Who the target IS bounds whether this
-		// caller may touch them at all; what the new role CONFERS bounds what
-		// they may hand out. A caller passing the first and not the second would
-		// promote an ordinary member into authority the caller lacks, and then
-		// hold it by proxy.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID); err != nil {
-			return err
-		}
-		if err := refuseUnlessCallerMayAssign(ctx, tx, actor, toRole); err != nil {
-			return err
-		}
-		// The target is read rather than merely proved to exist, because what it
-		// IS decides the answer: an agent seat holds no role at all.
-		var isAgent bool
-		targetErr := tx.QueryRow(ctx,
-			`SELECT is_agent FROM app_user WHERE id = $1 AND archived_at IS NULL`,
-			userID).Scan(&isAgent)
-		if errors.Is(targetErr, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
-		if targetErr != nil {
-			return targetErr
-		}
-		if isAgent {
-			return errAgentSeatHoldsNoRole
-		}
-		var roleID ids.UUID
-		err := tx.QueryRow(ctx, `SELECT id FROM role WHERE key = $1`, toRole).Scan(&roleID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errUnknownRole
-		}
-		if err != nil {
-			return err
-		}
-
-		rows, err := tx.Query(ctx,
-			`SELECT r.key FROM role_assignment ra JOIN role r ON r.id = ra.role_id WHERE ra.user_id = $1`,
-			userID)
-		if err != nil {
-			return err
-		}
-		fromRoles, err := pgx.CollectRows(rows, pgx.RowTo[string])
-		if err != nil {
-			return err
-		}
-		if len(fromRoles) == 1 && fromRoles[0] == toRole {
-			return nil // already exactly this role; no event to publish
-		}
-		// Never demote the last active admin — the same lockout as deactivation.
-		if toRole != roleAdmin {
-			lastAdmin, err := lastActiveAdmin(ctx, tx, userID)
-			if err != nil {
-				return err
-			}
-			if lastAdmin {
-				return errLastActiveAdmin
-			}
-		}
-
-		if _, err := tx.Exec(ctx,
-			`DELETE FROM role_assignment WHERE user_id = $1`, userID); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`,
-			roleID, userID); err != nil {
-			return err
-		}
-		auditID, err := storekit.Audit(ctx, tx, "assign", "user", userID.UUID,
-			map[string]any{"roles": fromRoles}, map[string]any{"roles": []string{toRole}})
-		if err != nil {
-			return err
-		}
-		var fromRole *string
-		if len(fromRoles) == 1 {
-			fromRole = &fromRoles[0]
-		}
-		return storekit.EmitEvent(ctx, tx, auditID, userID.UUID,
-			roleChangedPayload(userID, toRole, actor.UserID, fromRole))
-	})
-}
-
-// roleChangedPayload builds role.changed's typed payload. fromRole rides
-// the payload only when the previous state was a single role — a
-// multi-role history has no one "from".
-func roleChangedPayload(userID ids.UserID, toRole string, by ids.UserID, fromRole *string) crmcontracts.PublicEventRoleChanged {
-	return crmcontracts.PublicEventRoleChanged{
-		UserId:   openapi_types.UUID(userID.UUID),
-		ToRole:   toRole,
-		By:       openapi_types.UUID(by.UUID),
-		FromRole: fromRole,
 	}
 }

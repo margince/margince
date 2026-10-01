@@ -15,11 +15,8 @@ import { meFixture } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
-import {
-  forgetPlatformDeclines,
-  InstallationSetup,
-  outstandingStep,
-} from "./installation-setup";
+import { InstallationSetup, outstandingStep } from "./installation-setup";
+import { forgetPlatformDeclines } from "./installation-setup.decline";
 
 afterEach(() => {
   // Every case starts with the platform question unanswered by this account.
@@ -170,6 +167,39 @@ async function reportArrived(qc: QueryClient) {
   await waitFor(() =>
     expect(qc.getQueryState(["installation-setup"])?.status).toBe("success"),
   );
+}
+
+/** Binds Gemini through the model form and waits for the ignition. */
+async function igniteGemini(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(await screen.findByLabelText("API key"), "AIza-secret");
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("heading", { name: "Model connected" });
+}
+
+/**
+ * Holds every later read of the setup report until `answer()`, counting them,
+ * so a test can look at the screen while the re-read is in flight. With
+ * `refuseFirst`, the first read the server answers is a 500.
+ */
+function holdSetupReads({ refuseFirst = false } = {}) {
+  const serve = globalThis.fetch;
+  let answer = () => {};
+  const held = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  let reads = 0;
+  vi.stubGlobal("fetch", async (request: Request, init?: RequestInit) => {
+    if (!new URL(request.url).pathname.endsWith("/installation/setup")) {
+      return serve(request, init);
+    }
+    reads += 1;
+    await held;
+    if (refuseFirst && reads === 1) {
+      return jsonResponse({ title: "refused" }, 500);
+    }
+    return serve(request, init);
+  });
+  return { answer, count: () => reads };
 }
 
 describe("the first-run setup gate", () => {
@@ -386,6 +416,94 @@ describe("the first-run setup gate", () => {
     await waitFor(() => expect(writes.length).toBe(2));
     expect(writes[0].url).toBe("/v1/ai/provider-keys/gemini");
     expect(writes[1].url).toBe("/v1/ai/routing");
+  });
+
+  it("drops the step's status line once the binding lands", async () => {
+    const user = userEvent.setup();
+    mount(setupReport(false, false));
+    expect(await screen.findByText("No model connected")).toBeTruthy();
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      await screen.findByRole("heading", { name: "Model connected" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("No model connected")).toBeNull();
+  });
+
+  // The pressed Continue unmounts with the form, so focus is handed to the
+  // title a screen reader reads the ignition from, in order.
+  it("hands the reader to the stage title when the ignition starts", async () => {
+    const user = userEvent.setup();
+    mount(setupReport(false, false));
+    await user.type(await screen.findByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    const title = await screen.findByRole("heading", {
+      name: "Model connected",
+    });
+    expect(document.activeElement).toBe(title);
+  });
+
+  // The report is re-read only once the reader presses past the ignition, and
+  // until it answers it still asks for the model: letting go first would draw
+  // the model form again for the round trip.
+  it("holds the ignition until the next question arrives, then hands the reader to it", async () => {
+    const user = userEvent.setup();
+    const report = setupReport(false, false);
+    mount(report);
+    await igniteGemini(user);
+
+    const reads = holdSetupReads();
+    report.steps[0].configured = true;
+    report.complete = true;
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    // Held while the server is asked, so a second press is not a second ask,
+    // and the wait is said to a reader who cannot see the spinner.
+    const carryOn = screen.getByRole("button", { name: "Continue" });
+    await user.click(carryOn);
+    expect(reads.count()).toBe(1);
+    const described = (carryOn.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .map((id) => document.getElementById(id)?.textContent);
+    expect(described).toContain("Checking setup…");
+    expect(
+      screen.getByRole("heading", { name: "Model connected" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Choose a model provider")).toBeNull();
+
+    reads.answer();
+    const next = await screen.findByRole("heading", {
+      name: "What does your company run on?",
+    });
+    expect(document.activeElement).toBe(next);
+    expect(screen.queryByText("Choose a model provider")).toBeNull();
+  });
+
+  // A failed re-read leaves the stale report, which still asks for a model
+  // that is bound. The ignition stands, says so, and the press is the retry.
+  it("keeps the ignition standing when the re-read fails, and the press retries", async () => {
+    const user = userEvent.setup();
+    const report = setupReport(false, false);
+    mount(report);
+    await igniteGemini(user);
+
+    const reads = holdSetupReads({ refuseFirst: true });
+    report.steps[0].configured = true;
+    report.complete = true;
+    reads.answer();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Model connected" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Choose a model provider")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      await screen.findByRole("heading", {
+        name: "What does your company run on?",
+      }),
+    ).toBeTruthy();
+    expect(reads.count()).toBe(2);
   });
 
   // Every chat tier, not just one. A half-bound installation answers for one

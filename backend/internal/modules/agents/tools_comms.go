@@ -172,6 +172,7 @@ func (t draftEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "draft_email", Title: "Draft an email", Version: toolVersionV1,
 		Description:   draftEmailCopy.render(),
+		Instead:       draftEmailCopy.Instead,
 		RequiredScope: principal.ScopeDraft, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "draftEmail",
 		InputSchema: schema(`{"type":"object","properties":{
@@ -320,6 +321,7 @@ func (t sendEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_email", Title: "Send an email", Version: toolVersionV1,
 		Description:   sendEmailCopy.render(),
+		Instead:       sendEmailCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendEmail",
 		InputSchema: schema(`{"type":"object","required":["activity_id","to","subject","body"],"properties":{
@@ -407,6 +409,7 @@ func (t sendMessageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_message", Title: "Reply on a channel conversation", Version: toolVersionV1,
 		Description:   sendMessageCopy.render(),
+		Instead:       sendMessageCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "sendMessage",
 		InputSchema: schema(`{"type":"object","required":["activity_id","body"],"properties":{

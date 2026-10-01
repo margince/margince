@@ -2,10 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ConnectorsCard } from "./connectors";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+  stubWithSession,
+} from "./story-utils";
 
 // ConnectorsCard stories for the fe-uat render gate: a healthy connection, a
 // reauth-needed one (the reconnect affordance), a sync-error one, the empty
@@ -25,6 +30,14 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // lost its beat.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
+
+// Every story but the read-only one draws an administrator's view, so the
+// Telegram panel shows the verbs its layout is judged with.
+function stubAsBotManager(routes: RouteMap) {
+  stubWithSession(routes, {
+    channel_connection: ["read", "create", "update", "delete"],
+  });
+}
 
 const gmailConnected: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c1",
@@ -93,7 +106,7 @@ const imapPolled: CaptureConnection = {
 
 function cardStory(connections: CaptureConnection[]) {
   return () => {
-    installFetchStub({
+    stubAsBotManager({
       "GET /connectors": () => jsonResponse({ data: connections }),
       // IMAP has no Backfiller — the mounted BackfillPanel's setup screen
       // auto-loads this preview and must render the capability statement
@@ -216,7 +229,7 @@ export const OneConnectedWithHeaderVerb: Story = {
 // roster row's Reconnect.
 function connectFailureStory(connections: CaptureConnection[], path: string) {
   return () => {
-    installFetchStub({
+    stubAsBotManager({
       "GET /connectors": () => jsonResponse({ data: connections }),
       [`POST /connectors/${path}/connect`]: () =>
         jsonResponse(
@@ -260,7 +273,7 @@ export const ReconnectFailed: Story = {
 
 export const LoadFailed: Story = {
   render: () => {
-    installFetchStub({
+    stubAsBotManager({
       "GET /connectors": () =>
         jsonResponse({ title: "Internal Server Error", detail: "boom" }, 500),
     });
@@ -277,7 +290,7 @@ export const LoadFailed: Story = {
 // error card.
 export const NotConfigured: Story = {
   render: () => {
-    installFetchStub({
+    stubAsBotManager({
       "GET /connectors": () => jsonResponse({ code: "not_implemented" }, 501),
     });
     return (
@@ -291,11 +304,11 @@ export const NotConfigured: Story = {
 // The OAuth return outcome (Task 2): the backend lands the callback on
 // #/settings/connections/{outcome}; the card reads id2 off the route and
 // renders a dismissible inline note. Each story sets the hash before
-// mounting, exactly like installFetchStub is wired before mount.
+// mounting, exactly like the fetch stub is wired before mount.
 function outcomeStory(outcome: string, connections: CaptureConnection[]) {
   return () => {
     globalThis.location.hash = `#/settings/connections/${outcome}`;
-    installFetchStub({
+    stubAsBotManager({
       "GET /connectors": () => jsonResponse({ data: connections }),
     });
     return (
@@ -322,9 +335,12 @@ export const OAuthOk: Story = {
 // that the mail roster's stories never reach: no bot yet (one row offering the
 // connect), live bots (a row each), and a deployment with no credential store
 // to seal a token in (503, a calm feature-off state and not an error).
-function telegramStory(channels: unknown[] | null) {
+function telegramStory(
+  channels: unknown[] | null,
+  stub: (routes: RouteMap) => void = stubAsBotManager,
+) {
   return () => {
-    installFetchStub({
+    stub({
       "GET /connectors": () => jsonResponse({ data: [gmailConnected] }),
       "GET /channel-connections": () =>
         channels === null
@@ -367,6 +383,29 @@ export const TelegramTwoBots: Story = {
 };
 
 export const TelegramNotConfigured: Story = { render: telegramStory(null) };
+
+// The seeded rep reads the bot and may change none of it: the roster without
+// a verb, and one line naming who can act instead.
+export const TelegramReadOnly: Story = {
+  render: telegramStory([salesBot], (routes) =>
+    stubWithSession(
+      routes,
+      { channel_connection: ["read"] },
+      { roles: ["rep"] },
+    ),
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText(
+      "Only an administrator or operations user can connect or change the bot.",
+    );
+    const row = within(canvas.getByTestId("telegram-connection"));
+    await expect(
+      row.queryByRole("button", { name: "Replace token" }),
+    ).toBeNull();
+    await expect(row.queryByRole("button", { name: "Disconnect" })).toBeNull();
+  },
+};
 
 // Both panels' rows in dark. The row language puts the answer in the right
 // column against the panel's own ground, and `--textMuted` (the description)

@@ -215,11 +215,11 @@ func seatDeliveredTx(
 // replayClaimIsProvenTx answers whether this seat may record itself as an
 // importer of the message a replay just collided with.
 //
-// Freely, when the row is already this seat's: they authored or captured it, or
-// already hold an import or participant row on it. Recording the import then
-// widens nothing — the audience arm admits them already — and their own copies
-// routinely differ from the stored row: the provider's copy of a mail they sent,
-// a provider that rewrote the identity, a mailbox echoing its own send.
+// Freely, when the row is already this seat's — SeatHoldsActivityTx carries
+// that argument; recording the import then widens nothing, since the audience
+// arm admits them already, and their own copies routinely differ from the
+// stored row: the provider's copy of a mail they sent, a provider that
+// rewrote the identity, a mailbox echoing its own send.
 //
 // Otherwise only on evidence that the two mailboxes hold ONE message rather than
 // two that share a Message-ID: the same subject, body and files.
@@ -259,22 +259,24 @@ func replayClaimIsProvenTx(
 	if seat == ids.Nil {
 		return true, nil
 	}
+	// Freely when the row is already this seat's, by the standing every door
+	// judges with.
+	held, err := SeatHoldsActivityTx(ctx, tx, id)
+	if err != nil || held {
+		return held, err
+	}
 	var same bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM activity a
 			 WHERE a.id = $1
-			   AND (
-			     a.captured_by LIKE $5
-			     OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $6)
-			     OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = a.id AND ap.user_id = $6)
-			     OR (a.subject IS NOT DISTINCT FROM NULLIF($2, '')
-			         AND a.body IS NOT DISTINCT FROM NULLIF($3, '')
-			         AND NOT EXISTS (
-			             SELECT 1 FROM attachment f
-			              WHERE f.activity_id = a.id
-			                AND (f.checksum IS NULL OR f.checksum <> ALL($4))))))`,
-		id, fields.Subject, fields.Body, carried, "%:"+seat.String(), seat).Scan(&same); err != nil {
+			   AND a.subject IS NOT DISTINCT FROM NULLIF($2, '')
+			   AND a.body IS NOT DISTINCT FROM NULLIF($3, '')
+			   AND NOT EXISTS (
+			       SELECT 1 FROM attachment f
+			        WHERE f.activity_id = a.id
+			          AND (f.checksum IS NULL OR f.checksum <> ALL($4))))`,
+		id, fields.Subject, fields.Body, carried).Scan(&same); err != nil {
 		return false, fmt.Errorf("capture: comparing %s with the message it collided with: %w", id, err)
 	}
 	return same, nil

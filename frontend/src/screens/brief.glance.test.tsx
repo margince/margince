@@ -132,8 +132,8 @@ describe("BriefGlance — the weekly's sentence comes from the closed week", () 
 
   it("states the week's result and what it left behind", () => {
     const said = sentenceOf("weekly", CLOSED_WEEK);
-    expect(said).toContain("Deals won: 2");
-    expect(said).toContain("Commitments carried over: 2");
+    expect(said).toContain("You won 2 deals.");
+    expect(said).toContain("2 commitments carried over.");
   });
 
   // The two views compose from different reads. Over the weekly the morning's

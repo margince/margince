@@ -11,14 +11,18 @@ package compose
 // between would let a plan compile against a field the run no longer admits.
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/reportdoc"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -26,14 +30,20 @@ import (
 
 // analyticsQueryHandlers serves the schema and the query.
 type analyticsQueryHandlers struct {
-	db *database.DB
+	reportMetrics *reporting.Service
+	db            *database.DB
 	// floor is the installation's group floor, injected so a test can move it
 	// without editing a setting.
 	floor analyticsquery.Floor
+	// names labels an explanation's records under the reader's grants — the
+	// seam the report drawer names its rows through (derivationlabels.go).
+	names attention.Names
 }
 
-func newAnalyticsQueryHandlers(db *database.DB, floor analyticsquery.Floor) analyticsQueryHandlers {
-	return analyticsQueryHandlers{db: db, floor: floor}
+func newAnalyticsQueryHandlers(
+	db *database.DB, floor analyticsquery.Floor, names attention.Names,
+) analyticsQueryHandlers {
+	return analyticsQueryHandlers{db: db, floor: floor, names: names}
 }
 
 // GetAnalyticsSchema implements GET /analytics/schema.
@@ -86,11 +96,7 @@ func (h analyticsQueryHandlers) RunAnalyticsQuery(w http.ResponseWriter, r *http
 		httperr.Write(w, r, err)
 		return
 	}
-	out := crmcontracts.AnalyticsAnswer{
-		Columns: answer.Columns, Rows: answer.Rows,
-		Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
-		SchemaVersion: answer.SchemaVersion,
-	}
+	out := h.labelledAnswer(ctx, q, answer)
 	if runID != nil {
 		saved := openapi_types.UUID(*runID)
 		out.RunId = &saved
@@ -114,14 +120,15 @@ func (h analyticsQueryHandlers) GetReportRun(
 		httperr.Write(w, r, err)
 		return
 	}
+	asked, err := wireFromQuery(run.Query)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportRun{
-		Id:    openapi_types.UUID(run.ID),
-		Query: wireFromQuery(run.Query),
-		Answer: crmcontracts.AnalyticsAnswer{
-			Columns: run.Answer.Columns, Rows: run.Answer.Rows,
-			Withheld: run.Answer.Withheld, TotalSafe: run.Answer.TotalSafe,
-			SchemaVersion: run.Answer.SchemaVersion,
-		},
+		Id:          openapi_types.UUID(run.ID),
+		Query:       asked,
+		Answer:      h.labelledAnswer(ctx, run.Query, run.Answer),
 		AskedBy:     openapi_types.UUID(run.AskedBy.UUID),
 		StoredFloor: int(run.Floor),
 	})
@@ -189,10 +196,7 @@ func (h analyticsQueryHandlers) ExplainReportRunCell(
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AnalyticsExplanation{
-		Columns: out.Columns, Rows: out.Rows,
-		Withheld: out.Withheld, Truncated: out.Truncated,
-	})
+	httperr.WriteJSON(w, http.StatusOK, h.labelledExplanation(ctx, out))
 }
 
 // RenderAnalyticsReport implements POST /analytics/reports/render.
@@ -204,9 +208,9 @@ func (h analyticsQueryHandlers) RenderAnalyticsReport(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 	var blocks []RenderedBlock
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
-		blocks, err = RenderReport(ctx, tx, documentFromWire(body), h.floor)
+		blocks, err = RenderReport(ctx, tx, documentFromWire(body), h.floor, h.reportMetrics)
 		return err
 	}); err != nil {
 		httperr.Write(w, r, err)
@@ -228,7 +232,7 @@ func (h analyticsQueryHandlers) RenderAnalyticsReport(w http.ResponseWriter, r *
 			block.Severity = &severity
 		}
 		for _, v := range b.Values {
-			value := crmcontracts.RenderedValue{Withheld: v.Withheld}
+			value := crmcontracts.RenderedValue{Withheld: v.Withheld, Coverage: v.Coverage, Context: v.Context, Unit: v.Unit, DefinitionVersion: v.DefinitionVersion}
 			if v.Value != nil {
 				held := v.Value
 				value.Value = &held
@@ -257,7 +261,13 @@ func documentFromWire(in crmcontracts.ReportDocument) reportdoc.Document {
 		}
 		if b.Cells != nil {
 			for _, c := range *b.Cells {
-				cell := reportdoc.Cell{RunID: c.RunId.String(), Column: c.Column}
+				cell := reportdoc.Cell{MetricRef: c.MetricRef, EditionRef: c.EditionRef}
+				if c.RunId != nil {
+					cell.RunID = c.RunId.String()
+				}
+				if c.Column != nil {
+					cell.Column = *c.Column
+				}
 				if c.Group != nil {
 					cell.Group = *c.Group
 				}
@@ -274,16 +284,30 @@ func documentFromWire(in crmcontracts.ReportDocument) reportdoc.Document {
 // The inverse of queryFromWire, and it exists because a saved run answers with
 // the question it saved: a reader who wants to re-ask it, or ask a neighbouring
 // one, needs it in the vocabulary they would have typed.
-func wireFromQuery(in analyticsquery.Query) crmcontracts.AnalyticsQuery {
+func wireFromQuery(in analyticsquery.Query) (crmcontracts.AnalyticsQuery, error) {
 	out := crmcontracts.AnalyticsQuery{Entity: in.Entity}
+	// The scope ASKED for, which is what the run stored: a re-ask from this
+	// echo resolves it against the re-asker's own lens, as the read did.
+	if in.ScopeKind != "" {
+		kind := in.ScopeKind
+		out.ScopeKind = &kind
+	}
+	if in.ScopeID != "" {
+		id, err := ids.Parse(in.ScopeID)
+		if err != nil {
+			return crmcontracts.AnalyticsQuery{}, fmt.Errorf("compose: a saved run's scope id is not a uuid: %w", err)
+		}
+		scope := openapi_types.UUID(id)
+		out.ScopeId = &scope
+	}
 	if len(in.GroupBy) > 0 {
 		groupBy := in.GroupBy
 		out.GroupBy = &groupBy
 	}
-	if in.Limit != 0 {
-		limit := in.Limit
-		out.Limit = &limit
-	}
+	// The bound the re-ask runs under, stated even when the asker named none,
+	// so a reader told "only the first N" is told the N that applied.
+	limit := analyticsquery.AppliedLimit(in.Limit)
+	out.Limit = &limit
 	for _, m := range in.Measures {
 		measure := crmcontracts.AnalyticsMeasure{Fn: crmcontracts.AnalyticsMeasureFn(m.Fn)}
 		if m.Field != "" {
@@ -308,7 +332,7 @@ func wireFromQuery(in analyticsquery.Query) crmcontracts.AnalyticsQuery {
 	// Save is NOT carried back. It is an instruction about this call, not a
 	// property of the question — echoing it would describe a saved run as one
 	// that asks to be saved again.
-	return out
+	return out, nil
 }
 
 // ExplainAnalyticsCell implements POST /analytics/explain.
@@ -332,8 +356,50 @@ func (h analyticsQueryHandlers) ExplainAnalyticsCell(w http.ResponseWriter, r *h
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AnalyticsExplanation{
-		Columns: out.Columns, Rows: out.Rows,
+	httperr.WriteJSON(w, http.StatusOK, h.labelledExplanation(ctx, out))
+}
+
+// labelledExplanation names the records AFTER the explanation's transaction has
+// closed: each store's label read takes a connection of its own, and naming
+// inside the transaction would hold two per request (derivation.go does the
+// same). A row the reader may not name keeps its id and carries no label.
+func (h analyticsQueryHandlers) labelledExplanation(
+	ctx context.Context, out AnalyticsExplanation,
+) crmcontracts.AnalyticsExplanation {
+	// Empty, never null: a withheld cell has no rows, and null would read to a
+	// client as "unknown" rather than "nothing to open".
+	columns := append([]string{}, out.Columns...)
+	rows := append([]map[string]any{}, out.Rows...)
+	if labelDerivationRows(ctx, h.names, string(out.Entity), rows) {
+		columns = append(columns, derivationLabelColumn)
+	}
+	return crmcontracts.AnalyticsExplanation{
+		Columns: columns, Rows: rows,
 		Withheld: out.Withheld, Truncated: out.Truncated,
-	})
+		PopulationNarrowed: populationNarrowedWire(out.PopulationNarrowed),
+		Labels:             idLabelsWire(analyticsIDLabels(ctx, h.names, out.Question, rows)),
+	}
+}
+
+// labelledAnswer is an answer on the wire, its grouped ids named after the
+// transaction has closed, for the reason labelledExplanation gives.
+func (h analyticsQueryHandlers) labelledAnswer(
+	ctx context.Context, q analyticsquery.Query, answer AnalyticsAnswer,
+) crmcontracts.AnalyticsAnswer {
+	return crmcontracts.AnalyticsAnswer{
+		Columns: answer.Columns, Rows: answer.Rows,
+		Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
+		SchemaVersion:      answer.SchemaVersion,
+		PopulationNarrowed: populationNarrowedWire(answer.PopulationNarrowed),
+		Labels:             idLabelsWire(analyticsIDLabels(ctx, h.names, q, answer.Rows)),
+	}
+}
+
+// idLabelsWire omits the map when nothing was named, rather than sending {}.
+func idLabelsWire(labels map[string]map[string]string) *crmcontracts.AnalyticsIdLabels {
+	if len(labels) == 0 {
+		return nil
+	}
+	wire := crmcontracts.AnalyticsIdLabels(labels)
+	return &wire
 }

@@ -32,6 +32,11 @@ type CreateCompanyInput struct {
 	Address         *crmcontracts.Address
 	Domains         []CompanyDomainInput
 	Source          string
+	// SourceSystem names the system an import took this company from; nil
+	// for one created here, which is what makes it unattributable.
+	SourceSystem *string
+	// Author is who wrote it in the system it came from; zero when unknown.
+	Author storekit.SourceAuthorInput
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (customfields.go).
@@ -50,7 +55,6 @@ func (s *Store) CreateCompany(ctx context.Context, in CreateCompanyInput) (crmco
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
 	// The store-opened path reads the catalog through the unexported helper,
 	// not ActiveCompanyColumns: that one takes company:read on the
 	// caller's behalf, and a seat may hold create without it.
@@ -89,7 +93,6 @@ func (s *Store) CreateCompanyTx(ctx context.Context, tx pgx.Tx, in CreateCompany
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
 	out, err := createCompanyInTx(ctx, tx, in, by, nil)
 	if err != nil {
 		return out, err
@@ -143,6 +146,12 @@ func (s *Store) readyCompanyCreate(ctx context.Context, in CreateCompanyInput) (
 func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by string,
 	active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
+	owner, err := storekit.NewRecordOwner(ctx, tx, in.OwnerID)
+	if err != nil {
+		return crmcontracts.Company{}, err
+	}
+	in.OwnerID = owner
+
 	if err := ensureCompanyDomainsUnclaimed(ctx, tx, in.Domains); err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -173,6 +182,8 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 		Address:         in.Address,
 		Domains:         in.Domains,
 		Source:          in.Source,
+		SourceSystem:    in.SourceSystem,
+		Author:          in.Author,
 		CapturedBy:      by,
 		CustomFields:    in.CustomFields,
 		Active:          active,

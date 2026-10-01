@@ -40,6 +40,16 @@
 .badge > svg {
   flex: none;
 }
+/* A label whose every word is read wraps instead. It takes a box's radius, so
+   two lines leave the end letters clear of the curve; one line still reads as
+   the pill. */
+.badge-wrap,
+.badge-wrap .badge-label {
+  white-space: normal;
+}
+.badge-wrap {
+  border-radius: var(--r-sm);
+}
 /* The status tints are TRANSLUCENT by canon, so a badge painted with one
    takes its contrast from whatever it lands on: --success on --successBg read
    4.54:1 over --bgElevated and failed AA at 4.05:1 over a PanelPlate's
@@ -243,13 +253,6 @@
   font: var(--fontHeadingXXSmall);
 }
 
-/* A company's mark is a rounded square, not a circle. A logo is drawn on
-   a square and a face is not, and on a page carrying a company and its contacts
-   the shape is what tells the two apart before a reader has read either. */
-.avatar-company {
-  border-radius: var(--r-sm);
-}
-
 /* The smallest rung, and the default: every list row, every name a chip sits
    beside, the account block in the rail. A dense list table draws its chips
    smaller still, and does it from its own sheet — see `.lt-table.dense .avatar`
@@ -275,19 +278,11 @@
 /* The mark of a record PAGE: the one picture in the head, beside a name set
    at the record rung. Sized to the reference's 72, which reads as the page's
    own mark rather than as a large list avatar — at 56 beside a 44px name it
-   was the smaller of the two things naming the record. Squared to the pane's
-   radius, because at this size a chip's radius reads as a rounded photo. */
+   was the smaller of the two things naming the record. Round like every other
+   rung: a company and a contact are one kind of chip. */
 .avatar-xl {
   width: 72px;
   height: 72px;
-  border-radius: var(--r-lg);
-}
-/* A round mark keeps its circle at every rung: a contact is a portrait, an
-   company is a tile. `.avatar-company` squares the small rungs and this one
-   is square already, so the rule that has to be stated is the round one. */
-.avatar-xl:not(.avatar-company) {
-  border-radius: var(--r-full);
-  corner-shape: round;
 }
 
 /* An avatar beside its label on one line — a list cell, a search hit, a node
@@ -303,47 +298,35 @@
   min-width: 0;
 }
 
-/* The per-name tints come AFTER the base rule: same specificity, so the
-   later declaration is the one that wins. Defined before it, they were
-   silently overridden and every monogram rendered in the accent colour. */
-.avatar-t0 {
-  background: var(--mono0Fill);
-  color: var(--mono0Text);
-}
-.avatar-t1 {
-  background: var(--mono1Fill);
-  color: var(--mono1Text);
-}
-.avatar-t2 {
-  background: var(--mono2Fill);
-  color: var(--mono2Text);
-}
-.avatar-t3 {
-  background: var(--mono3Fill);
-  color: var(--mono3Text);
-}
-.avatar-t4 {
-  background: var(--mono4Fill);
-  color: var(--mono4Text);
-}
-.avatar-t5 {
-  background: var(--mono5Fill);
-  color: var(--mono5Text);
+/* The record's own ground: blob B over blob A over a base tint, each blob
+   fading to nothing, placed and sized by the numbers Avatar passes inline. It
+   comes AFTER the base rule, which it overrides at the same specificity. */
+.avatar-mesh {
+  background:
+    radial-gradient(
+      calc(var(--avatar-b-size) * 1%) calc(var(--avatar-b-size) * 1%) at
+        calc(var(--avatar-bx) * 1%) calc(var(--avatar-by) * 1%),
+      var(--avatarBlobB),
+      transparent
+    ),
+    radial-gradient(
+      calc(var(--avatar-a-size) * 1%) calc(var(--avatar-a-size) * 1%) at
+        calc(var(--avatar-ax) * 1%) calc(var(--avatar-ay) * 1%),
+      var(--avatarBlobA),
+      transparent
+    ),
+    var(--avatarGround);
+  color: var(--avatarInk);
 }
 
-/* A resolved logo sits ON the chip rather than replacing it: the chip is the
-   neutral, theme-aware backdrop a mark with its own opaque background needs to
-   look deliberate, and it is the monogram the viewer sees until the image
-   paints. `contain` plus the inset keeps the mark padded and never stretched —
-   a wide wordmark letterboxes instead of distorting. */
+/* A resolved logo sits ON the chip, on a neutral ground and never on a mesh:
+   the initials wait there until the logo paints, and a wide wordmark then
+   letterboxes inside the same circle — `contain` plus the inset keeps the mark
+   padded and never stretched. */
 .avatar-has-logo {
-  background: var(--bgCard);
   position: relative;
-}
-/* Once the mark is on screen it is the whole chip: no tint behind it to tint a
- * transparent logo, and no monogram left to read through it. */
-.avatar-painted {
-  background: none;
+  background: var(--bgCard);
+  color: var(--textSecondary);
 }
 
 .avatar-img {
@@ -354,15 +337,6 @@
   object-fit: contain;
   border-radius: var(--r-full);
   corner-shape: round;
-}
-
-/* A company's mark clips to the chip's OWN corner, not to a circle. The
-   rounding lives on the image as well as on the chip because the image is
-   positioned over it — a company whose logo actually resolved came out
-   round while the one still showing its monogram was square, so the shape
-   said "company" only for the companies with no logo. */
-.avatar-company .avatar-img {
-  border-radius: calc(var(--r-sm) - 2px);
 }
 
 .skeleton {
@@ -554,12 +528,10 @@
    lightbox — so one of the three would be the one that went stale. This clears
    every one of them, and what it costs is a title that wraps a word early.
 
-   Three selectors, because "the dialog's first line" has three shapes: the box
-   itself, a head band, and a head band whose first child is a box pairing the
-   title with a subtitle (the meeting brief). Deliberately not a descendant
-   combinator inside the band — that would reach a heading further down it,
-   which is nowhere near the control and would be indented for nothing. */
+   Not a descendant combinator inside the band: it would indent a heading
+   further down, nowhere near the control. */
 .modal > :is(h1, h2, h3, .modal-title):first-child,
+.modal > .form-stack > :is(h1, h2, h3):first-child,
 .modal > .drawer-head > :is(h1, h2, h3, .modal-title):first-child,
 .modal
   > .drawer-head
@@ -714,6 +686,9 @@
    nothing to pay it, and its content sat flush against the drawer's edge. */
 .modal-drawer-wide:not(:has(> .drawer-head)) {
   padding: var(--space-5);
+}
+.modal-drawer:not(.modal-drawer-wide) > .drawer-head {
+  margin-bottom: var(--space-3);
 }
 .modal-drawer-wide > .drawer-head {
   position: sticky;
@@ -966,6 +941,15 @@
 }
 .entity-link:hover {
   text-decoration: underline;
+}
+
+/* A keyboard reader gets no ring from the bare-link rule in base.css, which
+   scopes itself to `a:not([class])` — so the one anchor the product uses most
+   has to draw its own. */
+.entity-link:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
 }
 
 /* THE COUNT BESIDE AN OPTION, and it is one chip wherever it is drawn: a tab
@@ -1575,8 +1559,9 @@ span.error-line {
   justify-content: space-between;
   gap: var(--space-2);
 }
-/* A refusal is not a caption. It reads in the danger tone at the caption's
-   size, under the control it belongs to and above the rule that still applies. */
+/* A refusal is not a caption. The rule sets the danger ink and nothing else, so
+   the line takes the type of the field around it, under the control it belongs
+   to and above the rule that still applies. */
 .field-error {
   color: var(--dangerText);
 }
@@ -1636,6 +1621,7 @@ span.error-line {
    is not pointing never receives. */
 .checkfield:has(input:disabled) {
   cursor: not-allowed;
+  color: var(--textSecondary);
 }
 /* The box is native, so it was taking the PLATFORM's focus ring — the one blue
    this product otherwise refuses (see the caret and accent-color declarations in
@@ -1737,57 +1723,6 @@ span.error-line {
 .textarea:focus {
   border-color: var(--accent);
   box-shadow: var(--focus-glow);
-}
-
-.explain {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-/* Deliberately below the .iconbtn floor: this toggle sits INSIDE a line of
-   running figures, and a 32px control there would set the line's height. The
-   min-* pair is what holds that, since a bare width/height loses to the floor
-   the shared class declares. */
-.explain-toggle {
-  width: 22px;
-  height: 22px;
-  min-inline-size: 22px;
-  min-block-size: 22px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: transparent;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-}
-.explain-toggle svg {
-  width: 14px;
-  height: 14px;
-}
-.explain-toggle:hover {
-  color: var(--textPrimary);
-  background: var(--bgHover);
-}
-.explain-pop {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 30;
-  min-width: 260px;
-}
-.explain-rows {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-}
-.explain-rows li {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  justify-content: space-between;
 }
 
 .table-scroll {
@@ -2002,15 +1937,8 @@ span.error-line {
 .overflow-menu-items .t-caption {
   padding-inline: 9px;
 }
-/* One left x for every LABEL, in a menu whose items are mixed. An item leading
-   with a glyph starts its words a glyph-and-a-gap in; an item without one
-   starts them at the inset — so the words run down two columns and the menu
-   reads as ragged. The glyph-less rows reserve the same column, empty, and
-   only in a panel that actually holds a glyph: reserving it unconditionally
-   would indent every label in every menu for an icon none of them has.
-
-   A glyph is a Button's FIRST child by construction — the atom draws icons
-   leading — so the test is simply whether the row carries one. */
+/* One left x for every label while an item is in flight: a pending Button
+   leads with its busy mark, so the other rows reserve that column, empty. */
 .overflow-menu-items:has(.btn > svg) .btn:not(:has(> svg))::before {
   content: "";
   flex: none;
@@ -2367,15 +2295,8 @@ span.error-line {
   border-radius: inherit;
   background: var(--success);
 }
-/* A reading whose figure carries a tone carries it into the bar too, in the
-   SAME token: the bar is the same claim at a glance, and a bar a shade off the
-   figure above it is the card disagreeing with itself about how it went. A
-   reading with no tone is not a neutral reading, it is one that is fine, so the
-   untoned bar takes --success with the toned ones (`.stat-card-meter-fill`
-   above) — a row of identical grey tracks made the reader compare lengths to
-   find the one that is wrong, when the colour already knows. The brand accent
-   said the same thing in the colour of a primary action, which is how a bar
-   that reports came to look like one a reader could press. */
+/* The bar reads its figure's state in the base token; an untoned bar reads
+   --success, because a reading nobody toned is one that is fine. */
 .stat-card-warning ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--warning);
 }
@@ -2390,26 +2311,24 @@ span.error-line {
 }
 
 /* The four tones a reading's figure can carry, and the ONE place each is
-   spelled: the figure and its bar read the same token, so the two parts of one
-   claim cannot come out two colours. The BASE status token and not its Text
-   sibling: this is a 17-20px display figure and a 4px bar, which is the role
-   the base hue is for — the Text tokens are the ink for anything smaller. */
+   spelled. A figure is read, so it takes its state's Text ink, which clears
+   4.5:1; the bar is only seen, and keeps the base. */
 .stat-card-success {
-  color: var(--success);
+  color: var(--successText);
 }
 
 /* The reading a job has not finished writing — a figure still being counted,
    a lane the read has not reached. */
 .stat-card-info {
-  color: var(--info);
+  color: var(--infoText);
 }
 
 .stat-card-warning {
-  color: var(--warning);
+  color: var(--warningText);
 }
 
 .stat-card-danger {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The whole-tile variant: the slot itself is bad news, not just its figure —

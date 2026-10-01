@@ -18,9 +18,11 @@ package compose_test
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -28,28 +30,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
-
-// unkeyedToolsNoAgentIsGiven waives, per tool and object path, the served input
-// schemas that still carry an object without declared keys, for one reason: the
-// object is a caller-shaped map whose keys are the WORKSPACE's (a record's own
-// fields, a query plan, a column mapping), so declaring them is a product
-// decision about the tool's contract rather than a schema fix. No scheduled
-// agent is given one, which is the only way this build hands one to a model
-// under constrained decoding; MCP clients call them with their own decoders.
-//
-// SHRINK-ONLY: an entry whose tool is attached to an agent, is unregistered, or
-// whose object is now keyed fails TestEveryServedToolNamesTheKeysOfItsObjects.
-var unkeyedToolsNoAgentIsGiven = gatekit.Waive(map[string]string{
-	"create_record $.fields":   "fields is keyed by the record type's own field names",
-	"update_record $.fields":   "fields is keyed by the record type's own field names",
-	"query_workspace $.plan":   "plan is the query grammar's own open document",
-	"run_report $.filters":     "filters is keyed by the report source's own dimensions",
-	"preview_import $.mapping": "mapping is keyed by the uploaded file's own column headers",
-})
 
 func TestNoRequestAModelIsSentCarriesAnObjectWithoutKeys(t *testing.T) {
 	census, err := compose.NewTaskCensus()
@@ -147,6 +130,16 @@ func publishedSchemalessSites(t *testing.T) map[string]bool {
 	return schemaless
 }
 
+// A served tool names the keys of every object it takes, or DECLARES the one
+// whose keys are the caller's (mcp.ToolSpec.UnkeyedArguments) — and a tool
+// carrying such a declaration is never attached to a scheduled agent, the one
+// path on which this build hands a tool to a model under constrained decoding.
+//
+// The exemptions are read off the tools themselves, not listed here, and held
+// in both directions: an unkeyed object with no declaration fails, and so does
+// a declaration naming an object that is keyed now or was never there — a
+// declaration that outlives its object would keep the tool from agents for a
+// reason that is no longer true.
 func TestEveryServedToolNamesTheKeysOfItsObjects(t *testing.T) {
 	specs := servedSpecs()
 	if len(specs) == 0 {
@@ -156,21 +149,66 @@ func TestEveryServedToolNamesTheKeysOfItsObjects(t *testing.T) {
 	attached := attachedTools(t)
 
 	for _, spec := range specs {
-		for _, defect := range unkeyedObjects(t, spec.InputSchema, zeroArgument, zeroArgument[spec.Name]) {
-			offence := spec.Name + " " + defect
-			if !unkeyedToolsNoAgentIsGiven.Waived(t, offence) {
-				t.Errorf("tool %s: %s%s", spec.Name, defect, declaresNoKeys)
-				continue
-			}
-			if attached[spec.Name] {
-				t.Errorf("%s is attached to a scheduled agent while %s is waived — a constrained decoder "+
-					"cannot fill that object: declare its keys before attaching the tool", spec.Name, defect)
-			}
+		for _, finding := range unkeyedArgumentFindings(t, spec, zeroArgument, attached[spec.Name]) {
+			t.Error(finding)
 		}
 	}
-	// A waived object that was keyed, or whose tool was unregistered, is no
-	// longer asked about, so the entry is reported stale and the list only shrinks.
-	unkeyedToolsNoAgentIsGiven.AssertAllMatched(t)
+}
+
+// unkeyedArgumentFindings lists the ways one tool's declaration and its schema
+// disagree, or the declaration and the agent catalog do.
+func unkeyedArgumentFindings(t *testing.T, spec mcp.ToolSpec, zeroArgument map[string]bool, attached bool) []string {
+	t.Helper()
+	var findings []string
+	unkeyed := map[string]bool{}
+	for _, defect := range unkeyedObjects(t, spec.InputSchema, zeroArgument, zeroArgument[spec.Name]) {
+		unkeyed[defect] = true
+		switch {
+		case spec.UnkeyedArguments[defect] == "":
+			findings = append(findings, fmt.Sprintf("tool %s: %s%s — name its keys, or declare it in "+
+				"UnkeyedArguments with why they are the caller's", spec.Name, defect, declaresNoKeys))
+		case attached:
+			findings = append(findings, fmt.Sprintf("%s is attached to a scheduled agent while it declares %s "+
+				"unkeyed — a constrained decoder cannot fill that object: name its keys before attaching the tool",
+				spec.Name, defect))
+		}
+	}
+	for _, path := range slices.Sorted(maps.Keys(spec.UnkeyedArguments)) {
+		if !unkeyed[path] {
+			findings = append(findings, fmt.Sprintf("tool %s declares %s unkeyed, and its input schema has no "+
+				"unkeyed object there — drop the declaration, which keeps the tool from every agent", spec.Name, path))
+		}
+	}
+	return findings
+}
+
+// The gate refuses each way a declaration and a schema can disagree, and
+// passes the one way they agree.
+func TestTheUnkeyedArgumentGateRefusesEveryDisagreement(t *testing.T) {
+	open := json.RawMessage(`{"type":"object","properties":{"fields":{"type":"object"}}}`)
+	keyed := json.RawMessage(`{"type":"object","properties":{"fields":{"type":"object","properties":{"a":{"type":"string"}}}}}`)
+	declared := map[string]string{"$.fields": "the caller's own keys"}
+	for name, tc := range map[string]struct {
+		spec     mcp.ToolSpec
+		attached bool
+		// fired names the one finding this case must raise, "" for none.
+		fired string
+	}{
+		"a declared open object":             {mcp.ToolSpec{Name: "t", InputSchema: open, UnkeyedArguments: declared}, false, ""},
+		"an undeclared open object":          {mcp.ToolSpec{Name: "t", InputSchema: open}, false, "declare it in UnkeyedArguments"},
+		"a declared open object on an agent": {mcp.ToolSpec{Name: "t", InputSchema: open, UnkeyedArguments: declared}, true, "attached to a scheduled agent"},
+		"a declaration over a keyed object":  {mcp.ToolSpec{Name: "t", InputSchema: keyed, UnkeyedArguments: declared}, false, "drop the declaration"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := unkeyedArgumentFindings(t, tc.spec, map[string]bool{}, tc.attached)
+			switch {
+			case tc.fired == "" && len(got) != 0:
+				t.Errorf("findings = %v, want none", got)
+			case tc.fired != "" && (len(got) != 1 || !strings.Contains(got[0], tc.fired)):
+				t.Errorf("findings = %v, want exactly the one naming %q", got, tc.fired)
+			}
+		})
+	}
 }
 
 // declaresNoKeys finishes every finding: what the defect costs a model.

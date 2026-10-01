@@ -219,6 +219,15 @@ func TestTheFrameOffersStoppingAsAMoveAndNotOnlyAsCompletion(t *testing.T) {
 	}
 }
 
+// A model given two sources that disagree smooths them into one story unless it
+// is told otherwise, and the story it invents is the part nothing checks.
+func TestTheFrameTellsAModelToNameADisagreementRatherThanReconcileIt(t *testing.T) {
+	prompt := systemPrompt(nil, promptfence.New(), "")
+	if !strings.Contains(prompt, mcp.ConflictingSourcesRule) {
+		t.Errorf("the frame no longer carries the conflicting-sources rule:\n%s", prompt)
+	}
+}
+
 // The published per-step cost is the part of a real step request that is not
 // transcript: the same system prompt and the same step schema the window sends,
 // so the budget gate holds the bytes a run pays rather than a model of them.
@@ -235,5 +244,37 @@ func TestTheFixedStepCostIsWhatAStepRequestCarriesBesideItsTranscript(t *testing
 	}
 	if cost.Listing+cost.Schema > cost.Tokens {
 		t.Errorf("the listing (%d) and the schema (%d) outweigh the whole fixed cost (%d)", cost.Listing, cost.Schema, cost.Tokens)
+	}
+}
+
+// A run is never pointed at a neighbour it cannot call: the Instead text goes
+// when it names a tool outside the offer, and stays, with everything else in
+// the description, when every tool it names is offered.
+func TestTheListingPointsAtNoNeighbourTheRunIsNotOffered(t *testing.T) {
+	const instead = "Use prep_for_meeting when a meeting is near, and read_record for stored fields."
+	catchUp := mcp.ToolSpec{
+		Name:         "catch_me_up_on",
+		Description:  "Answer what has been going on. Built around one record. " + instead + " Keep each record_id.",
+		Instead:      instead,
+		InsteadTools: []string{"prep_for_meeting", "read_record"},
+	}
+	prep := mcp.ToolSpec{Name: "prep_for_meeting", Description: "Get ready for a meeting."}
+
+	narrow := newWindow(Job{Goal: "catch up"}, []mcp.ToolSpec{catchUp, readRecordSpec()}, nil).system
+	if strings.Contains(narrow, "prep_for_meeting") {
+		t.Errorf("a run not offered prep_for_meeting is still told to use it:\n%s", narrow)
+	}
+	for _, kept := range []string{"Built around one record.", "Keep each record_id."} {
+		if !strings.Contains(narrow, kept) {
+			t.Errorf("cutting the Instead also cut %q:\n%s", kept, narrow)
+		}
+	}
+	if !strings.Contains(narrow, "one record. Keep each") {
+		t.Errorf("the cut left the description's sentences apart by more than one space:\n%s", narrow)
+	}
+
+	closed := newWindow(Job{Goal: "catch up"}, []mcp.ToolSpec{catchUp, readRecordSpec(), prep}, nil).system
+	if !strings.Contains(closed, instead) {
+		t.Errorf("a run offered every neighbour lost the Instead that names them:\n%s", closed)
 	}
 }

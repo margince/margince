@@ -16,6 +16,7 @@ import {
 import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
+import { usePipelines } from "./pipelines.queries";
 import { StageRulesCard } from "./settings.stagerules";
 
 type TransitionRecord = components["schemas"]["StageTransitionRecord"];
@@ -44,20 +45,9 @@ export function StageAutomationCard() {
   const t = useT();
   const { locale } = useLocale();
   const [pipelineId, setPipelineId] = useState<string>("");
-  const pipelines = useQuery({
-    // The SAME key the pipelines card reads, so opening this page after that
-    // one costs no request and the two cannot disagree about what exists.
-    queryKey: ["pipelines", "all"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data;
-    },
-  });
+  // The SAME read the pipelines card makes, so opening this page after that
+  // one costs no request and the two cannot disagree about what exists.
+  const pipelines = usePipelines();
 
   const chosen = pipelineId || pipelines.data?.[0]?.id || "";
   const report = useQuery({

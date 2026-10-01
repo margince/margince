@@ -4,13 +4,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { DealBulkBar } from "./dealbulk";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "./story-utils";
 
-// The bar that appears under the deals table while rows are selected. It reads
-// the user roster for the owner picker; everything else it needs is passed in,
-// so these stories are the bar's own states rather than the table's.
+// The bar under the deals table while rows are selected. It reads the roster
+// for the owner picker and the session (`GET /me`) for the Shortlist verb;
+// everything else is passed in, so these are the bar's states, not the table's.
 const meta: Meta = {
-  title: "Records/Deal bulk bar",
+  title: "Records/Deals/Bulk bar",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -81,7 +86,10 @@ const roster = {
 
 export const Selected: Story = {
   render: () => {
-    installFetchStub({ "GET /users": () => jsonResponse(roster) });
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /users": () => jsonResponse(roster),
+    });
     return (
       <StoryProviders>
         <div className="lt-bulkbar">
@@ -100,7 +108,10 @@ export const Selected: Story = {
 // verbs and two pickers share one row.
 export const German: Story = {
   render: () => {
-    installFetchStub({ "GET /users": () => jsonResponse(roster) });
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /users": () => jsonResponse(roster),
+    });
     return (
       <StoryProviders locale="de">
         <div className="lt-bulkbar">
@@ -127,7 +138,10 @@ const truncatedRoster = {
 
 export const GermanPartialRoster: Story = {
   render: () => {
-    installFetchStub({ "GET /users": () => jsonResponse(truncatedRoster) });
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /users": () => jsonResponse(truncatedRoster),
+    });
     return (
       <StoryProviders locale="de">
         <div className="lt-bulkbar">

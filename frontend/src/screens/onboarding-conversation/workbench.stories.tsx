@@ -49,7 +49,7 @@ function Shell({ session }: Readonly<{ session: RouteMap[string] }>) {
           title="Company profile"
           sub="The work surface each act fills; here it stands in for one."
         >
-          <div className="mw-review ob-conv-artifact" />
+          <div className="ob-conv-artifact" />
         </ConversationWorkbench>
       </WorkbenchEntranceScope>
     </StoryProviders>
@@ -69,7 +69,15 @@ type Story = StoryObj<typeof Shell>;
 // rail's foot names the contact and keys their chip's tint on their address —
 // the stable identity, so a later rename does not move them to a new colour.
 export const SignedIn: Story = {
-  render: () => <Shell session={meRoute({})} />,
+  render: () => <Shell session={meRoute({ automation: ["update"] })} />,
+};
+
+// The only full-bleed capture of the band at 390px with the runtime chip in it:
+// `uat-phone` drives the capture gate to that width.
+export const SignedInPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <Shell session={meRoute({ automation: ["update"] })} />,
 };
 
 // A seat that never set a display name. The name falls back to the address,
@@ -78,7 +86,7 @@ export const SignedIn: Story = {
 // every colleague whose address starts the same way.
 export const NameFromAddress: Story = {
   render: () => {
-    const me = meFixture({});
+    const me = meFixture({ allow: { automation: ["update"] } });
     return (
       <Shell
         session={() =>

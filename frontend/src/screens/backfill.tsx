@@ -118,6 +118,7 @@ export function BackfillPanel({
         narrowing={narrowing}
         previewPending={preview.isPending}
         previewData={preview.data}
+        offeredWindows={run?.offered_windows}
         previewErrorMessage={
           preview.isError ? problemMessageOf(preview.error, t) : null
         }
@@ -125,7 +126,7 @@ export function BackfillPanel({
         startErrorMessage={
           start.isError ? problemMessageOf(start.error, t) : null
         }
-        onStart={() => start.mutate(window)}
+        onStart={() => importRun.begin(window)}
         onSkip={() => setSkipped(true)}
       />
     );
@@ -138,6 +139,9 @@ export function BackfillPanel({
       cancelError={cancel.isError ? problemMessageOf(cancel.error, t) : null}
       onCancel={() => cancel.mutate()}
       onRestart={() => importRun.restart(run)}
+      onResume={() => importRun.resume(run)}
+      resuming={start.isPending}
+      resumeError={start.isError ? problemMessageOf(start.error, t) : null}
     />
   );
 }
@@ -154,6 +158,7 @@ function BackfillSetup({
   narrowing,
   previewPending,
   previewData,
+  offeredWindows,
   previewErrorMessage,
   startPending,
   startErrorMessage,
@@ -166,6 +171,8 @@ function BackfillSetup({
   narrowing: boolean;
   previewPending: boolean;
   previewData: components["schemas"]["BackfillPreview"] | undefined;
+  /** The windows this installation admits; absent means the whole set. */
+  offeredWindows: readonly ImportWindow[] | undefined;
   previewErrorMessage: string | null;
   startPending: boolean;
   startErrorMessage: string | null;
@@ -198,6 +205,7 @@ function BackfillSetup({
         value={window}
         onChange={onWindowChange}
         preview={previewData}
+        offered={offeredWindows}
       />
       <p className="t-caption">{t("backfill.extendNote")}</p>
       {previewErrorMessage && <ErrorLine>{previewErrorMessage}</ErrorLine>}
@@ -285,12 +293,13 @@ function EstimateCard({
       )}
       {preview && costMinor !== undefined && (
         <p className="t-caption">
-          {t("backfill.estimateCost")} ~
-          {formatMoney(
-            costMinor,
-            preview.currency ?? FALLBACK_CURRENCY,
-            locale,
-          )}
+          {t("backfill.estimateCost", {
+            cost: formatMoney(
+              costMinor,
+              preview.currency ?? FALLBACK_CURRENCY,
+              locale,
+            ),
+          })}
         </p>
       )}
       {preview?.estimate_is_floor && costMinor !== undefined && (

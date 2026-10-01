@@ -50,7 +50,7 @@ const route: RouteCandidate = {
 // that never did. So every frame drives a play that names what it expects: a
 // rejecting play IS a failure the gate reports.
 const meta: Meta<typeof IntroDrawer> = {
-  title: "Records/Contact network/Intro ask",
+  title: "Records/Contact 360/Network/Intro ask",
   component: IntroDrawer,
   play: async () => {
     const drawer = within(await screen.findByRole("dialog"));

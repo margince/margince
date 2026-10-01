@@ -29,7 +29,7 @@ function Live(
 }
 
 const meta: Meta<typeof Live> = {
-  title: "Records/Chronology filter",
+  title: "Records/Record 360/Chronology filter",
   component: Live,
 };
 export default meta;

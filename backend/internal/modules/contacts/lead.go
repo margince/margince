@@ -34,6 +34,8 @@ type CreateLeadInput struct {
 	SourceSystem        *string
 	SourceID            *string
 	Source              string
+	// Author is who wrote it in the system it came from; zero when unknown.
+	Author storekit.SourceAuthorInput
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (customfields.go).
@@ -110,8 +112,8 @@ func (s *Store) readyLeadCreate(ctx context.Context, in CreateLeadInput) (Create
 	if err != nil {
 		return CreateLeadInput{}, "", err
 	}
-	// The owner is exactly what a HUMAN caller named — deliberately not
-	// storekit.OwnerOrActor, which every other manual create runs. A lead is
+	// The owner is exactly what a HUMAN caller named — deliberately not the
+	// creator default every other manual create applies. A lead is
 	// the funnel's queue entity: it arrives unassigned unless somebody names
 	// an owner, routing (leadrouting.go) is what assigns it, and the claim
 	// verb plus the Unassigned list dial exist for the ownerless state. The
@@ -122,8 +124,8 @@ func (s *Store) readyLeadCreate(ctx context.Context, in CreateLeadInput) (Create
 	// refuses ownerless rows and the claim verb is human-only, so a NULL
 	// owner would strand the very lead the agent just filed — it could never
 	// update, qualify or disqualify it again. The queue is a human choice.
-	if p, ok := principal.Actor(ctx); ok && p.Type == principal.PrincipalAgent {
-		normalized.OwnerID = storekit.OwnerOrActor(ctx, normalized.OwnerID)
+	if p, ok := principal.Actor(ctx); ok && p.Type == principal.PrincipalAgent && normalized.OwnerID == nil {
+		normalized.OwnerID = storekit.OwnerOrActor(ctx)
 	}
 	return normalized, by, nil
 }
@@ -164,9 +166,10 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	// transaction. Both entry points reach this body — CreateLead and
 	// CreateLeadTx, the latter being what CSV and mirror imports call — so
 	// this is the one place that sees every created lead. Omitting the owner
-	// stays the unassigned queue's own case and asks nothing.
+	// stays the unassigned queue's own case and asks nothing. An invited
+	// colleague may be named, as on every other record's create.
 	if in.OwnerID != nil {
-		if err := auth.EnsureAssignee(ctx, tx, in.OwnerID.UUID); err != nil {
+		if err := auth.EnsureNewRecordOwner(ctx, tx, in.OwnerID.UUID); err != nil {
 			return crmcontracts.Lead{}, false, err
 		}
 	}
@@ -202,14 +205,18 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	// The initial score is the §3 fit component — a fresh lead has no
 	// behavioral history yet; signal recompute moves it later.
 	fit := ScoreLeadDetail(deref(in.Title), intents.Of(in.Source), nil, time.Now().UTC())
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
+	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
+		return ids.LeadID{}, err
+	}
+	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
 		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
 	})
+	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
-		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by`+cfCols+`)
-		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15`+cfHolders+`)`,
+		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by`+authorCols+cfCols+`)
+		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15`+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Race behind the pre-checks: the constraint name tells an
@@ -400,6 +407,8 @@ type ListLeadsInput struct {
 	// Sort is the contract's sort spec, validated against the lead
 	// vocabulary plus the workspace's active cf_ columns.
 	Sort *string
+	// Membership narrows to one list's members (list_id).
+	Membership storekit.ListMemberFilter
 }
 
 // leadUniqueViolation maps a lead write's unique-index violation to the

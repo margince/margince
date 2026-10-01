@@ -180,6 +180,7 @@ func (s *Service) profileFor(name string, status string, runs []providerRunRow, 
 		JobHistory:             []crmcontracts.ContactProviderJobHistory{},
 		Departments:            []string{},
 		Seniorities:            []string{},
+		Attributes:             &[]crmcontracts.ContactProviderAttribute{},
 	}
 	if len(runs) > 0 {
 		latest := runs[0]

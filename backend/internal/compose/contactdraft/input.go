@@ -133,9 +133,10 @@ type DealIn struct {
 	CloseDate   string `json:"close_date,omitempty"`
 }
 
-// ProjectIn is the body of work the message is about.
+// ProjectIn is the body of work the message is about. It carries no id: a
+// project is not a record a reason may cite, and an id the grounding filter
+// refuses only invites a citation it drops.
 type ProjectIn struct {
-	ID   string `json:"id"`
 	Name string `json:"name"`
 	// Key is the handle a human writes in a subject line, when the project
 	// has one.
@@ -170,9 +171,9 @@ func (d DealIn) MarshalJSON() ([]byte, error) {
 
 // ClaimIn is one thing this contact said. The kind rides along because "she
 // objected to X" and "she asked for X" are opposite claims about the same
-// sentence, and the body alone loses which one it was.
+// sentence, and the body alone loses which one it was. It is cited by the
+// activity it was read from (SourceID), so it carries no id of its own.
 type ClaimIn struct {
-	ID   string `json:"id"`
 	Kind string `json:"kind"`
 	Body string `json:"body"`
 	// Due is when this was promised for, RFC3339, empty when nothing was

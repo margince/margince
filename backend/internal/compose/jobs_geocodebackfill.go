@@ -51,11 +51,10 @@ func (GeocodeBackfillArgs) Kind() string { return "geocode_backfill" }
 // periodic insert supplies uniqueness and no attempt policy of its own — the
 // same reason webhook_retry states one.
 func (GeocodeBackfillArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{
-		Queue:       geocodeQueue,
+	return *jobs.QueuedAs[GeocodeBackfillArgs](&river.InsertOpts{
 		MaxAttempts: 3,
 		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
-	}
+	})
 }
 
 // addGeocodeBackfillJobs registers the sweep and returns its schedule.

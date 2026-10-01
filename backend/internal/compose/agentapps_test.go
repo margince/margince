@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -197,28 +198,44 @@ func TestEveryViewIsServedUnderTheAppProfile(t *testing.T) {
 				"the sandbox and this assertion is where it gets argued: state why in the diff that adds it",
 				r.URI, r.UI.CSP)
 		}
-		// Compared against a WHOLE value rather than field by field: a permission
-		// added to the seam later would be invisible to a hand-written list, and
-		// silently-unchecked is the one thing a permission must not be.
-		//
-		// The expected value is per view, and that IS the assertion. A host maps
-		// this declaration onto an iframe `allow` attribute, so a card that
-		// declares a permission it never uses would carry the capability if its
-		// code were ever substituted. Geolocation belongs to the probe, which is
-		// the only view that reads a position; every product card asks for
-		// nothing. A permission spreading to a second view fails here.
-		want := mcp.ResourcePermissions{}
-		if r.URI == apps.GeoProbeURI {
-			want.Geolocation = true
-		}
-		if r.UI.Permissions != want {
-			t.Errorf("the view %s asks for browser permissions %+v, want %+v — a card declaring a permission "+
-				"it does not use is a widening of the sandbox, and this assertion is where it gets argued",
-				r.URI, r.UI.Permissions, want)
-		}
 	}
 	if views == 0 {
 		t.Fatal("the composed surface publishes no view, so this sweep proved nothing")
+	}
+}
+
+// No view asks its host for a browser permission, read off the wire a host
+// actually receives. The extension treats a `permissions` member's PRESENCE as
+// the request, and a host maps it onto the iframe's `allow` attribute, so a
+// card carrying one would hold the capability if its code were ever substituted.
+func TestNoServedViewAsksItsHostForAPermission(t *testing.T) {
+	var listed struct {
+		Resources []struct {
+			URI  string `json:"uri"`
+			Meta struct {
+				UI map[string]json.RawMessage `json:"ui"`
+			} `json:"_meta"` //nolint:tagliatelle // _meta is the protocol's reserved extension member, and the leading underscore is what reserves it
+		} `json:"resources"`
+	}
+	if err := json.Unmarshal(mcpResult(t, "resources/list", primedViews(t, everyDeclaredView())), &listed); err != nil {
+		t.Fatalf("decoding resources/list: %v", err)
+	}
+	views := 0
+	for _, r := range listed.Resources {
+		if !strings.HasPrefix(r.URI, mcp.AppURIScheme) {
+			continue
+		}
+		views++
+		if r.Meta.UI == nil {
+			t.Errorf("the view %s is listed with no _meta.ui, so this check read nothing for it", r.URI)
+		}
+		if asked, present := r.Meta.UI["permissions"]; present {
+			t.Errorf("the view %s asks its host for %s — a card that declares a permission is a widening of "+
+				"the sandbox, and it arrives in a diff beside the view that reads it", r.URI, asked)
+		}
+	}
+	if views == 0 {
+		t.Fatal("resources/list carries no view, so this check proved nothing")
 	}
 }
 

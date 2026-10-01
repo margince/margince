@@ -50,6 +50,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // fxRateFieldReads names the expression a conversion site must reach for: the
@@ -78,7 +80,7 @@ func TestOnlyOnePlaceMultipliesAnAmountByAStoredRate(t *testing.T) {
 			if strings.HasSuffix(path, "_test.go") || strings.Contains(filepath.ToSlash(path), fxConversionOwner) {
 				return nil
 			}
-			file, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+			file, parseErr := gatekit.ParseFile(path, parser.SkipObjectResolution)
 			if parseErr != nil {
 				return parseErr
 			}

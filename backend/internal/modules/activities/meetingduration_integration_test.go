@@ -38,7 +38,7 @@ func TestALoggedMeetingKeepsTheDurationItWasGiven(t *testing.T) {
 	const hour = 3600
 	subject, seconds := "Quarterly review", hour
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "meeting", Subject: &subject, Source: "ui", DurationSeconds: &seconds,
+		Kind: "meeting", Subject: &subject, Source: "manual", DurationSeconds: &seconds,
 	})
 	if err != nil {
 		t.Fatalf("LogActivityInputFrom: %v", err)

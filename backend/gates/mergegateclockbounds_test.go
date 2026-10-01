@@ -68,6 +68,10 @@ var clockBoundsInTheMergeGate = gatekit.Waive(map[string]string{
 		"default clock IS wall time, which is a claim about the clock's identity rather than about " +
 		"how long anything took. The tolerance is a minute against a drift that would be years, so " +
 		"no load on any machine can change the answer.",
+	"internal/compose/aicert/claudecli_unix_test.go:TestALateCLIJudgeIsKilledWithItsChildren": "tells a " +
+		"killed process group from a surviving child, which holds the call for exactly cliWaitDelay. " +
+		"The cancel fires only once the child exists, so the reading is kill-to-return alone: " +
+		"milliseconds against a bound of seconds, and the other answer is the whole delay.",
 })
 
 // isTimeCall reports whether expr is `time.<name>()`.
@@ -174,7 +178,7 @@ func TestNoMergeGateTestDecidesByTheClock(t *testing.T) {
 	t.Parallel()
 	defer clockBoundsInTheMergeGate.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	// Counted so the gate cannot pass by reading nothing. A walk that found no
 	// test files at all — a moved tree, a changed suffix — reports the same
 	// silence as a clean one, and silence is the one answer a census may not
@@ -188,7 +192,7 @@ func TestNoMergeGateTestDecidesByTheClock(t *testing.T) {
 		if isIntegrationTagged(path) {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			// The error IS the answer: a file this gate cannot parse is a file
 			// it cannot clear, and reporting OK over it is how a census fails
@@ -281,7 +285,7 @@ func TestTheClockBoundDetectorSeesEverySpelling(t *testing.T) {
 			t.Parallel()
 			src := "package p\nimport \"time\"\nfunc f(start, newest, oldest, deadline, issued time.Time) {\n" +
 				k.body + "\n}\n"
-			file, err := parser.ParseFile(token.NewFileSet(), "p.go", src, 0)
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "p.go", src, 0)
 			if err != nil {
 				t.Fatalf("parsing the case: %v", err)
 			}

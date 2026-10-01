@@ -77,7 +77,7 @@ func TestEveryRelationshipCarryingAContactIsWrittenUnderItsLock(t *testing.T) {
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), filepath.Join(dir, name), nil, parser.SkipObjectResolution)
+		file, err := gatekit.ParseFile(filepath.Join(dir, name), parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", name, err)
 		}
@@ -239,7 +239,7 @@ func TestTheWriterReaderSeesTheLockAndOnlyTheLock(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			file, err := parser.ParseFile(token.NewFileSet(), "planted.go", tc.source, parser.SkipObjectResolution)
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "planted.go", tc.source, parser.SkipObjectResolution)
 			if err != nil {
 				t.Fatalf("parsing the planted source: %v", err)
 			}

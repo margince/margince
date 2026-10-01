@@ -5,7 +5,7 @@ package projects
 
 // Putting the author of an imported project on the wire.
 //
-// The write half is sourceauthor.go; this is what a reader sees. It is spelled
+// The importer's create writes the pair; this is what a reader sees. It is spelled
 // once per module rather than once per product because a module never imports a
 // sibling and the helper returns a contract type, which `internal/shared` may
 // not name — so `activities`, `contacts`, `deals` and this package each carry
@@ -15,6 +15,7 @@ package projects
 import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // sourceAuthorSeatNameSQL resolves the author's CURRENT name from the member
@@ -56,6 +57,6 @@ func sourceAuthorOf(id *ids.UUID, seatName, sourceName, sourceSystem *string) *c
 	return &crmcontracts.SourceAuthor{
 		UserId:      uuidPtr(id),
 		DisplayName: name,
-		Via:         sourceSystem,
+		Via:         provenance.DisplayVia(sourceSystem),
 	}
 }

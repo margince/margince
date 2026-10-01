@@ -60,7 +60,7 @@ func testRouter(clients map[Tier]model.Client, meter usageStore, spentBudget Bud
 func TestRouterRoutesTaskToPrimaryTierAndMeters(t *testing.T) {
 	meter := &memMeter{}
 	cheap := NewFakeClient().Script("summary text")
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, meter, DefaultMonthlyTokens, ProfileCloudHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, meter, DefaultMonthlyTokens, ProfileEUHosted)
 
 	resp, info, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "sum it"}}})
 	if err != nil {
@@ -80,7 +80,7 @@ func TestRouterRoutesTaskToPrimaryTierAndMeters(t *testing.T) {
 func TestRouterForwardsCachedAndReasoningTokensToMeter(t *testing.T) {
 	meter := &memMeter{}
 	client := fixedResponseClient{resp: model.Response{InputTokens: 10, OutputTokens: 5, CachedTokens: 3, ReasoningTokens: 7}}
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: client}, meter, DefaultMonthlyTokens, ProfileCloudHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: client}, meter, DefaultMonthlyTokens, ProfileEUHosted)
 	if _, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestRouterFallsBackOnProviderError(t *testing.T) {
 	r := testRouter(map[Tier]model.Client{
 		TierCheapCloud: failingClient{},
 		TierPremium:    premium,
-	}, meter, DefaultMonthlyTokens, ProfileCloudHosted)
+	}, meter, DefaultMonthlyTokens, ProfileEUHosted)
 
 	_, info, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
 	if err != nil {
@@ -113,7 +113,7 @@ func TestRouterEveryTierFailingSurfacesLastError(t *testing.T) {
 	r := testRouter(map[Tier]model.Client{
 		TierCheapCloud: failingClient{},
 		TierPremium:    failingClient{},
-	}, &memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
+	}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 	_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
 	if err == nil || !strings.Contains(err.Error(), "provider down") {
 		t.Fatalf("want provider error surfaced, got %v", err)
@@ -126,7 +126,7 @@ func TestRouterSoftDegradeAtEightyPercent(t *testing.T) {
 	r := testRouter(map[Tier]model.Client{
 		TierLocalSmall: local,
 		TierCheapCloud: NewFakeClient().Script("full-price answer"),
-	}, meter, DefaultMonthlyTokens, ProfileCloudHosted)
+	}, meter, DefaultMonthlyTokens, ProfileEUHosted)
 
 	resp, info, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
 	if err != nil {
@@ -142,7 +142,7 @@ func TestRouterHardCapDefersBackgroundWithoutAttemptOrTrace(t *testing.T) {
 	meter := &memMeter{spent: int64(DefaultMonthlyTokens) + 1}
 	client := NewFakeClient()
 	calls := &fakeCallStore{}
-	r := testRouter(map[Tier]model.Client{TierLocalSmall: client}, meter, DefaultMonthlyTokens, ProfileCloudHosted)
+	r := testRouter(map[Tier]model.Client{TierLocalSmall: client}, meter, DefaultMonthlyTokens, ProfileEUHosted)
 	r.calls = calls
 	r.now = func() time.Time { return time.Date(2026, time.July, 19, 9, 30, 0, 0, time.FixedZone("ICT", 7*60*60)) }
 	_, _, err := r.Complete(wsContext(t), TaskCaptureClassify, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
@@ -168,7 +168,7 @@ func TestRouterHardCapPinsInteractiveToLocalSmall(t *testing.T) {
 	r := testRouter(map[Tier]model.Client{
 		TierLocalSmall: local,
 		TierCheapCloud: NewFakeClient().Script("should not run"),
-	}, meter, DefaultMonthlyTokens, ProfileCloudHosted)
+	}, meter, DefaultMonthlyTokens, ProfileEUHosted)
 	resp, info, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
 	if err != nil {
 		t.Fatal(err)
@@ -179,7 +179,7 @@ func TestRouterHardCapPinsInteractiveToLocalSmall(t *testing.T) {
 }
 
 func TestRouterZeroBudgetFailsClosed(t *testing.T) {
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &memMeter{}, StaticBudget(0), ProfileCloudHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &memMeter{}, StaticBudget(0), ProfileEUHosted)
 	_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
 	if err == nil || !strings.Contains(err.Error(), "non-positive token budget") {
 		t.Fatalf("zero budget must fail closed, got %v", err)
@@ -242,6 +242,21 @@ func TestApplyProfileRemapsFrontierUnderSovereign(t *testing.T) {
 	}
 }
 
+// servableLadder reads localOnlyAdmits, the same predicate decisionSkipFor
+// reads (TestTheDecisionLaneServesEveryTaskButKeepsLocalOnlyDataLocal): a
+// local_only task's rung bound to a hosted provider survives here exactly
+// because that predicate currently admits it, not because this function
+// forgot to ask.
+func TestServableLadderReadsTheSamePredicateAsTheDecisionLane(t *testing.T) {
+	b := &binding{routeMeta: map[Tier]routeMeta{
+		TierLocalSmall: {provider: "gemini", model: "gemini-3.1-flash-lite"},
+	}}
+	got := servableLadder(b, TaskCaptureCounterpartyVerdict, []Tier{TierLocalSmall})
+	if len(got) != 1 || got[0] != TierLocalSmall {
+		t.Fatalf("a local-only task's rung on a hosted provider = %v, want [local_small] while localOnlyAdmits is unconditional", got)
+	}
+}
+
 // Economy mode steps one rung down, and frontier's step is premium — not
 // straight to a cheap tier, which would drop two capability classes at the
 // first sign of budget pressure.
@@ -292,7 +307,7 @@ func TestRouterSovereignWithoutLocalDegradesHonestly(t *testing.T) {
 func TestRouterResultCacheHitSkipsModelCall(t *testing.T) {
 	meter := &memMeter{}
 	cheap := NewFakeClient().Script("first answer", "second answer")
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, meter, DefaultMonthlyTokens, ProfileCloudHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, meter, DefaultMonthlyTokens, ProfileEUHosted)
 	ctx := wsContext(t)
 	req := model.Request{Messages: []model.Message{{Role: "user", Content: "same thread"}}}
 
@@ -320,7 +335,7 @@ func TestRouterResultCacheHitSkipsModelCall(t *testing.T) {
 // derived from a document the caller never attached (same workspace).
 func TestRouterCacheKeyDistinguishesAttachments(t *testing.T) {
 	cheap := NewFakeClient().Script("summary of A", "summary of B")
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, &memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 	ctx := wsContext(t)
 	reqA := model.Request{
 		Messages:    []model.Message{{Role: "user", Content: "summarize the attached"}},
@@ -348,7 +363,7 @@ func TestRouterCacheKeyDistinguishesAttachments(t *testing.T) {
 // RT-AI-M7: identical inputs in two workspaces never share a cache row.
 func TestRouterCacheIsWorkspaceScoped(t *testing.T) {
 	cheap := NewFakeClient()
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, &memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 	req := model.Request{Messages: []model.Message{{Role: "user", Content: "identical"}}}
 
 	if _, _, err := r.Complete(wsContext(t), TaskSummarize, req); err != nil {
@@ -369,7 +384,7 @@ func TestRouterCacheIsWorkspaceScoped(t *testing.T) {
 func TestRouterEmbedStripsSecretsAndMeters(t *testing.T) {
 	meter := &memMeter{}
 	embedder := NewFakeClient()
-	r := assembleRouter(map[Tier]model.Client{}, embedder, ProfileCloudHosted, meter, DefaultMonthlyTokens, nil, nil, false, nil)
+	r := assembleRouter(map[Tier]model.Client{}, embedder, ProfileEUHosted, meter, DefaultMonthlyTokens, nil, nil, false, nil)
 	_, err := r.Embed(wsContext(t), model.EmbedRequest{Inputs: []string{"note with password=topsecretvalue in it"}})
 	if err != nil {
 		t.Fatal(err)
@@ -384,7 +399,7 @@ func TestRouterEmbedStripsSecretsAndMeters(t *testing.T) {
 }
 
 func TestRouterRequiresWorkspaceContext(t *testing.T) {
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 	_, _, err := r.Complete(context.Background(), TaskSummarize, model.Request{})
 	if err == nil || !strings.Contains(err.Error(), "workspace context") {
 		t.Fatalf("workspace-less call must fail, got %v", err)
@@ -403,6 +418,8 @@ func TestRouterCacheKeyDistinguishesEveryExternalBinding(t *testing.T) {
 	withContext := base
 	withContext.ContextScopes = []string{"identity"}
 	withContext.ContextFingerprint = strings.Repeat("a", 64)
+	withSite := base
+	withSite.Site = "summary"
 
 	wsID := ids.New[ids.WorkspaceKind]()
 	baseKey, err := cacheKey(wsID, TaskSummarize, base)
@@ -410,7 +427,7 @@ func TestRouterCacheKeyDistinguishesEveryExternalBinding(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, req := range map[string]model.Request{
-		"model override": withModel, "response schema": withSchema, "company context": withContext,
+		"model override": withModel, "response schema": withSchema, "company context": withContext, "site": withSite,
 	} {
 		key, err := cacheKey(wsID, TaskSummarize, req)
 		if err != nil {

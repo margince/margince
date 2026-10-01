@@ -26,8 +26,8 @@ import {
   jsonResponse,
   stubFetch,
 } from "./company.fixtures";
-import { SuggestionsSection } from "./company360";
 import { companyEditFields, mapCompanyUpdate } from "./companyform";
+import { TodayOnThisAccount } from "./companytoday";
 import { listFetchLimit } from "./listquery";
 import { WriteToHost } from "./writeto";
 
@@ -1006,30 +1006,35 @@ describe("CompanyScreen — hierarchy roll-up in the rail (P-7)", () => {
     expect(screen.queryByText("€0.00")).toBeNull();
   });
 
-  it("discloses accounts excluded because the viewer cannot read them", async () => {
-    stubFetch(
-      async (url) => {
-        if (url.includes("/activities")) {
-          return jsonResponse({ data: [] });
-        }
-        return jsonResponse(company);
-      },
-      {
-        rollup: {
-          ...rollup,
-          restricted_excluded: [
-            { id: "o-9", display_name: "Hidden Subsidiary GmbH" },
-          ],
+  it.each([
+    [1, "1 hidden company excluded"],
+    [2, "2 hidden companies excluded"],
+  ])(
+    "discloses the hidden companies the viewer cannot read (%i)",
+    async (hidden, said) => {
+      stubFetch(
+        async (url) => {
+          if (url.includes("/activities")) {
+            return jsonResponse({ data: [] });
+          }
+          return jsonResponse(company);
         },
-      },
-    );
-    render(<CompanyScreen id="o-1" />);
-    await openProfile();
+        {
+          rollup: {
+            ...rollup,
+            restricted_excluded: Array.from({ length: hidden }, (_, i) => ({
+              id: `o-9${i}`,
+              display_name: "Hidden Subsidiary GmbH",
+            })),
+          },
+        },
+      );
+      render(<CompanyScreen id="o-1" />);
+      await openProfile();
 
-    await waitFor(() =>
-      expect(screen.getByText("Hidden companies excluded: 1")).toBeTruthy(),
-    );
-  });
+      await waitFor(() => expect(screen.getByText(said)).toBeTruthy());
+    },
+  );
 });
 
 describe("CompanyScreen — the account pulse line (P-4)", () => {
@@ -1323,15 +1328,14 @@ const stalledSuggestion = {
   evidence: [{ entity_type: "deal", entity_id: "d-1" }],
 };
 
-// The suggestion rows and the ask card are components of their own, mounted
-// here directly rather than through the company page, which renders neither.
-// This matters for the "the card is absent" cases below: asserted against a
-// page that never mounts one, they would hold no matter what the card did.
+// The suggestion rows, through the brief the record page mounts them in.
 function renderSuggestionsFor(three60: unknown) {
   render(
-    <SuggestionsSection
+    <TodayOnThisAccount
       companyId="o-1"
       view={three60 as never}
+      loading={false}
+      failed={false}
       onOpenRecord={() => {}}
       onPerform={() => {}}
     />,
@@ -1369,7 +1373,7 @@ describe("CompanyScreen — next-step suggestions", () => {
       company360: { ...company360, suggestions: [unanswered] },
     });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
     await waitFor(() =>
       expect(container.querySelector(".co-rail")).toBeTruthy(),
     );
@@ -1451,19 +1455,15 @@ describe("CompanyScreen — next-step suggestions", () => {
     expect(screen.queryByText(/more not shown/)).toBeNull();
   });
 
-  it("says nothing at all when the account needs nothing", async () => {
+  it("offers no advice row when the account needs nothing", async () => {
     stubFetch(companyBackstop);
     renderSuggestionsFor(company360);
 
-    // "No advice" is not something a rep acts on, so the card is absent
-    // rather than empty. Asserted against a MOUNTED brief: on a page that
-    // never renders one, this would hold no matter what the component did.
-    await waitFor(() =>
-      expect(screen.queryByText("Worth doing next")).toBeNull(),
-    );
+    await screen.findByRole("heading", { name: "Needs attention" });
+    expect(screen.queryByRole("button", { name: "Not now" })).toBeNull();
   });
 
-  it("stays silent rather than claiming no advice when the section is withheld", async () => {
+  it("names the withheld advice rather than claiming nothing needs attention", async () => {
     const three60 = {
       ...company360,
       suggestions: undefined,
@@ -1472,9 +1472,8 @@ describe("CompanyScreen — next-step suggestions", () => {
     stubFetch(companyBackstop, { company360: three60 });
     renderSuggestionsFor(three60);
 
-    await waitFor(() =>
-      expect(screen.queryByText("Worth doing next")).toBeNull(),
-    );
+    await screen.findByText(/^Not included: suggestions\./);
+    expect(screen.queryByText("Nothing needs attention right now.")).toBeNull();
   });
 
   it("dismisses by fingerprint and leaves the row for the server to remove", async () => {
@@ -1499,7 +1498,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     await waitFor(() => expect(dismissed).toBeTruthy());
     // The server decides what survives: the card sends the fingerprint and
     // does NOT hide the row itself. Whether the surrounding page then re-reads
-    // the 360 is the page's business, and this suite mounts the card alone.
+    // the 360 is the page's business, and this suite mounts the brief alone.
     expect(dismissed).toEqual({ fingerprint: "fp-stalled-1" });
     expect(screen.getByText(stalledSuggestion.reason)).toBeTruthy();
   });
@@ -1635,7 +1634,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   it("puts the account's context on the right, beside the work", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
 
     await waitFor(() =>
       expect(container.querySelector(".co-overview-stack")).toBeTruthy(),
@@ -1659,12 +1658,10 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   it("carries every panel of the overview stack, and files what is left in the context column", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
 
     // The overview stack: what is worth doing and the pipeline's own figures.
-    // "Worth doing next" is not asserted here — it is advice, and this
-    // fixture's account has none to give; the suggestions suite above
-    // exercises its own presence.
+    // The advice rows are the suggestions suite's above.
     const stack = container.querySelector(".co-overview-stack");
     expect(stack).toBeTruthy();
     // The money is a TAB, so the overview column must not also carry it: a
@@ -1715,7 +1712,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   it("stacks the glance in one column: what needs a contact, the money, what the account is, then the questions", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
 
     const stack = container.querySelector(".co-overview-stack");
     expect(container.querySelector(".co-glance-cols")).toBeNull();
@@ -1747,7 +1744,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   it("leaves the details pane standing while a composer is open", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
     await waitFor(() =>
       expect(container.querySelector(".co-rail")).toBeTruthy(),
     );
@@ -1785,7 +1782,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
       },
     });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
 
     // Folded on arrival, naming how much it holds: that subjectless call
     // counts.
@@ -1834,7 +1831,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
       },
     });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
 
     const fold = container
       .querySelector(".co-overview-stack")
@@ -1940,7 +1937,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     vi.stubGlobal("fetch", held360);
 
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
     await openProfile();
 
     // Asserted on the panel headings the tab is built from: these words also

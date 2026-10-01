@@ -8,12 +8,12 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // A provider handler set that can queue a RUN must carry the pool its
@@ -36,7 +36,7 @@ func TestAProviderHandlerSetCarriesItsPool(t *testing.T) {
 	t.Parallel()
 
 	const composeDir = "internal/compose"
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	entries, err := os.ReadDir(composeDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", composeDir, err)
@@ -49,7 +49,7 @@ func TestAProviderHandlerSetCarriesItsPool(t *testing.T) {
 			continue
 		}
 		path := filepath.Join(composeDir, entry.Name())
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

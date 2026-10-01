@@ -60,11 +60,13 @@ export function EnrichedFields({
       <PanelBody>
         <ul className="corrections-fields">
           {fields.map((field) => (
-            // The claim's own key, falling back to the field name: two claims
-            // on one field are two rows, and the key must not move when a
-            // field is re-captured under an open editor, or the editor
-            // remounts and loses what it opened on.
-            <li key={field.claim_key ?? field.field}>
+            // The claim's own key, falling back to the field name, plus the
+            // value key: a phone has one row per number under one claim key.
+            // The key must not move when a field is re-captured under an open
+            // editor, or the editor remounts and loses what it opened on.
+            <li
+              key={`${field.claim_key ?? field.field}:${field.value_key ?? ""}`}
+            >
               <EnrichedField
                 contactId={contactId}
                 field={field}
@@ -149,7 +151,13 @@ function EnrichedField({
     mutationFn: async () => {
       const { error } = await api.POST(
         "/contacts/{id}/profile-fields/{field}/restore",
-        { params: { path: { id: contactId, field: field.field } } },
+        {
+          params: {
+            path: { id: contactId, field: field.field },
+            // Which number, for a phone: each number has its own undo.
+            query: field.value_key ? { value_key: field.value_key } : {},
+          },
+        },
       );
       if (error) {
         throwProblem(error);

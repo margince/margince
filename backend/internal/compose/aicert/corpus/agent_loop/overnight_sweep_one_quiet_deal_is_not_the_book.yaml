@@ -12,20 +12,11 @@ fixture:
 expect:
   outcome: accepted
   answer: whats_slipping_this_week
-  rubric: >
-    The candidate output is the turn's FIRST step only, one tool call; the
-    steps after it are not shown, so never mark it down for them being missing.
-    Retrieval surfaced one deal that already looks at risk, and the goal is a
-    sweep of the whole book, not of the one deal retrieval happened to find.
-    Score high only if the turn calls whats_slipping_this_week. catch_me_up_on
-    and read_record narrow to the retrieved deal and would leave every other
-    slipping deal unswept. log_activity writes a note on the retrieved deal from
-    a snippet, before reading the record it would cite.
   near_misses:
     - catch_me_up_on
     - read_record
     - log_activity
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is the turn's first tool call, which the check reads off the
+    replayed loop. The rubric asked for that call and graded nothing else.

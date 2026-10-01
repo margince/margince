@@ -109,7 +109,7 @@ func seedEndpointPair(ctx context.Context, t *testing.T, e *Env, who, where stri
 func createEmployment(ctx context.Context, t *testing.T, r *agents.Registry, contact, company ids.UUID, extra string) (ids.UUID, edgeFields) {
 	t.Helper()
 	created, err := r.Invoke(ctx, "create_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"ui"%s}}`,
+		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"manual"%s}}`,
 		contact, company, extra)))
 	if err != nil {
 		t.Fatalf("create_record relationship: %v", err)
@@ -248,7 +248,7 @@ func TestAnEdgeIsInvisibleWhenEitherEndpointIsOutOfTheCallersRowScope(t *testing
 		t.Fatalf("seeding the company: %v", err)
 	}
 	created, err := registry.Invoke(admin, "create_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"ui"}}`,
+		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"manual"}}`,
 		contact.Id, company.Id)))
 	if err != nil {
 		t.Fatalf("create_record relationship as admin: %v", err)
@@ -314,7 +314,7 @@ func TestAnEdgeCannotBeCreatedOverAnEndpointTheCallerCannotSee(t *testing.T) {
 	}
 
 	_, err = registry.Invoke(stranger, "create_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"ui"}}`,
+		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"manual"}}`,
 		mine.Id, hidden.Id)))
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
@@ -350,13 +350,13 @@ func TestAMisshapenEdgeIsRefusedWithSomethingTheCallerCanAct(t *testing.T) {
 			// argument is wrong on its own.
 			name: "wrong endpoint pair for the kind",
 			args: fmt.Sprintf(`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,`+
-				`"counterparty_company_id":%q,"source":"ui"}}`, contact.Id, company.Id),
+				`"counterparty_company_id":%q,"source":"manual"}}`, contact.Id, company.Id),
 			wants: "employment",
 		},
 		{
 			name: "a kind the vocabulary does not have",
 			args: fmt.Sprintf(`{"record_type":"relationship","fields":{"kind":"drinking_buddy","contact_id":%q,`+
-				`"company_id":%q,"source":"ui"}}`, contact.Id, company.Id),
+				`"company_id":%q,"source":"manual"}}`, contact.Id, company.Id),
 			wants: "kind",
 		},
 	} {
@@ -401,7 +401,7 @@ func TestAnEdgeEndingBeforeItBeganNamesTheDateField(t *testing.T) {
 
 	_, err = registry.Invoke(ctx, "create_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,`+
-			`"started_at":"2026-06-01","ended_at":"2026-01-01","source":"ui"}}`, contact.Id, company.Id)))
+			`"started_at":"2026-06-01","ended_at":"2026-01-01","source":"manual"}}`, contact.Id, company.Id)))
 	if err == nil {
 		t.Fatal("an edge that ended before it began was accepted")
 	}
@@ -440,7 +440,7 @@ func TestAProjectStakeholderEdgeKeepsTheProjectItNames(t *testing.T) {
 
 	created, err := registry.Invoke(ctx, "create_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","fields":{"kind":"project_stakeholder","project_id":%q,"contact_id":%q,`+
-			`"role":"sponsor","source":"ui"}}`, projectID, contact.Id)))
+			`"role":"sponsor","source":"manual"}}`, projectID, contact.Id)))
 	if err != nil {
 		t.Fatalf("create_record project_stakeholder: %v — this is the shape that fails when project_id "+
 			"is dropped between the body and the store", err)
@@ -483,7 +483,7 @@ func TestOneHiddenEndpointIsEnoughToHideTheEdge(t *testing.T) {
 
 	// Created by the admin, so the edge's existence owes nothing to the stranger.
 	created, err := registry.Invoke(admin, "create_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"ui"}}`,
+		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"manual"}}`,
 		mine.Id, hidden.Id)))
 	if err != nil {
 		t.Fatalf("create_record as admin over a mixed pair: %v", err)

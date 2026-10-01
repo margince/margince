@@ -62,8 +62,8 @@ var (
 // history as first-party testimony this installation's colleagues gave.
 //
 // Not the author columns, and the distinction is the whole reason this
-// parameter exists. The attribution repair skips a record whose author it
-// cannot resolve, so an imported row may carry no author at all — testing for
+// parameter exists. An importer names an author only when its source knows
+// one, so an imported row may carry no author at all — testing for
 // attribution rather than for provenance would hand exactly those rows T0.
 //
 // Not `source_system IS NOT NULL` either, which is what an earlier draft of

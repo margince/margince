@@ -16,7 +16,7 @@ import { StatStrip } from "./statstrip";
 // `hero` flag carried a third for the Brief; one reading in three spellings is
 // the defect, and the row's own job is only how many slots and where it folds.
 const meta: Meta<typeof StatStrip> = {
-  title: "Design System/StatStrip",
+  title: "Components/Text and data display/Stat strip",
   component: StatStrip,
   parameters: { layout: "padded" },
 };
@@ -78,10 +78,20 @@ export const SourcedAndAlerting: Story = {
 // — the last slot takes the rest of its row rather than sitting alone beside
 // empty cells under a stub of rule.
 //
-// Narrow the Storybook viewport below 68rem to see it fold; at full width both
-// strips are one even row and nothing is stretched.
+// Opened where the strip's container is under `max-width: 66rem`, the rule it
+// folds at; at full width both strips are one even row and nothing is stretched.
 export const FoldsWithoutAnOrphan: Story = {
-  parameters: { viewport: { defaultViewport: "tablet" } },
+  parameters: {
+    viewport: {
+      options: {
+        folded: {
+          name: "Folded (container max 66rem)",
+          styles: { width: "1024px", height: "720px" },
+        },
+      },
+    },
+  },
+  globals: { viewport: { value: "folded" } },
   render: () => (
     <div style={{ display: "grid", gap: "var(--space-6)" }}>
       <StatStrip>

@@ -29,7 +29,7 @@ import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { confidenceLevel, FieldDiff } from "../design-system/trust";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   coldFieldLabel,
@@ -43,6 +43,7 @@ import {
 } from "./common";
 import { ReadWarnings, SavedNotice } from "./company-context.notices";
 import { CompanyMark } from "./companymark";
+import { storeCompany, useCompany } from "./installationcompany";
 import "./company-context.css";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];
@@ -127,8 +128,8 @@ const MULTILINE_FIELDS = new Set<keyof CompanyInput>([
   "history",
 ]);
 
-// The rollout answer every surface that gates on the flag shares — the page
-// here, the onboarding entry, and the settings nav. Named so a caller can ask
+// The rollout answer every surface that gates on the flag shares — the card
+// here and the onboarding journey. Named so a caller can ask
 // the cache whether the answer has LANDED, which is a different question from
 // whether the request went out.
 export const companyContextCapabilitiesQueryKey = [
@@ -167,7 +168,7 @@ export function ManualCompanySetup() {
       return data;
     },
     onSuccess: (profile) => {
-      queryClient.setQueryData(["company"], profile);
+      storeCompany(queryClient, profile);
       navigate({ screen: "home" });
     },
   });
@@ -299,25 +300,12 @@ export function CompanyContextCard() {
   // the server would have admitted.
   const me = useMe();
   const canEdit = useCanUpsert("company");
-  // The installation's own profile is administered, not read on a grant.
-  // GET /company takes auth.RequireAdmin (contacts' requireAnchorAdministrator)
-  // and refuses every other role outright — so a seat without the admin role
-  // has no profile to show and asking for one earns a 403 it can do nothing
-  // with. The settings tab this card sits on is reachable on
-  // installation_settings:read, which four roles hold, and the two cards beside
-  // this one are theirs to see; this one simply is not.
+  // The installation's own profile is administered, not read on a grant:
+  // useCompany asks only from an admin seat, and for any other this card draws
+  // nothing (below). The settings page it sits on opens for readers who are not
+  // admins too (settingscatalog.ts, the `company` entry); this card is not theirs.
   const isAdmin = useHoldsAdminRole();
-  const company = useQuery({
-    queryKey: ["company"],
-    enabled: isAdmin,
-    queryFn: async (): Promise<CompanyProfile> => {
-      const { data, error } = await api.GET("/company");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const company = useCompany(true);
   const [form, setForm] = useState<CompanyInput | null>(null);
   // Which row's Edit was pressed, and so where the dialog puts focus. One
   // dialog holds every field because ONE PUT writes them: a per-group form
@@ -372,7 +360,7 @@ export function CompanyContextCard() {
       return data;
     },
     onSuccess: (profile) => {
-      queryClient.setQueryData(["company"], profile);
+      storeCompany(queryClient, profile);
       // Committing is what the dialog was opened for, so a landed save closes
       // it and leaves the confirmation on the card behind — where the rows the
       // save changed are. A refused save keeps the dialog open with what was
@@ -507,7 +495,7 @@ export function CompanyContextCard() {
       // which owns that state — so this only writes what the applied refresh
       // ENDS: the read the reviewer was working through, and the choices they
       // made in it.
-      queryClient.setQueryData(["company"], profile);
+      storeCompany(queryClient, profile);
       setReadID(null);
       setResolutions({});
     },
@@ -631,7 +619,7 @@ function CompanyFactsCard({
   saved,
   onEdit,
 }: Readonly<{
-  company: QueryLike<CompanyProfile>;
+  company: QueryLike<CompanyProfile | null>;
   /** Which rollout stage this installation is on, once the probe has answered. */
   rollout?: Capabilities["rollout"];
   form: CompanyInput | null;
@@ -641,7 +629,9 @@ function CompanyFactsCard({
   onEdit: (field: keyof CompanyInput) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
+  const confirmed = company.data?.fields?.length ?? 0;
   return (
     <Panel
       tone="accent"
@@ -661,10 +651,9 @@ function CompanyFactsCard({
         company.data ? (
           <>
             <span className="company-context-count">
-              <strong>
-                {formatNumber(company.data.fields?.length ?? 0, locale)}
-              </strong>{" "}
-              {t("settings.companyConfirmed")}
+              {plural("settings.companyConfirmed", confirmed, {
+                count: formatNumber(confirmed, locale),
+              })}
             </span>
             {rollout && <Badge>{rollout}</Badge>}
           </>
@@ -683,6 +672,7 @@ function CompanyFactsCard({
           pendingLabel={t("settings.companySourceTitle")}
         >
           {(profile) =>
+            profile !== null &&
             form && (
               <>
                 {/* The company's FACE, above the statements about it. It is the

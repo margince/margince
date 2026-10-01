@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -76,8 +77,11 @@ func TestABoughtContactIsOwedANotice(t *testing.T) {
 	if state != "open" {
 		t.Errorf("state = %q, want open", state)
 	}
-	if until := time.Until(due); until <= 0 || until > 31*24*time.Hour {
-		t.Errorf("the notice falls due in %v, want inside a month of the acquisition", until)
+	// A calendar month by the rule's own arithmetic, not 31 days: from 1 October
+	// it runs 31 days and can gain the hour a clock change hands back.
+	now := time.Now()
+	if !due.After(now) || due.After(consent.AddMonths(now, 1).Add(time.Hour)) {
+		t.Errorf("the notice falls due %v, want inside a calendar month of the acquisition (%v)", due, now)
 	}
 }
 
@@ -96,6 +100,37 @@ func TestAContactWhoWroteToUsOwesNothing(t *testing.T) {
 	if _, _, _, found := noticeCaseFor(t, e, contact); found {
 		t.Error("a contact who wrote to us first was recorded as owed a notice: they handed us " +
 			"the data, so the disclosure was owed at collection by the surface that took it")
+	}
+}
+
+// TestAContactCarriedOverFromAnotherCRMOwesNothing: a create stamped with the
+// reserved import namespace is a contact moved from the CRM used before. That
+// system held it under its own notice duty, so the move opens no case — before
+// this, one portal import put a disclosure per contact on the Focus list.
+func TestAContactCarriedOverFromAnotherCRMOwesNothing(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	var contact struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"full_name": "Carried Over", "source": "import", "source_system": "mirror:hubspot",
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create an imported contact → %d", status)
+	}
+	var kind string
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT kind FROM contact_acquisition_evidence WHERE contact_id = $1`, contact.ID).Scan(&kind); err != nil {
+		t.Fatal(err)
+	}
+	if kind != "crm_migration" {
+		t.Fatalf("acquisition kind %q, want crm_migration for a create in the import namespace", kind)
+	}
+
+	driveNoticeCase(t, e, contact.ID)
+
+	if _, _, _, found := noticeCaseFor(t, e, contact.ID); found {
+		t.Error("a contact carried over from the previous CRM was recorded as owed a notice")
 	}
 }
 

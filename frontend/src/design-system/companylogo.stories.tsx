@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { CompanyLogo } from "./companylogo";
 
 const meta: Meta<typeof CompanyLogo> = {
-  title: "Design System/CompanyLogo",
+  title: "Components/Images and icons/Company logo",
   component: CompanyLogo,
   parameters: { layout: "padded" },
 };

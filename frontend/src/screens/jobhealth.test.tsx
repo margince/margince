@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { JobHealthCard } from "./jobhealth";
+import { DeadWorkCallout } from "./jobhealthdead";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -303,7 +304,7 @@ describe("JobHealthCard", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveClass("callout-danger");
     expect(alert).toHaveTextContent(/will not run without intervention/i);
-    expect(alert).toHaveTextContent(/intervention: 3\./);
+    expect(alert).toHaveTextContent(/3 jobs were discarded or canceled/);
     // The span, in the sentence. A count with no window asks the reader to
     // guess, and the guess is "since forever".
     expect(alert).toHaveTextContent(/last 24h/i);
@@ -350,10 +351,19 @@ describe("JobHealthCard", () => {
     });
     render(<JobHealthCard />);
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/Dead jobs in the last 24h: 4/i);
+    expect(alert).toHaveTextContent(/4 dead jobs in the last 24h/i);
     expect(alert).toHaveTextContent(
       /531 discarded or canceled in the last 7 days/i,
     );
+  });
+
+  it("speaks of a single dead job in the singular", () => {
+    const kinds = [{ ...HEALTH.kinds[0], dead: 1, dead_recent: 1 }];
+    const health = { ...HEALTH, kinds, recent_failures: [] };
+    render(<DeadWorkCallout health={health} />);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/1 dead job in the last 24h/i);
+    expect(alert).toHaveTextContent(/1 job was discarded or canceled/i);
   });
 
   it("keeps a healthy report free of the dead-work alert", async () => {

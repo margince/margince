@@ -199,7 +199,11 @@ export function SidecarFieldRow({
           their own draft attributes their words to a machine — indefinitely, if
           the save then fails and the draft stays. */}
       {source && current && !editing && (
-        <EvidenceMark value={t("evidence.mark")} source={source} />
+        <EvidenceMark
+          value={t("evidence.mark")}
+          subject={current.value}
+          source={source}
+        />
       )}
       {/* The register's verdict beside the number it answers for. Only once a
           number exists: a mark on an empty field would say the register had

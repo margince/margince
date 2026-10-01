@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { storyTitle } from "../../scripts/lib/story-title";
+import { storyCensus } from "../../scripts/lib/story-files";
+import { titledStories } from "../../scripts/lib/story-title";
 import { translate } from "../i18n";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 
@@ -20,20 +20,8 @@ import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 // of story files is a census that fails short, reporting PASS over a file it
 // was never told about.
 
-const SCREENS = new URL(".", import.meta.url).pathname;
-
-function storyFilesUnder(dir: string): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      found.push(...storyFilesUnder(path));
-    } else if (entry.name.endsWith(".stories.tsx")) {
-      found.push(path);
-    }
-  }
-  return found;
-}
+const frontendRoot = resolve(__dirname, "..", "..");
+const srcDir = join(frontendRoot, "src");
 
 // The group/page PAIRS the catalog declares, as the sidebar spells them. Pairs
 // rather than two independent sets: `Settings/AI/Capture/Card` names a real
@@ -50,14 +38,16 @@ const PAGE_PATHS = new Set(
 );
 
 // The stories that are ABOUT a settings SURFACE rather than a card on a page,
-// named exactly. Two segments each, because neither names a catalog page: the
-// tree itself, and the settings home together with the boundary the same address
-// answers when its segment names no page this reader can open (`SETTINGS_HOME_ID`
-// is deliberately not a member of SETTINGS_PAGES). An
+// named exactly. Two segments each, because none names a catalog page: the
+// tree itself, the sidebar's settings level, and the settings home together with
+// the boundary the same address answers when its segment names no page this
+// reader can open (`SETTINGS_HOME_ID` is deliberately not a member of
+// SETTINGS_PAGES). An
 // `if (page === undefined) return` would exempt every two-segment title —
 // `Settings/Nonsense` included — which is a skip-list with no list.
 const SURFACE_STORIES = new Set([
   "Settings/Settings screen",
+  "Settings/Settings navigation",
   "Settings/Settings home",
 ]);
 
@@ -85,52 +75,24 @@ const ACROSS_PAGE_STORIES = new Set([
   "Settings/Across pages/Units offered in settings",
 ]);
 
-const settingsStories = storyFilesUnder(SCREENS)
-  .map((path) => ({
-    path: relative(SCREENS, path),
-    title: storyTitle(path, readFileSync(path, "utf8")),
-  }))
+// Every story file Storybook loads: a settings card's story can sit beside a
+// component outside screens/, as mail-history's does.
+const settingsStories = (await titledStories(storyCensus(frontendRoot).files))
+  .map(({ path, title }) => ({ path: relative(srcDir, path), title }))
   .filter(
     (story): story is { path: string; title: string } =>
       story.title?.startsWith("Settings/") ?? false,
   );
 
-// Every story file under screens/, whether or not it claims a Settings title.
-// The corpus this gate must not lose a member of.
-const everyStory = storyFilesUnder(SCREENS).map((path) => ({
-  path: relative(SCREENS, path),
-  title: storyTitle(path, readFileSync(path, "utf8")),
-}));
-
 describe("the settings stories are filed where the product files them", () => {
-  // A floor is not a census. `>40` over 66 stories permits 25 to vanish — a
-  // story whose title stops resolving, or whose root is edited away from
-  // `Settings/`, drops out of the filtered corpus and is never checked again.
-  // So the count is EXACT and derived from the tree: adding or removing a
-  // settings story is a deliberate edit to this number. 80 → 83 for
-  // `You/Connections/Backfill run`, `Data/Capture rules/Refused domain
-  // decision` and `You/Capture activity/Pipeline drawer`; 83 → 86 for
-  // `Across pages/Refresh from sources`, `Governance/Privacy &
-  // retention/Corrections` and `Governance/Privacy & retention/Retention policy
-  // form`; 86 → 87 for `AI/Automations/Automation form`; 87 → 88 for
-  // `Governance/Privacy & retention/Notice duties`; 88 → 89 for
-  // `Governance/Privacy & retention/Linked case notice`; 89 → 90 for
-  // `AI/Automations/Date field picker`; 90 → 91 for `Governance/System
-  // health/Connector records refused`; 91 → 93 for `Across pages/Units offered
-  // in settings` and `Governance/System health/Health card shell`; 93 → 94 for
-  // `Sales/Pipelines/Retired pipeline`; 94 → 96 for `AI/Models and
-  // routing/Service-account key` and `AI/Models and routing/Vertex location`.
+  // Pinned by hand rather than floored: a story retitled away from `Settings/`
+  // drops out of the corpus above, and only an exact count notices it go.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(96);
+    expect(settingsStories.length).toBe(114);
   });
 
-  // The filter above drops a file whose title does not resolve. That is the
-  // silent direction: a story with a computed or missing title would leave the
-  // corpus without failing anything. Every story file under screens/ must
-  // therefore yield a title at all.
-  it.each(everyStory)("resolves a title for $path", ({ title }) => {
-    expect(title).not.toBeNull();
-  });
+  // A file whose title does not resolve drops out of the filter above;
+  // catalog.test.ts fails every such file under src/.
 
   it.each(settingsStories)(
     "files $path at a path the catalog declares",

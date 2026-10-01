@@ -17,7 +17,7 @@ import {
 // mapped onto a profile field before it can be saved.
 
 const meta: Meta<typeof ContactResearchDrawer> = {
-  title: "Records/Contact record/Research drawer",
+  title: "Records/Contact 360/Research drawer",
   component: ContactResearchDrawer,
   parameters: { layout: "fullscreen" },
 };

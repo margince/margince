@@ -5,7 +5,8 @@ import { useLocale } from "../i18n";
 import { MoneyInput } from "./moneyinput";
 
 const meta: Meta = {
-  title: "Design System/MoneyInput",
+  title: "Components/Forms and input/Money input",
+  component: MoneyInput,
   parameters: { layout: "padded" },
 };
 export default meta;

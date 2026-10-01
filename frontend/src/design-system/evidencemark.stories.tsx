@@ -9,7 +9,7 @@ import { EvidenceMark } from "./evidencemark";
 // a value read from a page, a value a connector supplied, and a value a
 // contact typed — which carries no mark at all.
 const meta: Meta<typeof EvidenceMark> = {
-  title: "Design System/EvidenceMark",
+  title: "Components/AI and provenance/Evidence mark",
   component: EvidenceMark,
   parameters: { layout: "padded" },
   decorators: [

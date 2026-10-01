@@ -18,7 +18,6 @@ import (
 	"io"
 	"log/slog"
 	"sync"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -26,13 +25,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/websearchhttp"
 )
 
 // startContactAutoEnrich subscribes the consumer that fills a contact from what
-// their employer's site already published, and from public search metadata when
-// a provider is bound.
+// their employer's site already published.
 func startContactAutoEnrich(
 	ctx context.Context,
 	pool *pgxpool.Pool,
@@ -41,15 +37,7 @@ func startContactAutoEnrich(
 	logger *slog.Logger,
 	stdout io.Writer,
 ) {
-	// Search is optional by design (ADR-0081): a deployment that binds no
-	// provider fills from the employer's own pages and skips discovery,
-	// which is the sovereign posture rather than a degraded one.
-	searchClient, searchConfigured := websearchhttp.FromEnv(time.Now, config.FromOS)
-	enricher := compose.NewContactAutoEnrich(pool, contacts.NewStore(compose.InstallationDB(pool)), approvals.NewService(compose.InstallationDB(pool)), searchClient, logger)
-	if searchConfigured {
-		_, _ = fmt.Fprintln(stdout, "worker filling contacts from their employer's pages and public search results")
-	} else {
-		_, _ = fmt.Fprintln(stdout, "worker filling contacts from their employer's published pages (no search provider bound)")
-	}
+	enricher := compose.NewContactAutoEnrich(pool, contacts.NewStore(compose.InstallationDB(pool)), approvals.NewService(compose.InstallationDB(pool)), logger)
+	_, _ = fmt.Fprintln(stdout, "worker filling contacts from their employer's published pages")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:contact-auto-enrich", enricher.HandleEvent, logger, 0) })
 }

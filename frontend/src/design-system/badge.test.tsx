@@ -83,6 +83,24 @@ describe("Badge", () => {
     expect(badge.children).toHaveLength(2);
   });
 
+  it("wraps a label whose every word is read, and truncates every other", () => {
+    render(
+      <>
+        <Badge wrap>Stored in the vault · Google Gemini</Badge>
+        <Badge>Open</Badge>
+      </>,
+    );
+    expect(badgeFor("Stored in the vault · Google Gemini")).toHaveClass(
+      "badge-wrap",
+    );
+    expect(badgeFor("Open")).not.toHaveClass("badge-wrap");
+    const css = readFileSync(join(here, "atoms.css"), "utf8");
+    expect(css).toMatch(
+      /\.badge-wrap,\s*\.badge-wrap \.badge-label\s*\{\s*white-space:\s*normal;/,
+    );
+    expect(css).toMatch(/\.badge-wrap\s*\{\s*border-radius:\s*var\(--r-sm\);/);
+  });
+
   it("holds the whole label in the one span that truncates", () => {
     render(<Badge>extensions/acme/routes/partner-portal/settings</Badge>);
     const label = screen.getByText(

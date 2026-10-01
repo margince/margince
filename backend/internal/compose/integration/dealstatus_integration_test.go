@@ -61,7 +61,7 @@ func TestTheDealStatusCardFollowsTheDealsOwnRecords(t *testing.T) {
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "direction": "inbound", "subject": "Re: rollout", "body": "Can you send the DPA?",
 		"links":  []AnyMap{{"entity_type": "deal", "entity_id": dealID}},
-		"source": "ui",
+		"source": "manual",
 	}, nil, &mail); status != http.StatusCreated {
 		t.Fatalf("log mail = %d %v", status, mail)
 	}
@@ -82,7 +82,7 @@ func TestTheDealStatusCardFollowsTheDealsOwnRecords(t *testing.T) {
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "direction": "outbound", "subject": "Re: rollout", "body": "DPA attached.",
 		"links":  []AnyMap{{"entity_type": "deal", "entity_id": dealID}},
-		"source": "ui",
+		"source": "manual",
 	}, nil, &reply); status != http.StatusCreated {
 		t.Fatalf("log the reply = %d %v", status, reply)
 	}

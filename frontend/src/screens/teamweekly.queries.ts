@@ -10,15 +10,20 @@ export type Team = components["schemas"]["Team"];
 export type TeamWeeklyReview = components["schemas"]["TeamWeeklyReview"];
 export type TeamWeeklyRep = components["schemas"]["TeamWeeklyRep"];
 export type TeamWeeklyFocusKind = TeamWeeklyRep["focus_kind"];
+/** Which teams' weeks the server opens for this reader, off the worklist read. */
+export type TeamWeekReach = NonNullable<
+  components["schemas"]["Worklist"]["team_week"]
+>;
 
 /**
  * How a read of a team's frozen week can come back with nothing to draw.
  *
  * The two absences are different facts and the screen says different things
- * about them: `forbidden` is a reader whose row scope reaches only their own
- * rows, and `no_snapshot` is a team whose first week has not closed yet. A
- * screen that drew one plate over both would tell a lead they lack permission
- * on a Tuesday in their team's first week.
+ * about them: `forbidden` is a reader who may open no team's week — they lead
+ * no team and hold no oversight grant — and `no_snapshot` is a team whose week
+ * has not closed yet, or one a lead is not on. A screen that drew one plate over
+ * both would tell a lead they lack permission on a Tuesday in their team's first
+ * week.
  */
 export type TeamWeeklyAbsence = "forbidden" | "no_snapshot";
 
@@ -64,10 +69,8 @@ export function useTeamWeeklyReview(
  * The workspace's teams, for the picker.
  *
  * There is no "my teams" read: `/teams` lists every unarchived team any member
- * may see. Which of them a reader may have a WEEK of is the team-weekly
- * endpoint's own answer — it refuses a reader whose scope reaches only their own
- * rows — so the picker offers and the server decides, rather than this screen
- * inventing a second membership rule beside the one that already ships.
+ * may see. Each view's picker narrows it to the teams its own server rule
+ * serves — see `morningTeams` and `weekTeams` beside the picker.
  */
 export function useTeams(): UseQueryResult<readonly Team[]> {
   return useQuery({

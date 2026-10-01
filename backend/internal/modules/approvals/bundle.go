@@ -43,6 +43,9 @@ const (
 	// BundleEffectFailed — the verdict IS recorded and audited, but the
 	// follow-on change did not land.
 	BundleEffectFailed BundleOutcome = "effect_failed"
+	// BundleRefused — the kind's release precheck refused approving it, so it
+	// was left pending, exactly as a single decision would leave it.
+	BundleRefused BundleOutcome = "refused"
 )
 
 // BundleMember is one member of a bundle and what the decision did to it.
@@ -128,6 +131,12 @@ func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.P
 	for _, a := range mine {
 		if status := a.effectiveStatus(now); status != statusPending {
 			out = append(out, BundleMember{Approval: a, Outcome: outcomeOf(status)})
+			continue
+		}
+		// The same preflight a single decision runs, and for the same reason: a
+		// refusal after the commit leaves an approved row nothing can decide again.
+		if approve && s.memberRefusedByPrecheck(ctx, a) {
+			out = append(out, BundleMember{Approval: a, Outcome: BundleRefused})
 			continue
 		}
 		member, err := s.decideMemberInTx(ctx, tx, p, a, approve, reason)
@@ -268,4 +277,15 @@ func bundleMembers(ctx context.Context, tx pgx.Tx, bundleID ids.UUID) (rows []ro
 		return nil, false, err
 	}
 	return rows, len(rows) > bundleDecisionCap, nil
+}
+
+// memberRefusedByPrecheck asks a member's kind whether approving it could run,
+// on the terms runPrecheck applies to a single decision: only for a
+// server-proposed staging, and only for a kind that registered a check.
+func (s *Service) memberRefusedByPrecheck(ctx context.Context, a row) bool {
+	check, ok := s.prechecks[a.Kind]
+	if !ok || !serverProposed(a) {
+		return false
+	}
+	return check(ctx, a.ProposedChange, nil) != nil
 }

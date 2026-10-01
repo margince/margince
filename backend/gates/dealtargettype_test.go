@@ -25,12 +25,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEveryStagingNamesItsDealTargetThroughOneConstant(t *testing.T) {
 	t.Parallel()
 	root := filepath.Join("internal", "compose")
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	var offenders []string
 	found, dealSites := 0, 0
 
@@ -42,7 +44,7 @@ func TestEveryStagingNamesItsDealTargetThroughOneConstant(t *testing.T) {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		parsed, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		parsed, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 		if err != nil {
 			return err
 		}

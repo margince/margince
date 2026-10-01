@@ -12,7 +12,9 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -67,8 +69,12 @@ func (h Handlers) GetClaimEvidence(w http.ResponseWriter, r *http.Request,
 		httperr.Write(w, r, err)
 		return
 	}
+	// The receipt's labels follow the installation's base language, the same
+	// source the dossier itself is written from — a receipt opened off a German
+	// card must not answer in English.
 	receipt, err := EvidenceFor(r.Context(), h.svc.facts,
-		ids.From[ids.CompanyKind](ids.UUID(id)), entityType, entityID)
+		ids.From[ids.CompanyKind](ids.UUID(id)), entityType, entityID,
+		identity.BaseLanguageForPrompt(r.Context(), h.svc.pool))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -79,7 +85,7 @@ func (h Handlers) GetClaimEvidence(w http.ResponseWriter, r *http.Request,
 func (h Handlers) serve(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, force bool) {
 	dossier, err := h.svc.Get(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)), force)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, dossier)
@@ -88,7 +94,7 @@ func (h Handlers) serve(w http.ResponseWriter, r *http.Request, id crmcontracts.
 func (h Handlers) serveGrowthFit(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, force bool) {
 	fit, err := h.growthFit.Get(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)), force)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, fit)

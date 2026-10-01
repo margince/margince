@@ -567,7 +567,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
   padding: var(--space-5) var(--space-6);
-  margin-top: var(--space-4);
 }
 
 /* The strip stays in reach as the record scrolls: stuck to the top of the
@@ -792,7 +791,7 @@
        reach. */
     z-index: 2;
     margin: 12px 0 0;
-    padding: var(--space-2) 0;
+    padding: var(--space-2) var(--padCard);
     background: var(--bgPage);
     border-top: 1px solid var(--borderSubtle);
   }

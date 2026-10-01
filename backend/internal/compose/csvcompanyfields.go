@@ -58,9 +58,12 @@ func storedPrimaryDomain(current map[string]json.RawMessage) json.RawMessage {
 // An absent field renders empty, which no non-empty import value equals.
 
 func companyCreateFrom(fields map[string]string, source string) contacts.CreateCompanyInput {
+	sourceSystem := csvSourceSystem()
 	in := contacts.CreateCompanyInput{
-		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
-		Source:      source,
+		DisplayName:  strings.TrimSpace(fields[fieldDisplayName]),
+		Source:       source,
+		SourceSystem: &sourceSystem,
+		Author:       authorFrom(fields),
 	}
 	in.LegalName = importString(fields, "legal_name")
 	in.Description = importString(fields, "description")

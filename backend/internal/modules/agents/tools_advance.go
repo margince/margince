@@ -77,6 +77,7 @@ func (t advanceDeal) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "advance_deal", Title: "Advance a deal to a stage", Version: toolVersionV1,
 		Description:   advanceDealCopy.render(),
+		Instead:       advanceDealCopy.Instead,
 		RequiredScope: principal.ScopeWrite,
 		Tier:          mcp.TierDynamic,
 		TierResolver:  advanceDealTier,

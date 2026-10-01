@@ -7,23 +7,21 @@ package activities
 //
 // Its own file because it is the thing three callers share and must never fork:
 // the Worklist's workspace-wide read, the entity-scoped list filter, and the
-// hidden-backlog guardrail. Every rule that decides whether a contact is waiting
-// lives here — the anti-joins, the machine-sender exclusion, the horizon, the
-// sales-link requirement, the live-record predicates — and a caller restating
-// any of them would be a second answer to one question, wrong the first time
-// either copy was edited.
+// hidden-backlog guardrail. Whether a reply is owed at all is owedSQL in
+// answered.go; every queue rule on top of it lives here — the horizon, the
+// sales-link requirement, the colleague domains, the live-record predicates —
+// and a caller restating any of them would be a second answer to one
+// question, wrong the first time either copy was edited.
 //
 // waiting.go holds what READS it; this holds what it says.
 
 import "fmt"
 
-// waitingRepliesSQL includes outstanding requests and incidental unanswered
-// sales conversations. Requests survive replies, age and closed deals until
-// explicit resolution; incidental mail retains the conversation guardrails.
-// All eligibility predicates precede the cap. Thread comparisons stay within
-// the same medium and read instant; unrelated or future mail cannot answer one.
-// Unthreaded mail is admitted only with request evidence.
-const waitingRepliesSQL = `
+// waitingRepliesSQL is owedSQL narrowed by the queue's own rules: horizon,
+// sales link, colleagues and the reader's set-asides. Requests survive replies, age and closed deals until
+// explicit resolution. All eligibility predicates precede the cap. Every rule
+// that hides a row owed a reply has a figure in hiddenbacklog.go.
+var waitingRepliesSQL = `
 	SELECT a.id, a.kind, COALESCE(a.subject, ''),
 	       COALESCE((array_agg(sender.address ORDER BY sender.address)
 	                 FILTER (WHERE sender.address IS NOT NULL))[1], ''),
@@ -157,11 +155,17 @@ const waitingRepliesSQL = `
 	         ON sender.activity_id = a.id AND sender.role = 'from'
 	  LEFT JOIN deal openDeal ON openDeal.id = wl.deal_id
 	                         AND %[8]s
-	  -- The ownership walk, all four off the gated link join above.
-	  LEFT JOIN deal ownerDeal ON ownerDeal.id = wl.deal_id
-	  LEFT JOIN lead ownerLead ON ownerLead.id = wl.lead_id
-	  LEFT JOIN contact ownerContact ON ownerContact.id = wl.contact_id
-	  LEFT JOIN company ownerCompany ON ownerCompany.id = wl.company_id
+	  -- The ownership walk, all four off the gated link join above. Each is a
+	  -- lateral keyed on its link, fenced by OFFSET 0: flattened into joins, the
+	  -- planner under-counted the candidates and rescanned whole tables per row.
+	  LEFT JOIN LATERAL (SELECT ownerDeal.id, ownerDeal.owner_id FROM deal ownerDeal
+	                    WHERE ownerDeal.id = wl.deal_id OFFSET 0) ownerDeal ON true
+	  LEFT JOIN LATERAL (SELECT ownerLead.id, ownerLead.owner_id FROM lead ownerLead
+	                    WHERE ownerLead.id = wl.lead_id OFFSET 0) ownerLead ON true
+	  LEFT JOIN LATERAL (SELECT ownerContact.id, ownerContact.owner_id FROM contact ownerContact
+	                    WHERE ownerContact.id = wl.contact_id OFFSET 0) ownerContact ON true
+	  LEFT JOIN LATERAL (SELECT ownerCompany.id, ownerCompany.owner_id FROM company ownerCompany
+	                    WHERE ownerCompany.id = wl.company_id OFFSET 0) ownerCompany ON true
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
@@ -184,10 +188,11 @@ const waitingRepliesSQL = `
 	   -- deal card said "Their move. Nobody here is owed an answer.", and no
 	   -- pass could ever reach the message to disagree.
 	   --
-	   -- Nothing is loosened by admitting it. The reply anti-joins below
-	   -- compare thread keys with plain equality and never NULL-match them, so
-	   -- a threadless row simply finds no reply and stays waiting; the machine
-	   -- and colleague rules sit above the scan cap and still apply.
+	   -- Nothing is loosened by admitting it. owedSQL compares thread keys
+	   -- with plain equality and never NULL-matches them, so a threadless row
+	   -- is answered only by a reply to its sender or a call or meeting with
+	   -- them; the machine and colleague rules sit above the scan cap and still
+	   -- apply.
 	   AND NOT EXISTS (SELECT 1 FROM activity request_task
 	     WHERE request_task.source_system = '` + EmailRequestTaskSource + `'
 	       AND request_task.source_activity_id = a.id
@@ -237,49 +242,14 @@ const waitingRepliesSQL = `
 	   -- way the seam's own set does — mail from a departmental host is still
 	   -- from a colleague.
 	   AND (%[14]s OR NOT %[15]s)
-	   -- The obvious machines, excluded BEFORE the cap. Filtering them after
-	   -- LIMIT lets two hundred notification threads fill the scan and push a
-	   -- real customer past it, and the page then says nobody is waiting —
-	   -- which is the one answer this source must never get wrong.
-	   --
-	   -- Deliberately coarse: it removes what nothing could mistake for a
-	   -- contact, and the caller's own rule (capture's address list, which
-	   -- knows the operator's allowlist) still runs over what survives.
-	   AND ((` + outstandingRequestSQL + `) OR NOT EXISTS (
-	         SELECT 1 FROM activity_participant machine
-	          WHERE machine.activity_id = a.id
-	            AND machine.role = 'from'
-	            AND (machine.address ILIKE '%%noreply%%'
-	              OR machine.address ILIKE '%%no-reply%%'
-	              OR machine.address ILIKE '%%do-not-reply%%'
-	              OR machine.address ILIKE '%%donotreply%%'
-	              OR machine.address ILIKE '%%notification%%'
-	              OR machine.address ILIKE '%%mailer-daemon%%')))
-	   AND %[18]s
-	   AND ((` + requestCandidateSQL + `) OR NOT EXISTS (
-	         SELECT 1 FROM activity newer
-	          WHERE newer.thread_key = a.thread_key
-	            AND newer.kind = a.kind
-	            AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
-	            AND newer.direction = 'inbound'
-	            AND newer.archived_at IS NULL
-	            AND newer.occurred_at <= $%[1]d
-	            AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id)))
-	   -- Judged NOT a sales conversation, by anybody. A property of the THREAD,
-	   -- so it holds for every reader AND for every later reply: one rep
-	   -- recognizing the procurement newsletter settles what the conversation
-	   -- is, and the next issue of it must not arrive as fresh work.
-	   --
-	   -- Matched on the same triple the reply anti-joins below use. Keying the
-	   -- judgement on one activity id instead let the next inbound revive the
-	   -- thread, because that message is a different row.
-	   --
-	   -- Before the cap, like every rule above it.
-	   AND (%[12]s OR NOT EXISTS (
-	         SELECT 1 FROM activity_sales_state judged
-	          WHERE judged.thread_key = a.thread_key
-	            AND judged.kind = a.kind
-	            AND judged.channel_provider = coalesce(a.channel_provider, '')))
+	   -- Owed a reply at all, before the cap like every rule above. The
+	   -- obvious machine senders go here: two hundred notification threads
+	   -- must not fill the scan and push a real customer past it. The
+	   -- not-sales judgement is keyed on the THREAD, so the next issue of a
+	   -- newsletter somebody recognised does not arrive as fresh work. Slots 12
+	   -- and 18 relax the not-sales and informs_us judgements for their hidden
+	   -- figures.
+	   AND ` + owedSQL("$%[1]d", "%[12]s", "%[18]s") + `
 	   -- Set aside by THIS reader, and only this reader.
 	   --
 	   -- Judged against the row's CURRENT state rather than against what it was

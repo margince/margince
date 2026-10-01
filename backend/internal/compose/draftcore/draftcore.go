@@ -50,8 +50,9 @@ type Observer interface {
 	// something different for a false claim than for a phrasing tic, and an
 	// operator reading the line needs to be able to tell which without knowing
 	// every rule by heart. `remaining` counts the DISTINCT rules still broken,
-	// which is the number the serve decision was made on.
-	RetryDidNotClear(ctx context.Context, rule draftcheck.Rule, phrase string, remaining int)
+	// which is the number the serve decision was made on, and servedRetry says
+	// which attempt that decision chose.
+	RetryDidNotClear(ctx context.Context, rule draftcheck.Rule, phrase string, remaining int, servedRetry bool)
 }
 
 // TextOf reads the two channels of a draft a check has to judge.
@@ -85,46 +86,15 @@ type SubjectOf[D any] func(D) (subject string, threaded bool)
 // prompt sentence cannot do — and the reason this loop exists at all is that
 // three separate prompt rules lost to model reflexes before it did.
 //
-// When the retry does not clear the findings, the attempt carrying FEWER of them
-// is served. A second attempt is not automatically better, and the count is the
+// When the retry does not clear the findings, servesRetry picks the attempt to
+// serve. A second attempt is not automatically better, and the findings are the
 // only evidence available without asking a model to judge its own output.
-// Findings is everything the phrasing rules say is wrong with one draft.
-//
-// Exported because CorrectOnce is not the only pass that has to ask. The voice
-// floor runs AFTER this loop and may substitute a retried draft, so it needs
-// the same answer to know whether the substitution regressed anything — and a
-// second spelling of "what is wrong with a draft" would drift from this one
-// until the two disagreed about a phrase in front of a user.
-func Findings[D any](
-	draft D, lang textlang.Lang, band convstate.Band, booked bool,
-	textOf TextOf[D], subjectOf SubjectOf[D],
-) []draftcheck.Finding {
-	body, reasoning := textOf(draft)
-	// Whether this draft answers a real inbound message decides more than the
-	// subject's reply prefix: a reply is written from the counterparty's own
-	// words, so it may echo a call THEY named, where a message opening a new
-	// conversation has no such ground to stand on.
-	subject, threaded := "", false
-	if subjectOf != nil {
-		subject, threaded = subjectOf(draft)
-	}
-	findings := append(draftcheck.Body(body, lang, band, draftcheck.Grounds{Threaded: threaded, Booked: booked}),
-		draftcheck.Reasoning(reasoning, lang, band)...)
-	// Shape is asked of the BODY alone. Reasoning chips travel through the same
-	// phrasing rules but are labels, not messages.
-	findings = append(findings, draftcheck.Formatting(body)...)
-	if subjectOf != nil {
-		findings = append(findings, draftcheck.Subject(subject, lang, band, threaded)...)
-	}
-	return findings
-}
-
 func CorrectOnce[D any](
-	ctx context.Context, lang textlang.Lang, band convstate.Band, booked bool,
+	ctx context.Context, lang textlang.Lang, band convstate.Band, record draftcheck.Grounds,
 	write Writer[D], textOf TextOf[D], subjectOf SubjectOf[D], observe Observer,
 ) (D, error) {
 	check := func(draft D) []draftcheck.Finding {
-		return Findings(draft, lang, band, booked, textOf, subjectOf)
+		return Findings(draft, lang, band, record, textOf, subjectOf)
 	}
 
 	draft, err := write(ctx, "")
@@ -152,13 +122,50 @@ func CorrectOnce[D any](
 	if len(remaining) == 0 {
 		return retried, nil
 	}
+	serveRetry := servesRetry(findings, remaining)
 	if observe != nil {
-		observe.RetryDidNotClear(ctx, remaining[0].Rule, remaining[0].Phrase, draftcheck.Rules(remaining))
+		observe.RetryDidNotClear(ctx, remaining[0].Rule, remaining[0].Phrase, draftcheck.Rules(remaining), serveRetry)
 	}
-	if servesRetry(findings, remaining) {
+	if serveRetry {
 		return retried, nil
 	}
 	return draft, nil
+}
+
+// Findings is everything the phrasing rules say is wrong with one draft.
+//
+// Exported because CorrectOnce is not the only pass that has to ask. The voice
+// floor runs AFTER this loop and may substitute a retried draft, so it needs
+// the same answer to know whether the substitution regressed anything — and a
+// second spelling of "what is wrong with a draft" would drift from this one
+// until the two disagreed about a phrase in front of a user.
+//
+// record carries what the caller knows — a booking, a meeting the intent
+// names. Threaded is not the caller's to say: it is read off subjectOf, beside
+// the subject whose reply prefix it decides.
+func Findings[D any](
+	draft D, lang textlang.Lang, band convstate.Band, record draftcheck.Grounds,
+	textOf TextOf[D], subjectOf SubjectOf[D],
+) []draftcheck.Finding {
+	body, reasoning := textOf(draft)
+	// Whether this draft answers a real inbound message decides more than the
+	// subject's reply prefix: a reply is written from the counterparty's own
+	// words, so it may echo a call THEY named, where a message opening a new
+	// conversation has no such ground to stand on.
+	subject := ""
+	record.Threaded = false
+	if subjectOf != nil {
+		subject, record.Threaded = subjectOf(draft)
+	}
+	findings := append(draftcheck.Body(body, lang, band, record),
+		draftcheck.Reasoning(reasoning, lang, band)...)
+	// Shape is asked of the BODY alone. Reasoning chips travel through the same
+	// phrasing rules but are labels, not messages.
+	findings = append(findings, draftcheck.Formatting(body)...)
+	if subjectOf != nil {
+		findings = append(findings, draftcheck.Subject(subject, lang, band, record.Threaded)...)
+	}
+	return findings
 }
 
 // servesRetry decides which attempt a reader would call safer.
@@ -179,11 +186,12 @@ func CorrectOnce[D any](
 // have used first: a rep sends what the product wrote, and an invented call
 // reaches the recipient as the company's own word.
 //
-// A TIE goes to the retry, unchanged. Both attempts carry one finding often
-// enough to matter — the model swaps "circling back" for "checking in" — and
-// the retried one was at least written with the correction in hand, so it is
-// the better bet on everything the check does not measure. Only a retry that is
-// strictly worse is discarded.
+// A TIE goes to the first attempt. The retry was asked to clear a finding and
+// did not, so the correction bought nothing the check can see, while a retry
+// written under a list of things not to say drops what the check does not
+// measure — on a first touch, the sender's own name. Only a retry that is
+// strictly better is served, save one case: in a tie between false claims, a
+// retry that cleared every claim it was told about did what it was asked.
 func servesRetry(first, retried []draftcheck.Finding) bool {
 	firstWorst, _ := draftcheck.Worst(first)
 	retriedWorst, _ := draftcheck.Worst(retried)
@@ -193,11 +201,29 @@ func servesRetry(first, retried []draftcheck.Finding) bool {
 	if firstRules, retriedRules := draftcheck.Rules(first), draftcheck.Rules(retried); retriedRules != firstRules {
 		return retriedRules < firstRules
 	}
+	if firstWorst == draftcheck.Claim && clearedReportedClaims(first, retried) {
+		return true
+	}
 	// SAME SEVERITY AND THE SAME NUMBER OF RULES: the raw match count is the
 	// last thing that separates them, and here it is honest. The comparison the
 	// ticket objected to was across DIFFERENT rules, where one rule reports per
 	// phrase and another reports once however many matched; by this point both
 	// drafts break the same number of rules, and a draft saying the same wrong
 	// thing three ways is more of it than a draft saying it once.
-	return len(retried) <= len(first)
+	return len(retried) < len(first)
+}
+
+// clearedReportedClaims says retried breaks none of the Claim rules first was
+// corrected for.
+func clearedReportedClaims(first, retried []draftcheck.Finding) bool {
+	still := make(map[string]bool, len(retried))
+	for _, f := range retried {
+		still[f.Rule.Name()] = true
+	}
+	for _, f := range first {
+		if f.Rule.Severity() == draftcheck.Claim && still[f.Rule.Name()] {
+			return false
+		}
+	}
+	return true
 }

@@ -9,17 +9,14 @@ judge, folds the runs into a `certified` / `supported_degraded` /
 `not_supported` verdict, and commits the result as a JSON record.
 
 This is the **paid, opt-in** lane: real provider calls billed to your own **BYOK**
-(bring-your-own-key) budget, since Margince runs no inference of its own. A
-developer/CI tool, never part of a request path.
+budget, since Margince runs no inference of its own — never part of a request path.
 
 > **Start free.** `make e2e-ai-report` ([§3](#3-read-the-readiness-report)) needs
-> no key, no network and no database: it prints what every shipped site's record
-> already says, including the ones nothing has ever certified. Read it before you
-> spend — it tells you whether the run you are about to pay for is the missing one.
+> no key, network or database, and prints what every shipped site's record says,
+> including the uncertified ones: read it before you pay for a run.
 
-See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md),
-[add-an-ai-task.md](add-an-ai-task.md) (adding one rather than certifying it), and
-[reference/ai-certification.md](../reference/ai-certification.md) — the committed page these records render to.
+See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md), [add-an-ai-task.md](add-an-ai-task.md),
+[certify-a-decision-site.md](certify-a-decision-site.md) (the decisions lane) and [reference/ai-certification.md](../reference/ai-certification.md), the page these records render to.
 
 ## Prerequisites
 
@@ -28,12 +25,11 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    - `MODEL=provider:model` — ONE candidate, bound to every task under test.
      The A/B shape: change the model, leave everything else, compare.
    - `ROUTING=<deployment config>` — a **deployment**: each task is certified
-     against the model that config's `seeds.ai_routing` binds at the task's
-     *leading ladder rung*, the rung that would actually serve it, so one run
-     writes records across several models. Nobody deploys a model; they deploy a
-     binding, and that is the question an install actually depends on. A task
-     whose leading rung the config leaves unbound is reported and skipped, since
-     one unbound tier must not cost every other record.
+     against every distinct model its ladder binds in that config's
+     `seeds.ai_routing` — the rung that answers and each fallback a failed call
+     falls to — one record each. Nobody deploys a model; they deploy a binding.
+     A fallback in the judge's own family is skipped and named; an unbound
+     ladder is reported, since one unbound tier must not cost every other record.
 
    The two are mutually exclusive and a run with both is refused: one names a
    deployment, the other one candidate. Neither reads the *installation's*
@@ -42,15 +38,15 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
 
    `JUDGE=provider:model` is the second model that grades the answers, and **one
    judge grades every task of a run** — a judge swap flips verdicts on its own.
-   It defaults to `openai_compatible:openai/gpt-oss-120b` on OpenRouter, chosen
-   for cost (needs `OPENAI_COMPATIBLE_API_KEY`); an exported
-   `MARGINCE_AICERT_JUDGE_MODEL` replaces it and `JUDGE=` overrides both —
-   `gemini:gemini-3.1-flash-lite` (also cheap) or `gemini:gemini-3.5-flash`, with
-   `GEMINI_API_KEY`. It is **never resolved from the routing**, and a model never
-   grades itself: a run in which any task it certifies has the judge as its
-   candidate is refused before the first paid call, naming those tasks.
-   `openrouter_cloud` binds gpt-oss-120b itself, so certify it with
-   `JUDGE=gemini:gemini-3.1-flash-lite`.
+   It defaults to `claude_cli:claude-sonnet-4-6`, graded through `claude -p` on a
+   Claude Code subscription (needs `claude` on PATH and `CLAUDE_CODE_OAUTH_TOKEN`);
+   an exported `MARGINCE_AICERT_JUDGE_MODEL` replaces it and `JUDGE=` overrides
+   both — `openai_compatible:anthropic/claude-sonnet-4.6` with
+   `JUDGE_UPSTREAM='{}'` (same model, paid per call) or `gemini:gemini-3.5-flash`.
+   It is **never resolved from the routing**, and a model never grades itself: a
+   run in which any task it certifies has the judge's family as its candidate is
+   refused before the first paid call, naming those tasks, so a preset binding a
+   Claude model names a non-Claude judge.
 
    For an OpenAI-wire broker — one OpenRouter key reaching every open-weight
    model — add the endpoint, which `openai_compatible` fails closed without:
@@ -61,12 +57,12 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
      BASE_URL=https://openrouter.ai/api
    ```
 
-   `PROFILE=` names the environment class a record is filed under (`eu_hosted`,
-   the default, `eu_resident`, `sovereign` or `cloud_frontier`). It is enforced:
-   a binding the profile forbids is refused rather than run. Under `ROUTING=` it
-   is **ignored** and the profile is the config file's own — the profile is part
-   of a record's identity and part of what the binding is validated against, so
-   it has to come from the file that named the models.
+   `PROFILE=` names the environment class a record is filed under
+   (`cloud_frontier`, the default, `eu_hosted` or `sovereign`). It is enforced:
+   `sovereign` refuses a cloud candidate (not the judge), and `eu_hosted` a broker
+   candidate that `UPSTREAM=` does not pin to EU hosts (`{"only":["mistral/eu"]}`).
+   Under `ROUTING=` it is **ignored**: a record's profile is part of its
+   identity, so it comes from the file that named the models.
 
 2. The provider's **BYOK key in the environment** — e.g. `GEMINI_API_KEY`,
    `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY` (the
@@ -82,16 +78,16 @@ make e2e-ai TASK=cold_start MODEL=gemini:gemini-3.1-flash-lite
 ```
 
 This certifies **the model you name**, not any binding this installation holds.
-It runs every scenario in the task's corpus `N` times (an odd number, with
-response caching off so every run is a fresh model call), judges each answer, and
-prints the verdict:
+It runs every scenario in the task's corpus `N` times (response caching off, so
+every run is a fresh model call), runs a borderline scenario more (see below),
+judges each answer, and prints the verdict:
 
 ```text
 cold_start: certified (reliability=1.00 judge_score_p50=100 self_judged=false)
 ```
 
-`self_judged` is `true` when the candidate and the judge resolved to the **same
-served model** on every run — the model graded its own answers. It is not a
+`self_judged` is `true` when candidate and judge are the **same model family**
+(publisher or model line; older records flagged only an exact match). It is not a
 failure and does not change the verdict, but it weakens the *score*: read such a
 band as the deterministic pass (what the production validator accepted) plus an
 opinion the candidate has an interest in. A passing run writes/refreshes a record
@@ -104,11 +100,10 @@ To certify **what a deployment binds** rather than one model you typed, point
 make e2e-ai ROUTING=config/margince.dev.yaml
 ```
 
-It resolves a model per task from that config's `seeds.ai_routing` and logs the
-resolution before it spends — task, leading rung, model bound there — so a run
-against a config you have not read is still not a run against a binding you
-cannot see. Records land under the resolved models' own names, so one run writes
-several.
+It logs each task's rungs before it spends — task, tier, model — and writes a
+record per model. **`STALE_ONLY` is on by default:** a model whose record is
+already current for this build is skipped, so a sweep pays only for what is
+missing or stale; `STALE_ONLY=0` re-measures it.
 
 The **task** names come from the contract (`backend/api/ai-tasks.yaml`), and only
 a task it marks `status: shipped` can be certified — including `cert_judge`,
@@ -117,11 +112,9 @@ build rather than from a copy here: `make ai-probe ARGS='list'` prints every
 shipped site from the same census the report enumerates. Omit `TASK=` to run the
 whole corpus.
 
-A `planned` task — one the contract declares but nothing implements
-(`nl_search`, `transcript`) — owns no scenarios, and naming it fails the run with
-`task "…" has no scenarios under corpus`. That is the point: a scenario for a
-prompt nobody ships would score a hand-written copy and report the task covered,
-so a fitness test (`aicert/corpus_test.go`) holds the corpus to that both ways.
+A `planned` task (`nl_search`, `transcript`) owns no scenarios, so naming it fails
+with `task "…" has no scenarios under corpus`: a scenario for a prompt nobody
+ships would score a copy (`aicert/corpus_test.go` holds that both ways).
 
 A task is not one prompt. `cold_start` ships four invocation **sites** and
 `voice_build` three, each with its own scenarios; `TASK=` selects the task, so
@@ -142,18 +135,29 @@ you change the binding.
 
 The binding carries its own endpoint, so an `openai_compatible` candidate is the
 same one-liner with `BASE_URL=` added (the Prerequisites example above).
-A broker slug may carry its own variant suffix (`:free`, `:batch`, `:thinking`);
-the provider/model split cuts at the FIRST colon, so
-`openai_compatible:openai/gpt-oss-20b:free` binds the whole slug.
+A broker slug may carry its own variant suffix (`:free`, `:batch`, `:thinking`); the
+provider/model split cuts at the FIRST colon, so `openai_compatible:openai/gpt-oss-20b:free` binds the whole slug.
 
-Other knobs: `RUNS=5` (odd repeat count), `PROFILE=` (environment class),
-`JUDGE_BASE_URL=` for an `openai_compatible` judge you name — the OpenRouter host
-is the default only for the default judge, and unset it falls back to
-`BASE_URL=`, since a judge on the candidate's broker is the common case.
+Other knobs: `RUNS=5` (first round; 9+ turns extension off), `PROFILE=` (environment class),
+`JUDGE_BASE_URL=` for an `openai_compatible` judge — unset, it rides the
+candidate's `BASE_URL=` (or `MARGINCE_AICERT_BASE_URL`), and the OpenRouter host
+only when neither is set.
 A broker binding is served under production's upstream default (fp16/bf16 hosts
-only); `UPSTREAM='{}'` and `JUDGE_UPSTREAM='{}'` lift it, and each record names
-what applied. One small pre-flight call per binding runs before the corpus, so a
-key, slug or preference no host can serve fails in seconds, not mid-corpus.
+only); `UPSTREAM='{}'` and `JUDGE_UPSTREAM='{}'` lift it. Each record names what
+applied and any `thinking_level`, crediting only presets set alike. A pre-flight
+call per binding makes a key, slug or preference no host serves fail in seconds.
+
+## Choosing a judge transport
+
+`JUDGE=provider:model` grades through a provider adapter, billed per token;
+`JUDGE=claude_cli:<model>` (`sonnet`, or an id like `claude-sonnet-4-6`) grades
+through `claude -p` on a Claude Code subscription. It needs the CLI on `PATH`
+and `CLAUDE_CODE_OAUTH_TOKEN` (`claude setup-token`, read from `.env.local`;
+`ANTHROPIC_API_KEY` works too). Each call runs from an empty directory with no
+tools, no settings and the judge's system prompt in place of the CLI's, and the
+record names the model the CLI reports serving. Use it when a subscription beats
+per-token grading: it costs 2–5 s of start-up a call, counts against the plan's
+limits, has no temperature or max-token control, and refuses Claude candidates.
 
 ## 3. Read the readiness report
 
@@ -172,7 +176,7 @@ SITE                      SCOPE            STATUS   SCENARIOS  BAND       PROVID
 agent_loop/morning_brief  single_turn      absent   -          -          -         -                 -          -     -       -            -         -             -        -
 cold_start/acts           single_turn      current  3/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
 cold_start/company        single_turn      partial  9/10       certified  gemini    gemini-3.5-flash  eu_hosted  27    27      1.00         27        0             0        0
-rate_extract/pricing      full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
+rate_extract/fx           full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
 ```
 
 **Every row's numbers are that SITE's own.** A record is written per task and a
@@ -207,16 +211,10 @@ corpus ships today — which is what makes a `partial` actionable, since `9/10` 
 `1/10` are the same word and very different bills. A scenario the corpus has
 since **dropped** counts in neither half: nobody can re-run it.
 
-**Per-scenario stamps are what make re-certification affordable.** A record
-carries each scenario's own stamp (`ScenarioRecord.Stamp`) beside the task-level
-`PromptVersion`, which is the fold of them (`aicert.ScenarioStamps` /
-`FoldScenarioStamps`), so adding one scenario to a ten-scenario task reads
-`partial 9/10` and costs one re-run rather than invalidating nine measurements
-that are still true. The guarantee is finer rather than weaker: a scenario's
-stamp still covers the scenario whole plus both requests this build constructs
-from it. A record written before those stamps existed carries none, is judged by
-its task stamp — `current` or `stale`, never `partial` — and reads `-` under
-`SCENARIOS`.
+**Per-scenario stamps make re-certification affordable.** A record carries each
+scenario's own stamp beside the task-level `PromptVersion` (their fold), so a new
+scenario in a ten-scenario task reads `partial 9/10` and costs one re-run. A
+record older than those stamps is judged by its task stamp and reads `-` there.
 
 `SCOPE` is how much of the site a run covers, from the most to the least:
 
@@ -289,10 +287,12 @@ Two things now stand in the way.
 **The run is re-driven** when the router comes back having failed on every bound
 tier — three attempts, waiting 2s then 8s. Only an exhausted ladder is retried: a
 validator failure or a caps miss is a *measurement*, and an exhausted account is
-a human's to fix. A withheld answer is a measurement too — the run fails,
-ungraded, and the record names the filter — while a rejected request stops the
-task with no record, because it measures the binding, not the model. It is re-driven whole, because a site may turn a multi-turn
-conversation or a tool loop and there is no resuming one mid-way.
+a human's to fix. A withheld answer fails the run ungraded, naming the filter; a
+rejected request stops the task with no record. A run is re-driven whole, since a
+conversation or tool loop cannot resume mid-way. An answer the upstream **breaks
+off** (`ai.ErrAnswerAbandoned`) is re-driven too, and becomes an ungraded
+`invalid` run, counted as `abandoned` on its scenario row, only when every
+attempt breaks off: the model was reached and could not finish.
 
 **Every scored run is journaled** to `.tmp/aicert/resume/` as it is scored, so a
 restart replays what it can (`… run(s) replayable`) instead of paying again. A
@@ -312,19 +312,20 @@ every whole run before the cut. One run owns a directory at a time — parallel
 
 ## How the verdict is decided
 
-Each run either **HardPasses** — the site's own production validator accepted
-the reply, the reply is the answer the scenario expects, and the run stayed
-inside its token/latency caps — or fails. The judge scores the answer 0–100
-against the rubric. `certified` takes a pooled pass **rate** (so the bar does not
-rise with the corpus), a majority of every scenario's own runs (so one case that
-always fails cannot hide in the pool), and every scenario's median and minimum
-score at its bands; `supported_degraded` a pooled majority and medians at
-`degraded_min`; anything else, including a scenario no judge scored, is
-`not_supported`. The numbers are in [The exact rule](../reference/ai-certification.md#how-the-scoring-works),
-and every one lives in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go):
-edit it there, bump `gradingRule`, and regenerate the page. **reliability** is the
-fraction of runs that HardPassed (0–1), the number to trend. A run whose served
-model is not uniform (a fallback, between runs or calls) **voids** the record: you cannot certify a moving target.
+A run **HardPasses** when the site's own validator accepted the reply, it is the
+answer the scenario expects, and it stayed inside its caps. The judge scores it
+0–100 once, again within 10 of any band or anywhere under its `floor`, and a third time when two differ by more
+than 5 (re-asking only low scores biased it upward); the run takes their median. [The exact rule](../reference/ai-certification.md#how-the-scoring-works)
+pools the task's scenarios: `certified` needs 90% passing with a one-sided 90%
+Wilson bound of 80%, half of each scenario's runs, every run at or above its
+`floor`, each scenario's t upper bound at its `certified_min`, and the runs'
+margins over it averaging ≥ 0 at a t lower bound; `supported_degraded` two
+thirds, and the margin over `degraded_min`. A **veto** keeps a broken scenario
+from being averaged away; one no judge scored is `not_supported` unless it declares `judge: none`, when its check alone grades it. A borderline
+scenario runs 3 more times, up to 9 (a lone one always does), and a resume
+replays the same extensions and the same opinions: at most 9 candidate and 27
+judge calls a scenario, a settled one 3 and about 4. Every number is in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go) (edit, bump `gradingRule`, regenerate).
+**reliability** is the HardPass fraction, the number to trend. A served model not uniform across runs or calls **voids** the record: you cannot certify a moving target.
 
 A run is not always one model call — a site may retry, fall back, or turn a tool
 loop — and everything the run is judged and charged for is pooled across all of
@@ -337,14 +338,11 @@ are the run's totals.
   output tokens on internal thinking that counts against `maxOutputTokens`; the
   lane gives both candidate and judge headroom so a thinking burst doesn't starve
   the answer into `MAX_TOKENS`. Leave room for it in a tight `caps.max_tokens`.
-- **Markdown-fenced JSON** is tolerated: the lane unfences as production does.
-- Records are committed artifacts — the proof travels with the code.
+- **Markdown-fenced JSON** is tolerated, and records are committed artifacts.
 
 ## When certification passes but the field does not
 
-A record measures a model against the CORPUS fixture. A site can be certified at
-reliability 1.00 and still fail on the input production actually hands it — the
-model-cost refresh did exactly that against a 530 KB provider catalog while
-`rate_extract/pricing` was certified on a two-line fixture. To run a site against
-real input through the same code, use [debug an AI task](debug-an-ai-task.md)
-(`make ai-probe`).
+A record measures a model against the CORPUS fixture, so a site certified at 1.00
+can still fail on production input (a site certified on a two-line fixture
+can fail on a 530 KB page). Run a site against real input with
+[debug an AI task](debug-an-ai-task.md) (`make ai-probe`).

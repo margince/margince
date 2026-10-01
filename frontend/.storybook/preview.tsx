@@ -19,10 +19,9 @@ import "../src/design-system/composed.css";
 // atoms.css for the same reason, and it bites hardest: `.card`, `.btn` and the
 // rest are reached BY CLASS from components that import nothing from atoms.tsx
 // — the module whose side-effect import loads this sheet. In the app it is
-// always present; in a story whose module graph stops short of atoms.tsx it was
-// not, and design-system/explain.tsx's popover rendered as unstyled text over
-// the figure it was explaining. Loading it here closes that for the catalog
-// rather than one story at a time.
+// always present; in a story whose module graph stops short of atoms.tsx it is
+// not. Loading it here closes that for the catalog rather than one story at a
+// time.
 import "../src/design-system/atoms.css";
 // settings.css for the third time in this list and the same reason: the
 // settings row language reaches `.settings-panel-commit` BY CLASS from the card
@@ -87,8 +86,42 @@ const preview: Preview = {
   // inside that rule rather than a particular handset. A story opts in with
   // `globals: { viewport: { value: "phone" } }`.
   //
-  // Storybook 9 ships the viewport tool itself, so this adds no addon.
+  // The viewport tool ships with Storybook itself, so this adds no addon.
   parameters: {
+    // A literal: Storybook reads this block out of the file without running it,
+    // and sidebar.test.ts holds its order to the README's tables.
+    options: {
+      storySort: {
+        method: "alphabetical",
+        order: [
+          "Get started",
+          "Foundations",
+          ["Color", "Typography", "Radius", "Brand"],
+          "Components",
+          [
+            "Forms and input",
+            "Images and icons",
+            "Labels",
+            "Layout and structure",
+            "Loading",
+            "Messaging",
+            "Navigation",
+            "Overlays and layering",
+            "Status indicators",
+            "Text and data display",
+            "Primitives",
+            "AI and provenance",
+          ],
+          "Patterns",
+          "Shell",
+          "Records",
+          "Settings",
+          "Onboarding",
+          "Signed out",
+          "MCP Apps",
+        ],
+      },
+    },
     viewport: {
       options: {
         phone: {

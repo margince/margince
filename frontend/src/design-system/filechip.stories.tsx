@@ -10,7 +10,7 @@ import { FileChip } from "./filechip";
 // everything else, which gets the neutral mark rather than a guessed one.
 
 const meta: Meta<typeof FileChip> = {
-  title: "Design System/FileChip",
+  title: "Components/Text and data display/File chip",
   component: FileChip,
   parameters: { layout: "padded" },
 };

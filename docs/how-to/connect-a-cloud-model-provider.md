@@ -16,7 +16,7 @@ for the full provider matrix. For the no-cloud path, see
 | `anthropic` | Claude (native Messages API — image input) | `ANTHROPIC_API_KEY` | optional (default `api.anthropic.com`) |
 | `openai` | GPT (native Responses API — reasoning effort, prompt-cache + reasoning token usage, image/PDF input) | `OPENAI_API_KEY` | optional (default `api.openai.com`) |
 | `gemini` | Gemini (native `generateContent` — thinking level, thought-signature continuity, image/PDF input) | `GEMINI_API_KEY` | optional (default `…/v1beta`) |
-| `gemini_vertex` | the same Gemini wire, served by Vertex AI at a `location` you choose — the one cloud provider `eu_resident` admits (§5) | `GEMINI_VERTEX_SA_JSON` (a service-account key) | **refused** — the host follows from `location` |
+| `gemini_vertex` | the same Gemini wire, served by Vertex AI at a `location` you choose, which is where Google processes the call (§5) | `GEMINI_VERTEX_SA_JSON` (a service-account key) | **refused** — the host follows from `location` |
 | `openai_compatible` | the OpenAI-wire long tail — Mistral, DeepSeek, Groq, Together, OpenRouter, a self-hosted gateway, … | `OPENAI_COMPATIBLE_API_KEY` | **required** |
 
 A binding names only the provider — **the BYOK key lives in the key vault**, put
@@ -57,8 +57,8 @@ in separately, in step 4. The shipped dev default binds **gemini** on
 # / OPENAI_API_KEY seed it, and remain the source with no vault and in the
 # DB-less lanes:
 tiers:
-  cheap_cloud: { provider: gemini, model: gemini-2.5-flash }
-  premium:     { provider: gemini, model: gemini-2.5-pro }
+  cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
+  premium:     { provider: gemini, model: gemini-3.5-flash }
 
 # …or any OpenAI-compatible vendor via the generic adapter. It needs a base_url
 # (the key comes from OPENAI_COMPATIBLE_API_KEY):
@@ -81,6 +81,17 @@ tiers:
 > AI rebinds a stack that is already up. The shape a binding has — `profile` plus
 > a `tiers` map — is schema-validated in any editor with a YAML language server
 > (autocomplete, enum checks, hover docs) against `config/margince.schema.json`, which the shipped configs point at with a `# yaml-language-server:` line.
+>
+> **Gemini thinking on a structured call.** Gemini charges its thinking to the
+> same output ceiling the answer needs, so a request with a response schema and
+> no `thinking_level` of its own is sent `thinkingLevel: low`. That only ever
+> lowers a model's default: a Flash-Lite, which already defaults to `minimal` (or
+> to no thinking at all on 2.5), is sent no level and keeps its own. A task that
+> wants a different level names it on the request
+> (`ProviderOptions["gemini"].thinking_level`), and a tier that should think
+> differently names it on the binding (`thinking_level: low`, which a request's
+> own level still outranks) — see
+> [configuration.md](../reference/configuration.md).
 >
 > **One key, every open-weight model:** bind `openai_compatible` with
 > `base_url: https://openrouter.ai/api` and one `OPENAI_COMPATIBLE_API_KEY`, and
@@ -177,10 +188,10 @@ the first boot seals it into the key vault. The project comes from the key's
 `embeddings:`, names one, and it takes no `base_url`:
 
 ```yaml
-profile: eu_resident
+profile: eu_hosted
 tiers:
   premium: { provider: gemini_vertex, location: eu, model: gemini-3.5-flash }
-embeddings: { provider: gemini_vertex, location: eu, model: gemini-embedding-001 }
+embeddings: { provider: gemini_vertex, location: europe-west4, model: gemini-embedding-001 }
 ```
 
 `eu` — the EU multi-region — is the recommendation: Google keeps processing in
@@ -188,9 +199,10 @@ EU member states and picks the region. An EU region
 (`europe-west1`, `-west3`, `-west4`, `-west8`, `-west9`, `-west12`, `-north1`,
 `-central2`, `-southwest1`) pins one country, when that is what you need.
 `europe-west2` is London and `europe-west6` is Zürich, both outside the EU;
-`global` may process anywhere; `us` is the US. None of those is EU-resident.
+`global` may process anywhere; `us` is the US. None of those is in the EU.
 [`config/presets/gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml)
-binds every lane at `eu`.
+binds the chat tiers at `eu` and the embeddings lane at `europe-west4`, because
+`eu` serves no embedding model.
 
 **Not every model is served at every location.** Settings → AI lists the
 locations the key can reach and the models the chosen one serves, and checks a
@@ -200,11 +212,10 @@ rather than stored. If Google cannot be asked at that moment, the save goes
 through and the API logs a warning naming the unchecked binding: an outage at
 Google does not block routing edits.
 
-**What `eu_resident` enforces.** Every tier and the embeddings lane must be a
-local model or `gemini_vertex` at an EU location. Anything else is refused when
-the routing is saved (or at boot, from a seed) with the tier named, and model
-discovery refuses a non-resident binding before it makes any call. The guarantee
-covers **AI inference only**: connectors, enrichment and mail reach their own
+**What `eu_hosted` enforces on Vertex.** Every `gemini_vertex` tier and embeddings
+lane must name an EU location. Any other is refused when the routing is saved (or
+at boot, from a seed) with the tier named, and model discovery refuses a non-EU
+location before it makes any call. The guarantee covers **AI inference only**: connectors, enrichment and mail reach their own
 services whatever the profile says, and the certification judge (`make e2e-ai`
 `JUDGE=`) is not profile-checked — its corpus is synthetic.
 
@@ -214,11 +225,8 @@ Under `profile: sovereign` (zero egress by construction) a cloud provider on any
 tier — or the embeddings lane — is a **startup error**, not a runtime surprise.
 The refusal is bound to the provider _name_, not a config flag, so pointing
 `openai_compatible` at a localhost URL is still refused: only `ollama`, `vllm`,
-and `fake` are sovereign-eligible. Use `eu_hosted` (cloud-hosted, no residency
-guarantee) or `cloud_frontier` for a BYOK cloud binding. `eu_resident` enforces
-EU processing and refuses every binding that cannot guarantee it: it accepts
-what `sovereign` accepts, plus `gemini_vertex` at an EU location (`eu` or an EU
-region — London `europe-west2` and Zürich `europe-west6` are outside the EU).
+and `fake` are sovereign-eligible. Use `eu_hosted` or `cloud_frontier` for a BYOK
+cloud binding.
 
 The endpoint is checked too, because a local provider name is not on its own a
 local endpoint: `ollama` and `vllm` take a `base_url`, and one pointed at a
@@ -252,7 +260,7 @@ followed, one that changes host or downgrades to http is refused.
 | Symptom | Meaning / fix |
 |---|---|
 | `http 404` on `…/v1/v1/chat/completions` or `…/v1/v1/responses` | `base_url` includes a `/v1` segment — drop it (§2 caveat); the adapter adds it. |
-| Boot error *"profile sovereign forbids cloud provider …"* (or *"profile eu_resident …"*) | A cloud provider is bound under a profile that refuses it. Switch to `eu_hosted`/`cloud_frontier`, or bind that tier to `ollama`/`vllm`. |
+| Boot error *"profile sovereign forbids cloud provider …"* | A cloud provider is bound under a profile that refuses it. Switch to `eu_hosted`/`cloud_frontier`, or bind that tier to `ollama`/`vllm`. |
 | Boot error *"needs an api key — set X_API_KEY …"* | The bound cloud provider's key env var is unset. Export the one the error names (e.g. `GEMINI_API_KEY`). |
 | Boot error *"field api_key not found"* | You put an `api_key:` in the `seeds.ai_routing` binding — remove it; the key comes from the env var (see the table above). |
 | Boot error *"needs a base_url …"* | `openai_compatible` has no `base_url`. Add the vendor host root (no `/v1`). |
@@ -268,5 +276,5 @@ followed, one that changes host or downgrades to http is refused.
 | 422 *"gemini_vertex does not serve model … in location …"* | That location has no endpoint for the model (`no_endpoint`; Settings shows *Not served in …*). Pick a model the location lists, or another location. |
 | Log warning *"routing saved with a gemini_vertex model unchecked"* | The save probe could not run (`unreachable`): Google unreachable, or the key lacks `roles/aiplatform.user` or the project the Vertex AI API. The binding is stored; fix the grant and pick the model again in Settings to check it. |
 | 422 *"the stored gemini_vertex service-account key is not usable"* | The held key file cannot be parsed. Replace it under Model provider keys (§5). |
-| 422 *"profile eu_resident refuses gemini_vertex at location …"* | London, Zürich, `global` and `us` are not EU-resident. Choose `eu` or an EU region (§5). |
+| 422 *"… under profile eu_hosted: gemini_vertex location … is not an EU location"* | London, Zürich, `global` and `us` are outside the EU. Choose `eu` or an EU region (§5), or declare `cloud_frontier`. |
 | Log says *"offline fake"* despite a cloud binding | Two causes, and the log line distinguishes them. Either nothing is bound — bind a tier under Settings → AI, or `make dev-fresh` to consume a `seeds.ai_routing` you just declared — or a binding EXISTS and could not be built, which with `--ai-fake` on the command line falls back to the fake and warns "the stored model binding cannot be served". That second one is almost always a bound vendor whose key is missing: supply it under Settings → AI → Model provider keys. |

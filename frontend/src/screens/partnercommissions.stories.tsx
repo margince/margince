@@ -18,7 +18,7 @@ import {
 // an empty ledger shows neither.
 
 const meta: Meta = {
-  title: "Records/Partner/Commission",
+  title: "Records/Company 360/Partner tab/Commission",
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -106,6 +106,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// not a capture.* tuning knob, so it is set here rather than folded into
 	// CaptureConfigFromDeploy's own deployconfig.Capture-scoped contract.
 	captureCfg := compose.CaptureConfigFromDeploy(deployCfg.Capture, logger)
+	compose.WarnStaleRates(deployCfg.Rates, logger)
 	captureCfg.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
@@ -155,6 +156,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	opts = append(opts, modelOpts...)
 	opts = append(opts, compose.WithCompanyContextRollout(string(deployCfg.CompanyContext.EffectiveRollout())))
+	opts = append(opts, compose.WithListsEnabled(deployCfg.Lists.Enabled), compose.WithReportingEnabled(deployCfg.Analytics.PerformanceEnabled))
 
 	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, deployCfg, logger)
 	if err != nil {
@@ -293,6 +295,15 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	// who is scraping it. A closed one without a token is said once too,
 	// because a scraper answered 401 is otherwise a mystery.
 	opts = append(opts, compose.WithMetricsToken(cfg.metricsToken))
+	// Said once either way: which address the per-IP limits key on is not
+	// visible from any single request, and behind a proxy the default is the
+	// proxy — one bucket every client shares.
+	opts = append(opts, compose.WithTrustedProxies(cfg.trustedProxies))
+	if cfg.trustedProxies.Empty() {
+		logger.Info("api: per-IP rate limits key on the TCP peer — behind a reverse proxy set MARGINCE_TRUSTED_PROXIES to its network, or every client shares the proxy's bucket")
+	} else {
+		logger.Info("api: per-IP rate limits key on X-Forwarded-For from trusted proxies", "trusted_proxies", cfg.trustedProxies.String())
+	}
 	switch {
 	case cfg.metricsAccess == metricsAccessOpen:
 		opts = append(opts, compose.WithOpenMetrics())

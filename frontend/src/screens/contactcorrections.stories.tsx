@@ -47,7 +47,7 @@ const view: Contact360 = {
 };
 
 const meta: Meta<typeof EnrichedFields> = {
-  title: "Records/Contact corrections",
+  title: "Records/Contact 360/Corrections",
   component: EnrichedFields,
   parameters: { layout: "padded" },
 };

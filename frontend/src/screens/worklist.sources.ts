@@ -11,6 +11,7 @@ export function sourceName(source: string, t: Translator): string {
 const coverageNames = new Map<string, MessageKey>([
   ["approval", "brief.coverage.source.approval"],
   ["dedupe_candidate", "brief.coverage.source.dedupe_candidate"],
+  ["deal_suggestion", "brief.coverage.source.deal_suggestion"],
   ["task", "brief.coverage.source.task"],
   ["brief_item", "brief.coverage.source.brief_item"],
   ["conversation_claim", "brief.coverage.source.conversation_claim"],

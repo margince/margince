@@ -158,6 +158,11 @@ workspace/
 # Compiled generator binaries. `go build` inside a tool directory drops one
 # beside the source, and it is machine debris the same way a build cache is.
 # The .exe half is Windows, where `go build` names the binary that way.
+#
+# `go build ./tools/<name>` run from backend/ drops the same binary at
+# /backend/<name> instead, which is the spelling a session reaches for when it
+# is already in backend/ — so both are listed for the tools that have hit it.
+/backend/gen-aitasks
 /backend/tools/gen-aitasks/gen-aitasks
 /backend/tools/gen-aitasks/gen-aitasks.exe
 /backend/tools/gen-jobs/gen-jobs

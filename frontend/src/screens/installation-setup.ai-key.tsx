@@ -25,6 +25,8 @@ export function useBindModels() {
       provider: string;
       baseUrl?: string;
       location?: string;
+      // Where the embedder is bound when the chat location serves none.
+      embedLocation?: string;
       profile: SetupProvider["profile"];
       chatModel: string;
       embedModel: string;
@@ -33,21 +35,21 @@ export function useBindModels() {
       // degrades honestly at runtime, but an onboarding that bound only some of
       // them would have the product answer for one task and refuse another with
       // no way for the reader to tell which they had configured.
-      const placement = {
-        ...(vars.baseUrl ? { base_url: vars.baseUrl } : {}),
-        ...(vars.location ? { location: vars.location } : {}),
-      };
+      const host = vars.baseUrl ? { base_url: vars.baseUrl } : {};
+      const embedLocation = vars.embedLocation ?? vars.location;
       const binding = {
         provider: vars.provider,
         model: vars.chatModel,
-        ...placement,
+        ...host,
+        ...(vars.location ? { location: vars.location } : {}),
       };
       const { error } = await api.PUT("/ai/routing", {
         body: {
-          // The choice's own profile rather than a question: asking a
-          // first-time admin to choose a location ladder before they have
-          // bound anything is asking a question they cannot yet answer, and
-          // each choice was offered as the one it binds under.
+          // The choice's own profile rather than a question: cloud_frontier
+          // for a vendor bound to keep no EU promise (the server refuses an
+          // unpinned broker under eu_hosted), eu_hosted for Vertex at an EU
+          // location. Asking a first-time admin to choose a location ladder
+          // before they have bound anything asks what they cannot yet know.
           profile: vars.profile,
           tiers: {
             local_small: binding,
@@ -58,7 +60,8 @@ export function useBindModels() {
           embeddings: {
             provider: vars.provider,
             model: vars.embedModel,
-            ...placement,
+            ...host,
+            ...(embedLocation ? { location: embedLocation } : {}),
           },
         },
       });
@@ -73,10 +76,10 @@ export function useBindModels() {
   });
 }
 
-// A choice that enforces residency says so in its name: it is the one thing
-// that sets it apart from the plain Gemini choice above it.
+// A choice that keeps processing in the EU says so in its name: it is the one
+// thing that sets it apart from the plain Gemini choice above it.
 export function choiceLabel(preset: SetupProvider, t: Translator): string {
-  return preset.profile === "eu_resident"
+  return preset.profile === "eu_hosted"
     ? `${preset.label} (${t("firstRun.ai.euResidency")})`
     : preset.label;
 }

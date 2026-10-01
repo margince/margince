@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  writeStored,
+} from "../app/storage";
 import type { useT } from "../i18n";
 import { throwProblem } from "./common";
 
@@ -8,26 +14,17 @@ import { throwProblem } from "./common";
 // issued, kept in sessionStorage and presented as a Bearer on every call, and
 // the one way every call answers when that token has stopped admitting them.
 
-const SESSION_KEY = "margince.room.session";
-
 export function readSession(): string | null {
-  try {
-    return globalThis.sessionStorage?.getItem(SESSION_KEY) ?? null;
-  } catch {
-    return null;
-  }
+  return readStored(STORAGE_KEYS.buyerRoomSession);
 }
 
+// A browser refusing storage still gets this one page view: the token lives in
+// React state for the tab's lifetime and is simply not kept.
 export function writeSession(token: string | null): void {
-  try {
-    if (token === null) {
-      globalThis.sessionStorage?.removeItem(SESSION_KEY);
-    } else {
-      globalThis.sessionStorage?.setItem(SESSION_KEY, token);
-    }
-  } catch {
-    // A browser refusing storage still gets this one page view: the token
-    // lives in React state for the tab's lifetime and is simply not kept.
+  if (token === null) {
+    removeStored(STORAGE_KEYS.buyerRoomSession);
+  } else {
+    writeStored(STORAGE_KEYS.buyerRoomSession, token);
   }
 }
 

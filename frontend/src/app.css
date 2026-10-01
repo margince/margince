@@ -131,8 +131,8 @@ body {
  * at all, and the thumb colour answers the pointer per element, which an
  * inherited value cannot. What a component can still say for itself differs
  * between the two, and the difference is specificity. The WIDTH sits on `*`,
- * which carries none, so one class beats it — `.mw-artifact` and the
- * conversation thread hide their bars exactly that way. The COLOUR under the
+ * which carries none, so one class beats it — `.recordtabs-strip` hides its
+ * bar exactly that way. The COLOUR under the
  * pointer is `*:hover:not(:has(:hover))`, and `:not()` and `:has()` each take
  * their argument's, so that is (0,2,0): a single class LOSES to it, and a
  * component that wants a thumb colour of its own needs two classes or `:hover`

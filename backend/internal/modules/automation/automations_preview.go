@@ -243,7 +243,7 @@ func activityPreviewDefs() map[string]previewDef {
 // static, single-table shape yet). renewal_reminder is NOT here: its
 // previewDef is built dynamically per-instance instead (resolvePreviewRecipe).
 func unsupportedPreviewDefs() map[string]previewDef {
-	return map[string]previewDef{
+	defs := map[string]previewDef{
 		noActivityReminderName: previewNotYetSupported(
 			"preview is not yet supported for no_activity_reminder: its candidate set spans every linked entity type with no single row-scoped resource to preview against",
 		),
@@ -251,6 +251,11 @@ func unsupportedPreviewDefs() map[string]previewDef {
 			"preview is not yet supported for check_in_cadence: its candidate set spans every linked entity type with no single row-scoped resource to preview against",
 		),
 	}
+	for _, key := range listRuleKeys {
+		defs[key] = previewNotYetSupported("preview is not yet supported for " + key +
+			": who joins or leaves a Live List is known only when its check runs; the list's own history shows past changes")
+	}
+	return defs
 }
 
 // Preview evaluates the automation's When/If against current workspace

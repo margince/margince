@@ -167,6 +167,86 @@ type MeetingCanceller interface {
 	CancelMeeting(ctx context.Context, key NaturalKey, at time.Time) error
 }
 
+// IdentifiedMeetingCanceller is MeetingCanceller for an event that also states
+// its cross-door identity. A cancelled event that was matched onto a meeting
+// another door filed (an import, a colleague's calendar) has no row under its
+// own natural key; the identity is what still finds it. Optional, for
+// MeetingCanceller's reason: a sink that implements only CancelMeeting cancels
+// by natural key alone, as before.
+type IdentifiedMeetingCanceller interface {
+	CancelIdentifiedMeeting(ctx context.Context, key NaturalKey, identity CrossDoorIdentity, at time.Time) error
+}
+
+// MeetingMover is the calendar's third verb: a meeting already captured was
+// rescheduled. A key naming no captured meeting writes nothing, so a connector
+// may call it for an event it will not capture — one moved past its horizon —
+// and only a meeting it captured earlier moves. Optional, for
+// MeetingCanceller's reason.
+type MeetingMover interface {
+	MoveMeeting(ctx context.Context, key NaturalKey, start time.Time, duration *int) error
+}
+
+// MessageRemover is the mail connectors' equivalent: the provider reports that
+// a message this workspace captured is gone from the mailbox it came from.
+//
+// Separate from Sink for MeetingCanceller's reason — only the mail connectors
+// have anything to say through it, and a calendar or channel connector should
+// not have to answer a question it is never asked.
+//
+// What the removal MEANS is not this seam's to decide. A connector reports that
+// the provider said a message is gone; whether the captured copy follows is a
+// question about colleagues' claims and statutory duties that the implementor
+// answers. A connector that decided it would be deciding for mailboxes it
+// cannot see.
+type MessageRemover interface {
+	// RemoveMessage reports that the message captured under this natural key
+	// was deleted at the provider, by the owner of the mailbox it arrived in.
+	//
+	// Whose mailbox comes from the principal on ctx, the way every other write
+	// a sync makes resolves its seat — a connector that passed an owner would
+	// be naming a seat it learned from an address, which is the thing capture
+	// spends its whole identity spine not doing.
+	//
+	// Idempotent and forgiving: a key naming nothing this workspace captured is
+	// the ordinary case, not an error — most deleted mail was never captured.
+	RemoveMessage(ctx context.Context, key NaturalKey) error
+}
+
+// NamedContainer is one folder or label a mailbox owner can recognise: the
+// provider's own token, and the name they see for it.
+//
+// Both halves, because neither works alone. A Gmail label id is an opaque
+// "Label_7" and a Graph folder id is base64url — asking somebody to type one is
+// asking them to look it up — while the NAME is what they read in their mail
+// client and is not stable enough to match on.
+type NamedContainer struct {
+	// ID is the provider's own token, and what a capture_exclusion rule stores.
+	ID string
+	// Name is what the owner sees. For display only: two folders may share it,
+	// and a rename must not silently re-point a rule.
+	Name string
+}
+
+// ContainerLister is the mail connectors' third optional verb: which folders or
+// labels this mailbox has, so an owner can pick one to keep out of capture.
+//
+// Optional for MessageRemover's reason — a channel or calendar connector has no
+// folders to offer — and READ-ONLY by design. Listing is what makes the rule
+// authorable; the rule itself is capture's, and a connector that could write
+// one would be deciding what its own mailbox keeps out.
+type ContainerLister interface {
+	// ListContainers returns the mailbox's folders or labels, in the order the
+	// provider gives them, and whether the walk STOPPED SHORT of the whole
+	// mailbox.
+	//
+	// The bool is the honest half. A listing bounded by a page or depth budget
+	// is still worth serving — a long list that stops beats no list at all —
+	// but a picker that showed it as complete tells somebody their folder does
+	// not exist when the truth is that nobody looked. A connector that
+	// enumerates everything answers false, and means it.
+	ListContainers(ctx context.Context, auth Auth) ([]NamedContainer, bool, error)
+}
+
 // NormalizedRecord — a provider record mapped onto the clean relational
 // core with provenance. Fields holds the typed domain struct for
 // EntityType so a wrong mapping fails to compile, not at runtime.
@@ -238,6 +318,15 @@ type NormalizedRecord struct {
 	// ("telegram:<bot_id>:<chat_id>"), the one case where that is the right join
 	// key. Empty only for a mail record with none of its three sources.
 	ThreadKey string
+
+	// ReplyTo lists the Message-IDs a mail record says it answers — In-Reply-To
+	// and each References entry, unbracketed. ThreadKey is derived from the
+	// first of them; the full list is what lets capture join two thread roots
+	// that turn out to be one conversation, because mail programs shorten the
+	// References header. The sender's text, so capture acts on an entry only
+	// when the same seat holds the message it names. Empty for anything that
+	// is not mail.
+	ReplyTo []string
 
 	// The FURTHER parties beyond the mailbox owner and Counterparty — CCs, a
 	// meeting's attendees and organizer. Additive rather than a replacement,
@@ -322,6 +411,12 @@ type CrossDoorIdentity struct {
 	// Which meeting within the series, as its own start. Zero likewise yields no
 	// identity: a series without one names every meeting in it at once.
 	Occurrence time.Time
+	// AllDay says the occurrence is a calendar DATE rather than an instant. An
+	// all-day start is stored at noon UTC (meetingmap.AllDayStart), which no
+	// other door states: an importer or an ICS client says the date, or its
+	// midnight. The key is composed from the date alone, so both doors name the
+	// same all-day meeting once.
+	AllDay bool
 }
 
 // Stated reports whether the provider actually gave both parts. A partial

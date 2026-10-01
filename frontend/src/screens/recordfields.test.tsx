@@ -249,3 +249,37 @@ it("connects the reference label to its search input", async () => {
   await user.click(label);
   expect(screen.getByRole("searchbox", { name: "Parent" })).toHaveFocus();
 });
+
+it("keeps a rendered group's edit verb in place, disabled, while another field saves", async () => {
+  const user = userEvent.setup();
+  let release = () => {};
+  const save = vi.fn<RecordFieldSave>(
+    () =>
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+  );
+  render(
+    <RecordFields
+      title="Details"
+      kind="contact"
+      fields={[
+        ...fields,
+        { key: "tags", labelText: "Tags", type: "multiselect" },
+      ]}
+      record={{ ...record, tags: "a" }}
+      renderValues={{ tags: <a href="https://tags.example">a</a> }}
+      canEdit
+      save={save}
+    />,
+    { wrapper },
+  );
+  await user.click(screen.getByRole("button", { name: "Change Name" }));
+  await user.type(screen.getByRole("textbox", { name: "Name" }), "!{Enter}");
+  await waitFor(() => expect(save).toHaveBeenCalled());
+  expect(screen.getByRole("button", { name: "Change Tags" })).toBeDisabled();
+  release();
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Change Tags" })).toBeEnabled(),
+  );
+});

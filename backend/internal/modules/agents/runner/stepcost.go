@@ -45,7 +45,7 @@ func FixedStepCost(specs []mcp.ToolSpec) StepCost {
 	schema := stepSchema(specs)
 	return StepCost{
 		Tokens:  requestTokens(systemPrompt(specs, promptfence.New(), ""), schema, nil),
-		Listing: len(ToolListing(specs)) / 4,
+		Listing: len(ToolListing(AsOffered(specs))) / 4,
 		Schema:  len(schema) / 4,
 	}
 }

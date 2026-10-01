@@ -5,14 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { company360 } from "./company.fixtures";
 import {
-  CommercialPanel,
   DealsCard,
   NextSteps,
   ProposedNextSteps,
   StateStrip,
-  SuggestionsSection,
 } from "./company360";
-import { CompanyContractState } from "./companycommercial";
 import {
   installFetchStub,
   jsonResponse,
@@ -353,15 +350,6 @@ function Cards({ view }: Readonly<{ view: View }>) {
   return (
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
-        {/* The contract standing rides in the panel's `extra` slot, which is
-            the SAME component the Deals tab draws — an account's contracted
-            value and renewal must not be able to say two things on two
-            surfaces. The withheld story below reaches it with no contract
-            grant, where the block is absent rather than reading "none". */}
-        <CommercialPanel
-          view={view}
-          extra={<CompanyContractState view={view} />}
-        />
         <DealsCard view={view} />
         <NextSteps view={view} />
       </div>
@@ -403,7 +391,7 @@ const recommending: View = {
         deal_id: "d-1",
         task: {
           subject: 'Agree the next step on "Fleet retrofit 2026"',
-          source: "ui",
+          source: "manual",
           links: [{ entity_type: "deal", entity_id: "d-1" }],
         },
       },
@@ -429,39 +417,6 @@ function RecommendedStep() {
 
 export const NextStepRecommended: Story = {
   render: () => <RecommendedStep />,
-};
-
-// The same advice in its own panel, which is the chrome the rows are read in
-// wherever the merged daily brief is not what mounted them. Indigo rather than
-// accent: a rule wrote every row under this head, so the tint is the panel's
-// claim about WHO wrote it, and the badge in the band says it in words for a
-// reader who cannot tell the tints apart.
-function Suggestions() {
-  installFetchStub({
-    "GET /me": meRoute({ company: ["read", "update"] }),
-  });
-  return (
-    <StoryProviders>
-      <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
-        <SuggestionsSection
-          companyId="o-1"
-          view={recommending}
-          onOpenRecord={() => {}}
-          onOpenTasks={() => {}}
-        />
-      </div>
-    </StoryProviders>
-  );
-}
-
-export const MargincesSuggestions: Story = { render: () => <Suggestions /> };
-
-// The indigo head, the tinted rows and the filled verb are all color-mix() of
-// tokens that lift with the dark accent, so the panel can be right in light
-// and wrong here.
-export const MargincesSuggestionsDark: Story = {
-  ...MargincesSuggestions,
-  globals: { theme: "dark" },
 };
 
 // A connected finance source, shaped exactly like companyfinance.stories.tsx's

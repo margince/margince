@@ -154,7 +154,7 @@
   height: 48px;
   border-radius: 50%;
   corner-shape: round;
-  color: var(--success);
+  color: var(--successText);
   background: var(--successBg);
 }
 

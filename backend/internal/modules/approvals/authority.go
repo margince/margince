@@ -11,6 +11,7 @@ package approvals
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -18,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -184,8 +186,9 @@ var decisionGrants = map[string][]grantRequirement{
 	"send_company_email": {{objectActivity, principal.ActionCreate}},
 	// send_message is the same effect on a messaging channel: an activity
 	// write, with the consent gate running in the handler whoever approved it.
-	"send_message": {{objectActivity, principal.ActionCreate}},
-	"book_meeting": {{objectActivity, principal.ActionCreate}},
+	"send_message":   {{objectActivity, principal.ActionCreate}},
+	"book_meeting":   {{objectActivity, principal.ActionCreate}},
+	"invite_meeting": {{objectActivity, principal.ActionCreate}},
 	// A relink moves an activity onto another record, which the store gates on
 	// activity.UPDATE — an association change, not a re-capture. It reaches a
 	// human at all only for one destination: filing under a PROJECT classifies
@@ -224,10 +227,6 @@ var decisionGrants = map[string][]grantRequirement{
 	"fx_rate_proposal": {
 		{targetFxRate, principal.ActionCreate},
 		{targetFxRate, principal.ActionUpdate},
-	},
-	"ai_model_rate_proposal": {
-		{targetAIModelRate, principal.ActionCreate},
-		{targetAIModelRate, principal.ActionUpdate},
 	},
 	// Accepting a deep site read writes profile fields and category facts
 	// onto the target company — the same update authority enrich needs.
@@ -373,6 +372,52 @@ func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bo
 		return false, nil
 	}
 	return targetDecidable(ctx, tx, a.TargetType, a.TargetID)
+}
+
+// PendingDecidableBy answers whether the ACTING principal could decide the
+// named approval RIGHT NOW: the row is still pending, it has not lapsed, and
+// decidable answers yes. It is the same three-conjunct predicate the inbox
+// filters by, asked about one row instead of a page.
+//
+// Exported for the notification fan-out, which has to ask it once per seat and
+// would otherwise grow a third copy of the decision-authority rule — the
+// webhooks module's partial copy is the cautionary precedent, not the pattern.
+// The fan-out must never tell a colleague about a card their own inbox would
+// then hide from them.
+//
+// THE ROW IS RE-READ HERE, which is the whole reason this is not a question the
+// caller can answer from an event. Supersession and withdrawal both write
+// `expired` with no event of their own, so an envelope that says "pending" can
+// be describing a row that has not been pending for hours.
+//
+// An approval that is GONE answers false rather than ErrNotFound, matching what
+// Get already does in the other direction: the inbox deliberately conflates
+// absent with invisible, and a predicate that raised for the one and answered
+// for the other would leak which it was.
+func (s *Service) PendingDecidableBy(ctx context.Context, id ids.ApprovalID) (bool, error) {
+	if err := actingForAHuman(ctx); err != nil {
+		return false, err
+	}
+	p, _ := principal.Actor(ctx)
+	var could bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		a, err := get(ctx, tx, id)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if a.effectiveStatus(s.now()) != statusPending {
+			return nil
+		}
+		could, err = decidable(ctx, tx, p, a)
+		return err
+	})
+	if err != nil {
+		return false, err
+	}
+	return could, nil
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {

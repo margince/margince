@@ -28,7 +28,13 @@ import { Heading } from "../design-system/heading";
 import { Popover } from "../design-system/popover";
 import { TokenList } from "../design-system/tokeninput";
 import { formatBytes, formatNumber } from "../format/format";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import {
+  type Locale,
+  type Translator,
+  translatePlural,
+  useLocale,
+  useT,
+} from "../i18n";
 import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
 import { type CarriageViolation, carriageViolations } from "./carriage";
 import { useProviderCarriage } from "./channelproviders";
@@ -358,10 +364,15 @@ function carriageReason(
 ): string {
   switch (violation.kind) {
     case "carries":
-      return t("compose.carriageCarries", {
-        channel,
-        count: formatNumber(violation.count, locale),
-      });
+      return translatePlural(
+        locale,
+        "compose.carriageCarries",
+        violation.count,
+        {
+          channel,
+          count: formatNumber(violation.count, locale),
+        },
+      );
     case "count":
       return t("compose.carriageCount", {
         channel,

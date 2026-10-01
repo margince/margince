@@ -165,3 +165,26 @@ func TestAnUnreachableProviderSaysSoOnTheJobRow(t *testing.T) {
 		t.Error("the published fault no longer carries the sentinel, so nothing downstream can classify it")
 	}
 }
+
+// ClassFor answers the class faultFor records, so a surface storing the class
+// and River's column storing the sentence name one failure alike.
+func TestClassForNamesTheClassFaultRecords(t *testing.T) {
+	for _, cause := range []error{
+		fmt.Errorf("writing the row: %w", apperrors.ErrConflict),
+		fmt.Errorf("a sentinel and a shape: %w", errors.Join(context.DeadlineExceeded, apperrors.ErrNotFound)),
+		fmt.Errorf("reading: %w", context.DeadlineExceeded),
+	} {
+		class := ClassFor(cause)
+		if class == "" {
+			t.Errorf("ClassFor(%v) named nothing, want a core class", cause)
+			continue
+		}
+		if got := Fault(cause).Error(); got != SentenceForClass(class) {
+			t.Errorf("ClassFor(%v) = %q, whose sentence is %q, but Fault records %q",
+				cause, class, SentenceForClass(class), got)
+		}
+	}
+	if got := ClassFor(errors.New("smtp 550 <someone@example.com> refused")); got != "" {
+		t.Errorf("an unrecognised cause was classed %q, want none", got)
+	}
+}

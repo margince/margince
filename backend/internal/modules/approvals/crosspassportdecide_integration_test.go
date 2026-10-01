@@ -139,3 +139,244 @@ func TestASecondContactsPassportDoesNotReleaseAConfirmationRequiredAction(t *tes
 		t.Errorf("the staging credential could not redeem what its contact released: %v", err)
 	}
 }
+
+// connection registers a client and the grant beneath it, which is the identity
+// a credential keeps across its own rotations.
+func (e *stagingEnv) connection(t *testing.T, human ids.UUID) ids.UUID {
+	t.Helper()
+	clientID := "client-" + ids.NewV7().String()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO oauth_client (client_id, client_name, redirect_uris)
+		VALUES ($1, 'Rotating client', ARRAY['https://client.example/cb'])`, clientID); err != nil {
+		t.Fatalf("registering the client: %v", err)
+	}
+	grant := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO oauth_grant (id, client_id, user_id, scopes, refresh_allowed)
+		VALUES ($1, $2, $3, ARRAY['read','write'], true)`, grant, clientID, human); err != nil {
+		t.Fatalf("seeding the connection: %v", err)
+	}
+	return grant
+}
+
+// connectedPassport mints a credential under an OAuth CONNECTION and returns
+// the agent context asserting it. Calling it twice for one connection is what a
+// refresh leaves behind: two passport rows, one grant, the same human and the
+// same caps.
+func (e *stagingEnv) connectedPassport(t *testing.T, human, grant ids.UUID) context.Context {
+	t.Helper()
+	ctx := e.lentPassport(t, human)
+	actor, _ := principal.Actor(ctx)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE passport SET oauth_grant_id = $2 WHERE id = $1`, actor.PassportID, grant); err != nil {
+		t.Fatalf("binding the passport to its connection: %v", err)
+	}
+	actor.ConnectionID = grant
+	return principal.WithActor(ctx, actor)
+}
+
+// A connected agent's passport id is not stable: refreshing its token retires
+// the passport and mints a replacement under the same grant. Compared on the
+// passport alone, the agent that staged a confirm-first call releases it itself
+// after doing nothing but waiting for its own access token to expire — and the
+// receipt names the human who never saw it.
+//
+// The sibling test above allows exactly this shape for two DIRECTLY minted
+// passports of one human, on the grounds that a human had to be present to mint
+// each. That reasoning is what fails here: nobody is present at a rotation.
+func TestARotatedCredentialDoesNotReleaseWhatItStagedAgainstTheDatabase(t *testing.T) {
+	e := setupStaging(t)
+	ctx := context.Background()
+
+	grant := e.connection(t, e.rep)
+	target := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Rotamer', 'gmail:seed', 'connector:gmail')`, target); err != nil {
+		t.Fatalf("seeding the target: %v", err)
+	}
+
+	before := e.connectedPassport(t, e.rep, grant)
+	after := e.connectedPassport(t, e.rep, grant)
+
+	staged, err := e.svc.Stage(before, StageInput{
+		Kind:           "company_name_promotion",
+		ProposedChange: []byte(`{"proposed_name":"Rotamer Global"}`),
+		DiffHash:       "rotated-" + target.String(),
+		TargetType:     tableCompany,
+		TargetID:       target,
+		Summary:        "Rename Rotamer?",
+	})
+	if err != nil {
+		t.Fatalf("staging on the connection's first credential: %v", err)
+	}
+
+	if _, err := e.svc.Decide(after, staged, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("the connection's renewed credential approved what the connection itself staged → %v, "+
+			"want ErrPermissionDenied — an agent then walks any confirm-first call through by waiting "+
+			"for its own token to refresh", err)
+	}
+
+	// The mirror, and the reason the fix is one comparison rather than a second
+	// rule: the renewed credential must still REDEEM what a human released for
+	// it. Refusing here would leave the proposer unable to finish its own work.
+	human := e.asHumanWith(principal.Permissions{
+		RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{
+			tableCompany: {Create: true, Read: true, Update: true, Delete: true},
+		},
+	})
+	if _, err := e.svc.Decide(human, staged, true, nil); err != nil {
+		t.Fatalf("the human could not release the proposal: %v", err)
+	}
+	if _, _, err := e.svc.Redeem(after, staged, "company_name_promotion", "rotated-"+target.String()); err != nil {
+		t.Errorf("the renewed credential could not redeem what its human released: %v — a rotation "+
+			"must not cost an agent the authority it was granted", err)
+	}
+}
+
+// The third reader of the same question. TaskState and Withdraw resolve the
+// caller's own proposal through ownProposal, so before sameAgent a rotation
+// told an agent that the proposal it was waiting on did not exist — and left it
+// unable to take its own request off a human's desk.
+//
+// A second connection still sees nothing, which is what keeps this a fix to the
+// identity rather than a widening of who may poll.
+func TestARotatedCredentialStillPollsAndWithdrawsItsOwnProposal(t *testing.T) {
+	e := setupStaging(t)
+	ctx := context.Background()
+
+	grant := e.connection(t, e.rep)
+	stranger := e.connection(t, e.rep)
+	target := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Pollex', 'gmail:seed', 'connector:gmail')`, target); err != nil {
+		t.Fatalf("seeding the target: %v", err)
+	}
+
+	before := e.connectedPassport(t, e.rep, grant)
+	after := e.connectedPassport(t, e.rep, grant)
+	other := e.connectedPassport(t, e.rep, stranger)
+
+	staged, err := e.svc.Stage(before, StageInput{
+		Kind:           "company_name_promotion",
+		ProposedChange: []byte(`{"proposed_name":"Pollex Global"}`),
+		DiffHash:       "polled-" + target.String(),
+		TargetType:     tableCompany,
+		TargetID:       target,
+		Summary:        "Rename Pollex?",
+	})
+	if err != nil {
+		t.Fatalf("staging on the connection's first credential: %v", err)
+	}
+
+	state, err := e.svc.TaskState(after, staged)
+	if err != nil {
+		t.Fatalf("the renewed credential could not poll its own staged proposal: %v — a rotation "+
+			"must not make an agent's own work invisible to it", err)
+	}
+	if state.Status != StatusPending {
+		t.Fatalf("the proposal polled as %q, want %q", state.Status, StatusPending)
+	}
+	if _, err := e.svc.ProposedChange(after, staged); err != nil {
+		t.Errorf("the renewed credential could not read back what it staged: %v", err)
+	}
+
+	// A DIFFERENT connection is still nobody: not-found rather than a refusal,
+	// so a poll cannot be used to discover that somebody else's proposal exists.
+	if _, err := e.svc.TaskState(other, staged); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("another connection polled a proposal it did not stage → %v, want ErrNotFound", err)
+	}
+
+	retracted, err := e.svc.Withdraw(after, staged, "superseded")
+	if err != nil {
+		t.Fatalf("the renewed credential could not withdraw its own proposal: %v", err)
+	}
+	if !retracted {
+		t.Error("withdrawing an undecided proposal reported nothing to retract")
+	}
+}
+
+// Two CONNECTIONS of one contact, which is the loan made twice.
+//
+// The two rules either side of this one bind the credential and the human, and
+// both pass here: A and B are connected agents of the same contact, so A stages
+// and B releases with nobody having looked. The refusal text now names
+// decide_approval and tells a caller it may relay the contact's answer, so the
+// shape is reachable by instruction — a tool loop told "the user already said
+// yes" has a named tool to reach for.
+//
+// The GRANT is the line, and the sibling tests are why. A rotation is one
+// connection and is refused because nobody is present at a rotation; two
+// directly minted passports are allowed because a human session had to mint
+// each. A second connection is the first case wearing the second's clothes:
+// connecting an agent is not being present when it answers.
+func TestASecondConnectionOfTheSameContactDoesNotReleaseWhatTheFirstStaged(t *testing.T) {
+	e := setupStaging(t)
+	ctx := context.Background()
+
+	target := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Twograntz', 'gmail:seed', 'connector:gmail')`, target); err != nil {
+		t.Fatalf("seeding the target: %v", err)
+	}
+
+	// Two grants, one contact: different connections, so sameAgent separates
+	// them, and the same lender, so the human rule passes.
+	proposer := e.connectedPassport(t, e.rep, e.connection(t, e.rep))
+	confirmer := e.connectedPassport(t, e.rep, e.connection(t, e.rep))
+
+	staged, err := e.svc.Stage(proposer, StageInput{
+		Kind:           "company_name_promotion",
+		ProposedChange: []byte(`{"proposed_name":"Twograntz Global"}`),
+		DiffHash:       "twogrants-" + target.String(),
+		TargetType:     tableCompany,
+		TargetID:       target,
+		Summary:        "Rename Twograntz?",
+	})
+	if err != nil {
+		t.Fatalf("staging on the first connection: %v", err)
+	}
+
+	if _, err := e.svc.Decide(confirmer, staged, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a second connection of the same contact approved what the first staged → %v, want "+
+			"ErrPermissionDenied — the confirm-first tier is then walked end to end by two "+
+			"credentials the contact lent once and never looked at again", err)
+	}
+
+	// A rejection still passes, for the reason every rule here spares it: it
+	// discards the proposal and cannot escalate.
+	if _, err := e.svc.Decide(confirmer, staged, false, nil); err != nil {
+		t.Errorf("the second connection could not REJECT the proposal: %v", err)
+	}
+
+	// THE POSITIVE CONTROL. Without it this test passes just as well when a
+	// connected credential can no longer decide anything at all: a HUMAN
+	// releases what a connection staged, and the proposer redeems it.
+	control := StageInput{
+		Kind:           "company_name_promotion",
+		ProposedChange: []byte(`{"proposed_name":"Twograntz Worldwide"}`),
+		DiffHash:       "twogrants-control-" + target.String(),
+		TargetType:     tableCompany,
+		TargetID:       target,
+		Summary:        "Rename Twograntz again?",
+	}
+	sanctioned, err := e.svc.Stage(proposer, control)
+	if err != nil {
+		t.Fatalf("staging the control proposal: %v", err)
+	}
+	human := e.asHumanWith(principal.Permissions{
+		RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{
+			tableCompany: {Create: true, Read: true, Update: true, Delete: true},
+		},
+	})
+	if _, err := e.svc.Decide(human, sanctioned, true, nil); err != nil {
+		t.Fatalf("the contact could not release what their own connection staged: %v", err)
+	}
+	if _, _, err := e.svc.Redeem(proposer, sanctioned, control.Kind, control.DiffHash); err != nil {
+		t.Errorf("the proposing connection could not redeem what its contact released: %v", err)
+	}
+}

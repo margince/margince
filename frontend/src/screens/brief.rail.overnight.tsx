@@ -78,6 +78,34 @@ function DigestCount({
   );
 }
 
+type PhaseChange = DigestProjects["phase_changes"][number];
+
+// One line per project: where it stood before the window and where it stands
+// now. A project walked Initiative → Pursuing → Delivering in one night is one
+// piece of news, not three — an import that walks every project up its phases
+// put 183 lines here. The birth row of a project created overnight carries no
+// from_phase and is not a move; a walk that ends where it began is none either.
+export function netPhaseMoves(changes: readonly PhaseChange[]): PhaseChange[] {
+  const byProject = new Map<string, PhaseChange[]>();
+  for (const change of changes) {
+    const list = byProject.get(change.project_id) ?? [];
+    list.push(change);
+    byProject.set(change.project_id, list);
+  }
+  const out: PhaseChange[] = [];
+  for (const list of byProject.values()) {
+    const ordered = [...list].sort(
+      (a, b) => Date.parse(a.occurred_at) - Date.parse(b.occurred_at),
+    );
+    const first = ordered.find((change) => change.from_phase != null);
+    const last = ordered[ordered.length - 1];
+    if (first && last && first.from_phase !== last.to_phase) {
+      out.push({ ...last, from_phase: first.from_phase });
+    }
+  }
+  return out;
+}
+
 // What moved on the projects overnight: every project named is a link to its
 // page, because the section exists to send the reader there. A list that is
 // empty renders nothing — the heading alone would claim news it has none of.
@@ -87,9 +115,7 @@ function DigestProjectsBlock({
   const t = useT();
   const { locale } = useLocale();
   const { phase_changes, new_commitments, gone_quiet } = projects;
-  // The birth row of a project created overnight carries no from_phase; a move
-  // between rungs is the news, so only those are listed.
-  const moves = phase_changes.filter((change) => change.from_phase != null);
+  const moves = netPhaseMoves(phase_changes);
   if (
     moves.length === 0 &&
     new_commitments.length === 0 &&
@@ -106,7 +132,7 @@ function DigestProjectsBlock({
           aria-label={t("brief.digestPhaseChanges")}
         >
           {moves.map((change) => (
-            <li key={`${change.project_id}-${change.occurred_at}`}>
+            <li key={change.project_id}>
               <EntityRef kind="project" id={change.project_id} />{" "}
               <span className="t-caption">
                 {t("brief.digestPhaseChange", {

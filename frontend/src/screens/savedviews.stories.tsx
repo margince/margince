@@ -113,10 +113,33 @@ export const NamingAView: Story = {
 export const NothingWorthSaving: Story = {
   // An unnarrowed list offers no save: the view would do what the All tab
   // already does, and a rail of those is how a useful feature becomes clutter.
-  // Deliberately an empty capture — that IS the documented behaviour.
+  // Manage views stays, because the reader's existing views are still theirs
+  // to rename or delete.
   render: () => {
     routes();
     return <SaveViewAction resource="contacts" query={UNNARROWED} />;
+  },
+};
+
+export const ManagingViews: Story = {
+  // Every saved view of the resource, each with Rename and Delete. The first
+  // row is opened into its rename, the one question a row asks in place.
+  render: () => {
+    routes({
+      "PATCH /views/v-1": () => jsonResponse(VIEWS.data[0]),
+      "DELETE /views/v-1": () => jsonResponse(VIEWS.data[0]),
+    });
+    return <SaveViewAction resource="contacts" query={UNNARROWED} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Manage views" }),
+    );
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await page.findByRole("button", { name: "Rename Gold tier in Berlin" }),
+    );
   },
 };
 

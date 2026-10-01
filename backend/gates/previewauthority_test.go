@@ -24,7 +24,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"regexp"
@@ -49,7 +48,7 @@ const authorityLevelSource = "internal/shared/ports/commsauthz/authority.go"
 // catch is a level the contract does not publish.
 func declaredAuthorityLevels(t *testing.T) map[string]bool {
 	t.Helper()
-	parsed, err := parser.ParseFile(token.NewFileSet(), authorityLevelSource, nil, 0)
+	parsed, err := gatekit.ParseFile(authorityLevelSource, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", authorityLevelSource, err)
 	}

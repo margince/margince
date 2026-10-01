@@ -103,11 +103,10 @@ func TestAnUngradedRunIsLeftOutOfTheJudgesNumbers(t *testing.T) {
 
 // An even graded set takes the AVERAGE of its two middles, never the upper one.
 //
-// This is the direction a certification number must not err in. RunnerConfig
-// repeats an odd number of times, so the run set is odd and a median looked
-// safe; an ungraded run leaves the SCORE set even, and upper-middle selection
-// then reports a pair {10, 80} as 80. That clears a DegradedMin of 60 on a set
-// half of whose grades are a 10.
+// This is the direction a certification number must not err in. An ungraded
+// run, or an extended case's six runs, leaves the SCORE set even, and
+// upper-middle selection then reports a pair {10, 80} as 80. That clears a
+// DegradedMin of 60 on a set half of whose grades are a 10.
 func TestAnEvenGradedSetTakesTheAverageOfItsMiddles(t *testing.T) {
 	t.Parallel()
 	graded := func(score int) RunResult { return RunResult{HardPass: true, Score: score} }
@@ -180,7 +179,7 @@ func TestATaskCutOffOnEveryAttemptIsRecordedNotAborted(t *testing.T) {
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		ai.ProfileCloudHosted, 3, quietLogger(), &certifyHooks{
+		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 		})
@@ -225,7 +224,7 @@ func certifyAgainst(t *testing.T, candidate, judge *ai.FakeClient) (Record, erro
 	t.Helper()
 	return certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
 		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
-		ai.ProfileCloudHosted, 3, quietLogger(), &certifyHooks{
+		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
 		})
@@ -284,20 +283,23 @@ func TestARejectedCandidateAbortsTheTaskWithNoRecord(t *testing.T) {
 	}
 }
 
-// A withheld run names the binding it was sent to, which is not the identity
-// a served run reports — a native vendor answers with a dated version of the
-// model id it was asked for. Compared as though it had served, it would void a
-// set whose served runs were all one model.
-func TestAWithheldRunNeitherSetsNorBreaksTheServedIdentity(t *testing.T) {
+// A withheld or abandoned run names the binding it was sent to, which is not
+// the identity a served run reports — a native vendor answers with a dated
+// version of the model id it was asked for. Compared as though it had served,
+// it would void a set whose served runs were all one model.
+func TestARunWithNoAnswerNeitherSetsNorBreaksTheServedIdentity(t *testing.T) {
 	t.Parallel()
 	withheld := runOutcome{RunResult: RunResult{Withheld: "SAFETY"}, Provider: "gemini", ServedModel: "gemini-flash"}
+	abandoned := runOutcome{RunResult: RunResult{Abandoned: true}, Provider: "gemini", ServedModel: "gemini-flash"}
 	served := runOutcome{Provider: "gemini", ServedModel: "gemini-flash-001"}
 	for name, tc := range map[string]struct {
 		order []runOutcome
 		want  string
 	}{
-		"withheld first": {[]runOutcome{withheld, served, withheld}, served.ServedModel},
-		"served first":   {[]runOutcome{served, withheld, served}, served.ServedModel},
+		"withheld first":         {[]runOutcome{withheld, served, withheld}, served.ServedModel},
+		"served first":           {[]runOutcome{served, withheld, served}, served.ServedModel},
+		"abandoned first":        {[]runOutcome{abandoned, served, abandoned}, served.ServedModel},
+		"served, then abandoned": {[]runOutcome{served, abandoned, served}, served.ServedModel},
 		// Nothing served, so the binding is the only identity there is.
 		"every run withheld": {[]runOutcome{withheld, withheld, withheld}, withheld.ServedModel},
 	} {

@@ -222,10 +222,12 @@ var retired = gatekit.Waive(map[string]string{
 	"frontend/src/screens/settings-chrome.test.tsx":        "the seats settings group",
 	"frontend/src/screens/license.stories.tsx":             "a page under the seats settings group",
 	"frontend/src/screens/licenseholder.stories.tsx":       "a page under the seats settings group",
+	"frontend/src/screens/roles-settings.stories.tsx":      "a page under the seats settings group",
 	"frontend/src/screens/users-access.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/screens/users-admin.stories.tsx":         "a page under the seats settings group",
 	"frontend/src/screens/users-invite-form.stories.tsx":   "a page under the seats settings group",
 	"frontend/src/screens/users-password-link.stories.tsx": "a page under the seats settings group",
+	"frontend/src/screens/users-rolecell.stories.tsx":      "a page under the seats settings group",
 	"frontend/src/screens/share.tsx": "the share target kind: a colleague with a seat, or a team " +
 		"of them — never this record",
 	"docs/handbook/settings.md": "it names the seats settings group, which is the heading a " +
@@ -235,8 +237,21 @@ var retired = gatekit.Waive(map[string]string{
 	// source without its mirror would fail the moment the two are brought into line.
 	"backend/internal/modules/knowledge/handbook/settings.md": "the embedded copy of the page above",
 
-	"scripts/fe-file-length-waivers.txt": "its note explains which two words got wider, which it " +
-		"cannot do without saying them",
+	// The German compliance package: a works agreement, a consent form, an
+	// employee information sheet and the processing record. "Die beschäftigte
+	// Person" is the ordinary German for a human being and the term these
+	// documents are written in — none of them names this product's record at
+	// all, because none of them is about the CRM's contacts. They are about the
+	// colleagues whose mail is captured.
+	//
+	// Waived rather than renamed because the rename was tried: it produced
+	// "die beschäftigte Contact" and "Eine Einwilligung je Contact", which are
+	// not German, in four documents that get printed and signed.
+	"docs/compliance/de": "German legal prose about the employees whose mail is captured — " +
+		"die beschäftigte Person is a human being, and these documents never name this record",
+
+	"scripts/handbook-ask/questions.txt": "questions in the words users type — \"add a new " +
+		"contact\" is not what they say — and the bank exists to prove the handbook answers them anyway",
 
 	"backend/internal/compose/auditlegacytype.go": "the word audit rows written before the " +
 		"rename still carry. `trg_audit_no_mutate` refuses an UPDATE on audit_log, so those rows " +
@@ -245,6 +260,8 @@ var retired = gatekit.Waive(map[string]string{
 
 	"docs/reference/record-vocabulary.md": "it states the rule, which it cannot do without " +
 		"naming the word the rule retires",
+	"docs/reference/ui-copy-style-de.md": "it states the German human-sense rule that " +
+		"record-noun.test.ts holds, which it cannot do without the German word for a human being",
 
 	"backend/gates/contactvocabulary_test.go": "this file names the word in order to refuse it",
 
@@ -429,6 +446,10 @@ func pathNamesTheRetiredWord(path string) bool {
 // namesTheRetiredWord reports whether a line calls this record by a retired
 // name, once the words that merely resemble it are taken out.
 func namesTheRetiredWord(line string) bool {
+	// Both words, and every stem removed first, spell "person" or "people".
+	if !mayHoldFolded(line, "person", "people") {
+		return false
+	}
 	return theRetiredWord.MatchString(notThisRecord.ReplaceAllString(line, ""))
 }
 

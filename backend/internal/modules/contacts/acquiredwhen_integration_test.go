@@ -189,3 +189,67 @@ func TestEveryCapturedActivityCarriesATimeToDateTheAcquisitionFrom(t *testing.T)
 		t.Error("a captured contact has an undated acquisition")
 	}
 }
+
+// A first mail FROM somebody is them contacting us, reply or not: the contact
+// is subject_initiated and owes no disclosure. Only an address we wrote to, or
+// saw on a Cc, and that never wrote, stays unknown.
+func TestAStrangerWhoWroteFirstIsSubjectInitiated(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	in := e.datedEnsureInput(ctx, t, "cold@firstmail.test", "firstmail.test", time.Now().Add(-time.Hour))
+	in.Replied = false
+
+	res, err := e.store.EnsureCounterparty(ctx, in)
+	if err != nil || !res.ContactCreated {
+		t.Fatalf("ensure = %+v (err %v), want a created contact", res, err)
+	}
+	if kind, _ := acquisitionOf(ctx, t, e.store, res.ContactID); kind != AcquiredSubjectInitiated {
+		t.Errorf("a stranger who sent us the first mail is recorded as %q, want %q", kind, AcquiredSubjectInitiated)
+	}
+}
+
+func TestAnAddressWeOnlyWroteToStaysUnknown(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	in := e.datedEnsureInput(ctx, t, "prospect@coldlist.test", "coldlist.test", time.Now().Add(-time.Hour))
+	in.Replied = false
+	// The same message, turned round: we sent it, and they are only a recipient.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `UPDATE activity SET direction = 'outbound' WHERE id = $1`, in.ActivityID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `UPDATE activity_participant SET role = 'to' WHERE activity_id = $1`, in.ActivityID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := e.store.EnsureCounterparty(ctx, in)
+	if err != nil || !res.ContactCreated {
+		t.Fatalf("ensure = %+v (err %v), want a created contact", res, err)
+	}
+	if kind, _ := acquisitionOf(ctx, t, e.store, res.ContactID); kind != AcquiredUnknownLegacy {
+		t.Errorf("an address we only wrote to is recorded as %q, want %q", kind, AcquiredUnknownLegacy)
+	}
+}
+
+// A newsletter is a list writing to everyone, not the sender writing to us.
+func TestABulkSenderStaysUnknown(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	in := e.datedEnsureInput(ctx, t, "news@list.test", "list.test", time.Now().Add(-time.Hour))
+	in.Replied = false
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE activity SET bulk_mail_attested = true WHERE id = $1`, in.ActivityID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	res, err := e.store.EnsureCounterparty(ctx, in)
+	if err != nil || !res.ContactCreated {
+		t.Fatalf("ensure = %+v (err %v), want a created contact", res, err)
+	}
+	if kind, _ := acquisitionOf(ctx, t, e.store, res.ContactID); kind != AcquiredUnknownLegacy {
+		t.Errorf("a bulk sender is recorded as %q, want %q", kind, AcquiredUnknownLegacy)
+	}
+}

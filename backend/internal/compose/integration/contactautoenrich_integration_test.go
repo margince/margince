@@ -109,13 +109,11 @@ func stageSiteLead(t *testing.T, e *Env, companyID ids.CompanyID, page sitePage)
 	return id
 }
 
-// newEnricher builds the consumer with no search provider — the sovereign
-// posture of ADR-0081, and the arm this suite exercises. Discovery has its own
-// unit tests against a fake client; what is under test here is the fill from
-// what the employer already published.
+// newEnricher builds the consumer this suite drives: the fill from what the
+// employer already published.
 func newEnricher(e *Env) *compose.ContactAutoEnrich {
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return compose.NewContactAutoEnrich(e.Pool, contacts.NewStore(e.DB()), approvals.NewService(e.DB()), nil, quiet)
+	return compose.NewContactAutoEnrich(e.Pool, contacts.NewStore(e.DB()), approvals.NewService(e.DB()), quiet)
 }
 
 // contactCreated is the envelope a newly created contact reaches the consumer on.
@@ -201,6 +199,47 @@ func TestContactAutoEnrichFillsAContactFromTheirEmployersStagedPage(t *testing.T
 	}
 	if !withdrawn {
 		t.Error("the site-lead proposal is still live, so a rep is asked to create a lead for a contact that exists")
+	}
+}
+
+// A withdrawal the database refuses fails the pass, so the bus retries it,
+// rather than leaving a rep asked to create a lead for a contact that exists.
+func TestContactAutoEnrichFailsWhenTheProposalCannotBeWithdrawn(t *testing.T) {
+	e := Setup(t)
+	contactID, companyID := seedEmployedContact(t, e, "Anna Muster")
+	approvalID := stageSiteLead(t, e, companyID, sitePage{
+		Name:            "Anna Muster",
+		Role:            "Head of Delivery",
+		EvidenceSnippet: "Anna Muster — Head of Delivery",
+		SourceURL:       "https://gitex.com/team",
+	})
+	owner := OwnerConn(t)
+	ctx := context.Background()
+	if _, err := owner.Exec(ctx, `
+		CREATE FUNCTION refuse_withdrawal() RETURNS trigger LANGUAGE plpgsql AS $$
+		BEGIN RAISE EXCEPTION 'refused by the test'; END $$;
+		CREATE TRIGGER refuse_withdrawal BEFORE UPDATE ON approval FOR EACH ROW
+		EXECUTE FUNCTION refuse_withdrawal();`); err != nil {
+		t.Fatalf("installing the refusal: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := owner.Exec(ctx, `DROP TRIGGER refuse_withdrawal ON approval; DROP FUNCTION refuse_withdrawal();`); err != nil {
+			t.Errorf("removing the refusal: %v", err)
+		}
+	})
+
+	if err := newEnricher(e).HandleEvent(ctx, contactCreated(contactID)); err == nil {
+		t.Fatal("HandleEvent succeeded although the proposal could not be withdrawn")
+	}
+
+	var live bool
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT expires_at >= created_at FROM approval WHERE id = $1`, approvalID).Scan(&live)
+	}); err != nil {
+		t.Fatalf("reading the proposal back: %v", err)
+	}
+	if !live {
+		t.Error("the proposal reads as withdrawn although its withdrawal was refused")
 	}
 }
 

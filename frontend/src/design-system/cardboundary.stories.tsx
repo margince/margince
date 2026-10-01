@@ -15,7 +15,7 @@ const client = new QueryClient({
 });
 
 const meta: Meta<typeof CardBoundary> = {
-  title: "Design System/CardBoundary",
+  title: "Components/Messaging/Card boundary",
   component: CardBoundary,
   parameters: { layout: "padded" },
   decorators: [

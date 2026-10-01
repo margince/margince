@@ -35,7 +35,7 @@ const localesLayer = "i18n"
 // switch can ever select, and the honest answer to that is a refusal rather
 // than a file nobody reads.
 //
-// Keep in step with frontend/src/i18n/index.tsx's LOCALES. The two lists are
+// Keep in step with frontend/src/i18n/locale.ts's LOCALES. The two lists are
 // held together by TestComposedLocalesMatchTheCatalogue.
 var composedLocales = []string{"en", "de", "vi"}
 

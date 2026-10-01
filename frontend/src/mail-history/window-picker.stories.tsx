@@ -7,7 +7,7 @@ import { ImportWindowPicker } from "./window-picker";
 
 type ImportWindow = components["schemas"]["StartBackfillRequest"]["window"];
 const meta: Meta<typeof ImportWindowPicker> = {
-  title: "Settings/Connections/Import window",
+  title: "Settings/You/Connections/Import window",
   component: ImportWindowPicker,
 };
 export default meta;
@@ -44,7 +44,7 @@ export const TenYearsDark: Story = { ...TenYears, globals: { theme: "dark" } };
 // spread; nothing is keyed on it.
 const openTheList: Story["play"] = async ({ canvasElement }) => {
   await userEvent.click(
-    within(canvasElement).getByRole("combobox", { name: "Import window" }),
+    within(canvasElement).getByRole("combobox", { name: "How far back" }),
   );
   await within(canvasElement.ownerDocument.body).findByRole("option", {
     name: "10 years",

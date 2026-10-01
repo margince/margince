@@ -195,6 +195,16 @@ type Request struct {
 	// stale-context cache hits impossible and the call trace inspectable.
 	ContextScopes      []string
 	ContextFingerprint string
+	// Site names the task's contract site this request is built for, empty for
+	// none. Routing metadata like the two above: the router reads the site's
+	// declared thinking level from it, and refuses a site the task never declares.
+	Site string
+	// ThinkingFloor is the least thinking this request asks for (minimal | low |
+	// medium | high); empty asks for none. The router fills it from the site's
+	// declared level, and each adapter maps it to its own wire as a floor: it
+	// raises a model that thinks less by default and never lowers one that
+	// thinks more (docs/reference/ai-thinking.md has the per-provider table).
+	ThinkingFloor string
 	// ContextBytes and ContextTokensEstimate describe only the final delimited
 	// company-context block. They are trace metadata, never provider inputs.
 	ContextBytes          int
@@ -244,6 +254,21 @@ type ToolDef struct {
 	InputSchema []byte // JSON Schema
 }
 
+// SchemaRelaxed, SchemaUnenforced and SchemaDropped are the values of
+// Response.SchemaDowngrade besides the empty "held as written".
+const (
+	SchemaRelaxed    = "relaxed"
+	SchemaUnenforced = "unenforced"
+	SchemaDropped    = "dropped"
+)
+
+// SchemaDowngrades lists the values Response.SchemaDowngrade may carry, the
+// empty "held as written" first, for a caller that walks them rather than
+// naming each one and missing the next.
+func SchemaDowngrades() []string {
+	return []string{"", SchemaRelaxed, SchemaUnenforced, SchemaDropped}
+}
+
 type Response struct {
 	Text string
 	// InputTokens is the TOTAL prompt tokens billed, cache reads AND cache
@@ -271,6 +296,22 @@ type Response struct {
 	// counted inside InputTokens above, so this is a breakdown, never
 	// additive on its own. 0 when the provider reports none.
 	CacheWriteTokens int
+	// SchemaDowngrade says the request's ResponseSchema was not enforced as
+	// written: SchemaRelaxed when bounds the vendor's decoder cannot hold were
+	// moved into descriptions (the shape is enforced, those bounds are not),
+	// SchemaUnenforced when the whole schema was sent but without the flag that
+	// asks the endpoint to hold to it (an OpenAI-wire `strict: false`), leaving
+	// enforcement to the endpoint rather than the request — OpenAI reads it as
+	// guidance, a vLLM host constrains decoding anyway — SchemaDropped when
+	// the vendor could hold no form of it and the completion was unconstrained.
+	// Empty when the schema went as given or there was none. The caller's
+	// validator checks the whole schema either way; this is how the call record
+	// says which answers generation did not hold.
+	//
+	// A call that failed after its schema was decided carries the same value on
+	// its error, through a `SchemaDowngrade() string` method, so the record of a
+	// failed call says what was sent too.
+	SchemaDowngrade string
 	// ProviderMetadata carries vendor-only outputs namespaced by provider key
 	// (e.g. {"openai":{"response_id":"…"}} for session logging).
 	ProviderMetadata map[string]json.RawMessage
@@ -308,10 +349,33 @@ type Response struct {
 // normalization changes.
 const FinishReasonLength = "length"
 
+// ErrOutputTruncated ends a stream the output ceiling cut off: every chunk
+// before it was generated and billed, and the answer they spell is
+// half-written. It is a stream's spelling of a Response carrying
+// FinishReasonLength — the call succeeded, so a caller that reads it as an
+// outage retries what a briefer request would fix.
+//
+// Port-level so other modules can errors.Is without importing a provider
+// package.
+var ErrOutputTruncated = errors.New("model: the answer was cut off at the output ceiling")
+
 // TokenStream delivers incremental completion tokens; Close releases the
 // underlying connection.
+//
+// How a stream ENDS is part of its answer, because a caller holding the chunks
+// cannot tell a whole answer from a cut one by reading them:
+//
+//   - ok false with a nil error means the provider's own terminal said the
+//     answer finished. Nothing else may end a stream cleanly.
+//   - an error matching ErrOutputTruncated means the output ceiling cut the
+//     answer off after the chunks already delivered.
+//   - an error matching ErrOutputWithheld means the provider declined to
+//     deliver the answer.
+//   - any other error means the stream failed, including a connection that
+//     closed before the provider's terminal arrived.
 type TokenStream interface {
-	// Next returns the next chunk; ok is false when the stream is done.
+	// Next returns the next chunk; ok is false when the stream is done, and
+	// err then says how it ended.
 	Next(ctx context.Context) (chunk string, ok bool, err error)
 	Close() error
 }
@@ -418,9 +482,10 @@ type Info struct {
 
 // The lanes an Info can state. Spelled here rather than imported from the
 // ai module because the port cannot depend on a module, and duplicated
-// deliberately: these are the wire's own two words, and the ai module's Lane
+// deliberately: these are the wire's own words, and the ai module's Lane
 // type is what maps them onto its price sheet.
 const (
 	LaneChat       = "chat"
 	LaneEmbeddings = "embeddings"
+	LaneDecisions  = "decisions"
 )

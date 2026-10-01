@@ -229,6 +229,7 @@ func (r *callRuntime) normalized(rec extension.Record, declared extension.Ingres
 			Subject:         rec.Activity.Subject,
 			Body:            rec.Activity.Body,
 			OccurredAt:      rec.Activity.OccurredAt,
+			DurationSeconds: rec.Activity.DurationSeconds,
 			Direction:       rec.Activity.Direction,
 		},
 		Source:       r.sourceSystem(rec.System),
@@ -263,7 +264,7 @@ func participantsOf(parties []extension.Participant) []connector.MessageParticip
 			Role:          p.Role,
 		})
 	}
-	return connector.CapParticipants(mapped)
+	return connector.CapParticipants(mapped).Participants
 }
 
 // counterpartyOf maps the published counterparty onto the core's and stamps what

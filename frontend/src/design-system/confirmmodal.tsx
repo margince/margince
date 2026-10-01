@@ -5,7 +5,6 @@ import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { Heading } from "./heading";
 import { AutonomyDot } from "./trust";
-import "./confirmmodal.css";
 
 // The shared confirm-dialog chrome: this used to live duplicated,
 // near-identically, inline in the deals.tsx terminal-stage
@@ -104,7 +103,7 @@ export function ConfirmModal({
       returnFocusTo={returnFocusTo}
       initialFocusTo={initialFocusTo}
     >
-      <Heading size="large" id={headingId} className="t-h2 confirm-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {tier && (
           <>
             <AutonomyDot tier={tier} />{" "}

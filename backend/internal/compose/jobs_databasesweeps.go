@@ -35,16 +35,26 @@ import (
 // does not — a projection store, and the brief engine plus the identity service
 // — not because they are gated differently: the gating is the same nothing, and
 // that is why they belong here rather than behind a condition of their own.
-func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig) {
+func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig, reportingEnabled bool) {
+	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now, enabled: reportingEnabled})
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{pool: pool, corrector: NewCloseDateCorrector(pool, log)})
 	addDeclaredWorker[FollowUpReconcileArgs](reg, &followUpReconcileWorker{pool: pool, reconciler: NewFollowUpReconciler(pool, log)})
-	addDeclaredWorker[AssuranceSweepArgs](reg, &assuranceSweepWorker{
+	assuranceSweep := &assuranceSweepWorker{
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
 		activities: activities.NewStore(InstallationDB(pool)),
-	})
+	}
+	addDeclaredWorker[AssuranceSweepArgs](reg, assuranceSweep)
+	// The pass a human asked for runs the SAME worker, minus the enrolment gate
+	// the nightly one applies. Sharing the instance rather than building a
+	// second is the point: a check somebody pressed and a check the calendar
+	// fired must not be able to differ in what they do.
+	addDeclaredWorker[AssuranceRunArgs](reg, &assuranceRunWorker{sweep: assuranceSweep})
 	addDeclaredWorker[ForecastSnapshotSweepArgs](reg, &forecastSnapshotSweepWorker{
-		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
+		reportingEnabled: reportingEnabled,
+		pool:             pool, now: func() time.Time { return time.Now().UTC() }, log: log,
 	})
+	addDeclaredWorker[RiskVerdictSweepArgs](reg, newRiskVerdictSweepWorker(
+		pool, func() time.Time { return time.Now().UTC() }, log))
 	addDeclaredWorker[TimeScanArgs](reg, &timeScanWorker{pool: pool, log: log})
 	addDeclaredWorker[IdempotencyRetentionArgs](reg, &idempotencyRetentionWorker{
 		pool: pool, sweeper: NewIdempotencyRetentionSweeper(pool, log),

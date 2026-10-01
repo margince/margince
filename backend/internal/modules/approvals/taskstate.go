@@ -137,12 +137,12 @@ func (s *Service) ProposedChange(ctx context.Context, id ids.ApprovalID) (json.R
 // agent's to take back — and a caller that reported "withdrawn" either way
 // would tell its user the proposal was gone while it sat decided in the inbox.
 func (s *Service) Withdraw(ctx context.Context, id ids.ApprovalID, reason string) (retracted bool, err error) {
-	passport, err := stagingPassport(ctx)
+	actor, err := stagingAgent(ctx)
 	if err != nil {
 		return false, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := ownProposal(ctx, tx, id, passport); err != nil {
+		if _, err := ownProposal(ctx, tx, id, actor); err != nil {
 			return err
 		}
 		var wErr error
@@ -157,12 +157,12 @@ func (s *Service) Withdraw(ctx context.Context, id ids.ApprovalID, reason string
 
 // readOwnProposal runs read over the calling passport's own staged proposal.
 func (s *Service) readOwnProposal(ctx context.Context, id ids.ApprovalID, read func(row)) error {
-	passport, err := stagingPassport(ctx)
+	actor, err := stagingAgent(ctx)
 	if err != nil {
 		return err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		a, err := ownProposal(ctx, tx, id, passport)
+		a, err := ownProposal(ctx, tx, id, actor)
 		if err != nil {
 			return err
 		}
@@ -175,32 +175,32 @@ func (s *Service) readOwnProposal(ctx context.Context, id ids.ApprovalID, read f
 	return nil
 }
 
-// ownProposal fetches an approval only if THIS passport staged it.
+// ownProposal fetches an approval only if THIS agent staged it.
 //
-// The nil check is not belt-and-braces: passport_id is nullable, and a proposal
-// staged by a human carries none. Comparing a non-nil caller against a nil
-// column has to answer "not yours" rather than dereferencing it.
-func ownProposal(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, passport ids.PassportID) (row, error) {
+// sameAgent rather than passport equality, so a poll survives the caller's own
+// token rotation: an agent that refreshes mid-wait answers to a new passport id
+// and would otherwise be told its own proposal does not exist.
+func ownProposal(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, p principal.Principal) (row, error) {
 	a, err := get(ctx, tx, id)
 	if err != nil {
 		return row{}, err
 	}
-	if a.PassportID == nil || *a.PassportID != passport {
+	if !sameAgent(a, p) {
 		return row{}, apperrors.ErrNotFound
 	}
 	return a, nil
 }
 
-// stagingPassport answers the agent passport a poll is acting under.
+// stagingAgent answers the agent principal a poll is acting under.
 //
-// A ZERO id is refused as hard as a missing principal. principal.Actor answers
-// ok for a zero-value Principal, and a zero passport would compare equal to
-// nothing and therefore reach the not-found answer anyway — but by accident.
-// Saying so here makes the refusal the rule rather than a consequence.
-func stagingPassport(ctx context.Context) (ids.PassportID, error) {
+// A ZERO passport is refused as hard as a missing principal. principal.Actor
+// answers ok for a zero-value Principal, and a zero passport would match nothing
+// and therefore reach the not-found answer anyway — but by accident. Saying so
+// here makes the refusal the rule rather than a consequence.
+func stagingAgent(ctx context.Context) (principal.Principal, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.PassportID.IsZero() {
-		return ids.PassportID{}, errors.New("crmapprovals: only an agent passport may poll its own staged proposal")
+		return principal.Principal{}, errors.New("crmapprovals: only an agent passport may poll its own staged proposal")
 	}
-	return ids.From[ids.PassportKind](actor.PassportID), nil
+	return actor, nil
 }

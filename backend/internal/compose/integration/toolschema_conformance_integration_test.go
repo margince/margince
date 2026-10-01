@@ -89,6 +89,10 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		`{"record_type":"contact","fields":{"full_name":"To Be Archived"}}`)
 	duplicate := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"contact","fields":{"full_name":"Schema Conformance (dup)"}}`)
+	handable := createThroughTheToolSurface(ctx, t, registry,
+		`{"record_type":"contact","fields":{"full_name":"To Be Handed On"}}`)
+	handableItems := `[{"id":"` + handable.String() + `","version":` +
+		e.WsScalar(t, `SELECT version::text FROM contact WHERE id = $1`, handable) + `}]`
 	project := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"project","fields":{"name":"Conformance project","company_id":"`+
 			company.String()+`"}}`)
@@ -118,8 +122,14 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	// deal write as a side effect of checking a schema.
 	waiting := stageOneProposal(ctx, t, e, deal)
 
+	// A saved run for search_report_evidence to search, saved through the tool
+	// that hands a caller one.
+	run := savedRunThroughTheToolSurface(ctx, t, registry,
+		`{"entity":"activities-by-kind","group_by":["kind"],"measures":[{"fn":"count"}],"save":true}`)
+
 	calls := []struct{ tool, args string }{
 		{"list_pipelines", `{}`},
+		{"read_reporting", `{"mode":"catalog"}`},
 		{"read_brief", `{}`},
 		// The night writing back onto the morning it just read. The narrative
 		// is the run-level half and the item names one the snapshot above
@@ -149,13 +159,6 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// there is nothing for a caller to narrow by — and the empty object is
 		// the shape the schema declares.
 		{"list_channel_providers", `{}`},
-		// No arguments, and there can be none: the schema declares an empty
-		// object and forbids every other member, so the second call its
-		// neighbours carry is impossible rather than merely redundant. It is
-		// also the one tool here that reads nothing off its context, so the
-		// seal supplies freshness, evidence and warnings unaided — an absent
-		// one would show here first.
-		{"check_location_support", `{}`},
 		{"search_records", `{"q":"Conformance"}`},
 		{"search_records", `{"q":"Conformance","record_type":"contact","limit":5}`},
 		// A query that matches nothing: the empty answer has to keep the shape
@@ -191,6 +194,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// report" on a page that was in fact degraded.
 		{"search_context", `{"query":"Conformance","record_types":["contact"]}`},
 		{"search_context", `{"query":"nothing here matches this"}`},
+		// The whole run and one cell of it. Too few activities clear the floor
+		// here, so the withheld answer, with its refused prevalence, is the
+		// shape this pins; the evidence suite holds the populated one.
+		{"search_report_evidence", `{"run_id":"` + run.String() + `","query":"relinked"}`},
+		{"search_report_evidence", `{"run_id":"` + run.String() + `","cell":["note"],"query":"relinked"}`},
 		// A payload that resolves and one that resolves to nothing. The second is
 		// the answer a caller acts on by CREATING a record, so its shape is the
 		// one a mis-read costs the most.
@@ -256,6 +264,12 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// the table. Its declared shape is another guaranteed subset, so the
 		// real handler is the only thing that can say whether it holds.
 		{"demote_lead", `{"lead_id":"` + promotable.String() + `","reason":"promoted by mistake"}`},
+		// Preview first, then the change it previewed: both answer the one
+		// declared shape, each with its own members.
+		{"bulk_update_records", `{"mode":"preview","record_type":"contact","verb":"reassign_owner","owner_id":"` +
+			e.Rep2.String() + `","items":` + handableItems + `}`},
+		{"bulk_update_records", `{"mode":"execute","record_type":"contact","verb":"reassign_owner","owner_id":"` +
+			e.Rep2.String() + `","items":` + handableItems + `}`},
 		{"archive_record", `{"record_type":"contact","id":"` + spare.String() + `"}`},
 		{"merge_records", `{"record_type":"contact","source_id":"` + duplicate.String() +
 			`","target_id":"` + contact.String() + `"}`},
@@ -344,6 +358,10 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 // listed here and then made reachable fails as loudly as one that was never
 // covered, so the list cannot quietly outlive its reason.
 var unreachableInThisLane = gatekit.Waive(map[string]string{
+	"read_lists": "needs lists switched on (lists.enabled), which this lane's registry is not composed with; " +
+		"TestAUserAndTheirAgentReadOneListTheSameWay (lists_http_integration_test.go) calls it through the served MCP surface and holds its answer to its schema",
+	"change_lists": "needs lists switched on (lists.enabled), which this lane's registry is not composed with; " +
+		"TestAUserAndTheirAgentReadOneListTheSameWay (lists_http_integration_test.go) calls it through the served MCP surface and holds its answer to its schema",
 	"preview_import": "needs an object store to put the source file in; this lane composes none, " +
 		"so the call would exercise the refusal rather than the handler",
 	"read_import_run": "needs a seat holding import_run.read, which this lane's seat does not " +
@@ -352,6 +370,7 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"read_import_report":   "needs a run that has been dry-run, which needs the object store above",
 	"commit_import":        "confirm-first, and needs the object store above to reach a committable run",
 	"book_meeting":         "needs a live calendar provider",
+	"invite_meeting":       "needs a writable calendar registry, working hours and a booking vault; this lane composes an empty SendPath",
 	"send_email":           "needs an outbound mail provider",
 	"send_company_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",
 	"send_message":         "needs an outbound channel provider",
@@ -415,7 +434,7 @@ func oneFinishedInputCheck(ctx context.Context, t *testing.T, e *Env) {
 	store := assurance.NewStore(compose.InstallationDB(e.Pool))
 	asOf := time.Now().UTC()
 	if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		run, err := store.StartRun(ctx, tx, asOf)
+		run, err := store.StartRun(ctx, tx, asOf, nil)
 		if err != nil {
 			return err
 		}
@@ -516,6 +535,25 @@ func createThroughTheToolSurface(ctx context.Context, t *testing.T, registry *ag
 		t.Fatalf("unreadable create_record answer %s: %v", out, err)
 	}
 	return created.Data.ID
+}
+
+// savedRunThroughTheToolSurface saves one analytics answer through
+// run_analytics_query and returns the run id it answered with.
+func savedRunThroughTheToolSurface(ctx context.Context, t *testing.T, registry *agents.Registry, args string) ids.UUID {
+	t.Helper()
+	out, err := registry.Invoke(ctx, "run_analytics_query", json.RawMessage(args))
+	if err != nil {
+		t.Fatalf("run_analytics_query(%s): %v", args, err)
+	}
+	var saved struct {
+		Data struct {
+			RunID ids.UUID `json:"run_id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(out, &saved); err != nil || saved.Data.RunID == (ids.UUID{}) {
+		t.Fatalf("run_analytics_query answered no run id: %s (%v)", out, err)
+	}
+	return saved.Data.RunID
 }
 
 // coinTagThroughTheToolSurface creates one tag through create_tag and returns

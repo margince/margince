@@ -86,8 +86,7 @@ func tagLinkFor(entity string) storekit.Field {
 		Expr:       "tg.tag_id",
 		Type:       storekit.FieldID,
 		References: storekit.RefTag,
-		Link: "EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = '" + entity +
-			"' AND tg.entity_id = t.id AND %s)",
+		Link:       storekit.TagLinkTemplate(entity),
 	}
 }
 
@@ -234,11 +233,11 @@ var segmentEngines = map[string]storekit.Query{
 	typeContact: {
 		Table:     typeContact,
 		BaseWhere: whereArchivedNull,
-		Fields: map[string]storekit.Field{
+		Fields: withFields(standardFields[typeContact], map[string]storekit.Field{
 			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField: ownerTeamField,
 			tagFilterField:   tagLinkFor(typeContact),
-		},
+		}),
 	},
 	typeCompany: {
 		Table: typeCompany,
@@ -248,7 +247,7 @@ var segmentEngines = map[string]storekit.Query{
 		// than as a filterable leaf, so no segment can opt back into it and no
 		// export built on one can carry it.
 		BaseWhere: whereArchivedNull + " AND NOT t.is_anchor",
-		Fields: map[string]storekit.Field{
+		Fields: withFields(standardFields[typeCompany], map[string]storekit.Field{
 			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField: ownerTeamField,
 			"industry":       {Expr: "t.industry", Type: storekit.FieldText},
@@ -272,12 +271,12 @@ var segmentEngines = map[string]storekit.Query{
 			"hosting_provider": hostingProviderField,
 			"operated_service": operatedServiceField,
 			"technology":       technologyField,
-		},
+		}),
 	},
 	"deal": {
 		Table:     "deal",
 		BaseWhere: whereArchivedNull,
-		Fields: map[string]storekit.Field{
+		Fields: withFields(standardFields[typeDeal], map[string]storekit.Field{
 			"pipeline_id":        {Expr: "t.pipeline_id", Type: storekit.FieldID, References: storekit.RefPipeline},
 			"stage_id":           {Expr: "t.stage_id", Type: storekit.FieldID, References: storekit.RefStage},
 			ownerIDField:         {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
@@ -300,18 +299,18 @@ var segmentEngines = map[string]storekit.Query{
 			"company_industry":  customerField("industry", storekit.FieldText),
 			"company_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
 			"company_lifecycle": customerField("lifecycle", storekit.FieldPicklist, lifecycleValues...),
-		},
+		}),
 	},
 	"lead": {
 		Table:     "lead",
 		BaseWhere: whereArchivedNull,
-		Fields: map[string]storekit.Field{
+		Fields: withFields(standardFields[typeLead], map[string]storekit.Field{
 			"status":                {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
 			ownerIDField:            {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField:        ownerTeamField,
 			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldText},
 			tagFilterField:          tagLinkFor("lead"),
-		},
+		}),
 	},
 	projectEntity: {
 		Table:     projectEntity,
@@ -372,7 +371,9 @@ func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Qu
 	for name, field := range core.Fields {
 		merged.Fields[name] = field
 	}
+	s.bindDealAmount(resource, merged.Fields)
 	if s.catalog == nil {
+		withholdFromCaller(ctx, resource, merged.Fields)
 		return merged, true, nil
 	}
 	// Every resource that reaches this point owns a segment engine, and
@@ -400,6 +401,7 @@ func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Qu
 		}
 		merged.Fields[column.Name] = field
 	}
+	withholdFromCaller(ctx, resource, merged.Fields)
 	return merged, true, nil
 }
 
@@ -449,7 +451,8 @@ func customField(column fieldcatalog.Column) (storekit.Field, bool) {
 		// Straight from the catalogue, which owns them for the same reason it owns
 		// labels: they are per-workspace admin state. Empty for every non-picklist
 		// type, which is what the column itself reports.
-		Options: column.Options,
+		Options:  column.Options,
+		Currency: column.Currency,
 	}, true
 }
 
@@ -461,6 +464,12 @@ func customField(column fieldcatalog.Column) (storekit.Field, bool) {
 // export or a membership read, where the caller sent only an id and a field
 // error would tell them to fix something they never wrote.
 var errNotAFilterTree = errors.New("not a valid filter tree")
+
+// PredicateFromDefinition decodes a filter tree a caller sent into the
+// canonical predicate, refusing one that is not a tree.
+func PredicateFromDefinition(def map[string]any) (storekit.Predicate, error) {
+	return predicateFromDefinition(def)
+}
 
 // predicateFromDefinition decodes a stored filter tree jsonb into the
 // canonical predicate. The stored value IS the tree (and/or/field/op/value) —

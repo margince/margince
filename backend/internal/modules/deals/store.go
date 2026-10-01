@@ -59,6 +59,12 @@ type Store struct {
 	// the module that owns the project.
 	ensureProjectAttachable EnsureProjectAttachable
 	startDeliveryForWonDeal StartDeliveryForWonDeal
+
+	// followOwner hands pending proposals to a deal's new owner (ownerfollow.go).
+	followOwner FollowOwner
+
+	// suggestionEffects are an accepted suggestion's writes outside this module.
+	suggestionEffects SuggestionEffects
 }
 
 // InstallationValue resolves ONE installation-identity value inside a
@@ -100,6 +106,9 @@ type Installation struct {
 	// partner programme. `contacts` owns that table, so the edge is injected
 	// here rather than read across the module boundary (ADR-0054).
 	EnsurePartner EnsurePartner
+	// FollowOwner hands a deal's pending proposals to its new owner, in the
+	// transaction that reassigns it (ownerfollow.go).
+	FollowOwner FollowOwner
 }
 
 // EnsurePartner answers whether a company may be named as a deal's
@@ -116,6 +125,7 @@ func NewStore(db *database.DB, inst Installation) *Store {
 		stampCorrespondence:     inst.StampCorrespondence,
 		ensureProjectAttachable: inst.EnsureProjectAttachable,
 		startDeliveryForWonDeal: inst.StartDeliveryForWonDeal,
+		followOwner:             inst.FollowOwner,
 	}
 }
 
@@ -145,6 +155,9 @@ func (i Installation) orRefusing() Installation {
 	}
 	if i.EnsurePartner == nil {
 		i.EnsurePartner = refusingEnsurePartner()
+	}
+	if i.FollowOwner == nil {
+		i.FollowOwner = refusingFollowOwner()
 	}
 	return i
 }

@@ -29,7 +29,8 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { emailDetailKey } from "../design-system/emaildetail";
 import { ErrorLine } from "../design-system/errorline";
 import { VisibilityLine } from "../design-system/visibility";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   AUDIENCE_CHOICES,
@@ -180,6 +181,8 @@ function ThreadContribution({
   presentation,
 }: Readonly<{ presentation: EmailPresentation }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const [held, setHeld] = useState<number | null>(null);
   const shared = presentation.access.audience === "workspace";
   const threadKey = presentation.thread_key;
@@ -223,7 +226,9 @@ function ThreadContribution({
       )}
       {held !== null && (
         <span className="t-caption">
-          {t("compose.threadStillHeld").replace("{count}", String(held))}
+          {plural("compose.threadStillHeld", held, {
+            count: formatNumber(held, locale),
+          })}
         </span>
       )}
       <ErrorLine inline error={mutation.error} />

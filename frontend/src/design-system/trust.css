@@ -153,20 +153,6 @@ button.evidence-chip:hover {
   flex-wrap: wrap;
 }
 
-.staged-edit {
-  font-family: var(--fontFamilyBody);
-  color: var(--textPrimary);
-  background: var(--bgElevated);
-  border: 1px solid var(--accent);
-  border-radius: var(--r-sm);
-  padding: 6px 10px;
-  /* The same floor every other field takes. It sits in a flex row beside a
-     Button that has one, and without it the two ends of that row were
-     different heights — which reads as a field that has not finished loading
-     rather than as a field beside its verb. */
-  min-block-size: var(--controlHeight);
-}
-
 .field-diff {
   display: inline-flex;
   align-items: center;
@@ -234,10 +220,6 @@ button.evidence-chip:hover {
  * and the one thing a keyboard reader must be able to do on this surface is know
  * which claim they are about to open.
  *
- * `.staged-edit` is a bare `<input>` with no `.input` class, so it inherits
- * neither the field's boundary nor its glow: it takes the field's ring here
- * rather than the control ring, because it IS a field.
- *
  * `.field-diff-long` is not a control at all — it is a scroll region made an
  * explicit tab stop so a long diff can be read without a mouse. A tab stop that
  * paints nothing is the same defect as a button that paints nothing.
@@ -249,17 +231,6 @@ button.evidence-chip:hover {
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
-.staged-edit:focus-visible {
-  /* The forced-colors ring rather than `outline: none`, which is what this
-     token exists for: forced-colors mode discards every box-shadow, so
-     suppressing the outline outright would leave this input — the one a reader
-     types a corrected value into before approving it — with no focus indicator
-     at all for the readers who most need one. */
-  outline: var(--focus-ring-forced);
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
-}
-
 /* An evidence chip is how a reader opens a provenance claim; hovering one moved
    its boundary and its text in one frame, on a surface where several sit in a
    row and the pointer crosses all of them on the way to the one they want. */

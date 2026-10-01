@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Markdown, type MarkdownHighlightOutcome } from "./markdown";
 
 const meta: Meta<typeof Markdown> = {
-  title: "Design System/Markdown",
+  title: "Components/Text and data display/Markdown",
   component: Markdown,
   parameters: { layout: "padded" },
 };

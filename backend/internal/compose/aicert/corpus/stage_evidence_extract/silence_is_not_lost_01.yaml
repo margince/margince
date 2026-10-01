@@ -18,16 +18,7 @@ fixture:
 expect:
   outcome: abstained
   answer: []
-  rubric: >
-    Neither criterion is mentioned. Silence about a criterion is not evidence
-    either way, and the correct answer is to omit both — the empty list scores
-    highest. The trap is reading a quiet buyer as a negative signal: claiming
-    security_review_cleared met=false, or economic_buyer_identified met=false,
-    scores at the floor. met=false means the text SAYS the thing has not
-    happened, and nothing here says anything about either. A reader that turns
-    a delay into a stated fact manufactures evidence out of an absence, which
-    is worse than reporting nothing because it looks like a finding.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The right answer is no claim, and the check fails any claim the reply makes,
+    grounded or not. The rubric only ranked the ways of making one.

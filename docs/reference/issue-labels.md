@@ -59,10 +59,14 @@ it. Leaving one off puts that issue in somebody's queue:
 
 - `status: in progress` — somebody is working on it right now. It goes on
   together with the assignee when the work starts, and comes off when the last
-  assignee leaves — one label serves however many hold the issue, so a session
-  dropping its own assignment does not take it with them. Both signals are set
-  on purpose: the assignee is what a reader sees in the issue list, the label is
-  what a search can exclude, and a comment saying "I am on this" is neither.
+  assignee leaves or the issue closes. `issue-closed.yml` does the latter on its
+  own: at once on close, and by the next daily sweep that runs for a close no
+  event reports (a workflow's own) or a failed run. One label serves however
+  many hold the issue, so a session dropping its own assignment does not take
+  it with them.
+  Both signals are set on purpose: the assignee is what a reader sees in the
+  issue list, the label is what a search can exclude, and a comment saying "I
+  am on this" is neither.
   Checking before you start, claiming, taking one over and releasing it:
   [../how-to/work-on-an-issue.md](../how-to/work-on-an-issue.md).
 - `status: needs-decision` — unactionable until a human rules, whether the ruling

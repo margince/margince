@@ -411,10 +411,14 @@ type DealFigures struct {
 	CloseDateProvisional *bool
 	ForecastCategory     *string
 	StageID              ids.UUID
-	OwnerID              ids.UUID
-	AmountMinor          *int64
-	Currency             string
-	ExpectedCloseDate    *time.Time
+	// StageWinProbability is the probability recorded on the deal's stage: a
+	// fact beside the deal's own money, never a weighting of it. A pointer
+	// because 0 is a real score a lost stage carries, not an absence.
+	StageWinProbability *int
+	OwnerID             ids.UUID
+	AmountMinor         *int64
+	Currency            string
+	ExpectedCloseDate   *time.Time
 	// CloseOverdue is the SAME calendar-date, workspace-zone verdict
 	// deals.CloseIsOverdue gives the at-risk lane's identical deal. Meaningless
 	// where ExpectedCloseDate is nil — a deal with no close date is not late by

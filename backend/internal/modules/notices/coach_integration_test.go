@@ -27,12 +27,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// asRole is asUser with role keys, which is what the coaching gate reads.
-func (e *noticeEnv) asRole(u ids.UserID, roles ...string) context.Context {
+// asSeat is asUser holding, or not holding, the team_lead grant the coaching
+// gate reads.
+func (e *noticeEnv) asSeat(u ids.UserID, leadsTeams bool) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + u.String(), UserID: u.UUID,
-		Permissions: principal.Permissions{RoleKeys: roles},
+		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
+			"team_lead": {Create: leadsTeams, Read: leadsTeams},
+		}},
 	})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
@@ -51,7 +54,7 @@ func TestALeadCoachesATeammateAndTheNoticeIsTheirs(t *testing.T) {
 	lead, rep := e.other, e.recipient
 
 	notice, err := e.store.RaiseCoachNotice(
-		e.asRole(lead, "manager"), teammatesSaying(true), rep,
+		e.asSeat(lead, true), teammatesSaying(true), rep,
 		crmcontracts.NoticeKindCoachReplyAging, "  Kirsten has been waiting since Tuesday.  ")
 	if err != nil {
 		t.Fatalf("a Team Lead coaching their teammate: %v", err)
@@ -80,7 +83,7 @@ func TestALeadCoachesATeammateAndTheNoticeIsTheirs(t *testing.T) {
 	if len(theirs) != 1 || theirs[0].ID != notice.ID {
 		t.Fatalf("the recipient holds %d notices, wanted the one raised for them", len(theirs))
 	}
-	coachs, err := e.store.UnreadFor(e.asRole(lead, "manager"), 10)
+	coachs, err := e.store.UnreadFor(e.asSeat(lead, true), 10)
 	if err != nil {
 		t.Fatalf("the coach reading their own notices: %v", err)
 	}
@@ -95,7 +98,7 @@ func TestARepDoesNotCoachEvenATeammate(t *testing.T) {
 	e := setupNotices(t)
 
 	_, err := e.store.RaiseCoachNotice(
-		e.asRole(e.other, "rep"), teammatesSaying(true), e.recipient,
+		e.asSeat(e.other, false), teammatesSaying(true), e.recipient,
 		crmcontracts.NoticeKindCoachGeneral, "a word")
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a rep coaching a teammate got %v, wanted a refusal", err)
@@ -104,7 +107,7 @@ func TestARepDoesNotCoachEvenATeammate(t *testing.T) {
 	// And the admit case beside it, over the SAME membership answer, so the
 	// refusal above is about the role and nothing else.
 	if _, err := e.store.RaiseCoachNotice(
-		e.asRole(e.other, "manager"), teammatesSaying(true), e.recipient,
+		e.asSeat(e.other, true), teammatesSaying(true), e.recipient,
 		crmcontracts.NoticeKindCoachGeneral, "a word"); err != nil {
 		t.Fatalf("a Team Lead over the same membership answer was refused: %v", err)
 	}
@@ -116,7 +119,7 @@ func TestALeadDoesNotCoachSomebodyOnAnotherTeam(t *testing.T) {
 	e := setupNotices(t)
 
 	_, err := e.store.RaiseCoachNotice(
-		e.asRole(e.other, "manager"), teammatesSaying(false), e.recipient,
+		e.asSeat(e.other, true), teammatesSaying(false), e.recipient,
 		crmcontracts.NoticeKindCoachGeneral, "a word")
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a lead coaching a stranger got %v, wanted a refusal", err)
@@ -145,7 +148,7 @@ func TestASystemPassDoesNotCoach(t *testing.T) {
 // turn away.
 func TestARefusedCallerCannotTellAValidRequestFromAnInvalidOne(t *testing.T) {
 	e := setupNotices(t)
-	rep := e.asRole(e.other, "rep")
+	rep := e.asSeat(e.other, false)
 
 	_, valid := e.store.RaiseCoachNotice(
 		rep, teammatesSaying(true), e.recipient, crmcontracts.NoticeKindCoachGeneral, "a word")
@@ -172,7 +175,7 @@ func TestAnUnknownKindIsRefusedBeforeAnythingIsWritten(t *testing.T) {
 	e := setupNotices(t)
 
 	_, err := e.store.RaiseCoachNotice(
-		e.asRole(e.other, "manager"), teammatesSaying(true), e.recipient,
+		e.asSeat(e.other, true), teammatesSaying(true), e.recipient,
 		crmcontracts.NoticeKind("automation"), "a word")
 	var parse *values.ParseError
 	if !errors.As(err, &parse) || parse.Field != "kind" {
@@ -196,7 +199,7 @@ func TestAnOversizeNoteIsRefusedRatherThanTrimmed(t *testing.T) {
 	e := setupNotices(t)
 
 	_, err := e.store.RaiseCoachNotice(
-		e.asRole(e.other, "manager"), teammatesSaying(true), e.recipient,
+		e.asSeat(e.other, true), teammatesSaying(true), e.recipient,
 		crmcontracts.NoticeKindCoachGeneral, strings.Repeat("x", noteBound+1))
 	var parse *values.ParseError
 	if !errors.As(err, &parse) || parse.Field != "note" {
@@ -206,7 +209,7 @@ func TestAnOversizeNoteIsRefusedRatherThanTrimmed(t *testing.T) {
 	// The ceiling itself is admitted, or the bound is off by one in the
 	// direction nobody notices.
 	if _, err := e.store.RaiseCoachNotice(
-		e.asRole(e.other, "manager"), teammatesSaying(true), e.recipient,
+		e.asSeat(e.other, true), teammatesSaying(true), e.recipient,
 		crmcontracts.NoticeKindCoachGeneral, strings.Repeat("x", noteBound)); err != nil {
 		t.Fatalf("a note exactly at the ceiling was refused: %v", err)
 	}
@@ -218,7 +221,7 @@ func TestCoachingYourselfIsRefused(t *testing.T) {
 	e := setupNotices(t)
 
 	_, err := e.store.RaiseCoachNotice(
-		e.asRole(e.other, "manager"), teammatesSaying(true), e.other,
+		e.asSeat(e.other, true), teammatesSaying(true), e.other,
 		crmcontracts.NoticeKindCoachGeneral, "a word")
 	var parse *values.ParseError
 	if !errors.As(err, &parse) || parse.Field != "recipient_user_id" {
@@ -232,7 +235,7 @@ func TestANoticeWithNoNoteStillSaysWhatItIsAbout(t *testing.T) {
 	e := setupNotices(t)
 
 	notice, err := e.store.RaiseCoachNotice(
-		e.asRole(e.other, "manager"), teammatesSaying(true), e.recipient,
+		e.asSeat(e.other, true), teammatesSaying(true), e.recipient,
 		crmcontracts.NoticeKindCoachReviewBacklog, "")
 	if err != nil {
 		t.Fatalf("raising a notice with no note: %v", err)

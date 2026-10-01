@@ -18,6 +18,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -325,7 +326,7 @@ func TestRestoringAFieldPutsBackWhatWasReplacedAndRefusesWhenTheRecordMovedOn(t 
 		"BEGIN:VCARD\nFN:Rita Undo\nTITLE:VP Finance\n"+
 			"EMAIL;TYPE=WORK:rita@undo.example\nEND:VCARD\n")
 
-	if err := e.store.RestoreProfileField(ctx, contactID, fieldTitle); err != nil {
+	if err := e.store.RestoreProfileField(ctx, contactID, fieldTitle, ""); err != nil {
 		t.Fatalf("restore: %v", err)
 	}
 	after, err := e.store.GetContact(ctx, contactID, storekit.LiveOnly)
@@ -340,7 +341,7 @@ func TestRestoringAFieldPutsBackWhatWasReplacedAndRefusesWhenTheRecordMovedOn(t 
 	if got := supersededFieldValue(ctx, t, e, contactID, fieldTitle); got != "" {
 		t.Errorf("superseded value = %q after the undo, want it cleared", got)
 	}
-	if err := e.store.RestoreProfileField(ctx, contactID, fieldTitle); !errors.Is(err, apperrors.ErrNotFound) {
+	if err := e.store.RestoreProfileField(ctx, contactID, fieldTitle, ""); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("second undo = %v, want ErrNotFound: there is nothing left to restore", err)
 	}
 
@@ -355,7 +356,7 @@ func TestRestoringAFieldPutsBackWhatWasReplacedAndRefusesWhenTheRecordMovedOn(t 
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.store.RestoreProfileField(ctx, contactID, fieldTitle); !errors.Is(err, apperrors.ErrConflict) {
+	if err := e.store.RestoreProfileField(ctx, contactID, fieldTitle, ""); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("undo over a since-typed value = %v, want ErrConflict", err)
 	}
 	moved, err := e.store.GetContact(ctx, contactID, storekit.LiveOnly)
@@ -473,7 +474,7 @@ func TestUndoingAReplacedNumberBringsBackTheRowAReaderDials(t *testing.T) {
 		t.Fatalf("live numbers = %v, want only the replacement before the undo", live)
 	}
 
-	if err := e.store.RestoreProfileField(ctx, contactID, fieldPhone); err != nil {
+	if err := e.store.RestoreProfileField(ctx, contactID, fieldPhone, ""); err != nil {
 		t.Fatalf("restore: %v", err)
 	}
 	live := livePhones(ctx, t, e, contactID)
@@ -481,6 +482,33 @@ func TestUndoingAReplacedNumberBringsBackTheRowAReaderDials(t *testing.T) {
 		t.Errorf("live numbers = %v after the undo, want the old number back and the "+
 			"replacement retired — an undo that leaves the record dialling the new one undid nothing", live)
 	}
+}
+
+// phoneEvidence reads the phone evidence rows as number to the number it
+// replaced, empty where it replaced none.
+func phoneEvidence(ctx context.Context, t *testing.T, e *dedupeEnv, contactID ids.ContactID) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT value_key, coalesce(superseded_value, '') FROM contact_profile_field
+			 WHERE contact_id = $1 AND field = 'phone'`, contactID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var number, replaced string
+			if err := rows.Scan(&number, &replaced); err != nil {
+				return err
+			}
+			out[number] = replaced
+		}
+		return rows.Err()
+	}); err != nil {
+		t.Fatalf("reading the phone evidence: %v", err)
+	}
+	return out
 }
 
 // livePhones reads the numbers a reader would be offered, in position order.
@@ -564,13 +592,11 @@ func TestACardCannotDateItselfIntoTheFuture(t *testing.T) {
 	}
 }
 
-// A card listing several numbers points the undo at the one that REPLACED
-// something, not at whichever it happened to list first.
+// A card listing several numbers records each, and the undo belongs to the one
+// that REPLACED something, not to whichever the card happened to list first.
 //
-// The sidecar holds one row per field and the undo reads the value out of it,
-// so a card stating a new mobile and a replacing work number would otherwise
-// point the undo at the mobile — and the reader clicking Undo would revive a
-// number they were not looking at while the mobile stayed put.
+// A reader clicking Undo on the home number would otherwise revive a work
+// number they were not looking at.
 func TestACardWithSeveralNumbersPointsTheUndoAtTheReplacement(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -594,15 +620,17 @@ func TestACardWithSeveralNumbersPointsTheUndoAtTheReplacement(t *testing.T) {
 		"BEGIN:VCARD\nFN:Mila Multi\nTEL;TYPE=HOME:+49 170 3333333\nTEL;TYPE=WORK:+49 30 2222222\n"+
 			"EMAIL;TYPE=WORK:mila@multi.example\nEND:VCARD\n")
 
-	// The evidence line is what the undo reads, so assert it names the number
-	// that replaced one. Without this the test can pass on the restore alone,
-	// which follows superseded_phone_id and would find the right row even when
-	// the line names the wrong number.
-	if got := profileFieldValue(ctx, t, e, contactID, fieldPhone); got != "+49302222222" {
-		t.Errorf("phone evidence line = %q, want the number that REPLACED one — "+
-			"the undo reads its value out of this row", got)
+	// The evidence rows are what the undo reads, so assert the buffer sits on
+	// the number that replaced one. Without this the test can pass on the
+	// restore alone, which follows superseded_phone_id and would find the right
+	// row even when the evidence named the wrong number.
+	if got := phoneEvidence(ctx, t, e, contactID); !maps.Equal(got, map[string]string{
+		"+49302222222": "+49301111111", "+491703333333": "",
+	}) {
+		t.Errorf("phone evidence (number: replaced) = %v, want one row per number and the "+
+			"buffer on the work number that replaced one", got)
 	}
-	if err := e.store.RestoreProfileField(ctx, contactID, fieldPhone); err != nil {
+	if err := e.store.RestoreProfileField(ctx, contactID, fieldPhone, ""); err != nil {
 		t.Fatalf("restore: %v", err)
 	}
 	live := livePhones(ctx, t, e, contactID)

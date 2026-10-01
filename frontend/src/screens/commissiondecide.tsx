@@ -206,7 +206,7 @@ export function CommissionDecision({
         // top of the document without a named target.
         returnFocusTo={() => triggerRef.current}
       >
-        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t(copy.label)}
         </Heading>
         <p className="commissiondecide-confirm">{t(copy.confirm)}</p>

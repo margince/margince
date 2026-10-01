@@ -91,6 +91,7 @@ func (t enrichCompany) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "enrich", Title: "Enrich a company from its website", Version: toolVersionV1,
 		Description: enrichCopy.render(),
+		Instead:     enrichCopy.Instead,
 		// Stays confirm-first, against the general rule that a passport does
 		// what its holder could do unaided. The argument does not reach this
 		// verb: a contact picking a URL in the browser chose it, while here the

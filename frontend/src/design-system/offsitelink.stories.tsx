@@ -8,7 +8,7 @@ import { OffsiteLink } from "./offsitelink";
 // component owns and a call site must not repeat: an address the product may
 // follow becomes a link, and one it may not stays as text with the fact intact.
 const meta: Meta<typeof OffsiteLink> = {
-  title: "Design System/OffsiteLink",
+  title: "Components/Navigation/Offsite link",
   component: OffsiteLink,
   parameters: { layout: "padded" },
 };

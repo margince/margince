@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -27,6 +28,7 @@ function story(
     provider: string;
     configured: boolean;
     env_var: string;
+    optional: boolean;
     credential_kind: "api_key" | "service_account";
   }[],
   allow: GrantSpec = MANAGER,
@@ -35,6 +37,8 @@ function story(
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
       "GET /ai/provider-keys": () => jsonResponse({ providers }),
+      "POST /ai/provider-keys/gemini/test": () =>
+        jsonResponse({ provider: "gemini", ok: true, model_count: 42 }),
     });
     return (
       <StoryProviders>
@@ -48,12 +52,14 @@ const gemini = {
   provider: "gemini",
   configured: true,
   env_var: "GEMINI_API_KEY",
+  optional: false,
   credential_kind: "api_key" as const,
 };
 const anthropic = {
   provider: "anthropic",
   configured: false,
   env_var: "ANTHROPIC_API_KEY",
+  optional: false,
   credential_kind: "api_key" as const,
 };
 // Keyed by a file rather than a paste: its row reads "Service account key
@@ -62,11 +68,20 @@ const vertex = {
   provider: "gemini_vertex",
   configured: true,
   env_var: "GEMINI_VERTEX_SA_JSON",
+  optional: false,
   credential_kind: "service_account" as const,
+};
+// A self-hosted decision server needs no key, so this one is sent when held.
+const jevCompatible = {
+  provider: "jev_compatible",
+  configured: false,
+  env_var: "JEV_COMPATIBLE_API_KEY",
+  optional: true,
+  credential_kind: "api_key" as const,
 };
 
 const meta: Meta<typeof AiProviderKeysCard> = {
-  title: "Settings/AI/Models and routing/Model provider keys",
+  title: "Settings/AI/AI models/Model provider keys",
   component: AiProviderKeysCard,
 };
 export default meta;
@@ -81,6 +96,12 @@ export const Mixed: Story = { render: story([gemini, anthropic]) };
 // "nothing set yet" and not as an error.
 export const NothingConfigured: Story = {
   render: story([anthropic, { ...gemini, configured: false }]),
+};
+
+// An optional key not held reads as optional, not as a gap: the adapter calls
+// without one, so nothing here is wrong and nothing warns.
+export const OptionalKey: Story = {
+  render: story([gemini, anthropic, jevCompatible]),
 };
 
 // A keyed provider on its own. The row says configured and offers removal; the
@@ -120,4 +141,17 @@ export const ServiceAccount: Story = {
 export const MixedDark: Story = {
   globals: { theme: "dark" },
   render: story([gemini, anthropic]),
+};
+
+// A key tested against its vendor: the answer lands on the row it was asked
+// for, as a count on a pass and as the named reason on a failure.
+export const Tested: Story = {
+  render: story([gemini, anthropic]),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Manage gemini" }),
+    );
+    await userEvent.click(await body.findByRole("button", { name: /^test$/i }));
+  },
 };

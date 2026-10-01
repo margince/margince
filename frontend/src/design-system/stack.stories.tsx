@@ -6,7 +6,7 @@ import { Button, Card, SectionHeader } from "./atoms";
 import { Row, Stack } from "./stack";
 
 const meta: Meta<typeof Stack> = {
-  title: "Design System/Stack",
+  title: "Components/Primitives/Stack",
   component: Stack,
 };
 export default meta;

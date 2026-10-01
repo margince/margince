@@ -254,14 +254,16 @@ func insertOnce(
 		}
 		return false, fmt.Errorf("bound the project-insert lock wait: %w", err)
 	}
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
+	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
 		id, in.Name, key, in.CompanyID, in.OwnerID,
 		in.Description, in.StartedAt, in.TargetEndDate, in.Source, by,
+		in.SourceSystem,
 	})
+	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
 	_, insertErr := sp.Exec(ctx,
 		`INSERT INTO project (id, name, key, company_id, owner_id,
-		                      description, started_at, target_end_date, source, captured_by`+cfCols+`)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10`+cfHolders+`)`,
+		                      description, started_at, target_end_date, source, captured_by, source_system`+authorCols+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11`+authorHolders+cfHolders+`)`,
 		args...)
 	if insertErr != nil {
 		if rbErr := sp.Rollback(ctx); rbErr != nil {

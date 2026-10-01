@@ -32,6 +32,7 @@ import { ShareAction } from "../share";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
+import { AddToShortlistAction } from "../addtoshortlist";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -254,6 +255,7 @@ export function DealActions({
           recordId={deal.id}
           disabledReasonId={refusedReasonId}
         />
+        <AddToShortlistAction entityType="deal" entityId={deal.id} />
         {/* Reopen answers a CLOSED deal, so an open one has no reason to be
             told about it — absent, not refused. An archived closed deal keeps
             it, refused: the reader came asking whether this can come back. */}

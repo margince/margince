@@ -4,6 +4,7 @@
 package privacy
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -11,6 +12,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -21,12 +24,35 @@ import (
 
 // entityFieldMask names fields whose history is withheld for an entity
 // type, exactly as the live value would be withheld — hiding history and
-// value is one motion, never two mechanisms. Empty until field-level
-// masking ships; the transform applies it to both sides before diffing
-// so a masked field can never leak through an old_value.
+// value is one motion, never two mechanisms. The transform applies it to both
+// sides before diffing, so a masked field cannot leak through an old_value.
 type entityFieldMask map[string]struct{}
 
-var defaultFieldMasks = map[string]entityFieldMask{}
+// withheldHistoryOf is what this caller's role withholds on the entity, and
+// therefore what its history withholds too.
+//
+// It reads the same catalog the live value does. A static table here answered
+// for the build rather than for the reader and was empty, so an amount the
+// deal read withheld was recoverable from the audit diff of any edit that
+// touched it — the mask was one read away from meaning nothing.
+func withheldHistoryOf(ctx context.Context, entityType string) (entityFieldMask, error) {
+	p, err := storekit.Actor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// The unconditioned set: history spans rows and times, and a mask that
+	// lifts where the caller may write today says nothing about the row as it
+	// stood when the change was made.
+	// MaskedHistoryFields, not MaskedFields: a one-to-one extension audits its
+	// images onto the host, so the host's trail serves fields configured under
+	// the extension's own object.
+	withheld := auth.MaskedHistoryFields(p, entityType, false)
+	mask := make(entityFieldMask, len(withheld))
+	for _, field := range withheld {
+		mask[field] = struct{}{}
+	}
+	return mask, nil
+}
 
 // writerBookkeepingKeys names keys an audit image carries that are not fields
 // OF the record: the writing pipeline's own state — which draft it applied

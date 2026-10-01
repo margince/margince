@@ -136,6 +136,80 @@ func TestCompleteCarriesCacheWriteTokens(t *testing.T) {
 	}
 }
 
+// A schema the serving adapter could not send as written is on the call
+// record, so a reply generation did not constrain is not mistaken for one it
+// did.
+func TestTheTraceRecordsTheSchemaDowngradeTheAdapterReported(t *testing.T) {
+	for _, downgrade := range []string{"", model.SchemaRelaxed, model.SchemaUnenforced, model.SchemaDropped} {
+		fcs := &fakeCallStore{}
+		r := assembleRouter(
+			map[Tier]model.Client{TierCheapCloud: stubClient{resp: model.Response{Text: "{}", SchemaDowngrade: downgrade}}},
+			nil, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, fcs,
+			map[Tier]routeMeta{TierCheapCloud: {provider: "anthropic", model: "claude-x"}},
+			false, nil,
+		)
+		if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud}, model.Request{}); err != nil {
+			t.Fatalf("complete: %v", err)
+		}
+		if len(fcs.recorded) != 1 || fcs.recorded[0].SchemaDowngrade != downgrade {
+			t.Fatalf("trace SchemaDowngrade = %+v, want %q", fcs.recorded, downgrade)
+		}
+	}
+}
+
+// A cache hit replays the answer and the downgrade it was generated under
+// together: the replayed answer was held to exactly what the first one was.
+func TestACacheHitRecordsTheDowngradeItsAnswerWasGeneratedUnder(t *testing.T) {
+	fcs := &fakeCallStore{}
+	r := assembleRouter(
+		map[Tier]model.Client{TierCheapCloud: stubClient{resp: model.Response{Text: "{}", SchemaDowngrade: model.SchemaRelaxed}}},
+		nil, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, fcs,
+		map[Tier]routeMeta{TierCheapCloud: {provider: "anthropic", model: "claude-x"}},
+		false, nil,
+	)
+	ctx := wsCtx()
+	for range 2 {
+		if _, _, err := r.serveCompletion(ctx, TaskColdStart, []Tier{TierCheapCloud}, model.Request{}); err != nil {
+			t.Fatalf("complete: %v", err)
+		}
+	}
+	if len(fcs.recorded) != 2 || !fcs.recorded[1].CacheHit {
+		t.Fatalf("want a served call then a cache hit, got %+v", fcs.recorded)
+	}
+	if got := fcs.recorded[1].SchemaDowngrade; got != model.SchemaRelaxed {
+		t.Fatalf("cache hit SchemaDowngrade = %q, want %q", got, model.SchemaRelaxed)
+	}
+}
+
+// A rung that failed after its adapter decided the schema records that
+// decision, both as a rung the walk fell back from and as the terminal row.
+func TestAFailedRungRecordsTheDowngradeItsErrorCarries(t *testing.T) {
+	failWith := func(downgrade string) stubClient {
+		_, err := reportSchemaDowngrade(model.Response{}, errors.New("upstream down"), downgrade, &httpAttempt{began: true})
+		return stubClient{err: err}
+	}
+	fcs := &fakeCallStore{}
+	r := assembleRouter(
+		map[Tier]model.Client{TierCheapCloud: failWith(model.SchemaDropped), TierPremium: failWith(model.SchemaUnenforced)},
+		nil, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, fcs,
+		map[Tier]routeMeta{
+			TierCheapCloud: {provider: "anthropic", model: "claude-x"},
+			TierPremium:    {provider: "openai", model: "gpt-x"},
+		},
+		false, nil,
+	)
+	if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud, TierPremium}, model.Request{}); err == nil {
+		t.Fatal("every rung failed, yet the call was served")
+	}
+	got := map[Tier]string{}
+	for _, call := range fcs.recorded {
+		got[call.Tier] = call.SchemaDowngrade
+	}
+	if got[TierCheapCloud] != model.SchemaDropped || got[TierPremium] != model.SchemaUnenforced {
+		t.Fatalf("recorded downgrades by tier = %v, want cheap_cloud dropped, premium unenforced", got)
+	}
+}
+
 // TestServedIdentityStamping covers the terminals servedIdentity must
 // distinguish: a provider that reports its own served model off the wire
 // (source "response"), the generic OpenAI-compatible wire that only ever
@@ -181,16 +255,37 @@ func TestServedIdentityStamping(t *testing.T) {
 	}
 }
 
-// servedSource must carry exactly one entry per knownProviders: a provider
-// missing from the map silently stamps ServedIdentitySource="" instead of a
-// real trust label, and a stray key can never be reached from a
-// ParseRouting-validated config.
+// A server on the jev_compatible wire may name its own dated snapshot or may
+// hand the requested model back, so each reply is graded by what it says: a
+// name other than the one asked for cannot be a reflection of the request.
+func TestAPerReplyWireIsAReportOnlyWhenItNamesAnotherModel(t *testing.T) {
+	cases := []struct {
+		name, served, wantModel, wantSource string
+	}{
+		{"a dated snapshot is the server's own report", "typesafe/jev-1.13-20260917", "typesafe/jev-1.13-20260917", servedIdentitySourceResponse},
+		{"the requested model handed back is an echo", "typesafe/jev-1.13", "typesafe/jev-1.13", servedIdentitySourceEcho},
+		{"no name at all falls back to the binding", "", "typesafe/jev-1.13", servedIdentitySourceConfigured},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotModel, gotSource := servedIdentity(providerJevCompatible, "typesafe/jev-1.13", tc.served)
+			if gotModel != tc.wantModel || gotSource != tc.wantSource {
+				t.Errorf("servedIdentity = (%q, %q), want (%q, %q)", gotModel, gotSource, tc.wantModel, tc.wantSource)
+			}
+		})
+	}
+}
+
+// servedSource must carry exactly one entry per provider, the decision
+// adapters included: a provider missing from the map silently stamps
+// ServedIdentitySource="" instead of a real trust label, and a stray key can
+// never be reached from a ParseRouting-validated config.
 func TestServedSourceCoversEveryKnownProvider(t *testing.T) {
 	names := make([]string, 0, len(servedSource))
 	for name := range servedSource {
 		names = append(names, name)
 	}
-	assertSetEqual(t, "servedSource", names, knownProviders)
+	assertSetEqual(t, "servedSource", names, providerNames())
 }
 
 func TestCompleteRecordsFailure(t *testing.T) {
@@ -302,7 +397,7 @@ func TestCompleteEmitsSlog(t *testing.T) {
 	r := assembleRouter(
 		map[Tier]model.Client{TierCheapCloud: cheap},
 		NewFakeClient(),
-		ProfileCloudHosted,
+		ProfileEUHosted,
 		meter,
 		DefaultMonthlyTokens,
 		nil, // callStore
@@ -641,7 +736,7 @@ func TestCaptureOffRecordsNoPayload(t *testing.T) {
 // beside this holds that arm).
 func TestABudgetReadFailureIsTracedRatherThanSilent(t *testing.T) {
 	calls := &fakeCallStore{}
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &brokenMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &brokenMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 	r.calls = calls
 	_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
 	if err == nil {
@@ -660,7 +755,7 @@ func TestABudgetReadFailureIsTracedRatherThanSilent(t *testing.T) {
 // reached routing — never as a provider fault.
 func TestAnAnnouncedRequestFailureIsTracedUnderItsOwnSentinel(t *testing.T) {
 	calls := &fakeCallStore{}
-	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &memMeter{}, DefaultMonthlyTokens, ProfileCloudHosted)
+	r := testRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, &memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 	r.calls = calls
 	r.AnnounceRequestFailure(wsContext(t), TaskSummarize, errors.New("company context would not render"))
 	if len(calls.recorded) != 1 {

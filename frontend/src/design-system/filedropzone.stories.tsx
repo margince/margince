@@ -8,7 +8,8 @@ import { LocaleProvider } from "../i18n";
 import { FileDropzone } from "./filedropzone";
 
 const meta: Meta = {
-  title: "Design System/FileDropzone",
+  title: "Components/Forms and input/File dropzone",
+  component: FileDropzone,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

@@ -126,6 +126,12 @@ var predicateEdgeReads = gatekit.Waive(map[string]string{
 // than the disclosure this change fixes: the sweep's correctness depends on
 // seeing every edge, and it runs as the system principal precisely so it does.
 var lifecycleEdgeReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
+	"internal/modules/privacy/reportingredaction.go:redactSubjectReporting":     "Subject erasure must find every copied contribution before destroying the identifying links; source identifiers remain inside the erasure transaction.",
+	"internal/modules/privacy/sarreporting.go:sarReportingSections":             "Subject-access export follows the requested contact through linked reporting contributions under the existing SAR authority; it must not omit the subject merely because the operator lacks relationship browsing rights.",
+	// Deal Scout: its system-principal evidence read and the suggestion writer's own conditions.
+	"internal/modules/activities/meetingcounterparty.go:HeldMeetingCounterparties": "the held-meeting walk Deal Scout reads as the system principal: the current employment edge takes a meeting's outside participant to their company, and what leaves is an (activity, company) pair the scout turns into a suggestion, read back only through the suggestion visibility clause",
+
 	"internal/modules/contacts/employment_import_link.go:linkEmploymentEpisode":    "the importer compares all existing employment identities under its held contact and employment locks, after contact-update and relationship-create grants. Filtering contenders by reader scope could create duplicate roles; only a company that passed EnsureLinkTarget is linked",
 	"internal/modules/contacts/employment_import_read.go:employmentImportItem":     "the retained-evidence reader checks the linked edge's archive bit after requireEmploymentRead gates the contact and relationship object. Company visibility is re-probed before any company or edge id is returned; no unrelated edge fields are disclosed",
 	"internal/modules/contacts/employmentmergesupport.go:relinkEmploymentSupport":  "merge support moves provenance to the surviving duplicate edge inside the contact/company merge transaction and its write grant; filtering loser edges by list visibility would strand support on archived rows",

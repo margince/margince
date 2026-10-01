@@ -3,7 +3,11 @@
 
 package ai
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/margince/margince/backend/internal/shared/ports/model"
+)
 
 // schemaNode is a decoded JSON Schema object — the only shape this walk
 // recurses into. Named rather than spelled inline so the recursion reads as
@@ -25,9 +29,21 @@ type schemaNode map[string]any
 // walk does not do — a dangling or open target is a 400. Refusing the keyword
 // costs a schema its enforcement, which is the direction this may fail in.
 var strictKeywords = map[string]bool{
-	"type": true, "properties": true, "required": true, "additionalProperties": true,
-	"items": true, "anyOf": true, "enum": true, "const": true,
-	"description": true, "title": true,
+	kwType: true, kwProperties: true, "required": true, kwAdditionalProperties: true,
+	kwItems: true, kwAnyOf: true, "enum": true, "const": true,
+	kwDescription: true, "title": true,
+}
+
+// strictDowngrade is the downgrade an OpenAI-wire request goes under: a
+// schema schemaAllowsStrict refuses is still sent, with strict false, which
+// leaves enforcing it to the endpoint — model.SchemaUnenforced.
+// The openai and openai_compatible wires both report it from this predicate,
+// which is the one that decides the flag they send.
+func strictDowngrade(raw json.RawMessage) string {
+	if len(raw) == 0 || schemaAllowsStrict(raw) {
+		return ""
+	}
+	return model.SchemaUnenforced
 }
 
 // schemaAllowsStrict reports whether a response schema already satisfies the
@@ -71,17 +87,17 @@ func schemaAllowsStrict(raw json.RawMessage) bool {
 // All three, because a node this misses is never asked whether it is closed —
 // so an outer schema can be impeccable while an open object nests inside it.
 func (n schemaNode) isObject() bool {
-	if n["type"] == "object" {
+	if n[kwType] == kwObject {
 		return true
 	}
-	if union, isUnion := n["type"].([]any); isUnion {
+	if union, isUnion := n[kwType].([]any); isUnion {
 		for _, member := range union {
-			if member == "object" {
+			if member == kwObject {
 				return true
 			}
 		}
 	}
-	_, declaresProperties := n["properties"]
+	_, declaresProperties := n[kwProperties]
 	return declaresProperties
 }
 
@@ -101,24 +117,24 @@ func (n schemaNode) allowsStrict() bool {
 		// schemas — and isClosed is what reads `required` and
 		// `additionalProperties`.
 		switch key {
-		case "additionalProperties":
+		case kwAdditionalProperties:
 			if _, isBool := child.(bool); !isBool {
 				return false
 			}
 		// A map KEYED BY NAME: its keys are the caller's property names, which
 		// must not be held to the keyword vocabulary, while its values are
 		// schemas that must be.
-		case "properties":
+		case kwProperties:
 			if !propertiesAllowStrict(child) {
 				return false
 			}
 		// One subschema only. The tuple form (`items` as a list) is not in the
 		// strict profile, so a list here is a refusal rather than a walk.
-		case "items":
+		case kwItems:
 			if !oneSubschemaAllowsStrict(child) {
 				return false
 			}
-		case "anyOf":
+		case kwAnyOf:
 			branches, isList := child.([]any)
 			if !isList {
 				return false
@@ -169,10 +185,10 @@ func propertiesAllowStrict(value any) bool {
 // Both directions, because the endpoint refuses both: a property missing from
 // required, and a required naming a property that does not exist.
 func (n schemaNode) isClosed() bool {
-	if allowsExtra, declared := n["additionalProperties"].(bool); !declared || allowsExtra {
+	if allowsExtra, declared := n[kwAdditionalProperties].(bool); !declared || allowsExtra {
 		return false
 	}
-	declaredProps, hasProps := n["properties"]
+	declaredProps, hasProps := n[kwProperties]
 	if !hasProps {
 		// No properties to omit, so nothing can be missing from required.
 		return true

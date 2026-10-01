@@ -18,6 +18,7 @@ package company360
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"time"
@@ -54,6 +55,30 @@ type contactCursor struct {
 	Sort string    `json:"s"`
 	ID   ids.UUID  `json:"i"`
 	AsOf time.Time `json:"a"`
+	// Anchor is the POSITION the previous page ended at, rather than the row
+	// that happened to hold it. A contact archived, or renamed out of the
+	// search, between two pages is gone from the slice — a resume point that
+	// has to be FOUND cannot survive that, while one that can be placed can.
+	// Absent on a token minted before this field existed; legacyOffset answers
+	// those.
+	Anchor *contactAnchor `json:"k,omitempty"`
+}
+
+// contactAnchor carries every value the orders here sort by, so the anchor can
+// be sorted back into a later page's slice and its place read off.
+//
+// It holds the engagement INPUTS rather than the engagement: `recommended`
+// ranks on EngagementOf, and a token carrying the verdict would freeze a
+// derivation that belongs to the contacts module. Carrying what that derivation
+// reads leaves one definition of engagement, in the module that owns it.
+type contactAnchor struct {
+	FullName     string     `json:"n"`
+	Strength     int        `json:"g"`
+	LastSeen     *time.Time `json:"l"`
+	Inbound90d   int        `json:"ib"`
+	Outbound90d  int        `json:"ob"`
+	LastInbound  *time.Time `json:"li"`
+	LastOutbound *time.Time `json:"lo"`
 }
 
 // ContactPage lists the account's contacts for one page of the Contacts tab.
@@ -146,7 +171,7 @@ func (s *Service) rankedContactRows(
 	sortContacts(kept, q.Sort, identity)
 
 	limit := storekit.ClampLimit(q.Limit)
-	start, err := cursorOffset(kept, q.Cursor, q.Sort)
+	start, err := cursorOffset(kept, identity, q.Cursor, q.Sort)
 	if err != nil {
 		return crmcontracts.CompanyContactListResponse{}, err
 	}
@@ -164,8 +189,10 @@ func (s *Service) rankedContactRows(
 		// The SAME instant forward, not a fresh one: `now` is the walk's own
 		// origin here, so page three resumes from where page one started
 		// rather than re-pinning to page two's arrival.
+		last := page[len(page)-1]
 		token, err := storekit.EncodeOpaque(contactCursor{
-			Sort: q.Sort, ID: page[len(page)-1].ContactID.UUID, AsOf: now,
+			Sort: q.Sort, ID: last.ContactID.UUID, AsOf: now,
+			Anchor: anchorOf(last, identity[last.ContactID]),
 		})
 		if err != nil {
 			return crmcontracts.CompanyContactListResponse{}, err
@@ -260,12 +287,6 @@ func sortContacts(all []contacts.ContactStrength, order string, identity map[ids
 	}
 }
 
-// cursorOffset resolves a page token to a position in the ranked slice.
-//
-// The token names the last contact of the previous page, so the next one starts
-// after it. A contact that has since left the account is not in the slice any
-// more: rather than guess a position, the read refuses, because resuming from a
-// position that no longer exists is how a page silently skips contacts.
 // walkInstant is the moment this page ranks against: the cursor's, continuing a
 // walk, or this request's, starting one.
 //
@@ -297,7 +318,17 @@ func (s *Service) walkInstant(token *string) (time.Time, error) {
 	return pos.AsOf.UTC(), nil
 }
 
-func cursorOffset(all []contacts.ContactStrength, token *string, order string) (int, error) {
+// cursorOffset resolves a page token to the index the next page starts at.
+//
+// The token names where the previous page ended, so this page starts after that
+// place — which is a place in the ORDER, not a row. Asking instead which index
+// the anchor row sits at makes the answer depend on the anchor still being
+// there, and a contact archived between two pages takes the rest of the walk
+// with it.
+func cursorOffset(
+	all []contacts.ContactStrength, identity map[ids.ContactID]contactCard,
+	token *string, order string,
+) (int, error) {
 	if token == nil || *token == "" {
 		return 0, nil
 	}
@@ -308,8 +339,86 @@ func cursorOffset(all []contacts.ContactStrength, token *string, order string) (
 	if pos.Sort != order {
 		return 0, &storekit.CursorSortMismatchError{}
 	}
+	if pos.Anchor == nil {
+		return legacyOffset(all, pos.ID)
+	}
+	return resumeAfter(all, identity, pos, order), nil
+}
+
+// anchorOf records the values every order here sorts by, for the contact a page
+// ended on.
+func anchorOf(c contacts.ContactStrength, who contactCard) *contactAnchor {
+	return &contactAnchor{
+		FullName:     who.fullName,
+		Strength:     c.Strength.Strength,
+		LastSeen:     c.Strength.LastInteraction,
+		Inbound90d:   c.Strength.Inbound90d,
+		Outbound90d:  c.Strength.Outbound90d,
+		LastInbound:  c.Strength.LastInbound,
+		LastOutbound: c.Strength.LastOutbound,
+	}
+}
+
+// resumeAfter is the index the next page starts at: where the anchor belongs in
+// this page's slice, whether or not the anchor itself is still in it.
+//
+// The anchor is sorted back INTO the slice by the same sortContacts the page
+// used, rather than compared against it by a second copy of the order. A copy
+// would be one more thing to keep in step with RankContacts, and the two
+// disagreeing is precisely the skipped contact this exists to prevent.
+//
+// The anchor sorts equal to its own surviving row and is appended after it, so
+// a stable sort leaves it last of the pair: taking the LAST match means the
+// anchor's row is behind the resume point rather than served twice.
+func resumeAfter(
+	all []contacts.ContactStrength, identity map[ids.ContactID]contactCard,
+	pos contactCursor, order string,
+) int {
+	anchorID := ids.From[ids.ContactKind](pos.ID)
+	augmented := make([]contacts.ContactStrength, len(all), len(all)+1)
+	copy(augmented, all)
+	augmented = append(augmented, contacts.ContactStrength{
+		ContactID: anchorID,
+		Strength: contacts.RelationshipStrength{
+			Strength:        pos.Anchor.Strength,
+			LastInteraction: pos.Anchor.LastSeen,
+			Inbound90d:      pos.Anchor.Inbound90d,
+			Outbound90d:     pos.Anchor.Outbound90d,
+			LastInbound:     pos.Anchor.LastInbound,
+			LastOutbound:    pos.Anchor.LastOutbound,
+		},
+	})
+
+	// The name the anchor was RANKED under, not the one its row carries now: a
+	// contact renamed mid-walk would otherwise resume from a place the previous
+	// page never ended at.
+	named := make(map[ids.ContactID]contactCard, len(identity)+1)
+	maps.Copy(named, identity)
+	card := named[anchorID]
+	card.fullName = pos.Anchor.FullName
+	named[anchorID] = card
+
+	sortContacts(augmented, order, named)
+
+	start := 0
+	for i := range augmented {
+		if augmented[i].ContactID == anchorID {
+			start = i
+		}
+	}
+	return start
+}
+
+// legacyOffset resolves a token minted before the cursor carried its anchor's
+// position, by finding the anchor row itself.
+//
+// It keeps the old refusal, because it is the only honest answer left: without
+// the anchor's sort values there is nothing to place, and guessing a position
+// is how a page silently skips contacts. These tokens stop arriving once the
+// pages in flight at the deploy have been walked.
+func legacyOffset(all []contacts.ContactStrength, anchor ids.UUID) (int, error) {
 	for i, c := range all {
-		if c.ContactID.UUID == pos.ID {
+		if c.ContactID.UUID == anchor {
 			return i + 1, nil
 		}
 	}

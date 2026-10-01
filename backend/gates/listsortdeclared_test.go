@@ -33,7 +33,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -192,6 +191,9 @@ func overridesSharedSort(t *testing.T, node yaml.Node, shared parameterIdentity)
 // operation, answering empty for a node that carries none.
 func parameterList(t *testing.T, node yaml.Node) []yaml.Node {
 	t.Helper()
+	for node.Kind == yaml.AliasNode && node.Alias != nil {
+		node = *node.Alias
+	}
 	if node.Kind == 0 {
 		return nil
 	}
@@ -255,7 +257,7 @@ func packageFunctions(t *testing.T, path string) map[string]*ast.FuncDecl {
 		if strings.HasSuffix(source, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
+		file, err := gatekit.ParseFile(source, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", source, err)
 		}
@@ -432,4 +434,15 @@ func declaresAnHTTPHandler(file *ast.File) bool {
 		}
 	}
 	return false
+}
+
+func TestSharedSortParametersFollowYAMLSequenceAliases(t *testing.T) {
+	t.Parallel()
+	var doc map[string]yaml.Node
+	if err := yaml.Unmarshal([]byte("original: &params\n  - $ref: '#/components/parameters/Sort'\ninherited: *params\n"), &doc); err != nil {
+		t.Fatal(err)
+	}
+	if !declaresSharedSort(t, doc["inherited"], parameterIdentity{}) {
+		t.Fatal("inherited alias hid Sort from the census")
+	}
 }

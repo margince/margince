@@ -13,7 +13,7 @@ import { Button, Card, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   LoadMoreButton,
@@ -186,6 +186,7 @@ function UndoButton({
   label?: MessageKey;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const client = useQueryClient();
@@ -275,7 +276,7 @@ function UndoButton({
             ? t("history.undo.confirmEdgeBody", {
                 other: entry.edge.other_label ?? t("ref.nameLoadFailed"),
               })
-            : t("history.undo.confirmBody", {
+            : plural("history.undo.confirmBody", changes.length, {
                 count: formatNumber(changes.length, locale),
               })}
         </p>

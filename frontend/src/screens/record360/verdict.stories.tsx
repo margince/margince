@@ -20,7 +20,7 @@ import { Proof, SignalStrip, VerdictHead } from "./verdict";
 // reviewer's press.
 
 const meta: Meta<typeof VerdictHead> = {
-  title: "Records/Record reading/Verdict head",
+  title: "Records/Record 360/Verdict head",
   component: VerdictHead,
   parameters: { layout: "padded" },
 };

@@ -99,6 +99,10 @@ func (d restCommandDeps) summaryCopy(ctx context.Context) approvalSummaryCopy {
 // own comment.
 var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error){
 	"approveImportRun":     commitImportCommand,
+	"previewBulkChange":    bulkChangeCommand,
+	"executeBulkChange":    bulkChangeCommand,
+	"previewBulkUndo":      bulkChangeCommand,
+	"undoBulkChange":       bulkChangeCommand,
 	"archiveActivity":      archiveCommand,
 	"archiveDeal":          archiveCommand,
 	"archiveTag":           archiveCommand,
@@ -127,6 +131,15 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"createRelationship":        createCommand,
 	"createSavedView":           createCommand,
 	"createWebhookSubscription": createCommand,
+
+	// The six list-changing routes share one decoder: each binds its approval
+	// to the list it changes, and create to none (listseam.go).
+	opCreateList:       listChangeCommand,
+	"updateList":       listChangeCommand,
+	"archiveList":      listChangeCommand,
+	"restoreList":      listChangeCommand,
+	"addListMember":    listChangeCommand,
+	"removeListMember": listChangeCommand,
 
 	opRenameCustomField:         patchCommand,
 	"updateActivity":            patchCommand,
@@ -202,17 +215,18 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// Four of the fourteen are 🟢 today and stage nothing, so their entries are
 	// unreached until a tier floor tightens them; agentcommandauto.go's own doc
 	// says why they are registered anyway.
-	"sendEmail":           sendEmailCommand,
-	"sendMessage":         sendMessageCommand,
-	"sendCompanyEmail":    sendCompanyEmailCommand,
-	"bookMeeting":         bookMeetingCommand,
-	"promoteLead":         promoteLeadCommand,
-	"disqualifyLead":      disqualifyLeadCommand,
-	"demoteLead":          demoteLeadCommand,
-	"advanceProjectPhase": advanceProjectPhaseCommand,
-	"advanceDeal":         advanceDealCommand,
-	"mergeContact":        mergeCommand,
-	"mergeCompany":        mergeCommand,
+	"sendEmail":               sendEmailCommand,
+	"sendMessage":             sendMessageCommand,
+	"sendCompanyEmail":        sendCompanyEmailCommand,
+	"bookMeeting":             bookMeetingCommand,
+	"createMeetingInvitation": meetingInvitationCommand,
+	"promoteLead":             promoteLeadCommand,
+	"disqualifyLead":          disqualifyLeadCommand,
+	"demoteLead":              demoteLeadCommand,
+	"advanceProjectPhase":     advanceProjectPhaseCommand,
+	"advanceDeal":             advanceDealCommand,
+	"mergeContact":            mergeCommand,
+	"mergeCompany":            mergeCommand,
 	// mergeTags is NOT one of those two. They fold a record into another
 	// record through the SoR provider; this folds a vocabulary word, which no
 	// provider serves, so it resolves against the tag seam instead.

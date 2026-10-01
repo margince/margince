@@ -35,49 +35,18 @@ var nonResidentReason = map[string]string{
 	"us":           "the US multi-region processes in the US",
 }
 
-// residencyBound reports whether p limits where a model may process a
-// prompt: on the same host (sovereign), or inside the EU (eu_resident).
-func (p Profile) residencyBound() bool {
-	return p == ProfileSovereign || p == ProfileEUResident
-}
-
-// RequireResidency refuses a binding the profile does not let process a
-// prompt, and is asked before any client is built for it. eu_resident admits
-// what sovereign admits, and gemini_vertex at a resident location.
-func RequireResidency(profile Profile, binding ProviderConfig) error {
-	return refuseNonResident(profile, "this binding", binding)
-}
-
-func refuseNonResident(profile Profile, label string, binding ProviderConfig) error {
-	if !profile.residencyBound() {
-		return nil
+// vertexLocationGap names why a gemini_vertex binding may process a prompt
+// outside the EU, or answers "" when its location is an EU one. Any other
+// provider answers "": its host is not a location this rule can read.
+func vertexLocationGap(binding ProviderConfig) string {
+	if binding.Provider != providerGeminiVertex || euResidentLocations[binding.Location] {
+		return ""
 	}
-	if profile == ProfileEUResident && binding.Provider == providerGeminiVertex {
-		return requireEULocation(label, binding.Location)
-	}
-	if !localProviders[binding.Provider] {
-		if profile == ProfileEUResident {
-			return fmt.Errorf("ai: routing config: profile %s forbids cloud provider %q on %s: only gemini_vertex at an EU location, or a same-host model, keeps processing inside the EU",
-				profile, binding.Provider, label)
-		}
-		return fmt.Errorf("ai: routing config: profile %s forbids cloud provider %q on %s", profile, binding.Provider, label)
-	}
-	return requireSovereignEndpoint(label, binding.Provider, binding.BaseURL)
-}
-
-func requireEULocation(label, location string) error {
-	if err := vertexLocationError(label, location); err != nil {
-		return err
-	}
-	if euResidentLocations[location] {
-		return nil
-	}
-	reason, named := nonResidentReason[location]
+	reason, named := nonResidentReason[binding.Location]
 	if !named {
 		reason = "the EU locations are " + strings.Join(slices.Sorted(maps.Keys(euResidentLocations)), ", ")
 	}
-	return fmt.Errorf("ai: routing config: profile %s refuses gemini_vertex at location %q on %s: %s",
-		ProfileEUResident, location, label, reason)
+	return fmt.Sprintf("location %q is not an EU location: %s", binding.Location, reason)
 }
 
 // The jurisdictions a Vertex location is reported under.

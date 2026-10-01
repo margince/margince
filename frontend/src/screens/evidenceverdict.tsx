@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
-import { Button, TextInput } from "../design-system/atoms";
+import { Button, Field, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -204,15 +204,17 @@ export function EvidenceVerdict({
       await settle();
     },
   });
-  const failure = confirm.error ?? correct.error;
   // Losing the race is the one refusal a precondition creates, and the server
   // states it as the bare sentinel `version skew` — two words naming a concept
   // no reader has met. The catalog says what happened and what to do instead.
-  const reason = failure
-    ? isVersionSkewOf(failure)
-      ? t("edit.versionSkew")
-      : problemMessageOf(failure, t)
-    : null;
+  const reasonFor = (failure: Error | null) =>
+    failure === null
+      ? undefined
+      : isVersionSkewOf(failure)
+        ? t("edit.versionSkew")
+        : problemMessageOf(failure, t);
+  const corrected = reasonFor(correct.error);
+  const confirmed = reasonFor(confirm.error);
 
   // Already a human's word. Saying who and when is the whole point — a
   // confirmed value that does not say who confirmed it is no better evidenced
@@ -235,11 +237,19 @@ export function EvidenceVerdict({
   if (correcting) {
     return (
       <span className="evidence-verdict">
-        <TextInput
-          value={draft}
-          aria-label={t("evidence.correctedValue")}
-          onChange={(event) => setDraft(event.target.value)}
-        />
+        <Field
+          label={t("evidence.correctedValue")}
+          labelHidden
+          error={corrected}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+          )}
+        </Field>
         <Button
           disabled={!correct.isPending && draft.trim() === ""}
           pending={correct.isPending}
@@ -251,9 +261,6 @@ export function EvidenceVerdict({
         <Button onClick={() => setCorrecting(false)}>
           {t("evidence.cancel")}
         </Button>
-        {/* The draft survives a failed save: the field above still holds what
-            was typed, and the refusal names why. */}
-        {reason && <ErrorLine inline>{reason}</ErrorLine>}
       </span>
     );
   }
@@ -269,13 +276,15 @@ export function EvidenceVerdict({
       </Button>
       <Button
         onClick={() => {
+          // A correction abandoned earlier does not speak for this one.
+          correct.reset();
           setDraft(claim.value);
           setCorrecting(true);
         }}
       >
         {t("evidence.correct")}
       </Button>
-      {reason && <ErrorLine inline>{reason}</ErrorLine>}
+      {confirmed && <ErrorLine inline>{confirmed}</ErrorLine>}
     </span>
   );
 }

@@ -46,7 +46,40 @@ var equivalentContent = map[string]map[string][]equivalence{
 			applied: "416edd1aa2a69937fc7be3c3faf77eb64367f22707d1df038a0df7f9205fe1a2",
 			source:  "8d574fbe51796a818cb7ff938c766ceb152142ea4265090e2eaf445cb6c5d776",
 		}},
+		// The review's touch trigger wrote a version column the table lacks, so
+		// on a database holding reviews the sweep's UPDATE aborted. The current
+		// file holds that trigger off around the one UPDATE and re-enables it;
+		// the down half is unchanged and no catalog object differs.
+		"1790568769": {{
+			applied: "3322c618c5e63b3adc0cbafd9d00a7ddb8d921fd046941747dea2e4c42a2b4a4",
+			source:  "57662d25857ee38a6207b33cac92b93453f02fcf3163abf892df35a824758751",
+		}},
 	},
+}
+
+// ContentAdmitted answers whether a migrate would admit a database that
+// recorded applied as this migration's content: the digests agree, or the pair
+// is one of the checked equivalences above.
+//
+// Exported because the test-database head probe asks the same question, and a
+// probe stricter than the migrator is not a safer probe — it reports a template
+// the migrator would reuse as not-at-head and rebuilds it. Both doors read the
+// list through here rather than each looping over it.
+//
+// Held by: TestEquivalentContentIsAdmittedAndNothingElseIs
+// (backend/internal/platform/dbmigrate/dbmigrate_test.go), which puts the same
+// three cases to this and to assertContentMatches and compares their verdicts.
+func ContentAdmitted(namespace string, m Migration, applied string) bool {
+	current := Digest(m)
+	if applied == current {
+		return true
+	}
+	for _, eq := range equivalentContent[namespace][m.Version] {
+		if applied == eq.applied && current == eq.source {
+			return true
+		}
+	}
+	return false
 }
 
 // equivalence is one checked claim that two byte sequences build one schema.

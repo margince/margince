@@ -69,6 +69,8 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 		"Held rather than closed: the value is provider-qualified, and the qualifier is an allowlist of the providers whose namespaces the exclusion validator knows (containerProviders in the capture module). " +
 		"A unit's own provider is not on it, so a published field would let a unit state a container no rule can name — a value that travels the whole pre-store path and matches nothing, which reads to its author like a rule that does not work. " +
 		"It lands with the first unit that has containers AND a provider on that list, in the same PR, for the reason Parts is held: a frozen field with no caller freezes a shape no unit has exercised",
+	"ReplyTo": "the Message-IDs a mail record says it answers, which capture uses to merge thread keys. Derived by the core mail parser (mailmap) from the headers it reads, never stated by a caller: a unit-supplied list would be a claim that steers which conversations merge. " +
+		"A unit's record carries none, so it threads on its ThreadKey alone, as every record did before thread joining.",
 	"StoredOriginal": "which raw_capture row a record was read from, and a unit never has one to name: the published path hands over the ORIGINAL BYTES (Record.Raw) and the sink stores the row, so the sink knows the id and fills it. " +
 		"Zero from a unit is therefore not an absent answer but the ordinary one — the sink's own id lands a moment later in the same transaction. " +
 		"Deliberately unpublishable as well as unpublished: the value names a row in a table the extension surface does not reach, so a unit supplying one would be pointing a purge at a row it did not write",

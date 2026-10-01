@@ -12,6 +12,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import { AddEmploymentModal } from "./addemploymentmodal";
+import { BoughtMark, boughtFields } from "./boughtmarks";
 import { problemMessageOf, throwProblem } from "./common";
 import { EmploymentRow } from "./contactemploymentrow";
 import {
@@ -121,6 +122,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   // cannot edit which company they work at either.
   const canEdit = useCanWriteRecord("contact", contact) && !readOnlyReason;
   const actions = useEmploymentActions(contact.id);
+  const bought = boughtFields(contact);
   const more = useEmploymentPages(view);
   const allEmployments = [
     ...new Map(
@@ -212,6 +214,14 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
                 employments[index - 1]?.company_id !== employment.company_id
               }
               employment={employment}
+              mark={
+                <BoughtMark
+                  bought={bought.get(
+                    `employment:${employment.relationship_id}`,
+                  )}
+                  subject={employment.company_name ?? ""}
+                />
+              }
               // The title the contact's own record carries stands in for a
               // role not yet written on the current employment: the same fact
               // the header shows under the name, offered here where a reader

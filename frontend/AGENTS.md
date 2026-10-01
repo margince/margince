@@ -76,12 +76,12 @@ Why, plus the token table and `ProvenanceTag`, the rule at its smallest:
 holds that colours come from tokens; nothing can tell you the token you picked
 means the wrong thing.
 
-## English copy follows the style page
+## Copy follows the style pages
 
-English catalog text follows [`docs/reference/ui-copy-style.md`](../docs/reference/ui-copy-style.md),
-and German and Vietnamese are translated from it. `copy-style.test.ts` holds
-only the mechanical rules; tone, vocabulary, length and message shape are yours
-to check against that page before you add or change a value.
+English catalog text follows [`docs/reference/ui-copy-style.md`](../docs/reference/ui-copy-style.md);
+German adds [`ui-copy-style-de.md`](../docs/reference/ui-copy-style-de.md). `copy-style.test.ts`
+and `copy-style-de.test.ts` hold only the mechanical rules; tone, vocabulary,
+length and message shape are yours to check before you add or change a value.
 
 ## A test may not depend on how busy the machine is
 

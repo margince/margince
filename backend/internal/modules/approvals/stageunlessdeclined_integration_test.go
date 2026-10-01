@@ -62,6 +62,14 @@ func setupStaging(t *testing.T) *stagingEnv {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	// The isolation the fresh workspace id above only looks like. `approval`
+	// carries no workspace_id and this tree has no row-level security, so an
+	// installation-wide reader — MarkLapsedRedemptions, ExpireDue — sees every
+	// row any earlier case in this package left. The harness beside this one,
+	// compose/integration.Setup, resets for the same reason.
+	if err := testdb.Reset(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
 
 	e := &stagingEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7()}
 	if _, err := owner.Exec(ctx,
@@ -80,7 +88,7 @@ func setupStaging(t *testing.T) *stagingEnv {
 	// of its own, so it runs last and sees a package that has genuinely stopped.
 	// The pool outlives the test now, so a goroutine still holding a connection
 	// would go on writing into the database the NEXT test just reset.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	e.pool, e.svc = pool, NewService(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
 	return e
 }

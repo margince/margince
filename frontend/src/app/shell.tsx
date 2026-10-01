@@ -14,12 +14,13 @@ import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
-import { useCompany } from "../screens/onboarding";
+import { useMe } from "../screens/common";
 import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
 import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
 import { BetaBadge } from "./betabadge";
 import { CaptureChip } from "./capture-chip";
+import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
 import { SCREEN_ENTITY } from "./entity";
@@ -53,6 +54,7 @@ import { usePopoverDismiss } from "./popover";
 import { useReadingColumn } from "./readingcolumn";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
+import { readStored, STORAGE_KEYS, writeStored } from "./storage";
 import { TopBar } from "./topbar";
 import { usePhoneViewport } from "./viewport";
 import "./shell.css";
@@ -81,26 +83,6 @@ import "./shell.css";
 // prop stays because a deeper level declaring `badgeIds` needs this door.
 export type ShellCounts = NavCounts;
 
-const COLLAPSE_KEY = "margince.sidebarCollapsed";
-
-// Storage is unavailable in some embedded contexts; a missing preference is a
-// default, never an error.
-function readStored(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeStored(key: string, value: string): void {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // A browser refusing storage must not break navigation.
-  }
-}
-
 // `narrow` is the panel at its 56px width — the caller's own `collapsed &&
 // !sheetOpen`, which is the condition shell.css already uses for every rule
 // that means "this is a rail and not a column". The phone sheet is 600px wide
@@ -115,13 +97,11 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
    * whether there is a company name above it. Temporary, and betabadge.tsx
    * carries the list of what its deletion takes. */
   const marker = <BetaBadge />;
-  // The installation's own company (ADR-0061: one installation, one
-  // company), OBSERVED on the entry the onboarding gate already filled.
-  // A disabled observer: it never fetches, so it cannot re-trigger the gate's
-  // read and walk the app back through its splash, but it does re-render when
-  // the company card writes a new mark into the entry — a plain cache peek
-  // left the rail wearing the old face until something else re-rendered it.
-  const installation = useCompany(false).data ?? undefined;
+  // The installation's own name and marks (ADR-0061: one installation, one
+  // company), from /me, which carries them to every seat — the full company
+  // profile is an admin's read. A disabled observer: the auth gate already
+  // fetched /me, and this re-renders when a company save refreshes it.
+  const installation = useMe(false).data?.installation_brand;
   // Whose product this is, above whose product it runs on. The reader works
   // for the company named here and not for us, so the company is the heading
   // and the product is the line under it.
@@ -199,10 +179,10 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
             its deterministic monogram underneath, and a company whose site
             declared no icon has a face rather than a gap. */}
         <span className="ws-chip ws-chip-company">
+          {/* The brand read carries no company id, so the name keys the chip. */}
           <Avatar
-            identity={installation.company_id}
+            identity={installation.display_name}
             name={installation.display_name}
-            shape="company"
           />
         </span>
         {/* `as="div"`: the workspace name is the rail's identity, not a section
@@ -629,7 +609,7 @@ function SectionSwitcher({
       <Modal open={open} onClose={close} labelledBy={titleId}>
         {/* Named by the SECTION: the list is everything Settings holds, and the
             entry the reader came from is marked inside it. */}
-        <Heading size="large" id={titleId} className="t-h2">
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           {t(section.titleKey)}
         </Heading>
         {/* Above the rows, exactly where the rail puts it. Without this the
@@ -819,7 +799,7 @@ export function Shell({
   const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
   const { gridded, griddedRecord } = useReadingColumn(route);
   const [collapsed, setCollapsed] = useState(
-    () => readStored(COLLAPSE_KEY) === "1",
+    () => readStored(STORAGE_KEYS.sidebarCollapsed) === "1",
   );
   // What the sidebar's walk between levels remembers — where a walk OUT of a
   // level returns to, and whether the level that arrives was asked for and takes
@@ -855,7 +835,7 @@ export function Shell({
   const toggle = useCallback(() => {
     setCollapsed((current) => {
       const next = !current;
-      writeStored(COLLAPSE_KEY, next ? "1" : "0");
+      writeStored(STORAGE_KEYS.sidebarCollapsed, next ? "1" : "0");
       return next;
     });
   }, []);
@@ -965,8 +945,7 @@ export function Shell({
               onOpenSearch={onOpenSearch}
             />
           )}
-          {/* Public, onboarding, and preference routes are intentionally
-            railless; these advisories belong only here. */}
+          <ConnectivityBanner />
           <EconomyBanner />
           <EmbedReindexBanner />
           <LicenseBanner />

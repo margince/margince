@@ -188,7 +188,7 @@ export function ContractRenewModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t("contracts.renew.title")}
       </Heading>
       <p>{t("contracts.renew.hint")}</p>
@@ -316,7 +316,7 @@ export function ContractStatusModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t("contracts.statusChange.title")}
       </Heading>
 
@@ -446,7 +446,7 @@ export function ContractCancelModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t("contracts.cancel.title")}
       </Heading>
       <p>{t("contracts.cancel.hint")}</p>

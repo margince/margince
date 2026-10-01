@@ -45,6 +45,11 @@
   height: 14px;
 }
 
+/* A roster that failed to load: Retry stands a step under the refusal. */
+.share-roster-retry {
+  margin-top: var(--space-2);
+}
+
 .share-subject-list {
   list-style: none;
   margin: 8px 0 0;

@@ -52,6 +52,11 @@ type CreateProjectInput struct {
 	StartedAt     *time.Time
 	TargetEndDate *time.Time
 	Source        string
+	// SourceSystem names the system an import took this project from; nil
+	// for one created here, which is what makes it unattributable.
+	SourceSystem *string
+	// Author is who wrote it in the system it came from; zero when unknown.
+	Author storekit.SourceAuthorInput
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (storekit customcolumns).
@@ -68,12 +73,6 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
-	// A project with no requested owner belongs to its creator, the same
-	// default contact/company/deal births apply. Ownerless matters
-	// more here than elsewhere: write authority reads an unowned row as
-	// nobody's to change, so an ownerless project can never be attached to a
-	// deal by the rep who just created it (projects.EnsureAttachable).
-	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
 	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return crmcontracts.Project{}, err
@@ -94,11 +93,25 @@ func createProjectTx(
 	ctx context.Context, tx pgx.Tx, in CreateProjectInput, by string,
 	active []fieldcatalog.Column, attachCompany AttachCompany, companies ProjectCompanies,
 ) (crmcontracts.Project, error) {
+	// A project with no requested owner belongs to its creator, the same
+	// default contact/company/deal births apply. Ownerless matters
+	// more here than elsewhere: write authority reads an unowned row as
+	// nobody's to change, so an ownerless project can never be attached to a
+	// deal by the rep who just created it (projects.EnsureAttachable).
+	owner, err := storekit.NewRecordOwner(ctx, tx, in.OwnerID)
+	if err != nil {
+		return crmcontracts.Project{}, err
+	}
+	in.OwnerID = owner
+
 	// The anchor company is a client-supplied reference to a row-scoped
 	// record, so naming it is a read of it: the caller must be able to see
 	// the company before a project can be hung off it. The composite FK
 	// only proves same-workspace, which is a weaker claim.
 	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.CompanyID.UUID); err != nil {
+		return crmcontracts.Project{}, err
+	}
+	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return crmcontracts.Project{}, err
 	}
 
@@ -213,8 +226,14 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 			id, now); err != nil {
 			return fmt.Errorf("archive project stakeholder edges: %w", err)
 		}
-		if _, err := tx.Exec(ctx,
-			`DELETE FROM list_member WHERE entity_type = 'project' AND entity_id = $1`, id); err != nil {
+		var detached storekit.ArchiveCascade
+		if err := detached.DropMemberships(ctx, tx, `WITH gone AS (
+			DELETE FROM list_member WHERE entity_type = 'project' AND entity_id = @record
+			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
+		logged AS (
+			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
+			SELECT list_id, entity_type, entity_id, 'removed', 'record_archived', @actor FROM gone)
+		SELECT list_id, added_by, created_at, note FROM gone`, id.UUID); err != nil {
 			return fmt.Errorf("detach list memberships: %w", err)
 		}
 		if _, err := tx.Exec(ctx,
