@@ -461,6 +461,11 @@
      paragraph set large rather than as a title. */
   max-width: 20ch;
 }
+/* Focusable only so a step can hand the reader here; it is not a control, and
+   a ring would invite a press that does nothing. */
+.ob-stage-title:focus {
+  outline: none;
+}
 
 .ob-stage-sub {
   margin: 0;

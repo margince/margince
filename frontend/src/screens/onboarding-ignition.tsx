@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { Badge, Button } from "../design-system/atoms";
 import type { MarginceCoreState } from "../design-system/margince-core";
+import { focusStageTitle } from "../design-system/onboarding-stage";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./onboarding-ignition.css";
@@ -107,6 +108,8 @@ export function Ignition({
   onDone,
 }: Readonly<{ vendor: string; onDone: () => void }>) {
   const t = useT();
+  // The button that started this unmounted under the reader's focus.
+  useEffect(focusStageTitle, []);
   return (
     <div className="ob-ig">
       {/* The wash is the STAGE's — it comes from the orb, which is in the other
@@ -119,9 +122,10 @@ export function Ignition({
       <p className="ob-ig-beat" data-beat="1">
         {t("firstRun.ignite.reaching")}
       </p>
-      {/* One region, so three timed lines are heard as one change; aria-live,
-          as a role on the <ul> replaces list and orphans its items. */}
-      <ul className="ob-ig-can" aria-live="polite" aria-atomic="true">
+      {/* Not a live region: the lines are in the tree from the first frame
+          and only their opacity is timed, so there is no change to announce.
+          The reader reaches them by focus, from the stage title down. */}
+      <ul className="ob-ig-can">
         {CAPABILITIES.map((c) => (
           <li key={c.what} data-can={c.can}>
             <b className="t-eyebrow">

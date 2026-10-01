@@ -62,6 +62,15 @@ export type StageProgress = Readonly<{ steps: readonly string[]; at: number }>;
 export const STAGE_TITLE_ID = "ob-stage-title";
 
 /**
+ * Hands the reader back to the stage headline, for a step that replaces the
+ * control they just pressed. Focus would otherwise fall to the body and a
+ * screen reader go quiet; from the title it reads the new board in order.
+ */
+export function focusStageTitle(): void {
+  document.getElementById(STAGE_TITLE_ID)?.focus();
+}
+
+/**
  * The Core's element id, for a surface that has to send something TO it.
  *
  * The crawl's evidence flies into the orb, and the orb is not inside the canvas
@@ -384,6 +393,7 @@ export function OnboardingStage({
               size="xlarge"
               className="ob-stage-title"
               id={STAGE_TITLE_ID}
+              tabIndex={-1}
             >
               {title}
             </Heading>
