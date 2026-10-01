@@ -13,6 +13,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { formatDayMonth, formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider, translate } from "../i18n";
@@ -219,6 +220,30 @@ it("offers the host's booking link while the page takes bookings", async () => {
   });
   expect(
     await screen.findByRole("button", { name: "Copy my booking link" }),
+  ).toBeTruthy();
+});
+
+it("lets only the link copied last read Copied, since the clipboard holds one", async () => {
+  const user = userEvent.setup();
+  const clipboard = stubClipboard("accepts");
+  mount(() => [proposed], {
+    "GET /scheduling/profile": () => jsonResponse(bookingProfile),
+  });
+  await user.click(
+    await screen.findByRole("button", { name: "Copy my booking link" }),
+  );
+  await screen.findByRole("button", { name: "Copied" });
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+
+  await waitFor(() =>
+    expect(clipboard.written).toEqual([
+      bookingProfile.public_url,
+      proposed.url,
+    ]),
+  );
+  expect(screen.getAllByRole("button", { name: "Copied" })).toHaveLength(1);
+  expect(
+    screen.getByRole("button", { name: "Copy my booking link" }),
   ).toBeTruthy();
 });
 

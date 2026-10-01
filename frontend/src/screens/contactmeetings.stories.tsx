@@ -85,6 +85,7 @@ function WaitingUnreadable() {
     <WaitingSection
       contact={view.contact}
       proposals={proposals}
+      copied={{ url: null, onCopied: () => undefined }}
       afterWithdraw={() => null}
     />
   );

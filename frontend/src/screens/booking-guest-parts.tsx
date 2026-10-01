@@ -220,7 +220,8 @@ export function GuestDetailsForm({
         <Button
           type="submit"
           variant="primary"
-          disabled={refused || !details.consent || pending}
+          disabled={refused || !details.consent}
+          pending={pending}
         >
           {t("scheduling.confirmAt", {
             day: formatDayMonth(selected.start, locale, zone),

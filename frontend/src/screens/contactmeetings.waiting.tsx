@@ -26,6 +26,15 @@ import { ComposeModal } from "./compose";
 type Proposal = components["schemas"]["MeetingProposal"];
 type Contact = components["schemas"]["Contact360"]["contact"];
 
+/**
+ * Which link the tab's one clipboard holds. The tab draws a copy control per
+ * link, and only the one copied last may read Copied.
+ */
+export type CopiedLink = Readonly<{
+  url: string | null;
+  onCopied: (url: string) => void;
+}>;
+
 /** The reader's own open proposals to one contact: the times still unanswered. */
 export function useMeetingProposals(contactId: string | undefined) {
   return useQuery({
@@ -42,6 +51,16 @@ export function useMeetingProposals(contactId: string | undefined) {
 }
 
 /**
+ * How many invitations wait on the contact, as far as the latest read says: a
+ * failed refetch keeps its cached rows, and the count must not outlive them.
+ */
+export function waitingCount(
+  proposals: ReturnType<typeof useMeetingProposals>,
+): number {
+  return proposals.isError ? 0 : (proposals.data?.length ?? 0);
+}
+
+/**
  * Invitations the contact has not answered yet, between what is booked and
  * what was held. Hidden when there are none, and until the list has arrived:
  * an empty "waiting" section says nothing a reader can act on, and one that
@@ -50,10 +69,12 @@ export function useMeetingProposals(contactId: string | undefined) {
 export function WaitingSection({
   contact,
   proposals,
+  copied,
   afterWithdraw,
 }: Readonly<{
   contact: Contact;
   proposals: ReturnType<typeof useMeetingProposals>;
+  copied: CopiedLink;
   // Where focus lands once a withdrawal removes the card that opened the
   // dialog; the last one takes this whole section with it.
   afterWithdraw: () => HTMLElement | null;
@@ -105,6 +126,7 @@ export function WaitingSection({
           <ProposalRow
             key={proposal.id}
             proposal={proposal}
+            copied={copied}
             onResend={() => setResending(proposal)}
             onWithdraw={() => {
               withdrawn.current = false;
@@ -116,7 +138,10 @@ export function WaitingSection({
       </SurfaceState>
       <ConfirmModal
         open={withdrawing !== null}
-        onClose={() => setWithdrawing(null)}
+        onClose={() => {
+          // The DELETE is already out: closing now would hide how it ends.
+          if (!withdraw.isPending) setWithdrawing(null);
+        }}
         returnFocusTo={() => (withdrawn.current ? afterWithdraw() : null)}
         title={t("contact.meetings.withdrawTitle")}
         confirmLabel={t("contact.meetings.withdrawConfirm")}
@@ -176,10 +201,12 @@ function ResendComposer({
 
 function ProposalRow({
   proposal,
+  copied,
   onResend,
   onWithdraw,
 }: Readonly<{
   proposal: Proposal;
+  copied: CopiedLink;
   onResend: () => void;
   onWithdraw: () => void;
 }>) {
@@ -187,11 +214,15 @@ function ProposalRow({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const copy = useClipboardCopy(proposal.url, {
-    copy: t("scheduling.copyLink"),
-    copied: t("scheduling.copied"),
-    remedy: t("scheduling.copyFallback"),
-  });
+  const copy = useClipboardCopy(
+    proposal.url,
+    {
+      copy: t("scheduling.copyLink"),
+      copied: t("scheduling.copied"),
+      remedy: t("scheduling.copyFallback"),
+    },
+    () => copied.onCopied(proposal.url),
+  );
   const offered = proposal.options.length;
   const title =
     offered > 0
@@ -217,7 +248,13 @@ function ProposalRow({
         })}
       </p>
       <div className="pe-meeting-actions">
-        <Button onClick={copy.copy}>{copy.label}</Button>
+        <Button onClick={copy.copy}>
+          {t(
+            copied.url === proposal.url
+              ? "scheduling.copied"
+              : "scheduling.copyLink",
+          )}
+        </Button>
         <Button onClick={onResend}>{t("contact.meetings.resend")}</Button>
         <Button onClick={onWithdraw}>{t("contact.meetings.withdraw")}</Button>
       </div>

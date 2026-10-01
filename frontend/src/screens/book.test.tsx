@@ -80,10 +80,11 @@ const slotName = (index: number, zone = viewerZone()) =>
   formatTimeOfDay(bookingSlots[index].start, "en", zone);
 const CONFIRM = /^Confirm \d/;
 // The month on show is the one the guest opens the page in, so the clock is
-// pinned to the month the fixture's free times fall in.
+// pinned to the month the fixture's free times fall in: midday UTC on the 1st
+// is October in every zone.
 function inBookingMonth() {
   vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date("2026-10-01T06:00:00Z"));
+  vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
 }
 afterEach(() => {
   cleanup();

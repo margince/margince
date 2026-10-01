@@ -79,7 +79,8 @@ function deliverySteps(status: Invitation["status"], t: Translator): Step[] {
     { key: "created", state: "done", label: t("scheduling.step.created") },
     calendar[status],
   ];
-  if (status !== "canceling" && status !== "canceled")
+  // Only a calendar that took the invitation leaves the guest something to answer.
+  if (!["canceling", "canceled", "needs_attention"].includes(status))
     steps.push({
       key: "reply",
       state: "waiting",

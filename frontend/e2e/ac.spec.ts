@@ -4,6 +4,7 @@ import { meFixture } from "../src/app/mefixture";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
+import { copy } from "./copy";
 import { anna, mockApi } from "./seed";
 import { pageOverflow, textsOf } from "./waits";
 
@@ -1151,7 +1152,9 @@ test("AC-book-public: consent gates calendar invitation and its wording passes t
   await page.goto("/#/book/host-1");
   await expect(page.locator("nav.rail")).toHaveCount(0);
   await page.locator(".bookguest-times .meeting-slots button").first().click();
-  const submit = page.getByRole("button", { name: /\d{2}:\d{2} bestätigen$/ });
+  const submit = page.getByRole("button", {
+    name: copy(de["scheduling.confirmAt"]),
+  });
   await expect(submit).toBeDisabled();
   await page
     .getByRole("textbox", { name: de["book.name"], exact: true })
@@ -1192,7 +1195,7 @@ test("AC-book-public-409: a taken slot degrades honestly — no fabricated confi
 }) => {
   await page.clock.setFixedTime(new Date("2026-07-01T06:00:00Z"));
   await page.goto("/#/book/host-1");
-  await page.getByRole("button", { name: "12:00" }).click();
+  await page.getByRole("button", { name: /^12:00$/ }).click();
   await page
     .getByRole("textbox", { name: de["book.name"], exact: true })
     .fill("Jonas Beispiel");
@@ -1200,7 +1203,11 @@ test("AC-book-public-409: a taken slot degrades honestly — no fabricated confi
     .getByRole("textbox", { name: de["book.email"] })
     .fill("jonas@beispiel.example");
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: /12:00 bestätigen$/ }).click();
+  await page
+    .getByRole("button", {
+      name: copy(de["scheduling.confirmAt"], { time: "12:00" }),
+    })
+    .click();
   await expect(page.getByText("slot no longer available")).toBeVisible();
   await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });

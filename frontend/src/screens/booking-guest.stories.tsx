@@ -16,15 +16,14 @@ const meta: Meta<typeof BookingGuestScreen> = {
 };
 export default meta;
 type Story = StoryObj<typeof BookingGuestScreen>;
-// The page opens on the month it is viewed in, so the catalogue's free times
-// fall in that month, a few days on, rather than on a fixed date that drifts
-// into the past.
+// The catalogue's free times fall a few days on rather than on a fixed date
+// that drifts into the past. Late in a month that is next month, which the
+// page, opening on the month it is viewed in, reaches by one press.
 function openTimes() {
   const now = new Date();
-  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   return [2, 3, 5].flatMap((ahead) => {
     const day = new Date(now);
-    day.setDate(Math.min(now.getDate() + ahead, last));
+    day.setDate(now.getDate() + ahead);
     return [9, 11, 14].map((hour) => {
       const start = new Date(day);
       start.setHours(hour, 0, 0, 0);
@@ -35,6 +34,10 @@ function openTimes() {
     });
   });
 }
+const timesThisMonth = () =>
+  openTimes().some(
+    (slot) => new Date(slot.start).getMonth() === new Date().getMonth(),
+  );
 const openMonth: RouteMap = {
   "GET /public/booking/ada-lovelace/availability": () =>
     jsonResponse({ slots: openTimes(), truncated: false }),
@@ -61,6 +64,10 @@ export const PickedTime: Story = {
   }),
   play: async ({ canvasElement }) => {
     const page = within(canvasElement.ownerDocument.body);
+    if (!timesThisMonth())
+      await userEvent.click(
+        await page.findByRole("button", { name: "Next month" }),
+      );
     const [first] = await page.findAllByRole("button", {
       name: /^\d{1,2}:\d{2}/,
     });

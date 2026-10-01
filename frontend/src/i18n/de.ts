@@ -277,6 +277,10 @@ export const de = {
   "scheduling.videoGeneric": "Videocall-Link hinzufügen",
   "scheduling.videoHint": "Wird mit der Kalendereinladung erstellt.",
   "scheduling.linkReady": "Link erstellt · läuft ab am {date}",
+  "scheduling.dayPast": "vergangen",
+  "scheduling.dayFull": "nichts frei",
+  "scheduling.linkReplaced":
+    "Du hast den Vorschlag geändert, deshalb bekommt er einen neuen Link. Der vorherige bleibt offen, bis du ihn unter „Termine“ beim Kontakt zurückziehst.",
   "scheduling.bookWith": "Termin mit {name} buchen",
   "scheduling.setupTitle":
     "Buchung fertig einrichten · {done} von {total} erledigt",
@@ -9893,7 +9897,7 @@ export const de = {
   "contact.deals.untitled": "Deal ohne Titel",
   "contact.deals.noStage": "Noch keine Phase",
   "contact.meetings.upcoming": "Anstehend",
-  "contact.meetings.past": "Stattgefunden",
+  "contact.meetings.past": "Stattgefundene Termine",
   "contact.meetings.noneBooked": "Keine anstehenden Termine.",
   "contact.meetings.noneLogged": "Keine Termine erfasst.",
   "contact.meetings.untitled": "Termin ohne Titel",

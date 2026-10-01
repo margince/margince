@@ -82,7 +82,11 @@ export function BookingInviteScreen({
     );
   return (
     <div className="book-page">
-      <BookingHead contactId={contactId} name={name} onClose={back} />
+      <BookingHead
+        contactId={selectedId || undefined}
+        name={name}
+        onClose={back}
+      />
       <ErrorLine error={profile.error} />
       <ChoiceList
         legend={t("scheduling.method")}

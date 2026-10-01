@@ -63,7 +63,7 @@ export function useWorkingHours(refreshOnReturn = false) {
 // minutesOf reads `HH:MM` as minutes past midnight, so two times can be
 // compared without a date to attach them to. NaN for anything else, which the
 // caller treats as "cannot compare" rather than as zero.
-function minutesOf(written: string): number {
+export function minutesOf(written: string): number {
   const [hour, minute] = written.split(":");
   const hours = Number(hour);
   const minutes = Number(minute);

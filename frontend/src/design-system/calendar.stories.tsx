@@ -86,9 +86,11 @@ export const SomeDaysUnavailable: Story = {
       onSelect={() => {}}
       today={TODAY}
       locale="en"
-      isDisabled={(day) => {
+      refusal={(day) => {
         const date = new Date(`${day}T12:00:00`);
-        return date < TODAY || date.getDay() === 0 || date.getDay() === 6;
+        if (date < TODAY) return "past";
+        if (date.getDay() === 0 || date.getDay() === 6) return "nothing free";
+        return undefined;
       }}
     />
   ),

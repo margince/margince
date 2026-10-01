@@ -1,6 +1,6 @@
 .save-bar {
   position: sticky;
-  bottom: var(--space-4);
+  bottom: var(--stickyBottomInset);
   margin-top: var(--space-6);
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);

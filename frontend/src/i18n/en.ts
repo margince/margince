@@ -233,7 +233,7 @@ export const en = {
   "scheduling.proposeHelp":
     "Offer two or three times by email. Nothing is held until they pick one.",
   "scheduling.inviteHelp":
-    "You have already agreed a time. The calendar invite goes out now.",
+    "You have already agreed on a time. The calendar invite goes out now.",
   "scheduling.linkHelp":
     "They pick any open time. The link books once and expires in 7 days.",
   "scheduling.pickOffer": "Pick two or three times to offer",
@@ -275,6 +275,10 @@ export const en = {
   "scheduling.videoGeneric": "Add video call link",
   "scheduling.videoHint": "Created with the calendar invite.",
   "scheduling.linkReady": "Link created · expires {date}",
+  "scheduling.dayPast": "past",
+  "scheduling.dayFull": "nothing free",
+  "scheduling.linkReplaced":
+    "You changed this proposal, so it gets a new link. The earlier link stays open until you withdraw it under the contact’s Meetings.",
   "scheduling.bookWith": "Book a meeting with {name}",
   "scheduling.setupTitle": "Finish setting up booking · {done} of {total} done",
   "scheduling.stepCalendar": "A calendar that can send invites",
@@ -486,7 +490,7 @@ export const en = {
   "scheduling.fact.location": "Location",
   "scheduling.fact.reminder": "Reminder",
   "scheduling.videoPending":
-    "Link appears once the calendar accepts the invitation.",
+    "The link appears once the calendar accepts the invitation.",
   "scheduling.videoMissing":
     "The calendar did not add a video link. Add one in your calendar.",
   "scheduling.openGoogleCalendar": "Open in Google Calendar",

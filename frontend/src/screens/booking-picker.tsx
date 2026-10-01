@@ -19,7 +19,7 @@ import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { useInviteAvailability } from "./booking-availability";
 import { BookingZone } from "./booking-common";
 import { QueryGate } from "./common";
-import type { useWorkingHours } from "./working-hours";
+import { minutesOf, type useWorkingHours } from "./working-hours";
 
 export type BookingMode = "propose" | "invite" | "link";
 export type BookingSlot = { start: string; end: string };
@@ -28,6 +28,27 @@ const DAY = 86400000;
 const LENGTHS = ["15", "30", "45", "60"];
 
 type Slot = components["schemas"]["MeetingAvailability"]["slots"][number];
+type WorkingHours = components["schemas"]["WorkingHours"];
+
+const isoWeekday = (day: string) =>
+  new Date(`${day}T12:00:00Z`).getUTCDay() || 7;
+
+// Whether a day shown in `zone` meets the host's working window, which is kept
+// on the host's own clock: across zones one shown day spans two host days.
+function overlapsWorkingDay(day: string, zone: string, hours: WorkingHours) {
+  const start = Date.parse(startOfDayInZone(day, zone));
+  const end = start + DAY;
+  const hostDays = new Set(
+    [start, end - 1].map((instant) => dayInZone(instant, hours.timezone)),
+  );
+  return [...hostDays].some((hostDay) => {
+    if (!hours.days.includes(isoWeekday(hostDay))) return false;
+    const midnight = Date.parse(startOfDayInZone(hostDay, hours.timezone));
+    const open = midnight + minutesOf(hours.start_time) * 60000;
+    const close = midnight + minutesOf(hours.end_time) * 60000;
+    return open < end && close > start;
+  });
+}
 
 // The columns a week shows: every day that has a free time, plus the host's
 // working days that have none, so an empty Tuesday reads as busy rather than
@@ -36,7 +57,7 @@ export function weekDays(
   slots: readonly Slot[],
   from: string,
   windowDays: number,
-  workingDays: readonly number[] | undefined,
+  hours: WorkingHours | undefined,
   locale: Locale,
   zone: string,
 ): MeetingDay[] {
@@ -44,8 +65,7 @@ export function weekDays(
   const start = Date.parse(from);
   for (let offset = 0; offset < windowDays; offset++) {
     const key = dayInZone(start + offset * DAY, zone);
-    const isoWeekday = new Date(`${key}T12:00:00Z`).getUTCDay() || 7;
-    if (!workingDays || workingDays.includes(isoWeekday)) byDay.set(key, []);
+    if (!hours || overlapsWorkingDay(key, zone, hours)) byDay.set(key, []);
   }
   for (const slot of slots) {
     const key = dayInZone(Date.parse(slot.start), zone);
@@ -176,7 +196,7 @@ export function BookingPicker({
                     value.slots,
                     from,
                     searchAhead ? 0 : 7,
-                    hours.data?.working_hours?.days,
+                    hours.data?.working_hours,
                     locale,
                     zone,
                   )}

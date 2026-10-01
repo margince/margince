@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
-import { formatTimeOfDay } from "../format/format";
+import { formatTimeOfDay, fullDayName } from "../format/format";
 import { formatDayFull, formatTimeRange } from "../format/meetingtime";
 import { dayInZone, viewerZone } from "../format/timezone";
 import { BookingScreen } from "./book";
@@ -40,7 +40,7 @@ afterEach(() => {
 // the clock to the month the fixture's free times fall in.
 function inBookingMonth() {
   vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date("2026-10-01T06:00:00Z"));
+  vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
 }
 const slotName = (index: number) =>
   formatTimeOfDay(bookingSlots[index].start, "en", viewerZone());
@@ -160,7 +160,7 @@ it("reads the whole month on show, following a truncated answer from its last ti
   const reads = availabilityReads(requests.mock.calls);
   const first = new URL(reads[0].url).searchParams;
   // From now to the start of November: one month, never an open-ended window.
-  expect(first.get("from")).toBe("2026-10-01T06:00:00.000Z");
+  expect(first.get("from")).toBe("2026-10-01T12:00:00.000Z");
   expect(Date.parse(first.get("to") ?? "")).toBeLessThanOrEqual(
     Date.parse("2026-11-01T12:00:00Z"),
   );
@@ -211,8 +211,13 @@ it("reads the day a truncated month stopped in, and the days after it, on their 
   expect(
     await screen.findByRole("button", { name: timeOf(rest) }),
   ).toBeTruthy();
+  const [year, month, date] = dayInZone(Date.parse(late.start), viewerZone())
+    .split("-")
+    .map(Number);
   await user.click(
-    screen.getByRole("button", { name: "Wednesday, 14 October 2026" }),
+    screen.getByRole("button", {
+      name: fullDayName(new Date(year, month - 1, date), "en"),
+    }),
   );
   expect(
     await screen.findByRole("button", { name: timeOf(late) }),
@@ -242,7 +247,9 @@ it("refuses days with nothing free and clears the time when another day is chose
   // The first day with a free time is chosen for the guest.
   await user.click(await screen.findByRole("button", { name: slotName(0) }));
   expect(
-    screen.getByRole("button", { name: "Tuesday, 6 October 2026" }),
+    screen.getByRole("button", {
+      name: "Tuesday, 6 October 2026, nothing free",
+    }),
   ).toHaveProperty("disabled", true);
   expect(
     screen.getByRole("button", { name: "Monday, 5 October 2026" }),

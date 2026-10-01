@@ -34,6 +34,10 @@ export const QuickCopyPaused: Story = {
     </StoryProviders>
   ),
 };
+export const QuickCopyPausedDark: Story = {
+  ...QuickCopyPaused,
+  globals: { theme: "dark" },
+};
 export const DefaultsOnOutlook: Story = {
   render: () => (
     <StoryProviders>
@@ -44,4 +48,8 @@ export const DefaultsOnOutlook: Story = {
       />
     </StoryProviders>
   ),
+};
+export const DefaultsOnOutlookDark: Story = {
+  ...DefaultsOnOutlook,
+  globals: { theme: "dark" },
 };

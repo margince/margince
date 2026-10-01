@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
@@ -11,7 +11,12 @@ import { dateTileParts } from "../format/datetile";
 import { formatNumber, formatTimeOfDay } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { useMe } from "./common";
-import { useMeetingProposals, WaitingSection } from "./contactmeetings.waiting";
+import {
+  type CopiedLink,
+  useMeetingProposals,
+  WaitingSection,
+  waitingCount,
+} from "./contactmeetings.waiting";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import "./contact360.css";
 
@@ -229,16 +234,18 @@ export function ContactMeetingsTab({
   const meetingPrep =
     view?.moment?.rule === "meeting_prep" ? view.moment : undefined;
   const bookButton = useRef<HTMLButtonElement>(null);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const copied: CopiedLink = { url: copiedUrl, onCopied: setCopiedUrl };
   return (
     <div className="record-stack">
       <div className="pe-meetings-head">
         <MeetingsCount
           upcoming={next ? 1 : 0}
-          waiting={proposals.data?.length ?? 0}
+          waiting={waitingCount(proposals)}
           ready={Boolean(view)}
         />
         <div className="pe-meeting-actions">
-          <CopyBookingLink />
+          <CopyBookingLink copied={copied} />
           <Button
             ref={bookButton}
             variant="primary"
@@ -303,6 +310,7 @@ export function ContactMeetingsTab({
         <WaitingSection
           contact={view.contact}
           proposals={proposals}
+          copied={copied}
           afterWithdraw={() => bookButton.current}
         />
       )}
@@ -359,19 +367,29 @@ function MeetingsCount({
 // The reader's own public link, for a contact who would rather pick a time
 // themselves. Offered only while the page takes bookings: a paused link hands
 // the contact a page that turns them away.
-function CopyBookingLink() {
+function CopyBookingLink({ copied }: Readonly<{ copied: CopiedLink }>) {
   const t = useT();
   const profile = useSchedulingProfile();
   const url = profile.data?.enabled ? (profile.data.public_url ?? "") : "";
-  const copy = useClipboardCopy(url, {
-    copy: t("contact.meetings.copyBookingLink"),
-    copied: t("scheduling.copied"),
-    remedy: t("scheduling.copyFallback"),
-  });
+  const copy = useClipboardCopy(
+    url,
+    {
+      copy: t("contact.meetings.copyBookingLink"),
+      copied: t("scheduling.copied"),
+      remedy: t("scheduling.copyFallback"),
+    },
+    () => copied.onCopied(url),
+  );
   if (!url) return null;
   return (
     <>
-      <Button onClick={copy.copy}>{copy.label}</Button>
+      <Button onClick={copy.copy}>
+        {t(
+          copied.url === url
+            ? "scheduling.copied"
+            : "contact.meetings.copyBookingLink",
+        )}
+      </Button>
       {copy.notice && (
         <div className="pe-waiting-notice">
           {copy.notice}

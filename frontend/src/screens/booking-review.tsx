@@ -297,7 +297,7 @@ function InviteSend({
     <div className="book-form">
       <Button
         variant="primary"
-        disabled={disabled || !request || send.isPending}
+        disabled={disabled || !request}
         pending={send.isPending}
         onClick={() => {
           if (request) send.mutate(request);
@@ -348,7 +348,7 @@ function ProposalSend({
     <div className="book-form">
       <Button
         variant="primary"
-        disabled={disabled || create.isPending}
+        disabled={disabled}
         pending={create.isPending}
         onClick={() => (current ? setReview(true) : create.mutate(request))}
       >
@@ -366,6 +366,9 @@ function ProposalSend({
           </Button>
           {copy.notice}
         </div>
+      )}
+      {!current && create.data && (
+        <p className="t-caption">{t("scheduling.linkReplaced")}</p>
       )}
       <ErrorLine error={create.error} />
       {review && create.data && (

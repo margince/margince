@@ -3,7 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
+import { backStaysInApp, navigate } from "../app/router";
 import { ActionRow } from "../design-system/actionrow";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -47,10 +47,10 @@ const IN_FLIGHT: ReadonlySet<Status> = new Set([
 ]);
 
 // The host reaches a meeting from a contact, the worklist or a link in their
-// calendar, so "back" is wherever they were; a page opened cold has no history
-// to return to and lands on home instead.
+// calendar, so "back" is wherever they were; a page opened cold has no screen
+// of ours behind it, whatever else the tab visited, and lands on home instead.
 function leaveMeeting() {
-  if (globalThis.history.length > 1) globalThis.history.back();
+  if (backStaysInApp()) globalThis.history.back();
   else navigate({ screen: "home" });
 }
 
@@ -189,14 +189,16 @@ export function BookingMeetingScreen({
                         }
                       />
                     )}
-                    {changeError}
+                    {!cancelOpen && changeError}
                   </PanelBody>
                 </Panel>
                 {host && <DeliveryCard status={meeting.status} />}
                 {cancelable && (
                   <ConfirmModal
                     open={cancelOpen}
-                    onClose={() => setCancelOpen(false)}
+                    onClose={() => {
+                      if (!change.isPending) setCancelOpen(false);
+                    }}
                     title={t("scheduling.cancel")}
                     confirmLabel={t("scheduling.cancel")}
                     confirmVariant="danger"
@@ -283,7 +285,7 @@ function AttentionNotice({
       tone="warning"
       title={t("scheduling.attentionTitle")}
       actions={
-        <Button variant="primary" disabled={pending} onClick={onRetry}>
+        <Button variant="primary" pending={pending} onClick={onRetry}>
           {t("scheduling.retry")}
         </Button>
       }

@@ -13,6 +13,9 @@ export type GuestSlot = Availability["slots"][number];
 // times, so a busy host's month is not cut off after its first days.
 const MAX_PAGES = 4;
 const STEP_PAST_LAST = 15 * 60000;
+// The server answers at most 31 days at a time, and a month with a fall-back
+// clock change is an hour longer than that in the guest's zone.
+const MAX_SPAN = 31 * 86400000;
 
 // `dayInZone` spells a day as the calendar does; this lets the type say so.
 function isCalendarDay(value: string): value is ISODay {
@@ -64,12 +67,18 @@ export async function readMonth(
   const byStart = new Map<string, GuestSlot>();
   let cursor = window.from;
   for (let page = 0; page < MAX_PAGES; page++) {
-    const answer = await read(cursor, window.to);
+    const spanEnd = Date.parse(cursor) + MAX_SPAN;
+    const to =
+      spanEnd < Date.parse(window.to)
+        ? new Date(spanEnd).toISOString()
+        : window.to;
+    const answer = await read(cursor, to);
     for (const slot of answer.slots) byStart.set(slot.start, slot);
     const last = answer.slots.at(-1);
-    if (!answer.truncated || !last)
-      return { slots: [...byStart.values()], truncated: false };
-    cursor = new Date(Date.parse(last.start) + STEP_PAST_LAST).toISOString();
+    if (answer.truncated && last)
+      cursor = new Date(Date.parse(last.start) + STEP_PAST_LAST).toISOString();
+    else if (to !== window.to) cursor = to;
+    else return { slots: [...byStart.values()], truncated: false };
   }
   return { slots: [...byStart.values()], truncated: true };
 }
@@ -109,15 +118,15 @@ export function pastKnown(
   return day !== "" && !!days?.knownUntil && day >= days.knownUntil;
 }
 
-/** Whether a day in the grid can be chosen, given what the month's read said. */
-export function dayRefused(
+/** Why a day in the grid cannot be chosen, given what the month's read said. */
+export function dayRefusal(
   day: ISODay,
   today: string,
   monthKey: string,
   days: ReturnType<typeof monthDays> | undefined,
-): boolean {
-  if (day < today) return true;
-  if (!days || !day.startsWith(monthKey)) return false;
-  if (days.knownUntil && day > days.knownUntil) return false;
-  return !days.byDay.has(day);
+): "past" | "full" | undefined {
+  if (day < today) return "past";
+  if (!days || !day.startsWith(monthKey)) return undefined;
+  if (days.knownUntil && day > days.knownUntil) return undefined;
+  return days.byDay.has(day) ? undefined : "full";
 }

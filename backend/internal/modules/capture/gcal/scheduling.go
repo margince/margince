@@ -190,17 +190,29 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 	return receipt, nil
 }
 
-// videoURL reads a Meet link Google was still creating when it answered the
-// insert. One read, not a poll, and never a delivery failure: the event exists
-// and the invite reached the guest, so a link that is missing or unreadable
-// leaves a delivered meeting without one.
+// meetReadPauses spaces the reads of a Meet link Google was still creating when
+// it answered the insert; creation usually settles within a few seconds.
+var meetReadPauses = []time.Duration{0, time.Second, 2 * time.Second}
+
+// videoURL reads a pending Meet link until Google settles it, within
+// meetReadPauses. Never a delivery failure: the event exists and the invite
+// reached the guest, so a link still missing leaves the meeting without one.
 func (a *httpAPI) videoURL(ctx context.Context, token, calendar, event string) string {
-	var current scheduledEvent
-	if _, err := calendarwire.Request(ctx, a.client, token, http.MethodGet, a.base+"/calendars/"+url.PathEscape(calendar)+"/events/"+url.PathEscape(event), nil, &current); err != nil {
-		slog.WarnContext(ctx, "calendar: the new event's video link could not be read", "err", err)
-		return ""
+	for _, wait := range meetReadPauses {
+		if err := a.pause(ctx, wait); err != nil {
+			slog.WarnContext(ctx, "calendar: stopped waiting for the new event's video link", "err", err)
+			return ""
+		}
+		var current scheduledEvent
+		if _, err := calendarwire.Request(ctx, a.client, token, http.MethodGet, a.base+"/calendars/"+url.PathEscape(calendar)+"/events/"+url.PathEscape(event), nil, &current); err != nil {
+			slog.WarnContext(ctx, "calendar: the new event's video link could not be read", "err", err)
+			return ""
+		}
+		if current.VideoURL != "" || !current.conferencePending() {
+			return current.VideoURL
+		}
 	}
-	return current.VideoURL
+	return ""
 }
 
 func (a *httpAPI) Cancel(ctx context.Context, token, calendar, event string) error {

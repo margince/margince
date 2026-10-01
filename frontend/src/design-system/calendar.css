@@ -73,7 +73,7 @@
   background: var(--accent);
   color: var(--textOnAccentControl);
 }
-.calendar-day[aria-pressed="true"]:hover {
+.calendar-day[aria-pressed="true"]:hover:not(:disabled) {
   background: var(--accent);
   filter: brightness(1.05);
 }

@@ -7,14 +7,8 @@ import {
   bookingProfile,
   bookingSlots,
 } from "../src/screens/book.testkit";
+import { copy } from "./copy";
 import { mockApi } from "./seed";
-
-// A catalog string with its {placeholders} matched as any text, so a test names
-// a control by the copy it wears without re-spelling the interpolated parts.
-const copy = (value: string) =>
-  new RegExp(
-    `^${value.replace(/[.*+?^$()|[\]\\]/g, "\\$&").replace(/\{[a-z]+\}/g, ".+")}$`,
-  );
 
 test.beforeEach(async ({ page, context }) => {
   await mockApi(context);

@@ -106,6 +106,7 @@ export const DeliverySteps: Story = {
           "confirmed",
           "needs_attention",
           "rescheduling",
+          "canceling",
           "canceled",
         ] as const
       ).map((status) => (

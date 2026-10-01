@@ -154,6 +154,11 @@ it("prefills the contact and saved details, then offers two picked times in one 
     "https://crm.example.test/#/book/proposal-private",
   );
   expect(screen.getByText(/Link created/)).toBeTruthy();
+
+  // The link carries what was proposed, so a change after it means another one.
+  await user.type(screen.getByLabelText("Meeting title"), "!");
+  expect(screen.queryByText(/Link created/)).toBeNull();
+  expect(screen.getByText(/so it gets a new link/)).toBeTruthy();
 });
 
 it("removes an offered time from the review list", async () => {

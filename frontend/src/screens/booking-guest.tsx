@@ -18,7 +18,7 @@ import { useLocale, useT } from "../i18n";
 import { BookingFooter, useBookingIntent } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
 import {
-  dayRefused,
+  dayRefusal,
   dayWindow,
   type GuestSlot,
   isoMonth,
@@ -275,9 +275,17 @@ export function BookingGuestScreen({
                           onSelect={pickDay}
                           today={new Date(now)}
                           locale={locale}
-                          isDisabled={(candidate) =>
-                            dayRefused(candidate, today, monthKey, days)
-                          }
+                          refusal={(candidate) => {
+                            const why = dayRefusal(
+                              candidate,
+                              today,
+                              monthKey,
+                              days,
+                            );
+                            if (why === "past") return t("scheduling.dayPast");
+                            if (why === "full") return t("scheduling.dayFull");
+                            return undefined;
+                          }}
                         />
                       </section>
                       <section className="bookguest-times">

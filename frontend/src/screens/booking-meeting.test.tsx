@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { routeHash } from "../app/router";
 import { formatDayFull, formatTimeRange } from "../format/meetingtime";
 import { viewerZone } from "../format/timezone";
 import { bookingInvitation } from "./book.testkit";
@@ -74,6 +75,15 @@ it("names the meeting in its heading, with its delivery as a badge and its time 
   expect(screen.getByRole("button", { name: "Back" })).toBeTruthy();
 });
 
+it("takes a meeting opened cold home rather than back out of the app", async () => {
+  const user = userEvent.setup();
+  const back = vi.spyOn(globalThis.history, "back");
+  host({ status: "confirmed" });
+  await user.click(await screen.findByRole("button", { name: "Back" }));
+  expect(back).not.toHaveBeenCalled();
+  expect(globalThis.location.hash).toBe(routeHash({ screen: "home" }));
+});
+
 it("shows the join link with a copy action once the calendar has made one", async () => {
   host({
     status: "confirmed",
@@ -109,7 +119,7 @@ it("says the link is coming while the calendar has not answered yet", async () =
   host({ status: "pending", provider: "graphcal", video_call: true });
   expect(
     await screen.findByText(
-      "Link appears once the calendar accepts the invitation.",
+      "The link appears once the calendar accepts the invitation.",
     ),
   ).toBeTruthy();
   expect(screen.getByText("Microsoft Teams")).toBeTruthy();
@@ -158,6 +168,11 @@ it("offers a retry of the same invitation before cancelling when the calendar re
   expect(
     retry.compareDocumentPosition(cancel) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
+  // A refused invitation never reached the guest, so nothing awaits a reply.
+  const delivery = screen.getByRole("region", { name: "Delivery" });
+  expect(
+    within(delivery).queryByText("Waiting for the guest’s reply"),
+  ).toBeNull();
   await user.click(retry);
   await waitFor(() =>
     expect(changes).toEqual([{ action: "retry", version: 4 }]),

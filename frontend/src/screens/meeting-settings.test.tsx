@@ -540,14 +540,20 @@ it("saves hours and meeting preferences together from one save bar, and discards
       return jsonResponse({ chosen: true, working_hours: body });
     },
   });
-  await screen.findByLabelText("Meeting title");
+  const title = await screen.findByLabelText("Meeting title");
   const saturday = screen.getByRole("checkbox", { name: "Saturday" });
   await user.click(saturday);
+  await user.type(title, "?");
   await user.click(screen.getByRole("button", { name: "Discard" }));
   expect(saturday).toHaveProperty("checked", false);
+  expect(title).toHaveProperty("value", bookingProfile.title);
   expect(screen.queryByRole("button", { name: "Save settings" })).toBeNull();
+  // Monday re-ticked lands after Friday in the draft; the save is still whole.
+  const monday = screen.getByRole("checkbox", { name: "Monday" });
+  await user.click(monday);
+  await user.click(monday);
   await user.click(saturday);
-  await user.type(screen.getByLabelText("Meeting title"), "!");
+  await user.type(title, "!");
   await user.click(screen.getByRole("button", { name: "Save settings" }));
   await waitFor(() => expect(profileWrites).toHaveLength(1));
   expect(hourWrites).toEqual([
@@ -604,4 +610,13 @@ it("keeps hours the server saved when the profile write after them fails", async
   await user.click(screen.getByRole("button", { name: "Discard" }));
   expect(saturday).toHaveProperty("checked", true);
   expect(screen.queryByRole("button", { name: "Save settings" })).toBeNull();
+});
+
+it("says the booking page has no company to show rather than leaving the fact blank", async () => {
+  mount({
+    "GET /scheduling/profile": () =>
+      jsonResponse({ ...bookingProfile, company_name: "", logo_url: "" }),
+  });
+  const term = await screen.findByText("Company name and logo");
+  expect(term.nextElementSibling?.textContent).toContain("Not set");
 });

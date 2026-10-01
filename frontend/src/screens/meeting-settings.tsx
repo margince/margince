@@ -101,7 +101,9 @@ function MeetingSettingsForm({
   const profileDirty =
     JSON.stringify(form) !== JSON.stringify(baseline) ||
     (provider !== "" && provider !== baseline.provider);
-  const hoursDirty = JSON.stringify(hoursDraft) !== JSON.stringify(savedHours);
+  const hoursDirty =
+    JSON.stringify(hoursDraft && savedForm(hoursDraft)) !==
+    JSON.stringify(savedHours);
   useUnsavedGuard(profileDirty || hoursDirty);
   const save = useSaveMeetingSettings(setSavedHours, (value) => {
     setBaseline(value);
@@ -228,7 +230,7 @@ function MeetingSettingsForm({
               <Button
                 type="submit"
                 variant="primary"
-                disabled={save.isPending || blocked}
+                disabled={blocked}
                 pending={save.isPending}
               >
                 {t("scheduling.save")}
@@ -295,9 +297,7 @@ function settingsDraft(
   const choose = ready && selected?.writable && !calendars.isFetching;
   return {
     original: baseline,
-    hours: hours
-      ? { ...hours, days: [...hours.days].sort((a, b) => a - b) }
-      : null,
+    hours: hours ? savedForm(hours) : null,
     next: {
       ...form,
       provider: choose ? provider : form.provider,
@@ -305,6 +305,12 @@ function settingsDraft(
       blocking_calendars: choose ? blocking : form.blocking_calendars,
     },
   };
+}
+
+// Hours as the server keeps them, days in order: the picker appends a day
+// re-ticked, and a draft compared unsorted would stay unsaved after its save.
+function savedForm(hours: WorkingHours): WorkingHours {
+  return { ...hours, days: [...hours.days].sort((a, b) => a - b) };
 }
 
 function changedMeetingPreferences(

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 	"time"
 
@@ -17,14 +18,16 @@ import (
 const meetLink = "https://meet.google.com/abc-defg-hij"
 
 // videoCalendar records what Save sent and answers the insert with created,
-// and any later read of the event with read.
+// and any later read of the event with read. Pauses are recorded, not waited.
 type videoCalendar struct {
-	readFails bool
-	sent      scheduledEvent
-	query     string
-	reads     int
-	created   scheduledEvent
-	read      scheduledEvent
+	readFails  bool
+	pauseFails bool
+	pauses     []time.Duration
+	sent       scheduledEvent
+	query      string
+	reads      int
+	created    scheduledEvent
+	read       scheduledEvent
 }
 
 func (c *videoCalendar) serve(t *testing.T) *httpAPI {
@@ -49,7 +52,14 @@ func (c *videoCalendar) serve(t *testing.T) *httpAPI {
 		}
 	}))
 	t.Cleanup(server.Close)
-	return &httpAPI{client: server.Client(), base: server.URL}
+	pause := func(_ context.Context, wait time.Duration) error {
+		c.pauses = append(c.pauses, wait)
+		if c.pauseFails {
+			return context.Canceled
+		}
+		return nil
+	}
+	return &httpAPI{client: server.Client(), base: server.URL, pause: pause}
 }
 
 func videoAppointment(video bool, eventID string) connector.CalendarAppointment {
@@ -103,25 +113,29 @@ func TestGoogleIsAskedForAMeetOnlyWhenANewMeetingWantsOne(t *testing.T) {
 	}
 }
 
-func TestAPendingMeetIsReadOnceAndNeverFailsTheDelivery(t *testing.T) {
+func TestAPendingMeetIsReadUntilSettledWithinABoundAndNeverFailsTheDelivery(t *testing.T) {
 	for _, tc := range []struct {
-		name      string
-		status    string
-		later     string
-		readFails bool
-		wantReads int
-		wantLink  string
+		name       string
+		status     string
+		later      scheduledEvent
+		readFails  bool
+		pauseFails bool
+		wantReads  int
+		wantLink   string
 	}{
-		{"pending then ready", "pending", meetLink, false, 1, meetLink},
-		{"still pending", "pending", "", false, 1, ""},
-		{"read unavailable", "pending", meetLink, true, 1, ""},
-		{"refused", "failure", meetLink, false, 0, ""},
+		{"pending then ready", "pending", scheduledEvent{VideoURL: meetLink}, false, false, 1, meetLink},
+		{"settled without a link", "pending", scheduledEvent{Conference: conferenceIn("failure")}, false, false, 1, ""},
+		{"still pending", "pending", scheduledEvent{Conference: conferenceIn("pending")}, false, false, len(meetReadPauses), ""},
+		{"read unavailable", "pending", scheduledEvent{VideoURL: meetLink}, true, false, 1, ""},
+		{"caller gone", "pending", scheduledEvent{VideoURL: meetLink}, false, true, 0, ""},
+		{"refused", "failure", scheduledEvent{VideoURL: meetLink}, false, false, 0, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			tc.later.ID = "event"
 			calendar := &videoCalendar{
-				readFails: tc.readFails,
-				created:   scheduledEvent{ID: "event", Conference: conferenceIn(tc.status)},
-				read:      scheduledEvent{ID: "event", VideoURL: tc.later},
+				readFails: tc.readFails, pauseFails: tc.pauseFails,
+				created: scheduledEvent{ID: "event", Conference: conferenceIn(tc.status)},
+				read:    tc.later,
 			}
 			receipt, err := calendar.serve(t).Save(context.Background(), "token", videoAppointment(true, ""))
 			if err != nil {
@@ -129,6 +143,9 @@ func TestAPendingMeetIsReadOnceAndNeverFailsTheDelivery(t *testing.T) {
 			}
 			if receipt.EventID != "event" || receipt.VideoURL != tc.wantLink || calendar.reads != tc.wantReads {
 				t.Fatalf("receipt = %+v after %d reads, want link %q after %d", receipt, calendar.reads, tc.wantLink, tc.wantReads)
+			}
+			if calendar.reads > 1 && !slices.Equal(calendar.pauses, meetReadPauses) {
+				t.Fatalf("reads were spaced %v, want %v", calendar.pauses, meetReadPauses)
 			}
 		})
 	}

@@ -120,12 +120,13 @@ it("refuses the days the caller says cannot be chosen", async () => {
       onSelect={chose}
       today={TODAY}
       locale="en"
-      isDisabled={(day) => day === "2026-08-25"}
+      refusal={(day) => (day === "2026-08-25" ? "nothing free" : undefined)}
     />,
   );
 
+  // The reason is in the name: struck through says it only to the eye.
   const refused = screen.getByRole("button", {
-    name: "Tuesday, 25 August 2026",
+    name: "Tuesday, 25 August 2026, nothing free",
   });
   expect(refused).toHaveProperty("disabled", true);
   await user.click(refused);

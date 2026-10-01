@@ -115,3 +115,21 @@ func TestTheProposalListHidesAContactTheReaderCannotSee(t *testing.T) {
 		t.Fatalf("a contact made private to a colleague answered %+v, %v; want ErrNotFound", listed, err)
 	}
 }
+
+func TestTheProposalListNeedsTheContactGrant(t *testing.T) {
+	f := newInvitationFixture(t)
+	f.propose(f.actingAs(f.env.rep, principal.RowScopeAll), t, f.request.ContactId, "Before the grant was lost")
+	withoutContacts := principal.WithActor(f.ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + f.env.rep.String(), UserID: f.env.rep,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects:  map[string]principal.ObjectGrant{"activity": {Create: true, Read: true, Update: true, Delete: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+
+	listed, err := f.store.OpenProposals(withoutContacts, ids.UUID(f.request.ContactId))
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a reader without contact access listed %+v, %v; want ErrPermissionDenied", listed, err)
+	}
+}

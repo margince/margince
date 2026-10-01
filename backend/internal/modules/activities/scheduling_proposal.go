@@ -226,9 +226,13 @@ type openProposal struct {
 }
 
 // OpenProposals lists the acting host's links to one contact that a guest can
-// still book through, newest first. Withdrawing one archives its activity.
+// still book through, newest first. Withdrawing one archives its activity. The
+// list is read off the contact, so it needs the contact grant as well.
 func (s *Store) OpenProposals(ctx context.Context, contact ids.UUID) ([]crmcontracts.MeetingProposal, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	host, err := schedulingHost(ctx)
