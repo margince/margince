@@ -165,6 +165,9 @@ export function useRecordTimeline(
   options: Readonly<{
     filters?: TimelineFilters;
     firstPage?: ActivityPage;
+    // False while the record's own read has not yet said the reader may see
+    // its activities: a read asked before that only collects a refusal.
+    enabled?: boolean;
   }> = {},
 ): RecordTimeline {
   const filters = options.filters ?? NO_TIMELINE_FILTERS;
@@ -194,7 +197,7 @@ export function useRecordTimeline(
     ],
     // With a seed the first page is already on screen: nothing is fetched
     // until the reader asks, and `fetchNextPage` fetches regardless of this.
-    enabled: !seed,
+    enabled: !seed && (options.enabled ?? true),
     initialPageParam: seedCursor,
     getNextPageParam: (last: ActivityPage) =>
       last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,

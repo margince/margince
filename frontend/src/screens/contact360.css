@@ -811,58 +811,37 @@
   max-width: 22rem;
 }
 
-/* One meeting, as a dated card: the date tile in its own column, the room and
-   what to do about it in the one beside it. Both the booked meeting and every
-   one already held share this shape, so a reader learns it once rather than
-   reading a different card for "next" and "already happened". */
-.pe-meeting,
-.pe-waiting {
+/* The Meetings tab: three panels, each a list of meetings as rows. The tab
+   is the container its rows measure, so a narrow work column folds a row's
+   verbs under its text whatever the viewport around it. */
+.pe-meetings {
+  container-type: inline-size;
+}
+
+/* The tab's two ways to start a meeting, as the Upcoming panel's toolbar: in
+   the body rather than the head, whose one band cannot hold both verbs and
+   the title at a phone's width. */
+.pe-meetings-toolbar {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-2) var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
-}
-
-.pe-meeting + .pe-meeting,
-.pe-waiting + .pe-waiting {
-  margin-top: var(--space-2);
-}
-
-/* An invitation still waiting on the contact has no date to hang a tile on
-   (a personal link offers no times at all), so it is the meeting card's box
-   holding one column. */
-.pe-waiting {
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-2);
-}
-
-/* The URL a failed copy leaves behind, selectable, under the notice that says
-   the browser refused. */
-.pe-waiting-url {
-  margin: 0;
-  overflow-wrap: anywhere;
-  user-select: all;
-}
-.pe-waiting-notice {
-  flex-basis: 100%;
-  display: grid;
-  gap: var(--space-2);
-}
-
-/* The tab's own head: what is in motion on the left, the two ways to start
-   something new on the right. */
-.pe-meetings-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
+  padding-block: var(--space-3);
 }
-.pe-meetings-head > p {
-  margin: 0;
+
+/* One meeting: its day as a small calendar page, what it is and when beside
+   it, and its verbs at the far end. Every panel on the tab draws its meetings
+   this one way, so a reader learns the row once. */
+.pe-meeting {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+/* The next meeting leads: a larger page in the accent tint, and its verbs
+   under what it is rather than beside it. */
+.pe-meeting-lead {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
 }
 
 /* Weekday over day over month, centred rather than left-set: a date read as a
@@ -871,27 +850,85 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   min-width: 3.25rem;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+  background: var(--bgCard);
   text-align: center;
 }
-
+.pe-meeting-date-edge {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
 .pe-meeting-day {
+  font: var(--fontHeadingSmall);
+}
+.pe-meeting-lead .pe-meeting-date {
+  min-width: 4rem;
+  padding: var(--space-2) var(--space-3);
+  border-color: transparent;
+  background: var(--accentLight);
+}
+.pe-meeting-lead .pe-meeting-date,
+.pe-meeting-lead .pe-meeting-date-edge {
+  color: var(--accentText);
+}
+.pe-meeting-lead .pe-meeting-day {
   font: var(--fontHeadingMedium);
 }
 
 .pe-meeting-body {
   display: flex;
   flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.pe-meeting-lead .pe-meeting-body {
+  gap: var(--space-2);
+}
+
+/* The subject with whatever became of the meeting beside it. */
+.pe-meeting-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
   min-width: 0;
 }
 
 .pe-meeting-title {
-  margin: 0;
+  min-width: 0;
+  font-weight: var(--fontWeightMedium);
+  overflow-wrap: anywhere;
+}
+.pe-meeting-title-lead {
+  font: var(--fontHeadingSmall);
 }
 
 .pe-meeting-meta {
   margin: 0;
+}
+
+/* Who is in the room: their faces, then their names. */
+.pe-meeting-people {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.pe-meeting-join {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--space-2);
+}
+.pe-meeting-join svg {
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+  flex: none;
 }
 
 /* The prep chip: Margince's own line about why this meeting is worth reading
@@ -913,6 +950,67 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--gapActions);
+}
+
+/* A row's verbs, at its far end. A row the reader may do nothing with keeps
+   no empty cell. */
+.pe-meeting-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+.pe-meeting-verbs:empty {
+  display: none;
+}
+
+/* An invitation still waiting on the contact has no date to hang a page on (a
+   personal link offers no times at all), so it is the meeting row without
+   one, its offered times as a strip of labels. */
+.pe-proposal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+.pe-proposal-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pe-proposal-notice {
+  grid-column: 1 / -1;
+}
+
+/* What a failed copy leaves behind: the notice that the browser refused, and
+   the address under it, selectable. */
+.pe-copy-notice {
+  display: grid;
+  gap: var(--space-2);
+}
+.pe-copy-url {
+  margin: 0;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+@container (max-width: 34rem) {
+  .pe-meeting {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .pe-meeting-verbs {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+  .pe-proposal {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pe-proposal .pe-meeting-verbs {
+    grid-column: 1;
+  }
 }
 
 /* One deal on the Deals tab, in the employer card's own family (`.pe-employment`

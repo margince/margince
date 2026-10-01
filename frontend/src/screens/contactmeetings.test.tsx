@@ -13,8 +13,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { RecordZoneProvider } from "../app/recordzone";
 import { stubClipboard } from "../design-system/clipboard-testing";
-import { formatDayMonth, formatTimeOfDay } from "../format/format";
+import { formatDayMonth } from "../format/format";
+import { formatTimeRange } from "../format/meetingtime";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider, translate } from "../i18n";
 import { bookingProfile, bookingProposals, bookingSlots } from "./book.testkit";
@@ -75,6 +77,7 @@ function mount(
   proposals: () => Proposal[],
   routes: RouteMap = {},
   allow: Parameters<typeof meRoute>[0] = { activity: ["create"] },
+  shown: components["schemas"]["Contact360"] = view,
 ) {
   installFetchStub({
     "GET /me": meRoute(allow, { seat: "full" }),
@@ -88,7 +91,9 @@ function mount(
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ContactMeetingsTab view={view} />
+        <RecordZoneProvider zone="UTC">
+          <ContactMeetingsTab view={shown} />
+        </RecordZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -103,16 +108,15 @@ it("lists the invitations still waiting on the contact, between upcoming and hel
   expect(
     screen.getAllByRole("heading").map((heading) => heading.textContent),
   ).toEqual(["Upcoming", "Waiting on Dana", "Held"]);
-  expect(screen.getByText("0 upcoming · 2 awaiting reply")).toBeTruthy();
   expect(screen.getByText("Personal link · Intro call")).toBeTruthy();
   const zone = viewerZone();
-  const offered = bookingSlots
-    .map(
-      (slot) =>
-        `${formatDayMonth(slot.start, "en", zone)} ${formatTimeOfDay(slot.start, "en", zone)}`,
-    )
-    .join(" · ");
-  expect(screen.getByText(offered)).toBeTruthy();
+  // Each offered time is its own label, so a reader scans them as a set.
+  for (const slot of bookingSlots)
+    expect(
+      screen.getByText(
+        `${formatDayMonth(slot.start, "en", zone)} · ${formatTimeRange(slot.start, slot.end, "en", zone)}`,
+      ),
+    ).toBeTruthy();
   expect(
     screen.getByText(
       `Sent ${formatDayMonth(proposed.created_at, "en", zone)} · expires ${formatDayMonth(proposed.expires_at, "en", zone)}`,
@@ -134,7 +138,7 @@ it("hides the waiting section when nothing is waiting", async () => {
       "success",
     ),
   );
-  expect(screen.getByText("0 upcoming")).toBeTruthy();
+  expect(screen.getByText("No upcoming meetings.")).toBeTruthy();
   expect(screen.queryByRole("heading", { name: /Waiting on/ })).toBeNull();
 });
 
@@ -272,4 +276,184 @@ it("does not ask for proposals when the reader may not book", async () => {
   ).toBeTruthy();
   expect(asked).not.toHaveBeenCalled();
   expect(screen.queryByRole("heading", { name: /Waiting on/ })).toBeNull();
+});
+
+type Activity = components["schemas"]["Activity"];
+
+function meeting(
+  row: Pick<Activity, "id" | "occurred_at"> & Partial<Activity>,
+) {
+  return {
+    kind: "meeting",
+    subject: "Weekly call",
+    duration_seconds: 1800,
+    is_done: false,
+    source: "manual",
+    captured_by: "human:u-1",
+    content_state: "available",
+    created_at: "2026-09-01T08:00:00Z",
+    updated_at: "2026-09-01T08:00:00Z",
+    ...row,
+  } satisfies Activity;
+}
+
+function meetingsPage(rows: Activity[], nextCursor?: string) {
+  return jsonResponse({
+    data: rows,
+    page: { has_more: Boolean(nextCursor), next_cursor: nextCursor ?? null },
+  });
+}
+
+const booked = meeting({
+  id: "0198f011-cccc-7000-8000-000000000001",
+  occurred_at: "2026-10-02T09:00:00Z",
+  meeting_status: "booked",
+  invitation_status: "confirmed",
+});
+
+const withBooking: components["schemas"]["Contact360"] = {
+  ...view,
+  next_meeting: {
+    activity_id: booked.id,
+    starts_at: booked.occurred_at,
+    subject: "Weekly call",
+    participants: [{ contact_id: "p-1", full_name: "Dana Buyer" }],
+  },
+};
+
+it("offers the next meeting's join link and its own page, from the invitation the calendar made", async () => {
+  const user = userEvent.setup();
+  mount(
+    () => [],
+    {
+      "GET /activities": () => meetingsPage([booked]),
+      [`GET /scheduling/invitations/${booked.id}`]: () =>
+        jsonResponse({
+          id: booked.id,
+          status: "confirmed",
+          start: "2026-10-02T09:00:00Z",
+          end: "2026-10-02T09:45:00Z",
+          subject: "Weekly call",
+          location: "",
+          version: 1,
+          provider: "gcal",
+          video_call: true,
+          video_url: "https://meet.google.com/abc-defg-hij",
+        }),
+    },
+    undefined,
+    withBooking,
+  );
+  const join = await screen.findByRole("link", { name: "Join Google Meet" });
+  expect(join.getAttribute("href")).toBe(
+    "https://meet.google.com/abc-defg-hij",
+  );
+  // The end comes from the invitation, which the calendar keeps current.
+  expect(
+    screen.getByText(
+      formatTimeRange(
+        "2026-10-02T09:00:00Z",
+        "2026-10-02T09:45:00Z",
+        "en",
+        "UTC",
+      ),
+    ),
+  ).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Weekly call" }));
+  expect(window.location.hash).toBe(`#/book/meeting-${booked.id}`);
+});
+
+it("asks for no invitation for a meeting that was not booked through Margince", async () => {
+  const invitation = vi.fn(() => jsonResponse({}));
+  mount(
+    () => [],
+    {
+      "GET /activities": () =>
+        meetingsPage([
+          { ...booked, invitation_status: null },
+          meeting({
+            id: "m-held",
+            subject: "Discovery call",
+            occurred_at: "2026-09-24T08:00:00Z",
+          }),
+        ]),
+      [`GET /scheduling/invitations/${booked.id}`]: invitation,
+    },
+    undefined,
+    withBooking,
+  );
+  // The list has arrived, so the card knows how the meeting was booked.
+  await screen.findByText("Discovery call");
+  expect(screen.getByText("Weekly call")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Weekly call" })).toBeNull();
+  expect(invitation).not.toHaveBeenCalled();
+});
+
+it("says what became of a meeting only where it is not the ordinary answer", async () => {
+  mount(() => [], {
+    "GET /activities": () =>
+      meetingsPage([
+        meeting({
+          id: "m-held",
+          subject: "Discovery call",
+          occurred_at: "2026-09-24T08:00:00Z",
+          meeting_status: "held",
+        }),
+        meeting({
+          id: "m-missed",
+          subject: "Intro call",
+          occurred_at: "2026-09-17T08:00:00Z",
+          meeting_status: "no_show",
+        }),
+      ]),
+  });
+  const held = await screen.findByRole("region", { name: "Held" });
+  await within(held).findByText("Intro call");
+  expect(within(held).getAllByText("No-show")).toHaveLength(1);
+  expect(
+    within(held).queryByText("Held", { selector: ".badge-label" }),
+  ).toBeNull();
+});
+
+it("reads older meetings when the reader asks for them", async () => {
+  const user = userEvent.setup();
+  const pages = [
+    meetingsPage(
+      [
+        meeting({
+          id: "m-new",
+          subject: "Review",
+          occurred_at: "2026-09-24T08:00:00Z",
+        }),
+      ],
+      "c-2",
+    ),
+    meetingsPage([
+      meeting({
+        id: "m-old",
+        subject: "Kick-off",
+        occurred_at: "2026-06-03T08:00:00Z",
+      }),
+    ]),
+  ];
+  let read = 0;
+  mount(() => [], {
+    "GET /activities": () => pages[Math.min(read++, pages.length - 1)],
+  });
+  await screen.findByText("Review");
+  expect(screen.queryByText("Kick-off")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Load more" }));
+  expect(await screen.findByText("Kick-off")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+});
+
+it("does not ask for meetings the reader's role may not see", async () => {
+  const listed = vi.fn(() => meetingsPage([]));
+  mount(() => [], { "GET /activities": listed }, undefined, {
+    ...view,
+    sections_omitted: ["activities"],
+  });
+  const held = await screen.findByRole("region", { name: "Held" });
+  expect(within(held).getByText("Hidden for your role")).toBeTruthy();
+  expect(listed).not.toHaveBeenCalled();
 });

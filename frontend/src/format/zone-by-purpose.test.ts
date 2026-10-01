@@ -162,6 +162,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The week grid's empty working days depend on the host's zone against the reader's, so the test pins both to make them disagree.",
   },
   {
+    file: "screens/contactmeetings.test.tsx",
+    why: "The next meeting's end comes from its calendar invitation, and the test names the record zone it renders that span in, so the expected span is stated rather than inherited.",
+  },
+  {
     file: "screens/book.test.tsx",
     why: "The guest deliberately selects Bangkok and the test verifies that its slot labels follow that chosen zone rather than the browser default.",
   },

@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
-import { Heading } from "../design-system/heading";
+import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
-import {
-  formatDayMonth,
-  formatNumber,
-  formatTimeOfDay,
-} from "../format/format";
+import { formatDayMonth, formatNumber } from "../format/format";
+import { formatTimeRange } from "../format/meetingtime";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { entityTimelineKeys } from "./activitykeys";
@@ -35,10 +37,31 @@ export type CopiedLink = Readonly<{
   onCopied: (url: string) => void;
 }>;
 
+function meetingProposalsKey(contactId: string | undefined) {
+  return ["meeting-proposals", contactId];
+}
+
+/**
+ * Reads the contact's Meetings tab again after a write that changed what it
+ * lists: a meeting booked, an invitation sent or one withdrawn. The tab reads
+ * the contact's timeline and the open proposals, so both are stale.
+ */
+export async function refreshContactMeetings(
+  client: QueryClient,
+  contactId: string,
+): Promise<void> {
+  await Promise.all(
+    [
+      meetingProposalsKey(contactId),
+      ...entityTimelineKeys("contact", contactId),
+    ].map((queryKey) => client.invalidateQueries({ queryKey })),
+  );
+}
+
 /** The reader's own open proposals to one contact: the times still unanswered. */
 export function useMeetingProposals(contactId: string | undefined) {
   return useQuery({
-    queryKey: ["meeting-proposals", contactId],
+    queryKey: meetingProposalsKey(contactId),
     enabled: Boolean(contactId),
     queryFn: async () => {
       const { data, error } = await api.GET("/scheduling/proposals", {
@@ -48,16 +71,6 @@ export function useMeetingProposals(contactId: string | undefined) {
       return data.data;
     },
   });
-}
-
-/**
- * How many invitations wait on the contact, as far as the latest read says: a
- * failed refetch keeps its cached rows, and the count must not outlive them.
- */
-export function waitingCount(
-  proposals: ReturnType<typeof useMeetingProposals>,
-): number {
-  return proposals.isError ? 0 : (proposals.data?.length ?? 0);
 }
 
 /**
@@ -96,12 +109,7 @@ export function WaitingSection({
     onSuccess: async (_done, { contactId }) => {
       withdrawn.current = true;
       setWithdrawing(null);
-      await Promise.all(
-        [
-          ["meeting-proposals", contactId],
-          ...entityTimelineKeys("contact", contactId),
-        ].map((queryKey) => client.invalidateQueries({ queryKey })),
-      );
+      await refreshContactMeetings(client, contactId);
     },
   });
   const rows = proposals.data ?? [];
@@ -112,17 +120,20 @@ export function WaitingSection({
     ? t("contact.meetings.waitingOn", { name: firstName })
     : t("contact.meetings.waitingOnReply");
   return (
-    <section>
-      <Heading size="large" className="t-h3">
-        {title}
-      </Heading>
-      <SurfaceState
-        loadingLabel={title}
-        state={state}
-        emptyLabel={title}
-        detail={{ onRetry: () => void proposals.refetch() }}
-      >
-        {rows.map((proposal) => (
+    <Panel title={title}>
+      {state === "failed" ? (
+        <PanelBody>
+          <SurfaceState
+            loadingLabel={title}
+            state={state}
+            emptyLabel={title}
+            detail={{ onRetry: () => void proposals.refetch() }}
+          >
+            {null}
+          </SurfaceState>
+        </PanelBody>
+      ) : (
+        rows.map((proposal) => (
           <ProposalRow
             key={proposal.id}
             proposal={proposal}
@@ -134,8 +145,8 @@ export function WaitingSection({
               setWithdrawing(proposal);
             }}
           />
-        ))}
-      </SurfaceState>
+        ))
+      )}
       <ConfirmModal
         open={withdrawing !== null}
         onClose={() => {
@@ -165,7 +176,7 @@ export function WaitingSection({
           onClose={() => setResending(null)}
         />
       )}
-    </section>
+    </Panel>
   );
 }
 
@@ -231,39 +242,48 @@ function ProposalRow({
           subject: proposal.subject,
         })
       : t("contact.meetings.personalLink", { subject: proposal.subject });
-  const times = proposal.options
-    .map(
-      (slot) =>
-        `${formatDayMonth(slot.start, locale, zone)} ${formatTimeOfDay(slot.start, locale, zone)}`,
-    )
-    .join(" · ");
   return (
-    <article className="pe-waiting">
-      <p className="t-body pe-meeting-title">{title}</p>
-      {times && <p className="t-num pe-meeting-meta">{times}</p>}
-      <p className="t-caption pe-meeting-meta">
-        {t("contact.meetings.sentExpires", {
-          sent: formatDayMonth(proposal.created_at, locale, zone),
-          expires: formatDayMonth(proposal.expires_at, locale, zone),
-        })}
-      </p>
-      <div className="pe-meeting-actions">
-        <Button onClick={copy.copy}>
-          {t(
-            copied.url === proposal.url
-              ? "scheduling.copied"
-              : "scheduling.copyLink",
+    <PanelRow>
+      <article className="pe-proposal">
+        <div className="pe-meeting-body">
+          <span className="pe-meeting-title">{title}</span>
+          {offered > 0 && (
+            <ul className="pe-proposal-times">
+              {proposal.options.map((slot) => (
+                <li key={slot.start}>
+                  <Badge>
+                    {formatDayMonth(slot.start, locale, zone)} ·{" "}
+                    {formatTimeRange(slot.start, slot.end, locale, zone)}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
           )}
-        </Button>
-        <Button onClick={onResend}>{t("contact.meetings.resend")}</Button>
-        <Button onClick={onWithdraw}>{t("contact.meetings.withdraw")}</Button>
-      </div>
-      {copy.notice && (
-        <>
-          {copy.notice}
-          <p className="pe-waiting-url">{proposal.url}</p>
-        </>
-      )}
-    </article>
+          <p className="t-caption pe-meeting-meta">
+            {t("contact.meetings.sentExpires", {
+              sent: formatDayMonth(proposal.created_at, locale, zone),
+              expires: formatDayMonth(proposal.expires_at, locale, zone),
+            })}
+          </p>
+        </div>
+        <div className="pe-meeting-verbs">
+          <Button onClick={copy.copy}>
+            {t(
+              copied.url === proposal.url
+                ? "scheduling.copied"
+                : "scheduling.copyLink",
+            )}
+          </Button>
+          <Button onClick={onResend}>{t("contact.meetings.resend")}</Button>
+          <Button onClick={onWithdraw}>{t("contact.meetings.withdraw")}</Button>
+        </div>
+        {copy.notice && (
+          <div className="pe-copy-notice pe-proposal-notice">
+            {copy.notice}
+            <p className="pe-copy-url">{proposal.url}</p>
+          </div>
+        )}
+      </article>
+    </PanelRow>
   );
 }

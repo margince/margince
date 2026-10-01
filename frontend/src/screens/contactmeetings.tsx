@@ -1,21 +1,33 @@
-import { useRef, useState } from "react";
+import { Link } from "lucide-react";
+import { type Ref, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
+import { ActionRow } from "../design-system/actionrow";
 import { Button, type ButtonVariant } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
-import { Heading } from "../design-system/heading";
-import { SurfaceState, sectionState } from "../design-system/surfacestate";
-import { dateTileParts } from "../format/datetile";
-import { formatNumber, formatTimeOfDay } from "../format/format";
-import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { useMe } from "./common";
+import {
+  Panel,
+  PanelBody,
+  RailPanel,
+  type RailPanelState,
+} from "../design-system/panel";
+import {
+  type TimelineFilters,
+  useRecordTimeline,
+} from "../design-system/recordtimeline";
+import {
+  omitted,
+  SurfaceState,
+  sectionState,
+} from "../design-system/surfacestate";
+import { useT } from "../i18n";
+import { LoadMoreButton, useMe } from "./common";
+import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
   type CopiedLink,
   useMeetingProposals,
   WaitingSection,
-  waitingCount,
 } from "./contactmeetings.waiting";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import "./contact360.css";
@@ -98,88 +110,53 @@ function MeetingMomentAction({
   );
 }
 
-// One meeting, dated: the card shape both the booked meeting and every one
-// already held share, so a reader learns it once. `withheld` redacts the
-// title exactly as the timeline's own row does: the same fact rendered a
-// second way would be the two disagreeing about what "withheld" means.
-function MeetingCard({
-  startsAt,
-  subject,
-  withheld,
-  participants,
-  activity,
-  locale,
-  zone,
-  note,
-  briefVariant,
-  onBriefMeeting,
-  secondaryActions,
-  onAction,
-}: Readonly<{
-  startsAt: string;
-  subject?: string | null;
-  withheld?: boolean;
-  participants?: readonly Readonly<{ contact_id: string; full_name: string }>[];
-  activity: Pick<Activity, "id" | "kind" | "content_state"> | undefined;
-  locale: Locale;
-  zone: string;
-  note?: Readonly<{ by: string; whyNow: string }>;
-  briefVariant?: ButtonVariant;
-  onBriefMeeting?: (activityId: string) => void;
-  secondaryActions?: readonly ContactMomentAction[];
-  onAction?: (action: ContactMomentAction) => void;
-}>) {
-  const t = useT();
-  const tile = dateTileParts(startsAt, locale, zone);
-  const title = withheld
-    ? t("timeline.withheld")
-    : (subject ?? t("contact.meetings.untitled"));
-  const meta = [
-    formatTimeOfDay(startsAt, locale, zone),
-    (participants ?? []).length > 0
-      ? (participants ?? []).map((who) => who.full_name).join(", ")
-      : undefined,
-  ].filter(Boolean);
-  return (
-    <article className="pe-meeting">
-      <time className="pe-meeting-date" dateTime={startsAt}>
-        <span className="t-caption">{tile.weekday}</span>
-        <span className="pe-meeting-day">{tile.day}</span>
-        <span className="t-caption">{tile.month}</span>
-      </time>
-      <div className="pe-meeting-body">
-        <p className="t-body pe-meeting-title">{title}</p>
-        <p className="t-caption pe-meeting-meta">{meta.join(" · ")}</p>
-        {note && (
-          <p className="pe-meeting-note">
-            <span className="pe-meeting-note-by">{note.by}</span> ·{" "}
-            {note.whyNow}
-          </p>
-        )}
-        <div className="pe-meeting-actions">
-          <MeetingBriefAction
-            activity={activity}
-            onBriefMeeting={onBriefMeeting}
-            variant={briefVariant}
-          />
-          {secondaryActions?.map((action) => (
-            <MeetingMomentAction
-              key={action.label}
-              action={action}
-              onAction={onAction}
-            />
-          ))}
-        </div>
-      </div>
-    </article>
-  );
+const MEETINGS_ONLY: TimelineFilters = { kind: "meeting" };
+
+// Which of the contact's meetings still lie ahead and which are behind, on the
+// server's clock: the read's own `as_of`, so a reader whose computer clock is
+// wrong still sees the meeting where it belongs. The soonest booked one is
+// drawn on its own, from the server's next-meeting read, and is not listed a
+// second time.
+function splitMeetings(
+  listed: readonly Activity[],
+  asOf: string,
+  nextId: string | undefined,
+): Readonly<{ ahead: Activity[]; held: Activity[] }> {
+  const now = Date.parse(asOf);
+  const at = (activity: Activity) => Date.parse(activity.occurred_at);
+  const others = listed.filter((activity) => activity.id !== nextId);
+  return {
+    ahead: others
+      .filter((activity) => at(activity) > now)
+      .sort((a, b) => at(a) - at(b)),
+    // Newest first: the row on top answers "what just happened".
+    held: others
+      .filter((activity) => at(activity) <= now)
+      .sort((a, b) => at(b) - at(a)),
+  };
+}
+
+// The held list is the contact's own meetings read, page by page, so it can
+// say more than the composite read's first page of every kind carries.
+function heldState(
+  view: Contact360 | undefined,
+  loading: boolean,
+  listed: ReturnType<typeof useRecordTimeline>,
+  count: number,
+): RailPanelState {
+  if (!view) return loading ? "loading" : "unavailable";
+  if (omitted(view, "activities")) return "withheld";
+  if (count > 0) return "ready";
+  if (listed.isError) return "failed";
+  return listed.isPending ? "loading" : "empty";
 }
 
 /**
- * ContactMeetingsTab puts the meeting that has not happened yet above the ones
- * that have. The booked meeting is the server's own next-meeting read, taken
- * through this contact's activity link rather than their account's — the company's
- * answer names a meeting this contact may not be in.
+ * ContactMeetingsTab reads as three panels: what is booked, what is still
+ * waiting on the contact's answer, and what has already been held. The booked
+ * meeting leads, from the server's own next-meeting read taken through this
+ * contact's activity link rather than their account's — the company's answer
+ * names a meeting this contact may not be in.
  */
 export function ContactMeetingsTab({
   view,
@@ -196,37 +173,20 @@ export function ContactMeetingsTab({
   onAction?: (action: ContactMomentAction) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
   const canBook = useCanWrite("activity", "create");
-  const me = useMe();
-  const grantKnown = me.data?.authorization !== undefined;
   // Only a reader who may book reads the proposals: the list answers 403 to
   // anyone else, and the section they fill is theirs alone.
   const proposals = useMeetingProposals(canBook ? view?.contact.id : undefined);
-  // The booked meeting is drawn above, from the server's own next-meeting
-  // read. It is also an activity, so an unfiltered list draws it a second time
-  // under "already held" — which was merely untidy while the rows were inert
-  // and becomes two identical brief buttons for one room now that they carry a
-  // verb.
-  const booked = view?.next_meeting?.activity_id;
-  const met = (view?.activities?.data ?? [])
-    .filter(
-      (activity: Activity) =>
-        activity.kind === "meeting" && activity.id !== booked,
-    )
-    // Newest first: the row above answers "what just happened", not "what was
-    // logged first": the order the page's own list otherwise arrives in.
-    .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at));
-  const hasMore = view?.activities?.page.has_more ?? false;
-  const past = sectionState(
-    view,
-    "activities",
-    Boolean(view?.activities),
-    met.length,
-    loading,
-  );
+  const listed = useRecordTimeline("contact", view?.contact.id ?? "", {
+    filters: MEETINGS_ONLY,
+    enabled: view !== undefined && !omitted(view, "activities"),
+  });
   const next = view?.next_meeting;
+  const { ahead, held } = splitMeetings(
+    listed.activities,
+    view?.as_of ?? "",
+    next?.activity_id,
+  );
   // The prep chip and its agenda verb belong to the meeting the moment is
   // ABOUT (the next one) and to no other rung: a moment on a different
   // claim (a re-engagement, an overdue promise) has nothing to say about a
@@ -236,76 +196,106 @@ export function ContactMeetingsTab({
   const bookButton = useRef<HTMLButtonElement>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const copied: CopiedLink = { url: copiedUrl, onCopied: setCopiedUrl };
+  const bookingLink = useBookingLink(copied);
+  const upcoming = sectionState(
+    view,
+    "next_meeting",
+    Boolean(view),
+    (next ? 1 : 0) + ahead.length,
+    loading,
+  );
+  const briefOf = (activity: Activity) => (
+    <MeetingBriefAction activity={activity} onBriefMeeting={onBriefMeeting} />
+  );
   return (
-    <div className="record-stack">
-      <div className="pe-meetings-head">
-        <MeetingsCount
-          upcoming={next ? 1 : 0}
-          waiting={waitingCount(proposals)}
-          ready={Boolean(view)}
-        />
-        <div className="pe-meeting-actions">
-          <CopyBookingLink copied={copied} />
-          <Button
-            ref={bookButton}
-            variant="primary"
-            disabled={loading || !view || !grantKnown}
-            reason={
-              view && grantKnown && !canBook
-                ? t("scheduling.bookRefused")
-                : undefined
+    <div className="record-stack pe-meetings">
+      <Panel title={t("contact.meetings.upcoming")}>
+        <PanelBody className="pe-meetings-toolbar">
+          <ActionRow
+            primary={
+              <BookMeeting
+                view={view}
+                loading={loading}
+                canBook={canBook}
+                ref={bookButton}
+              />
             }
-            onClick={() => {
-              if (view)
-                navigate({ screen: "book", id: `contact-${view.contact.id}` });
-            }}
           >
-            {t("scheduling.bookContact")}
-          </Button>
-        </div>
-      </div>
-      <section>
-        <Heading size="large" className="t-h3">
-          {t("contact.meetings.upcoming")}
-        </Heading>
-        <SurfaceState
-          loadingLabel={t("contact.meetings.upcoming")}
-          state={sectionState(
-            view,
-            "next_meeting",
-            Boolean(view),
-            next ? 1 : 0,
-            loading,
+            {bookingLink.url && (
+              <Button onClick={bookingLink.copy.copy}>
+                <Link aria-hidden="true" />
+                {t(
+                  copied.url === bookingLink.url
+                    ? "scheduling.copied"
+                    : "contact.meetings.copyBookingLink",
+                )}
+              </Button>
+            )}
+          </ActionRow>
+          {bookingLink.copy.notice && (
+            <div className="pe-copy-notice">
+              {bookingLink.copy.notice}
+              <p className="pe-copy-url">{bookingLink.url}</p>
+            </div>
           )}
-          emptyLabel={t("contact.meetings.noneBooked")}
-        >
-          {next && (
-            <MeetingCard
-              startsAt={next.starts_at}
-              subject={next.subject}
-              participants={next.participants}
-              // next_meeting carries no content_state because the 360
-              // withholds the whole section rather than a redacted row, so a
-              // booked meeting the reader can see here is one they can read.
-              // The kind is stated for the same reason: this section IS the
-              // meeting.
-              activity={{ id: next.activity_id, kind: "meeting" }}
-              locale={locale}
-              zone={recordZone}
-              note={
-                meetingPrep && {
-                  by: "Margince",
-                  whyNow: meetingPrep.why_now,
+        </PanelBody>
+        {upcoming === "ready" ? (
+          <>
+            {next && (
+              <NextMeetingCard
+                next={next}
+                activity={listed.activities.find(
+                  (activity) => activity.id === next.activity_id,
+                )}
+                note={
+                  meetingPrep && {
+                    by: "Margince",
+                    whyNow: meetingPrep.why_now,
+                  }
                 }
-              }
-              briefVariant="ai"
-              onBriefMeeting={onBriefMeeting}
-              secondaryActions={meetingPrep?.secondary_actions}
-              onAction={onAction}
-            />
-          )}
-        </SurfaceState>
-      </section>
+                verbs={
+                  <>
+                    <MeetingBriefAction
+                      // next_meeting carries no content_state because the 360
+                      // withholds the whole section rather than a redacted
+                      // row, so a booked meeting the reader can see here is
+                      // one they can read. The kind is stated for the same
+                      // reason: this section IS the meeting.
+                      activity={{ id: next.activity_id, kind: "meeting" }}
+                      onBriefMeeting={onBriefMeeting}
+                      variant="ai"
+                    />
+                    {meetingPrep?.secondary_actions?.map((action) => (
+                      <MeetingMomentAction
+                        key={action.label}
+                        action={action}
+                        onAction={onAction}
+                      />
+                    ))}
+                  </>
+                }
+              />
+            )}
+            {ahead.map((activity) => (
+              <MeetingRow
+                key={activity.id}
+                activity={activity}
+                verbs={briefOf(activity)}
+              />
+            ))}
+          </>
+        ) : (
+          <PanelBody>
+            <SurfaceState
+              state={upcoming}
+              loadingLabel={t("contact.meetings.upcoming")}
+              emptyLabel={t("contact.meetings.noneBooked")}
+            >
+              {null}
+            </SurfaceState>
+          </PanelBody>
+        )}
+      </Panel>
       {view && (
         <WaitingSection
           contact={view.contact}
@@ -314,60 +304,62 @@ export function ContactMeetingsTab({
           afterWithdraw={() => bookButton.current}
         />
       )}
-      <section>
-        <Heading size="large" className="t-h3">
-          {t("contact.meetings.past")}
-        </Heading>
-        <SurfaceState
-          loadingLabel={t("contact.meetings.past")}
-          state={past === "ready" && hasMore ? "partial" : past}
-          emptyLabel={t("contact.meetings.noneLogged")}
-        >
-          {met.map((activity) => (
-            <MeetingCard
-              key={activity.id}
-              startsAt={activity.occurred_at}
-              subject={activity.subject}
-              withheld={activity.content_state === "withheld"}
-              activity={activity}
-              locale={locale}
-              zone={recordZone}
-              onBriefMeeting={onBriefMeeting}
-            />
-          ))}
-        </SurfaceState>
-      </section>
+      <RailPanel
+        title={t("contact.meetings.past")}
+        state={heldState(view, loading, listed, held.length)}
+        emptyLabel={t("contact.meetings.noneLogged")}
+        detail={{ onRetry: () => void listed.refetch() }}
+        footer={listed.hasNextPage ? <LoadMoreButton query={listed} /> : null}
+      >
+        {held.map((activity) => (
+          <MeetingRow
+            key={activity.id}
+            activity={activity}
+            verbs={briefOf(activity)}
+          />
+        ))}
+      </RailPanel>
     </div>
   );
 }
 
-// How much is in motion with this contact, ahead of the sections that list it.
-function MeetingsCount({
-  upcoming,
-  waiting,
-  ready,
-}: Readonly<{ upcoming: number; waiting: number; ready: boolean }>) {
-  const plural = usePlural();
-  const { locale } = useLocale();
-  if (!ready) return <span />;
-  const parts = [
-    plural("contact.meetings.countUpcoming", upcoming, {
-      count: formatNumber(upcoming, locale),
-    }),
-  ];
-  if (waiting > 0)
-    parts.push(
-      plural("contact.meetings.countWaiting", waiting, {
-        count: formatNumber(waiting, locale),
-      }),
-    );
-  return <p className="t-caption">{parts.join(" · ")}</p>;
+// The tab's own verb: a meeting with this contact, from the booking flow.
+function BookMeeting({
+  view,
+  loading,
+  canBook,
+  ref,
+}: Readonly<{
+  view?: Contact360;
+  loading: boolean;
+  canBook: boolean;
+  ref: Ref<HTMLButtonElement>;
+}>) {
+  const t = useT();
+  const me = useMe();
+  const grantKnown = me.data?.authorization !== undefined;
+  return (
+    <Button
+      ref={ref}
+      variant="primary"
+      disabled={loading || !view || !grantKnown}
+      reason={
+        view && grantKnown && !canBook ? t("scheduling.bookRefused") : undefined
+      }
+      onClick={() => {
+        if (view)
+          navigate({ screen: "book", id: `contact-${view.contact.id}` });
+      }}
+    >
+      {t("scheduling.bookContact")}
+    </Button>
+  );
 }
 
 // The reader's own public link, for a contact who would rather pick a time
 // themselves. Offered only while the page takes bookings: a paused link hands
 // the contact a page that turns them away.
-function CopyBookingLink({ copied }: Readonly<{ copied: CopiedLink }>) {
+function useBookingLink(copied: CopiedLink) {
   const t = useT();
   const profile = useSchedulingProfile();
   const url = profile.data?.enabled ? (profile.data.public_url ?? "") : "";
@@ -380,22 +372,5 @@ function CopyBookingLink({ copied }: Readonly<{ copied: CopiedLink }>) {
     },
     () => copied.onCopied(url),
   );
-  if (!url) return null;
-  return (
-    <>
-      <Button onClick={copy.copy}>
-        {t(
-          copied.url === url
-            ? "scheduling.copied"
-            : "contact.meetings.copyBookingLink",
-        )}
-      </Button>
-      {copy.notice && (
-        <div className="pe-waiting-notice">
-          {copy.notice}
-          <p className="pe-waiting-url">{url}</p>
-        </div>
-      )}
-    </>
-  );
+  return { url, copy };
 }

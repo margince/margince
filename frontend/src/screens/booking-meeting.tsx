@@ -1,11 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { backStaysInApp, navigate } from "../app/router";
 import { ActionRow } from "../design-system/actionrow";
-import { Badge, Button } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
@@ -18,33 +18,21 @@ import { useLocale, useT } from "../i18n";
 import { BookingFooter } from "./booking-common";
 import {
   DeliveryCard,
+  InvitationBadge,
   MeetingFacts,
   openCalendarLabel,
 } from "./booking-meeting-parts";
 import { BookingReschedule } from "./booking-reschedule";
 import { problemCodeOf, QueryGate, throwProblem } from "./common";
+import {
+  meetingInvitationKey,
+  useMeetingInvitation,
+} from "./meeting-invitation-query";
 import { ContactMeetingBrief } from "./meetingbrief/drawer";
 import "./booking-meeting.css";
 
 type Invitation = components["schemas"]["MeetingInvitation"];
 type Change = components["schemas"]["MeetingInvitationChange"];
-type Status = Invitation["status"];
-
-const STATUS_TONE: Readonly<
-  Record<Status, "info" | "success" | "warning" | "default">
-> = {
-  pending: "info",
-  confirmed: "success",
-  needs_attention: "warning",
-  rescheduling: "info",
-  canceling: "info",
-  canceled: "default",
-};
-const IN_FLIGHT: ReadonlySet<Status> = new Set([
-  "pending",
-  "rescheduling",
-  "canceling",
-]);
 
 // The host reaches a meeting from a contact, the worklist or a link in their
 // calendar, so "back" is wherever they were; a page opened cold has no screen
@@ -63,25 +51,8 @@ export function BookingMeetingScreen({
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reschedule, setReschedule] = useState(false);
   const [brief, setBrief] = useState(false);
-  const queryKey = ["meeting-invitation", id, token];
-  const query = useQuery({
-    queryKey,
-    queryFn: async () => {
-      const result = token
-        ? await api.GET("/public/meeting/{token}", {
-            params: { path: { token } },
-          })
-        : await api.GET("/scheduling/invitations/{id}", {
-            params: { path: { id: id ?? "" } },
-          });
-      if (result.error) throwProblem(result.error);
-      return result.data;
-    },
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      return status && IN_FLIGHT.has(status) ? 3000 : false;
-    },
-  });
+  const queryKey = meetingInvitationKey(id, token);
+  const query = useMeetingInvitation(id, token);
   const change = useMutation({
     mutationFn: async (input: {
       id?: string;
@@ -233,23 +204,10 @@ function MeetingHead({ meeting }: Readonly<{ meeting: Invitation }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const labels: Record<Status, string> = {
-    pending: t("scheduling.pending"),
-    confirmed: t("scheduling.confirmed"),
-    needs_attention: t("scheduling.needs_attention"),
-    rescheduling: t("scheduling.rescheduling"),
-    canceling: t("scheduling.canceling"),
-    canceled: t("scheduling.canceled"),
-  };
   return (
     <div className="bookmeet-head">
       <div role="status">
-        <Badge
-          tone={STATUS_TONE[meeting.status]}
-          live={IN_FLIGHT.has(meeting.status)}
-        >
-          {labels[meeting.status]}
-        </Badge>
+        <InvitationBadge status={meeting.status} />
       </div>
       <Heading as="h1" size="large">
         {meeting.subject || t("contact.meetings.untitled")}
