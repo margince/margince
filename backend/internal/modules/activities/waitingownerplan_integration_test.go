@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -50,7 +51,7 @@ func TestTheWaitingQueryKeysEachReplyOwnerLookupOnItsLink(t *testing.T) {
 	sent := &waitingStatement{}
 	config := e.pool.Config()
 	config.ConnConfig.Tracer = sent
-	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+	pool, err := testdb.OwnPoolFromConfig(context.Background(), config)
 	if err != nil {
 		t.Fatalf("opening a traced pool: %v", err)
 	}
