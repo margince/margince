@@ -14987,10 +14987,11 @@ export interface paths {
         };
         /**
          * Download the offer's most recently rendered PDF.
-         * @description Streams the bytes `pdf_asset_ref` points at (set by `renderOffer`). 404 both when the
-         *     offer has never been rendered (`pdf_asset_ref` is null) and on the usual row-scope
-         *     miss — neither leaks which case applies. 501 mirrors `renderOffer`'s own posture when
-         *     the deployment has no blobstore wired.
+         * @description Streams the bytes `pdf_asset_ref` points at (set by `renderOffer`). 404 when the
+         *     caller's read of the offer carries no `pdf_asset_ref` — never rendered, or withheld
+         *     because the caller cannot open the offer's buyer company — and on the usual row-scope
+         *     miss; none leaks which case applies. 501 mirrors `renderOffer`'s own posture when the
+         *     deployment has no blobstore wired.
          */
         get: operations["downloadOfferPdf"];
         put?: never;
@@ -37632,7 +37633,7 @@ export interface components {
              * @description The offer_template used for locale/layout at render time; unset falls back to the workspace's default template for the offer's locale.
              */
             template_id?: string | null;
-            /** @description Rendered PDF ref, set by renderOffer (B-E03.22/WP7). */
+            /** @description Rendered PDF ref, set by renderOffer. Null, as are buyer_company_id and buyer_snapshot, for a reader who cannot open the buyer company; cleared when a draft's buyer changes. */
             pdf_asset_ref?: string | null;
             /** Format: date-time */
             readonly accepted_at?: string | null;
@@ -64794,7 +64795,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The offer, with pdf_asset_ref populated. */
+            /** @description The offer, with pdf_asset_ref populated — null, as on every read, for a caller who cannot open the offer's buyer company. */
             200: {
                 headers: {
                     [name: string]: unknown;

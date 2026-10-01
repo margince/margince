@@ -579,7 +579,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `issuer_snapshot` | `jsonb` |  | Seller legal block captured at send time. |
 | `net_minor` | `bigint` | yes | Σ line nets — derived, never client-set. |
 | `offer_number` | `text` | yes | Human-facing Angebot number, minted server-side, unique per workspace (with revision). |
-| `pdf_asset_ref` | `text` |  | Rendered PDF ref, set by renderOffer (B-E03.22/WP7). |
+| `pdf_asset_ref` | `text` |  | Rendered PDF ref, set by renderOffer. |
 | `revision` | `integer` | yes | Bumped when a sent offer is regenerated; the prior revision becomes superseded. |
 | `status` | `text` | yes | One of `draft`, `sent`, `accepted`, `rejected`, `expired`, `superseded`. |
 | `tax_minor` | `bigint` | yes | Σ line taxes — derived, never client-set. |

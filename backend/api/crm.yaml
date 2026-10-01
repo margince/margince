@@ -22113,7 +22113,7 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
-          description: The offer, with pdf_asset_ref populated.
+          description: The offer, with pdf_asset_ref populated — null, as on every read, for a caller who cannot open the offer's buyer company.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Offer' }
@@ -22148,10 +22148,11 @@ paths:
       x-agent-access: human-only
       summary: Download the offer's most recently rendered PDF.
       description: |
-        Streams the bytes `pdf_asset_ref` points at (set by `renderOffer`). 404 both when the
-        offer has never been rendered (`pdf_asset_ref` is null) and on the usual row-scope
-        miss — neither leaks which case applies. 501 mirrors `renderOffer`'s own posture when
-        the deployment has no blobstore wired.
+        Streams the bytes `pdf_asset_ref` points at (set by `renderOffer`). 404 when the
+        caller's read of the offer carries no `pdf_asset_ref` — never rendered, or withheld
+        because the caller cannot open the offer's buyer company — and on the usual row-scope
+        miss; none leaks which case applies. 501 mirrors `renderOffer`'s own posture when the
+        deployment has no blobstore wired.
       responses:
         '200':
           description: The PDF bytes; Content-Disposition names the file.
@@ -50855,7 +50856,7 @@ components:
         fx_rate_to_base: { type: [string, 'null'], readOnly: true, description: 'Native→base, frozen at send (RT-PR-C2). Decimal-as-string to avoid float rounding.' }
         fx_rate_date: { type: [string, 'null'], format: date, readOnly: true }
         template_id: { type: [string, 'null'], format: uuid, description: The offer_template used for locale/layout at render time; unset falls back to the workspace's default template for the offer's locale. }
-        pdf_asset_ref: { type: [string, 'null'], description: 'Rendered PDF ref, set by renderOffer (B-E03.22/WP7).' }
+        pdf_asset_ref: { type: [string, 'null'], description: 'Rendered PDF ref, set by renderOffer. Null, as are buyer_company_id and buyer_snapshot, for a reader who cannot open the buyer company; cleared when a draft''s buyer changes.' }
         accepted_at: { type: [string, 'null'], format: date-time, readOnly: true }
         ai_generated: { type: boolean, readOnly: true, default: false, description: 'True only on the response of the regenerate call that produced this draft revision; false on every other read — provenance is stamped on the drafting call itself, not persisted across future reads.' }
         ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send.' }

@@ -220,9 +220,10 @@ func (h Handlers) RenderOffer(w http.ResponseWriter, r *http.Request, id crmcont
 }
 
 // DownloadOfferPdf streams the bytes renderOffer last wrote at
-// pdf_asset_ref. GetOffer already carries the row-scope/RBAC gate, so a
-// nil pdf_asset_ref (never rendered) and an invisible offer both fall
-// through to the same apperrors.ErrNotFound — neither leaks which case
+// pdf_asset_ref. GetOffer already carries the row-scope/RBAC gate, and it
+// withholds the ref from a reader who cannot open the offer's buyer company,
+// so an offer never rendered, a rendering withheld and an invisible offer all
+// fall through to the same apperrors.ErrNotFound — none leaks which case
 // applies (mirrors DownloadAttachment's existence-hiding posture).
 func (h Handlers) DownloadOfferPdf(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	offer, err := h.store.GetOffer(r.Context(), pathID[ids.OfferKind](id), storekit.IncludeArchived)

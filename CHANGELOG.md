@@ -91,6 +91,12 @@ when it has content.
   recent email history. Source-linked reminders reconcile without duplicates;
   accepting or completing one updates request state across the deal and email
   views. Background deal refresh updates facts without model calls.
+- **An offer's PDF is no longer served to a reader who cannot open its buyer
+  company.** The PDF prints the buyer's legal block, which the offer already
+  withheld from that reader along with the buyer's id. For them the offer reads
+  as never rendered, a PDF they rendered themselves included, and its download
+  answers 404. Changing a draft's buyer removes its PDF, which printed the
+  previous one.
 
 ## [0.0.1] - 2026-09-10
 

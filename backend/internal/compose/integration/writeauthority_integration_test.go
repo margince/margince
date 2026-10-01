@@ -397,7 +397,7 @@ func TestAReadShareOfADealCannotEditItsOffer(t *testing.T) {
 	store := deals.NewStore(e.DB(), deals.Installation{})
 	intro := "Rewritten by a reader"
 	editOffer := func() error {
-		_, err := store.UpdateOffer(holder, ids.From[ids.OfferKind](offer), deals.UpdateOfferInput{IntroText: &intro})
+		_, _, err := store.UpdateOffer(holder, ids.From[ids.OfferKind](offer), deals.UpdateOfferInput{IntroText: &intro})
 		return err
 	}
 	shareDeal := func(access string) {
