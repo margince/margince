@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -76,10 +77,10 @@ func TestABoughtContactIsOwedANotice(t *testing.T) {
 	if state != "open" {
 		t.Errorf("state = %q, want open", state)
 	}
-	// A calendar month, not 31 days: from 1 October it runs 31 days and can
-	// gain the hour a clock change hands back, so the bound is the month itself.
+	// A calendar month by the rule's own arithmetic, not 31 days: from 1 October
+	// it runs 31 days and can gain the hour a clock change hands back.
 	now := time.Now()
-	if !due.After(now) || due.After(now.AddDate(0, 1, 0).Add(time.Hour)) {
+	if !due.After(now) || due.After(consent.AddMonths(now, 1).Add(time.Hour)) {
 		t.Errorf("the notice falls due %v, want inside a calendar month of the acquisition (%v)", due, now)
 	}
 }
