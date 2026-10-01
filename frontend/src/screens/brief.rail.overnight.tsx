@@ -192,11 +192,18 @@ export function OvernightDigest() {
   const t = useT();
   const digestQuery = useMorningDigest();
   return (
-    <QueryGate query={digestQuery} pendingLabel={t("brief.panel.overnight")}>
-      {(digest) =>
-        overnightIsEmpty(digest) ? null : <DigestBody digest={digest} />
-      }
-    </QueryGate>
+    <>
+      {/* A failed read is said under the group it failed to fill: a bare
+          "did not load" at the foot of the receipt would not say what. */}
+      {digestQuery.isError && (
+        <PanelGroupHead title={t("brief.panel.overnight")} level="h3" />
+      )}
+      <QueryGate query={digestQuery} pendingLabel={t("brief.panel.overnight")}>
+        {(digest) =>
+          overnightIsEmpty(digest) ? null : <DigestBody digest={digest} />
+        }
+      </QueryGate>
+    </>
   );
 }
 

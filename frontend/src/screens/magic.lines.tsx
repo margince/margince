@@ -104,7 +104,7 @@ function MagicLineRow({
         {/* A sentence this build has no key for is DROPPED rather than
             printed: `magic.action.something` on a receipt is worse than a row
             that says only what it was about and when. */}
-        {sentence && t(sentence, line.summary.values)}
+        {sentence && t(sentence, line.summary.values)}{" "}
         <LineSubject line={line} since={since} />
         {detail.length > 0 && (
           <span className="sr-only">

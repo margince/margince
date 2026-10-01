@@ -118,15 +118,25 @@ export function placeMarks(receipt: MagicReceipt): readonly TimelineMark[] {
   return placed;
 }
 
-// A bar stands on the baseline, where its height is read, beside any bar
-// already there; a dot climbs onto whatever stands where it falls.
+// A bar stands on the baseline, where its height is read, beside whatever
+// already stands there, dot or bar; a dot climbs onto whatever stands where it
+// falls.
 function standing(
   under: readonly TimelineMark[],
   height: number,
 ): { nudge: number; bottom: number } {
   if (height > DOT_PX) {
-    const bars = under.filter((mark) => mark.height > DOT_PX).length;
-    return { nudge: bars * (BAR_PX + STACK_GAP_PX), bottom: 0 };
+    const nudge = under
+      .filter((mark) => mark.bottom === 0)
+      .reduce(
+        (right, mark) =>
+          Math.max(
+            right,
+            mark.nudge + widthOf(mark) / 2 + STACK_GAP_PX + BAR_PX / 2,
+          ),
+        0,
+      );
+    return { nudge, bottom: 0 };
   }
   const top = under.reduce(
     (most, mark) => Math.max(most, mark.bottom + mark.height),
@@ -136,6 +146,10 @@ function standing(
     nudge: 0,
     bottom: top === 0 ? 0 : Math.min(top + STACK_GAP_PX, PLOT_PX - height),
   };
+}
+
+function widthOf(mark: TimelineMark): number {
+  return mark.height > DOT_PX ? BAR_PX : DOT_PX;
 }
 
 export type AxisTick = Readonly<{ at: number; iso: string; day: boolean }>;

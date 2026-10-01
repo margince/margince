@@ -6,7 +6,7 @@ import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { useTooltip } from "../design-system/tooltip";
-import { floorFigure } from "../format/figure";
+import { floorFigure, readsAsFloor } from "../format/figure";
 import {
   formatDateTime,
   formatMoneyCompact,
@@ -147,11 +147,9 @@ function LaneReading({
 }: Reading) {
   const t = useT();
   const { locale } = useLocale();
-  // A FLOOR OF NONE IS NOT A FLOOR. `0+` says "at least nothing", which is
-  // true of every number there has ever been — so the mark goes on a figure
-  // that counts something and nowhere else. A bounded read that found none of
-  // a kind is a reading of zero, and the `+` was noise on it.
-  const marked = floor === true && count !== null && count > 0;
+  // The figure and the tip that explains its `+` ask the one rule: a floor of
+  // none is not a floor (`readsAsFloor`).
+  const marked = readsAsFloor(floor === true, count ?? 0);
   // A DOOR INTO NOTHING IS NOT REASSURANCE, it is a trip. A topic's confirmed
   // zero has no rows behind it, so its door lands the reader in an empty lane
   // framed by the urgent counts of every other slot — which reads as a filter
@@ -178,7 +176,7 @@ function LaneReading({
   const card = (
     <StatCard
       label={label}
-      value={floorFigure(figure, marked)}
+      value={floorFigure(figure, marked, count ?? 0)}
       tone={warning ? "warning" : undefined}
       // The basis says what the figure was taken over. With no figure there was
       // nothing to take it over, so the line says what failed instead.
@@ -466,6 +464,7 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
           ? floorFigure(
               formatMoneyCompact(amount, currency, locale),
               incomplete,
+              amount,
             )
           : t(
               nothingFlagged

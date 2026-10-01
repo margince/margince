@@ -11,7 +11,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type MagicSentenceKey, magicByKey } from "./magic.keys";
-import type { MagicLine } from "./magic.queries";
+import { fillsPage, type MagicLine } from "./magic.queries";
 
 // Which reading each sentence counts toward, for EVERY sentence the receipt
 // can send, so a new one is a compile error here until somebody decides. Null
@@ -113,12 +113,15 @@ function glanceReadings(done: readonly MagicLine[]): readonly GlanceReading[] {
     tally.actors.set(who, share);
     byLabel.set(label, tally);
   }
+  // A lane that filled its page may hold more of any kind beyond it: every
+  // total is then a floor, and no job can be said to have done the most.
+  const full = fillsPage(done);
   return [...byLabel.entries()]
     .map(([label, tally]) => ({
       label,
       total: tally.total,
-      floor: tally.floor,
-      actor: leadActor(tally.actors),
+      floor: tally.floor || full,
+      actor: full ? null : leadActor(tally.actors),
     }))
     .sort((a, b) => b.total - a.total)
     .slice(0, GLANCE_SLOTS);
@@ -160,6 +163,7 @@ export function MagicGlance({
             value={floorFigure(
               formatNumber(reading.total, locale),
               reading.floor,
+              reading.total,
             )}
             detail={by ? t(by, reading.actor?.label?.values) : undefined}
           />

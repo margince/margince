@@ -3,6 +3,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
+import { MAGIC_PAGE_LINES } from "./magic.queries";
 import { line, receipt, renderMagic, stub } from "./magic.testkit";
 
 afterEach(() => {
@@ -116,6 +117,31 @@ describe("the receipt at a glance", () => {
     renderMagic();
     const glance = await screen.findByRole("region", { name: "What got done" });
     expect(readings(glance)).toEqual([["Emails filed", "13+", ""]]);
+  });
+
+  it("reads every sum as a minimum, and names no job, when the done lane fills its page", async () => {
+    const id = (n: number) =>
+      `00000000-0000-7000-8000-${String(n).padStart(12, "0")}`;
+    stub(
+      receipt({
+        done: Array.from({ length: MAGIC_PAGE_LINES }, (_, n) =>
+          line({
+            id: id(n + 1),
+            summary: { key: "magic.action.mail_filed" },
+            actor: mailFiling,
+          }),
+        ),
+      }),
+    );
+    renderMagic();
+    const glance = await screen.findByRole("region", { name: "What got done" });
+    expect(readings(glance)).toEqual([["Emails filed", "100+", ""]]);
+    expect(
+      within(screen.getByRole("list", { name: "Summary" })).getByText(
+        "100+ done for you",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("100+ changes, one by one")).toBeTruthy();
   });
 
   it("folds the done lines under the changes they stand for, and counts those", async () => {

@@ -111,17 +111,29 @@ export const EveryLane: Story = { render: () => panel(EVERY_LANE) };
 /** On Home: the changes still waiting for a word lead, the night's digest closes. */
 export const OnHome: Story = {
   render: () => {
+    // Accept and Undo answer as the server would: the change reads as
+    // answered on the next read, rather than offering both again.
+    const change = automaticStageReceipt;
+    const deal = change.subject?.id;
+    let review = change.review;
+    const answer = (patch: { accepted?: boolean; reversed?: boolean }) => {
+      review = review && { ...review, ...patch };
+      return new Response(null, { status: 204 });
+    };
     stubWithSession(
       {
         "GET /magic": () => jsonResponse(BUSY_NIGHT),
         "GET /worklist/handled": () =>
           jsonResponse({
             as_of: "2026-09-13T08:00:00Z",
-            receipts: [automaticStageReceipt],
+            receipts: [{ ...change, review }],
             truncated: false,
           }),
-        [`GET /deals/${automaticStageReceipt.subject?.id}`]: () =>
-          jsonResponse({ name: "PIM Rollout" }),
+        [`POST /deals/${deal}/applied-changes/${change.id}/accept`]: () =>
+          answer({ accepted: true }),
+        [`POST /deals/${deal}/stage-progressions/${change.id}/revert`]: () =>
+          answer({ reversed: true }),
+        [`GET /deals/${deal}`]: () => jsonResponse({ name: "PIM Rollout" }),
         "GET /digest": () => jsonResponse(digest),
         "GET /projects/01a00000-0000-7000-8000-000000000001": () =>
           jsonResponse({

@@ -130,6 +130,22 @@ describe("BriefScreen — the context rail", () => {
     expect(within(receipt).getByText("Emails synced")).toBeTruthy();
   });
 
+  it("names the night over a digest read that failed", async () => {
+    stubApi({
+      "GET /digest": () =>
+        jsonResponse({ title: "Server error", code: "internal" }, 500),
+    });
+    render(<BriefScreen />);
+
+    const receipt = await screen.findByRole("region", {
+      name: "Since your last brief",
+    });
+    // Not a bare failure at the foot of the receipt: it says what failed.
+    expect(
+      await within(receipt).findByRole("heading", { name: "Overnight" }),
+    ).toBeTruthy();
+  });
+
   // /digest is a specified operation an installation may not implement yet, so
   // the honest answer is 501 — and a refusal is not a delay. Read as an error,
   // the client retried it, and React Query pauses between retries while the tab

@@ -109,6 +109,22 @@ describe("the strip's marks", () => {
     ]);
   });
 
+  it("sets a bulk job beside a dot already on the baseline rather than over it", () => {
+    const marks = placeMarks(
+      receipt({
+        done: [
+          line({ id: "00000000-0000-7000-8000-000000000001" }),
+          line({ id: "00000000-0000-7000-8000-000000000002", count: 42 }),
+        ],
+      }),
+    );
+    // Half the dot, the gap, half the bar: the bar's edge clears the dot's.
+    expect(marks.map((mark) => [mark.bottom, mark.nudge])).toEqual([
+      [0, 0],
+      [0, 10],
+    ]);
+  });
+
   it("holds a line from before the window at its start", () => {
     const [mark] = placeMarks(
       receipt({ done: [line({ occurred_at: "2026-09-11T08:00:00Z" })] }),

@@ -4,8 +4,12 @@
 import { useRecordZone } from "../app/recordzone";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatDateTime, formatDayMonth } from "../format/format";
-import { viewerZone } from "../format/timezone";
+import {
+  formatDateTime,
+  formatDayMonth,
+  formatTimeOfDay,
+} from "../format/format";
+import { dayInZone, viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { EntityRef } from "./entityref";
 import { listReadState } from "./worklist.listread";
@@ -44,7 +48,7 @@ export function BriefChanges() {
               // actor, and the mark's colour is a claim about who acted.
               <li className="magic-line" key={receipt.id}>
                 <p className="magic-line-text">
-                  {receiptSummary(receipt, t, locale, recordZone)}
+                  {receiptSummary(receipt, t, locale, recordZone)}{" "}
                   {receipt.subject?.type === "deal" && (
                     <span className="magic-line-subject">
                       <EntityRef kind="deal" id={receipt.subject.id} />
@@ -59,7 +63,9 @@ export function BriefChanges() {
                   dateTime={receipt.occurred_at}
                   title={formatDateTime(receipt.occurred_at, locale, zone)}
                 >
-                  {formatDayMonth(receipt.occurred_at, locale, zone)}
+                  {sameDay(receipt.occurred_at, query.data?.as_of, zone)
+                    ? formatTimeOfDay(receipt.occurred_at, locale, zone)
+                    : formatDayMonth(receipt.occurred_at, locale, zone)}
                 </time>
               </li>
             ))}
@@ -70,5 +76,15 @@ export function BriefChanges() {
         </SurfaceState>
       </PanelBody>
     </>
+  );
+}
+
+// A change from today shows its hour, an older one its day: the list spans as
+// many days as changes have waited, and the hour of one from last week says
+// less than which day it was.
+function sameDay(iso: string, asOf: string | undefined, zone: string): boolean {
+  return (
+    asOf !== undefined &&
+    dayInZone(Date.parse(iso), zone) === dayInZone(Date.parse(asOf), zone)
   );
 }

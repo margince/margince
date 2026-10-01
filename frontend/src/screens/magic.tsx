@@ -40,6 +40,7 @@ import type { MessageKey } from "../i18n/en";
 import { MagicGlance } from "./magic.glance";
 import { MagicLaneSection } from "./magic.lines";
 import {
+  fillsPage,
   MAGIC_WINDOWS,
   type MagicLane,
   type MagicLine,
@@ -151,12 +152,18 @@ export function MagicPanel({
   const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
-  const doneFloor = anyFloor(done);
+  const doneFloor = sumIsFloor(done);
   // "All" would claim the whole of a count that is only a floor.
   const doneFold = plural(
     doneFloor ? "magic.done.atLeast" : "magic.done.all",
     doneRecords,
-    { count: floorFigure(formatNumber(doneRecords, locale), doneFloor) },
+    {
+      count: floorFigure(
+        formatNumber(doneRecords, locale),
+        doneFloor,
+        doneRecords,
+      ),
+    },
   );
   const byDay = shown ? spansDays(shown.since, shown.as_of) : false;
   return (
@@ -245,9 +252,10 @@ function recordsOf(rows: readonly MagicLine[]): number {
   return rows.reduce((sum, row) => sum + (row.count ?? 1), 0);
 }
 
-// A sum over a line whose read was cut short is itself only a floor.
-function anyFloor(rows: readonly MagicLine[]): boolean {
-  return rows.some((row) => row.count_is_floor === true);
+// A sum is only a floor over a line whose read was cut short, or over a lane
+// that filled its page and may hold more lines than it shows.
+function sumIsFloor(rows: readonly MagicLine[]): boolean {
+  return fillsPage(rows) || rows.some((row) => row.count_is_floor === true);
 }
 
 /**
@@ -283,7 +291,11 @@ function LaneSummary({
       lane,
       tone: LANE_TONE[lane],
       text: plural(LANE_COUNT[lane], count, {
-        count: floorFigure(formatNumber(count, locale), anyFloor(rows)),
+        count: floorFigure(
+          formatNumber(count, locale),
+          sumIsFloor(rows),
+          count,
+        ),
       }),
     };
   });
