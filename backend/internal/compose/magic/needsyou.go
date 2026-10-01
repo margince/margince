@@ -136,9 +136,9 @@ func pendingLine(a crmcontracts.Approval) (crmcontracts.MagicLine, bool) {
 		},
 		Consequence: &consequence,
 		Actor:       actor,
-		// Nothing has happened yet, so there is nothing to put back. Stated
-		// rather than absent, which a client would have to guess about.
-		Undo: &crmcontracts.MagicUndo{Undoable: false, Reason: &nothingToUndo},
+		// No undo at all. Nothing has happened yet, so the line's action is
+		// deciding, which the approvals surface holds; a refusal here would read
+		// as "this cannot be undone" about a change nobody has made.
 	}
 	// Both halves or neither: an entity reference carrying a type with no id
 	// points a reader at nothing.

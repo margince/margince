@@ -293,22 +293,16 @@ func TestATargetedProposalNamesTheRecordAndItsCaption(t *testing.T) {
 	}
 }
 
-// Nothing has happened yet, so there is nothing to put back — said out loud
-// rather than left absent for a client to guess about.
-func TestADecisionNotYetMadeHasNothingToTakeBack(t *testing.T) {
+// Nothing has happened yet, so there is nothing to put back, and the line says
+// nothing about undoing: its action is the decision, and a refusal would read as
+// "this cannot be undone" about a change nobody has made.
+func TestADecisionNotYetMadeCarriesNoUndo(t *testing.T) {
 	lines := decisionsWaiting(t, stagedApproval("coldstart"))
 	if len(lines) != 1 {
 		t.Fatalf("lines = %d, want the one staged decision", len(lines))
 	}
-	undo := lines[0].Undo
-	if undo == nil {
-		t.Fatal("undo = absent, want a stated policy a client can draw")
-	}
-	if undo.Undoable {
-		t.Error("a decision nobody has made is offered as undoable")
-	}
-	if undo.Reason == nil || *undo.Reason != nothingToUndo {
-		t.Errorf("undo reason = %v, want %q", undo.Reason, nothingToUndo)
+	if undo := lines[0].Undo; undo != nil {
+		t.Errorf("undo = %+v, want none: a decision waiting is decided, not undone", *undo)
 	}
 }
 

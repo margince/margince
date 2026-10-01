@@ -1,0 +1,220 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package compose
+
+// Undoing a signature fill, judging an undo with the record's own grant, and
+// the receipt's lines for what a machine created and archived.
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/magic"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+)
+
+// seedSignatureFill lands a signature on a contact through the real applier,
+// as the mail reader does, and answers the contact and the fill's entry.
+func seedSignatureFill(t *testing.T, e *integration.Env) (ids.UUID, ids.UUID) {
+	t.Helper()
+	contact := seedEnrichContact(t, e, "bob@acme.example",
+		"Best,\nBob Contact\nCTO\n+49 30 1234567\nAcme GmbH\nhttps://www.linkedin.com/in/bob-contact")
+	var activity ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	field := func(name, value string) contacts.SignatureField {
+		return contacts.SignatureField{Name: name, Value: value, Evidence: value, Confidence: 0.9}
+	}
+	if _, err := e.Contacts.ApplySignatureFields(machineCtx(e), ids.From[ids.ContactKind](contact), activity,
+		[]contacts.SignatureField{
+			field("title", "CTO"), field("phone", "+49 30 1234567"), field("company_name", "Acme GmbH"),
+			field("linkedin", "https://www.linkedin.com/in/bob-contact"),
+		}); err != nil {
+		t.Fatalf("the mail reader filling the contact: %v", err)
+	}
+	var fill ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT id FROM audit_log
+			 WHERE entity_type = 'contact' AND entity_id = $1 AND evidence->>'source' = 'capture_enrich'`,
+			contact).Scan(&fill)
+	}); err != nil {
+		t.Fatalf("find the fill's entry: %v", err)
+	}
+	return contact, fill
+}
+
+// whatTheFillLeft counts what the fill put on the contact: a title, evidence
+// rows, a live phone number and a LinkedIn slot.
+func whatTheFillLeft(t *testing.T, e *integration.Env, contact ids.UUID) (title *string, evidence, phones, linkedin int) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		c := context.Background()
+		return tx.QueryRow(c, `
+			SELECT (SELECT title FROM contact WHERE id = $1),
+			       (SELECT count(*) FROM contact_profile_field WHERE contact_id = $1),
+			       (SELECT count(*) FROM contact_phone WHERE contact_id = $1 AND archived_at IS NULL),
+			       (SELECT count(*) FROM contact_social WHERE contact_id = $1 AND platform = 'linkedin')`,
+			contact).Scan(&title, &evidence, &phones, &linkedin)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return title, evidence, phones, linkedin
+}
+
+// The fills the receipt reported as "cannot be undone": a signature filled a
+// title, a phone, a company name and a LinkedIn profile. Undo clears all four.
+func TestUndoingASignatureFillClearsEveryFieldItFilled(t *testing.T) {
+	e := integration.Setup(t)
+	contact, fill := seedSignatureFill(t, e)
+	if title, evidence, phones, linkedin := whatTheFillLeft(t, e, contact); title == nil || evidence < 4 || phones != 1 || linkedin != 1 {
+		t.Fatalf("the fill landed title=%v evidence=%d phones=%d linkedin=%d; the undo below would prove nothing",
+			title, evidence, phones, linkedin)
+	}
+
+	if answer := advisoryAnswer(e.Admin(), t, e, "contact", contact, fill); !answer.Undoable {
+		t.Fatalf("the signature fill reads %+v, want undoable", answer)
+	}
+	if err := undoEntry(t, e, "contact", contact, fill); err != nil {
+		t.Fatalf("undoing the fill: %v", err)
+	}
+	title, evidence, phones, linkedin := whatTheFillLeft(t, e, contact)
+	if title != nil || evidence != 0 || phones != 0 || linkedin != 0 {
+		t.Errorf("after the undo: title=%v evidence=%d phones=%d linkedin=%d, want all cleared",
+			title, evidence, phones, linkedin)
+	}
+	if answer := advisoryAnswer(e.Admin(), t, e, "contact", contact, fill); answer.Reason != string(ReasonAlreadyUndone) {
+		t.Errorf("the undone fill reads %+v, want %q", answer, ReasonAlreadyUndone)
+	}
+}
+
+// A title a colleague typed after the fill is theirs; the undo refuses rather
+// than clearing it.
+func TestAFillAColleagueChangedSinceIsNotUndone(t *testing.T) {
+	e := integration.Setup(t)
+	contact, fill := seedSignatureFill(t, e)
+	typed := "Geschäftsführerin"
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{Title: &typed}); err != nil {
+		t.Fatalf("a colleague typing a title: %v", err)
+	}
+
+	if reason := refusedFor(t, undoEntry(t, e, "contact", contact, fill)); reason != ReasonSuperseded {
+		t.Errorf("the undo of a fill a colleague changed since refused %q, want %q", reason, ReasonSuperseded)
+	}
+	if title, _, _, _ := whatTheFillLeft(t, e, contact); title == nil || *title != typed {
+		t.Errorf("title = %v, want the colleague's %q left standing", title, typed)
+	}
+}
+
+// judgeOnTheReceipt asks the receipt's undo judge about one entry, as one seat.
+func judgeOnTheReceipt(seat context.Context, t *testing.T, e *integration.Env, entityType string, auditID ids.UUID) *crmcontracts.MagicUndo {
+	t.Helper()
+	var answer *crmcontracts.MagicUndo
+	if err := database.WithWorkspaceTx(seat, e.Pool, func(tx pgx.Tx) error {
+		answers, err := magicUndoJudge{seam: restoreSeamFor(e)}.JudgeUndoPage(seat, tx,
+			[]magic.UndoSubject{{AuditID: auditID, EntityType: entityType}})
+		answer = answers[auditID]
+		return err
+	}); err != nil {
+		t.Fatalf("judging entry %s: %v", auditID, err)
+	}
+	if answer == nil {
+		t.Fatalf("entry %s was not judged", auditID)
+	}
+	return answer
+}
+
+// The receipt judged every undo with the DEAL grant. A seat that may change
+// contacts and not deals was refused every contact undo, and a seat with the
+// opposite grants was offered them.
+func TestTheReceiptJudgesAnUndoWithTheRecordTypesOwnGrant(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Petra Machine", nil)
+	title := "Buyer"
+	if _, err := e.Contacts.UpdateContact(machineCtx(e), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{Title: &title}); err != nil {
+		t.Fatalf("the machine changing the contact: %v", err)
+	}
+	change := latestAuditRowID(t, e, "contact", contact, "update")
+	seat := func(objects map[string]principal.ObjectGrant) context.Context {
+		return e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+			RoleKeys: []string{"rep"}, Objects: objects, RowScope: principal.RowScopeAll,
+		})
+	}
+
+	contactsOnly := seat(map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}})
+	if answer := judgeOnTheReceipt(contactsOnly, t, e, "contact", change); !answer.Undoable {
+		t.Errorf("a seat that may change contacts and not deals was refused %v", answer.Reason)
+	}
+	dealsOnly := seat(map[string]principal.ObjectGrant{
+		"contact": {Read: true}, "deal": {Read: true, Update: true},
+	})
+	answer := judgeOnTheReceipt(dealsOnly, t, e, "contact", change)
+	if answer.Undoable || answer.Reason == nil || *answer.Reason != string(ReasonNotWritableByCaller) {
+		t.Errorf("a seat that may change deals and not contacts was answered %+v, want %q", answer, ReasonNotWritableByCaller)
+	}
+}
+
+// An import's creates and the mail reader's archives each fold into ONE line
+// per job, kind of record and day, and the line opens to an undo per record.
+func TestTheReceiptFoldsCreatesAndArchivesAndOffersAnUndoPerRecord(t *testing.T) {
+	e := integration.Setup(t)
+	since := time.Now().Add(-time.Hour)
+	for _, name := range []string{"Ida Import", "Jan Import", "Kai Import"} {
+		if _, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: name, Source: "import"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, name := range []string{"Noise One GmbH", "Noise Two GmbH"} {
+		company := e.SeedCompany(t, name, nil)
+		if _, err := NewProvider(e.Pool).Archive(machineCtx(e), datasource.EntityRef{Type: "company", ID: company}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	svc := newMagicService(e.Pool, approvalsServiceWithEffects(e.Pool), time.Now)
+	svc.WithUndoJudge(magicUndoJudge{seam: restoreSeamFor(e)})
+
+	receipt, err := svc.Read(e.Admin(), &since, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+	lines := map[string]crmcontracts.MagicLine{}
+	for _, line := range receipt.Done {
+		lines[line.Summary.Key] = line
+	}
+	created, archived := lines["magic.action.create_contact"], lines["magic.action.archive_company"]
+	if created.Count == nil || *created.Count != 3 {
+		t.Errorf("the import's creates drew %+v, want one line counting 3 contacts", created)
+	}
+	if archived.Count == nil || *archived.Count != 2 {
+		t.Errorf("the archives drew %+v, want one line counting 2 companies", archived)
+	}
+
+	records, err := svc.LineRecords(e.Admin(), ids.UUID(created.Id), since, nil, 50)
+	if err != nil {
+		t.Fatalf("opening the create line: %v", err)
+	}
+	if len(records.Data) != 3 {
+		t.Fatalf("the create line opened to %d records, want 3", len(records.Data))
+	}
+	for _, record := range records.Data {
+		if !record.Undo.Undoable || record.Undo.AuditId == nil || record.Undo.Version == nil {
+			t.Errorf("record %v offers %+v, want an undo it can send", record.Entity.Label, record.Undo)
+		}
+	}
+}

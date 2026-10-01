@@ -832,6 +832,11 @@ export const vi = {
   "history.undo.confirmTitle": "Hoàn tác thay đổi này?",
   "history.undo.confirmEdgeBody":
     "Thao tác này thay đổi liên kết với {other}. Các bản ghi vẫn còn; chỉ mối liên kết giữa chúng thay đổi.",
+  "history.undo.confirmCreateBody":
+    "Bản ghi sẽ được lưu trữ. Bạn có thể khôi phục nó từ lịch sử của bản ghi.",
+  "history.undo.confirmArchiveBody": "Bản ghi sẽ được đưa ra khỏi kho lưu trữ.",
+  "history.undo.confirmPromoteBody":
+    "Liên hệ sẽ trở lại thành khách hàng tiềm năng. Nếu liên hệ được tạo khi chuyển đổi, liên hệ đó sẽ được lưu trữ.",
   "history.undo.confirmBody_one":
     "{count} trường sẽ trở lại giá trị trước thay đổi này:",
   "history.undo.confirmBody_other":
@@ -1151,7 +1156,7 @@ export const vi = {
   "record.archive": "Lưu trữ",
   "record.disqualify": "Loại",
   "record.archiveConfirm":
-    "Bạn chắc chứ? Thao tác này lưu trữ bản ghi — không có nút hoàn tác.",
+    "Lưu trữ bản ghi này? Bạn có thể khôi phục nó từ lịch sử của bản ghi.",
   "record.archived": "Đã lưu trữ",
   "record.archivedReadOnly": "Công ty này đã lưu trữ và không nhận thay đổi.",
   "record.notYoursToChange":
@@ -3299,7 +3304,7 @@ export const vi = {
   "deal.fxBase": "Gốc {value} · tỷ giá {rate} tính đến {date}",
   "deal.archive": "Lưu trữ deal",
   "deal.archiveConfirm":
-    "Lưu trữ sẽ đưa deal này ra khỏi pipeline đang hoạt động. Không thể hoàn tác từ giao diện.",
+    "Lưu trữ sẽ đưa deal này ra khỏi pipeline đang hoạt động. Bạn có thể khôi phục nó từ lịch sử của deal.",
   "deal.archivedReadOnly": "Deal này đã lưu trữ và không nhận thay đổi.",
   "deal.notYoursToChange":
     "Bạn không thể thay đổi deal này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
@@ -11615,6 +11620,18 @@ export const vi = {
     "Đã xóa nội dung bản chép lời đã quá hạn lưu trữ",
   "magic.action.retention_deal_archive":
     "Đã lưu trữ giao dịch đã đóng đã quá hạn lưu trữ",
+  "magic.action.create_contact": "Đã tạo liên hệ",
+  "magic.action.create_company": "Đã tạo công ty",
+  "magic.action.create_deal": "Đã tạo giao dịch",
+  "magic.action.create_lead": "Đã tạo khách hàng tiềm năng",
+  "magic.action.create_project": "Đã tạo dự án",
+  "magic.action.create_activity": "Đã lưu email hoặc cuộc họp",
+  "magic.action.archive_contact": "Đã lưu trữ liên hệ",
+  "magic.action.archive_company": "Đã lưu trữ công ty",
+  "magic.action.archive_deal": "Đã lưu trữ giao dịch",
+  "magic.action.archive_lead": "Đã lưu trữ khách hàng tiềm năng",
+  "magic.action.archive_project": "Đã lưu trữ dự án",
+  "magic.action.archive_activity": "Đã lưu trữ email hoặc cuộc họp",
   "magic.why.mail_filed": "Địa chỉ bên gửi thuộc về liên hệ này.",
   "magic.why.public_records":
     "Từ trang web công khai và bản ghi DNS của công ty.",
@@ -11640,6 +11657,7 @@ export const vi = {
   "magic.noRecord": "Không nêu bản ghi nào",
   "magic.undo.action": "Hoàn tác",
   "magic.undo.done": "Đã hoàn tác",
+  "magic.decide": "Quyết định",
   "magic.records.title": "Những gì đã thay đổi, theo từng bản ghi",
   "magic.records.empty": "Không còn bản ghi nào trong số này hiển thị.",
   "magic.records.more": "Xem thêm",
@@ -11669,6 +11687,8 @@ export const vi = {
   "magic.glance.meetingsBooked": "Cuộc hẹn đã đặt",
   "magic.glance.leadsDisqualified": "Lead đã loại",
   "magic.glance.retention": "Đã áp dụng lưu trữ",
+  "magic.glance.recordsCreated": "Bản ghi đã tạo",
+  "magic.glance.recordsArchived": "Bản ghi đã lưu trữ",
   "magic.timeline.title": "Thời điểm diễn ra",
   "magic.timeline.agent": "Tác tử",
   "magic.timeline.sync": "Đồng bộ và quy tắc",
