@@ -75,6 +75,7 @@ func TestNoAcquisitionKindIsALawfulBasis(t *testing.T) {
 		AcquiredSubjectInitiated, AcquiredCustomerContract, AcquiredRequestedQuoteOrMeeting,
 		AcquiredInPersonPermission, AcquiredReferral, AcquiredEventOrForm,
 		AcquiredPublicOrBusinessSource, AcquiredPurchasedOrImported, AcquiredUnknownLegacy,
+		AcquiredCRMMigration, AcquiredMailboxHistory,
 	}
 	// The basis vocabulary lives in shared/ports/commsauthz. These are facts;
 	// those are conclusions argued from facts, and a value appearing in both
@@ -90,8 +91,8 @@ func TestNoAcquisitionKindIsALawfulBasis(t *testing.T) {
 			t.Errorf("%q is both an acquisition kind and a lawful basis — a door that records it would be deciding permission", k)
 		}
 	}
-	if len(kinds) != 9 {
-		t.Errorf("the vocabulary has %d kinds, want the 9 the table's CHECK admits", len(kinds))
+	if len(kinds) != 11 {
+		t.Errorf("the vocabulary has %d kinds, want the 11 the table's CHECK admits", len(kinds))
 	}
 }
 

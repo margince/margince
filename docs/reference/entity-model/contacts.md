@@ -506,7 +506,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `id` | `uuid` | yes | Primary key. |
 | `captured_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 | `contact_id` | `uuid` | yes | Points at `contact.id` — deleting the parent deletes this row. |
-| `kind` | `text` | yes | One of `subject_initiated`, `customer_contract`, `requested_quote_or_meeting`, `in_person_permission`, `referral`, `event_or_form` and 4 more. |
+| `kind` | `text` | yes | One of `subject_initiated`, `customer_contract`, `requested_quote_or_meeting`, `in_person_permission`, `referral`, `event_or_form` and 5 more. |
 | `note` | `text` |  | Optional `text`. |
 | `occurred_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `purpose_claimed` | `text` |  | Optional `text`. |
@@ -522,7 +522,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `contact_acquisition_evidence_kind` — `CHECK ((kind = ANY (ARRAY['subject_initiated', 'customer_contract', 'requested_quote_or_meeting', 'in_person_permission', 'referral', 'event_or_form', 'public_or_business_source', 'purchased_or_imported', 'unknown_legacy', 'crm_migration'])))`
+- `contact_acquisition_evidence_kind` — `CHECK ((kind = ANY (ARRAY['subject_initiated', 'customer_contract', 'requested_quote_or_meeting', 'in_person_permission', 'referral', 'event_or_form', 'public_or_business_source', 'purchased_or_imported', 'unknown_legacy', 'crm_migration', 'mailbox_history'])))`
 - `contact_acquisition_evidence_source_shape` — `CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))`
 
 **Indexes**

@@ -40,10 +40,26 @@ func (e *dedupeEnv) importedByRep(ctx context.Context, t *testing.T, activity id
 	}
 }
 
-// sentBy is a message the rep's mailbox sent to the address, at a stated time.
-func (e *dedupeEnv) sentBy(ctx context.Context, t *testing.T, email string, at time.Time) EnsureCounterpartyInput {
+// sentBy is a message a seat's mailbox sent to the address at a stated time,
+// filed by the provider as sent and imported from that seat's mailbox.
+func (e *dedupeEnv) sentBy(
+	ctx context.Context, t *testing.T, sender ids.UUID, email string, at time.Time,
+) EnsureCounterpartyInput {
 	t.Helper()
 	in := e.outboundOnly(ctx, t, e.datedEnsureInput(ctx, t, email, "history.test", at))
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			UPDATE activity SET counterparty_email = $2, counterparty_outbound_attested = true
+			 WHERE id = $1`, in.ActivityID, email); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, role, user_id) VALUES ($1, 'from', $2)`,
+			in.ActivityID, sender)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
 	e.importedByRep(ctx, t, in.ActivityID)
 	return in
 }
@@ -62,7 +78,7 @@ func TestSomebodyWeWroteToBeforeTheMailboxWasConnectedIsMailboxHistory(t *testin
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))
-	in := e.sentBy(ctx, t, "old@history.test", time.Now().AddDate(-3, 0, 0))
+	in := e.sentBy(ctx, t, e.rep, "old@history.test", time.Now().AddDate(-3, 0, 0))
 
 	if kind := e.ensuredKind(ctx, t, in); kind != AcquiredMailboxHistory {
 		t.Errorf("a counterparty written to three years before the mailbox was connected is %q, want %q",
@@ -75,7 +91,7 @@ func TestSomebodyWeFirstWroteToAfterConnectingStaysUnknown(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.connectMailbox(ctx, t, time.Now().Add(-48*time.Hour))
-	in := e.sentBy(ctx, t, "new@history.test", time.Now().Add(-time.Hour))
+	in := e.sentBy(ctx, t, e.rep, "new@history.test", time.Now().Add(-time.Hour))
 
 	if kind := e.ensuredKind(ctx, t, in); kind != AcquiredUnknownLegacy {
 		t.Errorf("a counterparty first written to after the connection is %q, want %q", kind, AcquiredUnknownLegacy)
@@ -87,33 +103,49 @@ func TestSomebodyWeFirstWroteToAfterConnectingStaysUnknown(t *testing.T) {
 func TestMailFromASeatWithNoConnectionExcusesNothing(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	in := e.sentBy(ctx, t, "noconn@history.test", time.Now().AddDate(-2, 0, 0))
+	in := e.sentBy(ctx, t, e.rep, "noconn@history.test", time.Now().AddDate(-2, 0, 0))
 
 	if kind := e.ensuredKind(ctx, t, in); kind != AcquiredUnknownLegacy {
 		t.Errorf("mail from a seat with no connection made the contact %q, want %q", kind, AcquiredUnknownLegacy)
 	}
 }
 
-// An inbound Date header is the sender's claim. A stranger copied on a
-// backdated inbound message must not look like old correspondence of ours.
-func TestABackdatedInboundCopyDoesNotMakeHistory(t *testing.T) {
+// A message whose From names our seat but which the provider never filed as
+// sent is a header claim: anybody can write that From line and any Date.
+func TestAnUnattestedOutboundDoesNotMakeHistory(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	const email = "copied@history.test"
 	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))
-	backdated := e.datedEnsureInput(ctx, t, "spoofer@elsewhere.test", "elsewhere.test", time.Now().AddDate(-5, 0, 0))
-	e.importedByRep(ctx, t, backdated.ActivityID)
+	in := e.sentBy(ctx, t, e.rep, "spoofed@history.test", time.Now().AddDate(-5, 0, 0))
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'cc', $2)`,
-			backdated.ActivityID, email)
+		_, err := tx.Exec(ctx, `UPDATE activity SET counterparty_outbound_attested = false WHERE id = $1`, in.ActivityID)
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	in := e.sentBy(ctx, t, email, time.Now().Add(-time.Hour))
 
 	if kind := e.ensuredKind(ctx, t, in); kind != AcquiredUnknownLegacy {
-		t.Errorf("a stranger copied on a backdated inbound mail is %q, want %q", kind, AcquiredUnknownLegacy)
+		t.Errorf("an outbound the provider never filed as sent made the contact %q, want %q", kind, AcquiredUnknownLegacy)
+	}
+}
+
+// The connection that counts is the SENDER's. Mail a colleague sent that only
+// reached the rep's mailbox says nothing about when the colleague connected.
+func TestMailAnotherSeatSentIsNotTheImportersHistory(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	var colleague ids.UUID
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			INSERT INTO app_user (email, display_name) VALUES ('colleague@history.test', 'Colleague')
+			RETURNING id`).Scan(&colleague)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))
+	in := e.sentBy(ctx, t, colleague, "theirs@history.test", time.Now().AddDate(-1, 0, 0))
+
+	if kind := e.ensuredKind(ctx, t, in); kind != AcquiredUnknownLegacy {
+		t.Errorf("mail another seat sent made the contact %q, want %q", kind, AcquiredUnknownLegacy)
 	}
 }

@@ -17,12 +17,12 @@ import (
 // Without this, everybody we wrote to back then is a stranger of unknown
 // source, owed an Art. 14 notice whose month ran out years ago.
 //
-// Only OUTBOUND mail counts. Its Date header was written by our own mail
-// client; an inbound Date is the sender's claim, and a backdated message
-// copying strangers would otherwise excuse their notices. capture_import names
-// the seat whose mailbox delivered the message, and that seat's FIRST
-// connection is when the mailbox was attached. A seat with no connection
-// compares against NULL and matches nothing, which keeps the duty owed.
+// Every clause is evidence a header cannot forge. The provider filed the
+// message as sent (counterparty_outbound_attested) to this correspondent; the
+// seat whose mailbox delivered it (capture_import) is the sender; and the
+// message is dated before that seat's FIRST connection. The Date header is the
+// seat's own mail client's. A seat with no connection compares against NULL
+// and matches nothing, which keeps the duty owed.
 //
 // The settling migration
 // (1790844232_mail_older_than_its_mailbox_connection_owes_no_notice) spells
@@ -31,12 +31,13 @@ func writtenToBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (b
 	var held bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
-		  SELECT 1 FROM activity_participant p
-		    JOIN activity a ON a.id = p.activity_id
+		  SELECT 1 FROM activity a
 		    JOIN capture_import ci ON ci.activity_id = a.id
-		   WHERE lower(p.address) = lower($1) AND p.role <> 'from'
+		    JOIN activity_participant s
+		      ON s.activity_id = a.id AND s.role = 'from' AND s.user_id = ci.user_id
+		   WHERE a.counterparty_email = lower(trim($1))
 		     AND a.kind = 'email' AND a.direction = 'outbound'
-		     AND a.archived_at IS NULL
+		     AND a.counterparty_outbound_attested AND a.archived_at IS NULL
 		     AND a.occurred_at < (SELECT min(cc.created_at) FROM capture_connection cc
 		                           WHERE cc.user_id = ci.user_id))`, email).Scan(&held); err != nil {
 		return false, fmt.Errorf("contacts: did we write to this address before the mailbox was connected: %w", err)
