@@ -4,6 +4,11 @@
 package commsauthz
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -64,22 +69,71 @@ func TestUnknownPurposeIsOverrulableButNotByCategory(t *testing.T) {
 }
 
 // TestOnlyUnknownPurposeIsExcludedByCategory pins the exclusion to exactly the
-// no-category reason. Every OTHER machine-level, non-absolute refusal resolves
-// to a category and stays answerable by a per-category override, so the two
-// predicates agree on all of them — the day a future reason resolves to no
-// category, it must be added to CanBeOverruledByCategory's exclusion and to this
-// list together, rather than silently becoming overrulable by a vouch it does
-// not name.
+// no-category reason, over EVERY reason this package declares. The corpus is
+// read off absolute.go itself rather than retyped here: a list kept beside the
+// constants is one a new reason silently falls outside of, and a reason that
+// resolves to no category but is missing from CanBeOverruledByCategory's
+// exclusion would then be flippable by a vouch for the default category — the
+// one way this census must not fail short.
 func TestOnlyUnknownPurposeIsExcludedByCategory(t *testing.T) {
-	for _, reason := range []string{ReasonNoEvidence, ReasonNoMarketingConsent} {
+	t.Parallel()
+
+	for _, reason := range reasonConstants(t) {
 		d := Decision{Verdict: VerdictDeny, ReasonCode: reason}
-		if d.CanBeOverruled() != d.CanBeOverruledByCategory() {
-			t.Errorf("%q: the predicates disagree, but only unknown_purpose resolves to no category",
-				reason)
+		agree := d.CanBeOverruled() == d.CanBeOverruledByCategory()
+		if reason == ReasonUnknownPurpose {
+			if agree {
+				t.Error("unknown_purpose is the one reason the predicates must part on")
+			}
+			continue
+		}
+		if !agree {
+			t.Errorf("%q: the predicates disagree, but only unknown_purpose resolves to no category — "+
+				"if this reason now resolves to none, add it to CanBeOverruledByCategory's exclusion "+
+				"and to this test's one exception together", reason)
 		}
 	}
-	unknown := Decision{Verdict: VerdictDeny, ReasonCode: ReasonUnknownPurpose}
-	if unknown.CanBeOverruled() == unknown.CanBeOverruledByCategory() {
-		t.Error("unknown_purpose is the one reason the predicates must part on")
+}
+
+// reasonConstants reads every Reason* constant off absolute.go, the file that
+// owns them, so a reason exists in this census the moment it compiles.
+func reasonConstants(t *testing.T) []string {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), "absolute.go", nil, 0)
+	if err != nil {
+		t.Fatalf("parsing absolute.go: %v", err)
 	}
+	var reasons []string
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			values, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for i, name := range values.Names {
+				if !strings.HasPrefix(name.Name, "Reason") || i >= len(values.Values) {
+					continue
+				}
+				lit, ok := values.Values[i].(*ast.BasicLit)
+				if !ok || lit.Kind != token.STRING {
+					t.Fatalf("%s is not a string literal; this census reads reason codes as literals", name.Name)
+				}
+				code, err := strconv.Unquote(lit.Value)
+				if err != nil {
+					t.Fatalf("unquoting %s: %v", name.Name, err)
+				}
+				reasons = append(reasons, code)
+			}
+		}
+	}
+	// Under-recognition is the one way a census fails silently: a parse that
+	// found a handful of reasons is reading the wrong declarations.
+	if len(reasons) < 12 {
+		t.Fatalf("read %d Reason* constants off absolute.go, fewer than the package declares", len(reasons))
+	}
+	return reasons
 }
