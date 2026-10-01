@@ -170,18 +170,8 @@ func validateProviderEntry(name string, settings ProviderSettings, bound bool) e
 		return fmt.Errorf("ai: routing config: providers: %q is not a provider this build knows (have: %s)",
 			name, strings.Join(providerNames(), ", "))
 	}
-	// The URL is not echoed: it may carry userinfo, and the lane rule a bound
-	// host meets refuses that without repeating it either.
-	if !bound && settings.BaseURL != "" && !isFetchableURL(settings.BaseURL) {
-		return fmt.Errorf("ai: routing config: providers: %s: base_url is not an http(s) URL with a host; give the vendor host root, e.g. https://openrouter.ai/api", name)
-	}
-	// The key test and the model list dial an unbound entry too, so its host
-	// meets the egress rule here rather than at the Test button. A bound one
-	// meets it on each lane, whose refusal names the lane.
-	if !bound {
-		if err := requireDialableEndpoint("providers: "+name, name, settings.BaseURL); err != nil {
-			return err
-		}
+	if err := validateUnboundHost(name, settings.BaseURL, bound); err != nil {
+		return err
 	}
 	if settings.Location != "" && name != providerGeminiVertex {
 		return fmt.Errorf("ai: routing config: providers: %s: `location` names a Vertex AI location and only gemini_vertex is served from one; remove it", name)
@@ -208,6 +198,20 @@ func validateProviderEntry(name string, settings ProviderSettings, bound bool) e
 		return fmt.Errorf("%w (providers: %s)", err, name)
 	}
 	return nil
+}
+
+// validateUnboundHost holds the host of an entry no lane binds. The key test
+// and the model list dial it too, so it meets the egress rule here rather than
+// at the Test button; a bound one meets it on each lane, whose refusal names
+// the lane. The URL is not echoed: it may carry userinfo.
+func validateUnboundHost(name, baseURL string, bound bool) error {
+	if bound || baseURL == "" {
+		return nil
+	}
+	if !isFetchableURL(baseURL) {
+		return fmt.Errorf("ai: routing config: providers: %s: base_url is not an http(s) URL with a host; give the vendor host root, e.g. https://openrouter.ai/api", name)
+	}
+	return requireDialableEndpoint("providers: "+name, name, baseURL)
 }
 
 // BoundProviders reports, for each provider some lane binds, the lanes binding
