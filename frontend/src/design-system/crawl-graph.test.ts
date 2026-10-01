@@ -8,6 +8,7 @@ import {
   crawlAges,
   crawlArrived,
   layOutCrawl,
+  moteHome,
 } from "./crawl-graph";
 
 describe("the crawl picture's geometry", () => {
@@ -130,5 +131,19 @@ describe("when each page enters the picture", () => {
     for (const age of crawlAges(stamps, 100_000)) {
       expect(age).toBeGreaterThan(1);
     }
+  });
+});
+
+describe("where the motes fly to", () => {
+  it("is the Core's centre, in the layer's own space", () => {
+    const core = { left: 300, top: 120, width: 80, height: 60 };
+    expect(moteHome(core, { x: 20, y: 10 })).toEqual({ x: 320, y: 140 });
+  });
+
+  // A Core folded out of a short room keeps its element and loses its box;
+  // aiming at that box's centre sends every mote to the window's corner.
+  it("is nowhere when the Core has no box", () => {
+    const folded = { left: 0, top: 0, width: 0, height: 0 };
+    expect(moteHome(folded, { x: 0, y: 0 })).toBeNull();
   });
 });
