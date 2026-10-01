@@ -469,14 +469,21 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	}
 	// Whatever the detach could not reach — a row whose address is not among
 	// the subject's — names a contact who is going, so it goes with them.
-	if _, err := tx.Exec(ctx, `DELETE FROM communication_suppression WHERE contact_id = $1`, id); err != nil {
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM communication_suppression
+		 WHERE contact_id = $1
+		    OR contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)`, id); err != nil {
 		return err
 	}
 	// An override has NO address column to detach onto, unlike the suppression
 	// above — it exists to vouch for THIS contact, and a subject who returns
 	// arrives as a new record with nobody yet vouching for them. So it cannot
-	// be carried forward the way an objection can: it is deleted outright,
-	// same verb the eraser's contact-keyed delete uses.
-	_, err := tx.Exec(ctx, `DELETE FROM communication_override WHERE contact_id = $1`, id)
+	// be carried forward the way an objection can: it is deleted outright, and
+	// the rows of the records merged into this one, which a merge copied forward
+	// but left in place as evidence.
+	_, err := tx.Exec(ctx, `
+		DELETE FROM communication_override
+		 WHERE contact_id = $1
+		    OR contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)`, id)
 	return err
 }

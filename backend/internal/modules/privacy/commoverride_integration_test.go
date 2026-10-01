@@ -189,3 +189,70 @@ func TestTheExportCarriesTheSubjectsOverride(t *testing.T) {
 		t.Errorf("the exported override does not carry the recorded category/reason: %+v", row)
 	}
 }
+
+// TestArt17ErasureDeletesAMergedPredecessorsOverride holds the other half of a
+// merge: the survivor was given a copy, and the predecessor kept the original
+// as evidence. Erasing the survivor that leaves the predecessor's vouch behind
+// leaves the subject's own record of being vouched for.
+func TestArt17ErasureDeletesAMergedPredecessorsOverride(t *testing.T) {
+	e := setupSARIdentifiers(t)
+	predecessor := seedMergedPredecessor(e.ctx, t, e, e.contact)
+	seedOverride(e.ctx, t, e.owner, &predecessor.UUID, nil)
+
+	eraseCapabilities(e.ctx, t, e.owner, e.contact)
+
+	if n := countOverrides(e.ctx, t, e.owner, "contact_id", predecessor.UUID); n != 0 {
+		t.Errorf("%d override row(s) survived on the merged-away predecessor of an erased subject", n)
+	}
+}
+
+// TestArt17ErasureDeletesAMergedPredecessorsSuppression is the suppression twin:
+// a stop and a vouch are the same statement about the same person.
+func TestArt17ErasureDeletesAMergedPredecessorsSuppression(t *testing.T) {
+	e := setupSARIdentifiers(t)
+	predecessor := seedMergedPredecessor(e.ctx, t, e, e.contact)
+	mustExec(e.ctx, t, e.owner, `
+		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, 'marketing_objection', 'operator_ui', 'human:x', 'subject')`, predecessor)
+
+	eraseCapabilities(e.ctx, t, e.owner, e.contact)
+
+	var n int
+	if err := e.owner.QueryRow(e.ctx,
+		`SELECT count(*) FROM communication_suppression WHERE contact_id = $1`, predecessor).Scan(&n); err != nil {
+		t.Fatalf("counting the predecessor's suppressions: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("%d suppression row(s) survived on the merged-away predecessor of an erased subject", n)
+	}
+}
+
+// TestRetentionAnonymizeDeletesAMergedPredecessorsOverride holds the retention
+// sweep to the same reach as the eraser.
+func TestRetentionAnonymizeDeletesAMergedPredecessorsOverride(t *testing.T) {
+	ctx := context.Background()
+	tx := subjectColumnsTx(ctx, t)
+
+	ws, user := ids.NewV7(), ids.NewV7()
+	contact := ids.New[ids.ContactKind]()
+	predecessor := ids.New[ids.ContactKind]()
+	mustExec(ctx, t, tx, `INSERT INTO workspace (id) VALUES ($1)`, ws)
+	mustExec(ctx, t, tx,
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
+		user, "admin-"+user.String()+"@anon.test")
+	mustExec(ctx, t, tx,
+		`INSERT INTO contact (id, full_name, source, captured_by)
+		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text)`, contact, user)
+	mustExec(ctx, t, tx,
+		`INSERT INTO contact (id, full_name, source, captured_by, merged_into_id, archived_at)
+		 VALUES ($1, 'Hedda Duplicate', 'manual', 'user:'||$2::text, $3, now())`, predecessor, user, contact)
+	seedOverride(ctx, t, tx, &predecessor.UUID, nil)
+
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, noPayloads{t: t}); err != nil {
+		t.Fatalf("anonymizing the contact: %v", err)
+	}
+
+	if n := countOverrides(ctx, t, tx, "contact_id", predecessor.UUID); n != 0 {
+		t.Errorf("%d override row(s) survived on the merged-away predecessor of an anonymized contact", n)
+	}
+}
