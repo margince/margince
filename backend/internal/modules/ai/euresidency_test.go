@@ -29,13 +29,15 @@ func TestIsEURegionHostAdmitsOnlyARegionVariant(t *testing.T) {
 
 // An eu_hosted config that the broker may serve outside the EU is refused at
 // the parser, on a chat tier and on the embeddings lane alike, whether the
-// config arrived as a file or through the settings store.
+// config arrived as a file or through the settings store. One broker tier per
+// document: lanes on one provider share its upstream preferences.
 func TestAnEUHostedBrokerLaneMustPinAnEURegion(t *testing.T) {
 	t.Parallel()
 	const pinned = "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}"
 	const embedPinned = "{provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}"
+	const native = "{provider: gemini, model: g}"
 	doc := func(profile, premium, embeddings string) string {
-		return "profile: " + profile + "\ntiers:\n  cheap_cloud: " + pinned + "\n  premium: " + premium + "\nembeddings: " + embeddings + "\n"
+		return "profile: " + profile + "\ntiers:\n  premium: " + premium + "\nembeddings: " + embeddings + "\n"
 	}
 	for name, tc := range map[string]struct {
 		yaml string
@@ -54,11 +56,11 @@ func TestAnEUHostedBrokerLaneMustPinAnEURegion(t *testing.T) {
 			"`only:` admits mistral,",
 		},
 		"an unpinned embeddings lane": {
-			doc("eu_hosted", pinned, "{provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}"),
+			doc("eu_hosted", native, "{provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}"),
 			"the embeddings lane under profile eu_hosted",
 		},
 		"every lane pinned":                {doc("eu_hosted", pinned, embedPinned), ""},
-		"a host the broker does not front": {doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://inference.example.eu'}", embedPinned), ""},
+		"a host the broker does not front": {doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://inference.example.eu'}", native), ""},
 		"the same unpinned lane under cloud_frontier": {
 			doc("cloud_frontier", "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'}",
 				"{provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}"), "",

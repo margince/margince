@@ -56,6 +56,9 @@ type ProviderConfig struct {
 	// nor its contract site names a level (sitethinking.go has the precedence). Empty keeps the adapter's default (geminithinking.go). The
 	// parser refuses it on any other provider and on the embeddings lane.
 	ThinkingLevel string `yaml:"thinking_level" json:"thinking_level,omitempty"`
+	// ReasoningEffort caps a broker tier's thinking. It is the tier's own, not
+	// its provider's, and finalize merges it into the resolved Routing.
+	ReasoningEffort string `yaml:"reasoning_effort" json:"reasoning_effort,omitempty"`
 }
 
 // Provider defaults. The Anthropic URL is the vendor's public API; a

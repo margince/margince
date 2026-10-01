@@ -107,8 +107,10 @@ func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (Routing
 	return s.ReplaceIfVersion(ctx, next, "")
 }
 
-// Revision identifies the editable binding independently of credentials.
-func (cfg RoutingConfig) Revision() string { return cfg.bindingDigest() }
+// Revision identifies the editable document independently of credentials. It
+// digests canonical(), providers included, so editing a provider entry no lane
+// binds still moves the ETag while the routing version stays put.
+func (cfg RoutingConfig) Revision() string { return digestJSON(cfg.canonical()) }
 
 // ReplaceIfVersion checks a supplied version under the same lock as the write.
 // An empty version preserves the existing unconditional API for legacy clients.
@@ -168,7 +170,7 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 //
 // A thinking level of thinkingLevelDefault is the explicit clear, as an empty
 // `routing` object is for upstream preferences: it is stored as no level.
-func (next RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingConfig {
+func (cfg RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingConfig {
 	carry := func(lane, kept ProviderConfig) ProviderConfig {
 		cleared := lane.ThinkingLevel == thinkingLevelDefault
 		if cleared {
@@ -185,13 +187,13 @@ func (next RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingCon
 		}
 		return lane
 	}
-	tiers := make(map[Tier]ProviderConfig, len(next.Tiers))
-	for tier, binding := range next.Tiers {
+	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
+	for tier, binding := range cfg.Tiers {
 		tiers[tier] = carry(binding, stored.Tiers[tier])
 	}
-	next.Tiers = tiers
-	next.Embeddings.ProviderConfig = carry(next.Embeddings.ProviderConfig, stored.Embeddings.ProviderConfig)
-	return next
+	cfg.Tiers = tiers
+	cfg.Embeddings.ProviderConfig = carry(cfg.Embeddings.ProviderConfig, stored.Embeddings.ProviderConfig)
+	return cfg
 }
 
 // sameEndpoint reports whether two base URLs name one endpoint, ignoring the
