@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // One list, opened: what it is for, who looks after it, how many of its
-// members this reader can see, the members themselves, why each is there, and
-// what changed. The members are the record list's own rows, narrowed by
+// members this reader can see, the members themselves with what put each
+// there, and what changed. The members are the record list's own rows, narrowed by
 // list_id, so the page is never one request per member (listmembers.tsx).
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { navigate } from "../app/router";
-import { Badge, Button } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -17,19 +17,17 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useMe } from "./common";
 import { customColumnLabel } from "./filterdata";
+import { EditFilterAction, mayEditFilter } from "./filterlistedit";
+import { ListChangeSummary } from "./listchanges";
 import { ListHistoryPanel } from "./listhistory";
 import {
   ListHealthBadge,
   ListKindBadge,
   RECORD_TYPE_LABEL,
 } from "./listlibrary";
-import {
-  MEMBER_SOURCES,
-  type MemberRow,
-  MemberRows,
-  type MemberSource,
-  memberName,
-} from "./listmembers";
+import { useMemberColumns } from "./listmembercolumns";
+import { MEMBER_SOURCES, MemberRows, type MemberSource } from "./listmembers";
+import { ArchiveListAction } from "./listrules";
 import {
   type List,
   type ListRecordType,
@@ -41,7 +39,6 @@ import {
 } from "./lists.queries";
 import { ListSettingsAction } from "./listsettings";
 import { useListAudienceLabel } from "./listsharing";
-import { ListWhy } from "./listwhy";
 import "./lists.css";
 
 function isMemberSource(type: ListRecordType): type is MemberSource {
@@ -101,9 +98,11 @@ function ListHead({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const archive = useArchiveList();
   const audienceOf = useListAudienceLabel();
-  const lastExport = list.dependencies?.[0];
+  const exports = (list.dependencies ?? []).filter(
+    (use) => use.kind === "export",
+  );
+  const lastExport = exports[0];
   return (
     <header className="lists-head">
       <div className="lists-head-title">
@@ -126,8 +125,8 @@ function ListHead({ list }: Readonly<{ list: List }>) {
       <ListCheckLine list={list} />
       {lastExport && (
         <p className="t-caption">
-          {plural("lists.head.exported", list.dependencies?.length ?? 0, {
-            count: formatNumber(list.dependencies?.length ?? 0, locale),
+          {plural("lists.head.exported", exports.length, {
+            count: formatNumber(exports.length, locale),
             when: formatDateTime(lastExport.occurred_at, locale, viewerZone()),
           })}
         </p>
@@ -135,13 +134,8 @@ function ListHead({ list }: Readonly<{ list: List }>) {
       {list.can_edit && !list.archived_at && (
         <div className="card-actions">
           <ListSettingsAction list={list} />
-          <Button
-            variant="ghost"
-            pending={archive.isPending}
-            onClick={() => archive.mutate({ id: list.id, archive: true })}
-          >
-            {t("lists.archive")}
-          </Button>
+          <EditFilterAction list={list} />
+          <ArchiveListAction list={list} />
         </div>
       )}
     </header>
@@ -160,6 +154,8 @@ function ListCheckLine({ list }: Readonly<{ list: List }>) {
   }
   const check = list.last_check;
   const pulse = list.since_last_visit;
+  const changes = list.changes_since_visit;
+  const type = list.entity_type;
   const when = check
     ? formatDateTime(check.checked_at, locale, viewerZone())
     : "";
@@ -172,13 +168,25 @@ function ListCheckLine({ list }: Readonly<{ list: List }>) {
             ? t("lists.head.tooLarge", { when })
             : t("lists.head.lastChecked", { when })}
       </p>
-      {pulse && pulse.entered + pulse.left > 0 && (
-        <p className="t-caption">
-          {t("lists.head.pulse", {
-            entered: formatNumber(pulse.entered, locale),
-            left: formatNumber(pulse.left, locale),
-          })}
-        </p>
+      {changes ? (
+        <ListChangeSummary
+          summary={changes}
+          onOpen={
+            isMemberSource(type)
+              ? (id) => navigate({ screen: MEMBER_SOURCES[type].screen, id })
+              : undefined
+          }
+        />
+      ) : (
+        pulse &&
+        pulse.entered + pulse.left > 0 && (
+          <p className="t-caption">
+            {t("lists.head.pulse", {
+              entered: formatNumber(pulse.entered, locale),
+              left: formatNumber(pulse.left, locale),
+            })}
+          </p>
+        )
       )}
     </>
   );
@@ -216,7 +224,13 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
   }
   if (list.health === "invalid") {
     return (
-      <Callout tone="danger" title={t("lists.invalid.title")}>
+      <Callout
+        tone="danger"
+        title={t("lists.invalid.title")}
+        actions={
+          mayEditFilter(list) ? <EditFilterAction list={list} /> : undefined
+        }
+      >
         {t("lists.invalid.body")}
       </Callout>
     );
@@ -224,7 +238,13 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
   if (list.health === "retired_field") {
     const fields = list.retired_fields ?? [];
     return (
-      <Callout tone="warning" title={t("lists.retiredField.title")}>
+      <Callout
+        tone="warning"
+        title={t("lists.retiredField.title")}
+        actions={
+          mayEditFilter(list) ? <EditFilterAction list={list} /> : undefined
+        }
+      >
         {plural("lists.retiredField.body", fields.length, {
           fields: fields.map(customColumnLabel).join(", "),
         })}
@@ -263,11 +283,11 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
 
 function MembersPanel({ list }: Readonly<{ list: List }>) {
   const t = useT();
-  const [why, setWhy] = useState<MemberRow | null>(null);
   const joined = useMemo(
     () => new Set(list.joined_since_visit ?? []),
     [list.joined_since_visit],
   );
+  const columns = useMemberColumns(list, joined);
   if (!isMemberSource(list.entity_type)) {
     return (
       <Panel title={t("lists.members.title")}>
@@ -285,47 +305,9 @@ function MembersPanel({ list }: Readonly<{ list: List }>) {
           list={list}
           source={list.entity_type}
           onOpen={(row) => navigate({ screen: source.screen, id: row.id })}
-          columns={[
-            {
-              key: "name",
-              header: t("lists.col.name"),
-              fixed: true,
-              cell: (row) =>
-                joined.has(row.id) ? (
-                  <span className="lists-member-name">
-                    {memberName(row, t)}
-                    <Badge tone="accent">{t("lists.members.new")}</Badge>
-                  </span>
-                ) : (
-                  memberName(row, t)
-                ),
-            },
-            {
-              key: "why",
-              header: t("lists.members.whyColumn"),
-              verbs: true,
-              cell: (row) => (
-                <span className="cell-actions">
-                  <Button
-                    variant="ghost"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setWhy(row);
-                    }}
-                  >
-                    {t("lists.members.why")}
-                  </Button>
-                </span>
-              ),
-            },
-          ]}
+          columns={columns}
         />
       </PanelBody>
-      <ListWhy
-        list={list}
-        record={why ? { id: why.id, name: memberName(why, t) } : null}
-        onClose={() => setWhy(null)}
-      />
     </Panel>
   );
 }

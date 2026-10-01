@@ -51,12 +51,30 @@ type listSummary struct {
 	LastCheck     *listCheck
 	Pulse         *listPulse
 	Joined        []ids.UUID
+	Changes       *changeSummary
 }
 
 type listDependency struct {
 	Kind       string
 	OccurredAt time.Time
 	Actor      *string
+	// Rule is set for an automation rule that depends on the list.
+	Rule *RuleUse
+}
+
+// RuleUse is an active automation rule that watches a Live List or adds to a
+// Shortlist. ID and Name are empty for a reader who may not read automations.
+type RuleUse struct {
+	ID        ids.UUID
+	Name      string
+	Role      string
+	CreatedAt time.Time
+}
+
+// WithRuleUses injects the read of the automation rules that depend on a list.
+func (s *Store) WithRuleUses(read func(ctx context.Context, id ids.ListID) ([]RuleUse, error)) *Store {
+	s.ruleUses = read
+	return s
 }
 
 // summarize counts what this reader may see of a list and judges its health.
@@ -112,9 +130,28 @@ func (s *Store) stewardGone(ctx context.Context, l listRow) (bool, error) {
 	return !live, err
 }
 
-// Dependencies reads what uses a list. Filtered exports are the one kind in
-// this release; each is a finished extraction, so none blocks a change.
+// Dependencies reads what uses a list: the active automation rules that watch
+// or write it, then its filtered exports, newest first. None blocks a change:
+// an export is a finished extraction, and a rule pauses itself when its list
+// is archived.
 func (s *Store) Dependencies(ctx context.Context, id ids.ListID) ([]listDependency, error) {
+	exports, err := s.exportUses(ctx, id)
+	if err != nil || s.ruleUses == nil {
+		return exports, err
+	}
+	rules, err := s.ruleUses(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]listDependency, 0, len(rules)+len(exports))
+	for i := range rules {
+		out = append(out, listDependency{Kind: "automation", OccurredAt: rules[i].CreatedAt, Rule: &rules[i]})
+	}
+	return append(out, exports...), nil
+}
+
+// exportUses reads the newest filtered exports of a list.
+func (s *Store) exportUses(ctx context.Context, id ids.ListID) ([]listDependency, error) {
 	var out []listDependency
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := readVisibleList(ctx, tx, id); err != nil {

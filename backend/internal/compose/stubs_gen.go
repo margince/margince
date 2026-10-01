@@ -231,6 +231,10 @@ func (stubs) TestAiProviderKey(w nethttp.ResponseWriter, r *nethttp.Request, pro
 	httperr.NotImplemented(w, r, "TestAiProviderKey")
 }
 
+func (stubs) ListProviderLocations(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
+	httperr.NotImplemented(w, r, "ListProviderLocations")
+}
+
 func (stubs) GetAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiRouting")
 }
@@ -1619,6 +1623,10 @@ func (stubs) PreviewFilter(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewFilter")
 }
 
+func (stubs) ProposeFilter(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ProposeFilter")
+}
+
 func (stubs) GetFilterVocabulary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetFilterVocabularyParams) {
 	httperr.NotImplemented(w, r, "GetFilterVocabulary")
 }
@@ -2481,6 +2489,10 @@ func (stubs) CreateRecordRole(w nethttp.ResponseWriter, r *nethttp.Request, para
 
 func (stubs) UpdateRecordRole(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateRecordRoleParams) {
 	httperr.NotImplemented(w, r, "UpdateRecordRole")
+}
+
+func (stubs) GetRecordLists(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetRecordLists")
 }
 
 func (stubs) GetRecordTags(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {

@@ -79,13 +79,13 @@ type Operations struct {
 	AllowTestMailbox bool `yaml:"allow_test_mailbox"`
 }
 
-// Lists switches Live Lists and Shortlists on. They are off until an operator
-// turns them on: the product is being built, and nothing an installation shows
-// should advertise an unfinished surface.
+// Analytics switches governed sales reporting on. It is off by default.
 type Analytics struct {
 	PerformanceEnabled bool `yaml:"performance_enabled"`
 }
 
+// Lists switches Live Lists and Shortlists. They are on unless an operator
+// writes `enabled: false`, which hides every list surface and deletes no list.
 type Lists struct {
 	Enabled bool `yaml:"enabled"`
 }
@@ -347,7 +347,7 @@ type MCP struct {
 // One document: what a running process reads is the base file plus its
 // posture's overlay, which is Load in layers.go.
 func Parse(raw []byte) (Config, error) {
-	cfg := Config{Version: 1}
+	cfg := compiledDefaults()
 	dec := yaml.NewDecoder(strings.NewReader(string(raw)))
 	dec.KnownFields(true)
 	if err := dec.Decode(&cfg); err != nil {
@@ -357,6 +357,12 @@ func Parse(raw []byte) (Config, error) {
 		return Config{}, err
 	}
 	return cfg, nil
+}
+
+// compiledDefaults is the layer under every file: what an installation runs
+// with for each key its files leave unwritten.
+func compiledDefaults() Config {
+	return Config{Version: 1, Lists: Lists{Enabled: true}}
 }
 
 func (c Config) validate() error {

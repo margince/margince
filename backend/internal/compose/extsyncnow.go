@@ -120,11 +120,10 @@ func attendedChildOpts(childKind string) (*river.InsertOpts, error) {
 			"compose: %s declares an opts_owner other than fan_out, so its queue and attempt cap are not "+
 				"this helper's to set", childKind)
 	}
-	return &river.InsertOpts{
-		Queue:       spec.Queue,
+	return jobs.QueuedAsKind(childKind, &river.InsertOpts{
 		MaxAttempts: spec.MaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-	}, nil
+	}), nil
 }
 
 // extensionJobInserter answers the one insert-only River client this process

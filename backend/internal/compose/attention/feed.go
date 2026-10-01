@@ -301,14 +301,14 @@ func (s *Service) countingDecisions() *Service {
 // brief ran empty would inherit them because nothing would overwrite what
 // nothing wrote. That is another rep's mail-derived prose on this rep's row,
 // and an unsynchronised map write under concurrent requests besides.
-func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theNight, error) {
+func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besideDay, error) {
 	asOf := s.now().UTC()
 	// The day's end, resolved ONCE for the whole assembly: every due-dated lane
 	// is judged against the same instant, and the installation is asked for its
 	// timezone once rather than per lane.
 	until, loc, err := s.endOfDay(ctx, asOf)
 	if err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
 	// Every lane starts as an empty slice, never nil. The contract declares
 	// them as arrays, and a withheld lane leaves its field unset — which
@@ -330,7 +330,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 		out.ThisMorningState = &night.state
 	})
 	if err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
 	needsYou, count, err := s.decisionsToDepth(ctx, s.decisionsDepth())
@@ -343,8 +343,9 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 		}
 		out.Counts.DealSuggestionsOpen = count.suggestions
 	})
+	beside := besideDay{failed: count.failed}
 	if err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
 	planned, plannedTotal, err := s.planned(ctx, asOf, until, loc, s.taskScope)
@@ -353,7 +354,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 		out.Counts.Planned = plannedTotal
 	})
 	if err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
 	// The three OPTIONAL lanes, each bound or absent. optionalLane holds the
@@ -361,14 +362,14 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 	for _, lane := range s.optionalLanes(ctx, asOf, until, &out) {
 		omitted, err = lane.collect(omitted)
 		if err != nil {
-			return crmcontracts.Attention{}, theNight{}, err
+			return crmcontracts.Attention{}, besideDay{}, err
 		}
 	}
 
 	done, err := s.done(ctx, asOf)
 	omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
 	if err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
 	if len(omitted) > 0 {
@@ -377,17 +378,20 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 	// Last, over the assembled lanes: every card that names a record gets its
 	// display name under this reader's own grants (labels.go).
 	if err := s.fillSubjectLabels(ctx, &out); err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
-	return out, night, nil
+	beside.night = night
+	return out, beside, nil
 }
 
 // laneCount carries the totals behind a lane the reader only sees a slice of.
 type laneCount struct {
 	items      int
 	duplicates int
-	// suggestions is nil when the reader may not read suggestions at all.
+	// suggestions is nil when the reader may not read suggestions at all, or
+	// when the read failed — and then failed names it.
 	suggestions *int
+	failed      []*crmcontracts.WorklistSourceUnavailable
 }
 
 // decisions is the needs_you lane: staged approvals, open duplicate pairs and
@@ -458,11 +462,11 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	for _, approval := range staged {
 		approvals = append(approvals, approvalItem(approval, s.machine))
 	}
-	suggestions, openSuggested, err := s.openSuggestionItems(ctx, depth)
-	if err != nil {
-		return nil, laneCount{}, err
-	}
+	suggestions, openSuggested, failed := s.openSuggestionItems(ctx, depth)
 	count := laneCount{items: openPairs + openStaged, duplicates: openPairs, suggestions: openSuggested}
+	if failed != nil {
+		count.failed = append(count.failed, failed)
+	}
 	if openSuggested != nil {
 		count.items += *openSuggested
 	}

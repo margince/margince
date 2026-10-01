@@ -161,10 +161,10 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
     await user.click(
-      await screen.findByRole("button", { name: /Start another import/ }),
+      await screen.findByRole("button", { name: /Start a new import/ }),
     );
     const picker = await screen.findByRole("combobox", {
-      name: "Import window",
+      name: "How far back",
     });
     expect(picker.textContent).toContain("6 months");
     expect(screen.queryByText(/imports undefined/)).toBeNull();
@@ -180,7 +180,7 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
     const picker = await screen.findByRole("combobox", {
-      name: "Import window",
+      name: "How far back",
     });
     expect(picker.textContent).toContain("6 months");
     await user.click(picker);
@@ -224,11 +224,9 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    expect(
-      await screen.findByText(/At least 20,000 messages in that period/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/20,000 emails or more/)).toBeTruthy();
     // And not as a plain count, which is the statement this replaces.
-    expect(screen.queryByText(/^20,000 messages in that period/)).toBeNull();
+    expect(screen.queryByText(/^20,000 emails in that time/)).toBeNull();
   });
 
   it("auto-loads the scope estimate without a click, and does not spend until start", async () => {
@@ -238,8 +236,8 @@ describe("the connect-time backfill payoff", () => {
     // The scope appears with no user interaction, and the WINDOW leads it: the
     // period of their own mailbox is what the mailbox owner agrees to, and the count
     // describes that period.
-    expect(await screen.findByText(/6 months of your mailbox/)).toBeTruthy();
-    expect(screen.getByText(/1,234 messages in that period/)).toBeTruthy();
+    expect(await screen.findByText(/Goes back 6 months/)).toBeTruthy();
+    expect(screen.getByText(/1,234 emails in that time/)).toBeTruthy();
     expect(requestsTo(calls, "/backfill/preview", "POST").length).toBe(1);
     // But nothing has been imported: no start POST fired on its own.
     expect(requestsTo(calls, "/backfill", "POST").length).toBe(0);
@@ -258,7 +256,7 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    expect(await screen.findByText(/~US\$2\.50/)).toBeTruthy();
+    expect(await screen.findByText(/about US\$2\.50/)).toBeTruthy();
     expect(screen.queryByText(/EUR/)).toBeNull();
   });
 
@@ -270,7 +268,7 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    await screen.findByText(/400 messages in that period/);
+    await screen.findByText(/400 emails in that time/);
     await user.click(screen.getByRole("button", { name: /Start import/ }));
 
     await waitFor(() =>
@@ -291,7 +289,7 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    expect(await screen.findByText("Counting messages…")).toBeTruthy();
+    expect(await screen.findByText("Counting emails…")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /Start import/ }));
 
     await waitFor(() =>
@@ -337,8 +335,8 @@ describe("the connect-time backfill payoff", () => {
     expect(await screen.findByText("128")).toBeTruthy();
     expect(screen.getByText("47")).toBeTruthy();
     expect(screen.getByText("12")).toBeTruthy();
-    expect(screen.getByText("Emails captured")).toBeTruthy();
-    expect(screen.getByText("Contacts")).toBeTruthy();
+    expect(screen.getByText("Emails added")).toBeTruthy();
+    expect(screen.getByText("New contacts")).toBeTruthy();
     // "to check", not created: the count is domains this run raised a company
     // question for, and a domain becomes a company only if its site says so.
     expect(screen.getByText("Companies to check")).toBeTruthy();
@@ -357,7 +355,7 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    expect(await screen.findByText(/History import complete/i)).toBeTruthy();
+    expect(await screen.findByText(/Old emails imported/i)).toBeTruthy();
     expect(screen.getByText("512")).toBeTruthy();
   });
 
@@ -370,13 +368,11 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    await user.click(
-      await screen.findByRole("button", { name: /Stop import/ }),
-    );
+    await user.click(await screen.findByRole("button", { name: /^Stop$/ }));
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "DELETE").length).toBe(1),
     );
-    expect(await screen.findByText(/Stopped\./)).toBeTruthy();
+    expect(await screen.findByText(/You stopped the import/)).toBeTruthy();
   });
 
   // Stopping an import is a decision about the run, not about the mailbox: the
@@ -399,12 +395,12 @@ describe("the connect-time backfill payoff", () => {
     render(<BackfillPanel provider="gmail" />);
 
     await user.click(
-      await screen.findByRole("button", { name: /Start another import/ }),
+      await screen.findByRole("button", { name: /Start a new import/ }),
     );
     // Opened on the window this mailbox already ran, because the server only
     // ever widens — a picker that opens on a refusal wastes the first press.
     expect(
-      (await screen.findByRole("combobox", { name: "Import window" }))
+      (await screen.findByRole("combobox", { name: "How far back" }))
         .textContent,
     ).toContain("1 year");
 
@@ -418,6 +414,61 @@ describe("the connect-time backfill payoff", () => {
     });
   });
 
+  it("continues a run that stopped on an error, from where it stopped", async () => {
+    const calls = stubApi({
+      statuses: [
+        {
+          ...countsStatus("error", {
+            messages_scanned: 6800,
+            captured: 40,
+            failed: 3,
+          }),
+          resumable: true,
+        },
+      ],
+    });
+    render(<BackfillPanel provider="gmail" />);
+
+    expect(
+      await screen.findByText("The last import stopped after 6,800 emails."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("3 emails could not be added and were left out."),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(async () => {
+      const starts = requestsTo(calls, "/backfill", "POST");
+      expect(starts.length).toBe(1);
+      // No start_over: the server continues the stopped run with its counts.
+      expect(await starts[0]?.clone().json()).toEqual({ window: "6m" });
+    });
+  });
+
+  it("starts over from the top only when the reader asks to", async () => {
+    const calls = stubApi({
+      statuses: [
+        {
+          ...countsStatus("error", { messages_scanned: 6800, captured: 40 }),
+          resumable: true,
+        },
+      ],
+    });
+    render(<BackfillPanel provider="gmail" />);
+
+    await user.click(await screen.findByRole("button", { name: "Start over" }));
+    await user.click(
+      await screen.findByRole("button", { name: /Start import/ }),
+    );
+    await waitFor(async () => {
+      const starts = requestsTo(calls, "/backfill", "POST");
+      expect(starts.length).toBe(1);
+      expect(await starts[0]?.clone().json()).toEqual({
+        window: "6m",
+        start_over: true,
+      });
+    });
+  });
+
   it("surfaces an honest error class without hiding the counts captured so far", async () => {
     stubApi({
       statuses: [countsStatus("error", { captured: 40, contacts_created: 9 })],
@@ -426,7 +477,7 @@ describe("the connect-time backfill payoff", () => {
 
     expect(await screen.findByText("40")).toBeTruthy();
     expect(
-      screen.getByText(/everything captured so far is kept/i),
+      screen.getByText(/everything imported so far is kept/i),
     ).toBeTruthy();
   });
 });
@@ -444,9 +495,7 @@ describe("honest capability and staleness", () => {
     });
     render(<BackfillPanel provider="imap" initial={{ state: "none" }} />);
 
-    expect(
-      await screen.findByText(/does not support history import/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/cannot import old emails/i)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     // Not a retryable error state: no window picker offered for a provider
     // that structurally can't run this op.
@@ -509,7 +558,7 @@ describe("honest capability and staleness", () => {
       />,
     );
 
-    expect(screen.getByText(/last updated/i)).toBeTruthy();
+    expect(screen.getByText(/no progress for/i)).toBeTruthy();
     expect(screen.queryByRole("progressbar")).toBeNull();
   });
 
@@ -543,7 +592,7 @@ describe("honest capability and staleness", () => {
       await screen.findByRole("button", { name: /Start import/ }),
     );
 
-    expect(await screen.findByText(/only be widened/i)).toBeTruthy();
+    expect(await screen.findByText(/same time or longer/i)).toBeTruthy();
   });
 });
 

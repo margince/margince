@@ -164,8 +164,10 @@ A reader that serves content composes the content clause; a limited activity the
 but not read is withheld, with only the safe markers shown. The audience does **not** yield to
 `row_scope: all` — only the system principal reads the arm away.
 
-Note that `owner_id` is **optional**. A manual create stamps the creator
-(`storekit.OwnerOrActor`), but a record can still arrive without an owner — an import, a connector
+Note that `owner_id` is **optional**. A manual create stamps the creator when the caller names
+nobody, and asks the assignment question when they name somebody else (`storekit.NewRecordOwner`):
+a record cannot be born on a seat no handover could hand it to. But a record can still arrive
+without an owner — an import, a connector
 that had no seat to attribute. Such a row is readable by everyone and writable by **nobody** until a
 seat claims it, which is the opposite of what this paragraph used to say: an ownerless customer
 record every seat could rewrite is how two teams edit one company past each other.

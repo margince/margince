@@ -120,7 +120,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_contribution_pkey` — `unique, btree (id)`
 - `idx_forecast_contribution_audit` — `btree (audit_id) WHERE (audit_id IS NOT NULL)`
 - `idx_forecast_contribution_deal` — `btree (deal_id, created_at DESC)`
-- `idx_forecast_contribution_snapshot` — `btree (snapshot_id)`
 - `uq_forecast_contribution_deal` — `unique, btree (snapshot_id, deal_id)`
 
 ## forecast_snapshot

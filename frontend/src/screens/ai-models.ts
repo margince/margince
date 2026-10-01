@@ -92,16 +92,32 @@ function availableModelsQueryOptions(
   provider: string,
   tier: string,
   top?: number,
+  location?: string,
+  model?: string,
 ) {
   return {
-    queryKey: ["ai-available-models", provider, tier, top ?? null],
+    // The location and the probed model are part of the key: Vertex serves a
+    // different set at each location, so two locations are two answers.
+    queryKey: [
+      "ai-available-models",
+      provider,
+      tier,
+      top ?? null,
+      location ?? null,
+      model ?? null,
+    ],
     staleTime: 5 * 60 * 1000,
     retry: false,
     queryFn: async (): Promise<AvailableModels> => {
       try {
         const { data, error } = await api.GET(
           "/ai/available-models/{provider}",
-          { params: { path: { provider }, query: { tier, top } } },
+          {
+            params: {
+              path: { provider },
+              query: { tier, top, location, model },
+            },
+          },
         );
         // A 200 is not by itself an answer: an intermediary can return one with
         // a body this cannot read, and a list that is missing rather than empty
@@ -301,14 +317,75 @@ export function useAvailableModels(
   provider: string,
   tier: string,
   enabled: boolean,
+  location?: string,
 ) {
   // The lane is part of the key, not just the request: two lanes on one vendor
   // may be reached at two hosts, so their answers are two different lists and
   // must not share a cache entry. No `top`: a routing form binds an id its
   // reader already knows, so it wants the vendor's whole list, not a shortlist.
   return useQuery({
-    ...availableModelsQueryOptions(provider, tier),
+    ...availableModelsQueryOptions(provider, tier, undefined, location),
     enabled: enabled && provider !== "",
+  });
+}
+
+/**
+ * Whether ONE location serves ONE model — Vertex's answer, which differs by
+ * location where every other vendor's does not. Asked only for a model the
+ * reader chose, never for a list: each probe is a real call on the
+ * installation's service account. `undefined` target asks nothing.
+ */
+export function useModelProbe(
+  provider: string,
+  tier: string,
+  target: Readonly<{ location: string; model: string }> | undefined,
+) {
+  return useQuery({
+    ...availableModelsQueryOptions(
+      provider,
+      tier,
+      undefined,
+      target?.location,
+      target?.model,
+    ),
+    enabled: target !== undefined && target.model !== "",
+    // An unanswered probe is no answer to keep: asking the same location
+    // again must ask Google again.
+    staleTime: (query) =>
+      query.state.data?.unavailable === "unreachable" ? 0 : 5 * 60 * 1000,
+  });
+}
+
+/** Where one vendor can process a call, as the wire carries it. */
+export type ProviderLocations = components["schemas"]["ProviderLocationList"];
+
+/**
+ * The locations a Vertex binding may name. Never throws, for the reason the
+ * model list does not: the field still binds the location it holds, and Google
+ * being unreachable must not take the form with it.
+ */
+export function useProviderLocations(provider: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["ai-provider-locations", provider],
+    // No list is no answer to keep: a key saved or Google back since must be
+    // asked again.
+    staleTime: (query) => (query.state.data?.unavailable ? 0 : 5 * 60 * 1000),
+    retry: false,
+    enabled: enabled && provider !== "",
+    queryFn: async (): Promise<ProviderLocations> => {
+      try {
+        const { data, error } = await api.GET(
+          "/ai/provider-locations/{provider}",
+          { params: { path: { provider } } },
+        );
+        if (error || !data || !Array.isArray(data.locations)) {
+          return { provider, locations: [], unavailable: "unreachable" };
+        }
+        return data;
+      } catch {
+        return { provider, locations: [], unavailable: "unreachable" };
+      }
+    },
   });
 }
 

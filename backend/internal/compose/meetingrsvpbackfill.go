@@ -54,7 +54,9 @@ const (
 const meetingRSVPBackfillPerTick = 200
 
 // rsvpCandidate is one captured meeting this pass has yet to judge, with
-// everything the judgement needs read in the SAME query that found it.
+// every fact about the row the judgement needs read in the SAME query that
+// found it. The original's bytes are the exception: the drain reads those per
+// meeting, so a batch holds one payload rather than all of them.
 //
 // It is not replayCandidate: that shape carries the kind and the attestation the
 // participant passes need, and none of the key or start this one does. Reading
@@ -64,8 +66,10 @@ type rsvpCandidate struct {
 	activityID ids.ActivityID
 	// source is the CONNECTOR that captured the row, read from captured_by:
 	// which vendor's format the stored payload is in.
-	source  string
-	payload []byte
+	source string
+	// rawCaptureID names the stored original. The payload itself is read by
+	// the drain when this meeting's turn comes, never by the offer.
+	rawCaptureID ids.UUID
 	// key is the provider key the meeting was captured under — what the cancel
 	// writer finds the row by.
 	key connector.NaturalKey
@@ -118,7 +122,7 @@ func backfillMeetingRSVPBatch(ctx context.Context, pool *pgxpool.Pool, limit int
 // to one is the single thing a hold exists to prevent.
 func selectMeetingRSVPCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]rsvpCandidate, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, split_part(a.captured_by, ':', 2), rc.payload,
+		SELECT a.id, split_part(a.captured_by, ':', 2), rc.id,
 		       coalesce(a.source_system, ''), coalesce(a.source_id, ''), a.occurred_at,
 		       coalesce((
 		         SELECT c.account_label
@@ -148,7 +152,7 @@ func selectMeetingRSVPCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]r
 	var out []rsvpCandidate
 	for rows.Next() {
 		var c rsvpCandidate
-		if err := rows.Scan(&c.activityID, &c.source, &c.payload,
+		if err := rows.Scan(&c.activityID, &c.source, &c.rawCaptureID,
 			&c.key.SourceSystem, &c.key.SourceID, &c.startsAt, &c.owner); err != nil {
 			return nil, fmt.Errorf("compose: reading an rsvp backfill candidate: %w", err)
 		}
@@ -171,11 +175,11 @@ func selectMeetingRSVPCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]r
 // event was never worth capturing" — an internal meeting, a solo block — which
 // says nothing about whether it is off. The row exists, so it WAS captured under
 // whatever rule applied then, and this pass has no cancellation to write.
-func backfillOneMeetingRSVP(ctx context.Context, tx pgx.Tx, c rsvpCandidate) (string, error) {
+func backfillOneMeetingRSVP(ctx context.Context, tx pgx.Tx, c rsvpCandidate, payload []byte) (string, error) {
 	if c.owner == "" {
 		return rsvpBackfillUnreadable, nil
 	}
-	raw, decodeErr := decodeStoredOriginal(c.payload)
+	raw, decodeErr := decodeStoredOriginal(payload)
 	if decodeErr != nil {
 		return rsvpBackfillUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
@@ -227,3 +231,7 @@ func markMeetingRSVPSettled(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 // activity names the row this candidate is about, satisfying
 // storedOriginalCandidate.
 func (c rsvpCandidate) activity() ids.ActivityID { return c.activityID }
+
+// original names the stored original this meeting is read from, satisfying
+// storedOriginalCandidate.
+func (c rsvpCandidate) original() ids.UUID { return c.rawCaptureID }

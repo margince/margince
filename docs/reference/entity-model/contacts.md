@@ -6,7 +6,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-46 columns · primary key `(id)` · referenced by 40 foreign keys
+43 columns · primary key `(id)` · referenced by 40 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -17,7 +17,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `address_line2` | `text` |  | Optional `text`. |
 | `address_postal_code` | `text` |  | Optional `text`. |
 | `address_region` | `text` |  | Optional `text`. |
-| `classification` | `text` | yes | One of `prospect`, `customer`, `agency`, `reseller`, `tech_vendor`, `platform` and 3 more. |
 | `description` | `text` |  | One human-written line saying what the company does, shown under the title on the company page. |
 | `display_name` | `text` | yes | Required `text`. |
 | `geocode_input_hash` | `text` |  | Optional `text`. |
@@ -41,7 +40,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `owner_id` | `uuid` |  | Points at `app_user.id` — deleting the parent keeps this row and clears the link. |
 | `parent_company_id` | `uuid` |  | Single-level hierarchy FK; no cycles. |
 | `quarantined_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
-| `relevance` | `smallint` |  | Optional `smallint`. |
 | `size_band` | `text` |  | One of `1-10`, `11-50`, `51-200`, `201-500`, `501-1000`, `1001-5000` and 1 more. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id` — deleting the parent keeps this row and clears the link. |
 | `source_author_name` | `text` |  | Optional `text`. |
@@ -50,7 +48,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean` | yes | True while a litigation or investigation hold is preserving this record. |
-| `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
 | `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
@@ -69,7 +66,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `company_anchor_is_permanent` — `CHECK (((NOT is_anchor) OR ((archived_at IS NULL) AND (merged_into_id IS NULL))))`
-- `company_classification_check` — `CHECK ((classification = ANY (ARRAY['prospect', 'customer', 'agency', 'reseller', 'tech_vendor', 'platform', 'partner', 'competitor', 'other'])))`
 - `company_description_length` — `CHECK (((description IS NULL) OR (length(description) <= 500)))`
 - `company_geocode_resolved_has_a_point` — `CHECK (((geocode_status IS DISTINCT FROM 'ok') OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))`
 - `company_geocode_status_check` — `CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok', 'failed', 'no_match', 'stale']))))`
@@ -78,7 +74,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_name_source_check` — `CHECK ((name_source = ANY (ARRAY['human', 'dossier', 'signature', 'domain'])))`
 - `company_not_own_parent` — `CHECK (((parent_company_id IS NULL) OR (parent_company_id <> id)))`
 - `company_owner_private_names_its_owner` — `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
-- `company_relevance_check` — `CHECK (((relevance IS NULL) OR ((relevance >= 0) AND (relevance <= 100))))`
 - `company_size_band_check` — `CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']))))`
 - `company_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `company_visibility_check` — `CHECK ((visibility = ANY (ARRAY['workspace', 'owner'])))`
@@ -87,7 +82,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_linkedin_url_key` — `unique, btree (lower(linkedin_url)) WHERE ((linkedin_url IS NOT NULL) AND (archived_at IS NULL))`
 - `company_pkey` — `unique, btree (id)`
-- `idx_company_class` — `btree (classification) WHERE (archived_at IS NULL)`
 - `idx_company_created_keyset` — `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_company_geocoded` — `btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok') AND (archived_at IS NULL))`
 - `idx_company_import_display_name` — `btree (f_fold_import_name(display_name)) WHERE ((archived_at IS NULL) AND (merged_into_id IS NULL))`
@@ -431,7 +425,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-33 columns · primary key `(id)` · referenced by 41 foreign keys
+32 columns · primary key `(id)` · referenced by 41 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -462,7 +456,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean` | yes | True while a litigation or investigation hold is preserving this record. |
-| `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
 | `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
@@ -513,7 +506,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `id` | `uuid` | yes | Primary key. |
 | `captured_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 | `contact_id` | `uuid` | yes | Points at `contact.id` — deleting the parent deletes this row. |
-| `kind` | `text` | yes | One of `subject_initiated`, `customer_contract`, `requested_quote_or_meeting`, `in_person_permission`, `referral`, `event_or_form` and 4 more. |
+| `kind` | `text` | yes | One of `subject_initiated`, `customer_contract`, `requested_quote_or_meeting`, `in_person_permission`, `referral`, `event_or_form` and 5 more. |
 | `note` | `text` |  | Optional `text`. |
 | `occurred_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `purpose_claimed` | `text` |  | Optional `text`. |
@@ -529,7 +522,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `contact_acquisition_evidence_kind` — `CHECK ((kind = ANY (ARRAY['subject_initiated', 'customer_contract', 'requested_quote_or_meeting', 'in_person_permission', 'referral', 'event_or_form', 'public_or_business_source', 'purchased_or_imported', 'unknown_legacy', 'crm_migration'])))`
+- `contact_acquisition_evidence_kind` — `CHECK ((kind = ANY (ARRAY['subject_initiated', 'customer_contract', 'requested_quote_or_meeting', 'in_person_permission', 'referral', 'event_or_form', 'public_or_business_source', 'purchased_or_imported', 'unknown_legacy', 'crm_migration', 'mailbox_history'])))`
 - `contact_acquisition_evidence_source_shape` — `CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))`
 
 **Indexes**
@@ -648,6 +641,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `contact_phone_e164` — `CHECK ((phone ~ '^\+[1-9][0-9]{7,14}$'))`
 - `contact_phone_phone_type_check` — `CHECK ((phone_type = ANY (ARRAY['work', 'mobile', 'home', 'other'])))`
 
 **Indexes**
@@ -700,7 +694,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `contact_profile_field_pkey` — `unique, btree (id)`
-- `idx_contact_profile_field` — `btree (contact_id)`
 - `uq_contact_profile_field` — `unique, btree (contact_id, field, value_key)`
 
 **Triggers**
@@ -799,7 +792,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_social_contact_id_platform_key` — `unique, btree (contact_id, platform)`
 - `contact_social_pkey` — `unique, btree (id)`
-- `idx_contact_social_contact` — `btree (contact_id)`
 
 ## conversation_claim
 
@@ -854,7 +846,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## dedupe_candidate
 
-20 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -874,7 +866,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -967,7 +958,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-37 columns · primary key `(id)` · referenced by 13 foreign keys
+36 columns · primary key `(id)` · referenced by 13 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1002,7 +993,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean` | yes | True while a litigation or investigation hold is preserving this record. |
-| `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
 | `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | The stored source key. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
@@ -1262,12 +1252,12 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_linkedin_connection_matched_contact` — `btree (matched_contact_id)`
 - `idx_linkedin_connection_owner_user` — `btree (owner_user_id)`
 - `linkedin_connection_pkey` — `unique, btree (id)`
-- `uq_linkedin_connection_natural` — `unique, btree (owner_user_id, normalized_name, COALESCE(normalized_company, ''), COALESCE(connected_on, '1970-01-01'::date)) WHERE (provider_member_ref IS NULL)`
+- `uq_linkedin_connection_natural` — `unique, btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL)`
 - `uq_linkedin_connection_provider` — `unique, btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)`
 
 ## partner
 
-25 columns · primary key `(id)` · referenced by 0 foreign keys
+24 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1292,7 +1282,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -1686,7 +1675,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `site_read_stopped_reason_check` — `CHECK (((stopped_reason IS NULL) OR (stopped_reason = ANY (ARRAY['budget', 'page_cap', 'byte_cap', 'deadline']))))`
 - `site_read_target_kind_check` — `CHECK ((target_kind = ANY (ARRAY['onboarding', 'company', 'domain_triage'])))`
 - `site_read_target_shape` — `CHECK ((((target_kind = 'onboarding') AND ((company_id IS NULL) OR ((company_id IS NOT NULL) AND (confirmed_at IS NOT NULL)))) OR ((target_kind = 'company') AND (company_id IS NOT NULL)) OR ((target_kind = 'domain_triage') AND ((company_id IS NULL) OR ((company_id IS NOT NULL) AND (confirmed_at IS NOT NULL))))))`
-- `uq_site_read_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
@@ -1696,7 +1684,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `uq_site_read_company_inflight` — `unique, btree (company_id, seed_url) WHERE ((target_kind = 'company') AND (status = ANY (ARRAY['queued', 'deferred', 'running'])))`
 - `uq_site_read_onboarding_inflight` — `unique, btree (seed_url) WHERE ((target_kind = 'onboarding') AND (status = ANY (ARRAY['queued', 'deferred', 'running'])))`
 - `uq_site_read_triage_inflight` — `unique, btree (seed_url) WHERE ((target_kind = 'domain_triage') AND (status = ANY (ARRAY['queued', 'deferred', 'running'])))`
-- `uq_site_read_ws_id` — `unique, btree (id)`
 
 ## technical_lookup_cache
 

@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -181,12 +180,15 @@ func TestEveryCloudAdapterUsesTheHardenedTransport(t *testing.T) {
 
 	// Every cloud adapter needs its BYOK key present or SelectBrain refuses
 	// before it builds a client; the value is never sent anywhere here.
-	keys := config.Lookup(func(string) string { return "k" })
+	keys := allCloudKeys(t)
 	for _, provider := range KnownProviders() {
 		if provider == ProviderFake {
 			continue // the offline stub makes no outbound call at all
 		}
 		cfg := ProviderConfig{Provider: provider, Model: "m", BaseURL: "https://vendor.example"}
+		if provider == providerGeminiVertex {
+			cfg.BaseURL, cfg.Location = "", "eu"
+		}
 		client, err := SelectBrain(cfg, keys)
 		if err != nil {
 			t.Fatalf("SelectBrain(%s): %v", provider, err)

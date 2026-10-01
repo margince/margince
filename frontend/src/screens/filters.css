@@ -46,3 +46,16 @@
    * otherwise nudge the row on each edit. */
   font-variant-numeric: tabular-nums;
 }
+
+/* The plain-words box above the builder: the field, its button and whatever
+ * the proposal answers, stacked on the panel's own rhythm. */
+.filters-propose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.filters-propose-unused {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+}

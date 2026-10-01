@@ -391,6 +391,42 @@ counts and the oldest waiting age, plus up to 50 recent failures.
   before it ran — says so, rather than borrowing the unvettable-failure
   sentence and claiming a failure that never happened.
 
+### Reading a mailbox import
+
+A Gmail or Microsoft 365 history import (`capture_backfill`) is read from two
+places. **Where it stands** is fleet-wide, read from `capture_backfill` at
+scrape time and served by `cmd/api` beside the job gauges; every api replica
+answers the same numbers, so read them with `max`, never `sum`:
+
+| Family | Labels | Meaning |
+|---|---|---|
+| `margince_capture_backfill_runs` | `status` | imports per status (`queued`, `running`, `done`, `error`, `cancelled`); a status no run holds reads 0 |
+| `margince_capture_backfill_progress` | `field` | summed over the queued and running imports: `scanned`, `captured` and `skipped` are each the committed count plus the running page's live tally; `total_estimate` is the preview's estimate of the window, a floor where the preview said so |
+
+**Why it is slow** is per-process, counted by the worker that pages the import
+and served on its `--observe-addr` (the api serves its own copy for the provider
+calls it makes itself, such as the preview estimate). Every family below is
+emitted for a Gmail import. A Microsoft 365 import emits only the `sink` and
+`ensure` stages, the pages, the snoozes and the Retry-After: its requests,
+messages and `fetch`/`parse` stages are not counted.
+
+| Family | Labels | Meaning |
+|---|---|---|
+| `margince_connector_requests_total` | `provider`, `op`, `result` | every Gmail API call; `op` is `list`, `get_metadata` (a message's headers), `get_raw` (a full download), `history`, `token` (an OAuth token refresh or exchange) or `other`, `result` is `ok`, `rate_limited`, `auth`, `unreachable`, `not_found` or `error` |
+| `margince_connector_request_duration_seconds` | `provider`, `op` | histogram of the same calls' wall time |
+| `margince_capture_backfill_messages_total` | `provider`, `outcome` | one per message settled: the capture trace's outcome (`captured`, `internal`, `suppressed`, `deferred`, `fault`), else `skipped`; `refused` when the capture refused it and the page walked past, `failed` when its failure ended the page |
+| `margince_capture_backfill_stage_seconds` | `provider`, `stage` | histogram per fetch attempt or per message: `fetch_headers` (the headers read every listed message gets first), `fetch` (the RAW download, only for messages the headers did not settle), `parse`, `sink` (the capture transaction), `ensure` (counterparty, project and merge-staging work after it) |
+| `margince_capture_backfill_pages_total` | `provider`, `result` | pages by `ok`, `rate_limited`, `unreachable`, `token_rejected` (Gmail refused the page token; the run walks its window again once) or `failed` |
+| `margince_capture_backfill_snooze_seconds_total` | `provider`, `reason` | seconds the import chose to wait: `pacing` between good pages; after a failed page `rate_limited`, `unreachable`, `token_rejected` or `internal`; `rate_limited_in_page` for a short rate limit a page waited out inside itself; `resumed` when a run was reopened while its job was ending |
+| `margince_capture_backfill_retry_after_seconds_total` | `provider` | the Retry-After the provider asked for on the fault and in-page waits; the gap to their snooze total is the wait our own ladder added |
+
+Compare `sum by (stage) (rate(margince_capture_backfill_stage_seconds_sum[5m]))` across stages to see whether Google's
+download or our transaction dominates a message,
+`sum(rate(margince_connector_requests_total{op="get_metadata"}[5m])) - sum(rate(margince_connector_requests_total{op="get_raw"}[5m]))`
+for the full downloads the headers read saves, and
+`rate(margince_connector_requests_total{result="rate_limited"}[5m])` to see
+whether the provider is pacing the import.
+
 ## cmd/worker — the background process role
 
 **Outbound mail does not leave without this process.** Every role that accepts
@@ -485,6 +521,7 @@ re-serves no fleet-wide reading:
 | `margince_pgxpool_*` | this process's own connection pool — see the connection-pool section |
 | `margince_relay_published_total` | outbox rows *this* relay has shipped since start |
 | `margince_ai_*` | the AI calls *this* process made — every Router in a binary increments one process-wide collector |
+| `margince_connector_*`, `margince_capture_backfill_*` (counters and histograms) | the provider calls and mailbox imports *this* process ran — see [Reading a mailbox import](#reading-a-mailbox-import) |
 
 The AI families are labelled by `provider`, `model`, `served_identity_source`,
 `task` and `tier`. `model` is the **served** identity, not the configured one: a
@@ -946,6 +983,7 @@ place keeps the api reading a password file that is no longer written. Use
 | `MARGINCE_AICERT_RESUME` | — | `make e2e-ai` | directory for the resume journal: every scored run is appended to it as it is scored, so a run cut short by a dropped connection is restarted without paying for the runs it already made. A journaled run is replayed only for the same task and scenario, and only on the same candidate binding, judge, profile, corpus version, scenario stamp, BINARY and repeat index, within six hours — anything else is measured again. The binary is in that list because a stamp covers the requests, never the code that judges the replies. One run owns a resume directory at a time, held by a lock file. Empty turns it off, which forces a run to measure everything fresh. Surfaced as `RESUME=`, on by default. |
 | `MARGINCE_AICERT_STALE_ONLY` | `1` | `make e2e-ai` | `0` re-measures a model whose committed record is already current for this build; anything else skips it before any paid call, so a sweep pays only for what is missing or stale. "Current" is the judgement `make e2e-ai-report` prints. Surfaced as `STALE_ONLY=`, on by default. |
 | `MARGINCE_ANTHROPIC_KEY` | — | `ai` package smoke test | BYOK Anthropic key for the live Anthropic smoke test. Distinct from `ANTHROPIC_API_KEY`, which is what the **runtime** reads for a bound `anthropic` provider. |
+| `MARGINCE_VERTEX_SA_FILE` | — | `ai` package smoke test (`-tags livesmoke`) | path to a Google service-account key file for the live Vertex smoke test; the run fails rather than skips without it. Distinct from `GEMINI_VERTEX_SA_JSON`, which the **runtime** reads and which holds the file's contents, not a path. |
 | `MARGINCE_BENCH_TIER` | — | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds — `smb` (default) or `mid_market`. An unrecognized value fails the bench loudly. |
 | `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness WRITE its record into `docs/reference/perfbench/`, which `make perfdoc` renders into the published budgets page. Off by default because a scheduled job runs the same suite weekly (`make bench-perf-check`), and a machine must never write its own numbers into the tree. The by-hand `bench-record`/`bench-capture`/`bench-mobile` targets need no switch — nothing but a human runs them. |
 | `MARGINCE_AITASK_DIR` | — | `worker aitask` | working directory for the `ai-probe` debug loop's artifacts (flag `--work-dir`, default the gitignored `.tmp/aitask/`). A fetched page carries whatever the source carried, so this stays out of the tree. |
@@ -1175,12 +1213,16 @@ injects bounded context into declared AI tasks; `onboarding` additionally enable
 the five-step first-run flow. The default is `onboarding`. Moving backward is a
 reversible operational kill switch and never deletes confirmed company data.
 
-`lists.enabled` switches Live Lists and Shortlists on. The default is `false`:
-the `/v1/lists` routes answer 404, the `list_id` narrowing of the contact,
-company, deal and lead lists answers 404, the filtered export refuses a
+`lists.enabled` switches Live Lists and Shortlists. The default is `true`. Set
+it to `false` to hide them: the `/v1/lists` routes answer 404, the `list_id`
+narrowing of the contact, company, deal and lead lists answers 404, the filtered export refuses a
 `list_id` source, the company page names no list, no agent list tool is
-registered, and `/me` reports `settings_availability.lists: false`, so no screen
-offers them. Switching it off again hides lists without deleting any.
+registered, `/me` reports `settings_availability.lists: false`, so no screen
+offers them, and the worker's 15-minute Live List check records nothing, so no
+list history grows and no `list.evaluated` event is emitted. The worker reads
+the same file, so set it in the file both roles load. Switching it off hides
+lists without deleting any, and switching it back on shows them as they were;
+the first check after that records who joined and left since the last one.
 
 ### `POST /v1/connectors/test_mailbox/connect` — the QC-only fake mailbox
 
@@ -1407,6 +1449,7 @@ construction, naming what is missing.
 | `openai_compatible` | `OPENAI_COMPATIBLE_API_KEY` | **required** | BYOK cloud, generic OpenAI wire (OpenAI, Mistral, DeepSeek, Groq, Together, OpenRouter, …) |
 | `openai` | `OPENAI_API_KEY` | optional (default `api.openai.com`) | BYOK cloud, native Responses API |
 | `gemini` | `GEMINI_API_KEY` | optional (default `generativelanguage.googleapis.com/v1beta`) | BYOK cloud, native `generateContent` |
+| `gemini_vertex` | `GEMINI_VERTEX_SA_JSON` (the service-account key file's JSON) | **refused** — the host follows from `location` | BYOK cloud, the `gemini` wire served by Vertex AI; **`location` required**, and an EU one under `eu_hosted` |
 | `jev` | `TYPESAFE_API_KEY` | optional (default `https://api.typesafe.ai/v1/systemone`, the FULL endpoint) | decisions lane only; TypeSafe's own API |
 | `jev_compatible` | `JEV_COMPATIBLE_API_KEY` (**optional**: sent when held, never demanded) | **required**, the FULL endpoint | decisions lane only; any server on the Jev wire — OpenRouter (`https://openrouter.ai/api/alpha/decisions`, key = your OpenRouter key) or a self-hosted server (`http://127.0.0.1:8767/v1/systemone`, usually keyless) |
 
@@ -1419,6 +1462,20 @@ appends `/v1/chat/completions` (or `/v1/responses`), so a base ending in `/v1`
 would double it (`…/v1/v1/…` → 404). Use `https://api.mistral.ai`, not
 `https://api.mistral.ai/v1`. `gemini` is the mirror: its default base keeps the
 `/v1beta` segment and the paths are version-relative.
+
+`location` is a field of a `gemini_vertex` binding only, on a tier or on
+`embeddings:`, and refused on any other provider. It names the Vertex AI
+location that serves the call and processes the prompt: `eu`, `us`, `global`, or
+a region such as `europe-west4`. The API host follows from it, so no `base_url`
+is accepted. Under `profile: eu_hosted` it must be `eu` or an EU region
+(`europe-west1`, `-west3`, `-west4`, `-west8`, `-west9`, `-west10`, `-west12`,
+`-north1`, `-north2`, `-central2`, `-southwest1`); London `europe-west2`, Zürich `europe-west6`,
+`global` and `us` are refused. Saving a `gemini_vertex` binding asks Google
+whether the location serves the model and refuses it with a 422 if not.
+The key is a service account's JSON key file, whose account holds
+`roles/aiplatform.user`; `GEMINI_VERTEX_SA_JSON` carries the file's contents,
+not a path. [how-to/connect-a-cloud-model-provider.md](../how-to/connect-a-cloud-model-provider.md) §5
+walks through it.
 
 #### What a binding can be handed (documents, scans, photographed forms)
 

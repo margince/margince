@@ -63,8 +63,9 @@ func (r *Router) BoundLadder(task Task) []ModelRef {
 }
 
 // AttachmentMIMEs reports what a caller may hand task as a document part: the
-// media types EVERY bound rung of its ladder declares it carries. Empty means
-// this task cannot be given a document at all under the standing configuration.
+// media types every bound rung that might SERVE it declares it carries. Empty
+// means this task cannot be given a document at all under the standing
+// configuration.
 //
 // The INTERSECTION, not the union, and not the leading rung's set alone. A call
 // walks its ladder, and the budget guardrail can demote it to a lower rung
@@ -72,6 +73,13 @@ func (r *Router) BoundLadder(task Task) []ModelRef {
 // until the month it wasn't — and would then fail on the one call it had
 // already decided was safe. The conservative set is the only one that stays
 // true for a call this router might serve on any rung.
+//
+// ServableTiers and NOT taskLadders, for the reason PromptWindow walks it: this
+// is a safety bound on what goes on the wire, so it has to cover every rung the
+// call might land on, and the ladder is not that set. document_extract's ladder
+// names premium alone while the degrade closure reaches cheap_cloud and
+// local_small — so read off the ladder, a caller is told a PDF is fine, the
+// month turns, and the document is refused on a rung it never asked about.
 //
 // An unbound tier contributes nothing: it is skipped exactly as BoundLadder
 // skips it, because a rung nothing is bound to cannot serve the call either.
@@ -82,7 +90,7 @@ func (r *Router) AttachmentMIMEs(task Task) []string {
 	// next rung is then taken as the starting set rather than intersected with
 	// an empty one, and the task advertises carriage its leading rung refuses.
 	var started bool
-	for _, tier := range taskLadders[task] {
+	for _, tier := range ServableTiers(task) {
 		client, bound := r.binding().clients[tier]
 		if !bound {
 			continue
@@ -112,16 +120,16 @@ func (r *Router) AttachmentMIMEs(task Task) []string {
 // beside a local one must not erase the local rung's real constraint; a ladder
 // where every rung says 0 still answers 0, which is the right answer.
 //
-// It walks ServableTiers and NOT taskLadders, which is what separates it from
-// the two functions above. BoundLadder prices the standing configuration and
-// AttachmentMIMEs asks what a caller may hand the task — both questions about
-// how the installation is configured. THIS is a safety bound on what actually
-// goes on the wire, so it has to cover every rung the call might land on, and
-// the ladder is not that set: the budget guardrail degrades cheap_cloud to
-// local_small, and the sovereign profile remaps cloud rungs to local ones.
-// Either can serve an agent-loop call on a tier taskLadders never names, and a
-// window read off the ladder alone then answers "no limit" for a run a local
-// model with a real one is about to serve.
+// It walks ServableTiers and NOT taskLadders, which is what separates it and
+// AttachmentMIMEs from BoundLadder. BoundLadder prices the standing
+// configuration, a question about how the installation is configured. These two
+// are safety bounds on what actually goes on the wire, so they have to cover
+// every rung the call might land on, and the ladder is not that set: the budget
+// guardrail degrades cheap_cloud to local_small, and the sovereign profile
+// remaps cloud rungs to local ones. Either can serve an agent-loop call on a
+// tier taskLadders never names, and a window read off the ladder alone then
+// answers "no limit" for a run a local model with a real one is about to
+// serve.
 func (r *Router) PromptWindow(task Task) int {
 	smallest := 0
 	for _, tier := range ServableTiers(task) {

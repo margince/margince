@@ -117,7 +117,7 @@ var geminiThinkingLevels = []string{"minimal", "low", "medium", "high"} //nolint
 const thinkingLevelDefault = "default"
 
 // validateThinkingLevel refuses a binding's `thinking_level` that no request
-// could carry: on a provider other than gemini, outside the vocabulary, or on a
+// could carry: on a provider not on the Gemini wire, outside the vocabulary, or on a
 // model that predates the field. Refused at load rather than sent, because the
 // last two fail every call and the first would be ignored in silence.
 func validateThinkingLevel(lane string, binding ProviderConfig) error {
@@ -125,7 +125,7 @@ func validateThinkingLevel(lane string, binding ProviderConfig) error {
 	switch {
 	case level == "":
 		return nil
-	case binding.Provider != providerGemini:
+	case binding.Provider != providerGemini && binding.Provider != providerGeminiVertex:
 		return fmt.Errorf("ai: routing config: %s: `thinking_level` is Gemini's thinkingConfig and provider %s has no such field; remove it",
 			lane, binding.Provider)
 	case !slices.Contains(geminiThinkingLevels, level):

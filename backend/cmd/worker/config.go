@@ -26,6 +26,7 @@ type workerConfig struct {
 	configPath       string
 	publicBaseURL    string
 	reportingEnabled bool
+	listsEnabled     bool
 	captureConfig    compose.CaptureConfig
 	// allowDataReset is operations.allow_data_reset: whether this installation
 	// armed the destructive reset at all. The worker's only stake is the cache

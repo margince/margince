@@ -6,7 +6,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 ## project
 
-24 columns · primary key `(id)` · referenced by 9 foreign keys
+23 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -28,7 +28,6 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean` | yes | True while a litigation or investigation hold is preserving this record. |
-| `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
 | `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
@@ -50,7 +49,6 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `project_key_shape` — `CHECK (((key IS NULL) OR (key ~ '^[A-Za-z][A-Za-z0-9_-]{1,23}$')))`
 - `project_phase_check` — `CHECK ((phase = ANY (ARRAY['initiative', 'pursuing', 'delivering', 'closed'])))`
 - `project_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
-- `uq_project_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
@@ -61,7 +59,6 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `idx_project_search` — `gin (search_tsv)`
 - `project_pkey` — `unique, btree (id)`
 - `uq_project_key` — `unique, btree (lower(key)) WHERE ((key IS NOT NULL) AND (archived_at IS NULL))`
-- `uq_project_ws_id` — `unique, btree (id)`
 
 **Triggers**
 

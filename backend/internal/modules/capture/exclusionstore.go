@@ -158,7 +158,7 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Excl
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO capture_exclusion (scope, user_id, kind, value, created_by)
 			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (scope, coalesce(user_id, '00000000-0000-0000-0000-000000000000'::uuid), kind, value)
+			ON CONFLICT (scope, user_id, kind, value)
 			  DO UPDATE SET value = EXCLUDED.value
 			RETURNING id, scope, user_id, kind, value, created_at`,
 			scope, userID, kind, value, actor.ID).

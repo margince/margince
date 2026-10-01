@@ -114,7 +114,11 @@
   color: var(--aiText);
 }
 
+/* A refused way out stands above the press that retries it. */
 .ob-ig-go {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
   margin-top: var(--space-2);
   animation: ob-ig-rise var(--dur-enter) var(--ease-out) 3600ms both;
 }

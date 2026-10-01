@@ -62,6 +62,13 @@ func (s *Store) view(ctx context.Context, l listRow) (crmcontracts.List, error) 
 	if summary.Joined, err = s.joinedSinceVisit(ctx, l); err != nil {
 		return crmcontracts.List{}, err
 	}
+	changes, found, err := s.changesSinceVisit(ctx, l)
+	if err != nil {
+		return crmcontracts.List{}, err
+	}
+	if found {
+		summary.Changes = &changes
+	}
 	if summary.Dependencies, err = s.Dependencies(ctx, l.ID); err != nil {
 		return crmcontracts.List{}, err
 	}
@@ -95,15 +102,27 @@ func (s *Store) SetArchivedView(ctx context.Context, id ids.ListID, archive bool
 	return s.view(ctx, l)
 }
 
-// MembersPage answers one page of a list's members.
-func (s *Store) MembersPage(ctx context.Context, id ids.ListID, limit int, cursor string) (crmcontracts.ListMemberListResponse, error) {
-	members, page, err := s.ListMembers(ctx, id, limit, cursor)
+// MembersPage answers one members read, naming who added each Shortlist member.
+func (s *Store) MembersPage(ctx context.Context, id ids.ListID, read MemberRead) (crmcontracts.ListMemberListResponse, error) {
+	members, page, err := s.readMembers(ctx, id, read)
+	if err != nil {
+		return crmcontracts.ListMemberListResponse{}, err
+	}
+	actors := make([]string, 0, len(members))
+	for _, m := range members {
+		actors = append(actors, m.AddedBy)
+	}
+	names, err := s.actorNames(ctx, actors)
 	if err != nil {
 		return crmcontracts.ListMemberListResponse{}, err
 	}
 	data := make([]crmcontracts.ListMember, 0, len(members))
 	for _, m := range members {
-		data = append(data, wireMember(m))
+		member := wireMember(m)
+		if name, ok := names[m.AddedBy]; ok {
+			member.AddedByName = &name
+		}
+		data = append(data, member)
 	}
 	return crmcontracts.ListMemberListResponse{Data: data, Page: wirePage(page)}, nil
 }
@@ -213,13 +232,41 @@ func wireList(l listSummary) crmcontracts.List {
 	if l.Dependencies != nil {
 		deps := make([]crmcontracts.ListDependency, 0, len(l.Dependencies))
 		for _, d := range l.Dependencies {
-			deps = append(deps, crmcontracts.ListDependency{
-				Kind: crmcontracts.ListDependencyKind(d.Kind), OccurredAt: d.OccurredAt, Actor: d.Actor,
-			})
+			deps = append(deps, wireDependency(d))
 		}
 		out.Dependencies = &deps
 	}
+	if l.Changes != nil {
+		out.ChangesSinceVisit = &crmcontracts.ListChangeSummary{
+			Since: l.Changes.Since, FilterChanges: l.Changes.FilterChanges,
+			Joined: wireChangeGroup(l.Changes.Joined), Left: wireChangeGroup(l.Changes.Left),
+		}
+	}
 	return out
+}
+
+func wireDependency(d listDependency) crmcontracts.ListDependency {
+	out := crmcontracts.ListDependency{
+		Kind: crmcontracts.ListDependencyKind(d.Kind), OccurredAt: d.OccurredAt, Actor: d.Actor,
+	}
+	if d.Rule == nil {
+		return out
+	}
+	role := crmcontracts.ListDependencyRole(d.Rule.Role)
+	out.Role = &role
+	if d.Rule.Name != "" {
+		id := openapi_types.UUID(d.Rule.ID)
+		out.AutomationId, out.AutomationName = &id, &d.Rule.Name
+	}
+	return out
+}
+
+func wireChangeGroup(g changeGroup) crmcontracts.ListChangeGroup {
+	records := make([]crmcontracts.ListChangedRecord, 0, len(g.Records))
+	for _, r := range g.Records {
+		records = append(records, crmcontracts.ListChangedRecord{EntityId: openapi_types.UUID(r.ID), Name: r.Name})
+	}
+	return crmcontracts.ListChangeGroup{Count: g.Count, Records: records}
 }
 
 func userUUID(id *ids.UserID) *openapi_types.UUID {
@@ -241,11 +288,18 @@ func wireMember(m memberRow) crmcontracts.ListMember {
 	if !m.CreatedAt.IsZero() {
 		out.CreatedAt = &m.CreatedAt
 	}
+	if m.Values != nil {
+		values := make(map[string]crmcontracts.ListFieldValue, len(m.Values))
+		for field, v := range m.Values {
+			values[field] = crmcontracts.ListFieldValue{Value: v.Value, Hidden: v.Hidden, Label: v.Label}
+		}
+		out.Values = &values
+	}
 	return out
 }
 
 func wireVerdict(n storekit.ExplainNode) crmcontracts.ListClauseVerdict {
-	out := crmcontracts.ListClauseVerdict{Result: n.Result, Value: n.Value}
+	out := crmcontracts.ListClauseVerdict{Result: n.Result, Value: n.Value, ValueLabel: n.ValueLabel}
 	if n.Join != "" {
 		join := crmcontracts.ListClauseVerdictJoin(n.Join)
 		children := make([]crmcontracts.ListClauseVerdict, 0, len(n.Children))

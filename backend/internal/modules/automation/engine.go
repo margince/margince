@@ -49,6 +49,8 @@ type WorkflowEngine struct {
 	// directly (a module never imports a sibling) — the composition root
 	// injects the real implementation (compose/workflows.go).
 	resolver authz.Resolver
+	// pauses stops a list rule and tells its owner why (listrulefire.go).
+	pauses *RulePauser
 }
 
 // NewWorkflowEngine builds the engine over the pool and the authz resolver
@@ -56,7 +58,15 @@ type WorkflowEngine struct {
 // (gate.go). compose injects the real resolver; a nil one fails firings
 // closed rather than waving them through.
 func NewWorkflowEngine(db *database.DB, resolver authz.Resolver) *WorkflowEngine {
-	return &WorkflowEngine{db: db, resolver: resolver}
+	return &WorkflowEngine{db: db, resolver: resolver, pauses: NewRulePauser(db, nil, nil)}
+}
+
+// WithRulePauses names the transport a paused rule's owner hears through and
+// the lists a pause re-reads. Without them a rule that must pause fails its
+// firing instead.
+func (e *WorkflowEngine) WithRulePauses(notifier PauseNotifier, lists Lists) *WorkflowEngine {
+	e.pauses = NewRulePauser(e.db, notifier, lists)
+	return e
 }
 
 // RegisterWorkflow adds one handler at composition time.
@@ -156,6 +166,11 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 			firstErr = fmt.Errorf("workflow %s: %w", h.Spec().Name, err)
 		}
 	}
+	if env.Type == eventListArchived {
+		if err := e.pauses.PauseRulesOnArchivedList(runCtx, ev.Entity.ID); err != nil {
+			firstErr = fmt.Errorf("pausing the rules on an archived list: %w", err)
+		}
+	}
 	for _, h := range handlers {
 		if h.Spec().Trigger.EventType != env.Type {
 			continue
@@ -165,12 +180,21 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 			iev.AutomationID = inst.id.UUID
 			iev.OwnerID = inst.owner
 			iev.Params = inst.params
-			if err := e.runOne(runCtx, h, iev); err != nil && firstErr == nil {
+			if err := e.dispatch(runCtx, h, iev, inst.version); err != nil && firstErr == nil {
 				firstErr = fmt.Errorf("workflow %s: %w", h.Spec().Name, err)
 			}
 		}
 	}
 	return firstErr
+}
+
+// dispatch runs one instance's firing. A list rule's event stands for every
+// record one check saw change, so it fans out first.
+func (e *WorkflowEngine) dispatch(ctx context.Context, h workflow.Handler, ev workflow.Event, version int64) error {
+	if rule, ok := h.(listRule); ok {
+		return e.fireListRule(ctx, rule, ev, version)
+	}
+	return e.runOne(ctx, h, ev)
 }
 
 // clockHandlers returns the registered handlers whose trigger is a
@@ -194,9 +218,10 @@ func (e *WorkflowEngine) clockHandlers() []workflow.Handler {
 // match-time gate reads it to decide whether a firing has a human
 // authority to re-check at all.
 type automationInstance struct {
-	id     ids.AutomationID
-	owner  ids.UUID
-	params json.RawMessage
+	id      ids.AutomationID
+	owner   ids.UUID
+	params  json.RawMessage
+	version int64
 }
 
 // liveInstances loads the workspace's enabled, unarchived automations,
@@ -206,7 +231,7 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 	out := map[string][]automationInstance{}
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT id, key, params, owner_id FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
+			`SELECT id, key, params, owner_id, version FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
 		if err != nil {
 			return err
 		}
@@ -215,7 +240,7 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 			var inst automationInstance
 			var key string
 			var owner *ids.UUID
-			if err := rows.Scan(&inst.id, &key, &inst.params, &owner); err != nil {
+			if err := rows.Scan(&inst.id, &key, &inst.params, &owner, &inst.version); err != nil {
 				return err
 			}
 			if owner != nil {
@@ -337,6 +362,9 @@ func applyOne(ctx context.Context, ex Executors, eff workflow.Effect, action wor
 		return workflow.Action{}, &workflow.StagedApprovalError{ApprovalID: id}, nil
 	case workflow.ActionNotify:
 		return action, nil, applyNotify(ctx, ex.Notifier, action)
+	case workflow.ActionAddListMember:
+		recorded, err := applyAddListMember(ctx, ex, action)
+		return recorded, nil, err
 	case workflow.ActionDraftEmail:
 		// Drafting is 🟢 and has just run; the SEND it proposes is the 🟡 that
 		// waits (AUTO-PARAM-4, AUTO-AC-1). The action returned is the enriched

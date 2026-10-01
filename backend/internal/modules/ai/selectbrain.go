@@ -23,6 +23,9 @@ type ProviderConfig struct {
 	Provider string `yaml:"provider" json:"provider"` // one of knownProviders
 	Model    string `yaml:"model" json:"model"`       // provider-native model id, resolved from the logical tier
 	BaseURL  string `yaml:"base_url" json:"base_url"` // endpoint override; empty means the provider default
+	// Location is the Vertex AI location a gemini_vertex binding is served
+	// from. omitempty keeps every other binding's digest what it was.
+	Location string `yaml:"location" json:"location,omitempty"`
 	// Input is what the bound model can be GIVEN, in the acceptedModalities
 	// vocabulary (inputmodality.go). It does two jobs: on openai_compatible and
 	// vllm it IS the carriage, because only there is the answer a property of the
@@ -102,6 +105,7 @@ const (
 	providerOpenAICompatible = "openai_compatible"
 	providerOpenAI           = "openai"
 	providerGemini           = "gemini"
+	providerGeminiVertex     = "gemini_vertex"
 )
 
 // knownProviders is the provider names SelectBrain accepts: the registry's
@@ -130,7 +134,7 @@ func KnownProviders() []string {
 //
 // Held by: TestOnlyTheSelectorsBuildAnOutboundClient (backend/internal/modules/ai/outboundegress_test.go)
 //
-//nolint:ireturn // one call returns whichever of seven adapters the binding names; the port interface IS the return type
+//nolint:ireturn // one call returns whichever chat adapter the binding names; the port interface IS the return type
 func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 	// The client is built once, from the binding, and handed to whichever
 	// adapter the switch names: the egress guard it carries is chosen by the
@@ -146,7 +150,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 // production guard refuses the 127.0.0.1 such a server listens on, by design.
 // TestSelectBrainWiresTheEgressGuard holds the production wiring itself.
 //
-//nolint:ireturn // one call returns whichever of seven adapters the binding names; the port interface IS the return type
+//nolint:ireturn // one call returns whichever chat adapter the binding names; the port interface IS the return type
 func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (model.Client, error) {
 	switch cfg.Provider {
 	case ProviderFake:
@@ -222,12 +226,13 @@ func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (
 		}
 		return &geminiClient{
 			http:            httpc,
-			baseURL:         defaulted(cfg.BaseURL, defaultGeminiBaseURL),
-			apiKey:          key,
+			transport:       aiStudioTransport{baseURL: defaulted(cfg.BaseURL, defaultGeminiBaseURL), apiKey: key},
 			defaultModel:    cfg.Model,
 			attachmentMIMEs: narrowedCarriage(geminiCarries, cfg.Input),
 			thinkingLevel:   cfg.ThinkingLevel,
 		}, nil
+	case providerGeminiVertex:
+		return selectVertex(cfg, keys, httpc)
 	case "":
 		return nil, fmt.Errorf("ai: binding has no provider")
 	default:
@@ -308,9 +313,13 @@ func ConfigItems() []config.Item {
 		if !cloud {
 			continue
 		}
+		credential := "API key"
+		if credentialKindFor(provider) == CredentialKindServiceAccount {
+			credential = "service-account key (the JSON key file's contents)"
+		}
 		items = append(items, config.Item{
 			Name: env, Kind: config.KindString, Secret: true, Roles: both,
-			Doc: "BYOK API key for the " + provider + " provider; required only when the routing file binds it (ADR-0020 — we provide no inference)",
+			Doc: "BYOK " + credential + " for the " + provider + " provider; required only when the routing file binds it (ADR-0020 — we provide no inference)",
 		})
 	}
 	return items

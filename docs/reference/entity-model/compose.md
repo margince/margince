@@ -220,7 +220,6 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `brief_item_pkey` — `unique, btree (id)`
 - `idx_brief_item_deal` — `btree (deal_id)`
-- `idx_brief_item_run` — `btree (brief_run_id, rank)`
 - `idx_brief_item_state` — `btree (brief_run_id, state, state_at)`
 - `uq_brief_item_run_deal` — `unique, btree (brief_run_id, deal_id)`
 - `uq_brief_item_run_rank` — `unique, btree (brief_run_id, rank)`
@@ -993,7 +992,6 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
-- `idx_weekly_review_driver_bar` — `btree (weekly_review_id, period_kind, bar)`
 - `uq_weekly_review_driver_deal` — `unique, btree (weekly_review_id, period_kind, bar, deal_id)`
 - `weekly_review_driver_pkey` — `unique, btree (id)`
 
@@ -1026,7 +1024,6 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
-- `idx_weekly_review_learning_review` — `btree (weekly_review_id, "position")`
 - `uq_weekly_review_learning_slot` — `unique, btree (weekly_review_id, "position")`
 - `weekly_review_learning_pkey` — `unique, btree (id)`
 

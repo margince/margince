@@ -887,6 +887,7 @@ func (e AiProfileName) Valid() bool {
 const (
 	AiProfileProvidersAnthropic        AiProfileProviders = "anthropic"
 	AiProfileProvidersGemini           AiProfileProviders = "gemini"
+	AiProfileProvidersGeminiVertex     AiProfileProviders = "gemini_vertex"
 	AiProfileProvidersOllama           AiProfileProviders = "ollama"
 	AiProfileProvidersOpenai           AiProfileProviders = "openai"
 	AiProfileProvidersOpenaiCompatible AiProfileProviders = "openai_compatible"
@@ -899,6 +900,8 @@ func (e AiProfileProviders) Valid() bool {
 	case AiProfileProvidersAnthropic:
 		return true
 	case AiProfileProvidersGemini:
+		return true
+	case AiProfileProvidersGeminiVertex:
 		return true
 	case AiProfileProvidersOllama:
 		return true
@@ -928,6 +931,24 @@ func (e AiProfileState) Valid() bool {
 	case AiProfileStateDevelopment:
 		return true
 	case AiProfileStateUnconfigured:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiProviderKeyStatusCredentialKind.
+const (
+	AiProviderKeyStatusCredentialKindApiKey         AiProviderKeyStatusCredentialKind = "api_key"
+	AiProviderKeyStatusCredentialKindServiceAccount AiProviderKeyStatusCredentialKind = "service_account"
+)
+
+// Valid indicates whether the value is a known member of the AiProviderKeyStatusCredentialKind enum.
+func (e AiProviderKeyStatusCredentialKind) Valid() bool {
+	switch e {
+	case AiProviderKeyStatusCredentialKindApiKey:
+		return true
+	case AiProviderKeyStatusCredentialKindServiceAccount:
 		return true
 	default:
 		return false
@@ -1361,6 +1382,7 @@ func (e AssignmentSubjectKind) Valid() bool {
 const (
 	AssistantConfiguredModelProviderAssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
 	AssistantConfiguredModelProviderAssistantModelProviderGemini           AssistantConfiguredModelProvider = "gemini"
+	AssistantConfiguredModelProviderAssistantModelProviderGeminiVertex     AssistantConfiguredModelProvider = "gemini_vertex"
 	AssistantConfiguredModelProviderAssistantModelProviderOllama           AssistantConfiguredModelProvider = "ollama"
 	AssistantConfiguredModelProviderAssistantModelProviderOpenAI           AssistantConfiguredModelProvider = "openai"
 	AssistantConfiguredModelProviderAssistantModelProviderOpenAICompatible AssistantConfiguredModelProvider = "openai_compatible"
@@ -1373,6 +1395,8 @@ func (e AssistantConfiguredModelProvider) Valid() bool {
 	case AssistantConfiguredModelProviderAssistantModelProviderAnthropic:
 		return true
 	case AssistantConfiguredModelProviderAssistantModelProviderGemini:
+		return true
+	case AssistantConfiguredModelProviderAssistantModelProviderGeminiVertex:
 		return true
 	case AssistantConfiguredModelProviderAssistantModelProviderOllama:
 		return true
@@ -1475,6 +1499,7 @@ func (e AssistantProfileName) Valid() bool {
 const (
 	AssistantProfileProvidersAnthropic        AssistantProfileProviders = "anthropic"
 	AssistantProfileProvidersGemini           AssistantProfileProviders = "gemini"
+	AssistantProfileProvidersGeminiVertex     AssistantProfileProviders = "gemini_vertex"
 	AssistantProfileProvidersOllama           AssistantProfileProviders = "ollama"
 	AssistantProfileProvidersOpenai           AssistantProfileProviders = "openai"
 	AssistantProfileProvidersOpenaiCompatible AssistantProfileProviders = "openai_compatible"
@@ -1487,6 +1512,8 @@ func (e AssistantProfileProviders) Valid() bool {
 	case AssistantProfileProvidersAnthropic:
 		return true
 	case AssistantProfileProvidersGemini:
+		return true
+	case AssistantProfileProvidersGeminiVertex:
 		return true
 	case AssistantProfileProvidersOllama:
 		return true
@@ -2311,6 +2338,30 @@ func (e AuthorizationSeatType) Valid() bool {
 	case AuthorizationSeatTypeFull:
 		return true
 	case AuthorizationSeatTypeRead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AutomationPausedReason.
+const (
+	AutomationPausedReasonBurst           AutomationPausedReason = "burst"
+	AutomationPausedReasonListArchived    AutomationPausedReason = "list_archived"
+	AutomationPausedReasonListInvalid     AutomationPausedReason = "list_invalid"
+	AutomationPausedReasonListUnavailable AutomationPausedReason = "list_unavailable"
+)
+
+// Valid indicates whether the value is a known member of the AutomationPausedReason enum.
+func (e AutomationPausedReason) Valid() bool {
+	switch e {
+	case AutomationPausedReasonBurst:
+		return true
+	case AutomationPausedReasonListArchived:
+		return true
+	case AutomationPausedReasonListInvalid:
+		return true
+	case AutomationPausedReasonListUnavailable:
 		return true
 	default:
 		return false
@@ -8869,6 +8920,105 @@ func (e FilterPreviewRequestResource) Valid() bool {
 	}
 }
 
+// Defines values for FilterProposalResource.
+const (
+	FilterProposalResourceCompany FilterProposalResource = "company"
+	FilterProposalResourceContact FilterProposalResource = "contact"
+	FilterProposalResourceDeal    FilterProposalResource = "deal"
+	FilterProposalResourceLead    FilterProposalResource = "lead"
+)
+
+// Valid indicates whether the value is a known member of the FilterProposalResource enum.
+func (e FilterProposalResource) Valid() bool {
+	switch e {
+	case FilterProposalResourceCompany:
+		return true
+	case FilterProposalResourceContact:
+		return true
+	case FilterProposalResourceDeal:
+		return true
+	case FilterProposalResourceLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FilterProposalRequestLocale.
+const (
+	FilterProposalRequestLocaleDe FilterProposalRequestLocale = "de"
+	FilterProposalRequestLocaleEn FilterProposalRequestLocale = "en"
+	FilterProposalRequestLocaleVi FilterProposalRequestLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the FilterProposalRequestLocale enum.
+func (e FilterProposalRequestLocale) Valid() bool {
+	switch e {
+	case FilterProposalRequestLocaleDe:
+		return true
+	case FilterProposalRequestLocaleEn:
+		return true
+	case FilterProposalRequestLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FilterProposalRequestResource.
+const (
+	FilterProposalRequestResourceCompany FilterProposalRequestResource = "company"
+	FilterProposalRequestResourceContact FilterProposalRequestResource = "contact"
+	FilterProposalRequestResourceDeal    FilterProposalRequestResource = "deal"
+	FilterProposalRequestResourceLead    FilterProposalRequestResource = "lead"
+)
+
+// Valid indicates whether the value is a known member of the FilterProposalRequestResource enum.
+func (e FilterProposalRequestResource) Valid() bool {
+	switch e {
+	case FilterProposalRequestResourceCompany:
+		return true
+	case FilterProposalRequestResourceContact:
+		return true
+	case FilterProposalRequestResourceDeal:
+		return true
+	case FilterProposalRequestResourceLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FilterProposalUnsupportedCode.
+const (
+	FilterProposalUnsupportedCodeNotExpressible     FilterProposalUnsupportedCode = "not_expressible"
+	FilterProposalUnsupportedCodeOperatorNotAllowed FilterProposalUnsupportedCode = "operator_not_allowed"
+	FilterProposalUnsupportedCodeTooManyConditions  FilterProposalUnsupportedCode = "too_many_conditions"
+	FilterProposalUnsupportedCodeUnknownField       FilterProposalUnsupportedCode = "unknown_field"
+	FilterProposalUnsupportedCodeValueNotAllowed    FilterProposalUnsupportedCode = "value_not_allowed"
+	FilterProposalUnsupportedCodeValueNotVerifiable FilterProposalUnsupportedCode = "value_not_verifiable"
+)
+
+// Valid indicates whether the value is a known member of the FilterProposalUnsupportedCode enum.
+func (e FilterProposalUnsupportedCode) Valid() bool {
+	switch e {
+	case FilterProposalUnsupportedCodeNotExpressible:
+		return true
+	case FilterProposalUnsupportedCodeOperatorNotAllowed:
+		return true
+	case FilterProposalUnsupportedCodeTooManyConditions:
+		return true
+	case FilterProposalUnsupportedCodeUnknownField:
+		return true
+	case FilterProposalUnsupportedCodeValueNotAllowed:
+		return true
+	case FilterProposalUnsupportedCodeValueNotVerifiable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FilterVocabularyResource.
 const (
 	FilterVocabularyResourceCompany FilterVocabularyResource = "company"
@@ -10530,13 +10680,34 @@ func (e ListClauseVerdictJoin) Valid() bool {
 
 // Defines values for ListDependencyKind.
 const (
-	ListDependencyKindExport ListDependencyKind = "export"
+	ListDependencyKindAutomation ListDependencyKind = "automation"
+	ListDependencyKindExport     ListDependencyKind = "export"
 )
 
 // Valid indicates whether the value is a known member of the ListDependencyKind enum.
 func (e ListDependencyKind) Valid() bool {
 	switch e {
+	case ListDependencyKindAutomation:
+		return true
 	case ListDependencyKindExport:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListDependencyRole.
+const (
+	ListDependencyRoleWatches ListDependencyRole = "watches"
+	ListDependencyRoleWrites  ListDependencyRole = "writes"
+)
+
+// Valid indicates whether the value is a known member of the ListDependencyRole enum.
+func (e ListDependencyRole) Valid() bool {
+	switch e {
+	case ListDependencyRoleWatches:
+		return true
+	case ListDependencyRoleWrites:
 		return true
 	default:
 		return false
@@ -10572,6 +10743,7 @@ func (e ListHistoryEntryKind) Valid() bool {
 
 // Defines values for ListHistoryEntryReason.
 const (
+	ListHistoryEntryReasonAutomation     ListHistoryEntryReason = "automation"
 	ListHistoryEntryReasonBulk           ListHistoryEntryReason = "bulk"
 	ListHistoryEntryReasonChosen         ListHistoryEntryReason = "chosen"
 	ListHistoryEntryReasonEvaluated      ListHistoryEntryReason = "evaluated"
@@ -10583,6 +10755,8 @@ const (
 // Valid indicates whether the value is a known member of the ListHistoryEntryReason enum.
 func (e ListHistoryEntryReason) Valid() bool {
 	switch e {
+	case ListHistoryEntryReasonAutomation:
+		return true
 	case ListHistoryEntryReasonBulk:
 		return true
 	case ListHistoryEntryReasonChosen:
@@ -12226,6 +12400,54 @@ func (e ProviderConnectionStatus) Valid() bool {
 	case ProviderConnectionStatusRateLimited:
 		return true
 	case ProviderConnectionStatusValidating:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderLocationJurisdiction.
+const (
+	ProviderLocationJurisdictionEu     ProviderLocationJurisdiction = "eu"
+	ProviderLocationJurisdictionGlobal ProviderLocationJurisdiction = "global"
+	ProviderLocationJurisdictionOther  ProviderLocationJurisdiction = "other"
+	ProviderLocationJurisdictionUs     ProviderLocationJurisdiction = "us"
+)
+
+// Valid indicates whether the value is a known member of the ProviderLocationJurisdiction enum.
+func (e ProviderLocationJurisdiction) Valid() bool {
+	switch e {
+	case ProviderLocationJurisdictionEu:
+		return true
+	case ProviderLocationJurisdictionGlobal:
+		return true
+	case ProviderLocationJurisdictionOther:
+		return true
+	case ProviderLocationJurisdictionUs:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderLocationListUnavailable.
+const (
+	ProviderLocationListUnavailableNoKey          ProviderLocationListUnavailable = "no_key"
+	ProviderLocationListUnavailableNotPublished   ProviderLocationListUnavailable = "not_published"
+	ProviderLocationListUnavailableProfileForbids ProviderLocationListUnavailable = "profile_forbids"
+	ProviderLocationListUnavailableUnreachable    ProviderLocationListUnavailable = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the ProviderLocationListUnavailable enum.
+func (e ProviderLocationListUnavailable) Valid() bool {
+	switch e {
+	case ProviderLocationListUnavailableNoKey:
+		return true
+	case ProviderLocationListUnavailableNotPublished:
+		return true
+	case ProviderLocationListUnavailableProfileForbids:
+		return true
+	case ProviderLocationListUnavailableUnreachable:
 		return true
 	default:
 		return false
@@ -21420,11 +21642,17 @@ type AiEmbeddingsBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
+	// Location The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
+	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+	// on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
+	// On save, the model is asked for at this location, and one it does not serve is a 422.
+	Location *string `json:"location,omitempty"`
+
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
 	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
@@ -21602,10 +21830,13 @@ type AiProfileProviders string
 // AiProfileState defines model for AiProfile.State.
 type AiProfileState string
 
-// AiProviderKeyInput defines model for AiProviderKeyInput.
+// AiProviderKeyInput Exactly one of the two fields, the one the vendor's `credential_kind` names. The server refuses neither, both, or the other one with a 422.
 type AiProviderKeyInput struct {
 	// ApiKey The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
 	ApiKey *string `json:"api_key,omitempty"`
+
+	// ServiceAccountJson A Google service-account key file's whole contents, for `gemini_vertex`. WRITE-ONLY, exactly as `api_key` is. Its `project_id` is the project every call is billed to.
+	ServiceAccountJson *string `json:"service_account_json,omitempty"`
 }
 
 // AiProviderKeyList defines model for AiProviderKeyList.
@@ -21618,6 +21849,9 @@ type AiProviderKeyStatus struct {
 	// Configured Whether a credential is held. A screen reads this to offer "add" or "rotate"; it says nothing about whether the key still works, which only the vendor can answer.
 	Configured bool `json:"configured"`
 
+	// CredentialKind Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a service-account key file (`service_account_json`), `api_key` is a pasted key. A property of the vendor, not of what is stored.
+	CredentialKind AiProviderKeyStatusCredentialKind `json:"credential_kind"`
+
 	// EnvVar The variable the same key may arrive in. Named so an operator can see which export seeded a vendor; the names follow each vendor's own convention, which is why they carry no MARGINCE_ prefix.
 	EnvVar string `json:"env_var"`
 
@@ -21627,6 +21861,9 @@ type AiProviderKeyStatus struct {
 	// Provider The routing name of the vendor, the same string a binding uses.
 	Provider string `json:"provider"`
 }
+
+// AiProviderKeyStatusCredentialKind Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a service-account key file (`service_account_json`), `api_key` is a pasted key. A property of the vendor, not of what is stored.
+type AiProviderKeyStatusCredentialKind string
 
 // AiProviderKeyTestResult One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words.
 type AiProviderKeyTestResult struct {
@@ -21671,6 +21908,8 @@ type AiRouting struct {
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 	// provider on any tier is refused, and so is a local provider pointed at another host.
+	// `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
+	// `gemini_vertex` lane must name an EU location.
 	Profile AiRoutingProfile `json:"profile"`
 
 	// Tiers Tier name to the model bound on it. Empty means no models are bound.
@@ -21679,6 +21918,8 @@ type AiRouting struct {
 
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
+// `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
+// `gemini_vertex` lane must name an EU location.
 type AiRoutingProfile string
 
 // AiRoutingPreview defines model for AiRoutingPreview.
@@ -21784,11 +22025,17 @@ type AiTierBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
+	// Location The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
+	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+	// on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
+	// On save, the model is asked for at this location, and one it does not serve is a 422.
+	Location *string `json:"location,omitempty"`
+
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
 	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
@@ -22922,7 +23169,7 @@ type AttentionCounts struct {
 	// Commitments How many promises are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`
 
-	// DealSuggestionsOpen Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all.
+	// DealSuggestionsOpen Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`.
 	DealSuggestionsOpen *int `json:"deal_suggestions_open,omitempty"`
 
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
@@ -23590,13 +23837,19 @@ type Automation struct {
 	Id        openapi_types.UUID `json:"id"`
 
 	// Key The catalog type this instance is built from.
-	Key       string                 `json:"key"`
-	Name      string                 `json:"name"`
-	Params    map[string]interface{} `json:"params"`
-	Status    AutomationStatus       `json:"status"`
-	UpdatedAt *time.Time             `json:"updated_at,omitempty"`
-	Version   *int                   `json:"version,omitempty"`
+	Key    string                 `json:"key"`
+	Name   string                 `json:"name"`
+	Params map[string]interface{} `json:"params"`
+
+	// PausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
+	PausedReason *AutomationPausedReason `json:"paused_reason,omitempty"`
+	Status       AutomationStatus        `json:"status"`
+	UpdatedAt    *time.Time              `json:"updated_at,omitempty"`
+	Version      *int                    `json:"version,omitempty"`
 }
+
+// AutomationPausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
+type AutomationPausedReason string
 
 // AutomationStatus defines model for Automation.Status.
 type AutomationStatus string
@@ -23763,11 +24016,11 @@ type AvailableModelList struct {
 	// RankedBy The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten.
 	RankedBy *string `json:"ranked_by,omitempty"`
 
-	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
 	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
 }
 
-// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
 type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
@@ -23819,8 +24072,11 @@ type BackfillStatus struct {
 		Captured         *int `json:"captured,omitempty"`
 		CompaniesCreated *int `json:"companies_created,omitempty"`
 		ContactsCreated  *int `json:"contacts_created,omitempty"`
-		MessagesScanned  *int `json:"messages_scanned,omitempty"`
-		Skipped          *int `json:"skipped,omitempty"`
+
+		// Failed Messages the run could not capture and walked past. Committed pages only.
+		Failed          *int `json:"failed,omitempty"`
+		MessagesScanned *int `json:"messages_scanned,omitempty"`
+		Skipped         *int `json:"skipped,omitempty"`
 	} `json:"counts,omitempty"`
 
 	// EstimateIsFloor True when `estimated_messages` is a floor (see BackfillPreview): the denominator can be passed, so a client shows counts rather than a percentage instead of drawing a bar past its end. Persisted with the run, because the preview that produced the number is long gone by the time progress is read.
@@ -23834,8 +24090,11 @@ type BackfillStatus struct {
 
 	// OfferedWindows The windows THIS installation admits, in reach order — the product's supported set narrowed by `capture.max_backfill_months` where an operator set one. A picker offers these and no others: the preview and the start both refuse a window above the cap, so offering one is offering a choice that 422s. Absent or empty means the client should fall back to the full supported set rather than render an empty picker.
 	OfferedWindows *[]BackfillStatusOfferedWindows `json:"offered_windows,omitempty"`
-	StartedAt      *time.Time                      `json:"started_at,omitempty"`
-	State          BackfillStatusState             `json:"state"`
+
+	// Resumable The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again.
+	Resumable *bool               `json:"resumable,omitempty"`
+	StartedAt *time.Time          `json:"started_at,omitempty"`
+	State     BackfillStatusState `json:"state"`
 
 	// UpdatedAt Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").
 	UpdatedAt *time.Time            `json:"updated_at,omitempty"`
@@ -32476,6 +32735,75 @@ type FilterPreviewRequest struct {
 // FilterPreviewRequestResource defines model for FilterPreviewRequest.Resource.
 type FilterPreviewRequestResource string
 
+// FilterProposal Filter clauses proposed from plain words, already checked against the
+// caller's vocabulary. Not saved.
+type FilterProposal struct {
+	// Filter The proposed tree in the canonical filter shape `POST /filters/preview`
+	// and a dynamic list's `definition` take, with a group at its root. Null
+	// when nothing in the sentence could be expressed.
+	Filter *map[string]interface{} `json:"filter,omitempty"`
+
+	// ModelUsed The model that answered, when its provider named it.
+	ModelUsed *string                `json:"model_used,omitempty"`
+	Resource  FilterProposalResource `json:"resource"`
+
+	// Unsupported Every phrase that did not become a clause, and why.
+	Unsupported []FilterProposalUnsupported `json:"unsupported"`
+}
+
+// FilterProposalResource defines model for FilterProposal.Resource.
+type FilterProposalResource string
+
+// FilterProposalRequest A list described in plain words, to be turned into filter clauses.
+type FilterProposalRequest struct {
+	// Locale The reader's interface language, which the reasons in `unsupported` are
+	// written in. Absent means the installation's base language.
+	Locale   *FilterProposalRequestLocale  `json:"locale,omitempty"`
+	Resource FilterProposalRequestResource `json:"resource"`
+
+	// Text What the reader typed. Only this and the vocabulary reach the model.
+	Text string `json:"text"`
+}
+
+// FilterProposalRequestLocale The reader's interface language, which the reasons in `unsupported` are
+// written in. Absent means the installation's base language.
+type FilterProposalRequestLocale string
+
+// FilterProposalRequestResource defines model for FilterProposalRequest.Resource.
+type FilterProposalRequestResource string
+
+// FilterProposalUnsupported defines model for FilterProposalUnsupported.
+type FilterProposalUnsupported struct {
+	// Code `not_expressible` — the model found no field or operator for the phrase;
+	// `reason` is its explanation in the reader's language. Every other code is
+	// a clause the model proposed and the server dropped: a field this caller
+	// cannot filter on, an operator the field's type refuses, a value the field
+	// does not accept (including one outside a picklist's options), a picklist
+	// value this caller may not see the options of and so cannot be checked
+	// (`value_not_verifiable`), or a clause past the engine's limit. For those
+	// `reason` is the server's English detail, and `field` names the field so a
+	// client can say it in its own words.
+	Code FilterProposalUnsupportedCode `json:"code"`
+
+	// Field The field a dropped clause named. Absent for `not_expressible`.
+	Field *string `json:"field,omitempty"`
+
+	// Phrase The words of the request this is about.
+	Phrase string `json:"phrase"`
+	Reason string `json:"reason"`
+}
+
+// FilterProposalUnsupportedCode `not_expressible` — the model found no field or operator for the phrase;
+// `reason` is its explanation in the reader's language. Every other code is
+// a clause the model proposed and the server dropped: a field this caller
+// cannot filter on, an operator the field's type refuses, a value the field
+// does not accept (including one outside a picklist's options), a picklist
+// value this caller may not see the options of and so cannot be checked
+// (`value_not_verifiable`), or a clause past the engine's limit. For those
+// `reason` is the server's English detail, and `field` names the field so a
+// client can say it in its own words.
+type FilterProposalUnsupportedCode string
+
 // FilterVocabulary What a filter may say about one record type (LVS-EXT-8). Read from the
 // engine that evaluates filters, so the set here and the set the engine
 // accepts are the same set.
@@ -34848,13 +35176,14 @@ type List struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// CanEdit Whether this caller holds list authority over the list.
-	CanEdit   bool       `json:"can_edit"`
-	CreatedAt *time.Time `json:"created_at,omitempty"`
+	CanEdit           bool               `json:"can_edit"`
+	ChangesSinceVisit *ListChangeSummary `json:"changes_since_visit,omitempty"`
+	CreatedAt         *time.Time         `json:"created_at,omitempty"`
 
 	// Definition A Live List's filter tree; null for a Shortlist.
 	Definition *map[string]interface{} `json:"definition,omitempty"`
 
-	// Dependencies What uses this list. Exports are listed as usage and block nothing.
+	// Dependencies What uses this list: the active automation rules that watch or add to it, then its filtered exports. Neither blocks a change; a rule pauses itself when its list is archived.
 	Dependencies *[]ListDependency `json:"dependencies,omitempty"`
 	EntityType   ListEntityType    `json:"entity_type"`
 
@@ -34906,6 +35235,33 @@ type ListListType string
 // ListSharing Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
 type ListSharing string
 
+// ListChangeGroup The distinct records this caller can see that moved one way, and the newest three by name.
+type ListChangeGroup struct {
+	Count   int                 `json:"count"`
+	Records []ListChangedRecord `json:"records"`
+}
+
+// ListChangeSummary defines model for ListChangeSummary.
+type ListChangeSummary struct {
+	// FilterChanges How many times the filter changed since then.
+	FilterChanges int `json:"filter_changes"`
+
+	// Joined The distinct records this caller can see that moved one way, and the newest three by name.
+	Joined ListChangeGroup `json:"joined"`
+
+	// Left The distinct records this caller can see that moved one way, and the newest three by name.
+	Left ListChangeGroup `json:"left"`
+
+	// Since The visit the summary runs from.
+	Since time.Time `json:"since"`
+}
+
+// ListChangedRecord defines model for ListChangedRecord.
+type ListChangedRecord struct {
+	EntityId openapi_types.UUID `json:"entity_id"`
+	Name     *string            `json:"name,omitempty"`
+}
+
 // ListCheck When a Live List's members were last compared with the check before. `complete` recorded who joined and left; `too_large` matched more records than one check may hold, so nothing was recorded; `invalid` could not evaluate the filter.
 type ListCheck struct {
 	CheckedAt time.Time        `json:"checked_at"`
@@ -34931,6 +35287,9 @@ type ListClauseVerdict struct {
 
 	// Value The record's current value of the field, as text.
 	Value *string `json:"value,omitempty"`
+
+	// ValueLabel For a reference to a company or project this caller may open, its name.
+	ValueLabel *string `json:"value_label,omitempty"`
 }
 
 // ListClauseVerdictJoin defines model for ListClauseVerdict.Join.
@@ -34940,14 +35299,40 @@ type ListClauseVerdictJoin string
 type ListDependency struct {
 	Actor *string `json:"actor,omitempty"`
 
+	// AutomationId For an automation: the rule. Null for a caller who may not read automations.
+	AutomationId *openapi_types.UUID `json:"automation_id,omitempty"`
+
+	// AutomationName For an automation: its name. Null for a caller who may not read automations.
+	AutomationName *string `json:"automation_name,omitempty"`
+
 	// Blocking Whether it refuses a breaking change or archive of the list.
-	Blocking   bool               `json:"blocking"`
-	Kind       ListDependencyKind `json:"kind"`
-	OccurredAt time.Time          `json:"occurred_at"`
+	Blocking bool               `json:"blocking"`
+	Kind     ListDependencyKind `json:"kind"`
+
+	// OccurredAt When the export ran, or the rule was made.
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// Role For an automation: whether it watches this Live List or adds to this Shortlist.
+	Role *ListDependencyRole `json:"role,omitempty"`
 }
 
 // ListDependencyKind defines model for ListDependency.Kind.
 type ListDependencyKind string
+
+// ListDependencyRole For an automation: whether it watches this Live List or adds to this Shortlist.
+type ListDependencyRole string
+
+// ListFieldValue defines model for ListFieldValue.
+type ListFieldValue struct {
+	// Hidden The value is not shown to this caller.
+	Hidden bool `json:"hidden"`
+
+	// Label For a reference to a company or project this caller may open, its name.
+	Label *string `json:"label,omitempty"`
+
+	// Value The value as text, as the explanation states it; null when the record holds none.
+	Value *string `json:"value,omitempty"`
+}
 
 // ListHistoryEntry defines model for ListHistoryEntry.
 type ListHistoryEntry struct {
@@ -34967,7 +35352,7 @@ type ListHistoryEntry struct {
 	Note       *string              `json:"note,omitempty"`
 	OccurredAt time.Time            `json:"occurred_at"`
 
-	// Reason `filter_changed` marks the first check after the filter changed.
+	// Reason `filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.
 	Reason  *ListHistoryEntryReason `json:"reason,omitempty"`
 	Sharing *string                 `json:"sharing,omitempty"`
 	Version *int64                  `json:"version,omitempty"`
@@ -34976,7 +35361,7 @@ type ListHistoryEntry struct {
 // ListHistoryEntryKind `member_entered` and `member_left` are a Live List's observed changes, stamped with the check that saw them.
 type ListHistoryEntryKind string
 
-// ListHistoryEntryReason `filter_changed` marks the first check after the filter changed.
+// ListHistoryEntryReason `filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.
 type ListHistoryEntryReason string
 
 // ListHistoryResponse defines model for ListHistoryResponse.
@@ -34994,13 +35379,19 @@ type ListListResponse struct {
 // ListMember defines model for ListMember.
 type ListMember struct {
 	// AddedBy The principal that added a Shortlist member; `dynamic` for a Live List member.
-	AddedBy    *string              `json:"added_by,omitempty"`
-	CreatedAt  *time.Time           `json:"created_at,omitempty"`
-	EntityId   openapi_types.UUID   `json:"entity_id"`
-	EntityType ListMemberEntityType `json:"entity_type"`
-	Id         openapi_types.UUID   `json:"id"`
-	ListId     openapi_types.UUID   `json:"list_id"`
-	Note       *string              `json:"note,omitempty"`
+	AddedBy *string `json:"added_by,omitempty"`
+
+	// AddedByName For a Shortlist member, the display name of the user who added it; null for any other principal.
+	AddedByName *string              `json:"added_by_name,omitempty"`
+	CreatedAt   *time.Time           `json:"created_at,omitempty"`
+	EntityId    openapi_types.UUID   `json:"entity_id"`
+	EntityType  ListMemberEntityType `json:"entity_type"`
+	Id          openapi_types.UUID   `json:"id"`
+	ListId      openapi_types.UUID   `json:"list_id"`
+	Note        *string              `json:"note,omitempty"`
+
+	// Values For a Live List member: each field the list's filter names, by field name, with what it holds on this record for this caller. Absent for a Shortlist member.
+	Values *map[string]ListFieldValue `json:"values,omitempty"`
 }
 
 // ListMemberEntityType defines model for ListMember.EntityType.
@@ -37943,6 +38334,38 @@ type ProviderCredits struct {
 	ReadAt *time.Time      `json:"read_at,omitempty"`
 }
 
+// ProviderLocation defines model for ProviderLocation.
+type ProviderLocation struct {
+	// DisplayName Google's own label, or this build's for a multi-region Google did not list.
+	DisplayName string `json:"display_name"`
+
+	// Id The string a binding's `location` names, exactly as Google spells it.
+	Id string `json:"id"`
+
+	// Jurisdiction Whose law the processing happens under, by this build's policy: `eu` exactly when `resident`, `global` for the endpoint that may process anywhere, `us` for the US multi-region and US regions, and `other` for everything else — London and Zürich among them.
+	Jurisdiction ProviderLocationJurisdiction `json:"jurisdiction"`
+
+	// Resident Whether Google keeps ML processing at this location inside the EU, which is what the `eu_hosted` profile admits. This build's list, never Google's: a location Google adds is not resident until this build names it.
+	Resident bool `json:"resident"`
+}
+
+// ProviderLocationJurisdiction Whose law the processing happens under, by this build's policy: `eu` exactly when `resident`, `global` for the endpoint that may process anywhere, `us` for the US multi-region and US regions, and `other` for everything else — London and Zürich among them.
+type ProviderLocationJurisdiction string
+
+// ProviderLocationList Where one vendor can process a call. An empty `locations` always carries `unavailable`.
+type ProviderLocationList struct {
+	Locations []ProviderLocation `json:"locations"`
+
+	// Provider The routing name of the vendor that was asked.
+	Provider string `json:"provider"`
+
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer. `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
+	Unavailable *ProviderLocationListUnavailable `json:"unavailable,omitempty"`
+}
+
+// ProviderLocationListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer. `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
+type ProviderLocationListUnavailable string
+
 // ProviderLookupBacklog How much of the installation is still waiting to be looked up once, and whether the sweep is moving. A count without the paused flag reads as progress that has stalled; the two together say whether waiting is the right thing to do.
 type ProviderLookupBacklog struct {
 	// Paused True when nothing will be queued right now — the posture is off, the connection is not usable, or the day's run ceiling is spent. A remaining count that is not falling is explained by this rather than by a stuck sweep.
@@ -38591,6 +39014,14 @@ type RecordGrantRecordType string
 
 // RecordGrantSubjectType defines model for RecordGrant.SubjectType.
 type RecordGrantSubjectType string
+
+// RecordListsResponse defines model for RecordListsResponse.
+type RecordListsResponse struct {
+	Data []List `json:"data"`
+
+	// Truncated More lists hold the record than one answer carries; `data` is the first 1000 by name.
+	Truncated bool `json:"truncated"`
+}
 
 // RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
 type RecordQualifyingEventRequest struct {
@@ -41001,7 +41432,7 @@ type SettingsAvailability struct {
 	// EmbeddingReindex True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it.
 	EmbeddingReindex bool `json:"embedding_reindex"`
 
-	// Lists True when the installation has switched on Live Lists and Shortlists (`lists.enabled`). False while they are being built: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them.
+	// Lists True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them.
 	Lists *bool `json:"lists,omitempty"`
 
 	// Reporting Whether analytics.performance_enabled makes saved reporting available.
@@ -41613,6 +42044,9 @@ type StageTransitionRecord struct {
 
 // StartBackfillRequest defines model for StartBackfillRequest.
 type StartBackfillRequest struct {
+	// StartOver Read the window again from the newest message even where the last run ended on an error and could be continued (BackfillStatus.resumable). Omitted or false continues that run, with its counts, when its window covers this one.
+	StartOver *bool `json:"start_over,omitempty"`
+
 	// Window `none` is expressed by never calling this op. Widen-only versus a prior run.
 	Window StartBackfillRequestWindow `json:"window"`
 }
@@ -46107,6 +46541,12 @@ type ListAvailableModelsParams struct {
 	// Top Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
 	// Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
 	Top *int `form:"top,omitempty" json:"top,omitempty"`
+
+	// Location The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_hosted` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor.
+	Location *string `form:"location,omitempty" json:"location,omitempty"`
+
+	// Model Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe.
+	Model *string `form:"model,omitempty" json:"model,omitempty"`
 }
 
 // ListAiCallsParams defines parameters for ListAiCalls.
@@ -49228,6 +49668,9 @@ type ListListMembersParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// EntityId Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor.
+	EntityId *[]openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
 }
 
 // GetMagicParams defines parameters for GetMagic.
@@ -52044,6 +52487,9 @@ type CreateFilteredExportJSONRequestBody = FilteredExportRequest
 
 // PreviewFilterJSONRequestBody defines body for PreviewFilter for application/json ContentType.
 type PreviewFilterJSONRequestBody = FilterPreviewRequest
+
+// ProposeFilterJSONRequestBody defines body for ProposeFilter for application/json ContentType.
+type ProposeFilterJSONRequestBody = FilterProposalRequest
 
 // ResolveInputCheckJSONRequestBody defines body for ResolveInputCheck for application/json ContentType.
 type ResolveInputCheckJSONRequestBody = ResolveInputCheck
@@ -62890,6 +63336,9 @@ type ServerInterface interface {
 	// Ask one vendor whether the stored credential works (admin/ops).
 	// (POST /ai/provider-keys/{provider}/test)
 	TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string)
+	// Where one vendor can process a call (admin/ops).
+	// (GET /ai/provider-locations/{provider})
+	ListProviderLocations(w http.ResponseWriter, r *http.Request, provider string)
 	// The tier-to-model binding this installation runs on (admin/ops).
 	// (GET /ai/routing)
 	GetAiRouting(w http.ResponseWriter, r *http.Request)
@@ -63931,6 +64380,9 @@ type ServerInterface interface {
 	// Count and sample what a filter would select, before it is saved (LVS-EXT-9).
 	// (POST /filters/preview)
 	PreviewFilter(w http.ResponseWriter, r *http.Request)
+	// Propose filter clauses for a list described in plain words.
+	// (POST /filters/propose)
+	ProposeFilter(w http.ResponseWriter, r *http.Request)
 	// Read what a new filter clause may name on one record type (LVS-EXT-8).
 	// (GET /filters/vocabulary)
 	GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams)
@@ -64579,6 +65031,9 @@ type ServerInterface interface {
 	// Relabel, reorder, re-scope or retire a responsibility role.
 	// (PATCH /record-roles/{id})
 	UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams)
+	// The lists one record is on that this caller may find.
+	// (GET /records/{entity_type}/{entity_id}/lists)
+	GetRecordLists(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
 	// The tags on one record, and who put them there.
 	// (GET /records/{entity_type}/{entity_id}/tags)
 	GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
@@ -65335,6 +65790,12 @@ func (_ Unimplemented) SetAiProviderKey(w http.ResponseWriter, r *http.Request, 
 // Ask one vendor whether the stored credential works (admin/ops).
 // (POST /ai/provider-keys/{provider}/test)
 func (_ Unimplemented) TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Where one vendor can process a call (admin/ops).
+// (GET /ai/provider-locations/{provider})
+func (_ Unimplemented) ListProviderLocations(w http.ResponseWriter, r *http.Request, provider string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67420,6 +67881,12 @@ func (_ Unimplemented) PreviewFilter(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Propose filter clauses for a list described in plain words.
+// (POST /filters/propose)
+func (_ Unimplemented) ProposeFilter(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Read what a new filter clause may name on one record type (LVS-EXT-8).
 // (GET /filters/vocabulary)
 func (_ Unimplemented) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams) {
@@ -68713,6 +69180,12 @@ func (_ Unimplemented) CreateRecordRole(w http.ResponseWriter, r *http.Request, 
 // Relabel, reorder, re-scope or retire a responsibility role.
 // (PATCH /record-roles/{id})
 func (_ Unimplemented) UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The lists one record is on that this caller may find.
+// (GET /records/{entity_type}/{entity_id}/lists)
+func (_ Unimplemented) GetRecordLists(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71412,6 +71885,32 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 		return
 	}
 
+	// ------------- Optional query parameter "location" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "location", r.URL.Query(), &params.Location, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "location"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "location", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "model" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "model", r.URL.Query(), &params.Model, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAvailableModels(w, r, provider, params)
 	}))
@@ -71747,6 +72246,38 @@ func (siw *ServerInterfaceWrapper) TestAiProviderKey(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.TestAiProviderKey(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProviderLocations operation middleware
+func (siw *ServerInterfaceWrapper) ListProviderLocations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProviderLocations(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -87142,6 +87673,26 @@ func (siw *ServerInterfaceWrapper) PreviewFilter(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ProposeFilter operation middleware
+func (siw *ServerInterfaceWrapper) ProposeFilter(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProposeFilter(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetFilterVocabulary operation middleware
 func (siw *ServerInterfaceWrapper) GetFilterVocabulary(w http.ResponseWriter, r *http.Request) {
 
@@ -90142,6 +90693,19 @@ func (siw *ServerInterfaceWrapper) ListListMembers(w http.ResponseWriter, r *htt
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "entity_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity_id", r.URL.Query(), &params.EntityId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
 		}
 		return
 	}
@@ -95710,6 +96274,49 @@ func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateRecordRole(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetRecordLists operation middleware
+func (siw *ServerInterfaceWrapper) GetRecordLists(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_type" -------------
+	var entityType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_type", chi.URLParam(r, "entity_type"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", chi.URLParam(r, "entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRecordLists(w, r, entityType, entityId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -102577,6 +103184,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/ai/provider-keys/{provider}/test", wrapper.TestAiProviderKey)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/provider-locations/{provider}", wrapper.ListProviderLocations)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/routing", wrapper.GetAiRouting)
 	})
 	r.Group(func(r chi.Router) {
@@ -103618,6 +104228,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/filters/preview", wrapper.PreviewFilter)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/filters/propose", wrapper.ProposeFilter)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/filters/vocabulary", wrapper.GetFilterVocabulary)
 	})
 	r.Group(func(r chi.Router) {
@@ -104264,6 +104877,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/record-roles/{id}", wrapper.UpdateRecordRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/lists", wrapper.GetRecordLists)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/tags", wrapper.GetRecordTags)

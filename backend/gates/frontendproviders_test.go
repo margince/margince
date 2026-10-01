@@ -7,13 +7,15 @@
 
 package gates
 
-// The routing form offers an admin an adapter for every tier, and the frontend
-// cannot read Go, so its PROVIDERS list is a declared mirror of the server's
-// provider registry. Both directions fail: a name the form offers that
-// SelectBrain does not serve is a save refused for a choice the form made, and
-// an adapter SelectBrain serves that the form omits is a binding nobody can
-// choose from Settings. Its DECISION_PROVIDERS list mirrors the registry's
-// decision adapters the same way, both directions.
+// The routing form offers exactly the adapters and profiles the server accepts.
+//
+// `PROVIDERS` in `frontend/src/screens/ai-routing-fields.tsx` is a declared
+// mirror of the provider registry's chat adapters, `DECISION_PROVIDERS` one of
+// its decision adapters, and `PROFILES` in `frontend/src/screens/ai-routing.tsx`
+// one of `ai.DeclaredProfiles()`, each compared in both directions: a name the
+// form offers that the server refuses is a save rejected over a choice the
+// reader picked from our own list, and one the server accepts that the form
+// omits cannot be chosen from Settings.
 
 import (
 	"os"
@@ -24,7 +26,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-const routingFieldsFile = "../frontend/src/screens/ai-routing-fields.tsx"
+const (
+	routingFieldsFile = "../frontend/src/screens/ai-routing-fields.tsx"
+	routingFormFile   = "../frontend/src/screens/ai-routing.tsx"
+)
 
 var quotedName = regexp.MustCompile(`"([^"]+)"`)
 
@@ -50,6 +55,26 @@ func readFormConstant(t *testing.T, file, name string) []string {
 		t.Fatalf("%s parsed empty in %s — the mirror has gone blind", name, file)
 	}
 	return names
+}
+
+func TestTheRoutingFormOffersExactlyTheProfilesTheServerAdmits(t *testing.T) {
+	t.Parallel()
+	offered := readFormConstant(t, routingFormFile, "PROFILES")
+	var admitted []string
+	for _, p := range ai.DeclaredProfiles() {
+		admitted = append(admitted, string(p))
+	}
+	for _, name := range offered {
+		if !slices.Contains(admitted, name) {
+			t.Errorf("the routing form offers profile %q, which the server refuses on save", name)
+		}
+	}
+	for _, name := range admitted {
+		if !slices.Contains(offered, name) {
+			t.Errorf("the server admits profile %q and the routing form's PROFILES omits it — "+
+				"it cannot be chosen from Settings", name)
+		}
+	}
 }
 
 func TestTheRoutingFormOffersExactlyTheAdaptersTheServerServes(t *testing.T) {

@@ -276,7 +276,7 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 **Indexes**
 
-- `sales_target_identity` — `unique, btree (metric, scope_kind, COALESCE((scope_id), 'workspace'), COALESCE((pipeline_id), 'all'), period_kind, period_start)`
+- `sales_target_identity` — `unique, btree (metric, scope_kind, scope_id, pipeline_id, period_kind, period_start) NULLS NOT DISTINCT`
 - `sales_target_pkey` — `unique, btree (id)`
 
 ## sales_target_revision

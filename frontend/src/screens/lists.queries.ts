@@ -8,6 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { recordListsKey } from "./activitykeys";
 import { throwProblem, useMe } from "./common";
 
 export type List = components["schemas"]["List"];
@@ -16,6 +17,7 @@ export type ListHistoryEntry = components["schemas"]["ListHistoryEntry"];
 export type ListExplanation = components["schemas"]["ListMemberExplanation"];
 export type ListClauseVerdict = components["schemas"]["ListClauseVerdict"];
 export type ListVisit = components["schemas"]["ListVisit"];
+export type ListMember = components["schemas"]["ListMember"];
 
 /** Every cache entry a list write can make stale starts with this key. */
 export const LISTS_KEY = "lists";
@@ -66,8 +68,9 @@ export function useLists(query: ListQuery, enabled = true) {
   });
 }
 
-export function useList(id: string) {
+export function useList(id: string, enabled = true) {
   return useQuery({
+    enabled,
     queryKey: [LISTS_KEY, "one", id],
     queryFn: async () => {
       const { data, error } = await api.GET("/lists/{id}", {
@@ -121,14 +124,62 @@ export function useVisitList() {
   });
 }
 
-export function useExplanation(listId: string, recordId: string | null) {
+/**
+ * Why one record is or is not on a list. Kept under the record's own lists
+ * key, so a write to the record makes an open verdict stale with them.
+ */
+export function useExplanation(
+  listId: string,
+  recordType: ListedRecordType,
+  recordId: string,
+) {
   return useQuery({
-    queryKey: [LISTS_KEY, "why", listId, recordId],
-    enabled: recordId !== null,
+    queryKey: [...recordListsKey(recordType, recordId), "why", listId],
     queryFn: async () => {
       const { data, error } = await api.GET(
         "/lists/{id}/members/{recordId}/why",
-        { params: { path: { id: listId, recordId: recordId ?? "" } } },
+        { params: { path: { id: listId, recordId } } },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
+/**
+ * What the list says about each of these records: a Live List member's filter
+ * values, a Shortlist member's chooser, date and note. A record that is not a
+ * member, or that the reader cannot see, is absent.
+ */
+export async function listMembersAmong(
+  listId: string,
+  recordIds: readonly string[],
+): Promise<ReadonlyMap<string, ListMember>> {
+  if (recordIds.length === 0) {
+    return new Map();
+  }
+  const { data, error } = await api.GET("/lists/{id}/members", {
+    params: { path: { id: listId }, query: { entity_id: [...recordIds] } },
+  });
+  if (error) {
+    throwProblem(error);
+  }
+  return new Map(data.data.map((member) => [member.entity_id, member]));
+}
+
+/** The record types a record page offers lists on. */
+export type ListedRecordType = Exclude<ListRecordType, "project">;
+
+/** The lists one record is on that the reader may find. */
+export function useRecordLists(entityType: ListedRecordType, recordId: string) {
+  return useQuery({
+    queryKey: recordListsKey(entityType, recordId),
+    queryFn: async () => {
+      const { data, error } = await api.GET(
+        "/records/{entity_type}/{entity_id}/lists",
+        { params: { path: { entity_type: entityType, entity_id: recordId } } },
       );
       if (error) {
         throwProblem(error);
@@ -193,6 +244,8 @@ export type ListEdit = Readonly<{
   /** Absent leaves the team as it is; null moves it to the owner's teams. */
   teamId?: string | null;
   stewardId?: string;
+  /** A Live List's new filter tree, in the stored encoding. */
+  definition?: Record<string, unknown>;
 }>;
 
 export function useUpdateList() {
@@ -208,6 +261,7 @@ export function useUpdateList() {
           sharing: edit.sharing,
           team_id: edit.teamId,
           steward_id: edit.stewardId,
+          definition: edit.definition,
         },
       });
       if (error) {

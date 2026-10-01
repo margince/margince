@@ -74,6 +74,11 @@ func (n Node) validate(v any, path string) error {
 		return nil
 	case typeInteger:
 		return validateInteger(v, path)
+	case typeBoolean:
+		if _, ok := v.(bool); !ok {
+			return fmt.Errorf("%s: want boolean, got %T", path, v)
+		}
+		return nil
 	case typeNull:
 		if v != nil {
 			return fmt.Errorf("%s: want null, got %T", path, v)

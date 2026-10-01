@@ -32,12 +32,6 @@ import { pageOverflow, textsOf } from "./waits";
  * outlives the guard fails here, naming itself, rather than being measured
  * mid-flight.
  */
-// How long a finite animation is given to land before the assertions read the
-// page. Longer than the design system's own arrivals — the Select's open is
-// ~140ms, the longest here — and short enough that a PERPETUAL animation is
-// still reported by the assertion below rather than hidden by the wait.
-const ANIMATION_LANDING_MS = 500;
-
 async function settleAnimations(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   // Reduced motion stops the NEXT animation; it cannot call off one already in
@@ -47,27 +41,34 @@ async function settleAnimations(page: Page) {
   // animation the media query has no say over, and CSS `animation: none` does
   // not govern a WAAPI one the way it governs a keyframe.
   //
-  // So the in-flight ones are given a moment to LAND, at their resting frame,
-  // which is what a settled page means. The race is the bound: a perpetual
-  // animation never resolves `finished`, and waiting on one would turn the
-  // finding below into a timeout that names nothing. What survives this wait is
-  // exactly what the assertion is about.
+  // So the in-flight ones are awaited to their resting frame, which is what a
+  // settled page means — and each is asked whether it HAS one rather than being
+  // raced against a clock. A perpetual animation never resolves `finished`, so
+  // it is left for the finding below to name; a finite one always resolves, so
+  // waiting on it needs no budget.
+  //
+  // That distinction is the whole of this wait. A wall-clock budget cannot tell
+  // "perpetual" from "slow", so on a loaded runner it expired while the page's
+  // own boot arrivals were still landing and handed the assertion four running
+  // animations to report — the settle returning early, dressed as a finding.
+  // The animation's own timing can tell them apart on any machine at any load.
   //
   // allSettled rather than all: a cancelled animation REJECTS `finished`, and
   // that is a settled outcome here — the animation is over, which is all this
   // waits for.
-  await page.evaluate(async (budgetMs) => {
-    const landing = document
-      .getAnimations()
-      .filter((animation) => animation.playState === "running")
-      .map((animation) => animation.finished);
-    await Promise.race([
-      Promise.allSettled(landing),
-      new Promise((resolve) => {
-        window.setTimeout(resolve, budgetMs);
-      }),
-    ]);
-  }, ANIMATION_LANDING_MS);
+  await page.evaluate(async () => {
+    const lands = (animation: Animation) =>
+      Number.isFinite(
+        animation.effect?.getComputedTiming().activeDuration ?? Infinity,
+      );
+    await Promise.allSettled(
+      document
+        .getAnimations()
+        .filter((animation) => animation.playState === "running")
+        .filter(lands)
+        .map((animation) => animation.finished),
+    );
+  });
   const motion = await page.evaluate(() => {
     const describe = (element: Element) =>
       `${element.tagName.toLowerCase()}.${element.className}`;
@@ -428,7 +429,9 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(
     menu.getByRole("menuitem", { name: "Einstellungen" }),
   ).toHaveAttribute("href", "#/settings");
-  await expect(menu.getByRole("menuitem", { name: de["scheduling.myLink"] })).toHaveAttribute("href", "#/settings/meetings");
+  await expect(
+    menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
+  ).toHaveAttribute("href", "#/settings/meetings");
   await expect(menu.locator("a[href]")).toHaveCount(2);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
@@ -994,11 +997,17 @@ test("AC-inbox: the staged decision is on the day's queue", async ({
   ).toBeVisible();
 });
 
-test("AC-book: the reusable booking link is available for sharing and signatures", async ({ page }) => {
+test("AC-book: the reusable booking link is available for sharing and signatures", async ({
+  page,
+}) => {
   await page.goto("/#/book");
   await expect(page.locator("nav.rail")).toHaveCount(0);
-  await expect(page.getByRole("textbox", { name: de["scheduling.myLink"] })).toHaveValue("https://crm.example.test/#/book/host-1");
-  await expect(page.getByRole("button", { name: de["scheduling.copyLink"] })).toBeEnabled();
+  await expect(
+    page.getByRole("textbox", { name: de["scheduling.myLink"] }),
+  ).toHaveValue("https://crm.example.test/#/book/host-1");
+  await expect(
+    page.getByRole("button", { name: de["scheduling.copyLink"] }),
+  ).toBeEnabled();
 });
 
 test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enable is the deliberate second step", async ({
@@ -1135,21 +1144,35 @@ test("AC-settings: the passport list is metadata-only and strikes revoked rows",
 
 // The public page opens on the current month, so these pin the clock to the
 // month the fixture's free times fall in.
-test("AC-book-public: consent gates calendar invitation and its wording passes through verbatim", async ({ page }) => {
+test("AC-book-public: consent gates calendar invitation and its wording passes through verbatim", async ({
+  page,
+}) => {
   await page.clock.setFixedTime(new Date("2026-07-01T06:00:00Z"));
   await page.goto("/#/book/host-1");
   await expect(page.locator("nav.rail")).toHaveCount(0);
   await page.locator(".bookguest-times .meeting-slots button").first().click();
   const submit = page.getByRole("button", { name: /\d{2}:\d{2} bestätigen$/ });
   await expect(submit).toBeDisabled();
-  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
-  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
+  await page
+    .getByRole("textbox", { name: de["book.name"], exact: true })
+    .fill("Jonas Beispiel");
+  await page
+    .getByRole("textbox", { name: de["book.email"] })
+    .fill("jonas@beispiel.example");
   await expect(submit).toBeDisabled();
-  const consent = page.getByRole("checkbox", { name: de["book.consentWording"] });
+  const consent = page.getByRole("checkbox", {
+    name: de["book.consentWording"],
+  });
   await consent.check();
   await expect(submit).toBeEnabled();
-  const shownWording = await page.getByText(de["book.consentWording"], { exact: true }).textContent();
-  const requestPromise = page.waitForRequest((request) => request.method() === "POST" && request.url().includes("/public/booking/host-1"));
+  const shownWording = await page
+    .getByText(de["book.consentWording"], { exact: true })
+    .textContent();
+  const requestPromise = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().includes("/public/booking/host-1"),
+  );
   await submit.click();
   const request = await requestPromise;
   const body = request.postDataJSON();
@@ -1158,16 +1181,24 @@ test("AC-book-public: consent gates calendar invitation and its wording passes t
   expect(body.consent.purpose_id).toBeUndefined();
   expect(request.headers()["idempotency-key"]).toMatch(/^[0-9a-f-]{36}$/);
   await expect(page).toHaveURL(/#\/book\/manage-guest-booking$/);
-  await expect(page.getByRole("status")).toContainText(de["scheduling.pending"]);
+  await expect(page.getByRole("status")).toContainText(
+    de["scheduling.pending"],
+  );
   await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 
-test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({ page }) => {
+test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({
+  page,
+}) => {
   await page.clock.setFixedTime(new Date("2026-07-01T06:00:00Z"));
   await page.goto("/#/book/host-1");
   await page.getByRole("button", { name: "12:00" }).click();
-  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
-  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
+  await page
+    .getByRole("textbox", { name: de["book.name"], exact: true })
+    .fill("Jonas Beispiel");
+  await page
+    .getByRole("textbox", { name: de["book.email"] })
+    .fill("jonas@beispiel.example");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: /12:00 bestätigen$/ }).click();
   await expect(page.getByText("slot no longer available")).toBeVisible();

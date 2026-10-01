@@ -25,6 +25,9 @@ when it has content.
 
 - Mail history: setup and Settings share a dropdown through ten years, show the
   preview start date, and qualify capped message and cost estimates.
+- Mailbox imports report where their time goes on `/metrics`: every Gmail API
+  call by op and result, each message's fetch, parse, transaction and
+  follow-up time, pages and waits by cause, and the fleet's runs and progress.
 
 ### Removed
 

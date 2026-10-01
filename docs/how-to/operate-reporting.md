@@ -55,7 +55,8 @@ observations. Privacy erasure, SAR and retention remain active independently of 
 ## Investigate a discrepancy
 
 Start with the evaluation key, scope, timezone, interval, pipeline, definition and
-coverage on the answer. Events use their event-time attribution; current-state
+coverage on the answer. Sales won and win rate follow the current deal owner;
+qualification and SDR outcomes use their stated attribution rules. Current-state
 charts use their capture time. Target actuals have their own containing period.
 Use the evidence endpoint with the returned evaluation key and timestamp. If
 sources changed, the response asks for refresh rather than attaching new rows to

@@ -162,7 +162,7 @@ func refusingAdapter(t *testing.T, fixture refusalFixture) model.Client {
 	t.Helper()
 	client, err := selectLocalBrain(ProviderConfig{
 		Provider: fixture.provider, BaseURL: statusServer(t, fixture.status, fixture.body), Model: "m",
-	}, allCloudKeys())
+	}, allCloudKeys(t))
 	if err != nil {
 		t.Fatalf("building the %s adapter: %v", fixture.provider, err)
 	}

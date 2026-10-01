@@ -60,10 +60,10 @@ import (
 // — because a configuration file that half-applied is worse than one that
 // stopped the boot.
 func Load(path string, env runtimeenv.Environment) (Config, error) {
-	// Version is the compiled-defaults layer, so the layering has no
+	// The compiled defaults are the first layer, so the layering has no
 	// special case for "no file at all" — an installation with neither
 	// file and one with an empty base reach validate() the same way.
-	cfg := Config{Version: 1}
+	cfg := compiledDefaults()
 	for _, layer := range []string{path, OverlayPath(path, env)} {
 		if err := applyLayer(layer, &cfg); err != nil {
 			return Config{}, err

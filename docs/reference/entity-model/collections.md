@@ -131,7 +131,6 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 **Indexes**
 
 - `idx_list_member_entity` — `btree (entity_type, entity_id)`
-- `idx_list_member_list` — `btree (list_id)`
 - `list_member_pkey` — `unique, btree (id)`
 - `list_member_unique` — `unique, btree (list_id, entity_type, entity_id)`
 
@@ -150,7 +149,7 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 | `list_id` | `uuid` | yes | Points at `list.id` — deleting the parent deletes this row. |
 | `note` | `text` |  | Optional `text`. |
 | `occurred_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
-| `reason` | `text` | yes | One of `chosen`, `bulk`, `record_archived`, `record_restored`, `evaluated`, `filter_changed`. |
+| `reason` | `text` | yes | One of `chosen`, `bulk`, `record_archived`, `record_restored`, `evaluated`, `filter_changed` and 1 more. |
 
 **Points at**
 
@@ -162,7 +161,7 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `list_member_event_action_check` — `CHECK ((action = ANY (ARRAY['added', 'removed', 'entered', 'left'])))`
 - `list_member_event_entity_type_check` — `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
-- `list_member_event_reason_check` — `CHECK ((reason = ANY (ARRAY['chosen', 'bulk', 'record_archived', 'record_restored', 'evaluated', 'filter_changed'])))`
+- `list_member_event_reason_check` — `CHECK ((reason = ANY (ARRAY['chosen', 'bulk', 'record_archived', 'record_restored', 'evaluated', 'filter_changed', 'automation'])))`
 
 **Indexes**
 
@@ -324,6 +323,5 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 **Indexes**
 
 - `idx_taggable_entity` — `btree (entity_type, entity_id)`
-- `idx_taggable_tag` — `btree (tag_id)`
 - `taggable_pkey` — `unique, btree (id)`
 - `taggable_unique` — `unique, btree (tag_id, entity_type, entity_id)`

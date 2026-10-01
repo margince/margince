@@ -203,13 +203,17 @@ func deliveryAddressTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 //
 // THREE answers, because they fail differently for the reader.
 //
-// A purpose that RESOLVES TO NOTHING — never existed, or belongs to a workspace
-// this caller cannot see — is not found. It is deliberately not a 422 naming
-// the field: every other required body id on this surface answers 404 for an id
-// that names no visible row, so that a caller cannot tell "no such purpose"
-// from "not yours" and read the difference as an enumeration. Claiming such an
-// id was ARCHIVED is also simply untrue, and it sends an operator looking for a
-// purpose to unarchive that nobody ever created.
+// A purpose that RESOLVES TO NOTHING — one that never existed — is not found,
+// the answer every other required body id on this surface gives for an id that
+// names no row. Claiming such an id was ARCHIVED is also simply untrue, and it
+// sends an operator looking for a purpose to unarchive that nobody ever
+// created.
+//
+// Telling those two apart discloses nothing, and is not the exception to the
+// row-scope 404 that reviewers keep reading it as: that rule is about records a
+// caller may be OUTSIDE, and consent_purpose is installation configuration with
+// no owner, no visibility column and no scope clause on the read below.
+// TestAConsentPurposeIsNotARowScopedRecord fails the day that stops holding.
 //
 // An ARCHIVED purpose exists and is refused with its own sentence: a link
 // minted against it would mail and then dead-end, because consentCardFor

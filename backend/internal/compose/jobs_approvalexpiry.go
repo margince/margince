@@ -48,11 +48,10 @@ func (ApprovalExpiryArgs) Kind() string { return "approval_expiry" }
 // reach is still due then — the predicate is a clock, and a clock does not need
 // a second rung to come back to something.
 func (ApprovalExpiryArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{
-		Queue:       river.QueueDefault,
+	return *jobs.QueuedAs[ApprovalExpiryArgs](&river.InsertOpts{
 		MaxAttempts: 1,
 		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
-	}
+	})
 }
 
 type approvalExpiryWorker struct {

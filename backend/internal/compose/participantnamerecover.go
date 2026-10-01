@@ -38,10 +38,13 @@ import (
 
 // nameRecoveryCandidate is one calendar activity whose stored original may name
 // attendees the participant rows do not.
+//
+// It names the original rather than carrying it: the payload is read when this
+// candidate's turn comes, for the reason storedoriginaldrain.go gives.
 type nameRecoveryCandidate struct {
-	activityID ids.ActivityID
-	source     string
-	payload    []byte
+	activityID   ids.ActivityID
+	source       string
+	rawCaptureID ids.UUID
 }
 
 // recoverAttendeeNamesBatch fills in the names on up to limit calendar
@@ -64,10 +67,13 @@ func recoverAttendeeNamesBatch(ctx context.Context, pool *pgxpool.Pool, limit in
 			return err
 		}
 		for _, c := range candidates {
-			if err := recoverOneMeetingsNames(ctx, tx, c); err != nil {
+			done, err := recoverOneMeetingsNames(ctx, tx, c)
+			if err != nil {
 				return err
 			}
-			settled++
+			if done {
+				settled++
+			}
 		}
 		if settled > 0 {
 			log.DebugContext(ctx, "attendee name recovery: read a batch of stored invitations",
@@ -82,7 +88,7 @@ func recoverAttendeeNamesBatch(ctx context.Context, pool *pgxpool.Pool, limit in
 // still stored and whose participant rows predate the name column.
 func selectNameRecoveryCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]nameRecoveryCandidate, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.source_system, rc.payload
+		SELECT a.id, a.source_system, rc.id
 		  FROM activity a
 		  JOIN raw_capture rc
 		    ON rc.source_system = a.source_system AND rc.source_id = a.source_id
@@ -102,7 +108,7 @@ func selectNameRecoveryCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]
 	var out []nameRecoveryCandidate
 	for rows.Next() {
 		var c nameRecoveryCandidate
-		if err := rows.Scan(&c.activityID, &c.source, &c.payload); err != nil {
+		if err := rows.Scan(&c.activityID, &c.source, &c.rawCaptureID); err != nil {
 			return nil, fmt.Errorf("compose: selecting the invitations to re-read for names: %w", err)
 		}
 		out = append(out, c)
@@ -118,14 +124,23 @@ func selectNameRecoveryCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]
 //
 // An unreadable original still settles its rows, with nobody named: the read
 // has been attempted and will not improve, and a row left NULL would be offered
-// again on every later tick.
-func recoverOneMeetingsNames(ctx context.Context, tx pgx.Tx, c nameRecoveryCandidate) error {
-	if err := capture.RecordAttendeeNames(ctx, tx, c.activityID, namedPartiesOf(c)); err != nil {
-		return err
+// again on every later tick. An original that is gone by the time its turn
+// comes settles nothing and answers false: without it the meeting is no longer
+// a candidate, so leaving its rows alone cannot make the loop re-select it.
+func recoverOneMeetingsNames(ctx context.Context, tx pgx.Tx, c nameRecoveryCandidate) (bool, error) {
+	payload, found, err := readStoredOriginal(ctx, tx, c.rawCaptureID)
+	if err != nil || !found {
+		return false, err
+	}
+	if err := capture.RecordAttendeeNames(ctx, tx, c.activityID, namedPartiesOf(c.source, payload)); err != nil {
+		return false, err
 	}
 	// The rows now carry what the invitation said, so the contacts they resolved
 	// to can be named from it — the same call the live capture path makes.
-	return contacts.FillParticipantNamesTx(ctx, tx, c.activityID)
+	if err := contacts.FillParticipantNamesTx(ctx, tx, c.activityID); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // namedPartiesOf reads the parties one stored invitation names, lowercased to
@@ -134,13 +149,13 @@ func recoverOneMeetingsNames(ctx context.Context, tx pgx.Tx, c nameRecoveryCandi
 // An original that cannot be read yields nobody rather than a fault: the
 // meeting itself was captured successfully, and a payload this cannot parse is
 // not going to become parseable later.
-func namedPartiesOf(c nameRecoveryCandidate) []connector.MessageParticipant {
-	raw, err := decodeStoredOriginal(c.payload)
+func namedPartiesOf(source string, payload []byte) []connector.MessageParticipant {
+	raw, err := decodeStoredOriginal(payload)
 	if err != nil {
 		return nil
 	}
 	var parties connector.Parties
-	switch c.source {
+	switch source {
 	case sourceGCal:
 		parties, err = gcal.ParticipantsOf(raw, "")
 	case sourceGraphCal:

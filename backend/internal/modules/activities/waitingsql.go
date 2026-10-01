@@ -155,11 +155,17 @@ var waitingRepliesSQL = `
 	         ON sender.activity_id = a.id AND sender.role = 'from'
 	  LEFT JOIN deal openDeal ON openDeal.id = wl.deal_id
 	                         AND %[8]s
-	  -- The ownership walk, all four off the gated link join above.
-	  LEFT JOIN deal ownerDeal ON ownerDeal.id = wl.deal_id
-	  LEFT JOIN lead ownerLead ON ownerLead.id = wl.lead_id
-	  LEFT JOIN contact ownerContact ON ownerContact.id = wl.contact_id
-	  LEFT JOIN company ownerCompany ON ownerCompany.id = wl.company_id
+	  -- The ownership walk, all four off the gated link join above. Each is a
+	  -- lateral keyed on its link, fenced by OFFSET 0: flattened into joins, the
+	  -- planner under-counted the candidates and rescanned whole tables per row.
+	  LEFT JOIN LATERAL (SELECT ownerDeal.id, ownerDeal.owner_id FROM deal ownerDeal
+	                    WHERE ownerDeal.id = wl.deal_id OFFSET 0) ownerDeal ON true
+	  LEFT JOIN LATERAL (SELECT ownerLead.id, ownerLead.owner_id FROM lead ownerLead
+	                    WHERE ownerLead.id = wl.lead_id OFFSET 0) ownerLead ON true
+	  LEFT JOIN LATERAL (SELECT ownerContact.id, ownerContact.owner_id FROM contact ownerContact
+	                    WHERE ownerContact.id = wl.contact_id OFFSET 0) ownerContact ON true
+	  LEFT JOIN LATERAL (SELECT ownerCompany.id, ownerCompany.owner_id FROM company ownerCompany
+	                    WHERE ownerCompany.id = wl.company_id OFFSET 0) ownerCompany ON true
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL

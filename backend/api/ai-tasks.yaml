@@ -254,9 +254,10 @@ tasks:
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
-    status: planned
-    company_context: {scopes: [offer, market], token_budget: 600}
-    doc: "Declared, not built (ADR-0074)."
+    status: shipped
+    sites: [filter_propose]
+    company_context: {scopes: [offer, market], token_budget: 600, conditional: true}
+    doc: "A list described in plain words, read into filter clauses the builder shows for a human to edit and save. The model is handed the record type, the sentence, the caller's own filter vocabulary, today's date and the reader's language, and never a record: it proposes a predicate tree and the deterministic engine decides membership, exactly as for a hand-built filter. Every proposed clause is checked in code before it is answered - a field the caller cannot filter on, an operator its type refuses, a value outside a picklist's options or of the wrong type is dropped and named back as unsupported rather than failing the proposal, and so is a phrase the model could not express. The company context is our own offer and market, so 'companies in our target market' has something to be read against; it is conditional because reading it needs company read, and a caller filtering contacts without that grant still gets a proposal, just without it. Nothing is saved: Save stays a human's press. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic reading of a sentence to fall back to."
 
   cold_start:
     display_name: "Onboarding read"

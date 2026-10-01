@@ -92,6 +92,8 @@ export const vi = {
   "reporting.observations_one": "Quan sát: {count}",
   "reporting.observations_other": "Quan sát: {count}",
   "reporting.observationsUnavailable": "Chưa có cỡ mẫu",
+  "reporting.earlierDefinition":
+    "Bản chụp này sử dụng định nghĩa chỉ số trước đây. Các số liệu đã lưu chưa được tính lại.",
   "reporting.definition": "Cách đo lường",
   "reporting.viewRecords": "Xem bản ghi",
   "reporting.copyName": "Bản sao của {name}",
@@ -177,6 +179,8 @@ export const vi = {
   "reporting.period": "Khoảng thời gian",
   "reporting.pipeline": "Quy trình bán hàng",
   "reporting.allPipelines": "Tất cả pipeline",
+  "reporting.resultsThrough": "Kết quả tính đến {at}",
+  "reporting.noSalesWon": "Chưa có giao dịch thắng",
   "reporting.this_month": "Tháng này",
   "reporting.last_month": "Tháng trước",
   "reporting.last_week": "Tuần hoàn chỉnh trước",
@@ -5600,6 +5604,8 @@ export const vi = {
     "Chúng tôi tìm thấy thông tin của quý vị từ nguồn công khai hoặc nguồn doanh nghiệp, chẳng hạn danh bạ hoặc trang web công ty.",
   "privacynotice.source.crmMigration":
     "Thông tin của quý vị đã có trong hệ thống khách hàng chúng tôi dùng trước đây và được chuyển sang đây cùng hệ thống đó.",
+  "privacynotice.source.mailboxHistory":
+    "Chúng tôi đã trao đổi thư với quý vị trước khi hộp thư của chúng tôi được kết nối với hệ thống này.",
   "privacynotice.source.purchasedOrImported":
     "Thông tin của quý vị đến từ một danh sách được mua hoặc nhập vào.",
   "privacynotice.source.unknown":
@@ -6121,66 +6127,73 @@ export const vi = {
     "Đọc thư của bạn và có thể gửi từ đó. Bạn cấp cả hai trên màn hình của Google và ngắt kết nối lúc nào cũng được.",
   "ob.s4.googleUnverified":
     "Nếu Google báo “ứng dụng chưa xác minh”, chọn Nâng cao → Tiếp tục. Màn hình của Google liệt kê đúng những gì bạn đang cấp.",
-  "backfill.title": "Nhập lịch sử thư của bạn",
+  "backfill.title": "Nhập email cũ",
   "backfill.intro":
-    "Hãy chọn nhập ngược lại bao xa. Bạn sẽ thấy phạm vi và chi phí ước tính trước khi có gì chạy — và bỏ qua hẳn bước này cũng được.",
-  "backfill.windowLabel": "Khoảng thời gian nhập",
+    "Chọn muốn lấy lại bao xa. Chưa có gì chạy cho đến khi bạn bấm Bắt đầu nhập.",
+  "backfill.windowLabel": "Lấy lại bao xa",
   "backfill.window36m": "3 năm",
   "backfill.window84m": "7 năm",
   "backfill.window120m": "10 năm",
-  "backfill.since": "Nhập email từ ngày {date}.",
+  "backfill.since": "Email từ ngày {date}.",
   "backfill.extendNote":
-    "Bạn có thể mở rộng khoảng thời gian sau. Email đã nhập được giữ lại và không bị trùng lặp.",
-  "backfill.costFloorNote":
-    "Ước tính này chỉ bao gồm các thư đã đếm. Toàn bộ quá trình nhập có thể có nhiều thư hơn và tốn chi phí hơn.",
+    "Sau này bạn có thể lấy lại xa hơn. Email đã có sẽ không bị thêm lần nữa.",
+  "backfill.costFloorNote": "Nếu có nhiều email hơn, chi phí có thể cao hơn.",
   "backfill.window3m": "3 tháng",
   "backfill.window6m": "6 tháng",
   "backfill.window12m": "1 năm",
   "backfill.window24m": "2 năm",
   "backfill.window60m": "5 năm",
-  "backfill.previewLoading": "Đang đếm hộp thư của bạn…",
-  "backfill.scopeIs": "Sẽ nhập thư trong {window} gần đây từ hộp thư của bạn.",
-  "backfill.estimateMessagesExact_one": "{count} thư trong khoảng đó.",
-  "backfill.estimateMessagesExact_other": "{count} thư trong khoảng đó.",
+  "backfill.previewLoading": "Đang đếm email…",
+  "backfill.scopeIs": "Lấy lại {window} gần đây.",
+  "backfill.estimateMessagesExact_one": "{count} email trong khoảng này.",
+  "backfill.estimateMessagesExact_other": "{count} email trong khoảng này.",
   "backfill.estimateMessagesAtLeast_one":
-    "Ít nhất {count} thư trong khoảng đó — việc đếm dừng ở đây, nên có thể còn nhiều hơn.",
+    "{count} email trở lên. Đã dừng đếm ở đó.",
   "backfill.estimateMessagesAtLeast_other":
-    "Ít nhất {count} thư trong khoảng đó — việc đếm dừng ở đây, nên có thể còn nhiều hơn.",
-  "backfill.estimateCost": "Chi phí AI ước tính:",
+    "{count} email trở lên. Đã dừng đếm ở đó.",
+  "backfill.estimateCost": "Chi phí AI: khoảng {cost}.",
   "backfill.estimateNote":
-    "Đây là ước tính, không phải hoá đơn — mức dùng thật được đo và hiện ra ngay khi phát sinh.",
+    "Đây là ước tính, không phải hoá đơn. Bạn chỉ trả cho phần thực sự dùng.",
   "backfill.startCta": "Bắt đầu nhập",
   "backfill.starting": "Đang bắt đầu…",
-  "backfill.skip": "Bỏ qua việc nhập lịch sử",
+  "backfill.skip": "Để sau",
   "backfill.skippedNote":
-    "Không nhập lịch sử. Thư mới vẫn được thu thập từ giờ trở đi — bạn có thể bắt đầu nhập sau trong Cài đặt.",
-  "backfill.loading": "Đang kiểm tra trạng thái nhập…",
+    "Chưa nhập email cũ. Email mới vẫn được ghi nhận. Bạn có thể nhập email cũ sau trong Cài đặt.",
+  "backfill.loading": "Đang kiểm tra lượt nhập…",
   "backfill.statusUnavailable":
-    "Hiện chưa đọc được trạng thái nhập — bản thân việc thu thập vẫn chạy.",
-  "backfill.queuedTitle": "Đã xếp hàng lượt nhập",
-  "backfill.runningTitle": "Đang nhập lịch sử thư của bạn",
-  "backfill.readingBadge": "Margince đang đọc",
-  "backfill.doneTitle": "Đã nhập xong lịch sử",
-  "backfill.errorTitle": "Lượt nhập gặp trục trặc",
-  "backfill.cancelledTitle": "Đã huỷ lượt nhập",
+    "Hiện chưa xem được lượt nhập. Email mới vẫn được ghi nhận.",
+  "backfill.queuedTitle": "Sắp bắt đầu nhập",
+  "backfill.runningTitle": "Đang nhập email cũ",
+  "backfill.readingBadge": "Đang đọc",
+  "backfill.doneTitle": "Đã nhập xong email cũ",
+  "backfill.errorTitle": "Lượt nhập đã dừng",
+  "backfill.cancelledTitle": "Bạn đã dừng lượt nhập",
   "backfill.progressLabel": "Tiến độ nhập",
-  "backfill.countScanned": "Số thư đã quét",
-  "backfill.statEmails": "Email đã thu thập",
-  "backfill.statContacts": "Liên hệ",
+  "backfill.statEmails": "Email đã thêm",
+  "backfill.statContacts": "Liên hệ mới",
   // The count is domains this run raised a company question for, not
   // companies created — a domain becomes one only if its site says so.
   "backfill.statCompanies": "Công ty cần kiểm tra",
   "backfill.errorNote":
-    "Hệ thống sẽ tự thử lại; mọi thứ đã thu thập vẫn được giữ.",
-  "backfill.cancel": "Dừng lượt nhập",
-  "backfill.cancelledNote": "Đã dừng. Mọi thứ đã thu thập vẫn được giữ.",
-  "backfill.restart": "Bắt đầu lượt nhập khác",
+    "Lượt nhập đã dừng vì gặp lỗi. Mọi thứ đã nhập vẫn được giữ.",
+  "backfill.cancel": "Dừng",
+  "backfill.cancelledNote": "Mọi thứ đã nhập vẫn được giữ.",
+  "backfill.restart": "Bắt đầu lượt nhập mới",
   "backfill.unsupportedNote":
-    "Loại hộp thư này không nhập lịch sử được — chỉ thư mới được thu thập từ giờ trở đi.",
+    "Hộp thư này không nhập được email cũ. Email mới vẫn được ghi nhận.",
   "backfill.narrowingNote":
-    "Đã có một khoảng rộng hơn chạy cho hộp thư này; khoảng nhập chỉ nới rộng được, không thu hẹp được.",
-  "backfill.staleUpdated":
-    "Cập nhật lần cuối cách đây {duration} — không có tiến triển gần đây.",
+    "Hộp thư này đã lấy lại xa hơn rồi. Hãy chọn cùng khoảng hoặc xa hơn.",
+  "backfill.staleUpdated": "Không có tiến triển trong {duration}.",
+  "backfill.countScanned_one": "Đã xem {count} email",
+  "backfill.countScanned_other": "Đã xem {count} email",
+  "backfill.errorResumeNote":
+    "Lượt nhập đã dừng vì gặp lỗi. Bạn có thể tiếp tục từ chỗ đã dừng.",
+  "backfill.resumeNote_one": "Lượt nhập trước đã dừng sau {count} email.",
+  "backfill.resumeNote_other": "Lượt nhập trước đã dừng sau {count} email.",
+  "backfill.resumeCta": "Tiếp tục",
+  "backfill.startOverCta": "Bắt đầu lại",
+  "backfill.failedNote_one": "Không thêm được {count} email nên đã bỏ qua.",
+  "backfill.failedNote_other": "Không thêm được {count} email nên đã bỏ qua.",
 
   // Connected inboxes (Settings → Integrations): the "manage in Settings"
   // surface the onboarding copy promises.
@@ -7541,6 +7554,22 @@ export const vi = {
   "auto.delete": "Xoá",
   "auto.statusEnabled": "Đang bật",
   "auto.statusPaused": "Đang tạm dừng",
+  "auto.pausedReason.listArchived":
+    "Đã tạm dừng vì danh sách được theo dõi hoặc được thêm vào đã được lưu trữ. Khôi phục danh sách không tiếp tục tự động hóa này.",
+  "auto.pausedReason.listInvalid":
+    "Đã tạm dừng vì bộ lọc của danh sách động được theo dõi không còn dùng được. Sửa bộ lọc không tiếp tục tự động hóa này.",
+  "auto.pausedReason.listUnavailable":
+    "Đã tạm dừng vì chủ sở hữu không còn tìm thấy danh sách được theo dõi.",
+  "auto.pausedReason.burst":
+    "Đã tạm dừng vì một lần kiểm tra làm thay đổi hơn 100 bản ghi. Không bản ghi nào được xử lý.",
+  "auto.lists.placeholder": "Chọn danh sách",
+  "auto.lists.needsWatched":
+    "Chọn danh sách động trước. Danh sách chọn chứa cùng loại bản ghi.",
+  "auto.lists.loadError": "Không tải được danh sách.",
+  "auto.lists.noLive":
+    "Chưa có danh sách động. Hãy lưu một bộ lọc thành danh sách động trước.",
+  "auto.lists.noShortlist":
+    "Không có danh sách chọn nào thuộc loại bản ghi này có thể thay đổi.",
   "auto.dateField.placeholder": "Chọn trường ngày",
   "auto.dateField.needsObject":
     "Chọn đối tượng trước để xem các trường ngày của nó.",
@@ -9033,6 +9062,55 @@ export const vi = {
   "aiProviderKeys.withheld":
     "Chỉ người có quyền thay đổi liên kết mô hình mới thấy nhà cung cấp nào đã có khóa.",
   "aiProviderKeys.remove": "Xóa",
+  "aiProviderKeys.serviceAccountConfigured":
+    "Đã cấu hình khóa tài khoản dịch vụ",
+  "serviceAccountKey.label": "Khóa tài khoản dịch vụ (JSON)",
+  "serviceAccountKey.placeholder":
+    "Dán toàn bộ tệp khóa mà Google Cloud đã tải xuống",
+  "serviceAccountKey.fileLabel": "Hoặc chọn tệp khóa",
+  "serviceAccountKey.fileEmpty": "Thả tệp khóa .json vào đây, hoặc bấm để chọn",
+  "serviceAccountKey.empty": "Dán nội dung tệp khóa, hoặc chọn tệp.",
+  "serviceAccountKey.notJson":
+    "Đây không phải JSON. Hãy dán toàn bộ tệp khóa đúng như Google Cloud đã tải xuống.",
+  "serviceAccountKey.notServiceAccount":
+    "JSON này không phải khóa tài khoản dịch vụ: cần có type service_account, client_email và private_key.",
+  "serviceAccountKey.unreadable":
+    "Không đọc được tệp. Hãy chọn lại, hoặc dán nội dung của nó.",
+  "aiRouting.location.label": "Vị trí",
+  "aiRouting.location.help": "Nơi Google xử lý các lệnh gọi của làn này.",
+  "aiRouting.location.residentHelp":
+    "Hồ sơ eu_hosted chỉ chấp nhận các vị trí được đánh dấu lưu trú EU.",
+  "aiRouting.location.forbidden":
+    "Vị trí này nằm ngoài EU, nên hồ sơ eu_hosted từ chối nó. Hãy chọn một vị trí lưu trú EU.",
+  "aiRouting.location.loading":
+    "Đang hỏi Google khóa này truy cập được những vị trí nào…",
+  "aiRouting.location.noKey":
+    "Chưa có khóa tài khoản dịch vụ. Hãy thêm nó trong Khóa nhà cung cấp mô hình, rồi các vị trí nó truy cập được sẽ hiện ở đây.",
+  "aiRouting.location.unreachable":
+    "Google không phản hồi, nên chỉ có vị trí đã lưu. Khi lưu sẽ kiểm tra lại.",
+  "aiRouting.location.noModels":
+    "{location} không phục vụ mô hình nào trong danh sách của Google. Mọi ID mà nó phục vụ vẫn dùng được: hãy gõ vào.",
+  "aiRouting.location.option": "{group} · {name} ({id})",
+  "aiRouting.location.optionBare": "{group} · {id}",
+  "aiRouting.location.group.eu": "EU",
+  "aiRouting.location.group.us": "Mỹ",
+  "aiRouting.location.group.other": "Khác",
+  "aiRouting.location.group.global": "Toàn cầu",
+  "aiRouting.location.resident": "Lưu trú EU",
+  "aiRouting.location.nonResident": "Không lưu trú",
+  "aiRouting.location.notResident": "ngoài EU",
+  "aiRouting.probe.checking":
+    "Đang kiểm tra {location} có phục vụ mô hình này không…",
+  "aiRouting.probe.served": "Được phục vụ tại {location}.",
+  "aiRouting.probe.notServed":
+    "Không được phục vụ tại {location}. Hãy chọn mô hình hoặc vị trí khác.",
+  "aiRouting.probe.unverified":
+    "Không thể xác minh mô hình này tại {location}. Khi lưu sẽ hỏi lại Google.",
+  "aiRouting.probe.cleared":
+    "{model} không được phục vụ tại {location}, nên trường đã được xóa.",
+  "firstRun.ai.euResidency": "Lưu trú dữ liệu tại EU",
+  "firstRun.ai.locationBeforeKey":
+    "EU (đa vùng) giữ mọi lệnh gọi trong EU. Các vị trí khác sẽ hiện trong Cài đặt → AI sau khi lưu khóa.",
   "aiRouting.withheld":
     "Chỉ người có quyền thay đổi liên kết mô hình mới thấy bản cài đặt này dùng những mô hình nào.",
   "aiRouting.title": "Các tầng mô hình",
@@ -10161,6 +10239,41 @@ export const vi = {
   "filters.saveListTitle":
     "L\u01b0u b\u1ed9 l\u1ecdc n\u00e0y th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
   "filters.saveListConfirm": "L\u01b0u danh s\u00e1ch",
+  "filters.propose.label":
+    "M\u00f4 t\u1ea3 danh s\u00e1ch b\u1eb1ng l\u1eddi th\u01b0\u1eddng",
+  "filters.propose.hint":
+    "Margince \u0111\u1ec1 xu\u1ea5t \u0111i\u1ec1u ki\u1ec7n cho b\u1ed9 l\u1ecdc b\u00ean d\u01b0\u1edbi. Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c l\u01b0u cho \u0111\u1ebfn khi b\u1ea1n b\u1ea5m L\u01b0u.",
+  "filters.propose.placeholder":
+    "C\u00f4ng ty \u1edf \u0110\u1ee9c kh\u00f4ng c\u00f3 ho\u1ea1t \u0111\u1ed9ng trong 45 ng\u00e0y qua",
+  "filters.propose.submit": "\u0110\u1ec1 xu\u1ea5t b\u1ed9 l\u1ecdc",
+  "filters.propose.busy":
+    "\u0110ang \u0111\u1ecdc m\u00f4 t\u1ea3 c\u1ee7a b\u1ea1n",
+  "filters.propose.noModel":
+    "B\u1ed9 l\u1ecdc b\u1eb1ng l\u1eddi th\u01b0\u1eddng c\u1ea7n m\u1ed9t m\u00f4 h\u00ecnh AI \u0111\u00e3 \u0111\u01b0\u1ee3c c\u1ea5u h\u00ecnh. B\u1ea1n v\u1eabn c\u00f3 th\u1ec3 t\u1ef1 x\u00e2y d\u1ef1ng b\u1ed9 l\u1ecdc.",
+  "filters.propose.unreadable":
+    "Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c \u0111\u1ec1 xu\u1ea5t. H\u00e3y th\u1eed m\u00f4 t\u1ea3 danh s\u00e1ch theo c\u00e1ch kh\u00e1c.",
+  "filters.propose.readyTitle":
+    "B\u1ed9 l\u1ecdc \u0111\u00e3 s\u1eb5n s\u00e0ng",
+  "filters.propose.readyBody":
+    "B\u1ed9 l\u1ecdc c\u1ee7a b\u1ea1n \u0111\u00e3 c\u00f3 \u0111i\u1ec1u ki\u1ec7n. Thay ch\u00fang b\u1eb1ng \u0111\u1ec1 xu\u1ea5t, ho\u1eb7c th\u00eam \u0111\u1ec1 xu\u1ea5t v\u00e0o.",
+  "filters.propose.replace": "Thay b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i",
+  "filters.propose.add":
+    "Th\u00eam v\u00e0o b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i",
+  "filters.propose.discard": "B\u1ecf \u0111\u1ec1 xu\u1ea5t",
+  "filters.propose.unusedTitle": "Kh\u00f4ng d\u00f9ng \u0111\u01b0\u1ee3c",
+  "filters.propose.unusedDismiss": "\u1ea8n",
+  "filters.propose.unusedItem":
+    "C\u1ee5m t\u1eeb \u201c{phrase}\u201d: {reason}",
+  "filters.propose.reason.unknownField":
+    "Kh\u00f4ng c\u00f3 tr\u01b0\u1eddng n\u00e0o b\u1ea1n c\u00f3 th\u1ec3 l\u1ecdc \u1edf \u0111\u00e2y ghi nh\u1eadn \u0111i\u1ec1u n\u00e0y.",
+  "filters.propose.reason.operator":
+    "{field} kh\u00f4ng th\u1ec3 so s\u00e1nh theo c\u00e1ch \u0111\u00f3.",
+  "filters.propose.reason.value":
+    "{field} kh\u00f4ng nh\u1eadn gi\u00e1 tr\u1ecb \u0111\u00f3.",
+  "filters.propose.reason.notVerifiable":
+    "{field} c\u00f3 c\u00e1c l\u1ef1a ch\u1ecdn b\u1ea1n kh\u00f4ng \u0111\u01b0\u1ee3c xem, n\u00ean kh\u00f4ng th\u1ec3 ki\u1ec3m tra gi\u00e1 tr\u1ecb.",
+  "filters.propose.reason.tooMany":
+    "B\u1ed9 l\u1ecdc \u0111\u00e3 ch\u1ee9a nhi\u1ec1u \u0111i\u1ec1u ki\u1ec7n nh\u1ea5t c\u00f3 th\u1ec3.",
   "lists.page": "Danh s\u00e1ch",
   "lists.section.label": "Hi\u1ec3n th\u1ecb",
   "lists.section.views": "Ch\u1ebf \u0111\u1ed9 xem c\u1ee7a t\u00f4i",
@@ -10223,7 +10336,7 @@ export const vi = {
   "lists.archive": "L\u01b0u tr\u1eef danh s\u00e1ch",
   "lists.restore": "Kh\u00f4i ph\u1ee5c",
   "lists.unavailable":
-    "Danh s\u00e1ch ch\u01b0a \u0111\u01b0\u1ee3c b\u1eadt cho h\u1ec7 th\u1ed1ng n\u00e0y.",
+    "Danh s\u00e1ch \u0111\u00e3 b\u1ecb t\u1eaft cho h\u1ec7 th\u1ed1ng n\u00e0y.",
   "lists.gone":
     "Danh s\u00e1ch n\u00e0y kh\u00f4ng t\u1ed3n t\u1ea1i ho\u1eb7c kh\u00f4ng \u0111\u01b0\u1ee3c chia s\u1ebb v\u1edbi b\u1ea1n.",
   "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
@@ -10260,8 +10373,6 @@ export const vi = {
     "Ch\u01b0a ch\u1ecdn g\u00ec. Th\u00eam b\u1ea3n ghi t\u1eeb trang b\u1ea3n ghi ho\u1eb7c t\u1eeb m\u1ed9t l\u1ef1a ch\u1ecdn.",
   "lists.members.projects":
     "Danh s\u00e1ch d\u1ef1 \u00e1n hi\u1ec3n th\u1ecb th\u00e0nh vi\u00ean trong danh s\u00e1ch D\u1ef1 \u00e1n.",
-  "lists.members.whyColumn": "L\u00fd do",
-  "lists.members.why": "V\u00ec sao?",
   "lists.members.selectAll_one": "Chọn tất cả {count} thành viên",
   "lists.members.selectAll_other": "Chọn tất cả {count} thành viên",
   "lists.members.selectionFullTitle": "Đã chọn tối đa",
@@ -10290,7 +10401,6 @@ export const vi = {
     "v\u00ec b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef",
   "lists.history.reason.restored":
     "v\u00ec b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c kh\u00f4i ph\u1ee5c",
-  "lists.why.title": "V\u00ec sao {name}",
   "lists.why.loading": "\u0110ang t\u00ecm l\u00fd do",
   "lists.why.liveMember":
     "C\u00f3 trong danh s\u00e1ch: b\u1ed9 l\u1ecdc hi\u1ec7n \u0111ang ch\u1ecdn b\u1ea3n ghi n\u00e0y.",
@@ -10309,18 +10419,24 @@ export const vi = {
   "lists.why.hidden": "Gi\u00e1 tr\u1ecb b\u1ecb \u1ea9n v\u1edbi b\u1ea1n",
   "lists.why.daysAgo_one": "{count} ng\u00e0y tr\u01b0\u1edbc",
   "lists.why.daysAgo_other": "{count} ng\u00e0y tr\u01b0\u1edbc",
-  "lists.why.chosen": "\u0110\u01b0\u1ee3c {who} ch\u1ecdn v\u00e0o {when}.",
-  "lists.why.someone": "ai \u0111\u00f3",
-  "lists.why.notChosen":
-    "B\u1ea3n ghi n\u00e0y kh\u00f4ng c\u00f3 trong danh s\u00e1ch ch\u1ecdn.",
+  "lists.why.today": "h\u00f4m nay",
+  "lists.why.inDays_one": "trong {count} ng\u00e0y n\u1eefa",
+  "lists.why.inDays_other": "trong {count} ng\u00e0y n\u1eefa",
   "lists.remove": "G\u1ee1 kh\u1ecfi danh s\u00e1ch ch\u1ecdn",
   "lists.removeTitle":
     "G\u1ee1 b\u1ea3n ghi n\u00e0y kh\u1ecfi danh s\u00e1ch ch\u1ecdn?",
   "lists.note": "L\u00fd do (kh\u00f4ng b\u1eaft bu\u1ed9c)",
   "lists.noteHint":
     "\u0110\u01b0\u1ee3c l\u01b0u c\u00f9ng thay \u0111\u1ed5i \u0111\u1ec3 \u0111\u1ed3ng nghi\u1ec7p bi\u1ebft l\u00fd do.",
+  "lists.record.title": "Danh s\u00e1ch",
+  "lists.record.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
+  "lists.record.empty":
+    "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch n\u00e0o b\u1ea1n c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y.",
+  "lists.record.check": "Ki\u1ec3m tra m\u1ed9t danh s\u00e1ch \u0111\u1ed9ng",
+  "lists.record.checkPick": "Ch\u1ecdn m\u1ed9t danh s\u00e1ch \u0111\u1ed9ng",
+  "lists.record.truncated":
+    "V\u00e0 c\u00f2n danh s\u00e1ch kh\u00e1c kh\u00f4ng hi\u1ec3n th\u1ecb \u1edf \u0111\u00e2y.",
   "lists.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
-  "lists.onShortlists": "C\u00f3 trong danh s\u00e1ch ch\u1ecdn",
   "lists.add": "Th\u00eam",
   "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",
   "lists.pickShortlist": "Ch\u1ecdn danh s\u00e1ch",
@@ -10341,13 +10457,49 @@ export const vi = {
     "Kiểm tra lần cuối {when}. Danh sách khớp quá nhiều bản ghi nên không ghi nhận được bản ghi nào vào hay rời đi.",
   "lists.head.pulse": "Kể từ lần bạn xem trước: {entered} vào, {left} rời đi",
   "lists.members.new": "Mới",
+  "lists.members.hidden": "\u0110\u00e3 \u1ea9n",
+  "lists.members.addedBy": "Th\u00eam b\u1edfi",
+  "lists.members.addedOn": "Ng\u00e0y th\u00eam",
+  "lists.members.note": "Ghi ch\u00fa",
   "lists.history.entered": "Đã vào, tính đến {when}",
   "lists.history.left": "Đã rời đi, tính đến {when}",
   "lists.history.reason.filterChanged": "sau khi bộ lọc thay đổi",
   "lists.history.checker": "Lần kiểm tra định kỳ (15 phút một lần)",
   "lists.history.liveNote":
     "Việc kiểm tra chạy 15 phút một lần và ưu tiên các danh sách lâu nhất chưa được kiểm tra, nên khi có rất nhiều danh sách, một danh sách có thể phải chờ lâu hơn; “Kiểm tra lần cuối” cho biết lần kiểm tra gần nhất. Bản ghi vào hay rời đi được ghi nhận tại lần kiểm tra phát hiện ra thay đổi đó. Bản ghi vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
+  "lists.editFilter": "S\u1eeda b\u1ed9 l\u1ecdc",
+  "lists.editingTitle": "\u0110ang s\u1eeda b\u1ed9 l\u1ecdc c\u1ee7a {name}",
+  "lists.editingBody":
+    "L\u01b0u v\u00e0o danh s\u00e1ch \u0111\u1ec3 thay \u0111\u1ed5i c\u00e1c b\u1ea3n ghi m\u00e0 n\u00f3 ch\u1ee9a. L\u01b0u th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng s\u1ebd t\u1ea1o m\u1ed9t danh s\u00e1ch m\u1edbi.",
+  "lists.saveFilterTo": "L\u01b0u v\u00e0o {name}",
+  "lists.saveFilterTitle":
+    "Thay \u0111\u1ed5i b\u1ed9 l\u1ecdc c\u1ee7a {name}?",
+  "lists.saveFilterBody":
+    "T\u1eeb b\u00e2y gi\u1edd, c\u00e1c b\u1ea3n ghi v\u00e0o v\u00e0 r\u1eddi danh s\u00e1ch theo b\u1ed9 l\u1ecdc m\u1edbi, v\u00e0 thay \u0111\u1ed5i \u0111\u01b0\u1ee3c gi\u1eef trong l\u1ecbch s\u1eed. Ai t\u00ecm \u0111\u01b0\u1ee3c danh s\u00e1ch c\u0169ng s\u1ebd th\u1ea5y c\u00e1c th\u00e0nh vi\u00ean m\u1edbi.",
+  "lists.saveFilterConfirm": "L\u01b0u b\u1ed9 l\u1ecdc",
+  "lists.saveFilterConflict":
+    "Ai \u0111\u00f3 \u0111\u00e3 thay \u0111\u1ed5i danh s\u00e1ch n\u00e0y sau khi b\u1ea1n m\u1edf n\u00f3. H\u00e3y m\u1edf l\u1ea1i danh s\u00e1ch \u0111\u1ec3 xem thay \u0111\u1ed5i, r\u1ed3i s\u1eeda b\u1ed9 l\u1ecdc.",
   "lists.history.someone": "Ai \u0111\u00f3",
+  "lists.changes.since": "Kể từ lần bạn xem ngày {when}:",
+  "lists.changes.joined_one": "{count} vào",
+  "lists.changes.joined_other": "{count} vào",
+  "lists.changes.left_one": "{count} rời đi",
+  "lists.changes.left_other": "{count} rời đi",
+  "lists.changes.more_one": "+{count} bản ghi khác",
+  "lists.changes.more_other": "+{count} bản ghi khác",
+  "lists.changes.nothing": "không có bản ghi nào vào hay rời đi.",
+  "lists.changes.filter_one": "Bộ lọc đã thay đổi một lần.",
+  "lists.changes.filter_other": "Bộ lọc đã thay đổi {count} lần.",
+  "lists.rules.watches": "{name} theo dõi danh sách này",
+  "lists.rules.writes": "{name} thêm bản ghi vào danh sách này",
+  "lists.rules.hidden": "Một tự động hóa không mở được ở đây",
+  "lists.rules.archiveTitle": "Lưu trữ danh sách này?",
+  "lists.rules.archiveLead":
+    "Các tự động hóa này tạm dừng khi danh sách được lưu trữ. Khôi phục danh sách không tiếp tục chúng.",
+  "lists.rules.settingsLead": "Các tự động hóa dùng danh sách này:",
+  "lists.rules.settingsLeadLive":
+    "Các tự động hóa dùng danh sách này. Thay đổi bộ lọc sẽ thay đổi những gì chúng xử lý:",
+  "lists.history.reason.automation": "bởi một tự động hóa",
 
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.
   "filters.title": "B\u1ed9 l\u1ecdc & ch\u1ee7 \u0111\u1ec1",
@@ -11169,6 +11321,7 @@ export const vi = {
   "firstRun.ignite.act":
     "gửi bất cứ gì, hay sửa một bản ghi, nếu bạn không cho phép",
   "firstRun.ignite.carryOn": "Tiếp tục",
+  "firstRun.ignite.leaving": "Đang kiểm tra thiết lập…",
   "firstRun.step.model": "Mô hình",
   "firstRun.step.platform": "Nền tảng của bạn",
   "firstRun.google.eyebrow":

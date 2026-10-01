@@ -34,7 +34,7 @@ func (s *Store) insertRun(ctx context.Context, tx pgx.Tx, conn admittedConnectio
 		  (subject_kind, contact_id, provider, trigger, state, input_fingerprint,
 		   external_correlation_id, connection_version, connection_epoch,
 		   configuration_snapshot, requested_categories, requested_by)
-		VALUES ('contact', $1, $2, $3, 'queued', $4, gen_random_uuid(), $5, $6, $7, $8, $9)
+		VALUES ('contact', $1, $2, $3, 'queued', $4, uuidv7(), $5, $6, $7, $8, $9)
 		ON CONFLICT DO NOTHING
 		RETURNING id::text`,
 		in.ContactID, in.Provider, string(in.Trigger), fingerprint,
@@ -80,7 +80,7 @@ func (s *Store) insertSkipped(ctx context.Context, tx pgx.Tx, conn admittedConne
 		   connection_epoch, configuration_snapshot, requested_categories,
 		   requested_by, completed_at)
 		VALUES ('contact', $1, $2, $3, 'skipped', $4, 'skipped:' || gen_random_uuid()::text,
-		        gen_random_uuid(), $5, $6, $7, $8, $9, now())
+		        uuidv7(), $5, $6, $7, $8, $9, now())
 		RETURNING id::text`,
 		in.ContactID, in.Provider, string(in.Trigger), string(reason),
 		conn.version, conn.epoch, snapJSON, categoryStrings(cats),

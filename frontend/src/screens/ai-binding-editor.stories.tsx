@@ -36,12 +36,14 @@ const KEYS = [
     configured: true,
     env_var: "GEMINI_API_KEY",
     optional: false,
+    credential_kind: "api_key" as const,
   },
   {
     provider: "anthropic",
     configured: false,
     env_var: "ANTHROPIC_API_KEY",
     optional: false,
+    credential_kind: "api_key" as const,
   },
 ];
 

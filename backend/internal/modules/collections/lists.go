@@ -41,6 +41,9 @@ type Store struct {
 	dealAmount string
 	// baseCurrencyOf reads the installation's base currency; identity owns it.
 	baseCurrencyOf func(ctx context.Context, tx pgx.Tx) (string, error)
+	// ruleUses reads the active automation rules that watch or write a list;
+	// the automation module owns them, so compose injects the read.
+	ruleUses func(ctx context.Context, id ids.ListID) ([]RuleUse, error)
 }
 
 // WithLiveSteward injects the identity module's rule for a seat that may act,
@@ -341,10 +344,10 @@ func (s *Store) checkNewList(ctx context.Context, in *CreateListInput) error {
 		return err
 	}
 	if in.StewardID == nil {
-		in.StewardID = storekit.OwnerOrActor(ctx, nil)
+		in.StewardID = storekit.OwnerOrActor(ctx)
 	}
 	if in.OwnerID == nil {
-		in.OwnerID = storekit.OwnerOrActor(ctx, nil)
+		in.OwnerID = storekit.OwnerOrActor(ctx)
 	}
 	switch in.ListType {
 	case listTypeDynamic:

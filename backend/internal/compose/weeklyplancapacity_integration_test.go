@@ -149,6 +149,44 @@ func TestCapacityCountsAMeetingHostedByTheRepWhoeverFiledIt(t *testing.T) {
 	}
 }
 
+// An imported meeting whose source author holds no seat here is nobody's time.
+//
+// It carries no host, and its recorder is the admin who ran the import. The
+// capturer fallback would count every such meeting into the importer's week, so
+// it skips rows that name a source author. A host-less meeting the rep filed
+// by hand still counts.
+func TestCapacitySkipsAnImportedMeetingWhoseAuthorHoldsNoSeat(t *testing.T) {
+	e := integration.Setup(t)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	owner := integration.OwnerConn(t)
+	nextWeek := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
+	filedBy := "human:" + e.Rep1.String()
+
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status,
+		                      source, source_system, source_id, source_author_name, captured_by)
+		VALUES ($1, 'meeting', 'Imported, author unknown here', $2, 'booked',
+		        'manual', 'import-test', 'm-1', 'Someone Elsewhere', $3)`,
+		ids.NewV7(), time.Date(2026, 6, 16, 9, 0, 0, 0, time.UTC), filedBy); err != nil {
+		t.Fatalf("seeding the imported meeting: %v", err)
+	}
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
+		VALUES ($1, 'meeting', 'Filed by hand, no host', $2, 'booked', 'manual', $3)`,
+		ids.NewV7(), time.Date(2026, 6, 17, 9, 0, 0, 0, time.UTC), filedBy); err != nil {
+		t.Fatalf("seeding the hand-filed meeting: %v", err)
+	}
+
+	seam := weeklyPlanCapacity{pool: e.Pool}
+	got, err := seam.ForWeek(rep, e.Rep1, nextWeek)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Meetings != 1 {
+		t.Errorf("counted %d meetings, want only the hand-filed one", got.Meetings)
+	}
+}
+
 // A meeting with NO recorded status counts, because a calendar connector writes
 // none and every other surface reads that as one nothing has said is off.
 //

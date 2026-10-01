@@ -18,8 +18,8 @@ import {
   InstallationSetup,
   outstandingStep,
   useInstallationSetup,
-  usePlatformDeclined,
 } from "../installation-setup";
+import { usePlatformDeclined } from "../installation-setup.decline";
 import { storeCompany } from "../installationcompany";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import {

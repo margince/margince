@@ -237,20 +237,24 @@ The AI group in Settings has four pages: **AI usage**,
 **Model routing** — which model serves each kind of work, presented by activity
 rather than by tier. What you see is the current policy; **AI call log** is what
 actually ran. Shared bindings sit under Advanced, and changing one can move
-several activities at once. Prices name input and output cost per million tokens
-separately, rather than one unexplained arrow, and a tier name proves nothing
-about where data is processed or what it costs — read the binding. Each row in
-**AI tasks** names the tier the task runs on, and **View calls** opens the
-**AI call log** narrowed to that task.
+several activities at once. Prices show input and output cost per million
+tokens, and a tier name proves nothing about where data is processed or what it
+costs — read the binding. Each row in **AI tasks** names its tier, and **View
+calls** opens the **AI call log** narrowed to that task.
 
-Changes take effect without a restart: a running process picks up a saved
-binding within about a minute, and a call already in flight keeps the one it
-started with.
+Changes take effect without a restart, within about a minute; a call in flight
+keeps the binding it started with. A **Gemini on Vertex AI** binding also names
+a **Location**, where Google processes the work: under `eu_hosted` only the EU
+ones can be chosen, and saving checks that the location serves the model.
 
-**Provider keys** — your own keys for whichever provider you use. Margince can
-also run entirely against a local model with no cloud key at all.
+**Provider keys** — your own keys; Gemini on Vertex AI takes a Google Cloud
+**service-account key** file. Margince can also run on a local model with no key.
 
-**Automations** — the trigger-and-action catalogue. **Monthly AI allowance** — Admin and Ops set it; Management can read it and not
+**Automations** — the trigger-and-action catalogue. Three rules watch a Live
+List and, when a record joins or leaves it, add a task, notify the rule's owner,
+or add the record to a Shortlist. They run from the 15-minute check, once per
+record the owner can see. More than 100 changes in one check, an archived list
+or a broken filter pause the rule until its owner resumes it. **Monthly AI allowance** — Admin and Ops set it; Management can read it and not
 change it. The default is **12 million tokens per active full user each month**,
 pooled across the company. It is not an individual quota and not a spending cap
 in money. You can override the calculation with a fixed company total, which

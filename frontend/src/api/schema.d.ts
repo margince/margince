@@ -6826,6 +6826,11 @@ export interface paths {
          *     cannot see is absent, and nothing says it was there. For member rows with their record's
          *     own columns, read the record list (`listContacts`, `listCompanies`, `listDeals`,
          *     `listLeads`) with `list_id`.
+         *
+         *     A Live List member carries `values`: what each field its filter names holds on that
+         *     record, read the way the explanation reads it, so a masked field, a fact on a linked
+         *     record or a reference to a row this caller cannot open is `hidden`. A Shortlist member
+         *     carries the name of who added it.
          */
         get: operations["listListMembers"];
         put?: never;
@@ -6877,6 +6882,33 @@ export interface paths {
          *     see answers `404`, whether or not it is a member.
          */
         get: operations["explainListMember"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/{entity_type}/{entity_id}/lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "contact" | "company" | "deal" | "lead";
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The lists one record is on that this caller may find.
+         * @description Every Shortlist the record was chosen for, and every Live List whose filter selects it
+         *     now, evaluated by the same SQL the member read uses. Only lists this caller may find, and
+         *     not archived ones; a Live List whose filter no longer compiles is left out. A record that
+         *     does not exist, is archived, or that this caller cannot see answers `404`. Each list carries its identity, kind and sharing; read
+         *     `getList` for its counts and health.
+         */
+        get: operations["getRecordLists"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7007,6 +7039,45 @@ export interface paths {
          *     an export of it would contain.
          */
         post: operations["previewFilter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/filters/propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose filter clauses for a list described in plain words.
+         * @description Reads a sentence ("companies in Germany with no activity in the last 45 days")
+         *     and answers the filter tree it describes, for the builder to show as ordinary
+         *     editable clauses. Nothing is saved: a human reads the proposal, sees the match
+         *     count the preview answers for it, and presses Save themselves.
+         *
+         *     **The model proposes, the engine decides.** The model sees the record type,
+         *     the sentence, this caller's own filter vocabulary (field names, types,
+         *     operators, picklist options, custom-field labels), today's date and the
+         *     reader's language — never a record. Membership is decided later by the
+         *     predicate engine evaluating the tree, exactly as for a hand-built filter.
+         *
+         *     **Every clause is checked before it is answered.** A clause naming a field
+         *     this caller cannot filter on, an operator its type refuses, a value outside a
+         *     picklist's options or a value of the wrong type is DROPPED and named in
+         *     `unsupported` instead, so a proposal never fails because one phrase could not
+         *     be expressed. So is a phrase the model itself could not express ("who are
+         *     likely to buy").
+         *
+         *     A deployment with no AI model answers 409 `ai_not_configured`; a model that
+         *     was asked and did not answer is 503 `assistant_unavailable`.
+         */
+        post: operations["proposeFilter"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10829,6 +10900,11 @@ export interface paths {
          *     naming the fault, never a partially applied binding. An empty `tiers` is accepted and
          *     means unbound — the state an installation is in before anyone chooses models.
          *
+         *     A `gemini_vertex` binding is asked for at its location before it is stored: a model that
+         *     location does not serve is a 422 naming the tier, the model and the location, and so is
+         *     a missing or unusable service-account key. Google not answering admits the save, so an
+         *     outage cannot block an unrelated routing edit.
+         *
          *     Audit-only write (no event stream, EVT-NOEVT-3).
          */
         put: operations["replaceAiRouting"];
@@ -10883,6 +10959,10 @@ export interface paths {
                  *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
                  */
                 top?: number;
+                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_hosted` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor. */
+                location?: string;
+                /** @description Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe. */
+                model?: string;
             };
             header?: never;
             path: {
@@ -10902,7 +10982,8 @@ export interface paths {
          *
          *     The vendor is named, and only the vendor: the host it is reached at comes from this
          *     installation's own stored binding, or from the adapter's default. There is no request
-         *     parameter that selects an endpoint.
+         *     parameter that selects an endpoint: a `gemini_vertex` `location` picks one of Google's
+         *     three host shapes and cannot name a host.
          *
          *     A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`
          *     naming the state. The model field on the routing form takes any id the vendor serves,
@@ -10913,6 +10994,40 @@ export interface paths {
          *     tier cannot serve a call.
          */
         get: operations["listAvailableModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/provider-locations/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Where one vendor can process a call (admin/ops).
+         * @description The locations a `gemini_vertex` binding may name, asked of Google with the stored
+         *     service-account key's project, plus the `eu` and `us` multi-regions and `global` when
+         *     Google's list omits them. A metadata call on Google's global host; it carries no customer
+         *     data, so it is answered under every profile.
+         *
+         *     `resident` and `jurisdiction` are this build's residency policy, never Google's words: a
+         *     location Google adds tomorrow appears as an option and is not resident until this build
+         *     says so. Under `eu_hosted` every location is still listed, and a binding at one with
+         *     `resident: false` is refused on save.
+         *
+         *     A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`.
+         *     Every vendor but `gemini_vertex` answers `not_published`: it has no location to choose.
+         */
+        get: operations["listProviderLocations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10935,8 +11050,14 @@ export interface paths {
         /**
          * Store or rotate one vendor's BYOK key (admin/ops).
          * @description Seals the key in the installation's key vault and records only an opaque, workspace-bound
-         *     reference. `api_key` is WRITE-ONLY: no read path returns it, and the setting that points
-         *     at it holds the reference and never the bytes.
+         *     reference. `api_key` and `service_account_json` are WRITE-ONLY: no read path returns
+         *     either, and the setting that points at one holds the reference and never the bytes.
+         *
+         *     Send exactly the one field the vendor takes, which `credential_kind` on the list names:
+         *     `service_account_json` for `gemini_vertex`, `api_key` for every other cloud vendor. A
+         *     service-account key is checked before it is sealed: it must be a Google key file for a
+         *     service account, and Google must exchange it for an access token. A key that fails
+         *     either is a 422 naming what is wrong, never echoing the key.
          *
          *     Sending a key for a vendor that already has one ROTATES it. The new credential is sealed
          *     before the reference moves, and the superseded one is destroyed only after the move
@@ -10949,8 +11070,9 @@ export interface paths {
          *     whatever the clipboard did and a key with a trailing newline authenticates nothing while
          *     looking exactly like one that would.
          *
-         *     422 for a vendor this build serves with no key at all (a local model needs none), and for
-         *     an empty key — removing a credential is DELETE, not an empty write.
+         *     422 for a vendor this build serves with no key at all (a local model needs none), for
+         *     an empty key — removing a credential is DELETE, not an empty write — for the field the
+         *     vendor does not take, and for both fields at once.
          *
          *     Requires a key vault. Without one there is nowhere to put the bytes, and the refusal says
          *     so rather than recording a reference to something that was never written.
@@ -19006,7 +19128,7 @@ export interface components {
             /** @description The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten. */
             ranked_by?: string;
             /**
-             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
              * @enum {string}
              */
             unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
@@ -19035,6 +19157,30 @@ export interface components {
             /** @description This model's score under the list's `ranked_by`, so a screen can show WHY a model is in a shortened list rather than asking a reader to trust the order. A decimal string for the same reason the prices are: it is displayed, never arithmetic. Absent where the vendor publishes no such measure, which is also when the list cannot be ranked. */
             rank_score?: string;
         };
+        /** @description Where one vendor can process a call. An empty `locations` always carries `unavailable`. */
+        ProviderLocationList: {
+            /** @description The routing name of the vendor that was asked. */
+            provider: string;
+            locations: components["schemas"]["ProviderLocation"][];
+            /**
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer. `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
+             * @enum {string}
+             */
+            unavailable?: "no_key" | "not_published" | "unreachable" | "profile_forbids";
+        };
+        ProviderLocation: {
+            /** @description The string a binding's `location` names, exactly as Google spells it. */
+            id: string;
+            /** @description Google's own label, or this build's for a multi-region Google did not list. */
+            display_name: string;
+            /**
+             * @description Whose law the processing happens under, by this build's policy: `eu` exactly when `resident`, `global` for the endpoint that may process anywhere, `us` for the US multi-region and US regions, and `other` for everything else — London and Zürich among them.
+             * @enum {string}
+             */
+            jurisdiction: "eu" | "us" | "other" | "global";
+            /** @description Whether Google keeps ML processing at this location inside the EU, which is what the `eu_hosted` profile admits. This build's list, never Google's: a location Google adds is not resident until this build names it. */
+            resident: boolean;
+        };
         /** @description What may be known about one vendor's credential. Facts about the vendor and whether a key is held, and nothing about the key: it has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
         AiProviderKeyStatus: {
             /** @description The routing name of the vendor, the same string a binding uses. */
@@ -19045,6 +19191,11 @@ export interface components {
             env_var: string;
             /** @description Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix. */
             optional: boolean;
+            /**
+             * @description Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a service-account key file (`service_account_json`), `api_key` is a pasted key. A property of the vendor, not of what is stored.
+             * @enum {string}
+             */
+            credential_kind: "api_key" | "service_account";
         };
         /** @description One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words. */
         AiProviderKeyTestResult: {
@@ -19062,9 +19213,12 @@ export interface components {
              */
             reason?: "no_key" | "profile_forbids" | "not_published" | "no_endpoint" | "auth_failed" | "rate_limited" | "unreachable";
         };
+        /** @description Exactly one of the two fields, the one the vendor's `credential_kind` names. The server refuses neither, both, or the other one with a 422. */
         AiProviderKeyInput: {
             /** @description The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
-            api_key: string;
+            api_key?: string;
+            /** @description A Google service-account key file's whole contents, for `gemini_vertex`. WRITE-ONLY, exactly as `api_key` is. Its `project_id` is the project every call is billed to. */
+            service_account_json?: string;
         };
         /**
          * @description The installation's tier-to-model binding. `tiers` is keyed by tier name; the closed set
@@ -19076,6 +19230,8 @@ export interface components {
             /**
              * @description The location ladder (§4). `sovereign` means zero egress by construction: a cloud
              *     provider on any tier is refused, and so is a local provider pointed at another host.
+             *     `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
+             *     `gemini_vertex` lane must name an EU location.
              * @enum {string}
              */
             profile: "eu_hosted" | "sovereign" | "cloud_frontier";
@@ -19089,13 +19245,20 @@ export interface components {
         AiTierBinding: {
             /**
              * @description The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-             *     | openai | gemini. The credential is never part of this document.
+             *     | openai | gemini | gemini_vertex. The credential is never part of this document.
              */
             provider: string;
             /** @description The provider-native model id. */
             model: string;
             /** @description Endpoint override; empty means the provider default. */
             base_url?: string;
+            /**
+             * @description The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
+             *     processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+             *     on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
+             *     On save, the model is asked for at this location, and one it does not serve is a 422.
+             */
+            location?: string;
             /**
              * @description What the bound model may be GIVEN, in the accepted-modality vocabulary. On the
              *     OpenAI-wire providers it IS the carriage; everywhere else it NARROWS the carriage
@@ -20270,6 +20433,8 @@ export interface components {
              * @enum {string}
              */
             window: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
+            /** @description Read the window again from the newest message even where the last run ended on an error and could be continued (BackfillStatus.resumable). Omitted or false continues that run, with its counts, when its window covers this one. */
+            start_over?: boolean;
         };
         /** @description The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1). */
         BackfillStatus: {
@@ -20289,9 +20454,13 @@ export interface components {
                 messages_scanned?: number;
                 captured?: number;
                 skipped?: number;
+                /** @description Messages the run could not capture and walked past. Committed pages only. */
+                failed?: number;
                 contacts_created?: number;
                 companies_created?: number;
             };
+            /** @description The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again. */
+            resumable?: boolean;
             /** Format: date-time */
             started_at?: string | null;
             /** Format: date-time */
@@ -30693,7 +30862,9 @@ export interface components {
             since_last_visit?: components["schemas"]["ListPulse"];
             /** @description On a single Live List read: the members this caller can see that a check saw joining since their last visit and that are still members, newest first, at most 500. Absent from the library. */
             joined_since_visit?: string[];
-            /** @description What uses this list. Exports are listed as usage and block nothing. */
+            /** @description On a single Live List read: what changed since this caller last opened it, counted from the list's history under their row scope, with no model involved. Absent on a first visit, for a Shortlist and from the library. */
+            changes_since_visit?: components["schemas"]["ListChangeSummary"];
+            /** @description What uses this list: the active automation rules that watch or add to it, then its filtered exports. Neither blocks a change; a rule pauses itself when its list is archived. */
             dependencies?: components["schemas"]["ListDependency"][];
             /** Format: date-time */
             created_at?: string;
@@ -30708,6 +30879,27 @@ export interface components {
             checked_at: string;
             /** @enum {string} */
             outcome: "complete" | "too_large" | "invalid";
+        };
+        ListChangeSummary: {
+            /**
+             * Format: date-time
+             * @description The visit the summary runs from.
+             */
+            since: string;
+            joined: components["schemas"]["ListChangeGroup"];
+            left: components["schemas"]["ListChangeGroup"];
+            /** @description How many times the filter changed since then. */
+            filter_changes: number;
+        };
+        /** @description The distinct records this caller can see that moved one way, and the newest three by name. */
+        ListChangeGroup: {
+            count: number;
+            records: components["schemas"]["ListChangedRecord"][];
+        };
+        ListChangedRecord: {
+            /** Format: uuid */
+            entity_id: string;
+            name?: string | null;
         };
         ListPulse: {
             /**
@@ -30733,12 +30925,27 @@ export interface components {
         };
         ListDependency: {
             /** @enum {string} */
-            kind: "export";
-            /** Format: date-time */
+            kind: "export" | "automation";
+            /**
+             * Format: date-time
+             * @description When the export ran, or the rule was made.
+             */
             occurred_at: string;
             actor?: string | null;
             /** @description Whether it refuses a breaking change or archive of the list. */
             blocking: boolean;
+            /**
+             * @description For an automation: whether it watches this Live List or adds to this Shortlist.
+             * @enum {string|null}
+             */
+            role?: "watches" | "writes" | null;
+            /**
+             * Format: uuid
+             * @description For an automation: the rule. Null for a caller who may not read automations.
+             */
+            automation_id?: string | null;
+            /** @description For an automation: its name. Null for a caller who may not read automations. */
+            automation_name?: string | null;
         };
         ListMember: {
             /** Format: uuid */
@@ -30751,9 +30958,23 @@ export interface components {
             entity_id: string;
             /** @description The principal that added a Shortlist member; `dynamic` for a Live List member. */
             added_by?: string;
+            /** @description For a Shortlist member, the display name of the user who added it; null for any other principal. */
+            added_by_name?: string | null;
             /** Format: date-time */
             created_at?: string;
             note?: string | null;
+            /** @description For a Live List member: each field the list's filter names, by field name, with what it holds on this record for this caller. Absent for a Shortlist member. */
+            values?: {
+                [key: string]: components["schemas"]["ListFieldValue"];
+            };
+        };
+        ListFieldValue: {
+            /** @description The value as text, as the explanation states it; null when the record holds none. */
+            value?: string | null;
+            /** @description The value is not shown to this caller. */
+            hidden: boolean;
+            /** @description For a reference to a company or project this caller may open, its name. */
+            label?: string | null;
         };
         CreateListRequest: {
             name: string;
@@ -30831,6 +31052,8 @@ export interface components {
             value?: string | null;
             /** @description The value is not shown to this caller. */
             hidden?: boolean;
+            /** @description For a reference to a company or project this caller may open, its name. */
+            value_label?: string | null;
         };
         ListMemberExplanation: {
             /** Format: uuid */
@@ -30863,10 +31086,10 @@ export interface components {
              */
             definition_version?: number | null;
             /**
-             * @description `filter_changed` marks the first check after the filter changed.
+             * @description `filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.
              * @enum {string|null}
              */
-            reason?: "chosen" | "bulk" | "record_archived" | "record_restored" | "evaluated" | "filter_changed" | null;
+            reason?: "chosen" | "bulk" | "record_archived" | "record_restored" | "evaluated" | "filter_changed" | "automation" | null;
             /** Format: date-time */
             occurred_at: string;
             actor: string;
@@ -30882,6 +31105,11 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             sharing?: string | null;
+        };
+        RecordListsResponse: {
+            data: components["schemas"]["List"][];
+            /** @description More lists hold the record than one answer carries; `data` is the first 1000 by name. */
+            truncated: boolean;
         };
         ListHistoryResponse: {
             data: components["schemas"]["ListHistoryEntry"][];
@@ -30941,6 +31169,59 @@ export interface components {
              *     "showing 25 of 812" without comparing lengths and guessing.
              */
             truncated: boolean;
+        };
+        /** @description A list described in plain words, to be turned into filter clauses. */
+        FilterProposalRequest: {
+            /** @enum {string} */
+            resource: "contact" | "company" | "deal" | "lead";
+            /** @description What the reader typed. Only this and the vocabulary reach the model. */
+            text: string;
+            /**
+             * @description The reader's interface language, which the reasons in `unsupported` are
+             *     written in. Absent means the installation's base language.
+             * @enum {string}
+             */
+            locale?: "en" | "de" | "vi";
+        };
+        /**
+         * @description Filter clauses proposed from plain words, already checked against the
+         *     caller's vocabulary. Not saved.
+         */
+        FilterProposal: {
+            /** @enum {string} */
+            resource: "contact" | "company" | "deal" | "lead";
+            /**
+             * @description The proposed tree in the canonical filter shape `POST /filters/preview`
+             *     and a dynamic list's `definition` take, with a group at its root. Null
+             *     when nothing in the sentence could be expressed.
+             */
+            filter?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Every phrase that did not become a clause, and why. */
+            unsupported: components["schemas"]["FilterProposalUnsupported"][];
+            /** @description The model that answered, when its provider named it. */
+            model_used?: string;
+        };
+        FilterProposalUnsupported: {
+            /** @description The words of the request this is about. */
+            phrase: string;
+            /**
+             * @description `not_expressible` — the model found no field or operator for the phrase;
+             *     `reason` is its explanation in the reader's language. Every other code is
+             *     a clause the model proposed and the server dropped: a field this caller
+             *     cannot filter on, an operator the field's type refuses, a value the field
+             *     does not accept (including one outside a picklist's options), a picklist
+             *     value this caller may not see the options of and so cannot be checked
+             *     (`value_not_verifiable`), or a clause past the engine's limit. For those
+             *     `reason` is the server's English detail, and `field` names the field so a
+             *     client can say it in its own words.
+             * @enum {string}
+             */
+            code: "not_expressible" | "unknown_field" | "operator_not_allowed" | "value_not_allowed" | "value_not_verifiable" | "too_many_conditions";
+            reason: string;
+            /** @description The field a dropped clause named. Absent for `not_expressible`. */
+            field?: string;
         };
         /**
          * @description What a filter may say about one record type (LVS-EXT-8). Read from the
@@ -31824,7 +32105,7 @@ export interface components {
             /** @enum {string} */
             inference_mode: "cloud" | "local" | "hybrid" | "none" | "development";
             /** @description Distinct configured provider keys, sorted; fake is never returned. */
-            providers: ("anthropic" | "gemini" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
+            providers: ("anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
         };
         AiProfile: {
             /** @enum {string} */
@@ -31836,7 +32117,7 @@ export interface components {
             /** @enum {string} */
             inference_mode: "cloud" | "local" | "hybrid" | "none" | "development";
             /** @description Distinct configured provider keys, sorted; fake is never returned. */
-            providers: ("anthropic" | "gemini" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
+            providers: ("anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm")[];
             /** @description Authenticated tier-to-model bindings. Credentials and endpoints never appear here. */
             configured_models: components["schemas"]["AssistantConfiguredModel"][];
         };
@@ -31844,7 +32125,7 @@ export interface components {
             /** @enum {string} */
             tier: "local_small" | "cheap_cloud" | "premium" | "frontier" | "local_large";
             /** @enum {string} */
-            provider: "anthropic" | "gemini" | "ollama" | "openai" | "openai_compatible" | "vllm";
+            provider: "anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm";
             model: string;
         };
         AuthCapabilities: {
@@ -32835,7 +33116,7 @@ export interface components {
             company_context: boolean;
             /** @description Whether analytics.performance_enabled makes saved reporting available. */
             reporting?: boolean;
-            /** @description True when the installation has switched on Live Lists and Shortlists (`lists.enabled`). False while they are being built: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
+            /** @description True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
             lists?: boolean;
             /** @description True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it. */
             embedding_reindex: boolean;
@@ -36161,6 +36442,11 @@ export interface components {
             name: string;
             /** @enum {string} */
             status: "enabled" | "paused";
+            /**
+             * @description Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
+             * @enum {string|null}
+             */
+            paused_reason?: "list_archived" | "list_invalid" | "list_unavailable" | "burst" | null;
             params: {
                 [key: string]: unknown;
             };
@@ -38754,7 +39040,7 @@ export interface components {
             planned: number;
             /** @description Open duplicate pairs both of whose sides this caller can see. */
             duplicates_open?: number;
-            /** @description Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all. */
+            /** @description Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`. */
             deal_suggestions_open?: number;
             /** @description How many of today's meetings are still ahead — the bounded page, as the other lanes report. */
             meetings?: number;
@@ -52914,6 +53200,8 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor. */
+                entity_id?: string[];
             };
             header?: never;
             path: {
@@ -53020,6 +53308,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListMemberExplanation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getRecordLists: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "contact" | "company" | "deal" | "lead";
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The lists the record is on, by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordListsResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -53146,6 +53460,43 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    proposeFilter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FilterProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description The proposed tree and every phrase that could not be used. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FilterProposal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The model was asked and did not answer (`code: assistant_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     pauseReportingSchedules: {
@@ -58315,6 +58666,10 @@ export interface operations {
                  *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
                  */
                 top?: number;
+                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_hosted` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor. */
+                location?: string;
+                /** @description Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe. */
+                model?: string;
             };
             header?: never;
             path: {
@@ -58332,6 +58687,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AvailableModelList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    listProviderLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where the vendor can process a call, or why it could not be asked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderLocationList"];
                 };
             };
             401: components["responses"]["Unauthorized"];

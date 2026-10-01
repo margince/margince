@@ -142,7 +142,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 			t.Fatalf("live and frozen references disagree: %+v", blocks)
 		}
 		for _, value := range blocks[0].Values {
-			if value.Unit == nil || *value.Unit != "EUR" || value.DefinitionVersion == nil || *value.DefinitionVersion != "1" || value.Coverage == nil || value.Context == nil {
+			if value.Unit == nil || *value.Unit != "EUR" || value.DefinitionVersion == nil || *value.DefinitionVersion != "2" || value.Coverage == nil || value.Context == nil {
 				t.Fatalf("reference lost metric metadata: %+v", value)
 			}
 		}

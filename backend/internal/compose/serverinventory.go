@@ -131,6 +131,7 @@ type Server struct {
 	pipelineTraceHandlers
 	filteredExportHandlers
 	filterPreviewHandlers
+	filterProposalHandlers
 	exportBundleHandlers
 	companyRollupHandlers
 	strengthHandlers

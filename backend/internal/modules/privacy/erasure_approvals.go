@@ -30,6 +30,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -304,11 +305,11 @@ const evidenceCitesActivity = `
 // quoting one of those rows is reachable here only if the quotation carries the
 // address itself. There is no link to walk for a row that by definition has
 // none.
-const evidenceCitesSubjectActivity = `
+var evidenceCitesSubjectActivity = `
 	EXISTS (
 	  SELECT 1 FROM jsonb_array_elements(` + evidenceArray + `) AS item
 	  JOIN activity_link cited
-	    ON cited.activity_id::text = item->>'source_id'
+	    ON cited.activity_id = ` + storekit.CitedActivityID("item") + `
 	   WHERE item->>'source_type' = 'activity' AND cited.contact_id = $1)`
 
 // redactApprovalsCitingActivities empties every proposal whose evidence quotes

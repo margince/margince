@@ -58,21 +58,19 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 		if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}
-		// A named owner is an assignment, and the destination is asked the
-		// same question the bulk handover asks. The two used to disagree —
-		// the handover refused an inactive receiver and this path took any
-		// row app_user held — so a project could be handed one at a time to
-		// a seat the handover would have refused in bulk.
-		if in.OwnerID != nil {
-			if err := auth.EnsureAssignee(ctx, tx, in.OwnerID.UUID); err != nil {
-				return err
-			}
-		}
 		// current reads WITH active columns so the patch's audit
 		// before-image carries the honest pre-update cf values.
 		current, err := readProject(ctx, tx, id, storekit.LiveOnly, active)
 		if err != nil {
 			return fmt.Errorf("read project before update: %w", err)
+		}
+		// Handing the project on is an assignment, and the destination is
+		// asked the same question the bulk handover asks. The two used to
+		// disagree — the handover refused an inactive receiver and this path
+		// took any row app_user held — so a project could be handed one at a
+		// time to a seat the handover would have refused in bulk.
+		if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
+			return err
 		}
 
 		in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)

@@ -202,9 +202,15 @@ func countWeekLeads(
 // is that contact's, and letting its recorder also claim it would count one
 // meeting twice across two reps.
 //
+// A row that names a source author is excluded from the fallback: an import
+// writes another system's history, and its recorder is whoever ran the import.
+// Such a row with no host names an author with no seat here, so nobody here
+// held it (activities.meetingHost).
+//
 // Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
 func meetingIsTheirsSQL(hostPos, capturedPos string) string {
-	return fmt.Sprintf("(m.host_user_id = %s OR (m.host_user_id IS NULL AND m.captured_by = %s))",
+	return fmt.Sprintf("(m.host_user_id = %s OR (m.host_user_id IS NULL AND m.captured_by = %s"+
+		" AND m.source_author_id IS NULL AND m.source_author_name IS NULL))",
 		hostPos, capturedPos)
 }
 

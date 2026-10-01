@@ -84,6 +84,8 @@ export const de = {
   "reporting.observations_one": "Beobachtung: {count}",
   "reporting.observations_other": "Beobachtungen: {count}",
   "reporting.observationsUnavailable": "Stichprobengröße nicht verfügbar",
+  "reporting.earlierDefinition":
+    "Dieser Snapshot verwendet eine frühere Kennzahldefinition. Die gespeicherten Werte wurden nicht neu berechnet.",
   "reporting.definition": "Berechnung anzeigen",
   "reporting.viewRecords": "Datensätze anzeigen",
   "reporting.copyName": "Kopie von {name}",
@@ -168,6 +170,8 @@ export const de = {
   "reporting.period": "Zeitraum",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Alle Pipelines",
+  "reporting.resultsThrough": "Ergebnisse bis {at}",
+  "reporting.noSalesWon": "Keine gewonnenen Abschlüsse",
   "reporting.this_month": "Dieser Monat",
   "reporting.last_month": "Letzter Monat",
   "reporting.last_week": "Letzte abgeschlossene Woche",
@@ -5668,6 +5672,8 @@ export const de = {
     "Wir haben Ihre Daten in einer öffentlichen oder geschäftlichen Quelle gefunden, etwa einem Verzeichnis oder einer Unternehmenswebsite.",
   "privacynotice.source.crmMigration":
     "Ihre Daten waren bereits in unserem bisherigen Kundensystem und wurden mit ihm hierher übertragen.",
+  "privacynotice.source.mailboxHistory":
+    "Wir standen bereits per E-Mail mit Ihnen in Kontakt, bevor unser Postfach mit diesem System verbunden wurde.",
   "privacynotice.source.purchasedOrImported":
     "Ihre Daten stammen aus einer gekauften oder importierten Liste.",
   "privacynotice.source.unknown":
@@ -6187,65 +6193,75 @@ export const de = {
     "Liest deine E-Mails und kann aus dem Postfach senden. Beides erlaubst du auf der Seite von Google und kannst die Verbindung jederzeit trennen.",
   "ob.s4.googleUnverified":
     "Wenn Google vor einer „nicht verifizierten App“ warnt, wähle „Erweitert“ und dann „Weiter“. Die Seite von Google zeigt genau, was erlaubt wird.",
-  "backfill.title": "Postfachverlauf importieren",
+  "backfill.title": "Alte E-Mails importieren",
   "backfill.intro":
-    "Wähle, wie weit zurück importiert wird. Umfang und geschätzte Kosten werden angezeigt, bevor etwas startet, und dieser Schritt lässt sich überspringen.",
-  "backfill.windowLabel": "Importzeitraum",
+    "Wähle, wie weit du zurückgehen willst. Es startet erst, wenn du auf „Import starten“ klickst.",
+  "backfill.windowLabel": "Wie weit zurück",
   "backfill.window36m": "3 Jahre",
   "backfill.window84m": "7 Jahre",
   "backfill.window120m": "10 Jahre",
-  "backfill.since": "Importiert E-Mails seit {date}.",
+  "backfill.since": "E-Mails seit {date}.",
   "backfill.extendNote":
-    "Der Verlauf lässt sich später erweitern. Bereits importierte E-Mails bleiben erhalten und werden nicht doppelt angelegt.",
-  "backfill.costFloorNote":
-    "Diese Schätzung umfasst nur die bisher gezählten Nachrichten. Der vollständige Import kann mehr Nachrichten enthalten und mehr kosten.",
+    "Du kannst später weiter zurückgehen. E-Mails, die schon da sind, kommen nicht doppelt.",
+  "backfill.costFloorNote": "Gibt es mehr E-Mails, kann es auch mehr kosten.",
   "backfill.window3m": "3 Monate",
   "backfill.window6m": "6 Monate",
   "backfill.window12m": "1 Jahr",
   "backfill.window24m": "2 Jahre",
   "backfill.window60m": "5 Jahre",
-  "backfill.previewLoading": "Nachrichten werden gezählt…",
-  "backfill.scopeIs": "Importiert {window} deines Postfachs.",
-  "backfill.estimateMessagesExact_one": "{count} Nachricht in diesem Zeitraum.",
-  "backfill.estimateMessagesExact_other":
-    "{count} Nachrichten in diesem Zeitraum.",
+  "backfill.previewLoading": "E-Mails werden gezählt…",
+  "backfill.scopeIs": "Geht {window} zurück.",
+  "backfill.estimateMessagesExact_one": "{count} E-Mail in dieser Zeit.",
+  "backfill.estimateMessagesExact_other": "{count} E-Mails in dieser Zeit.",
   "backfill.estimateMessagesAtLeast_one":
-    "Mindestens {count} Nachricht in diesem Zeitraum. Dort wurde das Zählen beendet, es können also mehr sein.",
+    "{count} E-Mail oder mehr. Weiter wurde nicht gezählt.",
   "backfill.estimateMessagesAtLeast_other":
-    "Mindestens {count} Nachrichten in diesem Zeitraum. Dort wurde das Zählen beendet, es können also mehr sein.",
-  "backfill.estimateCost": "Geschätzte KI-Kosten:",
+    "{count} E-Mails oder mehr. Weiter wurde nicht gezählt.",
+  "backfill.estimateCost": "KI-Kosten: etwa {cost}.",
   "backfill.estimateNote":
-    "Eine Schätzung, keine Rechnung. Die tatsächliche Nutzung wird gemessen und laufend angezeigt.",
+    "Das ist eine Schätzung, keine Rechnung. Du zahlst nur, was wirklich anfällt.",
   "backfill.startCta": "Import starten",
   "backfill.starting": "Wird gestartet…",
-  "backfill.skip": "Import des Postfachverlaufs überspringen",
+  "backfill.skip": "Jetzt nicht",
   "backfill.skippedNote":
-    "Kein Verlauf importiert. Neue E-Mails werden weiterhin erfasst, und ein Import lässt sich später in den Einstellungen starten.",
-  "backfill.loading": "Importstatus wird geprüft…",
+    "Keine alten E-Mails importiert. Neue E-Mails kommen weiter an. Alte E-Mails kannst du später in den Einstellungen importieren.",
+  "backfill.loading": "Import wird geprüft…",
   "backfill.statusUnavailable":
-    "Importstatus ist nicht verfügbar. Die Erfassung läuft weiter.",
-  "backfill.queuedTitle": "Import eingereiht",
-  "backfill.runningTitle": "Postfachverlauf wird importiert",
-  "backfill.readingBadge": "Wird analysiert",
-  "backfill.doneTitle": "Import des Postfachverlaufs abgeschlossen",
-  "backfill.errorTitle": "Importfehler",
-  "backfill.cancelledTitle": "Import abgebrochen",
+    "Der Import lässt sich gerade nicht anzeigen. Neue E-Mails kommen weiter an.",
+  "backfill.queuedTitle": "Import startet gleich",
+  "backfill.runningTitle": "Alte E-Mails werden importiert",
+  "backfill.readingBadge": "Liest",
+  "backfill.doneTitle": "Alte E-Mails importiert",
+  "backfill.errorTitle": "Import angehalten",
+  "backfill.cancelledTitle": "Du hast den Import gestoppt",
   "backfill.progressLabel": "Importfortschritt",
-  "backfill.countScanned": "Durchsuchte Nachrichten",
-  "backfill.statEmails": "Erfasste E-Mails",
-  "backfill.statContacts": "Kontakte",
-  "backfill.statCompanies": "Zu prüfende Unternehmen",
+  "backfill.statEmails": "Neue E-Mails",
+  "backfill.statContacts": "Neue Kontakte",
+  "backfill.statCompanies": "Unternehmen zum Prüfen",
   "backfill.errorNote":
-    "Der Import wird automatisch wiederholt. Alles bisher Erfasste bleibt erhalten.",
-  "backfill.cancel": "Import stoppen",
-  "backfill.cancelledNote": "Gestoppt. Alles bisher Erfasste bleibt erhalten.",
-  "backfill.restart": "Weiteren Import starten",
+    "Der Import ist wegen eines Fehlers stehen geblieben. Alles bisher Importierte bleibt erhalten.",
+  "backfill.cancel": "Stoppen",
+  "backfill.cancelledNote": "Alles bisher Importierte bleibt erhalten.",
+  "backfill.restart": "Neuen Import starten",
   "backfill.unsupportedNote":
-    "Dieser Postfachtyp unterstützt keinen Import des Verlaufs. Nur neue E-Mails werden erfasst.",
+    "Dieses Postfach kann keine alten E-Mails importieren. Neue E-Mails kommen weiter an.",
   "backfill.narrowingNote":
-    "Für dieses Postfach lief bereits ein größerer Zeitraum. Der Importzeitraum kann nur erweitert werden.",
-  "backfill.staleUpdated":
-    "Zuletzt aktualisiert vor {duration}. Kein aktueller Fortschritt.",
+    "Für dieses Postfach lief schon ein längerer Zeitraum. Wähle denselben oder einen längeren.",
+  "backfill.staleUpdated": "Seit {duration} kein Fortschritt.",
+  "backfill.countScanned_one": "{count} E-Mail geprüft",
+  "backfill.countScanned_other": "{count} E-Mails geprüft",
+  "backfill.errorResumeNote":
+    "Der Import ist wegen eines Fehlers stehen geblieben. Du kannst dort weitermachen, wo er aufgehört hat.",
+  "backfill.resumeNote_one":
+    "Der letzte Import hat nach {count} E-Mail angehalten.",
+  "backfill.resumeNote_other":
+    "Der letzte Import hat nach {count} E-Mails angehalten.",
+  "backfill.resumeCta": "Weitermachen",
+  "backfill.startOverCta": "Neu beginnen",
+  "backfill.failedNote_one":
+    "{count} E-Mail ließ sich nicht hinzufügen und wurde ausgelassen.",
+  "backfill.failedNote_other":
+    "{count} E-Mails ließen sich nicht hinzufügen und wurden ausgelassen.",
 
   // Connected inboxes (Einstellungen → Verbindungen).
   // Die Einheiten dieser Installation, auf der Einstellungsseite, die bereits
@@ -7614,6 +7630,22 @@ export const de = {
   "auto.delete": "Löschen",
   "auto.statusEnabled": "Aktiv",
   "auto.statusPaused": "Pausiert",
+  "auto.pausedReason.listArchived":
+    "Pausiert, weil die beobachtete oder befüllte Liste archiviert wurde. Das Wiederherstellen der Liste setzt die Automatisierung nicht fort.",
+  "auto.pausedReason.listInvalid":
+    "Pausiert, weil der Filter der beobachteten Live-Liste nicht mehr funktioniert. Das Reparieren des Filters setzt die Automatisierung nicht fort.",
+  "auto.pausedReason.listUnavailable":
+    "Pausiert, weil das zuständige Teammitglied die beobachtete Liste nicht mehr findet.",
+  "auto.pausedReason.burst":
+    "Pausiert, weil eine Prüfung mehr als 100 Datensätze bewegt hat. Für keinen davon wurde etwas ausgeführt.",
+  "auto.lists.placeholder": "Liste wählen",
+  "auto.lists.needsWatched":
+    "Zuerst die Live-Liste wählen. Die Shortlist enthält denselben Datensatztyp.",
+  "auto.lists.loadError": "Listen konnten nicht geladen werden.",
+  "auto.lists.noLive":
+    "Noch keine Live-Listen. Zuerst einen Filter als Live-Liste speichern.",
+  "auto.lists.noShortlist":
+    "Keine änderbare Shortlist mit diesem Datensatztyp.",
   "auto.dateField.placeholder": "Datumsfeld auswählen",
   "auto.dateField.needsObject":
     "Wähle zuerst ein Objekt, um seine Datumsfelder anzuzeigen.",
@@ -9117,6 +9149,57 @@ export const de = {
   "aiProviderKeys.withheld":
     "Nur Admins und Operations mit der Berechtigung zum Ändern von Modellzuordnungen sehen, welche Anbieter einen Schlüssel haben.",
   "aiProviderKeys.remove": "Entfernen",
+  "aiProviderKeys.serviceAccountConfigured": "Dienstkonto-Schlüssel hinterlegt",
+  "serviceAccountKey.label": "Dienstkonto-Schlüssel (JSON)",
+  "serviceAccountKey.placeholder":
+    "Füge die ganze Schlüsseldatei ein, die Google Cloud heruntergeladen hat",
+  "serviceAccountKey.fileLabel": "Oder wähle die Schlüsseldatei",
+  "serviceAccountKey.fileEmpty":
+    "Zieh die .json-Schlüsseldatei hierher oder klicke, um sie zu wählen",
+  "serviceAccountKey.empty":
+    "Füge den Inhalt der Schlüsseldatei ein oder wähle die Datei.",
+  "serviceAccountKey.notJson":
+    "Das ist kein JSON. Füge die ganze Schlüsseldatei so ein, wie Google Cloud sie heruntergeladen hat.",
+  "serviceAccountKey.notServiceAccount":
+    "Dieses JSON ist kein Dienstkonto-Schlüssel: Es braucht type service_account, eine client_email und einen private_key.",
+  "serviceAccountKey.unreadable":
+    "Die Datei konnte nicht gelesen werden. Wähle sie noch einmal oder füge ihren Inhalt ein.",
+  "aiRouting.location.label": "Standort",
+  "aiRouting.location.help":
+    "Wo Google die Aufrufe dieser Strecke verarbeitet.",
+  "aiRouting.location.residentHelp":
+    "Das Profil eu_hosted lässt nur die als EU-resident markierten Standorte zu.",
+  "aiRouting.location.forbidden":
+    "Dieser Standort liegt außerhalb der EU, daher lehnt das Profil eu_hosted ihn ab. Wähle einen EU-residenten Standort.",
+  "aiRouting.location.loading":
+    "Google wird gefragt, welche Standorte dieser Schlüssel erreicht…",
+  "aiRouting.location.noKey":
+    "Noch ist kein Dienstkonto-Schlüssel hinterlegt. Füge ihn unter Modellanbieter-Schlüssel hinzu, dann erscheinen hier die Standorte, die er erreicht.",
+  "aiRouting.location.unreachable":
+    "Google hat nicht geantwortet, daher steht nur der gespeicherte Standort zur Wahl. Beim Speichern wird erneut geprüft.",
+  "aiRouting.location.noModels":
+    "{location} bedient keines der Modelle, die Google auflistet. Jede ID, die der Standort bedient, funktioniert trotzdem: eintippen.",
+  "aiRouting.location.option": "{group} · {name} ({id})",
+  "aiRouting.location.optionBare": "{group} · {id}",
+  "aiRouting.location.group.eu": "EU",
+  "aiRouting.location.group.us": "USA",
+  "aiRouting.location.group.other": "Andere",
+  "aiRouting.location.group.global": "Global",
+  "aiRouting.location.resident": "EU-resident",
+  "aiRouting.location.nonResident": "Nicht resident",
+  "aiRouting.location.notResident": "außerhalb der EU",
+  "aiRouting.probe.checking":
+    "Es wird geprüft, ob {location} dieses Modell bedient…",
+  "aiRouting.probe.served": "Wird in {location} bedient.",
+  "aiRouting.probe.notServed":
+    "Wird in {location} nicht bedient. Wähle ein anderes Modell oder einen anderen Standort.",
+  "aiRouting.probe.unverified":
+    "Konnte dieses Modell in {location} nicht prüfen. Beim Speichern wird Google erneut gefragt.",
+  "aiRouting.probe.cleared":
+    "{model} wird in {location} nicht bedient, daher wurde das Feld geleert.",
+  "firstRun.ai.euResidency": "EU-Datenresidenz",
+  "firstRun.ai.locationBeforeKey":
+    "EU (Multi-Region) hält jeden Aufruf in der EU. Andere Standorte stehen unter Einstellungen → KI, sobald der Schlüssel gespeichert ist.",
   "aiRouting.withheld":
     "Nur Admins und Operations mit der Berechtigung zum Ändern von Modellzuordnungen sehen, welche Modelle diese Installation verwendet.",
   "aiRouting.title": "Modellstufen",
@@ -10273,6 +10356,34 @@ export const de = {
   "filters.saveList": "Als Live-Liste speichern",
   "filters.saveListTitle": "Diesen Filter als Live-Liste speichern",
   "filters.saveListConfirm": "Liste speichern",
+  "filters.propose.label": "Beschreibe die Liste in eigenen Worten",
+  "filters.propose.hint":
+    "Margince schlägt Bedingungen für den Filter darunter vor. Gespeichert wird erst, wenn du auf Speichern drückst.",
+  "filters.propose.placeholder":
+    "Unternehmen in Deutschland ohne Aktivität in den letzten 45 Tagen",
+  "filters.propose.submit": "Filter vorschlagen",
+  "filters.propose.busy": "Deine Beschreibung wird gelesen",
+  "filters.propose.noModel":
+    "Filter aus eigenen Worten brauchen ein konfiguriertes KI-Modell. Du kannst den Filter weiterhin von Hand bauen.",
+  "filters.propose.unreadable":
+    "Der Vorschlag ließ sich nicht lesen. Beschreibe die Liste anders.",
+  "filters.propose.readyTitle": "Ein Filter ist bereit",
+  "filters.propose.readyBody":
+    "Dein Filter hat schon Bedingungen. Ersetze sie durch den Vorschlag oder füge den Vorschlag hinzu.",
+  "filters.propose.replace": "Aktuellen Filter ersetzen",
+  "filters.propose.add": "Zum aktuellen Filter hinzufügen",
+  "filters.propose.discard": "Vorschlag verwerfen",
+  "filters.propose.unusedTitle": "Nicht verwendet",
+  "filters.propose.unusedDismiss": "Ausblenden",
+  "filters.propose.unusedItem": "„{phrase}“: {reason}",
+  "filters.propose.reason.unknownField":
+    "Kein Feld, nach dem du hier filtern kannst, erfasst das.",
+  "filters.propose.reason.operator": "{field} lässt sich so nicht vergleichen.",
+  "filters.propose.reason.value": "{field} nimmt diesen Wert nicht an.",
+  "filters.propose.reason.notVerifiable":
+    "{field} hat Optionen, die du nicht sehen kannst, deshalb ließ sich der Wert nicht prüfen.",
+  "filters.propose.reason.tooMany":
+    "Der Filter enthält schon so viele Bedingungen, wie er fassen kann.",
   "lists.page": "Liste",
   "lists.section.label": "Anzeigen",
   "lists.section.views": "Meine Ansichten",
@@ -10326,8 +10437,7 @@ export const de = {
   "lists.settingsTitle": "Diese Liste bearbeiten",
   "lists.archive": "Liste archivieren",
   "lists.restore": "Wiederherstellen",
-  "lists.unavailable":
-    "Listen sind in dieser Installation nicht eingeschaltet.",
+  "lists.unavailable": "Listen sind in dieser Installation ausgeschaltet.",
   "lists.gone":
     "Diese Liste gibt es nicht, oder sie ist nicht mit dir geteilt.",
   "lists.unnamed": "Ohne Namen",
@@ -10358,8 +10468,6 @@ export const de = {
     "Noch nichts ausgew\u00e4hlt. F\u00fcge Datens\u00e4tze \u00fcber eine Datensatzseite oder eine Auswahl hinzu.",
   "lists.members.projects":
     "Projektlisten zeigen ihre Mitglieder in der Projektliste.",
-  "lists.members.whyColumn": "Warum",
-  "lists.members.why": "Warum?",
   "lists.members.selectAll_one": "{count} Mitglied auswählen",
   "lists.members.selectAll_other": "Alle {count} Mitglieder auswählen",
   "lists.members.selectionFullTitle": "Die Auswahl ist voll",
@@ -10385,7 +10493,6 @@ export const de = {
   "lists.history.reason.bulk": "in einer Sammel\u00e4nderung",
   "lists.history.reason.archived": "weil der Datensatz archiviert wurde",
   "lists.history.reason.restored": "weil der Datensatz wiederhergestellt wurde",
-  "lists.why.title": "Warum {name}",
   "lists.why.loading": "Grund wird ermittelt",
   "lists.why.liveMember":
     "Auf dieser Liste: Der Filter w\u00e4hlt diesen Datensatz gerade aus.",
@@ -10403,16 +10510,21 @@ export const de = {
   "lists.why.hidden": "Wert f\u00fcr dich verborgen",
   "lists.why.daysAgo_one": "vor {count} Tag",
   "lists.why.daysAgo_other": "vor {count} Tagen",
-  "lists.why.chosen": "Ausgew\u00e4hlt von {who} am {when}.",
-  "lists.why.someone": "jemandem",
-  "lists.why.notChosen": "Dieser Datensatz ist nicht auf dieser Shortlist.",
+  "lists.why.today": "heute",
+  "lists.why.inDays_one": "in {count} Tag",
+  "lists.why.inDays_other": "in {count} Tagen",
   "lists.remove": "Von der Shortlist entfernen",
   "lists.removeTitle": "Diesen Datensatz von der Shortlist entfernen?",
   "lists.note": "Warum (optional)",
   "lists.noteHint":
     "Wird mit der \u00c4nderung gespeichert, damit das Team den Grund sieht.",
+  "lists.record.title": "Listen",
+  "lists.record.loading": "Listen werden geladen",
+  "lists.record.empty": "Auf keiner Liste, die du finden kannst.",
+  "lists.record.check": "Live-Liste pr\u00fcfen",
+  "lists.record.checkPick": "Live-Liste ausw\u00e4hlen",
+  "lists.record.truncated": "Und weitere Listen, die hier nicht stehen.",
   "lists.addToShortlist": "Zur Shortlist hinzuf\u00fcgen",
-  "lists.onShortlists": "Auf Shortlists",
   "lists.add": "Hinzuf\u00fcgen",
   "lists.shortlist": "Shortlist",
   "lists.pickShortlist": "Shortlist w\u00e4hlen",
@@ -10433,13 +10545,49 @@ export const de = {
   "lists.head.pulse":
     "Seit deinem letzten Besuch: {entered} hinzugekommen, {left} weggefallen",
   "lists.members.new": "Neu",
+  "lists.members.hidden": "Verborgen",
+  "lists.members.addedBy": "Hinzugef\u00fcgt von",
+  "lists.members.addedOn": "Hinzugef\u00fcgt am",
+  "lists.members.note": "Notiz",
   "lists.history.entered": "Hinzugekommen, Stand {when}",
   "lists.history.left": "Weggefallen, Stand {when}",
   "lists.history.reason.filterChanged": "nachdem der Filter geändert wurde",
   "lists.history.checker": "Die 15-Minuten-Prüfung",
   "lists.history.liveNote":
     "Die Prüfung läuft alle 15 Minuten und nimmt sich zuerst die Listen vor, die am längsten nicht geprüft wurden. Bei sehr vielen Listen kann eine Liste daher länger warten; „Zuletzt geprüft“ zeigt, wann es war. Wer hinzukam oder wegfiel, wird zum Zeitpunkt der Prüfung festgehalten, die die Änderung bemerkt hat. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder wegfällt, wird nicht festgehalten.",
+  "lists.editFilter": "Filter bearbeiten",
+  "lists.editingTitle": "Du bearbeitest den Filter von {name}",
+  "lists.editingBody":
+    "Speichere in die Liste, um zu ändern, welche Datensätze sie enthält. „Als Live-Liste speichern“ legt stattdessen eine neue Liste an.",
+  "lists.saveFilterTo": "In {name} speichern",
+  "lists.saveFilterTitle": "Filter von {name} ändern?",
+  "lists.saveFilterBody":
+    "Ab jetzt kommen Datensätze nach dem neuen Filter in die Liste und verlassen sie, und die Änderung bleibt in ihrem Verlauf. Alle, die die Liste finden können, sehen die neuen Mitglieder.",
+  "lists.saveFilterConfirm": "Filter speichern",
+  "lists.saveFilterConflict":
+    "Jemand hat diese Liste geändert, nachdem du sie geöffnet hast. Öffne die Liste erneut, um die Änderung zu sehen, und bearbeite dann den Filter.",
   "lists.history.someone": "Jemand",
+  "lists.changes.since": "Seit deinem Besuch am {when}:",
+  "lists.changes.joined_one": "{count} hinzugekommen",
+  "lists.changes.joined_other": "{count} hinzugekommen",
+  "lists.changes.left_one": "{count} weggefallen",
+  "lists.changes.left_other": "{count} weggefallen",
+  "lists.changes.more_one": "+{count} weitere",
+  "lists.changes.more_other": "+{count} weitere",
+  "lists.changes.nothing": "nichts hinzugekommen oder weggefallen.",
+  "lists.changes.filter_one": "Der Filter wurde einmal geändert.",
+  "lists.changes.filter_other": "Der Filter wurde {count}-mal geändert.",
+  "lists.rules.watches": "{name} beobachtet diese Liste",
+  "lists.rules.writes": "{name} fügt dieser Liste Datensätze hinzu",
+  "lists.rules.hidden":
+    "Eine Automatisierung, die hier nicht geöffnet werden kann",
+  "lists.rules.archiveTitle": "Diese Liste archivieren?",
+  "lists.rules.archiveLead":
+    "Diese Automatisierungen pausieren, wenn die Liste archiviert wird. Das Wiederherstellen der Liste setzt sie nicht fort.",
+  "lists.rules.settingsLead": "Automatisierungen, die diese Liste nutzen:",
+  "lists.rules.settingsLeadLive":
+    "Automatisierungen, die diese Liste nutzen. Eine Filteränderung ändert, worauf sie reagieren:",
+  "lists.history.reason.automation": "durch eine Automatisierung",
 
   // Die Oberfl\u00e4che \u201eFilter & Ansichten\u201c.
   "filters.title": "Filter und Ansichten",
@@ -11284,6 +11432,7 @@ export const de = {
   "firstRun.ignite.act":
     "ohne deine Freigabe etwas senden oder einen Datensatz ändern",
   "firstRun.ignite.carryOn": "Weiter",
+  "firstRun.ignite.leaving": "Einrichtung wird geprüft…",
   "firstRun.step.model": "Modell",
   "firstRun.step.platform": "Plattform",
   "firstRun.google.eyebrow": "Modell verbunden · E-Mail nicht verbunden",

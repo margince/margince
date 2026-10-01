@@ -60,7 +60,7 @@ here so it can be answered for.
 | `draft_reply` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
 | `enrich` | `local_small` → `cheap_cloud` | no | no | no | — | shipped |
 | `growth_fit` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
-| `nl_search` | `cheap_cloud` → `premium` | no | no | no | — | planned |
+| `nl_search` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
 | `offer_draft` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
 | `owed_verdict` | `local_small` → `cheap_cloud` | no | yes | no | — | shipped |
 | `propose_roles` | `cheap_cloud` → `premium` | no | no | no | — | shipped |

@@ -482,7 +482,7 @@ func TestAnonymizingALeadRemovesItsScoreExplanation(t *testing.T) {
 	// module issued the DELETE.
 	if _, err := pool.Exec(ctx, `
 		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, title = NULL,
-		  company_name = NULL, candidate_company_key = NULL, raw = NULL,
+		  company_name = NULL, candidate_company_key = NULL,
 		  archived_at = coalesce(archived_at, now())
 		WHERE id = $1`, leadID); err != nil {
 		t.Fatalf("anonymizing the lead: %v", err)

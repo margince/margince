@@ -82,6 +82,8 @@ export const en = {
   "reporting.observations_one": "Observation: {count}",
   "reporting.observations_other": "Observations: {count}",
   "reporting.observationsUnavailable": "Sample size unavailable",
+  "reporting.earlierDefinition":
+    "This snapshot uses an earlier metric definition. Its saved figures have not been recalculated.",
   "reporting.definition": "How this is measured",
   "reporting.viewRecords": "View records",
   "reporting.copyName": "Copy of {name}",
@@ -166,6 +168,8 @@ export const en = {
   "reporting.period": "Date range",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "All pipelines",
+  "reporting.resultsThrough": "Results through {at}",
+  "reporting.noSalesWon": "No sales won",
   "reporting.this_month": "This month",
   "reporting.last_month": "Last month",
   "reporting.last_week": "Last completed week",
@@ -5829,6 +5833,8 @@ export const en = {
     "We found your details in a public or business source, such as a directory or a company website.",
   "privacynotice.source.crmMigration":
     "Your details were already in the customer system we used before, and moved here with it.",
+  "privacynotice.source.mailboxHistory":
+    "We had already exchanged mail with you before our mailbox was connected to this system.",
   "privacynotice.source.purchasedOrImported":
     "Your details came from a list that was bought or imported.",
   "privacynotice.source.unknown": "We cannot say how your details reached us.",
@@ -6335,69 +6341,79 @@ export const en = {
     "Reads your mail and can send from it. You grant both on Google’s screen and can disconnect at any time.",
   "ob.s4.googleUnverified":
     "If Google warns about an “unverified app”, select Advanced, then Continue. Google’s screen lists exactly what is granted.",
-  "backfill.title": "Import mailbox history",
+  "backfill.title": "Import old emails",
   "backfill.intro":
-    "Choose how far back to import. The scope and estimated cost are shown before anything runs, and this step can be skipped.",
-  "backfill.windowLabel": "Import window",
+    "Choose how far back to go. Nothing starts until you click Start import.",
+  "backfill.windowLabel": "How far back",
   "backfill.window36m": "3 years",
   "backfill.window84m": "7 years",
   "backfill.window120m": "10 years",
-  "backfill.since": "Imports email since {date}.",
+  "backfill.since": "Emails since {date}.",
   "backfill.extendNote":
-    "The history can be extended later. Emails already imported are kept and not duplicated.",
-  "backfill.costFloorNote":
-    "This estimate covers only the messages counted so far. The full import can contain more messages and cost more.",
+    "You can go further back later. Emails that are already here are not added twice.",
+  "backfill.costFloorNote": "The cost can be higher if there are more emails.",
   "backfill.window3m": "3 months",
   "backfill.window6m": "6 months",
   "backfill.window12m": "1 year",
   "backfill.window24m": "2 years",
   "backfill.window60m": "5 years",
-  "backfill.previewLoading": "Counting messages…",
-  "backfill.scopeIs": "Imports {window} of your mailbox.",
-  "backfill.estimateMessagesExact_one": "{count} message in that period.",
-  "backfill.estimateMessagesExact_other": "{count} messages in that period.",
+  "backfill.previewLoading": "Counting emails…",
+  "backfill.scopeIs": "Goes back {window}.",
+  "backfill.estimateMessagesExact_one": "{count} email in that time.",
+  "backfill.estimateMessagesExact_other": "{count} emails in that time.",
   "backfill.estimateMessagesAtLeast_one":
-    "At least {count} message in that period. Counting stopped there, so there may be more.",
+    "{count} email or more. Counting stopped there.",
   "backfill.estimateMessagesAtLeast_other":
-    "At least {count} messages in that period. Counting stopped there, so there may be more.",
-  "backfill.estimateCost": "Estimated AI cost:",
+    "{count} emails or more. Counting stopped there.",
+  "backfill.estimateCost": "AI cost: about {cost}.",
   "backfill.estimateNote":
-    "An estimate, not a bill. Actual usage is metered and shown as it accrues.",
+    "This is an estimate, not a bill. You only pay for what is used.",
   "backfill.startCta": "Start import",
   "backfill.starting": "Starting…",
-  "backfill.skip": "Skip mailbox history import",
+  "backfill.skip": "Not now",
   "backfill.skippedNote":
-    "No history imported. New mail is still captured, and an import can be started later from Settings.",
-  "backfill.loading": "Checking import status…",
+    "No old emails imported. New emails still come in. You can import old emails later in Settings.",
+  "backfill.loading": "Checking the import…",
   "backfill.statusUnavailable":
-    "Import status is unavailable. Capture continues.",
-  "backfill.queuedTitle": "Import queued",
-  "backfill.runningTitle": "Importing mailbox history",
+    "The import status is not available right now. New emails still come in.",
+  "backfill.queuedTitle": "Import starts soon",
+  "backfill.runningTitle": "Importing old emails",
   // The pill beside a live title: the indigo on the card is a claim that a
   // machine is doing the reading, and this is the same claim in words.
-  "backfill.readingBadge": "Analyzing",
-  "backfill.doneTitle": "Mailbox history import complete",
-  "backfill.errorTitle": "Import error",
-  "backfill.cancelledTitle": "Import canceled",
+  "backfill.readingBadge": "Reading",
+  "backfill.doneTitle": "Old emails imported",
+  "backfill.errorTitle": "Import stopped",
+  "backfill.cancelledTitle": "You stopped the import",
   "backfill.progressLabel": "Import progress",
-  "backfill.countScanned": "Messages scanned",
-  "backfill.statEmails": "Emails captured",
-  "backfill.statContacts": "Contacts",
+  "backfill.statEmails": "Emails added",
+  "backfill.statContacts": "New contacts",
   // The count is domains this run raised a company question for, not
   // companies created — a domain becomes one only if its site says so.
   "backfill.statCompanies": "Companies to check",
   "backfill.errorNote":
-    "The import retries automatically. Everything captured so far is kept.",
-  "backfill.cancel": "Stop import",
-  "backfill.cancelledNote": "Stopped. Everything captured so far is kept.",
+    "The import stopped because of an error. Everything imported so far is kept.",
+  "backfill.cancel": "Stop",
+  "backfill.cancelledNote": "Everything imported so far is kept.",
   // On a run that has stopped — cancelled, failed or finished. The window it
   // opens on is the one that ran, because the server only ever widens.
-  "backfill.restart": "Start another import",
+  "backfill.restart": "Start a new import",
   "backfill.unsupportedNote":
-    "This mailbox type does not support history import. Only new mail is captured.",
+    "This mailbox cannot import old emails. New emails still come in.",
   "backfill.narrowingNote":
-    "A wider window already ran for this mailbox. The import window can only be widened.",
-  "backfill.staleUpdated": "Last updated {duration} ago. No recent progress.",
+    "This mailbox already went back further. Pick the same time or longer.",
+  "backfill.staleUpdated": "No progress for {duration}.",
+  "backfill.countScanned_one": "{count} email checked",
+  "backfill.countScanned_other": "{count} emails checked",
+  "backfill.errorResumeNote":
+    "The import stopped because of an error. You can continue where it left off.",
+  "backfill.resumeNote_one": "The last import stopped after {count} email.",
+  "backfill.resumeNote_other": "The last import stopped after {count} emails.",
+  "backfill.resumeCta": "Continue",
+  "backfill.startOverCta": "Start over",
+  "backfill.failedNote_one":
+    "{count} email could not be added and was left out.",
+  "backfill.failedNote_other":
+    "{count} emails could not be added and were left out.",
 
   // The units an installation composed, offered on the settings page that
   // already holds the kind of credential each one is configured with. The two
@@ -7797,6 +7813,21 @@ export const en = {
   "auto.delete": "Delete",
   "auto.statusEnabled": "Enabled",
   "auto.statusPaused": "Paused",
+  "auto.pausedReason.listArchived":
+    "Paused because the list it watches or adds to was archived. Restoring the list does not resume it.",
+  "auto.pausedReason.listInvalid":
+    "Paused because the filter of the Live List it watches stopped working. Fixing the filter does not resume it.",
+  "auto.pausedReason.listUnavailable":
+    "Paused because its owner can no longer find the list it watches.",
+  "auto.pausedReason.burst":
+    "Paused because one check moved more than 100 records. It acted on none of them.",
+  "auto.lists.placeholder": "Choose a list",
+  "auto.lists.needsWatched":
+    "Choose the Live List first. The Shortlist holds the same record type.",
+  "auto.lists.loadError": "Lists could not be loaded.",
+  "auto.lists.noLive": "No Live Lists yet. Save a filter as a Live List first.",
+  "auto.lists.noShortlist":
+    "No Shortlist of this record type that can be changed here.",
   "auto.dateField.placeholder": "Select date field",
   "auto.dateField.needsObject":
     "Choose an object first to list its date fields.",
@@ -9257,6 +9288,56 @@ export const en = {
   "aiProviderKeys.withheld":
     "Only an administrator or operations user who can change model bindings can see which providers have a key.",
   "aiProviderKeys.remove": "Remove",
+  "aiProviderKeys.serviceAccountConfigured": "Service account key configured",
+  "serviceAccountKey.label": "Service-account key (JSON)",
+  "serviceAccountKey.placeholder":
+    "Paste the whole key file Google Cloud downloaded",
+  "serviceAccountKey.fileLabel": "Or choose the key file",
+  "serviceAccountKey.fileEmpty":
+    "Drop the .json key file here, or click to choose it",
+  "serviceAccountKey.empty":
+    "Paste the contents of the key file, or choose the file.",
+  "serviceAccountKey.notJson":
+    "This is not JSON. Paste the whole key file exactly as Google Cloud downloaded it.",
+  "serviceAccountKey.notServiceAccount":
+    "This JSON is not a service-account key: it needs type service_account, a client_email and a private_key.",
+  "serviceAccountKey.unreadable":
+    "The file could not be read. Choose it again, or paste its contents.",
+  "aiRouting.location.label": "Location",
+  "aiRouting.location.help":
+    "Where Google processes the calls this lane makes.",
+  "aiRouting.location.residentHelp":
+    "The eu_hosted profile admits only the locations marked EU resident.",
+  "aiRouting.location.forbidden":
+    "This location is outside the EU, so the eu_hosted profile refuses it. Choose an EU-resident location.",
+  "aiRouting.location.loading":
+    "Asking Google which locations this key can reach…",
+  "aiRouting.location.noKey":
+    "No service-account key is held yet. Add it under Model provider keys and the locations it can reach are listed here.",
+  "aiRouting.location.unreachable":
+    "Google did not answer, so only the stored location is offered. Saving checks it again.",
+  "aiRouting.location.noModels":
+    "{location} serves none of the models Google lists. Any id it serves still works: type it.",
+  "aiRouting.location.option": "{group} · {name} ({id})",
+  "aiRouting.location.optionBare": "{group} · {id}",
+  "aiRouting.location.group.eu": "EU",
+  "aiRouting.location.group.us": "US",
+  "aiRouting.location.group.other": "Other",
+  "aiRouting.location.group.global": "Global",
+  "aiRouting.location.resident": "EU resident",
+  "aiRouting.location.nonResident": "Not resident",
+  "aiRouting.location.notResident": "outside the EU",
+  "aiRouting.probe.checking": "Checking whether {location} serves this model…",
+  "aiRouting.probe.served": "Served in {location}.",
+  "aiRouting.probe.notServed":
+    "Not served in {location}. Choose another model or location.",
+  "aiRouting.probe.unverified":
+    "Could not verify this model in {location}. Saving asks Google again.",
+  "aiRouting.probe.cleared":
+    "{model} is not served in {location}, so the field was cleared.",
+  "firstRun.ai.euResidency": "EU data residency",
+  "firstRun.ai.locationBeforeKey":
+    "EU (multi-region) keeps every call inside the EU. Other locations are listed under Settings → AI once the key is saved.",
   "aiRouting.withheld":
     "Only an administrator or operations user who can change model bindings can see which models this installation uses.",
   "aiRouting.title": "Model tiers",
@@ -10419,6 +10500,34 @@ export const en = {
   "filters.saveList": "Save as Live List",
   "filters.saveListTitle": "Save this filter as a Live List",
   "filters.saveListConfirm": "Save list",
+  "filters.propose.label": "Describe the list in plain words",
+  "filters.propose.hint":
+    "Margince proposes conditions for the filter below. Nothing is saved until you press Save.",
+  "filters.propose.placeholder":
+    "Companies in Germany with no activity in the last 45 days",
+  "filters.propose.submit": "Propose filter",
+  "filters.propose.busy": "Reading your description",
+  "filters.propose.noModel":
+    "Plain-words filters need an AI model configured. You can still build the filter by hand.",
+  "filters.propose.unreadable":
+    "The proposal could not be read. Try describing the list another way.",
+  "filters.propose.readyTitle": "A filter is ready",
+  "filters.propose.readyBody":
+    "Your filter already has conditions. Replace them with the proposal, or add the proposal to them.",
+  "filters.propose.replace": "Replace current filter",
+  "filters.propose.add": "Add to current filter",
+  "filters.propose.discard": "Discard proposal",
+  "filters.propose.unusedTitle": "Could not use",
+  "filters.propose.unusedDismiss": "Dismiss",
+  "filters.propose.unusedItem": "“{phrase}”: {reason}",
+  "filters.propose.reason.unknownField":
+    "No field you can filter on here records this.",
+  "filters.propose.reason.operator": "{field} cannot be compared that way.",
+  "filters.propose.reason.value": "{field} does not take that value.",
+  "filters.propose.reason.notVerifiable":
+    "{field} lists options you cannot see, so the value could not be checked.",
+  "filters.propose.reason.tooMany":
+    "The filter already holds as many conditions as it can.",
   "lists.page": "List",
   "lists.section.label": "Show",
   "lists.section.views": "My views",
@@ -10472,7 +10581,7 @@ export const en = {
   "lists.settingsTitle": "Edit this list",
   "lists.archive": "Archive list",
   "lists.restore": "Restore",
-  "lists.unavailable": "Lists are not switched on for this installation.",
+  "lists.unavailable": "Lists are switched off for this installation.",
   "lists.gone": "This list is not there, or it is not shared with you.",
   "lists.unnamed": "Unnamed",
   "lists.head.facts":
@@ -10502,8 +10611,6 @@ export const en = {
     "Nothing chosen yet. Add records from a record page or a selection.",
   "lists.members.projects":
     "Project lists show their members in the Projects list.",
-  "lists.members.whyColumn": "Why",
-  "lists.members.why": "Why?",
   "lists.members.selectAll_one": "Select all {count} member",
   "lists.members.selectAll_other": "Select all {count} members",
   "lists.members.selectionFullTitle": "The selection is full",
@@ -10529,7 +10636,6 @@ export const en = {
   "lists.history.reason.bulk": "in a bulk change",
   "lists.history.reason.archived": "because the record was archived",
   "lists.history.reason.restored": "because the record was restored",
-  "lists.why.title": "Why {name}",
   "lists.why.loading": "Working out why",
   "lists.why.liveMember": "On this list: its filter selects this record now.",
   "lists.why.liveNotMember":
@@ -10546,15 +10652,20 @@ export const en = {
   "lists.why.hidden": "Value hidden from you",
   "lists.why.daysAgo_one": "{count} day ago",
   "lists.why.daysAgo_other": "{count} days ago",
-  "lists.why.chosen": "Chosen by {who} on {when}.",
-  "lists.why.someone": "someone",
-  "lists.why.notChosen": "This record is not on this Shortlist.",
+  "lists.why.today": "today",
+  "lists.why.inDays_one": "in {count} day",
+  "lists.why.inDays_other": "in {count} days",
   "lists.remove": "Take off the Shortlist",
   "lists.removeTitle": "Take this record off the Shortlist?",
   "lists.note": "Why (optional)",
   "lists.noteHint": "Kept with the change so colleagues can see why.",
+  "lists.record.title": "Lists",
+  "lists.record.loading": "Loading lists",
+  "lists.record.empty": "Not on any list you can find.",
+  "lists.record.check": "Check a Live List",
+  "lists.record.checkPick": "Pick a Live List",
+  "lists.record.truncated": "And more lists not shown here.",
   "lists.addToShortlist": "Add to Shortlist",
-  "lists.onShortlists": "On Shortlists",
   "lists.add": "Add",
   "lists.shortlist": "Shortlist",
   "lists.pickShortlist": "Pick a Shortlist",
@@ -10572,13 +10683,48 @@ export const en = {
     "Last checked {when}. It matched too many records to record who joined and left.",
   "lists.head.pulse": "Since your last visit: {entered} joined, {left} left",
   "lists.members.new": "New",
+  "lists.members.hidden": "Hidden",
+  "lists.members.addedBy": "Added by",
+  "lists.members.addedOn": "Added on",
+  "lists.members.note": "Note",
   "lists.history.entered": "Joined as of {when}",
   "lists.history.left": "Left as of {when}",
   "lists.history.reason.filterChanged": "after the filter changed",
   "lists.history.checker": "The 15-minute check",
   "lists.history.liveNote":
     "The check runs every 15 minutes and takes the lists checked longest ago first, so with very many lists one can wait longer; “Last checked” says when it was. Who joined and left is recorded as of the check that noticed it, and a record that joins and leaves between two checks is not recorded.",
+  "lists.editFilter": "Edit filter",
+  "lists.editingTitle": "Editing the filter of {name}",
+  "lists.editingBody":
+    "Save to the list to change which records it holds. Save as Live List makes a new list instead.",
+  "lists.saveFilterTo": "Save to {name}",
+  "lists.saveFilterTitle": "Change the filter of {name}?",
+  "lists.saveFilterBody":
+    "Records join and leave the list by the new filter from now on, and the change is kept in its history. Everyone who can find the list sees the new members.",
+  "lists.saveFilterConfirm": "Save filter",
+  "lists.saveFilterConflict":
+    "Someone changed this list after you opened it. Open the list again to see their change, then edit the filter.",
   "lists.history.someone": "Someone",
+  "lists.changes.since": "Since your visit on {when}:",
+  "lists.changes.joined_one": "{count} joined",
+  "lists.changes.joined_other": "{count} joined",
+  "lists.changes.left_one": "{count} left",
+  "lists.changes.left_other": "{count} left",
+  "lists.changes.more_one": "+{count} more",
+  "lists.changes.more_other": "+{count} more",
+  "lists.changes.nothing": "nothing joined or left.",
+  "lists.changes.filter_one": "The filter changed once.",
+  "lists.changes.filter_other": "The filter changed {count} times.",
+  "lists.rules.watches": "{name} watches this list",
+  "lists.rules.writes": "{name} adds records to this list",
+  "lists.rules.hidden": "An automation that cannot be opened here",
+  "lists.rules.archiveTitle": "Archive this list?",
+  "lists.rules.archiveLead":
+    "These automations pause when the list is archived. Restoring the list does not resume them.",
+  "lists.rules.settingsLead": "Automations that use this list:",
+  "lists.rules.settingsLeadLive":
+    "Automations that use this list. Changing its filter changes what they act on:",
+  "lists.history.reason.automation": "by an automation",
 
   // The Filters & views screen's own chrome. The match line is keyed per object
   // because "3 contacts match" and "3 companies match" are different sentences in
@@ -11555,6 +11701,7 @@ export const en = {
   "firstRun.ignite.act":
     "send anything or change a record without your approval",
   "firstRun.ignite.carryOn": "Continue",
+  "firstRun.ignite.leaving": "Checking setup…",
   "firstRun.ai.foot":
     "Nothing is sent to the provider until you select Continue.",
   "contact.readings.title": "Contact status",
