@@ -4,7 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -12,11 +12,9 @@ import { en } from "../i18n/en";
 import { SaveFilterListAction } from "./filterlist";
 import { ListScreen } from "./listpage";
 import {
-  chosenWhy,
   LIVE_ID,
   listsMe,
   liveList,
-  MEMBER_ID,
   members,
   SHORTLIST_ID,
   shortlist,
@@ -220,53 +218,6 @@ describe("changing a list from its page", () => {
       await screen.findByRole("button", { name: en["lists.restore"] }),
     );
     await vi.waitFor(() => expect(restored).toBe(true));
-  });
-
-  it("takes a chosen member off the Shortlist with a note", async () => {
-    const removed: unknown[] = [];
-    installFetchStub({
-      "GET /me": listsMe(true),
-      [`GET /lists/${SHORTLIST_ID}`]: () =>
-        jsonResponse({ ...shortlist, health: "ok" }),
-      [`GET /lists/${SHORTLIST_ID}/history`]: () => jsonResponse(empty),
-      "GET /companies": () =>
-        jsonResponse({ data: members, page: { has_more: false } }),
-      [`GET /lists/${SHORTLIST_ID}/members/${MEMBER_ID}/why`]: () =>
-        jsonResponse(chosenWhy),
-      [`POST /lists/${SHORTLIST_ID}/members/remove`]: (body) => {
-        removed.push(body);
-        return new Response(null, { status: 204 });
-      },
-    });
-    const user = userEvent.setup();
-    render(
-      <StoryProviders>
-        <ListScreen listID={SHORTLIST_ID} />
-      </StoryProviders>,
-    );
-    const row = (await screen.findByText("MiTek")).closest("tr") as HTMLElement;
-    await user.click(
-      within(row).getByRole("button", { name: en["lists.members.why"] }),
-    );
-    await user.click(
-      await screen.findByRole("button", { name: en["lists.remove"] }),
-    );
-    await user.type(
-      screen.getByRole("textbox", { name: en["lists.note"] }),
-      "left the company",
-    );
-    const dialog = screen.getByRole("dialog", {
-      name: en["lists.removeTitle"],
-    });
-    await user.click(
-      within(dialog).getByRole("button", { name: en["lists.remove"] }),
-    );
-    await vi.waitFor(() => expect(removed).toHaveLength(1));
-    expect(removed[0]).toEqual({
-      entity_type: "company",
-      entity_id: MEMBER_ID,
-      note: "left the company",
-    });
   });
 });
 

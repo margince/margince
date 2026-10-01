@@ -30,9 +30,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 294 |
-| Columns | 3490 |
-| Foreign keys | 475 |
+| Tables | 293 |
+| Columns | 3482 |
+| Foreign keys | 472 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -42,11 +42,11 @@ Ranked by how many foreign keys point at them, so this list follows the schema r
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 22 | 126 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 42 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 41 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 40 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 32 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 22 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 36 | 14 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 36 | 13 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 11 | 8 |
@@ -101,7 +101,7 @@ erDiagram
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 36 |
-| [consent](consent.md) | 18 |
+| [consent](consent.md) | 17 |
 | [contacts](contacts.md) | 39 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
@@ -182,7 +182,7 @@ erDiagram
 | [`capture_alias_sighting`](capture.md#capture_alias_sighting) | capture | 5 | 0 |
 | [`capture_auto_enrich_budget`](capture.md#capture_auto_enrich_budget) | capture | 2 | 0 |
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 7 | 0 |
-| [`capture_backfill`](capture.md#capture_backfill) | capture | 23 | 1 |
+| [`capture_backfill`](capture.md#capture_backfill) | capture | 25 | 1 |
 | [`capture_backfill_creation`](capture.md#capture_backfill_creation) | capture | 4 | 0 |
 | [`capture_connection`](capture.md#capture_connection) | capture | 20 | 2 |
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |
@@ -207,7 +207,6 @@ erDiagram
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 24 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 17 | 2 |
-| [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 11 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
 | [`company`](contacts.md#company) | contacts | 43 | 40 |
@@ -229,7 +228,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 10 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 32 | 42 |
+| [`contact`](contacts.md#contact) | contacts | 32 | 41 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 10 | 1 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |
@@ -298,7 +297,7 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
-| [`lead`](contacts.md#lead) | contacts | 36 | 14 |
+| [`lead`](contacts.md#lead) | contacts | 36 | 13 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 8 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |

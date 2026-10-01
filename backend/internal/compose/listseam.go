@@ -50,7 +50,7 @@ func (s listSeam) ReadLists(ctx context.Context, q agents.ListRead) (json.RawMes
 	case agents.ListModeGet:
 		return encodedListAnswer(s.store.ListView(ctx, listID(*q.ListID)))
 	case agents.ListModeMembers:
-		return encodedListAnswer(s.store.MembersPage(ctx, listID(*q.ListID), q.Limit, q.Cursor))
+		return encodedListAnswer(s.store.MembersPage(ctx, listID(*q.ListID), collections.MemberRead{Limit: q.Limit, Cursor: q.Cursor}))
 	case agents.ListModeWhy:
 		return encodedListAnswer(s.store.ExplainView(ctx, listID(*q.ListID), *q.RecordID))
 	case agents.ListModeHistory:

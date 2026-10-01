@@ -6822,6 +6822,11 @@ export interface paths {
          *     cannot see is absent, and nothing says it was there. For member rows with their record's
          *     own columns, read the record list (`listContacts`, `listCompanies`, `listDeals`,
          *     `listLeads`) with `list_id`.
+         *
+         *     A Live List member carries `values`: what each field its filter names holds on that
+         *     record, read the way the explanation reads it, so a masked field, a fact on a linked
+         *     record or a reference to a row this caller cannot open is `hidden`. A Shortlist member
+         *     carries the name of who added it.
          */
         get: operations["listListMembers"];
         put?: never;
@@ -6873,6 +6878,33 @@ export interface paths {
          *     see answers `404`, whether or not it is a member.
          */
         get: operations["explainListMember"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/{entity_type}/{entity_id}/lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "contact" | "company" | "deal" | "lead";
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The lists one record is on that this caller may find.
+         * @description Every Shortlist the record was chosen for, and every Live List whose filter selects it
+         *     now, evaluated by the same SQL the member read uses. Only lists this caller may find, and
+         *     not archived ones; a Live List whose filter no longer compiles is left out. A record that
+         *     does not exist, is archived, or that this caller cannot see answers `404`. Each list carries its identity, kind and sharing; read
+         *     `getList` for its counts and health.
+         */
+        get: operations["getRecordLists"];
         put?: never;
         post?: never;
         delete?: never;
@@ -20382,6 +20414,8 @@ export interface components {
              * @enum {string}
              */
             window: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
+            /** @description Read the window again from the newest message even where the last run ended on an error and could be continued (BackfillStatus.resumable). Omitted or false continues that run, with its counts, when its window covers this one. */
+            start_over?: boolean;
         };
         /** @description The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1). */
         BackfillStatus: {
@@ -20401,9 +20435,13 @@ export interface components {
                 messages_scanned?: number;
                 captured?: number;
                 skipped?: number;
+                /** @description Messages the run could not capture and walked past. Committed pages only. */
+                failed?: number;
                 contacts_created?: number;
                 companies_created?: number;
             };
+            /** @description The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again. */
+            resumable?: boolean;
             /** Format: date-time */
             started_at?: string | null;
             /** Format: date-time */
@@ -30859,9 +30897,23 @@ export interface components {
             entity_id: string;
             /** @description The principal that added a Shortlist member; `dynamic` for a Live List member. */
             added_by?: string;
+            /** @description For a Shortlist member, the display name of the user who added it; null for any other principal. */
+            added_by_name?: string | null;
             /** Format: date-time */
             created_at?: string;
             note?: string | null;
+            /** @description For a Live List member: each field the list's filter names, by field name, with what it holds on this record for this caller. Absent for a Shortlist member. */
+            values?: {
+                [key: string]: components["schemas"]["ListFieldValue"];
+            };
+        };
+        ListFieldValue: {
+            /** @description The value as text, as the explanation states it; null when the record holds none. */
+            value?: string | null;
+            /** @description The value is not shown to this caller. */
+            hidden: boolean;
+            /** @description For a reference to a company or project this caller may open, its name. */
+            label?: string | null;
         };
         CreateListRequest: {
             name: string;
@@ -30939,6 +30991,8 @@ export interface components {
             value?: string | null;
             /** @description The value is not shown to this caller. */
             hidden?: boolean;
+            /** @description For a reference to a company or project this caller may open, its name. */
+            value_label?: string | null;
         };
         ListMemberExplanation: {
             /** Format: uuid */
@@ -30990,6 +31044,11 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             sharing?: string | null;
+        };
+        RecordListsResponse: {
+            data: components["schemas"]["List"][];
+            /** @description More lists hold the record than one answer carries; `data` is the first 1000 by name. */
+            truncated: boolean;
         };
         ListHistoryResponse: {
             data: components["schemas"]["ListHistoryEntry"][];
@@ -53055,6 +53114,8 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor. */
+                entity_id?: string[];
             };
             header?: never;
             path: {
@@ -53161,6 +53222,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListMemberExplanation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getRecordLists: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "contact" | "company" | "deal" | "lead";
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The lists the record is on, by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordListsResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];

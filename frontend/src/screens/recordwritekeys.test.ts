@@ -24,6 +24,7 @@ describe("recordWriteKeys", () => {
       ["contact", "p-1"],
       ["contact360", "p-1"],
       ["contactBrief", "p-1"],
+      ["lists", "record", "contact", "p-1"],
     ]);
   });
 

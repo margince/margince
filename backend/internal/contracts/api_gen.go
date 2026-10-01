@@ -23975,8 +23975,11 @@ type BackfillStatus struct {
 		Captured         *int `json:"captured,omitempty"`
 		CompaniesCreated *int `json:"companies_created,omitempty"`
 		ContactsCreated  *int `json:"contacts_created,omitempty"`
-		MessagesScanned  *int `json:"messages_scanned,omitempty"`
-		Skipped          *int `json:"skipped,omitempty"`
+
+		// Failed Messages the run could not capture and walked past. Committed pages only.
+		Failed          *int `json:"failed,omitempty"`
+		MessagesScanned *int `json:"messages_scanned,omitempty"`
+		Skipped         *int `json:"skipped,omitempty"`
 	} `json:"counts,omitempty"`
 
 	// EstimateIsFloor True when `estimated_messages` is a floor (see BackfillPreview): the denominator can be passed, so a client shows counts rather than a percentage instead of drawing a bar past its end. Persisted with the run, because the preview that produced the number is long gone by the time progress is read.
@@ -23990,8 +23993,11 @@ type BackfillStatus struct {
 
 	// OfferedWindows The windows THIS installation admits, in reach order — the product's supported set narrowed by `capture.max_backfill_months` where an operator set one. A picker offers these and no others: the preview and the start both refuse a window above the cap, so offering one is offering a choice that 422s. Absent or empty means the client should fall back to the full supported set rather than render an empty picker.
 	OfferedWindows *[]BackfillStatusOfferedWindows `json:"offered_windows,omitempty"`
-	StartedAt      *time.Time                      `json:"started_at,omitempty"`
-	State          BackfillStatusState             `json:"state"`
+
+	// Resumable The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again.
+	Resumable *bool               `json:"resumable,omitempty"`
+	StartedAt *time.Time          `json:"started_at,omitempty"`
+	State     BackfillStatusState `json:"state"`
 
 	// UpdatedAt Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").
 	UpdatedAt *time.Time            `json:"updated_at,omitempty"`
@@ -35184,6 +35190,9 @@ type ListClauseVerdict struct {
 
 	// Value The record's current value of the field, as text.
 	Value *string `json:"value,omitempty"`
+
+	// ValueLabel For a reference to a company or project this caller may open, its name.
+	ValueLabel *string `json:"value_label,omitempty"`
 }
 
 // ListClauseVerdictJoin defines model for ListClauseVerdict.Join.
@@ -35215,6 +35224,18 @@ type ListDependencyKind string
 
 // ListDependencyRole For an automation: whether it watches this Live List or adds to this Shortlist.
 type ListDependencyRole string
+
+// ListFieldValue defines model for ListFieldValue.
+type ListFieldValue struct {
+	// Hidden The value is not shown to this caller.
+	Hidden bool `json:"hidden"`
+
+	// Label For a reference to a company or project this caller may open, its name.
+	Label *string `json:"label,omitempty"`
+
+	// Value The value as text, as the explanation states it; null when the record holds none.
+	Value *string `json:"value,omitempty"`
+}
 
 // ListHistoryEntry defines model for ListHistoryEntry.
 type ListHistoryEntry struct {
@@ -35261,13 +35282,19 @@ type ListListResponse struct {
 // ListMember defines model for ListMember.
 type ListMember struct {
 	// AddedBy The principal that added a Shortlist member; `dynamic` for a Live List member.
-	AddedBy    *string              `json:"added_by,omitempty"`
-	CreatedAt  *time.Time           `json:"created_at,omitempty"`
-	EntityId   openapi_types.UUID   `json:"entity_id"`
-	EntityType ListMemberEntityType `json:"entity_type"`
-	Id         openapi_types.UUID   `json:"id"`
-	ListId     openapi_types.UUID   `json:"list_id"`
-	Note       *string              `json:"note,omitempty"`
+	AddedBy *string `json:"added_by,omitempty"`
+
+	// AddedByName For a Shortlist member, the display name of the user who added it; null for any other principal.
+	AddedByName *string              `json:"added_by_name,omitempty"`
+	CreatedAt   *time.Time           `json:"created_at,omitempty"`
+	EntityId    openapi_types.UUID   `json:"entity_id"`
+	EntityType  ListMemberEntityType `json:"entity_type"`
+	Id          openapi_types.UUID   `json:"id"`
+	ListId      openapi_types.UUID   `json:"list_id"`
+	Note        *string              `json:"note,omitempty"`
+
+	// Values For a Live List member: each field the list's filter names, by field name, with what it holds on this record for this caller. Absent for a Shortlist member.
+	Values *map[string]ListFieldValue `json:"values,omitempty"`
 }
 
 // ListMemberEntityType defines model for ListMember.EntityType.
@@ -38815,6 +38842,14 @@ type RecordGrantRecordType string
 // RecordGrantSubjectType defines model for RecordGrant.SubjectType.
 type RecordGrantSubjectType string
 
+// RecordListsResponse defines model for RecordListsResponse.
+type RecordListsResponse struct {
+	Data []List `json:"data"`
+
+	// Truncated More lists hold the record than one answer carries; `data` is the first 1000 by name.
+	Truncated bool `json:"truncated"`
+}
+
 // RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
 type RecordQualifyingEventRequest struct {
 	// Kind The two kinds a human may state. `in_person` is an exchange that happened in a room —
@@ -41839,6 +41874,9 @@ type StageTransitionRecord struct {
 
 // StartBackfillRequest defines model for StartBackfillRequest.
 type StartBackfillRequest struct {
+	// StartOver Read the window again from the newest message even where the last run ended on an error and could be continued (BackfillStatus.resumable). Omitted or false continues that run, with its counts, when its window covers this one.
+	StartOver *bool `json:"start_over,omitempty"`
+
 	// Window `none` is expressed by never calling this op. Widen-only versus a prior run.
 	Window StartBackfillRequestWindow `json:"window"`
 }
@@ -49480,6 +49518,9 @@ type ListListMembersParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// EntityId Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor.
+	EntityId *[]openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
 }
 
 // GetMagicParams defines parameters for GetMagic.
@@ -64844,6 +64885,9 @@ type ServerInterface interface {
 	// Relabel, reorder, re-scope or retire a responsibility role.
 	// (PATCH /record-roles/{id})
 	UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams)
+	// The lists one record is on that this caller may find.
+	// (GET /records/{entity_type}/{entity_id}/lists)
+	GetRecordLists(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
 	// The tags on one record, and who put them there.
 	// (GET /records/{entity_type}/{entity_id}/tags)
 	GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
@@ -68993,6 +69037,12 @@ func (_ Unimplemented) CreateRecordRole(w http.ResponseWriter, r *http.Request, 
 // Relabel, reorder, re-scope or retire a responsibility role.
 // (PATCH /record-roles/{id})
 func (_ Unimplemented) UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The lists one record is on that this caller may find.
+// (GET /records/{entity_type}/{entity_id}/lists)
+func (_ Unimplemented) GetRecordLists(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -90513,6 +90563,19 @@ func (siw *ServerInterfaceWrapper) ListListMembers(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// ------------- Optional query parameter "entity_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity_id", r.URL.Query(), &params.EntityId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListListMembers(w, r, id, params)
 	}))
@@ -96077,6 +96140,49 @@ func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateRecordRole(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetRecordLists operation middleware
+func (siw *ServerInterfaceWrapper) GetRecordLists(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_type" -------------
+	var entityType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_type", chi.URLParam(r, "entity_type"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", chi.URLParam(r, "entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRecordLists(w, r, entityType, entityId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -104601,6 +104707,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/record-roles/{id}", wrapper.UpdateRecordRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/lists", wrapper.GetRecordLists)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/tags", wrapper.GetRecordTags)

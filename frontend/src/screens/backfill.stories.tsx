@@ -136,7 +136,7 @@ export const Cancelled: Story = {
   }),
 };
 
-// The stopped run, and the way back out of it: pressing "Start another import"
+// The stopped run, and the way back out of it: pressing "Start a new import"
 // puts the window picker in front of the reader again, opened on the window
 // that ran. Without it, stopping once left the mailbox with no path to a
 // second import at all.
@@ -160,9 +160,9 @@ export const RestartAfterCancel: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: /Start another import/ }),
+      await canvas.findByRole("button", { name: /Start a new import/ }),
     );
-    await canvas.findByText("890 messages in that period.");
+    await canvas.findByText("890 emails in that time.");
   },
 };
 
