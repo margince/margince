@@ -39,6 +39,17 @@ decisions: {provider: jev_compatible, model: typesafe/jev-1.13, base_url: "https
 `,
 			want: "498572ba4efcfbfd7e27eaeda5f259192d1cc99596e65cda4366ecbf86dfdfa6",
 		},
+		"a broker binding whose tiers are served differently per model": {
+			doc: `profile: cloud_frontier
+tiers:
+  local_small: {provider: openai_compatible, model: openai/gpt-oss-120b, base_url: "https://openrouter.ai/api"}
+  cheap_cloud: {provider: openai_compatible, model: openai/gpt-oss-120b, base_url: "https://openrouter.ai/api"}
+  premium: {provider: openai_compatible, model: mistralai/mistral-medium-3-5, base_url: "https://openrouter.ai/api", routing: {}}
+  frontier: {provider: openai_compatible, model: anthropic/claude-sonnet-4.6, base_url: "https://openrouter.ai/api", routing: {quantizations: [fp16, bf16, fp32], require_parameters: true}}
+embeddings: {provider: openai_compatible, model: mistralai/mistral-embed-2312, base_url: "https://openrouter.ai/api", dimensions: 1024}
+`,
+			want: "54b0da1f30ff47919042f00d9882f066910972f4dcdb0b55a2d408a912d76aeb",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if got := versionOf(t, tc.doc); got != tc.want {
@@ -119,17 +130,21 @@ func TestLift_DisagreeingLanesFirstInOrderWinsAndWarns(t *testing.T) {
 	}
 }
 
-func TestLift_ReasoningEffortStaysOnTheTier(t *testing.T) {
+func TestLift_ServingPrefsStayOnTheTier(t *testing.T) {
 	log, _ := warnings()
 	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{
-		TierPremium: brokerLane("m", &OpenRouterRouting{Sort: SortThroughput, ReasoningEffort: effortHigh}),
+		TierPremium:    brokerLane("m", &OpenRouterRouting{Only: []string{"mistral/eu"}, Sort: SortThroughput, ReasoningEffort: effortHigh}),
+		TierCheapCloud: brokerLane("m", &OpenRouterRouting{Only: []string{"mistral/eu"}}),
 	}}
 	lifted := cfg.liftLaneProviderFields(log)
-	if got := lifted.Providers[providerOpenAICompatible].Upstream; !reflect.DeepEqual(got, &OpenRouterRouting{Sort: SortThroughput}) {
-		t.Errorf("provider upstream = %+v, want the sort without the effort", got)
+	if got := lifted.Providers[providerOpenAICompatible].Upstream; !reflect.DeepEqual(got, &OpenRouterRouting{Only: []string{"mistral/eu"}}) {
+		t.Errorf("provider upstream = %+v, want the pin alone", got)
 	}
-	if got := lifted.Tiers[TierPremium].ReasoningEffort; got != effortHigh {
-		t.Errorf("tier effort = %q, want %q", got, effortHigh)
+	if got := lifted.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, &OpenRouterRouting{Sort: SortThroughput, ReasoningEffort: effortHigh}) {
+		t.Errorf("tier premium routing = %+v, want its sort and effort without the pin", got)
+	}
+	if got := lifted.Tiers[TierCheapCloud].Routing; got == nil || !got.IsEmpty() {
+		t.Errorf("tier cheap_cloud routing = %+v, want `{}`: it never took the product default, and must not start", got)
 	}
 }
 
@@ -171,51 +186,66 @@ decisions: {provider: jev_compatible, model: d}
 func TestResolve_EmbeddingsGetsOnlyFilterFields(t *testing.T) {
 	cfg := mustParse(t, `profile: cloud_frontier
 providers:
-  openai_compatible: {base_url: "https://openrouter.ai/api", upstream: {only: [a], sort: throughput, quantizations: [fp8], allow_fallbacks: false}}
+  openai_compatible: {base_url: "https://openrouter.ai/api", upstream: {only: [a], allow_fallbacks: false}}
 tiers:
-  premium: {provider: openai_compatible, model: m}
+  premium: {provider: openai_compatible, model: m, routing: {sort: throughput, quantizations: [fp8]}}
 embeddings: {provider: openai_compatible, model: e}
 `)
 	off := false
 	if got, want := cfg.Embeddings.Routing, (&OpenRouterRouting{Only: []string{"a"}, AllowFallbacks: &off}); !reflect.DeepEqual(got, want) {
-		t.Errorf("embeddings routing = %+v, want only the host filters %+v", got, want)
+		t.Errorf("embeddings routing = %+v, want only the provider's pins %+v", got, want)
 	}
 	full := &OpenRouterRouting{Only: []string{"a"}, Sort: SortThroughput, Quantizations: []string{"fp8"}, AllowFallbacks: &off}
 	if got := cfg.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, full) {
-		t.Errorf("tier routing = %+v, want the whole block %+v", got, full)
+		t.Errorf("tier routing = %+v, want its own serving preferences plus the pins %+v", got, full)
 	}
 }
 
-func TestResolve_AbsentUpstreamStillGetsProductDefault(t *testing.T) {
-	const doc = `profile: cloud_frontier
+func TestResolve_AbsentTierRoutingGetsTheProductDefaultAndThePins(t *testing.T) {
+	cfg := mustParse(t, `profile: cloud_frontier
 providers:
-  openai_compatible: {base_url: "https://openrouter.ai/api"}
+  openai_compatible: {base_url: "https://openrouter.ai/api", upstream: {only: [mistral/eu]}}
 tiers:
   premium: {provider: openai_compatible, model: m}
-  cheap_cloud: {provider: openai_compatible, model: m, reasoning_effort: low}
 embeddings: {provider: gemini, model: e}
-`
-	cfg := mustParse(t, doc)
-	if got := cfg.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, DefaultOpenRouterRouting()) {
-		t.Errorf("tier premium routing = %+v, want the product default", got)
-	}
-	capped := DefaultOpenRouterRouting()
-	capped.ReasoningEffort = effortLow
-	if got := cfg.Tiers[TierCheapCloud].Routing; !reflect.DeepEqual(got, capped) {
-		t.Errorf("tier cheap_cloud routing = %+v, want the product default capped at low", got)
+`)
+	want := DefaultOpenRouterRouting()
+	want.Only = []string{"mistral/eu"}
+	if got := cfg.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, want) {
+		t.Errorf("tier routing = %+v, want the product default pinned %+v", got, want)
 	}
 }
 
-func TestResolve_EmptyUpstreamMeansNoPreferences(t *testing.T) {
+func TestResolve_TierOptOutKeepsOnlyProviderPins(t *testing.T) {
+	cfg := mustParse(t, `profile: cloud_frontier
+providers:
+  openai_compatible: {base_url: "https://openrouter.ai/api", upstream: {only: [mistral/eu]}}
+tiers:
+  premium: {provider: openai_compatible, model: m, routing: {}}
+embeddings: {provider: gemini, model: e}
+`)
+	if got, want := cfg.Tiers[TierPremium].Routing, (&OpenRouterRouting{Only: []string{"mistral/eu"}}); !reflect.DeepEqual(got, want) {
+		t.Errorf("tier routing = %+v, want the pin and none of the product default %+v", got, want)
+	}
+}
+
+func TestResolve_AnEmptyProviderUpstreamPinsNothing(t *testing.T) {
 	cfg := mustParse(t, `profile: cloud_frontier
 providers:
   openai_compatible: {base_url: "https://openrouter.ai/api", upstream: {}}
 tiers:
   premium: {provider: openai_compatible, model: m}
-embeddings: {provider: gemini, model: e}
+  cheap_cloud: {provider: openai_compatible, model: m, routing: {}}
+embeddings: {provider: openai_compatible, model: e}
 `)
-	if got := cfg.Tiers[TierPremium].Routing; got == nil || !got.IsEmpty() {
-		t.Errorf("tier routing = %+v, want the explicit opt-out, not the default", got)
+	if got := cfg.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, DefaultOpenRouterRouting()) {
+		t.Errorf("tier premium routing = %+v, want the product default untouched", got)
+	}
+	if got := cfg.Tiers[TierCheapCloud].Routing; got == nil || !got.IsEmpty() {
+		t.Errorf("tier cheap_cloud routing = %+v, want its opt-out kept", got)
+	}
+	if got := cfg.Embeddings.Routing; got != nil {
+		t.Errorf("embeddings routing = %+v, want none", got)
 	}
 }
 
@@ -230,7 +260,7 @@ embeddings: {provider: openai_compatible, model: e}
 `)
 	cfg.Tiers[TierPremium].Routing.Only[0] = "mutated"
 	cfg.Tiers[TierPremium].Routing.Sort = SortPrice
-	if got := cfg.Tiers[TierCheapCloud].Routing; got.Only[0] != "a" || got.Sort != "" {
+	if got := cfg.Tiers[TierCheapCloud].Routing; got.Only[0] != "a" || got.Sort != SortThroughput {
 		t.Errorf("tier cheap_cloud routing = %+v, changed with its sibling's", got)
 	}
 	if got := cfg.Embeddings.Routing.Only[0]; got != "a" {
@@ -281,10 +311,16 @@ func TestValidateProviderEntries(t *testing.T) {
 			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: "https://api.mistral.ai", Upstream: &OpenRouterRouting{}}}, "not an OpenRouter host",
 		},
 		"a reasoning effort in upstream": {
-			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker, Upstream: &OpenRouterRouting{ReasoningEffort: effortLow}}}, "set reasoning_effort on the tier",
+			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker, Upstream: &OpenRouterRouting{ReasoningEffort: effortLow}}}, "set per tier",
 		},
-		"a misspelt upstream sort": {
-			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker, Upstream: &OpenRouterRouting{Sort: "fastest"}}}, "sort",
+		"a serving preference in upstream": {
+			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker, Upstream: &OpenRouterRouting{Sort: SortThroughput}}}, "set per tier",
+		},
+		"a pin naming one host twice": {
+			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker, Upstream: &OpenRouterRouting{Only: []string{"a", "a"}}}}, "twice",
+		},
+		"a proxy host on a vendor adapter": {
+			ProfileCloudFrontier, map[string]ProviderSettings{providerAnthropic: {BaseURL: "https://gateway.example"}}, "",
 		},
 		"a host that is not http(s)": {ProfileCloudFrontier, map[string]ProviderSettings{providerVLLM: {BaseURL: "ftp://x"}}, "not an http(s) URL"},
 		"an unbound local host under sovereign": {
@@ -325,12 +361,12 @@ func TestBoundProviders_NamesEveryLaneInLiftOrder(t *testing.T) {
 	}
 }
 
-// A stored row written before canonical() existed carries resolved lanes, the
-// product default included; loading it again must neither move the version nor
-// pin that default onto the provider, where it would stop tracking the product.
+// A stored row written before canonical() existed carries resolved lanes, pins
+// and product default included; loading it again must neither move the version
+// nor lift any serving preference onto the provider.
 func TestDigest_RefinalizingAResolvedConfigKeepsItsVersion(t *testing.T) {
-	capped := strings.Replace(twoProviders, "model: m}", "model: m, reasoning_effort: low}", 1)
-	resolved := mustParse(t, capped)
+	pinned := strings.Replace(twoProviders, `{base_url: "https://openrouter.ai/api"}`, `{base_url: "https://openrouter.ai/api", upstream: {only: [mistral/eu]}}`, 1)
+	resolved := mustParse(t, pinned)
 	reloaded, err := FromStored(resolved, nil)
 	if err != nil {
 		t.Fatalf("FromStored: %v", err)
@@ -338,10 +374,7 @@ func TestDigest_RefinalizingAResolvedConfigKeepsItsVersion(t *testing.T) {
 	if reloaded.RoutingVersion() != resolved.RoutingVersion() {
 		t.Error("reloading a resolved config moved its routing version")
 	}
-	if got := reloaded.Providers[providerOpenAICompatible].Upstream; got != nil {
-		t.Errorf("provider upstream = %+v after reload, want still absent", got)
-	}
-	if got := reloaded.Tiers[TierPremium].ReasoningEffort; got != effortLow {
-		t.Errorf("tier effort = %q after reload, want %q", got, effortLow)
+	if got := reloaded.Providers[providerOpenAICompatible].Upstream; !reflect.DeepEqual(got, &OpenRouterRouting{Only: []string{"mistral/eu"}}) {
+		t.Errorf("provider upstream = %+v after reload, want the pin alone, with no serving preference pinned onto it", got)
 	}
 }

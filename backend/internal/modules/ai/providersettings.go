@@ -13,16 +13,18 @@ import (
 )
 
 // ProviderSettings is what one provider is configured with, independent of any
-// lane: the host it is dialled at and, for a broker, the upstream-selection
-// preferences every lane on it is served under.
+// lane: the host it is dialled at and, for a broker, where its requests may be
+// served.
 //
-// The lanes' own BaseURL and Routing are resolved from here by finalize and are
-// never the authority; canonical() strips them before a document is stored.
+// The lanes' BaseURL and the pins inside their Routing are resolved from here by
+// finalize and are never the authority; canonical() strips them before a
+// document is stored.
 type ProviderSettings struct {
 	BaseURL string `yaml:"base_url" json:"base_url,omitempty"`
-	// Upstream keeps ProviderConfig.Routing's three states: absent takes the
-	// product default on a chat tier, `{}` asks for no preferences. Its
-	// ReasoningEffort is refused, because how hard a model thinks is the tier's.
+	// Upstream holds only the pins — only, ignore, allow_fallbacks — because
+	// residency is the provider's. How a model is served (sort, quantizations,
+	// thinking) stays on each tier: two models behind one broker need different
+	// answers.
 	Upstream *OpenRouterRouting `yaml:"upstream" json:"upstream,omitempty"`
 }
 
@@ -42,7 +44,7 @@ func (cfg RoutingConfig) sortedTiers() []Tier {
 }
 
 // clone copies the preferences so a lane never aliases its provider's block or a
-// sibling lane's: one lane's merged effort must not reach the next.
+// sibling lane's.
 func (r *OpenRouterRouting) clone() *OpenRouterRouting {
 	if r == nil {
 		return nil
@@ -60,59 +62,67 @@ func (r *OpenRouterRouting) clone() *OpenRouterRouting {
 	return &out
 }
 
-// projectEmbeddings keeps the preferences that say WHICH hosts may read the
-// text. The embeddings lane reads every document the chat tiers do, so a
-// residency pin must reach it; the rest bound a completion's tail or thinking,
-// and an embedding is one forward pass with neither.
-//
-// A block that pins nothing projects to nil rather than `{}`: on this lane the
-// two send the same request, and nil is what the lane stored before its
-// preferences moved onto the provider, so the routing version stays put.
-func projectEmbeddings(upstream *OpenRouterRouting) *OpenRouterRouting {
-	if upstream == nil {
+// pins is the part of r that says WHICH hosts may serve the request, or nil
+// when r writes none. Written-but-empty lists count as written, so the
+// validator still refuses an `only: []`.
+func (r *OpenRouterRouting) pins() *OpenRouterRouting {
+	if r == nil || (r.Only == nil && r.Ignore == nil && r.AllowFallbacks == nil) {
 		return nil
 	}
-	kept := &OpenRouterRouting{Only: upstream.Only, Ignore: upstream.Ignore, AllowFallbacks: upstream.AllowFallbacks}
-	if kept.IsEmpty() && !upstream.IsEmpty() {
-		return nil
+	return (&OpenRouterRouting{Only: r.Only, Ignore: r.Ignore, AllowFallbacks: r.AllowFallbacks}).clone()
+}
+
+// withoutPins is r with its pins cleared. A block that held only pins becomes
+// `{}`, not nil, so a lane that opted out of the product default stays opted out.
+func (r *OpenRouterRouting) withoutPins() *OpenRouterRouting {
+	out := r.clone()
+	if out != nil {
+		out.Only, out.Ignore, out.AllowFallbacks = nil, nil, nil
 	}
-	return kept.clone()
+	return out
+}
+
+// withPins is a fresh copy of r carrying pins. With no pins, r is copied as is,
+// so an absent block stays absent.
+func (r *OpenRouterRouting) withPins(pins *OpenRouterRouting) *OpenRouterRouting {
+	out := r.clone()
+	if pins == nil {
+		return out
+	}
+	if out == nil {
+		out = &OpenRouterRouting{}
+	}
+	pinned := pins.clone()
+	out.Only, out.Ignore, out.AllowFallbacks = pinned.Only, pinned.Ignore, pinned.AllowFallbacks
+	return out
 }
 
 // providerLift carries a lift's state across lanes: the providers being built
 // and which lane each kept value came from, for the warning that names both.
 type providerLift struct {
-	providers    map[string]ProviderSettings
-	hostFrom     map[string]string
-	upstreamFrom map[string]string
-	tierBound    map[string]bool
-	log          *slog.Logger
+	providers map[string]ProviderSettings
+	hostFrom  map[string]string
+	pinsFrom  map[string]string
+	log       *slog.Logger
 }
 
-// liftLaneProviderFields moves the host and upstream preferences written on
-// lanes — the shape every routing document had before providers held them —
-// onto the provider. Lanes are visited tiers by name, then embeddings, then
-// decisions; the first value wins and each disagreeing lane is one warning.
-//
-// A lane value equal to what its provider would resolve to is cleared silently,
-// which makes the lift idempotent and safe over an already-resolved config.
+// liftLaneProviderFields moves the host and pins written on lanes — the shape
+// every routing document had before providers held them — onto the provider,
+// leaving each lane's serving preferences where they are. Lanes are visited
+// tiers by name, then embeddings, then decisions; the first value wins and each
+// disagreeing lane is one warning. A lane value equal to its provider's is
+// cleared silently, so the lift is idempotent and safe over a resolved config.
 func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig {
-	lift := providerLift{
-		providers: maps.Clone(cfg.Providers), hostFrom: map[string]string{}, upstreamFrom: map[string]string{},
-		tierBound: map[string]bool{}, log: log,
-	}
+	lift := providerLift{providers: maps.Clone(cfg.Providers), hostFrom: map[string]string{}, pinsFrom: map[string]string{}, log: log}
 	if lift.providers == nil {
 		lift.providers = map[string]ProviderSettings{}
 	}
-	for _, lane := range cfg.Tiers {
-		lift.tierBound[lane.Provider] = true
-	}
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
 	for _, tier := range cfg.sortedTiers() {
-		tiers[tier] = lift.lane(tierLabel(tier), cfg.Tiers[tier], false)
+		tiers[tier] = lift.lane(tierLabel(tier), cfg.Tiers[tier])
 	}
 	cfg.Tiers = tiers
-	cfg.Embeddings.ProviderConfig = lift.lane(embeddingsLaneLabel, cfg.Embeddings.ProviderConfig, true)
+	cfg.Embeddings.ProviderConfig = lift.lane(embeddingsLaneLabel, cfg.Embeddings.ProviderConfig)
 	if cfg.Decisions != nil {
 		decisions := *cfg.Decisions
 		lift.host(decisionsLaneLabel, decisions.Provider, decisions.BaseURL)
@@ -126,17 +136,13 @@ func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig 
 	return cfg
 }
 
-// lane lifts one chat lane's host and preferences and returns it cleared.
-func (l providerLift) lane(label string, lane ProviderConfig, embeddings bool) ProviderConfig {
+// lane lifts one chat lane's host and pins and returns it without them.
+func (l providerLift) lane(label string, lane ProviderConfig) ProviderConfig {
 	l.host(label, lane.Provider, lane.BaseURL)
-	if routing := lane.Routing.clone(); routing != nil {
-		if lane.ReasoningEffort == "" {
-			lane.ReasoningEffort = routing.ReasoningEffort
-		}
-		routing.ReasoningEffort = ""
-		l.upstream(label, lane, routing, embeddings)
+	if pins := lane.Routing.pins(); pins != nil {
+		l.pins(label, lane.Provider, pins)
 	}
-	lane.BaseURL, lane.Routing = "", nil
+	lane.BaseURL, lane.Routing = "", lane.Routing.withoutPins()
 	return lane
 }
 
@@ -155,35 +161,16 @@ func (l providerLift) host(label, provider, baseURL string) {
 	}
 }
 
-// upstream lifts a lane's effort-free preferences. The embeddings lane may seed
-// a provider only no tier binds: a tier's block is the fuller one, and the
-// embeddings lane reads its projection.
-func (l providerLift) upstream(label string, lane ProviderConfig, routing *OpenRouterRouting, embeddings bool) {
-	settings := l.providers[lane.Provider]
-	if embeddings && sameEmbeddingsFilter(routing, projectEmbeddings(settings.Upstream)) {
-		return
+func (l providerLift) pins(label, provider string, pins *OpenRouterRouting) {
+	settings := l.providers[provider]
+	switch {
+	case settings.Upstream == nil:
+		settings.Upstream = pins
+		l.providers[provider] = settings
+		l.pinsFrom[provider] = label
+	case !reflect.DeepEqual(settings.Upstream.pins(), pins):
+		l.warn("ai: routing: lane upstream pins differ from its provider's; the provider's win", provider, l.pinsFrom, label)
 	}
-	if !embeddings && reflect.DeepEqual(routing, UpstreamPreferencesFor(ProviderConfig{
-		Provider: lane.Provider, BaseURL: settings.BaseURL, Routing: settings.Upstream.clone(),
-	})) {
-		return
-	}
-	if settings.Upstream == nil && (!embeddings || !l.tierBound[lane.Provider]) {
-		settings.Upstream = routing
-		l.providers[lane.Provider] = settings
-		l.upstreamFrom[lane.Provider] = label
-		return
-	}
-	l.warn("ai: routing: lane upstream preferences differ from its provider's; the provider's win", lane.Provider, l.upstreamFrom, label)
-}
-
-// sameEmbeddingsFilter treats `{}` and nil alike: on the embeddings lane, which
-// takes no product default, both send no provider object.
-func sameEmbeddingsFilter(lane, resolved *OpenRouterRouting) bool {
-	if lane.IsEmpty() && resolved.IsEmpty() {
-		return true
-	}
-	return reflect.DeepEqual(projectEmbeddings(lane), resolved)
 }
 
 func (l providerLift) warn(msg, provider string, from map[string]string, dropped string) {
@@ -194,20 +181,22 @@ func (l providerLift) warn(msg, provider string, from map[string]string, dropped
 	l.log.Warn(msg, "provider", provider, "kept_from", kept, "dropped", dropped)
 }
 
-// resolveProviders fills every lane's host and upstream preferences from its
-// provider. Tiers take the block as written, so an absent one still receives the
-// product default afterwards; embeddings take only its host filters. The tier's
-// own reasoning effort is merged later, by applyTierEffort.
+// resolveProviders fills every lane's host and pins from its provider. A tier's
+// pins land on top of its product default when it declared no routing, so an
+// EU-pinned broker tier keeps the default sort and precision; a tier that wrote
+// `{}` gets the pins alone. Each lane gets its own copy.
 func (cfg RoutingConfig) resolveProviders() RoutingConfig {
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
 	for tier, lane := range cfg.Tiers {
 		settings := cfg.Providers[lane.Provider]
-		lane.BaseURL, lane.Routing = settings.BaseURL, settings.Upstream.clone()
+		lane.BaseURL = settings.BaseURL
+		lane.Routing = UpstreamPreferencesFor(lane).withPins(settings.Upstream.pins())
 		tiers[tier] = lane
 	}
 	cfg.Tiers = tiers
 	settings := cfg.Providers[cfg.Embeddings.Provider]
-	cfg.Embeddings.BaseURL, cfg.Embeddings.Routing = settings.BaseURL, projectEmbeddings(settings.Upstream)
+	cfg.Embeddings.BaseURL = settings.BaseURL
+	cfg.Embeddings.Routing = cfg.Embeddings.Routing.withPins(settings.Upstream.pins())
 	if cfg.Decisions != nil {
 		decisions := *cfg.Decisions
 		decisions.BaseURL = cfg.Providers[decisions.Provider].BaseURL
@@ -216,35 +205,18 @@ func (cfg RoutingConfig) resolveProviders() RoutingConfig {
 	return cfg
 }
 
-// applyTierEffort merges each tier's reasoning effort into its resolved
-// preferences, after the product default, so a tier on a provider with no
-// upstream block keeps the default and still caps its thinking. A tier no
-// preference reaches keeps none; validate refuses the effort it declared.
-func (cfg *RoutingConfig) applyTierEffort() {
-	for tier, lane := range cfg.Tiers {
-		if lane.ReasoningEffort == "" || !UpstreamPreferencesApply(lane) {
-			continue
-		}
-		if lane.Routing == nil {
-			lane.Routing = &OpenRouterRouting{}
-		}
-		lane.Routing.ReasoningEffort = lane.ReasoningEffort
-		cfg.Tiers[tier] = lane
-	}
-}
-
-// canonical is the document as stored: providers hold every host and upstream
-// block, and no lane carries the resolved copies.
+// canonical is the document as stored: providers hold every host and pin, and
+// lanes keep only their own serving preferences.
 func (cfg RoutingConfig) canonical() RoutingConfig {
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
 	for tier, lane := range cfg.Tiers {
-		lane.BaseURL, lane.Routing = "", nil
+		lane.BaseURL, lane.Routing = "", lane.Routing.withoutPins()
 		tiers[tier] = lane
 	}
 	if cfg.Tiers != nil {
 		cfg.Tiers = tiers
 	}
-	cfg.Embeddings.BaseURL, cfg.Embeddings.Routing = "", nil
+	cfg.Embeddings.BaseURL, cfg.Embeddings.Routing = "", cfg.Embeddings.Routing.withoutPins()
 	if cfg.Decisions != nil {
 		decisions := *cfg.Decisions
 		decisions.BaseURL = ""
@@ -286,11 +258,11 @@ func validateProviderEntry(name string, settings ProviderSettings, bound bool) e
 			name, name)
 	}
 	if settings.BaseURL != "" && !IsOpenRouterHost(settings.BaseURL) {
-		return fmt.Errorf("ai: routing config: providers: %s: `upstream` names OpenRouter's own upstream-selection fields and base_url is not an OpenRouter host; remove the block, or point the provider at the broker",
-			name)
+		return fmt.Errorf("ai: routing config: providers: %s: `upstream` names OpenRouter's own upstream-selection fields and base_url is not an OpenRouter host; remove the block, or point the provider at the broker", name)
 	}
-	if upstream.ReasoningEffort != "" {
-		return fmt.Errorf("ai: routing config: providers: %s: `upstream` takes no reasoning_effort — how hard a model thinks is the tier's; set reasoning_effort on the tier", name)
+	if !upstream.withoutPins().IsEmpty() {
+		return fmt.Errorf("ai: routing config: providers: %s: `upstream` takes only `only`, `ignore` and `allow_fallbacks` — where requests are served; "+
+			"sort, quantizations, require_parameters, preferred_max_latency_p90 and reasoning_effort are set per tier, under its `routing`", name)
 	}
 	if err := upstream.Validate(); err != nil {
 		return fmt.Errorf("%w (providers: %s)", err, name)

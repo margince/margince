@@ -189,7 +189,6 @@ func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
 	// must hash the same. Defaulting after the digest would make the two
 	// different configs to every cache key and trace that reads it.
 	cfg.applyUpstreamDefaults()
-	cfg.applyTierEffort()
 	if err := cfg.validate(); err != nil {
 		return RoutingConfig{}, err
 	}
@@ -235,21 +234,11 @@ func FromStored(stored RoutingConfig, keys config.Lookup) (RoutingConfig, error)
 // the cases where content a model wrote must stop being attributed to a model
 // that no longer produces it.
 //
-// It reads the RESOLVED lanes and leaves out Providers and each lane's own
-// reasoning effort: the lanes already carry both, and digesting them again would
-// re-attribute every cached brief the day the document's shape changed while
-// nothing it routes did.
+// It reads the RESOLVED lanes and leaves out Providers: the lanes already carry
+// every host and pin, and digesting them twice would re-attribute every cached
+// brief the day the document's shape changed while nothing it routes did.
 func (cfg RoutingConfig) bindingDigest() string {
 	cfg.Providers = nil
-	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
-	for tier, lane := range cfg.Tiers {
-		lane.ReasoningEffort = ""
-		tiers[tier] = lane
-	}
-	if cfg.Tiers != nil {
-		cfg.Tiers = tiers
-	}
-	cfg.Embeddings.ReasoningEffort = ""
 	return digestJSON(cfg)
 }
 
@@ -318,9 +307,6 @@ func (cfg RoutingConfig) validate() error {
 		if err := validateUpstreamPreferences(string(tier), binding); err != nil {
 			return err
 		}
-		if err := validateTierEffort(tier, binding); err != nil {
-			return err
-		}
 		if err := validateThinkingLevel("tier "+string(tier), binding); err != nil {
 			return err
 		}
@@ -331,7 +317,7 @@ func (cfg RoutingConfig) validate() error {
 	if err := refuseDecisionOnlyProvider("the embeddings lane", cfg.Embeddings.Provider); err != nil {
 		return err
 	}
-	if err := validateUpstreamPreferences(string(TierEmbedLane), cfg.Embeddings.ProviderConfig); err != nil {
+	if err := validateEmbeddingsRouting(cfg.Embeddings.ProviderConfig); err != nil {
 		return err
 	}
 	// EmbeddingsConfig embeds ProviderConfig INLINE, so `input:` under
@@ -342,9 +328,6 @@ func (cfg RoutingConfig) validate() error {
 	// tooling and cannot be the thing that holds this.
 	if cfg.Embeddings.Input != nil {
 		return fmt.Errorf("ai: routing config: the embeddings lane takes no `input` — it sends no attachments; declare it on the chat tier that reads documents")
-	}
-	if cfg.Embeddings.ReasoningEffort != "" {
-		return fmt.Errorf("ai: routing config: the embeddings lane takes no `reasoning_effort` — an embedding is one forward pass and does not think; declare it on a chat tier")
 	}
 	if cfg.Embeddings.ThinkingLevel != "" {
 		return fmt.Errorf("ai: routing config: the embeddings lane takes no `thinking_level` — an embedding is one forward pass and does not think; declare it on a chat tier")

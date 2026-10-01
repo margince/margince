@@ -29,8 +29,8 @@ func TestIsEURegionHostAdmitsOnlyARegionVariant(t *testing.T) {
 
 // An eu_hosted config that the broker may serve outside the EU is refused at
 // the parser, on a chat tier and on the embeddings lane alike, whether the
-// config arrived as a file or through the settings store. One broker tier per
-// document: lanes on one provider share its upstream preferences.
+// config arrived as a file or through the settings store. One broker lane per
+// gap: lanes on one provider share its pins.
 func TestAnEUHostedBrokerLaneMustPinAnEURegion(t *testing.T) {
 	t.Parallel()
 	const pinned = "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}"
@@ -44,11 +44,11 @@ func TestAnEUHostedBrokerLaneMustPinAnEURegion(t *testing.T) {
 		says string // "" means accepted
 	}{
 		"an inherited default": {
-			doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'}", embedPinned),
+			doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'}", native),
 			"tier premium under profile eu_hosted: no `only:`",
 		},
 		"an explicit opt-out": {
-			doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {}}", embedPinned),
+			doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {}}", native),
 			"tier premium under profile eu_hosted: no `only:`",
 		},
 		"a pin that admits a non-EU host": {
@@ -107,14 +107,11 @@ func TestAStoredEUHostedBrokerLaneWithNoPreferencesIsRefused(t *testing.T) {
 // refused on the way in.
 func TestAStoredEUHostedBrokerLaneLoadsButIsRefusedOnWrite(t *testing.T) {
 	t.Parallel()
-	pinned := &OpenRouterRouting{Only: []string{"mistral/eu"}}
 	broker := ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://openrouter.ai/api"}
-	embed := broker
-	embed.Routing = pinned
 	cfg := RoutingConfig{
 		Profile:    ProfileEUHosted,
 		Tiers:      map[Tier]ProviderConfig{TierPremium: broker},
-		Embeddings: EmbeddingsConfig{ProviderConfig: embed, Dimensions: 1024},
+		Embeddings: EmbeddingsConfig{ProviderConfig: broker, Dimensions: 1024},
 	}
 	loaded, err := FromStored(cfg, config.Static(nil))
 	if err != nil {

@@ -72,57 +72,26 @@ func TestAnUnpinnedEmbeddingsLaneSendsNoProviderObject(t *testing.T) {
 	}
 }
 
-// The embeddings lane reads only host selection from its provider's upstream
-// block, and only from a broker's. A completion preference on the provider is
-// the chat tiers' and is projected away rather than refused, so one block can
-// serve both kinds of lane.
+// Only host selection is legal on the embeddings lane, and only on the broker.
 func TestTheEmbeddingsLaneTakesOnlyHostSelection(t *testing.T) {
-	const broker = "provider: openai_compatible, model: e"
-	for upstream, want := range map[string]string{
-		"{only: [mistral/eu]}":                  `{"only":["mistral/eu"]}`,
-		"{ignore: [x], allow_fallbacks: false}": `{"ignore":["x"],"allow_fallbacks":false}`,
-		"{}":                                    `{}`,
-		"{sort: throughput}":                    `null`,
-		"{quantizations: [bf16]}":               `null`,
-		"{require_parameters: true}":            `null`,
-		"{preferred_max_latency_p90: 4}":        `null`,
+	const broker = "provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'"
+	for routing, legal := range map[string]bool{
+		"{only: [mistral/eu]}":                  true,
+		"{ignore: [x], allow_fallbacks: false}": true,
+		"{}":                                    true,
+		"{sort: throughput}":                    false,
+		"{quantizations: [bf16]}":               false,
+		"{require_parameters: true}":            false,
+		"{preferred_max_latency_p90: 4}":        false,
+		"{reasoning_effort: low}":               false,
 	} {
-		yaml := "profile: cloud_frontier\nproviders:\n  openai_compatible: {base_url: 'https://openrouter.ai/api', upstream: " + upstream +
-			"}\ntiers:\n  premium: {" + broker + "}\nembeddings: {" + broker + "}\n"
-		cfg, err := ParseRouting([]byte(yaml))
-		if err != nil {
-			t.Errorf("provider upstream %s: refused: %v", upstream, err)
-			continue
-		}
-		if got := wireOf(t, cfg.Embeddings.Routing); got != wireOf(t, decodeRouting(t, want)) {
-			t.Errorf("provider upstream %s: embeddings routing = %s, want %s", upstream, got, want)
+		yaml := "profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\nembeddings: {" + broker + ", routing: " + routing + "}\n"
+		if _, err := ParseRouting([]byte(yaml)); (err == nil) != legal {
+			t.Errorf("embeddings routing %s: accepted=%v, want %v (err: %v)", routing, err == nil, legal, err)
 		}
 	}
-	thinking := "profile: cloud_frontier\ntiers:\n  premium: {" + broker + ", base_url: 'https://openrouter.ai/api'}\nembeddings: {" + broker +
-		", base_url: 'https://openrouter.ai/api', routing: {reasoning_effort: low}}\n"
-	if _, err := ParseRouting([]byte(thinking)); err == nil {
-		t.Error("a reasoning effort on the embeddings lane was accepted; an embedding does not think")
-	}
-	native := "profile: cloud_frontier\ntiers:\n  premium: {" + broker + ", base_url: 'https://openrouter.ai/api'}\nembeddings: {provider: gemini, model: e, routing: {only: [x]}}\n"
+	native := "profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\nembeddings: {provider: gemini, model: e, routing: {only: [x]}}\n"
 	if _, err := ParseRouting([]byte(native)); err == nil {
 		t.Error("a host pin on a native embeddings vendor was accepted; it fronts one host and would be sent a field it never asked for")
 	}
-}
-
-func decodeRouting(t *testing.T, raw string) *OpenRouterRouting {
-	t.Helper()
-	var r *OpenRouterRouting
-	if err := json.Unmarshal([]byte(raw), &r); err != nil {
-		t.Fatal(err)
-	}
-	return r
-}
-
-func wireOf(t *testing.T, r *OpenRouterRouting) string {
-	t.Helper()
-	encoded, err := json.Marshal(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(encoded)
 }
