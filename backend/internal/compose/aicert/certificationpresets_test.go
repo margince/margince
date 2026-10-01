@@ -656,6 +656,24 @@ func TestAPresetRowNamesTheModelThatAnswersAndTheOneAFailedCallFallsTo(t *testin
 	}
 }
 
+// A Vertex fallback graded by the AI Studio record for its model says so on its
+// route line, as a borrowed first rung does in the measurement table.
+func TestABorrowedFallbackGradeSaysWhereItWasMeasured(t *testing.T) {
+	task := ai.TaskSummarize
+	ladder := ai.TaskLadder(task)
+	first, next := ladder[0], ladder[1]
+	cheap := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/cheap-1"}
+	vertex := ai.ProviderConfig{Provider: "gemini_vertex", Location: "eu", Model: "gemini-3.5-flash"}
+	studio := ai.ProviderConfig{Provider: "gemini", Model: vertex.Model}
+	row := attributeOneTask(task, ai.ProfileEUHosted, map[ai.Tier]ai.ProviderConfig{first: cheap, next: vertex},
+		measuredRecord(task, cheap, ai.ProfileEUHosted, aicert.VerdictCertified, 0),
+		measuredRecord(task, studio, ai.ProfileCloudFrontier, aicert.VerdictCertified, 0)).Tasks[0]
+	want := "cheap-1 · " + string(first) + " → gemini-3.5-flash, " + aiCertReady + ", measured on `gemini`"
+	if got := aiCertRouteLine(row); got != want {
+		t.Errorf("route line = %q\nwant         %q", got, want)
+	}
+}
+
 // A local-only task on a cloud preset is graded from its record like any other
 // feature: the router serves it there while the local_only rule is undecided.
 func TestALocalOnlyTaskOnACloudPresetIsGradedFromItsRecord(t *testing.T) {

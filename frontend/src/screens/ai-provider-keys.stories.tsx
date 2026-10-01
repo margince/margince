@@ -143,6 +143,20 @@ export const ServiceAccount: Story = {
   },
 };
 
+export const ServiceAccountDark: Story = {
+  globals: { theme: "dark" },
+  render: story([gemini, vertex, anthropic]),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Manage gemini_vertex" }),
+    );
+    await userEvent.click(
+      await body.findByRole("button", { name: /^replace$/i }),
+    );
+  },
+};
+
 // Dark. The configured/not-configured distinction is carried by a Badge tone,
 // and a tone that flattens against the dark panel would leave a reader unable
 // to tell a keyed provider from an unkeyed one — which on this card is the

@@ -131,6 +131,7 @@ function useRemoveProviderKey() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
+      queryClient.invalidateQueries({ queryKey: ["ai-provider-locations"] });
     },
   });
 }
