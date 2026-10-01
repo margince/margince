@@ -224,7 +224,16 @@ func carryHeldOpen(t *testing.T, e *channelConsentEnv, from, to ids.ContactID) (
 		}
 	}
 	t.Cleanup(release)
-	return <-holding, release
+	select {
+	case pid := <-holding:
+		return pid, release
+	case err := <-committed:
+		// The carry failed before it could hold anything; the error is the
+		// finding, and release must not wait on a channel already drained.
+		released = true
+		t.Fatalf("the held-open carry failed before holding its locks: %v", err)
+		return 0, release
+	}
 }
 
 // liveOverrideID reads back the one live override a subject holds.

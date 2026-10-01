@@ -663,8 +663,8 @@ func TestARevokeThroughAMergedAwayContactCannotReachTheSurvivorsOwnVouch(t *test
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("err = %v, want %v: the revoke reached a vouch on a survivor this seat may not write", err, apperrors.ErrPermissionDenied)
 	}
-	if _, level, _ := liveOverrideRow(t, e, other); level == "" {
-		t.Error("the survivor's vouch is gone")
+	if !overrideStillLive(t, e, theirs) {
+		t.Error("the survivor's own vouch was taken back by a seat that may not write the survivor")
 	}
 }
 

@@ -72,7 +72,10 @@ type StopCarrier interface {
 	// NO SEPARATE LOCK METHOD to call first: consent's lock on a subject's
 	// stops and its lock on that subject's overrides are the same advisory
 	// lock, keyed on the subject id alone (see overridecarry.go on the consent
-	// side) — LockStopsTx already takes it before either carry runs.
+	// side) — LockStopsTx already takes it before either carry runs. The
+	// override carry also takes its chain's own key internally
+	// (lockOverrideFamily, after the subject keys), so this method locks more
+	// than the subject key alone.
 	CarryOverridesTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error
 }
 
