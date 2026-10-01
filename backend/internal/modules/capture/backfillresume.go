@@ -40,8 +40,33 @@ const resumableRunPredicate = `b.status = 'error' AND b.cursor IS NOT NULL
 // is the newer statement about this mailbox.
 //
 // The run goes back to queued with its cursor, its counts and its estimate as
-// they were; the failure ladder starts again, because the person starting it
-// is the evidence that whatever stopped it may be fixed.
+// they were; the failure ladder starts again, because a start by hand is the
+// evidence that whatever stopped it may be fixed.
+// resumeOrNil continues the connection's failed run when one covers the window,
+// schedules it in the same transaction, and records the resumption on the
+// connection's trail. nil means nothing was resumed and the caller starts a new
+// run, which is also the answer when the caller asked to start over (resume
+// false).
+func resumeOrNil(ctx context.Context, tx pgx.Tx, resume bool, connID ids.UUID, windowMonths int, widest *int, enqueue EnqueueBackfill) (*BackfillRun, error) {
+	if !resume {
+		return nil, nil //nolint:nilnil // starting over resumes nothing
+	}
+	resumed, err := resumeFailedBackfillTx(ctx, tx, connID, windowMonths)
+	if err != nil || resumed == nil {
+		return nil, err
+	}
+	if err := enqueue(ctx, tx, resumed.ID); err != nil {
+		return nil, fmt.Errorf("capture: scheduling the backfill: %w", err)
+	}
+	return resumed, auditLifecycle(ctx, tx, "update", captureConnectionObject, connID,
+		map[string]any{auditBackfillWindowMonths: widest},
+		map[string]any{auditBackfillWindowMonths: windowMonths, "backfill_resumed": resumed.ID.String()})
+}
+
+// auditBackfillWindowMonths names how far back an import reaches on the
+// connection's audit trail.
+const auditBackfillWindowMonths = "backfill_window_months"
+
 func resumeFailedBackfillTx(ctx context.Context, tx pgx.Tx, connID ids.UUID, windowMonths int) (*BackfillRun, error) {
 	var run BackfillRun
 	err := tx.QueryRow(ctx, `

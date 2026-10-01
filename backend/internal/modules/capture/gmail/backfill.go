@@ -171,8 +171,10 @@ func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJ
 				return w.ctx.Err()
 			}
 			if err != nil || !drop {
+				// Not settled by its headers: the full download judges it, and a
+				// fault here costs only the download this pass would have saved.
 				keep = append(keep, id)
-				return nil
+				return nil //nolint:nilerr // the full path decides and reports for itself
 			}
 			return w.settle(id, false, nil)
 		})

@@ -176,16 +176,16 @@ type EnqueueBackfill func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) e
 // CONTINUES that run (resumeFailedBackfillTx) instead of reading the mailbox
 // again from the newest message. StartBackfillOver is the explicit fresh start.
 func (r *Registry) StartBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
-	return r.startBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, true)
+	return r.openBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, true)
 }
 
 // StartBackfillOver starts a new run from the top of the window even where a
 // failed run could be continued — the human's "start over".
 func (r *Registry) StartBackfillOver(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
-	return r.startBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, false)
+	return r.openBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, false)
 }
 
-func (r *Registry) startBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, resume bool) (BackfillRun, error) {
+func (r *Registry) openBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, resume bool) (BackfillRun, error) {
 	// Checked HERE as well as at the estimate, and not only there: the estimate
 	// is a preview a client may skip, and a start that trusted it would take
 	// the whole window from anyone who called this door directly.
@@ -220,31 +220,20 @@ func (r *Registry) startBackfill(ctx context.Context, provider string, userID id
 		// previous account's window leaves its human no way to import it at all
 		// short of a year of a mailbox they just connected. A connection that
 		// never changed account (account_bound_at IS NULL) consults every run.
-		var widest *int
-		if err := tx.QueryRow(ctx, `
-			SELECT max(b.window_months)
-			FROM capture_backfill b JOIN capture_connection c ON c.id = b.connection_id
-			WHERE b.connection_id = $1
-			  AND (c.account_bound_at IS NULL OR b.created_at >= c.account_bound_at)`, connID).Scan(&widest); err != nil {
+		widest, err := widestWindowTx(ctx, tx, connID)
+		if err != nil {
 			return err
 		}
 		if widest != nil && windowMonths < *widest {
 			return ErrWindowNarrowing
 		}
-		if resume {
-			resumed, err := resumeFailedBackfillTx(ctx, tx, connID, windowMonths)
-			if err != nil {
-				return err
-			}
-			if resumed != nil {
-				if err := enqueue(ctx, tx, resumed.ID); err != nil {
-					return fmt.Errorf("capture: scheduling the backfill: %w", err)
-				}
-				run = *resumed
-				return auditLifecycle(ctx, tx, "update", captureConnectionObject, connID,
-					map[string]any{"backfill_window_months": widest},
-					map[string]any{"backfill_window_months": windowMonths, "backfill_resumed": resumed.ID.String()})
-			}
+		resumed, err := resumeOrNil(ctx, tx, resume, connID, windowMonths, widest, enqueue)
+		if err != nil {
+			return err
+		}
+		if resumed != nil {
+			run = *resumed
+			return nil
 		}
 		after := r.now().AddDate(0, -windowMonths, 0)
 		err = tx.QueryRow(ctx, `
@@ -277,8 +266,8 @@ func (r *Registry) startBackfill(ctx context.Context, provider string, userID id
 		// extending it is the act somebody asks about later. Null where no run
 		// has ever imported this account.
 		if err := auditLifecycle(ctx, tx, "update", captureConnectionObject, connID,
-			map[string]any{"backfill_window_months": widest},
-			map[string]any{"backfill_window_months": windowMonths}); err != nil {
+			map[string]any{auditBackfillWindowMonths: widest},
+			map[string]any{auditBackfillWindowMonths: windowMonths}); err != nil {
 			return err
 		}
 		run.ConnectionID = connID
@@ -405,4 +394,22 @@ func (r *Registry) LiveBackfills(ctx context.Context) ([]ids.UUID, error) {
 		return err
 	})
 	return ids0, err
+}
+
+// widestWindowTx answers the widest window any run on this connection imported
+// for the account it holds now, or nil when none has.
+//
+// The runs it consults stop at the connection's last account rebind: a mailbox
+// connected today has imported nothing, and holding it to the previous
+// account's window leaves its human no way to import it at all short of a year
+// of a mailbox they just connected. A connection that never changed account
+// (account_bound_at IS NULL) consults every run.
+func widestWindowTx(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*int, error) {
+	var widest *int
+	err := tx.QueryRow(ctx, `
+		SELECT max(b.window_months)
+		FROM capture_backfill b JOIN capture_connection c ON c.id = b.connection_id
+		WHERE b.connection_id = $1
+		  AND (c.account_bound_at IS NULL OR b.created_at >= c.account_bound_at)`, connID).Scan(&widest)
+	return widest, err
 }
