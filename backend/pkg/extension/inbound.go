@@ -95,6 +95,22 @@ type InboundEndpoint struct {
 	// eventually does on a member's behalf is minted later, from that member's
 	// own live authority.
 	Handle InboundHandler
+
+	// Scheme is how a request to this endpoint is signed, and so what the core
+	// checks before the unit sees it. The zero value is SchemeMargince, so every
+	// declaration written before this field existed keeps its meaning.
+	Scheme InboundScheme
+
+	// SignatureHeader names the ONE header a provider carries its signature in.
+	// Required under SchemeProviderSigned, refused under SchemeMargince, which
+	// reads its own three headers.
+	SignatureHeader string
+
+	// Challenge answers a provider's subscription handshake — a GET carrying
+	// hub.* query parameters (the WebSub handshake's own names, which Meta
+	// follows). Optional: nil leaves GET a 405. Allowed only under
+	// SchemeProviderSigned, because a Margince sender has no handshake.
+	Challenge InboundChallenge
 }
 
 // InboundHandler is what a unit does with an admitted request.
@@ -214,8 +230,10 @@ type InboundOutcome int
 
 const (
 	// InboundAccepted means the request was verified and durably recorded.
-	// The core answers 202: recorded is not the same as acted on, and this
-	// edge deliberately does not do the acting.
+	// The core answers 202 under SchemeMargince: recorded is not the same as
+	// acted on, and this edge deliberately does not do the acting. Under
+	// SchemeProviderSigned it answers 200, the status providers document
+	// (Meta: "200 OK") and may count anything else against the subscription.
 	InboundAccepted InboundOutcome = iota
 
 	// InboundUnauthenticated means the request did not verify. The core
@@ -240,6 +258,62 @@ const (
 	// The core answers 500.
 	InboundTransient
 )
+
+// InboundScheme is how a request to an inbound endpoint is signed.
+type InboundScheme int
+
+const (
+	// SchemeMargince is the three X-Margince headers over SigningPayload.
+	SchemeMargince InboundScheme = iota
+
+	// SchemeProviderSigned is a third-party provider signing the raw body under
+	// a secret it shares with the unit, in one header of its own naming, with
+	// no timestamp and no nonce the core could check.
+	//
+	// THE UNIT OWNS REPLAY under this scheme, because the core has nothing to
+	// bound freshness with. A unit declaring it must key every event it keeps
+	// on a provider-assigned identifier, unique, and must refuse any event
+	// older than its store keeps those identifiers — so a captured request
+	// replayed at any later time lands nothing.
+	//
+	// An accepted request answers 200 rather than the Margince scheme's 202,
+	// because that is what providers document expecting back.
+	SchemeProviderSigned
+)
+
+// MaxInboundSignatureHeader bounds a provider signature header's value. A
+// SHA-256 MAC in hex with a short prefix is under 80 bytes.
+const MaxInboundSignatureHeader = 256
+
+// The handshake's bounds. The query is the one part of a GET a caller fully
+// chooses, so every dimension of it is capped before a unit sees it.
+const (
+	InboundChallengePrefix    = "hub."
+	MaxInboundChallengeQuery  = 4096
+	MaxInboundChallengeParams = 8
+	MaxInboundChallengeValue  = 256
+	// MaxInboundChallengeAnswer bounds what a unit may echo back. The answer
+	// is served as text/plain with nosniff, because it is usually a value the
+	// caller chose.
+	MaxInboundChallengeAnswer = 256
+)
+
+// InboundChallengeRequest is a provider's subscription handshake as the unit
+// sees it: the endpoint, the unit's own Ref, and the hub.* query parameters —
+// first value each — and nothing else about the request.
+type InboundChallengeRequest struct {
+	Slug  string
+	Ref   string
+	Query map[string]string
+}
+
+// InboundChallenge answers a handshake. The string is the 200 body when the
+// outcome is InboundAccepted; any other outcome is answered as the POST
+// outcomes are, so InboundUnauthenticated is the same opaque 401.
+type InboundChallenge func(ctx context.Context, rt Runtime, req InboundChallengeRequest) (string, InboundOutcome, error)
+
+// inboundHeaderNameGrammar is an HTTP header name a declaration may use.
+var inboundHeaderNameGrammar = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9-]{0,63}$`)
 
 // InboundRate is the two buckets an inbound endpoint is metered on. Both are
 // required: the endpoint bucket bounds what one sender can cost this
@@ -366,14 +440,45 @@ func (e InboundEndpoint) Validate() error {
 		return fmt.Errorf("extension: inbound endpoint %q sets no body cap — it decides how much an unauthenticated sender can make this installation read, so it has no default", e.Slug)
 	case e.MaxBody > MaxInboundBody:
 		return fmt.Errorf("extension: inbound endpoint %q asks for a %d-byte body cap, over the %d-byte ceiling", e.Slug, e.MaxBody, MaxInboundBody)
-	case e.Skew <= 0:
-		return fmt.Errorf("extension: inbound endpoint %q sets no clock skew — an edge with no freshness bound leaves one captured request replayable indefinitely", e.Slug)
-	case e.Skew > MaxInboundSkew:
-		return fmt.Errorf("extension: inbound endpoint %q asks for a %s skew, over the %s ceiling", e.Slug, e.Skew, MaxInboundSkew)
-	case e.Handle == nil:
+	}
+	if err := e.validateScheme(); err != nil {
+		return err
+	}
+	if e.Handle == nil {
 		return fmt.Errorf("extension: inbound endpoint %q declares no handler", e.Slug)
 	}
 	return e.Rate.validate(e.Slug)
+}
+
+// validateScheme holds each scheme to the fields it reads, and refuses the
+// fields it does not: a declaration carrying a field its scheme ignores is one
+// whose author believes something the core will not do.
+func (e InboundEndpoint) validateScheme() error {
+	switch e.Scheme {
+	case SchemeMargince:
+		switch {
+		case e.Skew <= 0:
+			return fmt.Errorf("extension: inbound endpoint %q sets no clock skew — an edge with no freshness bound leaves one captured request replayable indefinitely", e.Slug)
+		case e.Skew > MaxInboundSkew:
+			return fmt.Errorf("extension: inbound endpoint %q asks for a %s skew, over the %s ceiling", e.Slug, e.Skew, MaxInboundSkew)
+		case e.SignatureHeader != "":
+			return fmt.Errorf("extension: inbound endpoint %q names a signature header under the Margince scheme, which reads its own three headers — declare SchemeProviderSigned or drop it", e.Slug)
+		case e.Challenge != nil:
+			return fmt.Errorf("extension: inbound endpoint %q declares a Challenge under the Margince scheme — a subscription handshake is a provider's, and a Margince sender has none", e.Slug)
+		}
+	case SchemeProviderSigned:
+		switch {
+		case e.Skew != 0:
+			return fmt.Errorf("extension: inbound endpoint %q sets a clock skew under the provider-signed scheme, which carries no timestamp to bound — replay is the unit's, keyed on the provider's own event identifier", e.Slug)
+		case !inboundHeaderNameGrammar.MatchString(e.SignatureHeader):
+			return fmt.Errorf("extension: inbound endpoint %q names no usable signature header (%q) — the provider's signature must arrive in one named header", e.Slug, e.SignatureHeader)
+		case strings.HasPrefix(strings.ToLower(e.SignatureHeader), "x-margince-"):
+			return fmt.Errorf("extension: inbound endpoint %q names a Margince header as a provider's signature header", e.Slug)
+		}
+	default:
+		return fmt.Errorf("extension: inbound endpoint %q declares scheme %d, which is not one this core knows", e.Slug, int(e.Scheme))
+	}
+	return nil
 }
 
 func (e InboundEndpoint) validateSlug() error {
