@@ -28,7 +28,7 @@ import (
 // CanBeOverruled, so it never has to re-check the reason: a subject act or an
 // absolute machine fact never reaches here.
 //
-// CONTACT ONLY. decideOne is the single caller and hands over a resolved
+// CONTACT ONLY. decideOne hands over a resolved
 // contact id; decideLead has no override arm (authorizelead.go), and
 // overridesubject_test.go holds the lead half of this table unwritable. A
 // lead_id arm here would be a clause that can never match — the appearance of
