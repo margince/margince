@@ -115,15 +115,16 @@ func scrubContactGraphTraces(
 		_, err = tx.Exec(ctx, sweptParticipantsBlank, id, subjectEmails, providers, accounts)
 	}
 	if err == nil {
-		_, err = tx.Exec(ctx,
-			`DELETE FROM graph_interaction_edge WHERE contact_id = $1`, id)
-	}
-	if err == nil {
 		// Both endpoint columns: the swept party can stand on either end of a
 		// contact↔contact edge, and the row re-identifies them from the graph
-		// alone whichever side they are on.
+		// alone whichever side they are on. Before the interaction projection,
+		// the order every writer of the two tables takes (search.edgeTargets).
 		_, err = tx.Exec(ctx,
 			`DELETE FROM graph_contact_edge WHERE contact_a = $1 OR contact_b = $1`, id)
+	}
+	if err == nil {
+		_, err = tx.Exec(ctx,
+			`DELETE FROM graph_interaction_edge WHERE contact_id = $1`, id)
 	}
 	if err == nil {
 		// The SAME reach the request-driven eraser uses, by calling it rather

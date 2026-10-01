@@ -44,6 +44,9 @@ func TestPendingCountsOnlyUnembeddedActivitiesAndTheirText(t *testing.T) {
 	if err != nil {
 		t.Fatalf("TokenSumByWorkspace: %v", err)
 	}
+	if len(tokens) == 0 {
+		t.Fatal("TokenSumByWorkspace returned no workspaces — the per-workspace assertion would pass vacuously")
+	}
 	for ws, got := range tokens {
 		// "open abcd" is 9 bytes, 2 tokens at 4 bytes each; the covered body would be ~1200.
 		if got != 2 {
