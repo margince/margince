@@ -275,6 +275,9 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 			// from this job, because the job context dying mid-page is itself the
 			// commonest fault — and the log carries the detail.
 			w.log.WarnContext(ctx, "capture backfill page failed", "backfill", job.Args.BackfillID, "err", err)
+			if w.resumedMeanwhile(wsCtx, bfID) {
+				return river.JobSnooze(time.Second)
+			}
 			return nil
 		}
 		if completed {
@@ -290,6 +293,20 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 		}
 	}
 	return river.JobSnooze(time.Second)
+}
+
+// resumedMeanwhile says the run this job just ended was reopened.
+//
+// A human pressing Continue reopens the same run, and its enqueue is unique
+// against this job while it is still running — so the start can land on a job
+// that is about to return, and the reopened run would wait for the nightly
+// reconcile with nothing paging it. The job comes back in a second for it
+// instead. Only a QUEUED run counts: a run left running because a write failed
+// is the reconcile's, and snoozing on it would loop every second. A read that
+// fails answers false and the job ends as before.
+func (w *captureBackfillWorker) resumedMeanwhile(ctx context.Context, bfID ids.UUID) bool {
+	reopened, err := w.registry.BackfillReopened(ctx, bfID)
+	return err == nil && reopened
 }
 
 // enqueueDigest offers a same-day digest build for THIS workspace through the

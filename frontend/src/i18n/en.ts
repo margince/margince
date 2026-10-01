@@ -6223,69 +6223,79 @@ export const en = {
     "Reads your mail and can send from it. You grant both on Google’s screen and can disconnect at any time.",
   "ob.s4.googleUnverified":
     "If Google warns about an “unverified app”, select Advanced, then Continue. Google’s screen lists exactly what is granted.",
-  "backfill.title": "Import mailbox history",
+  "backfill.title": "Import old emails",
   "backfill.intro":
-    "Choose how far back to import. The scope and estimated cost are shown before anything runs, and this step can be skipped.",
-  "backfill.windowLabel": "Import window",
+    "Choose how far back to go. Nothing starts until you click Start import.",
+  "backfill.windowLabel": "How far back",
   "backfill.window36m": "3 years",
   "backfill.window84m": "7 years",
   "backfill.window120m": "10 years",
-  "backfill.since": "Imports email since {date}.",
+  "backfill.since": "Emails since {date}.",
   "backfill.extendNote":
-    "The history can be extended later. Emails already imported are kept and not duplicated.",
-  "backfill.costFloorNote":
-    "This estimate covers only the messages counted so far. The full import can contain more messages and cost more.",
+    "You can go further back later. Emails that are already here are not added twice.",
+  "backfill.costFloorNote": "The cost can be higher if there are more emails.",
   "backfill.window3m": "3 months",
   "backfill.window6m": "6 months",
   "backfill.window12m": "1 year",
   "backfill.window24m": "2 years",
   "backfill.window60m": "5 years",
-  "backfill.previewLoading": "Counting messages…",
-  "backfill.scopeIs": "Imports {window} of your mailbox.",
-  "backfill.estimateMessagesExact_one": "{count} message in that period.",
-  "backfill.estimateMessagesExact_other": "{count} messages in that period.",
+  "backfill.previewLoading": "Counting emails…",
+  "backfill.scopeIs": "Goes back {window}.",
+  "backfill.estimateMessagesExact_one": "{count} email in that time.",
+  "backfill.estimateMessagesExact_other": "{count} emails in that time.",
   "backfill.estimateMessagesAtLeast_one":
-    "At least {count} message in that period. Counting stopped there, so there may be more.",
+    "{count} email or more. Counting stopped there.",
   "backfill.estimateMessagesAtLeast_other":
-    "At least {count} messages in that period. Counting stopped there, so there may be more.",
-  "backfill.estimateCost": "Estimated AI cost:",
+    "{count} emails or more. Counting stopped there.",
+  "backfill.estimateCost": "AI cost: about {cost}.",
   "backfill.estimateNote":
-    "An estimate, not a bill. Actual usage is metered and shown as it accrues.",
+    "This is an estimate, not a bill. You only pay for what is used.",
   "backfill.startCta": "Start import",
   "backfill.starting": "Starting…",
-  "backfill.skip": "Skip mailbox history import",
+  "backfill.skip": "Not now",
   "backfill.skippedNote":
-    "No history imported. New mail is still captured, and an import can be started later from Settings.",
-  "backfill.loading": "Checking import status…",
+    "No old emails imported. New emails still come in. You can import old emails later in Settings.",
+  "backfill.loading": "Checking the import…",
   "backfill.statusUnavailable":
-    "Import status is unavailable. Capture continues.",
-  "backfill.queuedTitle": "Import queued",
-  "backfill.runningTitle": "Importing mailbox history",
+    "The import status is not available right now. New emails still come in.",
+  "backfill.queuedTitle": "Import starts soon",
+  "backfill.runningTitle": "Importing old emails",
   // The pill beside a live title: the indigo on the card is a claim that a
   // machine is doing the reading, and this is the same claim in words.
-  "backfill.readingBadge": "Analyzing",
-  "backfill.doneTitle": "Mailbox history import complete",
-  "backfill.errorTitle": "Import error",
-  "backfill.cancelledTitle": "Import canceled",
+  "backfill.readingBadge": "Reading",
+  "backfill.doneTitle": "Old emails imported",
+  "backfill.errorTitle": "Import stopped",
+  "backfill.cancelledTitle": "You stopped the import",
   "backfill.progressLabel": "Import progress",
-  "backfill.countScanned": "Messages scanned",
-  "backfill.statEmails": "Emails captured",
-  "backfill.statContacts": "Contacts",
+  "backfill.statEmails": "Emails added",
+  "backfill.statContacts": "New contacts",
   // The count is domains this run raised a company question for, not
   // companies created — a domain becomes one only if its site says so.
   "backfill.statCompanies": "Companies to check",
   "backfill.errorNote":
-    "The import retries automatically. Everything captured so far is kept.",
-  "backfill.cancel": "Stop import",
-  "backfill.cancelledNote": "Stopped. Everything captured so far is kept.",
+    "The import stopped because of an error. Everything imported so far is kept.",
+  "backfill.cancel": "Stop",
+  "backfill.cancelledNote": "Everything imported so far is kept.",
   // On a run that has stopped — cancelled, failed or finished. The window it
   // opens on is the one that ran, because the server only ever widens.
-  "backfill.restart": "Start another import",
+  "backfill.restart": "Start a new import",
   "backfill.unsupportedNote":
-    "This mailbox type does not support history import. Only new mail is captured.",
+    "This mailbox cannot import old emails. New emails still come in.",
   "backfill.narrowingNote":
-    "A wider window already ran for this mailbox. The import window can only be widened.",
-  "backfill.staleUpdated": "Last updated {duration} ago. No recent progress.",
+    "This mailbox already went back further. Pick the same time or longer.",
+  "backfill.staleUpdated": "No progress for {duration}.",
+  "backfill.countScanned_one": "{count} email checked",
+  "backfill.countScanned_other": "{count} emails checked",
+  "backfill.errorResumeNote":
+    "The import stopped because of an error. You can continue where it left off.",
+  "backfill.resumeNote_one": "The last import stopped after {count} email.",
+  "backfill.resumeNote_other": "The last import stopped after {count} emails.",
+  "backfill.resumeCta": "Continue",
+  "backfill.startOverCta": "Start over",
+  "backfill.failedNote_one":
+    "{count} email could not be added and was left out.",
+  "backfill.failedNote_other":
+    "{count} emails could not be added and were left out.",
 
   // The units an installation composed, offered on the settings page that
   // already holds the kind of credential each one is configured with. The two

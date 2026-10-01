@@ -23936,8 +23936,11 @@ type BackfillStatus struct {
 		Captured         *int `json:"captured,omitempty"`
 		CompaniesCreated *int `json:"companies_created,omitempty"`
 		ContactsCreated  *int `json:"contacts_created,omitempty"`
-		MessagesScanned  *int `json:"messages_scanned,omitempty"`
-		Skipped          *int `json:"skipped,omitempty"`
+
+		// Failed Messages the run could not capture and walked past. Committed pages only.
+		Failed          *int `json:"failed,omitempty"`
+		MessagesScanned *int `json:"messages_scanned,omitempty"`
+		Skipped         *int `json:"skipped,omitempty"`
 	} `json:"counts,omitempty"`
 
 	// EstimateIsFloor True when `estimated_messages` is a floor (see BackfillPreview): the denominator can be passed, so a client shows counts rather than a percentage instead of drawing a bar past its end. Persisted with the run, because the preview that produced the number is long gone by the time progress is read.
@@ -23951,8 +23954,11 @@ type BackfillStatus struct {
 
 	// OfferedWindows The windows THIS installation admits, in reach order — the product's supported set narrowed by `capture.max_backfill_months` where an operator set one. A picker offers these and no others: the preview and the start both refuse a window above the cap, so offering one is offering a choice that 422s. Absent or empty means the client should fall back to the full supported set rather than render an empty picker.
 	OfferedWindows *[]BackfillStatusOfferedWindows `json:"offered_windows,omitempty"`
-	StartedAt      *time.Time                      `json:"started_at,omitempty"`
-	State          BackfillStatusState             `json:"state"`
+
+	// Resumable The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again.
+	Resumable *bool               `json:"resumable,omitempty"`
+	StartedAt *time.Time          `json:"started_at,omitempty"`
+	State     BackfillStatusState `json:"state"`
 
 	// UpdatedAt Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").
 	UpdatedAt *time.Time            `json:"updated_at,omitempty"`
@@ -41794,6 +41800,9 @@ type StageTransitionRecord struct {
 
 // StartBackfillRequest defines model for StartBackfillRequest.
 type StartBackfillRequest struct {
+	// StartOver Read the window again from the newest message even where the last run ended on an error and could be continued (BackfillStatus.resumable). Omitted or false continues that run, with its counts, when its window covers this one.
+	StartOver *bool `json:"start_over,omitempty"`
+
 	// Window `none` is expressed by never calling this op. Widen-only versus a prior run.
 	Window StartBackfillRequestWindow `json:"window"`
 }

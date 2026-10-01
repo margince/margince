@@ -88,16 +88,16 @@ describe("the scope preview", () => {
       },
     });
     render({ state: "none" });
-    await screen.findByRole("combobox", { name: "Import window" });
+    await screen.findByRole("combobox", { name: "How far back" });
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Import window" }),
+      screen.getByRole("combobox", { name: "How far back" }),
       "10 years",
     );
-    await screen.findByText(/Imports email since/);
+    await screen.findByText(/Emails since/);
     expect(screen.getByText(/At least 20,000 messages/)).toBeInTheDocument();
     expect(
-      screen.getByText(/full import can contain more messages and cost more/),
+      screen.getByText(/cost can be higher if there are more emails/),
     ).toBeInTheDocument();
     expect(starts).toEqual([]);
     await user.click(
@@ -123,7 +123,7 @@ describe("the scope preview", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Import window" }),
+      screen.getByRole("combobox", { name: "How far back" }),
       "1 year",
     );
     await waitFor(() =>
@@ -156,7 +156,7 @@ describe("the scope preview", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Import window" }),
+      screen.getByRole("combobox", { name: "How far back" }),
       "1 year",
     );
 
@@ -199,7 +199,7 @@ describe("the scope preview", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Import window" }),
+      screen.getByRole("combobox", { name: "How far back" }),
       "3 months",
     );
     const start = screen.getByRole("button", { name: "Connect and import" });
@@ -317,7 +317,7 @@ describe("starting the read", () => {
     await screen.findByText("About 1,234 messages in this period.");
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Import window" }),
+      screen.getByRole("combobox", { name: "How far back" }),
       "3 months",
     );
     await user.click(
@@ -346,10 +346,10 @@ describe("starting the read", () => {
     render({ state: "cancelled", window: "12m", counts: { captured: 4 } });
 
     await user.click(
-      await screen.findByRole("button", { name: "Start another import" }),
+      await screen.findByRole("button", { name: "Start a new import" }),
     );
     expect(
-      screen.getByRole("combobox", { name: "Import window" }).textContent,
+      screen.getByRole("combobox", { name: "How far back" }).textContent,
     ).toContain("1 year");
 
     await screen.findByText("About 90 messages in this period.");
@@ -383,7 +383,7 @@ describe("starting the read", () => {
     ).not.toBeInTheDocument();
     // Still the setup view: the window pick is where the user was left.
     expect(
-      screen.getByRole("combobox", { name: "Import window" }),
+      screen.getByRole("combobox", { name: "How far back" }),
     ).toHaveTextContent("6 months");
   });
 
@@ -592,7 +592,7 @@ describe("outcomes", () => {
     );
 
     expect(
-      await screen.findByText(/Import status is unavailable/),
+      await screen.findByText(/The import status is not available/),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /^done$/i }));
     expect(onDone).toHaveBeenCalledTimes(1);

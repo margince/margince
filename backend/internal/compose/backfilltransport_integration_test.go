@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -416,6 +417,7 @@ func TestBackfillWire(t *testing.T) {
 	assertThePagerWalksTheRunToDone(t, b, worker, runID)
 	assertNarrowingAWindowIsRefused(t, b)
 	assertAFailedPageFinishesTheRunInError(t, b, worker)
+	assertAContinuedRunIsNotLeftWithoutAJob(t, b, worker)
 	assertCancelStopsALiveRun(t, b)
 	assertAcceptedAnswersDeclareJSON(t, b)
 	assertAStepOnAVanishedRunIsTerminal(t, b)
@@ -680,7 +682,9 @@ func assertNarrowingAWindowIsRefused(t *testing.T, b *backfillWireEnv) {
 func assertAFailedPageFinishesTheRunInError(t *testing.T, b *backfillWireEnv, worker *captureBackfillWorker) {
 	t.Helper()
 	t.Run("a failed page records the class and the run finishes error", func(t *testing.T) {
-		b.gmail.pageErr = errors.New("mailbox went away")
+		// A refused credential: a fault no retry repairs, so the run ends. An
+		// unclassified fault would be retried under the give-up cap instead.
+		b.gmail.pageErr = fmt.Errorf("mailbox went away: %w", connector.ErrAuthRejected)
 		defer func() { b.gmail.pageErr = nil }()
 		var out crmcontracts.BackfillStatus
 		if code, _ := b.do(b.human, t, b.startBackfill(crmcontracts.CaptureProviderGmail), `{"window":"12m"}`, &out); code != http.StatusAccepted {
@@ -700,6 +704,39 @@ func assertAFailedPageFinishesTheRunInError(t *testing.T, b *backfillWireEnv, wo
 			t.Fatalf("failed run = %+v, want state error with a recorded class", after)
 		}
 	})
+}
+
+// A Continue can land on the job that is just ending the run, because the
+// enqueue is unique against it. That job must come back for the reopened run
+// rather than leave it queued with nothing paging it until the nightly pass.
+func assertAContinuedRunIsNotLeftWithoutAJob(t *testing.T, b *backfillWireEnv, worker *captureBackfillWorker) {
+	t.Helper()
+	t.Run("a job ending a run that was continued meanwhile comes back for it", func(t *testing.T) {
+		var out crmcontracts.BackfillStatus
+		if code, _ := b.do(b.human, t, b.backfillStatus(crmcontracts.CaptureProviderGmail), "", &out); code != http.StatusOK || out.BackfillId == nil {
+			t.Fatalf("status = %d %+v, want the failed run", code, out)
+		}
+		runID := ids.UUID(*out.BackfillId)
+		wsCtx := principal.WithWorkspaceID(context.Background(), b.env.WS)
+		if worker.resumedMeanwhile(wsCtx, runID) {
+			t.Fatal("a run that stays ended must end the job")
+		}
+		setRunStatus(t, b, runID, "queued")
+		defer setRunStatus(t, b, runID, "error")
+		if !worker.resumedMeanwhile(wsCtx, runID) {
+			t.Fatal("a run reopened under the ending job must bring the job back")
+		}
+	})
+}
+
+func setRunStatus(t *testing.T, b *backfillWireEnv, runID ids.UUID, status string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(b.env.Admin(), b.env.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE capture_backfill SET status = $2 WHERE id = $1`, runID, status)
+		return err
+	}); err != nil {
+		t.Fatalf("setting the run %s: %v", status, err)
+	}
 }
 
 func assertCancelStopsALiveRun(t *testing.T, b *backfillWireEnv) {
