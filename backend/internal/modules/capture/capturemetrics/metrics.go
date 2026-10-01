@@ -66,11 +66,10 @@ const (
 	resultTokenGone   = "token_rejected"
 	resultFailed      = "failed"
 
-	reasonUnspecified = "unspecified"
-	reasonPacing      = "pacing"
-	reasonResumed     = "resumed"
-	reasonInPage      = "rate_limited_in_page"
-	reasonInternal    = "internal"
+	reasonPacing   = "pacing"
+	reasonResumed  = "resumed"
+	reasonInPage   = "rate_limited_in_page"
+	reasonInternal = "internal"
 )
 
 // requestBounds are the provider-call histogram's upper bounds in seconds: a
@@ -116,17 +115,8 @@ var shared = newCollector()
 func ObserveRequest(provider, op string, status int, err error, elapsed time.Duration) {
 	shared.observeRequest(provider, op, requestResult(status, err), elapsed)
 	if limited, ok := errors.AsType[*connector.RateLimitedError](err); ok {
-		shared.observeRateLimit(provider, op, rateLimitReason(limited.Reason))
+		shared.observeRateLimit(provider, op, connector.RateLimitReasonLabel(limited.Reason))
 	}
-}
-
-// rateLimitReason is the provider's named limit, or unspecified when it named
-// none or named one that is not a machine code.
-func rateLimitReason(reason string) string {
-	if connector.MachineReason(reason) == "" {
-		return reasonUnspecified
-	}
-	return reason
 }
 
 // requestResult folds a call's outcome into the result vocabulary. A 404 is

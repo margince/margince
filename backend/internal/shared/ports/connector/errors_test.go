@@ -114,3 +114,14 @@ func TestARateLimitLogsItsReasonAndStatus(t *testing.T) {
 		t.Errorf("RateLimitLogAttr of another error = %v, want the empty attribute", got)
 	}
 }
+
+func TestARateLimitReasonStaysInTheClosedSet(t *testing.T) {
+	for in, want := range map[string]string{
+		"": RateLimitUnspecified, RateLimitUser: RateLimitUser, RateLimitConcurrent: RateLimitConcurrent,
+		"backendError": RateLimitOther, "unspecified": RateLimitUnspecified,
+	} {
+		if got := RateLimitReasonLabel(in); got != want {
+			t.Errorf("RateLimitReasonLabel(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

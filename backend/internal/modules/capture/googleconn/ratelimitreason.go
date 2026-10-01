@@ -11,47 +11,37 @@ package googleconn
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// The rate-limit reasons a throttled Google call is labelled with. The set is
-// closed so a metric label and a log field stay bounded: Google's own code when
-// it is one of these, RateLimitConcurrent for the per-user concurrency cap,
-// RateLimitUnspecified when the body names no reason, RateLimitOther for any
-// code outside the set.
-const (
-	RateLimitConcurrent      = "concurrent"
-	RateLimitUser            = "userRateLimitExceeded"
-	RateLimitDaily           = "dailyLimitExceeded"
-	RateLimitQuota           = "quotaExceeded"
-	RateLimitRate            = "rateLimitExceeded"
-	RateLimitGeneric         = "limitExceeded"
-	RateLimitUnspecified     = "unspecified"
-	RateLimitOther           = "other"
-	concurrentRequestsPhrase = "concurrent requests"
-)
+// concurrentCapMessage is how Google words the per-user concurrency cap, the
+// one limit its reason code does not name.
+const concurrentCapMessage = "too many concurrent requests for user"
 
 // rateLimitPrecedence orders the reasons from most to least specific, so a body
 // naming several is labelled with the one that says most about the remedy.
 var rateLimitPrecedence = []string{
-	RateLimitConcurrent, RateLimitUser, RateLimitDaily, RateLimitQuota, RateLimitRate, RateLimitGeneric,
+	connector.RateLimitConcurrent, connector.RateLimitUser, connector.RateLimitDaily,
+	connector.RateLimitQuota, connector.RateLimitRate, connector.RateLimitGeneric,
 }
 
 // rateLimitCodes folds each reason code Google spells, classic and ErrorInfo
 // alike, onto the vocabulary above.
 var rateLimitCodes = map[string]string{
-	RateLimitUser:           RateLimitUser,
-	RateLimitDaily:          RateLimitDaily,
-	RateLimitQuota:          RateLimitQuota,
-	reasonQuotaExceededEnum: RateLimitQuota,
-	RateLimitRate:           RateLimitRate,
-	reasonRateLimitEnum:     RateLimitRate,
-	RateLimitGeneric:        RateLimitGeneric,
+	connector.RateLimitUser:    connector.RateLimitUser,
+	connector.RateLimitDaily:   connector.RateLimitDaily,
+	connector.RateLimitQuota:   connector.RateLimitQuota,
+	reasonQuotaExceededEnum:    connector.RateLimitQuota,
+	connector.RateLimitRate:    connector.RateLimitRate,
+	reasonRateLimitEnum:        connector.RateLimitRate,
+	connector.RateLimitGeneric: connector.RateLimitGeneric,
 }
 
 // RateLimitReason labels a throttled response body with the most specific
-// reason it names. The concurrency cap carries the generic rateLimitExceeded
-// code and is told apart only by its fixed message, which is matched here and
-// never carried further.
+// connector.RateLimit* reason it names. The concurrency cap carries the generic
+// rateLimitExceeded code and is told apart only by its fixed message, which is
+// matched here and never carried further.
 func RateLimitReason(body []byte) string {
 	codes, _ := reasonCodes(body)
 	found := map[string]bool{}
@@ -59,21 +49,21 @@ func RateLimitReason(body []byte) string {
 		if reason, ok := rateLimitCodes[raw]; ok {
 			found[reason] = true
 		} else if raw != "" {
-			found[RateLimitOther] = true
+			found[connector.RateLimitOther] = true
 		}
 	}
 	if namesConcurrency(body) {
-		found[RateLimitConcurrent] = true
+		found[connector.RateLimitConcurrent] = true
 	}
 	for _, reason := range rateLimitPrecedence {
 		if found[reason] {
 			return reason
 		}
 	}
-	if found[RateLimitOther] {
-		return RateLimitOther
+	if found[connector.RateLimitOther] {
+		return connector.RateLimitOther
 	}
-	return RateLimitUnspecified
+	return connector.RateLimitUnspecified
 }
 
 // namesConcurrency reports whether Google's message is the per-user
@@ -87,5 +77,5 @@ func namesConcurrency(body []byte) bool {
 	if err := json.Unmarshal(body, &parsed); err != nil {
 		return false
 	}
-	return strings.Contains(strings.ToLower(parsed.Error.Message), concurrentRequestsPhrase)
+	return strings.Contains(strings.ToLower(parsed.Error.Message), concurrentCapMessage)
 }

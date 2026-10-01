@@ -26,19 +26,19 @@ const (
 
 func TestARateLimitIsLabelledWithTheMostSpecificLimitItNames(t *testing.T) {
 	for name, tc := range map[string]struct{ body, want string }{
-		"403 per-user limit":      {userRateLimitBody, RateLimitUser},
-		"429 concurrency cap":     {concurrentBody, RateLimitConcurrent},
-		"429 rate limit":          {rateLimitBody, RateLimitRate},
-		"403 daily limit":         {dailyLimitBody, RateLimitDaily},
-		"403 project quota":       {quotaBody, RateLimitQuota},
-		"ErrorInfo rate limit":    {errorInfoBody, RateLimitRate},
-		"ErrorInfo quota":         {errorInfoQuota, RateLimitQuota},
-		"generic usage limit":     {`{"error":{"errors":[{"reason":"limitExceeded"}]}}`, RateLimitGeneric},
-		"several codes":           {`{"error":{"errors":[{"reason":"rateLimitExceeded"},{"reason":"userRateLimitExceeded"}]}}`, RateLimitUser},
-		"a code outside the set":  {`{"error":{"errors":[{"reason":"backendError"}]}}`, RateLimitOther},
-		"a status but no code":    {`{"error":{"code":429,"status":"RESOURCE_EXHAUSTED"}}`, RateLimitUnspecified},
-		"an empty body":           {``, RateLimitUnspecified},
-		"a body that is not JSON": {`<html>Too many concurrent requests</html>`, RateLimitUnspecified},
+		"403 per-user limit":      {userRateLimitBody, connector.RateLimitUser},
+		"429 concurrency cap":     {concurrentBody, connector.RateLimitConcurrent},
+		"429 rate limit":          {rateLimitBody, connector.RateLimitRate},
+		"403 daily limit":         {dailyLimitBody, connector.RateLimitDaily},
+		"403 project quota":       {quotaBody, connector.RateLimitQuota},
+		"ErrorInfo rate limit":    {errorInfoBody, connector.RateLimitRate},
+		"ErrorInfo quota":         {errorInfoQuota, connector.RateLimitQuota},
+		"generic usage limit":     {`{"error":{"errors":[{"reason":"limitExceeded"}]}}`, connector.RateLimitGeneric},
+		"several codes":           {`{"error":{"errors":[{"reason":"rateLimitExceeded"},{"reason":"userRateLimitExceeded"}]}}`, connector.RateLimitUser},
+		"a code outside the set":  {`{"error":{"errors":[{"reason":"backendError"}]}}`, connector.RateLimitOther},
+		"a status but no code":    {`{"error":{"code":429,"status":"RESOURCE_EXHAUSTED"}}`, connector.RateLimitUnspecified},
+		"an empty body":           {``, connector.RateLimitUnspecified},
+		"a body that is not JSON": {`<html>Too many concurrent requests</html>`, connector.RateLimitUnspecified},
 	} {
 		if got := RateLimitReason([]byte(tc.body)); got != tc.want {
 			t.Errorf("%s: RateLimitReason = %q, want %q", name, got, tc.want)
@@ -67,8 +67,8 @@ func TestGetCarriesTheLimitAndStatusOnARateLimit(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	for path, want := range map[string]connector.RateLimitedError{
-		"/user":       {Reason: RateLimitUser, Status: http.StatusForbidden},
-		"/concurrent": {Reason: RateLimitConcurrent, Status: http.StatusTooManyRequests},
+		"/user":       {Reason: connector.RateLimitUser, Status: http.StatusForbidden},
+		"/concurrent": {Reason: connector.RateLimitConcurrent, Status: http.StatusTooManyRequests},
 	} {
 		var out struct{}
 		_, err := Get(context.Background(), srv.Client(), srv.URL, "tok", path, nil, &out)

@@ -78,12 +78,14 @@ func TestARateLimitIsCountedUnderTheLimitItNamed(t *testing.T) {
 	ObserveRequest("gmail", OpList, http.StatusForbidden,
 		fmt.Errorf("list: %w", &connector.RateLimitedError{Reason: "userRateLimitExceeded", Status: http.StatusForbidden}), time.Second)
 	ObserveRequest("gmail", OpList, http.StatusTooManyRequests,
-		&connector.RateLimitedError{Reason: "not a code!"}, time.Second)
+		&connector.RateLimitedError{Reason: "notInTheSet"}, time.Second)
+	ObserveRequest("gmail", OpList, http.StatusTooManyRequests, &connector.RateLimitedError{}, time.Second)
 	ObserveRequest("gmail", OpList, http.StatusOK, nil, time.Second)
 
 	out := render()
 	mustContain(t, out,
 		`margince_connector_rate_limited_total{provider="gmail",op="list",reason="userRateLimitExceeded"} 1`,
+		`margince_connector_rate_limited_total{provider="gmail",op="list",reason="other"} 1`,
 		`margince_connector_rate_limited_total{provider="gmail",op="list",reason="unspecified"} 1`,
 	)
 	if strings.Contains(out, `rate_limited_total{provider="gmail",op="list",reason="ok"`) {
