@@ -570,3 +570,32 @@ it("reads the next meeting's own row when a busy calendar pushed it off the firs
   ).toBeTruthy();
   expect(row).toHaveBeenCalledTimes(1);
 });
+
+it("does not call the held list empty, or count what is ahead, while a page is still unread", async () => {
+  // A first page of meetings still ahead: the held ones, and perhaps more
+  // ahead, are on the next page.
+  mount(() => [], {
+    "GET /activities": () =>
+      meetingsPage(
+        [
+          meeting({
+            id: "m-a",
+            subject: "Planning",
+            occurred_at: "2026-10-08T09:00:00Z",
+          }),
+          meeting({
+            id: "m-b",
+            subject: "Review",
+            occurred_at: "2026-10-06T09:00:00Z",
+          }),
+        ],
+        "c-2",
+      ),
+  });
+  const upcoming = await screen.findByRole("region", { name: "Upcoming" });
+  await within(upcoming).findByText("Planning");
+  expect(within(upcoming).queryByText("2")).toBeNull();
+  const held = screen.getByRole("region", { name: "Held" });
+  expect(within(held).queryByText("No meetings logged.")).toBeNull();
+  expect(within(held).getByRole("button", { name: "Load more" })).toBeTruthy();
+});

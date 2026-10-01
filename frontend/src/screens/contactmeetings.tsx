@@ -131,7 +131,7 @@ function splitMeetings(
   listed: readonly Activity[],
   asOf: string,
   nextId: string | undefined,
-): Readonly<{ ahead: Activity[]; held: Activity[] }> {
+): Readonly<{ ahead: Activity[]; held: Activity[]; pastReached: boolean }> {
   const now = Date.parse(asOf);
   const at = (activity: Activity) => Date.parse(activity.occurred_at);
   // A meeting called off keeps its date, and the server's next-meeting read
@@ -145,6 +145,9 @@ function splitMeetings(
     held: others
       .filter((activity) => !isAhead(activity))
       .sort((a, b) => at(b) - at(a)),
+    // The list arrives newest first, so once a page reaches a meeting already
+    // behind the read, every meeting still ahead is on the pages read so far.
+    pastReached: listed.some((activity) => at(activity) <= now),
   };
 }
 
@@ -160,6 +163,9 @@ function heldState(
   if (omitted(view, "activities")) return "withheld";
   if (count > 0) return "ready";
   if (listed.isError) return "failed";
+  // A first page of meetings still ahead says nothing yet about those held:
+  // the panel offers the next page rather than calling itself empty.
+  if (listed.hasNextPage) return "ready";
   return listed.isPending ? "loading" : "empty";
 }
 
@@ -195,7 +201,7 @@ export function ContactMeetingsTab({
     enabled: view !== undefined && !omitted(view, "activities"),
   });
   const next = view?.next_meeting;
-  const { ahead, held } = splitMeetings(
+  const { ahead, held, pastReached } = splitMeetings(
     listed.activities,
     view?.as_of ?? "",
     next?.activity_id,
@@ -224,7 +230,10 @@ export function ContactMeetingsTab({
       <Panel
         title={t("contact.meetings.upcoming")}
         titleAction={
-          upcoming === "ready" && (
+          // A count only once it is the whole count: meetings still ahead can
+          // sit on a page not read yet until the list has reached the past.
+          upcoming === "ready" &&
+          (pastReached || !listed.hasNextPage) && (
             <Badge>{formatNumber((next ? 1 : 0) + ahead.length, locale)}</Badge>
           )
         }
