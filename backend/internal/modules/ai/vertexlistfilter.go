@@ -25,9 +25,14 @@ const servedFor = time.Hour
 // probeFanout bounds how many models are asked about at once.
 const probeFanout = 8
 
+// probeBudget bounds the whole round, so one slow location cannot hold a
+// picker open until the server's write timeout cancels it.
+const probeBudget = 20 * time.Second
+
 // uncallable names catalog entries no binding here can call: speech, live
-// audio and image generation share the gemini- prefix with the text models.
-var uncallable = []string{"-tts", "native-audio", "live-", "-image"}
+// audio and image generation share the gemini- prefix with the text models,
+// and the multimodal embedder takes no plain text instance.
+var uncallable = []string{"-tts", "native-audio", "live-", "-image", "multimodalembedding"}
 
 type servedAtLocation struct {
 	mu    sync.Mutex
@@ -48,7 +53,8 @@ func (s *RoutingStore) clock() time.Time {
 
 // servedOnly keeps the listed models location serves. Only a definite "not
 // served" drops one: a probe Google did not answer keeps the model on offer,
-// since an outage must not empty the picker.
+// since an outage must not empty the picker. A round is reused only when every
+// probe was answered; an embedder's probe is one billed embed call.
 func (s *RoutingStore) servedOnly(ctx context.Context, client *geminiClient, location string, models []model.Info) []model.Info {
 	callable := make([]model.Info, 0, len(models))
 	for _, m := range models {
@@ -56,10 +62,14 @@ func (s *RoutingStore) servedOnly(ctx context.Context, client *geminiClient, loc
 			callable = append(callable, m)
 		}
 	}
-	served := s.served.lookup(location, s.clock())
+	key := servedKey(client, location)
+	served := s.served.lookup(key, s.clock())
 	if served == nil {
-		served = probeLocation(ctx, client.relocated(location), location, callable)
-		s.served.remember(location, servedAnswer{at: s.clock(), served: served})
+		var answered bool
+		served, answered = probeLocation(ctx, client.relocated(location), location, callable)
+		if answered {
+			s.served.remember(key, servedAnswer{at: s.clock(), served: served})
+		}
 	}
 	kept := make([]model.Info, 0, len(callable))
 	for _, m := range callable {
@@ -79,26 +89,44 @@ func isUncallable(id string) bool {
 	return false
 }
 
+// servedKey names whose answer it is: what a location serves differs by
+// Google project, so a key from another project is asked afresh.
+func servedKey(client *geminiClient, location string) string {
+	vertex, _ := client.transport.(vertexTransport)
+	return vertex.projectID + "/" + location
+}
+
 // probeLocation asks location about each model, probeFanout at a time, and
-// answers which it serves: false only where Google said it does not.
-func probeLocation(ctx context.Context, client *geminiClient, location string, models []model.Info) map[string]bool {
+// answers which it serves — false only where Google said it does not — and
+// whether Google answered every probe.
+func probeLocation(ctx context.Context, client *geminiClient, location string, models []model.Info) (map[string]bool, bool) {
+	ctx, cancel := context.WithTimeout(ctx, probeBudget)
+	defer cancel()
 	served := make(map[string]bool, len(models))
+	answered := true
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	slots := make(chan struct{}, probeFanout)
 	for _, m := range models {
+		if ctx.Err() != nil {
+			answered = false
+			break
+		}
 		wg.Add(1)
 		slots <- struct{}{}
 		go func(m model.Info) {
 			defer func() { <-slots; wg.Done() }()
 			err := probeOnce(ctx, client, vertexProbe{location: location, model: m.ID, lane: m.Lane})
 			mu.Lock()
+			defer mu.Unlock()
 			served[m.ID] = !errors.Is(err, errModelNotFound)
-			mu.Unlock()
+			if err != nil && !errors.Is(err, errModelNotFound) {
+				answered = false
+			}
 		}(m)
 	}
 	wg.Wait()
-	return served
+	return served, answered && ctx.Err() == nil
 }
 
 func (c *servedAtLocation) lookup(location string, now time.Time) map[string]bool {

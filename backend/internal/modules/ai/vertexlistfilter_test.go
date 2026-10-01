@@ -114,7 +114,44 @@ func TestAVertexLocationsAnswerIsReusedForAWhile(t *testing.T) {
 	}
 	now = now.Add(2 * time.Hour)
 	store.availableModels(context.Background(), RoutingConfig{}, q)
-	if later := google.probes() - first; later <= 2 {
-		t.Errorf("an open two hours later asked the location nothing new (%d request(s))", later)
+	if later := google.probes() - first; later != 3 {
+		t.Errorf("an open two hours later sent %d request(s) in all since the first, want 3 (the reused list, then the list and the probe)", later)
+	}
+}
+
+// A probe round Google did not answer is not an answer: nothing is reused,
+// so the next open asks again rather than offering the whole catalog for an
+// hour.
+func TestAnUnansweredProbeRoundIsNotReused(t *testing.T) {
+	t.Parallel()
+	selector, google := googleAt(t, func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/publishers/google/models") {
+			writeBody(t, w, `{"publisherModels":[{"name":"publishers/google/models/gemini-3.5-flash"}]}`)
+			return
+		}
+		w.WriteHeader(http.StatusServiceUnavailable)
+	})
+	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector, served: &servedAtLocation{}}
+	q := AvailableModelsQuery{Provider: providerGeminiVertex, Tier: "premium", Location: "europe-west4"}
+
+	store.availableModels(context.Background(), RoutingConfig{}, q)
+	first := google.probes()
+	store.availableModels(context.Background(), RoutingConfig{}, q)
+	if again := google.probes() - first; again != 2 {
+		t.Errorf("a second open after an unanswered round sent %d request(s), want 2 (the list and the probe again)", again)
+	}
+}
+
+// What a location serves differs by Google project, so a key from another
+// project is not answered from the first one's lineup.
+func TestALocationsAnswerIsKeptPerProject(t *testing.T) {
+	cache := &servedAtLocation{}
+	at := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	cache.remember("p1/europe-west4", servedAnswer{at: at, served: map[string]bool{"m": true}})
+	if got := cache.lookup("p2/europe-west4", at); got != nil {
+		t.Errorf("another project's location answered from the first's lineup: %v", got)
+	}
+	if got := cache.lookup("p1/europe-west4", at); !got["m"] {
+		t.Error("the same project's answer was not reused")
 	}
 }

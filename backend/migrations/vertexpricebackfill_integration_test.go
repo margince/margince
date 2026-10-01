@@ -112,3 +112,27 @@ func TestAVertexSheetWithPricesIsLeftAlone(t *testing.T) {
 		t.Errorf("Vertex rows = %v, want the one it already had", got)
 	}
 }
+
+// A provisioned installation's seed already prices three Vertex models, so the
+// upgrade copies nothing there; its other models take Gemini's price through
+// the live fallback instead.
+func TestASeededVertexSheetTakesNoCopy(t *testing.T) {
+	dsn, _ := dsns(t)
+	conn := connect(t, dsn)
+	headSchema(t, conn)
+	ctx := context.Background()
+	if _, err := conn.Exec(ctx, `DELETE FROM ai_model_rate`); err != nil {
+		t.Fatal(err)
+	}
+	for _, model := range []string{"gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-pro"} {
+		seedRate(ctx, t, conn, "gemini", model, "2026-08-01", 1_000_000)
+	}
+	seedRate(ctx, t, conn, "gemini_vertex", "gemini-3.5-flash", "2026-08-01", 1_500_000)
+	seedRate(ctx, t, conn, "gemini_vertex", "gemini-3.1-flash-lite", "2026-08-01", 250_000)
+
+	runFile(ctx, t, conn, vertexBackfill+".up.sql")
+
+	if got := vertexRates(ctx, t, conn); len(got) != 2 {
+		t.Errorf("Vertex rows = %v, want only the two the seed planted", got)
+	}
+}

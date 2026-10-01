@@ -642,3 +642,30 @@ func TestLift_TheFirstLanesSpellingOfAHostWins(t *testing.T) {
 		t.Errorf("premium served at %q, want cheap_cloud's spelling, which sorts first", got)
 	}
 }
+
+// finalize is what the watcher calls every recheck, so the warn-once rule is
+// asserted through it: the same stored row read twice warns once.
+func TestFinalizingOneStoredRowTwiceWarnsOnce(t *testing.T) {
+	log, buf := warnings()
+	previous := slog.Default()
+	slog.SetDefault(log)
+	t.Cleanup(func() { slog.SetDefault(previous) })
+	cfg := RoutingConfig{
+		Profile: ProfileCloudFrontier,
+		Tiers: map[Tier]ProviderConfig{
+			TierCheapCloud: {Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://a.example/" + t.Name()},
+			TierPremium:    {Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://b.example"},
+		},
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: "fake"}},
+	}
+
+	for range 2 {
+		if _, err := cfg.finalize(); err != nil {
+			t.Fatalf("finalize: %v", err)
+		}
+	}
+
+	if lines := warnLines(buf); len(lines) != 1 {
+		t.Errorf("two reads of one stored row warned %d times, want once: %q", len(lines), lines)
+	}
+}
