@@ -127,11 +127,13 @@ func TestABrokerPresetInheritsTheDefaultAndCanOptOut(t *testing.T) {
 // `only:` is absent or admits a host that is not an EU-region endpoint. An empty
 // `routing: {}` is the broker's own price-weighted choice of host, anywhere.
 //
-// The broker half is ai.EURegionPinGap, the rule the parser holds every
-// eu_hosted config to. The first half is this gate's own and is stricter: the
-// parser admits a native vendor under eu_hosted because it cannot tell where an
-// operator's host runs, but a SHIPPED preset is one the repository vouches for,
-// and a binding that carries no pin is not one it can vouch for.
+// The broker half, and a Vertex lane's location, are ai.EURegionPinGap, the
+// rule the parser holds every eu_hosted config to. The first half is this
+// gate's own and is stricter: the parser admits a native vendor under
+// eu_hosted because it cannot tell where an operator's host runs, but a
+// SHIPPED preset is one the repository vouches for, and a binding that carries
+// no pin is not one it can vouch for. A Vertex location is a pin: the host and
+// the place Google processes the call both follow from it.
 func residencyGaps(cfg ai.RoutingConfig) []string {
 	lanes := map[string]ai.ProviderConfig{"embeddings": cfg.Embeddings.ProviderConfig}
 	for tier, binding := range cfg.Tiers {
@@ -139,7 +141,7 @@ func residencyGaps(cfg ai.RoutingConfig) []string {
 	}
 	var gaps []string
 	for lane, binding := range lanes {
-		if !ai.UpstreamPreferencesApply(binding) {
+		if !ai.UpstreamPreferencesApply(binding) && binding.Location == "" {
 			host := binding.BaseURL
 			if host == "" {
 				host = "its vendor's own host"
@@ -215,6 +217,9 @@ func TestResidencyGapsSeesEveryUnpinnedShape(t *testing.T) {
 			"premium: `only:` admits mistral/zdr,",
 		},
 		"a direct vendor": {withPremium("{provider: gemini, model: m}"), "premium: bound to gemini"},
+		"a Vertex location outside the EU": {
+			withPremium("{provider: gemini_vertex, location: europe-west2, model: m}"), "premium: location \"europe-west2\" is not an EU location",
+		},
 		"an unpinned embeddings lane": {
 			"profile: cloud_frontier\ntiers:\n  premium: " + pinned + "\n" +
 				"embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}\n",
@@ -239,6 +244,13 @@ func TestResidencyGapsSeesEveryUnpinnedShape(t *testing.T) {
 	if gaps := residencyGaps(cfg); len(gaps) != 0 {
 		t.Errorf("a config pinned on every lane reports %q", gaps)
 	}
+	cfg, err = ai.ParseRouting([]byte(withPremium("{provider: gemini_vertex, location: eu, model: m}")))
+	if err != nil {
+		t.Fatalf("the Vertex control does not parse: %v", err)
+	}
+	if gaps := residencyGaps(cfg); len(gaps) != 0 {
+		t.Errorf("a Vertex lane at an EU location reports %q", gaps)
+	}
 }
 
 // hostedLocalOnlyBindings ratifies each shipped configuration that binds a
@@ -259,7 +271,9 @@ func TestResidencyGapsSeesEveryUnpinnedShape(t *testing.T) {
 var hostedLocalOnlyBindings = gatekit.Waive(map[string]string{
 	"margince.dev.yaml": "the dev stack rides one vendor on every rung so a contributor needs no local " +
 		"inference to boot it, and it judges seeded fixtures rather than a real mailbox",
-	"presets/gemini_cloud.yaml":     "an all-Gemini deployment has no local rung to offer",
+	"presets/gemini_cloud.yaml": "an all-Gemini deployment has no local rung to offer",
+	"presets/gemini_vertex_eu.yaml": "the same on Vertex AI, held to EU locations — which bounds the REGION " +
+		"the prompt reaches but not the machine, and local_only is about the machine",
 	"presets/openrouter_cloud.yaml": "a broker deployment has no local rung to offer",
 	"presets/openrouter_cloud_eu.yaml": "the same, pinned to EU endpoints — which bounds the REGION the " +
 		"prompt reaches but not the machine, and local_only is about the machine",

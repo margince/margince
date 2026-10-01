@@ -111,7 +111,14 @@ func probeProviderKey(
 	if isDecisionProvider(provider) {
 		return probeDecisionKey(ctx, cfg, provider, keys, build.decider)
 	}
-	client, err := build.brain(boundProviderConfig(cfg, provider, ""), keys)
+	binding := boundProviderConfig(cfg, provider, "")
+	// A Vertex key is tested on Google's global host, which the model list
+	// reaches whatever location a lane names: a key is the project's, not one
+	// location's.
+	if provider == providerGeminiVertex {
+		binding.Location = vertexMetadataLocation
+	}
+	client, err := build.brain(binding, keys)
 	if err != nil {
 		out.Reason = keyTestRefusal(unavailableFor(err))
 		return out

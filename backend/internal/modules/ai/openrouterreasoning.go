@@ -102,9 +102,9 @@ func (c *openAICompatClient) reasoningFloor(ctx context.Context, modelID, floor 
 func (c *openAICompatClient) fetchReasoning(ctx context.Context) (openRouterCatalog, error) {
 	ctx, cancel := context.WithTimeout(ctx, openRouterModelsTimeout)
 	defer cancel()
-	raw, err := getListBody(ctx, c.http, "openai-compat", c.baseURL+"/v1/models", func(r *http.Request) {
+	raw, err := getListBody(ctx, c.http, "openai-compat", c.baseURL+"/v1/models", signedBy(func(r *http.Request) {
 		r.Header.Set("Authorization", "Bearer "+c.apiKey)
-	})
+	}))
 	if err != nil {
 		return nil, err
 	}

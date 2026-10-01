@@ -451,7 +451,7 @@
       ],
       "properties": {
         "provider": {
-          "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini. The only place vendor names appear.",
+          "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The only place vendor names appear.",
           "enum": [
             "fake",
             "anthropic",
@@ -459,7 +459,8 @@
             "vllm",
             "openai_compatible",
             "openai",
-            "gemini"
+            "gemini",
+            "gemini_vertex"
           ]
         },
         "model": {
@@ -469,6 +470,11 @@
         "base_url": {
           "type": "string",
           "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default."
+        },
+        "location": {
+          "type": "string",
+          "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
+          "description": "gemini_vertex only, and REQUIRED there: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4. The host follows from it, so gemini_vertex takes no base_url."
         },
         "input": {
           "description": "What the bound model can be GIVEN. On openai_compatible/vllm it is the whole answer (the carriage depends on which model was bound). On every other provider it NARROWS the carriage fixed in that adapter's wire — at most what the wire carries, at most what is declared — so it can take image away from a gemini tier and can never add a lane a wire lacks. Omit to take whatever the provider carries; write [text] to send it no attachments. Must include text.",
@@ -489,7 +495,7 @@
           "$ref": "#/$defs/upstreamRouting"
         },
         "thinking_level": {
-          "description": "How deeply a gemini tier thinks when the request names no level of its own. Omit it for the adapter's default: a structured request thinks at low, and a Flash-Lite keeps its own shallower default (minimal), which low RAISES. Gemini charges thinking to the same output ceiling as the answer. Gemini 3 or later only — a Gemini 2.5 answers the field with a 400, and gemini-3.1-pro-preview refuses minimal.",
+          "description": "How deeply a gemini or gemini_vertex tier thinks when the request names no level of its own. Omit it for the adapter's default: a structured request thinks at low, and a Flash-Lite keeps its own shallower default (minimal), which low RAISES. Gemini charges thinking to the same output ceiling as the answer. Gemini 3 or later only — a Gemini 2.5 answers the field with a 400, and gemini-3.1-pro-preview refuses minimal.",
           "enum": [
             "minimal",
             "low",
@@ -518,6 +524,39 @@
         },
         {
           "if": {
+            "properties": {
+              "provider": {
+                "const": "gemini_vertex"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "location"
+            ],
+            "not": {
+              "required": [
+                "base_url"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "location"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "const": "gemini_vertex"
+              }
+            }
+          }
+        },
+        {
+          "if": {
             "required": [
               "thinking_level"
             ]
@@ -525,7 +564,10 @@
           "then": {
             "properties": {
               "provider": {
-                "const": "gemini"
+                "enum": [
+                  "gemini",
+                  "gemini_vertex"
+                ]
               }
             }
           }
@@ -643,7 +685,7 @@
       ],
       "properties": {
         "provider": {
-          "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini. The only place vendor names appear.",
+          "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The only place vendor names appear.",
           "enum": [
             "fake",
             "anthropic",
@@ -651,7 +693,8 @@
             "vllm",
             "openai_compatible",
             "openai",
-            "gemini"
+            "gemini",
+            "gemini_vertex"
           ]
         },
         "model": {
@@ -661,6 +704,11 @@
         "base_url": {
           "type": "string",
           "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default."
+        },
+        "location": {
+          "type": "string",
+          "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
+          "description": "gemini_vertex only, and REQUIRED there: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4. The host follows from it, so gemini_vertex takes no base_url."
         },
         "dimensions": {
           "type": "integer",
@@ -689,6 +737,39 @@
         },
         {
           "$ref": "#/$defs/routingNeedsOpenRouter"
+        },
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "gemini_vertex"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "location"
+            ],
+            "not": {
+              "required": [
+                "base_url"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "location"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "const": "gemini_vertex"
+              }
+            }
+          }
         }
       ]
     },

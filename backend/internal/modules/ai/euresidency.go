@@ -22,16 +22,20 @@ func isEURegionHost(slug string) bool {
 	return region == "eu" || strings.HasPrefix(region, "eu-") || strings.HasPrefix(region, "europe-")
 }
 
-// EURegionPinGap names why a broker binding may be served outside the EU, or
-// answers "" when every host its `only:` admits is an EU-region endpoint.
+// EURegionPinGap names why a broker binding, or a gemini_vertex one, may be
+// served outside the EU, or answers "" when every host its `only:` admits is
+// an EU-region endpoint and every Vertex location an EU one.
 //
 // A broker fronts many hosts per model and, without `only:`, picks among them
 // itself — a model with no EU endpoint at all is still served, from wherever it
 // runs, and nothing fails. So on a broker the pin is the whole residency
 // guarantee. A binding the broker does not front answers "": it names one host,
 // and whether that host is in the EU is a fact about the host this rule cannot
-// read.
+// read — except on Vertex, whose host follows from a location the build knows.
 func EURegionPinGap(binding ProviderConfig) string {
+	if gap := vertexLocationGap(binding); gap != "" {
+		return gap
+	}
 	if !UpstreamPreferencesApply(binding) {
 		return ""
 	}
@@ -57,6 +61,11 @@ func EURegionPinGap(binding ProviderConfig) string {
 func requireEURegionPin(profile Profile, lane string, binding ProviderConfig) error {
 	if profile != ProfileEUHosted {
 		return nil
+	}
+	if gap := vertexLocationGap(binding); gap != "" {
+		return fmt.Errorf("ai: routing config: %s under profile eu_hosted: gemini_vertex %s; "+
+			"bind an EU location such as eu or europe-west4, "+
+			"or declare profile cloud_frontier if this binding does not promise EU inference", lane, gap)
 	}
 	if gap := EURegionPinGap(binding); gap != "" {
 		return fmt.Errorf("ai: routing config: %s under profile eu_hosted: %s; "+

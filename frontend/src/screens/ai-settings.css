@@ -165,6 +165,13 @@
   min-width: 0;
 }
 
+/* A key file's verbs sit under its box rather than beside it, at their own
+ * width: the box is too tall to share a line with them. */
+.ai-key-verbs {
+  display: flex;
+  gap: var(--space-2);
+}
+
 /* Air between a credential's reading and the field it opens. Without it the
  * field's own label sat directly under the last line of the summary and the two
  * read as one block instead of a reading and the thing it opened. */

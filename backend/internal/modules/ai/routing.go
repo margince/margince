@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -252,18 +253,21 @@ func ProviderIsLocal(provider string) bool {
 	return localProviders[provider]
 }
 
+// declaredProfiles lists the environment classes Valid admits, and the schema
+// gate compares it with the config schema's enum.
+var declaredProfiles = []Profile{ProfileEUHosted, ProfileSovereign, ProfileCloudFrontier}
+
+// DeclaredProfiles is declaredProfiles as a copy, for the gate that holds the
+// routing form's own list against it.
+func DeclaredProfiles() []Profile { return slices.Clone(declaredProfiles) }
+
 // Valid reports whether p is one of the declared environment classes.
 //
 // Exported because the certification lane files a record under the profile it
-// measured and has to refuse an unknown one, and a second switch over the same
-// three constants there would go quietly stale the day a fourth is added.
+// measured and has to refuse an unknown one, and a second list of the same
+// constants there would go quietly stale the day another is added.
 func (p Profile) Valid() bool {
-	switch p {
-	case ProfileEUHosted, ProfileSovereign, ProfileCloudFrontier:
-		return true
-	default:
-		return false
-	}
+	return slices.Contains(declaredProfiles, p)
 }
 
 func (cfg RoutingConfig) validate() error {
@@ -321,6 +325,9 @@ func (cfg RoutingConfig) validate() error {
 		if err := requireSovereignEndpoint("the embeddings lane", cfg.Embeddings.Provider, cfg.Embeddings.BaseURL); err != nil {
 			return err
 		}
+	}
+	if err := validateVertexPlacement("the embeddings lane", cfg.Embeddings.ProviderConfig); err != nil {
+		return err
 	}
 	// The embed lane dials an operator-supplied host like any chat tier, so it
 	// carries the same egress rule on every profile.
@@ -388,6 +395,9 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 		if err := requireSovereignEndpoint(fmt.Sprintf("tier %s", tier), binding.Provider, binding.BaseURL); err != nil {
 			return err
 		}
+	}
+	if err := validateVertexPlacement(fmt.Sprintf("tier %s", tier), binding); err != nil {
+		return err
 	}
 	// EVERY profile, not only sovereign. base_url is the address this server
 	// dials, and outside the sovereign branch above nothing looked at it at

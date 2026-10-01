@@ -382,24 +382,27 @@ function startableProviders(
 // The stored profile is kept when it is one: an operator who declared eu_hosted
 // before binding anything must not be moved off it by a first click. A fresh
 // installation stores an empty profile, which is no member of the enum, and
-// then `cloud_frontier` — what both cloud presets need — is written instead.
+// then the preset's own profile is written instead.
 export function firstBinding(
   id: keyof typeof SETUP_PROVIDERS,
   stored: string,
 ): Routing {
   const p = SETUP_PROVIDERS[id];
+  const host = p.baseUrl ? { base_url: p.baseUrl } : {};
   const lane = {
     provider: p.provider,
     model: p.chatModel,
-    ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
+    ...host,
+    ...(p.location ? { location: p.location } : {}),
   };
   return {
-    profile: isProfile(stored) ? stored : "cloud_frontier",
+    profile: isProfile(stored) ? stored : p.profile,
     tiers: Object.fromEntries(TIER_ORDER.map((t) => [t, { ...lane }])),
     embeddings: {
       provider: p.provider,
       model: p.embedModel,
-      ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
+      ...host,
+      ...(p.embedLocation ? { location: p.embedLocation } : {}),
     },
   };
 }
@@ -418,11 +421,9 @@ function sheetAsOf(catalogue: ModelCatalogue): string | null {
   );
 }
 
-const PROFILES: readonly Routing["profile"][] = [
-  "eu_hosted",
-  "sovereign",
-  "cloud_frontier",
-];
+// A declared mirror of the server's profiles, held both ways by
+// backend/gates/frontendproviders_test.go, which reads this `[…] as const` form.
+const PROFILES = ["eu_hosted", "sovereign", "cloud_frontier"] as const;
 
 function isProfile(value: string): value is Routing["profile"] {
   return PROFILES.some((p) => p === value);

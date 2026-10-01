@@ -1,12 +1,12 @@
 import type { BrowserContext, Page } from "@playwright/test";
 import { type GrantSpec, meFixture } from "../src/app/mefixture";
+import { bookingInvitation, bookingProfile } from "../src/screens/book.testkit";
 import {
   briefEmpty,
   briefManager,
   briefOmitted,
   briefWithPlan,
 } from "../src/screens/meetingbrief/fixtures";
-import { bookingInvitation, bookingProfile } from "../src/screens/book.testkit";
 import { aiAdminFixture } from "./ai-admin-fixture";
 import { type MockProject, projectMock } from "./projectmock";
 
@@ -730,11 +730,24 @@ export const auditEntries = [
 // One provider keyed and one not, so the route the 390px and axe sweeps visit
 // renders BOTH row states. A list of only-configured or only-empty rows would
 // leave half the card's markup unvisited by the very sweeps that exist to see
-// it. `env_var` is required by AiProviderKeyStatus.
+// it. `env_var`, `optional` and `credential_kind` are required by
+// AiProviderKeyStatus.
 export const aiProviderKeys = {
   providers: [
-    { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-    { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
+    {
+      provider: "gemini",
+      configured: true,
+      env_var: "GEMINI_API_KEY",
+      optional: false,
+      credential_kind: "api_key",
+    },
+    {
+      provider: "anthropic",
+      configured: false,
+      env_var: "ANTHROPIC_API_KEY",
+      optional: false,
+      credential_kind: "api_key",
+    },
   ],
 };
 
@@ -2423,11 +2436,20 @@ export async function mockApi(
       }
       return json(existing);
     }
-    if (path === "/scheduling/profile" || path === "/public/booking/host-1/profile") {
-      return json({ ...bookingProfile, slug: "host-1", public_url: "https://crm.example.test/#/book/host-1" });
+    if (
+      path === "/scheduling/profile" ||
+      path === "/public/booking/host-1/profile"
+    ) {
+      return json({
+        ...bookingProfile,
+        slug: "host-1",
+        public_url: "https://crm.example.test/#/book/host-1",
+      });
     }
     if (path === "/scheduling/calendars") {
-      return json([{ id: "primary", name: "Work calendar", writable: true, primary: true }]);
+      return json([
+        { id: "primary", name: "Work calendar", writable: true, primary: true },
+      ]);
     }
     if (path === "/public/meeting/guest-booking") {
       return json({ ...bookingInvitation, ...publicSlots[0] });
@@ -2460,7 +2482,20 @@ export async function mockApi(
           409,
         );
       }
-      return json({ start: body.start, end: body.end, booking: "pending", invitation: { ...bookingInvitation, start: body.start, end: body.end, management_token: "guest-booking" } }, 201);
+      return json(
+        {
+          start: body.start,
+          end: body.end,
+          booking: "pending",
+          invitation: {
+            ...bookingInvitation,
+            start: body.start,
+            end: body.end,
+            management_token: "guest-booking",
+          },
+        },
+        201,
+      );
     }
     if (path === "/availability") {
       return json({

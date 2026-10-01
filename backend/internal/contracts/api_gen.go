@@ -887,6 +887,7 @@ func (e AiProfileName) Valid() bool {
 const (
 	AiProfileProvidersAnthropic        AiProfileProviders = "anthropic"
 	AiProfileProvidersGemini           AiProfileProviders = "gemini"
+	AiProfileProvidersGeminiVertex     AiProfileProviders = "gemini_vertex"
 	AiProfileProvidersOllama           AiProfileProviders = "ollama"
 	AiProfileProvidersOpenai           AiProfileProviders = "openai"
 	AiProfileProvidersOpenaiCompatible AiProfileProviders = "openai_compatible"
@@ -899,6 +900,8 @@ func (e AiProfileProviders) Valid() bool {
 	case AiProfileProvidersAnthropic:
 		return true
 	case AiProfileProvidersGemini:
+		return true
+	case AiProfileProvidersGeminiVertex:
 		return true
 	case AiProfileProvidersOllama:
 		return true
@@ -928,6 +931,24 @@ func (e AiProfileState) Valid() bool {
 	case AiProfileStateDevelopment:
 		return true
 	case AiProfileStateUnconfigured:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiProviderKeyStatusCredentialKind.
+const (
+	AiProviderKeyStatusCredentialKindApiKey         AiProviderKeyStatusCredentialKind = "api_key"
+	AiProviderKeyStatusCredentialKindServiceAccount AiProviderKeyStatusCredentialKind = "service_account"
+)
+
+// Valid indicates whether the value is a known member of the AiProviderKeyStatusCredentialKind enum.
+func (e AiProviderKeyStatusCredentialKind) Valid() bool {
+	switch e {
+	case AiProviderKeyStatusCredentialKindApiKey:
+		return true
+	case AiProviderKeyStatusCredentialKindServiceAccount:
 		return true
 	default:
 		return false
@@ -1361,6 +1382,7 @@ func (e AssignmentSubjectKind) Valid() bool {
 const (
 	AssistantConfiguredModelProviderAssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
 	AssistantConfiguredModelProviderAssistantModelProviderGemini           AssistantConfiguredModelProvider = "gemini"
+	AssistantConfiguredModelProviderAssistantModelProviderGeminiVertex     AssistantConfiguredModelProvider = "gemini_vertex"
 	AssistantConfiguredModelProviderAssistantModelProviderOllama           AssistantConfiguredModelProvider = "ollama"
 	AssistantConfiguredModelProviderAssistantModelProviderOpenAI           AssistantConfiguredModelProvider = "openai"
 	AssistantConfiguredModelProviderAssistantModelProviderOpenAICompatible AssistantConfiguredModelProvider = "openai_compatible"
@@ -1373,6 +1395,8 @@ func (e AssistantConfiguredModelProvider) Valid() bool {
 	case AssistantConfiguredModelProviderAssistantModelProviderAnthropic:
 		return true
 	case AssistantConfiguredModelProviderAssistantModelProviderGemini:
+		return true
+	case AssistantConfiguredModelProviderAssistantModelProviderGeminiVertex:
 		return true
 	case AssistantConfiguredModelProviderAssistantModelProviderOllama:
 		return true
@@ -1475,6 +1499,7 @@ func (e AssistantProfileName) Valid() bool {
 const (
 	AssistantProfileProvidersAnthropic        AssistantProfileProviders = "anthropic"
 	AssistantProfileProvidersGemini           AssistantProfileProviders = "gemini"
+	AssistantProfileProvidersGeminiVertex     AssistantProfileProviders = "gemini_vertex"
 	AssistantProfileProvidersOllama           AssistantProfileProviders = "ollama"
 	AssistantProfileProvidersOpenai           AssistantProfileProviders = "openai"
 	AssistantProfileProvidersOpenaiCompatible AssistantProfileProviders = "openai_compatible"
@@ -1487,6 +1512,8 @@ func (e AssistantProfileProviders) Valid() bool {
 	case AssistantProfileProvidersAnthropic:
 		return true
 	case AssistantProfileProvidersGemini:
+		return true
+	case AssistantProfileProvidersGeminiVertex:
 		return true
 	case AssistantProfileProvidersOllama:
 		return true
@@ -12361,6 +12388,54 @@ func (e ProviderConnectionStatus) Valid() bool {
 	}
 }
 
+// Defines values for ProviderLocationJurisdiction.
+const (
+	ProviderLocationJurisdictionEu     ProviderLocationJurisdiction = "eu"
+	ProviderLocationJurisdictionGlobal ProviderLocationJurisdiction = "global"
+	ProviderLocationJurisdictionOther  ProviderLocationJurisdiction = "other"
+	ProviderLocationJurisdictionUs     ProviderLocationJurisdiction = "us"
+)
+
+// Valid indicates whether the value is a known member of the ProviderLocationJurisdiction enum.
+func (e ProviderLocationJurisdiction) Valid() bool {
+	switch e {
+	case ProviderLocationJurisdictionEu:
+		return true
+	case ProviderLocationJurisdictionGlobal:
+		return true
+	case ProviderLocationJurisdictionOther:
+		return true
+	case ProviderLocationJurisdictionUs:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderLocationListUnavailable.
+const (
+	ProviderLocationListUnavailableNoKey          ProviderLocationListUnavailable = "no_key"
+	ProviderLocationListUnavailableNotPublished   ProviderLocationListUnavailable = "not_published"
+	ProviderLocationListUnavailableProfileForbids ProviderLocationListUnavailable = "profile_forbids"
+	ProviderLocationListUnavailableUnreachable    ProviderLocationListUnavailable = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the ProviderLocationListUnavailable enum.
+func (e ProviderLocationListUnavailable) Valid() bool {
+	switch e {
+	case ProviderLocationListUnavailableNoKey:
+		return true
+	case ProviderLocationListUnavailableNotPublished:
+		return true
+	case ProviderLocationListUnavailableProfileForbids:
+		return true
+	case ProviderLocationListUnavailableUnreachable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProviderRunSkipReason.
 const (
 	ProviderRunSkipReasonAlreadyFresh              ProviderRunSkipReason = "already_fresh"
@@ -21531,11 +21606,17 @@ type AiEmbeddingsBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
+	// Location The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
+	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+	// on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
+	// On save, the model is asked for at this location, and one it does not serve is a 422.
+	Location *string `json:"location,omitempty"`
+
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
 	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
@@ -21713,10 +21794,13 @@ type AiProfileProviders string
 // AiProfileState defines model for AiProfile.State.
 type AiProfileState string
 
-// AiProviderKeyInput defines model for AiProviderKeyInput.
+// AiProviderKeyInput Exactly one of the two fields, the one the vendor's `credential_kind` names. The server refuses neither, both, or the other one with a 422.
 type AiProviderKeyInput struct {
 	// ApiKey The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
 	ApiKey *string `json:"api_key,omitempty"`
+
+	// ServiceAccountJson A Google service-account key file's whole contents, for `gemini_vertex`. WRITE-ONLY, exactly as `api_key` is. Its `project_id` is the project every call is billed to.
+	ServiceAccountJson *string `json:"service_account_json,omitempty"`
 }
 
 // AiProviderKeyList defines model for AiProviderKeyList.
@@ -21729,6 +21813,9 @@ type AiProviderKeyStatus struct {
 	// Configured Whether a credential is held. A screen reads this to offer "add" or "rotate"; it says nothing about whether the key still works, which only the vendor can answer.
 	Configured bool `json:"configured"`
 
+	// CredentialKind Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a service-account key file (`service_account_json`), `api_key` is a pasted key. A property of the vendor, not of what is stored.
+	CredentialKind AiProviderKeyStatusCredentialKind `json:"credential_kind"`
+
 	// EnvVar The variable the same key may arrive in. Named so an operator can see which export seeded a vendor; the names follow each vendor's own convention, which is why they carry no MARGINCE_ prefix.
 	EnvVar string `json:"env_var"`
 
@@ -21738,6 +21825,9 @@ type AiProviderKeyStatus struct {
 	// Provider The routing name of the vendor, the same string a binding uses.
 	Provider string `json:"provider"`
 }
+
+// AiProviderKeyStatusCredentialKind Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a service-account key file (`service_account_json`), `api_key` is a pasted key. A property of the vendor, not of what is stored.
+type AiProviderKeyStatusCredentialKind string
 
 // AiProviderKeyTestResult One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words.
 type AiProviderKeyTestResult struct {
@@ -21782,6 +21872,8 @@ type AiRouting struct {
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 	// provider on any tier is refused, and so is a local provider pointed at another host.
+	// `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
+	// `gemini_vertex` lane must name an EU location.
 	Profile AiRoutingProfile `json:"profile"`
 
 	// Tiers Tier name to the model bound on it. Empty means no models are bound.
@@ -21790,6 +21882,8 @@ type AiRouting struct {
 
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
+// `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
+// `gemini_vertex` lane must name an EU location.
 type AiRoutingProfile string
 
 // AiRoutingPreview defines model for AiRoutingPreview.
@@ -21895,11 +21989,17 @@ type AiTierBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
+	// Location The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
+	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+	// on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
+	// On save, the model is asked for at this location, and one it does not serve is a 422.
+	Location *string `json:"location,omitempty"`
+
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
 	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
@@ -23880,11 +23980,11 @@ type AvailableModelList struct {
 	// RankedBy The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten.
 	RankedBy *string `json:"ranked_by,omitempty"`
 
-	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
 	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
 }
 
-// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
 type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
@@ -38160,6 +38260,38 @@ type ProviderCredits struct {
 	ReadAt *time.Time      `json:"read_at,omitempty"`
 }
 
+// ProviderLocation defines model for ProviderLocation.
+type ProviderLocation struct {
+	// DisplayName Google's own label, or this build's for a multi-region Google did not list.
+	DisplayName string `json:"display_name"`
+
+	// Id The string a binding's `location` names, exactly as Google spells it.
+	Id string `json:"id"`
+
+	// Jurisdiction Whose law the processing happens under, by this build's policy: `eu` exactly when `resident`, `global` for the endpoint that may process anywhere, `us` for the US multi-region and US regions, and `other` for everything else — London and Zürich among them.
+	Jurisdiction ProviderLocationJurisdiction `json:"jurisdiction"`
+
+	// Resident Whether Google keeps ML processing at this location inside the EU, which is what the `eu_hosted` profile admits. This build's list, never Google's: a location Google adds is not resident until this build names it.
+	Resident bool `json:"resident"`
+}
+
+// ProviderLocationJurisdiction Whose law the processing happens under, by this build's policy: `eu` exactly when `resident`, `global` for the endpoint that may process anywhere, `us` for the US multi-region and US regions, and `other` for everything else — London and Zürich among them.
+type ProviderLocationJurisdiction string
+
+// ProviderLocationList Where one vendor can process a call. An empty `locations` always carries `unavailable`.
+type ProviderLocationList struct {
+	Locations []ProviderLocation `json:"locations"`
+
+	// Provider The routing name of the vendor that was asked.
+	Provider string `json:"provider"`
+
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer. `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
+	Unavailable *ProviderLocationListUnavailable `json:"unavailable,omitempty"`
+}
+
+// ProviderLocationListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer. `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
+type ProviderLocationListUnavailable string
+
 // ProviderLookupBacklog How much of the installation is still waiting to be looked up once, and whether the sweep is moving. A count without the paused flag reads as progress that has stalled; the two together say whether waiting is the right thing to do.
 type ProviderLookupBacklog struct {
 	// Paused True when nothing will be queued right now — the posture is off, the connection is not usable, or the day's run ceiling is spent. A remaining count that is not falling is explained by this rather than by a stuck sweep.
@@ -46326,6 +46458,12 @@ type ListAvailableModelsParams struct {
 	// Top Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
 	// Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
 	Top *int `form:"top,omitempty" json:"top,omitempty"`
+
+	// Location The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_hosted` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor.
+	Location *string `form:"location,omitempty" json:"location,omitempty"`
+
+	// Model Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe.
+	Model *string `form:"model,omitempty" json:"model,omitempty"`
 }
 
 // ListAiCallsParams defines parameters for ListAiCalls.
@@ -63110,6 +63248,9 @@ type ServerInterface interface {
 	// Ask one vendor whether the stored credential works (admin/ops).
 	// (POST /ai/provider-keys/{provider}/test)
 	TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string)
+	// Where one vendor can process a call (admin/ops).
+	// (GET /ai/provider-locations/{provider})
+	ListProviderLocations(w http.ResponseWriter, r *http.Request, provider string)
 	// The tier-to-model binding this installation runs on (admin/ops).
 	// (GET /ai/routing)
 	GetAiRouting(w http.ResponseWriter, r *http.Request)
@@ -65558,6 +65699,12 @@ func (_ Unimplemented) SetAiProviderKey(w http.ResponseWriter, r *http.Request, 
 // Ask one vendor whether the stored credential works (admin/ops).
 // (POST /ai/provider-keys/{provider}/test)
 func (_ Unimplemented) TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Where one vendor can process a call (admin/ops).
+// (GET /ai/provider-locations/{provider})
+func (_ Unimplemented) ListProviderLocations(w http.ResponseWriter, r *http.Request, provider string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71641,6 +71788,32 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 		return
 	}
 
+	// ------------- Optional query parameter "location" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "location", r.URL.Query(), &params.Location, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "location"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "location", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "model" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "model", r.URL.Query(), &params.Model, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAvailableModels(w, r, provider, params)
 	}))
@@ -71976,6 +72149,38 @@ func (siw *ServerInterfaceWrapper) TestAiProviderKey(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.TestAiProviderKey(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProviderLocations operation middleware
+func (siw *ServerInterfaceWrapper) ListProviderLocations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProviderLocations(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -102841,6 +103046,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai/provider-keys/{provider}/test", wrapper.TestAiProviderKey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/provider-locations/{provider}", wrapper.ListProviderLocations)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/routing", wrapper.GetAiRouting)

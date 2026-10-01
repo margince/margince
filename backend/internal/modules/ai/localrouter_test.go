@@ -188,7 +188,7 @@ func TestALocalRouterSendsTheBrokerDefaultsProductionWould(t *testing.T) {
 			cfg := RoutingConfig{
 				Profile: ProfileCloudFrontier, Tiers: tiers,
 				Embeddings: EmbeddingsConfig{ProviderConfig: binding},
-			}.WithKeys(allCloudKeys())
+			}.WithKeys(allCloudKeys(t))
 			router, err := NewLocalRouter(cfg)
 			if err != nil {
 				t.Fatalf("building the router: %v", err)

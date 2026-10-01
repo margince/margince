@@ -23,8 +23,33 @@ import (
 // recordMeasures reports whether rec grades binding as a rung of task under
 // profile: the same provider, model, profile, thinking level and broker upstream
 // preferences, with every site run at the level this binding serves it — a
-// record from before a site declared its level measured a different call.
+// record from before a site declared its level measured a different call. A
+// binding's own record grades it first, and MeasuredAs's record otherwise.
 func recordMeasures(rec Record, binding ai.ProviderConfig, profile ai.Profile, task ai.Task) bool {
+	if measuresExactly(rec, binding, profile, task) {
+		return true
+	}
+	as, asProfile := MeasuredAs(binding, profile)
+	return as.Provider != binding.Provider && measuresExactly(rec, as, asProfile, task)
+}
+
+// MeasuredAs is the binding and profile a record names when it grades binding
+// on another provider's measurement (ai.MeasuredBy). A Vertex binding is graded
+// by the AI Studio record for the same model: Vertex serves Gemini's weights on
+// Gemini's wire, so the request that record measured is the one Vertex is sent.
+// Those records are filed under cloud_frontier, the profile AI Studio is bound
+// under; a profile alters no call but by refusing one, and a refused binding is
+// never run.
+func MeasuredAs(binding ai.ProviderConfig, profile ai.Profile) (ai.ProviderConfig, ai.Profile) {
+	by := ai.MeasuredBy(binding.Provider)
+	if by == binding.Provider {
+		return binding, profile
+	}
+	binding.Provider, binding.Location = by, ""
+	return binding, ai.ProfileCloudFrontier
+}
+
+func measuresExactly(rec Record, binding ai.ProviderConfig, profile ai.Profile, task ai.Task) bool {
 	return rec.Kind != KindDecision &&
 		rec.Task == string(task) &&
 		rec.Provider == binding.Provider &&

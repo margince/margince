@@ -79,7 +79,7 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 	for tier, b := range cfg.Tiers {
 		tiers[string(tier)] = crmcontracts.AiTierBinding{
 			Provider: b.Provider, Model: b.Model,
-			BaseUrl: optionalString(b.BaseURL), Input: optionalStrings(b.Input),
+			BaseUrl: optionalString(b.BaseURL), Location: optionalString(b.Location), Input: optionalStrings(b.Input),
 			Routing:       routingToWire(b.Routing),
 			ThinkingLevel: optionalEnum[crmcontracts.AiTierBindingThinkingLevel](b.ThinkingLevel),
 		}
@@ -90,6 +90,7 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 		Embeddings: crmcontracts.AiEmbeddingsBinding{
 			Provider: cfg.Embeddings.Provider, Model: cfg.Embeddings.Model,
 			BaseUrl:       optionalString(cfg.Embeddings.BaseURL),
+			Location:      optionalString(cfg.Embeddings.Location),
 			Input:         optionalStrings(cfg.Embeddings.Input),
 			Routing:       routingToWire(cfg.Embeddings.Routing),
 			ThinkingLevel: optionalEnum[crmcontracts.AiEmbeddingsBindingThinkingLevel](cfg.Embeddings.ThinkingLevel),
@@ -131,7 +132,8 @@ func fromContractAiRouting(req crmcontracts.AiRouting) ai.RoutingConfig {
 	// the text (only, ignore, allow_fallbacks), and the store refuses the rest.
 	embeddings := crmcontracts.AiTierBinding{
 		Provider: req.Embeddings.Provider, Model: req.Embeddings.Model,
-		BaseUrl: req.Embeddings.BaseUrl, Input: req.Embeddings.Input, Routing: req.Embeddings.Routing,
+		BaseUrl: req.Embeddings.BaseUrl, Location: req.Embeddings.Location, Input: req.Embeddings.Input,
+		Routing: req.Embeddings.Routing,
 	}
 	// Mapped although this lane refuses it, so a submitted level meets the
 	// store's refusal instead of being dropped as though it were never sent.
@@ -160,6 +162,9 @@ func tierFromWire(b crmcontracts.AiTierBinding) ai.ProviderConfig {
 	out := ai.ProviderConfig{Provider: b.Provider, Model: b.Model, Routing: routingFromWire(b.Routing)}
 	if b.BaseUrl != nil {
 		out.BaseURL = *b.BaseUrl
+	}
+	if b.Location != nil {
+		out.Location = *b.Location
 	}
 	if b.Input != nil {
 		out.Input = *b.Input
@@ -280,12 +285,55 @@ func (h aiRoutingHandlers) ListAvailableModels(
 	if params.Top != nil {
 		top = *params.Top
 	}
-	available, err := h.store.ListAvailableModels(r.Context(), provider, tier, top)
+	available, err := h.store.ListAvailableModels(r.Context(), ai.AvailableModelsQuery{
+		Provider: provider, Tier: tier, Top: top,
+		Location: derefString(params.Location), Model: derefString(params.Model),
+	})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, toContractAvailableModels(available))
+}
+
+// ListProviderLocations reports where one vendor can process a call, for the
+// Location field of a gemini_vertex binding. Like the model list, a vendor
+// that cannot be asked is a 200 carrying the reason.
+func (h aiRoutingHandlers) ListProviderLocations(w http.ResponseWriter, r *http.Request, provider string) {
+	if h.store == nil {
+		httperr.NotImplemented(w, r, "ListProviderLocations")
+		return
+	}
+	// Human-only (x-agent-access): the agent gate refuses first, and this is
+	// its in-handler twin, as on the binding write.
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	found, err := h.store.ListProviderLocations(r.Context(), provider)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, toContractProviderLocations(found))
+}
+
+// toContractProviderLocations keeps Locations an array, never null, for the
+// reason toContractAvailableModels does.
+func toContractProviderLocations(found ai.ProviderLocations) crmcontracts.ProviderLocationList {
+	locations := make([]crmcontracts.ProviderLocation, 0, len(found.Locations))
+	for _, l := range found.Locations {
+		locations = append(locations, crmcontracts.ProviderLocation{
+			Id: l.ID, DisplayName: l.DisplayName,
+			Jurisdiction: crmcontracts.ProviderLocationJurisdiction(l.Jurisdiction), Resident: l.Resident,
+		})
+	}
+	out := crmcontracts.ProviderLocationList{Provider: found.Provider, Locations: locations}
+	if found.Unavailable != ai.AvailabilityOK {
+		reason := crmcontracts.ProviderLocationListUnavailable(found.Unavailable)
+		out.Unavailable = &reason
+	}
+	return out
 }
 
 // toContractAvailableModels maps one vendor's answer onto the wire shape.
