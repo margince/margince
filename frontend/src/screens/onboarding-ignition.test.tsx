@@ -4,38 +4,22 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { OnboardingStage } from "../design-system/onboarding-stage";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { Ignition } from "./onboarding-ignition";
 
 afterEach(cleanup);
 
-function renderOnStage() {
-  return render(
-    <LocaleProvider initial="en">
-      <OnboardingStage flow="Setup" lit title="Choose a model">
+describe("the ignition's capability lines", () => {
+  // Not a live region: one that mounts already full and never changes is
+  // announced by no screen reader reliably. The reader reaches the lines by
+  // focus, which the screen hosting the ignition hands to the stage title.
+  it("are one plain list of three items", () => {
+    render(
+      <LocaleProvider initial="en">
         <Ignition vendor="Google Gemini" onDone={() => {}} />
-      </OnboardingStage>
-    </LocaleProvider>,
-  );
-}
-
-describe("the ignition", () => {
-  // The control that started it is gone, so focus is handed somewhere a screen
-  // reader reads the whole scene from, in order.
-  it("takes the reader to the stage title the moment it starts", () => {
-    renderOnStage();
-
-    expect(document.activeElement).toBe(
-      screen.getByRole("heading", { name: "Choose a model" }),
+      </LocaleProvider>,
     );
-  });
-
-  // A live region that mounts already full is announced by no screen reader
-  // reliably, and one that is never changed is never announced at all.
-  it("draws its capability lines as one plain list of three, not a live region", () => {
-    renderOnStage();
 
     const list = screen.getByRole("list");
     const items = within(list).getAllByRole("listitem");

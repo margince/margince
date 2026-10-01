@@ -15,11 +15,8 @@ import { meFixture } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
-import {
-  forgetPlatformDeclines,
-  InstallationSetup,
-  outstandingStep,
-} from "./installation-setup";
+import { InstallationSetup, outstandingStep } from "./installation-setup";
+import { forgetPlatformDeclines } from "./installation-setup.decline";
 
 afterEach(() => {
   // Every case starts with the platform question unanswered by this account.
@@ -398,6 +395,57 @@ describe("the first-run setup gate", () => {
       await screen.findByRole("heading", { name: "Model connected" }),
     ).toBeTruthy();
     expect(screen.queryByText("No model connected")).toBeNull();
+  });
+
+  // The pressed Continue unmounts with the form, so focus is handed to the
+  // title a screen reader reads the ignition from, in order.
+  it("hands the reader to the stage title when the ignition starts", async () => {
+    const user = userEvent.setup();
+    mount(setupReport(false, false));
+    await user.type(await screen.findByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    const title = await screen.findByRole("heading", {
+      name: "Model connected",
+    });
+    expect(document.activeElement).toBe(title);
+  });
+
+  // The report is re-read only once the reader presses past the ignition, and
+  // until it answers it still asks for the model: letting go first would draw
+  // the model form again for the round trip.
+  it("holds the ignition until the next question arrives, then hands the reader to it", async () => {
+    const user = userEvent.setup();
+    const report = setupReport(false, false);
+    mount(report);
+    await user.type(await screen.findByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("heading", { name: "Model connected" });
+
+    const serve = globalThis.fetch;
+    let answer = () => {};
+    const held = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    vi.stubGlobal("fetch", async (request: Request, init?: RequestInit) => {
+      if (new URL(request.url).pathname.endsWith("/installation/setup")) {
+        await held;
+      }
+      return serve(request, init);
+    });
+    report.steps[0].configured = true;
+    report.complete = true;
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      screen.getByRole("heading", { name: "Model connected" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Choose a model provider")).toBeNull();
+
+    answer();
+    const next = await screen.findByRole("heading", {
+      name: "What does your company run on?",
+    });
+    expect(document.activeElement).toBe(next);
+    expect(screen.queryByText("Choose a model provider")).toBeNull();
   });
 
   // Every chat tier, not just one. A half-bound installation answers for one

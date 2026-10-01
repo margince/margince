@@ -5,6 +5,7 @@ import {
   createContext,
   type ReactNode,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -62,12 +63,26 @@ export type StageProgress = Readonly<{ steps: readonly string[]; at: number }>;
 export const STAGE_TITLE_ID = "ob-stage-title";
 
 /**
- * Hands the reader back to the stage headline, for a step that replaces the
- * control they just pressed. Focus would otherwise fall to the body and a
- * screen reader go quiet; from the title it reads the new board in order.
+ * Hands the reader to the stage headline whenever `board` (the caller's name
+ * for what the board shows) changes. A swap unmounts the control just pressed,
+ * so focus would fall to the body and a screen reader go quiet; from the title
+ * it reads the new board in order. The first board is an arrival, not a swap.
+ *
+ * Opt-in rather than the stage's own rule, because a flow that moves focus
+ * into its board itself (the conversation's entries) would be fought by it.
  */
-export function focusStageTitle(): void {
-  document.getElementById(STAGE_TITLE_ID)?.focus();
+export function useStageTitleFocus(board: string | undefined): void {
+  const shown = useRef(board);
+  useEffect(() => {
+    const swapped =
+      shown.current !== undefined &&
+      board !== undefined &&
+      shown.current !== board;
+    if (swapped) {
+      document.getElementById(STAGE_TITLE_ID)?.focus();
+    }
+    shown.current = board;
+  }, [board]);
 }
 
 /**

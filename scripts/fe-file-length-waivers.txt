@@ -13,7 +13,7 @@
 982 frontend/src/app/shell.tsx
 1003 frontend/src/App.tsx
 1034 frontend/src/screens/automations.test.tsx
-1030 frontend/src/screens/installation-setup.tsx
+952 frontend/src/screens/installation-setup.tsx
 925 frontend/src/screens/auth.tsx
 1088 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
 1096 frontend/src/screens/worklist.test.tsx

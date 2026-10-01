@@ -4,7 +4,6 @@
 import { useEffect, useState } from "react";
 import { Badge, Button } from "../design-system/atoms";
 import type { MarginceCoreState } from "../design-system/margince-core";
-import { focusStageTitle } from "../design-system/onboarding-stage";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./onboarding-ignition.css";
@@ -108,8 +107,6 @@ export function Ignition({
   onDone,
 }: Readonly<{ vendor: string; onDone: () => void }>) {
   const t = useT();
-  // The button that started this unmounted under the reader's focus.
-  useEffect(focusStageTitle, []);
   return (
     <div className="ob-ig">
       {/* The wash is the STAGE's — it comes from the orb, which is in the other
@@ -124,7 +121,7 @@ export function Ignition({
       </p>
       {/* Not a live region: the lines are in the tree from the first frame
           and only their opacity is timed, so there is no change to announce.
-          The reader reaches them by focus, from the stage title down. */}
+          The screen hands focus to the stage title, which reads down to them. */}
       <ul className="ob-ig-can">
         {CAPABILITIES.map((c) => (
           <li key={c.what} data-can={c.can}>
