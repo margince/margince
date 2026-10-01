@@ -15,8 +15,8 @@ export function useRecordOwners(ownerId: string | null | undefined) {
   );
   const missing =
     Boolean(ownerId) && !options.some((entry) => entry.value === ownerId);
-  // Named by id: the current owner may be invited or deactivated, neither of
-  // which the picker's own walk carries any more.
+  // Named by id: the current owner may be invited or deactivated, and the
+  // picker's walk carries neither.
   const ownerName = useMemberName(missing ? ownerId : null);
   if (missing && ownerId)
     options.push({

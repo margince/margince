@@ -89,10 +89,10 @@ function endlessRoster(): RosterServer {
   };
 }
 
-// What GET /users/names answers for the assignee's own id — the by-id read
-// unofferedAssignee resolves through now, independent of the roster walk
-// above. A read that never answers proves the field's own loading state; an
-// id the map omits is a settled absence, same as an archived seat.
+// What GET /users/names answers for the assignee's own id, the by-id read
+// unofferedAssignee resolves through, apart from the roster walk above. A
+// read that never answers proves the field's own loading state; an id the map
+// omits is a settled absence, same as an archived seat.
 type NameServer = () => Promise<Response>;
 
 function namesOf(byId: Readonly<Record<string, string>>): NameServer {

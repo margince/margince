@@ -231,6 +231,29 @@ func TestARepeatIsOneRowAndAnUnknownIdIsNoRow(t *testing.T) {
 // nameSeatsRecorder is the one request+recorder builder the three readers
 // below share, so the ceiling, order and shape assertions differ only in
 // what they read back rather than in how they call the handler.
+// An external Deal Room participant is not a member of the installation whose
+// colleagues these are. SeatNames holds that gate itself —
+// rosterteams_integration_test.go proves it — and this is the proof that the
+// refusal reaches a caller of the ROUTE as the 403 the contract publishes,
+// rather than as an empty answer that reads as a workspace with nobody in it.
+func TestNamingRefusesADealRoomBuyer(t *testing.T) {
+	e := setupRevocationEnv(t, "seat-names-buyer")
+
+	buyerCtx := principal.WithActor(
+		principal.WithWorkspaceID(context.Background(), e.ws.UUID),
+		principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:room-guest"})
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/users/names", nil).WithContext(buyerCtx)
+	NewHandlers(e.svc).NameSeats(rec, req, crmcontracts.NameSeatsParams{
+		Id: []openapi_types.UUID{openapi_types.UUID(e.admin.UserID.UUID)},
+	})
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("a Deal Room buyer naming a colleague = %d, want %d: %s",
+			rec.Code, http.StatusForbidden, rec.Body)
+	}
+}
+
 func nameSeatsRecorder(t *testing.T, e *revocationEnv, caller Identity, wanted []openapi_types.UUID) *httptest.ResponseRecorder {
 	t.Helper()
 	rec := httptest.NewRecorder()
