@@ -10,16 +10,16 @@
   "totals": {
     "tools": 81,
     "resources": 11,
-    "tool_catalog_bytes": 247149,
+    "tool_catalog_bytes": 247272,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 62832,
+    "approx_wire_tokens_total": 62862,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 62823,
-      "input_schema_bytes": 57034,
-      "output_schema_bytes": 109945,
-      "description_plus_input_schema_bytes": 119857
+      "input_schema_bytes": 57066,
+      "output_schema_bytes": 110036,
+      "description_plus_input_schema_bytes": 119889
     }
   },
   "tools": {
@@ -6193,6 +6193,9 @@
             },
             "subject": {
               "type": "string"
+            },
+            "video_call": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -6227,6 +6230,9 @@
                 "management_token": {
                   "type": "string"
                 },
+                "provider": {
+                  "type": "string"
+                },
                 "reminder_status": {
                   "type": "string"
                 },
@@ -6241,6 +6247,12 @@
                 },
                 "version": {
                   "type": "integer"
+                },
+                "video_call": {
+                  "type": "boolean"
+                },
+                "video_url": {
+                  "type": "string"
                 }
               },
               "required": [

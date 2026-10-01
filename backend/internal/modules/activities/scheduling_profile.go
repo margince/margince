@@ -65,6 +65,16 @@ func defaultSchedulingProfile() crmcontracts.SchedulingProfile {
 	}
 }
 
+// videoCallFor decides whether a new meeting asks the calendar for a video
+// link: the request's own choice when it made one, else the host's setting,
+// which a profile saved before the setting existed does not carry.
+func videoCallFor(profile crmcontracts.SchedulingProfile, requested *bool) bool {
+	if requested != nil {
+		return *requested
+	}
+	return profile.VideoCall == nil || *profile.VideoCall
+}
+
 func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crmcontracts.SchedulingProfile, error) {
 	profile := defaultSchedulingProfile()
 	var name string

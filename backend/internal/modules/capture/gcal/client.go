@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 )
 
 // calendarAPIBase is Google's Calendar v3 root; overridable via NewAPI for
@@ -134,6 +135,8 @@ type httpAPI struct {
 	// now is the clock for the initial-backfill window bound; injectable so a
 	// test drives a deterministic timeMin.
 	now func() time.Time
+	// pause waits between reads of a Meet link Google is still creating.
+	pause func(context.Context, time.Duration) error
 }
 
 // NewAPI builds the Calendar REST client over the given HTTP client and base
@@ -147,7 +150,7 @@ func NewAPI(client *http.Client, base string) API {
 	if base == "" {
 		base = calendarAPIBase
 	}
-	return &httpAPI{client: client, base: base, now: time.Now}
+	return &httpAPI{client: client, base: base, now: time.Now, pause: backoff.Sleep}
 }
 
 func (a *httpAPI) PrimaryOwner(ctx context.Context, accessToken string) (string, error) {

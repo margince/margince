@@ -59,7 +59,7 @@ func matchingReceipt(event scheduledEvent, in connector.CalendarAppointment) (*c
 		}
 		return nil, fmt.Errorf("calendar: existing invitation has changed; reconcile before retrying")
 	}
-	return &connector.CalendarReceipt{EventID: event.ID, UID: event.UID, URL: event.URL}, nil
+	return &connector.CalendarReceipt{EventID: event.ID, UID: event.UID, URL: event.URL, VideoURL: event.videoURL()}, nil
 }
 
 func (a *httpAPI) Inspect(ctx context.Context, token, calendar, event string) (connector.CalendarState, error) {

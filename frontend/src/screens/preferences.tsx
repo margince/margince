@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { Button, Card, EmptyState, Skeleton } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
+import { SaveBar } from "../design-system/savebar";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
@@ -396,7 +397,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
       <PendingConfirmations outcomes={outcomes} purposes={purposes} />
 
       {dirty.length > 0 && (
-        <div className="pref-save-bar">
+        <SaveBar label={t("prefs.notSaved")}>
           <p className="pref-not-saved">{t("prefs.notSaved")}</p>
           <p className="t-caption">
             {t("prefs.savePending", {
@@ -428,7 +429,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
               {t("prefs.save")}
             </Button>
           </div>
-        </div>
+        </SaveBar>
       )}
     </PublicPage>
   );

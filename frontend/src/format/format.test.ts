@@ -19,6 +19,7 @@ import {
   MONEY_ABSENT,
   ordinalNumber,
 } from "./format";
+import { formatDayFull, formatTimeRange } from "./meetingtime";
 
 // B-EP09.17/18/19 acceptance: locale changes the RENDERING of the same stored
 // value and never the value; de-DE renders decimal-comma / dot-thousands;
@@ -341,5 +342,39 @@ describe("formatUsdPerMTok", () => {
   // explicit zero row — an honest 0, never "no data".
   it("says zero for a price that is genuinely zero", () => {
     expect(formatUsdPerMTok("0", "en")).toBe("US$0.00");
+  });
+});
+
+describe("when a booked meeting happens", () => {
+  const start = "2026-10-05T07:30:00Z";
+  const end = "2026-10-05T08:00:00Z";
+
+  it("names a meeting's day in full, in the reader's locale", () => {
+    expect(formatDayFull(start, "en", "Europe/Berlin")).toBe(
+      "Monday, 5 October 2026",
+    );
+    expect(formatDayFull(start, "de", "Europe/Berlin")).toBe(
+      "Montag, 5. Oktober 2026",
+    );
+  });
+
+  it("names the day the zone is in, not the one UTC is in", () => {
+    // 21:30Z on 4 June is already Friday 5 June in Auckland.
+    expect(
+      formatDayFull("2026-06-04T21:30:00Z", "en", "Pacific/Auckland"),
+    ).toBe("Friday, 5 June 2026");
+  });
+
+  it("writes a meeting's two times as one span", () => {
+    expect(formatTimeRange(start, end, "en", "Europe/Berlin")).toBe(
+      "09:30–10:00",
+    );
+  });
+
+  it("refuses a fixed offset, as every renderer in the module does", () => {
+    expect(() => formatDayFull(start, "en", "+01:00")).toThrow(/IANA/);
+    expect(() => formatTimeRange(start, end, "en", "Etc/GMT-1")).toThrow(
+      /IANA/,
+    );
   });
 });

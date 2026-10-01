@@ -5249,7 +5249,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List the acting host's open proposals and personal links for one contact.
+         * @description Open means not yet used, not expired and not withdrawn. Withdraw one by archiving its activity.
+         */
+        get: operations["listMeetingProposals"];
         put?: never;
         /** Create a personal, expiring invitation without reserving time or sending mail. */
         post: operations["createMeetingProposal"];
@@ -28035,6 +28039,11 @@ export interface components {
             location: string;
             duration_minutes: number;
             enabled: boolean;
+            /**
+             * @description Present when new meetings get a video call link from the host's calendar.
+             * @enum {string}
+             */
+            video_app?: "google_meet" | "microsoft_teams";
         };
         SchedulingProfile: {
             enabled: boolean;
@@ -28059,6 +28068,8 @@ export interface components {
             replace_link?: boolean;
             /** @description Send one operational email reminder one hour before future meetings. */
             email_reminder?: boolean;
+            /** @description Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on. */
+            video_call?: boolean;
         };
         MeetingInvitationRequest: {
             /** Format: uuid */
@@ -28072,6 +28083,8 @@ export interface components {
             subject: string;
             location: string;
             description: string;
+            /** @description Add a video call link from the connected calendar. Absent follows the host's profile setting. */
+            video_call?: boolean;
         };
         MeetingAvailability: {
             slots: {
@@ -28091,6 +28104,8 @@ export interface components {
             location: string;
             description: string;
             duration_minutes: number;
+            /** @description Add a video call link when the guest books. Absent follows the host's profile setting. */
+            video_call?: boolean;
             options: {
                 /** Format: date-time */
                 start: string;
@@ -28129,6 +28144,37 @@ export interface components {
             management_token?: string;
             /** @enum {string} */
             reminder_status?: "off" | "pending" | "queued" | "unavailable";
+            /**
+             * @description The calendar provider that holds the event. Omitted on guest reads.
+             * @enum {string}
+             */
+            provider?: "gcal" | "graphcal";
+            /** @description A video call link was requested for this meeting. */
+            video_call?: boolean;
+            /** @description The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one. */
+            video_url?: string;
+        };
+        MeetingProposal: {
+            /**
+             * Format: uuid
+             * @description The proposal's activity id; archive it to withdraw the link.
+             */
+            id: string;
+            subject: string;
+            duration_minutes: number;
+            /** @description The offered times. Empty for a personal link where the guest picks any open time. */
+            options: {
+                /** Format: date-time */
+                start: string;
+                /** Format: date-time */
+                end: string;
+            }[];
+            /** @description The personal link, for copying or resending. */
+            url: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
         };
         MeetingInvitationChange: {
             /** @enum {string} */
@@ -49799,6 +49845,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeetingAvailability"];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listMeetingProposals: {
+        parameters: {
+            query: {
+                contact_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Open proposals, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["MeetingProposal"][];
+                    };
                 };
             };
             /** @description The operation could not be completed. */

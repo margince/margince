@@ -11005,6 +11005,24 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingInvitationProvider.
+const (
+	MeetingInvitationProviderGcal     MeetingInvitationProvider = "gcal"
+	MeetingInvitationProviderGraphcal MeetingInvitationProvider = "graphcal"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationProvider enum.
+func (e MeetingInvitationProvider) Valid() bool {
+	switch e {
+	case MeetingInvitationProviderGcal:
+		return true
+	case MeetingInvitationProviderGraphcal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingInvitationReminderStatus.
 const (
 	MeetingInvitationReminderStatusOff         MeetingInvitationReminderStatus = "off"
@@ -12547,6 +12565,24 @@ func (e ProviderRunTrigger) Valid() bool {
 	case ProviderRunTriggerManual:
 		return true
 	case ProviderRunTriggerScheduledRefresh:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicSchedulingProfileVideoApp.
+const (
+	PublicSchedulingProfileVideoAppGoogleMeet     PublicSchedulingProfileVideoApp = "google_meet"
+	PublicSchedulingProfileVideoAppMicrosoftTeams PublicSchedulingProfileVideoApp = "microsoft_teams"
+)
+
+// Valid indicates whether the value is a known member of the PublicSchedulingProfileVideoApp enum.
+func (e PublicSchedulingProfileVideoApp) Valid() bool {
+	switch e {
+	case PublicSchedulingProfileVideoAppGoogleMeet:
+		return true
+	case PublicSchedulingProfileVideoAppMicrosoftTeams:
 		return true
 	default:
 		return false
@@ -35868,17 +35904,29 @@ type MeetingBriefSectionKind string
 
 // MeetingInvitation defines model for MeetingInvitation.
 type MeetingInvitation struct {
-	CalendarUrl     *string                          `json:"calendar_url,omitempty"`
-	End             time.Time                        `json:"end"`
-	Id              openapi_types.UUID               `json:"id"`
-	Location        string                           `json:"location"`
-	ManagementToken *string                          `json:"management_token,omitempty"`
-	ReminderStatus  *MeetingInvitationReminderStatus `json:"reminder_status,omitempty"`
-	Start           time.Time                        `json:"start"`
-	Status          MeetingInvitationStatus          `json:"status"`
-	Subject         string                           `json:"subject"`
-	Version         int64                            `json:"version"`
+	CalendarUrl     *string            `json:"calendar_url,omitempty"`
+	End             time.Time          `json:"end"`
+	Id              openapi_types.UUID `json:"id"`
+	Location        string             `json:"location"`
+	ManagementToken *string            `json:"management_token,omitempty"`
+
+	// Provider The calendar provider that holds the event. Omitted on guest reads.
+	Provider       *MeetingInvitationProvider       `json:"provider,omitempty"`
+	ReminderStatus *MeetingInvitationReminderStatus `json:"reminder_status,omitempty"`
+	Start          time.Time                        `json:"start"`
+	Status         MeetingInvitationStatus          `json:"status"`
+	Subject        string                           `json:"subject"`
+	Version        int64                            `json:"version"`
+
+	// VideoCall A video call link was requested for this meeting.
+	VideoCall *bool `json:"video_call,omitempty"`
+
+	// VideoUrl The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one.
+	VideoUrl *string `json:"video_url,omitempty"`
 }
+
+// MeetingInvitationProvider The calendar provider that holds the event. Omitted on guest reads.
+type MeetingInvitationProvider string
 
 // MeetingInvitationReminderStatus defines model for MeetingInvitation.ReminderStatus.
 type MeetingInvitationReminderStatus string
@@ -35906,6 +35954,9 @@ type MeetingInvitationRequest struct {
 	Location      string              `json:"location"`
 	Start         time.Time           `json:"start"`
 	Subject       string              `json:"subject"`
+
+	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
+	VideoCall *bool `json:"video_call,omitempty"`
 }
 
 // MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
@@ -36112,6 +36163,26 @@ type MeetingPlanUnknown struct {
 // MeetingPlanUnknownKind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
 type MeetingPlanUnknownKind string
 
+// MeetingProposal defines model for MeetingProposal.
+type MeetingProposal struct {
+	CreatedAt       time.Time `json:"created_at"`
+	DurationMinutes int       `json:"duration_minutes"`
+	ExpiresAt       time.Time `json:"expires_at"`
+
+	// Id The proposal's activity id; archive it to withdraw the link.
+	Id openapi_types.UUID `json:"id"`
+
+	// Options The offered times. Empty for a personal link where the guest picks any open time.
+	Options []struct {
+		End   time.Time `json:"end"`
+		Start time.Time `json:"start"`
+	} `json:"options"`
+	Subject string `json:"subject"`
+
+	// Url The personal link, for copying or resending.
+	Url string `json:"url"`
+}
+
 // MeetingProposalRequest defines model for MeetingProposalRequest.
 type MeetingProposalRequest struct {
 	AttendeeEmail   openapi_types.Email `json:"attendee_email"`
@@ -36124,6 +36195,9 @@ type MeetingProposalRequest struct {
 		Start time.Time `json:"start"`
 	} `json:"options"`
 	Subject string `json:"subject"`
+
+	// VideoCall Add a video call link when the guest books. Absent follows the host's profile setting.
+	VideoCall *bool `json:"video_call,omitempty"`
 }
 
 // MergeTagsRequest defines model for MergeTagsRequest.
@@ -38501,7 +38575,13 @@ type PublicSchedulingProfile struct {
 	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl *string `json:"logo_url,omitempty"`
 	Title   string  `json:"title"`
+
+	// VideoApp Present when new meetings get a video call link from the host's calendar.
+	VideoApp *PublicSchedulingProfileVideoApp `json:"video_app,omitempty"`
 }
+
+// PublicSchedulingProfileVideoApp Present when new meetings get a video call link from the host's calendar.
+type PublicSchedulingProfileVideoApp string
 
 // PutOnboardingStateRequest defines model for PutOnboardingStateRequest.
 type PutOnboardingStateRequest struct {
@@ -40540,6 +40620,9 @@ type SchedulingProfile struct {
 	ReplaceLink   *bool                     `json:"replace_link,omitempty"`
 	Slug          *string                   `json:"slug,omitempty"`
 	Title         string                    `json:"title"`
+
+	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
+	VideoCall *bool `json:"video_call,omitempty"`
 }
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
@@ -51026,6 +51109,11 @@ type CreateMeetingInvitationParams struct {
 type GetMeetingAvailabilityParams struct {
 	From time.Time `form:"from" json:"from"`
 	To   time.Time `form:"to" json:"to"`
+}
+
+// ListMeetingProposalsParams defines parameters for ListMeetingProposals.
+type ListMeetingProposalsParams struct {
+	ContactId openapi_types.UUID `form:"contact_id" json:"contact_id"`
 }
 
 // CreateMeetingProposalParams defines parameters for CreateMeetingProposal.
@@ -65072,6 +65160,9 @@ type ServerInterface interface {
 	// Configure and activate the caller's booking page.
 	// (PUT /scheduling/profile)
 	PutSchedulingProfile(w http.ResponseWriter, r *http.Request)
+	// List the acting host's open proposals and personal links for one contact.
+	// (GET /scheduling/proposals)
+	ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams)
 	// Create a personal, expiring invitation without reserving time or sending mail.
 	// (POST /scheduling/proposals)
 	CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams)
@@ -69347,6 +69438,12 @@ func (_ Unimplemented) GetSchedulingProfile(w http.ResponseWriter, r *http.Reque
 // Configure and activate the caller's booking page.
 // (PUT /scheduling/profile)
 func (_ Unimplemented) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the acting host's open proposals and personal links for one contact.
+// (GET /scheduling/proposals)
+func (_ Unimplemented) ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -98225,6 +98322,45 @@ func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListMeetingProposals operation middleware
+func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMeetingProposalsParams
+
+	// ------------- Required query parameter "contact_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "contact_id", r.URL.Query(), &params.ContactId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "contact_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contact_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMeetingProposals(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateMeetingProposal operation middleware
 func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, r *http.Request) {
 
@@ -104870,6 +105006,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/scheduling/profile", wrapper.PutSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/proposals", wrapper.ListMeetingProposals)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/scheduling/proposals", wrapper.CreateMeetingProposal)

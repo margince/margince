@@ -7,6 +7,7 @@ import {
   bookingProfile,
   bookingSlots,
 } from "../src/screens/book.testkit";
+import { copy } from "./copy";
 import { mockApi } from "./seed";
 
 test.beforeEach(async ({ page, context }) => {
@@ -21,7 +22,10 @@ test("Meetings opens a booking for the contact", async ({ page }) => {
     .click();
   await expect(page).toHaveURL(/#\/book\/contact-p-anna$/);
   await expect(
-    page.getByRole("heading", { name: de["scheduling.new"] }),
+    page.getByRole("heading", {
+      level: 1,
+      name: copy(de["scheduling.bookWith"]),
+    }),
   ).toBeVisible();
 });
 
@@ -147,7 +151,7 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
   await page.getByRole("link", { name: de["scheduling.openSettings"] }).click();
   const settings = await settingsPromise;
   await expect(
-    settings.getByRole("heading", { name: de["workingHours.title"] }),
+    settings.getByRole("heading", { name: de["scheduling.availabilityTitle"] }),
   ).toBeVisible();
   await expect(
     settings.getByRole("combobox", { name: de["scheduling.provider"] }),
@@ -166,22 +170,24 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
   await expect(page.getByLabel(de["scheduling.agenda"])).toHaveValue(
     "Discuss scope",
   );
-  await page.getByRole("combobox", { name: de["scheduling.method"] }).click();
-  await page.getByRole("option", { name: de["scheduling.invite"] }).click();
-  await page.locator(".meeting-slots button").first().click();
   await page
-    .getByRole("button", { name: de["scheduling.invite"], exact: true })
+    .getByRole("radio", { name: new RegExp(de["scheduling.invite"]) })
+    .check();
+  await page.locator(".meeting-week button").first().click();
+  await page
+    .getByRole("button", { name: copy(de["scheduling.sendInviteAt"]) })
     .click();
-  await expect(
-    page.getByRole("heading", { name: de["scheduling.pending"] }),
-  ).toBeVisible();
+  await expect(page.getByRole("status")).toContainText(
+    de["scheduling.pending"],
+  );
   expect(invitations).toHaveLength(1);
   expect(invitations[0]).toEqual({
     contact_id: bookingContact.id,
     attendee_email: bookingContact.primary_email,
     description: "Discuss scope",
     subject: bookingProfile.title,
-    location: bookingProfile.location,
+    location: "",
+    video_call: true,
     ...bookingSlots[0],
   });
   await page.getByRole("button", { name: de["scheduling.cancel"] }).click();
@@ -189,9 +195,9 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
     .getByRole("dialog")
     .getByRole("button", { name: de["scheduling.cancel"] })
     .click();
-  await expect(
-    page.getByRole("heading", { name: de["scheduling.canceling"] }),
-  ).toBeVisible();
+  await expect(page.getByRole("status")).toContainText(
+    de["scheduling.canceling"],
+  );
 });
 
 test("personal proposal opens the guest page and accepts the chosen time", async ({
@@ -243,21 +249,26 @@ test("personal proposal opens the guest page and accepts the chosen time", async
     (route) => route.fulfill({ json: { slots: [], truncated: false } }),
   );
   await page.goto(`/#/book/contact-${bookingContact.id}`);
-  await page.locator(".meeting-slots button").nth(0).click();
-  await page.locator(".meeting-slots button").nth(1).click();
+  await page.locator(".meeting-week button").nth(0).click();
+  await page.locator(".meeting-week button").nth(1).click();
   await page
-    .getByRole("button", { name: de["scheduling.reviewProposal"] })
+    .getByRole("button", { name: copy(de["scheduling.reviewTimes_other"]) })
     .click();
-  await page.getByRole("link", { name: de["scheduling.personalLink"] }).click();
+  await expect(page.getByText(copy(de["scheduling.linkReady"]))).toBeVisible();
+  await page.goto("/#/book/proposal-personal");
   await expect(
     page.getByRole("heading", { name: "Personal discovery" }),
   ).toBeVisible();
-  await page.locator(".meeting-slots button").first().click();
-  await expect(
-    page.getByRole("button", { name: de["scheduling.book"] }),
-  ).toBeDisabled();
+  await page
+    .locator(".bookguest-suggested .meeting-slots button")
+    .first()
+    .click();
+  const confirm = page.getByRole("button", {
+    name: copy(de["scheduling.confirmAt"]),
+  });
+  await expect(confirm).toBeDisabled();
   await page.getByRole("checkbox", { name: de["book.consentWording"] }).check();
-  await page.getByRole("button", { name: de["scheduling.book"] }).click();
+  await confirm.click();
   await expect(page).toHaveURL(/#\/book\/manage-guest-booking$/);
 });
 
@@ -284,15 +295,15 @@ test("guest reschedules only after confirming the replacement time", async ({
   await page.locator(".meeting-slots button").last().click();
   expect(changes).toHaveLength(0);
   await page.getByRole("button", { name: de["scheduling.saveTime"] }).click();
-  await expect(
-    page.getByRole("heading", { name: de["scheduling.rescheduling"] }),
-  ).toBeVisible();
+  await expect(page.getByRole("status")).toContainText(
+    de["scheduling.rescheduling"],
+  );
   expect(changes).toEqual([
     { action: "reschedule", version: 1, ...bookingSlots[1] },
   ]);
 });
 
-test("busy-week guidance finds later times and explains dates outside the horizon", async ({
+test("a busy week says so per day, finds later times, and stops paging at the booking horizon", async ({
   page,
   context,
 }) => {
@@ -306,15 +317,15 @@ test("busy-week guidance finds later times and explains dates outside the horizo
     }),
   );
   await page.goto(`/#/book/contact-${bookingContact.id}`);
-  await expect(page.getByText(de["scheduling.allDayBlocks"])).toBeVisible();
+  await expect(
+    page.getByText(de["scheduling.noFreeTime"]).first(),
+  ).toBeVisible();
   await page.getByRole("button", { name: de["scheduling.findNext"] }).click();
-  await expect(page.locator(".meeting-slots button")).toHaveCount(2);
-  const date = page.getByLabel(de["scheduling.date"]);
-  await expect(date).toHaveAttribute("max", "2026-10-27");
-  await date.fill("2026-11-02");
-  await expect(page.getByText(de["scheduling.outsideHorizon"])).toBeVisible();
-  await expect(page.getByText(de["scheduling.noTimes"])).toHaveCount(0);
+  await expect(page.locator(".meeting-week button")).toHaveCount(2);
   expect(calls).toBe(2);
+  const next = page.getByRole("button", { name: de["scheduling.nextWeek"] });
+  for (let week = 0; week < 4; week++) await next.click();
+  await expect(next).toBeDisabled();
 });
 
 test("meeting settings shows the reusable link, saves hours, and previews a paused page", async ({
@@ -372,22 +383,21 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   await expect(
     page.getByRole("heading", { name: bookingProfile.title }),
   ).toBeVisible();
-  const slot = page.locator(".meeting-slots button").first();
+  await page.getByRole("button", { name: de["calendar.nextMonth"] }).click();
+  await expect.poll(() => availability.length).toBe(2);
+  const slot = page.locator(".bookguest-times .meeting-slots button").first();
   await expect(slot).toBeVisible();
   await slot.click();
-  await expect(slot).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel(de["book.name"], { exact: true }).fill("Demo guest");
   await page
     .getByLabel(de["book.email"], { exact: true })
     .fill("guest@example.test");
   await page.getByRole("checkbox").check();
   await expect(
-    page.getByRole("button", { name: de["scheduling.book"] }),
+    page.getByRole("button", { name: copy(de["scheduling.confirmAt"]) }),
   ).toBeDisabled();
-  await page.getByLabel(de["scheduling.date"]).fill("2026-10-12");
-  await expect.poll(() => availability.length).toBe(2);
+  await page.getByRole("button", { name: de["scheduling.changeTime"] }).click();
   await expect(slot).toBeVisible();
-  await expect(page.getByRole("button", { pressed: true })).toHaveCount(0);
   expect(writes).toHaveLength(1);
 });
 
@@ -414,9 +424,12 @@ test("calendar setup enables booking with the existing Account name", async ({
     await route.fulfill({ json: profile });
   });
   await page.goto("/#/settings/meetings");
-  const name = page.getByLabel(de["scheduling.hostName"]);
-  await expect(name).toHaveValue(bookingProfile.host_name ?? "");
-  await expect(name).toHaveAttribute("readonly", "");
+  await expect(
+    page.getByText(de["scheduling.hostName"], { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".factlist")).toContainText(
+    bookingProfile.host_name ?? "",
+  );
   await expect(
     page
       .getByRole("main")
@@ -436,7 +449,7 @@ test("calendar setup enables booking with the existing Account name", async ({
     .click();
   await expect(
     page.getByText(de["scheduling.active"], { exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(2);
   expect(writes).toHaveLength(2);
   expect(writes[1]).toMatchObject({
     provider: "gcal",
