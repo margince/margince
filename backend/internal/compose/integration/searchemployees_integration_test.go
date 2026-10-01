@@ -98,7 +98,11 @@ func TestAContactAtTwoMatchedCompaniesAppearsOnce(t *testing.T) {
 	if scores[better] <= scores[weaker] {
 		t.Fatalf("the fixture's ranks are %v and %v; it no longer tells the two employers apart", scores[better], scores[weaker])
 	}
-	if hit := hitFor(page, anna); hit == nil || hit.WorksAt == nil || hit.WorksAt.CompanyID != better {
+	hit := hitFor(page, anna)
+	if hit == nil {
+		t.Fatalf("the employee is not on the page: %+v", page.Hits)
+	}
+	if hit.WorksAt == nil || hit.WorksAt.CompanyID != better {
 		t.Errorf("the employee carries works_at %+v, want the better-matching %s", hit.WorksAt, better)
 	}
 }

@@ -777,6 +777,33 @@ describe("SearchScreen — grouped by what each hit is", () => {
     );
   });
 
+  // Emails and calls are one type to the server, so a cut among either is one
+  // list to open: one button, named for that list, not one per heading.
+  it("offers the rest of emails and activities once, for both", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            emailHit,
+            { type: "activity", id: "a2", title: "Rennsteig kickoff call" },
+          ],
+          page: { next_cursor: null, has_more: false },
+          types_with_more: ["activity"],
+        }),
+      ),
+    );
+    render(<SearchScreen q="rennsteig" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Activities" }),
+    ).toBeTruthy();
+    const offers = screen.getAllByRole("button", { name: /^Show all/ });
+    expect(offers.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Show all Emails and activities",
+    ]);
+  });
+
   // The activity pill narrows to the emails AND the calls and notes beside
   // them, so it says both rather than reading as the Activities heading.
   it("names the activity pill for everything it narrows to", () => {

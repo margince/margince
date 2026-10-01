@@ -277,20 +277,28 @@ function SearchGroups({
   }>;
 }>) {
   const t = useT();
+  const groups = groupSearchHits(results);
   return (
     <div className="search-groups arrive-stack">
-      {groupSearchHits(results).map(({ group, hits }) => {
+      {groups.map(({ group, hits }, index) => {
         const heading = t(SEARCH_GROUP_KEY[group]);
         const type = searchGroupType(group);
+        // Emails and activities narrow to one list and the server counts them
+        // as one type, so only the first of their groups offers the rest.
+        const offersMore =
+          more?.types.includes(type) &&
+          groups.findIndex((other) => searchGroupType(other.group) === type) ===
+            index;
         return (
           <Panel
             key={group}
             title={heading}
             titleAction={
-              more?.types.includes(type) && (
+              offersMore &&
+              more && (
                 <Button
                   aria-label={t("search.group.showAllNamed", {
-                    group: heading,
+                    group: t(SEARCH_FILTER_KEY[type]),
                   })}
                   onClick={() => more.onNarrow(type)}
                 >
