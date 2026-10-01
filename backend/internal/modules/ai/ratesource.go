@@ -28,11 +28,11 @@ func rateFallbacks() (from, to []string) {
 	return from, to
 }
 
-// rateMatch is the one spelling of "the rate a call is priced at": the latest
-// ai_model_rate row effective on day for the model, the provider's own row
-// when one is effective, else the row of the provider it is priced by. Every
-// price read — RateFor, the cost report, a run's transparency — selects
-// through it, so the three cannot price one call two ways.
+// rateMatch is the rate a call is priced at: the latest ai_model_rate row
+// effective on day for the model, the provider's own row when one is
+// effective, else the row of the provider it is priced by. RateFor, the cost
+// report and a run's transparency select through it, so they price a call
+// alike.
 //
 // provider, model and day are SQL expressions (a placeholder or a column);
 // fromArg and toArg are the placeholder numbers bound to rateFallbacks().
