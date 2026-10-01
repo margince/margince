@@ -16,6 +16,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -740,5 +743,22 @@ func TestARevokeThroughTheLiveSurvivorReachesTheOriginalItWasCopiedFrom(t *testi
 		if n := liveOverridesOn(t, e, c); n != 0 {
 			t.Errorf("contact %s still holds %d live override(s), want 0", c.UUID, n)
 		}
+	}
+}
+
+// TestTheAllowDoorAnswers422ForACategoryItCannotResolve holds the wire half of
+// the validation contract: a category outside the engine's vocabulary is the
+// caller's fault, and the documented answer is 422, not a server error.
+func TestTheAllowDoorAnswers422ForACategoryItCannotResolve(t *testing.T) {
+	e := setupChannelConsent(t)
+	rec := httptest.NewRecorder()
+	body := strings.NewReader(`{"category":"not-a-category","reason":"they asked us at the trade fair"}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/contacts/x/consent/allow", body).WithContext(e.ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	Handlers{store: e.store}.AllowContact(rec, req, crmcontracts.Id(e.contact.UUID))
+
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("the allow door answered %d: %s, want 422", rec.Code, rec.Body.String())
 	}
 }

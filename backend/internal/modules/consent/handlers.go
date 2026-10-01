@@ -279,7 +279,7 @@ func (h Handlers) AllowContact(w http.ResponseWriter, r *http.Request, id crmcon
 		Reason:    req.Reason,
 	})
 	if err != nil {
-		httperr.Write(w, r, err)
+		writeConsentErr(w, r, err)
 		return
 	}
 	// 201 WITH THE ID, where SuppressContact answers 204. The revoke door takes
@@ -340,7 +340,7 @@ func (h Handlers) RevokeOverride(
 		OverrideID: ids.UUID(overrideID),
 		Reason:     req.Reason,
 	}); err != nil {
-		httperr.Write(w, r, err)
+		writeConsentErr(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
