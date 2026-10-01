@@ -53,11 +53,25 @@ func TestSearchHonorsObjectRBAC(t *testing.T) {
 	if len(page.Hits) != 1 || page.Hits[0].Type != "company" {
 		t.Fatalf("object RBAC leaked into search: %+v", page.Hits)
 	}
+	// A grouped page reserves room for every type, and a denied one still gets none.
+	perType := 5
+	page, err = e.Store.Search(companyOnly, search.Input{Query: "rostock", PerType: &perType})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Hits) != 1 || page.Hits[0].Type != "company" {
+		t.Fatalf("object RBAC leaked into a grouped search: %+v", page.Hits)
+	}
 	// Explicitly requesting only the denied type answers an empty page,
 	// not an error — nothing to disclose.
 	page, err = e.Store.Search(companyOnly, search.Input{Query: "rostock", Types: []string{"contact"}})
 	if err != nil || len(page.Hits) != 0 {
 		t.Fatalf("denied-type search → %v %+v, want an empty page", err, page.Hits)
+	}
+	// Grouped, the same refusal is still a grouped page: empty, cutting nothing.
+	page, err = e.Store.Search(companyOnly, search.Input{Query: "rostock", Types: []string{"contact"}, PerType: &perType})
+	if err != nil || len(page.Hits) != 0 || page.TypesWithMore == nil || len(page.TypesWithMore) != 0 {
+		t.Fatalf("denied-type grouped search → %v %+v, want an empty grouped page", err, page)
 	}
 }
 
@@ -92,6 +106,48 @@ func TestSearchRanksAcrossObjectTypes(t *testing.T) {
 	// above single-mention rows.
 	if page.Hits[0].Type != "activity" {
 		t.Errorf("rank order ignores term frequency: top hit %+v", page.Hits[0])
+	}
+}
+
+// An account's name is one word in one field; a note about it repeats the
+// word, so ranked across types three notes fill a page of three and the
+// account is not on it. Grouped, every type that matched is.
+func TestAGroupedSearchShowsTheAccountThatNotesNamingItOutrank(t *testing.T) {
+	e := SetupSearch(t)
+	account := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Lubeck Shipping', 'manual', 'human:x')`)
+	for i := 0; i < 3; i++ {
+		e.SeedID(t, fmt.Sprintf(`INSERT INTO activity (id, kind, subject, body, source, captured_by)
+			VALUES ($1, 'note', 'Lubeck renewal %d', 'Lubeck asked again: Lubeck wants the Lubeck terms', 'manual', 'human:x')`, i))
+	}
+
+	ranked, err := e.Store.Search(e.Admin(), search.Input{Query: "lubeck", Limit: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasType(ranked.Hits, "company") {
+		t.Fatalf("the ranked page already carries the account, so this proves nothing: %+v", ranked.Hits)
+	}
+
+	perType := 2
+	grouped, err := e.Store.Search(e.Admin(), search.Input{Query: "lubeck", PerType: &perType})
+	if err != nil {
+		t.Fatal(err)
+	}
+	activities := 0
+	var companies []ids.UUID
+	for _, hit := range grouped.Hits {
+		switch hit.Type {
+		case "activity":
+			activities++
+		case "company":
+			companies = append(companies, hit.ID)
+		}
+	}
+	if len(companies) != 1 || companies[0] != account || activities != 2 {
+		t.Fatalf("grouped page = %+v, want the account and two of the three notes", grouped.Hits)
+	}
+	if len(grouped.TypesWithMore) != 1 || grouped.TypesWithMore[0] != "activity" {
+		t.Fatalf("TypesWithMore = %v, want [activity]: the third note was left out", grouped.TypesWithMore)
 	}
 }
 

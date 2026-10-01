@@ -81,21 +81,38 @@ export const Default: Story = {
   render: () => palette(noHits),
 };
 
-// Live record hits under the commands. The second line names the KIND, in the
-// reader's language — this row printed the raw wire word until #4026, so a
-// German reader met "company" here.
+// Live record hits under the commands, grouped under the kind each one is, in
+// the reader's language. The mail about the account sits below the account
+// however much higher it ranked: relevance does not compare across kinds, and
+// a short list ranked across them used to be all mail and no company.
 export const WithRecordHits: Story = {
   render: () =>
     palette(() =>
       jsonResponse({
         data: [
+          {
+            type: "activity",
+            id: "a1",
+            title: "Re: Acme renewal terms",
+            email_summary: {
+              activity_id: "a1",
+              occurred_at: "2026-09-01T09:15:00Z",
+              counterparty: "Dana Buyer",
+            },
+          },
           { type: "contact", id: "p1", title: "Dana Buyer" },
           { type: "company", id: "o1", title: "Acme GmbH" },
           { type: "company", id: "o2", title: "Brandt GmbH", is_partner: true },
-          { type: "product", id: "pr1", title: "Kärcher floor scrubber" },
+          {
+            type: "product",
+            id: "pr1",
+            title: "Kärcher floor scrubber",
+            snippet: "KAR-9910",
+          },
           { type: "tag", id: "t1", title: "Key account" },
         ],
         page: { next_cursor: null, has_more: false },
+        types_with_more: ["activity"],
       }),
     ),
   play: type("acme"),

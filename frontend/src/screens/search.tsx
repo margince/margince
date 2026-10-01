@@ -1,42 +1,59 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
-import { api } from "../api/client";
+import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, routeHash } from "../app/router";
 import {
-  SEARCH_HIT_GROUP_KEY,
+  groupSearchHits,
+  SEARCH_FILTER_KEY,
+  SEARCH_GROUP_KEY,
   SEARCH_HIT_ORDER,
   type SearchHitType,
+  searchGroupType,
   searchHitRoute,
 } from "../app/searchkinds";
 import { useUrlParams } from "../app/urlstate";
-import { Badge, Card, EmptyState, SearchField } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  SearchField,
+} from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
-import { Heading } from "../design-system/heading";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { LoadMoreButton, QueryGate, QueryStates, throwProblem } from "./common";
 import { companyTabRoute } from "./companytab";
 import { useOpenEmail } from "./openemail";
 import "./search.css";
 
 type SearchResult = components["schemas"]["SearchResult"];
 
-// RS-1/RS-2: the cross-object search results screen. Hits are grouped by
-// record type so a caller scanning "acme" sees contacts, companies, deals and the
-// rest as separate sections rather than one undifferentiated ranked list.
+// RS-1/RS-2: the cross-object search results screen. Hits are grouped by what
+// they are so a caller scanning "acme" sees the company, its contacts, its deals
+// and the mail about it as separate sections rather than one ranked list.
+//
+// Unnarrowed, the page asks for a few of EACH type rather than the best fifty
+// overall: relevance does not compare across types, and a thread that names an
+// account in every paragraph outranks the account, so fifty ranked hits could
+// be fifty emails with the company itself nowhere on the page. Narrowed to one
+// type, it is that type's ranked list, paged.
 //
 // The order and the headings come from app/searchkinds.ts, which the ⌘K palette
 // reads too. They were a pair of literals here until a type the server returned
 // went missing from both — project hits came back ranked and were dropped on the
 // floor, because a list that has to be edited by hand once per new type is a
 // list somebody eventually does not edit.
+
+// How many hits of each type the unnarrowed page shows before "Show all".
+export const RESULTS_PER_TYPE = 5;
 
 // Which type the reader has narrowed to. `all` is the absence of a narrowing
 // and is spelled by an ABSENT parameter, so one view has exactly one address.
@@ -58,32 +75,6 @@ export function SearchScreen({
   const zone = useRecordZone();
   const [params, setParams] = useUrlParams();
   const filter = typeFilterFrom(params.get(SEARCH_TYPE_PARAM));
-  const query = useQuery({
-    // The narrowing is part of the key because it is part of the REQUEST: the
-    // pills send `types` to the server rather than hiding rows already drawn,
-    // so a narrowed search is a different answer and not a smaller view of the
-    // same one. That is also why no pill carries a count — the endpoint returns
-    // one page of ranked hits and knows no per-type total, and a figure derived
-    // from what happens to be on screen would be a number the reader could act
-    // on and could not trust.
-    queryKey: ["search", q, filter],
-    enabled: q.trim().length > 0,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/search", {
-        params: {
-          query: {
-            q,
-            limit: 50,
-            ...(filter === ALL_TYPES ? {} : { types: [filter] }),
-          },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
 
   const narrowTo = (next: TypeFilter) => {
     const dials = new Map(params);
@@ -125,7 +116,14 @@ export function SearchScreen({
         <>
           {/* Drawn above the results and not inside them, because it survives
               an empty answer: a reader who narrowed to Deals and found none
-              needs the control that got them there in order to get back. */}
+              needs the control that got them there in order to get back.
+
+              The narrowing is a SERVER dial: a pill sends `types` rather than
+              hiding rows already drawn, so a narrowed search is a different
+              answer and not a smaller view of the same one. That is also why
+              no pill carries a count — the endpoint knows no per-type total,
+              and a figure derived from what happens to be on screen would be
+              a number the reader could act on and could not trust. */}
           <FilterPills
             label={t("search.filter.label")}
             value={filter}
@@ -134,19 +132,19 @@ export function SearchScreen({
               { value: ALL_TYPES as TypeFilter, label: t("search.filter.all") },
               ...SEARCH_HIT_ORDER.map((kind) => ({
                 value: kind as TypeFilter,
-                label: t(SEARCH_HIT_GROUP_KEY[kind]),
+                label: t(SEARCH_FILTER_KEY[kind]),
               })),
             ]}
           />
-          <QueryGate query={query} pendingLabel={t("search.pending")}>
-            {(data) =>
-              data.data.length === 0 ? (
-                <EmptyState>{t("search.empty", { q })}</EmptyState>
-              ) : (
-                <SearchGroups results={data.data} onOpenEmail={setOpenEmail} />
-              )
-            }
-          </QueryGate>
+          {filter === ALL_TYPES ? (
+            <GroupedResults
+              q={q}
+              onOpenEmail={setOpenEmail}
+              onNarrow={narrowTo}
+            />
+          ) : (
+            <NarrowedResults q={q} type={filter} onOpenEmail={setOpenEmail} />
+          )}
         </>
       )}
       {/* One drawer over the whole results page, at page level rather than
@@ -161,36 +159,144 @@ export function SearchScreen({
   );
 }
 
+// A few of every type that matched, each type's best first, with a way into
+// the rest of any type the server says holds more.
+function GroupedResults({
+  q,
+  onOpenEmail,
+  onNarrow,
+}: Readonly<{
+  q: string;
+  onOpenEmail: (activityId: string) => void;
+  onNarrow: (type: SearchHitType) => void;
+}>) {
+  const t = useT();
+  const query = useQuery({
+    queryKey: ["search", q, ALL_TYPES],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/search", {
+        params: { query: { q, per_type: RESULTS_PER_TYPE } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+  return (
+    <QueryGate query={query} pendingLabel={t("search.pending")}>
+      {(data) =>
+        data.data.length === 0 ? (
+          <EmptyState>{t("search.empty", { q })}</EmptyState>
+        ) : (
+          <SearchGroups
+            results={data.data}
+            onOpenEmail={onOpenEmail}
+            more={{ types: data.types_with_more ?? [], onNarrow }}
+          />
+        )
+      }
+    </QueryGate>
+  );
+}
+
+// One type's ranked list, paged by the server's keyset cursor.
+function NarrowedResults({
+  q,
+  type,
+  onOpenEmail,
+}: Readonly<{
+  q: string;
+  type: SearchHitType;
+  onOpenEmail: (activityId: string) => void;
+}>) {
+  const t = useT();
+  const query = useInfiniteQuery({
+    queryKey: ["search", q, type],
+    initialPageParam: FIRST_PAGE,
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await api.GET("/search", {
+        params: {
+          query: {
+            q,
+            types: [type],
+            limit: 50,
+            cursor: pageParam ?? undefined,
+          },
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    getNextPageParam: (last) => last.page.next_cursor ?? null,
+  });
+  const hits = query.data?.pages.flatMap((page) => page.data) ?? [];
+  return (
+    <QueryStates query={query} pendingLabel={t("search.pending")}>
+      {hits.length === 0 ? (
+        <EmptyState>{t("search.empty", { q })}</EmptyState>
+      ) : (
+        <>
+          <SearchGroups results={hits} onOpenEmail={onOpenEmail} />
+          <LoadMoreButton query={query} />
+        </>
+      )}
+    </QueryStates>
+  );
+}
+
 function SearchGroups({
   results,
   onOpenEmail,
+  more,
 }: Readonly<{
   results: SearchResult[];
   onOpenEmail: (activityId: string) => void;
+  // Which types hold more than is drawn, and how to show them. Absent on a
+  // narrowed page, where the rest arrives by loading more instead.
+  more?: Readonly<{
+    types: readonly SearchHitType[];
+    onNarrow: (type: SearchHitType) => void;
+  }>;
 }>) {
   const t = useT();
   return (
     <div className="search-groups arrive-stack">
-      {SEARCH_HIT_ORDER.filter((type) =>
-        results.some((r) => r.type === type),
-      ).map((type) => (
-        <Card key={type} className="search-group">
-          <Heading size="small" as="h2">
-            {t(SEARCH_HIT_GROUP_KEY[type])}
-          </Heading>
-          <ul className="search-hits">
-            {results
-              .filter((r) => r.type === type)
-              .map((hit) => (
+      {groupSearchHits(results).map(({ group, hits }) => {
+        const heading = t(SEARCH_GROUP_KEY[group]);
+        const type = searchGroupType(group);
+        return (
+          <Card
+            key={group}
+            className="search-group"
+            title={heading}
+            actions={
+              more?.types.includes(type) && (
+                <Button
+                  aria-label={t("search.group.showAllNamed", {
+                    group: heading,
+                  })}
+                  onClick={() => more.onNarrow(type)}
+                >
+                  {t("list.showAll")}
+                </Button>
+              )
+            }
+          >
+            <ul className="search-hits">
+              {hits.map((hit) => (
                 <SearchHit
                   key={`${hit.type}:${hit.id}`}
                   hit={hit}
                   onOpenEmail={onOpenEmail}
                 />
               ))}
-          </ul>
-        </Card>
-      ))}
+            </ul>
+          </Card>
+        );
+      })}
     </div>
   );
 }

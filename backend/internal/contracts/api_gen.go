@@ -14101,6 +14101,45 @@ func (e SchedulingProfileProvider) Valid() bool {
 	}
 }
 
+// Defines values for SearchResponseTypesWithMore.
+const (
+	SearchResponseTypesWithMoreActivity      SearchResponseTypesWithMore = "activity"
+	SearchResponseTypesWithMoreCompany       SearchResponseTypesWithMore = "company"
+	SearchResponseTypesWithMoreContact       SearchResponseTypesWithMore = "contact"
+	SearchResponseTypesWithMoreDeal          SearchResponseTypesWithMore = "deal"
+	SearchResponseTypesWithMoreLead          SearchResponseTypesWithMore = "lead"
+	SearchResponseTypesWithMoreOfferTemplate SearchResponseTypesWithMore = "offer_template"
+	SearchResponseTypesWithMoreProduct       SearchResponseTypesWithMore = "product"
+	SearchResponseTypesWithMoreProject       SearchResponseTypesWithMore = "project"
+	SearchResponseTypesWithMoreTag           SearchResponseTypesWithMore = "tag"
+)
+
+// Valid indicates whether the value is a known member of the SearchResponseTypesWithMore enum.
+func (e SearchResponseTypesWithMore) Valid() bool {
+	switch e {
+	case SearchResponseTypesWithMoreActivity:
+		return true
+	case SearchResponseTypesWithMoreCompany:
+		return true
+	case SearchResponseTypesWithMoreContact:
+		return true
+	case SearchResponseTypesWithMoreDeal:
+		return true
+	case SearchResponseTypesWithMoreLead:
+		return true
+	case SearchResponseTypesWithMoreOfferTemplate:
+		return true
+	case SearchResponseTypesWithMoreProduct:
+		return true
+	case SearchResponseTypesWithMoreProject:
+		return true
+	case SearchResponseTypesWithMoreTag:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SearchResultTrustTier.
 const (
 	SearchResultTrustTierSearchResultTrustTierAuthoritative SearchResultTrustTier = "authoritative"
@@ -40632,7 +40671,13 @@ type SchedulingProfileProvider string
 type SearchResponse struct {
 	Data []SearchResult `json:"data"`
 	Page PageInfo       `json:"page"`
+
+	// TypesWithMore On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
+	TypesWithMore *[]SearchResponseTypesWithMore `json:"types_with_more,omitempty"`
 }
+
+// SearchResponseTypesWithMore defines model for SearchResponse.TypesWithMore.
+type SearchResponseTypesWithMore string
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
@@ -51142,6 +51187,9 @@ type SearchParams struct {
 
 	// Types Restrict to these object types (default all).
 	Types *[]SearchParamsTypes `form:"types,omitempty" json:"types,omitempty"`
+
+	// PerType Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest.
+	PerType *int `form:"per_type,omitempty" json:"per_type,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -98447,6 +98495,19 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "types"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "types", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "per_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "per_type", r.URL.Query(), &params.PerType, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "per_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "per_type", Err: err})
 		}
 		return
 	}

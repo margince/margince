@@ -66,6 +66,7 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 	if params.Limit != nil {
 		in.Limit = *params.Limit
 	}
+	in.PerType = params.PerType
 
 	page, err := h.store.Search(r.Context(), in)
 	if err != nil {
@@ -73,11 +74,26 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 		return
 	}
 
+	httperr.WriteJSON(w, http.StatusOK, wirePage(page))
+}
+
+// wirePage renders a page as the contract's response. `types_with_more` is
+// present on a grouped page alone, empty when every type fit, so a client can
+// tell "nothing more of any type" from "this was a ranked page".
+func wirePage(page Page) crmcontracts.SearchResponse {
 	pageInfo := crmcontracts.PageInfo{HasMore: page.HasMore}
 	if page.NextCursor != "" {
 		pageInfo.NextCursor = &page.NextCursor
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.SearchResponse{Data: wireHits(page.Hits), Page: pageInfo})
+	response := crmcontracts.SearchResponse{Data: wireHits(page.Hits), Page: pageInfo}
+	if page.TypesWithMore != nil {
+		more := make([]crmcontracts.SearchResponseTypesWithMore, 0, len(page.TypesWithMore))
+		for _, entity := range page.TypesWithMore {
+			more = append(more, crmcontracts.SearchResponseTypesWithMore(entity))
+		}
+		response.TypesWithMore = &more
+	}
+	return response
 }
 
 // wireHits renders a page of hits as the contract's results.

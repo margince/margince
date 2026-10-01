@@ -1,5 +1,5 @@
 import { CornerDownLeft, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   EmptyState,
@@ -41,6 +41,10 @@ export type Command = {
   // older word must not be told the screen does not exist.
   keywords?: readonly string[];
   type: "screen" | "action" | "record";
+  // The heading the row is drawn under, already translated. A record hit names
+  // its kind here rather than in a badge, so a list holding a company and three
+  // emails reads as two groups and not as four rows saying "Record".
+  group?: string;
   // Where the row goes. Absent on a row that opens something OVER the page
   // instead of leaving it — asking does that, and a route it never follows
   // would be a claim about where the reader ends up that is simply untrue.
@@ -415,32 +419,38 @@ export function CommandPalette({
             <EmptyState>{t("palette.empty")}</EmptyState>
           )}
           {rows.map((command, index) => (
-            <button
-              key={command.id}
-              type="button"
-              className={
-                index === selected
-                  ? "palette-row t-body selected"
-                  : "palette-row t-body"
-              }
-              onClick={() => run(command)}
-              ref={(element) => {
-                if (index === selected) {
-                  element?.scrollIntoView?.({ block: "nearest" });
+            <Fragment key={command.id}>
+              {/* A heading where the group changes, outside the row: the
+                  arrow keys walk rows, and a heading is not somewhere to go. */}
+              {command.group && command.group !== rows[index - 1]?.group && (
+                <p className="palette-group t-caption">{command.group}</p>
+              )}
+              <button
+                type="button"
+                className={
+                  index === selected
+                    ? "palette-row t-body selected"
+                    : "palette-row t-body"
                 }
-              }}
-            >
-              {command.id === "ask-ai" ? (
-                <Sparkles aria-hidden />
-              ) : (
-                <CornerDownLeft aria-hidden />
-              )}
-              <span className="label">{command.label}</span>
-              {command.subtitle && (
-                <span className="sub t-caption">{command.subtitle}</span>
-              )}
-              <Badge>{t(TYPE_KEY[command.type])}</Badge>
-            </button>
+                onClick={() => run(command)}
+                ref={(element) => {
+                  if (index === selected) {
+                    element?.scrollIntoView?.({ block: "nearest" });
+                  }
+                }}
+              >
+                {command.id === "ask-ai" ? (
+                  <Sparkles aria-hidden />
+                ) : (
+                  <CornerDownLeft aria-hidden />
+                )}
+                <span className="label">{command.label}</span>
+                {command.subtitle && (
+                  <span className="sub t-caption">{command.subtitle}</span>
+                )}
+                {!command.group && <Badge>{t(TYPE_KEY[command.type])}</Badge>}
+              </button>
+            </Fragment>
           ))}
         </div>
       </div>

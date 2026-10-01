@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { SearchScreen } from "./search";
 
@@ -685,5 +685,132 @@ describe("SearchScreen — narrowing by type", () => {
     render(<SearchScreen q="zzz" />);
     expect(await screen.findByText(/No matches/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "All" })).toBeTruthy();
+  });
+});
+
+describe("SearchScreen — grouped by what each hit is", () => {
+  // Unnarrowed: a test above leaves a `type` dial in the address.
+  beforeEach(() => {
+    globalThis.location.hash = "#/search/rennsteig";
+  });
+  const urlOf = (input: RequestInfo | URL) =>
+    input instanceof Request ? input.url : String(input);
+
+  // Fifty hits ranked across types were fifty emails for a word that also named
+  // the company: relevance does not compare across kinds. Unnarrowed, the page
+  // asks for a few of each kind instead, and the company is on it.
+  it("asks for a few of each kind and draws the mail apart from the records", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({
+        data: [
+          emailHit,
+          {
+            type: "company",
+            id: "o1",
+            title: "Rennsteig GmbH",
+            score: 0.2,
+            trust_tier: "authoritative",
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+        types_with_more: [],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="rennsteig" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Companies" }),
+    ).toBeTruthy();
+    const headings = screen
+      .getAllByRole("heading")
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual(["Companies", "Emails"]);
+    const asked = fetchMock.mock.calls.map(([input]) => urlOf(input));
+    expect(asked.some((url) => url.includes("per_type=5"))).toBe(true);
+    expect(asked.some((url) => url.includes("limit="))).toBe(false);
+    // Nothing was cut, so nothing offers the rest.
+    expect(screen.queryByRole("button", { name: /^Show all/ })).toBeNull();
+  });
+
+  // Only a kind the server says holds more offers the rest, and the rest is
+  // that kind's own ranked list: the same narrowing the pills make.
+  it("offers the rest of a kind the server cut, as that kind's own list", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({
+        data: [
+          emailHit,
+          { type: "company", id: "o1", title: "Rennsteig GmbH", score: 0.2 },
+        ],
+        page: { next_cursor: null, has_more: false },
+        types_with_more: ["company"],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="rennsteig" />);
+
+    const showAll = await screen.findByRole("button", {
+      name: "Show all Companies",
+    });
+    expect(
+      screen.queryByRole("button", { name: "Show all Emails" }),
+    ).toBeNull();
+    await user.click(showAll);
+
+    await waitFor(() =>
+      expect(globalThis.location.hash).toContain("type=company"),
+    );
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          urlOf(input).includes("types=company"),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  // The activity pill narrows to the emails AND the calls and notes beside
+  // them, so it says both rather than reading as the Activities heading.
+  it("names the activity pill for everything it narrows to", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({ data: [], page: { next_cursor: null, has_more: false } }),
+      ),
+    );
+    render(<SearchScreen q="acme" />);
+    expect(
+      screen.getByRole("button", { name: "Emails and activities" }),
+    ).toBeTruthy();
+  });
+});
+
+describe("SearchScreen — one kind, paged", () => {
+  // A narrowed search is that kind's whole ranked list, and fifty is a page of
+  // it rather than the end of it.
+  it("loads the next page of a narrowed search from the cursor", async () => {
+    const user = userEvent.setup();
+    globalThis.location.hash = "#/search/acme?type=deal";
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      return url.includes("cursor=next-1")
+        ? jsonResponse({
+            data: [{ type: "deal", id: "d2", title: "Acme renewal" }],
+            page: { next_cursor: null, has_more: false },
+          })
+        : jsonResponse({
+            data: [{ type: "deal", id: "d1", title: "Acme expansion" }],
+            page: { next_cursor: "next-1", has_more: true },
+          });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="acme" />);
+
+    await user.click(await screen.findByRole("button", { name: "Load more" }));
+
+    expect(await screen.findByText("Acme renewal")).toBeTruthy();
+    expect(screen.getByText("Acme expansion")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 });

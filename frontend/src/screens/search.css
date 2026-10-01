@@ -1,6 +1,11 @@
 .search-bar {
   margin: var(--space-3) 0 var(--space-5);
 }
+/* The pills carry no margin of their own; the results under them need air
+   whichever answer arrives — groups, an empty state or the wait. */
+.search-bar ~ .filterpills {
+  margin-bottom: var(--space-4);
+}
 .search-groups {
   display: flex;
   flex-direction: column;
@@ -8,9 +13,6 @@
 }
 .search-group {
   padding: var(--space-3) var(--space-4);
-}
-.search-group h2 {
-  margin-bottom: var(--space-2);
 }
 .search-hits {
   list-style: none;

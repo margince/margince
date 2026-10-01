@@ -254,3 +254,80 @@ export const EveryKindGerman: Story = {
     );
   },
 };
+
+// The word that names an account names every thread about it, and each thread
+// says it more often than the account's one name field does. Unnarrowed, the
+// page shows a few of each kind, the account above the mail, and a way into the
+// rest of each kind the server cut — here the mail and the deals.
+const mailAbout = (id: string, subject: string, day: number) => ({
+  type: "activity",
+  id,
+  title: subject,
+  score: 9 - day,
+  trust_tier: "authoritative",
+  email_summary: {
+    activity_id: id,
+    occurred_at: `2026-09-0${day}T09:15:00Z`,
+    version: 1,
+    subject,
+    preview: "Acme asked again about the Acme renewal terms.",
+    counterparty: "Dana Buyer",
+    direction: "inbound",
+    display_status: "team",
+    move: "needs_reply",
+    attachment_count: 0,
+  },
+});
+
+export const CompanyAboveItsMail: Story = {
+  render: () => {
+    globalThis.location.hash = "#/search/acme";
+    installFetchStub({
+      "GET /search": () =>
+        jsonResponse({
+          data: [
+            mailAbout("a1", "Re: Acme renewal terms", 1),
+            mailAbout("a2", "Acme — revised quote", 2),
+            mailAbout("a3", "Fwd: Acme rollout plan", 3),
+            { type: "company", id: "o1", title: "Acme GmbH", score: 0.4 },
+            {
+              type: "deal",
+              id: "d1",
+              title: "Acme — Platform expansion",
+              score: 0.3,
+            },
+            { type: "deal", id: "d2", title: "Acme renewal 2027", score: 0.2 },
+          ],
+          page: { next_cursor: null, has_more: false },
+          types_with_more: ["deal", "activity"],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <SearchScreen q="acme" />
+      </StoryProviders>
+    );
+  },
+};
+
+// One kind, narrowed: that kind's ranked list, a page at a time.
+export const NarrowedWithMore: Story = {
+  render: () => {
+    globalThis.location.hash = "#/search/acme?type=deal";
+    installFetchStub({
+      "GET /search": () =>
+        jsonResponse({
+          data: [
+            { type: "deal", id: "d1", title: "Acme — Platform expansion" },
+            { type: "deal", id: "d2", title: "Acme renewal 2027" },
+          ],
+          page: { next_cursor: "next", has_more: true },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <SearchScreen q="acme" />
+      </StoryProviders>
+    );
+  },
+};

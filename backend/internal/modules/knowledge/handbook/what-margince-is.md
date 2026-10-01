@@ -126,16 +126,17 @@ Each Margince screen sits in one place in the sidebar, and a few are reached ano
 
 ### How do I search for something?
 To search Margince, click the search field **Search or ask Margince** in the top bar, or press ⌘K (Ctrl+K), and start typing.
-1. Type a name, company, deal or any other word. Matching records appear as you type, each marked **Record**.
+1. Type a name, company, deal or any other word. Matches appear as you type, a few of each kind, under headings such as **Companies**, **Contacts** and **Emails**.
 2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page.
-3. On that page, **Show only** narrows the results to one kind.
+3. On that page, **Show all** beside a kind, or **Show only**, lists every match of that kind.
 If nothing matches, the palette says **No matches.** If record search fails, it says **Search failed** and the screen commands still work.
 Also called: find, look up, global search.
 
 **Search results** are grouped by kind: Contacts, Companies, Deals, Leads,
-Projects, Activities, Products, Offer templates and Tags. A result that came
-from a connected system is marked **From a connected system**, rather than
-looking like something somebody here typed.
+Projects, Products, Offer templates, Emails, Activities and Tags. Each kind
+shows its best few matches, so a company stays on the page however many emails
+mention it. A result that came from a connected system is marked **From a
+connected system**, rather than looking like something somebody here typed.
 
 ### What is the command palette?
 The command palette is the Margince box that finds any screen, action, setting or record from one place. It opens over the page you are on, with the placeholder **Search or ask Margince**.

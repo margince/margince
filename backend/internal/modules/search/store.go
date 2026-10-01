@@ -97,8 +97,9 @@ func (s *Store) forWorkspace(ws ids.WorkspaceID) *Store {
 }
 
 // Hit is one ranked result. Score is ts_rank_cd over the entity's
-// search_tsv — comparable across types because every column uses the
-// same 'simple' configuration.
+// search_tsv: it orders hits of one type well and hits of different types
+// poorly, since a message body repeating a name outranks the record that
+// bears it — which is what a grouped search (Input.PerType) answers.
 type Hit struct {
 	Type    string
 	ID      ids.UUID
@@ -121,6 +122,9 @@ type Page struct {
 	Hits       []Hit
 	NextCursor string
 	HasMore    bool
+	// TypesWithMore is non-nil on a grouped page alone: the types that matched
+	// more hits than PerType let it carry, in searchBranches order.
+	TypesWithMore []string
 }
 
 type Input struct {
@@ -132,12 +136,15 @@ type Input struct {
 	// non-nil set finds nothing, because a bound set with no members is still
 	// a bound — reading it as "no bound" would search the whole corpus.
 	Within []ids.UUID
+	// PerType, when set, asks for a grouped page — at most this many hits of
+	// each type — instead of one ranked list. Nil is the ranked list.
+	PerType *int
 }
 
-// Search runs the ranked cross-object query (contract /search). Every
-// branch carries archived_at IS NULL and the caller's row scope; ranked
-// keyset pagination orders (score DESC, type, id) so the cursor is
-// stable under concurrent writes.
+// Search runs the cross-object query (contract /search): one ranked list, or
+// with PerType one page grouped by type. Every branch carries archived_at IS
+// NULL and the caller's row scope; ranked keyset pagination orders (score
+// DESC, type, id) so the cursor is stable under concurrent writes.
 func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	// normalizeQuery, not TrimSpace: a TRAILING separator is what says the
 	// reader finished a word, and trimming it turned every completed search
@@ -146,7 +153,6 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	if strings.TrimSpace(query) == "" {
 		return Page{}, &BadQueryError{Field: "q", Reason: "q is required"}
 	}
-	limit := clampLimit(in.Limit)
 	types := in.Types
 	if len(types) == 0 {
 		for _, b := range searchBranches {
@@ -158,18 +164,13 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return Page{}, &BadQueryError{Field: "types", Reason: fmt.Sprintf("unknown type %q", t)}
 		}
 	}
-
-	var cursor *rankedCursor
-	if in.Cursor != "" {
-		decoded, err := decodeCursor(in.Cursor)
-		if err != nil {
-			return Page{}, err
-		}
-		cursor = &decoded
+	shape, err := shapeFor(in)
+	if err != nil {
+		return Page{}, err
 	}
 
 	var page Page
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
@@ -181,28 +182,13 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		if len(branches) == 0 {
 			// Every requested type was denied by object RBAC: an empty
 			// page, not an error — search discloses nothing the entity
-			// lists would not.
+			// lists would not. Still the shape asked for, so a grouped
+			// request gets a grouped page.
+			page = shape.page(nil)
 			return nil
 		}
 
-		var where []string
-		if bound := withinClause(in.Within, arg); bound != "" {
-			where = append(where, bound)
-		}
-		if cursor != nil {
-			// Keyset over the ranked order: strictly worse score, or the
-			// same score past the (type, id) tie-break.
-			where = append(where, fmt.Sprintf(
-				`(score < $%d OR (score = $%d AND (rtype, id) > ($%d, $%d)))`,
-				arg(cursor.Score), len(args), arg(cursor.Type), arg(cursor.ID)))
-		}
-		sql := "SELECT rtype, id, title, snippet, score FROM (" + strings.Join(branches, " UNION ALL ") + ") ranked"
-		if len(where) > 0 {
-			sql += " WHERE " + strings.Join(where, " AND ")
-		}
-		sql += fmt.Sprintf(" ORDER BY score DESC, rtype, id LIMIT $%d", arg(limit+1))
-
-		rows, err := tx.Query(ctx, sql, args...)
+		rows, err := tx.Query(ctx, shape.statement(branches, withinClause(in.Within, arg), arg), args...)
 		if err != nil {
 			return rankingFault(ctx, err)
 		}
@@ -213,9 +199,11 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		// ceiling would otherwise surface as a raw fault from the scan and the
 		// arm above would only ever catch a statement killed before it started
 		// returning.
-		if page, err = scanRankedPage(rows, limit); err != nil {
+		hits, err := scanHits(rows)
+		if err != nil {
 			return rankingFault(ctx, err)
 		}
+		page = shape.page(hits)
 		if err := s.countTagReach(ctx, tx, page.Hits); err != nil {
 			return err
 		}
@@ -228,6 +216,69 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		return Page{}, err
 	}
 	return page, nil
+}
+
+// pageShape is how one request turns its admitted branches into a statement,
+// and the rows that statement returns into a page: one ranked list
+// (rankedShape), or a few hits of every type (groupedShape).
+type pageShape interface {
+	statement(branches []string, within string, arg func(any) int) string
+	page(hits []Hit) Page
+}
+
+// shapeFor picks the page this request asked for, refusing a cursor it
+// cannot read before any statement runs.
+func shapeFor(in Input) (pageShape, error) {
+	if in.PerType != nil {
+		return groupedShapeFor(*in.PerType, in)
+	}
+	shape := rankedShape{limit: clampLimit(in.Limit)}
+	if in.Cursor != "" {
+		decoded, err := decodeCursor(in.Cursor)
+		if err != nil {
+			return nil, err
+		}
+		shape.cursor = &decoded
+	}
+	return shape, nil
+}
+
+// rankedShape is one list ranked across every type, paged by a keyset cursor.
+type rankedShape struct {
+	cursor *rankedCursor
+	limit  int
+}
+
+func (r rankedShape) statement(branches []string, within string, arg func(any) int) string {
+	var where []string
+	if within != "" {
+		where = append(where, within)
+	}
+	if r.cursor != nil {
+		// Keyset over the ranked order: strictly worse score, or the same
+		// score past the (type, id) tie-break.
+		score := arg(r.cursor.Score)
+		where = append(where, fmt.Sprintf(
+			`(score < $%d OR (score = $%d AND (rtype, id) > ($%d, $%d)))`,
+			score, score, arg(r.cursor.Type), arg(r.cursor.ID)))
+	}
+	sql := "SELECT rtype, id, title, snippet, score FROM (" + strings.Join(branches, " UNION ALL ") + ") ranked"
+	if len(where) > 0 {
+		sql += " WHERE " + strings.Join(where, " AND ")
+	}
+	return sql + fmt.Sprintf(" ORDER BY score DESC, rtype, id LIMIT $%d", arg(r.limit+1))
+}
+
+// page derives the keyset cursor from the limit+1 overfetch.
+func (r rankedShape) page(hits []Hit) Page {
+	page := Page{Hits: hits}
+	if len(hits) > r.limit {
+		page.Hits = hits[:r.limit]
+		page.HasMore = true
+		last := page.Hits[r.limit-1]
+		page.NextCursor = encodeCursor(rankedCursor{Score: last.Score, Type: last.Type, ID: last.ID})
+	}
+	return page
 }
 
 // bindTypedQuery binds a query split at the last separator: the words the
@@ -244,8 +295,8 @@ func bindTypedQuery(query string, arg func(any) int) (headPos, tailPos int, hasF
 	return headPos, tailPos, tail != ""
 }
 
-// withinClause renders a search's record bound over the ranked union's id, or
-// "" when there is none. Applied to the union rather than to each branch so
+// withinClause renders a search's record bound over the union's output id, or
+// "" when there is none. Against the output rather than any branch's table, so
 // every branch, present and future, is bounded by the one predicate.
 func withinClause(within []ids.UUID, arg func(any) int) string {
 	if within == nil {
@@ -298,15 +349,14 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 	return branches, nil
 }
 
-// scanRankedPage materializes the ranked rows and derives the keyset
-// cursor from the limit+1 overfetch.
-func scanRankedPage(rows pgx.Rows, limit int) (Page, error) {
-	var page Page
+// scanHits materializes the rows of either shape's statement.
+func scanHits(rows pgx.Rows) ([]Hit, error) {
+	var hits []Hit
 	for rows.Next() {
 		var h Hit
 		var title, snippet *string
 		if err := rows.Scan(&h.Type, &h.ID, &title, &snippet, &h.Score); err != nil {
-			return Page{}, err
+			return nil, err
 		}
 		if title != nil {
 			h.Title = *title
@@ -314,22 +364,13 @@ func scanRankedPage(rows pgx.Rows, limit int) (Page, error) {
 		if snippet != nil {
 			h.Snippet = strings.TrimSpace(*snippet)
 		}
-		page.Hits = append(page.Hits, h)
+		hits = append(hits, h)
 	}
-	if err := rows.Err(); err != nil {
-		return Page{}, err
-	}
-	if len(page.Hits) > limit {
-		page.Hits = page.Hits[:limit]
-		page.HasMore = true
-		last := page.Hits[limit-1]
-		page.NextCursor = encodeCursor(rankedCursor{Score: last.Score, Type: last.Type, ID: last.ID})
-	}
-	return page, nil
+	return hits, rows.Err()
 }
 
 // BadQueryError maps to a 422 at the transport. Field names WHICH query input
-// was wrong — q or types. A malformed page token is not one of them: that answer
+// was wrong — q, types or per_type. A malformed page token is not one of them: that answer
 // is the same on every paginated endpoint, so it is storekit's to give.
 type BadQueryError struct {
 	Field  string

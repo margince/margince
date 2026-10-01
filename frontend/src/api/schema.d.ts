@@ -33886,6 +33886,8 @@ export interface components {
         SearchResponse: {
             data: components["schemas"]["SearchResult"][];
             page: components["schemas"]["PageInfo"];
+            /** @description On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole. */
+            types_with_more?: ("contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
         };
         ContextEntityRef: {
             /**
@@ -55366,6 +55368,8 @@ export interface operations {
                 q: string;
                 /** @description Restrict to these object types (default all). */
                 types?: ("contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
+                /** @description Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. */
+                per_type?: number;
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -55386,7 +55390,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Ranked cross-object results. */
+            /** @description Ranked cross-object results, or with `per_type` a few of each type. */
             200: {
                 headers: {
                     [name: string]: unknown;

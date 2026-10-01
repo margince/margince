@@ -12605,11 +12605,23 @@ paths:
           style: form
           explode: false
           description: Restrict to these object types (default all).
+        - name: per_type
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 20 }
+          description: >
+            Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each
+            type's best first. Relevance is not comparable across types — a message naming an
+            account ten times outranks the account itself — so a short ranked list can hold
+            nothing but messages, while a grouped answer carries every type that matched.
+            `data` holds each type's hits together, best first. The page is the whole answer, so it
+            takes no `cursor` and no `limit`; `types_with_more` names the types holding more than
+            it carries, and asking again without `per_type`, with `types` set to one of them, pages
+            through the rest.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: Ranked cross-object results.
+          description: Ranked cross-object results, or with `per_type` a few of each type.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SearchResponse' }
@@ -46754,6 +46766,13 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/SearchResult' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+        types_with_more:
+          type: array
+          items: { type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag] }
+          description: >
+            On a `per_type` answer only: the types that matched more hits than the page carries
+            for them. Absent on a ranked answer, whose `page.has_more` says the same thing for
+            the list as a whole.
 
     ContextEntityRef:
       type: object

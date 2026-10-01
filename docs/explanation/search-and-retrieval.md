@@ -89,7 +89,18 @@ only borrows from is [relationship-graph.md](relationship-graph.md).
 **lexical arm alone** (`Store.Search`) — ranked, cursor-paged, every result
 stamped `trust_tier: authoritative` (the provenance grade the contract puts on
 natively-held records; `external` is reserved for connector-sourced rows and is
-not emitted yet). The **fused** path (`Store.HybridSearch`) is
+not emitted yet).
+
+**`ts_rank_cd` does not compare across types.** A message that names an
+account in its subject and again through its body outranks the account, whose
+name is one `A`-weighted word, so a short list ranked across types can hold
+nothing but mail. `per_type=N` asks `GET /v1/search` for a **grouped** page
+instead (`groupedShape`): each admitted branch is capped at `N + 1` before the
+union, the extra row is dropped and reported in `types_with_more`, and the page
+takes no cursor or limit — narrowing to one type with `types` pages through the
+rest. The ⌘K palette (`per_type=3`) and the unnarrowed results screen
+(`per_type=5`) both ask for it, and draw an activity that carries an
+`email_summary` under **Emails**, apart from the calls and notes beside it. The **fused** path (`Store.HybridSearch`) is
 reached through the `shared/ports/retrieval` seam (`search.Retriever`), which is
 what the AI layers ground on: `cmd/api` wires it with the resolved model path's
 embedder for the offer-draft surface, `cmd/worker` wires it as the Surface-B
@@ -361,7 +372,8 @@ mechanism with its own maintenance rules — see
 
 | | |
 |---|---|
-| Lexical query + keyset cursor | `internal/modules/search/store.go` (`Search`) |
+| Lexical query + keyset cursor | `internal/modules/search/store.go` (`Search`, `rankedShape`) |
+| Grouped page (`per_type`) | `internal/modules/search/grouped.go` (`groupedShape`) |
 | What a searchable entity is, and who may see one | `internal/modules/search/branches.go` (`searchBranches`, `branchScope`, `SearchedTables`) |
 | Vector write + similarity read | `internal/modules/search/embedding.go` (`UpsertEmbedding`, `SimilarEntities`) |
 | RRF fusion | `internal/modules/search/fuse.go` (`HybridSearch`, `fuseRankedResults`, `rrfK`) |
