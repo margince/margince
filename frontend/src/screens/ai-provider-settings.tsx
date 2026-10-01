@@ -215,7 +215,7 @@ function UpstreamFields({
   const t = useT();
   return (
     <fieldset className="ai-provider-upstream">
-      <legend className="t-h4">{t("aiProviderSettings.upstream.label")}</legend>
+      <legend className="t-h3">{t("aiProviderSettings.upstream.label")}</legend>
       <p className="t-caption">{t("aiProviderSettings.upstream.help")}</p>
       <Field label={t("aiProviderSettings.upstream.only")}>
         {(control) => (

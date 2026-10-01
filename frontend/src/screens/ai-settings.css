@@ -91,6 +91,31 @@
   padding-block: var(--space-4);
 }
 
+/* A provider's own settings, under its key: separated from the key row by a
+   hairline, because they answer a different question (where, not who). */
+.ai-provider-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.ai-provider-upstream {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ai-provider-settings-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
 .ai-sheet-section + .ai-sheet-section {
   border-top: 1px solid var(--borderSubtle);
 }
