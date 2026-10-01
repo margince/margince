@@ -26,7 +26,7 @@ import {
   type VendorCatalogue,
   vendorSuggestions,
 } from "./ai-models";
-import { useSetProviderKey } from "./ai-provider-keys";
+import { useSetProviderKey } from "./ai-provider-key-hooks";
 import { ModelRatePlate } from "./ai-rates";
 import { throwProblem, WriteRefused } from "./common";
 import { ImapMailboxForm } from "./imap-connect-form";

@@ -17,7 +17,7 @@ import {
   unkeyedProviders,
   useAiModelCatalogue,
 } from "./ai-models";
-import { useProviderKeys } from "./ai-provider-keys";
+import { useProviderKeys } from "./ai-provider-key-hooks";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";
 import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
