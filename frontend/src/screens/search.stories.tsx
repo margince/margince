@@ -293,6 +293,8 @@ export const CompanyAboveItsMail: Story = {
             mailAbout("a1", "Re: Acme renewal terms", 1),
             mailAbout("a2", "Acme — revised quote", 2),
             mailAbout("a3", "Fwd: Acme rollout plan", 3),
+            mailAbout("a4", "Acme kickoff agenda", 4),
+            mailAbout("a5", "Re: Acme invoice question", 5),
             {
               type: "company",
               id: "o1",
@@ -314,8 +316,18 @@ export const CompanyAboveItsMail: Story = {
               score: 0.3,
             },
             { type: "deal", id: "d2", title: "Acme renewal 2027", score: 0.2 },
+            { type: "deal", id: "d3", title: "Acme fleet add-on", score: 0.2 },
+            { type: "deal", id: "d4", title: "Acme support plan", score: 0.1 },
+            {
+              type: "deal",
+              id: "d5",
+              title: "Acme pilot, Hamburg",
+              score: 0.1,
+            },
           ],
           page: { next_cursor: null, has_more: false },
+          // Five apiece, the page's cap, so the cut the server reports is one
+          // the data could have made.
           types_with_more: ["deal", "activity"],
         }),
     });

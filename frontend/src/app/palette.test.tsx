@@ -368,6 +368,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // every thread about it, and a short list ranked across kinds was all mail.
   // The palette asks for a few of each kind and draws the account first.
   it("draws the account above the mail that outranks it, asking for a few of each kind", async () => {
+    const user = userEvent.setup();
     const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
       jsonResponse({
         data: [
@@ -393,7 +394,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     const { container } = render(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await userEvent.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("searchbox"), "acme");
 
     const email = await screen.findByRole("button", { name: /Acme renewal/ });
     expect(
@@ -446,6 +447,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // reader meets a name with no reason it is in the list. The palette asks
   // for those contacts, and the row draws the record's own mark.
   it("says which matched company a contact works at, under its mark", async () => {
+    const user = userEvent.setup();
     const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
       jsonResponse({
         data: [
@@ -461,7 +463,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("searchbox"), "acme");
 
     const row = await screen.findByRole("button", {
       name: "Jonas Weiß Works at Acme GmbH",
@@ -479,6 +481,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   });
 
   it("draws a company's logo on its mark", async () => {
+    const user = userEvent.setup();
     const logo =
       "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E";
     vi.stubGlobal(
@@ -494,7 +497,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       ),
     );
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("searchbox"), "acme");
 
     const company = await screen.findByRole("button", { name: "Acme GmbH" });
     expect(
@@ -508,6 +511,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // The marker means nothing off a company, so a hit of another kind draws no
   // partner line whatever the server sent beside it.
   it("draws no partner line on a non-company hit despite a partner marker", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -525,7 +529,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       ),
     );
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "dana");
+    await user.type(screen.getByRole("searchbox"), "dana");
     const row = await screen.findByRole("button", { name: /Dana Buyer/ });
     expect(row.querySelector(".sub")).toBeNull();
   });
@@ -560,6 +564,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // gated on whether the reader may see the account. The palette used to read
   // each project and its company again to build the same line.
   it("routes a project hit to its page, with its key and account as its line", async () => {
+    const user = userEvent.setup();
     const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
       jsonResponse({
         data: [
@@ -581,7 +586,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "roll");
+    await user.type(screen.getByRole("searchbox"), "roll");
     expect(await screen.findByText("ACME-CRM · Acme GmbH")).toBeTruthy();
     expect(screen.getByText("Brandt Automotive")).toBeTruthy();
     expect(
@@ -592,7 +597,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       ),
     ).toBe(false);
 
-    await userEvent.click(screen.getByText("ACME-CRM · Acme GmbH"));
+    await user.click(screen.getByText("ACME-CRM · Acme GmbH"));
     expect(window.location.hash).toBe("#/projects/pr-1");
   });
 

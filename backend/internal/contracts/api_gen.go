@@ -40697,7 +40697,7 @@ type SearchResult struct {
 	// IsPartner For a `company` hit only: whether the account carries a LIVE partner programme. True when a partner record exists and has not been retired, false when it was checked and carries none. Null on every other hit type, and null when the marker was not taken — a caller who may not read partner programmes gets null rather than false, because null means UNKNOWN while false would tell them this account is not a partner. A client renders the partner marker, with a route to the company's partner record, on `true` alone.
 	IsPartner *bool `json:"is_partner,omitempty"`
 
-	// LogoUrl For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Null when it has none, and on every other hit type.
+	// LogoUrl For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type.
 	LogoUrl *string `json:"logo_url,omitempty"`
 
 	// Score Relevance score.

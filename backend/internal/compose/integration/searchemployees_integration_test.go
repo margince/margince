@@ -321,8 +321,8 @@ func TestACompanyHitCarriesItsLogo(t *testing.T) {
 	}
 }
 
-// The HTTP surface turns with_employees into the arm, and the wire
-// carries the employer it found.
+// The handler turns a decoded with_employees into the arm, and the wire carries
+// the employer it found. Decoding the query is the generated wrapper's.
 func TestTheSearchEndpointFindsEmployeesWhenAsked(t *testing.T) {
 	e := SetupSearch(t)
 	werke := seedSearchCompany(t, e, "Quedlinburg Werke")
@@ -332,7 +332,7 @@ func TestTheSearchEndpointFindsEmployeesWhenAsked(t *testing.T) {
 	asked := true
 	h := search.NewHandlers(e.DB(), nil, nil, nil, nil)
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/v1/search?q=quedlinburg&with_employees=true", nil).WithContext(e.Admin())
+	req := httptest.NewRequest(http.MethodGet, "/v1/search", nil).WithContext(e.Admin())
 	h.Search(rec, req, crmcontracts.SearchParams{Q: "quedlinburg", WithEmployees: &asked})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d: %s", rec.Code, rec.Body.String())

@@ -8,8 +8,9 @@ import (
 	"strings"
 )
 
-// maxPerType bounds a grouped page. Every branch at this cap stays within the
-// largest ranked page, so a grouped answer never costs more than a ranked one
+// maxPerType bounds a grouped page. Every union element at this cap, the
+// employer arm included, stays within the largest ranked page, so a grouped
+// answer never costs more than a ranked one
 // (TestAGroupedPageFitsInTheLargestRankedPage).
 const maxPerType = 20
 

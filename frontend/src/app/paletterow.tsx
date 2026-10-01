@@ -4,6 +4,7 @@
 import { CornerDownLeft, Sparkles } from "lucide-react";
 import { Avatar, Badge } from "../design-system/atoms";
 import { EmailReference } from "../design-system/emailreference";
+import { Eyebrow } from "../design-system/eyebrow";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { Command } from "./palette";
@@ -35,7 +36,9 @@ export function PaletteRow({
   return (
     <>
       {command.group && command.group !== previous?.group && (
-        <p className="palette-group t-caption">{command.group}</p>
+        <Eyebrow as="h2" className="palette-group">
+          {command.group}
+        </Eyebrow>
       )}
       <button
         type="button"

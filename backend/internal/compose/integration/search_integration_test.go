@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -115,9 +116,13 @@ func TestSearchRanksAcrossObjectTypes(t *testing.T) {
 func TestAGroupedSearchShowsTheAccountThatNotesNamingItOutrank(t *testing.T) {
 	e := SetupSearch(t)
 	account := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Lubeck Shipping', 'manual', 'human:x')`)
-	for i := 0; i < 3; i++ {
-		e.SeedID(t, fmt.Sprintf(`INSERT INTO activity (id, kind, subject, body, source, captured_by)
-			VALUES ($1, 'note', 'Lubeck renewal %d', 'Lubeck asked again: Lubeck wants the Lubeck terms', 'manual', 'human:x')`, i))
+	// Each note repeats the name once more than the last, so the four rank apart.
+	// The statement fetches one past the cap of two, so it must choose: the
+	// strongest two are kept and the weaker ones are never on the page.
+	notes := make([]ids.UUID, 4)
+	for i := range notes {
+		notes[i] = e.SeedID(t, fmt.Sprintf(`INSERT INTO activity (id, kind, subject, body, source, captured_by)
+			VALUES ($1, 'note', 'Lubeck renewal %d', '%s', 'manual', 'human:x')`, i, strings.Repeat("Lubeck terms again. ", i+1)))
 	}
 
 	ranked, err := e.Store.Search(e.Admin(), search.Input{Query: "lubeck", Limit: 3})
@@ -133,21 +138,24 @@ func TestAGroupedSearchShowsTheAccountThatNotesNamingItOutrank(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	activities := 0
-	var companies []ids.UUID
+	var companies, kept []ids.UUID
 	for _, hit := range grouped.Hits {
 		switch hit.Type {
 		case "activity":
-			activities++
+			kept = append(kept, hit.ID)
 		case "company":
 			companies = append(companies, hit.ID)
 		}
 	}
-	if len(companies) != 1 || companies[0] != account || activities != 2 {
-		t.Fatalf("grouped page = %+v, want the account and two of the three notes", grouped.Hits)
+	if len(companies) != 1 || companies[0] != account || len(kept) != 2 {
+		t.Fatalf("grouped page = %+v, want the account and two of the four notes", grouped.Hits)
+	}
+	// The statement's own order decides which notes the cap keeps: the best.
+	if !slices.Contains(kept, notes[3]) || !slices.Contains(kept, notes[2]) {
+		t.Fatalf("the grouped page kept %v, want the two strongest notes %s and %s", kept, notes[3], notes[2])
 	}
 	if len(grouped.TypesWithMore) != 1 || grouped.TypesWithMore[0] != "activity" {
-		t.Fatalf("TypesWithMore = %v, want [activity]: the third note was left out", grouped.TypesWithMore)
+		t.Fatalf("TypesWithMore = %v, want [activity]: two notes were left out", grouped.TypesWithMore)
 	}
 }
 

@@ -1559,6 +1559,17 @@ export async function mockApi(
     if (path === "/contacts/p-new") {
       return json({ ...anna, id: "p-new", full_name: "Peter Neu" });
     }
+    // The contact the search fixture finds through Brandt, so opening that hit
+    // lands on its own record.
+    if (path === "/contacts/p-jonas") {
+      return json({
+        ...anna,
+        id: "p-jonas",
+        full_name: "Jonas Weiß",
+        title: "Fleet manager",
+        emails: [],
+      });
+    }
     if (path === "/companies" && method === "POST") {
       const body = route.request().postDataJSON();
       return json(

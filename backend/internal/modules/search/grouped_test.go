@@ -68,13 +68,15 @@ func TestAGroupedSearchRefusesAPageOrACapItCannotAnswer(t *testing.T) {
 	}
 }
 
-// Every branch at the per-type cap must still fit the largest ranked page, or
-// a grouped request becomes the cheapest way to ask for more than a ranked one
-// is allowed. A branch added to the table counts here on its own.
+// Every union element at the per-type cap — each branch and the employer arm —
+// must still fit the largest ranked page, or a grouped request becomes the
+// cheapest way to ask for more than a ranked one is allowed. A branch added to
+// the table counts here on its own.
 func TestAGroupedPageFitsInTheLargestRankedPage(t *testing.T) {
 	unbounded := math.MaxInt
-	if largest := storekit.ClampLimit(&unbounded); len(searchBranches)*maxPerType > largest {
-		t.Fatalf("%d branches at %d per type is %d hits, past the largest ranked page of %d",
-			len(searchBranches), maxPerType, len(searchBranches)*maxPerType, largest)
+	elements := len(searchBranches) + 1
+	if largest := storekit.ClampLimit(&unbounded); elements*maxPerType > largest {
+		t.Fatalf("%d union elements at %d per type is %d hits, past the largest ranked page of %d",
+			elements, maxPerType, elements*maxPerType, largest)
 	}
 }

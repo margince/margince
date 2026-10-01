@@ -46755,7 +46755,7 @@ components:
           readOnly: true
           description: >
             For a `company` hit only: the company's logo, the same URL its record carries as
-            `Company.logo_url`. Null when it has none, and on every other hit type.
+            `Company.logo_url`. Absent when it has none, and on every other hit type.
         is_partner:
           type: [boolean, 'null']
           description: >

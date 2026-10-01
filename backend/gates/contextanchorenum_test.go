@@ -6,7 +6,9 @@
 package gates
 
 // GET /records/{entity_type}/{id}/context accepts exactly the record types the
-// search module can search, and the contract has to say the same set.
+// search module can anchor a context read on — every searchable type but the
+// text-only ones — and the contract has to say the same set. The full
+// searchable set is searchtypeenum_test.go's.
 //
 // The handler derives its own admission from that table (search.knownEntity),
 // so the two can only disagree in the contract's direction — and every way they
@@ -111,9 +113,10 @@ const (
 	anchorsOnly branchSelection = true
 )
 
-// searchableEntitiesFromSource extracts the `entity:` value of every
-// searchBranches element — the module's one entity table, parsed rather than
-// copied, so a branch added or withdrawn reaches this gate on its own.
+// searchableEntitiesFromSource extracts the `entity:` value of each
+// searchBranches element the selection admits — the module's one entity table,
+// parsed rather than copied, so a branch added or withdrawn reaches the gates
+// on its own.
 func searchableEntitiesFromSource(t *testing.T, selection branchSelection) []string {
 	t.Helper()
 	file, err := gatekit.ParseFile(searchBranchFile, 0)
