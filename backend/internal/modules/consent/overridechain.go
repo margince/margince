@@ -114,6 +114,35 @@ func overrideFamilyRoot(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, 
 	return root, nil
 }
 
+// lockOverrideFamilyOf locks the chain the named row belongs to and answers the
+// root it locked, re-reading until the two agree. The root is read before the
+// lock is held, and carried_from is ON DELETE SET NULL: an erasure of the
+// retired source committing in between deletes the root and re-roots the copy
+// under its own id, so the key just taken serialises nothing a later carry
+// would take. Reading again under the key, and locking the new root when it
+// moved, ends with a key both this revoke and any carry extending the chain
+// derive from the same row. The advisory lock is reentrant and held to commit,
+// so a stale key taken on the way stays held harmlessly.
+func lockOverrideFamilyOf(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, error) {
+	root, err := overrideFamilyRoot(ctx, tx, id)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	for {
+		if err := lockOverrideFamily(ctx, tx, root); err != nil {
+			return ids.UUID{}, err
+		}
+		again, err := overrideFamilyRoot(ctx, tx, id)
+		if err != nil {
+			return ids.UUID{}, err
+		}
+		if again == root {
+			return root, nil
+		}
+		root = again
+	}
+}
+
 // lockCarriedFamilies is the carry side: every chain the copy about to run
 // would extend.
 //

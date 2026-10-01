@@ -301,11 +301,8 @@ func (s *Store) revokeOverrideAdmittedTx(
 	// subject it started on, and the merge that would extend it locks two
 	// subjects this caller never named. overridechain.go carries that argument
 	// and the lock order both.
-	root, err := overrideFamilyRoot(ctx, tx, in.OverrideID)
+	root, err := lockOverrideFamilyOf(ctx, tx, in.OverrideID)
 	if err != nil {
-		return err
-	}
-	if err := lockOverrideFamily(ctx, tx, root); err != nil {
 		return err
 	}
 	// EnsureRetractable, which IS EnsureWritable and says so: this write
