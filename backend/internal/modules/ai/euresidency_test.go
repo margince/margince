@@ -29,8 +29,8 @@ func TestIsEURegionHostAdmitsOnlyARegionVariant(t *testing.T) {
 
 // An eu_hosted config that the broker may serve outside the EU is refused at
 // the parser, on a chat tier and on the embeddings lane alike, whether the
-// config arrived as a file or through the settings store. One broker lane per
-// gap: lanes on one provider share its pins.
+// config arrived as a file or through the settings store. A tier's pin reaches
+// the lanes on its provider; the embeddings lane's own pin reaches no tier.
 func TestAnEUHostedBrokerLaneMustPinAnEURegion(t *testing.T) {
 	t.Parallel()
 	const pinned = "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}"
@@ -44,11 +44,11 @@ func TestAnEUHostedBrokerLaneMustPinAnEURegion(t *testing.T) {
 		says string // "" means accepted
 	}{
 		"an inherited default": {
-			doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'}", native),
+			doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'}", embedPinned),
 			"tier premium under profile eu_hosted: no `only:`",
 		},
 		"an explicit opt-out": {
-			doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {}}", native),
+			doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {}}", embedPinned),
 			"tier premium under profile eu_hosted: no `only:`",
 		},
 		"a pin that admits a non-EU host": {
@@ -60,7 +60,13 @@ func TestAnEUHostedBrokerLaneMustPinAnEURegion(t *testing.T) {
 			"the embeddings lane under profile eu_hosted",
 		},
 		"every lane pinned":                {doc("eu_hosted", pinned, embedPinned), ""},
-		"a host the broker does not front": {doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://inference.example.eu'}", native), ""},
+		"a host the broker does not front": {doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://inference.example.eu'}", embedPinned), ""},
+		"an unpinned embeddings lane served under its tier's pin": {
+			doc("eu_hosted", pinned, "{provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}"), "",
+		},
+		"a direct-vendor tier beside a pinned broker embeddings lane": {
+			doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://api.mistral.ai'}", embedPinned), "",
+		},
 		"the same unpinned lane under cloud_frontier": {
 			doc("cloud_frontier", "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'}",
 				"{provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}"), "",
@@ -107,11 +113,14 @@ func TestAStoredEUHostedBrokerLaneWithNoPreferencesIsRefused(t *testing.T) {
 // refused on the way in.
 func TestAStoredEUHostedBrokerLaneLoadsButIsRefusedOnWrite(t *testing.T) {
 	t.Parallel()
+	pinned := &OpenRouterRouting{Only: []string{"mistral/eu"}}
 	broker := ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://openrouter.ai/api"}
+	embed := broker
+	embed.Routing = pinned
 	cfg := RoutingConfig{
 		Profile:    ProfileEUHosted,
 		Tiers:      map[Tier]ProviderConfig{TierPremium: broker},
-		Embeddings: EmbeddingsConfig{ProviderConfig: broker, Dimensions: 1024},
+		Embeddings: EmbeddingsConfig{ProviderConfig: embed, Dimensions: 1024},
 	}
 	loaded, err := FromStored(cfg, config.Static(nil))
 	if err != nil {

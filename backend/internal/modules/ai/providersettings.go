@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
-	"reflect"
 	"slices"
 	"strings"
 )
@@ -97,94 +96,11 @@ func (r *OpenRouterRouting) withPins(pins *OpenRouterRouting) *OpenRouterRouting
 	return out
 }
 
-// providerLift carries a lift's state across lanes: the providers being built
-// and which lane each kept value came from, for the warning that names both.
-type providerLift struct {
-	providers map[string]ProviderSettings
-	hostFrom  map[string]string
-	pinsFrom  map[string]string
-	log       *slog.Logger
-}
-
-// liftLaneProviderFields moves the host and pins written on lanes — the shape
-// every routing document had before providers held them — onto the provider,
-// leaving each lane's serving preferences where they are. Lanes are visited
-// tiers by name, then embeddings, then decisions; the first value wins and each
-// disagreeing lane is one warning. A lane value equal to its provider's is
-// cleared silently, so the lift is idempotent and safe over a resolved config.
-func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig {
-	lift := providerLift{providers: maps.Clone(cfg.Providers), hostFrom: map[string]string{}, pinsFrom: map[string]string{}, log: log}
-	if lift.providers == nil {
-		lift.providers = map[string]ProviderSettings{}
-	}
-	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
-	for _, tier := range cfg.sortedTiers() {
-		tiers[tier] = lift.lane(tierLabel(tier), cfg.Tiers[tier])
-	}
-	cfg.Tiers = tiers
-	cfg.Embeddings.ProviderConfig = lift.lane(embeddingsLaneLabel, cfg.Embeddings.ProviderConfig)
-	if cfg.Decisions != nil {
-		decisions := *cfg.Decisions
-		lift.host(decisionsLaneLabel, decisions.Provider, decisions.BaseURL)
-		decisions.BaseURL = ""
-		cfg.Decisions = &decisions
-	}
-	if len(lift.providers) == 0 {
-		lift.providers = nil
-	}
-	cfg.Providers = lift.providers
-	return cfg
-}
-
-// lane lifts one chat lane's host and pins and returns it without them.
-func (l providerLift) lane(label string, lane ProviderConfig) ProviderConfig {
-	l.host(label, lane.Provider, lane.BaseURL)
-	if pins := lane.Routing.pins(); pins != nil {
-		l.pins(label, lane.Provider, pins)
-	}
-	lane.BaseURL, lane.Routing = "", lane.Routing.withoutPins()
-	return lane
-}
-
-func (l providerLift) host(label, provider, baseURL string) {
-	if baseURL == "" {
-		return
-	}
-	settings := l.providers[provider]
-	switch {
-	case settings.BaseURL == "":
-		settings.BaseURL = baseURL
-		l.providers[provider] = settings
-		l.hostFrom[provider] = label
-	case !sameEndpoint(settings.BaseURL, baseURL):
-		l.warn("ai: routing: lane host differs from its provider's; the provider's wins", provider, l.hostFrom, label)
-	}
-}
-
-func (l providerLift) pins(label, provider string, pins *OpenRouterRouting) {
-	settings := l.providers[provider]
-	switch {
-	case settings.Upstream == nil:
-		settings.Upstream = pins
-		l.providers[provider] = settings
-		l.pinsFrom[provider] = label
-	case !reflect.DeepEqual(settings.Upstream.pins(), pins):
-		l.warn("ai: routing: lane upstream pins differ from its provider's; the provider's win", provider, l.pinsFrom, label)
-	}
-}
-
-func (l providerLift) warn(msg, provider string, from map[string]string, dropped string) {
-	kept := from[provider]
-	if kept == "" {
-		kept = providerEntryLabel
-	}
-	l.log.Warn(msg, "provider", provider, "kept_from", kept, "dropped", dropped)
-}
-
 // resolveProviders fills every lane's host and pins from its provider. A tier's
 // pins land on top of its product default when it declared no routing, so an
 // EU-pinned broker tier keeps the default sort and precision; a tier that wrote
-// `{}` gets the pins alone. Each lane gets its own copy.
+// `{}` gets the pins alone. The embeddings lane keeps its own host and pins when
+// it names them, and otherwise reads its provider's. Each lane gets its own copy.
 func (cfg RoutingConfig) resolveProviders() RoutingConfig {
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
 	for tier, lane := range cfg.Tiers {
@@ -194,9 +110,7 @@ func (cfg RoutingConfig) resolveProviders() RoutingConfig {
 		tiers[tier] = lane
 	}
 	cfg.Tiers = tiers
-	settings := cfg.Providers[cfg.Embeddings.Provider]
-	cfg.Embeddings.BaseURL = settings.BaseURL
-	cfg.Embeddings.Routing = cfg.Embeddings.Routing.withPins(settings.Upstream.pins())
+	cfg.Embeddings.ProviderConfig = cfg.Embeddings.resolved(cfg.Providers[cfg.Embeddings.Provider])
 	if cfg.Decisions != nil {
 		decisions := *cfg.Decisions
 		decisions.BaseURL = cfg.Providers[decisions.Provider].BaseURL
@@ -205,24 +119,30 @@ func (cfg RoutingConfig) resolveProviders() RoutingConfig {
 	return cfg
 }
 
-// canonical is the document as stored: providers hold every host and pin, and
-// lanes keep only their own serving preferences.
+// resolved is the embeddings lane as served. Its own base_url is a separate
+// embeddings server (one model per vLLM process), and its provider's pins name
+// hosts behind the provider's broker, so they reach the lane only when it is
+// served there and states none of its own.
+func (e EmbeddingsConfig) resolved(settings ProviderSettings) ProviderConfig {
+	lane := e.ProviderConfig
+	lane.Routing = lane.Routing.clone()
+	if lane.BaseURL != "" {
+		return lane
+	}
+	lane.BaseURL = settings.BaseURL
+	if lane.Routing.pins() == nil {
+		lane.Routing = lane.Routing.withPins(settings.Upstream.pins())
+	}
+	return lane
+}
+
+// canonical is the document as stored: providers hold every host and pin they
+// can, tiers keep only their serving preferences, and the embeddings lane only
+// what overrides its provider. It lifts first, so a row stored in the old
+// per-lane shape and its lifted twin are one document — the ETag (Revision)
+// must see a host whichever shape it is read in.
 func (cfg RoutingConfig) canonical() RoutingConfig {
-	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
-	for tier, lane := range cfg.Tiers {
-		lane.BaseURL, lane.Routing = "", lane.Routing.withoutPins()
-		tiers[tier] = lane
-	}
-	if cfg.Tiers != nil {
-		cfg.Tiers = tiers
-	}
-	cfg.Embeddings.BaseURL, cfg.Embeddings.Routing = "", cfg.Embeddings.Routing.withoutPins()
-	if cfg.Decisions != nil {
-		decisions := *cfg.Decisions
-		decisions.BaseURL = ""
-		cfg.Decisions = &decisions
-	}
-	return cfg
+	return cfg.liftLaneProviderFields(slog.New(slog.DiscardHandler))
 }
 
 // validateProviderEntries holds each provider entry to its shape. An entry no

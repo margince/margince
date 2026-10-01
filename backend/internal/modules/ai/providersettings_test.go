@@ -10,7 +10,21 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
+
+// qwenLocalVLLM is config/presets/qwen3_local_vllm.yaml's binding: chat tiers on
+// vllm's compiled default and the embedder at a port of its own, because vLLM
+// serves one model per process.
+const qwenLocalVLLM = `profile: sovereign
+tiers:
+  local_small: {provider: vllm, model: "mlx-community/Qwen3-14B-4bit"}
+  cheap_cloud: {provider: vllm, model: "mlx-community/Qwen3-14B-4bit"}
+  premium: {provider: vllm, model: "mlx-community/Qwen3-14B-4bit"}
+  frontier: {provider: vllm, model: "mlx-community/Qwen3-14B-4bit"}
+embeddings: {provider: vllm, model: BAAI/bge-m3, base_url: "http://localhost:8001", dimensions: 1024}
+`
 
 // A routing document written before hosts and upstream preferences moved onto
 // the provider, in the two shapes installations store: an EU broker binding
@@ -49,6 +63,10 @@ tiers:
 embeddings: {provider: openai_compatible, model: mistralai/mistral-embed-2312, base_url: "https://openrouter.ai/api", dimensions: 1024}
 `,
 			want: "54b0da1f30ff47919042f00d9882f066910972f4dcdb0b55a2d408a912d76aeb",
+		},
+		"a local binding with a separate embeddings server": {
+			doc:  qwenLocalVLLM,
+			want: "8d8fff91f8bdf5171d385a521a601f7723ac92b14c1a2f8d0b3b6e1120e50260",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -376,5 +394,114 @@ func TestDigest_RefinalizingAResolvedConfigKeepsItsVersion(t *testing.T) {
 	}
 	if got := reloaded.Providers[providerOpenAICompatible].Upstream; !reflect.DeepEqual(got, &OpenRouterRouting{Only: []string{"mistral/eu"}}) {
 		t.Errorf("provider upstream = %+v after reload, want the pin alone, with no serving preference pinned onto it", got)
+	}
+}
+
+func TestResolve_ASeparateEmbeddingsServerKeepsItsHost(t *testing.T) {
+	cfg := mustParse(t, qwenLocalVLLM)
+	for tier, lane := range cfg.Tiers {
+		if lane.BaseURL != "" {
+			t.Errorf("tier %s resolved to %q, want vllm's compiled default", tier, lane.BaseURL)
+		}
+	}
+	if got := cfg.Embeddings.BaseURL; got != "http://localhost:8001" {
+		t.Errorf("embeddings resolved to %q, want its own server", got)
+	}
+	if got := cfg.canonical().Embeddings.BaseURL; got != "http://localhost:8001" {
+		t.Errorf("canonical embeddings host = %q, want the override kept", got)
+	}
+}
+
+func TestLift_ALaneAtTheDefaultAndALaneElsewhereDisagree(t *testing.T) {
+	log, buf := warnings()
+	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: {Provider: providerVLLM, Model: "m"},
+		TierPremium:    {Provider: providerVLLM, Model: "m", BaseURL: "http://localhost:9000"},
+	}}
+	if got := cfg.liftLaneProviderFields(log).Providers[providerVLLM].BaseURL; got != "" {
+		t.Errorf("provider host = %q, want the compiled default tier cheap_cloud dials", got)
+	}
+	lines := warnLines(buf)
+	if len(lines) != 1 || !strings.Contains(lines[0], `"dropped":"tier premium"`) {
+		t.Errorf("warnings = %v, want one dropping tier premium", lines)
+	}
+}
+
+const pinnedEmbedder = `profile: cloud_frontier
+tiers:
+  premium: {provider: openai_compatible, model: anthropic/claude-sonnet-4.5, base_url: "https://openrouter.ai/api"}
+embeddings: {provider: openai_compatible, model: mistralai/mistral-embed-2312, base_url: "https://openrouter.ai/api", routing: {only: [mistral/eu]}}
+`
+
+func TestLift_EmbeddingsPinsStayOnTheirLaneBesideATier(t *testing.T) {
+	cfg := mustParse(t, pinnedEmbedder)
+	if got := cfg.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, DefaultOpenRouterRouting()) {
+		t.Errorf("tier routing = %+v, want the product default without the embedder's pin: the pinned host may not serve this model", got)
+	}
+	if got := cfg.Embeddings.Routing; !reflect.DeepEqual(got, &OpenRouterRouting{Only: []string{"mistral/eu"}}) {
+		t.Errorf("embeddings routing = %+v, want its own pin", got)
+	}
+}
+
+func TestLift_ALaneThatStatedNoPinsInheritsThemWithAWarning(t *testing.T) {
+	const doc = `profile: cloud_frontier
+tiers:
+  cheap_cloud: {provider: openai_compatible, model: m, base_url: "https://openrouter.ai/api", routing: {only: [mistral/eu]}}
+  premium: {provider: openai_compatible, model: m, base_url: "https://openrouter.ai/api"}
+embeddings: {provider: openai_compatible, model: e, base_url: "https://openrouter.ai/api"}
+`
+	cfg := mustParse(t, doc)
+	pinned := DefaultOpenRouterRouting()
+	pinned.Only = []string{"mistral/eu"}
+	if got := cfg.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, pinned) {
+		t.Errorf("tier premium routing = %+v, want the default under the provider's pin", got)
+	}
+	if got := cfg.Embeddings.Routing; !reflect.DeepEqual(got, &OpenRouterRouting{Only: []string{"mistral/eu"}}) {
+		t.Errorf("embeddings routing = %+v, want the provider's pin", got)
+	}
+	var raw RoutingConfig
+	if err := yaml.Unmarshal([]byte(doc), &raw); err != nil {
+		t.Fatal(err)
+	}
+	log, buf := warnings()
+	raw.liftLaneProviderFields(log)
+	lines := warnLines(buf)
+	if len(lines) != 2 || !strings.Contains(lines[0], `"inheriting":"tier premium"`) || !strings.Contains(lines[1], `"inheriting":"the embeddings lane"`) ||
+		!strings.Contains(lines[0], `"pinned_by":"tier cheap_cloud"`) {
+		t.Errorf("warnings = %v, want one per inheriting lane naming tier cheap_cloud", lines)
+	}
+}
+
+func TestLift_PinsOnADirectVendorHostAreDroppedNotRefused(t *testing.T) {
+	cfg := mustParse(t, `profile: cloud_frontier
+tiers:
+  premium: {provider: openai_compatible, model: m, base_url: "https://api.mistral.ai", routing: {only: [mistral/eu]}}
+embeddings: {provider: gemini, model: e}
+`)
+	if got := cfg.Tiers[TierPremium].Routing; got != nil {
+		t.Errorf("tier routing = %+v, want none: a direct vendor takes no broker pins", got)
+	}
+	if cfg.Providers[providerOpenAICompatible].Upstream != nil {
+		t.Error("the dropped pins reached the provider")
+	}
+}
+
+func TestResolve_ADirectVendorTierBesideAPinnedBrokerEmbedder(t *testing.T) {
+	doc := strings.Replace(pinnedEmbedder, `model: anthropic/claude-sonnet-4.5, base_url: "https://openrouter.ai/api"`, `model: mistral-medium, base_url: "https://api.mistral.ai"`, 1)
+	cfg := mustParse(t, doc)
+	if got := cfg.Tiers[TierPremium]; got.BaseURL != "https://api.mistral.ai" || got.Routing != nil {
+		t.Errorf("tier = %+v, want the vendor host with no broker preferences", got)
+	}
+	if got := cfg.Embeddings; got.BaseURL != broker || !reflect.DeepEqual(got.Routing, &OpenRouterRouting{Only: []string{"mistral/eu"}}) {
+		t.Errorf("embeddings = %+v, want the broker and its own pin", got.ProviderConfig)
+	}
+}
+
+func TestRevision_SeesTheHostOfAnUnliftedRow(t *testing.T) {
+	row := func(host string) RoutingConfig {
+		return RoutingConfig{Profile: ProfileCloudFrontier, Tiers: map[Tier]ProviderConfig{TierPremium: {Provider: providerOpenAICompatible, Model: "m", BaseURL: host}}}
+	}
+	if row("https://a.example").Revision() == row("https://b.example").Revision() {
+		t.Error("two stored rows differing only in a tier's host share a revision; a concurrent host edit would be overwritten unseen")
 	}
 }
