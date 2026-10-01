@@ -17,6 +17,7 @@ import (
 	"maps"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -51,11 +52,16 @@ type RoutingStore struct {
 	selectBrain brainSelector
 	// log hears a save admitted unchecked; nil is slog.Default.
 	log *slog.Logger
+	// now dates what a Vertex location was found to serve; nil is time.Now.
+	now func() time.Time
+	// served holds, per Vertex location, which models it was found to serve.
+	// Shared by the copies the With* builders make; nil asks every time.
+	served *servedAtLocation
 }
 
 // NewRoutingStore builds the store over the settings catalog.
 func NewRoutingStore(s *settings.Store, keys config.Lookup) *RoutingStore {
-	return &RoutingStore{settings: s, keys: keys}
+	return &RoutingStore{settings: s, keys: keys, served: &servedAtLocation{}}
 }
 
 // WithVault returns a store that can resolve a sealed credential.
