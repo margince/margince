@@ -293,6 +293,13 @@ type NormalizedRecord struct {
 	// (mailmap.TopDeliveredTo); empty is the safe answer and the common one.
 	DeliveredTo string
 
+	// ProviderReceivedAt is when the mailbox PROVIDER says this message arrived
+	// in the seat's mailbox: Gmail's internalDate, Graph's receivedDateTime. It
+	// comes off the provider's API response, never out of the message, so a
+	// sender cannot set it the way they set a Date header. Zero when the
+	// transport states none, and a zero time proves nothing about arrival.
+	ProviderReceivedAt time.Time
+
 	// The provider's own filing places, each qualified by its namespace:
 	// "gmail:<labelId>", "graph:<folderId>", "imap:<mailbox>". Qualified rather
 	// than bare because one contact may have connected two mailboxes on

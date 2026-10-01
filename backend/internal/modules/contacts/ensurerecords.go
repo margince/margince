@@ -210,7 +210,9 @@ func acquiredFromCapture(replied bool) string {
 // not the sender writing to us. A first mail from a stranger is them contacting
 // us, and a disclosure duty for it would be owed to nobody. Only the reverse —
 // an address we wrote to, or saw on a Cc, that never wrote — stays unknown,
-// unless a seat wrote to it before connecting the mailbox (mailbox_history).
+// unless a seat's mailbox already held mail with it before that seat connected
+// the mailbox (mailbox_history): mail the seat sent to it, or received mail
+// that named it on To or Cc.
 func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email string) (string, error) {
 	if kind := acquiredFromCapture(replied); kind == AcquiredSubjectInitiated {
 		return kind, nil
@@ -238,6 +240,11 @@ func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email s
 	history, err := writtenToBeforeConnectedTx(ctx, tx, email)
 	if err != nil {
 		return "", err
+	}
+	if !history {
+		if history, err = receivedBeforeConnectedTx(ctx, tx, email); err != nil {
+			return "", err
+		}
 	}
 	if history {
 		return AcquiredMailboxHistory, nil

@@ -5666,7 +5666,7 @@ export const de = {
   "privacynotice.source.crmMigration":
     "Ihre Daten waren bereits in unserem bisherigen Kundensystem und wurden mit ihm hierher übertragen.",
   "privacynotice.source.mailboxHistory":
-    "Wir standen bereits per E-Mail mit Ihnen in Kontakt, bevor unser Postfach mit diesem System verbunden wurde.",
+    "Bevor unser Postfach mit diesem System verbunden wurde, enthielt es bereits E-Mails, die wir Ihnen geschickt haben, oder E-Mails, die wir erhalten haben und die auch an Sie gingen.",
   "privacynotice.source.purchasedOrImported":
     "Ihre Daten stammen aus einer gekauften oder importierten Liste.",
   "privacynotice.source.unknown":

@@ -309,6 +309,7 @@ func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounc
 	}
 	msg = msg.AttestSentByOwner(fetched.FiledAsSent)
 	rec := msg.ToRecord(connectorName, fetched.RFC822)
+	rec.ProviderReceivedAt = fetched.ReceivedAt
 	// Where Gmail filed it, so an owner who keeps a label out of the CRM is
 	// answered before the message is stored. Set here rather than in
 	// mailmap.ToRecord because a label is provider metadata off the
