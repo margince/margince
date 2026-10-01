@@ -56,10 +56,17 @@ function backendFor(configured: boolean) {
               provider: "gemini_vertex",
               configured,
               env_var: "GEMINI_VERTEX_SA_JSON",
+              optional: false,
               credential_kind: "service_account",
             },
           ],
         });
+      }
+      if (
+        req.url.includes("/ai/routing") ||
+        req.url.includes("/ai-model-rates")
+      ) {
+        return jsonResponse({}, 404);
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
@@ -78,8 +85,16 @@ const render = (ui: ReactNode) => {
   );
 };
 
+// The credential lives on the vendor's sheet, one click past the list.
+async function openSheet(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("button", { name: "Manage gemini_vertex" }),
+  );
+  return screen.findByTestId("ai-provider-key-gemini_vertex");
+}
+
 async function openRow(user: ReturnType<typeof userEvent.setup>) {
-  const row = await screen.findByTestId("ai-provider-key-gemini_vertex");
+  const row = await openSheet(user);
   await user.click(
     within(row).getByRole("button", { name: /^(add|replace)$/i }),
   );
@@ -97,10 +112,10 @@ describe("a service-account provider key", () => {
     vi.stubGlobal("fetch", backendFor(true).fetchMock);
     render(<AiProviderKeysCard />);
 
-    expect(
-      await screen.findByText("Service account key configured"),
-    ).toBeInTheDocument();
     const row = await openRow(user);
+    expect(
+      within(row).getByText("Service account key configured"),
+    ).toBeInTheDocument();
     const box = within(row).getByLabelText("Service-account key (JSON)");
     expect(box.tagName).toBe("TEXTAREA");
     expect(box).toHaveValue("");

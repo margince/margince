@@ -560,7 +560,7 @@ describe("the first-run setup gate", () => {
 
   // The residency choice binds under the profile it was offered as, at a
   // location, keyed by a service-account file rather than a pasted key.
-  it("binds Gemini on Vertex at eu under eu_resident, keyed by the key file", async () => {
+  it("binds Gemini on Vertex in the EU under eu_hosted, keyed by the key file", async () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
     await screen.findByText("Choose a model provider");
@@ -590,13 +590,15 @@ describe("the first-run setup gate", () => {
       tiers: Record<string, { provider: string; location?: string }>;
       embeddings: { provider: string; location?: string };
     };
-    expect(routing.profile).toBe("eu_resident");
-    for (const bound of [...Object.values(routing.tiers), routing.embeddings]) {
-      expect(bound).toMatchObject({
-        provider: "gemini_vertex",
-        location: "eu",
-      });
+    expect(routing.profile).toBe("eu_hosted");
+    for (const bound of Object.values(routing.tiers)) {
+      expect(bound).toMatchObject({ provider: "gemini_vertex", location: "eu" });
     }
+    // The EU multi-region serves no embedder, so that lane sits in an EU region.
+    expect(routing.embeddings).toMatchObject({
+      provider: "gemini_vertex",
+      location: "europe-west4",
+    });
   });
 
   it("refuses a pasted key file that is not JSON before writing anything", async () => {

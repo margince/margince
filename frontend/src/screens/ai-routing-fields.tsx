@@ -17,7 +17,11 @@ import {
   useModelProbe,
 } from "./ai-models";
 import "./ai-settings.css";
-import { VERTEX_PROVIDER, VertexLocationField } from "./vertex-location";
+import {
+  DEFAULT_VERTEX_LOCATION,
+  VERTEX_PROVIDER,
+  VertexLocationField,
+} from "./vertex-location";
 
 type Routing = components["schemas"]["AiRouting"];
 // The adapters a tier may name. Written out because the wire carries a free
@@ -168,8 +172,8 @@ export function AdapterFields<B extends TierBindingLike>({
   laneName,
   binding,
   catalogue,
-  profile,
-  vertexLocation,
+  profile = "",
+  vertexLocation = DEFAULT_VERTEX_LOCATION,
   disabled,
   onChange,
   providers = PROVIDERS,
@@ -190,10 +194,11 @@ export function AdapterFields<B extends TierBindingLike>({
   laneName: string;
   binding: B;
   catalogue: ModelCatalogue;
-  // The draft's profile, which decides the Vertex locations on offer.
-  profile: string;
+  // The draft's profile, which decides the Vertex locations on offer. The
+  // decision lane binds no Vertex model, so it passes neither.
+  profile?: string;
   // Where a lane newly pointed at Vertex starts: another saved Vertex lane's.
-  vertexLocation: string;
+  vertexLocation?: string;
   disabled: boolean;
   onChange: (next: B) => void;
 }>) {

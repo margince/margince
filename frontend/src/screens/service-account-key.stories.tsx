@@ -31,7 +31,7 @@ function Harness({
 }
 
 const meta: Meta<typeof ServiceAccountKeyField> = {
-  title: "Settings/AI/Models and routing/Service-account key",
+  title: "Settings/AI/AI models/Service-account key",
   component: ServiceAccountKeyField,
 };
 export default meta;

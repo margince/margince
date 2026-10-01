@@ -19,7 +19,7 @@ import { withProvider } from "./ai-routing-fields";
 
 // A Gemini-on-Vertex lane is bound by LOCATION, which is where Google processes
 // the call: the field lists locations by jurisdiction, refuses the ones the
-// enforced EU profile would, and asks the chosen location whether it serves
+// eu_hosted profile would, and asks the chosen location whether it serves
 // the chosen model before the save has to.
 
 function jsonResponse(body: unknown, status = 200) {
@@ -71,7 +71,7 @@ const LOCATIONS = {
 };
 
 const VERTEX_ROUTING = {
-  profile: "eu_resident",
+  profile: "eu_hosted",
   tiers: {
     premium: {
       provider: "gemini_vertex",
@@ -162,23 +162,22 @@ function backendFor({
   return { fetchMock, asked, getCapturedPut: () => capturedPut };
 }
 
+// Opens one lane's editor and hands back the dialog that owns its binding.
 async function openLane(
   user: ReturnType<typeof userEvent.setup>,
   testId: string,
 ) {
   const lane = await screen.findByTestId(testId);
-  await user.click(within(lane).getByRole("button", { name: /change/i }));
-  return lane;
+  await user.click(within(lane).getByRole("button", { name: /^edit$/i }));
+  return screen.findByRole("dialog");
 }
 
 async function save(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: /preview effects/i }));
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: /save routing/i }),
-    ).not.toBeDisabled(),
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: /save binding/i,
+    }),
   );
-  await user.click(screen.getByRole("button", { name: /save routing/i }));
 }
 
 const render = (ui: ReactNode) => {
@@ -198,7 +197,7 @@ afterEach(() => {
 });
 
 describe("a gemini_vertex lane", () => {
-  it("lists locations grouped EU, US, Other, Global, refusing the non-resident ones under eu_resident", async () => {
+  it("lists locations grouped EU, US, Other, Global, refusing the non-resident ones under eu_hosted", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backendFor().fetchMock);
     render(<AiRoutingCard />);
@@ -211,9 +210,9 @@ describe("a gemini_vertex lane", () => {
     expect(options.map((o) => o.textContent)).toEqual([
       "EU residentEU · EU (multi-region) (eu)",
       "EU residentEU · Netherlands (europe-west4)",
-      "Not residentUS · US (multi-region) (us) — outside EU data residency",
-      "Not residentOther · London (europe-west2) — outside EU data residency",
-      "Not residentGlobal · Global (global) — outside EU data residency",
+      "Not residentUS · US (multi-region) (us) — outside the EU",
+      "Not residentOther · London (europe-west2) — outside the EU",
+      "Not residentGlobal · Global (global) — outside the EU",
     ]);
     const london = within(screen.getByRole("listbox")).getByRole("option", {
       name: /London/,
@@ -226,11 +225,11 @@ describe("a gemini_vertex lane", () => {
     ).not.toHaveAttribute("aria-disabled", "true");
   });
 
-  it("offers every location under a profile that does not enforce residency", async () => {
+  it("offers every location under a profile that promises no EU inference", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
-      backendFor({ routing: { ...VERTEX_ROUTING, profile: "eu_hosted" } })
+      backendFor({ routing: { ...VERTEX_ROUTING, profile: "cloud_frontier" } })
         .fetchMock,
     );
     render(<AiRoutingCard />);
