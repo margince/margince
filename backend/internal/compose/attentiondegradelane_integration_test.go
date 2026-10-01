@@ -60,8 +60,7 @@ func (s shortLaneBudget) Degradable(ctx context.Context, _ time.Duration, fn fun
 
 func TestAStuckWaitingLaneIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *testing.T) {
 	e := integration.Setup(t)
-	measureFirstResponse(t, e)
-	seedOwedLead(t, e, "Waiting On Rep1", &e.Rep1, 2*time.Hour)
+	seedLeadTask(t, e)
 
 	db := InstallationDB(e.Pool)
 	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), time.Now).
@@ -94,8 +93,8 @@ func TestAStuckWaitingLaneIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *test
 	if !named {
 		t.Errorf("sources_unavailable is %v, want the waiting lane named as failed", page.SourcesUnavailable)
 	}
-	if got := leadRows(page); len(got) != 1 || got[0] != "Waiting On Rep1" {
-		t.Errorf("the lead lane carries %v after the waiting lane failed, want the one owed lead", got)
+	if got := taskTitles(page); len(got) != 1 || got[0] != "Call selected prospect" {
+		t.Errorf("the task lane carries %v after the waiting lane failed, want the planned task", got)
 	}
 }
 
@@ -119,7 +118,7 @@ func (s stuckSuggestions) CountOpen(ctx context.Context) (int, error) {
 
 func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *testing.T) {
 	e := integration.Setup(t)
-	seedOwedLead(t, e, "Waiting On Rep1", &e.Rep1, 2*time.Hour)
+	seedLeadTask(t, e)
 
 	db := InstallationDB(e.Pool)
 	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), time.Now).
@@ -158,7 +157,7 @@ func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *t
 			t.Errorf("the queue carries suggestion %s from a read that failed", item.Id)
 		}
 	}
-	if got := leadRows(page); len(got) != 1 || got[0] != "Waiting On Rep1" {
-		t.Errorf("the lead lane carries %v after the suggestion read failed, want the one owed lead", got)
+	if got := taskTitles(page); len(got) != 1 || got[0] != "Call selected prospect" {
+		t.Errorf("the task lane carries %v after the suggestion read failed, want the planned task", got)
 	}
 }

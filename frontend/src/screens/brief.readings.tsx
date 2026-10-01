@@ -29,15 +29,11 @@ import {
   DECISIONS,
   decisionsBlocking,
   floorTest,
-  LEADS,
   scopeWasCut,
+  TASKS,
 } from "./brief.readings.honesty";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
-import type {
-  Worklist,
-  WorklistFilter,
-  WorklistItem,
-} from "./worklist.queries";
+import type { Worklist, WorklistFilter } from "./worklist.queries";
 
 // The day's readings, on one dense plate.
 //
@@ -271,13 +267,11 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           scope={day.scope}
           label={t("brief.readings.leads")}
           count={
-            day.sources_unavailable.some(
-              (entry) => entry.source === "lead_response",
-            )
+            day.sources_unavailable.some((entry) => entry.source === "task")
               ? null
               : readings.prospecting
           }
-          floor={floorOf(LEADS)}
+          floor={floorOf(TASKS)}
           // The deadline is the fact that changes what a reader does before
           // lunch, and NULL rather than a guess where the page cannot honestly
           // compute one.
@@ -358,7 +352,7 @@ function meetingsDetail(
 // its plain basis line, which is what the meetings slot does with readiness for
 // the same reason.
 function soonestLeadDeadline(day: Worklist): string | null {
-  const entry = day.counts.find((count) => count.category === LEADS);
+  const entry = day.counts.find((count) => count.category === TASKS);
   if (entry === undefined) {
     // No lead was read at all: nothing to be nearest, and nothing missing.
     return null;
@@ -368,34 +362,15 @@ function soonestLeadDeadline(day: Worklist): string | null {
   }
   let soonest: string | null = null;
   for (const item of day.queue) {
-    const at = item.category === LEADS ? replyDueAt(item) : undefined;
+    const at =
+      item.source === "task" && item.subject?.type === "lead"
+        ? (item.due_at ?? undefined)
+        : undefined;
     if (at !== undefined && (soonest === null || at < soonest)) {
       soonest = at;
     }
   }
   return soonest;
-}
-
-// When this row says a reply is due, or nothing.
-//
-// The moment is read off the at-risk reason BY NAME rather than by taking
-// whatever date the row carries. An overdue lead has already missed its moment,
-// so it is not the next one due — and no test here can hold that distinction,
-// because a breached lead's other reason (`waiting_days`) carries a DAYS value,
-// which a filter reading "any date value" would skip anyway. The kind check is
-// what keeps this right when a lead row grows a second date-valued reason, a
-// first-contact date or a routing moment, that would otherwise read as a reply
-// deadline.
-function replyDueAt(item: WorklistItem): string | undefined {
-  for (const because of item.because) {
-    if (
-      because.kind === "response_due_soon" &&
-      because.value?.kind === "date"
-    ) {
-      return because.value.date;
-    }
-  }
-  return undefined;
 }
 
 type MeetingsReading = Readonly<{

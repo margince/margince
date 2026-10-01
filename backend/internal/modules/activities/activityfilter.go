@@ -160,6 +160,9 @@ func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
 	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
 		where = append(where, clause)
 	}
+	if in.Worklist {
+		where = append(where, auth.LiveIntakeTaskClause("a"))
+	}
 	return append(where, openTaskWindowClauses(in, arg)...)
 }
 

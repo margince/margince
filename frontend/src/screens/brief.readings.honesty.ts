@@ -12,7 +12,7 @@ import type { Worklist } from "./worklist.queries";
 
 /** The lanes the strip's four worklist figures are summed from. */
 export const MEETINGS = "meetings";
-export const LEADS = "leads";
+export const TASKS = "tasks";
 export const DECISIONS = "decisions";
 
 // Which categories came back at a bound, as the server marked them.
