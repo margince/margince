@@ -61,6 +61,7 @@ export const OnAPhone: Story = {
 // its state stays in words on the band.
 export const OnAShortPhone: Story = {
   globals: { viewport: { value: "phoneOnItsSide" } },
+  tags: ["uat-phone-on-its-side"],
   args: OnAPhone.args,
 };
 

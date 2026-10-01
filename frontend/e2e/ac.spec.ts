@@ -1767,7 +1767,9 @@ test.describe("the cold start's board on a phone at 200% text", () => {
       document.documentElement.style.fontSize = "200%";
     });
     await expectBoardReachable(page);
-    // The Core's row is what a room this short against its text gives up.
+    // The Core's row is what a room this short against its text gives up —
+    // folded, never unmounted, or its WebGL loop restarts on the way back.
+    await expect(page.locator(".ob-stage-core")).toHaveCount(1);
     await expect(page.locator(".ob-stage-core")).toBeHidden();
     // The ignition is the widest step: the sealed badge and the capability
     // lines are the lines that outgrew the board.
