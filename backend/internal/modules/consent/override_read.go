@@ -28,6 +28,14 @@ import (
 // CanBeOverruled, so it never has to re-check the reason: a subject act or an
 // absolute machine fact never reaches here.
 //
+// CONTACT ONLY. decideOne is the single caller and hands over a resolved
+// contact id; decideLead has no override arm (authorizelead.go), and
+// overridesubject_test.go holds the lead half of this table unwritable. A
+// lead_id arm here would be a clause that can never match — the appearance of
+// mirroring the engine without the fact, the same shape lift.go refuses —
+// and it would cost the planner communication_override_live_contact on every
+// send evaluation.
+//
 // The level filter derives from LevelsWeakestFirst rather than a retyped rank,
 // so "outranks machine" here reads the same ladder CanOverrule elsewhere
 // compares against, instead of a second ranking that could fall out of step
@@ -51,7 +59,7 @@ func liveOverride(
 		 WHERE revoked_at IS NULL
 		   AND category = $2
 		   AND decided_by_level = ANY($3)
-		   AND (contact_id = $1 OR lead_id = $1)
+		   AND contact_id = $1
 		 ORDER BY array_position($3::text[], decided_by_level) DESC, recorded_at DESC
 		 LIMIT 1`,
 		contactID, string(category), levelsAboveMachine).Scan(&id)

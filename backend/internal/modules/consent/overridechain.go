@@ -52,9 +52,12 @@ import (
 )
 
 // revokedOverride is one row the walk took back, read off RETURNING so each can
-// ship its own event. The contact is the ROW's subject and not the caller's: a
-// carried copy belongs to the survivor's stream, which is where it was
-// announced, and nil for a copy a promotion left on a lead.
+// ship its own event and its own audit row. The contact is the ROW's subject
+// and not the caller's: a carried copy belongs to the survivor's stream, which
+// is where it was announced. Scanned as a pointer because the schema admits a
+// lead-held row (contact_id NULL); no writer produces one today, which
+// overridesubject_test.go holds, and a reader that assumed NOT NULL would be
+// the first thing to break the day that changes.
 type revokedOverride struct {
 	id      ids.UUID
 	contact *ids.UUID

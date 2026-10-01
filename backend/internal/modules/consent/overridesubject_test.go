@@ -13,8 +13,9 @@ package consent
 // it. Two things are therefore missing on purpose rather than by oversight, and
 // both would be silent defects the moment a lead vouch became writable:
 //
-//   - decideLead (authorizelead.go) never consults liveOverride, so a lead
-//     override would be recorded and then ignored by every send about that lead.
+//   - decideLead (authorizelead.go) never consults liveOverride, and
+//     liveOverride itself matches contact_id alone, so a lead override would
+//     be recorded and then ignored by every send about that lead.
 //   - promote.go carries a lead's STOPS onto the new contact and would have to
 //     carry the vouch with them, or a promotion would drop it exactly as the
 //     contact merge used to.
@@ -44,9 +45,9 @@ func TestTheAllowDoorTakesNoLeadSubject(t *testing.T) {
 		if !strings.Contains(strings.ToLower(name), "lead") {
 			continue
 		}
-		t.Errorf("AllowInput.%s makes a lead override writable. Three things now owe a change in "+
+		t.Errorf("AllowInput.%s makes a lead override writable. Four things now owe a change in "+
 			"the same diff: decideLead must consult liveOverride or every send about that lead "+
-			"ignores the vouch; promote.go must carry it onto the new contact beside the stops it "+
+			"ignores the vouch; liveOverride must grow a lead_id arm; promote.go must carry it onto the new contact beside the stops it "+
 			"already carries; and contacts.carryOverridesTx must reach the lead-to-lead merge the "+
 			"way carryStopsTx does", name)
 	}
