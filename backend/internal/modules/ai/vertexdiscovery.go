@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -360,8 +361,14 @@ func (s *RoutingStore) probeVertexBindings(ctx context.Context, stored, next Rou
 	return nil
 }
 
+// vertexProbeTimeout bounds one probe. Longer than listTimeout: a probe is a
+// model call at the location, behind a token exchange on the first, and a cold
+// one measured 2.5–5 s live, so at the list's bound half read as unreachable.
+// Short enough that a save probing several lanes stays well inside a request.
+const vertexProbeTimeout = 10 * time.Second
+
 func probeOnce(ctx context.Context, client *geminiClient, p vertexProbe) error {
-	asked, cancel := context.WithTimeout(ctx, listTimeout)
+	asked, cancel := context.WithTimeout(ctx, vertexProbeTimeout)
 	defer cancel()
 	return client.probeModel(asked, p.model, p.lane)
 }

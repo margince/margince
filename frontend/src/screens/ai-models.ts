@@ -349,6 +349,10 @@ export function useModelProbe(
       target?.model,
     ),
     enabled: target !== undefined && target.model !== "",
+    // An unanswered probe is no answer to keep: asking the same location
+    // again must ask Google again.
+    staleTime: (query) =>
+      query.state.data?.unavailable === "unreachable" ? 0 : 5 * 60 * 1000,
   });
 }
 

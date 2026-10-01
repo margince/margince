@@ -376,6 +376,41 @@ describe("a gemini_vertex lane", () => {
     expect(within(lane).queryByText(/not served/i)).toBeNull();
   });
 
+  it("asks again about a model whose probe went unanswered", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor({
+      vertexModels: ({ model }) =>
+        model
+          ? {
+              provider: "gemini_vertex",
+              models: [],
+              unavailable: "unreachable",
+            }
+          : LISTED_AT_EU,
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    const lane = await openLane(user, "ai-routing-tier-premium");
+    const box = await within(lane).findByRole("combobox", { name: "Model" });
+    await pickSuggestion(user, box, /^gemini-4\.0-flash/);
+    await within(lane).findByText(/could not verify this model in eu/i);
+    // Away and back: the same question, which must reach Google again.
+    for (const model of [/^gemini-3\.5-flash/, /^gemini-4\.0-flash/]) {
+      await user.clear(box);
+      await user.click(
+        within(await screen.findByRole("listbox")).getByRole("option", {
+          name: model,
+        }),
+      );
+    }
+    await waitFor(() =>
+      expect(
+        backend.asked.filter((q) => q.model === "gemini-4.0-flash"),
+      ).toHaveLength(2),
+    );
+  });
+
   it("clears a model the new location does not serve, and saves the new location", async () => {
     const user = userEvent.setup();
     const backend = backendFor({
