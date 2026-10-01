@@ -142,15 +142,23 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		// weighs these rows and decides that separately.
 		return observedApplied, nil
 	}
-	tag, err := tx.Exec(ctx, `
-		UPDATE contact SET `+column+` = $2 WHERE id = $1 AND archived_at IS NULL`, contactID, f.Value)
-	if err != nil {
-		return observedSkipped, fmt.Errorf("contacts: observed %s fill: %w", f.Field, err)
-	}
-	if tag.RowsAffected() == 0 {
+	var held bool
+	err = tx.QueryRow(ctx, `
+		WITH prior AS (SELECT `+column+` AS value FROM contact WHERE id = $1)
+		UPDATE contact SET `+column+` = $2 FROM prior WHERE id = $1 AND archived_at IS NULL
+		RETURNING prior.value IS NOT DISTINCT FROM $2`, contactID, f.Value).Scan(&held)
+	if errors.Is(err, pgx.ErrNoRows) {
 		// The subject went between the two statements: the evidence row must
 		// not claim a value the record does not carry.
 		return observedSkipped, revokeSignatureEvidence(ctx, tx, contactID, f.Field)
+	}
+	if err != nil {
+		return observedSkipped, fmt.Errorf("contacts: observed %s fill: %w", f.Field, err)
+	}
+	if held {
+		// The record already showed this value, so the statement confirmed it
+		// rather than filling it: undoing the statement must not clear it.
+		return observedConfirmed, nil
 	}
 	return observedApplied, nil
 }

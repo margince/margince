@@ -76,11 +76,7 @@ func (s RestoreSeam) reverseByVerb(
 func (r recordInverses) perform(ctx context.Context, pool *pgxpool.Pool, row AuditRow, kind inverse, ifVersion int64) error {
 	switch kind {
 	case inverseArchive:
-		_, err := r.provider.ArchiveAt(ctx, datasource.ArchiveInput{
-			Ref:       datasource.EntityRef{Type: datasource.EntityType(row.EntityType), ID: row.EntityID},
-			IfVersion: &ifVersion,
-		})
-		return err
+		return r.archiveCreated(ctx, pool, row, ifVersion)
 	case inverseUnarchive:
 		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 			return r.unarchive(ctx, tx, row, ifVersion)
@@ -95,6 +91,49 @@ func (r recordInverses) perform(ctx context.Context, pool *pgxpool.Pool, row Aud
 	case inverseNone:
 	}
 	return fmt.Errorf("compose: entry %s has no module verb that undoes it", row.ID)
+}
+
+// archiveCreated archives the record a create made. For a contact, company or
+// deal the archive retires its links in the same statement set, and a link a
+// colleague added after the decision does not move the record's version, so
+// the colleague check is asked again AFTER the archive, in its transaction: a
+// link the archive retired is visible to it, and the whole write rolls back.
+// A project or an activity archives through its module's own entry point.
+func (r recordInverses) archiveCreated(ctx context.Context, pool *pgxpool.Pool, row AuditRow, ifVersion int64) error {
+	var archive func(tx pgx.Tx) error
+	switch row.EntityType {
+	case entityTypeContact:
+		archive = func(tx pgx.Tx) error {
+			return r.contacts.ArchiveContactTx(ctx, tx, ids.From[ids.ContactKind](row.EntityID), &ifVersion)
+		}
+	case string(recordTypeCompany):
+		archive = func(tx pgx.Tx) error {
+			return r.contacts.ArchiveCompanyTx(ctx, tx, ids.From[ids.CompanyKind](row.EntityID), &ifVersion)
+		}
+	case entityTypeDeal:
+		archive = func(tx pgx.Tx) error {
+			return r.deals.ArchiveDealTx(ctx, tx, ids.From[ids.DealKind](row.EntityID), &ifVersion)
+		}
+	default:
+		_, err := r.provider.ArchiveAt(ctx, datasource.ArchiveInput{
+			Ref:       datasource.EntityRef{Type: datasource.EntityType(row.EntityType), ID: row.EntityID},
+			IfVersion: &ifVersion,
+		})
+		return err
+	}
+	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := archive(tx); err != nil {
+			return err
+		}
+		worked, err := contacts.ColleagueWorkedOnSince(ctx, tx, row.EntityType, row.EntityID, row.OccurredAt)
+		if err != nil {
+			return err
+		}
+		if worked {
+			return RefusedRestore{Reason: ReasonSuperseded, Detail: "changed by a colleague since it was created"}
+		}
+		return nil
+	})
 }
 
 // unarchive brings the record back through its own module's un-archive.

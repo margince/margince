@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -127,4 +128,27 @@ func refuseIfHumanTouched(
 		return &HumanTouchedError{EntityType: entityType, EntityID: id}
 	}
 	return nil
+}
+
+// ColleagueWorkedOnSince reports whether a colleague has acted on the record
+// since `since`: a human audit row on the record itself, or on a link the
+// record is an end of, because archiving the record retires those links too.
+// A human's undo of some other change is not work on the record, so a reversal
+// does not count, and neither does a row this transaction wrote itself.
+func ColleagueWorkedOnSince(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, since time.Time) (bool, error) {
+	var worked bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM audit_log a
+			 WHERE a.actor_type = 'human' AND a.occurred_at > $3 AND a.occurred_at <> now()
+			   AND NOT (coalesce(a.evidence, '{}'::jsonb) ? $4)
+			   AND ((a.entity_type = $1 AND a.entity_id = $2)
+			        OR (a.entity_type = $5 AND a.entity_id IN (
+			              SELECT r.id FROM relationship r
+			               WHERE $2 IN (r.contact_id, r.counterparty_contact_id, r.company_id,
+			                            r.counterparty_company_id, r.deal_id, r.project_id)))))`,
+		entityType, id, since, storekit.EvidenceKeyUndidAuditLog, tableRelationship).Scan(&worked); err != nil {
+		return false, fmt.Errorf("checking whether a colleague worked on this %s: %w", entityType, err)
+	}
+	return worked, nil
 }

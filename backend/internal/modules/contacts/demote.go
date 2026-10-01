@@ -121,16 +121,11 @@ func (s *Store) DemoteLead(
 		if err != nil {
 			return err
 		}
-		// A contact the promotion created is archived by the unwind, so a
-		// caller that asked for it is refused once a colleague has worked on
-		// that contact: their work would be archived with it.
-		if outcome == outcomeCreated {
-			if err := refuseIfHumanTouched(ctx, tx, entityContact, contactID.UUID, options); err != nil {
-				return err
-			}
-		}
 		unwind, err := unwindContact(ctx, tx, id, contactID, outcome)
 		if err != nil {
+			return err
+		}
+		if err := refuseIfColleagueWorkedOnCreated(ctx, tx, contactID, outcome, options); err != nil {
 			return err
 		}
 		setBy, err := statusSetByFor(ctx)
@@ -379,4 +374,25 @@ func promotedContactOf(ctx context.Context, tx pgx.Tx, id ids.LeadID) (ids.Conta
 		return ids.ContactID{}, &NotPromotedError{}
 	}
 	return ids.From[ids.ContactKind](*promoted), nil
+}
+
+// refuseIfColleagueWorkedOnCreated refuses, for a caller that asked, a
+// demotion that archived a contact a colleague has worked on since: their work
+// would be archived with it. Asked AFTER the unwind, in its transaction, so a
+// link a colleague added while this ran is either retired by the unwind and
+// seen here, or added after it and left standing.
+func refuseIfColleagueWorkedOnCreated(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, outcome promotionOutcome, options writeOptions,
+) error {
+	if options.untouchedSince == nil || outcome != outcomeCreated {
+		return nil
+	}
+	worked, err := ColleagueWorkedOnSince(ctx, tx, entityContact, contactID.UUID, *options.untouchedSince)
+	if err != nil {
+		return err
+	}
+	if worked {
+		return &HumanTouchedError{EntityType: entityContact, EntityID: contactID.UUID}
+	}
+	return nil
 }

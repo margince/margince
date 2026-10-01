@@ -176,8 +176,8 @@ func (e Evaluator) inverseState(ctx context.Context, tx pgx.Tx, row AuditRow, ki
 
 // promotionStands refuses the undo of a promotion once the lead has moved on,
 // or once a colleague has worked on the contact the promotion created: the
-// demotion archives that contact. The test is the one DemoteLead re-asks under
-// its lock, so the two cannot disagree about what counts as work.
+// demotion archives that contact. DemoteLead asks the same question inside its
+// own transaction, so the two cannot disagree about what counts as work.
 func promotionStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, bool, error) {
 	moved, err := fieldsThatMovedSince(ctx, tx, row)
 	if err != nil {
@@ -196,13 +196,8 @@ func promotionStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability,
 	if promoted.Contact == nil || promoted.Outcome != promotionCreatedContact {
 		return Undoability{}, false, nil
 	}
-	var touched bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM audit_log
-			 WHERE entity_type = $1 AND entity_id = $2
-			   AND actor_type = 'human' AND occurred_at > $3)`,
-		entityTypeContact, *promoted.Contact, row.OccurredAt).Scan(&touched); err != nil {
+	touched, err := contacts.ColleagueWorkedOnSince(ctx, tx, entityTypeContact, *promoted.Contact, row.OccurredAt)
+	if err != nil {
 		return Undoability{}, false, err
 	}
 	if touched {
@@ -223,21 +218,8 @@ func (e Evaluator) createStands(ctx context.Context, tx pgx.Tx, row AuditRow) (U
 	if answer, archived, err := e.archivedRefusal(ctx, tx, row); err != nil || archived {
 		return answer, archived, err
 	}
-	// The record's own rows, and the links it is an end of: a colleague who
-	// added an employment wrote the relationship, not the contact, and the
-	// archive would retire that link too.
-	var touched bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM audit_log a
-			 WHERE a.actor_type = 'human' AND a.occurred_at > $3
-			   AND NOT (coalesce(a.evidence, '{}'::jsonb) ? $4)
-			   AND ((a.entity_type = $1 AND a.entity_id = $2)
-			        OR (a.entity_type = $5 AND a.entity_id IN (
-			              SELECT r.id FROM relationship r
-			               WHERE $2 IN (r.contact_id, r.counterparty_contact_id, r.company_id,
-			                            r.counterparty_company_id, r.deal_id, r.project_id)))))`,
-		row.EntityType, row.EntityID, row.OccurredAt, storekit.EvidenceKeyUndidAuditLog, edgeEntityType).Scan(&touched); err != nil {
+	touched, err := contacts.ColleagueWorkedOnSince(ctx, tx, row.EntityType, row.EntityID, row.OccurredAt)
+	if err != nil {
 		return Undoability{}, false, err
 	}
 	if touched {

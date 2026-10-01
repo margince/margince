@@ -168,10 +168,14 @@ func fillStands(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill Fi
 		            AND claim_key = encode(sha256(('profile_field:' || f.field)::bytea), 'hex')))
 		       AND bool_and(f.field <> $5 OR EXISTS (
 		         SELECT 1 FROM contact p WHERE p.id = f.contact_id AND p.title IS NOT DISTINCT FROM f.value))
-		       AND bool_and(f.field <> $6 OR EXISTS (
+		       AND bool_and(f.field <> $6 OR (EXISTS (
 		         SELECT 1 FROM contact_phone n
 		          WHERE n.contact_id = f.contact_id AND n.phone = f.value AND n.source = f.source
-		            AND n.archived_at IS NULL)),
+		            AND n.archived_at IS NULL)
+		         AND NOT EXISTS (
+		         SELECT 1 FROM audit_log a
+		          WHERE a.entity_type = 'contact' AND a.entity_id = f.contact_id
+		            AND a.actor_type = 'human' AND a.occurred_at > $7 AND a.after ? 'phones'))),
 		       coalesce(bool_or(f.superseded_value IS NOT NULL OR (f.field = $6 AND NOT EXISTS (
 		         SELECT 1 FROM contact_phone n
 		          WHERE n.contact_id = f.contact_id AND n.phone = f.value AND n.created_at = $7))), false)

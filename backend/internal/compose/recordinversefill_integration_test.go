@@ -338,3 +338,54 @@ func TestACreateWhoseLinkAColleagueAddedIsNotUndone(t *testing.T) {
 		t.Errorf("the undo of a create whose link a colleague added refused %q, want %q", reason, ReasonSuperseded)
 	}
 }
+
+// A number a colleague reclassified after the signature added it is theirs now;
+// the undo refuses rather than archiving it.
+func TestASignatureNumberAColleagueChangedIsNotUndone(t *testing.T) {
+	e := integration.Setup(t)
+	contact, fill := seedSignatureFill(t, e)
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{
+		Phones: []contacts.ContactPhoneInput{{Phone: "+49 30 1234567", PhoneType: "mobile", IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("a colleague reclassifying the number: %v", err)
+	}
+
+	if reason := refusedFor(t, undoEntry(t, e, "contact", contact, fill)); reason != ReasonSuperseded {
+		t.Errorf("the undo refused %q, want %q", reason, ReasonSuperseded)
+	}
+	if _, _, phones, _ := whatTheFillLeft(t, e, contact); phones != 1 {
+		t.Errorf("%d live numbers after the refused undo, want the colleague's one", phones)
+	}
+}
+
+// A signature that states the title a colleague already typed confirms it and
+// fills nothing, so undoing the signature leaves the title.
+func TestUndoingASignatureLeavesATitleItOnlyConfirmed(t *testing.T) {
+	e := integration.Setup(t)
+	contact := seedEnrichContact(t, e, "bob@acme.example", "Best,\nBob Contact\nCTO\nAcme GmbH")
+	typed := "CTO"
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{Title: &typed}); err != nil {
+		t.Fatal(err)
+	}
+	var activity ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Contacts.ApplySignatureFields(machineCtx(e), ids.From[ids.ContactKind](contact), activity,
+		[]contacts.SignatureField{
+			{Name: "title", Value: "CTO", Evidence: "CTO", Confidence: 0.9},
+			{Name: "company_name", Value: "Acme GmbH", Evidence: "Acme GmbH", Confidence: 0.9},
+		}); err != nil {
+		t.Fatalf("the signature: %v", err)
+	}
+	fill := fillEntryOf(t, e, contact, "capture_enrich")
+	if err := undoEntry(t, e, "contact", contact, fill); err != nil {
+		t.Fatalf("undoing the signature: %v", err)
+	}
+	if title, _, _, _ := whatTheFillLeft(t, e, contact); title == nil || *title != typed {
+		t.Errorf("title = %v, want the colleague's %q kept", title, typed)
+	}
+}
