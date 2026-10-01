@@ -300,7 +300,7 @@ func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounc
 	if hasRejectedLabel(fetched.Labels) {
 		return false, nil
 	}
-	msg, err := mailmap.Parse(fetched.RFC822, owner)
+	msg, err := parseTimed(ctx, fetched.RFC822, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // a single unparseable message is a skip, not a fatal pull error (mirrors the IMAP connector)
 	}

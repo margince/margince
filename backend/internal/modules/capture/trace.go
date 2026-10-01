@@ -28,6 +28,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
@@ -258,6 +259,11 @@ func Trace(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) error {
 		counterparty, subject)
 	if err != nil {
 		return fmt.Errorf("capture: recording the pipeline trace: %w", err)
+	}
+	// A backfill's per-message tally takes the decision whether or not the row
+	// is new: a replayed message still came to it.
+	if pipelinetrace.CountsInFunnel(in.Stage) {
+		capturemetrics.NoteOutcome(ctx, string(in.Outcome))
 	}
 	// Only what the statement actually inserted. ON CONFLICT DO NOTHING swallows
 	// a replayed decision, and the internal gate fires before the dedupe

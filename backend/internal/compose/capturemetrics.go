@@ -15,6 +15,7 @@ import (
 	"sort"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
@@ -41,7 +42,9 @@ func writeCaptureMetrics(w io.Writer, totals map[string]uint64) {
 	}
 }
 
-// writeCaptureSection is the fan-out's entry point.
+// writeCaptureSection is the fan-out's entry point. The import families are
+// this process's own provider calls; the worker renders its set too.
 func (Server) writeCaptureSection(w io.Writer) {
 	writeCaptureMetrics(w, capture.TraceOutcomeTotals())
+	capturemetrics.WriteProcessMetrics(w)
 }
