@@ -102,8 +102,12 @@ func TestAnImportedMeetingNamingOnlyAnAuthorNameHasNoHost(t *testing.T) {
 
 	id := e.logMeeting(t, "m-2", nil, storekit.SourceAuthorInput{AuthorName: &name})
 
-	if host, _ := e.hostOf(t, id); host != nil {
+	host, claims := e.hostOf(t, id)
+	if host != nil {
 		t.Errorf("host = %v, want none — the author holds no seat here", *host)
+	}
+	if claims {
+		t.Error("the imported meeting claims a host slot")
 	}
 	if e.onMeetingsOf(t, e.rep)[id] {
 		t.Error("the imported meeting is in the importer's meetings")
