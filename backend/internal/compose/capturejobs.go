@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -275,7 +276,7 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 			// from this job, because the job context dying mid-page is itself the
 			// commonest fault — and the log carries the detail.
 			w.log.WarnContext(ctx, "capture backfill page failed", "backfill", job.Args.BackfillID, "err", err)
-			return nil
+			return w.unlessResumed(wsCtx, bfID)
 		}
 		if completed {
 			// The connect-time import just closed: build today's digest for
@@ -290,6 +291,22 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 		}
 	}
 	return river.JobSnooze(time.Second)
+}
+
+// unlessResumed ends the job, unless the run it just ended is live again.
+//
+// A human pressing Continue reopens the same run, and its enqueue is unique
+// against this job while it is still running — so the start can land on a job
+// that is about to return, and the reopened run would wait for the nightly
+// reconcile with nothing paging it. Coming back in a second instead keeps it
+// moving. A read that fails ends the job as before; the reconcile still covers
+// the run.
+func (w *captureBackfillWorker) unlessResumed(ctx context.Context, bfID ids.UUID) error {
+	live, err := w.registry.LiveBackfills(ctx)
+	if err == nil && slices.Contains(live, bfID) {
+		return river.JobSnooze(time.Second)
+	}
+	return nil
 }
 
 // enqueueDigest offers a same-day digest build for THIS workspace through the

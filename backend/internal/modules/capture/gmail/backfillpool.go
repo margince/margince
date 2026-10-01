@@ -105,10 +105,13 @@ func rateLimited[T any](ctx context.Context, g *rateGate, fn func() (T, error)) 
 		if errors.As(err, &limited) && limited.RetryAfter > wait {
 			wait = limited.RetryAfter
 		}
+		// The gate closes either way: a wait too long for the page still holds
+		// the other workers, so none of them spends Gmail's patience while the
+		// page winds down and hands the wait to the engine.
+		g.pause(wait)
 		if wait > rateWaitInPage || attempt+1 >= rateRetriesInPage {
 			return zero, err
 		}
-		g.pause(wait)
 	}
 }
 
