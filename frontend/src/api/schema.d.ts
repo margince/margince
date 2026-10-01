@@ -6900,8 +6900,8 @@ export interface paths {
          * The lists one record is on that this caller may find.
          * @description Every Shortlist the record was chosen for, and every Live List whose filter selects it
          *     now, evaluated by the same SQL the member read uses. Only lists this caller may find, and
-         *     not archived ones; a Live List whose filter no longer compiles is left out. A record this
-         *     caller cannot see answers `404`. Each list carries its identity, kind and sharing; read
+         *     not archived ones; a Live List whose filter no longer compiles is left out. A record that
+         *     does not exist, is archived, or that this caller cannot see answers `404`. Each list carries its identity, kind and sharing; read
          *     `getList` for its counts and health.
          */
         get: operations["getRecordLists"];
@@ -30960,6 +30960,8 @@ export interface components {
         };
         RecordListsResponse: {
             data: components["schemas"]["List"][];
+            /** @description More lists hold the record than one answer carries; `data` is the first 1000 by name. */
+            truncated: boolean;
         };
         ListHistoryResponse: {
             data: components["schemas"]["ListHistoryEntry"][];

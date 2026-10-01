@@ -148,7 +148,7 @@ func TestARecordNamesOnlyTheListsItsReaderMayFind(t *testing.T) {
 		t.Fatal(err)
 	}
 	var named []ids.UUID
-	for _, l := range lists {
+	for _, l := range lists.Lists {
 		named = append(named, ids.UUID(l.Id))
 	}
 	want := []ids.UUID{shortlist.UUID, live.UUID}
@@ -165,6 +165,60 @@ func TestARecordItsReaderCannotSeeNamesNoLists(t *testing.T) {
 	reader := e.As(e.Rep3, []ids.UUID{e.Team2}, listFinderPerms())
 	if _, err := store.RecordListsFor(reader, "contact", contact); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("lists of a record the reader cannot see answered %v, want not found", err)
+	}
+}
+
+func TestARecordThatDoesNotExistNamesNoLists(t *testing.T) {
+	e := Setup(t)
+	store := collections.NewStore(e.DB())
+	for _, entityType := range []string{"contact", "company", "deal", "lead"} {
+		if _, err := store.RecordListsFor(e.Admin(), entityType, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
+			t.Errorf("lists of a %s that does not exist answered %v, want not found", entityType, err)
+		}
+	}
+}
+
+func TestEveryLiveListIsJudgedHoweverManyAWorkspaceHas(t *testing.T) {
+	e := Setup(t)
+	store := collections.NewStore(e.DB())
+	contact := e.SeedContact(t, "Listed Contact", &e.Rep3)
+	// More Live Lists than one answer carries, each sorting before the one
+	// that selects the record and none selecting it. Seeded in one statement:
+	// a thousand writes through the list writer would be the whole test.
+	e.WsExec(t, `INSERT INTO list (name, entity_type, list_type, definition, sharing, owner_id, steward_id)
+		SELECT 'aa ' || lpad(g::text, 4, '0'), 'contact', 'dynamic',
+		       jsonb_build_object('field', 'owner_id', 'op', 'eq', 'value', $1::text), 'workspace', $2, $2
+		FROM generate_series(1, 1000) g`, e.Rep1.String(), e.AdminUser)
+	selecting := seedList(t, e, store, collections.CreateListInput{
+		Name: "zz Rep three's", EntityType: "contact", ListType: "dynamic", Sharing: "workspace",
+		Definition: map[string]any{"field": "owner_id", "op": "eq", "value": e.Rep3.String()},
+	})
+	found, err := store.RecordListsFor(e.Admin(), "contact", contact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found.Lists) != 1 || ids.UUID(found.Lists[0].Id) != selecting.UUID || found.Truncated {
+		t.Fatalf("the record named %d lists (truncated %v), want only the selecting Live List %s",
+			len(found.Lists), found.Truncated, selecting)
+	}
+}
+
+func TestARecordOnMoreListsThanOneAnswerCarriesSaysSo(t *testing.T) {
+	e := Setup(t)
+	store := collections.NewStore(e.DB())
+	contact := e.SeedContact(t, "Much Chosen", &e.Rep3)
+	e.WsExec(t, `WITH made AS (
+		INSERT INTO list (name, entity_type, list_type, sharing, owner_id, steward_id)
+		SELECT 'pick ' || lpad(g::text, 4, '0'), 'contact', 'static', 'workspace', $2, $2
+		FROM generate_series(1, 1001) g RETURNING id)
+		INSERT INTO list_member (list_id, entity_type, entity_id, added_by)
+		SELECT id, 'contact', $1, 'human:' || $2::text FROM made`, contact, e.AdminUser)
+	found, err := store.RecordListsFor(e.Admin(), "contact", contact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found.Lists) != 1000 || !found.Truncated {
+		t.Fatalf("a record on 1001 Shortlists named %d (truncated %v), want 1000 and truncated", len(found.Lists), found.Truncated)
 	}
 }
 

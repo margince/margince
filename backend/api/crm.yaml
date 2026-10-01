@@ -10451,8 +10451,8 @@ paths:
       description: |
         Every Shortlist the record was chosen for, and every Live List whose filter selects it
         now, evaluated by the same SQL the member read uses. Only lists this caller may find, and
-        not archived ones; a Live List whose filter no longer compiles is left out. A record this
-        caller cannot see answers `404`. Each list carries its identity, kind and sharing; read
+        not archived ones; a Live List whose filter no longer compiles is left out. A record that
+        does not exist, is archived, or that this caller cannot see answers `404`. Each list carries its identity, kind and sharing; read
         `getList` for its counts and health.
       responses:
         '200':
@@ -42154,9 +42154,10 @@ components:
 
     RecordListsResponse:
       type: object
-      required: [data]
+      required: [data, truncated]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/List' } }
+        truncated: { type: boolean, description: 'More lists hold the record than one answer carries; `data` is the first 1000 by name.' }
 
     ListHistoryResponse:
       type: object

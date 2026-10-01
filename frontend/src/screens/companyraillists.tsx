@@ -29,7 +29,7 @@ function CompanyLists({ companyId }: Readonly<{ companyId: string }>) {
       summary={
         <SectionSummary
           title={t("lists.record.title")}
-          count={lists.data?.length}
+          count={lists.data?.data.length}
         />
       }
     >

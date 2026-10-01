@@ -10,6 +10,8 @@ package collections
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,77 +25,110 @@ import (
 // recordListTypes are the record types a record page offers lists on.
 var recordListTypes = map[string]bool{typeContact: true, typeCompany: true, typeDeal: true, typeLead: true}
 
-// RecordListsFor reads the lists one record is on that this caller may find,
-// by name. A record outside the caller's row scope answers ErrNotFound.
-func (s *Store) RecordListsFor(ctx context.Context, entityType string, entityID ids.UUID) ([]crmcontracts.List, error) {
+// RecordLists is the lists one record is on that the caller may find, by
+// name, and whether more were found than one answer holds.
+type RecordLists struct {
+	Lists     []crmcontracts.List
+	Truncated bool
+}
+
+// RecordListsFor reads the lists one record is on that this caller may find.
+// A record that does not exist, is archived, or lies outside the caller's row
+// scope answers ErrNotFound.
+func (s *Store) RecordListsFor(ctx context.Context, entityType string, entityID ids.UUID) (RecordLists, error) {
 	if !recordListTypes[entityType] {
-		return nil, &BadInputError{Field: entityTypeField, Reason: "must be contact, company, deal or lead"}
+		return RecordLists{}, &BadInputError{Field: entityTypeField, Reason: "must be contact, company, deal or lead"}
 	}
 	if err := auth.Require(ctx, listObject, principal.ActionRead); err != nil {
-		return nil, err
+		return RecordLists{}, err
 	}
 	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
-		return nil, err
+		return RecordLists{}, err
 	}
 	// Resolved before the transaction: the engine reads the field catalog on a
 	// connection of its own (see liveFilter).
 	engine, ok, err := s.SegmentEngine(ctx, entityType)
 	if err != nil {
-		return nil, err
+		return RecordLists{}, err
 	}
 	if !ok {
-		return nil, fmt.Errorf("no dynamic segment engine for entity_type %q", entityType)
+		return RecordLists{}, fmt.Errorf("no dynamic segment engine for entity_type %q", entityType)
 	}
 	var on []listRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, entityType, entityID); err != nil {
+		// The live probe asks even an unbounded reader whether the row exists.
+		if err := auth.EnsureVisibleLive(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}
-		candidates, err := findableListsHolding(ctx, tx, entityType, entityID, true)
-		if err != nil {
-			return err
-		}
-		on, err = selectedLists(ctx, tx, engine, candidates, entityID)
-		return err
+		var readErr error
+		on, readErr = listsHolding(ctx, tx, engine, entityType, entityID)
+		return readErr
 	})
 	if err != nil {
-		return nil, err
+		return RecordLists{}, err
 	}
-	out := make([]crmcontracts.List, 0, len(on))
+	out := RecordLists{Lists: make([]crmcontracts.List, 0, min(len(on), catalogCap))}
+	if len(on) > catalogCap {
+		on, out.Truncated = on[:catalogCap], true
+	}
 	for _, l := range on {
-		out = append(out, foundList(ctx, l))
+		out.Lists = append(out.Lists, foundList(ctx, l))
 	}
 	return out, nil
 }
 
-// selectedLists keeps every Shortlist among candidates and each Live List
-// whose filter selects the record, judged in one statement. A Live List whose
-// filter no longer compiles holds nobody, as its member read would say.
-func selectedLists(ctx context.Context, tx pgx.Tx, engine storekit.Query, candidates []listRow, entityID ids.UUID) ([]listRow, error) {
-	var live []listRow
-	var filters []storekit.Predicate
-	for _, l := range candidates {
-		if l.ListType != listTypeDynamic {
-			continue
+// listsHolding is every Shortlist the record was chosen for, up to one past
+// the cap, and every findable Live List whose filter selects it, by name.
+func listsHolding(ctx context.Context, tx pgx.Tx, engine storekit.Query, entityType string, entityID ids.UUID) ([]listRow, error) {
+	chosen, err := findableShortlistsHolding(ctx, tx, entityType, entityID, catalogCap+1)
+	if err != nil {
+		return nil, err
+	}
+	live, err := findableLiveLists(ctx, tx, entityType)
+	if err != nil {
+		return nil, err
+	}
+	selecting, err := selectingLists(ctx, tx, engine, live, entityID)
+	if err != nil {
+		return nil, err
+	}
+	out := slices.Concat(chosen, selecting)
+	slices.SortFunc(out, func(a, b listRow) int {
+		if c := strings.Compare(a.Name, b.Name); c != 0 {
+			return c
 		}
+		return strings.Compare(a.ID.String(), b.ID.String())
+	})
+	return out, nil
+}
+
+// liveBatch bounds how many filters one statement judges, well inside
+// Postgres's limit on the columns a statement may select.
+const liveBatch = 200
+
+// selectingLists keeps each Live List whose filter selects the record. A Live
+// List whose filter no longer compiles holds nobody, as its member read says.
+func selectingLists(ctx context.Context, tx pgx.Tx, engine storekit.Query, live []listRow, entityID ids.UUID) ([]listRow, error) {
+	var judged []listRow
+	var filters []storekit.Predicate
+	for _, l := range live {
 		pred, err := predicateFromDefinition(l.Definition)
 		if err != nil || !compiles(engine, pred) {
 			continue
 		}
-		live, filters = append(live, l), append(filters, pred)
-	}
-	selected, err := engine.SelectsEach(ctx, tx, filters, entityID)
-	if err != nil {
-		return nil, err
-	}
-	isOn := map[ids.ListID]bool{}
-	for i, l := range live {
-		isOn[l.ID] = selected[i]
+		judged, filters = append(judged, l), append(filters, pred)
 	}
 	var out []listRow
-	for _, l := range candidates {
-		if l.ListType != listTypeDynamic || isOn[l.ID] {
-			out = append(out, l)
+	for start := 0; start < len(filters); start += liveBatch {
+		end := min(start+liveBatch, len(filters))
+		selected, err := engine.SelectsEach(ctx, tx, filters[start:end], entityID)
+		if err != nil {
+			return nil, err
+		}
+		for i, on := range selected {
+			if on {
+				out = append(out, judged[start+i])
+			}
 		}
 	}
 	return out, nil
@@ -107,25 +142,42 @@ func compiles(engine storekit.Query, pred storekit.Predicate) bool {
 	return err == nil
 }
 
-// findableListsHolding reads the live lists of entityType the caller may find
-// that may hold the record, by name: each Shortlist it was chosen for and,
-// withLive, every Live List, whose filter the caller still has to judge.
-func findableListsHolding(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, withLive bool) ([]listRow, error) {
+// findableShortlistsHolding reads the live Shortlists of entityType the caller
+// may find that the record was chosen for, by name, at most limit of them.
+func findableShortlistsHolding(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, limit int) ([]listRow, error) {
+	return findableLists(ctx, tx, entityType, &limit, func(typePos int, arg func(any) int) string {
+		return fmt.Sprintf(`l.list_type = '%s' AND EXISTS (SELECT 1 FROM list_member m
+			WHERE m.list_id = l.id AND m.entity_type = $%d AND m.entity_id = $%d)`, listTypeStatic, typePos, arg(entityID))
+	})
+}
+
+// findableLiveLists reads every live Live List of entityType the caller may
+// find. Unbounded: each is judged, and a cap here would drop a list that
+// selects the record without saying so.
+func findableLiveLists(ctx context.Context, tx pgx.Tx, entityType string) ([]listRow, error) {
+	return findableLists(ctx, tx, entityType, nil, func(int, func(any) int) string {
+		return fmt.Sprintf("l.list_type = '%s'", listTypeDynamic)
+	})
+}
+
+// findableLists reads the unarchived lists of entityType the caller may find
+// that narrow selects, by name, at most limit of them when limit is set.
+func findableLists(ctx context.Context, tx pgx.Tx, entityType string, limit *int, narrow func(typePos int, arg func(any) int) string) ([]listRow, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	typePos := arg(entityType)
-	chosen := fmt.Sprintf(`l.list_type = '%s' AND EXISTS (SELECT 1 FROM list_member m
-		WHERE m.list_id = l.id AND m.entity_type = $%d AND m.entity_id = $%d)`, listTypeStatic, typePos, arg(entityID))
-	if withLive {
-		chosen = fmt.Sprintf("(l.list_type = '%s' OR (%s))", listTypeDynamic, chosen)
-	}
+	where := narrow(typePos, arg)
 	scope, err := recordScope(ctx, listObject, "l", arg)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT %s FROM list l
+	sql := fmt.Sprintf(`SELECT %s FROM list l
 		WHERE l.entity_type = $%d AND l.archived_at IS NULL AND %s AND %s
-		ORDER BY l.name, l.id LIMIT $%d`, listColumns, typePos, chosen, scope, arg(catalogCap)), args...)
+		ORDER BY l.name, l.id`, listColumns, typePos, where, scope)
+	if limit != nil {
+		sql += fmt.Sprintf(" LIMIT $%d", arg(*limit))
+	}
+	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -136,12 +188,12 @@ func findableListsHolding(ctx context.Context, tx pgx.Tx, entityType string, ent
 // caller may find, by name, at most limit of them, inside the caller's
 // transaction. The caller has already established it may see the record.
 func ShortlistsHolding(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, limit int) ([]crmcontracts.List, error) {
-	lists, err := findableListsHolding(ctx, tx, entityType, entityID, false)
+	lists, err := findableShortlistsHolding(ctx, tx, entityType, entityID, limit)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]crmcontracts.List, 0, min(len(lists), limit))
-	for _, l := range lists[:min(len(lists), limit)] {
+	out := make([]crmcontracts.List, 0, len(lists))
+	for _, l := range lists {
 		out = append(out, foundList(ctx, l))
 	}
 	return out, nil

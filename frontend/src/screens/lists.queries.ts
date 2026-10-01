@@ -184,7 +184,7 @@ export function useRecordLists(entityType: ListedRecordType, recordId: string) {
       if (error) {
         throwProblem(error);
       }
-      return data.data;
+      return data;
     },
   });
 }

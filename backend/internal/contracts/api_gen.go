@@ -38794,6 +38794,9 @@ type RecordGrantSubjectType string
 // RecordListsResponse defines model for RecordListsResponse.
 type RecordListsResponse struct {
 	Data []List `json:"data"`
+
+	// Truncated More lists hold the record than one answer carries; `data` is the first 1000 by name.
+	Truncated bool `json:"truncated"`
 }
 
 // RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.

@@ -49,7 +49,7 @@ export function RecordListsPanel({ entityType, entityId }: RecordRef) {
 export function RecordListsBody({ entityType, entityId }: RecordRef) {
   const t = useT();
   const lists = useRecordLists(entityType, entityId);
-  const found = lists.data ?? [];
+  const found = lists.data?.data ?? [];
   return (
     <div className="lists-record">
       <SurfaceState
@@ -83,6 +83,9 @@ export function RecordListsBody({ entityType, entityId }: RecordRef) {
             </li>
           ))}
         </ul>
+        {lists.data?.truncated && (
+          <p className="t-caption">{t("lists.record.truncated")}</p>
+        )}
       </SurfaceState>
       <CheckAList entityType={entityType} entityId={entityId} />
     </div>

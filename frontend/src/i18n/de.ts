@@ -10336,6 +10336,7 @@ export const de = {
   "lists.record.empty": "Auf keiner Liste, die du finden kannst.",
   "lists.record.check": "Live-Liste pr\u00fcfen",
   "lists.record.checkPick": "Live-Liste ausw\u00e4hlen",
+  "lists.record.truncated": "Und weitere Listen, die hier nicht stehen.",
   "lists.addToShortlist": "Zur Shortlist hinzuf\u00fcgen",
   "lists.add": "Hinzuf\u00fcgen",
   "lists.shortlist": "Shortlist",

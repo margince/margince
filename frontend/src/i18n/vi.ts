@@ -10257,6 +10257,7 @@ export const vi = {
     "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch n\u00e0o b\u1ea1n c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y.",
   "lists.record.check": "Ki\u1ec3m tra m\u1ed9t danh s\u00e1ch \u0111\u1ed9ng",
   "lists.record.checkPick": "Ch\u1ecdn m\u1ed9t danh s\u00e1ch \u0111\u1ed9ng",
+  "lists.record.truncated": "V\u00e0 c\u00f2n danh s\u00e1ch kh\u00e1c kh\u00f4ng hi\u1ec3n th\u1ecb \u1edf \u0111\u00e2y.",
   "lists.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
   "lists.add": "Th\u00eam",
   "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",

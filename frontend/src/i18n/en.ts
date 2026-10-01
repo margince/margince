@@ -10486,6 +10486,7 @@ export const en = {
   "lists.record.empty": "Not on any list you can find.",
   "lists.record.check": "Check a Live List",
   "lists.record.checkPick": "Pick a Live List",
+  "lists.record.truncated": "And more lists not shown here.",
   "lists.addToShortlist": "Add to Shortlist",
   "lists.add": "Add",
   "lists.shortlist": "Shortlist",

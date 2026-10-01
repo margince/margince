@@ -158,8 +158,8 @@ func (h Handlers) GetRecordLists(w http.ResponseWriter, r *http.Request, entityT
 	if h.listsOff(w, r) {
 		return
 	}
-	lists, err := h.store.RecordListsFor(r.Context(), entityType, ids.UUID(entityID))
-	respond(w, r, http.StatusOK, crmcontracts.RecordListsResponse{Data: lists}, err)
+	found, err := h.store.RecordListsFor(r.Context(), entityType, ids.UUID(entityID))
+	respond(w, r, http.StatusOK, crmcontracts.RecordListsResponse{Data: found.Lists, Truncated: found.Truncated}, err)
 }
 
 // AddListMember serves POST /lists/{id}/members.

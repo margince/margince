@@ -68,6 +68,16 @@ describe("a record page's lists", () => {
     ).toBeInTheDocument();
   });
 
+  it("says when more lists hold the record than the answer carries", async () => {
+    stub({
+      [`GET /records/company/${MEMBER_ID}/lists`]: () =>
+        jsonResponse({ data: [editableShortlist], truncated: true }),
+    });
+    expect(
+      await screen.findByText(en["lists.record.truncated"]),
+    ).toBeInTheDocument();
+  });
+
   it("says it is on no list the reader can find", async () => {
     stub({
       [`GET /records/company/${MEMBER_ID}/lists`]: () =>
