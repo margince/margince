@@ -89,6 +89,13 @@ func TestReportingFutureRangeSavesAndFreezesOnlyMeasuredSales(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	saved, err := f.service.GetReport(f.human, ids.UUID(report.Id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.Selection.Interval == nil || !saved.Selection.Interval.StartAt.Equal(selection.Interval.StartAt) || !saved.Selection.Interval.EndAt.Equal(selection.Interval.EndAt) {
+		t.Fatalf("saved selection changed: %+v", saved.Selection)
+	}
 	run, err := f.service.Freeze(f.human, ids.UUID(report.Id), report.Revision, "year-capture")
 	if err != nil {
 		t.Fatal(err)

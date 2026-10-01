@@ -29,42 +29,55 @@ it("shows the server cutoff when a custom range includes future days", async () 
     </StoryProviders>,
   );
   expect(await screen.findByText(/^Results through /)).toHaveTextContent(
-    "2026",
+    "22/09/2026, 14:00",
   );
   expect(
     screen.queryByRole("button", { name: "Retry" }),
   ).not.toBeInTheDocument();
 });
 
-it("asks for corrected inputs instead of retrying an invalid reporting selection", async () => {
-  window.location.hash =
-    "#/analytics/performance?period=custom&from=2025-01-01&through=2026-10-31";
-  installFetchStub({
-    ...reportingStoryRoutes(),
-    "GET /analytics/evaluate": () =>
-      jsonResponse(
-        {
-          status: 400,
-          code: "reporting_interval_invalid",
-          detail: "choose an interval of no more than twelve months",
-        },
-        400,
-      ),
-  });
-  render(
-    <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
-    </StoryProviders>,
-  );
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    "choose an interval of no more than twelve months",
-  );
-  expect(
-    screen.queryByRole("button", { name: "Retry" }),
-  ).not.toBeInTheDocument();
-  expect(screen.queryByText(/Reload the page/)).not.toBeInTheDocument();
-  expect(screen.queryByText(/invalid argument/)).not.toBeInTheDocument();
-});
+it.each([
+  {
+    name: "oversized",
+    from: "2025-01-01",
+    through: "2026-10-31",
+    message: "choose an interval of no more than twelve months",
+  },
+  {
+    name: "reversed",
+    from: "2026-10-31",
+    through: "2026-01-01",
+    message: "choose an end date after the start date",
+  },
+])(
+  "asks for corrected $name dates without retrying",
+  async ({ from, through, message }) => {
+    window.location.hash = `#/analytics/performance?period=custom&from=${from}&through=${through}`;
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/evaluate": () =>
+        jsonResponse(
+          {
+            status: 400,
+            code: "reporting_interval_invalid",
+            detail: message,
+          },
+          400,
+        ),
+    });
+    render(
+      <StoryProviders>
+        <ReportingOverview scope={reportingStoryScope} />
+      </StoryProviders>,
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(
+      screen.queryByRole("button", { name: "Retry" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Reload the page/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/invalid argument/)).not.toBeInTheDocument();
+  },
+);
 
 it("labels an empty sales period without calling unknown values zero", () => {
   const evaluation: typeof reportingStoryEvaluation = {

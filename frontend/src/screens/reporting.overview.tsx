@@ -355,5 +355,5 @@ function OverviewBody({
 }
 
 function validDateRange(period: string, start: string, end: string): boolean {
-  return period !== "custom" || !!(start && end && end >= start);
+  return period !== "custom" || !!(start && end);
 }

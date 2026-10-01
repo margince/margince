@@ -19,7 +19,7 @@ actual. Changing the event period does not turn today's pipeline into history.
 that period begins. The dates beside the figures identify the period measured.
 Custom ranges may span up to twelve months. If the end date is today or later,
 actual results stop at the current reporting cutoff, shown above the charts;
-future sales are not counted. Entirely future ranges cannot show actual results.
+future sales are not counted. Entirely future ranges are rejected; choose a start date before the cutoff.
 Targets use the month or fiscal quarter containing the actual cutoff, even when
 the requested custom end date is later. Saved editions keep their captured cutoff.
 

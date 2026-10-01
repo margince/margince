@@ -4,10 +4,12 @@
 package reporting
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 func TestCustomReportingRangeStopsAtTheEvaluationCutoff(t *testing.T) {
@@ -52,8 +54,8 @@ func TestCustomReportingRangeValidatesTheRequestedSpanBeforeClamping(t *testing.
 		{StartAt: at.AddDate(0, -1, 0), EndAt: at.AddDate(0, 11, 0).Add(time.Nanosecond)},
 		{StartAt: at.AddDate(0, -1, 0), EndAt: at.AddDate(0, -2, 0)},
 	} {
-		if _, err := Interval(crmcontracts.ReportingSelection{Period: "custom", Interval: &window}, calendar, at); err == nil {
-			t.Fatalf("accepted invalid range: %+v", window)
+		if _, err := Interval(crmcontracts.ReportingSelection{Period: "custom", Interval: &window}, calendar, at); !errors.Is(err, apperrors.ErrInvalidArgument) {
+			t.Fatalf("invalid range %+v returned %v", window, err)
 		}
 	}
 }
