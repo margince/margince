@@ -76,8 +76,11 @@ func TestABoughtContactIsOwedANotice(t *testing.T) {
 	if state != "open" {
 		t.Errorf("state = %q, want open", state)
 	}
-	if until := time.Until(due); until <= 0 || until > 31*24*time.Hour {
-		t.Errorf("the notice falls due in %v, want inside a month of the acquisition", until)
+	// A calendar month, not 31 days: from 1 October it runs 31 days and can
+	// gain the hour a clock change hands back, so the bound is the month itself.
+	now := time.Now()
+	if !due.After(now) || due.After(now.AddDate(0, 1, 0).Add(time.Hour)) {
+		t.Errorf("the notice falls due %v, want inside a calendar month of the acquisition (%v)", due, now)
 	}
 }
 
