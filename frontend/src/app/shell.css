@@ -1201,7 +1201,7 @@
   border-radius: 0;
   margin-bottom: var(--space-1);
 }
-.palette-row svg,
+.palette-row > svg,
 .palette-ask svg {
   width: 14px;
   height: 14px;

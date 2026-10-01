@@ -147,7 +147,7 @@ func TestAGroupedSearchShowsTheAccountThatNotesNamingItOutrank(t *testing.T) {
 			companies = append(companies, hit.ID)
 		}
 	}
-	if len(companies) != 1 || companies[0] != account || len(kept) != 2 {
+	if len(companies) != 1 || companies[0] != account || len(kept) != 2 || len(grouped.Hits) != 3 {
 		t.Fatalf("grouped page = %+v, want the account and two of the four notes", grouped.Hits)
 	}
 	// The statement's own order decides which notes the cap keeps: the best.

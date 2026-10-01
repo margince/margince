@@ -2482,7 +2482,8 @@ export async function mockApi(
         },
         // A contact found only through the company the word named, and only
         // for a caller that asked for employees, as the server answers.
-        ...(url.searchParams.get("with_employees") === "true"
+        ...(q.includes("brandt") &&
+        url.searchParams.get("with_employees") === "true"
           ? [
               {
                 type: "contact",

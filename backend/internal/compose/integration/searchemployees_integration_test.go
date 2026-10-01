@@ -244,8 +244,11 @@ func TestAGroupedPageCapsContactsFoundThroughEmployers(t *testing.T) {
 		staffCompany(t, e, seedSearchContact(t, e, name), werke, employmentShape{})
 	}
 	page = searchWith(e.Admin(), t, e, search.Input{Query: "quedlinburg", PerType: &two, WithEmployees: true})
-	if got := contactIDs(page); len(got) != 2 || got[0] != own || page.Hits[0].WorksAt != nil {
+	if got := contactIDs(page); len(got) != 2 || got[0] != own {
 		t.Fatalf("grouped contacts are %v, want two led by the own-text match %s", got, own)
+	}
+	if hit := hitFor(page, own); hit == nil || hit.WorksAt != nil {
+		t.Fatalf("the own-text match is %+v, want it on the page carrying no employer", hit)
 	}
 	if len(page.TypesWithMore) != 1 || page.TypesWithMore[0] != "contact" {
 		t.Errorf("types_with_more = %v, want [contact] with four contacts matched and two shown", page.TypesWithMore)

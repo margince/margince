@@ -84,6 +84,7 @@ func searchTypesParameterEnum(t *testing.T) []string {
 			Get struct {
 				Parameters []struct {
 					Name   string `yaml:"name"`
+					In     string `yaml:"in"`
 					Schema struct {
 						Items contractSchemaFields `yaml:"items"`
 					} `yaml:"schema"`
@@ -95,7 +96,7 @@ func searchTypesParameterEnum(t *testing.T) []string {
 		t.Fatalf("parsing %s: %v", contractFile, err)
 	}
 	for _, param := range doc.Paths["/search"].Get.Parameters {
-		if param.Name == "types" {
+		if param.Name == "types" && param.In == "query" {
 			return param.Schema.Items.Enum
 		}
 	}
