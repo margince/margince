@@ -104,7 +104,8 @@ func TestAProjectionWriteTheDatabaseRefusesSurfaces(t *testing.T) {
 	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC(), "inbound", "from")
 	v.recompute(t, activity)
 
-	breakingTable := func(table string, run func(tx pgx.Tx) error) error {
+	breakingTable := func(t *testing.T, table string, run func(tx pgx.Tx) error) error {
+		t.Helper()
 		tx, err := owner.Begin(ctx)
 		if err != nil {
 			t.Fatalf("begin: %v", err)
@@ -150,7 +151,7 @@ func TestAProjectionWriteTheDatabaseRefusesSurfaces(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := breakingTable(tc.table, tc.run); err == nil {
+			if err := breakingTable(t, tc.table, tc.run); err == nil {
 				t.Errorf("%s with %s missing returned nil", tc.name, tc.table)
 			}
 		})

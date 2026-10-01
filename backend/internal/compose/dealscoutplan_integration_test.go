@@ -19,9 +19,8 @@ import (
 
 // The scout's signal branch checks, for every citation of every open signal,
 // that the cited activity is still live. That lookup must reach activity by its
-// primary key: reaching it by comparing text scans the whole table once per
-// citation, which outran the 30 s statement ceiling on production data and
-// failed the hourly pass for five hours.
+// primary key: comparing text scans the whole table once per citation, so its
+// cost grows with the table instead of with the citations.
 //
 // Sequential scans are switched off so the plan cannot pick one for being cheap
 // on a test-sized table: with them off, a lookup that CAN use the key does, and
