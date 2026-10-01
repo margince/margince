@@ -69,7 +69,7 @@ export const BrokerUnset: Story = {
   render: story("openai_compatible", routing({})),
 };
 
-// Pointed at OpenRouter with an EU pin: the host pins appear.
+// Pointed at OpenRouter with pins set elsewhere: the sheet keeps them.
 export const OpenRouterPinned: Story = {
   render: story(
     "openai_compatible",
@@ -82,7 +82,15 @@ export const OpenRouterPinned: Story = {
   ),
 };
 
-// A self-hosted gateway: no pins to offer.
+// OpenRouter's EU address, with what it requires.
+export const OpenRouterEu: Story = {
+  render: story(
+    "openai_compatible",
+    routing({ openai_compatible: { base_url: "https://eu.openrouter.ai/api" } }),
+  ),
+};
+
+// A host no known service has: the sheet opens on Other and asks for it.
 export const Gateway: Story = {
   render: story(
     "openai_compatible",

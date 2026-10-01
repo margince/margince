@@ -117,8 +117,6 @@ Three states, and the last two are different:
 | `routing: {}` | **explicitly nothing** — the broker's own price-weighted routing |
 | `routing: {…}` | exactly what is written |
 
-An omitted key and a written `{}` are different JSON, so the store keeps both.
-
 ### Pinning a region
 
 Neither the default nor `{}` says anything about *where* a call is served. The
@@ -138,8 +136,10 @@ tier's.** `only`, `ignore` and `allow_fallbacks` are set once, as
 provider sheet), and reach every lane on it; the embeddings lane may state its
 own. `sort`, `quantizations`, `require_parameters`, `preferred_max_latency_p90`
 and `reasoning_effort` stay on each tier's `routing:`, because two models behind
-one broker need different answers. A preset ending in `_eu.yaml` must pin every
-lane to an EU-region slug; `TestAResidencyPresetPinsEveryLaneToAnEURegion` fails one that does not.
+one broker need different answers. OpenRouter's EU address, `https://eu.openrouter.ai/api`
+(Business or Enterprise plan), keeps every request in the EU, so `eu_hosted` needs no pin
+on it; on the global address a preset ending in `_eu.yaml` must pin every lane to an
+EU-region slug, which `TestAResidencyPresetPinsEveryLaneToAnEURegion` holds.
 
 ## 3b. Validated through the config path
 

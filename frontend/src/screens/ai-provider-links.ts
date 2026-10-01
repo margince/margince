@@ -9,6 +9,7 @@ const OPENROUTER_MODELS = "https://openrouter.ai/models";
 
 const PRICING_PAGES: Readonly<Record<string, string>> = {
   gemini: "https://ai.google.dev/gemini-api/docs/pricing",
+  gemini_vertex: "https://cloud.google.com/vertex-ai/generative-ai/pricing",
   anthropic: "https://platform.claude.com/docs/en/about-claude/pricing",
   openai: "https://developers.openai.com/api/docs/pricing",
   jev: "https://openrouter.ai/typesafe/jev-1.13",

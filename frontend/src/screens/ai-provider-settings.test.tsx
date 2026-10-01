@@ -163,7 +163,7 @@ describe("a provider's settings on its sheet", () => {
     expect(host).toHaveValue("https://old.example");
     await user.clear(host);
     await user.type(host, "https://gateway.example");
-    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
 
     await waitFor(() =>
       expect(puts).toEqual([
@@ -212,7 +212,7 @@ describe("a provider's settings on its sheet", () => {
       within(sheet).getByText(/https:\/\/api\.mistral\.ai/),
     ).toBeInTheDocument();
     expect(within(sheet).queryByLabelText("Host")).toBeNull();
-    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
 
     await waitFor(() =>
       expect(puts[0]?.body).toEqual({ base_url: "https://api.mistral.ai" }),
@@ -246,7 +246,7 @@ describe("a provider's settings on its sheet", () => {
     expect(
       within(sheet).getByText(/Business or Enterprise plan/),
     ).toBeInTheDocument();
-    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
 
     await waitFor(() =>
       expect(puts[0]?.body.base_url).toBe("https://eu.openrouter.ai/api"),
@@ -270,7 +270,7 @@ describe("a provider's settings on its sheet", () => {
     const sheet = await openSheet(user, "openai_compatible");
     await within(sheet).findByRole("combobox", { name: "Service" });
     expect(within(sheet).queryByText("Only these hosts")).toBeNull();
-    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
 
     await waitFor(() =>
       expect(puts[0]?.body).toEqual({
@@ -291,7 +291,7 @@ describe("a provider's settings on its sheet", () => {
     await user.click(
       await screen.findByRole("option", { name: /europe-west4/ }),
     );
-    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
 
     await waitFor(() =>
       expect(puts).toEqual([
@@ -320,7 +320,7 @@ describe("a provider's settings on its sheet", () => {
 
     const sheet = await openSheet(user, "openai_compatible");
     await user.clear(await within(sheet).findByLabelText("Host"));
-    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
 
     expect(await within(sheet).findByText(/tier premium/)).toBeInTheDocument();
   });

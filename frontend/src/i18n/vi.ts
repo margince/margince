@@ -11299,7 +11299,7 @@ export const vi = {
   "aiProviderSettings.host.line": "Máy chủ: {host}",
   "aiProviderSettings.host.default": "Dùng địa chỉ riêng của dịch vụ.",
   "aiProviderSettings.host.guide": "Cách tìm máy chủ của bạn",
-  "aiProviderSettings.save": "Lưu",
+  "aiProviderSettings.save": "Lưu kết nối",
   "aiProviderSettings.preset.openrouter": "Mẫu: OpenRouter",
   "aiProviderSettings.upstream.label": "Máy chủ OpenRouter",
   "aiProviderSettings.upstream.help":
@@ -11319,6 +11319,7 @@ export const vi = {
   "aiProviders.name.jevCompatible": "Tương thích Jev",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
+  "aiProviders.borrowedFrom": "Từ {provider}",
   "aiProviders.connection": "Kết nối",
   "aiProviders.prices": "Giá",
   "aiProviders.addPrice": "Thêm giá",

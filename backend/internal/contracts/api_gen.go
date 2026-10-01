@@ -21843,6 +21843,9 @@ type AiProviderKeyStatus struct {
 	// Optional Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix.
 	Optional bool `json:"optional"`
 
+	// PricedBy The provider whose prices this one's calls take for a model its own price sheet does not list: `gemini` for `gemini_vertex`, which serves the same models. A price written for this provider overrides it. Absent for a provider whose unpriced models stay unpriced.
+	PricedBy *string `json:"priced_by,omitempty"`
+
 	// Provider The routing name of the vendor, the same string a binding uses.
 	Provider string `json:"provider"`
 }

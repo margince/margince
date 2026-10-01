@@ -28498,6 +28498,13 @@ components:
             Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a
             service-account key file (`service_account_json`), `api_key` is a pasted key. A
             property of the vendor, not of what is stored.
+        priced_by:
+          type: string
+          description: >-
+            The provider whose prices this one's calls take for a model its own price sheet does
+            not list: `gemini` for `gemini_vertex`, which serves the same models. A price written
+            for this provider overrides it. Absent for a provider whose unpriced models stay
+            unpriced.
     AiProviderKeyTestResult:
       type: object
       additionalProperties: false

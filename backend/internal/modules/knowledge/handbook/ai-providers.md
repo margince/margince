@@ -18,15 +18,13 @@ Also called: model vendor, AI vendor, LLM provider, API key settings.
 
 ### What does each provider need?
 Each provider in Margince needs different settings:
-- **anthropic**, **openai**, **gemini**: a key. Nothing else.
-- **gemini_vertex** (Gemini on Vertex AI): a service-account key file and a
-  **Location**.
-- **openai_compatible** (OpenRouter, Mistral, Groq, Together, or your own
-  gateway): a key and a **Host**. On OpenRouter, optionally the **OpenRouter
-  hosts** that may serve it.
-- **jev** (TypeSafe's decision model): a key. The **Host** is optional.
-- **jev_compatible** (a decision model served elsewhere, such as OpenRouter):
-  a **Host**. The key is optional.
+- **Anthropic**, **OpenAI**, **Google Gemini**: a key. Nothing else.
+- **Gemini on Vertex AI**: a service-account key file and a **Location**.
+- **OpenAI-compatible** (OpenRouter, Mistral, Together, Groq, DeepSeek, or your
+  own gateway): a key and a **Service**.
+- **TypeSafe Jev**: a key. The **Service** defaults to TypeSafe's own address.
+- **Jev-compatible** (a decision model served elsewhere, such as OpenRouter):
+  a **Service**. The key is optional.
 A provider set up here is used everywhere it is bound, so there is no host or
 location to repeat on each model tier.
 
@@ -46,31 +44,28 @@ These three reach their vendor's own service, so they ask for nothing else.
 
 ### How do I connect OpenRouter or another OpenAI-compatible service?
 To connect OpenRouter, or any service that speaks the OpenAI interface, open the
-**openai_compatible** sheet, add the service's key, fill in **Host**, and choose
-**Save**.
-- For OpenRouter, choose **Preset: OpenRouter**; it fills the host for you.
-- For another service, the host is its address without a version at the end:
-  `https://api.mistral.ai`, not `https://api.mistral.ai/v1`.
-Then choose **Test**. A model tier on **openai_compatible** with no host set
-says so in its editor, and cannot be saved until the host is set here.
+**OpenAI-compatible** sheet, add the service's key, pick it under **Service**,
+and choose **Save connection**.
+- A listed service — OpenRouter, Mistral, Together, Groq, DeepSeek — fills its
+  own host, shown under the choice.
+- For any other, choose **Other OpenAI-compatible service** and fill in **Host**
+  with its address without a version at the end: `https://api.mistral.ai`, not
+  `https://api.mistral.ai/v1`. **How to find your host** opens the setup guide.
+Then choose **Test**. A model tier on this provider with no host set says so in
+its editor, and cannot be saved until the host is set here.
 
 ### How do I keep OpenRouter's processing inside the EU?
-To keep OpenRouter's processing inside the EU, open the **openai_compatible**
-sheet with OpenRouter as its host, and under **OpenRouter hosts** add the EU
-endpoints to **Only these hosts** — for Mistral models, `mistral/eu`.
-- **Only these hosts**: OpenRouter may serve requests from these and no others.
-- **Never these hosts**: OpenRouter never uses these.
-- **Fall back to other hosts**: whether OpenRouter may switch hosts when one
-  fails. **OpenRouter decides** keeps its own default.
-These apply to every model tier and the embeddings model on OpenRouter. A model
-that no listed host serves fails, so check a model's endpoints on OpenRouter
-before you pin it. How fast or how precisely one model is served is set on its
-tier, not here.
+To keep OpenRouter's processing inside the EU, choose **OpenRouter (EU)** under
+**Service** on the **OpenAI-compatible** sheet. Requests then go to OpenRouter's
+EU address, which processes them only inside the EU and sends them only to
+providers there; it counts as EU inference under the **eu_hosted** profile.
+It needs an OpenRouter Business or Enterprise plan, and only EU-eligible models
+are served there.
 
 ### How do I set up Gemini on Vertex AI?
 To set up Gemini on Vertex AI in Margince, open the **gemini_vertex** sheet,
 add a Google Cloud **service-account key** file under **Connection**, choose a
-**Location**, and choose **Save**.
+**Location**, and choose **Save connection**.
 The **Location** is where Google processes every call: **eu**, the EU
 multi-region, keeps processing in the EU and is the usual choice. Under the
 **eu_hosted** profile, only EU locations can be chosen.
@@ -79,15 +74,18 @@ on Gemini on Vertex AI. If one is not served there, the change is refused and
 names the model.
 The embeddings model may use a location of its own; set it in the embeddings
 model's editor under **Model tiers**.
+Gemini on Vertex AI serves Gemini's models, so a model its own **Prices** do not
+list is priced at Google Gemini's price, marked **From Google Gemini**. Edit one
+to give Vertex its own price for that model.
 
 ### How do I add a decision model?
 To add a decision model, set up its provider first, then bind it under **Model
 tiers** with **Add decision model**.
-- **jev**, TypeSafe's own service: add the TypeSafe key. Leave **Host** blank to
-  use TypeSafe's own address.
-- **jev_compatible**, served elsewhere: fill in **Host** with the full decision
-  address; for OpenRouter choose **Preset: OpenRouter**. A key is sent if one is
-  saved, and is not required.
+- **TypeSafe Jev**: add the TypeSafe key. **Service** stays on **TypeSafe
+  (default)**.
+- **Jev-compatible**, served elsewhere: under **Service** choose **OpenRouter**,
+  or **Other decision server** and fill in its full address. A key is sent if
+  one is saved, and is not required.
 
 ### Where do I set up a local model, such as Ollama or vLLM?
 A local model runs on your own machines, so it needs no key and has no sheet
@@ -97,6 +95,6 @@ installation. The embeddings model may run on a server of its own: fill in
 
 ### Why does a model tier say its provider has no host?
 A model tier says its provider has no host when the provider cannot be reached
-until one is set: **openai_compatible** and **jev_compatible** have no address
-of their own. Open that provider's sheet under **Providers**, fill in **Host**,
-and choose **Save**; the tier can then be saved.
+until one is set: **OpenAI-compatible** and **Jev-compatible** have no address
+of their own. Open that provider's sheet under **Providers**, pick its
+**Service**, and choose **Save connection**; the tier can then be saved.

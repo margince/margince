@@ -11403,7 +11403,7 @@ export const de = {
   "aiProviderSettings.host.line": "Host: {host}",
   "aiProviderSettings.host.default": "Nutzt die eigene Adresse des Dienstes.",
   "aiProviderSettings.host.guide": "So findest du deinen Host",
-  "aiProviderSettings.save": "Speichern",
+  "aiProviderSettings.save": "Verbindung speichern",
   "aiProviderSettings.preset.openrouter": "Vorlage: OpenRouter",
   "aiProviderSettings.upstream.label": "OpenRouter-Hosts",
   "aiProviderSettings.upstream.help":
@@ -11423,6 +11423,7 @@ export const de = {
   "aiProviders.name.jevCompatible": "Jev-kompatibel",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
+  "aiProviders.borrowedFrom": "Von {provider}",
   "aiProviders.connection": "Verbindung",
   "aiProviders.prices": "Preise",
   "aiProviders.addPrice": "Preis hinzufügen",
