@@ -592,3 +592,121 @@ func TestARevokeThroughAMergedAwayContactReachesTheRowAllowMovedToTheSurvivor(t 
 		t.Errorf("the survivor still holds %d live override(s), want 0", live)
 	}
 }
+
+// boundedAdminCtx is boundedRepCtx's seat with the admin role: its authority
+// level can take back an admin's vouch, while its row scope still stops at the
+// records it owns. A rep-level seat could not exercise the survivor check at
+// all, because the level comparison refuses it first.
+func boundedAdminCtx(ws, user ids.UUID) context.Context {
+	ctx := boundedRepCtx(ws, user)
+	actor, _ := principal.Actor(ctx)
+	actor.Permissions.RoleKeys = []string{"admin"}
+	return principal.WithActor(ctx, actor)
+}
+
+// seedMergedPair seeds a contact the rep owns, merged into a survivor somebody
+// else owns, so a bounded seat may write the retired record and not the one it
+// settles onto.
+func seedMergedPair(t *testing.T, e *channelConsentEnv) (own, other ids.ContactID) {
+	t.Helper()
+	own = ids.New[ids.ContactKind]()
+	other = ids.New[ids.ContactKind]()
+	elsewhere := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Other Rep')`,
+		elsewhere, "rep-"+elsewhere.String()+"@cc.test"); err != nil {
+		t.Fatalf("seeding the survivor's owner: %v", err)
+	}
+	for _, row := range []struct {
+		id    ids.ContactID
+		name  string
+		owner ids.UUID
+	}{{own, "Rep Owned Source", e.user}, {other, "Somebody Elses Survivor", elsewhere}} {
+		if _, err := e.owner.Exec(context.Background(), `
+			INSERT INTO contact (id, full_name, source, captured_by, visibility, owner_id)
+			VALUES ($1, $2, 'test', 'human:x', 'workspace', $3)`, row.id, row.name, row.owner); err != nil {
+			t.Fatalf("seeding %s: %v", row.name, err)
+		}
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE contact SET merged_into_id = $1 WHERE id = $2`, other, own); err != nil {
+		t.Fatalf("merging the pair: %v", err)
+	}
+	return own, other
+}
+
+// TestARevokeThroughAMergedAwayContactCannotReachTheSurvivorsOwnVouch holds
+// the widened lookup to the caller's reach. Accepting a row on the survivor is
+// what lets a pre-merge handle work; it must not let a seat that may write the
+// retired record take back a vouch somebody recorded on a survivor that seat
+// may not touch.
+func TestARevokeThroughAMergedAwayContactCannotReachTheSurvivorsOwnVouch(t *testing.T) {
+	e := setupChannelConsent(t)
+	own, other := seedMergedPair(t, e)
+	theirs, err := e.store.Allow(e.ctx, AllowInput{
+		ContactID: other, Category: "marketing", Reason: "their account manager confirmed it",
+	})
+	if err != nil {
+		t.Fatalf("recording the survivor's own override: %v", err)
+	}
+
+	err = e.store.RevokeOverride(boundedAdminCtx(e.ws, e.user), RevokeOverrideInput{
+		ContactID: own, OverrideID: theirs, Reason: "trying through the record I own",
+	})
+	// ErrPermissionDenied, the write-authority arm: the survivor has workspace
+	// visibility, so this seat can see it and the scope arm admits it; the
+	// owner check is what refuses. The seat is an admin so the level
+	// comparison passes and only the survivor's scope is on trial.
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("err = %v, want %v: the revoke reached a vouch on a survivor this seat may not write", err, apperrors.ErrPermissionDenied)
+	}
+	if _, level, _ := liveOverrideRow(t, e, other); level == "" {
+		t.Error("the survivor's vouch is gone")
+	}
+}
+
+// TestARevokeNamesTheRowsSubjectOrItsSurvivorAndNothingElse pins the other
+// edge of the widened lookup: a row on a contact that is neither the one
+// named nor its survivor stays unreachable and unrevealed.
+func TestARevokeNamesTheRowsSubjectOrItsSurvivorAndNothingElse(t *testing.T) {
+	e := setupChannelConsent(t)
+	stranger := seedOverrideContact(t, e, "Unrelated Contact")
+	recorded, err := e.store.Allow(e.ctx, AllowInput{
+		ContactID: stranger, Category: "marketing", Reason: "confirmed on a call",
+	})
+	if err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+
+	err = e.store.RevokeOverride(e.ctx, RevokeOverrideInput{
+		ContactID: e.contact, OverrideID: recorded, Reason: "not mine to take back",
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want not found: a row on an unrelated contact must stay hidden", err)
+	}
+}
+
+// TestAllowThroughAMergedAwayContactChecksTheSurvivorItWritesOnto is the
+// write side of the same reach: the row lands on the survivor, so the
+// survivor's scope is read before it does.
+func TestAllowThroughAMergedAwayContactChecksTheSurvivorItWritesOnto(t *testing.T) {
+	e := setupChannelConsent(t)
+	own, other := seedMergedPair(t, e)
+
+	_, err := e.store.Allow(boundedRepCtx(e.ws, e.user), AllowInput{
+		ContactID: own, Category: "marketing", Reason: "vouching through the record I own",
+	})
+	// ErrPermissionDenied, the write-authority arm, for the reason the revoke
+	// test above gives.
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("err = %v, want %v: the vouch landed on a survivor this seat may not write", err, apperrors.ErrPermissionDenied)
+	}
+	var n int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM communication_override WHERE contact_id = $1`, other).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Errorf("the survivor holds %d override(s), want 0", n)
+	}
+}

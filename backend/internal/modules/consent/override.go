@@ -162,6 +162,13 @@ func (s *Store) allowAdmittedTx(
 	if err != nil {
 		return ids.UUID{}, err
 	}
+	// AND THE SURVIVOR'S OWN SCOPE, when it differs: the row lands on a record
+	// the caller never named, so the writability check above has not read it.
+	if subjectID != sub.id {
+		if err := auth.EnsureWritable(ctx, tx, sub.entityType, subjectID); err != nil {
+			return ids.UUID{}, err
+		}
+	}
 	sub.id = subjectID
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -314,6 +321,17 @@ func (s *Store) revokeOverrideAdmittedTx(
 	surviving, err := survivingSubject(ctx, tx, sub.id)
 	if err != nil {
 		return err
+	}
+	// THE SURVIVOR IS CHECKED TOO. The row accepted below may sit on the
+	// survivor, a record this caller never named and whose scope the check
+	// above never read: a seat that may write the retired contact but not the
+	// one it merged into would otherwise take back the survivor's own vouches,
+	// and learn from the answer which ids exist there. A plain read, so it adds
+	// no lock the merge could cycle on.
+	if surviving != sub.id {
+		if err := auth.EnsureRetractable(ctx, tx, sub.entityType, surviving); err != nil {
+			return err
+		}
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
