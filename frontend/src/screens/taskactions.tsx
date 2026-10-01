@@ -1,7 +1,6 @@
 import {
   type QueryKey,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useId, useState } from "react";
@@ -27,6 +26,7 @@ import { throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
+import { useActivity } from "./activityread";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -315,20 +315,7 @@ export function TaskDetailModal({
   const titleId = useId();
   // Keep the task open while reading its original evidence.
   const [openSource, setOpenSource] = useState<string | null>(null);
-  const query = useQuery({
-    queryKey: ["activity", activityId],
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id: activityId } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-  });
+  const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
   return (
     <Modal open onClose={onClose} labelledBy={titleId} placement="right">
@@ -418,20 +405,7 @@ function SourceActivity({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const titleId = useId();
-  const query = useQuery({
-    queryKey: ["activity", activityId],
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id: activityId } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-  });
+  const query = useActivity(activityId);
   // The CURRENT read decides what is shown, never the cache alone. A refused
   // read leaves the last answer in `data`: this reader shares its query key
   // with `SourceEvidence`, whose observer outlives the drawer, so an eviction

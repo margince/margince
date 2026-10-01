@@ -10,7 +10,7 @@ import {
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, Button } from "../design-system/atoms";
+import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
@@ -280,7 +280,15 @@ function ProposalRow({
             )}
           </Button>
           <Button onClick={onResend}>{t("contact.meetings.resend")}</Button>
-          <Button onClick={onWithdraw}>{t("contact.meetings.withdraw")}</Button>
+          {/* Withdrawing is the rare verb, and the one that cannot be undone:
+              folded away from the two a reader reaches for. */}
+          <OverflowMenu
+            label={t("contact.meetings.moreFor", { subject: proposal.subject })}
+          >
+            <Button variant="ghost" onClick={onWithdraw}>
+              {t("contact.meetings.withdraw")}
+            </Button>
+          </OverflowMenu>
         </div>
         {copy.notice && (
           <div className="pe-copy-notice pe-proposal-notice">

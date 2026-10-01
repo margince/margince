@@ -156,7 +156,11 @@ it("withdraws an invitation by archiving it, then reads the list and the timelin
   const row = (await screen.findByText("Project discovery")).closest("article");
   if (!row) throw new Error("Each proposal is drawn as its own card");
   client.setQueryData(["contact360", "p-1"], view);
-  await user.click(within(row).getByRole("button", { name: "Withdraw" }));
+  // The rare verb is folded into the row's own menu.
+  await user.click(
+    within(row).getByRole("button", { name: "More for Project discovery" }),
+  );
+  await user.click(await screen.findByRole("button", { name: "Withdraw" }));
   const dialog = await screen.findByRole("dialog");
   expect(within(dialog).getByText("Withdraw this invitation?")).toBeTruthy();
   await user.click(
@@ -182,7 +186,10 @@ it("returns focus to the Withdraw button when the withdrawal is cancelled", asyn
   mount(() => [proposed]);
   const row = (await screen.findByText("Project discovery")).closest("article");
   if (!row) throw new Error("Each proposal is drawn as its own card");
-  const opener = within(row).getByRole("button", { name: "Withdraw" });
+  await user.click(
+    within(row).getByRole("button", { name: "More for Project discovery" }),
+  );
+  const opener = await screen.findByRole("button", { name: "Withdraw" });
   await user.click(opener);
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
@@ -314,7 +321,6 @@ const withBooking: components["schemas"]["Contact360"] = {
 };
 
 it("offers the next meeting's join link and its own page, from the invitation the calendar made", async () => {
-  const user = userEvent.setup();
   mount(
     () => [],
     {
@@ -351,8 +357,9 @@ it("offers the next meeting's join link and its own page, from the invitation th
       ),
     ),
   ).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Weekly call" }));
-  expect(window.location.hash).toBe(`#/book/meeting-${booked.id}`);
+  expect(
+    screen.getByRole("link", { name: "Weekly call" }).getAttribute("href"),
+  ).toBe(`#/book/meeting-${booked.id}`);
 });
 
 it("asks for no invitation for a meeting that was not booked through Margince", async () => {
@@ -377,7 +384,7 @@ it("asks for no invitation for a meeting that was not booked through Margince", 
   // The list has arrived, so the card knows how the meeting was booked.
   await screen.findByText("Discovery call");
   expect(screen.getByText("Weekly call")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Weekly call" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Weekly call" })).toBeNull();
   expect(invitation).not.toHaveBeenCalled();
 });
 
@@ -429,7 +436,7 @@ it("reads older meetings when the reader asks for them", async () => {
     ]),
   ];
   let read = 0;
-  mount(() => [], {
+  const { requests } = mount(() => [], {
     "GET /activities": () => pages[Math.min(read++, pages.length - 1)],
   });
   await screen.findByText("Review");
@@ -437,6 +444,21 @@ it("reads older meetings when the reader asks for them", async () => {
   await user.click(screen.getByRole("button", { name: "Load more" }));
   expect(await screen.findByText("Kick-off")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+  // Both reads are this contact's meetings; the second continues from the
+  // first page's cursor.
+  const asked = requests.mock.calls
+    .map(([input, init]) =>
+      input instanceof Request ? input : new Request(input, init),
+    )
+    .map((request) => new URL(request.url))
+    .filter((url) => url.pathname.endsWith("/activities"));
+  expect(asked).toHaveLength(2);
+  for (const url of asked) {
+    expect(url.searchParams.get("entity_id")).toBe("p-1");
+    expect(url.searchParams.get("kind")).toBe("meeting");
+  }
+  expect(asked[0].searchParams.get("cursor")).toBeNull();
+  expect(asked[1].searchParams.get("cursor")).toBe("c-2");
 });
 
 it("does not ask for meetings the reader's role may not see", async () => {
@@ -488,4 +510,63 @@ it("says how far off each meeting ahead is, on the read's own clock", async () =
   expect(within(upcoming).getByText("Today")).toBeTruthy();
   expect(within(upcoming).getByText("Tomorrow")).toBeTruthy();
   expect(within(upcoming).getByText("In 8 days")).toBeTruthy();
+});
+
+it("lists a meeting that was called off with what became of it, not as upcoming", async () => {
+  mount(() => [], {
+    "GET /activities": () =>
+      meetingsPage([
+        meeting({
+          id: "m-off",
+          subject: "Site visit",
+          occurred_at: "2026-10-07T09:00:00Z",
+          meeting_status: "canceled",
+        }),
+      ]),
+  });
+  const held = await screen.findByRole("region", { name: "Held" });
+  await within(held).findByText("Site visit");
+  expect(within(held).getByText("Canceled")).toBeTruthy();
+  expect(
+    within(screen.getByRole("region", { name: "Upcoming" })).queryByText(
+      "Site visit",
+    ),
+  ).toBeNull();
+});
+
+it("reads the next meeting's own row when a busy calendar pushed it off the first page", async () => {
+  const later = Array.from({ length: 3 }, (_, index) =>
+    meeting({
+      id: `m-later-${index}`,
+      subject: `Later call ${index}`,
+      occurred_at: `2026-10-1${index}T09:00:00Z`,
+    }),
+  );
+  const row = vi.fn(() => jsonResponse(booked));
+  mount(
+    () => [],
+    {
+      "GET /activities": () => meetingsPage(later, "c-2"),
+      [`GET /activities/${booked.id}`]: row,
+      [`GET /scheduling/invitations/${booked.id}`]: () =>
+        jsonResponse({
+          id: booked.id,
+          status: "confirmed",
+          start: booked.occurred_at,
+          end: "2026-10-02T09:30:00Z",
+          subject: "Weekly call",
+          location: "",
+          version: 1,
+          provider: "graphcal",
+          video_call: true,
+          video_url: "https://teams.microsoft.com/l/meetup-join/abc",
+        }),
+    },
+    undefined,
+    withBooking,
+  );
+  expect(
+    await screen.findByRole("link", { name: "Join Microsoft Teams" }),
+  ).toBeTruthy();
+  expect(row).toHaveBeenCalledTimes(1);
 });

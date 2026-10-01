@@ -535,6 +535,7 @@ export const de = {
   "contact.meetings.sentExpires": "Gesendet am {sent} · gültig bis {expires}",
   "contact.meetings.resend": "Erneut senden",
   "contact.meetings.withdraw": "Zurückziehen",
+  "contact.meetings.moreFor": "Mehr zu {subject}",
   "contact.meetings.withdrawTitle": "Diese Einladung zurückziehen?",
   "contact.meetings.withdrawBody":
     "Der Link funktioniert nicht mehr, und der Gast kann darüber nicht mehr buchen.",

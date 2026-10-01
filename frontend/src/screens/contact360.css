@@ -942,7 +942,7 @@
 }
 
 /* Who is in the room: their faces, then their names. */
-.pe-meeting-people {
+.pe-meeting-attendees {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -981,6 +981,10 @@
 .pe-meeting-verbs:empty {
   display: none;
 }
+/* Nor its track, whose column gap would otherwise pad the row's far edge. */
+.pe-meeting:has(> .pe-meeting-verbs:empty) {
+  grid-template-columns: auto minmax(0, 1fr);
+}
 
 /* An invitation still waiting on the contact has no date to hang a page on (a
    personal link offers no times at all), so it is the meeting row without
@@ -1015,6 +1019,10 @@
   user-select: all;
 }
 
+/* A phone's width: every row keeps its date beside its text and takes its
+   verbs under it; the next meeting stacks, its date a chip over the title so
+   the text runs the panel's full width; the two ways to start a meeting each
+   take a full line. */
 @container (max-width: 34rem) {
   .pe-meeting {
     grid-template-columns: auto minmax(0, 1fr);
@@ -1028,6 +1036,27 @@
   }
   .pe-proposal .pe-meeting-verbs {
     grid-column: 1;
+  }
+  .pe-meeting-lead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pe-meeting-lead .pe-meeting-date {
+    flex-direction: row;
+    align-items: baseline;
+    justify-self: start;
+    gap: var(--space-1);
+    min-width: 0;
+    padding: var(--space-1) var(--space-3);
+  }
+  .pe-meeting-lead .pe-meeting-day {
+    font: var(--fontBodySmall);
+    font-weight: var(--fontWeightBold);
+  }
+  .pe-meetings-toolbar .action-row > * {
+    flex: 1 1 100%;
+  }
+  .pe-meetings-toolbar .action-row .btn {
+    flex: 1 1 auto;
   }
 }
 

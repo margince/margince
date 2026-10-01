@@ -23,6 +23,7 @@ import {
 } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useActivity } from "./activityread";
 import { LoadMoreButton, useMe } from "./common";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
@@ -113,6 +114,14 @@ function MeetingMomentAction({
 
 const MEETINGS_ONLY: TimelineFilters = { kind: "meeting" };
 
+function calledOff(activity: Activity): boolean {
+  return (
+    activity.meeting_status === "canceled" ||
+    activity.invitation_status === "canceled" ||
+    activity.invitation_status === "canceling"
+  );
+}
+
 // Which of the contact's meetings still lie ahead and which are behind, on the
 // server's clock: the read's own `as_of`, so a reader whose computer clock is
 // wrong still sees the meeting where it belongs. The soonest booked one is
@@ -125,14 +134,16 @@ function splitMeetings(
 ): Readonly<{ ahead: Activity[]; held: Activity[] }> {
   const now = Date.parse(asOf);
   const at = (activity: Activity) => Date.parse(activity.occurred_at);
+  // A meeting called off keeps its date, and the server's next-meeting read
+  // leaves it out; it is listed with what became of it, not as upcoming.
+  const isAhead = (activity: Activity) =>
+    at(activity) > now && !calledOff(activity);
   const others = listed.filter((activity) => activity.id !== nextId);
   return {
-    ahead: others
-      .filter((activity) => at(activity) > now)
-      .sort((a, b) => at(a) - at(b)),
+    ahead: others.filter(isAhead).sort((a, b) => at(a) - at(b)),
     // Newest first: the row on top answers "what just happened".
     held: others
-      .filter((activity) => at(activity) <= now)
+      .filter((activity) => !isAhead(activity))
       .sort((a, b) => at(b) - at(a)),
   };
 }
@@ -231,9 +242,7 @@ export function ContactMeetingsTab({
               <NextMeeting
                 view={view}
                 next={next}
-                activity={listed.activities.find(
-                  (activity) => activity.id === next.activity_id,
-                )}
+                listed={listed}
                 onBriefMeeting={onBriefMeeting}
                 onAction={onAction}
               />
@@ -291,16 +300,27 @@ export function ContactMeetingsTab({
 function NextMeeting({
   view,
   next,
-  activity,
+  listed,
   onBriefMeeting,
   onAction,
 }: Readonly<{
   view: Contact360;
   next: NonNullable<Contact360["next_meeting"]>;
-  activity?: Activity;
+  listed: ReturnType<typeof useRecordTimeline>;
   onBriefMeeting?: (activityId: string) => void;
   onAction?: (action: ContactMomentAction) => void;
 }>) {
+  // The meeting's own row says whether it was booked through Margince. The
+  // contact's list carries it unless a busy calendar pushed it past the first
+  // page; then it is read on its own.
+  const listedRow = listed.activities.find(
+    (activity) => activity.id === next.activity_id,
+  );
+  const ownRow = useActivity(
+    next.activity_id,
+    !listedRow && listed.isSuccess && listed.hasNextPage,
+  );
+  const activity = listedRow ?? ownRow.data;
   // The prep chip and its agenda verb belong to the meeting the moment is
   // ABOUT (the next one) and to no other rung: a moment on a different
   // claim (a re-engagement, an overdue promise) has nothing to say about a

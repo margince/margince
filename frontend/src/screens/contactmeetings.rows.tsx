@@ -5,7 +5,7 @@ import { Clock, MapPin, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
+import { routeHash } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
 import { OffsiteLink } from "../design-system/offsitelink";
@@ -112,13 +112,12 @@ function MeetingTitle({
     : "pe-meeting-title";
   if (!opens) return <span className={className}>{children}</span>;
   return (
-    <button
-      type="button"
+    <a
       className={`entity-link ${className}`}
-      onClick={() => navigate({ screen: "book", id: `meeting-${activityId}` })}
+      href={routeHash({ screen: "book", id: `meeting-${activityId}` })}
     >
       {children}
-    </button>
+    </a>
   );
 }
 
@@ -244,7 +243,7 @@ export function NextMeetingCard({
     invitation?.end ?? (activity && endOf(activity)),
   );
   const place = invitation?.location.trim();
-  const people = next.participants ?? [];
+  const attendees = next.participants ?? [];
   return (
     <PanelBody>
       <article className="pe-meeting pe-meeting-lead">
@@ -272,16 +271,16 @@ export function NextMeetingCard({
             )}
             {invitation && <JoinCall invitation={invitation} />}
           </ul>
-          {people.length > 0 && (
-            <div className="pe-meeting-people">
+          {attendees.length > 0 && (
+            <div className="pe-meeting-attendees">
               <AvatarStack
-                contacts={people.map((who) => ({
+                contacts={attendees.map((who) => ({
                   name: who.full_name,
                   identity: who.contact_id,
                 }))}
               />
               <span className="t-caption">
-                {people.map((who) => who.full_name).join(", ")}
+                {attendees.map((who) => who.full_name).join(", ")}
               </span>
             </div>
           )}

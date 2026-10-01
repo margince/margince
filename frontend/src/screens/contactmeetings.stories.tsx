@@ -27,11 +27,13 @@ const view: components["schemas"]["Contact360"] = {
 };
 
 // The tab's reads, with the proposals and the host's profile the story names.
-function withRoutes(routes: RouteMap): Decorator {
+// A factory where a route answers differently on its second call, so every
+// render of the story starts again from the first page.
+function withRoutes(routes: RouteMap | (() => RouteMap)): Decorator {
   return (Story) => {
     installFetchStub({
       "GET /me": meRoute({ activity: ["create"] }, { seat: "full" }),
-      ...routes,
+      ...(typeof routes === "function" ? routes() : routes),
     });
     return (
       <StoryProviders>
@@ -190,19 +192,36 @@ const nextInvitation: components["schemas"]["MeetingInvitation"] = {
   video_call: true,
   video_url: "https://meet.google.com/abc-defg-hij",
 };
+// What Load more reads after the first page.
+const olderMeetings: Activity[] = [
+  meeting(
+    "0198f011-bbbb-7000-8000-000000000006",
+    "2026-08-27T08:00:00Z",
+    "Kick-off",
+    "held",
+  ),
+];
 export const Booked: Story = {
   decorators: [
-    withRoutes({
-      "GET /scheduling/proposals": () =>
-        jsonResponse({ data: bookingProposals }),
-      "GET /scheduling/profile": () => jsonResponse(bookingProfile),
-      "GET /activities": () =>
-        jsonResponse({
-          data: meetings,
-          page: { has_more: true, next_cursor: "c2" },
-        }),
-      [`GET /scheduling/invitations/${nextMeetingId}`]: () =>
-        jsonResponse(nextInvitation),
+    withRoutes(() => {
+      let read = 0;
+      return {
+        "GET /scheduling/proposals": () =>
+          jsonResponse({ data: bookingProposals }),
+        "GET /scheduling/profile": () => jsonResponse(bookingProfile),
+        "GET /activities": () =>
+          read++ === 0
+            ? jsonResponse({
+                data: meetings,
+                page: { has_more: true, next_cursor: "c2" },
+              })
+            : jsonResponse({
+                data: olderMeetings,
+                page: { has_more: false },
+              }),
+        [`GET /scheduling/invitations/${nextMeetingId}`]: () =>
+          jsonResponse(nextInvitation),
+      };
     }),
   ],
   args: {

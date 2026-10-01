@@ -529,6 +529,7 @@ export const vi = {
   "contact.meetings.sentExpires": "Đã gửi {sent} · hết hạn {expires}",
   "contact.meetings.resend": "Gửi lại",
   "contact.meetings.withdraw": "Thu hồi",
+  "contact.meetings.moreFor": "Thêm cho {subject}",
   "contact.meetings.withdrawTitle": "Thu hồi lời mời này?",
   "contact.meetings.withdrawBody":
     "Liên kết sẽ ngừng hoạt động và khách không thể đặt lịch qua liên kết này nữa.",
