@@ -665,5 +665,5 @@ func (e *forecastEnv) composeTool(
 	if err != nil {
 		t.Fatalf("encoding the document: %v", err)
 	}
-	return analyticsReportComposer(e.Pool, analyticsquery.DefaultFloor, false)(ctx, encoded)
+	return analyticsReportComposer(e.Pool, analyticsquery.DefaultFloor)(ctx, encoded)
 }

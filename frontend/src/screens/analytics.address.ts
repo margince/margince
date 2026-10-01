@@ -61,7 +61,7 @@ const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
 
 export function sectionFromAddress(
   segment: string | undefined,
-  fallback: Section = "forecast",
+  fallback: Section = "performance",
 ): Section {
   if (isSection(segment)) {
     return segment;

@@ -1755,8 +1755,7 @@ Two operator gotchas, verified against current vendor docs:
 
 ## Sales reporting
 
-`analytics.performance_enabled` (default `false`) enables governed sales reporting
-in both API and worker. It controls availability, the metric MCP tool, scheduled
-editions and configured forecast captures. The legacy analytics and workspace
-forecast continue when disabled. [Operate reporting](../how-to/operate-reporting.md)
-covers pilot setup, durable pause, history gaps and rollback.
+Reporting is always available in the API, web UI, MCP tools and workers.
+The retired `analytics.performance_enabled` key is accepted but ignored so existing
+configuration files still load; remove it from operator files. [Operate reporting](../how-to/operate-reporting.md)
+covers setup, durable schedule pause and rollback.

@@ -481,8 +481,7 @@ type Server struct {
 	resetRuntime ResetRuntime
 
 	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
-	listsEnabled     bool
-	reportingEnabled bool
+	listsEnabled bool
 }
 
 var _ crmcontracts.ServerInterface = Server{}

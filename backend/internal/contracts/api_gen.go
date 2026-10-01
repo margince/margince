@@ -41352,7 +41352,7 @@ type SettingsAvailability struct {
 	// Lists True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them.
 	Lists *bool `json:"lists,omitempty"`
 
-	// Reporting Whether analytics.performance_enabled makes saved reporting available.
+	// Reporting Reporting is always available. Retained for compatibility with older clients.
 	Reporting *bool `json:"reporting,omitempty"`
 }
 

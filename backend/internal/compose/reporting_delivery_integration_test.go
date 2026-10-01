@@ -78,7 +78,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 		t.Fatal(err)
 	}
 	t.Cleanup(publicationPool.Close)
-	worker := &reportScheduleSweepWorker{enabled: true, pool: publicationPool, now: func() time.Time { return at }}
+	worker := &reportScheduleSweepWorker{pool: publicationPool, now: func() time.Time { return at }}
 	if err := worker.Work(context.Background(), nil); err != nil {
 		t.Fatal(err)
 	}
@@ -96,6 +96,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 	if *edition.Evaluation.Metrics[0].Value != 21600000 || len(edition.Evaluation.Charts) != 2 {
 		t.Fatalf("wrong frozen result: %+v", edition)
 	}
+	assertReportingEditionTransports(human, t, e, edition)
 	amount := int64(5000000)
 	if _, err := writer.UpdateDeal(writerCtx, ids.From[ids.DealKind](ids.UUID(closed.Id)), deals.UpdateDealInput{AmountMinor: &amount}); err != nil {
 		t.Fatal(err)

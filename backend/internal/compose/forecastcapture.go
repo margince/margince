@@ -19,11 +19,8 @@ import (
 
 func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) error {
 	contexts := []crmcontracts.ReportingCaptureContext{{Scope: crmcontracts.ReportingScope{Kind: ScopeKindWorkspace}}}
-	if w.reportingEnabled {
-		framework, err := newReportingService(w.pool, w.now).GetFramework(ctx)
-		if err != nil {
-			return err
-		}
+	framework, frameworkErr := newReportingService(w.pool, w.now).GetFramework(ctx)
+	if frameworkErr == nil {
 		contexts = append(contexts, framework.Definition.CaptureContexts...)
 	}
 	if len(contexts) > 21 {
@@ -37,7 +34,7 @@ func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) e
 	sort.SliceStable(contexts, func(i, j int) bool {
 		return attempts[reportingCaptureKey(contexts[i])].Before(attempts[reportingCaptureKey(contexts[j])])
 	})
-	var failures []error
+	failures := []error{frameworkErr}
 	seen := map[string]bool{}
 	for _, capture := range contexts {
 		if err := ctx.Err(); err != nil {
@@ -108,9 +105,6 @@ func (w *forecastSnapshotSweepWorker) freezeContext(ctx context.Context, capture
 		fingerprint, err := reportingPopulationFingerprint(scope, names)
 		if err != nil {
 			return err
-		}
-		if !w.reportingEnabled {
-			fingerprint = ""
 		}
 		_, err = store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
 			Period: period, Scope: resolved,

@@ -42,11 +42,9 @@ type Readings = components["schemas"]["ForecastReadings"];
 export function ForecastView({
   selection,
   canSubmit,
-  reportingEnabled = false,
 }: Readonly<{
   selection: AnalyticsSelection;
   canSubmit: boolean;
-  reportingEnabled?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -97,7 +95,7 @@ export function ForecastView({
               </p>
             )}
             <ForecastAnswer readings={data} locale={locale} />
-            {reportingEnabled && period === "quarter" && (
+            {period === "quarter" && (
               <ReportingForecastGraphs scope={selection.scope} />
             )}
             {canCall && editing ? (
