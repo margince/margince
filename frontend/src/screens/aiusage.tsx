@@ -205,6 +205,10 @@ function AiUsageBody({
     () => new Map(rows.map((row) => [row.task, row.task_display_name])),
     [rows],
   );
+  const taskSummaries = useMemo(
+    () => new Map(rows.map((row) => [row.task, row.task_summary])),
+    [rows],
+  );
   const unpricedCalls = useMemo(
     () => rows.reduce((sum, row) => sum + (row.unpriced_calls ?? 0), 0),
     [rows],
@@ -282,6 +286,7 @@ function AiUsageBody({
         <DecisionSummaryRow
           decisions={data.decisions ?? []}
           taskName={(task) => taskNames.get(task) ?? task}
+          taskSummary={(task) => taskSummaries.get(task)}
         />
       )}
       {/* The per-day breakdown is diagnostic — a reader reconciling one day's
