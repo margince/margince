@@ -164,13 +164,23 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return Page{}, &BadQueryError{Field: "types", Reason: fmt.Sprintf("unknown type %q", t)}
 		}
 	}
-	shape, err := shapeFor(in)
-	if err != nil {
-		return Page{}, err
+	var shape pageShape
+	if in.PerType != nil {
+		grouped, err := groupedShapeFor(*in.PerType, in)
+		if err != nil {
+			return Page{}, err
+		}
+		shape = grouped
+	} else {
+		ranked, err := rankedShapeFor(in)
+		if err != nil {
+			return Page{}, err
+		}
+		shape = ranked
 	}
 
 	var page Page
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
@@ -226,17 +236,14 @@ type pageShape interface {
 	page(hits []Hit) Page
 }
 
-// shapeFor picks the page this request asked for, refusing a cursor it
-// cannot read before any statement runs.
-func shapeFor(in Input) (pageShape, error) {
-	if in.PerType != nil {
-		return groupedShapeFor(*in.PerType, in)
-	}
+// rankedShapeFor reads a ranked request's page, refusing a cursor it cannot
+// read before any statement runs.
+func rankedShapeFor(in Input) (rankedShape, error) {
 	shape := rankedShape{limit: clampLimit(in.Limit)}
 	if in.Cursor != "" {
 		decoded, err := decodeCursor(in.Cursor)
 		if err != nil {
-			return nil, err
+			return rankedShape{}, err
 		}
 		shape.cursor = &decoded
 	}

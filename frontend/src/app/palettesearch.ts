@@ -79,11 +79,6 @@ export function useSearchCommands(query: string): SearchArm {
   // already says what kind. A project's is its key and its account, which is
   // how two projects called "Rollout" are told apart, and the server sends it.
   const secondLine = (hit: SearchResult): string | undefined => {
-    if (hit.email_summary) {
-      const { counterparty, occurred_at } = hit.email_summary;
-      const when = formatDate(occurred_at, locale, zone);
-      return counterparty ? `${counterparty} · ${when}` : when;
-    }
     // A partner is a property of a company rather than a kind of its own.
     if (hit.type === "company" && hit.is_partner === true) {
       return t("search.partner.badge");
@@ -106,6 +101,18 @@ export function useSearchCommands(query: string): SearchArm {
             id: `record:${hit.type}:${hit.id}`,
             label: hit.title ?? hit.id,
             subtitle: secondLine(hit),
+            // A message is cited the way every surface cites one; this file
+            // carries the subject and the date and draws neither.
+            cite: hit.email_summary
+              ? {
+                  subject: hit.email_summary.subject,
+                  occurredAt: formatDate(
+                    hit.email_summary.occurred_at,
+                    locale,
+                    zone,
+                  ),
+                }
+              : undefined,
             group: t(SEARCH_GROUP_KEY[group]),
             type: "record",
             route,

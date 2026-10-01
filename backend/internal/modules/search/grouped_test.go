@@ -57,13 +57,13 @@ func TestAGroupedSearchRefusesAPageOrACapItCannotAnswer(t *testing.T) {
 		"no hits per type":      {PerType: &zero},
 		"past the per-type cap": {PerType: &tooMany},
 	} {
-		_, err := shapeFor(in)
+		_, err := groupedShapeFor(*in.PerType, in)
 		var bad *BadQueryError
 		if !errors.As(err, &bad) || bad.Field != "per_type" {
 			t.Errorf("%s: err = %v, want a 422 naming per_type", name, err)
 		}
 	}
-	if _, err := shapeFor(Input{PerType: &five}); err != nil {
+	if _, err := groupedShapeFor(five, Input{PerType: &five}); err != nil {
 		t.Fatalf("a plain grouped request was refused: %v", err)
 	}
 }

@@ -9,6 +9,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
+import { EmailReference } from "../design-system/emailreference";
 import { usePresence } from "../design-system/presence";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -45,6 +46,10 @@ export type Command = {
   // its kind here rather than in a badge, so a list holding a company and three
   // emails reads as two groups and not as four rows saying "Record".
   group?: string;
+  // A message, drawn as the product's one citation of an email (subject and
+  // date) in place of the label and second line. The date arrives formatted:
+  // the caller owns the reader's timezone.
+  cite?: Readonly<{ subject: string | null | undefined; occurredAt: string }>;
   // Where the row goes. Absent on a row that opens something OVER the page
   // instead of leaving it — asking does that, and a route it never follows
   // would be a claim about where the reader ends up that is simply untrue.
@@ -444,9 +449,18 @@ export function CommandPalette({
                 ) : (
                   <CornerDownLeft aria-hidden />
                 )}
-                <span className="label">{command.label}</span>
-                {command.subtitle && (
-                  <span className="sub t-caption">{command.subtitle}</span>
+                {command.cite ? (
+                  <EmailReference
+                    subject={command.cite.subject}
+                    occurredAt={command.cite.occurredAt}
+                  />
+                ) : (
+                  <>
+                    <span className="label">{command.label}</span>
+                    {command.subtitle && (
+                      <span className="sub t-caption">{command.subtitle}</span>
+                    )}
+                  </>
                 )}
                 {!command.group && <Badge>{t(TYPE_KEY[command.type])}</Badge>}
               </button>

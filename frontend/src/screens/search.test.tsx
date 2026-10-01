@@ -776,7 +776,10 @@ describe("SearchScreen — grouped by what each hit is", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        jsonResponse({ data: [], page: { next_cursor: null, has_more: false } }),
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
       ),
     );
     render(<SearchScreen q="acme" />);

@@ -23,12 +23,12 @@ type groupedShape struct {
 
 // groupedShapeFor validates a grouped request. It answers one page, whole, so
 // a cursor or a limit alongside it would be a page of a different answer.
-func groupedShapeFor(perType int, in Input) (pageShape, error) {
+func groupedShapeFor(perType int, in Input) (groupedShape, error) {
 	if perType < 1 || perType > maxPerType {
-		return nil, &BadQueryError{Field: "per_type", Reason: fmt.Sprintf("per_type must be between 1 and %d", maxPerType)}
+		return groupedShape{}, &BadQueryError{Field: "per_type", Reason: fmt.Sprintf("per_type must be between 1 and %d", maxPerType)}
 	}
 	if in.Cursor != "" || in.Limit != 0 {
-		return nil, &BadQueryError{Field: "per_type", Reason: "per_type answers one grouped page and takes no cursor or limit — " +
+		return groupedShape{}, &BadQueryError{Field: "per_type", Reason: "per_type answers one grouped page and takes no cursor or limit — " +
 			"drop per_type and narrow with types to page through one type"}
 	}
 	return groupedShape{perType: perType}, nil

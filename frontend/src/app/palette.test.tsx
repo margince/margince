@@ -376,6 +376,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
             score: 8,
             email_summary: {
               activity_id: "a1",
+              subject: "Re: Acme renewal",
               occurred_at: "2026-09-01T09:15:00Z",
               counterparty: "Dana Buyer",
             },
@@ -402,8 +403,11 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(rows.findIndex((text) => text.includes("Acme GmbH"))).toBeLessThan(
       rows.findIndex((text) => text.includes("Acme renewal")),
     );
-    // Who it was with and when, which is how one thread is told from another.
-    expect(email.querySelector(".sub")?.textContent).toMatch(/^Dana Buyer · /);
+    // Cited the way every surface cites a message: its subject and its date.
+    expect(email.querySelector(".emailref__subject")?.textContent).toBe(
+      "Re: Acme renewal",
+    );
+    expect(email.querySelector(".emailref__when")?.textContent).toBeTruthy();
 
     const asked = fetchMock.mock.calls.map(([input]) =>
       input instanceof Request ? input.url : String(input),

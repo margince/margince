@@ -96,6 +96,7 @@ export const WithRecordHits: Story = {
             title: "Re: Acme renewal terms",
             email_summary: {
               activity_id: "a1",
+              subject: "Re: Acme renewal terms",
               occurred_at: "2026-09-01T09:15:00Z",
               counterparty: "Dana Buyer",
             },
