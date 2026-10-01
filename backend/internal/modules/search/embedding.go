@@ -72,36 +72,57 @@ func (s *Store) UpsertEmbedding(ctx context.Context, entityType string, entityID
 		return false, nil
 	}
 
-	fresh := false
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var existingHash, existingModel string
+	existingHash, existingModel, err := s.storedEmbeddingStamp(ctx, entityType, entityID)
+	if err != nil {
+		return false, err
+	}
+	if existingHash == hash && existingModel == identity {
+		return false, nil // unchanged text, unchanged binding — never re-embed
+	}
+
+	// Between the read and the write, never inside a transaction: the call can
+	// run to ai.CallCeiling, and an idle-in-transaction session that long holds a
+	// pool slot, pins vacuum's horizon database-wide, and is killed by
+	// database.IdleTransactionCeiling after the model call is already paid for.
+	res, err := embedder.Embed(ctx, model.EmbedRequest{Inputs: []string{text}, Dimensions: dims})
+	if err != nil {
+		return false, fmt.Errorf("search: embed: %w", err)
+	}
+	if len(res.Vectors) != 1 || res.Dims != dims {
+		return false, fmt.Errorf("search: embedder returned %d vectors of width %d, need 1×%d", len(res.Vectors), res.Dims, dims)
+	}
+	if isZero(res.Vectors[0]) {
+		return false, fmt.Errorf("search: embedder returned a zero vector (cosine NaN)")
+	}
+	return s.writeEmbedding(ctx, entityType, entityID, hash, identity, res.Vectors[0], existingHash)
+}
+
+// storedEmbeddingStamp reads the hash and model the entity's vector was last
+// written under, both "" when no row exists — the honest "nothing stored",
+// distinct from a real empty hash or model.
+func (s *Store) storedEmbeddingStamp(ctx context.Context, entityType string, entityID ids.UUID) (hash, embedModel string, err error) {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			SELECT chunk_hash, model FROM embedding
 			WHERE entity_type = $1 AND entity_id = $2 AND chunk_ix = 0`,
-			entityType, entityID).Scan(&existingHash, &existingModel)
-		if err != nil {
-			if !errors.Is(err, pgx.ErrNoRows) {
-				return err
-			}
-			// No row yet: existingHash/existingModel stay "" — the honest
-			// "nothing stored" case, distinct from a real empty hash/model.
+			entityType, entityID).Scan(&hash, &embedModel)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
 		}
-		if existingHash == hash && existingModel == identity {
-			return nil // unchanged text, unchanged binding — never re-embed
-		}
+		return err
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("search: reading the stored embedding stamp: %w", err)
+	}
+	return hash, embedModel, nil
+}
 
-		res, err := embedder.Embed(ctx, model.EmbedRequest{Inputs: []string{text}, Dimensions: dims})
-		if err != nil {
-			return fmt.Errorf("search: embed: %w", err)
-		}
-		if len(res.Vectors) != 1 || res.Dims != dims {
-			return fmt.Errorf("search: embedder returned %d vectors of width %d, need 1×%d", len(res.Vectors), res.Dims, dims)
-		}
-		if isZero(res.Vectors[0]) {
-			return fmt.Errorf("search: embedder returned a zero vector (cosine NaN)")
-		}
-
-		// CAS on the hash read above ('' when no row existed): a
+// writeEmbedding stores vec unless the row has moved past readHash since it
+// was read, and reports whether it wrote.
+func (s *Store) writeEmbedding(ctx context.Context, entityType string, entityID ids.UUID, hash, identity string, vec []float32, readHash string) (bool, error) {
+	fresh := false
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// CAS on readHash ('' when no row existed): a
 		// concurrent writer that already advanced chunk_hash past what we
 		// read (a redelivered event racing this one, or another identity
 		// swap) already won — leave fresh=false rather than clobbering a
@@ -142,7 +163,7 @@ func (s *Store) UpsertEmbedding(ctx context.Context, entityType string, entityID
 			DO UPDATE SET chunk_hash = EXCLUDED.chunk_hash, model = EXCLUDED.model,
 			              embedding = EXCLUDED.embedding, created_at = now()
 			WHERE embedding.chunk_hash IS NOT DISTINCT FROM $6`,
-			entityType, entityID, hash, identity, vectorLiteral(res.Vectors[0]), existingHash)
+			entityType, entityID, hash, identity, vectorLiteral(vec), readHash)
 		if err != nil {
 			return fmt.Errorf("search: upsert embedding: %w", err)
 		}
