@@ -7,7 +7,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/fs"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -101,17 +101,22 @@ func TestOnlyUnknownPurposeIsExcludedByCategory(t *testing.T) {
 // file declares it.
 func reasonConstants(t *testing.T) []string {
 	t.Helper()
-	pkgs, err := parser.ParseDir(token.NewFileSet(), ".", func(fi fs.FileInfo) bool {
-		return !strings.HasSuffix(fi.Name(), "_test.go")
-	}, 0)
+	entries, err := os.ReadDir(".")
 	if err != nil {
-		t.Fatalf("parsing the package's files: %v", err)
+		t.Fatalf("listing the package's files: %v", err)
 	}
+	fset := token.NewFileSet()
 	var reasons []string
-	for _, pkg := range pkgs {
-		for _, file := range pkg.Files {
-			reasons = append(reasons, fileReasonConstants(t, file)...)
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
 		}
+		file, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", name, err)
+		}
+		reasons = append(reasons, fileReasonConstants(t, file)...)
 	}
 	// Under-recognition is the one way a census fails silently: a parse that
 	// found a handful of reasons is reading the wrong declarations.
