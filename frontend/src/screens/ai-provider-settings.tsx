@@ -252,7 +252,8 @@ function UpstreamFields({
             onChange={(value) =>
               onChange({
                 ...upstream,
-                allow_fallbacks: value === "default" ? undefined : value === "yes",
+                allow_fallbacks:
+                  value === "default" ? undefined : value === "yes",
               })
             }
           />

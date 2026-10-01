@@ -9,21 +9,25 @@ import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
-  useProviderKeys,
-  useRemoveProviderKey,
-  useSetProviderKey,
-} from "./ai-provider-key-hooks";
-import {
   credentialKindOf,
   KeyEntry,
   keyStateLabel,
   keyStateTone,
 } from "./ai-provider-key-entry";
 import {
+  useProviderKeys,
+  useRemoveProviderKey,
+  useSetProviderKey,
+} from "./ai-provider-key-hooks";
+import {
   KeyTestButton,
   KeyTestOutcome,
   useTestProviderKey,
 } from "./ai-provider-key-test";
+import {
+  hasProviderSettings,
+  ProviderSettingsForm,
+} from "./ai-provider-settings";
 import {
   ProviderSheet,
   type ProviderUsage,
@@ -31,10 +35,6 @@ import {
   STATE_LABEL,
   STATE_TONE,
 } from "./ai-provider-sheet";
-import {
-  hasProviderSettings,
-  ProviderSettingsForm,
-} from "./ai-provider-settings";
 import { providerUsage, useRouting } from "./ai-routing-query";
 import { PanelTitle } from "./ai-terms";
 import { problemMessageOf, QueryGate } from "./common";

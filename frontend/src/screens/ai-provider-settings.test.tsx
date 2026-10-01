@@ -167,7 +167,9 @@ describe("a provider's settings on its sheet", () => {
 
   it("offers the upstream pins only for an OpenRouter host", async () => {
     backend(
-      routingWith({ openai_compatible: { base_url: "https://gateway.example" } }),
+      routingWith({
+        openai_compatible: { base_url: "https://gateway.example" },
+      }),
     );
     const user = userEvent.setup();
     render(<AiProviderKeysCard />);
@@ -225,7 +227,9 @@ describe("a provider's settings on its sheet", () => {
     const sheet = await openSheet(user, "gemini_vertex");
     expect(within(sheet).queryByLabelText("Host")).toBeNull();
     await user.click(await within(sheet).findByLabelText("Location"));
-    await user.click(await screen.findByRole("option", { name: /europe-west4/ }));
+    await user.click(
+      await screen.findByRole("option", { name: /europe-west4/ }),
+    );
     await user.click(within(sheet).getByRole("button", { name: "Save" }));
 
     await waitFor(() =>

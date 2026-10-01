@@ -6,8 +6,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { AdapterFields } from "./ai-routing-fields";
 import { ProviderSettingsForm } from "./ai-provider-settings";
+import { AdapterFields } from "./ai-routing-fields";
 
 // A provider's host is set on the provider, once, so a lane's fields name the
 // provider and the model and nothing about where the provider is — except the
@@ -44,14 +44,23 @@ function mountLane(
   provider: string,
   laneName: string,
   providerSettings?: ProviderSettings,
-  onChange: (next: { provider: string; model: string; base_url?: string }) => void = () =>
-    undefined,
+  onChange: (next: {
+    provider: string;
+    model: string;
+    base_url?: string;
+  }) => void = () => undefined,
 ) {
   stubModels();
   wrap(
     <AdapterFields
       label="Provider"
-      lane={laneName === "embeddings" ? "embeddings" : laneName === "decisions" ? "decisions" : "chat"}
+      lane={
+        laneName === "embeddings"
+          ? "embeddings"
+          : laneName === "decisions"
+            ? "decisions"
+            : "chat"
+      }
       laneName={laneName}
       binding={{ provider, model: "m" }}
       catalogue={[]}
@@ -64,7 +73,9 @@ function mountLane(
 
 describe("a lane's fields", () => {
   it("ask a tier for no host: it is the provider's", () => {
-    mountLane("openai_compatible", "premium", { base_url: "https://openrouter.ai/api" });
+    mountLane("openai_compatible", "premium", {
+      base_url: "https://openrouter.ai/api",
+    });
     expect(screen.queryByLabelText("Host")).toBeNull();
     expect(screen.queryByText(/set its host/i)).toBeNull();
   });
@@ -90,7 +101,9 @@ describe("a lane's fields", () => {
 // wrong thing.
 function mountSheet(provider: string) {
   stubModels();
-  wrap(<ProviderSettingsForm provider={provider} routing={undefined} canManage />);
+  wrap(
+    <ProviderSettingsForm provider={provider} routing={undefined} canManage />,
+  );
 }
 
 describe("the Host field's help", () => {

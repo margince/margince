@@ -523,7 +523,9 @@ describe("a gemini_vertex lane", () => {
       "gemini_vertex",
     );
     // The tier names no location of its own: it is the provider's.
-    expect(within(lane).queryByRole("combobox", { name: "Location" })).toBeNull();
+    expect(
+      within(lane).queryByRole("combobox", { name: "Location" }),
+    ).toBeNull();
     await save(user);
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
     expect(backend.getCapturedPut()?.tiers.cheap_cloud.location).toBe(

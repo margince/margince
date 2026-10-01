@@ -28,8 +28,18 @@ function story(provider: string, value: Routing, canManage = true) {
         jsonResponse({
           provider: "gemini_vertex",
           locations: [
-            { id: "eu", display_name: "EU (multi-region)", jurisdiction: "eu", resident: true },
-            { id: "europe-west4", display_name: "Netherlands", jurisdiction: "eu", resident: true },
+            {
+              id: "eu",
+              display_name: "EU (multi-region)",
+              jurisdiction: "eu",
+              resident: true,
+            },
+            {
+              id: "europe-west4",
+              display_name: "Netherlands",
+              jurisdiction: "eu",
+              resident: true,
+            },
           ],
         }),
     });
