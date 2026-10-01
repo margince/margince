@@ -372,7 +372,8 @@ mechanism with its own maintenance rules — see
 
 | | |
 |---|---|
-| Lexical query + keyset cursor | `internal/modules/search/store.go` (`Search`, `rankedShape`) |
+| Lexical query | `internal/modules/search/store.go` (`Search`) |
+| Ranked page + keyset cursor | `internal/modules/search/ranked.go` (`rankedShape`) |
 | Grouped page (`per_type`) | `internal/modules/search/grouped.go` (`groupedShape`) |
 | What a searchable entity is, and who may see one | `internal/modules/search/branches.go` (`searchBranches`, `branchScope`, `SearchedTables`) |
 | Vector write + similarity read | `internal/modules/search/embedding.go` (`UpsertEmbedding`, `SimilarEntities`) |
