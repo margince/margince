@@ -345,7 +345,7 @@ func (s *Store) revokeOverrideAdmittedTx(
 			"this override was recorded at a level you may not revoke: %w", apperrors.ErrPermissionDenied)
 	}
 
-	revoked, err := revokeOverrideChain(ctx, tx, root)
+	revoked, err := revokeOverrideChain(ctx, tx, root, in.OverrideID)
 	if err != nil {
 		return err
 	}

@@ -70,9 +70,10 @@ type revokedOverride struct {
 // touches it afterwards, and TestEveryPackageOnlyWritesTablesItOwns
 // (backend/gates/tableownership_test.go) keeps this package the only one that
 // may. The walk upward is therefore over rows already settled. Erasure can cut
-// the link — the reference is ON DELETE SET NULL — and that is harmless here:
-// the orphaned copy becomes a root of its own, and the rows that would have
-// shared its key are gone with it.
+// the link — the reference is ON DELETE SET NULL — and the orphaned copy
+// becomes a root of its own, with the rows that would have shared its key gone
+// with it. The walk that follows does not rely on the root it read staying a
+// row: revokeOverrideChain anchors on the named row too.
 //
 // Transaction-scoped and spelled like every other lock in this package, over a
 // key no subject can collide with.
@@ -163,18 +164,22 @@ func lockCarriedFamilies(ctx context.Context, tx pgx.Tx, from commsauthz.StopSub
 
 // revokeOverrideChain takes back the whole chain the given ROOT heads — the
 // original and every copy a merge made of it — and names each row it took.
-// Given the root and not the row the caller named, so that a revoke through a
-// carried copy reaches the original it was copied from: the lock above is keyed
-// on the root, and the write covers what the lock covers.
 //
 // Every copy carries the original's authority verbatim (overridecarry.go), so
 // the caller's one CanRevoke check answers for the whole chain: a merge cannot
 // introduce a descendant recorded at a level the caller could not have revoked.
-func revokeOverrideChain(ctx context.Context, tx pgx.Tx, root ids.UUID) ([]revokedOverride, error) {
+//
+// Anchored on the named row as well as the root. The root was read in an
+// earlier statement, and carried_from is ON DELETE SET NULL: an erasure of the
+// retired source committing in between deletes the root and orphans the copy,
+// so a walk from the root alone would match nothing and the door would answer
+// success having taken nothing back. The named row is locked FOR UPDATE and
+// live, so starting there as well reaches it whatever happened to its root.
+func revokeOverrideChain(ctx context.Context, tx pgx.Tx, root, named ids.UUID) ([]revokedOverride, error) {
 	rows, err := tx.Query(ctx, `
 		WITH RECURSIVE chain AS (
-		    SELECT id FROM communication_override WHERE id = $1
-		  UNION ALL
+		    SELECT id FROM communication_override WHERE id IN ($1, $2)
+		  UNION
 		    SELECT carried.id
 		      FROM communication_override carried
 		      JOIN chain ON carried.carried_from = chain.id
@@ -182,7 +187,7 @@ func revokeOverrideChain(ctx context.Context, tx pgx.Tx, root ids.UUID) ([]revok
 		UPDATE communication_override
 		   SET revoked_at = now()
 		 WHERE id IN (SELECT id FROM chain) AND revoked_at IS NULL
-		RETURNING id, contact_id`, root)
+		RETURNING id, contact_id`, root, named)
 	if err != nil {
 		return nil, fmt.Errorf("consent: revoking the override: %w", err)
 	}
