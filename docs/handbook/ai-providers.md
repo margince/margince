@@ -12,8 +12,8 @@ choose **Manage** on the provider's row under **Providers**.
 The provider's sheet opens on the right. **Connection** holds its key and, for
 the providers that need them, where it is reached; **Prices** holds what its
 models cost.
-Only an administrator can change a provider. Others can open the sheet and read
-it.
+Only an administrator or an operations user can change a provider. Others can
+open the sheet and read it.
 Also called: model vendor, AI vendor, LLM provider, API key settings.
 
 ### What does each provider need?
@@ -63,7 +63,7 @@ It needs an OpenRouter Business or Enterprise plan, and only EU-eligible models
 are served there.
 
 ### How do I set up Gemini on Vertex AI?
-To set up Gemini on Vertex AI in Margince, open the **gemini_vertex** sheet,
+To set up Gemini on Vertex AI in Margince, open the **Gemini on Vertex AI** sheet,
 add a Google Cloud **service-account key** file under **Connection**, choose a
 **Location**, and choose **Save connection**.
 The **Location** is where Google processes every call: **eu**, the EU

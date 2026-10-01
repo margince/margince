@@ -69,25 +69,40 @@ func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig 
 	}
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
 	for _, tier := range cfg.sortedTiers() {
-		lift.tierBound[cfg.Tiers[tier].Provider] = true
-		tiers[tier] = lift.tier(tierLabel(tier), cfg.Tiers[tier])
+		lane := cfg.Tiers[tier]
+		if !liftable(lane.Provider) {
+			tiers[tier] = lane
+			continue
+		}
+		lift.tierBound[lane.Provider] = true
+		tiers[tier] = lift.tier(tierLabel(tier), lane)
 	}
 	cfg.Tiers = tiers
-	if cfg.Decisions != nil {
+	if cfg.Decisions != nil && liftable(cfg.Decisions.Provider) {
 		decisions := *cfg.Decisions
 		lift.tierBound[decisions.Provider] = true
 		lift.host(decisionsLaneLabel, decisions.Provider, decisions.BaseURL)
 		decisions.BaseURL = ""
 		cfg.Decisions = &decisions
 	}
-	cfg.Embeddings.ProviderConfig = lift.embeddings(cfg.Embeddings.ProviderConfig)
-	cfg.Embeddings.Location = lift.embeddingsLocation(cfg.Embeddings.Provider, cfg.Embeddings.Location)
+	if liftable(cfg.Embeddings.Provider) {
+		cfg.Embeddings.ProviderConfig = lift.embeddings(cfg.Embeddings.ProviderConfig)
+		cfg.Embeddings.Location = lift.embeddingsLocation(cfg.Embeddings.Provider, cfg.Embeddings.Location)
+	}
 	lift.warnInherited()
 	if len(lift.providers) == 0 {
 		lift.providers = nil
 	}
 	cfg.Providers = lift.providers
 	return cfg
+}
+
+// liftable reports whether a lane's provider can hold what the lane wrote. A
+// provider this build does not know keeps it on the lane, which fails when it is
+// asked to serve rather than refusing the whole document and every other lane.
+func liftable(provider string) bool {
+	_, known := providerByName(provider)
+	return known
 }
 
 // tier lifts one tier's host and pins and returns it with neither.

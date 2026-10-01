@@ -79,13 +79,29 @@ func TestTheListSaysWhichVendorsAreConfigured(t *testing.T) {
 
 	var before struct {
 		Providers []struct {
-			Provider   string `json:"provider"`
-			Configured bool   `json:"configured"`
-			EnvVar     string `json:"env_var"`
+			Provider   string  `json:"provider"`
+			Configured bool    `json:"configured"`
+			EnvVar     string  `json:"env_var"`
+			PricedBy   *string `json:"priced_by"`
 		} `json:"providers"`
 	}
 	if code := e.Call(t, "GET", "/v1/ai/provider-keys", nil, nil, &before); code != 200 {
 		t.Fatalf("GET = %d", code)
+	}
+	// Vertex serves Gemini's models and is priced at Gemini's rows; nothing
+	// else borrows a price, so nothing else names a lender.
+	sawVertex := false
+	for _, p := range before.Providers {
+		sawVertex = sawVertex || p.Provider == "gemini_vertex"
+		switch {
+		case p.Provider == "gemini_vertex" && (p.PricedBy == nil || *p.PricedBy != "gemini"):
+			t.Errorf("gemini_vertex priced_by = %v, want gemini", p.PricedBy)
+		case p.Provider != "gemini_vertex" && p.PricedBy != nil:
+			t.Errorf("%s priced_by = %q, want it omitted", p.Provider, *p.PricedBy)
+		}
+	}
+	if !sawVertex {
+		t.Error("gemini_vertex is not listed, so its priced_by was never read")
 	}
 	// An installation that has configured nothing is exactly the one that needs
 	// the screen, so every servable vendor is listed.

@@ -85,6 +85,27 @@ describe("a lane's fields", () => {
     expect(screen.getByText(/set its host/i)).toBeInTheDocument();
   });
 
+  it("raise no missing host for an embeddings lane on a server of its own", () => {
+    stubModels();
+    wrap(
+      <AdapterFields
+        label="Provider"
+        lane="embeddings"
+        laneName="embeddings"
+        binding={{
+          provider: "openai_compatible",
+          model: "m",
+          base_url: "http://vllm.internal:8000",
+        }}
+        catalogue={[]}
+        providerSettings={{}}
+        disabled={false}
+        onChange={() => undefined}
+      />,
+    );
+    expect(screen.queryByText(/set its host/i)).toBeNull();
+  });
+
   it("let the embeddings lane name a server of its own", async () => {
     const changes: Array<{ base_url?: string }> = [];
     mountLane("vllm", "embeddings", undefined, (next) => changes.push(next));

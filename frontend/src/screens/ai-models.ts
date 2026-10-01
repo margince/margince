@@ -450,9 +450,9 @@ export function unkeyedProviders(
 }
 
 /**
- * The rows provider borrows from pricedBy: pricedBy's rows for the models and
- * lanes provider's own sheet does not price. A mirror of the server's rate
- * lookup (rateMatch, ratesource.go), which prices the call the same way.
+ * The rows provider borrows from pricedBy: pricedBy's rows for the models
+ * provider's own sheet does not price, on any lane. A mirror of the server's
+ * rate lookup (rateMatch, ratesource.go), which matches on the model alone.
  */
 export function borrowedRows(
   sheet: readonly ModelRate[],
@@ -463,8 +463,7 @@ export function borrowedRows(
   const own = sheet.filter((r) => r.provider === provider);
   return sheet.filter(
     (r) =>
-      r.provider === pricedBy &&
-      !own.some((o) => o.model_id === r.model_id && o.lane === r.lane),
+      r.provider === pricedBy && !own.some((o) => o.model_id === r.model_id),
   );
 }
 

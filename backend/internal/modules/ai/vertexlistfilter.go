@@ -54,8 +54,9 @@ func (s *RoutingStore) clock() time.Time {
 // servedOnly keeps the listed models location serves. Only a definite "not
 // served" drops one: a probe Google did not answer keeps the model on offer,
 // since an outage must not empty the picker. A round is reused only when every
-// probe was answered; an embedder's probe is one billed embed call.
-func (s *RoutingStore) servedOnly(ctx context.Context, client *geminiClient, location string, models []model.Info) []model.Info {
+// probe was answered; an embedder's probe is one billed embed call. It reports
+// whether the list is exact: every model's answer known, fresh or reused.
+func (s *RoutingStore) servedOnly(ctx context.Context, client *geminiClient, location string, models []model.Info) ([]model.Info, bool) {
 	callable := make([]model.Info, 0, len(models))
 	for _, m := range models {
 		if !isUncallable(m.ID) {
@@ -64,8 +65,8 @@ func (s *RoutingStore) servedOnly(ctx context.Context, client *geminiClient, loc
 	}
 	key := servedKey(client, location)
 	served := s.served.lookup(key, s.clock())
+	answered := served != nil
 	if served == nil {
-		var answered bool
 		served, answered = probeLocation(ctx, client.relocated(location), location, callable)
 		if answered {
 			s.served.remember(key, servedAnswer{at: s.clock(), served: served})
@@ -77,7 +78,7 @@ func (s *RoutingStore) servedOnly(ctx context.Context, client *geminiClient, loc
 			kept = append(kept, m)
 		}
 	}
-	return kept
+	return kept, answered
 }
 
 func isUncallable(id string) bool {
@@ -109,7 +110,9 @@ func probeLocation(ctx context.Context, client *geminiClient, location string, m
 	slots := make(chan struct{}, probeFanout)
 	for _, m := range models {
 		if ctx.Err() != nil {
+			mu.Lock()
 			answered = false
+			mu.Unlock()
 			break
 		}
 		wg.Add(1)

@@ -53,6 +53,9 @@ func TestSettingAProvidersHostRepointsEveryLaneOnIt(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("decoding the answer: %v", err)
 	}
+	if len(got.Tiers) == 0 {
+		t.Fatal("the answer carries no tiers, so nothing below checks the new host reached a lane")
+	}
 	for name, tier := range got.Tiers {
 		if tier.BaseUrl == nil || *tier.BaseUrl != "https://eu.openrouter.ai/api" {
 			t.Errorf("tier %s base_url = %v, want the provider's new host", name, tier.BaseUrl)

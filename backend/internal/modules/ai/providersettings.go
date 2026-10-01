@@ -107,14 +107,20 @@ func (r *OpenRouterRouting) withPins(pins *OpenRouterRouting) *OpenRouterRouting
 func (cfg RoutingConfig) resolveProviders() RoutingConfig {
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
 	for tier, lane := range cfg.Tiers {
+		if !liftable(lane.Provider) {
+			tiers[tier] = lane
+			continue
+		}
 		settings := cfg.Providers[lane.Provider]
 		lane.BaseURL, lane.Location = settings.BaseURL, settings.Location
 		lane.Routing = UpstreamPreferencesFor(lane).withPins(settings.Upstream.pins())
 		tiers[tier] = lane
 	}
 	cfg.Tiers = tiers
-	cfg.Embeddings.ProviderConfig = cfg.Embeddings.resolved(cfg.Providers[cfg.Embeddings.Provider])
-	if cfg.Decisions != nil {
+	if liftable(cfg.Embeddings.Provider) {
+		cfg.Embeddings.ProviderConfig = cfg.Embeddings.resolved(cfg.Providers[cfg.Embeddings.Provider])
+	}
+	if cfg.Decisions != nil && liftable(cfg.Decisions.Provider) {
 		decisions := *cfg.Decisions
 		decisions.BaseURL = cfg.Providers[decisions.Provider].BaseURL
 		cfg.Decisions = &decisions

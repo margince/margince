@@ -63403,7 +63403,7 @@ type ServerInterface interface {
 	// Where one vendor can process a call (admin/ops).
 	// (GET /ai/provider-locations/{provider})
 	ListProviderLocations(w http.ResponseWriter, r *http.Request, provider string)
-	// Set one provider's host and upstream pins (admin/ops).
+	// Set one provider's host, upstream pins and location (admin/ops).
 	// (PUT /ai/provider-settings/{provider})
 	SetAiProviderSettings(w http.ResponseWriter, r *http.Request, provider string)
 	// The tier-to-model binding this installation runs on (admin/ops).
@@ -65866,7 +65866,7 @@ func (_ Unimplemented) ListProviderLocations(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Set one provider's host and upstream pins (admin/ops).
+// Set one provider's host, upstream pins and location (admin/ops).
 // (PUT /ai/provider-settings/{provider})
 func (_ Unimplemented) SetAiProviderSettings(w http.ResponseWriter, r *http.Request, provider string) {
 	w.WriteHeader(http.StatusNotImplemented)

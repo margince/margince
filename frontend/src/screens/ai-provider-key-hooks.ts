@@ -44,7 +44,9 @@ export function useSetProviderKey() {
     // observer and the devtools, until garbage collection gets to it. Passing
     // the key some other way would trade that for a stale-closure refusal,
     // which is the defect the variables rule exists to prevent, so the answer
-    // is to keep the variable and drop it early.
+    // is to keep the variable and drop it early — and gcTime 0 drops it from
+    // the cache, not just the observer, the moment it is reset.
+    gcTime: 0,
     mutationFn: async (vars: {
       provider: string;
       kind: CredentialKind;

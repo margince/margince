@@ -15,6 +15,7 @@ import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { AiProviderKeysCard } from "./ai-provider-keys";
+import { serviceOf } from "./ai-provider-settings";
 
 // A provider's host, its OpenRouter pins and its Vertex location are set on
 // the provider's sheet, once, for every lane that binds it.
@@ -401,5 +402,19 @@ describe("a provider's settings on its sheet", () => {
     );
 
     expect(await within(sheet).findByText(/tier premium/)).toBeInTheDocument();
+  });
+});
+
+describe("serviceOf", () => {
+  it("takes a host carrying credentials or a query for no listed service", () => {
+    expect(serviceOf("openai_compatible", "https://openrouter.ai/api")).toBe(
+      "openrouter",
+    );
+    expect(
+      serviceOf("openai_compatible", "https://team:secret@openrouter.ai/api"),
+    ).toBe("other");
+    expect(
+      serviceOf("openai_compatible", "https://openrouter.ai/api?region=eu"),
+    ).toBe("other");
   });
 });

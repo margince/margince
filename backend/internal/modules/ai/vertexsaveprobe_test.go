@@ -99,6 +99,8 @@ func TestOneSaveAsksEachQuestionOnceOnOneToken(t *testing.T) {
 	next := vertexRouting("europe-west4")
 	next.Tiers[TierFrontier] = next.Tiers[TierPremium]
 	next.Tiers[TierCheapCloud] = ProviderConfig{Provider: providerGeminiVertex, Location: "europe-west4", Model: "gemini-3.5-flash-lite"}
+	// The embedder sits at a location of its own, so the save names two.
+	next.Embeddings.Location = "eu"
 
 	if err := store.probeVertexBindings(context.Background(), RoutingConfig{}, next); err != nil {
 		t.Fatalf("a served binding was refused: %v", err)

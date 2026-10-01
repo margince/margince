@@ -146,3 +146,17 @@ func TestTheRoutingPreviewReportsADecisionLaneChangeApartFromAModelChange(t *tes
 		}
 	}
 }
+
+// A stored document names the decision server's host on its provider, not the
+// lane, and the preview reads it there: a server on this host is local.
+func TestThePreviewReadsTheDecisionHostFromItsProvider(t *testing.T) {
+	cfg := RoutingConfig{
+		Profile:   ProfileCloudFrontier,
+		Tiers:     map[Tier]ProviderConfig{TierCheapCloud: {Provider: ProviderFake, Model: "cheap"}},
+		Decisions: &DecisionsConfig{Provider: providerJevCompatible, Model: "typed-decisions"},
+		Providers: map[string]ProviderSettings{providerJevCompatible: {BaseURL: selfHostedLane.BaseURL}},
+	}
+	if row := triageRoute(t, cfg, BandNormal); row.DecisionCandidate == nil || row.DecisionCandidate.Processing != "configured_endpoint" {
+		t.Errorf("candidate = %v, want configured_endpoint: the provider's host is on this machine", row.DecisionCandidate)
+	}
+}

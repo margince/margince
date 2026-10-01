@@ -139,15 +139,18 @@ export function hasProviderSettings(provider: string): boolean {
   return SERVICES.has(provider) || provider === VERTEX_PROVIDER;
 }
 
-// Two spellings of one address name one service. A mirror of the server's
-// sameEndpoint (routingstore.go): surrounding space, a trailing slash, and the
-// case of scheme and host, which URLs ignore; the path keeps its case.
+// Two spellings of one address name one service: surrounding space, a trailing
+// slash, and the case of scheme and host, which URLs ignore; the path keeps its
+// case. Credentials and a query count, so a host carrying either is never taken
+// for a listed service and rewritten without them on save.
 function sameHost(a: string, b: string): boolean {
   const norm = (h: string) => {
     const trimmed = h.trim().replace(/\/+$/, "");
     try {
       const u = new URL(trimmed);
-      return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, "")}`;
+      const auth =
+        u.username || u.password ? `${u.username}:${u.password}@` : "";
+      return `${u.protocol}//${auth}${u.host}${u.pathname.replace(/\/+$/, "")}${u.search}`;
     } catch {
       return trimmed;
     }

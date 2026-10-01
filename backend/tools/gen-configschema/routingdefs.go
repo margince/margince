@@ -22,8 +22,8 @@ import (
 // generator uses: these descriptions are hand-tuned and the key order is
 // deliberate, and round-tripping them would churn the file on every
 // regeneration for no reader's benefit. What is NOT literal is the tier enum,
-// which comes from the task contract through ai.AllTiers, and the decisions
-// provider enum, which comes from the provider registry through
+// which comes from the task contract through ai.AllTiers, and the provider
+// enums, which come from the provider registry through ai.KnownProviders and
 // ai.DecisionProviders.
 const routingDefsTemplate = `{
   "aiRouting": {
@@ -55,6 +55,7 @@ const routingDefsTemplate = `{
   "providers": {
     "description": "Provider name to what that provider is configured with, independent of any lane: its host and the broker's upstream pins. Every lane binding a provider reads them from here, so a host is written once. A lane's own base_url or pins (the older spelling) are lifted here when the provider names none.",
     "type": "object",
+    "propertyNames": { "enum": [__PROVIDERS__] },
     "additionalProperties": { "$ref": "#/$defs/providerSettings" }
   }
 }
@@ -66,7 +67,7 @@ const routingDefsTemplate = `{
     "additionalProperties": false,
     "properties": {
       "base_url": { "type": "string", "description": "Where the provider is reached. REQUIRED on openai_compatible while a lane binds it (the vendor host root, NO /v1), and on jev_compatible while the decisions lane binds it (the FULL decision endpoint, posted to as written). Empty ⇒ the adapter's compiled default." },
-      "upstream": { "$ref": "#/$defs/embeddingsRouting" },
+      "upstream": { "description": "openai_compatible on an OpenRouter host only: which upstream providers the broker may serve this provider's requests from — only, ignore, allow_fallbacks. Every lane on the provider is served under them; how each tier is served (sort, quantizations, latency) stays on its own routing.", "$ref": "#/$defs/embeddingsRouting" },
       "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only, and REQUIRED while a lane binds it: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4." }
     }
   },
@@ -228,7 +229,7 @@ const routingDefsTemplate = `{
 }`
 
 // routingDefs renders the $defs block with the tier names the contract declares
-// and the decision providers the registry holds.
+// and the providers the registry holds.
 func routingDefs() json.RawMessage {
 	tiers := ai.AllTiers()
 	names := make([]string, len(tiers))
@@ -237,6 +238,7 @@ func routingDefs() json.RawMessage {
 	}
 	raw := strings.Replace(routingDefsTemplate, "__TIERS__", quotedList(names), 1)
 	raw = strings.Replace(raw, "__DECISION_PROVIDERS__", quotedList(ai.DecisionProviders()), 1)
+	raw = strings.Replace(raw, "__PROVIDERS__", quotedList(ai.KnownProviders()), 1)
 	// Validated here so a substitution bug fails generation rather than shipping
 	// a schema no editor can load.
 	var probe any

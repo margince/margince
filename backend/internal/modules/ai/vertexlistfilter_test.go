@@ -59,6 +59,8 @@ func TestAVertexListOffersOnlyWhatTheLocationServes(t *testing.T) {
 	served := map[string]bool{
 		"europe-west4/gemini-3.5-flash":     true,
 		"europe-west4/gemini-embedding-001": true,
+		// Served, and still not offered: no binding here can call a speech model.
+		"europe-west4/gemini-2.5-flash-tts": true,
 		"us-central1/gemini-2.5-pro":        true,
 	}
 	selector, _ := googleAt(t, googleWithCatalog(t, catalog, served))
@@ -93,6 +95,9 @@ func TestAVertexModelGoogleCouldNotBeAskedAboutStaysOnOffer(t *testing.T) {
 
 	if !slices.Equal(listedIDs(got), []string{"gemini-3.5-flash"}) {
 		t.Errorf("offered %v, want the unanswered model kept", listedIDs(got))
+	}
+	if got.Complete {
+		t.Error("a list Google did not fully answer is marked complete, so a picker drops models it may serve")
 	}
 }
 

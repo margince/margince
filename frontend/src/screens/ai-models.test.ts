@@ -243,6 +243,18 @@ describe("withBorrowedRows", () => {
     expect(vertex).toEqual(["gemini-2.5-pro@1.25", "gemini-3.5-flash@1.60"]);
   });
 
+  it("lends no row for a model the borrower prices on any lane, as the server bills it", () => {
+    const sheet = [
+      rate("gemini", "gemini-3.5-flash", "chat", "1.50"),
+      rate("gemini_vertex", "gemini-3.5-flash", "embeddings", "1.60"),
+    ];
+    const read = withBorrowedRows(sheet, [
+      { provider: "gemini_vertex", priced_by: "gemini" },
+    ]);
+    const vertex = (read ?? []).filter((r) => r.provider === "gemini_vertex");
+    expect(vertex.map((r) => r.input_per_mtok)).toEqual(["1.60"]);
+  });
+
   it("leaves the sheet as it is with no provider priced by another", () => {
     const sheet = [rate("gemini", "gemini-2.5-pro", "chat")];
     expect(withBorrowedRows(sheet, [{ provider: "gemini" }])).toEqual(sheet);

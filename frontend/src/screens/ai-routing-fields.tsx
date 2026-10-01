@@ -110,9 +110,9 @@ export function rebind<B extends TierBindingLike>(
 }
 
 /**
- * The binding re-pointed at another adapter. `location` belongs to Vertex alone
- * and `base_url` is refused there, so each is dropped where the server would
- * refuse it; a Vertex binding keeps its own location or takes the default.
+ * The binding re-pointed at another adapter. A host belongs to the provider it
+ * was written for, so another provider never inherits it; `location` belongs to
+ * Vertex alone, and a Vertex binding keeps its own or takes the default.
  */
 export function withProvider<B extends TierBindingLike>(
   binding: B,
@@ -121,9 +121,10 @@ export function withProvider<B extends TierBindingLike>(
 ): B {
   // A model id names a model on one vendor; carried onto another it names one
   // that vendor does not serve, so a provider change starts the model empty.
+  const moved = provider !== binding.provider;
   const next = rebind(binding, {
     provider,
-    ...(provider === binding.provider ? {} : { model: "" }),
+    ...(moved ? { model: "", base_url: undefined } : {}),
   });
   if (provider === VERTEX_PROVIDER) {
     return {
@@ -209,10 +210,13 @@ export function AdapterFields<B extends TierBindingLike>({
     setPickModel(false);
     if (modelBox.current) document.getElementById(modelBox.current)?.focus();
   }, [pickModel]);
+  // An embeddings server of its own is where that lane is reached, whatever its
+  // provider holds.
   const unhosted =
     NEEDS_HOST.has(binding.provider) &&
     providerSettings !== undefined &&
-    !providerSettings.base_url;
+    !providerSettings.base_url &&
+    !(ownServer && binding.base_url);
   // A Vertex list is asked of the location model by model, which takes a
   // moment; until it answers, the price sheet is not offered in its place,
   // since most of what it names that location does not serve.

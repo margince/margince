@@ -669,3 +669,29 @@ func TestFinalizingOneStoredRowTwiceWarnsOnce(t *testing.T) {
 		t.Errorf("two reads of one stored row warned %d times, want once: %q", len(lines), lines)
 	}
 }
+
+// A stored lane naming a provider this build does not know fails when that
+// lane is asked to serve, as it always has: its host is not lifted onto a
+// provider entry the parser would refuse, taking every other lane down too.
+func TestLift_AnUnknownProvidersLaneHostStaysOnTheLane(t *testing.T) {
+	cfg := RoutingConfig{
+		Profile: ProfileCloudFrontier,
+		Tiers: map[Tier]ProviderConfig{
+			TierPremium:    {Provider: "made_up", Model: "m", BaseURL: "https://gateway.example"},
+			TierCheapCloud: {Provider: ProviderFake, Model: "cheap"},
+		},
+	}
+	log, _ := warnings()
+
+	lifted := cfg.liftLaneProviderFields(log)
+
+	if _, ok := lifted.Providers["made_up"]; ok {
+		t.Error("an unknown provider's lane host was lifted onto a provider entry")
+	}
+	if got := lifted.Tiers[TierPremium].BaseURL; got != "https://gateway.example" {
+		t.Errorf("premium host = %q, want it kept on the lane", got)
+	}
+	if err := lifted.validateProviderEntries(); err != nil {
+		t.Errorf("the lifted document's provider entries were refused: %v", err)
+	}
+}

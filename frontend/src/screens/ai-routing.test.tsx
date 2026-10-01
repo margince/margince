@@ -342,6 +342,8 @@ describe("AiRoutingCard", () => {
     const sent = backend.getCapturedPut()?.tiers.premium;
     expect(sent?.provider).toBe("gemini");
     expect(sent).not.toHaveProperty("routing");
+    // The OpenRouter host it carried is not sent for gemini to take as its own.
+    expect(sent).not.toHaveProperty("base_url");
   });
   // The lane the operator reported as unreachable: it takes a provider of its
   // own, and re-pointing it has to carry the host and the width with it or the

@@ -101,15 +101,6 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
-.ai-provider-upstream {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
 /* A known service's host, read rather than typed: the URL may be long and is
    allowed to break anywhere rather than push the sheet wider. */
 .ai-provider-host {

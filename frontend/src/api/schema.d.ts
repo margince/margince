@@ -11117,10 +11117,10 @@ export interface paths {
         };
         get?: never;
         /**
-         * Set one provider's host and upstream pins (admin/ops).
+         * Set one provider's host, upstream pins and location (admin/ops).
          * @description Replaces this provider's entry in the routing document's `providers` and re-validates
          *     the whole document under the routing lock, so no If-Match is needed: nothing else in
-         *     the document changes. An empty body removes the entry.
+         *     the document changes. An empty object (`{}`) removes the entry.
          *
          *     Every lane on the provider reads the new host and pins from here, and takes effect
          *     without a restart, exactly as `PUT /ai/routing` does.

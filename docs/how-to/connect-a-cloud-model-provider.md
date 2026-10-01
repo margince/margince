@@ -72,8 +72,9 @@ tiers:
 ```
 
 > **A provider's host is set once, on the provider.** `providers.<name>.base_url`
-> is where every lane binding that provider is reached; in the app it is the Host
-> field on the provider's sheet (Settings → AI models → Providers). A lane names
+> is where every lane binding that provider is reached; in the app it is the
+> **Service** on the provider's sheet (Settings → AI models → Providers), with a
+> Host field under **Other**. A lane names
 > only its provider and model. The one exception is the embeddings lane, which
 > may carry its own `base_url` for a separate embeddings server (a self-hosted
 > vLLM serves one model per process). A lane that still writes `base_url` — the
@@ -118,7 +119,9 @@ points it at the same broker the chat tiers use, so a stack needs ONE key rather
 than a second provider's purely for embeddings.
 
 ```yaml
-# the dev default — same broker, host and key as the chat tiers
+# the dev default — the same broker and key as the chat tiers. The dev seed's
+# openai_compatible host is OpenRouter (https://openrouter.ai/api), so the model
+# is OpenRouter's vendor/model id; on Mistral's own host it is mistral-embed.
 embeddings: { provider: openai_compatible, model: mistralai/mistral-embed-2312,
               dimensions: 1024 }
 # embeddings: { provider: vllm, model: BAAI/bge-m3, base_url: http://localhost:8001 }  # its own server

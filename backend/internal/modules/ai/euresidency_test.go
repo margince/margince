@@ -146,8 +146,8 @@ func TestOpenRoutersEUAddressIsResidentWithoutPins(t *testing.T) {
 	if _, err := ParseRouting([]byte(doc("https://eu.openrouter.ai/api"))); err != nil {
 		t.Errorf("a lane on OpenRouter's EU address was refused under eu_hosted: %v", err)
 	}
-	if _, err := ParseRouting([]byte(doc("https://openrouter.ai/api"))); err == nil {
-		t.Error("an unpinned lane on OpenRouter's global address was admitted under eu_hosted")
+	if _, err := ParseRouting([]byte(doc("https://openrouter.ai/api"))); err == nil || !strings.Contains(err.Error(), "EU") {
+		t.Errorf("an unpinned lane on OpenRouter's global address: err = %v, want the EU residency refusal", err)
 	}
 	if gap := EURegionPinGap(ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://EU.OpenRouter.ai/api/"}); gap != "" {
 		t.Errorf("EURegionPinGap on the EU address = %q, want none", gap)

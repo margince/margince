@@ -196,8 +196,7 @@ func (s *RoutingStore) availableModels(ctx context.Context, cfg RoutingConfig, q
 		return out
 	}
 	if gemini, vertex := client.(*geminiClient); vertex && provider == providerGeminiVertex {
-		models = s.servedOnly(ctx, gemini, bound.Location, models)
-		out.Complete = true
+		models, out.Complete = s.servedOnly(ctx, gemini, bound.Location, models)
 	}
 	out.Models = make([]AvailableModel, len(models))
 	for i, m := range models {

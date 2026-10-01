@@ -444,6 +444,18 @@
         "providers": {
           "description": "Provider name to what that provider is configured with, independent of any lane: its host and the broker's upstream pins. Every lane binding a provider reads them from here, so a host is written once. A lane's own base_url or pins (the older spelling) are lifted here when the provider names none.",
           "type": "object",
+          "propertyNames": {
+            "enum": [
+              "fake",
+              "anthropic",
+              "ollama",
+              "vllm",
+              "openai_compatible",
+              "openai",
+              "gemini",
+              "gemini_vertex"
+            ]
+          },
           "additionalProperties": {
             "$ref": "#/$defs/providerSettings"
           }
@@ -460,6 +472,7 @@
           "description": "Where the provider is reached. REQUIRED on openai_compatible while a lane binds it (the vendor host root, NO /v1), and on jev_compatible while the decisions lane binds it (the FULL decision endpoint, posted to as written). Empty ⇒ the adapter's compiled default."
         },
         "upstream": {
+          "description": "openai_compatible on an OpenRouter host only: which upstream providers the broker may serve this provider's requests from — only, ignore, allow_fallbacks. Every lane on the provider is served under them; how each tier is served (sort, quantizations, latency) stays on its own routing.",
           "$ref": "#/$defs/embeddingsRouting"
         },
         "location": {
