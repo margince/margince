@@ -4,7 +4,7 @@ import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { navigate } from "../app/router";
 import { ActionRow } from "../design-system/actionrow";
-import { Button, type ButtonVariant } from "../design-system/atoms";
+import { Badge, Button, type ButtonVariant } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import {
   Panel,
@@ -21,7 +21,8 @@ import {
   SurfaceState,
   sectionState,
 } from "../design-system/surfacestate";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { LoadMoreButton, useMe } from "./common";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
@@ -173,6 +174,7 @@ export function ContactMeetingsTab({
   onAction?: (action: ContactMomentAction) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const canBook = useCanWrite("activity", "create");
   // Only a reader who may book reads the proposals: the list answers 403 to
   // anyone else, and the section they fill is theirs alone.
@@ -187,16 +189,9 @@ export function ContactMeetingsTab({
     view?.as_of ?? "",
     next?.activity_id,
   );
-  // The prep chip and its agenda verb belong to the meeting the moment is
-  // ABOUT (the next one) and to no other rung: a moment on a different
-  // claim (a re-engagement, an overdue promise) has nothing to say about a
-  // meeting at all.
-  const meetingPrep =
-    view?.moment?.rule === "meeting_prep" ? view.moment : undefined;
   const bookButton = useRef<HTMLButtonElement>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const copied: CopiedLink = { url: copiedUrl, onCopied: setCopiedUrl };
-  const bookingLink = useBookingLink(copied);
   const upcoming = sectionState(
     view,
     "next_meeting",
@@ -204,82 +199,50 @@ export function ContactMeetingsTab({
     (next ? 1 : 0) + ahead.length,
     loading,
   );
+  // An AI verb among equals on every row: the quiet indigo, where the next
+  // meeting leads with the filled one.
   const briefOf = (activity: Activity) => (
-    <MeetingBriefAction activity={activity} onBriefMeeting={onBriefMeeting} />
+    <MeetingBriefAction
+      activity={activity}
+      onBriefMeeting={onBriefMeeting}
+      variant="aiQuiet"
+    />
   );
   return (
     <div className="record-stack pe-meetings">
-      <Panel title={t("contact.meetings.upcoming")}>
-        <PanelBody className="pe-meetings-toolbar">
-          <ActionRow
-            primary={
-              <BookMeeting
-                view={view}
-                loading={loading}
-                canBook={canBook}
-                ref={bookButton}
-              />
-            }
-          >
-            {bookingLink.url && (
-              <Button onClick={bookingLink.copy.copy}>
-                <Link aria-hidden="true" />
-                {t(
-                  copied.url === bookingLink.url
-                    ? "scheduling.copied"
-                    : "contact.meetings.copyBookingLink",
-                )}
-              </Button>
-            )}
-          </ActionRow>
-          {bookingLink.copy.notice && (
-            <div className="pe-copy-notice">
-              {bookingLink.copy.notice}
-              <p className="pe-copy-url">{bookingLink.url}</p>
-            </div>
-          )}
-        </PanelBody>
+      <Panel
+        title={t("contact.meetings.upcoming")}
+        titleAction={
+          upcoming === "ready" && (
+            <Badge>{formatNumber((next ? 1 : 0) + ahead.length, locale)}</Badge>
+          )
+        }
+      >
+        <MeetingsToolbar
+          view={view}
+          loading={loading}
+          canBook={canBook}
+          copied={copied}
+          bookButton={bookButton}
+        />
         {upcoming === "ready" ? (
           <>
-            {next && (
-              <NextMeetingCard
+            {view && next && (
+              <NextMeeting
+                view={view}
                 next={next}
                 activity={listed.activities.find(
                   (activity) => activity.id === next.activity_id,
                 )}
-                note={
-                  meetingPrep && {
-                    by: "Margince",
-                    whyNow: meetingPrep.why_now,
-                  }
-                }
-                verbs={
-                  <>
-                    <MeetingBriefAction
-                      // next_meeting carries no content_state because the 360
-                      // withholds the whole section rather than a redacted
-                      // row, so a booked meeting the reader can see here is
-                      // one they can read. The kind is stated for the same
-                      // reason: this section IS the meeting.
-                      activity={{ id: next.activity_id, kind: "meeting" }}
-                      onBriefMeeting={onBriefMeeting}
-                      variant="ai"
-                    />
-                    {meetingPrep?.secondary_actions?.map((action) => (
-                      <MeetingMomentAction
-                        key={action.label}
-                        action={action}
-                        onAction={onAction}
-                      />
-                    ))}
-                  </>
-                }
+                onBriefMeeting={onBriefMeeting}
+                onAction={onAction}
               />
             )}
             {ahead.map((activity) => (
               <MeetingRow
                 key={activity.id}
                 activity={activity}
+                asOf={view?.as_of}
                 verbs={briefOf(activity)}
               />
             ))}
@@ -320,6 +283,107 @@ export function ContactMeetingsTab({
         ))}
       </RailPanel>
     </div>
+  );
+}
+
+// The booked meeting, with what the prep moment says about it and the verbs
+// that get a reader ready for it.
+function NextMeeting({
+  view,
+  next,
+  activity,
+  onBriefMeeting,
+  onAction,
+}: Readonly<{
+  view: Contact360;
+  next: NonNullable<Contact360["next_meeting"]>;
+  activity?: Activity;
+  onBriefMeeting?: (activityId: string) => void;
+  onAction?: (action: ContactMomentAction) => void;
+}>) {
+  // The prep chip and its agenda verb belong to the meeting the moment is
+  // ABOUT (the next one) and to no other rung: a moment on a different
+  // claim (a re-engagement, an overdue promise) has nothing to say about a
+  // meeting at all.
+  const meetingPrep =
+    view.moment?.rule === "meeting_prep" ? view.moment : undefined;
+  return (
+    <NextMeetingCard
+      next={next}
+      asOf={view.as_of}
+      activity={activity}
+      note={meetingPrep && { by: "Margince", whyNow: meetingPrep.why_now }}
+      verbs={
+        <>
+          <MeetingBriefAction
+            // next_meeting carries no content_state because the 360 withholds
+            // the whole section rather than a redacted row, so a booked
+            // meeting the reader can see here is one they can read. The kind
+            // is stated for the same reason: this section IS the meeting.
+            activity={{ id: next.activity_id, kind: "meeting" }}
+            onBriefMeeting={onBriefMeeting}
+            variant="ai"
+          />
+          {meetingPrep?.secondary_actions?.map((action) => (
+            <MeetingMomentAction
+              key={action.label}
+              action={action}
+              onAction={onAction}
+            />
+          ))}
+        </>
+      }
+    />
+  );
+}
+
+// The two ways to start a meeting: book one, or hand the contact the reader's
+// own booking link.
+function MeetingsToolbar({
+  view,
+  loading,
+  canBook,
+  copied,
+  bookButton,
+}: Readonly<{
+  view?: Contact360;
+  loading: boolean;
+  canBook: boolean;
+  copied: CopiedLink;
+  bookButton: Ref<HTMLButtonElement>;
+}>) {
+  const t = useT();
+  const bookingLink = useBookingLink(copied);
+  return (
+    <PanelBody className="pe-meetings-toolbar">
+      <ActionRow
+        primary={
+          <BookMeeting
+            view={view}
+            loading={loading}
+            canBook={canBook}
+            ref={bookButton}
+          />
+        }
+      >
+        {bookingLink.url && (
+          <Button onClick={bookingLink.copy.copy}>
+            <Link aria-hidden="true" />
+            {t(
+              copied.url === bookingLink.url
+                ? "scheduling.copied"
+                : "contact.meetings.copyBookingLink",
+            )}
+          </Button>
+        )}
+      </ActionRow>
+      {bookingLink.copy.notice && (
+        <div className="pe-copy-notice">
+          {bookingLink.copy.notice}
+          <p className="pe-copy-url">{bookingLink.url}</p>
+        </div>
+      )}
+    </PanelBody>
   );
 }
 

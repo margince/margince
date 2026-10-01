@@ -19,7 +19,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDayMonth, formatNumber } from "../format/format";
 import { formatTimeRange } from "../format/meetingtime";
 import { viewerZone } from "../format/timezone";
-import { useLocale, usePlural, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { entityTimelineKeys } from "./activitykeys";
 import { proposalEmailBody } from "./booking-proposal-message";
 import { throwProblem } from "./common";
@@ -93,6 +93,7 @@ export function WaitingSection({
   afterWithdraw: () => HTMLElement | null;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const client = useQueryClient();
   const withdrawn = useRef(false);
   const [withdrawing, setWithdrawing] = useState<Proposal | null>(null);
@@ -120,7 +121,12 @@ export function WaitingSection({
     ? t("contact.meetings.waitingOn", { name: firstName })
     : t("contact.meetings.waitingOnReply");
   return (
-    <Panel title={title}>
+    <Panel
+      title={title}
+      titleAction={
+        state === "ready" && <Badge>{formatNumber(rows.length, locale)}</Badge>
+      }
+    >
       {state === "failed" ? (
         <PanelBody>
           <SurfaceState
@@ -222,7 +228,6 @@ function ProposalRow({
   onWithdraw: () => void;
 }>) {
   const t = useT();
-  const plural = usePlural();
   const { locale } = useLocale();
   const zone = viewerZone();
   const copy = useClipboardCopy(
@@ -234,21 +239,21 @@ function ProposalRow({
     },
     () => copied.onCopied(proposal.url),
   );
-  const offered = proposal.options.length;
-  const title =
-    offered > 0
-      ? plural("contact.meetings.proposed", offered, {
-          count: formatNumber(offered, locale),
-          subject: proposal.subject,
-        })
-      : t("contact.meetings.personalLink", { subject: proposal.subject });
   return (
     <PanelRow>
       <article className="pe-proposal">
         <div className="pe-meeting-body">
-          <span className="pe-meeting-title">{title}</span>
-          {offered > 0 && (
-            <ul className="pe-proposal-times">
+          <div className="pe-meeting-headline">
+            <span className="pe-meeting-title">{proposal.subject}</span>
+            {proposal.options.length === 0 && (
+              <Badge>{t("contact.meetings.personalLink")}</Badge>
+            )}
+          </div>
+          {proposal.options.length > 0 && (
+            <ul
+              className="pe-proposal-times"
+              aria-label={t("contact.meetings.offeredTimes")}
+            >
               {proposal.options.map((slot) => (
                 <li key={slot.start}>
                   <Badge>

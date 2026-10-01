@@ -102,13 +102,13 @@ function mount(
 
 it("lists the invitations still waiting on the contact, between upcoming and held", async () => {
   const { requests } = mount(() => [proposed, personal]);
-  expect(
-    await screen.findByText("Proposed 2 times · Project discovery"),
-  ).toBeTruthy();
+  expect(await screen.findByText("Project discovery")).toBeTruthy();
   expect(
     screen.getAllByRole("heading").map((heading) => heading.textContent),
   ).toEqual(["Upcoming", "Waiting on Dana", "Held"]);
-  expect(screen.getByText("Personal link · Intro call")).toBeTruthy();
+  // A link that offers no times says what it is instead.
+  const intro = screen.getByText("Intro call").closest("article");
+  expect(intro?.textContent).toContain("Personal link");
   const zone = viewerZone();
   // Each offered time is its own label, so a reader scans them as a set.
   for (const slot of bookingSlots)
@@ -153,9 +153,7 @@ it("withdraws an invitation by archiving it, then reads the list and the timelin
       return jsonResponse({ id: proposed.id });
     },
   });
-  const row = (
-    await screen.findByText("Proposed 2 times · Project discovery")
-  ).closest("article");
+  const row = (await screen.findByText("Project discovery")).closest("article");
   if (!row) throw new Error("Each proposal is drawn as its own card");
   client.setQueryData(["contact360", "p-1"], view);
   await user.click(within(row).getByRole("button", { name: "Withdraw" }));
@@ -166,11 +164,9 @@ it("withdraws an invitation by archiving it, then reads the list and the timelin
   );
   await waitFor(() => expect(archived).toEqual([proposed.id]));
   await waitFor(() =>
-    expect(
-      screen.queryByText("Proposed 2 times · Project discovery"),
-    ).toBeNull(),
+    expect(screen.queryByText("Project discovery")).toBeNull(),
   );
-  expect(screen.getByText("Personal link · Intro call")).toBeTruthy();
+  expect(screen.getByText("Intro call")).toBeTruthy();
   // The Withdraw button that opened the dialog went with its card.
   await waitFor(() =>
     expect(document.activeElement).toBe(
@@ -184,9 +180,7 @@ it("withdraws an invitation by archiving it, then reads the list and the timelin
 it("returns focus to the Withdraw button when the withdrawal is cancelled", async () => {
   const user = userEvent.setup();
   mount(() => [proposed]);
-  const row = (
-    await screen.findByText("Proposed 2 times · Project discovery")
-  ).closest("article");
+  const row = (await screen.findByText("Project discovery")).closest("article");
   if (!row) throw new Error("Each proposal is drawn as its own card");
   const opener = within(row).getByRole("button", { name: "Withdraw" });
   await user.click(opener);
@@ -198,9 +192,7 @@ it("returns focus to the Withdraw button when the withdrawal is cancelled", asyn
 it("resends an invitation through the composer with the email it was sent with", async () => {
   const user = userEvent.setup();
   mount(() => [proposed]);
-  const row = (
-    await screen.findByText("Proposed 2 times · Project discovery")
-  ).closest("article");
+  const row = (await screen.findByText("Project discovery")).closest("article");
   if (!row) throw new Error("Each proposal is drawn as its own card");
   await user.click(within(row).getByRole("button", { name: "Resend" }));
   const composer = await screen.findByRole("dialog", { name: "Compose" });
@@ -456,4 +448,44 @@ it("does not ask for meetings the reader's role may not see", async () => {
   const held = await screen.findByRole("region", { name: "Held" });
   expect(within(held).getByText("Hidden for your role")).toBeTruthy();
   expect(listed).not.toHaveBeenCalled();
+});
+
+it("says how far off each meeting ahead is, on the read's own clock", async () => {
+  const soon = meeting({ id: "m-soon", occurred_at: "2026-10-01T23:00:00Z" });
+  mount(
+    () => [],
+    {
+      "GET /activities": () =>
+        meetingsPage([
+          meeting({
+            id: "m-later",
+            subject: "Rollout",
+            occurred_at: "2026-10-09T09:00:00Z",
+          }),
+          meeting({
+            id: "m-next",
+            subject: "Review",
+            occurred_at: "2026-10-02T09:00:00Z",
+          }),
+          soon,
+        ]),
+    },
+    undefined,
+    {
+      ...view,
+      // Late in the evening, so a meeting at 23:00 is still today and one the
+      // next morning is tomorrow, whatever the clock of the machine reading it.
+      as_of: "2026-10-01T22:30:00Z",
+      next_meeting: {
+        activity_id: soon.id,
+        starts_at: soon.occurred_at,
+        subject: "Weekly call",
+      },
+    },
+  );
+  const upcoming = await screen.findByRole("region", { name: "Upcoming" });
+  await within(upcoming).findByText("Rollout");
+  expect(within(upcoming).getByText("Today")).toBeTruthy();
+  expect(within(upcoming).getByText("Tomorrow")).toBeTruthy();
+  expect(within(upcoming).getByText("In 8 days")).toBeTruthy();
 });

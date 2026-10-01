@@ -855,7 +855,7 @@
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--bgCard);
+  background: var(--bgElevated);
   text-align: center;
 }
 .pe-meeting-date-edge {
@@ -906,6 +906,36 @@
 .pe-meeting-title-lead {
   font: var(--fontHeadingSmall);
 }
+/* A title that opens the meeting's page reads as a title first, in ink like
+   the ones that open nothing, and shows it is a way in when pointed at. */
+.pe-meeting .entity-link.pe-meeting-title {
+  color: var(--textPrimary);
+}
+.pe-meeting .entity-link.pe-meeting-title:hover {
+  color: var(--accentText);
+}
+
+/* When, where and how to join, each beside its own glyph. */
+.pe-meeting-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pe-meeting-facts > li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.pe-meeting-facts svg {
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+  flex: none;
+  color: var(--textSecondary);
+}
 
 .pe-meeting-meta {
   margin: 0;
@@ -917,18 +947,6 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-}
-
-.pe-meeting-join {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  gap: var(--space-2);
-}
-.pe-meeting-join svg {
-  inline-size: var(--controlIcon);
-  block-size: var(--controlIcon);
-  flex: none;
 }
 
 /* The prep chip: Margince's own line about why this meeting is worth reading

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Video } from "lucide-react";
+import { Clock, MapPin, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
@@ -11,9 +11,10 @@ import { AvatarStack } from "../design-system/avatarstack";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { PanelBody, PanelRow } from "../design-system/panel";
 import { dateTileParts } from "../format/datetile";
-import { formatTimeOfDay } from "../format/format";
+import { calendarDaysUntil } from "../format/daysuntil";
+import { formatNumber, formatTimeOfDay } from "../format/format";
 import { formatTimeRange } from "../format/meetingtime";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { InvitationBadge } from "./booking-meeting-parts";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "./booking-video";
 import { useMeetingInvitation } from "./meeting-invitation-query";
@@ -68,6 +69,30 @@ function DateTile({ at }: Readonly<{ at: string }>) {
       <span className="pe-meeting-date-edge">{tile.month}</span>
     </time>
   );
+}
+
+// How far off a meeting still ahead is, counted in the calendar its date tile
+// is drawn in and from the read's own `as_of`.
+function DaysAway({
+  at,
+  asOf,
+  lead,
+}: Readonly<{ at: string; asOf: string; lead?: boolean }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const days = calendarDaysUntil(at, zone, new Date(asOf));
+  if (days < 0) return null;
+  const label =
+    days === 0
+      ? t("contact.meetings.today")
+      : days === 1
+        ? t("contact.meetings.tomorrow")
+        : plural("contact.meetings.inDays", days, {
+            days: formatNumber(days, locale),
+          });
+  return <Badge tone={lead ? "accent" : "default"}>{label}</Badge>;
 }
 
 // The subject, and the way into the meeting's own page where it has one.
@@ -125,8 +150,14 @@ function MeetingStatus({
  */
 export function MeetingRow({
   activity,
+  asOf,
   verbs,
-}: Readonly<{ activity: Activity; verbs?: ReactNode }>) {
+}: Readonly<{
+  activity: Activity;
+  // The read's own clock, for a meeting still ahead: it then says how far off.
+  asOf?: string;
+  verbs?: ReactNode;
+}>) {
   const t = useT();
   const span = useMeetingSpan(activity.occurred_at, endOf(activity));
   const title =
@@ -145,6 +176,7 @@ export function MeetingRow({
             >
               {title}
             </MeetingTitle>
+            {asOf && <DaysAway at={activity.occurred_at} asOf={asOf} />}
             <MeetingStatus
               outcome={activity.meeting_status}
               invitation={activity.invitation_status}
@@ -168,15 +200,14 @@ function JoinCall({ invitation }: Readonly<{ invitation: Invitation }>) {
     ? VIDEO_APP_NAME[PROVIDER_VIDEO_APP[invitation.provider]]
     : undefined;
   return (
-    <OffsiteLink
-      href={invitation.video_url}
-      className="link-button pe-meeting-join"
-    >
+    <li>
       <Video aria-hidden="true" />
-      {app
-        ? t("contact.meetings.join", { app })
-        : t("contact.meetings.joinCall")}
-    </OffsiteLink>
+      <OffsiteLink href={invitation.video_url}>
+        {app
+          ? t("contact.meetings.join", { app })
+          : t("contact.meetings.joinCall")}
+      </OffsiteLink>
+    </li>
   );
 }
 
@@ -189,11 +220,13 @@ function JoinCall({ invitation }: Readonly<{ invitation: Invitation }>) {
  */
 export function NextMeetingCard({
   next,
+  asOf,
   activity,
   note,
   verbs,
 }: Readonly<{
   next: NextMeeting;
+  asOf: string;
   // The meeting's row in the contact's list, which says whether it was booked
   // through Margince. Absent until that list arrives.
   activity?: Activity;
@@ -221,13 +254,24 @@ export function NextMeetingCard({
             <MeetingTitle activityId={next.activity_id} opens={opens} lead>
               {next.subject ?? t("contact.meetings.untitled")}
             </MeetingTitle>
+            <DaysAway at={next.starts_at} asOf={asOf} lead />
             <MeetingStatus
               invitation={invitation?.status ?? activity?.invitation_status}
             />
           </div>
-          <p className="t-num pe-meeting-meta">
-            {[span, place].filter(Boolean).join(" · ")}
-          </p>
+          <ul className="pe-meeting-facts">
+            <li>
+              <Clock aria-hidden="true" />
+              <span className="t-num">{span}</span>
+            </li>
+            {place && (
+              <li>
+                <MapPin aria-hidden="true" />
+                <span>{place}</span>
+              </li>
+            )}
+            {invitation && <JoinCall invitation={invitation} />}
+          </ul>
           {people.length > 0 && (
             <div className="pe-meeting-people">
               <AvatarStack
@@ -241,7 +285,6 @@ export function NextMeetingCard({
               </span>
             </div>
           )}
-          {invitation && <JoinCall invitation={invitation} />}
           {note && (
             <p className="pe-meeting-note">
               <span className="pe-meeting-note-by">{note.by}</span> ·{" "}
