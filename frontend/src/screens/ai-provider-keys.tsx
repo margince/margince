@@ -16,6 +16,13 @@ import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
+  type CredentialKind,
+  credentialKindOf,
+  KeyEntry,
+  keyStateLabel,
+  keyStateTone,
+} from "./ai-provider-key-entry";
+import {
   KeyTestButton,
   KeyTestOutcome,
   useTestProviderKey,
@@ -35,10 +42,7 @@ import {
   RefreshSummary,
   useRefreshModelPrices,
 } from "./rate-catalogue-refresh";
-import {
-  ServiceAccountKeyField,
-  serviceAccountProblem,
-} from "./service-account-key";
+import { serviceAccountProblem } from "./service-account-key";
 import "./ai-settings.css";
 
 // The vendor credentials this installation calls models with.
@@ -56,13 +60,6 @@ import "./ai-settings.css";
 // shape the routing card uses.
 
 type ProviderStatus = components["schemas"]["AiProviderKeyStatus"];
-export type CredentialKind = ProviderStatus["credential_kind"];
-
-// A server older than the kind field sends none, and every vendor it knows
-// takes an API key.
-function credentialKindOf(status: ProviderStatus): CredentialKind {
-  return status.credential_kind ?? "api_key";
-}
 
 export function useProviderKeys(enabled: boolean) {
   return useQuery({
@@ -496,100 +493,4 @@ function ProviderConnection({
       </ConfirmModal>
     </div>
   );
-}
-
-// The field the secret is typed into: a password box for a pasted key, the
-// key-file control for a service account. Save and Remove ride along.
-function KeyEntry({
-  kind,
-  configured,
-  value,
-  disabled,
-  hint,
-  refusal,
-  onChange,
-  verbs,
-}: Readonly<{
-  kind: CredentialKind;
-  configured: boolean;
-  value: string;
-  disabled: boolean;
-  hint: string;
-  refusal: MessageKey | undefined;
-  onChange: (value: string) => void;
-  verbs: ReactNode;
-}>) {
-  const t = useT();
-  if (kind === "service_account") {
-    return (
-      <>
-        <ServiceAccountKeyField
-          value={value}
-          disabled={disabled}
-          hint={hint}
-          error={refusal ? t(refusal) : undefined}
-          onChange={onChange}
-        />
-        <div className="ai-key-entry">{verbs}</div>
-      </>
-    );
-  }
-  return (
-    <Field label={t("aiProviderKeys.field")} hint={hint}>
-      {/* One paste and the verbs that act on it, on one line. It carried
-          `row-inline`, which nothing in this tree styles, so the field,
-          its verb and the removal each took a full-width block of their
-          own. */}
-      {(control) => (
-        <div className="ai-key-entry">
-          <TextInput
-            {...control}
-            // A password field, so the browser does not offer to remember
-            // a credential this app deliberately never stores
-            // client-side, and so a screenshare does not carry it.
-            type="password"
-            autoComplete="off"
-            value={value}
-            disabled={disabled}
-            placeholder={
-              configured
-                ? t("aiProviderKeys.replacePlaceholder")
-                : t("aiProviderKeys.addPlaceholder")
-            }
-            onChange={(e) => onChange(e.target.value)}
-          />
-          {verbs}
-        </div>
-      )}
-    </Field>
-  );
-}
-
-function keyStateLabel(
-  status: ProviderStatus,
-  keyless: boolean,
-  kind: CredentialKind,
-): MessageKey {
-  if (keyless) {
-    return "aiProviderKeys.keyless";
-  }
-  if (status.configured) {
-    return kind === "service_account"
-      ? "aiProviderKeys.serviceAccountConfigured"
-      : "aiProviderKeys.configured";
-  }
-  return status.optional ? "aiProviderKeys.optional" : "aiProviderKeys.absent";
-}
-
-// A held key, or none needed, is settled. An optional key not held is no gap —
-// the adapter calls without one — so it only reports; a required key that is
-// missing warns.
-function keyStateTone(
-  status: ProviderStatus,
-  keyless: boolean,
-): "success" | "info" | "warning" {
-  if (status.configured || keyless) {
-    return "success";
-  }
-  return status.optional ? "info" : "warning";
 }

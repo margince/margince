@@ -7,7 +7,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import { VertexLocationField } from "./vertex-location";
 
 // Where a Gemini-on-Vertex lane is processed. Open the list: it reads EU, US,
-// Other, Global, each with its residency badge, and under eu_resident the
+// Other, Global, each with its residency badge, and under eu_hosted the
 // non-resident rows are greyed and say why.
 const LOCATIONS = {
   provider: "gemini_vertex",
@@ -73,24 +73,24 @@ const meta: Meta<typeof VertexLocationField> = {
 export default meta;
 type Story = StoryObj<typeof VertexLocationField>;
 
-export const EuResident: Story = { render: story("eu_resident") };
+export const EuHosted: Story = { render: story("eu_hosted") };
 
-export const CloudHosted: Story = { render: story("eu_hosted") };
+export const CloudFrontier: Story = { render: story("cloud_frontier") };
 
 // A stored location this profile refuses: the hint says so before Save does.
 export const StoredOutsideResidency: Story = {
-  render: story("eu_resident", LOCATIONS, "europe-west2"),
+  render: story("eu_hosted", LOCATIONS, "europe-west2"),
 };
 
 export const NoKey: Story = {
-  render: story("eu_resident", {
+  render: story("eu_hosted", {
     provider: "gemini_vertex",
     locations: [],
     unavailable: "no_key",
   }),
 };
 
-export const EuResidentDark: Story = {
+export const EuHostedDark: Story = {
   globals: { theme: "dark" },
-  render: story("eu_resident"),
+  render: story("eu_hosted"),
 };

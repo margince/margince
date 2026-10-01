@@ -8970,6 +8970,7 @@ export const vi = {
   "aiRouting.location.noModels":
     "{location} không phục vụ mô hình nào trong danh sách của Google. Mọi ID mà nó phục vụ vẫn dùng được: hãy gõ vào.",
   "aiRouting.location.option": "{group} · {name} ({id})",
+  "aiRouting.location.optionBare": "{group} · {id}",
   "aiRouting.location.group.eu": "EU",
   "aiRouting.location.group.us": "Mỹ",
   "aiRouting.location.group.other": "Khác",

@@ -51,7 +51,7 @@ type ProviderLocations struct {
 // ListProviderLocations asks Google which locations the stored key's project
 // can reach. Sovereign refuses it, because asking is egress to a cloud vendor.
 // Every other profile is answered: the list is metadata on the global host, and
-// under eu_resident the non-resident options are still shown, marked so,
+// under eu_hosted the options outside the EU are still shown, marked so,
 // because the screen explains the refusal rather than hiding the choice.
 func (s *RoutingStore) ListProviderLocations(ctx context.Context, provider string) (ProviderLocations, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {

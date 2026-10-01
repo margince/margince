@@ -592,7 +592,10 @@ describe("the first-run setup gate", () => {
     };
     expect(routing.profile).toBe("eu_hosted");
     for (const bound of Object.values(routing.tiers)) {
-      expect(bound).toMatchObject({ provider: "gemini_vertex", location: "eu" });
+      expect(bound).toMatchObject({
+        provider: "gemini_vertex",
+        location: "eu",
+      });
     }
     // The EU multi-region serves no embedder, so that lane sits in an EU region.
     expect(routing.embeddings).toMatchObject({

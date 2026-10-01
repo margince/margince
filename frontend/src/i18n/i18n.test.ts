@@ -105,6 +105,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // A pattern of placeholders with no words in it, and the EU's own
   // abbreviation, which Vietnamese writes the same way.
   "aiRouting.location.option",
+  "aiRouting.location.optionBare",
   "aiRouting.location.group.eu",
   "aiRouting.baseUrl.placeholder.jev",
   "aiRouting.baseUrl.placeholder.jevCompatible",

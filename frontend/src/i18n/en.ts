@@ -9201,6 +9201,7 @@ export const en = {
   "aiRouting.location.noModels":
     "{location} serves none of the models Google lists. Any id it serves still works: type it.",
   "aiRouting.location.option": "{group} · {name} ({id})",
+  "aiRouting.location.optionBare": "{group} · {id}",
   "aiRouting.location.group.eu": "EU",
   "aiRouting.location.group.us": "US",
   "aiRouting.location.group.other": "Other",

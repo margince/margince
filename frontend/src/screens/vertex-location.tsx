@@ -10,8 +10,8 @@ import { type ProviderLocations, useProviderLocations } from "./ai-models";
 
 // Where Google processes a Gemini-on-Vertex call. The location IS the
 // residency question, so the picker says which jurisdiction each one is under
-// and, under the enforced EU profile, refuses the ones outside it before the
-// server has to.
+// and, under eu_hosted, refuses the ones outside the EU before the server has
+// to.
 
 export const VERTEX_PROVIDER = "gemini_vertex";
 
@@ -50,7 +50,7 @@ const JURISDICTION_ORDER: readonly Jurisdiction[] = [
 export function locationOptions(
   list: ProviderLocations | undefined,
   current: string,
-  euResident: boolean,
+  euOnly: boolean,
   t: Translator,
 ): SelectOption[] {
   const known = [...(list?.locations ?? [])].sort(
@@ -59,12 +59,16 @@ export function locationOptions(
         JURISDICTION_ORDER.indexOf(b.jurisdiction) || stable(a.id, b.id),
   );
   const options: SelectOption[] = known.map((l) => {
-    const refused = euResident && !l.resident;
-    const label = t("aiRouting.location.option", {
-      group: t(`aiRouting.location.group.${l.jurisdiction}`),
-      name: l.display_name,
-      id: l.id,
-    });
+    const refused = euOnly && !l.resident;
+    const group = t(`aiRouting.location.group.${l.jurisdiction}`);
+    // Google names its multi-regions and leaves every region unnamed.
+    const label = l.display_name
+      ? t("aiRouting.location.option", {
+          group,
+          name: l.display_name,
+          id: l.id,
+        })
+      : t("aiRouting.location.optionBare", { group, id: l.id });
     return {
       value: l.id,
       label: refused
@@ -88,7 +92,7 @@ function locationHint(
   list: ProviderLocations | undefined,
   pending: boolean,
   current: string,
-  euResident: boolean,
+  euOnly: boolean,
   noKeyHint: string,
   t: Translator,
 ): string {
@@ -101,7 +105,7 @@ function locationHint(
   if (list?.unavailable) {
     return t("aiRouting.location.unreachable");
   }
-  if (!euResident) {
+  if (!euOnly) {
     return t("aiRouting.location.help");
   }
   const stored = list?.locations.find((l) => l.id === current);
@@ -127,7 +131,7 @@ export function VertexLocationField({
 }>) {
   const t = useT();
   const locations = useProviderLocations(VERTEX_PROVIDER, true);
-  const euResident = profile === "eu_hosted";
+  const euOnly = profile === "eu_hosted";
   return (
     <Field
       label={t("aiRouting.location.label")}
@@ -135,7 +139,7 @@ export function VertexLocationField({
         locations.data,
         locations.isPending,
         value,
-        euResident,
+        euOnly,
         noKeyHint ?? t("aiRouting.location.noKey"),
         t,
       )}
@@ -145,7 +149,7 @@ export function VertexLocationField({
           {...control}
           value={value}
           disabled={disabled}
-          options={locationOptions(locations.data, value, euResident, t)}
+          options={locationOptions(locations.data, value, euOnly, t)}
           onChange={onChange}
         />
       )}

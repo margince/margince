@@ -67,6 +67,13 @@ const LOCATIONS = {
       jurisdiction: "eu",
       resident: true,
     },
+    // Google names no region, only the multi-regions.
+    {
+      id: "europe-west1",
+      display_name: "",
+      jurisdiction: "eu",
+      resident: true,
+    },
   ],
 };
 
@@ -209,6 +216,7 @@ describe("a gemini_vertex lane", () => {
     const options = within(screen.getByRole("listbox")).getAllByRole("option");
     expect(options.map((o) => o.textContent)).toEqual([
       "EU residentEU · EU (multi-region) (eu)",
+      "EU residentEU · europe-west1",
       "EU residentEU · Netherlands (europe-west4)",
       "Not residentUS · US (multi-region) (us) — outside the EU",
       "Not residentOther · London (europe-west2) — outside the EU",

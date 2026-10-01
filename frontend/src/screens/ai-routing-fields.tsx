@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
 import { Select } from "../design-system/select";
-import { type Translator, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   type AvailableModels,
@@ -14,7 +14,6 @@ import {
   type ModelLane,
   offeredModels,
   useAvailableModels,
-  useModelProbe,
 } from "./ai-models";
 import "./ai-settings.css";
 import {
@@ -22,6 +21,7 @@ import {
   VERTEX_PROVIDER,
   VertexLocationField,
 } from "./vertex-location";
+import { useVertexModelProbe } from "./vertex-model-probe";
 
 type Routing = components["schemas"]["AiRouting"];
 // The adapters a tier may name. Written out because the wire carries a free
@@ -149,13 +149,6 @@ export function withProvider<B extends TierBindingLike>(
   return { ...next, location: undefined };
 }
 
-/** One probe: whether `location` serves `model`, and what to do if it does not. */
-type ProbeTarget = Readonly<{
-  location: string;
-  model: string;
-  clearIfUnserved: boolean;
-}>;
-
 // The three controls that name an adapter: which vendor, which model on it,
 // and -- only where the vendor has no address of its own -- where to reach it.
 //
@@ -224,42 +217,15 @@ export function AdapterFields<B extends TierBindingLike>({
     lane,
     locale,
   );
-  const [probeTarget, setProbeTarget] = useState<ProbeTarget | undefined>();
-  const [cleared, setCleared] = useState<ProbeTarget | undefined>();
-  const probe = useModelProbe(
-    binding.provider,
+  const probe = useVertexModelProbe({
+    vertex,
     laneName,
-    vertex ? probeTarget : undefined,
-  );
-  // The probe speaks for the field only while it asked about what the field
-  // holds; a model typed since is a different question.
-  const probed =
-    vertex &&
-    probeTarget !== undefined &&
-    probeTarget.model === binding.model &&
-    probeTarget.location === location;
-  const unserved = probed && probe.data?.unavailable === "no_endpoint";
-  // A location change that the model does not survive empties the field
-  // rather than leaving a binding the save would refuse.
-  useEffect(() => {
-    if (unserved && probeTarget?.clearIfUnserved) {
-      setCleared(probeTarget);
-      // Once: the same model typed back in is flagged, not cleared again.
-      setProbeTarget({ ...probeTarget, clearIfUnserved: false });
-      onChange({ ...binding, model: "" });
-    }
-  }, [unserved, probeTarget, binding, onChange]);
-
-  const hint = vertex
-    ? vertexModelHint({
-        available: available.data,
-        probe: probed ? probe.data : undefined,
-        probing: probed && probe.isFetching,
-        cleared,
-        location,
-        t,
-      })
-    : undefined;
+    binding,
+    location,
+    available: available.data,
+    onChange,
+  });
+  const hint = vertex ? probe.hint : undefined;
   return (
     <>
       <div className="binding-provider-row">
@@ -271,8 +237,7 @@ export function AdapterFields<B extends TierBindingLike>({
               disabled={disabled}
               options={providers.map((p) => ({ value: p, label: p }))}
               onChange={(provider) => {
-                setProbeTarget(undefined);
-                setCleared(undefined);
+                probe.forget();
                 onChange(withProvider(binding, provider, vertexLocation));
               }}
             />
@@ -287,16 +252,7 @@ export function AdapterFields<B extends TierBindingLike>({
           profile={profile}
           disabled={disabled}
           onChange={(next) => {
-            setCleared(undefined);
-            setProbeTarget(
-              binding.model === ""
-                ? undefined
-                : {
-                    location: next,
-                    model: binding.model,
-                    clearIfUnserved: true,
-                  },
-            );
+            probe.relocate(next);
             onChange({ ...binding, location: next });
           }}
         />
@@ -327,12 +283,12 @@ export function AdapterFields<B extends TierBindingLike>({
             suggestions={suggestions}
             disabled={disabled}
             onChange={(model) => {
-              setCleared(undefined);
               // A pick from the list is a choice worth checking; a keystroke
               // is not, and each probe is a call on the service account.
-              if (vertex && suggestions.some((s) => s.value === model)) {
-                setProbeTarget({ location, model, clearIfUnserved: false });
-              }
+              probe.picked(
+                model,
+                suggestions.some((s) => s.value === model),
+              );
               onChange(rebind(binding, { model }));
             }}
           />
@@ -401,58 +357,6 @@ export function EmbeddingWidthField({
       )}
     </Field>
   );
-}
-
-/**
- * What a Vertex lane's model field says: the probe's verdict on the chosen
- * model when there is one, else what the location's list could tell. Undefined
- * text falls through to the note every vendor shares.
- */
-function vertexModelHint({
-  available,
-  probe,
-  probing,
-  cleared,
-  location,
-  t,
-}: Readonly<{
-  available: AvailableModels | undefined;
-  probe: AvailableModels | undefined;
-  probing: boolean;
-  cleared: ProbeTarget | undefined;
-  location: string;
-  t: Translator;
-}>): { text?: string; error?: string } {
-  if (cleared) {
-    return {
-      text: t("aiRouting.probe.cleared", {
-        model: cleared.model,
-        location: cleared.location,
-      }),
-    };
-  }
-  if (probing) {
-    return { text: t("aiRouting.probe.checking", { location }) };
-  }
-  if (probe?.unavailable === "no_endpoint") {
-    return { error: t("aiRouting.probe.notServed", { location }) };
-  }
-  if (probe?.unavailable) {
-    return { text: t("aiRouting.probe.unverified", { location }) };
-  }
-  if (probe) {
-    return { text: t("aiRouting.probe.served", { location }) };
-  }
-  if (available?.unavailable === "no_key") {
-    return { text: t("aiRouting.location.noKey") };
-  }
-  if (available?.unavailable === "profile_forbids") {
-    return { text: t("aiRouting.location.forbidden") };
-  }
-  if (available && !available.unavailable && available.models.length === 0) {
-    return { text: t("aiRouting.location.noModels", { location }) };
-  }
-  return {};
 }
 
 // Said in the field's own hint rather than as an error: the box still binds

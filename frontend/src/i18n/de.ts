@@ -9054,6 +9054,7 @@ export const de = {
   "aiRouting.location.noModels":
     "{location} bedient keines der Modelle, die Google auflistet. Jede ID, die der Standort bedient, funktioniert trotzdem: eintippen.",
   "aiRouting.location.option": "{group} · {name} ({id})",
+  "aiRouting.location.optionBare": "{group} · {id}",
   "aiRouting.location.group.eu": "EU",
   "aiRouting.location.group.us": "USA",
   "aiRouting.location.group.other": "Andere",
