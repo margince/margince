@@ -680,7 +680,9 @@ func assertNarrowingAWindowIsRefused(t *testing.T, b *backfillWireEnv) {
 func assertAFailedPageFinishesTheRunInError(t *testing.T, b *backfillWireEnv, worker *captureBackfillWorker) {
 	t.Helper()
 	t.Run("a failed page records the class and the run finishes error", func(t *testing.T) {
-		b.gmail.pageErr = errors.New("mailbox went away")
+		// A refused credential: a fault no retry repairs, so the run ends. An
+		// unclassified fault would be retried under the give-up cap instead.
+		b.gmail.pageErr = fmt.Errorf("mailbox went away: %w", connector.ErrAuthRejected)
 		defer func() { b.gmail.pageErr = nil }()
 		var out crmcontracts.BackfillStatus
 		if code, _ := b.do(b.human, t, b.startBackfill(crmcontracts.CaptureProviderGmail), `{"window":"12m"}`, &out); code != http.StatusAccepted {

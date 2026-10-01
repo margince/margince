@@ -66,9 +66,10 @@ type headerAPI struct {
 	pagedAPI
 	mu        sync.Mutex
 	fullReads map[string]int
-	// delay makes the full read of the named id slow, so fetches finish out
-	// of the page's order.
-	delay map[string]time.Duration
+	// after holds the full read of an id until the read of another id has
+	// finished, so fetches finish out of the page's order.
+	after map[string]string
+	done  map[string]chan struct{}
 	// limitedOnce answers the first full read of each named id with a rate
 	// limit carrying a short Retry-After.
 	limitedOnce map[string]bool
@@ -91,10 +92,18 @@ func (h *headerAPI) GetRaw(ctx context.Context, access, id string) (Message, err
 	if first && h.limitedOnce[id] {
 		return Message{}, &connector.RateLimitedError{RetryAfter: 20 * time.Millisecond}
 	}
-	if d := h.delay[id]; d > 0 {
-		time.Sleep(d)
+	if other, ok := h.after[id]; ok {
+		select {
+		case <-h.done[other]:
+		case <-ctx.Done():
+			return Message{}, ctx.Err()
+		}
 	}
-	return h.pagedAPI.GetRaw(ctx, access, id)
+	msg, err := h.pagedAPI.GetRaw(ctx, access, id)
+	if ch, ok := h.done[id]; ok {
+		close(ch)
+	}
+	return msg, err
 }
 
 func pageOf(ids ...string) *headerAPI {
@@ -148,7 +157,10 @@ func TestHeadersOfAMultipartMessageStillParse(t *testing.T) {
 func TestBackfillPageCapturesInListingOrderWhateverFinishesFirst(t *testing.T) {
 	ids := []string{"m1@mail.gmail.com", "m2@mail.gmail.com", "m3@mail.gmail.com", "m4@mail.gmail.com"}
 	api := pageOf(ids...)
-	api.delay = map[string]time.Duration{"m1@mail.gmail.com": 40 * time.Millisecond, "m2@mail.gmail.com": 20 * time.Millisecond}
+	// m1 finishes only after m2, and m2 only after m3: all three run at once
+	// in a pool of four, so the reads finish in reverse.
+	api.after = map[string]string{"m1@mail.gmail.com": "m2@mail.gmail.com", "m2@mail.gmail.com": "m3@mail.gmail.com"}
+	api.done = map[string]chan struct{}{"m2@mail.gmail.com": make(chan struct{}), "m3@mail.gmail.com": make(chan struct{})}
 	for _, id := range ids {
 		api.raws[id] = rawMsg(id, "alice@acme.com")
 	}
