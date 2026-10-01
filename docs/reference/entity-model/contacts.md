@@ -1251,7 +1251,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_linkedin_connection_matched_contact` — `btree (matched_contact_id)`
 - `idx_linkedin_connection_owner_user` — `btree (owner_user_id)`
 - `linkedin_connection_pkey` — `unique, btree (id)`
-- `uq_linkedin_connection_natural` — `unique, btree (owner_user_id, normalized_name, COALESCE(normalized_company, ''), COALESCE(connected_on, '1970-01-01'::date)) WHERE (provider_member_ref IS NULL)`
+- `uq_linkedin_connection_natural` — `unique, btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL)`
 - `uq_linkedin_connection_provider` — `unique, btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)`
 
 ## partner

@@ -512,7 +512,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `idx_role_assignment_team` — `btree (team_id)`
 - `idx_role_assignment_user` — `btree (user_id)`
 - `role_assignment_pkey` — `unique, btree (id)`
-- `uq_role_assignment` — `unique, btree (role_id, user_id, COALESCE(team_id, '00000000-0000-0000-0000-000000000000'::uuid))`
+- `uq_role_assignment` — `unique, btree (role_id, user_id, team_id) NULLS NOT DISTINCT`
 
 **Triggers**
 

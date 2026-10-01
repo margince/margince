@@ -268,6 +268,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `narrowindextwin_test.go` | H2 | A partial index whose columns already carry an unpredicated one says why it is worth a second B-tree on every write. |
 | `noticecasecolumns_test.go` | H2 | One SELECT list per whole-row read in the consent package. |
 | `noticedutycensus_test.go` | H3 | Every way a contact can arrive has a decided disclosure duty. |
+| `nullsentinelindex_test.go` | H2 | A nullable column in a unique key is held by NULLS NOT DISTINCT, not by a sentinel. |
 | `onecallerpredicatebudget_test.go` | H2 | The ceiling on a statement whose predicate the CALLER wrote is one number, declared in platform/database as CallerPredicateBudget. |
 | `oneconsentcarry_test.go` | H2 | The consent carry — what happens to a retiring record's consent when another record survives it — is spelled once inside the contacts module. |
 | `onecursorenvelope_test.go` | H2 | A keyset cursor travels in one envelope, storekit's. |

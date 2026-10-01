@@ -1692,7 +1692,7 @@ public.capture_trace.subject text gen=- def=-
 public.capture_trace.user_id uuid gen=- def=-
 public.capture_trace_counterparty CREATE INDEX capture_trace_counterparty ON public.capture_trace USING btree (counterparty) WHERE (counterparty IS NOT NULL)
 public.capture_trace_message CREATE INDEX capture_trace_message ON public.capture_trace USING btree (source_system, source_id)
-public.capture_trace_natural_key CREATE UNIQUE INDEX capture_trace_natural_key ON public.capture_trace USING btree (COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), source_system, source_id, stage, outcome)
+public.capture_trace_natural_key CREATE UNIQUE INDEX capture_trace_natural_key ON public.capture_trace USING btree (user_id, source_system, source_id, stage, outcome) NULLS NOT DISTINCT
 public.capture_trace_pkey CREATE UNIQUE INDEX capture_trace_pkey ON public.capture_trace USING btree (id)
 public.capture_trace_user_window CREATE INDEX capture_trace_user_window ON public.capture_trace USING btree (user_id, occurred_at DESC)
 public.capture_trace_window CREATE INDEX capture_trace_window ON public.capture_trace USING btree (occurred_at DESC)
@@ -4401,7 +4401,7 @@ public.intro_request.version integer NOT NULL gen=- def=1
 public.intro_request_awaiting_decision CREATE INDEX intro_request_awaiting_decision ON public.intro_request USING btree (introducer_user_id, due_at) WHERE ((status = 'requested'::text) AND (archived_at IS NULL))
 public.intro_request_due CREATE INDEX intro_request_due ON public.intro_request USING btree (due_at) WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
 public.intro_request_for_contact CREATE INDEX intro_request_for_contact ON public.intro_request USING btree (contact_id, requested_at DESC)
-public.intro_request_open_route CREATE UNIQUE INDEX intro_request_open_route ON public.intro_request USING btree (contact_id, introducer_user_id, COALESCE(through_contact_id, '00000000-0000-0000-0000-000000000000'::uuid)) WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
+public.intro_request_open_route CREATE UNIQUE INDEX intro_request_open_route ON public.intro_request USING btree (contact_id, introducer_user_id, through_contact_id) NULLS NOT DISTINCT WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
 public.intro_request_pkey CREATE UNIQUE INDEX intro_request_pkey ON public.intro_request USING btree (id)
 public.ix_confirm_token_contact CREATE INDEX ix_confirm_token_contact ON public.confirm_token USING btree (contact_id)
 public.ix_contact_confirm_submission_contact CREATE INDEX ix_contact_confirm_submission_contact ON public.contact_confirm_submission USING btree (contact_id)
@@ -5977,7 +5977,7 @@ public.sales_target.scope_id uuid gen=- def=-
 public.sales_target.scope_kind text NOT NULL gen=- def=-
 public.sales_target.unit text NOT NULL gen=- def=-
 public.sales_target.version bigint NOT NULL gen=- def=-
-public.sales_target_identity CREATE UNIQUE INDEX sales_target_identity ON public.sales_target USING btree (metric, scope_kind, COALESCE((scope_id)::text, 'workspace'::text), COALESCE((pipeline_id)::text, 'all'::text), period_kind, period_start)
+public.sales_target_identity CREATE UNIQUE INDEX sales_target_identity ON public.sales_target USING btree (metric, scope_kind, scope_id, pipeline_id, period_kind, period_start) NULLS NOT DISTINCT
 public.sales_target_pkey CREATE UNIQUE INDEX sales_target_pkey ON public.sales_target USING btree (id)
 public.sales_target_revision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sales_target_revision.created_by uuid NOT NULL gen=- def=-
@@ -6043,7 +6043,7 @@ public.scheduled_send.scheduled_tz text NOT NULL gen=- def=-
 public.scheduled_send.status text NOT NULL gen=- def='scheduled'::text
 public.scheduled_send.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.scheduled_send.version bigint NOT NULL gen=- def=1
-public.scheduled_send_one_held_message_per_seat CREATE UNIQUE INDEX scheduled_send_one_held_message_per_seat ON public.scheduled_send USING btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, COALESCE(agent_actor_id, ''::text), COALESCE(agent_passport_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(anchor_activity_id, '00000000-0000-0000-0000-000000000000'::uuid), md5((COALESCE(origin_links, '[]'::jsonb))::text), md5((COALESCE(also_links, '[]'::jsonb))::text), md5((payload)::text)) WHERE ((status = 'held'::text) AND (held_reason = 'send_refused'::text))
+public.scheduled_send_one_held_message_per_seat CREATE UNIQUE INDEX scheduled_send_one_held_message_per_seat ON public.scheduled_send USING btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, agent_actor_id, agent_passport_id, anchor_activity_id, md5((COALESCE(origin_links, '[]'::jsonb))::text), md5((COALESCE(also_links, '[]'::jsonb))::text), md5((payload)::text)) NULLS NOT DISTINCT WHERE ((status = 'held'::text) AND (held_reason = 'send_refused'::text))
 public.scheduled_send_pkey CREATE UNIQUE INDEX scheduled_send_pkey ON public.scheduled_send USING btree (id)
 public.sdr_handoff acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sdr_handoff.assigned_to uuid gen=- def=-
@@ -6671,7 +6671,7 @@ END;
 
 public.uq_activity_link CREATE UNIQUE INDEX uq_activity_link ON public.activity_link USING btree (activity_id, entity_type, COALESCE(contact_id, company_id, deal_id, lead_id, project_id))
 public.uq_activity_link_project CREATE UNIQUE INDEX uq_activity_link_project ON public.activity_link USING btree (activity_id) WHERE (entity_type = 'project'::text)
-public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(contact_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(address, ''::text), COALESCE(channel_user_id, ''::text))
+public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT
 public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE ((basis <> 'controller_pin'::text) AND ((deal_id IS NOT NULL) OR (project_id IS NOT NULL)))
 public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)
@@ -6686,7 +6686,7 @@ public.uq_brief_item_run_rank CREATE UNIQUE INDEX uq_brief_item_run_rank ON publ
 public.uq_brief_run_user_day CREATE UNIQUE INDEX uq_brief_run_user_day ON public.brief_run USING btree (user_id, local_day)
 public.uq_bulk_operation_undo_of CREATE UNIQUE INDEX uq_bulk_operation_undo_of ON public.bulk_operation USING btree (undo_of) WHERE (undo_of IS NOT NULL)
 public.uq_capture_backfill_live CREATE UNIQUE INDEX uq_capture_backfill_live ON public.capture_backfill USING btree (connection_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
-public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), kind, value)
+public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, user_id, kind, value) NULLS NOT DISTINCT
 public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain)
 public.uq_channel_connection_provider CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE (archived_at IS NULL)
 public.uq_commission_live_per_deal CREATE UNIQUE INDEX uq_commission_live_per_deal ON public.commission_entry USING btree (deal_id) WHERE ((status <> 'void'::text) AND (reversal_of IS NULL))
@@ -6729,7 +6729,7 @@ public.uq_lead_email_dedupe CREATE UNIQUE INDEX uq_lead_email_dedupe ON public.l
 public.uq_lead_manual_signal_live CREATE UNIQUE INDEX uq_lead_manual_signal_live ON public.lead_manual_signal USING btree (lead_id, factor) WHERE (superseded_at IS NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key)
-public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, COALESCE(normalized_company, ''::text), COALESCE(connected_on, '1970-01-01'::date)) WHERE (provider_member_ref IS NULL)
+public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL)
 public.uq_linkedin_connection_provider CREATE UNIQUE INDEX uq_linkedin_connection_provider ON public.linkedin_connection USING btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)
 public.uq_notice_dedupe CREATE UNIQUE INDEX uq_notice_dedupe ON public.notice USING btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL)
 public.uq_offer_template_default CREATE UNIQUE INDEX uq_offer_template_default ON public.offer_template USING btree (locale) WHERE (is_default AND (archived_at IS NULL))
@@ -6753,7 +6753,7 @@ public.uq_rel_employment CREATE UNIQUE INDEX uq_rel_employment ON public.relatio
 public.uq_rel_project_company CREATE UNIQUE INDEX uq_rel_project_company ON public.relationship USING btree (project_id, company_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL))
 public.uq_rel_project_stakeholder CREATE UNIQUE INDEX uq_rel_project_stakeholder ON public.relationship USING btree (project_id, contact_id) WHERE ((kind = 'project_stakeholder'::text) AND (archived_at IS NULL))
 public.uq_rel_works_with CREATE UNIQUE INDEX uq_rel_works_with ON public.relationship USING btree (LEAST(contact_id, counterparty_contact_id), GREATEST(contact_id, counterparty_contact_id)) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
-public.uq_role_assignment CREATE UNIQUE INDEX uq_role_assignment ON public.role_assignment USING btree (role_id, user_id, COALESCE(team_id, '00000000-0000-0000-0000-000000000000'::uuid))
+public.uq_role_assignment CREATE UNIQUE INDEX uq_role_assignment ON public.role_assignment USING btree (role_id, user_id, team_id) NULLS NOT DISTINCT
 public.uq_signal_fingerprint CREATE UNIQUE INDEX uq_signal_fingerprint ON public.signal USING btree (fingerprint) WHERE ((fingerprint IS NOT NULL) AND (archived_at IS NULL))
 public.uq_site_read_company_inflight CREATE UNIQUE INDEX uq_site_read_company_inflight ON public.site_read USING btree (company_id, seed_url) WHERE ((target_kind = 'company'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
 public.uq_site_read_onboarding_inflight CREATE UNIQUE INDEX uq_site_read_onboarding_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'onboarding'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))

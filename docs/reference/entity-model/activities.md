@@ -344,7 +344,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_aparticipant_address` — `btree (lower(address)) WHERE (address IS NOT NULL)`
 - `idx_aparticipant_contact` — `btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)`
 - `idx_aparticipant_user` — `btree (user_id, activity_id) WHERE (user_id IS NOT NULL)`
-- `uq_activity_participant` — `unique, btree (activity_id, role, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(contact_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(address, ''), COALESCE(channel_user_id, ''))`
+- `uq_activity_participant` — `unique, btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT`
 
 ## activity_reader_state
 
@@ -918,7 +918,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_scheduled_send_anchor` — `btree (anchor_activity_id) WHERE (anchor_activity_id IS NOT NULL)`
 - `idx_scheduled_send_due` — `btree (scheduled_at) WHERE (status = 'scheduled')`
 - `idx_scheduled_send_owner` — `btree (scheduled_by, status, scheduled_at DESC)`
-- `scheduled_send_one_held_message_per_seat` — `unique, btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, COALESCE(agent_actor_id, ''), COALESCE(agent_passport_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(anchor_activity_id, '00000000-0000-0000-0000-000000000000'::uuid), md5((COALESCE(origin_links, '[]'))), md5((COALESCE(also_links, '[]'))), md5((payload))) WHERE ((status = 'held') AND (held_reason = 'send_refused'))`
+- `scheduled_send_one_held_message_per_seat` — `unique, btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, agent_actor_id, agent_passport_id, anchor_activity_id, md5((COALESCE(origin_links, '[]'))), md5((COALESCE(also_links, '[]'))), md5((payload))) NULLS NOT DISTINCT WHERE ((status = 'held') AND (held_reason = 'send_refused'))`
 - `scheduled_send_pkey` — `unique, btree (id)`
 
 ## stored_object_intent

@@ -288,7 +288,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_exclusion_pkey` — `unique, btree (id)`
 - `idx_capture_exclusion_user` — `btree (user_id)`
 - `idx_capture_exclusion_value` — `btree (kind, value)`
-- `uq_capture_exclusion` — `unique, btree (scope, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), kind, value)`
+- `uq_capture_exclusion` — `unique, btree (scope, user_id, kind, value) NULLS NOT DISTINCT`
 
 ## capture_freemail_domain
 
@@ -634,7 +634,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_trace_counterparty` — `btree (counterparty) WHERE (counterparty IS NOT NULL)`
 - `capture_trace_message` — `btree (source_system, source_id)`
-- `capture_trace_natural_key` — `unique, btree (COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), source_system, source_id, stage, outcome)`
+- `capture_trace_natural_key` — `unique, btree (user_id, source_system, source_id, stage, outcome) NULLS NOT DISTINCT`
 - `capture_trace_pkey` — `unique, btree (id)`
 - `capture_trace_user_window` — `btree (user_id, occurred_at DESC)`
 - `capture_trace_window` — `btree (occurred_at DESC)`
