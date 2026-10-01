@@ -2034,6 +2034,7 @@ public.communication_override.lead_id uuid gen=- def=-
 public.communication_override.reason text NOT NULL gen=- def=-
 public.communication_override.recorded_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_override.revoked_at timestamp with time zone gen=- def=-
+public.communication_override_carried_from CREATE INDEX communication_override_carried_from ON public.communication_override USING btree (carried_from) WHERE (carried_from IS NOT NULL)
 public.communication_override_contact_cascade CREATE INDEX communication_override_contact_cascade ON public.communication_override USING btree (contact_id) WHERE (contact_id IS NOT NULL)
 public.communication_override_lead_cascade CREATE INDEX communication_override_lead_cascade ON public.communication_override USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.communication_override_live_contact CREATE INDEX communication_override_live_contact ON public.communication_override USING btree (contact_id, category) WHERE (revoked_at IS NULL)

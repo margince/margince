@@ -51,3 +51,10 @@ CREATE INDEX communication_override_contact_cascade
     ON communication_override (contact_id) WHERE contact_id IS NOT NULL;
 CREATE INDEX communication_override_lead_cascade
     ON communication_override (lead_id) WHERE lead_id IS NOT NULL;
+
+-- Three recursive walks join on carried_from — the family lock on revoke and
+-- on carry, and the revoke itself — and the carry runs inside the merge
+-- transaction. Partial on IS NOT NULL: a root carries NULL here and is never
+-- the join's target, so indexing it would only widen the index.
+CREATE INDEX communication_override_carried_from
+    ON communication_override (carried_from) WHERE carried_from IS NOT NULL;
