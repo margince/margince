@@ -104,6 +104,7 @@ it("labels an empty sales period without calling unknown values zero", () => {
     </StoryProviders>,
   );
   expect(screen.queryByText(/^No sales won/)).not.toBeInTheDocument();
+  expect(screen.getByText("Partial coverage")).toBeVisible();
 });
 
 it("preserves the server explanation for a broken installation calendar", async () => {
