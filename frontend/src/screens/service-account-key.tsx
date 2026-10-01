@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Field, Textarea } from "../design-system/atoms";
 import { FileDropzone } from "../design-system/filedropzone";
 import { useT } from "../i18n";
@@ -66,6 +66,8 @@ export function ServiceAccountKeyField({
   const t = useT();
   const [picked, setPicked] = useState<File | undefined>();
   const [unreadable, setUnreadable] = useState(false);
+  // Which file read is the latest; a hand edit counts as a newer one.
+  const reads = useRef(0);
   return (
     <>
       <Field
@@ -86,6 +88,7 @@ export function ServiceAccountKeyField({
             disabled={disabled}
             placeholder={t("serviceAccountKey.placeholder")}
             onChange={(e) => {
+              reads.current += 1;
               setUnreadable(false);
               onChange(e.target.value);
             }}
@@ -100,12 +103,18 @@ export function ServiceAccountKeyField({
           file={picked}
           onPick={(file) => {
             setPicked(file);
+            // Only the latest pick may fill the box: a slower earlier read
+            // must not overwrite it.
+            const read = ++reads.current;
             file.text().then(
               (text) => {
+                if (read !== reads.current) return;
                 setUnreadable(false);
                 onChange(text);
               },
-              () => setUnreadable(true),
+              () => {
+                if (read === reads.current) setUnreadable(true);
+              },
             );
           }}
         />

@@ -112,6 +112,8 @@ export function useSetProviderKey() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
+      // The locations a key reaches are asked with that key.
+      queryClient.invalidateQueries({ queryKey: ["ai-provider-locations"] });
     },
   });
 }
@@ -349,6 +351,7 @@ function ProviderConnection({
               ? serviceAccountProblem(trimmed)
               : undefined;
           if (problem) {
+            save.reset();
             setRefusal(problem);
             return;
           }

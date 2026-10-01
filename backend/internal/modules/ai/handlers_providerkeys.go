@@ -92,6 +92,12 @@ func (h Handlers) SetAiProviderKey(w http.ResponseWriter, r *http.Request, provi
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
+	// Both fields named is refused whatever they hold: the contract takes
+	// exactly one, and an empty second one is not an absent one.
+	if body.ApiKey != nil && body.ServiceAccountJson != nil {
+		httperr.Write(w, r, keyRefused("send api_key or service_account_json, not both"))
+		return
+	}
 	sent := ProviderCredential{APIKey: writtenKey(body.ApiKey), ServiceAccountJSON: writtenKey(body.ServiceAccountJson)}
 	if err := h.providerKeys.Set(r.Context(), provider, sent); err != nil {
 		// A missing vault is the operator's to fix and nothing the caller sent,

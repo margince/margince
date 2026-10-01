@@ -128,10 +128,19 @@ export const Withheld: Story = {
   render: story([gemini, anthropic], NO_GRANT),
 };
 
-// A service-account vendor beside two API-key ones. Open its row with Replace
-// to see the key-file box and picker; the box starts empty like every other.
+// A service-account vendor beside two API-key ones, opened at Replace: the
+// key-file box and picker, empty like every other.
 export const ServiceAccount: Story = {
   render: story([gemini, vertex, anthropic]),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Manage gemini_vertex" }),
+    );
+    await userEvent.click(
+      await body.findByRole("button", { name: /^replace$/i }),
+    );
+  },
 };
 
 // Dark. The configured/not-configured distinction is carried by a Badge tone,

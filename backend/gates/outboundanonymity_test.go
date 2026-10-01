@@ -51,9 +51,10 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"internal/compose/integration/apptest/appenv.go:func Call": "drives a server the test itself started, in the same process tree, for the length of one test",
 	"internal/compose/integration/apptest/mcp.go:func rpc":     "drives a server the test itself started, in the same process tree, for the length of one test",
 
-	// The model providers. Each call carries the customer's own API key, which
-	// is the account the provider bills, rate-limits and revokes; an agent
-	// beside it names software the provider has no lever over.
+	// The model providers. Each call carries the customer's own credential — an
+	// API key, or a service account's signed assertion — which is the account
+	// the provider bills, rate-limits and revokes; an agent beside it names
+	// software the provider has no lever over.
 	"internal/modules/ai/anthropic.go:func send":            "carries the customer's own provider key, which is the identity that provider bills and throttles",
 	"internal/modules/ai/gemini.go:func post":               "carries the customer's own provider key, which is the identity that provider bills and throttles",
 	"internal/modules/ai/ollama.go:func post":               "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",

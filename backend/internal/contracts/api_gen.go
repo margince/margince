@@ -12414,9 +12414,10 @@ func (e ProviderLocationJurisdiction) Valid() bool {
 
 // Defines values for ProviderLocationListUnavailable.
 const (
-	ProviderLocationListUnavailableNoKey        ProviderLocationListUnavailable = "no_key"
-	ProviderLocationListUnavailableNotPublished ProviderLocationListUnavailable = "not_published"
-	ProviderLocationListUnavailableUnreachable  ProviderLocationListUnavailable = "unreachable"
+	ProviderLocationListUnavailableNoKey          ProviderLocationListUnavailable = "no_key"
+	ProviderLocationListUnavailableNotPublished   ProviderLocationListUnavailable = "not_published"
+	ProviderLocationListUnavailableProfileForbids ProviderLocationListUnavailable = "profile_forbids"
+	ProviderLocationListUnavailableUnreachable    ProviderLocationListUnavailable = "unreachable"
 )
 
 // Valid indicates whether the value is a known member of the ProviderLocationListUnavailable enum.
@@ -12425,6 +12426,8 @@ func (e ProviderLocationListUnavailable) Valid() bool {
 	case ProviderLocationListUnavailableNoKey:
 		return true
 	case ProviderLocationListUnavailableNotPublished:
+		return true
+	case ProviderLocationListUnavailableProfileForbids:
 		return true
 	case ProviderLocationListUnavailableUnreachable:
 		return true
@@ -38282,11 +38285,11 @@ type ProviderLocationList struct {
 	// Provider The routing name of the vendor that was asked.
 	Provider string `json:"provider"`
 
-	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer.
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer. `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
 	Unavailable *ProviderLocationListUnavailable `json:"unavailable,omitempty"`
 }
 
-// ProviderLocationListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer.
+// ProviderLocationListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer. `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
 type ProviderLocationListUnavailable string
 
 // ProviderLookupBacklog How much of the installation is still waiting to be looked up once, and whether the sweep is moving. A count without the paused flag reads as progress that has stalled; the two together say whether waiting is the right thing to do.

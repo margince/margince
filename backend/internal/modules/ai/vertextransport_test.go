@@ -255,13 +255,18 @@ func TestOnlyAVertexBindingTakesALocation(t *testing.T) {
 // input, with the width the caller asked for.
 func TestAVertexEmbeddingIsOnePredictPerInputAtTheAskedWidth(t *testing.T) {
 	t.Parallel()
-	var bodies []vertexEmbedWire
+	var (
+		mu     sync.Mutex
+		bodies []vertexEmbedWire
+	)
 	client, recorder := vertexAt(t, "europe-west4", func(w http.ResponseWriter, r *http.Request) {
 		var body vertexEmbedWire
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Errorf("decode the embed body: %v", err)
 		}
+		mu.Lock()
 		bodies = append(bodies, body)
+		mu.Unlock()
 		writeBody(t, w, `{"predictions":[{"embeddings":{"values":[0.5,0.25,0.125]}}]}`)
 	})
 	got, err := client.Embed(context.Background(), model.EmbedRequest{Model: "gemini-embedding-001", Inputs: []string{"a", "b"}, Dimensions: 3})
@@ -272,7 +277,9 @@ func TestAVertexEmbeddingIsOnePredictPerInputAtTheAskedWidth(t *testing.T) {
 		t.Fatalf("calls = %v, want one :predict per input", recorder.calls)
 	}
 	for i, want := range []string{"a", "b"} {
+		mu.Lock()
 		body := bodies[i]
+		mu.Unlock()
 		if len(body.Instances) != 1 || body.Instances[0].Content != want || body.Parameters == nil || body.Parameters.OutputDimensionality != 3 {
 			t.Errorf("call %d sent %+v, want one instance %q at width 3", i, body, want)
 		}

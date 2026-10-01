@@ -83,7 +83,7 @@ func selectVertex(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (m
 	if keyFile == "" {
 		return nil, byokKeyRequired(providerGeminiVertex)
 	}
-	if err := vertexLocationError("the binding", cfg.Location); err != nil {
+	if err := validateVertexPlacement("the binding", cfg); err != nil {
 		return nil, err
 	}
 	account, err := parseVertexServiceAccount(keyFile)

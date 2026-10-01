@@ -19159,10 +19159,10 @@ export interface components {
             provider: string;
             locations: components["schemas"]["ProviderLocation"][];
             /**
-             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer.
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer. `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
              * @enum {string}
              */
-            unavailable?: "no_key" | "not_published" | "unreachable";
+            unavailable?: "no_key" | "not_published" | "unreachable" | "profile_forbids";
         };
         ProviderLocation: {
             /** @description The string a binding's `location` names, exactly as Google spells it. */

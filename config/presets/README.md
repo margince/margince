@@ -23,9 +23,10 @@ because the choice decides where this installation's text goes.
 of `margince.dev.yaml` so it can be named and reused. The dev overlay still
 carries its own copy — that file is the dev posture and has to stand alone.
 
-`gemini_vertex_eu.yaml` binds the same models as `gemini_cloud.yaml` on Vertex
-AI at an EU location, under `eu_hosted`: a location outside the EU member states
-— London and Zürich included — is refused at save. The key is a service
+`gemini_vertex_eu.yaml` binds `gemini_cloud.yaml`'s Flash and Flash-Lite at its
+thinking levels, on Vertex AI at an EU location, under `eu_hosted`; frontier takes
+Flash too, because Vertex serves no Pro model in the EU. A location outside the
+EU member states — London and Zürich included — is refused at save. The key is a service
 account holding `roles/aiplatform.user`; the steps are in
 [docs/how-to/connect-a-cloud-model-provider.md](../../docs/how-to/connect-a-cloud-model-provider.md) §5.
 

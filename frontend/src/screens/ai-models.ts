@@ -367,7 +367,9 @@ export type ProviderLocations = components["schemas"]["ProviderLocationList"];
 export function useProviderLocations(provider: string, enabled: boolean) {
   return useQuery({
     queryKey: ["ai-provider-locations", provider],
-    staleTime: 5 * 60 * 1000,
+    // No list is no answer to keep: a key saved or Google back since must be
+    // asked again.
+    staleTime: (query) => (query.state.data?.unavailable ? 0 : 5 * 60 * 1000),
     retry: false,
     enabled: enabled && provider !== "",
     queryFn: async (): Promise<ProviderLocations> => {

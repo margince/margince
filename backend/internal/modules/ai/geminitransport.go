@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"net/http"
+	"net/url"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -33,7 +34,7 @@ type aiStudioTransport struct {
 }
 
 func (t aiStudioTransport) modelURL(model, verb string) string {
-	return t.modelsURL() + "/" + model + ":" + verb
+	return t.modelsURL() + "/" + url.PathEscape(model) + ":" + verb
 }
 
 func (t aiStudioTransport) modelsURL() string { return t.baseURL + "/models" }

@@ -227,8 +227,9 @@ function AiStep({
   // mean nothing to this one — leaving them would offer a binding that cannot
   // serve a single call.
   const pick = (next: SetupProviderId) => {
-    // A pasted API key means nothing in a key-file box, nor the reverse.
-    if (SETUP_PROVIDERS[next].credential !== preset.credential) {
+    // A key is one vendor's: kept across a switch, it would be saved for the
+    // next vendor and refused on its first call.
+    if (next !== choice) {
       setApiKey("");
     }
     setKeyRefusal(undefined);

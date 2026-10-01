@@ -134,7 +134,7 @@ func KnownProviders() []string {
 //
 // Held by: TestOnlyTheSelectorsBuildAnOutboundClient (backend/internal/modules/ai/outboundegress_test.go)
 //
-//nolint:ireturn // one call returns whichever of seven adapters the binding names; the port interface IS the return type
+//nolint:ireturn // one call returns whichever chat adapter the binding names; the port interface IS the return type
 func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 	// The client is built once, from the binding, and handed to whichever
 	// adapter the switch names: the egress guard it carries is chosen by the
@@ -150,7 +150,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 // production guard refuses the 127.0.0.1 such a server listens on, by design.
 // TestSelectBrainWiresTheEgressGuard holds the production wiring itself.
 //
-//nolint:ireturn // one call returns whichever of seven adapters the binding names; the port interface IS the return type
+//nolint:ireturn // one call returns whichever chat adapter the binding names; the port interface IS the return type
 func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (model.Client, error) {
 	switch cfg.Provider {
 	case ProviderFake:

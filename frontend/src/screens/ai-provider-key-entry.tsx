@@ -53,7 +53,7 @@ export function KeyEntry({
           error={refusal ? t(refusal) : undefined}
           onChange={onChange}
         />
-        <div className="ai-key-entry">{verbs}</div>
+        <div className="ai-key-verbs">{verbs}</div>
       </>
     );
   }

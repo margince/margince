@@ -382,6 +382,8 @@ func refuseUnserved(p labelledProbe, err error) error {
 		return fmt.Errorf("ai: routing config: %s: gemini_vertex does not serve model %q in location %q", p.label, p.model, p.location)
 	case errors.Is(err, errNoProviderKey):
 		return fmt.Errorf("ai: routing config: %s: gemini_vertex holds no service-account key, so model %q in location %q cannot be checked — add the key first", p.label, p.model, p.location)
+	case errors.Is(err, errKeyRefused):
+		return fmt.Errorf("ai: routing config: %s: %w, so model %q in location %q cannot be checked — replace the key under Provider keys", p.label, err, p.model, p.location)
 	case errors.Is(err, errInvalidServiceAccount):
 		return fmt.Errorf("ai: routing config: %s: the stored gemini_vertex service-account key is not usable (%w) — replace it under Provider keys", p.label, err)
 	default:

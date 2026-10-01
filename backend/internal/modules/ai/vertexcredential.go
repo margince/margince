@@ -253,9 +253,18 @@ func (s *vertexTokenSource) exchange(ctx context.Context, issuedAt time.Time) (s
 // that field is vendor prose and is not repeated.
 var oauthErrorCode = regexp.MustCompile(`^[a-z_]{1,64}$`)
 
+// errKeyRefused is Google refusing the key itself — a 4xx on the exchange
+// other than a throttle, as for a revoked key or a deleted account — which
+// waiting will not fix.
+var errKeyRefused = errors.New("the service-account key was refused by Google")
+
 func tokenExchangeRefused(status int, code string) error {
+	detail := fmt.Sprintf("http %d", status)
 	if oauthErrorCode.MatchString(code) {
-		return fmt.Errorf("ai: gemini_vertex: token exchange refused: http %d, %s", status, code)
+		detail += ", " + code
 	}
-	return fmt.Errorf("ai: gemini_vertex: token exchange refused: http %d", status)
+	if status >= 400 && status < 500 && status != http.StatusTooManyRequests {
+		return fmt.Errorf("ai: gemini_vertex: token exchange refused: %s: %w", detail, errKeyRefused)
+	}
+	return fmt.Errorf("ai: gemini_vertex: token exchange refused: %s", detail)
 }

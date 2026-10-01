@@ -28384,11 +28384,12 @@ components:
           items: { $ref: '#/components/schemas/ProviderLocation' }
         unavailable:
           type: string
-          enum: [no_key, not_published, unreachable]
+          enum: [no_key, not_published, unreachable, profile_forbids]
           description: >-
             Why the list is empty, when it is. Absent means the vendor answered.
             `no_key` — no service-account key is held. `not_published` — this vendor has no
             location to choose. `unreachable` — Google was asked and did not answer.
+            `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
     ProviderLocation:
       type: object
       additionalProperties: false

@@ -274,3 +274,22 @@ func TestOnlyAMissingPublisherModelReadsAsNotServed(t *testing.T) {
 		}
 	}
 }
+
+// Google refusing the key is an answer, and the save is refused for it; a
+// throttle or an outage is not, and the save goes through unchecked.
+func TestARefusedKeyRefusesTheSaveAndAnOutageDoesNot(t *testing.T) {
+	t.Parallel()
+	p := labelledProbe{label: "tier premium", vertexProbe: vertexProbe{location: "eu", model: "gemini-3.5-flash"}}
+	for status, refused := range map[int]bool{
+		http.StatusBadRequest: true, http.StatusUnauthorized: true, http.StatusForbidden: true,
+		http.StatusTooManyRequests: false, http.StatusServiceUnavailable: false,
+	} {
+		err := refuseUnserved(p, tokenExchangeRefused(status, "invalid_grant"))
+		if got := err != nil; got != refused {
+			t.Errorf("a token exchange answered %d: refused = %v, want %v (%v)", status, got, refused, err)
+		}
+		if refused && err != nil && !strings.Contains(err.Error(), "replace the key") {
+			t.Errorf("a %d refusal does not say what to do: %v", status, err)
+		}
+	}
+}

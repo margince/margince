@@ -102,13 +102,13 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // A URL, which is the same string in every language.
   "scheduling.locationExample",
   "aiRouting.baseUrl.placeholder",
+  "aiRouting.baseUrl.placeholder.jev",
+  "aiRouting.baseUrl.placeholder.jevCompatible",
   // A pattern of placeholders with no words in it, and the EU's own
   // abbreviation, which Vietnamese writes the same way.
   "aiRouting.location.option",
   "aiRouting.location.optionBare",
   "aiRouting.location.group.eu",
-  "aiRouting.baseUrl.placeholder.jev",
-  "aiRouting.baseUrl.placeholder.jevCompatible",
   // The same noun, captioning a staged proposal's email field.
   "approval.field.email",
   // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it

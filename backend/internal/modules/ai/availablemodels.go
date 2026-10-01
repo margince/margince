@@ -125,10 +125,11 @@ func (s *RoutingStore) ListAvailableModels(ctx context.Context, q AvailableModel
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
 		return AvailableModels{}, err
 	}
-	if q.Location != "" && !vertexLocationShape.MatchString(q.Location) {
+	vertex := q.Provider == providerGeminiVertex
+	if vertex && q.Location != "" && !vertexLocationShape.MatchString(q.Location) {
 		return AvailableModels{}, fmt.Errorf("%w: location must be eu, us, global, or a region such as europe-west4", apperrors.ErrInvalidArgument)
 	}
-	if q.Model != "" && !vertexModelShape.MatchString(q.Model) {
+	if vertex && q.Model != "" && !vertexModelShape.MatchString(q.Model) {
 		return AvailableModels{}, fmt.Errorf("%w: model must be a publisher model id such as gemini-3.5-flash", apperrors.ErrInvalidArgument)
 	}
 	cfg, err := s.Get(ctx)
