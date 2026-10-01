@@ -285,7 +285,7 @@ function RunFoot({
         </Button>
       )}
       {!live && (
-        <Button onClick={onRestart}>
+        <Button disabled={resuming} onClick={onRestart}>
           {t(resumable ? "backfill.startOverCta" : "backfill.restart")}
         </Button>
       )}

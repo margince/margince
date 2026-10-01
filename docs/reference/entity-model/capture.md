@@ -76,7 +76,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_backfill
 
-24 columns · primary key `(id)` · referenced by 1 foreign key
+25 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -102,6 +102,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `total_estimate` | `integer` |  | Optional `integer`. |
 | `total_estimate_is_floor` | `boolean` | yes | Required `boolean`, defaulting to `false`. |
 | `window_months` | `integer` | yes | Required `integer`. |
+| `window_restarts` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 

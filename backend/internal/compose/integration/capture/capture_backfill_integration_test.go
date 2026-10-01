@@ -325,8 +325,8 @@ func TestBackfillStepFaultsAreTerminal(t *testing.T) {
 		if status, _, _, _ := readBackfillRow(t, e, id); status != "running" {
 			t.Fatalf("row status = %s, want running", status)
 		}
-		// End it, so the next subtest's fresh start is not refused as a second
-		// live run.
+		// End it: a run left running here would be a live run nothing pages,
+		// refusing every later start on this connection.
 		if _, err := registry.CancelBackfill(grantCtx, "gmail", rep); err != nil {
 			t.Fatalf("CancelBackfill: %v", err)
 		}

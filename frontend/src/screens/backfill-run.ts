@@ -155,7 +155,11 @@ export function useBackfillRun({
   });
 
   const start = useMutation({
-    mutationFn: (pick: ImportWindow) => startRun(provider, pick, startOver),
+    // The start-over choice travels with the call rather than being read from
+    // state inside the function, so a press always sends the choice that was
+    // on screen when it was made.
+    mutationFn: (pick: { window: ImportWindow; startOver: boolean }) =>
+      startRun(provider, pick.window, pick.startOver),
     onSuccess: () => {
       // The new run is what the reader watches now, so the pick they started it
       // from stands down with it.
@@ -190,6 +194,9 @@ export function useBackfillRun({
     preview,
     start,
     cancel,
+    /** Start the import on the picked window, from the top when the reader
+     *  chose "start over", otherwise continuing a run that can be continued. */
+    begin: (pick: ImportWindow) => start.mutate({ window: pick, startOver }),
     /** The window the picker is on. */
     window,
     setWindow,
@@ -220,7 +227,7 @@ export function useBackfillRun({
      */
     resume: (run: BackfillStatus) => {
       if (isImportWindow(run.window)) {
-        start.mutate(run.window);
+        start.mutate({ window: run.window, startOver: false });
       }
     },
   };

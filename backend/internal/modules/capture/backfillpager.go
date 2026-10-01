@@ -182,26 +182,30 @@ func retriesPage(class errorClass) bool {
 // counted, because they exist.
 //
 // It counts as a failure on the ladder, and a run without a token never comes
-// here, so a provider refusing the first page too ends the run normally.
+// here, so a provider refusing the first page too ends the run normally. It
+// happens once per run (window_restarts): a provider that rejects the token
+// again after a fresh walk is not answered by walking forever, and the run
+// ends on history_gone for its human to decide.
 func (r *Registry) restartWindowWalk(ctx context.Context, backfillID ids.UUID, cause error) (done, completed bool, retryAfter time.Duration, err error) {
 	writeCtx, cancel := detachedWrite(ctx)
 	defer cancel()
-	var live bool
+	var restarted bool
 	err = r.db.Tx(writeCtx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(writeCtx, `
 			UPDATE capture_backfill
 			   SET cursor = NULL, scanned = 0, captured = 0, skipped = 0, failed = 0,
-			       consecutive_failures = consecutive_failures + 1, last_error_class = $2`+resetInflightProgress+`,
+			       consecutive_failures = consecutive_failures + 1, last_error_class = $2,
+			       window_restarts = window_restarts + 1`+resetInflightProgress+`,
 			       status = CASE WHEN status = 'queued' THEN 'running' ELSE status END
-			 WHERE id = $1 AND status IN ('queued','running')`, backfillID, string(classHistoryGone))
-		live = tag.RowsAffected() > 0
+			 WHERE id = $1 AND status IN ('queued','running') AND window_restarts < $3`,
+			backfillID, string(classHistoryGone), maxWindowRestarts)
+		restarted = tag.RowsAffected() > 0
 		return err
 	})
-	if err != nil {
+	if err != nil || !restarted {
+		// Either the write failed, or this run already walked its window again
+		// once (or ended under us — failBackfill then matches nothing).
 		return true, false, 0, errors.Join(cause, err, r.failBackfill(ctx, backfillID, cause))
-	}
-	if !live {
-		return true, false, 0, cause
 	}
 	return false, false, time.Second, cause
 }
@@ -259,6 +263,10 @@ func backfillRetryDelay(failures int, cause error) time.Duration {
 	}
 	return delay
 }
+
+// maxWindowRestarts is how often one run may walk its window again after the
+// provider rejected its page token.
+const maxWindowRestarts = 1
 
 // backfillRateBackoffBase..backfillRateBackoffCap bound the rate-limit ladder:
 // ten consecutive limited pages, the give-up cap, span about an hour and a half.

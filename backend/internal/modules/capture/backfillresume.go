@@ -40,7 +40,7 @@ const resumableRunPredicate = `b.status = 'error' AND b.cursor IS NOT NULL
 // is the newer statement about this mailbox.
 //
 // The run goes back to queued with its cursor, its counts and its estimate as
-// they were; the failure ladder starts again, because a start by hand is the
+// they were; the failure ladder and the restart allowance start again, because a start by hand is the
 // evidence that whatever stopped it may be fixed.
 // resumeOrNil continues the connection's failed run when one covers the window,
 // schedules it in the same transaction, and records the resumption on the
@@ -72,12 +72,12 @@ func resumeFailedBackfillTx(ctx context.Context, tx pgx.Tx, connID ids.UUID, win
 	err := tx.QueryRow(ctx, `
 		UPDATE capture_backfill
 		   SET status = 'queued', completed_at = NULL, consecutive_failures = 0,
-		       last_error_class = NULL`+resetInflightProgress+`
+		       last_error_class = NULL, window_restarts = 0`+resetInflightProgress+`
 		 WHERE id = (
 		         SELECT b.id FROM capture_backfill b
 		           JOIN capture_connection c ON c.id = b.connection_id
-		          WHERE b.connection_id = $1
-		            AND b.created_at = (SELECT max(created_at) FROM capture_backfill WHERE connection_id = $1)
+		          WHERE b.id = (SELECT id FROM capture_backfill WHERE connection_id = $1
+		                         ORDER BY created_at DESC, id DESC LIMIT 1)
 		            AND b.window_months >= $2
 		            AND `+resumableRunPredicate+`)
 		RETURNING id, connection_id, window_months, after_date, status, cursor,
@@ -95,4 +95,22 @@ func resumeFailedBackfillTx(ctx context.Context, tx pgx.Tx, connID ids.UUID, win
 		return nil, fmt.Errorf("capture: resuming the failed backfill: %w", err)
 	}
 	return &run, nil
+}
+
+// BackfillReopened says the run is queued: something reopened it after it
+// ended — a human's Continue, or a sync reviving a run its credential ended.
+// A job that has just ended the run uses it to come back for the reopened run
+// instead of leaving it to the nightly reconcile. A run that stayed live for
+// any other reason (a page whose commit failed) is running, not queued, and
+// is the reconcile's.
+func (r *Registry) BackfillReopened(ctx context.Context, backfillID ids.UUID) (bool, error) {
+	var queued bool
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT status = 'queued' FROM capture_backfill WHERE id = $1`, backfillID).Scan(&queued)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return queued, err
 }

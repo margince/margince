@@ -9,6 +9,7 @@ package gmail
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -278,6 +279,13 @@ func TestRateGateKeepsTheLongerPauseAndGivesWayToCancel(t *testing.T) {
 	cancel()
 	if err := g.wait(ctx); err == nil {
 		t.Fatal("a closed gate must give way to a cancelled context")
+	}
+	// Held, not passed: a closed gate is still closed when the caller's own
+	// deadline ends, which is what the caller sees.
+	short, stop := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer stop()
+	if err := g.wait(short); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("wait on a closed gate = %v, want it held until the caller's deadline", err)
 	}
 	if err := (&rateGate{}).wait(context.Background()); err != nil {
 		t.Fatalf("an open gate held the caller: %v", err)

@@ -126,7 +126,7 @@ export function BackfillPanel({
         startErrorMessage={
           start.isError ? problemMessageOf(start.error, t) : null
         }
-        onStart={() => start.mutate(window)}
+        onStart={() => importRun.begin(window)}
         onSkip={() => setSkipped(true)}
       />
     );

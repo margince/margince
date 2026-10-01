@@ -14,7 +14,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -296,17 +295,18 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 	return river.JobSnooze(time.Second)
 }
 
-// resumedMeanwhile says the run this job just ended is live again.
+// resumedMeanwhile says the run this job just ended was reopened.
 //
 // A human pressing Continue reopens the same run, and its enqueue is unique
 // against this job while it is still running — so the start can land on a job
 // that is about to return, and the reopened run would wait for the nightly
 // reconcile with nothing paging it. The job comes back in a second for it
-// instead. A read that fails answers false and the job ends as before; the
-// reconcile still covers the run.
+// instead. Only a QUEUED run counts: a run left running because a write failed
+// is the reconcile's, and snoozing on it would loop every second. A read that
+// fails answers false and the job ends as before.
 func (w *captureBackfillWorker) resumedMeanwhile(ctx context.Context, bfID ids.UUID) bool {
-	live, err := w.registry.LiveBackfills(ctx)
-	return err == nil && slices.Contains(live, bfID)
+	reopened, err := w.registry.BackfillReopened(ctx, bfID)
+	return err == nil && reopened
 }
 
 // enqueueDigest offers a same-day digest build for THIS workspace through the

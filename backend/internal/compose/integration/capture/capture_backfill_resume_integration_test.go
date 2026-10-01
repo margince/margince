@@ -119,7 +119,7 @@ func TestAnInternalPageFaultIsRetriedInsteadOfEndingTheRun(t *testing.T) {
 
 func TestARejectedPageTokenWalksTheWindowAgain(t *testing.T) {
 	e := integration.SetupSearch(t)
-	registry, runID := startFlakyBackfill(t, e, []error{nil, connector.ErrCursorGone})
+	registry, runID := startFlakyBackfill(t, e, []error{nil, connector.ErrCursorGone, nil, connector.ErrCursorGone})
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
 	if _, _, _, err := registry.RunBackfillStep(wsCtx, runID); err != nil {
 		t.Fatalf("first page: %v", err)
@@ -138,6 +138,15 @@ func TestARejectedPageTokenWalksTheWindowAgain(t *testing.T) {
 	}
 	if _, scanned, _, _ = readBackfillRow(t, e, runID); scanned != 10 {
 		t.Fatalf("scanned = %d after walking the first page again, want 10", scanned)
+	}
+
+	// Once per run: a provider that rejects the token again is not answered
+	// by walking the window forever.
+	if done, _, _, err := registry.RunBackfillStep(wsCtx, runID); err == nil || !done {
+		t.Fatalf("second rejection: done=%v err=%v, want the run ended", done, err)
+	}
+	if status, _, _, _ := readBackfillRow(t, e, runID); status != "error" {
+		t.Fatalf("status = %s after a second rejected token, want error", status)
 	}
 }
 

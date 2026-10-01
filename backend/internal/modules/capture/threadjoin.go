@@ -144,10 +144,6 @@ func (s *Sink) mergeLinkedThreads(
 func (s *Sink) keysToMerge(
 	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours []ids.ActivityID, created bool,
 ) ([]string, error) {
-	keys, err := heldNeighbourKeysTx(ctx, tx, seat, neighbours)
-	if err != nil {
-		return nil, err
-	}
 	own, sole, live, err := ownThreadKeyTx(ctx, tx, id)
 	if err != nil {
 		return nil, err
@@ -159,6 +155,10 @@ func (s *Sink) keysToMerge(
 	// threads of the live messages it links.
 	if !live {
 		return nil, nil
+	}
+	keys, err := heldNeighbourKeysTx(ctx, tx, seat, neighbours)
+	if err != nil {
+		return nil, err
 	}
 	if own != "" && (!created || sole) && !slices.Contains(keys, own) {
 		keys = append(keys, own)
