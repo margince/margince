@@ -52084,7 +52084,7 @@ components:
             soonest-due dozen; the number says how many there are, which is the reading
             `needs_you` has always had.
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
-        deal_suggestions_open: { type: integer, minimum: 0, description: "Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all." }
+        deal_suggestions_open: { type: integer, minimum: 0, description: "Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`." }
         meetings:
           type: integer
           minimum: 0

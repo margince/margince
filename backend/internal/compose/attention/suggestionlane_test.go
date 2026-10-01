@@ -119,10 +119,33 @@ func TestAReaderWhoMayNotReadSuggestionsKeepsTheRestOfTheLane(t *testing.T) {
 	}
 }
 
-func TestABrokenSuggestionReadFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
-	svc := decisionsService(stubApprovals{}, stubDuplicates{}).
-		WithDealSuggestions(&stubSuggestions{err: errors.New("the database is unreachable")})
-	if _, err := svc.Assemble(pageReader()); err == nil {
-		t.Fatal("a suggestion read that FAILED was reported as an empty lane")
+func TestABrokenSuggestionReadIsNamedFailedAndTheRestOfTheDayStillLoads(t *testing.T) {
+	svc := decisionsService(stubApprovals{rows: []crmcontracts.Approval{approval("a staged send")}}, stubDuplicates{}).
+		WithDealSuggestions(&stubSuggestions{err: errors.New("canceling statement due to statement timeout")})
+
+	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25, "")
+	if err != nil {
+		t.Fatalf("a stalled suggestion read failed the whole worklist: %v", err)
+	}
+	if len(day.Queue) != 1 {
+		t.Fatalf("the queue carries %d rows, want the staged approval beside the failed source", len(day.Queue))
+	}
+	named := false
+	for _, missing := range day.SourcesUnavailable {
+		if missing.Source == sourceDealSuggestion && missing.Reason == crmcontracts.WorklistSourceUnavailableReasonFailed {
+			named = true
+		}
+	}
+	if !named {
+		t.Fatalf("sources_unavailable = %+v, want deal_suggestion named as failed", day.SourcesUnavailable)
+	}
+
+	lanes, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatalf("a stalled suggestion read failed the lane feed: %v", err)
+	}
+	if lanes.Counts.DealSuggestionsOpen != nil {
+		t.Fatalf("suggestion count = %d, want it absent: a read that failed must not print a confident zero",
+			*lanes.Counts.DealSuggestionsOpen)
 	}
 }

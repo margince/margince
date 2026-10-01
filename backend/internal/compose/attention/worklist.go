@@ -115,7 +115,7 @@ func (s *Service) worklistIn(
 	// score — from one read of the brief lane. Both travel as values rather than
 	// on the service: feed.go's assembleDay states why a field there would carry
 	// one reader's night onto the next reader's page.
-	day, night, err := reader.assembleDay(ctx)
+	day, beside, err := reader.assembleDay(ctx)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -170,20 +170,20 @@ func (s *Service) worklistIn(
 	// so they cannot travel as an argument the way the findings do — and they
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
-	withPins = withPins.readingScores(night.scores, night.cutoff)
+	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
 	withPins, planErr := withPins.readingPlan(ctx, day.AsOf)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, leads, cursor,
-		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr, planErr})
+		append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr, planErr}, beside.failed...))
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	teamWeek := teamWeekFor(ctx)
 	out.TeamWeek = &teamWeek
-	if err := reader.nameWorklistRows(ctx, out.Queue, night.findings); err != nil {
+	if err := reader.nameWorklistRows(ctx, out.Queue, beside.night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
 	if out.Focus != nil {
-		if err := reader.nameWorklistRows(ctx, out.Focus.Items, night.findings); err != nil {
+		if err := reader.nameWorklistRows(ctx, out.Focus.Items, beside.night.findings); err != nil {
 			return crmcontracts.Worklist{}, err
 		}
 	}
