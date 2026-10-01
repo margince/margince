@@ -156,7 +156,7 @@ ol {
   grid-template-columns: auto minmax(0, 1fr);
 }
 
-.item-person {
+.item-colleague {
   grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
 }

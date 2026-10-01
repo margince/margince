@@ -93,7 +93,7 @@ function bandCell(bucket: string): HTMLElement {
 }
 
 function colleagueRow(colleague: Colleague, position: number): HTMLElement {
-  const row = el("li", "panel-row item item-person");
+  const row = el("li", "panel-row item item-colleague");
   row.append(
     el("span", "figure", String(position)),
     avatar(colleague.name, colleague.userID),
