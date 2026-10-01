@@ -677,14 +677,28 @@ describe("rebind", () => {
 });
 
 describe("reachableProviders", () => {
+  const apiKey = "api_key" as const;
   const keys = [
-    { provider: "gemini", configured: true, env_var: "G", optional: false },
-    { provider: "openai", configured: false, env_var: "O", optional: false },
+    {
+      provider: "gemini",
+      configured: true,
+      env_var: "G",
+      optional: false,
+      credential_kind: apiKey,
+    },
+    {
+      provider: "openai",
+      configured: false,
+      env_var: "O",
+      optional: false,
+      credential_kind: apiKey,
+    },
     {
       provider: "jev_compatible",
       configured: false,
       env_var: "J",
       optional: true,
+      credential_kind: apiKey,
     },
   ];
   const all = ["gemini", "openai", "jev_compatible", "ollama", "vllm", "fake"];
