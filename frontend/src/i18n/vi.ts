@@ -9013,9 +9013,11 @@ export const vi = {
     "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.models.askingLocation": "Đang hỏi Google những mô hình {location} phục vụ…",
   "aiRouting.models.noKey":
     "Chưa có khóa nên không có danh sách mô hình. Hãy nhập ID bất kỳ.",
-  "aiRouting.models.noEndpoint": "Nhập host ở trên để tải danh sách mô hình.",
+  "aiRouting.models.noEndpoint":
+    "Đặt máy chủ của nhà cung cấp này trong mục Nhà cung cấp để tải danh sách mô hình.",
   "aiRouting.models.profileForbids":
     "Hồ sơ này không cho phép nhà cung cấp này.",
   "aiRouting.models.notPublished":

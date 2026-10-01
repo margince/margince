@@ -147,7 +147,8 @@ function backendFor({
           model: url.searchParams.get("model"),
         };
         asked.push(question);
-        return jsonResponse(vertexModels(question));
+        const answer = vertexModels(question);
+        return answer instanceof Promise ? answer : jsonResponse(answer);
       }
       if (url.pathname.includes("/ai/available-models/")) {
         return jsonResponse({ provider: "gemini", models: [] });
@@ -535,6 +536,29 @@ describe("a gemini_vertex lane", () => {
     expect(backend.getCapturedPut()?.tiers.cheap_cloud.location).toBe(
       "europe-west4",
     );
+  });
+});
+
+describe("a Vertex model list still being asked", () => {
+  // Every model is asked of the location, which takes a moment; until it
+  // answers, the price sheet's models are not offered in its place, because
+  // most of them that location does not serve.
+  it("offers nothing and says it is asking until the location answers", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backendFor({ vertexModels: () => new Promise<Response>(() => {}) })
+        .fetchMock,
+    );
+    render(<AiRoutingCard />);
+
+    const lane = await openLane(user, "ai-routing-tier-premium");
+    const box = within(lane).getByRole("combobox", { name: "Model" });
+    await user.clear(box);
+    expect(
+      await within(lane).findByText(/Asking Google which models eu serves/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("listbox")).toBeNull();
   });
 });
 

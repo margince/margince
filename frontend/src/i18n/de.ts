@@ -9097,10 +9097,11 @@ export const de = {
     "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.models.askingLocation": "Google wird gefragt, welche Modelle {location} anbietet …",
   "aiRouting.models.noKey":
     "Kein Schlüssel, daher keine Modellliste. Beliebige Modell-ID eingeben.",
   "aiRouting.models.noEndpoint":
-    "Host oben eintragen, um die Modellliste zu laden.",
+    "Lege den Host dieses Anbieters unter Anbieter fest, um seine Modellliste zu laden.",
   "aiRouting.models.profileForbids":
     "Dieses Profil erlaubt diesen Anbieter nicht.",
   "aiRouting.models.notPublished":

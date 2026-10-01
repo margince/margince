@@ -213,13 +213,13 @@ export function AdapterFields<B extends TierBindingLike>({
     NEEDS_HOST.has(binding.provider) &&
     providerSettings !== undefined &&
     !providerSettings.base_url;
-  const suggestions = offeredModels(
-    available.data,
-    catalogue,
-    binding.provider,
-    lane,
-    locale,
-  );
+  // A Vertex list is asked of the location model by model, which takes a
+  // moment; until it answers, the price sheet is not offered in its place,
+  // since most of what it names that location does not serve.
+  const asking = vertex && location !== "" && available.isPending;
+  const suggestions = asking
+    ? []
+    : offeredModels(available.data, catalogue, binding.provider, lane, locale);
   const probe = useVertexModelProbe({
     vertex,
     laneName,
@@ -279,6 +279,9 @@ export function AdapterFields<B extends TierBindingLike>({
         label={t("aiRouting.model.label")}
         hint={
           hint?.text ??
+          (asking
+            ? t("aiRouting.models.askingLocation", { location })
+            : undefined) ??
           (available.data?.unavailable
             ? modelSourceNote(available.data.unavailable, t)
             : t("aiRouting.model.help"))
