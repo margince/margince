@@ -6,11 +6,11 @@ package consent
 // What holds the lead half of communication_override unreachable, and what must
 // land the day it stops being.
 //
-// The table, liveOverride, the merge carry, the erasure and retention sweeps and
-// the SAR section all carry a lead arm — the shape communication_suppression has
-// — but no door writes one: Allow takes a contact and nothing else, and the
-// carry's lead target is reached only from a lead-to-lead merge that never calls
-// it. Two things are therefore missing on purpose rather than by oversight, and
+// The table, the merge carry, the erasure and retention sweeps and the SAR
+// section all carry a lead arm — the shape communication_suppression has — but
+// no door writes one, and liveOverride reads contact_id alone: Allow takes a
+// contact and nothing else, and the carry's lead target is reached only from a
+// lead-to-lead merge that never calls it. Two things are therefore missing on purpose rather than by oversight, and
 // both would be silent defects the moment a lead vouch became writable:
 //
 //   - decideLead (authorizelead.go) never consults liveOverride, and

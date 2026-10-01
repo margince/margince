@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"strconv"
 	"strings"
 	"testing"
@@ -70,11 +71,11 @@ func TestUnknownPurposeIsOverrulableButNotByCategory(t *testing.T) {
 
 // TestOnlyUnknownPurposeIsExcludedByCategory pins the exclusion to exactly the
 // no-category reason, over EVERY reason this package declares. The corpus is
-// read off absolute.go itself rather than retyped here: a list kept beside the
-// constants is one a new reason silently falls outside of, and a reason that
-// resolves to no category but is missing from CanBeOverruledByCategory's
-// exclusion would then be flippable by a vouch for the default category — the
-// one way this census must not fail short.
+// every reason the package declares, read off its own files rather than
+// retyped here: a list kept beside the constants is one a new reason silently
+// falls outside of, and a reason that resolves to no category but is missing
+// from CanBeOverruledByCategory's exclusion would then be flippable by a vouch
+// for the default category — the one way this census must not fail short.
 func TestOnlyUnknownPurposeIsExcludedByCategory(t *testing.T) {
 	t.Parallel()
 
@@ -95,14 +96,35 @@ func TestOnlyUnknownPurposeIsExcludedByCategory(t *testing.T) {
 	}
 }
 
-// reasonConstants reads every Reason* constant off absolute.go, the file that
-// owns them, so a reason exists in this census the moment it compiles.
+// reasonConstants reads every Reason* constant off the package's own non-test
+// files, so a reason exists in this census the moment it compiles, whichever
+// file declares it.
 func reasonConstants(t *testing.T) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), "absolute.go", nil, 0)
+	pkgs, err := parser.ParseDir(token.NewFileSet(), ".", func(fi fs.FileInfo) bool {
+		return !strings.HasSuffix(fi.Name(), "_test.go")
+	}, 0)
 	if err != nil {
-		t.Fatalf("parsing absolute.go: %v", err)
+		t.Fatalf("parsing the package's files: %v", err)
 	}
+	var reasons []string
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			reasons = append(reasons, fileReasonConstants(t, file)...)
+		}
+	}
+	// Under-recognition is the one way a census fails silently: a parse that
+	// found a handful of reasons is reading the wrong declarations.
+	if len(reasons) < 12 {
+		t.Fatalf("read %d Reason* constants off the package, fewer than it declares", len(reasons))
+	}
+	return reasons
+}
+
+// fileReasonConstants returns the string literal of each Reason* constant one
+// file declares.
+func fileReasonConstants(t *testing.T, file *ast.File) []string {
+	t.Helper()
 	var reasons []string
 	for _, decl := range file.Decls {
 		gen, ok := decl.(*ast.GenDecl)
@@ -132,11 +154,6 @@ func reasonConstants(t *testing.T) []string {
 				reasons = append(reasons, code)
 			}
 		}
-	}
-	// Under-recognition is the one way a census fails silently: a parse that
-	// found a handful of reasons is reading the wrong declarations.
-	if len(reasons) < 12 {
-		t.Fatalf("read %d Reason* constants off absolute.go, fewer than the package declares", len(reasons))
 	}
 	return reasons
 }
