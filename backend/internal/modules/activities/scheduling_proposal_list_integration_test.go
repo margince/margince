@@ -46,7 +46,7 @@ func (f *invitationFixture) seedContact(t *testing.T, owner ids.UUID) crmcontrac
 
 // actingAs is a colleague of the fixture's host with the same grants, plus
 // the delete a withdrawal needs.
-func (f *invitationFixture) actingAs(user ids.UUID, scope principal.RowScope) context.Context {
+func (f *invitationFixture) actingAs(user ids.UUID) context.Context {
 	return principal.WithActor(f.ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{
@@ -55,14 +55,14 @@ func (f *invitationFixture) actingAs(user ids.UUID, scope principal.RowScope) co
 				"activity": {Create: true, Read: true, Update: true, Delete: true},
 				"contact":  {Read: true},
 			},
-			RowScope: scope,
+			RowScope: principal.RowScopeAll,
 		},
 	})
 }
 
 func TestTheProposalListShowsOnlyTheHostsLinksAGuestCanStillUse(t *testing.T) {
 	f := newInvitationFixture(t)
-	host := f.actingAs(f.env.rep, principal.RowScopeAll)
+	host := f.actingAs(f.env.rep)
 	contact := f.request.ContactId
 
 	expiring := f.propose(host, t, contact, "Expires first", slot{Start: monday(9), End: monday(10)})
@@ -71,7 +71,7 @@ func TestTheProposalListShowsOnlyTheHostsLinksAGuestCanStillUse(t *testing.T) {
 	withdrawn := f.propose(host, t, contact, "Withdrawn")
 	newest := f.propose(host, t, contact, "Newest")
 	f.propose(host, t, f.seedContact(t, f.env.rep), "Somebody else")
-	f.propose(f.actingAs(f.env.other, principal.RowScopeAll), t, contact, "A colleague's")
+	f.propose(f.actingAs(f.env.other), t, contact, "A colleague's")
 
 	if _, err := f.store.reserveAndQueueInvitation(host, ids.From[ids.UserKind](f.env.rep), f.request, invitationIntent{ProposalID: used.ID}); err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func TestTheProposalListShowsOnlyTheHostsLinksAGuestCanStillUse(t *testing.T) {
 
 func TestTheProposalListHidesAContactTheReaderCannotSee(t *testing.T) {
 	f := newInvitationFixture(t)
-	host := f.actingAs(f.env.rep, principal.RowScopeAll)
+	host := f.actingAs(f.env.rep)
 	contact := f.seedContact(t, f.env.other)
 	f.propose(host, t, contact, "Private talks")
 	args := schedulingArgs{}
@@ -118,7 +118,7 @@ func TestTheProposalListHidesAContactTheReaderCannotSee(t *testing.T) {
 
 func TestTheProposalListNeedsTheContactGrant(t *testing.T) {
 	f := newInvitationFixture(t)
-	f.propose(f.actingAs(f.env.rep, principal.RowScopeAll), t, f.request.ContactId, "Before the grant was lost")
+	f.propose(f.actingAs(f.env.rep), t, f.request.ContactId, "Before the grant was lost")
 	withoutContacts := principal.WithActor(f.ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + f.env.rep.String(), UserID: f.env.rep,
 		Permissions: principal.Permissions{
