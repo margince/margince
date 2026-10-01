@@ -15,8 +15,10 @@ import (
 )
 
 const (
-	heldMailUp   = "core/1790871110_mail_a_mailbox_already_held_owes_no_notice.up.sql"
-	heldMailDown = "core/1790871110_mail_a_mailbox_already_held_owes_no_notice.down.sql"
+	arrivalUp    = "core/1790871110_an_import_row_records_when_the_provider_says_mail_arrived.up.sql"
+	arrivalDown  = "core/1790871110_an_import_row_records_when_the_provider_says_mail_arrived.down.sql"
+	heldMailUp   = "core/1790871111_mail_a_mailbox_already_held_owes_no_notice.up.sql"
+	heldMailDown = "core/1790871111_mail_a_mailbox_already_held_owes_no_notice.down.sql"
 )
 
 // receivedMail describes one inbound message that named the contact on Cc.
@@ -26,6 +28,9 @@ type receivedMail struct {
 	bulk       bool
 	original   string // the stored RFC822 original, empty for none
 	enveloped  bool   // stored base64 in capture's envelope, as non-UTF-8 mail is
+	payload    string // a stored original given verbatim as jsonb, overriding original
+	landedBy   string // the activity's captured_by; empty is this seat's Gmail connection
+	state      string // the case's state; empty is open
 }
 
 // receivedCase seeds one captured contact that only ever appeared on the Cc
@@ -46,13 +51,15 @@ WITH c AS (
 ), rc AS (
   INSERT INTO raw_capture (source_system, source_id, payload)
   SELECT 'email', $2,
-         CASE WHEN $8 THEN jsonb_build_object('encoding', 'base64', 'data', encode(convert_to($7::text, 'UTF8'), 'base64'))
+         CASE WHEN $9 <> '' THEN $9::jsonb
+              WHEN $8 THEN jsonb_build_object('encoding', 'base64',
+                                              'data', translate(encode(convert_to($7::text, 'UTF8'), 'base64'), E'\n', ''))
               ELSE to_jsonb($7::text) END
-   WHERE $7 <> '' RETURNING id
+   WHERE $7 <> '' OR $9 <> '' RETURNING id
 ), a AS (
   INSERT INTO activity (kind, subject, direction, occurred_at, source_system, source_id, source, captured_by,
                         counterparty_email, bulk_mail_attested, raw_capture_id)
-  VALUES ('email', 'hi', 'inbound', $4, 'gmail', $2, 'gmail:seed', 'connector:gmail',
+  VALUES ('email', 'hi', 'inbound', $4, 'gmail', $2, 'gmail:seed', coalesce(NULLIF($10, ''), 'connector:gmail:' || $1),
           'sender@elsewhere.test', $6, (SELECT id FROM rc)) RETURNING id
 ), p AS (
   INSERT INTO activity_participant (activity_id, role, address, user_id)
@@ -61,15 +68,17 @@ WITH c AS (
   UNION ALL SELECT id, 'to', NULL, $1::uuid FROM a
   RETURNING activity_id
 ), ci AS (
-  INSERT INTO capture_import (activity_id, user_id, provider_received_at) SELECT id, $1, $5 FROM a RETURNING id
+  INSERT INTO capture_import (activity_id, user_id, provider_received_at) SELECT id, $1::uuid, $5 FROM a RETURNING id
 ), e AS (
   INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by)
   SELECT id, 'unknown_legacy', $4, $3 FROM c RETURNING id, contact_id
 )
-INSERT INTO privacy_notice_case (contact_id, acquisition_id, rule, due_at, state)
-SELECT e.contact_id, e.id, 'art14', $4::timestamptz + interval '1 month', 'open'
+INSERT INTO privacy_notice_case (contact_id, acquisition_id, rule, due_at, state, blocked_reason)
+SELECT e.contact_id, e.id, 'art14', $4::timestamptz + interval '1 month', coalesce(NULLIF($11, ''), 'open'),
+       CASE WHEN $11 = 'blocked' THEN 'no address on file' END
   FROM e RETURNING id`,
-		seat, email, capturedBy, m.headerDate, m.providerAt, m.bulk, m.original, m.enveloped).Scan(&caseID)
+		seat, email, capturedBy, m.headerDate, m.providerAt, m.bulk, m.original, m.enveloped,
+		m.payload, m.landedBy, m.state).Scan(&caseID)
 	if err != nil {
 		t.Fatalf("seeding %s: %v", email, err)
 	}
@@ -184,6 +193,44 @@ func TestTheHeldMailUpgradeClosesDutiesForMailTheMailboxAlreadyHeld(t *testing.T
 				receivedMail{headerDate: old, providerAt: &old}),
 			"open", "unknown_legacy",
 		},
+		// A stored original only proves arrival when this seat's own Gmail or
+		// Graph connection landed it: not an extension's record ...
+		"extension-landed": {
+			receivedCase(ctx, t, conn, seat, "unit@held.test", verdict,
+				receivedMail{headerDate: old, original: rfc822(old, old), landedBy: "connector:unit"}),
+			"open", "unknown_legacy",
+		},
+		// ... and not a copy another seat's mailbox delivered.
+		"other-seat-landed": {
+			receivedCase(ctx, t, conn, seat, "theirs@held.test", verdict,
+				receivedMail{
+					headerDate: old, original: rfc822(old, old),
+					landedBy: "connector:gmail:00000000-0000-7000-8000-000000000001",
+				}),
+			"open", "unknown_legacy",
+		},
+		// Malformed evidence is no evidence, and never stops the upgrade.
+		"bad-offset": {
+			receivedCase(ctx, t, conn, seat, "offset@held.test", verdict,
+				receivedMail{headerDate: old, original: "Received: by x; 1 Jan 2020 00:00:00 +9999\r\n\r\nhi"}),
+			"open", "unknown_legacy",
+		},
+		"bad-base64": {
+			receivedCase(ctx, t, conn, seat, "base64@held.test", verdict,
+				receivedMail{headerDate: old, payload: `{"encoding": "base64", "data": "not*base64"}`}),
+			"open", "unknown_legacy",
+		},
+		// A blocked duty closes too, and the rollback puts its reason back.
+		"blocked-before": {
+			receivedCase(ctx, t, conn, seat, "blocked@held.test", verdict,
+				receivedMail{headerDate: old, providerAt: &old, state: "blocked"}),
+			"exempt_with_reason", "mailbox_history",
+		},
+		// A finished duty keeps its ground; only the acquisition changes.
+		"verdict-sent-done": {
+			historyCase(ctx, t, conn, seat, "done@held.test", verdict, "completed", old),
+			"completed", "mailbox_history",
+		},
 	}
 
 	for range 2 {
@@ -205,14 +252,22 @@ func TestTheHeldMailUpgradeClosesDutiesForMailTheMailboxAlreadyHeld(t *testing.T
 	}
 
 	execFile(ctx, t, conn, heldMailDown)
+	execFile(ctx, t, conn, arrivalDown)
 	for _, name := range []string{"verdict-sent", "received-before", "stamped-before"} {
 		if state, kind := caseAndKind(ctx, t, conn, cases[name].id); state != "open" || kind != "unknown_legacy" {
 			t.Errorf("after the rollback %s is %q on %q, want open on unknown_legacy", name, state, kind)
 		}
 	}
+	if state, kind := caseAndKind(ctx, t, conn, cases["blocked-before"].id); state != "blocked" || kind != "unknown_legacy" {
+		t.Errorf("after the rollback the blocked duty is %q on %q, want blocked on unknown_legacy", state, kind)
+	}
+	if state, kind := caseAndKind(ctx, t, conn, cases["verdict-sent-done"].id); state != "completed" || kind != "unknown_legacy" {
+		t.Errorf("after the rollback the finished duty is %q on %q, want completed on unknown_legacy", state, kind)
+	}
 
 	// Up again: the stored original still carries its stamp, and the sent mail
 	// is still on record, so both close again.
+	execFile(ctx, t, conn, arrivalUp)
 	execFile(ctx, t, conn, heldMailUp)
 	for _, name := range []string{"verdict-sent", "stamped-before"} {
 		if state, _ := caseAndKind(ctx, t, conn, cases[name].id); state != "exempt_with_reason" {

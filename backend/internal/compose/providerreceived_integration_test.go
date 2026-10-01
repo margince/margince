@@ -39,12 +39,18 @@ func TestTheSinkRecordsWhenTheProviderSaysTheMessageArrived(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// First through a round that names no arrival time (a Graph delta), then
+	// through one that does (the backfill): the empty value is filled.
+	sink := capture.NewSink(e.DB())
+	ref, err := sink.Upsert(connectorCtx(e, "gmail", e.Rep1), parsed.ToRecord("gmail", raw))
+	if err != nil {
+		t.Fatalf("capturing the message: %v", err)
+	}
 	rec := parsed.ToRecord("gmail", raw)
 	arrived := time.Date(2026, 6, 4, 8, 0, 0, 0, time.UTC)
 	rec.ProviderReceivedAt = arrived
-	ref, err := capture.NewSink(e.DB()).Upsert(connectorCtx(e, "gmail", e.Rep1), rec)
-	if err != nil {
-		t.Fatalf("capturing the message: %v", err)
+	if _, err := sink.Upsert(connectorCtx(e, "gmail", e.Rep1), rec); err != nil {
+		t.Fatalf("capturing the message again: %v", err)
 	}
 
 	got := scalar[time.Time](t, e, `

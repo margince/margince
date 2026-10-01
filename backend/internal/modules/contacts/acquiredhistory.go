@@ -63,7 +63,7 @@ func writtenToBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (b
 // compares against NULL and matches nothing, which keeps the duty owed.
 //
 // The settling migration
-// (1790871110_mail_a_mailbox_already_held_owes_no_notice) spells the same rule
+// (1790871111_mail_a_mailbox_already_held_owes_no_notice) spells the same rule
 // in SQL.
 func receivedBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	var held bool

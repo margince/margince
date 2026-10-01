@@ -69,6 +69,17 @@ func recordImportTx(
 		activityID, ownerUserID, birth.posture, birth.verdictStatus, birth.reason, birth.reasons, received); err != nil {
 		return fmt.Errorf("capture: recording the import of %s: %w", activityID, err)
 	}
+	// A row written before the provider's time was known (a delta round names
+	// ids only) learns it from the next capture that carries it, such as the
+	// backfill. Only an empty value is filled: the decisions on the row stay.
+	if received != nil {
+		if _, err := tx.Exec(ctx, `
+			UPDATE capture_import SET provider_received_at = $3
+			 WHERE activity_id = $1 AND user_id = $2 AND provider_received_at IS NULL`,
+			activityID, ownerUserID, received); err != nil {
+			return fmt.Errorf("capture: recording when %s arrived: %w", activityID, err)
+		}
+	}
 	return nil
 }
 
