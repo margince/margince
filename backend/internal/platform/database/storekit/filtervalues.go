@@ -25,6 +25,9 @@ import (
 type FieldValue struct {
 	Value  *string
 	Hidden bool
+	// Label is the name of the record a reference value names, when the
+	// reader may open it.
+	Label *string
 }
 
 // FieldsNamed is the fields a filter tree's leaves name, once each, in the
@@ -120,7 +123,8 @@ func scanValues(ctx context.Context, tx pgx.Tx, sql string, args []any, shown []
 }
 
 // withholdUnseenValues hides each shown value naming a row the reader may not
-// open, as withholdUnseenReferences does for one explained record.
+// open, and names each one they may, as withholdUnseenReferences does for one
+// explained record.
 func withholdUnseenValues(ctx context.Context, tx pgx.Tx, values map[ids.UUID]map[string]FieldValue, shown []valueColumn) error {
 	for _, column := range shown {
 		if column.references == "" {
@@ -132,24 +136,35 @@ func withholdUnseenValues(ctx context.Context, tx pgx.Tx, values map[ids.UUID]ma
 				named = append(named, *v)
 			}
 		}
-		unseen, err := unseenReferences(ctx, tx, column.references, named)
+		seen, err := seenReferences(ctx, tx, column.references, named)
 		if err != nil {
 			return err
 		}
 		for _, record := range values {
-			if v := record[column.name].Value; v != nil && unseen[*v] {
-				record[column.name] = FieldValue{Hidden: true}
+			v := record[column.name].Value
+			if v == nil {
+				continue
 			}
+			label, ok := seen[*v]
+			if !ok {
+				record[column.name] = FieldValue{Hidden: true}
+				continue
+			}
+			record[column.name] = FieldValue{Value: v, Label: label}
 		}
 	}
 	return nil
 }
 
-// unseenReferences is the subset of values, each the id of a row of table,
-// that this reader may not open.
-func unseenReferences(ctx context.Context, tx pgx.Tx, table string, values []string) (map[string]bool, error) {
+// referenceNames is the column naming a row of each referenced table.
+var referenceNames = map[string]string{"company": "display_name", "project": "name"}
+
+// seenReferences answers, of values each the id of a row of table, those this
+// reader may open, each with the row's name (nil where it has none). A value
+// absent from the answer names a row they may not open.
+func seenReferences(ctx context.Context, tx pgx.Tx, table string, values []string) (map[string]*string, error) {
 	if len(values) == 0 {
-		return map[string]bool{}, nil
+		return map[string]*string{}, nil
 	}
 	parsed := make(map[string]ids.UUID, len(values))
 	rowIDs := make([]ids.UUID, 0, len(values))
@@ -165,13 +180,29 @@ func unseenReferences(ctx context.Context, tx pgx.Tx, table string, values []str
 	if err != nil {
 		return nil, err
 	}
-	unseen := map[string]bool{}
-	for value, id := range parsed {
-		if !visible[id] {
-			unseen[value] = true
+	var open []ids.UUID
+	for _, id := range rowIDs {
+		if visible[id] {
+			open = append(open, id)
 		}
 	}
-	return unseen, nil
+	names, err := LabelsByID(ctx, tx, fmt.Sprintf("SELECT id, coalesce(%s, '') FROM %s WHERE id = ANY($1)",
+		pgx.Identifier{referenceNames[table]}.Sanitize(), pgx.Identifier{table}.Sanitize()), open)
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]*string{}
+	for value, id := range parsed {
+		if !visible[id] {
+			continue
+		}
+		if name, ok := names[id]; ok {
+			seen[value] = &name
+		} else {
+			seen[value] = nil
+		}
+	}
+	return seen, nil
 }
 
 // SelectsEach answers whether each filter selects one record, judged as a

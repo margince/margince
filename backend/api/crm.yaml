@@ -42044,6 +42044,7 @@ components:
       properties:
         value: { type: [string, 'null'], description: 'The value as text, as the explanation states it; null when the record holds none.' }
         hidden: { type: boolean, description: 'The value is not shown to this caller.' }
+        label: { type: [string, 'null'], description: 'For a reference to a company or project this caller may open, its name.' }
 
     CreateListRequest:
       type: object
@@ -42108,6 +42109,7 @@ components:
         result: { type: [boolean, 'null'] }
         value: { type: [string, 'null'], description: 'The record''s current value of the field, as text.' }
         hidden: { type: boolean, description: 'The value is not shown to this caller.' }
+        value_label: { type: [string, 'null'], description: 'For a reference to a company or project this caller may open, its name.' }
 
     ListMemberExplanation:
       type: object

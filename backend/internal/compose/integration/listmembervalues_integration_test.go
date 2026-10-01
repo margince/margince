@@ -52,11 +52,18 @@ func TestALiveListMembersValuesAreHiddenWhereItsWhyHidesThem(t *testing.T) {
 	}
 	capturer := e.As(e.Rep1, []ids.UUID{e.Team1}, dealListPerms())
 	seen := (*onlyMember(capturer, t, store, list.ID, deal).Values)["company_id"]
-	if seen.Hidden || seen.Value == nil || *seen.Value != company.String() {
-		t.Fatalf("the capturer read the company value %+v, want %s", seen, company)
+	if seen.Hidden || seen.Value == nil || *seen.Value != company.String() || seen.Label == nil || *seen.Label != "Hidden Account" {
+		t.Fatalf("the capturer read the company value %+v, want %s named Hidden Account", seen, company)
+	}
+	why, err := store.ExplainMember(capturer, list.ID, deal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if leaf := why.Clauses.Children[0]; leaf.ValueLabel == nil || *leaf.ValueLabel != "Hidden Account" {
+		t.Fatalf("the capturer's why named the company %+v, want Hidden Account", leaf)
 	}
 	outsider := e.As(e.Rep3, []ids.UUID{e.Team2}, dealListPerms())
-	if v := (*onlyMember(outsider, t, store, list.ID, deal).Values)["company_id"]; !v.Hidden || v.Value != nil {
+	if v := (*onlyMember(outsider, t, store, list.ID, deal).Values)["company_id"]; !v.Hidden || v.Value != nil || v.Label != nil {
 		t.Fatalf("a reader who cannot open the company read %+v", v)
 	}
 	masked := dealListPerms()

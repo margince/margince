@@ -35145,6 +35145,9 @@ type ListClauseVerdict struct {
 
 	// Value The record's current value of the field, as text.
 	Value *string `json:"value,omitempty"`
+
+	// ValueLabel For a reference to a company or project this caller may open, its name.
+	ValueLabel *string `json:"value_label,omitempty"`
 }
 
 // ListClauseVerdictJoin defines model for ListClauseVerdict.Join.
@@ -35181,6 +35184,9 @@ type ListDependencyRole string
 type ListFieldValue struct {
 	// Hidden The value is not shown to this caller.
 	Hidden bool `json:"hidden"`
+
+	// Label For a reference to a company or project this caller may open, its name.
+	Label *string `json:"label,omitempty"`
 
 	// Value The value as text, as the explanation states it; null when the record holds none.
 	Value *string `json:"value,omitempty"`

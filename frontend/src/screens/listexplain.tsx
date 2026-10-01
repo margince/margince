@@ -114,7 +114,8 @@ function Verdict({
               value:
                 node.value == null
                   ? t("lists.why.empty")
-                  : valueText(node.field ?? "", node.value),
+                  : (node.value_label ??
+                    valueText(node.field ?? "", node.value)),
             })}
       </span>
     </p>

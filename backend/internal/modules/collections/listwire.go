@@ -291,7 +291,7 @@ func wireMember(m memberRow) crmcontracts.ListMember {
 	if m.Values != nil {
 		values := make(map[string]crmcontracts.ListFieldValue, len(m.Values))
 		for field, v := range m.Values {
-			values[field] = crmcontracts.ListFieldValue{Value: v.Value, Hidden: v.Hidden}
+			values[field] = crmcontracts.ListFieldValue{Value: v.Value, Hidden: v.Hidden, Label: v.Label}
 		}
 		out.Values = &values
 	}
@@ -299,7 +299,7 @@ func wireMember(m memberRow) crmcontracts.ListMember {
 }
 
 func wireVerdict(n storekit.ExplainNode) crmcontracts.ListClauseVerdict {
-	out := crmcontracts.ListClauseVerdict{Result: n.Result, Value: n.Value}
+	out := crmcontracts.ListClauseVerdict{Result: n.Result, Value: n.Value, ValueLabel: n.ValueLabel}
 	if n.Join != "" {
 		join := crmcontracts.ListClauseVerdictJoin(n.Join)
 		children := make([]crmcontracts.ListClauseVerdict, 0, len(n.Children))

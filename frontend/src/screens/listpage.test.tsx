@@ -91,6 +91,37 @@ describe("an opened list", () => {
     expect(screen.queryByRole("button", { name: /why/i })).toBeNull();
   });
 
+  it("names a referenced record in its column rather than showing its id", async () => {
+    const parent = "01a0f000-0000-7000-8000-000000000040";
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /lists/${LIVE_ID}`]: () =>
+        jsonResponse({
+          ...liveList,
+          definition: { field: "parent_company_id", op: "exists", value: true },
+        }),
+      [`GET /lists/${LIVE_ID}/history`]: () =>
+        jsonResponse({ data: [], page: { has_more: false } }),
+      "GET /companies": () =>
+        jsonResponse({ data: members, page: { has_more: false } }),
+      [`GET /lists/${LIVE_ID}/members`]: listingAnswer({
+        ...liveListing,
+        values: {
+          parent_company_id: {
+            value: parent,
+            label: "Acme Holding",
+            hidden: false,
+          },
+        },
+      }),
+      "GET /filters/vocabulary": () => jsonResponse(vocabulary),
+    });
+    page(LIVE_ID);
+    const row = (await screen.findByText("MiTek")).closest("tr") as HTMLElement;
+    expect(await within(row).findByText("Acme Holding")).toBeInTheDocument();
+    expect(within(row).queryByText(parent)).toBeNull();
+  });
+
   it("draws the first four filter fields and offers the rest under Display", async () => {
     const fields = ["industry", "city", "country", "employees", "website"];
     installFetchStub({

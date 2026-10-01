@@ -110,6 +110,33 @@ describe("a record page's lists", () => {
     expect(screen.getByText(en["lists.why.hidden"])).toBeInTheDocument();
   });
 
+  it("names a referenced record in a clause rather than showing its id", async () => {
+    const parent = "01a0f000-0000-7000-8000-000000000040";
+    stub({
+      [`GET /lists/${LIVE_ID}/members/${MEMBER_ID}/why`]: () =>
+        jsonResponse({
+          ...notOnLiveWhy,
+          clauses: {
+            field: "parent_company_id",
+            op: "exists",
+            operand: true,
+            result: true,
+            value: parent,
+            value_label: "Acme Holding",
+          },
+        }),
+    });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("combobox", { name: en["lists.record.check"] }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: liveList.name }),
+    );
+    expect(await screen.findByText("Now: Acme Holding")).toBeInTheDocument();
+    expect(screen.queryByText(`Now: ${parent}`)).toBeNull();
+  });
+
   it("takes the record off a Shortlist with a note", async () => {
     const removed: unknown[] = [];
     stub({

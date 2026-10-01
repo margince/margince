@@ -70,7 +70,10 @@ function useFilterColumns(list: List): ListColumn<MemberRow>[] {
         if (held?.hidden) {
           return <span className="t-caption">{t("lists.members.hidden")}</span>;
         }
-        return held?.value == null ? "—" : valueText(field, held.value);
+        if (held?.value == null) {
+          return "—";
+        }
+        return held.label ?? valueText(field, held.value);
       },
     };
   });

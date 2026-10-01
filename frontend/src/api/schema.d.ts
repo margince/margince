@@ -30829,6 +30829,8 @@ export interface components {
             value?: string | null;
             /** @description The value is not shown to this caller. */
             hidden: boolean;
+            /** @description For a reference to a company or project this caller may open, its name. */
+            label?: string | null;
         };
         CreateListRequest: {
             name: string;
@@ -30906,6 +30908,8 @@ export interface components {
             value?: string | null;
             /** @description The value is not shown to this caller. */
             hidden?: boolean;
+            /** @description For a reference to a company or project this caller may open, its name. */
+            value_label?: string | null;
         };
         ListMemberExplanation: {
             /** Format: uuid */
