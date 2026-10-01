@@ -42,6 +42,12 @@ The product is **Margince**. Older documents say "Gradion CRM" — same product.
   be able to follow every instruction here. Write the rule out instead of citing
   somewhere they cannot reach.
 - **Never commit a local machine path or a secret.**
+- **The repository knows no running instance.** Nothing here — code, comments,
+  tests, docs, issues, commits, PR bodies, review replies — names or describes a
+  hosted, production or staging deployment: its hosts, cloud or provider accounts,
+  billing, workspaces, customers or users, an incident's date, or a figure
+  measured on it. State the behaviour and the code that causes it, and reproduce
+  the evidence on seeded data.
 
 `backend/gates/publicreferences_test.go` catches what a test can: a private repo name,
 a `specs/` path, a `foundation#NNNN` reference. It does not read commit messages
