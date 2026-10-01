@@ -11,6 +11,7 @@ package compose
 // wire mapping and the human-only refusal.
 
 import (
+	"cmp"
 	"net/http"
 	"strings"
 
@@ -69,17 +70,48 @@ func (h aiRoutingHandlers) ReplaceAiRouting(w http.ResponseWriter, r *http.Reque
 	httperr.WriteJSON(w, http.StatusOK, toContractAiRouting(cfg))
 }
 
+// SetAiProviderSettings replaces one provider's entry. Human-only for the same
+// reason ReplaceAiRouting is: a host decides where the installation's text goes.
+func (h aiRoutingHandlers) SetAiProviderSettings(w http.ResponseWriter, r *http.Request, provider string) {
+	if h.store == nil {
+		httperr.NotImplemented(w, r, "SetAiProviderSettings")
+		return
+	}
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	var req crmcontracts.AiProviderSettings
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	cfg, err := h.store.SetProviderSettings(r.Context(), provider, providerSettingsFromWire(req))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.Header().Set("ETag", `"`+cfg.Revision()+`"`)
+	httperr.WriteJSON(w, http.StatusOK, toContractAiRouting(cfg))
+}
+
 // toContractAiRouting maps a stored binding onto the wire shape.
 //
 // Tiers is always a map, never nil: an unbound installation answers `{}`, which
 // says "nothing is bound", where a null would leave a client guessing whether
 // the field was omitted or the read failed.
+//
+// A lane's base_url is the host its provider is reached at, so a client that
+// predates `providers` still sees where each lane goes and writes back a value
+// the store recognises as the provider's. Routing goes out as stored: resolving
+// it would write the provider's pins and the product default onto every tier
+// such a client saves.
 func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
+	host := func(provider string) string { return cfg.Providers[provider].BaseURL }
 	tiers := make(map[string]crmcontracts.AiTierBinding, len(cfg.Tiers))
 	for tier, b := range cfg.Tiers {
 		tiers[string(tier)] = crmcontracts.AiTierBinding{
 			Provider: b.Provider, Model: b.Model,
-			BaseUrl: optionalString(b.BaseURL), Location: optionalString(b.Location), Input: optionalStrings(b.Input),
+			BaseUrl: optionalString(cmp.Or(b.BaseURL, host(b.Provider))), Location: optionalString(b.Location), Input: optionalStrings(b.Input),
 			Routing:       routingToWire(b.Routing),
 			ThinkingLevel: optionalEnum[crmcontracts.AiTierBindingThinkingLevel](b.ThinkingLevel),
 		}
@@ -89,7 +121,7 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 		Tiers:   tiers,
 		Embeddings: crmcontracts.AiEmbeddingsBinding{
 			Provider: cfg.Embeddings.Provider, Model: cfg.Embeddings.Model,
-			BaseUrl:       optionalString(cfg.Embeddings.BaseURL),
+			BaseUrl:       optionalString(cmp.Or(cfg.Embeddings.BaseURL, host(cfg.Embeddings.Provider))),
 			Location:      optionalString(cfg.Embeddings.Location),
 			Input:         optionalStrings(cfg.Embeddings.Input),
 			Routing:       routingToWire(cfg.Embeddings.Routing),
@@ -99,18 +131,75 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 			// the document as though an operator had chosen it.
 			Dimensions: optionalInt(cfg.Embeddings.Dimensions),
 		},
-		Decisions: decisionsToWire(cfg.Decisions),
+		Decisions: decisionsToWire(cfg.Decisions, host),
+		Providers: providersToWire(cfg.Providers),
 	}
+}
+
+// providersToWire and providersFromWire carry the providers map. Nil on the
+// way in is "keep the stored entries", which an old client relies on, so an
+// absent map never becomes an empty one or the reverse.
+func providersToWire(in map[string]ai.ProviderSettings) *map[string]crmcontracts.AiProviderSettings {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]crmcontracts.AiProviderSettings, len(in))
+	for name, p := range in {
+		out[name] = crmcontracts.AiProviderSettings{BaseUrl: optionalString(p.BaseURL), Upstream: upstreamToWire(p.Upstream)}
+	}
+	return &out
+}
+
+func providersFromWire(in *map[string]crmcontracts.AiProviderSettings) map[string]ai.ProviderSettings {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]ai.ProviderSettings, len(*in))
+	for name, p := range *in {
+		out[name] = providerSettingsFromWire(p)
+	}
+	return out
+}
+
+func providerSettingsFromWire(p crmcontracts.AiProviderSettings) ai.ProviderSettings {
+	out := ai.ProviderSettings{Upstream: upstreamFromWire(p.Upstream)}
+	if p.BaseUrl != nil {
+		out.BaseURL = *p.BaseUrl
+	}
+	return out
+}
+
+// upstreamToWire and upstreamFromWire keep absent and empty apart, as
+// routingToWire does: an empty upstream says "no pins", absent says nothing.
+func upstreamToWire(r *ai.OpenRouterRouting) *crmcontracts.AiOpenRouterUpstream {
+	if r == nil {
+		return nil
+	}
+	return &crmcontracts.AiOpenRouterUpstream{Only: optionalStrings(r.Only), Ignore: optionalStrings(r.Ignore), AllowFallbacks: r.AllowFallbacks}
+}
+
+func upstreamFromWire(r *crmcontracts.AiOpenRouterUpstream) *ai.OpenRouterRouting {
+	if r == nil {
+		return nil
+	}
+	out := &ai.OpenRouterRouting{AllowFallbacks: r.AllowFallbacks}
+	if r.Only != nil {
+		out.Only = *r.Only
+	}
+	if r.Ignore != nil {
+		out.Ignore = *r.Ignore
+	}
+	return out
 }
 
 // decisionsToWire and decisionsFromWire carry the decision lane. The pointer is
 // the meaning, as with routing: nil is "no decision model", which sends every
 // decision site to its LLM ladder, so neither direction may invent a lane.
-func decisionsToWire(d *ai.DecisionsConfig) *crmcontracts.AiDecisionsBinding {
+func decisionsToWire(d *ai.DecisionsConfig, host func(provider string) string) *crmcontracts.AiDecisionsBinding {
 	if d == nil {
 		return nil
 	}
-	return &crmcontracts.AiDecisionsBinding{Provider: d.Provider, Model: d.Model, BaseUrl: optionalString(d.BaseURL)}
+	return &crmcontracts.AiDecisionsBinding{Provider: d.Provider, Model: d.Model, BaseUrl: optionalString(cmp.Or(d.BaseURL, host(d.Provider)))}
 }
 
 func decisionsFromWire(d *crmcontracts.AiDecisionsBinding) *ai.DecisionsConfig {
@@ -145,6 +234,7 @@ func fromContractAiRouting(req crmcontracts.AiRouting) ai.RoutingConfig {
 		Profile:    ai.Profile(req.Profile),
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: tierFromWire(embeddings)},
 		Decisions:  decisionsFromWire(req.Decisions),
+		Providers:  providersFromWire(req.Providers),
 	}
 	if req.Embeddings.Dimensions != nil {
 		cfg.Embeddings.Dimensions = *req.Embeddings.Dimensions
