@@ -421,6 +421,9 @@ export function offeredModels(
     // a usable model or offer an embedder to a chat tier.
     .filter((m) => m.lane === undefined || m.lane === lane)
     .map((m) => ({ value: m.id, hint: priced.get(m.id) }));
+  // A complete list is what the asked place serves; a sheet model beside it is
+  // one that place does not, so none is added.
+  if (available?.complete) return fromVendor;
   const seen = new Set(fromVendor.map((s) => s.value));
   const fromSheet = [...priced.entries()]
     .filter(([id]) => !seen.has(id))

@@ -366,6 +366,9 @@ func toContractAvailableModels(a ai.AvailableModels) crmcontracts.AvailableModel
 		})
 	}
 	out := crmcontracts.AvailableModelList{Provider: a.Provider, Models: models, RankedBy: optionalString(a.RankedBy)}
+	if a.Complete {
+		out.Complete = &a.Complete
+	}
 	if a.Unavailable != ai.AvailabilityOK {
 		reason := crmcontracts.AvailableModelListUnavailable(a.Unavailable)
 		out.Unavailable = &reason

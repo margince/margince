@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import {
+  offeredModels,
   suggestionsFor,
   type VendorCatalogue,
   type VendorModel,
@@ -175,5 +176,48 @@ describe("vendorSuggestions", () => {
   // publishes nothing: the field is a plain text box and the admin types an id.
   it("is empty when the vendor never answered", () => {
     expect(vendorSuggestions(undefined, SHEET, "gemini", "en")).toEqual([]);
+  });
+});
+
+// A list asked of the place a model runs is the whole answer there: a model
+// the price sheet names beside it is one that place does not serve, so it is
+// not offered. An ordinary vendor list stays merged with the sheet, which
+// keeps a model the vendor shipped after the list was read.
+describe("offeredModels", () => {
+  const sheet = [
+    rate("gemini_vertex", "gemini-3.5-flash", "chat"),
+    rate("gemini_vertex", "gemini-2.5-pro", "chat"),
+  ];
+
+  it("offers only the listed models when the list is complete", () => {
+    const offered = offeredModels(
+      {
+        provider: "gemini_vertex",
+        models: [{ id: "gemini-2.5-pro", lane: "chat" }],
+        complete: true,
+      },
+      sheet,
+      "gemini_vertex",
+      "chat",
+      "en",
+    );
+    expect(offered.map((s) => s.value)).toEqual(["gemini-2.5-pro"]);
+  });
+
+  it("adds the sheet's other models beside a list that is not complete", () => {
+    const offered = offeredModels(
+      {
+        provider: "gemini_vertex",
+        models: [{ id: "gemini-2.5-pro", lane: "chat" }],
+      },
+      sheet,
+      "gemini_vertex",
+      "chat",
+      "en",
+    );
+    expect(offered.map((s) => s.value)).toEqual([
+      "gemini-2.5-pro",
+      "gemini-3.5-flash",
+    ]);
   });
 });

@@ -28346,6 +28346,12 @@ components:
         models:
           type: array
           items: { $ref: '#/components/schemas/AvailableModel' }
+        complete:
+          type: boolean
+          description: >-
+            True when `models` is exactly what the asked place serves — a `gemini_vertex` list,
+            each model asked of the location — so a client offers nothing beside it. Absent or
+            false for a vendor's own list, which may lag a model the vendor shipped since.
         ranked_by:
           type: string
           description: >-

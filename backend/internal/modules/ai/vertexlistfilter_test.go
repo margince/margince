@@ -70,6 +70,9 @@ func TestAVertexListOffersOnlyWhatTheLocationServes(t *testing.T) {
 	if want := []string{"gemini-3.5-flash", "gemini-embedding-001"}; !slices.Equal(listedIDs(got), want) {
 		t.Errorf("europe-west4 offers %v, want %v", listedIDs(got), want)
 	}
+	if !got.Complete {
+		t.Error("a list asked of the location is not marked complete, so a picker adds models it does not serve")
+	}
 }
 
 // Google not answering a probe is not an answer: the model stays on offer

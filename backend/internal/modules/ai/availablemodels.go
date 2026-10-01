@@ -98,6 +98,9 @@ type AvailableModels struct {
 	// Unavailable is empty when the vendor answered, and names the state when
 	// it did not. Models is empty whenever this is set.
 	Unavailable ModelAvailability
+	// Complete is true when Models is exactly what the asked place serves, so
+	// a picker offers nothing beside it.
+	Complete bool
 }
 
 // ListAvailableModels asks one vendor what it serves.
@@ -194,6 +197,7 @@ func (s *RoutingStore) availableModels(ctx context.Context, cfg RoutingConfig, q
 	}
 	if gemini, vertex := client.(*geminiClient); vertex && provider == providerGeminiVertex {
 		models = s.servedOnly(ctx, gemini, bound.Location, models)
+		out.Complete = true
 	}
 	out.Models = make([]AvailableModel, len(models))
 	for i, m := range models {

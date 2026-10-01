@@ -24025,7 +24025,9 @@ type AvailableModelLane string
 // AvailableModelList One vendor's own answer about what it serves.
 // An empty `models` with NO `unavailable` is a vendor that answered and serves nothing — a local runner with no model pulled onto it is the ordinary case. It is a different state from a vendor that could not be asked, which always sets `unavailable`, and a client that folded the two would tell a reader to paste a key they already have.
 type AvailableModelList struct {
-	Models []AvailableModel `json:"models"`
+	// Complete True when `models` is exactly what the asked place serves — a `gemini_vertex` list, each model asked of the location — so a client offers nothing beside it. Absent or false for a vendor's own list, which may lag a model the vendor shipped since.
+	Complete *bool            `json:"complete,omitempty"`
+	Models   []AvailableModel `json:"models"`
 
 	// Provider The routing name of the vendor that was asked.
 	Provider string `json:"provider"`

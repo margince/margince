@@ -19156,6 +19156,8 @@ export interface components {
             /** @description The routing name of the vendor that was asked. */
             provider: string;
             models: components["schemas"]["AvailableModel"][];
+            /** @description True when `models` is exactly what the asked place serves — a `gemini_vertex` list, each model asked of the location — so a client offers nothing beside it. Absent or false for a vendor's own list, which may lag a model the vendor shipped since. */
+            complete?: boolean;
             /** @description The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten. */
             ranked_by?: string;
             /**
