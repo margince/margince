@@ -123,18 +123,30 @@ func TestAProjectionWriteTheDatabaseRefusesSurfaces(t *testing.T) {
 		name, table string
 		run         func(tx pgx.Tx) error
 	}{
-		{"refolding a contact whose colleagues cannot be read", "graph_interaction_edge",
-			func(tx pgx.Tx) error { return search.RecomputeEdgesForContact(ctx, tx, c.UUID) }},
-		{"refolding a contact whose peers cannot be read", "graph_contact_edge",
-			func(tx pgx.Tx) error { return search.RecomputeEdgesForContact(ctx, tx, c.UUID) }},
-		{"dropping a contact's peer edges", "graph_contact_edge",
-			func(tx pgx.Tx) error { return search.DropEdgesForContact(ctx, tx, c.UUID) }},
-		{"dropping a contact's interaction edges", "graph_interaction_edge",
-			func(tx pgx.Tx) error { return search.DropEdgesForContact(ctx, tx, c.UUID) }},
-		{"refolding activities", "graph_contact_edge",
-			func(tx pgx.Tx) error { return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activity}) }},
-		{"rebuilding", "graph_interaction_edge",
-			func(tx pgx.Tx) error { return search.RebuildEdges(ctx, tx) }},
+		{
+			"refolding a contact whose colleagues cannot be read", "graph_interaction_edge",
+			func(tx pgx.Tx) error { return search.RecomputeEdgesForContact(ctx, tx, c.UUID) },
+		},
+		{
+			"refolding a contact whose peers cannot be read", "graph_contact_edge",
+			func(tx pgx.Tx) error { return search.RecomputeEdgesForContact(ctx, tx, c.UUID) },
+		},
+		{
+			"dropping a contact's peer edges", "graph_contact_edge",
+			func(tx pgx.Tx) error { return search.DropEdgesForContact(ctx, tx, c.UUID) },
+		},
+		{
+			"dropping a contact's interaction edges", "graph_interaction_edge",
+			func(tx pgx.Tx) error { return search.DropEdgesForContact(ctx, tx, c.UUID) },
+		},
+		{
+			"refolding activities", "graph_contact_edge",
+			func(tx pgx.Tx) error { return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activity}) },
+		},
+		{
+			"rebuilding", "graph_interaction_edge",
+			func(tx pgx.Tx) error { return search.RebuildEdges(ctx, tx) },
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
