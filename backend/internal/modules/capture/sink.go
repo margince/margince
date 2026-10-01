@@ -272,7 +272,9 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// irreversible, and why the own-domain set is admin-visible (ADR-0082 §4).
 		return datasource.EntityRef{}, fmt.Errorf("%w: %s", connector.ErrSkip, dropped)
 	}
+	// Everything after the commit, merge staging included, is the ensure stage.
 	ensureStart := time.Now()
+	defer func() { capturemetrics.ObserveStage(ctx, capturemetrics.StageEnsure, time.Since(ensureStart)) }()
 	if activityCreated {
 		// The tier ladder already decided, and recorded its decision, inside
 		// the transaction above. Creation runs AFTER that commit, in its own
@@ -296,7 +298,6 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 	// Independent of the counterparty decision: a message from a sender no
 	// record was created for still belongs to the project its subject names.
 	s.attributeProject(ctx, rec, ref)
-	capturemetrics.ObserveStage(ctx, capturemetrics.StageEnsure, time.Since(ensureStart))
 	if dedupeHit != nil && s.stager != nil {
 		// Staged OUTSIDE the capture transaction on purpose: the capture
 		// itself wrote nothing (the collision blocked it), and the

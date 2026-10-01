@@ -22,11 +22,13 @@ import (
 )
 
 // The provider API calls a connector names, so a dashboard can tell the
-// listing of ids from the per-message download it drives.
+// listing of ids from the per-message download it drives. OpToken is a round
+// trip to the provider's OAuth token endpoint.
 const (
 	OpList    = "list"
 	OpGetRaw  = "get_raw"
 	OpHistory = "history"
+	OpToken   = "token"
 	OpOther   = "other"
 )
 

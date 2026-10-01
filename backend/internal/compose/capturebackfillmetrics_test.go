@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"math"
 	"strings"
 	"testing"
 
@@ -58,14 +59,15 @@ func TestAFailedBackfillReadWritesNothing(t *testing.T) {
 	}
 }
 
-// refusingWriter fails every write after the first n bytes.
-type refusingWriter struct{ n int }
+// refusingWriter refuses its write number refuse (counting from zero) and every
+// write after it, and counts how many writes it was asked for.
+type refusingWriter struct{ writes, refuse int }
 
 func (w *refusingWriter) Write(p []byte) (int, error) {
-	if len(p) > w.n {
+	w.writes++
+	if w.writes > w.refuse {
 		return 0, io.ErrClosedPipe
 	}
-	w.n -= len(p)
 	return len(p), nil
 }
 
@@ -80,9 +82,15 @@ func TestARefusedWriteStopsTheFleetSections(t *testing.T) {
 		t.Errorf("%d sections ran, want the one that refused and none after it", ran)
 	}
 
-	for budget := range 600 {
-		if err := writeBackfillFleet(&refusingWriter{n: budget}, capture.BackfillFleet{}); err == nil {
-			t.Fatalf("a writer refusing after %d bytes was reported as written in full", budget)
+	// Every write the fleet section makes is refused in turn, so each one's
+	// error is proven to reach the caller.
+	counted := &refusingWriter{refuse: math.MaxInt}
+	if err := writeBackfillFleet(counted, capture.BackfillFleet{}); err != nil {
+		t.Fatalf("writeBackfillFleet to an accepting writer: %v", err)
+	}
+	for refuse := range counted.writes {
+		if err := writeBackfillFleet(&refusingWriter{refuse: refuse}, capture.BackfillFleet{}); !errors.Is(err, io.ErrClosedPipe) {
+			t.Errorf("write %d of %d was refused and writeBackfillFleet returned %v", refuse, counted.writes, err)
 		}
 	}
 }

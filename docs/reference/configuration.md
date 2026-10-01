@@ -401,15 +401,18 @@ answers the same numbers, so read them with `max`, never `sum`:
 | Family | Labels | Meaning |
 |---|---|---|
 | `margince_capture_backfill_runs` | `status` | imports per status (`queued`, `running`, `done`, `error`, `cancelled`); a status no run holds reads 0 |
-| `margince_capture_backfill_progress` | `field` | `scanned`, `captured`, `skipped` and `total_estimate` summed over the queued and running imports, each the committed count plus the running page's live tally |
+| `margince_capture_backfill_progress` | `field` | summed over the queued and running imports: `scanned`, `captured` and `skipped` are each the committed count plus the running page's live tally; `total_estimate` is the preview's estimate of the window, a floor where the preview said so |
 
 **Why it is slow** is per-process, counted by the worker that pages the import
 and served on its `--observe-addr` (the api serves its own copy for the provider
-calls it makes itself, such as the preview estimate):
+calls it makes itself, such as the preview estimate). Every family below is
+emitted for a Gmail import. A Microsoft 365 import emits only the `sink` and
+`ensure` stages, the pages, the snoozes and the Retry-After: its requests,
+messages and `fetch`/`parse` stages are not counted.
 
 | Family | Labels | Meaning |
 |---|---|---|
-| `margince_connector_requests_total` | `provider`, `op`, `result` | every Gmail API call; `op` is `list`, `get_raw`, `history` or `other`, `result` is `ok`, `rate_limited`, `auth`, `unreachable`, `not_found` or `error` |
+| `margince_connector_requests_total` | `provider`, `op`, `result` | every Gmail API call; `op` is `list`, `get_raw`, `history`, `token` (an OAuth token refresh or exchange) or `other`, `result` is `ok`, `rate_limited`, `auth`, `unreachable`, `not_found` or `error` |
 | `margince_connector_request_duration_seconds` | `provider`, `op` | histogram of the same calls' wall time |
 | `margince_capture_backfill_messages_total` | `provider`, `outcome` | one per message walked: the capture trace's outcome (`captured`, `internal`, `suppressed`, `deferred`, `fault`), else `skipped`, or `failed` when the message stopped its page |
 | `margince_capture_backfill_stage_seconds` | `provider`, `stage` | histogram per message: `fetch` (the RAW download), `parse`, `sink` (the capture transaction), `ensure` (counterparty and project work after it) |
@@ -417,7 +420,7 @@ calls it makes itself, such as the preview estimate):
 | `margince_capture_backfill_snooze_seconds_total` | `provider`, `reason` | seconds the import chose to wait: `pacing` between good pages, `rate_limited` or `unreachable` after a failed one |
 | `margince_capture_backfill_retry_after_seconds_total` | `provider` | the Retry-After the provider asked for on those faults; the gap to the snooze total is the wait our own ladder added |
 
-Compare `rate(..._stage_seconds_sum[5m])` across stages to see whether Google's
+Compare `sum by (stage) (rate(margince_capture_backfill_stage_seconds_sum[5m]))` across stages to see whether Google's
 download or our transaction dominates a message, and
 `rate(margince_connector_requests_total{result="rate_limited"}[5m])` to see
 whether the provider is pacing the import.

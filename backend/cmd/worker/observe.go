@@ -44,7 +44,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
@@ -208,11 +207,11 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 }
 
 // writeProcessSections renders the counter families this process increments:
-// the AI calls it routed, and the provider calls and mailbox imports its
-// capture lanes ran.
+// the AI calls it routed, and what its capture lanes decided, called and
+// imported.
 func writeProcessSections(w io.Writer) {
 	ai.WriteProcessMetrics(w)
-	capturemetrics.WriteProcessMetrics(w)
+	compose.WriteCaptureProcessMetrics(w)
 }
 
 // mountPprof puts Go's runtime profiles on the observe mux, and ONLY there.

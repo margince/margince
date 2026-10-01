@@ -30,11 +30,15 @@ func TestCaptureMetricsNamesEveryOutcomeItCounted(t *testing.T) {
 }
 
 // A process that has traced nothing has not decided nothing — it has not run.
-// Printing zeros would report the first as the second.
-func TestCaptureMetricsSaysNothingWhenNothingWasTraced(t *testing.T) {
+// Printing zeros would report the first as the second, so only the family's
+// declaration is written.
+func TestCaptureMetricsWritesNoSampleWhenNothingWasTraced(t *testing.T) {
 	var buf bytes.Buffer
 	writeCaptureMetrics(&buf, nil)
-	if buf.Len() != 0 {
-		t.Errorf("exposition = %q for an untraced process, want empty", buf.String())
+	if strings.Contains(buf.String(), "margince_capture_outcomes_total{") {
+		t.Errorf("exposition = %q for an untraced process, want no sample", buf.String())
+	}
+	if !strings.Contains(buf.String(), "# TYPE margince_capture_outcomes_total counter\n") {
+		t.Errorf("exposition = %q, want the family declared", buf.String())
 	}
 }

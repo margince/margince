@@ -173,3 +173,24 @@ func TestAMessageThatStopsThePageIsCountedFailed(t *testing.T) {
 		t.Errorf("failed moved by %v, want 1", moved[messages("failed")])
 	}
 }
+
+// Every refresh is a round trip to Google's token endpoint, so a page that
+// starts with one shows it in the request count and its latency.
+func TestATokenRefreshIsCountedAsAProviderCall(t *testing.T) {
+	ctx := context.Background()
+	moved := deltas(t, func() {
+		if _, err := New(fakeOAuth{access: "access-1"}, &pagedAPI{}).EstimateBackfill(ctx, authBytes(t), time.Now()); err != nil {
+			t.Errorf("EstimateBackfill: %v", err)
+		}
+		if _, err := New(staleOAuth{}, &pagedAPI{}).EstimateBackfill(ctx, authBytes(t), time.Now()); err == nil {
+			t.Error("a revoked refresh token was accepted")
+		}
+		if _, err := (timedAuthorizer{staleOAuth{}}).Exchange(ctx, "code", "https://back"); err == nil {
+			t.Error("a refused exchange succeeded")
+		}
+	}, requests("token", "ok"), requests("token", "error"))
+	if moved[requests("token", "ok")] != 1 || moved[requests("token", "error")] != 2 {
+		t.Errorf("token calls moved ok by %v and error by %v, want 1 and 2",
+			moved[requests("token", "ok")], moved[requests("token", "error")])
+	}
+}

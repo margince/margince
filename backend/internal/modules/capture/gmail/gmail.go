@@ -64,7 +64,7 @@ func (c *Connector) WithBounceSink(sink connector.BounceSink) *Connector {
 
 // New returns a Gmail connector over the given OAuth + API surfaces.
 func New(oauth googleconn.Authorizer, api API) *Connector {
-	return &Connector{oauth: oauth, api: api}
+	return &Connector{oauth: timedAuthorizer{oauth}, api: api}
 }
 
 var (

@@ -30,9 +30,10 @@ type BackfillFleet struct {
 	Live BackfillProgress
 }
 
-// BackfillProgress sums the message counters of the live (queued or running) runs,
-// each the committed count plus the running page's live tally, exactly as a
-// run's own status read reports it.
+// BackfillProgress sums the counters of the live (queued or running) runs.
+// Scanned, Captured and Skipped are each the committed count plus the running
+// page's live tally, as a run's own status read reports them; TotalEstimate is
+// the preview's estimate.
 type BackfillProgress struct {
 	Scanned, Captured, Skipped, TotalEstimate int64
 }

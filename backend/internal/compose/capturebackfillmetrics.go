@@ -43,7 +43,7 @@ func writeBackfillFleet(w io.Writer, fleet capture.BackfillFleet) error {
 	}
 
 	if err := writeFamilyHeader(w, "margince_capture_backfill_progress",
-		"Message counters summed over the queued and running imports, each the committed count plus the running page's live tally. total_estimate is the preview's count, a floor where the preview said so."); err != nil {
+		"Counters summed over the queued and running imports: scanned, captured and skipped are each the committed count plus the running page's live tally; total_estimate is the preview's estimate, a floor where the preview said so."); err != nil {
 		return err
 	}
 	for _, field := range []struct {

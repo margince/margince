@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
+	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -46,6 +48,24 @@ func (a *httpAPI) Watch(ctx context.Context, accessToken, topic string) (string,
 	historyID, expires, err := a.watchOnce(ctx, accessToken, topic)
 	capturemetrics.ObserveRequest(connectorName, capturemetrics.OpOther, 0, err, time.Since(start))
 	return historyID, expires, err
+}
+
+// timedAuthorizer counts every token-endpoint round trip as a provider call:
+// each one is a refresh at Google, and a backfill makes one per page.
+type timedAuthorizer struct{ googleconn.Authorizer }
+
+func (a timedAuthorizer) AccessToken(ctx context.Context, refreshToken string) (string, error) {
+	start := time.Now()
+	access, err := a.Authorizer.AccessToken(ctx, refreshToken)
+	capturemetrics.ObserveRequest(connectorName, capturemetrics.OpToken, 0, err, time.Since(start))
+	return access, err
+}
+
+func (a timedAuthorizer) Exchange(ctx context.Context, code, redirectURI string) (oauthflow.TokenGrant, error) {
+	start := time.Now()
+	grant, err := a.Authorizer.Exchange(ctx, code, redirectURI)
+	capturemetrics.ObserveRequest(connectorName, capturemetrics.OpToken, 0, err, time.Since(start))
+	return grant, err
 }
 
 // backfillMessage walks one listed message under its own tally, which the

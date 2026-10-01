@@ -151,8 +151,10 @@ func TestTheWorkerMetricsAreProcessLocalAndReServeNoFleetGauge(t *testing.T) {
 		"margince_ai_calls_total",
 		"margince_ai_call_duration_seconds",
 		"margince_ai_tokens_total",
-		// The import counters. The capture lanes run here, so the provider
-		// calls and the backfill's stage timings are this process's to report.
+		// The capture counters. The capture lanes run here, so their traced
+		// outcomes, provider calls and backfill stage timings are this
+		// process's to report.
+		"margince_capture_outcomes_total",
 		"margince_connector_requests_total",
 		"margince_connector_request_duration_seconds",
 		"margince_capture_backfill_stage_seconds",
