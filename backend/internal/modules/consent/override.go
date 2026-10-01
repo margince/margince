@@ -339,27 +339,16 @@ func (s *Store) revokeOverrideAdmittedTx(
 		return err
 	}
 
-	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id,
-		map[string]any{
-			"revoked_override": in.OverrideID.String(),
-			// How many rows this actually took back: one for a vouch that never
-			// travelled, more when a merge had copied it onto a survivor. An
-			// audit saying "one" over a two-row revoke would understate what the
-			// caller's single click did.
-			"revoked_rows":      len(revoked),
-			"recorded_at_level": decided,
-			"revoked_by_level":  string(level),
-			"revoked_by":        by,
-			// The REVOKER's words, and the audit entry is their home — the same
-			// split liftAdmittedTx keeps: the rep's own reason for vouching stays
-			// on the override row, and this is the installation explaining why it
-			// took the vouch back.
-			fieldReason: in.Reason,
-		})
-	if err != nil {
-		return err
-	}
-	return emitOverrideLifted(ctx, tx, auditID, revoked, commsauthz.AuthorityLevel(decided), level)
+	// The REVOKER's words ride every audit row — the same split liftAdmittedTx
+	// keeps: the rep's own reason for vouching stays on the override row, and
+	// this is the installation explaining why it took the vouch back.
+	return auditAndEmitRevokedOverrides(ctx, tx, revoked, revokeNote{
+		recordedAtLevel: commsauthz.AuthorityLevel(decided),
+		revokedByLevel:  level,
+		by:              by,
+		reason:          in.Reason,
+		rows:            len(revoked),
+	})
 }
 
 // overrideLiftedPayload names which override was revoked, at which authority it

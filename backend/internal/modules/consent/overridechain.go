@@ -201,25 +201,52 @@ func revokeOverrideChain(ctx context.Context, tx pgx.Tx, root ids.UUID) ([]revok
 	return revoked, nil
 }
 
-// emitOverrideLifted ships one consent.override_lifted per row taken back, each
-// on its own subject's stream.
+// revokeNote is what every audit row of one revoke says: the same words on each
+// contact the chain reached, differing only in which row that contact lost.
+type revokeNote struct {
+	recordedAtLevel, revokedByLevel commsauthz.AuthorityLevel
+	by, reason                      string
+	// rows is how many the one click took back in all — one for a vouch that
+	// never travelled, more when a merge had copied it. Repeated on every row
+	// so an auditor reading one contact's history sees the click's full reach
+	// without joining the others.
+	rows int
+}
+
+// auditAndEmitRevokedOverrides writes one audit row and one event per row the
+// walk took back, each on the contact that row belongs to.
 //
-// CONTACT ROWS ONLY, the same exclusion auditAndEmitCarriedOverrides makes and
-// for the same reason: public-events.yaml declares consent.override_lifted with
-// a static x-entity-type: contact, so a lead-held copy would ship an envelope
-// naming contact:<lead uuid>, an id of the wrong kind. A promotion is the only
-// way to hold one, and it leaves the contact copy — the one a send evaluates —
-// announced correctly.
-func emitOverrideLifted(
-	ctx context.Context, tx pgx.Tx, auditID ids.UUID,
-	revoked []revokedOverride, recordedAtLevel, by commsauthz.AuthorityLevel,
+// PER ROW, NOT PER CALL. The caller named one record; the walk changed one row
+// on each record in the chain, and the write shape is domain row + audit row +
+// event per record changed. A single audit on the caller's record would leave
+// every survivor's history ending at "override carried", with its copy revoked
+// in the table and nothing on that record saying so.
+//
+// CONTACT ROWS ONLY: public-events.yaml declares consent.override_lifted with a
+// static x-entity-type: contact, and the audit's entity is the same contact.
+// No writer produces a lead-held row today (overridesubject_test.go); the nil
+// skip is the schema's shape, not a path.
+func auditAndEmitRevokedOverrides(
+	ctx context.Context, tx pgx.Tx, revoked []revokedOverride, note revokeNote,
 ) error {
 	for _, r := range revoked {
 		if r.contact == nil {
 			continue
 		}
+		auditID, err := storekit.AuditEvent(ctx, tx, "update", entityContact, *r.contact,
+			map[string]any{
+				"revoked_override":  r.id.String(),
+				"revoked_rows":      note.rows,
+				"recorded_at_level": string(note.recordedAtLevel),
+				"revoked_by_level":  string(note.revokedByLevel),
+				"revoked_by":        note.by,
+				fieldReason:         note.reason,
+			})
+		if err != nil {
+			return err
+		}
 		if err := storekit.EmitEvent(ctx, tx, auditID, *r.contact,
-			overrideLiftedPayload(r.id, recordedAtLevel, by)); err != nil {
+			overrideLiftedPayload(r.id, note.recordedAtLevel, note.revokedByLevel)); err != nil {
 			return err
 		}
 	}

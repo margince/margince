@@ -285,3 +285,53 @@ func liftedOverrideStreams(t *testing.T, e *channelConsentEnv) map[ids.UUID]ids.
 	}
 	return streams
 }
+
+// TestRevokingAVouchAuditsEveryContactTheChainReached is the auditor's half,
+// beside the subscriber's above. A carry writes "overrides carried" into the
+// survivor's history; a revoke that audits only the record the caller named
+// leaves that history ending there, with the copy revoked in the table and
+// nothing on the survivor saying so. One audit row per row taken back, on the
+// contact that row belongs to, is what keeps each record's history complete.
+func TestRevokingAVouchAuditsEveryContactTheChainReached(t *testing.T) {
+	e := setupChannelConsent(t)
+	survivor := seedOverrideContact(t, e, "Audit Survivor")
+
+	recorded, err := e.store.Allow(e.ctx, AllowInput{
+		ContactID: e.contact, Category: "marketing", Reason: "they asked us at the trade fair",
+	})
+	if err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+	carryOverrides(t, e, e.contact, survivor)
+	copied := liveOverrideID(t, e, survivor)
+
+	if err := e.store.RevokeOverride(e.ctx, RevokeOverrideInput{
+		ContactID: e.contact, OverrideID: recorded, Reason: "the buyer changed their mind",
+	}); err != nil {
+		t.Fatalf("revoking the override: %v", err)
+	}
+
+	for _, want := range []struct {
+		contact ids.ContactID
+		row     ids.UUID
+	}{{e.contact, recorded}, {survivor, copied}} {
+		if n := revokeAuditRows(t, e, want.contact, want.row); n != 1 {
+			t.Errorf("contact %s carries %d audit row(s) naming revoked override %s, want 1",
+				want.contact.UUID, n, want.row)
+		}
+	}
+}
+
+// revokeAuditRows counts the audit entries on one contact that name one
+// revoked override — the row an auditor opening that contact's history reads.
+func revokeAuditRows(t *testing.T, e *channelConsentEnv, contact ids.ContactID, row ids.UUID) int {
+	t.Helper()
+	var n int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM audit_log
+		 WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'update'
+		   AND after->>'revoked_override' = $2`, contact, row.String()).Scan(&n); err != nil {
+		t.Fatalf("counting the revoke's audit rows: %v", err)
+	}
+	return n
+}
