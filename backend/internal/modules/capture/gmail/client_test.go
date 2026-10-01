@@ -56,7 +56,9 @@ func googleStub(t *testing.T) *httptest.Server {
 
 	mux.HandleFunc("/messages/m1", func(w http.ResponseWriter, _ *http.Request) {
 		raw := base64.RawURLEncoding.EncodeToString([]byte("Subject: hi\r\n\r\nbody"))
-		writeJSON(w, map[string]any{"id": "m1", "raw": raw, "labelIds": []string{"INBOX", "UNREAD"}})
+		writeJSON(w, map[string]any{
+			"id": "m1", "raw": raw, "labelIds": []string{"INBOX", "UNREAD"}, "internalDate": "1600000000123",
+		})
 	})
 
 	// The same mailbox's own outgoing copy: Gmail files it under SENT.
@@ -224,6 +226,27 @@ func TestGetRawDecodesBase64URL(t *testing.T) {
 	raw := msg.RFC822
 	if !strings.Contains(string(raw), "Subject: hi") {
 		t.Errorf("decoded RFC822 = %q, want it to contain the header", raw)
+	}
+}
+
+// internalDate is Google's arrival time in this mailbox. It is what proves mail
+// was already held before the mailbox was connected, so it must come off the
+// response exactly, and a message without one must claim no time at all.
+func TestGetRawReadsGmailsArrivalTime(t *testing.T) {
+	_, api := newTestClients(t)
+	msg, err := api.GetRaw(context.Background(), "access-2", "m1")
+	if err != nil {
+		t.Fatalf("GetRaw: %v", err)
+	}
+	if want := time.UnixMilli(1600000000123).UTC(); !msg.ReceivedAt.Equal(want) {
+		t.Errorf("ReceivedAt = %v, want %v", msg.ReceivedAt, want)
+	}
+	sent, err := api.GetRaw(context.Background(), "access-2", "m-sent")
+	if err != nil {
+		t.Fatalf("GetRaw on the sent copy: %v", err)
+	}
+	if !sent.ReceivedAt.IsZero() {
+		t.Errorf("a response with no internalDate gave ReceivedAt = %v, want zero", sent.ReceivedAt)
 	}
 }
 

@@ -322,7 +322,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -330,6 +330,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `activity_id` | `uuid` | yes | Points at `activity.id` — deleting the parent deletes this row. |
 | `imported_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 | `posture_at_import` | `text` |  | One of `shared`, `classified`, `held`. |
+| `provider_received_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `user_id` | `uuid` | yes | Points at `app_user.id` — the parent cannot be deleted while this row points at it. |
 | `verdict_reason` | `text` |  | Optional `text`. |
 | `verdict_reasons` | `text[]` |  | Optional `text[]`. |

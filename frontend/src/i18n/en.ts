@@ -5827,7 +5827,7 @@ export const en = {
   "privacynotice.source.crmMigration":
     "Your details were already in the customer system we used before, and moved here with it.",
   "privacynotice.source.mailboxHistory":
-    "We had already exchanged mail with you before our mailbox was connected to this system.",
+    "Before our mailbox was connected to this system, it already held mail we sent you, or mail we received that was also addressed to you.",
   "privacynotice.source.purchasedOrImported":
     "Your details came from a list that was bought or imported.",
   "privacynotice.source.unknown": "We cannot say how your details reached us.",

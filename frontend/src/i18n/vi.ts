@@ -5598,7 +5598,7 @@ export const vi = {
   "privacynotice.source.crmMigration":
     "Thông tin của quý vị đã có trong hệ thống khách hàng chúng tôi dùng trước đây và được chuyển sang đây cùng hệ thống đó.",
   "privacynotice.source.mailboxHistory":
-    "Chúng tôi đã trao đổi thư với quý vị trước khi hộp thư của chúng tôi được kết nối với hệ thống này.",
+    "Trước khi hộp thư của chúng tôi được kết nối với hệ thống này, hộp thư đã có thư chúng tôi gửi cho quý vị, hoặc thư chúng tôi nhận được cũng gửi đến quý vị.",
   "privacynotice.source.purchasedOrImported":
     "Thông tin của quý vị đến từ một danh sách được mua hoặc nhập vào.",
   "privacynotice.source.unknown":

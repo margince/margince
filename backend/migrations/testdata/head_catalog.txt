@@ -1528,6 +1528,7 @@ public.capture_import.capture_import_verdict_status_check CHECK (((verdict_statu
 public.capture_import.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_import.posture_at_import text gen=- def=-
+public.capture_import.provider_received_at timestamp with time zone gen=- def=-
 public.capture_import.user_id uuid NOT NULL gen=- def=-
 public.capture_import.verdict_reason text gen=- def=-
 public.capture_import.verdict_reasons text[] gen=- def=-
