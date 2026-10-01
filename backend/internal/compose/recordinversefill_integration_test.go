@@ -389,3 +389,22 @@ func TestUndoingASignatureLeavesATitleItOnlyConfirmed(t *testing.T) {
 		t.Errorf("title = %v, want the colleague's %q kept", title, typed)
 	}
 }
+
+// A LinkedIn handle a colleague saved after the fill is theirs, even when it
+// reads the same as the one the fill claimed.
+func TestASignatureLinkedinAColleagueSavedSinceIsNotUndone(t *testing.T) {
+	e := integration.Setup(t)
+	contact, fill := seedSignatureFill(t, e)
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{
+		Social: map[string]any{"linkedin": "https://www.linkedin.com/in/bob-contact"},
+	}); err != nil {
+		t.Fatalf("a colleague saving the handle: %v", err)
+	}
+
+	if reason := refusedFor(t, undoEntry(t, e, "contact", contact, fill)); reason != ReasonSuperseded {
+		t.Errorf("the undo refused %q, want %q", reason, ReasonSuperseded)
+	}
+	if _, _, _, linkedin := whatTheFillLeft(t, e, contact); linkedin != 1 {
+		t.Errorf("%d LinkedIn handles after the refused undo, want the colleague's one", linkedin)
+	}
+}

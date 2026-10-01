@@ -155,6 +155,15 @@ func TestUndoingAMachineArchiveBringsTheRecordBack(t *testing.T) {
 	if answer := advisoryAnswer(e.Admin(), t, e, "company", company, archiveID); answer.Reason != string(ReasonAlreadyUndone) {
 		t.Errorf("the undone archive reads %+v, want %q", answer, ReasonAlreadyUndone)
 	}
+
+	// Redo: undoing the un-archive archives the company again.
+	restoreID := latestAuditRowID(t, e, "company", company, actionRestore)
+	if err := undoEntry(t, e, "company", company, restoreID); err != nil {
+		t.Fatalf("redoing the archive: %v", err)
+	}
+	if !isArchived(t, e, "company", company) {
+		t.Error("the redo left the company live")
+	}
 }
 
 // An archive already undone stays undone when the record is archived again:

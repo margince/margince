@@ -135,6 +135,9 @@ func JudgeFillRetraction(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 // read wrote there.
 func fieldStands(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill FillRetraction, field string) (stands, replaced bool, err error) {
 	rows, stands, replaced, err := fillStands(ctx, tx, contactID, fill, field)
+	if err == nil && stands && (field == fieldPhone || field == fieldLinkedin) {
+		stands, err = slotsStand(ctx, tx, contactID, fill, field)
+	}
 	if err != nil || rows > 0 || field != fieldTitle || fill.MirroredTitle == "" {
 		return stands, replaced, err
 	}
@@ -147,6 +150,39 @@ func fieldStands(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill F
 		return false, false, fmt.Errorf("contacts: reading whether the filled title still stands: %w", err)
 	}
 	return stands, false, nil
+}
+
+// slotsStand answers what the evidence rows cannot. A phone: every number the
+// fill inserted is still live and still carries this fill's evidence — a later
+// statement that replaced one of them leaves the rest looking whole. A LinkedIn
+// slot: no colleague has saved the contact's social handles since, because a
+// handle they re-entered is theirs even when it reads the same.
+func slotsStand(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill FillRetraction, field string) (bool, error) {
+	var moved bool
+	var err error
+	switch field {
+	case fieldPhone:
+		err = tx.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM contact_phone n
+				 WHERE n.contact_id = $1 AND n.source = $2 AND n.created_at = $3
+				   AND (n.archived_at IS NOT NULL OR NOT EXISTS (
+				     SELECT 1 FROM contact_profile_field f
+				      WHERE f.contact_id = n.contact_id AND f.field = $4 AND f.value = n.phone
+				        AND f.source = $2 AND f.source_ref = $5)))`,
+			contactID, fill.Source, fill.FilledAt, fieldPhone, fill.SourceRef).Scan(&moved)
+	case fieldLinkedin:
+		err = tx.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM audit_log a
+				 WHERE a.entity_type = $1 AND a.entity_id = $2 AND a.actor_type = 'human'
+				   AND a.occurred_at > $3 AND a.after ? $4)`,
+			entityContact, contactID, fill.FilledAt, auditKeySocial).Scan(&moved)
+	}
+	if err != nil {
+		return false, fmt.Errorf("contacts: reading whether the %s the fill wrote still stands: %w", field, err)
+	}
+	return !moved, nil
 }
 
 // fillStands reads one field's evidence rows: how many the pass wrote that are

@@ -44,6 +44,9 @@ const (
 	inverseDemote
 	// inverseRetractFill undoes a machine fill of a contact's profile fields.
 	inverseRetractFill
+	// inverseRearchive redoes an archive: it undoes the un-archive that
+	// reversed it.
+	inverseRearchive
 )
 
 // The audit verbs an inverse answers to.
@@ -53,13 +56,15 @@ const (
 	actionPromote = "promote"
 )
 
-// archivedByUndo are the record types whose create an undo archives: each has
-// an archive the provider routes (Provider.archiverFor). A lead has none, so a
-// lead's create stays a verb no undo reverses.
+// archivedByUndo are the record types whose create an undo archives. A lead
+// has no archive. A project's archive retires its stakeholder links in a
+// transaction of its own, where a link a colleague added after the decision
+// cannot be seen; until it can be archived on the caller's transaction, its
+// create stays a verb no undo reverses.
 //
 //nolint:goconst // record types read as data, listed where the branch is decided
 var archivedByUndo = map[string]bool{
-	"contact": true, "company": true, "deal": true, "project": true, entityTypeActivity: true,
+	"contact": true, "company": true, "deal": true, entityTypeActivity: true,
 }
 
 // unarchivedByUndo are the record types with an un-archive (contacts'
@@ -77,12 +82,28 @@ func inverseOf(row AuditRow) inverse {
 		return inverseUnarchive
 	case row.Action == actionPromote && row.EntityType == entityTypeLead:
 		return inverseDemote
+	case row.Action == actionRestore && unarchivedByUndo[row.EntityType] && restoresAnArchive(row):
+		return inverseRearchive
 	case row.EntityType == entityTypeContact:
 		if _, fill := fillOf(row); fill {
 			return inverseRetractFill
 		}
 	}
 	return inverseNone
+}
+
+// actionRestore is the verb an un-archive and a field restore both write.
+const actionRestore = "restore"
+
+// restoresAnArchive reports whether a restore row is an un-archive, which names
+// the archive it brought the record back from.
+func restoresAnArchive(row AuditRow) bool {
+	var evidence map[string]json.RawMessage
+	if json.Unmarshal(row.Evidence, &evidence) != nil {
+		return false
+	}
+	_, unarchived := evidence[storekit.EvidenceKeyRestoresArchive]
+	return unarchived
 }
 
 // fillOf asks the contacts module whether this entry is a fill it can take back.
@@ -105,7 +126,7 @@ const (
 // other undo is a write and asks update.
 func undoGrantFor(row AuditRow) principal.Action {
 	switch inverseOf(row) {
-	case inverseArchive, inverseUnarchive:
+	case inverseArchive, inverseUnarchive, inverseRearchive:
 		return principal.ActionDelete
 	case inverseNone, inverseDemote, inverseRetractFill:
 	}
@@ -169,6 +190,11 @@ func (e Evaluator) inverseState(ctx context.Context, tx pgx.Tx, row AuditRow, ki
 		return promotionStands(ctx, tx, row)
 	case inverseRetractFill:
 		return e.fillStands(ctx, tx, row)
+	case inverseRearchive:
+		// Archiving again is the same write as undoing a create, with the
+		// same test: the record is live, and nobody has worked on it since it
+		// came back.
+		return e.createStands(ctx, tx, row)
 	case inverseNone:
 	}
 	return Undoability{}, false, nil

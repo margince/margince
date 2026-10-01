@@ -75,7 +75,7 @@ func (s RestoreSeam) reverseByVerb(
 // perform runs the module verb that undoes the entry.
 func (r recordInverses) perform(ctx context.Context, pool *pgxpool.Pool, row AuditRow, kind inverse, ifVersion int64) error {
 	switch kind {
-	case inverseArchive:
+	case inverseArchive, inverseRearchive:
 		return r.archiveCreated(ctx, pool, row, ifVersion)
 	case inverseUnarchive:
 		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -93,12 +93,14 @@ func (r recordInverses) perform(ctx context.Context, pool *pgxpool.Pool, row Aud
 	return fmt.Errorf("compose: entry %s has no module verb that undoes it", row.ID)
 }
 
-// archiveCreated archives the record a create made. For a contact, company or
+// archiveCreated archives the record a create made, or archives again one an
+// un-archive brought back. For a contact, company or
 // deal the archive retires its links in the same statement set, and a link a
 // colleague added after the decision does not move the record's version, so
 // the colleague check is asked again AFTER the archive, in its transaction: a
 // link the archive retired is visible to it, and the whole write rolls back.
-// A project or an activity archives through its module's own entry point.
+// An activity archives through its module's own entry point: it retires no
+// links, and a colleague relinking it moves its version.
 func (r recordInverses) archiveCreated(ctx context.Context, pool *pgxpool.Pool, row AuditRow, ifVersion int64) error {
 	var archive func(tx pgx.Tx) error
 	switch row.EntityType {

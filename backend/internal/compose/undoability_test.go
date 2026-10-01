@@ -81,6 +81,7 @@ func TestEachVerbIsUndoneByItsOwnModuleVerb(t *testing.T) {
 		{"contact", actionCreate, inverseArchive},
 		{entityTypeActivity, actionCreate, inverseArchive},
 		{entityTypeLead, actionCreate, inverseNone},
+		{"project", actionCreate, inverseNone},
 		{"company", actionArchive, inverseUnarchive},
 		{entityTypeDeal, actionArchive, inverseUnarchive},
 		{entityTypeActivity, actionArchive, inverseNone},
