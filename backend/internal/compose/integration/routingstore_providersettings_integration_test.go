@@ -84,11 +84,15 @@ func TestProviderSettings_ABoundHostChangeIsAuditedAndRebindsServingRoles(t *tes
 	const audits = `SELECT count(*) FROM audit_log WHERE entity_type = 'ai_routing' AND after::text LIKE '%' || $1 || '%'`
 	const moved = "https://eu.openrouter.ai/api"
 
-	served, err := store.SetProviderSettings(ctx, "openai_compatible", ai.ProviderSettings{
+	stored, err := store.SetProviderSettings(ctx, "openai_compatible", ai.ProviderSettings{
 		BaseURL: moved, Upstream: &ai.OpenRouterRouting{Only: []string{"mistral/eu"}},
 	})
 	if err != nil {
 		t.Fatalf("SetProviderSettings: %v", err)
+	}
+	served, err := ai.FromStored(stored, nil)
+	if err != nil {
+		t.Fatalf("the stored document does not finalize: %v", err)
 	}
 
 	if got := served.Tiers[ai.TierPremium].BaseURL; got != moved {
