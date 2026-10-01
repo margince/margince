@@ -15,9 +15,12 @@ const PRICING_PAGES: Readonly<Record<string, string>> = {
   jev_compatible: "https://openrouter.ai/typesafe/jev-1.13",
 };
 
-function isOpenRouter(baseUrl: string): boolean {
+// OpenRouter or one of its subdomains, as the server reads a broker host: a
+// bare suffix match would take `notopenrouter.ai` for the broker.
+export function isOpenRouter(baseUrl: string): boolean {
   try {
-    return new URL(baseUrl).hostname.endsWith("openrouter.ai");
+    const host = new URL(baseUrl).hostname.toLowerCase();
+    return host === "openrouter.ai" || host.endsWith(".openrouter.ai");
   } catch {
     return false;
   }

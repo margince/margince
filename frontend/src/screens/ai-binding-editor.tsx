@@ -246,6 +246,7 @@ function SliceFields({
           catalogue={catalogue}
           profile={routing.profile}
           vertexLocation={vertexLocation}
+          providerSettings={routing.providers?.[draft.binding.provider] ?? {}}
           disabled={disabled}
           providers={reachableProviders(
             PROVIDERS,
@@ -268,6 +269,7 @@ function SliceFields({
             catalogue={catalogue}
             profile={routing.profile}
             vertexLocation={vertexLocation}
+            providerSettings={routing.providers?.[draft.binding.provider] ?? {}}
             disabled={disabled}
             providers={reachableProviders(
               PROVIDERS,
@@ -289,6 +291,7 @@ function SliceFields({
       return draft.binding ? (
         <DecisionFields
           binding={draft.binding}
+          providers={routing.providers}
           current={current}
           keys={keys}
           catalogue={catalogue}
@@ -301,6 +304,7 @@ function SliceFields({
 
 function DecisionFields({
   binding,
+  providers,
   current,
   keys,
   catalogue,
@@ -308,6 +312,7 @@ function DecisionFields({
   onChange,
 }: Readonly<{
   binding: DecisionsBinding;
+  providers: RoutingRead["routing"]["providers"];
   current: string | undefined;
   keys: readonly KeyStatus[] | undefined;
   catalogue: ModelCatalogue;
@@ -315,6 +320,7 @@ function DecisionFields({
   onChange: (next: DecisionsBinding) => void;
 }>) {
   const t = useT();
+  const settings = providers?.[binding.provider] ?? {};
   return (
     <AdapterFields
       label={t("aiRouting.provider.label")}
@@ -323,11 +329,18 @@ function DecisionFields({
       binding={binding}
       catalogue={catalogue}
       disabled={disabled}
+      providerSettings={settings}
       providers={reachableProviders(DECISION_PROVIDERS, keys, current)}
       onChange={(next) => onChange(reboundDecision(binding, next))}
       // The endpoint is a full URL nobody remembers, and OpenRouter's is the
       // one most installations want; the key is the one thing it cannot fill.
-      providerAside={openRouterPreset(binding, disabled, onChange, t)}
+      providerAside={openRouterPreset(
+        binding,
+        settings.base_url,
+        disabled,
+        onChange,
+        t,
+      )}
     />
   );
 }

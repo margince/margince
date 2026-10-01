@@ -7,7 +7,6 @@ import { Button, Field, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import {
   type AvailableModels,
   type ModelCatalogue,
@@ -24,6 +23,7 @@ import {
 import { useVertexModelProbe } from "./vertex-model-probe";
 
 type Routing = components["schemas"]["AiRouting"];
+type ProviderSettings = components["schemas"]["AiProviderSettings"];
 // The adapters a tier may name. Written out because the wire carries a free
 // string — the server refuses an unknown one, and a reader choosing from a list
 // should not have to discover that by being refused. A declared mirror of the
@@ -57,42 +57,20 @@ export const OPENROUTER_DECISION_PRESET = {
   model: "typesafe/jev-1.13",
 } as const;
 
-// The adapters whose host this form asks for, and what each does with it.
-//
-// openai_compatible has no host of its own, so the endpoint is the binding
-// rather than a tweak to it, and neither has jev_compatible, which is any
-// server on the Jev wire. jev has TypeSafe's own endpoint as its default, so
-// its host is offered with blank meaning that default.
-//
-// The help differs because what each does with the value differs: the chat
-// broker gets /v1 appended, while a decision endpoint is the full URL, used as
-// written. A sentence written for one told the others the wrong thing.
-type HostField = Readonly<{
-  help: MessageKey;
-  placeholder: MessageKey;
-}>;
-const HOST_FIELDS: ReadonlyMap<string, HostField> = new Map([
-  [
-    "openai_compatible",
-    {
-      help: "aiRouting.baseUrl.help",
-      placeholder: "aiRouting.baseUrl.placeholder",
-    },
-  ],
-  [
-    "jev",
-    {
-      help: "aiRouting.baseUrl.help.jev",
-      placeholder: "aiRouting.baseUrl.placeholder.jev",
-    },
-  ],
-  [
-    "jev_compatible",
-    {
-      help: "aiRouting.baseUrl.help.jevCompatible",
-      placeholder: "aiRouting.baseUrl.placeholder.jevCompatible",
-    },
-  ],
+// The providers that cannot be dialled until their host is set: neither has a
+// host of its own. A lane bound to one with no host set says where to set it.
+const NEEDS_HOST: ReadonlySet<string> = new Set([
+  "openai_compatible",
+  "jev_compatible",
+]);
+
+// The providers whose embeddings model may run on a server of its own: a
+// self-hosted vLLM serves one model per process, so the embedder is often not
+// where the chat models are.
+const EMBEDDINGS_SERVER: ReadonlySet<string> = new Set([
+  "openai_compatible",
+  "ollama",
+  "vllm",
 ]);
 
 type TierBindingLike = {
@@ -149,8 +127,9 @@ export function withProvider<B extends TierBindingLike>(
   return { ...next, location: undefined };
 }
 
-// The three controls that name an adapter: which vendor, which model on it,
-// and -- only where the vendor has no address of its own -- where to reach it.
+// The controls that name an adapter: which vendor and which model on it. Where
+// the vendor is reached is the provider's, set on its sheet; the embeddings
+// lane alone may name a server or a Vertex location of its own.
 //
 // One component rather than one per row. Both lanes ask the identical question
 // and the answers are governed by the identical rule, so a second copy would
@@ -167,6 +146,7 @@ export function AdapterFields<B extends TierBindingLike>({
   catalogue,
   profile = "",
   vertexLocation = DEFAULT_VERTEX_LOCATION,
+  providerSettings,
   disabled,
   onChange,
   providers = PROVIDERS,
@@ -192,6 +172,8 @@ export function AdapterFields<B extends TierBindingLike>({
   profile?: string;
   // Where a lane newly pointed at Vertex starts: another saved Vertex lane's.
   vertexLocation?: string;
+  // The bound provider's own settings, which say whether it can be dialled.
+  providerSettings?: ProviderSettings;
   disabled: boolean;
   onChange: (next: B) => void;
 }>) {
@@ -209,7 +191,11 @@ export function AdapterFields<B extends TierBindingLike>({
     true,
     vertex ? location : undefined,
   );
-  const host = HOST_FIELDS.get(binding.provider);
+  const ownServer = laneName === "embeddings";
+  const unhosted =
+    NEEDS_HOST.has(binding.provider) &&
+    providerSettings !== undefined &&
+    !providerSettings.base_url;
   const suggestions = offeredModels(
     available.data,
     catalogue,
@@ -246,7 +232,12 @@ export function AdapterFields<B extends TierBindingLike>({
         {providerAside?.action}
       </div>
       {providerAside?.note}
-      {vertex && (
+      {unhosted && (
+        <p className="t-caption">
+          {t("aiRouting.provider.noHost", { provider: binding.provider })}
+        </p>
+      )}
+      {vertex && ownServer && (
         <VertexLocationField
           value={location}
           profile={profile}
@@ -294,20 +285,16 @@ export function AdapterFields<B extends TierBindingLike>({
           />
         )}
       </Field>
-      {/* Only where it is load-bearing. An adapter with no default host is
-          refused a binding without one, so leaving this off the form made
-          every broker unbindable from here: the write was accepted and the
-          running role then declined to adopt it. A native vendor addresses
-          its own API, and an empty box beside it invites somebody to fill it
-          in with something that overrides a working default. */}
-      {host && (
-        <Field label={t("aiRouting.baseUrl.label")} hint={t(host.help)}>
+      {ownServer && EMBEDDINGS_SERVER.has(binding.provider) && (
+        <Field
+          label={t("aiRouting.embeddingsServer.label")}
+          hint={t("aiRouting.embeddingsServer.help")}
+        >
           {(control) => (
             <TextInput
               {...control}
               value={binding.base_url ?? ""}
               disabled={disabled}
-              placeholder={t(host.placeholder)}
               onChange={(e) =>
                 onChange(rebind(binding, { base_url: e.target.value }))
               }
@@ -386,12 +373,15 @@ function modelSourceNote(
  * The OpenRouter preset for the decision lane, as the verb beside its provider
  * and the note under the row. Only where the provider is the one OpenRouter
  * serves: the endpoint is a full URL nobody remembers, and the key is the one
- * thing the preset cannot fill.
+ * thing the preset cannot fill. The endpoint rides on the lane only while the
+ * provider has none, which the server then lifts onto the provider; a provider
+ * that has one keeps it.
  */
 export function openRouterPreset<
   B extends { provider: string; model: string; base_url?: string },
 >(
   binding: B,
+  providerHost: string | undefined,
   disabled: boolean,
   onChange: (next: B) => void,
   t: ReturnType<typeof useT>,
@@ -408,7 +398,9 @@ export function openRouterPreset<
           onClick={() =>
             onChange({
               ...binding,
-              base_url: OPENROUTER_DECISION_PRESET.base_url,
+              base_url: providerHost
+                ? undefined
+                : OPENROUTER_DECISION_PRESET.base_url,
               model: OPENROUTER_DECISION_PRESET.model,
             })
           }

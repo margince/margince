@@ -102,6 +102,14 @@ const LISTED_AT_EU = {
   ],
 };
 
+const EMBEDDERS_AT_EU = {
+  provider: "gemini_vertex",
+  models: [
+    { id: "gemini-embedding-002", lane: "embeddings" },
+    { id: "gemini-embedding-001", lane: "embeddings" },
+  ],
+};
+
 type CapturedBinding = { provider: string; model: string; location?: string };
 type CapturedRouting = {
   profile: string;
@@ -203,13 +211,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// A tier is served at its provider's location, set on the provider's sheet;
+// the embeddings lane may name one of its own, so the location field — and
+// everything it asks Google — is exercised there.
 describe("a gemini_vertex lane", () => {
   it("lists locations grouped EU, US, Other, Global, refusing the non-resident ones under eu_hosted", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backendFor().fetchMock);
     render(<AiRoutingCard />);
 
-    const lane = await openLane(user, "ai-routing-tier-premium");
+    const lane = await openLane(user, "ai-routing-embeddings");
     await user.click(
       await within(lane).findByRole("combobox", { name: "Location" }),
     );
@@ -242,7 +253,7 @@ describe("a gemini_vertex lane", () => {
     );
     render(<AiRoutingCard />);
 
-    const lane = await openLane(user, "ai-routing-tier-premium");
+    const lane = await openLane(user, "ai-routing-embeddings");
     await user.click(
       await within(lane).findByRole("combobox", { name: "Location" }),
     );
@@ -261,7 +272,7 @@ describe("a gemini_vertex lane", () => {
     );
     render(<AiRoutingCard />);
 
-    const lane = await openLane(user, "ai-routing-tier-premium");
+    const lane = await openLane(user, "ai-routing-embeddings");
     expect(
       await within(lane).findByText(/asking google which locations/i),
     ).toBeInTheDocument();
@@ -292,7 +303,7 @@ describe("a gemini_vertex lane", () => {
     );
     render(<AiRoutingCard />);
 
-    const lane = await openLane(user, "ai-routing-tier-premium");
+    const lane = await openLane(user, "ai-routing-embeddings");
     const notes = await within(lane).findAllByText(
       /add it under model provider keys/i,
     );
@@ -415,18 +426,18 @@ describe("a gemini_vertex lane", () => {
     const user = userEvent.setup();
     const backend = backendFor({
       vertexModels: ({ location, model }) =>
-        location === "europe-west4" && model === "gemini-3.5-flash"
+        location === "europe-west4" && model === "gemini-embedding-001"
           ? {
               provider: "gemini_vertex",
               models: [],
               unavailable: "no_endpoint",
             }
-          : LISTED_AT_EU,
+          : EMBEDDERS_AT_EU,
     });
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
 
-    const lane = await openLane(user, "ai-routing-tier-premium");
+    const lane = await openLane(user, "ai-routing-embeddings");
     await pickOption(
       user,
       await within(lane).findByRole("combobox", { name: "Location" }),
@@ -434,7 +445,7 @@ describe("a gemini_vertex lane", () => {
     );
     expect(
       await within(lane).findByText(
-        "gemini-3.5-flash is not served in europe-west4, so the field was cleared.",
+        "gemini-embedding-001 is not served in europe-west4, so the field was cleared.",
       ),
     ).toBeInTheDocument();
     expect(within(lane).getByRole("combobox", { name: "Model" })).toHaveValue(
@@ -444,13 +455,13 @@ describe("a gemini_vertex lane", () => {
     await pickSuggestion(
       user,
       within(lane).getByRole("combobox", { name: "Model" }),
-      /^gemini-4\.0-flash/,
+      /^gemini-embedding-002/,
     );
     await save(user);
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
-    expect(backend.getCapturedPut()?.tiers.premium).toEqual({
+    expect(backend.getCapturedPut()?.embeddings).toMatchObject({
       provider: "gemini_vertex",
-      model: "gemini-4.0-flash",
+      model: "gemini-embedding-002",
       location: "europe-west4",
     });
   });
@@ -462,14 +473,14 @@ describe("a gemini_vertex lane", () => {
         location === "europe-west4"
           ? {
               provider: "gemini_vertex",
-              models: [{ id: "gemini-3.1-flash-lite", lane: "chat" }],
+              models: [{ id: "text-embedding-005", lane: "embeddings" }],
             }
-          : LISTED_AT_EU,
+          : EMBEDDERS_AT_EU,
     });
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
 
-    const lane = await openLane(user, "ai-routing-tier-premium");
+    const lane = await openLane(user, "ai-routing-embeddings");
     await pickOption(
       user,
       await within(lane).findByRole("combobox", { name: "Location" }),
@@ -480,11 +491,11 @@ describe("a gemini_vertex lane", () => {
     const listbox = await screen.findByRole("listbox");
     expect(
       await within(listbox).findByRole("option", {
-        name: /^gemini-3\.1-flash-lite/,
+        name: /^text-embedding-005/,
       }),
     ).toBeInTheDocument();
     expect(
-      within(listbox).queryByRole("option", { name: /^gemini-4\.0-flash/ }),
+      within(listbox).queryByRole("option", { name: /^gemini-embedding-002/ }),
     ).toBeNull();
   });
 
@@ -511,9 +522,8 @@ describe("a gemini_vertex lane", () => {
       within(lane).getByRole("combobox", { name: "Provider" }),
       "gemini_vertex",
     );
-    expect(
-      await within(lane).findByRole("combobox", { name: "Location" }),
-    ).toHaveTextContent("europe-west4");
+    // The tier names no location of its own: it is the provider's.
+    expect(within(lane).queryByRole("combobox", { name: "Location" })).toBeNull();
     await save(user);
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
     expect(backend.getCapturedPut()?.tiers.cheap_cloud.location).toBe(

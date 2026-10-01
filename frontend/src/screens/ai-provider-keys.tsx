@@ -29,6 +29,10 @@ import {
   STATE_LABEL,
   STATE_TONE,
 } from "./ai-provider-sheet";
+import {
+  hasProviderSettings,
+  ProviderSettingsForm,
+} from "./ai-provider-settings";
 import { providerUsage, useRouting } from "./ai-routing-query";
 import { PanelTitle } from "./ai-terms";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
@@ -209,10 +213,20 @@ export function AiProviderKeysCard() {
                   usage={usage?.get(openStatus.provider)}
                   refresh={refresh}
                   connection={
-                    <ProviderConnection
-                      status={openStatus}
-                      canManage={canManage}
-                    />
+                    <>
+                      <ProviderConnection
+                        status={openStatus}
+                        canManage={canManage}
+                      />
+                      {hasProviderSettings(openStatus.provider) && (
+                        <ProviderSettingsForm
+                          key={openStatus.provider}
+                          provider={openStatus.provider}
+                          routing={routing.data?.routing}
+                          canManage={canManage}
+                        />
+                      )}
+                    </>
                   }
                   onClose={() => setOpened(null)}
                 />

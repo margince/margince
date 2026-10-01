@@ -9238,6 +9238,11 @@ export const en = {
   "aiRouting.dimensions.label": "Vector width",
   "aiRouting.dimensions.help":
     "Leave blank for the provider default. Values outside 1 to 2000 are refused.",
+  "aiRouting.provider.noHost":
+    "{provider} has no host yet. Set its host under Providers before saving.",
+  "aiRouting.embeddingsServer.label": "Embeddings server",
+  "aiRouting.embeddingsServer.help":
+    "Only if the embeddings model runs on its own server. Blank uses the provider’s host.",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
@@ -11548,6 +11553,17 @@ export const en = {
   "aiProviders.unpriced": "{model} is in use and has no price.",
   "aiProviders.setPrice": "Set price",
   "aiProviders.manage": "Manage",
+  "aiProviderSettings.save": "Save",
+  "aiProviderSettings.preset.openrouter": "Preset: OpenRouter",
+  "aiProviderSettings.upstream.label": "OpenRouter hosts",
+  "aiProviderSettings.upstream.help":
+    "Which OpenRouter hosts may serve this provider, on every lane. Pin EU hosts here for EU residency.",
+  "aiProviderSettings.upstream.only": "Only these hosts",
+  "aiProviderSettings.upstream.ignore": "Never these hosts",
+  "aiProviderSettings.upstream.fallbacks": "Fall back to other hosts",
+  "aiProviderSettings.upstream.fallbacks.default": "OpenRouter decides",
+  "aiProviderSettings.upstream.fallbacks.yes": "Yes",
+  "aiProviderSettings.upstream.fallbacks.no": "No",
   "aiProviders.connection": "Connection",
   "aiProviders.prices": "Prices",
   "aiProviders.addPrice": "Add price",

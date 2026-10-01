@@ -269,7 +269,9 @@ describe("AiRoutingCard", () => {
   // without one. With no field for it, choosing that adapter produced a write
   // the running role could never adopt: saved cleanly, then declined at the
   // rebind, leaving the OLD models serving with the reason only in a log.
-  it("asks for a host when the adapter has no default, and only then", async () => {
+  // A tier names its provider and model; the host is the provider's. A tier
+  // re-pointed at a provider with no host yet says where to set it.
+  it("asks a tier for no host, and says where to set one the provider lacks", async () => {
     // An instance rather than the default export: pickOption drives a portalled
     // listbox and needs a session that keeps pointer state across the open.
     const user = userEvent.setup();
@@ -277,9 +279,6 @@ describe("AiRoutingCard", () => {
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
     await screen.findByText("gemini-3.5-flash");
-
-    // A native vendor addresses its own API, so no host is asked for.
-    expect(screen.queryByLabelText("Host")).toBeNull();
 
     const tier = await openEditor(user, "ai-routing-tier-premium");
     // Named, because the row now holds two comboboxes: the adapter, and the
@@ -289,12 +288,14 @@ describe("AiRoutingCard", () => {
       within(tier).getByRole("combobox", { name: "Provider" }),
       "openai_compatible",
     );
-    const host = await within(tier).findByLabelText("Host");
-    await user.type(host, "https://openrouter.ai/api");
+    expect(within(tier).queryByLabelText("Host")).toBeNull();
+    expect(
+      within(tier).getByText(/openai_compatible has no host yet/),
+    ).toBeInTheDocument();
     await saveEditor(user, backend);
     const sent = backend.getCapturedPut();
     expect(sent?.tiers.premium.provider).toBe("openai_compatible");
-    expect(sent?.tiers.premium.base_url).toBe("https://openrouter.ai/api");
+    expect(sent?.tiers.premium.base_url).toBeUndefined();
   });
   // Broker preferences belong to the OpenRouter binding they were written for,
   // and the server refuses them on any other. Carried onto a new vendor, they
@@ -344,15 +345,16 @@ describe("AiRoutingCard", () => {
       within(lane).getByRole("combobox", { name: "Provider" }),
       "openai_compatible",
     );
+    // Its own embeddings server, for this lane alone.
     await user.type(
-      await within(lane).findByLabelText("Host"),
-      "https://openrouter.ai/api",
+      await within(lane).findByLabelText("Embeddings server"),
+      "http://gpu-box:8001",
     );
     await user.type(within(lane).getByLabelText("Vector width"), "1536");
     await saveEditor(user, backend);
     const sent = backend.getCapturedPut()?.embeddings;
     expect(sent?.provider).toBe("openai_compatible");
-    expect(sent?.base_url).toBe("https://openrouter.ai/api");
+    expect(sent?.base_url).toBe("http://gpu-box:8001");
     expect(sent?.dimensions).toBe(1536);
   });
 

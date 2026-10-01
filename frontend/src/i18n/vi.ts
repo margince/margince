@@ -9008,6 +9008,11 @@ export const vi = {
   "aiRouting.dimensions.label": "Độ rộng vector",
   "aiRouting.dimensions.help":
     "Để trống để dùng mặc định của nhà cung cấp. Giá trị ngoài khoảng 1 đến 2000 sẽ bị từ chối.",
+  "aiRouting.provider.noHost":
+    "{provider} chưa có máy chủ. Hãy đặt máy chủ trong mục Nhà cung cấp trước khi lưu.",
+  "aiRouting.embeddingsServer.label": "Máy chủ embedding",
+  "aiRouting.embeddingsServer.help":
+    "Chỉ khi mô hình embedding chạy trên máy chủ riêng. Để trống sẽ dùng máy chủ của nhà cung cấp.",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Máy chủ",
   "aiRouting.baseUrl.help":
@@ -11288,6 +11293,17 @@ export const vi = {
   "aiProviders.unpriced": "{model} đang được dùng và chưa có giá.",
   "aiProviders.setPrice": "Đặt giá",
   "aiProviders.manage": "Quản lý",
+  "aiProviderSettings.save": "Lưu",
+  "aiProviderSettings.preset.openrouter": "Mẫu: OpenRouter",
+  "aiProviderSettings.upstream.label": "Máy chủ OpenRouter",
+  "aiProviderSettings.upstream.help":
+    "Những máy chủ OpenRouter được phục vụ nhà cung cấp này, trên mọi luồng. Ghim máy chủ EU tại đây để lưu trú dữ liệu tại EU.",
+  "aiProviderSettings.upstream.only": "Chỉ những máy chủ này",
+  "aiProviderSettings.upstream.ignore": "Không bao giờ dùng những máy chủ này",
+  "aiProviderSettings.upstream.fallbacks": "Chuyển sang máy chủ khác",
+  "aiProviderSettings.upstream.fallbacks.default": "OpenRouter quyết định",
+  "aiProviderSettings.upstream.fallbacks.yes": "Có",
+  "aiProviderSettings.upstream.fallbacks.no": "Không",
   "aiProviders.connection": "Kết nối",
   "aiProviders.prices": "Giá",
   "aiProviders.addPrice": "Thêm giá",

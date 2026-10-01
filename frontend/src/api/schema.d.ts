@@ -10948,7 +10948,7 @@ export interface paths {
     "/ai/available-models/{provider}": {
         parameters: {
             query?: {
-                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
+                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). A vendor's host is set once, on the provider (`providers` in the routing document), so this matters only for `embeddings`, which may name a server of its own. Every other value asks the provider's host, and a vendor with none set asks the adapter's own default. */
                 tier?: string;
                 /**
                  * @description Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
@@ -11096,6 +11096,41 @@ export interface paths {
          *     Audit-only write (no event stream, EVT-NOEVT-3).
          */
         delete: operations["deleteAiProviderKey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/provider-settings/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set one provider's host and upstream pins (admin/ops).
+         * @description Replaces this provider's entry in the routing document's `providers` and re-validates
+         *     the whole document under the routing lock, so no If-Match is needed: nothing else in
+         *     the document changes. An empty body removes the entry.
+         *
+         *     Every lane on the provider reads the new host and pins from here, and takes effect
+         *     without a restart, exactly as `PUT /ai/routing` does.
+         *
+         *     A 422 names the fault: `no_host` when the change leaves a lane that binds this provider
+         *     with nowhere to dial (the message names the lanes); `invalid_value` for an upstream on a
+         *     provider other than an OpenRouter-hosted `openai_compatible`, a host the profile forbids,
+         *     or a malformed URL. 404 for a provider this build does not know.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        put: operations["setAiProviderSettings"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -19124,7 +19159,7 @@ export interface components {
             /** @description The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten. */
             ranked_by?: string;
             /**
-             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — the provider has no host set, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
              * @enum {string}
              */
             unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
@@ -19204,7 +19239,7 @@ export interface components {
             /** @description How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one. */
             model_count?: number;
             /**
-             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
              * @enum {string}
              */
             reason?: "no_key" | "profile_forbids" | "not_published" | "no_endpoint" | "auth_failed" | "rate_limited" | "unreachable";
@@ -19237,6 +19272,44 @@ export interface components {
             };
             embeddings: components["schemas"]["AiEmbeddingsBinding"];
             decisions?: components["schemas"]["AiDecisionsBinding"];
+            /**
+             * @description Provider name to what that provider is configured with, independent of any lane: its
+             *     host and the broker's upstream pins. Every lane binding a provider reads them from
+             *     here. A client that omits the field keeps the stored entries; one that sends it owns
+             *     the map, so an entry it leaves out is removed.
+             */
+            providers?: {
+                [key: string]: components["schemas"]["AiProviderSettings"];
+            };
+        };
+        /**
+         * @description One provider's configuration. An entry no lane binds is held to its shape only, so a
+         *     host can be set before anything is bound to it.
+         */
+        AiProviderSettings: {
+            /** @description Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. */
+            base_url?: string;
+            upstream?: components["schemas"]["AiOpenRouterUpstream"];
+            /**
+             * @description The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
+             *     processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+             *     while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
+             *     Google about each bound model at the new location first; one it does not serve is a 422.
+             */
+            location?: string;
+        };
+        /**
+         * @description Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
+         *     residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
+         *     How one model is served (sort, quantizations, …) stays on the tier's `routing`.
+         */
+        AiOpenRouterUpstream: {
+            /** @description Upstream slugs allowed; a hard filter. */
+            only?: string[];
+            /** @description Upstream slugs excluded; a hard filter. */
+            ignore?: string[];
+            /** @description Override the broker's host fallback. False is a real choice, distinct from absent. */
+            allow_fallbacks?: boolean;
         };
         AiTierBinding: {
             /**
@@ -19246,13 +19319,19 @@ export interface components {
             provider: string;
             /** @description The provider-native model id. */
             model: string;
-            /** @description Endpoint override; empty means the provider default. */
+            /**
+             * @description On a tier, the provider's host as resolved from `providers`; on write it is accepted
+             *     only when empty or equal to the provider's, and a different one is a 422
+             *     `moved_to_provider`. On the embeddings lane it is a live override: a separate
+             *     embeddings server for that lane alone. Empty means the provider's host.
+             */
             base_url?: string;
             /**
-             * @description The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
-             *     processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-             *     on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
-             *     On save, the model is asked for at this location, and one it does not serve is a 422.
+             * @description On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+             *     it is accepted only when empty or equal to the provider's, and a different one is a 422
+             *     `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
+             *     embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
+             *     Refused on every provider but `gemini_vertex`.
              */
             location?: string;
             /**
@@ -19274,12 +19353,13 @@ export interface components {
             thinking_level?: "default" | "minimal" | "low" | "medium" | "high";
         };
         /**
-         * @description Upstream-selection preferences for an openai_compatible binding pointed at
-         *     OpenRouter; refused on any other binding, and on the embeddings lane every
-         *     preference but only, ignore and allow_fallbacks is refused. Absent means the
-         *     product default (reliability over price); an empty object means no preferences
-         *     (the broker's own price-weighted routing). The two are different choices and a
-         *     client must not turn one into the other.
+         * @description How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
+         *     other binding, and on the embeddings lane every preference but only, ignore and
+         *     allow_fallbacks is refused. Absent means the product default (reliability over price);
+         *     an empty object means no preferences (the broker's own price-weighted routing). The two
+         *     are different choices and a client must not turn one into the other. `only`, `ignore`
+         *     and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
+         *     are accepted only when equal to the provider's, or lifted onto a provider that has none.
          */
         AiOpenRouterRouting: {
             /** @description Upstream slugs allowed; a hard filter. */
@@ -19320,7 +19400,10 @@ export interface components {
             provider: string;
             /** @description The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter. */
             model: string;
-            /** @description The FULL decision endpoint URL, posted to as written. Optional for jev (default https://api.typesafe.ai/v1/systemone); required for jev_compatible, e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone. */
+            /**
+             * @deprecated
+             * @description The decision provider's endpoint as resolved from `providers` (the FULL URL, posted to as written; jev defaults to https://api.typesafe.ai/v1/systemone). On write it is accepted only when empty or equal to the provider's; a different one is a 422 `moved_to_provider`.
+             */
             base_url?: string;
         };
         /**
@@ -58580,7 +58663,7 @@ export interface operations {
     listAvailableModels: {
         parameters: {
             query?: {
-                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
+                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). A vendor's host is set once, on the provider (`providers` in the routing document), so this matters only for `embeddings`, which may name a server of its own. Every other value asks the provider's host, and a vendor with none set asks the adapter's own default. */
                 tier?: string;
                 /**
                  * @description Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
@@ -58706,6 +58789,39 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    setAiProviderSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiProviderSettings"];
+            };
+        };
+        responses: {
+            /** @description The whole routing document, as it now reads. */
+            200: {
+                headers: {
+                    /** @description The configuration revision now stored. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiRouting"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     testAiProviderKey: {
