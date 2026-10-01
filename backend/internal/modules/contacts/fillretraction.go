@@ -41,6 +41,10 @@ type FillRetraction struct {
 	SourceRef string
 	Fields    []string
 	FilledAt  time.Time
+	// MirroredTitle is the title a site read wrote straight onto the column
+	// with no title evidence row of its own (fillSiteContactFields). Empty for
+	// a signature, whose title has its own row.
+	MirroredTitle string
 }
 
 // retractableFillSources are the passes that only fill blanks and record each
@@ -82,7 +86,12 @@ func FillOf(before, after, evidence json.RawMessage, occurredAt time.Time) (Fill
 		fields = append(fields, field)
 	}
 	slices.Sort(fields)
-	return FillRetraction{Source: said.Source, SourceRef: said.SourceRef, Fields: fields, FilledAt: occurredAt}, true
+	fill := FillRetraction{Source: said.Source, SourceRef: said.SourceRef, Fields: fields, FilledAt: occurredAt}
+	var title string
+	if json.Unmarshal(now[fieldTitle], &title) == nil && title != signatureFieldFilled {
+		fill.MirroredTitle = title
+	}
+	return fill, true
 }
 
 // FillRetractionRefusal says why a fill cannot be taken back. Moved names the
@@ -104,7 +113,7 @@ func (e *FillRetractionRefusal) Error() string {
 func JudgeFillRetraction(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill FillRetraction) error {
 	var refusal FillRetractionRefusal
 	for _, field := range fill.Fields {
-		stands, replaced, err := fillStands(ctx, tx, contactID, fill, field)
+		stands, replaced, err := fieldStands(ctx, tx, contactID, fill, field)
 		if err != nil {
 			return err
 		}
@@ -121,15 +130,37 @@ func JudgeFillRetraction(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 	return &refusal
 }
 
-// fillStands reads one field: whether every row the pass wrote is still there,
-// uncorrected, and still what the record shows, and whether any of them took
-// the place of an earlier value.
-func fillStands(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill FillRetraction, field string) (stands, replaced bool, err error) {
+// fieldStands reads one field the fill named. A site read's title has no
+// evidence row of its own, so it stands while the column still holds what the
+// read wrote there.
+func fieldStands(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill FillRetraction, field string) (stands, replaced bool, err error) {
+	rows, stands, replaced, err := fillStands(ctx, tx, contactID, fill, field)
+	if err != nil || rows > 0 || field != fieldTitle || fill.MirroredTitle == "" {
+		return stands, replaced, err
+	}
 	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
 		return false, false, err
 	}
+	err = tx.QueryRow(ctx, `SELECT title IS NOT DISTINCT FROM $2 FROM contact WHERE id = $1`,
+		contactID, fill.MirroredTitle).Scan(&stands)
+	if err != nil {
+		return false, false, fmt.Errorf("contacts: reading whether the filled title still stands: %w", err)
+	}
+	return stands, false, nil
+}
+
+// fillStands reads one field's evidence rows: how many the pass wrote that are
+// still there, whether every one is uncorrected and still what the record
+// shows, and whether any took the place of an earlier value. A phone number the
+// pass did not insert — it only confirmed one already on the record — counts as
+// taking a place, because clearing it would remove somebody else's number.
+func fillStands(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill FillRetraction, field string) (rows int, stands, replaced bool, err error) {
+	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
+		return 0, false, false, err
+	}
 	err = tx.QueryRow(ctx, `
-		SELECT count(*) > 0
+		SELECT count(*),
+		       count(*) > 0
 		       AND bool_and(NOT EXISTS (
 		         SELECT 1 FROM ai_feedback
 		          WHERE subject_type = 'contact' AND subject_id = f.contact_id
@@ -141,14 +172,16 @@ func fillStands(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill Fi
 		         SELECT 1 FROM contact_phone n
 		          WHERE n.contact_id = f.contact_id AND n.phone = f.value AND n.source = f.source
 		            AND n.archived_at IS NULL)),
-		       coalesce(bool_or(f.superseded_value IS NOT NULL), false)
+		       coalesce(bool_or(f.superseded_value IS NOT NULL OR (f.field = $6 AND NOT EXISTS (
+		         SELECT 1 FROM contact_phone n
+		          WHERE n.contact_id = f.contact_id AND n.phone = f.value AND n.created_at = $7))), false)
 		  FROM contact_profile_field f
 		 WHERE f.contact_id = $1 AND f.field = $2 AND f.source = $3 AND f.source_ref = $4`,
-		contactID, field, fill.Source, fill.SourceRef, fieldTitle, fieldPhone).Scan(&stands, &replaced)
+		contactID, field, fill.Source, fill.SourceRef, fieldTitle, fieldPhone, fill.FilledAt).Scan(&rows, &stands, &replaced)
 	if err != nil {
-		return false, false, fmt.Errorf("contacts: reading whether the %s fill still stands: %w", field, err)
+		return 0, false, false, fmt.Errorf("contacts: reading whether the %s fill still stands: %w", field, err)
 	}
-	return stands, replaced, nil
+	return rows, stands, replaced, nil
 }
 
 // RetractFill takes one fill back: the evidence rows it wrote, and what each
@@ -210,6 +243,9 @@ func retractField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill 
 	if err != nil {
 		return fmt.Errorf("contacts: removing the %s the fill wrote: %w", field, err)
 	}
+	if len(values) == 0 && field == fieldTitle && fill.MirroredTitle != "" {
+		values = []string{fill.MirroredTitle}
+	}
 	for _, value := range values {
 		if err := clearFilledValue(ctx, tx, contactID, fill, field, value); err != nil {
 			return err
@@ -236,8 +272,8 @@ func clearFilledValue(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, f
 	case fieldPhone:
 		_, err = tx.Exec(ctx, `
 			UPDATE contact_phone SET archived_at = now()
-			 WHERE contact_id = $1 AND phone = $2 AND source = $3 AND archived_at IS NULL`,
-			contactID, value, fill.Source)
+			 WHERE contact_id = $1 AND phone = $2 AND source = $3 AND created_at = $4 AND archived_at IS NULL`,
+			contactID, value, fill.Source, fill.FilledAt)
 	case fieldLinkedin:
 		err = clearClaimedLinkedinSlot(ctx, tx, contactID, fill, value)
 	}

@@ -121,6 +121,14 @@ func (s *Store) DemoteLead(
 		if err != nil {
 			return err
 		}
+		// A contact the promotion created is archived by the unwind, so a
+		// caller that asked for it is refused once a colleague has worked on
+		// that contact: their work would be archived with it.
+		if outcome == outcomeCreated {
+			if err := refuseIfHumanTouched(ctx, tx, entityContact, contactID.UUID, options); err != nil {
+				return err
+			}
+		}
 		unwind, err := unwindContact(ctx, tx, id, contactID, outcome)
 		if err != nil {
 			return err

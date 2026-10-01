@@ -218,3 +218,123 @@ func TestTheReceiptFoldsCreatesAndArchivesAndOffersAnUndoPerRecord(t *testing.T)
 		}
 	}
 }
+
+// fillEntryOf is the newest fill entry a pass wrote on one contact.
+func fillEntryOf(t *testing.T, e *integration.Env, contact ids.UUID, source string) ids.UUID {
+	t.Helper()
+	var fill ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT id FROM audit_log
+			 WHERE entity_type = 'contact' AND entity_id = $1 AND evidence->>'source' = $2
+			 ORDER BY occurred_at DESC, id DESC LIMIT 1`, contact, source).Scan(&fill)
+	}); err != nil {
+		t.Fatalf("find the %s fill's entry: %v", source, err)
+	}
+	return fill
+}
+
+// A later signature that only repeats a number already on the record did not
+// add it; undoing that signature must not take the number away.
+func TestUndoingASignatureThatOnlyConfirmedANumberLeavesTheNumber(t *testing.T) {
+	e := integration.Setup(t)
+	contact, _ := seedSignatureFill(t, e)
+	later := ids.NewV7()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		c := context.Background()
+		if _, err := tx.Exec(c, `
+			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id, source, captured_by, occurred_at)
+			VALUES ($1, 'email', 'again', 'Best,\nBob Contact\n+49 30 1234567', 'inbound', 'gmail', $2, 'gmail:seed', 'connector:gmail', now() + interval '1 day')`,
+			later, later.String()); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(c, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, later, contact); err != nil {
+			return err
+		}
+		_, err := tx.Exec(c, `INSERT INTO activity_participant (activity_id, contact_id, address, role) VALUES ($1, $2, 'bob@acme.example', 'from')`, later, contact)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Contacts.ApplySignatureFields(machineCtx(e), ids.From[ids.ContactKind](contact), later,
+		[]contacts.SignatureField{{Name: "phone", Value: "+49 30 1234567", Evidence: "+49 30 1234567", Confidence: 0.9}}); err != nil {
+		t.Fatalf("the later signature repeating the number: %v", err)
+	}
+	confirm := fillEntryOf(t, e, contact, "capture_enrich")
+
+	if reason := refusedFor(t, undoEntry(t, e, "contact", contact, confirm)); reason != ReasonNotRestorableByThisPath {
+		t.Errorf("undoing a signature that only confirmed a number refused %q, want %q", reason, ReasonNotRestorableByThisPath)
+	}
+	if _, _, phones, _ := whatTheFillLeft(t, e, contact); phones != 1 {
+		t.Errorf("%d live numbers after the refused undo, want the one the first signature added", phones)
+	}
+}
+
+// A site read fills an empty title straight onto the column, with no title
+// evidence row of its own. Undo clears that title too.
+func TestUndoingASiteReadClearsTheTitleItFilled(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Sara Site", nil)
+	company := e.SeedCompany(t, "Acme Site GmbH", nil)
+	seedEmploymentEdge(t, e, contact, company)
+	matched, err := e.Contacts.ApplySiteContactFields(machineCtx(e), ids.From[ids.CompanyKind](company), contacts.SiteContactFields{
+		Name: "Sara Site", Role: "Head of Operations", EvidenceSnippet: "Sara Site, Head of Operations",
+		SourceURL: "https://acme.test/team",
+	})
+	if err != nil || !matched {
+		t.Fatalf("the site read filling the contact: matched=%v err=%v", matched, err)
+	}
+	fill := fillEntryOf(t, e, contact, "site_read")
+
+	if err := undoEntry(t, e, "contact", contact, fill); err != nil {
+		t.Fatalf("undoing the site read: %v", err)
+	}
+	if title, evidence, _, _ := whatTheFillLeft(t, e, contact); title != nil || evidence != 0 {
+		t.Errorf("after the undo: title=%v evidence=%d, want both cleared", title, evidence)
+	}
+}
+
+// A colleague who worked on the contact a promotion created keeps that work:
+// the demotion would archive the contact.
+func TestAPromotionWhoseContactAColleagueChangedIsNotUndone(t *testing.T) {
+	e := integration.Setup(t)
+	name, email := "Lena Lead", "lena@prospect.test"
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leadID := ids.UUID(lead.Id)
+	contact, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "inbound_reply"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	title := "Fleet Manager"
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](ids.UUID(contact.Id)), contacts.UpdateContactInput{Title: &title}); err != nil {
+		t.Fatalf("a colleague editing the promoted contact: %v", err)
+	}
+	promoteID := latestAuditRowID(t, e, entityTypeLead, leadID, actionPromote)
+
+	if reason := refusedFor(t, undoEntry(t, e, entityTypeLead, leadID, promoteID)); reason != ReasonSuperseded {
+		t.Errorf("the undo refused %q, want %q", reason, ReasonSuperseded)
+	}
+	if isArchived(t, e, "contact", ids.UUID(contact.Id)) {
+		t.Error("the refused undo archived the colleague's contact anyway")
+	}
+}
+
+// A colleague who linked an imported contact to their employer wrote the link,
+// not the contact; archiving the contact would retire that link with it.
+func TestACreateWhoseLinkAColleagueAddedIsNotUndone(t *testing.T) {
+	e := integration.Setup(t)
+	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := ids.UUID(created.Id)
+	createID := latestAuditRowID(t, e, "contact", contact, actionCreate)
+	seedEmploymentEdge(t, e, contact, e.SeedCompany(t, "Employer GmbH", nil))
+
+	if reason := refusedFor(t, undoEntry(t, e, "contact", contact, createID)); reason != ReasonSuperseded {
+		t.Errorf("the undo of a create whose link a colleague added refused %q, want %q", reason, ReasonSuperseded)
+	}
+}

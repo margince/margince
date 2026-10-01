@@ -87,7 +87,7 @@ func (r recordInverses) perform(ctx context.Context, pool *pgxpool.Pool, row Aud
 		})
 	case inverseDemote:
 		_, err := r.contacts.DemoteLead(ctx, ids.From[ids.LeadKind](row.EntityID), demoteReason,
-			contacts.OnlyAtVersion(&ifVersion))
+			contacts.OnlyAtVersion(&ifVersion), contacts.NotTouchedByHumanSince(row.OccurredAt))
 		return err
 	case inverseRetractFill:
 		fill, _ := fillOf(row)
@@ -122,7 +122,10 @@ func inverseWriteRefusal(err error) error {
 	var fill *contacts.FillRetractionRefusal
 	var notPromoted *contacts.NotPromotedError
 	var hasDeal *contacts.ContactHasDealError
+	var touched *contacts.HumanTouchedError
 	switch {
+	case errors.As(err, &touched):
+		return RefusedRestore{Reason: ReasonSuperseded, Detail: "changed by a colleague since"}
 	case errors.As(err, &unarchive):
 		return unarchiveRefusal(unarchive)
 	case errors.As(err, &fill):
