@@ -19,10 +19,10 @@ import (
 
 // planNode is the part of an EXPLAIN (FORMAT JSON) node this test reads.
 type planNode struct {
-	NodeType  string     `json:"Node Type"`
-	Alias     string     `json:"Alias"`
-	IndexName string     `json:"Index Name"`
-	Plans     []planNode `json:"Plans"`
+	NodeType  string     `json:"Node Type"`  //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
+	Alias     string     `json:"Alias"`      //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
+	IndexName string     `json:"Index Name"` //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
+	Plans     []planNode `json:"Plans"`      //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
 }
 
 // reachedBy reports whether any node of the subtree is a scan of the index and
@@ -86,7 +86,7 @@ func TestTheScoutReachesACitedActivityByItsPrimaryKey(t *testing.T) {
 		t.Fatalf("planning the scout's read: %v", err)
 	}
 	var plans []struct {
-		Plan planNode `json:"Plan"`
+		Plan planNode `json:"Plan"` //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
 	}
 	if err := json.Unmarshal(raw, &plans); err != nil || len(plans) != 1 {
 		t.Fatalf("reading the plan: %v (%d plans)", err, len(plans))
