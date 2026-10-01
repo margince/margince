@@ -2,6 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
+import { de } from "../i18n/de";
+import { AiRuntimeChip } from "./airuntimechip";
 import { Button, Field, TextInput } from "./atoms";
 import { OnboardingStage } from "./onboarding-stage";
 
@@ -54,6 +57,48 @@ export const OnAPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   args: { ...Lit.args, coreStateLabel: "Core · reading input" },
+};
+
+// The longest end slot a laptop meets, which fe-uat renders at 1024px: the
+// German runtime chip outgrows its third there, so the slot wraps after the
+// state in words and the chip keeps the theme toggle beside it.
+export const AGermanChipAtALaptopWidth: Story = {
+  args: {
+    ...Lit.args,
+    coreStateLabel: de["ob.core.warning"],
+    aside: (
+      <AiRuntimeChip
+        configured="deepseek-chat"
+        locale="de"
+        labels={{
+          configured: de["ob.ai.configured"],
+          used: de["ob.ai.modelsUsed"],
+          route: de["ob.ai.route"],
+          calls: de["ob.ai.calls"],
+          tokens: de["ob.ai.tokens"],
+          latency: de["ob.ai.latency"],
+          estimatedCost: de["ob.ai.estimatedCost"],
+          partial: de["ob.ai.partialEstimate"],
+          awaiting: de["ob.ai.awaitingModel"],
+          unavailable: de["ob.ai.notAvailableYet"],
+          chip: de["ob.ai.runtimeChip"],
+          answering: de["ob.ai.answeringNow"],
+          scope: de["ob.ai.runScope"],
+        }}
+      />
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const band = canvasElement.querySelector(".ob-stage-band");
+    const toggle = await within(canvasElement).findByRole("button", {
+      name: /theme/i,
+    });
+    if (band === null) throw new Error("the stage drew no band");
+    const edge = band.getBoundingClientRect().right;
+    await expect(toggle.getBoundingClientRect().right).toBeLessThanOrEqual(
+      edge,
+    );
+  },
 };
 
 // The read theatre's anchor. A surface that gains a tile per page cannot be
