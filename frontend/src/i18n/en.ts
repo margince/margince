@@ -11515,6 +11515,7 @@ export const en = {
   "firstRun.ignite.act":
     "send anything or change a record without your approval",
   "firstRun.ignite.carryOn": "Continue",
+  "firstRun.ignite.leaving": "Checking setup…",
   "firstRun.ai.foot":
     "Nothing is sent to the provider until you select Continue.",
   "contact.readings.title": "Contact status",

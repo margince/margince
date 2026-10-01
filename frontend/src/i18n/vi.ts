@@ -11135,6 +11135,7 @@ export const vi = {
   "firstRun.ignite.act":
     "gửi bất cứ gì, hay sửa một bản ghi, nếu bạn không cho phép",
   "firstRun.ignite.carryOn": "Tiếp tục",
+  "firstRun.ignite.leaving": "Đang kiểm tra thiết lập…",
   "firstRun.step.model": "Mô hình",
   "firstRun.step.platform": "Nền tảng của bạn",
   "firstRun.google.eyebrow":

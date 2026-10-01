@@ -456,9 +456,15 @@ describe("the first-run setup gate", () => {
     report.steps[0].configured = true;
     report.complete = true;
     await user.click(screen.getByRole("button", { name: "Continue" }));
-    // Held while the server is asked, so a second press is not a second ask.
-    await user.click(screen.getByRole("button", { name: "Continue" }));
+    // Held while the server is asked, so a second press is not a second ask,
+    // and the wait is said to a reader who cannot see the spinner.
+    const carryOn = screen.getByRole("button", { name: "Continue" });
+    await user.click(carryOn);
     expect(reads.count()).toBe(1);
+    const described = (carryOn.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .map((id) => document.getElementById(id)?.textContent);
+    expect(described).toContain("Checking setup…");
     expect(
       screen.getByRole("heading", { name: "Model connected" }),
     ).toBeTruthy();

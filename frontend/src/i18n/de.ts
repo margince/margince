@@ -11237,6 +11237,7 @@ export const de = {
   "firstRun.ignite.act":
     "ohne deine Freigabe etwas senden oder einen Datensatz ändern",
   "firstRun.ignite.carryOn": "Weiter",
+  "firstRun.ignite.leaving": "Einrichtung wird geprüft…",
   "firstRun.step.model": "Modell",
   "firstRun.step.platform": "Plattform",
   "firstRun.google.eyebrow": "Modell verbunden · E-Mail nicht verbunden",

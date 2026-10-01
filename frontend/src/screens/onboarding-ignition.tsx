@@ -148,7 +148,12 @@ export function Ignition({
       </ul>
       <div className="ob-ig-go">
         <ErrorLine error={refused} />
-        <Button variant="primary" pending={leaving} onClick={leave}>
+        <Button
+          variant="primary"
+          pending={leaving}
+          busyLabel={t("firstRun.ignite.leaving")}
+          onClick={leave}
+        >
           {t("firstRun.ignite.carryOn")}
         </Button>
       </div>
