@@ -643,6 +643,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `contact_phone_e164` — `CHECK ((phone ~ '^\+[1-9][0-9]{7,14}$'))`
 - `contact_phone_phone_type_check` — `CHECK ((phone_type = ANY (ARRAY['work', 'mobile', 'home', 'other'])))`
 
 **Indexes**

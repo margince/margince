@@ -34,7 +34,9 @@ import (
 const (
 	livedTitle    = "Head of Partnerships"
 	replacedTitle = "Partnerships Lead"
-	replacedPhone = "+493033333333"
+	// Seven digits, for the reason livePhone carries: ident splices eight in and
+	// E.164 caps a number at fifteen.
+	replacedPhone = "+4930333"
 )
 
 // observedAt and replacedObservedAt are the dates the RECORD believes the
