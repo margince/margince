@@ -10,6 +10,7 @@ import { Callout } from "../design-system/callout";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { isOpenRouter } from "./ai-provider-links";
 import { ROUTING_KEY } from "./ai-routing-query";
 import { problemMessageOf, throwProblem } from "./common";
 import { VERTEX_PROVIDER, VertexLocationField } from "./vertex-location";
@@ -99,6 +100,13 @@ const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
           label: "aiProviderSettings.service.openrouter",
           host: "https://openrouter.ai/api/alpha/decisions",
         },
+        {
+          id: "openrouter-eu",
+          label: "aiProviderSettings.service.openrouterEu",
+          host: "https://eu.openrouter.ai/api/alpha/decisions",
+          note: "aiProviderSettings.service.openrouterEu.note",
+          noteLink: "https://openrouter.ai/docs/guides/features/sovereign-ai",
+        },
       ],
       other: {
         label: "aiProviderSettings.service.otherDecisions",
@@ -131,17 +139,32 @@ export function hasProviderSettings(provider: string): boolean {
   return SERVICES.has(provider) || provider === VERTEX_PROVIDER;
 }
 
-// Two spellings of one address name one service: case and a trailing slash
-// are what a hand edit varies without meaning to.
+// Two spellings of one address name one service. A mirror of the server's
+// sameEndpoint (routingstore.go): surrounding space, a trailing slash, and the
+// case of scheme and host, which URLs ignore; the path keeps its case.
 function sameHost(a: string, b: string): boolean {
-  const norm = (h: string) => h.trim().replace(/\/+$/, "").toLowerCase();
+  const norm = (h: string) => {
+    const trimmed = h.trim().replace(/\/+$/, "");
+    try {
+      const u = new URL(trimmed);
+      return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, "")}`;
+    } catch {
+      return trimmed;
+    }
+  };
   return norm(a) === norm(b);
 }
 
-/** The service a stored host belongs to: a known one, or Other. */
+// No service chosen yet: a provider that cannot be reached without a host
+// opens with nothing selected rather than stating a host it does not have.
+const UNCHOSEN = "";
+
+/** The service a stored host belongs to: a known one, Other, or none yet. */
 export function serviceOf(provider: string, host: string): string {
   const known = SERVICES.get(provider)?.services ?? [];
-  if (host.trim() === "") return known[0]?.id ?? OTHER;
+  if (host.trim() === "") {
+    return known.find((s) => s.host === "")?.id ?? UNCHOSEN;
+  }
   return (
     known.find((s) => s.host !== "" && sameHost(s.host, host))?.id ?? OTHER
   );
@@ -172,7 +195,9 @@ export function useSetProviderSettings() {
 
 // What the sheet sends: the host and location it shows, and the stored pins it
 // does not — a write replaces the whole entry, so pins set elsewhere ride along
-// rather than being wiped by a save that never showed them.
+// rather than being wiped by a save that never showed them. Pins name
+// OpenRouter's hosts, so they go when the provider moves off OpenRouter, which
+// the server would otherwise refuse with no control here to remove them.
 function settingsBody(
   stored: ProviderSettings,
   host: string,
@@ -181,7 +206,7 @@ function settingsBody(
   const body: ProviderSettings = {};
   if (host.trim()) body.base_url = host.trim();
   if (location) body.location = location;
-  if (stored.upstream) body.upstream = stored.upstream;
+  if (stored.upstream && isOpenRouter(host)) body.upstream = stored.upstream;
   return body;
 }
 
@@ -200,12 +225,18 @@ export function ProviderSettingsForm({
   const [service, setService] = useState(() =>
     serviceOf(provider, stored.base_url ?? ""),
   );
-  const [typed, setTyped] = useState(stored.base_url ?? "");
+  // Other starts empty when the stored host is a known service's: carried
+  // over it would read as a host the reader typed.
+  const [typed, setTyped] = useState(() =>
+    serviceOf(provider, stored.base_url ?? "") === OTHER
+      ? (stored.base_url ?? "")
+      : "",
+  );
   const [location, setLocation] = useState(stored.location ?? "");
   const save = useSetProviderSettings();
   const disabled = !canManage || save.isPending;
   const known = catalog?.services.find((s) => s.id === service);
-  const host = known ? known.host : typed;
+  const host = known ? known.host : service === OTHER ? typed : "";
   return (
     <div className="ai-provider-settings">
       {catalog && (
@@ -214,6 +245,7 @@ export function ProviderSettingsForm({
             <Select
               {...control}
               value={service}
+              placeholder={t("aiProviderSettings.service.choose")}
               disabled={disabled}
               options={[
                 ...catalog.services.map((s) => ({
@@ -242,7 +274,7 @@ export function ProviderSettingsForm({
           </a>
         </p>
       )}
-      {catalog && !known && (
+      {catalog && service === OTHER && (
         <>
           <Field
             label={t("aiRouting.baseUrl.label")}
@@ -280,7 +312,9 @@ export function ProviderSettingsForm({
         <Button
           variant="primary"
           pending={save.isPending}
-          disabled={!canManage}
+          disabled={
+            !canManage || (catalog !== undefined && service === UNCHOSEN)
+          }
           reason={canManage ? undefined : t("aiProviderKeys.adminOnly")}
           onClick={() =>
             save.mutate({

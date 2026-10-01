@@ -9,6 +9,7 @@ import {
   type VendorCatalogue,
   type VendorModel,
   vendorSuggestions,
+  withBorrowedRows,
 } from "./ai-models";
 
 type ModelRate = components["schemas"]["AiModelRate"];
@@ -219,5 +220,31 @@ describe("offeredModels", () => {
       "gemini-2.5-pro",
       "gemini-3.5-flash",
     ]);
+  });
+});
+
+// A provider priced by another is read with the rows it borrows, under its own
+// name, by every lane and picker — the same fallback the server prices with.
+describe("withBorrowedRows", () => {
+  it("lends the pricing provider's rows the borrower has no price for", () => {
+    const sheet = [
+      rate("gemini", "gemini-2.5-pro", "chat", "1.25"),
+      rate("gemini", "gemini-3.5-flash", "chat", "1.50"),
+      rate("gemini_vertex", "gemini-3.5-flash", "chat", "1.60"),
+    ];
+    const read = withBorrowedRows(sheet, [
+      { provider: "gemini_vertex", priced_by: "gemini" },
+      { provider: "gemini" },
+    ]);
+    const vertex = (read ?? [])
+      .filter((r) => r.provider === "gemini_vertex")
+      .map((r) => `${r.model_id}@${r.input_per_mtok}`)
+      .sort();
+    expect(vertex).toEqual(["gemini-2.5-pro@1.25", "gemini-3.5-flash@1.60"]);
+  });
+
+  it("leaves the sheet as it is with no provider priced by another", () => {
+    const sheet = [rate("gemini", "gemini-2.5-pro", "chat")];
+    expect(withBorrowedRows(sheet, [{ provider: "gemini" }])).toEqual(sheet);
   });
 });

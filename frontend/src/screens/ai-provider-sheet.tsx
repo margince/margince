@@ -11,7 +11,7 @@ import { Heading } from "../design-system/heading";
 import { today } from "../format/calendarday";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useAiModelCatalogue } from "./ai-models";
+import { borrowedRows, useAiModelCatalogue } from "./ai-models";
 import { pricingPageFor } from "./ai-provider-links";
 import { providerName } from "./ai-provider-names";
 import type { ProviderUse } from "./ai-routing-query";
@@ -271,13 +271,7 @@ function pricedRows(
   pricedBy: string | undefined,
 ): SheetRow[] {
   const own = sheet.filter((r) => r.provider === provider);
-  if (!pricedBy) return own;
-  const borrowed = sheet.filter(
-    (r) =>
-      r.provider === pricedBy &&
-      !own.some((o) => o.model_id === r.model_id && o.lane === r.lane),
-  );
-  return [...own, ...borrowed].sort((a, b) =>
+  return [...own, ...borrowedRows(sheet, provider, pricedBy)].sort((a, b) =>
     a.model_id.localeCompare(b.model_id),
   );
 }

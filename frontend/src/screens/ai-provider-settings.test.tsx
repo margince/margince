@@ -75,6 +75,12 @@ function backend(
               optional: false,
               credential_kind: "service_account",
             },
+            {
+              provider: "jev_compatible",
+              configured: false,
+              env_var: "JEV_COMPATIBLE_API_KEY",
+              optional: true,
+            },
           ],
         });
       }
@@ -163,7 +169,9 @@ describe("a provider's settings on its sheet", () => {
     expect(host).toHaveValue("https://old.example");
     await user.clear(host);
     await user.type(host, "https://gateway.example");
-    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
 
     await waitFor(() =>
       expect(puts).toEqual([
@@ -212,7 +220,9 @@ describe("a provider's settings on its sheet", () => {
       within(sheet).getByText(/https:\/\/api\.mistral\.ai/),
     ).toBeInTheDocument();
     expect(within(sheet).queryByLabelText("Host")).toBeNull();
-    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
 
     await waitFor(() =>
       expect(puts[0]?.body).toEqual({ base_url: "https://api.mistral.ai" }),
@@ -246,7 +256,9 @@ describe("a provider's settings on its sheet", () => {
     expect(
       within(sheet).getByText(/Business or Enterprise plan/),
     ).toBeInTheDocument();
-    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
 
     await waitFor(() =>
       expect(puts[0]?.body.base_url).toBe("https://eu.openrouter.ai/api"),
@@ -270,13 +282,75 @@ describe("a provider's settings on its sheet", () => {
     const sheet = await openSheet(user, "openai_compatible");
     await within(sheet).findByRole("combobox", { name: "Service" });
     expect(within(sheet).queryByText("Only these hosts")).toBeNull();
-    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
 
     await waitFor(() =>
       expect(puts[0]?.body).toEqual({
         base_url: "https://openrouter.ai/api",
         upstream: { only: ["mistral/eu"] },
       }),
+    );
+  });
+
+  // Pins name OpenRouter's hosts; a service elsewhere cannot take them, so
+  // moving off OpenRouter drops them rather than being refused for them.
+  it("drops stored pins when the provider moves off OpenRouter", async () => {
+    const puts = backend(
+      routingWith({
+        openai_compatible: {
+          base_url: "https://openrouter.ai/api",
+          upstream: { only: ["mistral/eu"] },
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    const sheet = await openSheet(user, "openai_compatible");
+    await pickService(user, sheet, "Mistral");
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
+
+    await waitFor(() =>
+      expect(puts[0]?.body).toEqual({ base_url: "https://api.mistral.ai" }),
+    );
+  });
+
+  // With no host stored the sheet states none: the reader chooses a service,
+  // and only then can it be saved.
+  it("asks for a service when the provider has no host yet", async () => {
+    backend(routingWith({}));
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    const sheet = await openSheet(user, "openai_compatible");
+    expect(
+      await within(sheet).findByRole("combobox", { name: "Service" }),
+    ).toHaveTextContent("Choose a service");
+    expect(within(sheet).queryByText(/Host: /)).toBeNull();
+    expect(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    ).toBeDisabled();
+  });
+
+  it("offers OpenRouter's EU address for a decision server", async () => {
+    const puts = backend(routingWith({}));
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    const sheet = await openSheet(user, "jev_compatible");
+    await pickService(user, sheet, "OpenRouter (EU)");
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
+
+    await waitFor(() =>
+      expect(puts[0]?.body.base_url).toBe(
+        "https://eu.openrouter.ai/api/alpha/decisions",
+      ),
     );
   });
 
@@ -291,7 +365,9 @@ describe("a provider's settings on its sheet", () => {
     await user.click(
       await screen.findByRole("option", { name: /europe-west4/ }),
     );
-    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
 
     await waitFor(() =>
       expect(puts).toEqual([
@@ -320,7 +396,9 @@ describe("a provider's settings on its sheet", () => {
 
     const sheet = await openSheet(user, "openai_compatible");
     await user.clear(await within(sheet).findByLabelText("Host"));
-    await user.click(within(sheet).getByRole("button", { name: "Save connection" }));
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
 
     expect(await within(sheet).findByText(/tier premium/)).toBeInTheDocument();
   });
