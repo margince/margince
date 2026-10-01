@@ -310,11 +310,10 @@ func (s *Store) revokeOverrideAdmittedTx(
 	if err := auth.EnsureRetractable(ctx, tx, sub.entityType, sub.id); err != nil {
 		return err
 	}
-	// SETTLED AGAINST A MERGE, as Allow settles its write: the row Allow
-	// returned may sit on the survivor of the contact this caller named.
-	// Either home is accepted — the original recorded before a merge still
-	// sits on the retired record — and nothing else is, so a row on a
-	// stranger's contact stays as unreachable as before.
+	// SETTLED AGAINST A MERGE, as Allow settles its write: the survivor is
+	// resolved so the chain-reach check below can accept the vouch through
+	// either home the caller may hold, and its scope is checked before any row
+	// is read.
 	surviving, err := survivingSubject(ctx, tx, sub.id)
 	if err != nil {
 		return err
@@ -343,8 +342,8 @@ func (s *Store) revokeOverrideAdmittedTx(
 	var decided string
 	err = tx.QueryRow(ctx, `
 		WITH RECURSIVE chain AS (
-		    SELECT id, contact_id FROM communication_override WHERE id = $4
-		  UNION ALL
+		    SELECT id, contact_id FROM communication_override WHERE id IN ($4, $1)
+		  UNION
 		    SELECT carried.id, carried.contact_id
 		      FROM communication_override carried
 		      JOIN chain ON carried.carried_from = chain.id

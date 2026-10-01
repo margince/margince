@@ -251,8 +251,6 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"communication_suppression.lead_id":      "server-derived: same, keyed on the subject's lead twins",
 	// The override entry is classified client-supplied-and-gated because Allow
 	// takes a caller's ContactID through auth.Require and auth.EnsureWritable.
-	// The suppression entry above has a door of the same shape in substance, and
-	// its "server-derived" wording understates that.
 	"communication_override.contact_id": "client-supplied and gated on the door that records a vouch, server-derived on the rest. Allow (consent/override.go) takes a caller's ContactID and puts it through auth.Require(contact, update) then auth.EnsureWritable inside the write's own transaction before the INSERT — a rep cannot vouch for a contact they could not already change, and one they cannot see answers ErrNotFound. The other writers name no caller id: the merge carry (CarryOverridesTx) resolves the subject from the merge it is already inside, and privacy's subject-addressed erasure, retention and SAR statements key on the subject their own operation is about",
 	"communication_override.lead_id":    "server-derived only: the Allow door is contact-only (AllowInput names no lead), so no caller supplies this column. It is written by the merge carry keyed on the survivor's lead twin and by privacy's lead-twin erasure and retention statements — the same shape as communication_suppression.lead_id",
 	"contact_acquisition_evidence.contact_id": "child row: why one contact exists, written by recordAcquisition " +

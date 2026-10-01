@@ -32,11 +32,12 @@ func (s *Store) carryOverridesTx(ctx context.Context, tx pgx.Tx, from, to commsa
 }
 
 // carryOverridesOrRefuse mirrors the refusal inlined in carryStopsTx
-// (stopcarry.go): an unwired carrier refuses the merge only when the retiring
-// subject holds an override the merge would otherwise drop, exactly the data-conditioned refusal
-// carryStopsTx's own comment argues for — refusing every merge outright
-// would break every caller with nothing to do with consent, and refusing
-// nothing would restore the silent-drop defect this file exists to close.
+// (stopcarry.go): an unwired carrier refuses the merge only when the
+// retiring subject holds an override the merge would otherwise drop, exactly
+// the data-conditioned refusal carryStopsTx's own comment argues for —
+// refusing every merge outright would break every caller with nothing to do
+// with consent, and refusing nothing would restore the silent-drop defect this
+// file exists to close.
 func carryOverridesOrRefuse(ctx context.Context, tx pgx.Tx, carrier StopCarrier, from, to commsauthz.StopSubject) error {
 	if carrier != nil {
 		return carrier.CarryOverridesTx(ctx, tx, from, to)

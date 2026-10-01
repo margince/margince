@@ -37,7 +37,10 @@ package consent
 // lockBothSidesOfACarry before it reaches lockCarriedFamilies, and
 // revokeOverrideAdmittedTx takes lockSubjectSuppressions before
 // lockOverrideFamily — so neither ever waits on a subject key while holding a
-// family key, and the two classes cannot cycle.
+// family key, and the two classes cannot cycle. Family against family: a revoke
+// may hold several family keys and takes them far-to-near along one ancestry; a
+// carry reads its roots in one statement under one snapshot, sorted by id.
+// Neither can take two in opposite orders.
 
 import (
 	"context"
@@ -65,14 +68,11 @@ type revokedOverride struct {
 
 // lockOverrideFamily serialises every writer of one carry chain.
 //
-// Keyed on the chain's ROOT, which every member can derive and which does not
-// move: the carry's INSERT sets carried_from and no statement in this package
-// touches it afterwards, and TestEveryPackageOnlyWritesTablesItOwns
-// (backend/gates/tableownership_test.go) keeps this package the only one that
-// may. The walk upward is therefore over rows already settled. Erasure can cut
-// the link — the reference is ON DELETE SET NULL — and the orphaned copy
-// becomes a root of its own, with the rows that would have shared its key gone
-// with it. The walk that follows does not rely on the root it read staying a
+// Keyed on the chain's ROOT, which every member can derive. The root is read
+// before the key is held and can move when an erasure deletes an ancestor
+// (carried_from is ON DELETE SET NULL, so the orphaned copy becomes a root of
+// its own); lockOverrideFamilyOf re-derives it under the key until the two
+// agree. The walk that follows does not rely on the root it read staying a
 // row: revokeOverrideChain anchors on the named row too.
 //
 // Transaction-scoped and spelled like every other lock in this package, over a
@@ -121,7 +121,10 @@ func overrideFamilyRoot(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, 
 // under its own id, so the key just taken serialises nothing a later carry
 // would take. Reading again under the key, and locking the new root when it
 // moved, ends with a key both this revoke and any carry extending the chain
-// derive from the same row. The advisory lock is reentrant and held to commit,
+// derive from the same row. The root moves only when an ancestor is deleted,
+// always toward the named row, so the loop ends within the chain's depth, and
+// the keys are taken far-to-near along one ancestry, so two revokes cannot take
+// them in opposite orders. The advisory lock is reentrant and held to commit,
 // so a stale key taken on the way stays held harmlessly.
 func lockOverrideFamilyOf(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, error) {
 	root, err := overrideFamilyRoot(ctx, tx, id)

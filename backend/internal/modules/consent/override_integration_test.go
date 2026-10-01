@@ -21,6 +21,8 @@ import (
 	"strings"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -669,8 +671,8 @@ func TestARevokeThroughAMergedAwayContactCannotReachTheSurvivorsOwnVouch(t *test
 }
 
 // TestARevokeNamesTheRowsSubjectOrItsSurvivorAndNothingElse pins the other
-// edge of the widened lookup: a row on a contact that is neither the one
-// named nor its survivor stays unreachable and unrevealed.
+// edge of the widened lookup: a row whose chain never touches the contact
+// named or its survivor stays unreachable and unrevealed.
 func TestARevokeNamesTheRowsSubjectOrItsSurvivorAndNothingElse(t *testing.T) {
 	e := setupChannelConsent(t)
 	stranger := seedOverrideContact(t, e, "Unrelated Contact")
@@ -760,5 +762,25 @@ func TestTheAllowDoorAnswers422ForACategoryItCannotResolve(t *testing.T) {
 
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("the allow door answered %d: %s, want 422", rec.Code, rec.Body.String())
+	}
+}
+
+// TestTheRevokeDoorAnswers422ForAnEmptyReason holds the second door's half of
+// the validation contract: a missing reason is the caller's fault, answered 422.
+func TestTheRevokeDoorAnswers422ForAnEmptyReason(t *testing.T) {
+	e := setupChannelConsent(t)
+	row := plantOverride(t, e, e.contact, string(commsauthz.LevelUser))
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/contacts/x/consent/allow/y/revoke",
+		strings.NewReader(`{"reason":""}`)).WithContext(e.ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	Handlers{store: e.store}.RevokeOverride(rec, req, crmcontracts.Id(e.contact.UUID), openapi_types.UUID(row))
+
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("the revoke door answered %d: %s, want 422", rec.Code, rec.Body.String())
+	}
+	if !overrideStillLive(t, e, row) {
+		t.Error("a refused reason revoked the row anyway")
 	}
 }
