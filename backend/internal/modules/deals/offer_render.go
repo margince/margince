@@ -26,6 +26,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -226,6 +227,15 @@ func resolveRenderTemplate(ctx context.Context, tx pgx.Tx, templateID *openapi_t
 	return locale, layout, nil
 }
 
+// DeclarePdfProvisional records a render's key in the intent ledger, on its own
+// transaction, before the handler puts the bytes; SetPdfAssetRef clears it.
+func (s *Store) DeclarePdfProvisional(ctx context.Context, key string) error {
+	if err := auth.Require(ctx, "offer", principal.ActionUpdate); err != nil {
+		return err
+	}
+	return storedobject.Record(ctx, s.db, key)
+}
+
 // SetPdfAssetRef persists the blob key the render handler already wrote
 // and audits it as a standard offer update. PrepareRender's read and this
 // write are deliberately separate transactions — the blob.Put in between
@@ -276,6 +286,10 @@ func (s *Store) SetPdfAssetRef(ctx context.Context, id ids.OfferID, ref string, 
 		if _, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID,
 			p.Before(), p.After()); err != nil {
 			return fmt.Errorf("audit offer render: %w", err)
+		}
+		// The key stops being provisional in the transaction that names it.
+		if err := storedobject.Clear(ctx, tx, ref); err != nil {
+			return err
 		}
 		var err2 error
 		if out, err2 = readOfferWithLines(ctx, tx, id, storekit.LiveOnly); err2 != nil {

@@ -237,7 +237,7 @@ const MailDraftRetention = 90 * 24 * time.Hour
 // PurgeStaleMailDrafts deletes up to limit drafts not saved within
 // MailDraftRetention, oldest first, in one transaction, and answers how many
 // went. The retention sweep calls it as the system; a backlog deeper than
-// limit is left to its next pass, like ListOrphanedObjects.
+// limit is left to its next pass, like the orphaned-object reap.
 func (s *Store) PurgeStaleMailDrafts(ctx context.Context, limit int) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err

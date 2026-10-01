@@ -356,7 +356,13 @@ func (h dataResetHandlers) purgeUnjoinableSurfaces(ctx context.Context, logger *
 		if err != nil {
 			return err
 		}
-		counts.ObjectsDeleted = n
+		// Offer PDFs rendered before their keys moved under the workspace
+		// prefix still live at offers/<ws>/..., which the sweep above misses.
+		legacy, err := h.blob.DeletePrefix(ctx, "offers/"+wsID.String()+"/")
+		if err != nil {
+			return err
+		}
+		counts.ObjectsDeleted = n + legacy
 	}
 	return h.purgeSealedCredentials(ctx, wsID, counts)
 }

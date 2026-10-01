@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/storedobject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -169,6 +170,11 @@ func (s *Store) RecordSiteReadLogo(ctx context.Context, readID ids.UUID, claimed
 		}
 		if err != nil {
 			return fmt.Errorf("record the website read's %s: %w", slot, err)
+		}
+		// The dossier names the key from here on, and a confirmation that
+		// adopts it moves the reference rather than writing a fresh key.
+		if err := storedobject.Clear(ctx, tx, objectKey); err != nil {
+			return err
 		}
 		recorded = true
 		supersededKey = supersededObject(previous, objectKey)

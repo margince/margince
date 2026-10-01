@@ -18,8 +18,11 @@ import (
 	"context"
 	"image"
 	"image/color"
+	"image/png"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -73,7 +76,7 @@ func TestAMarkStoredTrimmedIsServedWithoutADecode(t *testing.T) {
 	}
 	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 	base := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), "company_logo", companyID.String()+"/"+ids.NewV7().String())
-	key, err := contacts.PutLogo(ctx, blob, base, logoPNG(t))
+	key, err := e.Contacts.PutLogo(ctx, blob, base, logoPNG(t))
 	if err != nil {
 		t.Fatalf("PutLogo: %v", err)
 	}
@@ -89,6 +92,44 @@ func TestAMarkStoredTrimmedIsServedWithoutADecode(t *testing.T) {
 	}
 	if got := blob.putCount(key); got != puts {
 		t.Fatalf("serving a trimmed key wrote to it %d time(s)", got-puts)
+	}
+}
+
+func TestPutLogoStoresTheTrimmedMarkUnderAKeyThatSaysSo(t *testing.T) {
+	e := Setup(t)
+	blob := blobstore.NewMemory()
+	base := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), "company_logo", ids.NewV7().String())
+	key, err := e.Contacts.PutLogo(e.Admin(), blob, base, letterboxedLogo(t))
+	if err != nil {
+		t.Fatalf("PutLogo: %v", err)
+	}
+	if !strings.HasPrefix(key, base) || !strings.HasSuffix(key, ".trimmed.png") {
+		t.Fatalf("stored at %q, want %q marked as trimmed", key, base)
+	}
+	rc, _, err := blob.Get(context.Background(), key)
+	if err != nil {
+		t.Fatalf("reading %q back: %v", key, err)
+	}
+	stored, err := io.ReadAll(rc)
+	if cerr := rc.Close(); cerr != nil {
+		t.Fatalf("closing %q: %v", key, cerr)
+	}
+	if err != nil {
+		t.Fatalf("reading %q's bytes: %v", key, err)
+	}
+	decoded, err := png.Decode(bytes.NewReader(stored))
+	if err != nil {
+		t.Fatalf("the stored object is not a PNG: %v", err)
+	}
+	if bounds := decoded.Bounds(); bounds.Dx() != 32 || bounds.Dy() != 8 {
+		t.Fatalf("stored mark is %v, want the 32x8 wordmark without its canvas", bounds)
+	}
+	again, err := imagenorm.TrimTransparentPNG(stored)
+	if err != nil {
+		t.Fatalf("trimming the stored mark: %v", err)
+	}
+	if !bytes.Equal(again, stored) {
+		t.Fatal("a second trim changed the stored bytes; the serve path relies on them being final")
 	}
 }
 

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -68,8 +69,14 @@ func TestOfferRenderHTTP_PostRenderReturns200WithPdfAssetRefAndTheBlobExists(t *
 	if rendered.ID != offerID {
 		t.Fatalf("render response id = %q, want %q", rendered.ID, offerID)
 	}
-	if rendered.PdfAssetRef == "" {
-		t.Fatal("render response must carry a non-empty pdf_asset_ref")
+	// Under the workspace prefix is what the data reset's sweep reaches, and
+	// the kind segment is what the reap reads the key's columns from.
+	ws := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
+	if want := ws.String() + "/offer_pdf/"; !strings.HasPrefix(rendered.PdfAssetRef, want) {
+		t.Fatalf("pdf_asset_ref = %q, want it under %q", rendered.PdfAssetRef, want)
+	}
+	if keyIsProvisional(t, e.DB(), rendered.PdfAssetRef) {
+		t.Fatalf("a committed render must retire its intent, the ledger still holds %q", rendered.PdfAssetRef)
 	}
 
 	// The named object must actually exist in the store the render
@@ -113,6 +120,12 @@ func TestOfferRenderHTTP_PostRenderReturns200WithPdfAssetRefAndTheBlobExists(t *
 	}
 	if cerr := rc2.Close(); cerr != nil {
 		t.Errorf("close the re-rendered blob reader: %v", cerr)
+	}
+	if _, err := blob.DeletePrefix(context.Background(), ws.String()+"/"); err != nil {
+		t.Fatalf("sweep the workspace prefix: %v", err)
+	}
+	if _, _, err := blob.Get(context.Background(), renderedAgain.PdfAssetRef); !errors.Is(err, blobstore.ErrNotFound) {
+		t.Fatalf("the workspace sweep must reach a rendered offer PDF, got err=%v", err)
 	}
 }
 
@@ -292,6 +305,11 @@ func TestOfferRenderHTTP_OfferArchivedBetweenPrepareAndSetReclaimsTheBlob(t *tes
 	}
 	if _, _, err := race.Get(context.Background(), race.putKey); !errors.Is(err, blobstore.ErrNotFound) {
 		t.Fatalf("the render blob must be reclaimed after a non-version-skew refusal too, got err=%v", err)
+	}
+	// The intent outlives the rolled-back persist, so a reclaim that failed
+	// still leaves the reap a key to find.
+	if !keyIsProvisional(t, e.DB(), race.putKey) {
+		t.Fatalf("a refused render must leave its key provisional, the ledger lost %q", race.putKey)
 	}
 }
 

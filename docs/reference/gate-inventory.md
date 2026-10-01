@@ -185,6 +185,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `audittraildoor_test.go` | H2 | The audit trail is a SECOND door onto an activity's content, and every reader of it says what it does about a held one. |
 | `basecurrencyguard_test.go` | H2 | The base-currency lock as a fitness function. |
 | `belowtheauthgate_test.go` | H2 | What can be reached without credentials is a declared list, not whatever the routing code happens to allow. |
+| `blobputintent_test.go` | H2 | Every put into the object store declares its key provisional first, or says why it need not. |
 | `bootcomposition_test.go` | H2 | The fitness gate on the boot sequence: a process role that composes extensions also records what it composed. |
 | `boundedfixture_test.go` | H3 | An integration suite that only ever acts unbounded proves nothing about row scope. |
 | `briefevidencestrip_test.go` | H2 | "Never persist an email summary" is spelled once, and every writer that caches evidence says it that way. |

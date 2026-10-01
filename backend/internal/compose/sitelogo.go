@@ -67,9 +67,9 @@ const logoLaneBudget = 20 * time.Second
 // logoReclaimBudget bounds one detached delete of an unreferenced object.
 const logoReclaimBudget = 15 * time.Second
 
-// companyLogoKind is the blobstore key's entity discriminator, the peer
-// of "attachment" (blobstore.WorkspaceKey).
-const companyLogoKind = "company_logo"
+// companyLogoKind is the blobstore key's entity discriminator, the peer of
+// "attachment". Contacts declares it beside the columns the reap reads it with.
+const companyLogoKind = contacts.CompanyLogoObjectKind
 
 // Outcomes the resolve records per candidate. They are the quality signal the
 // `worker siteread` report prints: WHY the obvious logo was passed over is the
@@ -314,7 +314,7 @@ func (w *siteDeepReadWorker) storeResolvedLogo(ctx context.Context, args SiteDee
 	if claim.CompanyID != nil {
 		base = companyLogoKey(wsID, ids.From[ids.CompanyKind](*claim.CompanyID))
 	}
-	key, err := contacts.PutLogo(ctx, w.blob, base, logo.PNG)
+	key, err := w.contacts.PutLogo(ctx, w.blob, base, logo.PNG)
 	if err != nil {
 		// A failed Put can still have left a partial object, and no row names
 		// this key, so collecting it is unambiguously safe.

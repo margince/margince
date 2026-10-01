@@ -11,6 +11,8 @@ package compose
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -214,6 +216,55 @@ type pauseWatchingStore struct {
 func (s *pauseWatchingStore) DeletePrefix(ctx context.Context, prefix string) (int, error) {
 	s.sweptPrefix, s.pausedAtSweep = true, *s.fleetPaused
 	return s.Store.DeletePrefix(ctx, prefix)
+}
+
+// TestTheObjectSweepReachesOfferPDFsKeyedBeforeTheWorkspacePrefix: an offer PDF
+// rendered under the old offers/<ws>/... shape is the workspace's bytes as much
+// as one under <ws>/..., and a reset that left it would leave an object whose
+// only reference it just deleted. A sibling tenant's objects, in either shape,
+// stay.
+func TestTheObjectSweepReachesOfferPDFsKeyedBeforeTheWorkspacePrefix(t *testing.T) {
+	ctx := context.Background()
+	ws, sibling := ids.NewV7(), ids.NewV7()
+	store := blobstore.NewMemory()
+	gone := []string{
+		ws.String() + "/attachment/" + ids.NewV7().String(),
+		"offers/" + ws.String() + "/" + ids.NewV7().String() + "/1/" + ids.NewV7().String() + ".pdf",
+	}
+	kept := []string{
+		sibling.String() + "/attachment/" + ids.NewV7().String(),
+		"offers/" + sibling.String() + "/" + ids.NewV7().String() + "/1/" + ids.NewV7().String() + ".pdf",
+	}
+	for _, key := range append(slices.Clone(gone), kept...) {
+		if err := store.Put(ctx, key, strings.NewReader("x"), 1, "application/pdf"); err != nil {
+			t.Fatalf("plant %s: %v", key, err)
+		}
+	}
+
+	var counts resetCounts
+	h := dataResetHandlers{blob: store}
+	if err := h.purgeUnjoinableSurfaces(ctx, quietTestLogger(), ws, &counts); err != nil {
+		t.Fatalf("purgeUnjoinableSurfaces: %v", err)
+	}
+
+	for _, key := range gone {
+		if _, _, err := store.Get(ctx, key); !errors.Is(err, blobstore.ErrNotFound) {
+			t.Errorf("%s survived the reset (err=%v); its workspace's rows are gone, so nothing could reach it again", key, err)
+		}
+	}
+	for _, key := range kept {
+		rc, _, err := store.Get(ctx, key)
+		if err != nil {
+			t.Errorf("%s belongs to another workspace and was swept: %v", key, err)
+			continue
+		}
+		if err := rc.Close(); err != nil {
+			t.Errorf("close %s: %v", key, err)
+		}
+	}
+	if counts.ObjectsDeleted != len(gone) {
+		t.Errorf("ObjectsDeleted = %d, want %d — the report must count the legacy sweep too", counts.ObjectsDeleted, len(gone))
+	}
 }
 
 // TestTheResumeOutlivesTheAbandonedResetRequest: a reset is a bounded drain plus

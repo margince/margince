@@ -6,85 +6,56 @@ package contacts
 import (
 	"bytes"
 	"context"
-	"image"
-	"image/color"
-	"image/png"
-	"io"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strconv"
-	"strings"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// letterboxedWordmark is a 4:1 wordmark centred in a square transparent
-// canvas — the shape older uploads were stored in.
-func letterboxedWordmark(t *testing.T) []byte {
-	t.Helper()
-	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
-	for y := range 8 {
-		for x := range 32 {
-			wide.SetNRGBA(x, y, color.NRGBA{R: 255, G: 90, A: 255})
-		}
-	}
-	square, err := imagenorm.SquarePNG(wide, 32)
-	if err != nil {
-		t.Fatalf("encoding a letterboxed wordmark: %v", err)
-	}
-	return square
-}
-
-func storedObject(t *testing.T, blob blobstore.Store, key string) []byte {
-	t.Helper()
-	rc, _, err := blob.Get(context.Background(), key)
-	if err != nil {
-		t.Fatalf("reading %q back: %v", key, err)
-	}
-	stored, err := io.ReadAll(rc)
-	if cerr := rc.Close(); cerr != nil {
-		t.Fatalf("closing %q: %v", key, cerr)
-	}
-	if err != nil {
-		t.Fatalf("reading %q's bytes: %v", key, err)
-	}
-	return stored
-}
-
-func TestPutLogoStoresTheTrimmedMarkUnderAKeyThatSaysSo(t *testing.T) {
-	blob := blobstore.NewMemory()
-	key, err := PutLogo(context.Background(), blob, "ws/company_logo/c/1", letterboxedWordmark(t))
-	if err != nil {
-		t.Fatalf("PutLogo: %v", err)
-	}
-	if !storedTrimmed(key) || !strings.HasPrefix(key, "ws/company_logo/c/1") {
-		t.Fatalf("stored at %q, want the base key marked as trimmed", key)
-	}
-	stored := storedObject(t, blob, key)
-	decoded, err := png.Decode(bytes.NewReader(stored))
-	if err != nil {
-		t.Fatalf("the stored object is not a PNG: %v", err)
-	}
-	if bounds := decoded.Bounds(); bounds.Dx() != 32 || bounds.Dy() != 8 {
-		t.Fatalf("stored mark is %v, want the 32x8 wordmark without its canvas", bounds)
-	}
-	again, err := imagenorm.TrimTransparentPNG(stored)
-	if err != nil {
-		t.Fatalf("trimming the stored mark: %v", err)
-	}
-	if !bytes.Equal(again, stored) {
-		t.Fatal("a second trim changed the stored bytes; the serve path relies on them being final")
-	}
-}
-
+// A store with no database proves the refusal comes before the intent is
+// recorded as well as before the bytes are put: reaching either would panic.
 func TestPutLogoRefusesBytesThatAreNotAnImageAndStoresNothing(t *testing.T) {
 	blob := blobstore.NewMemory()
-	key, err := PutLogo(context.Background(), blob, "ws/company_logo/c/2", []byte("not a png"))
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem, ID: "agent:deepread"})
+	key, err := new(Store).PutLogo(ctx, blob, "ws/company_logo/c/2", []byte("not a png"))
 	if err == nil {
 		t.Fatalf("PutLogo stored undecodable bytes at %q", key)
 	}
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("PutLogo refused the caller, not the bytes: %v", err)
+	}
 	if key != "" {
 		t.Fatalf("a refused trim answered key %q, want none: nothing was written to collect", key)
+	}
+}
+
+func TestALegacyMarkLargerThanAnyLogoWriterStoresIsRefusedNotBuffered(t *testing.T) {
+	blob := blobstore.NewMemory()
+	const key = "ws/company_logo/c/legacy.png"
+	oversized := bytes.Repeat([]byte{0}, MaxLogoBytes+1)
+	if err := blob.Put(context.Background(), key, bytes.NewReader(oversized), int64(len(oversized)), imagenorm.ContentType); err != nil {
+		t.Fatalf("seeding the oversized object: %v", err)
+	}
+	handlers := NewHandlers(nil).WithBlobstore(blob)
+	id := crmcontracts.Id(ids.NewV7())
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+ids.UUID(id).String()+"/logo", nil)
+	handlers.streamLogoKey(rec, req, id, LogoWide, key, "GetCompanyLogo", logoCacheControl, false)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("GET an oversized legacy logo = %d, want 500", rec.Code)
+	}
+	if got := rec.Header().Get("Content-Type"); got == imagenorm.ContentType {
+		t.Fatal("an oversized object was answered as a logo")
 	}
 }
 

@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -86,8 +87,13 @@ func (s *RunStore) CreateStagedRun(ctx context.Context, in CreateStagedRunInput)
 		if err := scanRun(row, &run); err != nil {
 			return fmt.Errorf("creating import run: %w", err)
 		}
+		// A second run staged from one source finds the intent already gone,
+		// and the clear is a delete of nothing.
+		if err := storedobject.Clear(ctx, tx, in.SourceRef); err != nil {
+			return err
+		}
 		_, err := storekit.Audit(ctx, tx, "create", importRunObject, run.ID, nil, map[string]any{
-			"connector": run.Connector, auditFieldStatus: run.Status, "source_ref": run.SourceRef,
+			"connector": run.Connector, auditFieldStatus: run.Status, sourceRefColumn: run.SourceRef,
 			"object": in.Mapping.Object,
 		})
 		return err

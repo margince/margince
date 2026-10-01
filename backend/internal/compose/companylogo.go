@@ -93,7 +93,7 @@ func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Reques
 	// writers of one company's mark must never write the same object, or the
 	// stored image and the record's provenance end up describing different
 	// pictures.
-	key, err := contacts.PutLogo(r.Context(), h.blob, companyLogoKey(ids.From[ids.WorkspaceKind](workspace), company.CompanyID), png)
+	key, err := h.store.PutLogo(r.Context(), h.blob, companyLogoKey(ids.From[ids.WorkspaceKind](workspace), company.CompanyID), png)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -102,8 +102,9 @@ func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Reques
 	if setErr != nil {
 		// The bytes stay. A failed write here does not prove the transaction
 		// did not commit — a cancelled context, a dropped connection — and
-		// deleting an object the row may now name would show a broken image
-		// where an orphan only costs storage.
+		// deleting an object the row may now name would show a broken image.
+		// If it did not commit, the key is still provisional and the reap
+		// collects it.
 		httperr.Write(w, r, setErr)
 		return
 	}

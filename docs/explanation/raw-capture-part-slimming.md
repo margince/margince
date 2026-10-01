@@ -143,9 +143,6 @@ costs nothing now and is written down because the next contact to reach for it s
 
 ## What is still owed
 
-- **Orphaned-object reclamation.** `activities/capturedfiles.go` names it as owed by both writers of
-  the `attachment` table. This sweep does not change that: it removes a copy from the database and
-  never touches an object.
 - **Growth is bounded by a policy now, not by slimming.** Slimming reduces the slope of `raw_capture`'s
   growth by roughly twentyfold and does not make it bounded; the `raw_capture` retention scope does,
   on a clock of its own rather than on the activity's. What it does NOT reach is an original with no

@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,7 +47,8 @@ type QueueIngest func(ctx context.Context, tx pgx.Tx, documentID ids.UUID) error
 // The corpus is checked BEFORE any bytes are written, so an upload to a corpus
 // that does not exist cannot land an object. The object is put before the row
 // commits: a committed row always has its bytes, and a failed write leaves at
-// worst an orphan object rather than a row promising bytes that are not there.
+// worst an orphan object, declared in the intent ledger before the put so the
+// reap can find it (platform/storedobject).
 func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueIngest) (crmcontracts.KnowledgeDocument, error) {
 	media, checksum, size, err := s.readyUpload(ctx, &in)
 	if err != nil {
@@ -54,7 +56,10 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 	}
 
 	id := ids.NewV7()
-	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx)), "knowledge", id.String())
+	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx)), knowledgeObjectKind, id.String())
+	if err := storedobject.Record(ctx, s.db, key); err != nil {
+		return crmcontracts.KnowledgeDocument{}, err
+	}
 	if err := s.blob.Put(ctx, key, in.Content, size, media); err != nil {
 		return crmcontracts.KnowledgeDocument{}, fmt.Errorf("store the corpus document: %w", err)
 	}
@@ -115,6 +120,11 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 		if err := queue(ctx, tx, id); err != nil {
 			return fmt.Errorf("queue the corpus document's ingest: %w", err)
 		}
+		// Cleared with the row, so the key stops being provisional exactly
+		// when something names it.
+		if err := storedobject.Clear(ctx, tx, key); err != nil {
+			return err
+		}
 		var rerr error
 		out, rerr = readDocument(ctx, tx, id)
 		return rerr
@@ -124,8 +134,8 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 		// now names them. The ordinary case is the duplicate race: two uploads
 		// of identical bytes both clear the pre-flight, both call Put, and the
 		// loser is refused by the unique index — leaving its own object behind
-		// with nothing pointing at it and nothing that will ever collect it,
-		// because every sweep in this module walks ROWS.
+		// with nothing pointing at it. Deleted now rather than left for the
+		// reap; a crash before this line is the case the ledger covers.
 		//
 		// Reported rather than swallowed, and joined rather than substituted:
 		// the caller's refusal is the answer they need, and a storage backend

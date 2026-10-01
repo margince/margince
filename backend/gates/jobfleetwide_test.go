@@ -381,7 +381,8 @@ type fleetWideArgsType string
 // fan out to. Ratified, not discovered: a kind arrives here by a reviewed edit,
 // and gatekit reports one that outlives its subject.
 var fleetWideDoesItsOwnPass = gatekit.Waive(map[fleetWideArgsType]string{
-	"EmbedReindexArgs": "phase D un-scoped the embedding corpus (ADR-0091 §8), so the per-workspace children all rebuilt the SAME rows and all but the first found every one already fresh; one pass rebuilds it",
+	"EmbedReindexArgs":     "phase D un-scoped the embedding corpus (ADR-0091 §8), so the per-workspace children all rebuilt the SAME rows and all but the first found every one already fresh; one pass rebuilds it",
+	"StoredObjectReapArgs": "stored_object_intent carries no workspace — the key's own prefix names it — so a pass per workspace ran the same query once per tenant and the first run reaped everyone's; one pass reaps the installation's ledger",
 })
 
 // checkFleetWideDispatchers runs the gate over one directory.

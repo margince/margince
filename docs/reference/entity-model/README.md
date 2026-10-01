@@ -88,7 +88,7 @@ erDiagram
 
 | Area | Tables |
 |---|--:|
-| [activities](activities.md) | 25 |
+| [activities](activities.md) | 24 |
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
@@ -116,7 +116,7 @@ erDiagram
 | [knowledge](knowledge.md) | 3 |
 | [migration](migration.md) | 2 |
 | [notices](notices.md) | 3 |
-| [platform](platform.md) | 9 |
+| [platform](platform.md) | 10 |
 | [privacy](privacy.md) | 2 |
 | [projects](projects.md) | 3 |
 | [reporting](reporting.md) | 10 |
@@ -383,7 +383,7 @@ erDiagram
 | [`stage_exit_criterion`](deals.md#stage_exit_criterion) | deals | 12 | 1 |
 | [`stage_progression_outcome`](deals.md#stage_progression_outcome) | deals | 19 | 0 |
 | [`stage_progression_policy`](deals.md#stage_progression_policy) | deals | 18 | 0 |
-| [`stored_object_intent`](activities.md#stored_object_intent) | activities | 2 | 0 |
+| [`stored_object_intent`](platform.md#stored_object_intent) | platform | 2 | 0 |
 | [`suggestion_dismissal`](compose.md#suggestion_dismissal) | compose | 4 | 0 |
 | [`system_log`](platform.md#system_log) | platform | 8 | 0 |
 | [`tag`](collections.md#tag) | collections | 9 | 2 |

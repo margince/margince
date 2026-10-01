@@ -5,6 +5,7 @@ package deals
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -169,8 +170,8 @@ func (h Handlers) RenderOffer(w http.ResponseWriter, r *http.Request, id crmcont
 	if ingredients.Offer.Version != nil {
 		preparedVersion = *ingredients.Offer.Version
 	}
-	key := fmt.Sprintf("offers/%s/%s/%d/%s.pdf", storekit.MustWorkspace(r.Context()), ids.UUID(id), revision, ids.NewV7())
-	if err := h.blob.Put(r.Context(), key, bytes.NewReader(pdfBytes), int64(len(pdfBytes)), "application/pdf"); err != nil {
+	key := offerPDFKey(r.Context(), ids.UUID(id), revision)
+	if err := h.storeOfferPDF(r.Context(), key, pdfBytes); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -217,6 +218,22 @@ func (h Handlers) RenderOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		}
 	}
 	httperr.WriteJSON(w, http.StatusOK, updated)
+}
+
+// offerPDFKey mints one render attempt's key under the workspace prefix, so the
+// data reset's workspace sweep reaches it and the reap can read its kind.
+func offerPDFKey(ctx context.Context, offerID ids.UUID, revision int) string {
+	ws := ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx))
+	return blobstore.WorkspaceKey(ws, offerPDFObjectKind, fmt.Sprintf("%s/%d/%s.pdf", offerID, revision, ids.NewV7()))
+}
+
+// storeOfferPDF declares the key provisional and then stores the bytes, in that
+// order: a render refused after the put leaves bytes only the ledger can find.
+func (h Handlers) storeOfferPDF(ctx context.Context, key string, pdfBytes []byte) error {
+	if err := h.store.DeclarePdfProvisional(ctx, key); err != nil {
+		return err
+	}
+	return h.blob.Put(ctx, key, bytes.NewReader(pdfBytes), int64(len(pdfBytes)), "application/pdf")
 }
 
 // DownloadOfferPdf streams the bytes renderOffer last wrote at
