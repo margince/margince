@@ -429,7 +429,9 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(
     menu.getByRole("menuitem", { name: "Einstellungen" }),
   ).toHaveAttribute("href", "#/settings");
-  await expect(menu.getByRole("menuitem", { name: de["scheduling.myLink"] })).toHaveAttribute("href", "#/book");
+  await expect(
+    menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
+  ).toHaveAttribute("href", "#/book");
   await expect(menu.locator("a[href]")).toHaveCount(2);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
@@ -995,11 +997,17 @@ test("AC-inbox: the staged decision is on the day's queue", async ({
   ).toBeVisible();
 });
 
-test("AC-book: the reusable booking link is available for sharing and signatures", async ({ page }) => {
+test("AC-book: the reusable booking link is available for sharing and signatures", async ({
+  page,
+}) => {
   await page.goto("/#/book");
   await expect(page.locator("nav.rail")).toHaveCount(0);
-  await expect(page.getByRole("textbox", { name: de["scheduling.myLink"] })).toHaveValue("https://crm.example.test/#/book/host-1");
-  await expect(page.getByRole("button", { name: de["scheduling.copyLink"] })).toBeEnabled();
+  await expect(
+    page.getByRole("textbox", { name: de["scheduling.myLink"] }),
+  ).toHaveValue("https://crm.example.test/#/book/host-1");
+  await expect(
+    page.getByRole("button", { name: de["scheduling.copyLink"] }),
+  ).toBeEnabled();
 });
 
 test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enable is the deliberate second step", async ({
@@ -1134,20 +1142,37 @@ test("AC-settings: the passport list is metadata-only and strikes revoked rows",
   await expect(page.getByText(/mgp_/)).toHaveCount(0);
 });
 
-test("AC-book-public: consent gates calendar invitation and its wording passes through verbatim", async ({ page }) => {
+test("AC-book-public: consent gates calendar invitation and its wording passes through verbatim", async ({
+  page,
+}) => {
   await page.goto("/#/book/host-1");
   await expect(page.locator("nav.rail")).toHaveCount(0);
   const submit = page.getByRole("button", { name: de["scheduling.book"] });
   await expect(submit).toBeDisabled();
-  await page.getByRole("button", { name: /06\.07\.2026/ }).first().click();
-  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
-  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
+  await page
+    .getByRole("button", { name: /06\.07\.2026/ })
+    .first()
+    .click();
+  await page
+    .getByRole("textbox", { name: de["book.name"], exact: true })
+    .fill("Jonas Beispiel");
+  await page
+    .getByRole("textbox", { name: de["book.email"] })
+    .fill("jonas@beispiel.example");
   await expect(submit).toBeDisabled();
-  const consent = page.getByRole("checkbox", { name: de["book.consentWording"] });
+  const consent = page.getByRole("checkbox", {
+    name: de["book.consentWording"],
+  });
   await consent.check();
   await expect(submit).toBeEnabled();
-  const shownWording = await page.getByText(de["book.consentWording"], { exact: true }).textContent();
-  const requestPromise = page.waitForRequest((request) => request.method() === "POST" && request.url().includes("/public/booking/host-1"));
+  const shownWording = await page
+    .getByText(de["book.consentWording"], { exact: true })
+    .textContent();
+  const requestPromise = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().includes("/public/booking/host-1"),
+  );
   await submit.click();
   const request = await requestPromise;
   const body = request.postDataJSON();
@@ -1156,19 +1181,31 @@ test("AC-book-public: consent gates calendar invitation and its wording passes t
   expect(body.consent.purpose_id).toBeUndefined();
   expect(request.headers()["idempotency-key"]).toMatch(/^[0-9a-f-]{36}$/);
   await expect(page).toHaveURL(/#\/book\/manage-guest-booking$/);
-  await expect(page.getByRole("heading", { name: de["scheduling.pending"] })).toBeVisible();
-  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: de["scheduling.pending"] }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: de["scheduling.confirmed"] }),
+  ).toHaveCount(0);
 });
 
-test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({ page }) => {
+test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({
+  page,
+}) => {
   await page.goto("/#/book/host-1");
-  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
-  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
+  await page
+    .getByRole("textbox", { name: de["book.name"], exact: true })
+    .fill("Jonas Beispiel");
+  await page
+    .getByRole("textbox", { name: de["book.email"] })
+    .fill("jonas@beispiel.example");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: /12:00/ }).click();
   await page.getByRole("button", { name: de["scheduling.book"] }).click();
   await expect(page.getByText("slot no longer available")).toBeVisible();
-  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: de["scheduling.confirmed"] }),
+  ).toHaveCount(0);
 });
 
 test("AC-onboarding-1: onboarding is the rail-less conversational shell", async ({

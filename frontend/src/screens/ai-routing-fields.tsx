@@ -16,6 +16,12 @@ import {
   useAvailableModels,
 } from "./ai-models";
 import "./ai-settings.css";
+import {
+  DEFAULT_VERTEX_LOCATION,
+  VERTEX_PROVIDER,
+  VertexLocationField,
+} from "./vertex-location";
+import { useVertexModelProbe } from "./vertex-model-probe";
 
 type Routing = components["schemas"]["AiRouting"];
 // The adapters a tier may name. Written out because the wire carries a free
@@ -25,6 +31,7 @@ type Routing = components["schemas"]["AiRouting"];
 // backend/gates/frontendproviders_test.go, which reads this `[…] as const` form.
 export const PROVIDERS = [
   "gemini",
+  "gemini_vertex",
   "anthropic",
   "openai",
   "openai_compatible",
@@ -92,6 +99,7 @@ type TierBindingLike = {
   provider: string;
   model: string;
   base_url?: string;
+  location?: string;
   routing?: unknown;
   thinking_level?: string;
 };
@@ -120,6 +128,27 @@ export function rebind<B extends TierBindingLike>(
   return next;
 }
 
+/**
+ * The binding re-pointed at another adapter. `location` belongs to Vertex alone
+ * and `base_url` is refused there, so each is dropped where the server would
+ * refuse it; a Vertex binding keeps its own location or takes the default.
+ */
+export function withProvider<B extends TierBindingLike>(
+  binding: B,
+  provider: string,
+  vertexLocation: string,
+): B {
+  const next = rebind(binding, { provider });
+  if (provider === VERTEX_PROVIDER) {
+    return {
+      ...next,
+      base_url: undefined,
+      location: binding.location ?? vertexLocation,
+    };
+  }
+  return { ...next, location: undefined };
+}
+
 // The three controls that name an adapter: which vendor, which model on it,
 // and -- only where the vendor has no address of its own -- where to reach it.
 //
@@ -136,6 +165,8 @@ export function AdapterFields<B extends TierBindingLike>({
   laneName,
   binding,
   catalogue,
+  profile = "",
+  vertexLocation = DEFAULT_VERTEX_LOCATION,
   disabled,
   onChange,
   providers = PROVIDERS,
@@ -156,17 +187,45 @@ export function AdapterFields<B extends TierBindingLike>({
   laneName: string;
   binding: B;
   catalogue: ModelCatalogue;
+  // The draft's profile, which decides the Vertex locations on offer. The
+  // decision lane binds no Vertex model, so it passes neither.
+  profile?: string;
+  // Where a lane newly pointed at Vertex starts: another saved Vertex lane's.
+  vertexLocation?: string;
   disabled: boolean;
   onChange: (next: B) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const vertex = binding.provider === VERTEX_PROVIDER;
+  const location = binding.location ?? "";
   // Asked of the VENDOR, and only while these fields are open — this is a real
   // round-trip on the installation's own credential, not a table read. The lane
   // travels with it so an installation binding one vendor at two hosts is asked
-  // at the one THIS lane points at.
-  const available = useAvailableModels(binding.provider, laneName, true);
+  // at the one THIS lane points at; a Vertex lane is asked at its location.
+  const available = useAvailableModels(
+    binding.provider,
+    laneName,
+    true,
+    vertex ? location : undefined,
+  );
   const host = HOST_FIELDS.get(binding.provider);
+  const suggestions = offeredModels(
+    available.data,
+    catalogue,
+    binding.provider,
+    lane,
+    locale,
+  );
+  const probe = useVertexModelProbe({
+    vertex,
+    laneName,
+    binding,
+    location,
+    available: available.data,
+    onChange,
+  });
+  const hint = vertex ? probe.hint : undefined;
   return (
     <>
       <div className="binding-provider-row">
@@ -177,13 +236,27 @@ export function AdapterFields<B extends TierBindingLike>({
               value={binding.provider}
               disabled={disabled}
               options={providers.map((p) => ({ value: p, label: p }))}
-              onChange={(provider) => onChange(rebind(binding, { provider }))}
+              onChange={(provider) => {
+                probe.forget();
+                onChange(withProvider(binding, provider, vertexLocation));
+              }}
             />
           )}
         </Field>
         {providerAside?.action}
       </div>
       {providerAside?.note}
+      {vertex && (
+        <VertexLocationField
+          value={location}
+          profile={profile}
+          disabled={disabled}
+          onChange={(next) => {
+            probe.relocate(next);
+            onChange({ ...binding, location: next });
+          }}
+        />
+      )}
       {/* What the vendor serves, priced from the sheet where the sheet knows
           it. The list used to be the sheet ALONE, which answers what this
           installation can price rather than what exists — so a model released
@@ -196,24 +269,28 @@ export function AdapterFields<B extends TierBindingLike>({
       <Field
         label={t("aiRouting.model.label")}
         hint={
-          available.data?.unavailable
+          hint?.text ??
+          (available.data?.unavailable
             ? modelSourceNote(available.data.unavailable, t)
-            : t("aiRouting.model.help")
+            : t("aiRouting.model.help"))
         }
+        error={hint?.error}
       >
         {(control) => (
           <ComboBox
             {...control}
             value={binding.model}
-            suggestions={offeredModels(
-              available.data,
-              catalogue,
-              binding.provider,
-              lane,
-              locale,
-            )}
+            suggestions={suggestions}
             disabled={disabled}
-            onChange={(model) => onChange(rebind(binding, { model }))}
+            onChange={(model) => {
+              // A pick from the list is a choice worth checking; a keystroke
+              // is not, and each probe is a call on the service account.
+              probe.picked(
+                model,
+                suggestions.some((s) => s.value === model),
+              );
+              onChange(rebind(binding, { model }));
+            }}
           />
         )}
       </Field>

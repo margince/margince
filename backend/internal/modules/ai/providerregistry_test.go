@@ -17,7 +17,7 @@ import (
 func TestTheProviderListKeepsItsOrder(t *testing.T) {
 	// The order is visible: SelectBrain's refusal lists providers in it, and
 	// the config schema's enum was written in it.
-	want := []string{ProviderFake, providerAnthropic, providerOllama, providerVLLM, providerOpenAICompatible, providerOpenAI, providerGemini}
+	want := []string{ProviderFake, providerAnthropic, providerOllama, providerVLLM, providerOpenAICompatible, providerOpenAI, providerGemini, providerGeminiVertex}
 	if !slices.Equal(knownProviders, want) {
 		t.Fatalf("knownProviders = %v, want %v", knownProviders, want)
 	}
@@ -41,7 +41,7 @@ func TestADecisionProviderIsKnownOnlyToTheDecisionLane(t *testing.T) {
 // Every key slot is one row on the key screen, and only a jev_compatible key
 // is optional: a self-hosted Jev-wire server needs none.
 func TestOnlyTheJevCompatibleKeyIsOptional(t *testing.T) {
-	if got, want := CloudProvidersNeedingKeys(), []string{providerAnthropic, providerOpenAICompatible, providerOpenAI, providerGemini, providerJev, providerJevCompatible}; !slices.Equal(got, want) {
+	if got, want := CloudProvidersNeedingKeys(), []string{providerAnthropic, providerOpenAICompatible, providerOpenAI, providerGemini, providerGeminiVertex, providerJev, providerJevCompatible}; !slices.Equal(got, want) {
 		t.Errorf("CloudProvidersNeedingKeys() = %v, want %v", got, want)
 	}
 	for _, provider := range CloudProvidersNeedingKeys() {
@@ -57,19 +57,21 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 	})
 	assertMap(t, "providerEgress", providerEgress, map[string]egressClass{
 		ProviderFake: egressPublicOnly, providerAnthropic: egressPublicOnly,
-		providerOpenAI: egressPublicOnly, providerGemini: egressPublicOnly,
+		providerOpenAI: egressPublicOnly, providerGemini: egressPublicOnly, providerGeminiVertex: egressPublicOnly,
 		providerOllama: egressOperatorEndpoint, providerVLLM: egressOperatorEndpoint,
 		providerOpenAICompatible: egressOperatorEndpoint,
 		providerJev:              egressPublicOnly, providerJevCompatible: egressOperatorEndpoint,
 	})
 	assertMap(t, "cloudKeyEnv", cloudKeyEnv, map[string]string{
 		providerAnthropic: "ANTHROPIC_API_KEY", providerOpenAI: "OPENAI_API_KEY",
-		providerGemini: "GEMINI_API_KEY", providerOpenAICompatible: "OPENAI_COMPATIBLE_API_KEY",
-		providerJev: "TYPESAFE_API_KEY", providerJevCompatible: "JEV_COMPATIBLE_API_KEY",
+		providerGemini: "GEMINI_API_KEY", providerGeminiVertex: "GEMINI_VERTEX_SA_JSON",
+		providerOpenAICompatible: "OPENAI_COMPATIBLE_API_KEY",
+		providerJev:              "TYPESAFE_API_KEY", providerJevCompatible: "JEV_COMPATIBLE_API_KEY",
 	})
 	assertMap(t, "servedSource", servedSource, map[string]string{
 		providerAnthropic: servedIdentitySourceResponse, providerOllama: servedIdentitySourceResponse,
-		providerGemini: servedIdentitySourceResponse, providerOpenAI: servedIdentitySourceResponse,
+		providerGemini: servedIdentitySourceResponse, providerGeminiVertex: servedIdentitySourceResponse,
+		providerOpenAI:           servedIdentitySourceResponse,
 		providerOpenAICompatible: servedIdentitySourceEcho, providerVLLM: servedIdentitySourceEcho,
 		ProviderFake: servedIdentitySourceResponse, providerJev: servedIdentitySourceResponse,
 		providerJevCompatible: servedIdentityPerReply,
@@ -85,7 +87,7 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 		ProviderFake: carriesImagesAndPDF, providerAnthropic: anthropicCarries,
 		providerOllama: carriesImages, providerVLLM: carriesImages,
 		providerOpenAICompatible: carriesImages, providerOpenAI: openAICarries,
-		providerGemini: geminiCarries,
+		providerGemini: geminiCarries, providerGeminiVertex: geminiCarries,
 	}
 	if len(carriage) != len(wantCarriage) {
 		t.Errorf("wireCarriage has %d rows, want %d", len(carriage), len(wantCarriage))
@@ -98,7 +100,7 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 }
 
 func TestVendorHostedAndDefaultModelAnswerPerProvider(t *testing.T) {
-	vendorHosted := map[string]bool{providerAnthropic: true, providerOpenAI: true, providerGemini: true}
+	vendorHosted := map[string]bool{providerAnthropic: true, providerOpenAI: true, providerGemini: true, providerGeminiVertex: true}
 	defaultModel := map[string]string{providerOllama: defaultOllamaModel, providerVLLM: defaultVLLMModel}
 	for _, provider := range knownProviders {
 		if got := providerIsVendorHosted(provider); got != vendorHosted[provider] {

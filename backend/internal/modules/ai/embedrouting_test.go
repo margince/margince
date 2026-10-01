@@ -30,7 +30,7 @@ func embedBodyFrom(t *testing.T, binding ProviderConfig) map[string]json.RawMess
 	}))
 	t.Cleanup(srv.Close)
 	binding.BaseURL = srv.URL
-	client, err := SelectBrain(binding, allCloudKeys())
+	client, err := SelectBrain(binding, allCloudKeys(t))
 	if err != nil {
 		t.Fatal(err)
 	}

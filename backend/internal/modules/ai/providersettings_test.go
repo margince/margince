@@ -567,13 +567,22 @@ func TestEveryCompiledHostDialsAsAnEmptyOneDoes(t *testing.T) {
 
 func clientBaseURL(t *testing.T, binding ProviderConfig) string {
 	t.Helper()
-	client, err := SelectBrain(binding, allCloudKeys())
+	client, err := SelectBrain(binding, allCloudKeys(t))
 	if err != nil {
 		t.Fatalf("SelectBrain(%s): %v", binding.Provider, err)
 	}
-	field := reflect.ValueOf(client).Elem().FieldByName("baseURL")
-	if !field.IsValid() {
-		t.Fatalf("%s: the client carries no baseURL to compare", binding.Provider)
+	switch c := client.(type) {
+	case *anthropicClient:
+		return c.baseURL
+	case *openaiClient:
+		return c.baseURL
+	case *ollamaClient:
+		return c.baseURL
+	case *openAICompatClient:
+		return c.baseURL
+	case *geminiClient:
+		return c.transport.modelsURL()
 	}
-	return field.String()
+	t.Fatalf("%s: %T has a compiled host this test cannot read; add its case", binding.Provider, client)
+	return ""
 }

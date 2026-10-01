@@ -13,6 +13,7 @@ package ai
 import (
 	"cmp"
 	"context"
+	"log/slog"
 	"maps"
 	"net/url"
 	"strings"
@@ -45,6 +46,11 @@ type RoutingStore struct {
 	// benchmark rather than by a stored binding. Optional: absent it, that
 	// vendor answers not_published like any adapter this build does not carry.
 	catalogue *ModelCatalogue
+	// selectBrain builds the client every vendor read and save-time probe
+	// calls through; the zero value is SelectBrain.
+	selectBrain brainSelector
+	// log hears a save admitted unchecked; nil is slog.Default.
+	log *slog.Logger
 }
 
 // NewRoutingStore builds the store over the settings catalog.
@@ -115,6 +121,54 @@ func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (Routing
 	return s.ReplaceIfVersion(ctx, next, "")
 }
 
+// probeBeforeWrite asks Google about each Vertex binding the save adds or
+// changes. It runs before the write's lock is taken, because a network call
+// must not hold it; the write then validates again under the lock. A save
+// that names no gemini_vertex lane reads and asks nothing, and a stale one is
+// refused as stale before Google is asked.
+func (s *RoutingStore) probeBeforeWrite(ctx context.Context, next RoutingConfig, expected string) error {
+	if len(vertexProbesOf(next)) == 0 {
+		return nil
+	}
+	stored, err := settings.Get(ctx, s.settings, Routing)
+	if err != nil {
+		return err
+	}
+	if expected != "" && stored.Revision() != expected {
+		return apperrors.ErrVersionSkew
+	}
+	return s.probeCandidate(ctx, stored, next)
+}
+
+// probeCandidate holds next to the bar the write will, then asks Google about
+// what it adds or changes over stored.
+func (s *RoutingStore) probeCandidate(ctx context.Context, stored, next RoutingConfig) error {
+	_, candidate, err := next.replacing(stored)
+	if err != nil {
+		return err
+	}
+	// The probe is a call to the bound location, so a location the profile
+	// refuses is refused before it is asked anything.
+	if err := candidate.ResidencyGap(); err != nil {
+		return invalidRouting(err)
+	}
+	if err := s.probeVertexBindings(ctx, stored, candidate); err != nil {
+		return invalidRouting(err)
+	}
+	return nil
+}
+
+func invalidRouting(err error) error {
+	return settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
+}
+
+func (s *RoutingStore) logger() *slog.Logger {
+	if s.log == nil {
+		return slog.Default()
+	}
+	return s.log
+}
+
 // Revision identifies the editable document independently of credentials. It
 // digests canonical(), providers included, so editing a provider entry no lane
 // binds still moves the ETag while the routing version stays put.
@@ -129,6 +183,11 @@ func (cfg RoutingConfig) Revision() string { return digestJSON(cfg.canonical()) 
 func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig, expected string) (RoutingConfig, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
 		return RoutingConfig{}, err
+	}
+	if !next.Unconfigured() {
+		if err := s.probeBeforeWrite(ctx, next, expected); err != nil {
+			return RoutingConfig{}, err
+		}
 	}
 	return s.write(ctx, func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {
 		if expected != "" && current.Revision() != expected {

@@ -11,6 +11,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -51,8 +52,12 @@ func geminiError(ctx context.Context, resp *http.Response) error {
 			malformed = malformed || bodyFieldViolated(detail.FieldViolations)
 		}
 	}
-	err := providerRefusal(resp, limit, fmt.Errorf("ai: gemini: %s: %s (http %d)",
-		safeProviderText(ctx, apiErr.Error.Status), safeProviderText(ctx, apiErr.Error.Message), resp.StatusCode))
+	refused := fmt.Errorf("ai: gemini: %s: %s (http %d)",
+		safeProviderText(ctx, apiErr.Error.Status), safeProviderText(ctx, apiErr.Error.Message), resp.StatusCode)
+	if publisherModelMissing(apiErr.Error.Status, apiErr.Error.Message) {
+		refused = fmt.Errorf("%w: %w", errModelNotFound, refused)
+	}
+	err := providerRefusal(resp, limit, refused)
 	// INVALID_ARGUMENT alone also carries a prompt over the model's token
 	// limit and an invalid key; only a named field violation is the body's.
 	if apiErr.Error.Status == "INVALID_ARGUMENT" && malformed {
@@ -79,6 +84,17 @@ func bodyFieldViolated(violations []geminiFieldViolation) bool {
 		}
 	}
 	return false
+}
+
+// errModelNotFound is Google saying the addressed model does not exist at
+// this host, which on Vertex means the location does not serve it.
+var errModelNotFound = errors.New("ai: gemini: the model is not served here")
+
+// publisherModelMissing reads a NOT_FOUND as Vertex naming the model itself.
+// A project or location Google cannot find is NOT_FOUND too, and says so in
+// other words; that is a fault to report, not a model to clear.
+func publisherModelMissing(status, message string) bool {
+	return status == "NOT_FOUND" && strings.Contains(strings.ToLower(message), "publisher model")
 }
 
 // geminiRetryableLimit is the limit-source name a RetryInfo detail stands for.

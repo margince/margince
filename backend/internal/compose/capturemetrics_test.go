@@ -5,8 +5,14 @@ package compose
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func TestCaptureMetricsNamesEveryOutcomeItCounted(t *testing.T) {
@@ -40,5 +46,22 @@ func TestCaptureMetricsWritesNoSampleWhenNothingWasTraced(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "# TYPE margince_capture_outcomes_total counter\n") {
 		t.Errorf("exposition = %q, want the family declared", buf.String())
+	}
+}
+
+// A WARN line about a rate limit carries the limit Google named and the status
+// it came on, inline; a line about any other fault carries neither.
+func TestARateLimitLogLineCarriesTheLimitAndStatus(t *testing.T) {
+	var buf bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&buf, nil))
+	limited := &connector.RateLimitedError{Reason: "userRateLimitExceeded", Status: http.StatusForbidden}
+	log.Warn("capture connection sync failed", "err", fmt.Errorf("sync: %w", limited), rateLimitAttr(fmt.Errorf("sync: %w", limited)))
+	if !strings.Contains(buf.String(), " reason=userRateLimitExceeded status=403") {
+		t.Errorf("log line = %q, want the reason and status inline", buf.String())
+	}
+	buf.Reset()
+	log.Warn("capture connection sync failed", "err", errors.New("unreachable"), rateLimitAttr(errors.New("unreachable")))
+	if strings.Contains(buf.String(), "reason=") || strings.Contains(buf.String(), "status=") {
+		t.Errorf("log line = %q, want no rate-limit fields", buf.String())
 	}
 }

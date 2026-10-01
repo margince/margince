@@ -157,6 +157,7 @@ func TestTheWorkerMetricsAreProcessLocalAndReServeNoFleetGauge(t *testing.T) {
 		"margince_capture_outcomes_total",
 		"margince_connector_requests_total",
 		"margince_connector_request_duration_seconds",
+		"margince_connector_rate_limited_total",
 		"margince_capture_backfill_stage_seconds",
 		"margince_capture_backfill_snooze_seconds_total",
 	} {

@@ -104,7 +104,7 @@ func (c *decisionClient) typeSafeModels(ctx context.Context) ([]model.Info, erro
 	if err != nil {
 		return nil, err
 	}
-	raw, err := getListBody(ctx, c.http, providerJev, endpoint, c.authorize)
+	raw, err := getListBody(ctx, c.http, providerJev, endpoint, signedBy(c.authorize))
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (c *decisionClient) openRouterKeyCheck(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = getListBody(ctx, c.http, openRouterProvider, endpoint, c.authorize)
+	_, err = getListBody(ctx, c.http, openRouterProvider, endpoint, signedBy(c.authorize))
 	return err
 }
 
@@ -150,7 +150,7 @@ func (c *decisionClient) openRouterDecisionModels(ctx context.Context) ([]model.
 	if err != nil {
 		return nil, err
 	}
-	raw, err := getListBody(ctx, c.http, openRouterProvider, endpoint, c.authorize)
+	raw, err := getListBody(ctx, c.http, openRouterProvider, endpoint, signedBy(c.authorize))
 	if err != nil {
 		return nil, err
 	}

@@ -37,7 +37,7 @@ func TestAnthropicLiveSmoke(t *testing.T) {
 	if key == "" {
 		t.Skip("no Anthropic key configured; live smoke skipped")
 	}
-	client, err := SelectBrain(ProviderConfig{Provider: "anthropic", Model: "claude-haiku-4-5-20251001"}, allCloudKeys())
+	client, err := SelectBrain(ProviderConfig{Provider: "anthropic", Model: "claude-haiku-4-5-20251001"}, allCloudKeys(t))
 	if err != nil {
 		t.Fatal(err)
 	}

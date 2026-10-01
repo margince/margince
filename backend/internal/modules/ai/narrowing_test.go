@@ -67,7 +67,7 @@ func TestADeclarationNarrowsANativeProvidersCarriage(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			client, err := SelectBrain(tc.cfg, allCloudKeys())
+			client, err := SelectBrain(tc.cfg, allCloudKeys(t))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -91,7 +91,7 @@ func TestANarrowedBindingRefusesWhatItNoLongerAdvertises(t *testing.T) {
 
 	narrowed, err := selectLocalBrain(ProviderConfig{
 		Provider: providerGemini, BaseURL: srv.URL, Model: "m", Input: []string{"text", "image"},
-	}, allCloudKeys())
+	}, allCloudKeys(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,10 @@ func capsFor(t *testing.T, provider string, input []string) []string {
 	if provider == providerOpenAICompatible {
 		cfg.BaseURL = "https://example.invalid" // the one provider that requires it
 	}
-	client, err := SelectBrain(cfg, allCloudKeys())
+	if provider == providerGeminiVertex {
+		cfg.Location = "eu"
+	}
+	client, err := SelectBrain(cfg, allCloudKeys(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +215,7 @@ embeddings: {provider: fake, model: e}
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg = cfg.WithKeys(allCloudKeys())
+	cfg = cfg.WithKeys(allCloudKeys(t))
 	fake := NewFakeClient()
 	if _, err := NewLocalRouter(cfg, WithFakeClient(fake)); err != nil {
 		t.Fatal(err)
@@ -245,7 +248,7 @@ embeddings: {provider: gemini, model: e}
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg = cfg.WithKeys(allCloudKeys())
+	cfg = cfg.WithKeys(allCloudKeys(t))
 	router, err := NewRouter(cfg, nil, nil, nil, false, nil)
 	if err != nil {
 		t.Fatal(err)

@@ -270,8 +270,8 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 			// cursor intact. The row classifies the fault and counts it toward its
 			// own give-up cap; River owns the redelivery, so a snooze — not a
 			// silent stop — is what keeps the import alive across an outage.
-			w.log.WarnContext(ctx, "capture backfill page deferred",
-				"backfill", job.Args.BackfillID, "retry_after", retryAfter, "err", err)
+			w.log.WarnContext(ctx, "capture backfill page deferred", "backfill", job.Args.BackfillID,
+				"retry_after", retryAfter, "err", err, rateLimitAttr(err))
 			capturemetrics.ObserveDeferral(wsCtx, retryAfter, err)
 			return river.JobSnooze(retryAfter)
 		}
