@@ -79,7 +79,7 @@ func (c *JobCensus) Validate() error {
 		c.exactlyTheOperatorKindsSupplyTheirTimeout(),
 		c.everyArgsFieldIsDeclaredAndBack(),
 		c.everyFanOutChildCarriesItsUnitKey(),
-		c.everyArgsOwnedKindInsertsOnItsDeclaredQueue(),
+		c.everyArgsOwnedKindCarriesItsOwnInsertOpts(),
 		c.noArgsTypeAnswersToASecondKind(),
 		c.everyDeclaredQueueIsBuiltWithItsDeclaredBound(),
 		everyDeclaredPostureIsHonoured(),
@@ -266,17 +266,16 @@ func (c *JobCensus) exactlyTheOperatorKindsSupplyTheirTimeout() []string {
 	return findings
 }
 
-// everyArgsOwnedKindInsertsOnItsDeclaredQueue closes the one ownership level
-// the file can only CHECK. A fan-out child's queue is supplied from the
-// declaration, so drift is impossible; a caller-owned kind's is documentation
-// the runtime never reads. Between them sits opts_owner: args, where the kind's
-// own InsertOpts() decides and the declaration publishes a number a metric will
-// be read against — so the two are compared here.
+// everyArgsOwnedKindCarriesItsOwnInsertOpts holds the half of opts_owner: args
+// that supplying the queue cannot.
 //
-// An InsertOpts that names no queue is River's own default, not an absence:
-// that is the queue such a row actually lands on, and it is what the
-// declaration has to say.
-func (c *JobCensus) everyArgsOwnedKindInsertsOnItsDeclaredQueue() []string {
+// The queue itself is no longer compared: jobs.QueuedAs stamps it from the
+// declaration at every insert, so the two can no longer disagree and an arm
+// comparing them would pass whatever anyone wrote. What is still worth
+// refusing is a kind that declares its args own the options and carries none —
+// nothing then owns its uniqueness or its attempt cap, and River takes its own
+// defaults for both.
+func (c *JobCensus) everyArgsOwnedKindCarriesItsOwnInsertOpts() []string {
 	var findings []string
 	checked := 0
 	for kind, spec := range jobs.Declared() {
@@ -287,21 +286,12 @@ func (c *JobCensus) everyArgsOwnedKindInsertsOnItsDeclaredQueue() []string {
 		if !wired {
 			continue // already reported by the totality check.
 		}
-		withOpts, owns := entry.args.(river.JobArgsWithInsertOpts)
-		if !owns {
+		if _, owns := entry.args.(river.JobArgsWithInsertOpts); !owns {
 			findings = append(findings, fmt.Sprintf(
-				"%s declares opts_owner: args but %s has no InsertOpts() — nothing then owns its queue or its uniqueness, and River takes its own defaults", kind, spec.GoType))
+				"%s declares opts_owner: args but %s has no InsertOpts() — nothing then owns its uniqueness or its attempt cap, and River takes its own defaults", kind, spec.GoType))
 			continue
 		}
 		checked++
-		queue := withOpts.InsertOpts().Queue
-		if queue == "" {
-			queue = river.QueueDefault
-		}
-		if queue != spec.Queue {
-			findings = append(findings, fmt.Sprintf(
-				"%s declares queue %q but its own InsertOpts() inserts on %q — the declaration is what the fleet surfaces publish, and this kind's rows would not be there", kind, spec.Queue, queue))
-		}
 	}
 	if checked == 0 {
 		findings = append(findings,

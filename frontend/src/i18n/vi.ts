@@ -14,18 +14,54 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "reporting.latestSnapshot": "Ảnh chụp mới nhất",
+  "reporting.contextDetails": "Chi tiết báo cáo",
+  "reporting.pipelineFilter": "Cơ hội đang mở · dự kiến chốt",
+  "reporting.targetRemaining": "Còn {amount}",
+  "reporting.targetExceeded": "Vượt mục tiêu {amount}",
+  "reporting.targetPeriodSummary": "{actual} trên {target} · {percent}%",
+  "reporting.sampleDetails": "Chi tiết mẫu",
+  "reporting.customize": "Tùy chỉnh báo cáo",
+  "reporting.actions": "Thao tác báo cáo",
+  "reporting.history": "Lịch sử và lịch chạy",
+  "reporting.activateSchedule": "Kích hoạt lịch",
+  "reporting.savePaused": "Lưu và tạm dừng",
+  "reporting.updateSchedule": "Cập nhật lịch",
+  "reporting.scheduleResult":
+    "Ảnh chụp kỳ đã hoàn thành gần nhất được lưu tại đây.",
+  "reporting.useCurrentSettings": "Dùng cài đặt báo cáo hiện tại",
+  "reporting.pinnedSettings": "Cài đặt đã lưu trước đó",
+  "reporting.unallocated": "Chưa phân bổ",
+  "reporting.overallocated": "Phân bổ vượt mức",
+  "reporting.targetFor": "Mục tiêu cho",
+  "reporting.targetStatus": "Trạng thái mục tiêu",
+  "reporting.activeTargets": "Mục tiêu đang dùng",
+  "reporting.allTargets": "Tất cả mục tiêu",
+  "reporting.periodYear": "Năm",
+  "reporting.periodMonth": "Tháng bắt đầu",
+  "reporting.closedOn": "Ngày chốt",
+  "reporting.meetingOn": "Ngày họp",
+  "reporting.acceptedOn": "Ngày chấp nhận",
+  "reporting.record": "Bản ghi",
+  "reporting.dealValue": "Giá trị cơ hội",
+  "reporting.valueChanges": "Thay đổi giá trị",
+  "reporting.netChange": "Thay đổi ròng: {amount}",
+  "reporting.change": "Thay đổi",
+  "reporting.coverageAction":
+    "Với nguồn chưa kiểm tra được, hãy nhờ chủ kết nối hoặc quản trị viên khôi phục quyền truy cập.",
+  "reporting.currentPipeline": "Cơ hội đang mở hôm nay",
   "reporting.retiredHelp":
     "Mục tiêu đã ngừng vẫn được lưu trong lịch sử. Sửa mục tiêu này và bỏ trạng thái ngừng để sử dụng lại cùng phân bổ.",
   "reporting.pausedSchedules_one": "Lịch đã tạm dừng: {count}",
   "reporting.pausedSchedules_other": "Lịch đã tạm dừng: {count}",
-  "reporting.moreMetrics": "Thêm chỉ số và chi tiết",
-  "reporting.selectedValue": "Giá trị đã chọn",
-  "reporting.pageRecords_one": "Bản ghi trên trang này: {count}",
-  "reporting.pageRecords_other": "Bản ghi trên trang này: {count}",
+  "reporting.moreMetrics": "Tất cả chỉ số",
+  "reporting.selectedValue": "Tổng cộng",
+  "reporting.pageRecords_one": "Đang hiển thị {count} bản ghi",
+  "reporting.pageRecords_other": "Đang hiển thị {count} bản ghi",
   "reporting.currentState": "Trạng thái hiện tại",
   "reporting.attainment": "{percent}% mục tiêu",
   "reporting.remaining": "Còn lại",
-  "reporting.ownerMetric": "{metric} theo chủ sở hữu",
+  "reporting.ownerMetric": "{metric} theo thành viên",
   "reporting.quarterStart": "Chọn tháng đầu quý tài chính.",
   "reporting.additional": "Phân tích khác",
   "reporting.settings": "Cài đặt báo cáo",
@@ -52,10 +88,12 @@ export const vi = {
     "Bật lưu giữ ảnh chụp để lên lịch. Có thể lưu lịch ở trạng thái tạm dừng.",
   "reporting.shareSnapshot": "Ảnh chụp để chia sẻ",
   "reporting.capturePending": "Đã xếp hàng chụp. Kết quả sẽ xuất hiện tại đây.",
-  "reporting.createReport": "Tạo báo cáo",
+  "reporting.createReport": "Tạo từ Hiệu suất",
   "reporting.observations_one": "Quan sát: {count}",
   "reporting.observations_other": "Quan sát: {count}",
   "reporting.observationsUnavailable": "Chưa có cỡ mẫu",
+  "reporting.earlierDefinition":
+    "Bản chụp này sử dụng định nghĩa chỉ số trước đây. Các số liệu đã lưu chưa được tính lại.",
   "reporting.definition": "Cách đo lường",
   "reporting.viewRecords": "Xem bản ghi",
   "reporting.copyName": "Bản sao của {name}",
@@ -68,10 +106,8 @@ export const vi = {
   "reporting.status.partial": "Dữ liệu chưa đầy đủ",
   "reporting.status.ok": "Dữ liệu đầy đủ",
   "retention.scopeReportEdition": "Bản báo cáo đã lưu",
-  "reporting.reviewQueue": "Mở danh sách công việc của tôi",
   "reporting.lastCapture": "Lần ghi nhận thành công gần nhất {at}",
   "reporting.allocationDifference": "Mục tiêu nhóm trừ mục tiêu đã phân bổ",
-  "reporting.allocatedTarget": "Mục tiêu đã phân bổ",
   "reporting.view": "Chế độ hiệu suất",
   "reporting.fromDate": "Từ ngày",
   "reporting.throughDate": "Đến hết ngày",
@@ -85,13 +121,11 @@ export const vi = {
     "Cuộc họp khách hàng đã xác nhận và doanh số theo phụ trách lúc chốt · Pipeline mới tính deal mới tạo, không phải lần đạt chuẩn.",
   "brief.weekly.numericPartial":
     "Một số bằng chứng không khả dụng. Số liệu chỉ gồm bản ghi được phép đọc và có giá trị xác định.",
-  "reporting.owner": "Phụ trách",
   "reporting.edit": "Sửa báo cáo",
   "reporting.moveUp": "Di chuyển lên",
   "reporting.moveDown": "Di chuyển xuống",
-  "reporting.scorecard": "Hiệu suất theo phụ trách",
   "reporting.exportCsv": "Xuất CSV",
-  "reporting.captureContexts": "Ảnh chụp dự báo hàng ngày",
+  "reporting.captureContexts": "Ghi nhận lịch sử cơ hội hằng ngày",
   "reporting.captureHelp":
     "Chọn nhóm và quy trình cố định. Cần hai ảnh chụp hàng ngày tương thích để xem thay đổi.",
   "reporting.addCapture": "Thêm ảnh chụp",
@@ -112,10 +146,7 @@ export const vi = {
   "reporting.monthly": "Hàng tháng",
   "reporting.day": "Ngày chạy",
   "reporting.time": "Giờ địa phương",
-  "reporting.enabled": "Bật lịch chạy",
   "reporting.timezone": "Múi giờ báo cáo",
-  "reporting.scheduleBasis":
-    "Chốt tuần hoặc tháng hoàn chỉnh trước. Bản sửa đổi báo cáo được giữ nguyên cho đến khi bạn thay đổi.",
   "reporting.nextRun": "Lần chạy tiếp: {at}",
   "reporting.pause": "Tạm dừng",
   "reporting.resume": "Tiếp tục",
@@ -126,32 +157,30 @@ export const vi = {
   "reporting.value": "Số tiền hoặc số lượng mục tiêu",
   "reporting.newTarget": "Đặt mục tiêu",
   "reporting.revise": "Sửa mục tiêu",
-  "reporting.commitments":
-    "Cam kết nhóm và phân bổ cá nhân là các mục tiêu riêng. Chênh lệch không được tự động phân phối lại.",
   "reporting.up": "Di chuyển lên",
   "reporting.down": "Di chuyển xuống",
   "reporting.periodStart": "Ngày đầu của kỳ mục tiêu",
-  "reporting.noComparison": "Không có phiên bản trước tương thích.",
+  "reporting.noComparison":
+    "Chọn hai ảnh chụp cùng phạm vi của hai kỳ đã kết thúc liên tiếp.",
   "reporting.noSource": "Không có chi tiết nguồn.",
-  "reporting.framework": "Khung báo cáo",
+  "reporting.framework": "Thiết lập báo cáo",
   "reporting.template": "Chế độ xem mặc định",
   "reporting.sales": "Bán hàng",
   "reporting.sdr": "Kết quả SDR",
   "reporting.qualification": "Giai đoạn đủ điều kiện",
-  "reporting.publish": "Xuất bản khung",
+  "reporting.publish": "Lưu cài đặt báo cáo",
   "reporting.prospective":
-    "Thay đổi áp dụng cho sự kiện tương lai. Các phiên bản hiện có giữ nguyên khung gốc.",
+    "Thay đổi áp dụng cho sự kiện mới. Ảnh chụp đã lưu giữ nguyên cài đặt ban đầu.",
   "reporting.performance": "Hiệu suất",
   "reporting.reports": "Báo cáo đã lưu",
   "reporting.targets": "Mục tiêu",
   "reporting.definitions": "Định nghĩa chỉ số",
-  "reporting.purpose":
-    "Xem tiến độ, kiểm tra dữ liệu và lưu lịch sử có thể so sánh.",
   "reporting.save": "Lưu báo cáo",
-  "reporting.advanced": "Phân tích nâng cao",
   "reporting.period": "Khoảng thời gian",
   "reporting.pipeline": "Quy trình bán hàng",
   "reporting.allPipelines": "Tất cả pipeline",
+  "reporting.resultsThrough": "Kết quả tính đến {at}",
+  "reporting.noSalesWon": "Chưa có giao dịch thắng",
   "reporting.this_month": "Tháng này",
   "reporting.last_month": "Tháng trước",
   "reporting.last_week": "Tuần hoàn chỉnh trước",
@@ -159,16 +188,16 @@ export const vi = {
   "reporting.custom": "Khoảng thời gian tùy chọn",
   "reporting.start": "Ngày bắt đầu",
   "reporting.end": "Ngày kết thúc (không bao gồm)",
-  "reporting.bookings_trend": "Giá trị cơ hội đã thắng theo thời gian",
+  "reporting.bookings_trend": "Doanh số đã chốt theo thời gian",
   "reporting.stage_distribution": "Pipeline đang ở đâu?",
-  "reporting.owner_attainment": "Giá trị cơ hội đã thắng theo phụ trách",
-  "reporting.stage_age": "Deal đang chậm ở đâu?",
+  "reporting.owner_attainment": "Doanh số đã chốt theo nhân viên",
+  "reporting.stage_age": "Thời gian ở giai đoạn hiện tại",
   "reporting.sdr_outcomes": "Cuộc họp và cơ hội được chấp nhận",
   "reporting.target_progress": "Tiến độ mục tiêu đã phân bổ",
   "reporting.forecast_support": "Điều gì hỗ trợ dự báo?",
   "reporting.pipeline_movement": "Pipeline đã thay đổi thế nào?",
   "reporting.metric_reading": "Chi tiết chỉ số",
-  "reporting.bookings_won": "Giá trị cơ hội đã thắng",
+  "reporting.bookings_won": "Doanh số đã chốt",
   "reporting.closed_win_rate": "Tỷ lệ thắng deal đã đóng",
   "reporting.open_pipeline": "Pipeline đang mở",
   "reporting.qualified_pipeline_created": "Pipeline đủ điều kiện mới",
@@ -188,14 +217,11 @@ export const vi = {
   "reporting.data": "Xem biểu đồ dạng bảng",
   "reporting.evidence": "Bằng chứng",
   "reporting.details": "Chi tiết",
-  "reporting.noTarget": "Chưa đặt mục tiêu",
   "reporting.unavailable": "Không có dữ liệu",
-  "reporting.stateAt": "Trạng thái hiện tại lúc {at}",
-  "reporting.interval": "{start} đến {end} · {zone}",
   "reporting.restricted": "Bản ghi bị hạn chế",
   "reporting.next": "Trang tiếp",
   "reporting.name": "Tên báo cáo",
-  "reporting.audience": "Đối tượng",
+  "reporting.audience": "Ai có thể xem",
   "reporting.private": "Chỉ mình tôi",
   "reporting.team": "Nhóm đã chọn",
   "reporting.workspace": "Tổ chức",
@@ -203,7 +229,7 @@ export const vi = {
   "reporting.metrics": "Chỉ số",
   "reporting.cancel": "Hủy",
   "reporting.saved": "Đã lưu báo cáo",
-  "reporting.live": "Xem trước trực tiếp",
+  "reporting.live": "Báo cáo trực tiếp",
   "reporting.opening": "Đầu kỳ",
   "reporting.closing": "Cuối kỳ",
   "reporting.reconcile": "Các biến động không khớp với giá trị cuối kỳ.",
@@ -3272,6 +3298,34 @@ export const vi = {
     "{count} liên kết, thẻ hoặc mục trong danh sách không khôi phục được.",
   "bulk.undoLeftBehind_other":
     "{count} liên kết, thẻ hoặc mục trong danh sách không khôi phục được.",
+  "bulk.reason.no_change_list": "Đã có hoặc đã không có trong danh sách chọn",
+  "bulk.reason.no_change_tag": "Đã có hoặc đã không có thẻ này",
+  "bulk.tag": "Thẻ",
+  "bulk.tagPick": "Chọn thẻ",
+  "bulk.addTag": "Thêm thẻ",
+  "bulk.removeTag": "Gỡ thẻ",
+  "bulk.titleAddTag": "Gắn thẻ {tag} cho {unit} đã chọn?",
+  "bulk.titleRemoveTag": "Gỡ thẻ {tag} khỏi {unit} đã chọn?",
+  "bulk.confirmAddTag": "Thêm thẻ",
+  "bulk.confirmRemoveTag": "Gỡ thẻ",
+  "bulk.stateTagged": "Đã gắn thẻ",
+  "bulk.stateNotTagged": "Chưa gắn thẻ",
+  "bulk.createTask": "Tạo việc",
+  "bulk.taskTitle": "Mỗi bản ghi đã chọn một việc",
+  "bulk.taskSubject": "Việc cần làm",
+  "bulk.taskDue": "Hạn",
+  "bulk.taskAssignee": "Giao cho",
+  "bulk.taskAssigneeMe": "Tôi",
+  "bulk.taskNext": "Xem trước",
+  "bulk.titleCreateTask": "Tạo một việc cho mỗi bản ghi đã chọn trong {unit}?",
+  "bulk.confirmCreateTask": "Tạo việc",
+  "bulk.stateNewTask": "Việc mới",
+  "bulk.stateNoTask": "Không có việc mới",
+  "bulk.removeFromThisShortlist": "Gỡ khỏi danh sách chọn này",
+  "bulk.doneLeads_one": "Đã thay đổi {count} khách hàng tiềm năng.",
+  "bulk.doneLeads_other": "Đã thay đổi {count} khách hàng tiềm năng.",
+  "bulk.undoneLeads_one": "Đã hoàn tác {count} khách hàng tiềm năng.",
+  "bulk.undoneLeads_other": "Đã hoàn tác {count} khách hàng tiềm năng.",
 
   "deal.offers": "Báo giá",
   "deal.newOffer": "Báo giá mới",
@@ -4414,15 +4468,15 @@ export const vi = {
   "analytics.currency": "Tiền tệ",
   "analytics.count": "Deal",
   "analytics.closedDeals": "Deal đã đóng",
-  "analytics.unweighted": "Chưa trọng số",
-  "analytics.weighted": "Có trọng số",
+  "analytics.unweighted": "Giá trị cơ hội",
+  "analytics.weighted": "Giá trị điều chỉnh theo xác suất",
   "analytics.priced": "{priced}/{total} đã định giá",
   "analytics.planNote":
     "kế hoạch đã chạy và những dòng mà con số này đối chiếu về",
   "analytics.reportDeals": "Pipeline đang mở theo giai đoạn",
   "analytics.sections": "Các mục phân tích",
   "analytics.sectionForecast": "Dự báo",
-  "analytics.sectionPipeline": "Kênh bán",
+  "analytics.sectionPipeline": "Phân tích cơ hội",
   "analytics.sectionPerformance": "Hiệu suất",
   "analytics.noClosedDeals": "Chưa có deal nào được chốt.",
   "analytics.sectionOutcomes": "Kết quả của tôi",
@@ -4431,7 +4485,7 @@ export const vi = {
   // The Questions section: a question composed from the seat's own analytics
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
-  "analytics.sectionQuestions": "Câu hỏi",
+  "analytics.sectionQuestions": "Báo cáo tùy chỉnh",
   "analytics.reportDealsByStage": "Tất cả deal theo giai đoạn",
   "analytics.reportLeadsByStatus": "Lead theo trạng thái",
   "analytics.reportActivitiesByKind": "Hoạt động theo loại",
@@ -4485,9 +4539,9 @@ export const vi = {
   "analytics.q.addMeasure": "Thêm chỉ số",
   "analytics.q.allRecords": "Tất cả bản ghi",
   "analytics.q.answerTitle": "Kết quả",
-  "analytics.q.ask": "Hỏi",
-  "analytics.q.asking": "Đang hỏi…",
-  "analytics.q.builderTitle": "Câu hỏi của bạn",
+  "analytics.q.ask": "Chạy báo cáo",
+  "analytics.q.asking": "Đang chạy báo cáo…",
+  "analytics.q.builderTitle": "Báo cáo tùy chỉnh",
   "analytics.q.chooseField": "Chọn trường",
   "analytics.q.choosePopulation": "Chọn báo cáo",
   "analytics.q.copyLink": "Sao chép liên kết",
@@ -4557,9 +4611,8 @@ export const vi = {
     "Hãy thêm bộ lọc “Tiền tệ là …” để so sánh số tiền theo đơn vị tiền tệ của từng deal.",
   "analytics.q.scopeNotAvailable":
     "Câu hỏi này được lưu cho phạm vi bản ghi mà bạn không thể đo. Câu hỏi sẽ được hỏi trên {scope}.",
-  "analytics.q.staleTitle": "Kết quả đã cũ",
-  "analytics.q.staleBody":
-    "Kết quả này dành cho câu hỏi đã hỏi lần trước. Hãy hỏi lại để cập nhật.",
+  "analytics.q.staleTitle": "Báo cáo đã cũ",
+  "analytics.q.staleBody": "Chạy báo cáo để áp dụng thay đổi.",
   "analytics.q.calculationN": "Phép tính, chỉ số {n}",
   "analytics.q.measureFieldN": "Trường, chỉ số {n}",
   "analytics.q.filterFieldN": "Trường, bộ lọc {n}",
@@ -4569,18 +4622,17 @@ export const vi = {
   "analytics.q.withheldGroups_other": "Đã ẩn {count} nhóm",
   "analytics.reportProjectsByPhase": "Dự án theo giai đoạn",
   "analytics.reportProjectCommitments": "Cam kết dự án",
-  "analytics.reportProjectsGoneQuiet": "Dự án im ắng",
+  "analytics.reportProjectsGoneQuiet": "Dự án không hoạt động trong 30 ngày",
   "analytics.projects": "Dự án",
   "analytics.project": "Dự án",
   "analytics.openDealValue": "Giá trị deal đang mở ({currency})",
   "analytics.wonDealValue": "Giá trị deal đã thắng ({currency})",
-  "analytics.openCommitments": "Đang mở",
-  "analytics.overdueCommitments": "Quá hạn",
+  "analytics.openCommitments": "Cam kết đang mở",
+  "analytics.overdueCommitments": "Cam kết quá hạn",
   "analytics.quietSince": "Im ắng từ",
   "analytics.nothingQuiet": "Không có dự án đang triển khai nào bị im ắng.",
   "analytics.noProjectsYet": "Chưa có dự án nào — một deal thắng sẽ mở dự án.",
-  "analytics.coverageSub":
-    "Những nguồn nào kiểm tra hằng đêm đọc được, và đến đâu. Nguồn im ắng nhưng đã đọc là đã kiểm tra; nguồn chưa đọc sẽ nói lý do.",
+  "analytics.coverageSub": "Trạng thái kết nối từ lần kiểm tra mới nhất.",
   "analytics.covSource": "Nguồn",
   "analytics.covState": "Trạng thái",
   "analytics.covThrough": "Đã kiểm tra đến",
@@ -4590,12 +4642,10 @@ export const vi = {
   "analytics.covPermissionLimited": "Cần cấp lại quyền truy cập",
   "analytics.covNotConnected":
     "Chưa kết nối — không có gì để sửa, có việc cần quyết định",
-  "analytics.coverageInputsElsewhere":
-    "Vấn đề ở cấp bản ghi được liệt kê và xử lý trong phần rà soát đầu vào của Forecast.",
   "analytics.myPipeline": "Pipeline đang mở của tôi",
   "analytics.myMeetings": "Cuộc họp của tôi",
   "analytics.meetingsAsTheyStand":
-    "Các cuộc họp bạn chủ trì, theo trạng thái hôm nay — cuộc họp đã diễn ra không còn tính là đã đặt.",
+    "Các cuộc họp bạn chủ trì, theo trạng thái hiện tại. Không lọc ngày.",
   "analytics.meetingsBooked": "Đã đặt",
   "analytics.meetingsHeld": "Đã diễn ra",
   "analytics.meetingsNoShow": "Không đến",
@@ -4689,7 +4739,7 @@ export const vi = {
     "Chưa kiểm tra gì: lần kiểm tra đầu tiên chưa chạy. Các số liệu ở trên phản ánh hồ sơ hiện tại.",
   "review.firstCheck.title": "Bắt đầu kiểm tra dữ liệu đầu vào",
   "review.firstCheck.body":
-    "Việc kiểm tra hằng đêm chỉ chạy sau khi bạn bắt đầu. Lần kiểm tra đầu tiên nêu mọi phát hiện cùng một lúc và mở một việc cho mỗi giao dịch liên quan, nên biết trước quy mô là điều đáng làm.",
+    "Bắt đầu kiểm tra hằng đêm và tạo công việc cho từng cơ hội bị ảnh hưởng.",
   "review.firstCheck.scope":
     "Giao dịch sẽ kiểm tra: {deals}. Phát hiện sẽ nêu: {findings}.",
   "review.firstCheck.start": "Bắt đầu kiểm tra",
@@ -4742,30 +4792,30 @@ export const vi = {
   "review.submit": "Lưu câu trả lời",
   "forecast.question": "Quý này chúng ta sẽ đạt bao nhiêu?",
   "forecast.answerWithCall":
-    "Cam kết hiện tại là {call}. Bằng chứng hỗ trợ {evidence}.",
+    "Dự báo của quản lý: {call}. Đã thắng cộng cơ hội cam kết có ngày chốt đã xác nhận: {evidence}.",
   "forecast.answerNoCall":
-    "Chưa ai đưa ra cam kết cho kỳ này. Bằng chứng hỗ trợ {evidence}.",
+    "Đã thắng cộng cơ hội cam kết có ngày chốt đã xác nhận: {evidence}. Chưa có dự báo của quản lý.",
   "forecast.partialTitle": "Không phải deal nào cũng có giá",
   "forecast.partial":
     "{priced} trên {eligible} deal có số tiền. Số còn lại là pipeline thật nhưng không đóng góp vào các tổng ở trên.",
-  "forecast.currentCall": "Cam kết hiện tại",
-  "forecast.currentCallNone": "Chưa có dự báo",
-  "forecast.currentCallDetailOver": "Chốt ngày {date} · {gap} trên bằng chứng",
-  "forecast.currentCallDetailUnder": "Chốt ngày {date} · {gap} dưới bằng chứng",
-  "forecast.currentCallDetailEven": "Chốt ngày {date} · khớp với bằng chứng",
-  "forecast.evidence": "Có bằng chứng hỗ trợ",
-  "forecast.evidenceDetail": "Ngày chốt đã xác nhận",
+  "forecast.currentCall": "Dự báo của quản lý",
+  "forecast.currentCallDetailOver":
+    "Cập nhật {date} · cao hơn đã thắng + cam kết đã xác nhận {gap}",
+  "forecast.currentCallDetailUnder":
+    "Cập nhật {date} · thấp hơn đã thắng + cam kết đã xác nhận {gap}",
+  "forecast.currentCallDetailEven":
+    "Cập nhật {date} · bằng đã thắng + cam kết đã xác nhận",
+  "forecast.evidence": "Đã cam kết · ngày đã xác nhận",
   "forecast.bestCaseAdds": "Phần thêm khả quan nhất",
   "forecast.makeup": "Kỳ này gồm những gì",
   "forecast.alreadyWon": "Đã thắng",
-  "forecast.alreadyWonDetail": "Đã chốt trong kỳ này",
-  "forecast.updateCall": "Cập nhật cam kết hiện tại",
+  "forecast.updateCall": "Cập nhật dự báo",
   "forecast.callExplains":
-    "Cam kết là con số bạn tin sẽ chốt. Nó ghi lại con số của bạn và không thay đổi deal nào.",
+    "Nhập tổng doanh số dự kiến chốt trong kỳ, bao gồm doanh số đã chốt.",
   "forecast.expectedTotal": "Tổng dự kiến cho kỳ này",
   "forecast.supportingNote": "Ghi chú kèm theo",
   "forecast.cancel": "Hủy",
-  "forecast.saveCall": "Lưu cam kết",
+  "forecast.saveCall": "Lưu dự báo",
   "analytics.scopeLabel": "Những bản ghi nào nằm trong các số liệu này",
   "analytics.scopeFixed": "Các số liệu này bao gồm {scope}.",
   "forecast.period": "Khoảng thời gian",
@@ -7382,6 +7432,22 @@ export const vi = {
   "auto.delete": "Xoá",
   "auto.statusEnabled": "Đang bật",
   "auto.statusPaused": "Đang tạm dừng",
+  "auto.pausedReason.listArchived":
+    "Đã tạm dừng vì danh sách được theo dõi hoặc được thêm vào đã được lưu trữ. Khôi phục danh sách không tiếp tục tự động hóa này.",
+  "auto.pausedReason.listInvalid":
+    "Đã tạm dừng vì bộ lọc của danh sách động được theo dõi không còn dùng được. Sửa bộ lọc không tiếp tục tự động hóa này.",
+  "auto.pausedReason.listUnavailable":
+    "Đã tạm dừng vì chủ sở hữu không còn tìm thấy danh sách được theo dõi.",
+  "auto.pausedReason.burst":
+    "Đã tạm dừng vì một lần kiểm tra làm thay đổi hơn 100 bản ghi. Không bản ghi nào được xử lý.",
+  "auto.lists.placeholder": "Chọn danh sách",
+  "auto.lists.needsWatched":
+    "Chọn danh sách động trước. Danh sách chọn chứa cùng loại bản ghi.",
+  "auto.lists.loadError": "Không tải được danh sách.",
+  "auto.lists.noLive":
+    "Chưa có danh sách động. Hãy lưu một bộ lọc thành danh sách động trước.",
+  "auto.lists.noShortlist":
+    "Không có danh sách chọn nào thuộc loại bản ghi này có thể thay đổi.",
   "auto.dateField.placeholder": "Chọn trường ngày",
   "auto.dateField.needsObject":
     "Chọn đối tượng trước để xem các trường ngày của nó.",
@@ -7528,6 +7594,17 @@ export const vi = {
   "cf.noPermission":
     "Bạn chỉ có quyền đọc trường tùy chỉnh — thêm, sửa và lưu trữ không thuộc quyền của bạn ở đây.",
   "cf.retired": "Đã ngừng dùng",
+  "cf.retire.title": "Lưu trữ “{label}”?",
+  "cf.retire.body":
+    "Trường sẽ bị ẩn khỏi bản ghi mới và bộ lọc. Các giá trị đã lưu được giữ lại.",
+  "cf.retire.lists":
+    "Các danh sách động này lọc theo trường này. Chúng vẫn hoạt động với giá trị đã lưu và sẽ nhắc thành viên phụ trách thay điều kiện:",
+  "cf.retire.unseen_one":
+    "{count} danh sách động khác mà bạn không mở được cũng lọc theo trường này.",
+  "cf.retire.unseen_other":
+    "{count} danh sách động khác mà bạn không mở được cũng lọc theo trường này.",
+  "cf.retire.noLists": "Không có danh sách động nào lọc theo trường này.",
+  "cf.retire.checking": "Đang kiểm tra danh sách nào dùng trường này",
   // "Chung" thay vì "Tổ chức" cho mục đầu tiên: tiêu đề nhóm phía trên đã nói
   // từ đó, và một dòng lặp lại tiêu đề của chính nó thì không gọi tên được gì.
   "settings.home": "T\u1ed5ng quan",
@@ -9107,6 +9184,9 @@ export const vi = {
   "captureExclusions.containerLabel": "Thư mục hoặc nhãn",
   "captureExclusions.noContainers":
     "Hộp thư này không báo cáo thư mục nào. Hãy kết nối hộp thư có thư mục, hoặc loại trừ theo địa chỉ hoặc tên miền.",
+  "captureExclusions.containersPartial": "Danh sách thư mục này chưa đầy đủ",
+  "captureExclusions.containersPartialBody":
+    "Hộp thư của bạn có nhiều thư mục hơn danh sách này đọc được, nên thư mục bạn tìm có thể bị thiếu. Hãy nhập tên thư mục bên dưới, hoặc loại trừ theo địa chỉ hoặc tên miền.",
   "captureExclusions.containersUnreadable": "Không đọc được thư mục của bạn",
   "captureExclusions.containersUnreadableBody":
     "Nhà cung cấp thư không phản hồi, nên danh sách này có thể thiếu thư mục. Hãy thử lại sau giây lát, hoặc loại trừ theo địa chỉ hoặc tên miền.",
@@ -9988,6 +10068,41 @@ export const vi = {
   "filters.saveListTitle":
     "L\u01b0u b\u1ed9 l\u1ecdc n\u00e0y th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
   "filters.saveListConfirm": "L\u01b0u danh s\u00e1ch",
+  "filters.propose.label":
+    "M\u00f4 t\u1ea3 danh s\u00e1ch b\u1eb1ng l\u1eddi th\u01b0\u1eddng",
+  "filters.propose.hint":
+    "Margince \u0111\u1ec1 xu\u1ea5t \u0111i\u1ec1u ki\u1ec7n cho b\u1ed9 l\u1ecdc b\u00ean d\u01b0\u1edbi. Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c l\u01b0u cho \u0111\u1ebfn khi b\u1ea1n b\u1ea5m L\u01b0u.",
+  "filters.propose.placeholder":
+    "C\u00f4ng ty \u1edf \u0110\u1ee9c kh\u00f4ng c\u00f3 ho\u1ea1t \u0111\u1ed9ng trong 45 ng\u00e0y qua",
+  "filters.propose.submit": "\u0110\u1ec1 xu\u1ea5t b\u1ed9 l\u1ecdc",
+  "filters.propose.busy":
+    "\u0110ang \u0111\u1ecdc m\u00f4 t\u1ea3 c\u1ee7a b\u1ea1n",
+  "filters.propose.noModel":
+    "B\u1ed9 l\u1ecdc b\u1eb1ng l\u1eddi th\u01b0\u1eddng c\u1ea7n m\u1ed9t m\u00f4 h\u00ecnh AI \u0111\u00e3 \u0111\u01b0\u1ee3c c\u1ea5u h\u00ecnh. B\u1ea1n v\u1eabn c\u00f3 th\u1ec3 t\u1ef1 x\u00e2y d\u1ef1ng b\u1ed9 l\u1ecdc.",
+  "filters.propose.unreadable":
+    "Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c \u0111\u1ec1 xu\u1ea5t. H\u00e3y th\u1eed m\u00f4 t\u1ea3 danh s\u00e1ch theo c\u00e1ch kh\u00e1c.",
+  "filters.propose.readyTitle":
+    "B\u1ed9 l\u1ecdc \u0111\u00e3 s\u1eb5n s\u00e0ng",
+  "filters.propose.readyBody":
+    "B\u1ed9 l\u1ecdc c\u1ee7a b\u1ea1n \u0111\u00e3 c\u00f3 \u0111i\u1ec1u ki\u1ec7n. Thay ch\u00fang b\u1eb1ng \u0111\u1ec1 xu\u1ea5t, ho\u1eb7c th\u00eam \u0111\u1ec1 xu\u1ea5t v\u00e0o.",
+  "filters.propose.replace": "Thay b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i",
+  "filters.propose.add":
+    "Th\u00eam v\u00e0o b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i",
+  "filters.propose.discard": "B\u1ecf \u0111\u1ec1 xu\u1ea5t",
+  "filters.propose.unusedTitle": "Kh\u00f4ng d\u00f9ng \u0111\u01b0\u1ee3c",
+  "filters.propose.unusedDismiss": "\u1ea8n",
+  "filters.propose.unusedItem":
+    "C\u1ee5m t\u1eeb \u201c{phrase}\u201d: {reason}",
+  "filters.propose.reason.unknownField":
+    "Kh\u00f4ng c\u00f3 tr\u01b0\u1eddng n\u00e0o b\u1ea1n c\u00f3 th\u1ec3 l\u1ecdc \u1edf \u0111\u00e2y ghi nh\u1eadn \u0111i\u1ec1u n\u00e0y.",
+  "filters.propose.reason.operator":
+    "{field} kh\u00f4ng th\u1ec3 so s\u00e1nh theo c\u00e1ch \u0111\u00f3.",
+  "filters.propose.reason.value":
+    "{field} kh\u00f4ng nh\u1eadn gi\u00e1 tr\u1ecb \u0111\u00f3.",
+  "filters.propose.reason.notVerifiable":
+    "{field} c\u00f3 c\u00e1c l\u1ef1a ch\u1ecdn b\u1ea1n kh\u00f4ng \u0111\u01b0\u1ee3c xem, n\u00ean kh\u00f4ng th\u1ec3 ki\u1ec3m tra gi\u00e1 tr\u1ecb.",
+  "filters.propose.reason.tooMany":
+    "B\u1ed9 l\u1ecdc \u0111\u00e3 ch\u1ee9a nhi\u1ec1u \u0111i\u1ec1u ki\u1ec7n nh\u1ea5t c\u00f3 th\u1ec3.",
   "lists.page": "Danh s\u00e1ch",
   "lists.section.label": "Hi\u1ec3n th\u1ecb",
   "lists.section.views": "Ch\u1ebf \u0111\u1ed9 xem c\u1ee7a t\u00f4i",
@@ -10019,13 +10134,15 @@ export const vi = {
   "lists.health.ownerless": "C\u1ea7n ph\u1ee5 tr\u00e1ch",
   "lists.health.invalid":
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
+  "lists.health.retiredField":
+    "D\u00f9ng tr\u01b0\u1eddng \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng",
   "lists.library.title":
     "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
   "lists.library.search": "T\u00ecm danh s\u00e1ch",
   "lists.library.all": "T\u1ea5t c\u1ea3",
   "lists.library.kind": "Lo\u1ea1i danh s\u00e1ch",
   "lists.library.empty":
-    "Ch\u01b0a c\u00f3 danh s\u00e1ch n\u00e0o. H\u00e3y l\u01b0u m\u1ed9t b\u1ed9 l\u1ecdc th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng ho\u1eb7c t\u1ea1o danh s\u00e1ch ch\u1ecdn.",
+    "Ch\u01b0a c\u00f3 danh s\u00e1ch \u0111\u01b0\u1ee3c chia s\u1ebb n\u00e0o. H\u00e3y l\u01b0u m\u1ed9t b\u1ed9 l\u1ecdc th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng ho\u1eb7c t\u1ea1o danh s\u00e1ch ch\u1ecdn.",
   "lists.library.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
   "lists.col.name": "T\u00ean",
   "lists.col.kind": "Lo\u1ea1i",
@@ -10048,7 +10165,7 @@ export const vi = {
   "lists.archive": "L\u01b0u tr\u1eef danh s\u00e1ch",
   "lists.restore": "Kh\u00f4i ph\u1ee5c",
   "lists.unavailable":
-    "Danh s\u00e1ch ch\u01b0a \u0111\u01b0\u1ee3c b\u1eadt cho h\u1ec7 th\u1ed1ng n\u00e0y.",
+    "Danh s\u00e1ch \u0111\u00e3 b\u1ecb t\u1eaft cho h\u1ec7 th\u1ed1ng n\u00e0y.",
   "lists.gone":
     "Danh s\u00e1ch n\u00e0y kh\u00f4ng t\u1ed3n t\u1ea1i ho\u1eb7c kh\u00f4ng \u0111\u01b0\u1ee3c chia s\u1ebb v\u1edbi b\u1ea1n.",
   "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
@@ -10071,6 +10188,12 @@ export const vi = {
   "lists.ownerless.body":
     "Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch \u0111\u00e3 r\u1eddi \u0111i ho\u1eb7c ch\u01b0a t\u1eebng \u0111\u01b0\u1ee3c ch\u1ec9 \u0111\u1ecbnh. Ai c\u00f3 quy\u1ec1n s\u1eeda danh s\u00e1ch n\u00ean nh\u1eadn ph\u1ee5 tr\u00e1ch.",
   "lists.ownerless.takeOver": "Nh\u1eadn ph\u1ee5 tr\u00e1ch",
+  "lists.retiredField.title":
+    "B\u1ed9 l\u1ecdc n\u00e0y d\u00f9ng m\u1ed9t tr\u01b0\u1eddng \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng",
+  "lists.retiredField.body_one":
+    "{fields} \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng. Danh s\u00e1ch v\u1eabn ho\u1ea1t \u0111\u1ed9ng v\u1edbi c\u00e1c gi\u00e1 tr\u1ecb \u0111\u00e3 l\u01b0u, nh\u01b0ng s\u1ebd kh\u00f4ng c\u00f3 gi\u00e1 tr\u1ecb m\u1edbi. Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch n\u00ean thay \u0111i\u1ec1u ki\u1ec7n \u0111\u00f3 trong b\u1ed9 l\u1ecdc.",
+  "lists.retiredField.body_other":
+    "{fields} \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng. Danh s\u00e1ch v\u1eabn ho\u1ea1t \u0111\u1ed9ng v\u1edbi c\u00e1c gi\u00e1 tr\u1ecb \u0111\u00e3 l\u01b0u, nh\u01b0ng s\u1ebd kh\u00f4ng c\u00f3 gi\u00e1 tr\u1ecb m\u1edbi. Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch n\u00ean thay c\u00e1c \u0111i\u1ec1u ki\u1ec7n \u0111\u00f3 trong b\u1ed9 l\u1ecdc.",
   "lists.members.title": "Th\u00e0nh vi\u00ean",
   "lists.members.loading": "\u0110ang t\u1ea3i th\u00e0nh vi\u00ean",
   "lists.members.emptyLive":
@@ -10081,7 +10204,18 @@ export const vi = {
     "Danh s\u00e1ch d\u1ef1 \u00e1n hi\u1ec3n th\u1ecb th\u00e0nh vi\u00ean trong danh s\u00e1ch D\u1ef1 \u00e1n.",
   "lists.members.whyColumn": "L\u00fd do",
   "lists.members.why": "V\u00ec sao?",
-  "lists.members.more": "Xem th\u00eam",
+  "lists.members.selectAll_one": "Chọn tất cả {count} thành viên",
+  "lists.members.selectAll_other": "Chọn tất cả {count} thành viên",
+  "lists.members.selectionFullTitle": "Đã chọn tối đa",
+  "lists.members.selectionFull_one":
+    "Một thay đổi chỉ gồm tối đa {count} thành viên. Bỏ chọn một thành viên để chọn thành viên khác.",
+  "lists.members.selectionFull_other":
+    "Một thay đổi chỉ gồm tối đa {count} thành viên. Bỏ chọn một thành viên để chọn thành viên khác.",
+  "lists.members.selectAllCappedTitle": "Chưa chọn hết thành viên",
+  "lists.members.selectAllCapped_one":
+    "Chỉ chọn được {count} thành viên đầu tiên một lần. Xử lý thành viên này rồi chọn phần còn lại.",
+  "lists.members.selectAllCapped_other":
+    "Chỉ chọn được {count} thành viên đầu tiên một lần. Xử lý những thành viên này rồi chọn phần còn lại.",
   "lists.history.title": "Nh\u1eefng thay \u0111\u1ed5i",
   "lists.history.empty": "Ch\u01b0a c\u00f3 thay \u0111\u1ed5i n\u00e0o.",
   "lists.history.loading": "\u0110ang t\u1ea3i l\u1ecbch s\u1eed",
@@ -10136,7 +10270,58 @@ export const vi = {
     "Ch\u01b0a c\u00f3 ch\u1ebf \u0111\u1ed9 xem n\u00e0o. H\u00e3y t\u1ea1o b\u1ed9 l\u1ecdc r\u1ed3i b\u1ea5m L\u01b0u b\u1ed9 l\u1ecdc.",
   "lists.views.loading":
     "\u0110ang t\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
+  "lists.myLists.title": "Danh s\u00e1ch c\u1ee7a t\u00f4i",
+  "lists.myLists.empty":
+    "Ch\u01b0a c\u00f3 danh s\u00e1ch ri\u00eang t\u01b0 n\u00e0o. Danh s\u00e1ch ch\u1ec9 b\u1ea1n t\u00ecm th\u1ea5y s\u1ebd hi\u1ec7n \u1edf \u0111\u00e2y. Khi chia s\u1ebb, danh s\u00e1ch s\u1ebd chuy\u1ec3n sang ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb.",
+  "lists.pulse.chip": "+{entered} / −{left}",
+  "lists.pulse.label":
+    "{entered} bản ghi vào và {left} bản ghi rời đi kể từ lần bạn xem trước",
+  "lists.head.lastChecked": "Kiểm tra lần cuối {when}",
+  "lists.head.notChecked":
+    "Chưa được kiểm tra. Bản ghi vào và rời đi được ghi nhận từ lần kiểm tra đầu tiên.",
+  "lists.head.tooLarge":
+    "Kiểm tra lần cuối {when}. Danh sách khớp quá nhiều bản ghi nên không ghi nhận được bản ghi nào vào hay rời đi.",
+  "lists.head.pulse": "Kể từ lần bạn xem trước: {entered} vào, {left} rời đi",
+  "lists.members.new": "Mới",
+  "lists.history.entered": "Đã vào, tính đến {when}",
+  "lists.history.left": "Đã rời đi, tính đến {when}",
+  "lists.history.reason.filterChanged": "sau khi bộ lọc thay đổi",
+  "lists.history.checker": "Lần kiểm tra định kỳ (15 phút một lần)",
+  "lists.history.liveNote":
+    "Việc kiểm tra chạy 15 phút một lần và ưu tiên các danh sách lâu nhất chưa được kiểm tra, nên khi có rất nhiều danh sách, một danh sách có thể phải chờ lâu hơn; “Kiểm tra lần cuối” cho biết lần kiểm tra gần nhất. Bản ghi vào hay rời đi được ghi nhận tại lần kiểm tra phát hiện ra thay đổi đó. Bản ghi vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
+  "lists.editFilter": "S\u1eeda b\u1ed9 l\u1ecdc",
+  "lists.editingTitle": "\u0110ang s\u1eeda b\u1ed9 l\u1ecdc c\u1ee7a {name}",
+  "lists.editingBody":
+    "L\u01b0u v\u00e0o danh s\u00e1ch \u0111\u1ec3 thay \u0111\u1ed5i c\u00e1c b\u1ea3n ghi m\u00e0 n\u00f3 ch\u1ee9a. L\u01b0u th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng s\u1ebd t\u1ea1o m\u1ed9t danh s\u00e1ch m\u1edbi.",
+  "lists.saveFilterTo": "L\u01b0u v\u00e0o {name}",
+  "lists.saveFilterTitle":
+    "Thay \u0111\u1ed5i b\u1ed9 l\u1ecdc c\u1ee7a {name}?",
+  "lists.saveFilterBody":
+    "T\u1eeb b\u00e2y gi\u1edd, c\u00e1c b\u1ea3n ghi v\u00e0o v\u00e0 r\u1eddi danh s\u00e1ch theo b\u1ed9 l\u1ecdc m\u1edbi, v\u00e0 thay \u0111\u1ed5i \u0111\u01b0\u1ee3c gi\u1eef trong l\u1ecbch s\u1eed. Ai t\u00ecm \u0111\u01b0\u1ee3c danh s\u00e1ch c\u0169ng s\u1ebd th\u1ea5y c\u00e1c th\u00e0nh vi\u00ean m\u1edbi.",
+  "lists.saveFilterConfirm": "L\u01b0u b\u1ed9 l\u1ecdc",
+  "lists.saveFilterConflict":
+    "Ai \u0111\u00f3 \u0111\u00e3 thay \u0111\u1ed5i danh s\u00e1ch n\u00e0y sau khi b\u1ea1n m\u1edf n\u00f3. H\u00e3y m\u1edf l\u1ea1i danh s\u00e1ch \u0111\u1ec3 xem thay \u0111\u1ed5i, r\u1ed3i s\u1eeda b\u1ed9 l\u1ecdc.",
   "lists.history.someone": "Ai \u0111\u00f3",
+  "lists.changes.since": "Kể từ lần bạn xem ngày {when}:",
+  "lists.changes.joined_one": "{count} vào",
+  "lists.changes.joined_other": "{count} vào",
+  "lists.changes.left_one": "{count} rời đi",
+  "lists.changes.left_other": "{count} rời đi",
+  "lists.changes.more_one": "+{count} bản ghi khác",
+  "lists.changes.more_other": "+{count} bản ghi khác",
+  "lists.changes.nothing": "không có bản ghi nào vào hay rời đi.",
+  "lists.changes.filter_one": "Bộ lọc đã thay đổi một lần.",
+  "lists.changes.filter_other": "Bộ lọc đã thay đổi {count} lần.",
+  "lists.rules.watches": "{name} theo dõi danh sách này",
+  "lists.rules.writes": "{name} thêm bản ghi vào danh sách này",
+  "lists.rules.hidden": "Một tự động hóa không mở được ở đây",
+  "lists.rules.archiveTitle": "Lưu trữ danh sách này?",
+  "lists.rules.archiveLead":
+    "Các tự động hóa này tạm dừng khi danh sách được lưu trữ. Khôi phục danh sách không tiếp tục chúng.",
+  "lists.rules.settingsLead": "Các tự động hóa dùng danh sách này:",
+  "lists.rules.settingsLeadLive":
+    "Các tự động hóa dùng danh sách này. Thay đổi bộ lọc sẽ thay đổi những gì chúng xử lý:",
+  "lists.history.reason.automation": "bởi một tự động hóa",
 
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.
   "filters.title": "B\u1ed9 l\u1ecdc & ch\u1ee7 \u0111\u1ec1",
@@ -10958,6 +11143,7 @@ export const vi = {
   "firstRun.ignite.act":
     "gửi bất cứ gì, hay sửa một bản ghi, nếu bạn không cho phép",
   "firstRun.ignite.carryOn": "Tiếp tục",
+  "firstRun.ignite.leaving": "Đang kiểm tra thiết lập…",
   "firstRun.step.model": "Mô hình",
   "firstRun.step.platform": "Nền tảng của bạn",
   "firstRun.google.eyebrow":
@@ -11229,6 +11415,11 @@ export const vi = {
   "magic.aboutMany_other": "{label} và {others} bản ghi khác",
   "magic.aboutCount_one": "{count} bản ghi",
   "magic.aboutCount_other": "{count} bản ghi",
+  "magic.aboutManyAtLeast_one": "{label} và ít nhất {others} bản ghi khác",
+  "magic.aboutManyAtLeast_other": "{label} và ít nhất {others} bản ghi khác",
+  "magic.aboutCountAtLeast_one": "ít nhất {count} bản ghi",
+  "magic.aboutCountAtLeast_other": "ít nhất {count} bản ghi",
+  "magic.aboutNamedAtLeast": "{label} và có thể còn nữa",
   "magic.action.mail_filed": "Đã xếp email thu thập vào liên hệ này",
   "magic.action.company_profile_read": "Đã đọc hồ sơ kỹ thuật của công ty",
   "magic.action.fields_changed": "Đã thay đổi {fields}",

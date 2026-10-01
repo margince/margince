@@ -1,17 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ReportingScorecard } from "./reporting.scorecard";
+import { ReportingExportButton } from "./reporting.export";
 import { reportingStoryEvaluation } from "./reporting.story-fixtures";
 import { StoryProviders } from "./story-utils";
 export default {
-  title: "Records/Reports/Analytics/Owner scorecard",
+  title: "Records/Reports/Analytics/Export report",
 } satisfies Meta;
 export const Default: StoryObj = {
   render: () => (
     <StoryProviders>
-      <ReportingScorecard
-        evaluation={reportingStoryEvaluation}
-        onEvidence={() => {}}
-      />
+      <ReportingExportButton evaluation={reportingStoryEvaluation} />
     </StoryProviders>
   ),
 };

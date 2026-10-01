@@ -46,6 +46,11 @@ func (h Handlers) ListLists(w http.ResponseWriter, r *http.Request, params crmco
 		v := string(*params.ListType)
 		filter.ListType = &v
 	}
+	if params.Sharing != nil {
+		for _, sharing := range *params.Sharing {
+			filter.Sharing = append(filter.Sharing, string(sharing))
+		}
+	}
 	if params.IncludeArchived != nil && *params.IncludeArchived {
 		filter.Archived = storekit.IncludeArchived
 	}
@@ -188,6 +193,15 @@ func (h Handlers) ListListHistory(w http.ResponseWriter, r *http.Request, id crm
 	limit, cursor := pageParams(params.Limit, params.Cursor)
 	page, err := h.store.HistoryPage(r.Context(), pathID[ids.ListKind](id), limit, cursor)
 	respond(w, r, http.StatusOK, page, err)
+}
+
+// VisitList serves POST /lists/{id}/visit.
+func (h Handlers) VisitList(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if h.listsOff(w, r) {
+		return
+	}
+	visit, err := h.store.VisitView(r.Context(), pathID[ids.ListKind](id))
+	respond(w, r, http.StatusOK, visit, err)
 }
 
 // memberChange is a wire membership change as the membership writer takes it. The

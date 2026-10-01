@@ -14,13 +14,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// One read per (account, reader) sits in the queue at a time, on the
-// transcript lane it shares: a second open while one is queued must fold
-// into it rather than start a rival.
+// One read per (account, reader) sits in the queue at a time: a second open
+// while one is queued must fold into it rather than start a rival.
+//
+// The lane it lands on is not asserted here — jobs.QueuedAs supplies it from
+// the declaration, and TestNoInsertOptsNamesItsOwnQueue keeps it that way.
 func TestAnAccountScanIsQueuedOnceOnTheTranscriptLane(t *testing.T) {
-	opts := accountScanInsertOpts()
-	if opts.Queue != accountScanQueue || !opts.UniqueOpts.ByArgs {
-		t.Errorf("insert opts = %+v, want the transcript queue, unique by args", opts)
+	if opts := accountScanInsertOpts(); !opts.UniqueOpts.ByArgs {
+		t.Errorf("insert opts = %+v, want unique by args", opts)
 	}
 }
 

@@ -65,7 +65,7 @@
   flex: none;
 }
 .urlnote.err {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 .urlnote.ok {
   color: var(--successText);
@@ -106,7 +106,7 @@
 }
 .readfail.warning .rfi {
   background: var(--warningBg);
-  color: var(--warning);
+  color: var(--warningText);
 }
 
 .readfail .rfi svg {

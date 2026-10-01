@@ -35,7 +35,7 @@ The 9 tables owned by `platform`, as the migrations build them. [Back to the ent
 
 - `audit_log_action_check` — `CHECK ((action = ANY (ARRAY['create', 'update', 'archive', 'merge', 'promote', 'restore', 'export', 'erase', 'assign', 'advance_stage', 'advance_phase', 'approve', 'reject', 'consent_grant', 'consent_withdraw', 'activity_relink', 'record_share', 'record_unshare', 'resolve', 'demote', 'import', 'import_undo', 'disqualify', 'anonymize', 'send_email', 'reset_data', 'password_link_issued', 'connect', 'disconnect', 'schedule', 'reschedule', 'cancel', 'release', 'hold', 'expire', 'restrict', 'pin', 'accrue', 'pay', 'publish', 'pause', 'resume', 'close', 'invite', 'revoke', 'delete', 'place_legal_hold', 'lift_legal_hold'])))`
 - `audit_log_actor_type_check` — `CHECK ((actor_type = ANY (ARRAY['human', 'agent', 'connector', 'system', 'buyer'])))`
-- `audit_log_images_are_absent_or_present` — `CHECK (((before <> 'null') AND (after <> 'null'))) NOT VALID`
+- `audit_log_images_are_absent_or_present` — `CHECK (((before <> 'null') AND (after <> 'null')))`
 
 **Indexes**
 

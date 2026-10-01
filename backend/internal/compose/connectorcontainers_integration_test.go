@@ -30,7 +30,10 @@ import (
 // listingConnector answers a fixed set of folders and records the auth it was
 // handed, which is what proves the registry resolved a credential rather than
 // calling with nothing.
-type listingConnector struct{ sawAuth connector.Auth }
+type listingConnector struct {
+	sawAuth   connector.Auth
+	truncated bool
+}
 
 func (c *listingConnector) Descriptor() connector.Descriptor {
 	return connector.Descriptor{Name: "imap", Version: "fixture"}
@@ -50,9 +53,11 @@ func (c *listingConnector) Normalize(context.Context, connector.RawRecord) ([]co
 
 func (c *listingConnector) HealthCheck(context.Context, connector.Auth) error { return nil }
 
-func (c *listingConnector) ListContainers(_ context.Context, auth connector.Auth) ([]connector.NamedContainer, error) {
+func (c *listingConnector) ListContainers(
+	_ context.Context, auth connector.Auth,
+) ([]connector.NamedContainer, bool, error) {
 	c.sawAuth = auth
-	return []connector.NamedContainer{{ID: "INBOX/Privat", Name: "INBOX/Privat"}}, nil
+	return []connector.NamedContainer{{ID: "INBOX/Privat", Name: "INBOX/Privat"}}, c.truncated, nil
 }
 
 // The happy path, and the thing it really asserts: the registry read THIS
@@ -65,7 +70,7 @@ func TestListContainersResolvesTheSeatsOwnCredential(t *testing.T) {
 	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, nil)
 	r.Register(conn)
 
-	got, err := r.ListContainers(e.As(e.Rep1, nil, integration.AccountRepPerms), "imap",
+	got, _, err := r.ListContainers(e.As(e.Rep1, nil, integration.AccountRepPerms), "imap",
 		ids.From[ids.UserKind](e.Rep1))
 	if err != nil {
 		t.Fatalf("ListContainers: %v", err)
@@ -87,7 +92,7 @@ func TestListContainersAnswersAbsentForASeatWithNoConnection(t *testing.T) {
 	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, nil)
 	r.Register(&listingConnector{})
 
-	_, err := r.ListContainers(e.As(e.Rep2, nil, integration.AccountRepPerms), "imap",
+	_, _, err := r.ListContainers(e.As(e.Rep2, nil, integration.AccountRepPerms), "imap",
 		ids.From[ids.UserKind](e.Rep2))
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want not-found for a seat with no connection", err)
@@ -104,7 +109,7 @@ func TestListContainersDoesNotReachAColleaguesMailbox(t *testing.T) {
 	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, nil)
 	r.Register(conn)
 
-	_, err := r.ListContainers(e.As(e.Rep2, nil, integration.AccountRepPerms), "imap",
+	_, _, err := r.ListContainers(e.As(e.Rep2, nil, integration.AccountRepPerms), "imap",
 		ids.From[ids.UserKind](e.Rep2))
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want not-found rather than the colleague's folders", err)

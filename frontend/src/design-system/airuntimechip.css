@@ -28,9 +28,12 @@
   border-color: var(--ai);
   background: color-mix(in srgb, var(--ai) 14%, var(--bgElevated));
 }
+/* The AI family's focus on both boxes, as the onboarding fields draw it: the
+   edge in --aiText, which clears 3:1 in both themes, and the glow around it. */
 .mw-aistat-btn:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: 2px;
+  border-color: var(--aiText);
   box-shadow: var(--focus-glow-ai);
 }
 /* The caret is the only thing that says this opens. It turns with the popover, so
@@ -71,6 +74,16 @@
   background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
   animation: mw-aistat-in var(--dur-state) var(--ease-in-out) both;
+  /* The measured room below the chip, less the drop to the popover and a
+     gutter: at large text the rows scroll inside rather than off the screen. */
+  max-block-size: calc(var(--aistatRoom, 100dvh) - var(--space-4));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.mw-aistat-pop:focus-visible {
+  outline: var(--focus-ring-forced);
+  border-color: var(--aiText);
+  box-shadow: var(--focus-glow-ai);
 }
 @keyframes mw-aistat-in {
   from {

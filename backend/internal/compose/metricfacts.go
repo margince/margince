@@ -126,7 +126,7 @@ func readReportingOutcomes(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 }
 
 func closingMetricQuery(money bool) metricFactQuery {
-	query := metricFactQuery{from: deals.CurrentClosingJoin("t", "closing"), where: "t.archived_at IS NULL AND t.status <> 'open'", owner: "closing.owner_id_at_change", at: "t.closed_at", key: "COALESCE(closing.id,t.id)::text", stage: "''", stageLabel: "''", outcome: "t.status", provenance: "'current_closing'", money: money}
+	query := metricFactQuery{from: deals.CurrentClosingJoin("t", "closing"), where: "t.archived_at IS NULL AND t.status <> 'open'", owner: colOwnerID, at: "t.closed_at", key: "COALESCE(closing.id,t.id)::text", stage: "''", stageLabel: "''", outcome: "t.status", provenance: "'current_closing'", money: money}
 	if money {
 		query.where += " AND t.status='won'"
 	} else {
@@ -151,7 +151,7 @@ func readReportingAge(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reporti
 }
 
 func openMetricQuery(age bool) metricFactQuery {
-	query := metricFactQuery{stagePosition: "COALESCE(s.position,0)", from: "LEFT JOIN stage s ON s.id=t.stage_id", where: "t.archived_at IS NULL AND t.status='open'", owner: "t.owner_id", at: "NULL::timestamptz", key: "t.id::text", stage: "t.stage_id::text", stageLabel: "COALESCE(s.name,'Unmapped')", outcome: "'open'", provenance: "'current_state'", money: !age}
+	query := metricFactQuery{stagePosition: "COALESCE(s.position,0)", from: "LEFT JOIN stage s ON s.id=t.stage_id", where: "t.archived_at IS NULL AND t.status='open'", owner: colOwnerID, at: "NULL::timestamptz", key: "t.id::text", stage: "t.stage_id::text", stageLabel: "COALESCE(s.name,'Unmapped')", outcome: "'open'", provenance: "'current_state'", money: !age}
 	if age {
 		query.from += " " + currentStageEntryJoin
 		query.value = "current_stage_age"

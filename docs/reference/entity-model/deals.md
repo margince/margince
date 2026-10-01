@@ -70,7 +70,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-44 columns · primary key `(id)` · referenced by 22 foreign keys
+43 columns · primary key `(id)` · referenced by 22 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -112,7 +112,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean` | yes | True while a litigation or investigation hold is preserving this record. |
-| `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
 | `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
@@ -149,7 +148,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_partner_attribution_check` — `CHECK (((partner_attribution IS NULL) OR (partner_attribution = ANY (ARRAY['sourced', 'influenced']))))`
 - `deal_partner_attribution_pairing` — `CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL)))`
 - `deal_priority_check` — `CHECK (((priority IS NULL) OR (priority = ANY (ARRAY['low', 'medium', 'high']))))`
-- `deal_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))) NOT VALID`
+- `deal_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `deal_status_check` — `CHECK ((status = ANY (ARRAY['open', 'won', 'lost'])))`
 - `deal_won_without_contract_detail` — `CHECK (((won_without_contract_reason IS DISTINCT FROM 'other') OR ((won_without_contract_detail IS NOT NULL) AND (btrim(won_without_contract_detail) <> ''))))`
 - `deal_won_without_contract_only_when_won` — `CHECK (((won_without_contract_reason IS NULL) OR (status = 'won')))`
@@ -256,7 +255,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 **Indexes**
 
 - `deal_correction_audit_once` — `unique, btree (audit_log_id)`
-- `deal_correction_by_audit` — `btree (audit_log_id)`
 - `deal_correction_live` — `btree (deal_id, applied_at DESC) WHERE (reversed_at IS NULL)`
 - `deal_correction_pkey` — `unique, btree (id)`
 - `deal_correction_reversed` — `btree (deal_id, reversed_at DESC) WHERE (reversed_at IS NOT NULL)`
@@ -435,7 +433,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_stage_history_deal_id_id_key` — `unique, btree (deal_id, id)`
 - `deal_stage_history_pkey` — `unique, btree (id)`
 - `idx_deal_stage_history_changed` — `btree (changed_at)`
-- `idx_dsh_deal` — `btree (deal_id, changed_at)`
 - `reporting_stage_events` — `btree (deal_id, changed_at, id)`
 
 ## deal_suggestion
@@ -562,7 +559,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 - `fx_rate_pair_day` — `unique, btree (from_currency, to_currency, rate_date)`
 - `fx_rate_pkey` — `unique, btree (id)`
-- `idx_fx_rate_lookup` — `btree (from_currency, to_currency, rate_date)`
 
 ## offer
 
@@ -610,10 +606,10 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `offer_accepted_at` — `CHECK (((status <> 'accepted') OR (accepted_at IS NOT NULL)))`
 - `offer_currency_check` — `CHECK ((currency ~ '^[A-Z]{3}$'))`
 - `offer_deal_id_id_key` — `UNIQUE (deal_id, id)`
+- `offer_gross_is_net_plus_tax` — `CHECK ((gross_minor = (net_minor + tax_minor)))`
 - `offer_number_rev_unique` — `UNIQUE (offer_number, revision)`
 - `offer_revision_check` — `CHECK ((revision >= 1))`
 - `offer_status_check` — `CHECK ((status = ANY (ARRAY['draft', 'sent', 'accepted', 'rejected', 'expired', 'superseded'])))`
-- `uq_offer_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
@@ -623,7 +619,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `offer_deal_id_id_key` — `unique, btree (deal_id, id)`
 - `offer_number_rev_unique` — `unique, btree (offer_number, revision)`
 - `offer_pkey` — `unique, btree (id)`
-- `uq_offer_ws_id` — `unique, btree (id)`
 
 **Triggers**
 
@@ -679,7 +674,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Indexes**
 
-- `idx_oli_offer` — `btree (offer_id, "position")`
 - `offer_line_item_pkey` — `unique, btree (id)`
 - `uq_oli_position` — `unique, btree (offer_id, "position")`
 
@@ -707,7 +701,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 **Rules**
 
 - `offer_template_name_unique` — `UNIQUE (name)`
-- `uq_offer_template_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
@@ -715,7 +708,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `offer_template_name_unique` — `unique, btree (name)`
 - `offer_template_pkey` — `unique, btree (id)`
 - `uq_offer_template_default` — `unique, btree (locale) WHERE (is_default AND (archived_at IS NULL))`
-- `uq_offer_template_ws_id` — `unique, btree (id)`
 
 **Triggers**
 
@@ -783,7 +775,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `product_currency_check` — `CHECK ((currency ~ '^[A-Z]{3}$'))`
 - `product_default_tax_rate_check` — `CHECK ((default_tax_rate >= (0)::numeric))`
 - `product_unit_price_minor_check` — `CHECK ((unit_price_minor >= 0))`
-- `uq_product_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
@@ -791,7 +782,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `idx_product_search` — `gin (search_tsv)`
 - `product_pkey` — `unique, btree (id)`
 - `uq_product_sku` — `unique, btree (sku) WHERE ((sku IS NOT NULL) AND (archived_at IS NULL))`
-- `uq_product_ws_id` — `unique, btree (id)`
 
 **Triggers**
 

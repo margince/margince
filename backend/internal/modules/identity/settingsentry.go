@@ -258,11 +258,20 @@ func Definitions() []settings.Definition {
 // them (ADR-0054) — but the one spelling of "how the base currency is read"
 // belongs with the entry that declares it, not copied into each wiring site.
 //
-// RequireTx rather than Get: an absent row refuses instead of reading as the
-// registered default, because every caller of this is converting or freezing
-// money against the answer.
+// An absent row refuses instead of reading as the registered default, because
+// every caller of this is converting or freezing money against the answer.
+//
+// ReadForDecision rather than RequireTx: a caller here is about to write a
+// figure that is only correct against this base — a frozen rate, a converted
+// amount — and the base may not move between their reading it and their
+// commit. The shared lock makes a write of the base wait for them, so the
+// freeze probe that write runs sees the row they wrote and refuses.
+//
+// It is taken HERE and not at the five freeze sites because this is the one
+// spelling of how the base currency is read: a path that freezes a rate without
+// resolving the base does not exist, so there is no site left to forget it.
 func BaseCurrencyOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return settings.RequireTx(ctx, tx, BaseCurrency)
+	return settings.ReadForDecision(ctx, tx, BaseCurrency)
 }
 
 // TimezoneOf resolves the installation's IANA zone inside a transaction the

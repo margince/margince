@@ -241,18 +241,17 @@ func Trace(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) error {
 		INSERT INTO capture_trace (user_id, connector, source_system, source_id,
 		                           stage, outcome, reason, activity_id, counterparty, subject)
 		VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, ''), $8, $9, $10)
-		-- The conflict target SPELLS the index's expression, COALESCE and all: a
-		-- bare column list does not match an expression index, and Postgres
-		-- answers that with an error on every insert -- which, on the capture
-		-- transaction, would fail every capture in the deployment.
+		-- The conflict target must match capture_trace_natural_key exactly. It is
+		-- NULLS NOT DISTINCT over plain columns, so a bare list is what matches;
+		-- naming an expression it does not carry answers 42P10 on every insert,
+		-- which on the capture transaction fails every capture in the deployment.
 		--
 		-- Mail keys on one transport-independent identity, so one seat syncing
 		-- the same mailbox over two connectors records the FIRST connector's
 		-- decision for a given stage and outcome; the second is a no-op. A
 		-- different stage or outcome still writes its own row, so this is not a
 		-- promise of one row per message.
-		ON CONFLICT (COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid),
-		             source_system, source_id, stage, outcome) DO NOTHING`,
+		ON CONFLICT (user_id, source_system, source_id, stage, outcome) DO NOTHING`,
 		nullableID(in.UserID), in.Connector, in.SourceSystem,
 		traceSourceID(in.SourceID, in.SourceIDNamesAContact),
 		string(in.Stage), string(in.Outcome), in.Reason, nullableID(in.ActivityID),

@@ -200,3 +200,47 @@ func TestReportingTrendOmitsMissingOrPartialComparisonHistory(t *testing.T) {
 		}
 	}
 }
+
+func TestReportingFrozenProjectionPreservesOriginalMetricVersions(t *testing.T) {
+	before := crmcontracts.ReportingEvaluation{Context: crmcontracts.ReportingContext{Timezone: "UTC", Currency: "EUR"}}
+	for _, id := range []crmcontracts.ReportingMetricID{"bookings_won", "closed_win_rate", "meetings_held"} {
+		before.Metrics = append(before.Metrics, crmcontracts.ReportingMetric{Id: id, Version: "1", Coverage: crmcontracts.ReportingCoverage{Status: "ok"}})
+	}
+	projected, err := (metricEvaluator{}).ProjectFrozen(before, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(projected.Metrics) != len(before.Metrics) {
+		t.Fatal("stored metrics disappeared")
+	}
+	for _, metric := range projected.Metrics {
+		if metric.Version != "1" {
+			t.Fatalf("old attribution was relabelled: %+v", metric)
+		}
+	}
+}
+
+func TestReportingFrozenOwnerLabelsKeepTheirOriginalMeaning(t *testing.T) {
+	for _, version := range []string{"1", "2"} {
+		t.Run(version, func(t *testing.T) {
+			prior := crmcontracts.ReportingEvaluation{
+				Context:   crmcontracts.ReportingContext{Timezone: "UTC", Currency: "EUR"},
+				Selection: crmcontracts.ReportingSelection{Metrics: []crmcontracts.ReportingMetricID{"bookings_won"}, Blocks: []crmcontracts.ReportingBlockKind{"owner_attainment"}},
+				Metrics:   []crmcontracts.ReportingMetric{{Id: "bookings_won", Version: version, Unit: "EUR", Coverage: crmcontracts.ReportingCoverage{Status: "partial"}}},
+			}
+			fact := reportingTestMoney(ids.Nil, time.Time{}, 100)
+			fact.ContextID = reportingInterval
+			result, err := (metricEvaluator{}).ProjectFrozen(prior, []reporting.Fact{fact})
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := "Owner not recorded"
+			if version == "2" {
+				want = "Unassigned"
+			}
+			if len(result.Charts) != 1 || len(result.Charts[0].Points) != 1 || result.Charts[0].Points[0].Label != want {
+				t.Fatalf("frozen owner label: %+v", result.Charts)
+			}
+		})
+	}
+}

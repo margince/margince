@@ -78,6 +78,11 @@ func answerArms(inbound, until string) []answerArm {
 	    AND ` + later("answer_touch")
 	// The kind list in the thread walks restates what the equality already
 	// implies, so the planner can prove idx_activity_thread_reply_seek applies.
+	// The touch and ourMail predicates are likewise the predicates of
+	// idx_activity_answer_touch and idx_activity_answer_mail, clause for clause:
+	// narrow either fragment freely, but a clause dropped from one stops the
+	// planner proving its index applies, and the arm walks every activity of
+	// the contact again.
 	// OFFSET 0 keeps the planner walking from the sender to the mail they were
 	// named on: flattened, it scanned every later outbound and ran the subject
 	// expression on each.

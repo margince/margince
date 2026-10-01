@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 516,
-    "tokens": 27439,
+    "tokens": 27781,
     "median_tool_tokens": 278,
-    "mean_tool_tokens": 338
+    "mean_tool_tokens": 342
   },
   "agents": [
     {
@@ -111,6 +111,14 @@
       "tokens": 721
     },
     {
+      "name": "bulk_update_records",
+      "tokens": 720
+    },
+    {
+      "name": "read_lists",
+      "tokens": 699
+    },
+    {
       "name": "log_activity",
       "tokens": 677
     },
@@ -125,14 +133,6 @@
     {
       "name": "update_record",
       "tokens": 581
-    },
-    {
-      "name": "bulk_update_records",
-      "tokens": 548
-    },
-    {
-      "name": "read_lists",
-      "tokens": 528
     },
     {
       "name": "forecast_readings",

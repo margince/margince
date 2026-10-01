@@ -327,9 +327,17 @@ func approvalNoticeFor(
 		Recipient: ids.From[ids.UserKind](seat),
 		Kind:      notices.KindApprovalPending,
 		Subject:   subject,
-		DedupeKey: notices.KindApprovalPending + ":" + approvalID.String(),
+		DedupeKey: approvalNoticeDedupeKey(approvalID.UUID),
 		Target:    approvalNoticeTarget(staged),
 	}
+}
+
+// approvalNoticeDedupeKey names one announcement across every seat told about
+// it. Shared with the retraction consumer, which has only the approval's id and
+// must reach the same rows this wrote: two spellings of this string would leave
+// a settled card's lines standing with nothing failing.
+func approvalNoticeDedupeKey(approvalID ids.UUID) string {
+	return notices.KindApprovalPending + ":" + approvalID.String()
 }
 
 // approvalNoticeTarget is the record the card is about, when it is about one. A

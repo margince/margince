@@ -83,6 +83,8 @@ func sweepInsertOpts() *river.InsertOpts {
 // which is why the posture is stated per kind and never per field.
 type JobRunnerConfig struct {
 	ReportingEnabled bool
+	// ListsEnabled is lists.enabled: off, the Live List check records nothing.
+	ListsEnabled bool
 	// TestOnly is jobs.Config.TestOnly, carried here because jobtest boots its
 	// runners through NewJobRunner rather than through jobs.New — see there for
 	// what River does with it and why it keeps River's own name. Production
@@ -424,6 +426,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),
 		addDealScoutJobs(reg, pool, cfg, log),
+		addListEvaluateJobs(reg, pool, cfg, log),
 		addFinanceJobs(reg, pool, cfg, log),
 		registerTelegramPoll(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:

@@ -59,7 +59,7 @@ func (s *Service) LineRecords(
 	offset := pos.offset
 	out := crmcontracts.MagicLineRecords{Data: []crmcontracts.MagicLineRecord{}}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		entries, _, err := doneSince(ctx, tx, from, maxLimit)
+		entries, _, _, err := doneSince(ctx, tx, from, maxLimit)
 		if err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ func lineMembers(entries []entry, lineID ids.UUID) ([]entry, bool) {
 	var key string
 	for _, e := range entries {
 		if e.ID == lineID {
-			_, k, ok := lineOf(e)
+			k, ok := groupKeyOf(e)
 			if !ok {
 				return nil, false
 			}
@@ -118,7 +118,7 @@ func lineMembers(entries []entry, lineID ids.UUID) ([]entry, bool) {
 		if seen[e.EntityID] {
 			continue
 		}
-		if _, k, ok := lineOf(e); ok && k == key {
+		if k, ok := groupKeyOf(e); ok && k == key {
 			seen[e.EntityID] = true
 			members = append(members, e)
 		}

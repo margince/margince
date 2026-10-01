@@ -111,10 +111,13 @@ queues:
       wide enough that an ordinary text send is not queued behind two album
       uploads.
   deep_read:
-    max_workers: 2
+    max_workers: 6
     reason: >-
       Deep reads run on their own bounded pool so long crawls cannot evict the
-      short maintenance jobs from the default queue.
+      short maintenance jobs from the default queue. Six, because a crawl is
+      bound by the sites it reads and by the model rather than by the
+      process: each one spends its time waiting on the network, holds little
+      memory, and does not touch Postgres while it waits.
   geocode:
     max_workers: 1
     reason: >-
@@ -1405,6 +1408,23 @@ kinds:
       dispatcher's two minutes above unchanged — the scanning is entirely the
       child's, and this half enumerates the fleet and inserts one row per
       workspace.
+
+
+  list_evaluate:
+    role: worker
+    fleet: true
+    go_type: ListEvaluateArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 15m
+    reason: >-
+      Every fifteen minutes, because a Live List's history is only as fine as
+      its checks: a record that joins and leaves between two checks is never
+      seen, and the list page says so. A pass checks at most two hundred lists,
+      longest-unchecked first, each against at most fifty thousand records in
+      keyset pages, so ten minutes bounds the slowest pass with room to spare
+      and a pass cut short resumes where the checkpoints say.
 
 
   deal_scout:

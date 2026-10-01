@@ -37,7 +37,7 @@ func (h Handlers) oauthToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch r.PostForm.Get("grant_type") {
-	case "authorization_code":
+	case oauthGrantAuthorizationCode:
 		h.tokenFromAuthCode(w, r)
 	case oauthRefreshToken:
 		h.tokenFromRefresh(w, r)

@@ -50,6 +50,9 @@ esac
 
 cd "$(git rev-parse --show-toplevel)"
 
+# shellcheck source=scripts/lib-diskspace.sh
+source "$PWD/scripts/lib-diskspace.sh"
+
 # The revision both halves of the stack are stamped with. It is the commit
 # because that is what CI passes to both images, and a local stack should
 # exercise the same comparison rather than a permanently-disabled one. Export it
@@ -1064,6 +1067,10 @@ up)
   # A bound port must still stop the boot: binding would fail silently and
   # wait_ready would then read "ready" off the OLD server. (Vite without
   # --strictPort would not even fail — it would walk to a port we never poll.)
+  # A stack that boots onto a full disk fails as Postgres being unreachable,
+  # which reads as the database being broken rather than the machine being out
+  # of room (lib-diskspace.sh).
+  require_disk_headroom "a dev stack" || exit 1
   for _p in "$api_port" "$fe_port"; do
     if [[ -n "$(port_listeners "$_p")" ]]; then
       echo "FAIL: port :${_p} already in use — is $label already running?" >&2

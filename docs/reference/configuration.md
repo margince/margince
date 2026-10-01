@@ -41,6 +41,7 @@ configurable logger.
 | `--vat-check-requester` | `MARGINCE_VAT_CHECK_REQUESTER` | — | This installation's OWN VAT ID (e.g. `DE123456789`), on the worker role. VIES issues a consultation number — the receipt a business shows to say it verified a counterpart before treating a supply as intra-community — only for a check made under a requester's number. Unset still checks and still answers; the answer just carries no proof. |
 | `--certlog-base-url` | `MARGINCE_CERTLOG_BASE_URL` | — | certificate-transparency base URL, on the worker role. It enables the whole technical lookup — what a company publicly runs, read from its DNS records, its certificate history and one polite fetch of its own homepage. Unset = the lane is off: the company record keeps no technical profile and the button on it answers 501, which is honest for an installation that should make no outbound lookups. `public` uses crt.sh, which is free and needs no key but is one small service run on goodwill — the reader paces itself to one query every five seconds and caches every answer for that reason. |
 | `--technical-backfill-interval` | — | `6h` | how often the worker looks for companies whose technical profile is missing or stale. Unlike geocoding there is no write to trigger on — a company's mail provider changes at the COMPANY — so this pass is the only thing that ever observes a move. Runs on start; `0` turns the sweep off and leaves the button working. |
+| `--trusted-proxies` | `MARGINCE_TRUSTED_PROXIES` | — (none) | comma-separated CIDR prefixes (a bare address is its own `/32`) of the reverse proxies in front of the api. Every per-IP rate limit — sign-in (30/min per IP, 10 failures/min per email+IP), password reset, OIDC, `/oauth/token`, the MCP edge, the public booking/preference/deal-room pages, extension inbound routes — keys on ONE client address, and this decides which. **Unset** (the default), no forwarding header is believed and the key is the TCP peer: right for a directly-reached process, and wrong behind a proxy, where the peer is the PROXY and every client shares its bucket — one abuser at 30 sign-ins a minute then locks out everyone. **Set**, `X-Forwarded-For` is read only when the direct peer is inside one of these prefixes, and walked from the RIGHT to the first hop outside them: each proxy appends the address it received from, so anything a client wrote itself lies to the left of the address its own connection arrived from and is never reached. Include EVERY proxy hop (e.g. both the load balancer's and the ingress controller's networks) or the key stops at the untrusted proxy. A malformed hop keys on the peer rather than a guess. `0.0.0.0/0` / `::/0` (which would make the header attacker-chosen) and an unparseable entry are boot errors. The api logs at boot which posture it took |
 | `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` requires as a Bearer credential. Unset (the default), `/metrics` refuses every scrape with the same 401 a wrong token gets, unless `--metrics-access=open`. The api logs one line at boot saying which posture it took. Note the api serves **plain HTTP** (`ListenAndServe`, no TLS) and terminates TLS ahead of itself, so a token set here is carried in cleartext over whatever hop reaches the pod — private by construction in-cluster, and the same hop the session cookie and every OAuth passport already take, but it is not a credential to hand to a scraper across an untrusted network |
 | `--metrics-access` | `MARGINCE_METRICS_ACCESS` | `token` | who `/metrics` serves. `token` requires `--metrics-token`. `open` serves whatever reaches the port, which is what a Prometheus that discovers its targets by annotation (`prometheus.io/scrape`) needs: it reads a target's address and metrics path off the Kubernetes API and has nowhere to carry a credential. Choose `open` only where the port is already contained — a private listener, a NetworkPolicy, an ingress that does not route `/metrics` — because this listener is the one `/v1` is served on and the exposition names every route and carries workspace ids plus a declared-catalogue info metric. The api warns at boot whenever it is open, and refuses to boot with `open` and a token together (the token would authenticate nothing). `cmd/worker`'s own `/metrics` is served on `--observe-addr`, a separate listener that is off unless set |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns.** The binding is a stored setting: declared for a fresh install under `seeds.ai_routing` in `margince.yaml`, changed on a running one through Settings → AI / `PUT /v1/ai/routing`, no restart — with one exception: a role that STARTED with nothing bound wired no model path, so it has no watcher to notice the first binding and must be restarted once after it is saved. The flag stays registered so an existing command line does not die on an unknown one; nothing reads a routing file any more. What a bound installation lights up is unchanged: the cold-start read-back, per-org enrichment, the Morning-Brief L2 re-order, and AI-drafted offer regeneration |
@@ -461,6 +462,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--deepread-max-bytes` | `MARGINCE_DEEPREAD_MAX_BYTES` | `0` (= built-in 32 MiB) | deep-read crawl aggregate byte cap |
 | `--deepread-wall` | `MARGINCE_DEEPREAD_WALL` | `0` (= built-in 4m) | deep-read crawl wall clock |
 | `--observe-addr` | `MARGINCE_OBSERVE_ADDR` | — (off) | address to serve this worker's `/healthz`, `/readyz` and `/metrics` on, e.g. `127.0.0.1:9101`. Empty serves nothing — see below |
+| `--observe-pprof` | `MARGINCE_OBSERVE_PPROF` | `false` | `true` also serves Go's `net/http/pprof` profiles under `/debug/pprof/` on that same listener; requires `--observe-addr`. Enable temporarily — see below |
 
 ### The worker's own operator surface
 
@@ -534,6 +536,47 @@ and process capacity, so exposing it is an operator decision, and so is the
 interface it binds. Bind it to a loopback or a private interface, never a public
 one. An address that cannot be bound is a **boot error** naming it — a worker
 that could not serve its probes must not carry on looking healthy.
+
+### Profiling a running worker — `--observe-pprof`
+
+`MARGINCE_OBSERVE_PPROF=true` mounts Go's standard `net/http/pprof` handlers
+under `/debug/pprof/` on the observe listener. It exists for the problem the
+metrics above can show but not explain: a worker whose heap bursts, or whose CPU
+pins, inside one process where nothing outside can see which code path did it.
+`go_memstats_*` says the heap grew; a heap profile says **what holds it**.
+
+**Off by default, and meant to be switched on temporarily** — for the rollout
+that has to catch a problem, then back off. It adds no listener and no port: the
+profiles are served on the same address, with the same absence of
+authentication and the same in-cluster containment, as `/healthz` and
+`/metrics`. That is also why it is not on by default — the surface it adds is
+wider than the probes. A goroutine dump names every goroutine's stack, and
+`/debug/pprof/cmdline` answers the process's command line, including any flag
+passed there rather than through the environment (a `--dsn` carries its
+password). The worker logs a `WARN` line naming the address at every boot with
+it on.
+
+It is a **boot error** to set it `true` with no `--observe-addr` — there would
+be no listener to serve it on, and a setting that silently does nothing is the
+worse failure — and a value `strconv.ParseBool` rejects is a boot error too,
+rather than being read as off.
+
+From a pod's own network (the listener binds a private interface):
+
+```sh
+# the heap as it is right now — what a memory burst is diagnosed from
+curl -s http://<pod>:9101/debug/pprof/heap > heap.pb.gz
+# allocations over the next 10s, as a delta — what is being allocated DURING a burst
+curl -s 'http://<pod>:9101/debug/pprof/allocs?seconds=10' > allocs.pb.gz
+go tool pprof -top heap.pb.gz
+```
+
+`/debug/pprof/` lists every named profile (`heap`, `allocs`, `goroutine`,
+`block`, `mutex`, `threadcreate`); `profile` and `trace` are CPU profiling and
+the execution trace. The listener keeps its 10s write timeout for everything
+else; a request that samples over `?seconds=N` extends its own deadline by `N`,
+so `profile?seconds=30` works as it does anywhere else. A heap snapshot is
+immediate.
 
 ### `worker siteread` — the deep-read debug loop (no DB)
 
@@ -894,13 +937,14 @@ place keeps the api reading a password file that is no longer written. Use
 | `MARGINCE_TEST_BLOBSTORE_ENDPOINT`, `MARGINCE_TEST_BLOBSTORE_ACCESS_KEY`, `MARGINCE_TEST_BLOBSTORE_SECRET_KEY`, `MARGINCE_TEST_BLOBSTORE_BUCKET` | — | integration tests | the object store the blobstore lane runs against; exported by the Makefile at the `make db-up` MinIO, on its own `margince-test` bucket. The endpoint being unset **fails** the lane rather than skipping it — a skipped storage gate reads exactly like a passing one. |
 | `MARGINCE_AICERT` | — | `make e2e-ai` | the AI-certification lane's runtime switch. The `e2e_llm` build tag keeps this paid, live lane out of every ordinary lane; once the tag is set, an empty value here **fails** rather than skips, so the lane can never report success for having done nothing. |
 | `MARGINCE_AICERT_MODEL`, `MARGINCE_AICERT_JUDGE_MODEL` | — (`make e2e-ai` defaults the judge to `openai_compatible:openai/gpt-oss-120b`) | `make e2e-ai` | `provider:model` each. The run refuses without a judge, and without a candidate unless `MARGINCE_AICERT_ROUTING` names the bindings instead; `make e2e-ai` supplies the judge, so only the candidate is yours to name. The candidate is what the run certifies; the judge grades it and must be a DIFFERENT model, because one grading itself is certified by construction. ONE judge grades every task of a run, so a run in which any task it certifies has the judge as its candidate is refused before a single paid call, naming those tasks. The default is chosen for cost; `gemini:gemini-3.1-flash-lite` or `gemini:gemini-3.5-flash` are the documented alternatives. An exported `MARGINCE_AICERT_JUDGE_MODEL` replaces the Makefile default, and `JUDGE=` overrides both. Surfaced as `MODEL=` and `JUDGE=`. |
-| `MARGINCE_AICERT_ROUTING` | — | `make e2e-ai` | path to a deployment config whose `seeds.ai_routing` names the binding to certify. Certifies a DEPLOYMENT rather than a model: each task is measured against whatever is bound at its **leading ladder rung** (the rung that would actually serve it), so one run writes records across several models — which is what the config binds. Mutually exclusive with `MARGINCE_AICERT_MODEL`, and the run refuses both: one names a deployment, the other one candidate to A/B a prompt fix against. Under it `MARGINCE_AICERT_PROFILE` is ignored and the profile is the file's own, because a record's environment class must come from the config that named the models. The judge is still named separately and is never resolved from the routing — `cert_judge` is itself a task and leads at `premium`, so a config binding a model there would make the grader collide with every `premium`-led candidate. Surfaced as `ROUTING=`. |
+| `MARGINCE_AICERT_ROUTING` | — | `make e2e-ai` | path to a deployment config whose `seeds.ai_routing` names the binding to certify. Certifies a DEPLOYMENT rather than a model: each task is measured against **every distinct model its ladder binds** — the rung that answers, then each fallback a failed call falls to — so one run writes records across several models — which is what the config binds. Mutually exclusive with `MARGINCE_AICERT_MODEL`, and the run refuses both: one names a deployment, the other one candidate to A/B a prompt fix against. Under it `MARGINCE_AICERT_PROFILE` is ignored and the profile is the file's own, because a record's environment class must come from the config that named the models. The judge is still named separately and is never resolved from the routing — `cert_judge` is itself a task and leads at `premium`, so a config binding a model there would make the grader collide with every `premium`-led candidate. Surfaced as `ROUTING=`. |
 | `MARGINCE_AICERT_BASE_URL`, `MARGINCE_AICERT_JUDGE_BASE_URL` | — (`make e2e-ai` defaults the judge's to `https://openrouter.ai/api` for an `openai_compatible` judge when neither `BASE_URL=` nor `MARGINCE_AICERT_BASE_URL` is set, else empty) | `make e2e-ai` | endpoint host root for a broker or OpenAI-wire host. Required for `openai_compatible`, which fails closed without one; empty for a native vendor, which uses its own default. An `openai_compatible` judge left without its own falls back to the candidate's. Surfaced as `BASE_URL=`, `JUDGE_BASE_URL=`. |
 | `MARGINCE_AICERT_PROFILE` | — | `make e2e-ai` | the environment class a record is filed under (`eu_hosted` \| `sovereign` \| `cloud_frontier`), default `cloud_frontier`; ignored when `MARGINCE_AICERT_ROUTING` is set, which takes the profile from the config file instead. Not a label: it is part of a record's identity, and it is enforced — a cloud vendor under `sovereign` is refused rather than run, and so is a broker candidate under `eu_hosted` that `MARGINCE_AICERT_UPSTREAM` does not pin to EU-region hosts. Surfaced as `PROFILE=`. |
 | `MARGINCE_VOICE_MODEL`, `MARGINCE_VOICE_BASE_URL` | — | `TestVoiceLiveSmoke` | the model the manual voice-live smoke drives, `provider:model`, plus an endpoint host root when it is on a broker. Manual-only: the smoke fails rather than skips without one, so a run that measured nothing is never mistaken for a pass. |
 | `MARGINCE_AICERT_UPSTREAM`, `MARGINCE_AICERT_JUDGE_UPSTREAM` | — | `make e2e-ai` | broker upstream-selection preferences to serve the candidate, and the judge, under, as the JSON of one `ai.OpenRouterRouting` (`only`, `ignore`, `quantizations`, `sort`, `require_parameters`, `allow_fallbacks`, `preferred_max_latency_p90`, `reasoning_effort`). Optional. Unset, a broker binding is served under the product default production applies (`sort: throughput`, `quantizations: [fp16, bf16]`, `require_parameters: true`); `{}` opts out and measures the broker's own price-weighted choice. That default is a hard filter, so a model no host serves at fp16 or bf16 cannot be reached under it — the run's pre-flight call finds that before the corpus and names the variable, and `{}` is the way through. Every record names the preferences each binding was served under (`candidate_upstream`, `judge_upstream`), since two records of one model are comparable only where those agree. The candidate's is read only alongside `MODEL=` — a deployment's tiers carry their own bindings, so passing it with `ROUTING=` is refused rather than accepted and applied to nothing; the judge's is read either way, because the judge is never resolved from the routing. Preferences on a binding that is not a broker on an OpenRouter host are refused, and so are unknown keys: a misspelt preference would be dropped in silence and the run would report the default's numbers under a tuned run's name. The field set, and the measurements behind the default, are in [openrouter.md](openrouter.md). Surfaced as `UPSTREAM=`, `JUDGE_UPSTREAM=`. |
 | `MARGINCE_AICERT_TASK`, `MARGINCE_AICERT_RUNS`, `MARGINCE_AICERT_TRACE` | — | `make e2e-ai` | narrow certification to one task / repeat count / directory for the request+response dump. All optional: unset certifies everything the corpus covers. Surfaced as `TASK=`, `RUNS=`, `TRACE=`. |
 | `MARGINCE_AICERT_RESUME` | — | `make e2e-ai` | directory for the resume journal: every scored run is appended to it as it is scored, so a run cut short by a dropped connection is restarted without paying for the runs it already made. A journaled run is replayed only for the same task and scenario, and only on the same candidate binding, judge, profile, corpus version, scenario stamp, BINARY and repeat index, within six hours — anything else is measured again. The binary is in that list because a stamp covers the requests, never the code that judges the replies. One run owns a resume directory at a time, held by a lock file. Empty turns it off, which forces a run to measure everything fresh. Surfaced as `RESUME=`, on by default. |
+| `MARGINCE_AICERT_STALE_ONLY` | `1` | `make e2e-ai` | `0` re-measures a model whose committed record is already current for this build; anything else skips it before any paid call, so a sweep pays only for what is missing or stale. "Current" is the judgement `make e2e-ai-report` prints. Surfaced as `STALE_ONLY=`, on by default. |
 | `MARGINCE_ANTHROPIC_KEY` | — | `ai` package smoke test | BYOK Anthropic key for the live Anthropic smoke test. Distinct from `ANTHROPIC_API_KEY`, which is what the **runtime** reads for a bound `anthropic` provider. |
 | `MARGINCE_BENCH_TIER` | — | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds — `smb` (default) or `mid_market`. An unrecognized value fails the bench loudly. |
 | `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness WRITE its record into `docs/reference/perfbench/`, which `make perfdoc` renders into the published budgets page. Off by default because a scheduled job runs the same suite weekly (`make bench-perf-check`), and a machine must never write its own numbers into the tree. The by-hand `bench-record`/`bench-capture`/`bench-mobile` targets need no switch — nothing but a human runs them. |
@@ -1131,12 +1175,16 @@ injects bounded context into declared AI tasks; `onboarding` additionally enable
 the five-step first-run flow. The default is `onboarding`. Moving backward is a
 reversible operational kill switch and never deletes confirmed company data.
 
-`lists.enabled` switches Live Lists and Shortlists on. The default is `false`:
-the `/v1/lists` routes answer 404, the `list_id` narrowing of the contact,
-company, deal and lead lists answers 404, the filtered export refuses a
+`lists.enabled` switches Live Lists and Shortlists. The default is `true`. Set
+it to `false` to hide them: the `/v1/lists` routes answer 404, the `list_id`
+narrowing of the contact, company, deal and lead lists answers 404, the filtered export refuses a
 `list_id` source, the company page names no list, no agent list tool is
-registered, and `/me` reports `settings_availability.lists: false`, so no screen
-offers them. Switching it off again hides lists without deleting any.
+registered, `/me` reports `settings_availability.lists: false`, so no screen
+offers them, and the worker's 15-minute Live List check records nothing, so no
+list history grows and no `list.evaluated` event is emitted. The worker reads
+the same file, so set it in the file both roles load. Switching it off hides
+lists without deleting any, and switching it back on shows them as they were;
+the first check after that records who joined and left since the last one.
 
 ### `POST /v1/connectors/test_mailbox/connect` — the QC-only fake mailbox
 

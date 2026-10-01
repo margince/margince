@@ -8,14 +8,16 @@ import { navigate } from "../app/router";
 import { currentParams, replaceParams, useUrlParams } from "../app/urlstate";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { type ISODate, isISODate } from "../design-system/dateinput";
-import { Heading } from "../design-system/heading";
+import { ErrorLine } from "../design-system/errorline";
+import { Select } from "../design-system/select";
+import { formatDateTime } from "../format/format";
 import { startOfDayInZone } from "../format/timezone";
-import { useT } from "../i18n";
-import { openAnalyticsSection } from "./analytics.address";
+import { useLocale, useT } from "../i18n";
 import type { AnalyticsScope } from "./analytics.context";
-import { QueryGate, throwProblem } from "./common";
+import { problemCodeOf, QueryGate, throwProblem } from "./common";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { ReportingExportButton } from "./reporting.export";
 import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
 import {
   type ReportingEvidenceRef,
@@ -108,7 +110,7 @@ function useOverviewFilters(
           ?.id ?? defaultPipeline);
   const setPipelineId = (value: string) => setParam("pipeline", value || "all");
   const targetBasis: ReportingSelection["target_basis"] =
-    params.get("target") === "fiscal_quarter" ? "fiscal_quarter" : "month";
+    period === "this_quarter" ? "fiscal_quarter" : "month";
   const setTargetBasis = (value: string) => setParam("target", value);
   const closeWindow: ReportingSelection["close_window"] =
     params.get("close") === "fiscal_quarter" ? "fiscal_quarter" : "all_open";
@@ -144,6 +146,7 @@ function OverviewBody({
 }>) {
   const t = useT();
   const zone = useRecordZone();
+  const { locale } = useLocale();
   const {
     template,
     setTemplate,
@@ -217,22 +220,57 @@ function OverviewBody({
     },
   });
   const contextKey = JSON.stringify(selection);
+  const invalidSelection =
+    problemCodeOf(query.error) === "reporting_interval_invalid";
   return (
     <>
-      <div className="reporting-header">
-        <div>
-          <Heading as="h2" size="large">
-            {t("reporting.performance")}
-          </Heading>
-          <p className="t-caption">{t("reporting.purpose")}</p>
-        </div>
+      <div className="reporting-controlbar">
+        <SegmentedControl
+          label={t("reporting.view")}
+          options={["sales", "sdr"]}
+          value={template}
+          labels={{ sales: t("reporting.sales"), sdr: t("reporting.sdr") }}
+          onChange={(next) => {
+            setTemplate(next);
+            setEvidence(null);
+          }}
+        />
+        <ReportingFilters
+          selection={selection}
+          showScope={false}
+          showCloseWindow={false}
+          showPipeline={template === "sales"}
+          showTargets={false}
+          dates={{
+            from: start,
+            through: end,
+            onChange: (from, through) => {
+              setStart(from);
+              setEnd(through);
+              setEvidence(null);
+            },
+          }}
+          onChange={(next) => {
+            if (next.period !== period) {
+              setPeriod(next.period);
+              setTargetBasis(
+                next.period === "this_quarter" ? "fiscal_quarter" : "month",
+              );
+            }
+            if (
+              template === "sales" &&
+              next.pipeline_id !== selection.pipeline_id
+            )
+              setPipelineId(next.pipeline_id ?? "");
+            if (next.target_basis !== targetBasis)
+              setTargetBasis(next.target_basis);
+            if (next.close_window !== closeWindow)
+              setCloseWindow(next.close_window);
+            setEvidence(null);
+          }}
+        />
         <div className="reporting-header-actions">
-          <Button
-            variant="ghost"
-            onClick={() => openAnalyticsSection("questions")}
-          >
-            {t("reporting.advanced")}
-          </Button>
+          {query.data && <ReportingExportButton evaluation={query.data} />}
           {canSave && (
             <Button onClick={() => setSaving(true)} disabled={!query.isSuccess}>
               {t("reporting.save")}
@@ -240,55 +278,51 @@ function OverviewBody({
           )}
         </div>
       </div>
-      <SegmentedControl
-        label={t("reporting.view")}
-        options={["sales", "sdr"]}
-        value={template}
-        labels={{ sales: t("reporting.sales"), sdr: t("reporting.sdr") }}
-        onChange={(next) => {
-          setTemplate(next);
-          setEvidence(null);
-        }}
-      />
-      <ReportingFilters
-        selection={selection}
-        showScope={false}
-        showPipeline={template === "sales"}
-        showTargets={
-          template === "sales" ||
-          query.data?.metrics.some((metric) => metric.target != null) === true
-        }
-        dates={{
-          from: start,
-          through: end,
-          onChange: (from, through) => {
-            setStart(from);
-            setEnd(through);
-            setEvidence(null);
-          },
-        }}
-        onChange={(next) => {
-          if (next.period !== period) setPeriod(next.period);
-          if (
-            template === "sales" &&
-            next.pipeline_id !== selection.pipeline_id
-          )
-            setPipelineId(next.pipeline_id ?? "");
-          if (next.target_basis !== targetBasis)
-            setTargetBasis(next.target_basis);
-          if (next.close_window !== closeWindow)
-            setCloseWindow(next.close_window);
-          setEvidence(null);
-        }}
-      />
       {!validPeriod && <p role="status">{t("reporting.chooseDates")}</p>}
-      {validPeriod && (
+      {invalidSelection && <ErrorLine error={query.error} />}
+      {validPeriod && !invalidSelection && (
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
           {(evaluation) => (
             <>
+              {evaluation.context.interval.end_at ===
+                evaluation.context.evaluated_at && (
+                <p className="t-caption" role="status">
+                  {t("reporting.resultsThrough", {
+                    at: formatDateTime(
+                      evaluation.context.interval.end_at,
+                      locale,
+                      evaluation.context.timezone,
+                    ),
+                  })}
+                </p>
+              )}
               <ReportingCharts
                 evaluation={evaluation}
                 onEvidence={setEvidence}
+                pipelineControls={
+                  template === "sales" ? (
+                    <Select
+                      aria-label={t("reporting.pipelineFilter")}
+                      value={closeWindow}
+                      options={[
+                        { value: "all_open", label: t("reporting.all_open") },
+                        {
+                          value: "fiscal_quarter",
+                          label: t("reporting.fiscal_quarter"),
+                        },
+                      ]}
+                      onChange={(value) => {
+                        if (
+                          value === "all_open" ||
+                          value === "fiscal_quarter"
+                        ) {
+                          setCloseWindow(value);
+                          setEvidence(null);
+                        }
+                      }}
+                    />
+                  ) : undefined
+                }
               />
               {evidence && (
                 <ReportingEvidenceDrawer
@@ -321,5 +355,5 @@ function OverviewBody({
 }
 
 function validDateRange(period: string, start: string, end: string): boolean {
-  return period !== "custom" || !!(start && end && end >= start);
+  return period !== "custom" || !!(start && end);
 }

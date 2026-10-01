@@ -10,16 +10,16 @@
   "totals": {
     "tools": 81,
     "resources": 11,
-    "tool_catalog_bytes": 245573,
+    "tool_catalog_bytes": 247149,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 62438,
+    "approx_wire_tokens_total": 62832,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 62299,
-      "input_schema_bytes": 56159,
-      "output_schema_bytes": 109768,
-      "description_plus_input_schema_bytes": 118458
+      "description_bytes": 62823,
+      "input_schema_bytes": 57034,
+      "output_schema_bytes": 109945,
+      "description_plus_input_schema_bytes": 119857
     }
   },
   "tools": {
@@ -1158,7 +1158,7 @@
           "readOnlyHint": false,
           "title": "Change many records at once"
         },
-        "description": "Hand up to 500 contacts, companies or deals to one owner, archive them, or add them to or take them off a Shortlist, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add them to or take them off a Shortlist, put a tag on or take it off, or file one task under each, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "else": {
@@ -1239,19 +1239,54 @@
               "type": "string"
             },
             "record_type": {
+              "description": "A lead takes every verb but archive",
               "enum": [
                 "contact",
                 "company",
-                "deal"
+                "deal",
+                "lead"
               ],
               "type": "string"
+            },
+            "tag_id": {
+              "description": "The tag, for add_tag and remove_tag",
+              "format": "uuid",
+              "type": "string"
+            },
+            "task": {
+              "additionalProperties": false,
+              "description": "The task create_task files under each record",
+              "properties": {
+                "assignee_id": {
+                  "description": "Who owes it; defaults to the user",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "due_at": {
+                  "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "subject": {
+                  "maxLength": 500,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "subject"
+              ],
+              "type": "object"
             },
             "verb": {
               "enum": [
                 "reassign_owner",
                 "archive",
                 "add_to_list",
-                "remove_from_list"
+                "remove_from_list",
+                "add_tag",
+                "remove_tag",
+                "create_task"
               ],
               "type": "string"
             }
@@ -1362,6 +1397,13 @@
                           "owner_id": {
                             "format": "uuid",
                             "type": "string"
+                          },
+                          "tagged": {
+                            "type": "boolean"
+                          },
+                          "task_id": {
+                            "format": "uuid",
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -1378,6 +1420,13 @@
                             "type": "boolean"
                           },
                           "owner_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "tagged": {
+                            "type": "boolean"
+                          },
+                          "task_id": {
                             "format": "uuid",
                             "type": "string"
                           }
@@ -10916,7 +10965,7 @@
           "readOnlyHint": true,
           "title": "Find and read lists"
         },
-        "description": "Find the team's Live Lists (saved filters whose members join and leave on their own) and Shortlists (records chosen by hand), read one, page through its members, say why a record is or is not on it, read what changed on it, or preview what a filter would select before a Live List is saved. Every count, member and reason is what the user you act for may see: a list shared with them never shows a member record they cannot read, so two users may see different counts for one list. A preview is logged as a read of those records. search_records finds records by name; tags are applied with apply_tag, not lists. Keep list_id, the version for a later change, and next_cursor to read the next page. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Find the team's Live Lists (saved filters whose members join and leave on their own) and Shortlists (records chosen by hand), read one, page through its members, say why a record is or is not on it, read what changed on it — including which records a Live List was seen to gain and lose, and how many since the user last opened it — or preview what a filter would select before a Live List is saved. Every count, member and reason is what the user you act for may see: a list shared with them never shows a member record they cannot read, so two users may see different counts for one list. Live Lists are checked every 15 minutes, longest-unchecked first, so with very many lists one can wait longer (last_check says when); a record that joined and left between two checks is not recorded. A preview is logged as a read of those records. A list with health retired_field still works but filters on a retired custom field, named in retired_fields; its steward should replace that clause. search_records finds records by name; tags are applied with apply_tag, not lists. Keep list_id, the version for a later change, and next_cursor to read the next page. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -11032,6 +11081,18 @@
               "description": "For why: the record to explain",
               "format": "uuid",
               "type": "string"
+            },
+            "sharing": {
+              "description": "For find (optional): only lists with one of these sharing settings; private alone is the caller's own private lists",
+              "items": {
+                "enum": [
+                  "private",
+                  "team",
+                  "workspace"
+                ],
+                "type": "string"
+              },
+              "type": "array"
             }
           },
           "required": [
@@ -15508,6 +15569,9 @@
                 },
                 "contact_id": {
                   "format": "uuid",
+                  "type": "string"
+                },
+                "contact_name": {
                   "type": "string"
                 }
               },

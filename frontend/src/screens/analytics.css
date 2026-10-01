@@ -90,3 +90,9 @@
   flex: 1;
   min-width: var(--space-16);
 }
+
+.analytics-scope-control {
+  min-width: 12rem;
+  max-width: 20rem;
+  flex: 1;
+}

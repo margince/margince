@@ -41,6 +41,9 @@ type Store struct {
 	dealAmount string
 	// baseCurrencyOf reads the installation's base currency; identity owns it.
 	baseCurrencyOf func(ctx context.Context, tx pgx.Tx) (string, error)
+	// ruleUses reads the active automation rules that watch or write a list;
+	// the automation module owns them, so compose injects the read.
+	ruleUses func(ctx context.Context, id ids.ListID) ([]RuleUse, error)
 }
 
 // WithLiveSteward injects the identity module's rule for a seat that may act,
@@ -125,6 +128,7 @@ const (
 	purposeField   = "purpose"
 	teamIDField    = "team_id"
 	stewardIDField = "steward_id"
+	versionField   = "version"
 )
 
 // memberEntityVocabulary renders the accepted set for the refusal message.
@@ -204,7 +208,9 @@ type ListFilter struct {
 	EntityType *string
 	ListType   *string
 	// Query matches name or purpose, case-insensitively.
-	Query    *string
+	Query *string
+	// Sharing keeps lists with one of these settings; empty keeps every one.
+	Sharing  []string
 	Archived storekit.ArchivedFilter
 }
 
@@ -213,11 +219,19 @@ func (s *Store) ListLists(ctx context.Context, filter ListFilter) ([]listRow, bo
 	if err := auth.Require(ctx, listObject, principal.ActionRead); err != nil {
 		return nil, false, err
 	}
+	for _, sharing := range filter.Sharing {
+		if err := checkSharing(sharing); err != nil {
+			return nil, false, err
+		}
+	}
 	var out []listRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := []string{"true"}
+		if len(filter.Sharing) > 0 {
+			where = append(where, fmt.Sprintf("l.sharing = ANY($%d)", arg(filter.Sharing)))
+		}
 		if filter.EntityType != nil {
 			where = append(where, fmt.Sprintf("l.entity_type = $%d", arg(*filter.EntityType)))
 		}
@@ -330,10 +344,10 @@ func (s *Store) checkNewList(ctx context.Context, in *CreateListInput) error {
 		return err
 	}
 	if in.StewardID == nil {
-		in.StewardID = storekit.OwnerOrActor(ctx, nil)
+		in.StewardID = storekit.OwnerOrActor(ctx)
 	}
 	if in.OwnerID == nil {
-		in.OwnerID = storekit.OwnerOrActor(ctx, nil)
+		in.OwnerID = storekit.OwnerOrActor(ctx)
 	}
 	switch in.ListType {
 	case listTypeDynamic:

@@ -57,6 +57,31 @@ var equivalentContent = map[string]map[string][]equivalence{
 	},
 }
 
+// ContentAdmitted answers whether a migrate would admit a database that
+// recorded applied as this migration's content: the digests agree, or the pair
+// is one of the checked equivalences above.
+//
+// Exported because the test-database head probe asks the same question, and a
+// probe stricter than the migrator is not a safer probe — it reports a template
+// the migrator would reuse as not-at-head and rebuilds it. Both doors read the
+// list through here rather than each looping over it.
+//
+// Held by: TestEquivalentContentIsAdmittedAndNothingElseIs
+// (backend/internal/platform/dbmigrate/dbmigrate_test.go), which puts the same
+// three cases to this and to assertContentMatches and compares their verdicts.
+func ContentAdmitted(namespace string, m Migration, applied string) bool {
+	current := Digest(m)
+	if applied == current {
+		return true
+	}
+	for _, eq := range equivalentContent[namespace][m.Version] {
+		if applied == eq.applied && current == eq.source {
+			return true
+		}
+	}
+	return false
+}
+
 // equivalence is one checked claim that two byte sequences build one schema.
 type equivalence struct {
 	applied string // what the database recorded

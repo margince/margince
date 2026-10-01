@@ -7,12 +7,16 @@ package compose
 
 import (
 	"errors"
+	"net/http"
+	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -49,7 +53,7 @@ func TestReportingTeamTargetRemainsIndependentOfOwnerAllocations(t *testing.T) {
 	if _, err := service.UpdateTarget(ctx, ids.UUID(owner.Id), owner.Version, input); err != nil {
 		t.Fatal(err)
 	}
-	list, err := service.ListTargets(ctx, nil, 100)
+	list, err := service.ListTargets(ctx, nil, 100, reporting.TargetFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,5 +182,76 @@ func TestReportingPausedSchedulesRemainDiscoverableWithoutExposingSetupToReaders
 	}
 	if catalog.ScheduleReady != nil {
 		t.Fatal("read-only schedule reader received setup readiness")
+	}
+}
+
+func TestReportingTargetFiltersApplyBeforePagination(t *testing.T) {
+	f := reportingBusiness(t)
+	input := f.target.Definition
+	input.Scope = crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(f.env.Rep1)}
+	input.Reason = "Individual allocation"
+	owner, err := f.service.CreateTarget(f.human, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	retired := true
+	input.Retired = &retired
+	input.Reason = "Allocation ended"
+	if _, err := f.service.UpdateTarget(f.human, ids.UUID(owner.Id), owner.Version, input); err != nil {
+		t.Fatal(err)
+	}
+	active := false
+	handler := reportingHTTPRouter(f)
+	for _, tc := range []struct {
+		name   string
+		filter reporting.TargetFilter
+		want   int
+	}{
+		{"all", reporting.TargetFilter{}, 2},
+		{"active", reporting.TargetFilter{Retired: &active}, 1},
+		{"retired", reporting.TargetFilter{Retired: &retired}, 1},
+		{"period", reporting.TargetFilter{PeriodStart: &input.PeriodStart}, 2},
+		{"other period", reporting.TargetFilter{PeriodStart: &openapi_types.Date{Time: input.PeriodStart.AddDate(0, 1, 0)}}, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			count := 0
+			var cursor *ids.UUID
+			for {
+				page, err := f.service.ListTargets(f.human, cursor, 1, tc.filter)
+				if err != nil {
+					t.Fatal(err)
+				}
+				count += len(page.Data)
+				if tc.filter.Retired != nil && len(page.Data) > 0 {
+					got := page.Data[0].Definition.Retired != nil && *page.Data[0].Definition.Retired
+					if got != *tc.filter.Retired {
+						t.Fatalf("wrong retirement state: %+v", page.Data[0])
+					}
+				}
+				if page.NextCursor == nil {
+					break
+				}
+				next, err := ids.Parse(*page.NextCursor)
+				if err != nil {
+					t.Fatal(err)
+				}
+				cursor = &next
+			}
+			if count != tc.want {
+				t.Fatalf("got %d targets, want %d", count, tc.want)
+			}
+			params := url.Values{}
+			if tc.filter.Retired != nil {
+				params.Set("retired", strconv.FormatBool(*tc.filter.Retired))
+			}
+			if tc.filter.PeriodStart != nil {
+				params.Set("period_start", tc.filter.PeriodStart.Format("2006-01-02"))
+			}
+			response := reportingRequest(f.human, t, handler, http.MethodGet, "targets?"+params.Encode(), nil, -1, http.StatusOK)
+			page := reportingResponse[crmcontracts.ReportingTargetList](t, response)
+			if len(page.Data) != tc.want {
+				t.Fatalf("HTTP filter returned %d targets, want %d", len(page.Data), tc.want)
+			}
+		})
 	}
 }

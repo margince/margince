@@ -70,7 +70,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_call_secrets_removed_check` — `CHECK ((secrets_removed >= 0))`
 - `ai_call_source_check` — `CHECK ((served_identity_source = ANY (ARRAY['response', 'echo', 'configured'])))`
 - `ai_call_subject_shape` — `CHECK (((subject_type IS NULL) = (subject_id IS NULL)))`
-- `uq_ai_call_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
@@ -81,7 +80,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `idx_ai_call_agent_run` — `btree (agent_run_id)`
 - `idx_ai_call_correlation` — `btree (correlation_id)`
 - `idx_ai_call_occurred` — `btree (occurred_at DESC)`
-- `uq_ai_call_ws_id` — `unique, btree (id)`
 
 ## ai_call_config
 
@@ -158,7 +156,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 - `ai_feedback_pkey` — `unique, btree (id)`
 - `ai_feedback_subject_type_subject_id_claim_kind_key` — `unique, btree (subject_type, subject_id, claim_kind, claim_key)`
-- `idx_ai_feedback_subject` — `btree (subject_type, subject_id)`
 
 ## ai_model_rate
 
@@ -321,7 +318,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `uq_voice_corpus_source_ref` — `unique, btree (voice_profile_id, source_ref)`
 - `voice_corpus_source_manifest` — `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_corpus_source_pkey` — `unique, btree (id)`
-- `voice_corpus_source_profile_fk` — `btree (voice_profile_id)`
 
 ## voice_learning_signal
 
@@ -456,7 +452,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `uq_voice_profile_delta_version` — `unique, btree (voice_profile_id, to_version)`
 - `voice_profile_delta_history` — `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_profile_delta_pkey` — `unique, btree (id)`
-- `voice_profile_delta_profile_fk` — `btree (voice_profile_id)`
 
 ## voice_profile_version
 
@@ -499,7 +494,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Rules**
 
 - `uq_voice_profile_version_number` — `UNIQUE (voice_profile_id, profile_version)`
-- `uq_voice_profile_version_profile_number` — `UNIQUE (voice_profile_id, profile_version)`
 - `voice_profile_version_predecessor_version_check` — `CHECK ((predecessor_version >= 1))`
 - `voice_profile_version_profile_version_check` — `CHECK ((profile_version >= 1))`
 - `voice_profile_version_reason_check` — `CHECK ((reason = ANY (ARRAY['onboarding', 'manual', 'automatic', 'rollback'])))`
@@ -509,8 +503,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Indexes**
 
 - `uq_voice_profile_version_number` — `unique, btree (voice_profile_id, profile_version)`
-- `uq_voice_profile_version_profile_number` — `unique, btree (voice_profile_id, profile_version)`
 - `voice_profile_version_history` — `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_profile_version_one_active` — `unique, btree (voice_profile_id) WHERE (status = 'active')`
 - `voice_profile_version_pkey` — `unique, btree (id)`
-- `voice_profile_version_profile_fk` — `btree (voice_profile_id)`

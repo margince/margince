@@ -262,3 +262,25 @@ function declaredSpecifier(
     : node.isTypeOnly;
   return edges === "values" && typeOnly ? null : specifier.text;
 }
+
+// Every literal piece of a JSX `className`, however the caller composed it. A
+// piece that runs into an expression keeps its tail: `rmap-pill-${x}` reads
+// as `rmap-pill-`, a prefix of every class it can become.
+export function classNameLiterals(
+  attribute: ts.JsxAttribute | undefined,
+): string[] {
+  if (!attribute?.initializer) return [];
+  const out: string[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      out.push(node.text);
+    }
+    if (ts.isTemplateExpression(node)) {
+      out.push(node.head.text);
+      for (const span of node.templateSpans) out.push(span.literal.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(attribute.initializer);
+  return out;
+}

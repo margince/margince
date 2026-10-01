@@ -55,7 +55,6 @@ func (s *Store) CreateCompany(ctx context.Context, in CreateCompanyInput) (crmco
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
 	// The store-opened path reads the catalog through the unexported helper,
 	// not ActiveCompanyColumns: that one takes company:read on the
 	// caller's behalf, and a seat may hold create without it.
@@ -94,7 +93,6 @@ func (s *Store) CreateCompanyTx(ctx context.Context, tx pgx.Tx, in CreateCompany
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
 	out, err := createCompanyInTx(ctx, tx, in, by, nil)
 	if err != nil {
 		return out, err
@@ -148,6 +146,12 @@ func (s *Store) readyCompanyCreate(ctx context.Context, in CreateCompanyInput) (
 func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by string,
 	active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
+	owner, err := storekit.NewRecordOwner(ctx, tx, in.OwnerID)
+	if err != nil {
+		return crmcontracts.Company{}, err
+	}
+	in.OwnerID = owner
+
 	if err := ensureCompanyDomainsUnclaimed(ctx, tx, in.Domains); err != nil {
 		return crmcontracts.Company{}, err
 	}

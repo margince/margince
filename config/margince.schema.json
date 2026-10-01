@@ -324,7 +324,7 @@
       }
     },
     "analytics": {
-      "description": "Lists switches Live Lists and Shortlists on. They are off until an operator turns them on: the product is being built, and nothing an installation shows should advertise an unfinished surface.",
+      "description": "Analytics switches governed sales reporting on. It is off by default.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -334,6 +334,7 @@
       }
     },
     "lists": {
+      "description": "Lists switches Live Lists and Shortlists. They are on unless an operator writes `enabled: false`, which hides every list surface and deletes no list.",
       "type": "object",
       "additionalProperties": false,
       "properties": {

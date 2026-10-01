@@ -330,8 +330,8 @@ func TestFilteredExportHTTPEndToEnd(t *testing.T) {
 // held for the object path and was untested for the other two ways in.
 //
 // Each source's refusals are here too, because they are the interesting half:
-// a static list has explicit members rather than a filter, and a view may carry
-// no filter state at all. Both name their own wire field and answer 422.
+// a view may carry no filter state at all, which names its own wire field and
+// answers 422.
 func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

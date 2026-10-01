@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Button, Disclosure, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -23,10 +24,11 @@ import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   reportingAmount,
+  reportingCompactAmount,
   reportingMoneyUnit,
 } from "./reporting.model";
-import { ReportingScorecard } from "./reporting.scorecard";
 import { SdrOutcomes } from "./reporting.sdroutcomes";
+import { ResultsSummary, TargetProgress } from "./reporting.summary";
 import "./reporting.css";
 
 type EvidenceAction = (reference: ReportingEvidenceRef) => void;
@@ -34,10 +36,12 @@ type EvidenceAction = (reference: ReportingEvidenceRef) => void;
 export function ReportingCharts({
   evaluation,
   editionId,
+  pipelineControls,
   onEvidence,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   editionId?: string;
+  pipelineControls?: ReactNode;
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
@@ -59,7 +63,8 @@ export function ReportingCharts({
       ),
   );
   return (
-    <>
+    <div className="reporting-results">
+      <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
       <div className="reporting-grid">
         {charts.map((chart) => (
           <Panel
@@ -68,12 +73,15 @@ export function ReportingCharts({
             title={chartTitle(chart, evaluation, t)}
           >
             <PanelBody>
+              {chart.kind === "stage_distribution" && pipelineControls && (
+                <div className="reporting-toolbar">{pipelineControls}</div>
+              )}
               <ChartContext
                 chart={chart}
                 evaluation={evaluation}
                 editionId={editionId}
               />
-              {chart.points.length ? (
+              {chart.points.length && chart.coverage.status !== "no_data" ? (
                 <ChartBody
                   chart={chart}
                   evaluation={evaluation}
@@ -84,26 +92,24 @@ export function ReportingCharts({
                   {chart.coverage.reason ?? t("common.empty")}
                 </EmptyState>
               )}
-              <Button
-                variant="link"
-                onClick={() =>
-                  onEvidence({
-                    metric: chart.metric,
-                    context_id: chart.context_id,
-                  })
-                }
-              >
-                {t("reporting.viewRecords")}
-              </Button>
+              {chart.points.length > 0 &&
+                chart.coverage.status !== "no_data" && (
+                  <Button
+                    variant="link"
+                    onClick={() =>
+                      onEvidence({
+                        metric: chart.metric,
+                        context_id: chart.context_id,
+                      })
+                    }
+                  >
+                    {t("reporting.viewRecords")}
+                  </Button>
+                )}
             </PanelBody>
           </Panel>
         ))}
       </div>
-      <ReportingScorecard
-        evaluation={evaluation}
-        editionId={editionId}
-        onEvidence={onEvidence}
-      />
       <Disclosure summary={t("reporting.moreMetrics")}>
         <DataTable
           label={t("reporting.metrics")}
@@ -127,14 +133,18 @@ export function ReportingCharts({
               header: t("reporting.actual"),
               render: (metric) => amount(metric.value, metric.unit),
             },
-            {
-              key: "target",
-              header: t("reporting.target"),
-              render: (metric) =>
-                metric.target == null
-                  ? t("reporting.noTarget")
-                  : amount(metric.target, metric.unit),
-            },
+            ...(evaluation.metrics.some((metric) => metric.target != null)
+              ? [
+                  {
+                    key: "target",
+                    header: t("reporting.target"),
+                    render: (metric: ReportingEvaluation["metrics"][number]) =>
+                      metric.target == null
+                        ? "—"
+                        : amount(metric.target, metric.unit),
+                  },
+                ]
+              : []),
             {
               key: "status",
               header: t("reporting.evidence"),
@@ -153,7 +163,7 @@ export function ReportingCharts({
           ]}
         />
       </Disclosure>
-    </>
+    </div>
   );
 }
 
@@ -181,13 +191,17 @@ function ChartBody({
       chart.kind === "target_progress"
         ? metricLabel(chart.metric, t)
         : point.label,
-    amount: format(point.value),
+    amount: reportingCompactAmount(
+      point.value,
+      chart.unit,
+      evaluation.context.currency,
+      locale,
+    ),
     comparison: chart.comparison_interval ? point.comparison : undefined,
     comparisonAmount: chart.comparison_interval
       ? format(point.comparison)
       : undefined,
-    targetAmount:
-      point.target == null ? t("reporting.noTarget") : format(point.target),
+    targetAmount: point.target == null ? undefined : compact(point.target),
     upperAmount: format(point.upper),
   }));
   const onSelect = (key: string) => {
@@ -211,35 +225,29 @@ function ChartBody({
   switch (chart.kind) {
     case "bookings_trend": {
       const target = chart.points.find((point) => point.target != null)?.target;
-      const metric = evaluation.metrics.find(
-        (metric) => metric.id === chart.metric,
-      );
       return (
-        <>
-          <p className="reporting-headline t-num">{format(metric?.value)}</p>
-          <CumulativeChart
-            {...shared}
-            comparisonLabel={
-              chart.comparison_interval
-                ? `${t("reporting.previous")}: ${formatDateTime(chart.comparison_interval.start_at, locale, evaluation.context.timezone)} – ${formatDateTime(new Date(Date.parse(chart.comparison_interval.end_at) - 1).toISOString(), locale, evaluation.context.timezone)}`
-                : undefined
-            }
-            axisLabel={(value) =>
-              reportingMoneyUnit(chart.unit, evaluation.context.currency)
-                ? formatMoneyCompact(value, evaluation.context.currency, locale)
-                : format(value)
-            }
-            reference={
-              target == null
-                ? undefined
-                : {
-                    value: target,
-                    amount: format(target),
-                    label: t("reporting.target"),
-                  }
-            }
-          />
-        </>
+        <CumulativeChart
+          {...shared}
+          comparisonLabel={
+            chart.comparison_interval
+              ? `${t("reporting.previous")}: ${formatDateTime(chart.comparison_interval.start_at, locale, evaluation.context.timezone)} – ${formatDateTime(new Date(Date.parse(chart.comparison_interval.end_at) - 1).toISOString(), locale, evaluation.context.timezone)}`
+              : undefined
+          }
+          axisLabel={(value) =>
+            reportingMoneyUnit(chart.unit, evaluation.context.currency)
+              ? formatMoneyCompact(value, evaluation.context.currency, locale)
+              : format(value)
+          }
+          reference={
+            target == null
+              ? undefined
+              : {
+                  value: target,
+                  amount: compact(target),
+                  label: t("reporting.target"),
+                }
+          }
+        />
       );
     }
     case "owner_attainment":
@@ -252,19 +260,21 @@ function ChartBody({
             valueLabel={t("reporting.median")}
             upperLabel={t("reporting.upper")}
           />
-          {chart.points.map((point) => (
-            <p key={point.key} className="t-caption">
-              {point.label} ·{" "}
-              {point.observations == null
-                ? t("reporting.observationsUnavailable")
-                : plural("reporting.observations", point.observations, {
-                    count: formatNumber(point.observations, locale),
-                  })}
-              {point.value == null
-                ? ` · ${t("reporting.status.insufficient_sample")}`
-                : ""}
-            </p>
-          ))}
+          <Popover onHover label={t("reporting.sampleDetails")}>
+            {chart.points.map((point) => (
+              <p key={point.key} className="t-caption">
+                {point.label} ·{" "}
+                {point.observations == null
+                  ? t("reporting.observationsUnavailable")
+                  : plural("reporting.observations", point.observations, {
+                      count: formatNumber(point.observations, locale),
+                    })}
+                {point.value == null
+                  ? ` · ${t("reporting.status.insufficient_sample")}`
+                  : ""}
+              </p>
+            ))}
+          </Popover>
         </>
       );
     case "target_progress":
@@ -285,9 +295,12 @@ function ChartBody({
       return (
         <>
           <p className="reporting-headline t-num">
-            {format(
+            {reportingCompactAmount(
               evaluation.metrics.find((metric) => metric.id === chart.metric)
                 ?.value,
+              chart.unit,
+              evaluation.context.currency,
+              locale,
             )}
           </p>
           <BarList
@@ -386,6 +399,11 @@ function ChartBody({
         return <EmptyState>{t("reporting.unavailable")}</EmptyState>;
       return (
         <>
+          <p className="t-num">
+            {t("reporting.netChange", {
+              amount: `${chart.closing - chart.opening > 0 ? "+" : ""}${compact(chart.closing - chart.opening)}`,
+            })}
+          </p>
           <Waterfall
             label={shared.label}
             opening={{
@@ -404,6 +422,10 @@ function ChartBody({
                 : [
                     {
                       ...point,
+                      label:
+                        point.key === "amount"
+                          ? t("reporting.valueChanges")
+                          : point.label,
                       value: point.value,
                       amount: compact(point.value),
                     },
@@ -470,26 +492,4 @@ function chartTitle(
   )
     return metricLabel(chart.metric, t);
   return blockLabel(chart.kind, t);
-}
-
-function TargetProgress({
-  value,
-  target,
-  format,
-}: Readonly<{
-  value: number | null;
-  target?: number | null;
-  format: (value: number) => string;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  if (target == null || value == null) return null;
-  return (
-    <p className="t-caption">
-      {t("reporting.remaining")}: {format(Math.max(0, target - value))}
-      {target > 0
-        ? ` · ${t("reporting.attainment", { percent: formatNumber(Math.round((value / target) * 100), locale) })}`
-        : ""}
-    </p>
-  );
 }

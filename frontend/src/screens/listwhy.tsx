@@ -95,6 +95,7 @@ function VerdictMark({ result }: Readonly<{ result: boolean | null }>) {
     return <Check aria-label={t("lists.why.met")} className="lists-why-met" />;
   }
   if (result === false) {
+    // ds:ignore a verdict glyph drawn in the ink, not a failure line
     return <X aria-label={t("lists.why.unmet")} className="lists-why-unmet" />;
   }
   return (

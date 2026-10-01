@@ -100,12 +100,15 @@ const (
 
 // preflight sends one small call to every binding the run will use, before the
 // corpus: a key, slug or preference that cannot be served fails in seconds
-// rather than after the scenarios ahead of it were paid for.
-func preflight(ctx context.Context, cfg RunnerConfig, tasks []ai.Task, hooks *certifyHooks, log *slog.Logger) error {
+// rather than after the scenarios ahead of it were paid for. A binding that is
+// only ever a fallback is returned as unservable instead: it costs its own
+// records, never the answering rung's.
+func preflight(ctx context.Context, cfg RunnerConfig, tasks []ai.Task, hooks *certifyHooks, log *slog.Logger) ([]ai.ProviderConfig, error) {
 	if hooks == nil {
 		hooks = &certifyHooks{}
 	}
 	var errs []error
+	var lost []ai.ProviderConfig
 	for _, p := range preflightProbes(cfg, tasks, hooks) {
 		// A binding that cannot be set up is certifyTask's to report, per task,
 		// where it costs that task's record alone; the pre-flight only notes it.
@@ -123,14 +126,19 @@ func preflight(ctx context.Context, cfg RunnerConfig, tasks []ai.Task, hooks *ce
 			Messages:  []model.Message{{Role: roleUser, Content: preflightPrompt}},
 			MaxTokens: preflightMaxTokens,
 		})
-		if err != nil {
+		switch {
+		case err != nil && !p.answers:
+			log.WarnContext(ctx, "aicert: pre-flight could not serve a fallback; its records are skipped",
+				"model", p.binding.Model, "err", err)
+			lost = append(lost, p.binding)
+		case err != nil:
 			errs = append(errs, fmt.Errorf("pre-flight: the %s %s:%s could not be served, so no scenario was run: %w",
 				p.role.name, p.binding.Provider, p.binding.Model, unservable(p.role, err)))
-			continue
+		default:
+			log.InfoContext(ctx, "aicert: pre-flight served", "role", p.role.name, "model", p.binding.Model)
 		}
-		log.InfoContext(ctx, "aicert: pre-flight served", "role", p.role.name, "model", p.binding.Model)
 	}
-	return errors.Join(errs...)
+	return lost, errors.Join(errs...)
 }
 
 // preflightProbe is one binding to ask, bound on ladderTask's ladder and asked
@@ -140,30 +148,34 @@ type preflightProbe struct {
 	binding                ai.ProviderConfig
 	ladderTask, servedTask ai.Task
 	opts                   []ai.LocalOption
+	// answers is true when the binding answers some task first (or judges), so
+	// a run cannot go on without it.
+	answers bool
 }
 
 // preflightProbes is each distinct candidate the tasks resolve to, then the one
-// judge. A task whose rung is unbound is left to taskBindings to report.
+// judge. A task whose rung is unbound is left to taskCandidates to report.
 func preflightProbes(cfg RunnerConfig, tasks []ai.Task, hooks *certifyHooks) []preflightProbe {
 	var probes []preflightProbe
-	seen := map[string]bool{}
+	seen := map[string]int{}
 	for _, task := range tasks {
-		candidate := cfg.Binding
-		if cfg.Routing != nil {
-			resolved, _, ok := resolveBinding(*cfg.Routing, task)
-			if !ok {
+		cands, _, err := taskCandidates(cfg, task)
+		if err != nil {
+			continue // a binding that cannot be set up is certifyTask's to report, per task
+		}
+		for _, c := range cands {
+			key := bindingKey(c.Binding)
+			if i, ok := seen[key]; ok {
+				probes[i].answers = probes[i].answers || c.Rung == 0
 				continue
 			}
-			candidate = resolved
-		}
-		if key := bindingKey(candidate); !seen[key] {
-			seen[key] = true
-			probes = append(probes, preflightProbe{candidateRole, candidate, task, task, hooks.candidateOpts})
+			seen[key] = len(probes)
+			probes = append(probes, preflightProbe{candidateRole, c.Binding, task, task, hooks.candidateOpts, c.Rung == 0})
 		}
 	}
-	if len(tasks) > 0 {
+	if len(probes) > 0 {
 		judgeOpts := append(judgeTransport(cfg.JudgeBinding), hooks.judgeOpts...)
-		probes = append(probes, preflightProbe{judgeRole, cfg.JudgeBinding, tasks[0], ai.TaskCertJudge, judgeOpts})
+		probes = append(probes, preflightProbe{judgeRole, cfg.JudgeBinding, tasks[0], ai.TaskCertJudge, judgeOpts, true})
 	}
 	return probes
 }
@@ -180,8 +192,8 @@ func preflightDecisions(ctx context.Context, cfg RunnerConfig, byTask map[ai.Tas
 	}
 	for _, task := range sortedTasks(byTask) {
 		candidate, _, bound := resolveBinding(*cfg.Routing, task)
-		if !bound {
-			continue // taskBindings reports it, per task
+		if !bound || cfg.current[candidateKey(task, candidate)] {
+			continue // unbound: taskCandidates reports it; current: its decision leg will not run
 		}
 		sc, found := firstDecisionScenario(byTask[task], cfg.Census)
 		if !found {

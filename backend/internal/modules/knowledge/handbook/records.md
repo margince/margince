@@ -160,7 +160,7 @@ Also called: rename a company, update an account.
 ### How do I change the owner of a contact or company?
 To change who owns a contact or company in Margince, open the record and pick a colleague in the **Owner** row of its **Details** panel. The change saves as soon as you pick.
 You need edit rights on the record: your own, your team's, one shared with you for writing, or a role that edits every record. A private contact must keep an owner ("This field is required.").
-There is no bulk reassign for contacts or companies. For many deals or leads, see [Lists, filters and views](lists-filters-and-views.md).
+To hand many records to a colleague at once, see [Lists, filters and views](lists-filters-and-views.md).
 Also called: reassign a contact, hand over an account, transfer ownership, account owner.
 
 ### How do I claim a company nobody owns?

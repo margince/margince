@@ -297,7 +297,7 @@ func TestListContainersRefusesMalformedAuthWithoutDialing(t *testing.T) {
 		return nil, nil, errors.New("the test's dialer must not be reached")
 	})
 
-	if _, err := c.ListContainers(context.Background(), []byte("not json")); err == nil {
+	if _, _, err := c.ListContainers(context.Background(), []byte("not json")); err == nil {
 		t.Fatal("a malformed auth bundle listed containers instead of failing")
 	}
 	if dialed {

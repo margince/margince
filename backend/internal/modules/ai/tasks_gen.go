@@ -34,7 +34,7 @@ const (
 	TaskEnrich Task = "enrich"
 	// TaskGrowthFit is How well one company fits what we sell. The only site on the company view that must read OUR offering as well as theirs — a fit is a claim about two companies, and judging one against a guess about the other is what the DOSS-AC-13 band cap exists to stop. Our own context is never citable: evidence is target-side only, so a factor drawn from what we sell is labelled an assessment and still cites their records, or the grounding filter drops it (DOSS-AC-6). The band the model proposes is not the band served — the deterministic completeness gate can lower it to `unknown` or cap it at `moderate`, and never raises it.
 	TaskGrowthFit Task = "growth_fit"
-	// TaskNlSearch is Declared, not built (ADR-0074).
+	// TaskNlSearch is A list described in plain words, read into filter clauses the builder shows for a human to edit and save. The model is handed the record type, the sentence, the caller's own filter vocabulary, today's date and the reader's language, and never a record: it proposes a predicate tree and the deterministic engine decides membership, exactly as for a hand-built filter. Every proposed clause is checked in code before it is answered - a field the caller cannot filter on, an operator its type refuses, a value outside a picklist's options or of the wrong type is dropped and named back as unsupported rather than failing the proposal, and so is a phrase the model could not express. The company context is our own offer and market, so 'companies in our target market' has something to be read against; it is conditional because reading it needs company read, and a caller filtering contacts without that grant still gets a proposal, just without it. Nothing is saved: Save stays a human's press. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic reading of a sentence to fall back to.
 	TaskNlSearch   Task = "nl_search"
 	TaskOfferDraft Task = "offer_draft"
 	// TaskOwedVerdict is Whether an unanswered inbound message actually asks its recipient side for something — asks_us or informs_us. The waiting queue can prove somebody wrote and nobody replied; it cannot tell a question from a report, a receipt or a monthly statement, which is most of what a rep wanted to know. Judged over what SURVIVES the queue's own rules rather than over all unjudged mail, so the pass costs one call per ten messages a rep would otherwise have read. The prompt carries the recipient line and whether a calendar part came with it, because a report sent to a desk address with the reader merely copied reads exactly like a direct request without them. Below the confidence floor after a solo re-ask the message stays UNJUDGED, and unjudged is a real answer: the queue ranks such a row exactly as it did before this pass existed, so there is never a reason to guess. An informs_us verdict ends the obligation and hides the row from the queue, never deletes or archives it, and every row it hides is counted and listed under its own figure in /worklist/hidden. It never outranks a human: a request somebody accepted stays owed whatever the verdict says. The figure is what keeps this safe: this is one model call's opinion about a customer's mail, so a wrong verdict has to be visible to the lead who reads that figure. No cost_unit, and the omission is a decision rather than a gap: cost_unit names a task the connect-time backfill prices, and this pass deliberately does not run at backfill. Its candidates are the LIVE waiting queue, so judging a mailbox's history would spend a call per message on years of mail nobody will ever be shown — the hourly pass reaches everything the queue can surface, and reaches it when a rep is actually looking at it.
@@ -139,7 +139,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "e62a4d8789784f6bc2736d434f3954a0eb9682eb2880c3d75df2b1ec89062ce6"
+const TaskContractHash = "63f5cb255ed46204722aef9a6d513d43a073a8ecc9bd81a450833bfa979ea19f"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -296,7 +296,7 @@ var taskStatus = map[Task]string{
 	TaskDraftReply:                    "shipped",
 	TaskEnrich:                        "shipped",
 	TaskGrowthFit:                     "shipped",
-	TaskNlSearch:                      "planned",
+	TaskNlSearch:                      "shipped",
 	TaskOfferDraft:                    "shipped",
 	TaskOwedVerdict:                   "shipped",
 	TaskProposeRoles:                  "shipped",
@@ -388,6 +388,9 @@ var taskSites = map[Task][]Site{
 	},
 	TaskGrowthFit: {
 		{Name: "growth_fit", Kind: "one_shot"},
+	},
+	TaskNlSearch: {
+		{Name: "filter_propose", Kind: "one_shot"},
 	},
 	TaskOfferDraft: {
 		{Name: "draft", Kind: "one_shot"},
@@ -562,7 +565,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskDraftReply:                    {Scopes: []string{"positioning", "sales", "proof", "market"}, TokenBudget: 1400, Conditional: false},
 	TaskEnrich:                        {TokenBudget: 0, Conditional: false},
 	TaskGrowthFit:                     {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false},
-	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: false},
+	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: true},
 	TaskOfferDraft:                    {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},
 	TaskOwedVerdict:                   {TokenBudget: 0, Conditional: false},
 	TaskProposeRoles:                  {TokenBudget: 0, Conditional: false},

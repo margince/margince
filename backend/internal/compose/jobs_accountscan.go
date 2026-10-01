@@ -45,22 +45,17 @@ func (AccountScanArgs) Kind() string { return "account_scan" }
 // WorkspaceID binds this scan to its tenant (jobs.WorkspaceScoped).
 func (a AccountScanArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// accountScanQueue is the pool a reader is watching the page for: the
-// transcript reading's, for the reason api/jobs.yaml gives.
-const accountScanQueue = "transcript_read"
-
-// accountScanInsertOpts routes the job and deduplicates it by args, only
+// accountScanInsertOpts deduplicates the job by args, only
 // while a job is still active — for the reason documentExtractInsertOpts
 // gives. The scan reaches that trap through a retry inside the lease: it
 // declines the claim and returns, the job completes while the row stays
 // live, and the re-arm's enqueue under the same scan id must not collapse
 // against it.
 func accountScanInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue:       accountScanQueue,
+	return jobs.QueuedAs[AccountScanArgs](&river.InsertOpts{
 		MaxAttempts: sweptJobMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-	}
+	})
 }
 
 // WithAccountScan enables the scan on the api role: ensure queues the read

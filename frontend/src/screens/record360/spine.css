@@ -24,6 +24,10 @@
      the card already draws a boundary at every place it becomes one. */
   padding-top: var(--space-4);
 }
+.co-spine-scroll:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
 
 .co-spine-track {
   list-style: none;
@@ -135,7 +139,7 @@
      compared with nothing, rather than lined up with the body's tabular
      figures. */
   font-family: var(--fontFamilyHeading);
-  color: var(--warning);
+  color: var(--warningText);
 }
 .co-spine-gap .co-spine-rail {
   border-block-start-style: dashed;

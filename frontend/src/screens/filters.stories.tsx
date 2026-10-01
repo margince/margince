@@ -266,3 +266,41 @@ export const SharedViewsLibrary: Story = {
     return <FiltersScreen id="lists" />;
   },
 };
+
+// A Live List's filter opened from its page by its steward: the notice names
+// the list, and "Save to" writes the tree back to it beside "Save as Live List".
+export const EditingALiveListsFilter: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /lists/${liveList.id}`]: () => jsonResponse(liveList),
+      "GET /filters/vocabulary": () =>
+        jsonResponse({
+          resource: "company",
+          fields: [
+            {
+              name: "industry",
+              type: "text",
+              operators: ["eq", "neq"],
+              custom: false,
+            },
+            {
+              name: "cf_last_touch",
+              type: "date",
+              operators: ["lt", "gt"],
+              custom: true,
+            },
+          ],
+        }),
+      "POST /filters/preview": () =>
+        jsonResponse({
+          resource: "company",
+          match_count: 42,
+          columns: ["id"],
+          rows: [],
+          truncated: false,
+        }),
+    });
+    return <FiltersScreen id="list" view={liveList.id} />;
+  },
+};

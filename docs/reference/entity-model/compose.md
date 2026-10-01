@@ -220,7 +220,6 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `brief_item_pkey` — `unique, btree (id)`
 - `idx_brief_item_deal` — `btree (deal_id)`
-- `idx_brief_item_run` — `btree (brief_run_id, rank)`
 - `idx_brief_item_state` — `btree (brief_run_id, state, state_at)`
 - `uq_brief_item_run_deal` — `unique, btree (brief_run_id, deal_id)`
 - `uq_brief_item_run_rank` — `unique, btree (brief_run_id, rank)`
@@ -302,21 +301,21 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `changed_count` | `integer` | yes | Required `integer`. |
 | `params` | `jsonb` | yes | Required `jsonb`, defaulting to `'{}'::jsonb`. |
 | `passport_id` | `uuid` |  | Optional `uuid`. |
-| `record_type` | `text` | yes | One of `contact`, `company`, `deal`. |
+| `record_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`. |
 | `requested_by` | `text` | yes | Required `text`. |
 | `requested_for` | `uuid` |  | Optional `uuid`. |
 | `result` | `jsonb` | yes | Required `jsonb`, defaulting to `'{}'::jsonb`. |
 | `skipped_count` | `integer` | yes | Required `integer`. |
 | `undo_of` | `uuid` |  | Set on an undo: the change it put back. |
 | `undone_by` | `uuid` |  | Set once the change was undone: the undo that put it back. |
-| `verb` | `text` | yes | One of `reassign_owner`, `archive`, `add_to_list`, `remove_from_list`. |
+| `verb` | `text` | yes | One of `reassign_owner`, `archive`, `add_to_list`, `remove_from_list`, `add_tag`, `remove_tag` and 1 more. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 
 **Rules**
 
 - `bulk_operation_counts_check` — `CHECK (((changed_count >= 0) AND (skipped_count >= 0)))`
-- `bulk_operation_record_type_check` — `CHECK ((record_type = ANY (ARRAY['contact', 'company', 'deal'])))`
-- `bulk_operation_verb_check` — `CHECK ((verb = ANY (ARRAY['reassign_owner', 'archive', 'add_to_list', 'remove_from_list'])))`
+- `bulk_operation_record_type_check` — `CHECK ((record_type = ANY (ARRAY['contact', 'company', 'deal', 'lead'])))`
+- `bulk_operation_verb_check` — `CHECK ((verb = ANY (ARRAY['reassign_owner', 'archive', 'add_to_list', 'remove_from_list', 'add_tag', 'remove_tag', 'create_task'])))`
 
 **Indexes**
 
@@ -993,7 +992,6 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
-- `idx_weekly_review_driver_bar` — `btree (weekly_review_id, period_kind, bar)`
 - `uq_weekly_review_driver_deal` — `unique, btree (weekly_review_id, period_kind, bar, deal_id)`
 - `weekly_review_driver_pkey` — `unique, btree (id)`
 
@@ -1026,7 +1024,6 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
-- `idx_weekly_review_learning_review` — `btree (weekly_review_id, "position")`
 - `uq_weekly_review_learning_slot` — `unique, btree (weekly_review_id, "position")`
 - `weekly_review_learning_pkey` — `unique, btree (id)`
 

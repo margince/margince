@@ -80,19 +80,19 @@
 }
 
 .rmap-pill-waiting {
-  fill: var(--warning);
+  fill: var(--warningText);
 }
 
 .rmap-pill-answered {
-  fill: var(--success);
+  fill: var(--successText);
 }
 
 .rmap-pill-no_reply {
-  fill: var(--warning);
+  fill: var(--warningText);
 }
 
 .rmap-pill-untried {
-  fill: var(--borderStrong);
+  fill: var(--textSecondary);
 }
 
 .rmap-box {
@@ -125,7 +125,7 @@
 }
 
 .rmap-gap .rmap-name {
-  fill: var(--warning);
+  fill: var(--warningText);
 }
 
 .rmap-node {

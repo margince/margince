@@ -67,8 +67,8 @@ func (CheckCompanyVatArgs) Kind() string { return "check_company_vat" }
 // WorkspaceID binds this consultation to its tenant (jobs.WorkspaceScoped).
 func (a CheckCompanyVatArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// vatCheckQueue is declared in api/jobs.yaml at one worker; the name is spelled
-// here because the insert has to name it.
+// vatCheckQueue mirrors api/jobs.yaml, and sizes the pool below; the insert
+// takes the queue from the declaration itself (jobs.QueuedAs).
 const (
 	vatCheckQueue = "vat_check"
 	// vatCheckMaxWorkers mirrors api/jobs.yaml. One, for the reason stated at
@@ -121,13 +121,12 @@ type vatCheckEnqueuer interface {
 // useful, because the worker reads the number when it RUNS rather than from the
 // args.
 func vatCheckInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue: vatCheckQueue,
+	return jobs.QueuedAs[CheckCompanyVatArgs](&river.InsertOpts{
 		// ByArgs across every ACTIVE state: River requires the unique set to
 		// include pending and running and refuses a narrower one outright.
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 		MaxAttempts: vatCheckMaxAttempts,
-	}
+	})
 }
 
 // vatCheckWorker consults the register about one company.
@@ -177,22 +176,67 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVa
 	}))
 	companyID := ids.From[ids.CompanyKind](args.CompanyID)
 
-	number, ok, err := store.VatNumberForCheck(wsCtx, companyID)
-	if err != nil {
-		return jobs.FaultContext(wsCtx, fmt.Errorf("reading the VAT number to check: %w", err))
+	// ASKED AGAIN AFTER RECORDING, because the number can move while this job
+	// holds it. A correction enqueues a successor, and River's uniqueness spans
+	// `running` — it must, since a narrower set is refused outright — so that
+	// successor is skipped and nothing else would ever ask about the new value.
+	//
+	// Nothing is marked to make that visible: VatNumberForCheck already answers
+	// "is there something worth asking" from the data, by comparing the stated
+	// number against the one the stored check was about. A column saying the
+	// same thing would be a second copy of it, maintained by hand.
+	//
+	// Bounded, because the question is asked of a register on goodwill and a
+	// contact editing the field repeatedly must not turn one job into an
+	// unbounded run of consultations. Past the bound the next write's own
+	// enqueue picks it up, which is no longer deduplicated once this job ends.
+	for round := 0; round < vatCheckRoundsPerJob; round++ {
+		number, ok, err := store.VatNumberForCheck(wsCtx, companyID)
+		if err != nil {
+			return jobs.FaultContext(wsCtx, fmt.Errorf("reading the VAT number to check: %w", err))
+		}
+		// A contact who pressed the button asked for THIS consultation, so the
+		// only thing that stops it is the company stating no number at all. The
+		// staleness rule the automatic lanes obey is about not spending the
+		// installation's shared rate on questions nobody asked; this one was
+		// asked. First round only: a later round is reached because the value
+		// MOVED, and re-applying the override there would re-ask about a number
+		// already answered in this same job, forever.
+		if round == 0 && args.Requested && number != "" {
+			ok = true
+		}
+		if !ok {
+			// Nothing to ask about: the company states no VAT number, or the
+			// one it states has already been consulted. Both mean "do not ask".
+			return nil
+		}
+		if err := w.consult(wsCtx, store, companyID, number); err != nil {
+			// Faulted again although consult already faults its own returns.
+			// The rule is held by reading the RETURN rather than what the
+			// callee did with it, and a second pass costs nothing: a snooze or
+			// a cancel goes through untouched, so a register asking us to come
+			// back later still reschedules instead of recording a failure.
+			return jobs.FaultContext(wsCtx, err)
+		}
 	}
-	// A contact who pressed the button asked for THIS consultation, so the only
-	// thing that stops it is the company stating no number at all. The staleness
-	// rule the automatic lanes obey is about not spending the installation's
-	// shared rate on questions nobody asked; this one was asked.
-	if args.Requested && number != "" {
-		ok = true
-	}
-	if !ok {
-		// Nothing to ask about: the company states no VAT number, or the one it
-		// states has already been consulted. Both mean "do not ask".
-		return nil
-	}
+	return nil
+}
+
+// vatCheckRoundsPerJob bounds how many consultations one job may spend.
+//
+// Two: the one it was queued for, and one more for a value that moved while it
+// was being answered. A third would be a contact editing the field faster than
+// the register answers, and their next write enqueues a job of its own.
+const vatCheckRoundsPerJob = 2
+
+// consult asks the register about one number and records what it answered.
+//
+// Returns the job's own error: a snooze and a fault both belong to River and
+// are passed up unchanged, so the loop above stops on either rather than
+// spending its second round on a register that just declined.
+func (w *vatCheckWorker) consult(
+	wsCtx context.Context, store *contacts.Store, companyID ids.CompanyID, number string,
+) error {
 	if w.checker == nil {
 		// A deployment with no checker should not have queued this. Recording
 		// nothing keeps the row honest — an absent check is not a failed one —

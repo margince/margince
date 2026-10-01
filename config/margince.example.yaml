@@ -313,11 +313,11 @@ mcp:
 company_context:
   rollout: onboarding
 
-# Live Lists and Shortlists: named, shared sets of one record type. Off until an
-# operator switches them on; while off, the /lists routes answer 404, no agent
-# tool reaches them and no screen offers them.
+# Live Lists and Shortlists: named, shared sets of one record type. On by
+# default. Set enabled: false to hide them: the /lists routes answer 404, no
+# agent tool reaches them and no screen offers them. No list is deleted.
 lists:
-  enabled: false
+  enabled: true
 
 # Ops kill switches (OPS-CFG-9): capabilities this installation turns on
 # deliberately, in the file the deployment reviews. The whole section is

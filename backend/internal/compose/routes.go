@@ -363,6 +363,16 @@ func WithMetricsToken(token string) Option {
 	}
 }
 
+// WithTrustedProxies names the reverse proxies whose X-Forwarded-For this
+// process believes when it keys a per-IP limit — see
+// httpserver.ResolveClientIP. Called unconditionally at boot; the empty set
+// keys every limit on the TCP peer.
+func WithTrustedProxies(trusted httpserver.TrustedProxies) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.trustedProxies = trusted
+	}
+}
+
 // WithOpenMetrics serves /metrics to any caller that reaches the port, for the
 // deployment whose network boundary already contains it and whose scraper
 // cannot carry a credential. cmd/api applies it only for an explicit

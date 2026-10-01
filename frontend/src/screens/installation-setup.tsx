@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { readStored, STORAGE_KEYS, writeStored } from "../app/storage";
 import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
@@ -13,6 +12,7 @@ import { OffsiteLink } from "../design-system/offsitelink";
 import {
   OnboardingStage,
   StageActions,
+  useStageTitleFocus,
 } from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
@@ -28,8 +28,12 @@ import {
 } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
-import { throwProblem, useMe, WriteRefused } from "./common";
+import { throwProblem, WriteRefused } from "./common";
 import { ImapMailboxForm } from "./imap-connect-form";
+import {
+  usePlatformDeclined,
+  useRememberPlatformDeclined,
+} from "./installation-setup.decline";
 import { AiBindRefused } from "./installation-setup.notices";
 import {
   RedirectUris,
@@ -101,107 +105,6 @@ export function useInstallationSetup() {
  * held behind an empty screen, with nothing on it to say what it wants.
  */
 const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
-
-/**
- * Where "Not now" on the platform question is remembered.
- *
- * The app step is asked of the contact running the cold start, once. The server
- * has no word for "asked and declined" — the step is simply unconfigured until
- * an app is stored, from here or from Settings — so the decline lives in this
- * browser.
- *
- * KEYED BY THE ACCOUNT THAT GAVE IT. A mark keyed on the browser alone outlives
- * the installation it was about: a machine that had run one cold start carried
- * that answer into the next, and the second installation's setup skipped the
- * platform question with nothing on screen to say why — the one step that asks
- * for the company's OAuth app, silently gone, on the run that most needed
- * it. A re-claimed installation mints its own administrator, so its cold start
- * asks again; the same contact on the same installation is still asked once.
- */
-function declinedKey(account: string) {
-  return { family: STORAGE_KEYS.platformDeclined, member: account };
-}
-
-// The accounts that declined in THIS tab, whether or not storage kept it.
-const declinedThisSession = new Set<string>();
-
-/**
- * Forgets the in-tab declines — the counterpart to `localStorage.clear()`,
- * and needed for the same reason: this set is the half of the answer that
- * storage did not keep, so clearing one without the other leaves a decline
- * standing that the caller believes they erased. A test suite whose cases
- * each start from an unanswered question is the only caller today.
- */
-export function forgetPlatformDeclines(): void {
-  declinedThisSession.clear();
-}
-
-/** Whether `account` declined the question. An unknown account — the session
- *  probe has not answered yet — has declined nothing, which is the reading
- *  that asks rather than the one that hides. */
-function platformDeclined(account: string | null): boolean {
-  if (account === null) {
-    return false;
-  }
-  // Storage blocked and nothing declined in this tab either: the question is
-  // asked again, which is the safe reading of not knowing.
-  return (
-    declinedThisSession.has(account) || readStored(declinedKey(account)) === "1"
-  );
-}
-
-// Who is watching the decline: the gate on this screen and the act that
-// stands in front of it. Storage has no change event in the tab that wrote
-// it, so the write tells them itself.
-const declinedListeners = new Set<() => void>();
-
-function subscribeDeclined(listener: () => void): () => void {
-  declinedListeners.add(listener);
-  return () => declinedListeners.delete(listener);
-}
-
-function rememberPlatformDeclined(account: string | null): void {
-  if (account === null) {
-    return;
-  }
-  // Recorded here FIRST, and read back first: a browser that refuses storage
-  // still has to honour the answer for as long as the tab is open. Writing
-  // only to storage meant a private window asked the question again on the
-  // very next render, which is the step reappearing under the reader.
-  declinedThisSession.add(account);
-  writeStored(declinedKey(account), "1");
-  for (const listener of declinedListeners) {
-    listener();
-  }
-}
-
-/** The signed-in account the decline belongs to, or null while the session
- *  probe is still answering. */
-function useAccount(): string | null {
-  const me = useMe();
-  return me.data?.user.id ?? null;
-}
-
-/**
- * Whether this account declined the platform question in this browser, live:
- * the answer every caller of `outstandingStep` passes it, so the gate and the
- * act in front of it re-read the same fact the moment it changes.
- */
-export function usePlatformDeclined(): boolean {
-  const account = useAccount();
-  return useSyncExternalStore(
-    subscribeDeclined,
-    () => platformDeclined(account),
-    () => false,
-  );
-}
-
-/** Records the decline against the account that gave it. Its own hook so the
- *  gate does not have to hold the account itself to hand it back. */
-function useRememberPlatformDeclined(): () => void {
-  const account = useAccount();
-  return () => rememberPlatformDeclined(account);
-}
 
 /**
  * The first step that is not done yet AND that this screen can ask for, in the
@@ -898,18 +801,40 @@ function PlatformStep({
 }
 
 // What the room says while a step is answered, and for the four seconds after
-// the model binding lands: the ignition is not a step but the moment that
-// answer takes effect.
+// the binding lands, which carry no step's status line: it would be stale.
 function head(
   step: Step["step"],
   ignited: boolean,
-): Readonly<{ title: MessageKey; sub: MessageKey }> {
+): Readonly<{ eyebrow?: MessageKey; title: MessageKey; sub: MessageKey }> {
   if (ignited) {
     return { title: "firstRun.ignite.title", sub: "firstRun.ignite.sub" };
   }
   return step === "oauth_app"
-    ? { title: "firstRun.platform.title", sub: "firstRun.platform.sub" }
-    : { title: "firstRun.ai.title", sub: "firstRun.ai.sub" };
+    ? {
+        eyebrow: "firstRun.google.eyebrow",
+        title: "firstRun.platform.title",
+        sub: "firstRun.platform.sub",
+      }
+    : {
+        eyebrow: "firstRun.ai.eyebrow",
+        title: "firstRun.ai.title",
+        sub: "firstRun.ai.sub",
+      };
+}
+
+// Which board is up, for the render, the room and the focus. The ignition
+// holds only while the report asks for the model, so moving past it ends it.
+function boardOf(
+  step: Step | undefined,
+  ignited: string | null,
+): "model" | "ignition" | "platform" | undefined {
+  if (step === undefined) {
+    return undefined;
+  }
+  if (step.step === "oauth_app") {
+    return "platform";
+  }
+  return ignited === null ? "model" : "ignition";
 }
 
 function modelBound(setup: Setup | undefined): boolean {
@@ -940,15 +865,14 @@ export function InstallationSetup() {
   // Owned here because the Core belongs to the stage and the write belongs to
   // the step. The step says when it is writing; nothing reads this but the orb.
   const [busy, setBusy] = useState(false);
-  // The binding landed and the reader is watching the sequence. Held here
-  // rather than in the step, because what it changes is the ROOM: the light, the
-  // orb and what stands in the column all belong to the stage.
-  //
-  // The vendor travels with it because the sequence names whose key was sealed,
-  // and "sealed in the vault" without saying whose is a sentence about a
-  // mechanism rather than about what the reader just did.
+  // The binding landed and the sequence is playing: the ROOM's state, so held
+  // here. The vendor travels with it, since "sealed in the vault" without whose
+  // key is a sentence about a mechanism, not about what the reader just did.
   const [ignited, setIgnited] = useState<string | null>(null);
-  const igniting = useIgnitionCore(ignited !== null);
+  const board = boardOf(step, ignited);
+  const ignition = board === "ignition";
+  useStageTitleFocus(board);
+  const igniting = useIgnitionCore(ignition);
 
   // While the answer has not arrived, nothing: a step drawn from a guess would
   // be replaced a moment later by the real one, and the reader would have
@@ -961,8 +885,8 @@ export function InstallationSetup() {
   if (setup.isPending || !step) {
     return null;
   }
-  const core =
-    ignited !== null ? igniting.state : busy ? "working" : ("idle" as const);
+  const core = ignition ? igniting.state : busy ? "working" : ("idle" as const);
+  const heading = head(step.step, ignition);
   return (
     <OnboardingStage
       flow={t("ob.stage.flow")}
@@ -970,10 +894,10 @@ export function InstallationSetup() {
       // is asked again. That is not a second meaning for the indigo — it is the
       // same claim, made by the client that just watched the write succeed
       // rather than by the read that confirms it.
-      lit={ignited !== null || modelBound(setup.data)}
+      lit={ignition || modelBound(setup.data)}
       coreState={core}
       coreProgress={igniting.progress}
-      coreFlash={ignited !== null}
+      coreFlash={ignition}
       // The Core is aria-hidden, so the band says in words what it is showing.
       // From `ob.core.*`, the vocabulary every onboarding surface reads: the
       // orb showing the same state on two screens must not read as two
@@ -986,11 +910,7 @@ export function InstallationSetup() {
           ? "firstRun.step.platform"
           : "firstRun.step.model",
       )}
-      eyebrow={t(
-        step.step === "oauth_app"
-          ? "firstRun.google.eyebrow"
-          : "firstRun.ai.eyebrow",
-      )}
+      eyebrow={heading.eyebrow && t(heading.eyebrow)}
       // The one qualification the step carries, on the card's bottom edge. It
       // is true of the whole screen rather than of any field on it, which is
       // what makes it chrome: as a callout in the board it read as an
@@ -1000,10 +920,10 @@ export function InstallationSetup() {
           ? "firstRun.platform.foot"
           : "firstRun.ai.foot",
       )}
-      title={t(head(step.step, ignited !== null).title)}
-      sub={t(head(step.step, ignited !== null).sub)}
+      title={t(heading.title)}
+      sub={t(heading.sub)}
     >
-      {step.step === "oauth_app" ? (
+      {board === "platform" ? (
         <PlatformStep onBusy={setBusy} onDecline={decline} />
       ) : ignited === null ? (
         <AiStep
@@ -1016,12 +936,14 @@ export function InstallationSetup() {
       ) : (
         <Ignition
           vendor={ignited}
-          onDone={() => {
+          onDone={async () => {
+            // NOW the server is asked again, and only its answer lets go of
+            // the ignition: the stale report would draw the model form again.
+            await queryClient.invalidateQueries(
+              { queryKey: ["installation-setup"] },
+              { throwOnError: true },
+            );
             setIgnited(null);
-            // NOW the server is asked again, and the answer is what moves the
-            // screen — the same rule every other step follows, just deferred
-            // until the reader was done with this one.
-            queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
           }}
         />
       )}

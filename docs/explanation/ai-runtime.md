@@ -500,13 +500,12 @@ today *before* rebinding a tier under Settings → AI.
 
 A run is told what to measure — never a default read off the runner's disk. It is
 either ONE named candidate (`MODEL=`) bound to every task, or a whole
-**deployment** (`ROUTING=`), where each task is certified against the model that
-deployment binds at the task's leading ladder rung. The second exists because
-nobody deploys a model: an install binds one model at `local_small` and another
-at `premium`, and those are the answers it actually depends on. The rungs below a
-leading one are reachable under budget pressure and want their own runs — a
-record names one model, so pooling two would leave it unable to say which
-answered.
+**deployment** (`ROUTING=`), where each task is certified against every distinct
+model its ladder binds: the rung that answers, then each fallback a failed call
+falls to. The second exists because nobody deploys a model: an install binds one
+model at `local_small` and another at `premium`, and those are the answers it
+actually depends on. Each model gets its own run and its own record — a record
+names one model, so pooling two would leave it unable to say which answered.
 
 What it measures is the part worth knowing. The corpus holds
 **fixtures, not prompts**: a scenario carries the input a site is given, and the

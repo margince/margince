@@ -5,30 +5,33 @@
 // paints. Read as text rather than through a parser: the sheets here are flat,
 // which `rules()` holds, and a selector is read by one depth-aware tokenizer.
 
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { extensionLayers, filesMatching } from "./source-tree";
 
-export function stylesheets(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "node_modules" || entry.name === "dist"
-        ? []
-        : stylesheets(path);
-    }
-    return path.endsWith(".css") ? [path] : [];
-  });
+// Every sheet the bundle ships: the core's and each extension's frontend layer,
+// each directory read once however many links reach it.
+export function appStylesheets(frontendRoot: string): string[] {
+  const seen = new Set<string>();
+  return [
+    join(frontendRoot, "src"),
+    ...extensionLayers(join(frontendRoot, "..", "extensions")),
+  ].flatMap((dir) => filesMatching(dir, /\.css$/, seen));
 }
 
 export type Rule = { file: string; selector: string; body: string };
 
 export function rules(root: string): Rule[] {
-  const sheets = stylesheets(root);
+  const sheets = filesMatching(root, /\.css$/);
   if (sheets.length === 0) {
     throw new Error(
       `no stylesheet under ${root} — a rule walk over none reports a clean tree`,
     );
   }
+  return rulesOf(sheets);
+}
+
+export function rulesOf(sheets: readonly string[]): Rule[] {
   const all: Rule[] = [];
   for (const file of sheets) {
     const sheet = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
@@ -311,7 +314,20 @@ export function subjectClasses(selector: string): Set<string> {
 // `(?:^|[;{\s])` is what keeps this off --*-color: the character before a
 // longhand's `color:` is always a hyphen.
 export function inks(body: string): string[] {
-  return [...body.matchAll(/(?:^|[;{\s])color:\s*var\((--[\w-]+)\)/g)].map(
-    ([, ink]) => ink,
+  return colorValues(body).flatMap(
+    (value) => /^var\((--[\w-]+)\)/.exec(value)?.[1] ?? [],
   );
+}
+
+// Every value a rule's body gives `property`, whatever it is spelled as: a
+// fallback, a `color-mix()` or a second declaration all read here.
+export function declaredValues(body: string, property: string): string[] {
+  const name = property.replaceAll("-", "\\-");
+  return [
+    ...body.matchAll(new RegExp(`(?:^|[;{\\s])${name}\\s*:\\s*([^;]+)`, "g")),
+  ].map(([, value]) => value.trim());
+}
+
+export function colorValues(body: string): string[] {
+  return declaredValues(body, "color");
 }

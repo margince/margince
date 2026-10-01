@@ -99,6 +99,13 @@ function Meter({ filled, total }: Readonly<{ filled: number; total: number }>) {
   );
 }
 
+export const STAT_CARD_TONES = [
+  "info",
+  "success",
+  "warning",
+  "danger",
+] as const;
+
 export function StatCard({
   label,
   value,
@@ -138,7 +145,7 @@ export function StatCard({
   // directions, and a verdict that is fine reads as fine rather than as one
   // nobody has judged yet. `info` is the reading a job has not finished
   // writing, which is a different thing from one nobody has judged.
-  tone?: "info" | "success" | "warning" | "danger";
+  tone?: (typeof STAT_CARD_TONES)[number];
   // Where the figure came from, named on the card that shows it. A money
   // reading a reader cannot trace is one they must verify elsewhere.
   source?: ReactNode;

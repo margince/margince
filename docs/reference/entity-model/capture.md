@@ -190,7 +190,6 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_connection_provider_check` — `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
 - `capture_connection_status_check` — `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
 - `capture_connection_unique` — `UNIQUE (user_id, provider)`
-- `uq_capture_connection_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
@@ -198,7 +197,6 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `connector_connection_pkey` — `unique, btree (id)`
 - `idx_capture_connection` — `btree (provider, status) WHERE (archived_at IS NULL)`
 - `idx_capture_watch_renew` — `btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'))`
-- `uq_capture_connection_ws_id` — `unique, btree (id)`
 
 ## capture_counterparty_hold
 
@@ -228,7 +226,6 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_counterparty_hold_pkey` — `unique, btree (id)`
-- `capture_counterparty_hold_user_idx` — `btree (user_id, kind)`
 - `capture_counterparty_hold_user_value_key` — `unique, btree (user_id, kind, value)`
 
 ## capture_digest
@@ -291,7 +288,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_exclusion_pkey` — `unique, btree (id)`
 - `idx_capture_exclusion_user` — `btree (user_id)`
 - `idx_capture_exclusion_value` — `btree (kind, value)`
-- `uq_capture_exclusion` — `unique, btree (scope, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), kind, value)`
+- `uq_capture_exclusion` — `unique, btree (scope, user_id, kind, value) NULLS NOT DISTINCT`
 
 ## capture_freemail_domain
 
@@ -637,7 +634,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_trace_counterparty` — `btree (counterparty) WHERE (counterparty IS NOT NULL)`
 - `capture_trace_message` — `btree (source_system, source_id)`
-- `capture_trace_natural_key` — `unique, btree (COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), source_system, source_id, stage, outcome)`
+- `capture_trace_natural_key` — `unique, btree (user_id, source_system, source_id, stage, outcome) NULLS NOT DISTINCT`
 - `capture_trace_pkey` — `unique, btree (id)`
 - `capture_trace_user_window` — `btree (user_id, occurred_at DESC)`
 - `capture_trace_window` — `btree (occurred_at DESC)`

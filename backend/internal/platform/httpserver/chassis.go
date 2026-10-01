@@ -9,7 +9,6 @@ package httpserver
 
 import (
 	"log/slog"
-	"net"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -182,22 +181,4 @@ func RecoverPanics(log *slog.Logger, next http.Handler) http.Handler {
 		}()
 		next.ServeHTTP(w, r)
 	})
-}
-
-// ClientIP is the ONE client-IP throttle key in this process — the login and
-// password-reset limits in identity, the anonymous booking and preference
-// paths, and every connector edge. It is here rather than in either caller
-// because two copies meant a deployment could harden one edge and leave the
-// other keyed differently, and nothing would say so.
-//
-// RemoteAddr is the DIRECT peer. A raw X-Forwarded-For is attacker-chosen and
-// deliberately never read: a deployment fronted by a proxy terminates rate
-// limiting there, or extends this to a *trusted* Forwarded header — never
-// trusted blindly.
-func ClientIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }

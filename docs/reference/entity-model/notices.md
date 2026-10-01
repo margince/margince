@@ -6,7 +6,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 ## notice
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -19,6 +19,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 | `origin` | `jsonb` |  | Optional `jsonb`. |
 | `read_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `recipient_user_id` | `uuid` | yes | Points at `app_user.id` — deleting the parent deletes this row. |
+| `retracted_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `subject` | `text` | yes | The headline the recipient reads, derived from the kind rather than supplied. |
 | `target_id` | `uuid` |  | Optional `uuid`. |
 | `target_type` | `text` |  | Optional `text`. |
@@ -41,7 +42,6 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 **Indexes**
 
-- `idx_notice_recipient_user` — `btree (recipient_user_id)`
 - `notice_history` — `btree (recipient_user_id, created_at DESC, id DESC)`
 - `notice_pkey` — `unique, btree (id)`
 - `notice_unread` — `btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)`

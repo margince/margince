@@ -165,7 +165,8 @@ func (o ownDomainReader) ReaderAddresses(
 // needing one gate per independently-built store.
 func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 	return collections.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).
-		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithBaseCurrency(identity.BaseCurrencyOf)
+		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithBaseCurrency(identity.BaseCurrencyOf).
+		WithRuleUses(ruleUsesOf(pool))
 }
 
 // dealWorthTodaySQL is what the filter builder's deal amount compares: the
@@ -311,6 +312,12 @@ func (s *Server) wireExportSurface(pool *pgxpool.Pool, log *slog.Logger) {
 	s.filterPreviewHandlers = filterPreviewHandlers{
 		pool:        pool,
 		collections: collectionsStore,
+	}
+	// The lane stays nil until WithFilterProposals binds one, which is the
+	// no-model answer: a 409 saying a model is needed, never a 500.
+	s.filterProposalHandlers = filterProposalHandlers{
+		pool: pool, collections: collectionsStore, now: time.Now,
+		labels: catalogLabels(customfields.NewService(pool, nil)),
 	}
 	s.exportBundleHandlers = newExportBundleHandlers(pool, log)
 }

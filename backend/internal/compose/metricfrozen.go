@@ -45,7 +45,9 @@ func (metricEvaluator) ProjectFrozen(before crmcontracts.ReportingEvaluation, fa
 		coverage.Withheld = true
 		coverage.EligibleCount = nil
 		coverage.PricedCount = nil
-		projected := projectReportingMetric(reportingMetrics[index].definition, before.Context, facts, coverage)
+		definition := reportingMetrics[index].definition
+		definition.Version = metric.Version
+		projected := projectReportingMetric(definition, before.Context, facts, coverage)
 		if metric.Id == reportingClosedWinRate {
 			projected.Coverage.Status = coverage.Status
 			projected.Coverage.Withheld = false

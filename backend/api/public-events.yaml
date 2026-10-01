@@ -44,6 +44,7 @@ components:
         - list.restored
         - list.member_added
         - list.member_removed
+        - list.evaluated
         - commission.accrued
         - commission.decided
         - contract.created
@@ -842,14 +843,14 @@ components:
       x-entity-type: dynamic
       x-version: 1
       description: >-
-        Payload for list.member_added — a record was added to a Shortlist by hand or in a bulk
-        change. The subject is the RECORD (contact, company, deal, lead or project), so the event
-        reaches only a subscriber who may see that record. It names no list: delivery is decided
+        Payload for list.member_added — a record was added to a Shortlist by hand, in a bulk change
+        or by an automation rule. The subject is the RECORD (contact, company, deal, lead or
+        project), so the event reaches only a subscriber who may see that record. It names no list: delivery is decided
         by the record, and a list its subscriber cannot find must not be named to them. Which list,
         and the note, stay on the list's history, which is read under the list's own sharing.
       required: [reason]
       properties:
-        reason: { type: string, description: 'chosen or bulk.' }
+        reason: { type: string, description: 'chosen, bulk or automation.' }
       additionalProperties: false
 
     PublicEventListMemberRemoved:
@@ -863,6 +864,23 @@ components:
       required: [reason]
       properties:
         reason: { type: string, description: 'chosen or bulk.' }
+      additionalProperties: false
+
+    PublicEventListEvaluated:
+      type: object
+      x-event-type: list.evaluated
+      x-entity-type: list
+      x-version: 1
+      description: >-
+        Payload for list.evaluated — a check of a Live List saw records join or leave it. Emitted
+        once per check that saw a change, never per record. It carries no counts: the check sees
+        every record, and a count would tell a subscriber how many records they cannot see. Who
+        joined and left is on the list's history, read under the reader's own row scope.
+      required: [definition_version, evaluated_at, filter_changed]
+      properties:
+        definition_version: { type: integer, format: int64, description: 'The list version the check ran under.' }
+        evaluated_at: { type: string, format: date-time }
+        filter_changed: { type: boolean, description: 'This was the first check after the filter changed.' }
       additionalProperties: false
 
     PublicEventDealOwnerChanged:

@@ -13,7 +13,7 @@ const coverage = {
   withheld: false,
 } satisfies components["schemas"]["ReportingCoverage"];
 export const interval = {
-  start_at: "2026-09-01T00:00:00Z",
+  start_at: "2026-08-31T22:00:00Z",
   end_at: "2026-09-22T12:00:00Z",
 };
 export const reportingStoryEvaluation: ReportingEvaluation = {
@@ -25,7 +25,7 @@ export const reportingStoryEvaluation: ReportingEvaluation = {
     interval,
     target_interval: {
       start_at: interval.start_at,
-      end_at: "2026-10-01T00:00:00Z",
+      end_at: "2026-09-30T22:00:00Z",
     },
     period_kind: "this_month",
     timezone: REPORTING_FIXTURE_ZONE,
@@ -53,7 +53,7 @@ export const reportingStoryEvaluation: ReportingEvaluation = {
   metrics: [
     {
       id: "bookings_won",
-      version: "1",
+      version: "2",
       unit: "EUR",
       value: 21600000,
       target: 30000000,
@@ -315,7 +315,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
           supports_target: metric.id === "bookings_won",
           definition:
             metric.id === "bookings_won"
-              ? "Won deals credited to their owner at closing, in the selected close interval."
+              ? "Won deals grouped by their current owner, in the selected close interval."
               : "Current authorized observations at the capture time.",
           blocks: reportingStoryEvaluation.charts
             .filter((chart) => chart.metric === metric.id)
@@ -334,7 +334,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
       },
       {
         id: "meetings_held",
-        version: "1",
+        version: "2",
         unit: "count",
         temporal_basis: "event_period",
         supports_target: true,

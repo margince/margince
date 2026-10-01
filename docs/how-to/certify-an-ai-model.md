@@ -25,12 +25,11 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    - `MODEL=provider:model` — ONE candidate, bound to every task under test.
      The A/B shape: change the model, leave everything else, compare.
    - `ROUTING=<deployment config>` — a **deployment**: each task is certified
-     against the model that config's `seeds.ai_routing` binds at the task's
-     *leading ladder rung*, the rung that would actually serve it, so one run
-     writes records across several models. Nobody deploys a model; they deploy a
-     binding, and that is the question an install actually depends on. A task
-     whose leading rung the config leaves unbound is reported and skipped, since
-     one unbound tier must not cost every other record.
+     against every distinct model its ladder binds in that config's
+     `seeds.ai_routing` — the rung that answers and each fallback a failed call
+     falls to — one record each. Nobody deploys a model; they deploy a binding.
+     A fallback in the judge's own family is skipped and named; an unbound
+     ladder is reported, since one unbound tier must not cost every other record.
 
    The two are mutually exclusive and a run with both is refused: one names a
    deployment, the other one candidate. Neither reads the *installation's*
@@ -101,11 +100,10 @@ To certify **what a deployment binds** rather than one model you typed, point
 make e2e-ai ROUTING=config/margince.dev.yaml
 ```
 
-It resolves a model per task from that config's `seeds.ai_routing` and logs the
-resolution before it spends — task, leading rung, model bound there — so a run
-against a config you have not read is still not a run against a binding you
-cannot see. Records land under the resolved models' own names, so one run writes
-several.
+It logs each task's rungs before it spends — task, tier, model — and writes a
+record per model. **`STALE_ONLY` is on by default:** a model whose record is
+already current for this build is skipped, so a sweep pays only for what is
+missing or stale; `STALE_ONLY=0` re-measures it.
 
 The **task** names come from the contract (`backend/api/ai-tasks.yaml`), and only
 a task it marks `status: shipped` can be certified — including `cert_judge`,

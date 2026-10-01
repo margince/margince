@@ -361,12 +361,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Agent Seat Passports — the caller's own, or the workspace's for a member administrator (metadata only — no token re-disclosure).
-         * @description Enumerates Agent Seat Passports so Settings can show them and offer revoke (feedback/13). A
-         *     user sees the passports minted on their own behalf; a holder of the `user_admin` read grant
-         *     sees every passport in the workspace, because which agents act for whom is a read of member
-         *     administration — strictly narrower than revoking, and the same authority split the revoke
-         *     (`DELETE /passports/{id}`) enforces. **Never re-discloses a token** — the plaintext is shown
+         * List the caller's own Agent Seat Passports (metadata only — no token re-disclosure).
+         * @description Enumerates Agent Seat Passports so Settings can show them and offer revoke (feedback/13). Every
+         *     caller, an administrator included, sees only the passports minted on their own behalf: which
+         *     agents act for a human is that human's personal data. An administrator's authority to revoke a
+         *     colleague's passport (`DELETE /passports/{id}`) is offboarding and does not widen this list.
+         *     **Never re-discloses a token** — the plaintext is shown
          *     once at mint time only. Pairs with the mint (`POST`) below.
          *
          *     Two kinds of row arrive together and `connection` is what tells them apart: a passport the
@@ -3278,10 +3278,11 @@ export interface paths {
         put?: never;
         /**
          * Say what one change over a selection of records would do, without doing it.
-         * @description The first half of a bulk change. The caller names up to 500 contacts, companies or deals,
-         *     each with the `version` it was shown, and one verb: `reassign_owner` (with `owner_id`),
-         *     `archive`, or `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`, while lists
-         *     are switched on). The answer says which records the change would alter (`affected`), which it
+         * @description The first half of a bulk change. The caller names up to 500 contacts, companies, deals or
+         *     leads, each with the `version` it was shown, and one verb: `reassign_owner` (with
+         *     `owner_id`), `archive`, `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`,
+         *     while lists are switched on), `add_tag` / `remove_tag` (with `tag_id`), or `create_task`
+         *     (with `task`). The answer says which records the change would alter (`affected`), which it
          *     would leave alone and why (`excluded`), and up to three before/after rows to show the user.
          *
          *     Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
@@ -3315,9 +3316,10 @@ export interface paths {
         /**
          * Apply one change to a selection of records, record by record.
          * @description The second half of a bulk change. Each record is changed exactly as the single-record
-         *     operation would change it (`updateContact`, `updateCompany`, `updateDeal` for an owner;
-         *     `archiveContact`, `archiveCompany`, `archiveDeal` for an archive), with its own `audit_log`
-         *     row and its own event. Every audit row the change writes carries the same `batch_id`, which
+         *     operation would change it (`updateContact`, `updateCompany`, `updateDeal`, `updateLead` for
+         *     an owner; `archiveContact`, `archiveCompany`, `archiveDeal` for an archive; `applyTag` and
+         *     `removeTag` for a tag; `createTask` for a task), with its own `audit_log` row and its own
+         *     event. Every audit row the change writes carries the same `batch_id`, which
          *     the answer returns.
          *
          *     A record is skipped, not overwritten, when its version is no longer the one the caller
@@ -3417,7 +3419,8 @@ export interface paths {
          * Put back what one bulk change did, record by record.
          * @description A compensating bulk change with its own `batch_id`. A reassignment hands each record back to
          *     the owner it had before; an archive brings each record back with the child rows, list
-         *     memberships and tags its archive took down. Each record gets its own audit row, carrying
+         *     memberships and tags its archive took down; a Shortlist or tag change is reversed on each
+         *     record it changed; and `create_task` archives each task it created. Each record gets its own audit row, carrying
          *     the undo's `batch_id`, and its own event (`contact.restored`, `company.restored`,
          *     `deal.restored` for an archive).
          *
@@ -6890,12 +6893,43 @@ export interface paths {
         };
         /**
          * Read what changed on a list, newest first.
-         * @description Every change of the list's definition, and every Shortlist membership change of a record
-         *     this caller can see now. A change about a record they cannot see is absent.
+         * @description Every change of the list's definition, every Shortlist membership change, and every record
+         *     a Live List was seen to gain or lose, about a record this caller can see now. A change
+         *     about a record they cannot see is absent. The check runs every 15 minutes and takes the
+         *     Live Lists checked longest ago first, so with very many lists one can wait longer; the
+         *     list's `last_check` says when it was. `member_entered` and `member_left` are stamped with
+         *     the check that saw them, and a record that joined and left between two checks is not
+         *     recorded.
          */
         get: operations["listListHistory"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}/visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that the signed-in user has opened this list — the mark `since_last_visit` counts from.
+         * @description The mark moves only here, never as a side effect of reading the list, so a prefetch is not
+         *     a visit. It never moves backwards. A visit within half an hour of the last extends it
+         *     rather than starting a new one. The answer carries the visit `since_last_visit` now counts
+         *     from; null on a first visit.
+         */
+        post: operations["visitList"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6969,6 +7003,45 @@ export interface paths {
          *     an export of it would contain.
          */
         post: operations["previewFilter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/filters/propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose filter clauses for a list described in plain words.
+         * @description Reads a sentence ("companies in Germany with no activity in the last 45 days")
+         *     and answers the filter tree it describes, for the builder to show as ordinary
+         *     editable clauses. Nothing is saved: a human reads the proposal, sees the match
+         *     count the preview answers for it, and presses Save themselves.
+         *
+         *     **The model proposes, the engine decides.** The model sees the record type,
+         *     the sentence, this caller's own filter vocabulary (field names, types,
+         *     operators, picklist options, custom-field labels), today's date and the
+         *     reader's language — never a record. Membership is decided later by the
+         *     predicate engine evaluating the tree, exactly as for a hand-built filter.
+         *
+         *     **Every clause is checked before it is answered.** A clause naming a field
+         *     this caller cannot filter on, an operator its type refuses, a value outside a
+         *     picklist's options or a value of the wrong type is DROPPED and named in
+         *     `unsupported` instead, so a proposal never fails because one phrase could not
+         *     be expressed. So is a phrase the model itself could not express ("who are
+         *     likely to buy").
+         *
+         *     A deployment with no AI model answers 409 `ai_not_configured`; a model that
+         *     was asked and did not answer is 503 `assistant_unavailable`.
+         */
+        post: operations["proposeFilter"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7430,8 +7503,9 @@ export interface paths {
          * @description First-class filtered export (features/10 §3): emits exactly the rows that match the active
          *     filter AND that the caller may see (row-scoped through the same one filter engine that drives
          *     lists and saved views), rendered to CSV or JSON. Supply exactly one source — an inline `object`
-         *     with a `filter` (the canonical §13.5 predicate), a `view_id`, or the `list_id` of a Live List
-         *     (while lists are switched on; the export is then listed on the list as a use). Bulk record read
+         *     with a `filter` (the canonical §13.5 predicate), a `view_id`, or a `list_id` (while lists are
+         *     switched on): a Live List exports the records its filter matches, a Shortlist its members, and
+         *     the export is then listed on the list as a use. Bulk record read
          *     that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
          *     export writes one `audit_log` entry (who exported what slice, when — P7/P12).
          */
@@ -12150,6 +12224,32 @@ export interface paths {
         patch: operations["renameCustomField"];
         trace?: never;
     };
+    "/custom-fields/{id}/lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The Live Lists whose filter names this custom field.
+         * @description What retiring the field would leave behind, asked before the retire is confirmed. A list
+         *     the caller may find is named; the ones they may not find are only counted, so a private
+         *     list's name never leaves its owner and steward. Archived lists are left out. Needs the
+         *     grant that retires a field.
+         */
+        get: operations["listCustomFieldLiveLists"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/custom-fields/{id}/retire": {
         parameters: {
             query?: never;
@@ -12169,7 +12269,11 @@ export interface paths {
          *     drops a column as a side effect (CUSTOM-FIELDS-AC-13). 🟡 (mirrors `archiveContact`'s
          *     posture: an irreversible-feeling state change users must confirm) — an agent caller
          *     must supply `X-Approval-Token`. Not the generic archive shape: this is a status flip
-         *     on a still-fetchable row, not `archived_at` (which stays null).
+         *     on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
+         *     refused because a Live List filters on the field: the list keeps evaluating on the kept
+         *     values and reports health `retired_field`. Which lists those are is read, for the
+         *     caller's own visibility, from `listCustomFieldLiveLists` rather than carried here: a
+         *     replayed answer would otherwise repeat list names the caller may no longer find.
          */
         post: operations["retireCustomField"];
         delete?: never;
@@ -19673,6 +19777,17 @@ export interface components {
              *     see — the row then says the direction alone rather than inventing a stranger.
              */
             counterparty?: string | null;
+            /**
+             * Format: uuid
+             * @description The contact `counterparty` names, when the party it was taken from resolved to one
+             *     this caller may see. Present so a client can key a face on the RECORD rather than on
+             *     the phrase: the phrase cannot be turned back into a contact, and matching it by name
+             *     is wrong in both directions — a contact renamed since capture stops matching and
+             *     draws a second colour, and two contacts sharing a name cannot be told apart. Absent
+             *     when the far side resolved to no contact, which is a face the client has nothing
+             *     better to key than the words.
+             */
+            counterparty_contact_id?: string;
             /** @description How many files came with it. Zero when withheld, like every other count. */
             attachment_count: number;
             /**
@@ -20210,6 +20325,15 @@ export interface components {
         /** @description The folders or labels one mailbox has, as a picker offers them. */
         ConnectorContainers: {
             containers: components["schemas"]["ConnectorContainer"][];
+            /**
+             * @description True when the walk stopped short of the whole mailbox — a page or depth budget
+             *     spent before the folders ran out. The list is still worth showing: a long one
+             *     that stops beats no list at all. What it must not do is read as complete, because
+             *     somebody whose folder is missing would conclude the mailbox has no such folder
+             *     rather than that nobody looked. Absent or false means the whole mailbox was
+             *     enumerated.
+             */
+            truncated?: boolean;
         };
         /** @description One folder or label: the provider's own token, and the name its owner reads. */
         ConnectorContainer: {
@@ -26995,18 +27119,37 @@ export interface components {
             to_owner_id: string;
         };
         /**
-         * @description The kind of record a bulk change acts on. One change acts on one kind.
+         * @description The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
+         *     verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
          * @enum {string}
          */
-        BulkRecordType: "contact" | "company" | "deal";
+        BulkRecordType: "contact" | "company" | "deal" | "lead";
         /**
          * @description What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
          *     `archive` retires it exactly as the single-record archive does. `add_to_list` and
          *     `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
          *     `addListMember` and `removeListMember` do, and change nothing on the record itself.
+         *     `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
+         *     as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
+         *     under each record, exactly as `createTask` does.
          * @enum {string}
          */
-        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list";
+        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list" | "add_tag" | "remove_tag" | "create_task";
+        /** @description The task `create_task` files under every record of the selection. */
+        BulkTask: {
+            /** @description What has to be done, as one line. */
+            subject: string;
+            /**
+             * Format: date-time
+             * @description When it is due. Optional.
+             */
+            due_at?: string;
+            /**
+             * Format: uuid
+             * @description Who owes it. Defaults to the caller; must name a colleague the caller may hand work to.
+             */
+            assignee_id?: string;
+        };
         /** @description One selected record and the version the caller was shown. */
         BulkItem: {
             /** Format: uuid */
@@ -27033,6 +27176,12 @@ export interface components {
             list_id?: string;
             /** @description Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes. */
             note?: string;
+            /**
+             * Format: uuid
+             * @description The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
+             */
+            tag_id?: string;
+            task?: components["schemas"]["BulkTask"];
         };
         BulkChangeExecuteRequest: {
             record_type: components["schemas"]["BulkRecordType"];
@@ -27050,14 +27199,20 @@ export interface components {
             list_id?: string;
             /** @description Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes. */
             note?: string;
+            /**
+             * Format: uuid
+             * @description The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
+             */
+            tag_id?: string;
+            task?: components["schemas"]["BulkTask"];
             /** @description The token a preview of exactly this selection returned. Required above 10 records. */
             confirm_token?: string;
         };
         /**
          * @description Why a record is left alone. `not_found`: the caller cannot see it, or it is already
          *     archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
-         *     its version moved since the caller read it. `no_change`: it already has this owner, or is
-         *     already on (or already off) the Shortlist.
+         *     its version moved since the caller read it. `no_change`: it already has this owner, is
+         *     already on (or already off) the Shortlist, or already carries (or already lacks) the tag.
          *     `anchor_company`: it is the installation's own company, which is never archived.
          *     `not_previewed`: the preview whose token this execution presents did not list it.
          *     `refused`: a single-record rule refuses it; `code` says which.
@@ -27065,7 +27220,8 @@ export interface components {
          *     An undo adds five. `changed_since_batch`: the record changed after the change being undone.
          *     `merged`: it was merged into another record. `erased`: its personal data was erased or
          *     purged. `value_taken`: another live record now holds its email or domain.
-         *     `no_previous_owner`: it had no owner before the reassignment.
+         *     `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
+         *     each task the change created, and skips one completed or edited since as `changed_since_batch`.
          * @enum {string}
          */
         BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "not_previewed" | "refused" | "changed_since_batch" | "merged" | "erased" | "value_taken" | "no_previous_owner";
@@ -27092,6 +27248,13 @@ export interface components {
             archived: boolean;
             /** @description For a list verb, whether the record is on the Shortlist. */
             listed?: boolean;
+            /** @description For a tag verb, whether the record carries the tag. */
+            tagged?: boolean;
+            /**
+             * Format: uuid
+             * @description For `create_task`, the task filed under the record, once the change ran.
+             */
+            task_id?: string;
         };
         /** @description One record the change would alter, as it is and as it would be. */
         BulkSampleRow: {
@@ -27175,6 +27338,12 @@ export interface components {
              * @description The Shortlist a list verb named.
              */
             list_id?: string;
+            /**
+             * Format: uuid
+             * @description The tag a tag verb named.
+             */
+            tag_id?: string;
+            task?: components["schemas"]["BulkTask"];
             /** @description The number of records changed. */
             changed: number;
             skipped: components["schemas"]["BulkSkip"][];
@@ -30580,13 +30749,23 @@ export interface components {
             /** @description How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size. */
             visible_count?: number | null;
             /**
-             * @description `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles.
+             * @description `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `invalid` outranks `ownerless`, which outranks `retired_field`.
              * @enum {string}
              */
-            health: "ok" | "ownerless" | "invalid";
+            health: "ok" | "ownerless" | "invalid" | "retired_field";
+            /** @description The retired custom fields a Live List's filter names, by column name. Absent when it names none. */
+            retired_fields?: string[];
             /** @description Whether this caller holds list authority over the list. */
             can_edit: boolean;
-            /** @description What uses this list. Exports are listed as usage and block nothing. */
+            /** @description A Live List's latest check; absent for a Shortlist or a Live List not checked yet. */
+            last_check?: components["schemas"]["ListCheck"];
+            /** @description What a Live List gained and lost since this caller last opened it, counting only records they can see now. Absent on a first visit and for a Shortlist. A visit recorded in the last half hour is the one in progress, so the counts run from the visit before it. */
+            since_last_visit?: components["schemas"]["ListPulse"];
+            /** @description On a single Live List read: the members this caller can see that a check saw joining since their last visit and that are still members, newest first, at most 500. Absent from the library. */
+            joined_since_visit?: string[];
+            /** @description On a single Live List read: what changed since this caller last opened it, counted from the list's history under their row scope, with no model involved. Absent on a first visit, for a Shortlist and from the library. */
+            changes_since_visit?: components["schemas"]["ListChangeSummary"];
+            /** @description What uses this list: the active automation rules that watch or add to it, then its filtered exports. Neither blocks a change; a rule pauses itself when its list is archived. */
             dependencies?: components["schemas"]["ListDependency"][];
             /** Format: date-time */
             created_at?: string;
@@ -30595,14 +30774,79 @@ export interface components {
             /** Format: date-time */
             archived_at?: string | null;
         };
+        /** @description When a Live List's members were last compared with the check before. `complete` recorded who joined and left; `too_large` matched more records than one check may hold, so nothing was recorded; `invalid` could not evaluate the filter. */
+        ListCheck: {
+            /** Format: date-time */
+            checked_at: string;
+            /** @enum {string} */
+            outcome: "complete" | "too_large" | "invalid";
+        };
+        ListChangeSummary: {
+            /**
+             * Format: date-time
+             * @description The visit the summary runs from.
+             */
+            since: string;
+            joined: components["schemas"]["ListChangeGroup"];
+            left: components["schemas"]["ListChangeGroup"];
+            /** @description How many times the filter changed since then. */
+            filter_changes: number;
+        };
+        /** @description The distinct records this caller can see that moved one way, and the newest three by name. */
+        ListChangeGroup: {
+            count: number;
+            records: components["schemas"]["ListChangedRecord"][];
+        };
+        ListChangedRecord: {
+            /** Format: uuid */
+            entity_id: string;
+            name?: string | null;
+        };
+        ListPulse: {
+            /**
+             * Format: date-time
+             * @description The visit the counts run from.
+             */
+            since: string;
+            /** @description Records seen joining since then. */
+            entered: number;
+            /** @description Records seen leaving since then. */
+            left: number;
+        };
+        ListVisit: {
+            /** Format: uuid */
+            list_id: string;
+            /** Format: date-time */
+            visited_at: string;
+            /**
+             * Format: date-time
+             * @description Null on a first visit.
+             */
+            previous_visit_at?: string | null;
+        };
         ListDependency: {
             /** @enum {string} */
-            kind: "export";
-            /** Format: date-time */
+            kind: "export" | "automation";
+            /**
+             * Format: date-time
+             * @description When the export ran, or the rule was made.
+             */
             occurred_at: string;
             actor?: string | null;
             /** @description Whether it refuses a breaking change or archive of the list. */
             blocking: boolean;
+            /**
+             * @description For an automation: whether it watches this Live List or adds to this Shortlist.
+             * @enum {string|null}
+             */
+            role?: "watches" | "writes" | null;
+            /**
+             * Format: uuid
+             * @description For an automation: the rule. Null for a caller who may not read automations.
+             */
+            automation_id?: string | null;
+            /** @description For an automation: its name. Null for a caller who may not read automations. */
+            automation_name?: string | null;
         };
         ListMember: {
             /** Format: uuid */
@@ -30716,8 +30960,21 @@ export interface components {
         ListHistoryEntry: {
             /** Format: uuid */
             id: string;
-            /** @enum {string} */
-            kind: "member_added" | "member_removed" | "revised";
+            /**
+             * @description `member_entered` and `member_left` are a Live List's observed changes, stamped with the check that saw them.
+             * @enum {string}
+             */
+            kind: "member_added" | "member_removed" | "member_entered" | "member_left" | "revised";
+            /**
+             * Format: int64
+             * @description For an observed change, the list version whose filter it was seen under.
+             */
+            definition_version?: number | null;
+            /**
+             * @description `filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.
+             * @enum {string|null}
+             */
+            reason?: "chosen" | "bulk" | "record_archived" | "record_restored" | "evaluated" | "filter_changed" | "automation" | null;
             /** Format: date-time */
             occurred_at: string;
             actor: string;
@@ -30725,8 +30982,6 @@ export interface components {
             entity_type?: string | null;
             /** Format: uuid */
             entity_id?: string | null;
-            /** @enum {string|null} */
-            reason?: "chosen" | "bulk" | "record_archived" | "record_restored" | null;
             note?: string | null;
             /** Format: int64 */
             version?: number | null;
@@ -30794,6 +31049,59 @@ export interface components {
              *     "showing 25 of 812" without comparing lengths and guessing.
              */
             truncated: boolean;
+        };
+        /** @description A list described in plain words, to be turned into filter clauses. */
+        FilterProposalRequest: {
+            /** @enum {string} */
+            resource: "contact" | "company" | "deal" | "lead";
+            /** @description What the reader typed. Only this and the vocabulary reach the model. */
+            text: string;
+            /**
+             * @description The reader's interface language, which the reasons in `unsupported` are
+             *     written in. Absent means the installation's base language.
+             * @enum {string}
+             */
+            locale?: "en" | "de" | "vi";
+        };
+        /**
+         * @description Filter clauses proposed from plain words, already checked against the
+         *     caller's vocabulary. Not saved.
+         */
+        FilterProposal: {
+            /** @enum {string} */
+            resource: "contact" | "company" | "deal" | "lead";
+            /**
+             * @description The proposed tree in the canonical filter shape `POST /filters/preview`
+             *     and a dynamic list's `definition` take, with a group at its root. Null
+             *     when nothing in the sentence could be expressed.
+             */
+            filter?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Every phrase that did not become a clause, and why. */
+            unsupported: components["schemas"]["FilterProposalUnsupported"][];
+            /** @description The model that answered, when its provider named it. */
+            model_used?: string;
+        };
+        FilterProposalUnsupported: {
+            /** @description The words of the request this is about. */
+            phrase: string;
+            /**
+             * @description `not_expressible` — the model found no field or operator for the phrase;
+             *     `reason` is its explanation in the reader's language. Every other code is
+             *     a clause the model proposed and the server dropped: a field this caller
+             *     cannot filter on, an operator the field's type refuses, a value the field
+             *     does not accept (including one outside a picklist's options), a picklist
+             *     value this caller may not see the options of and so cannot be checked
+             *     (`value_not_verifiable`), or a clause past the engine's limit. For those
+             *     `reason` is the server's English detail, and `field` names the field so a
+             *     client can say it in its own words.
+             * @enum {string}
+             */
+            code: "not_expressible" | "unknown_field" | "operator_not_allowed" | "value_not_allowed" | "value_not_verifiable" | "too_many_conditions";
+            reason: string;
+            /** @description The field a dropped clause named. Absent for `not_expressible`. */
+            field?: string;
         };
         /**
          * @description What a filter may say about one record type (LVS-EXT-8). Read from the
@@ -31492,7 +31800,7 @@ export interface components {
             data: components["schemas"]["SavedView"][];
             page: components["schemas"]["PageInfo"];
         };
-        /** @description A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported) or a `list_id` (a Live List whose filter is exported). The slice is always row-scoped to the caller through the one filter engine. */
+        /** @description A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported) or a `list_id` (a Live List's matches or a Shortlist's members). The slice is always row-scoped to the caller through the one filter engine. */
         FilteredExportRequest: {
             /**
              * @description The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
@@ -31510,7 +31818,7 @@ export interface components {
             view_id?: string;
             /**
              * Format: uuid
-             * @description Export the members of a Live List the caller may find, as its filter selects them now. Mutually exclusive with object/view_id.
+             * @description Export the members of a list the caller may find — a Live List's as its filter selects them now, a Shortlist's as they were chosen — that the caller may see. Mutually exclusive with object/view_id.
              */
             list_id?: string;
             /** @enum {string} */
@@ -32688,7 +32996,7 @@ export interface components {
             company_context: boolean;
             /** @description Whether analytics.performance_enabled makes saved reporting available. */
             reporting?: boolean;
-            /** @description True when the installation has switched on Live Lists and Shortlists (`lists.enabled`). False while they are being built: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
+            /** @description True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
             lists?: boolean;
             /** @description True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it. */
             embedding_reindex: boolean;
@@ -33167,6 +33475,19 @@ export interface components {
              */
             archived_at?: string | null;
             version?: components["schemas"]["RowVersion"];
+        };
+        /** @description The Live Lists whose filter names a custom field: the ones the caller may find by name, and how many more exist that they may not find. */
+        CustomFieldLiveLists: {
+            lists: components["schemas"]["CustomFieldLiveList"][];
+            /** @description Live Lists that name the field but that this caller may not find. */
+            unseen_count: number;
+        };
+        CustomFieldLiveList: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            sharing: "private" | "team" | "workspace";
         };
         CustomFieldListResponse: {
             data: components["schemas"]["CustomField"][];
@@ -36001,6 +36322,11 @@ export interface components {
             name: string;
             /** @enum {string} */
             status: "enabled" | "paused";
+            /**
+             * @description Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
+             * @enum {string|null}
+             */
+            paused_reason?: "list_archived" | "list_invalid" | "list_unavailable" | "burst" | null;
             params: {
                 [key: string]: unknown;
             };
@@ -38602,7 +38928,7 @@ export interface components {
             planned: number;
             /** @description Open duplicate pairs both of whose sides this caller can see. */
             duplicates_open?: number;
-            /** @description Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all. */
+            /** @description Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`. */
             deal_suggestions_open?: number;
             /** @description How many of today's meetings are still ahead — the bounded page, as the other lanes report. */
             meetings?: number;
@@ -39032,6 +39358,15 @@ export interface components {
              */
             scope: "mine" | "unassigned" | "team" | "all";
             /**
+             * @description True when `scope` is `team` and the roster behind it came back at its cap, so
+             *     rows owned by teammates past the cap were never weighed. The same admission
+             *     `/worklist/team` makes with its own `truncated`, and for the same reason: a
+             *     page short by a colleague's whole queue is still a page, and one that did not
+             *     say so would read as a clear day. Absent or false means the scope was answered
+             *     whole.
+             */
+            scope_truncated?: boolean;
+            /**
              * @description The scopes this reader may ask for, narrowest first — derived from their own
              *     row scope. A client draws a control only when there is more than one, so a
              *     rep who can only see their own work is never offered a switch that would 403.
@@ -39127,6 +39462,25 @@ export interface components {
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
             shown: number;
+            /**
+             * @description True when this source answers for the ACTING USER only, whatever `scope` was
+             *     asked for. `team` and `all` widen the record-bearing sources, because a wider
+             *     row scope is what reaches a colleague's work; they cannot widen a source bound
+             *     to the reader inside the module that owns it — notices filter on the recipient,
+             *     the capture and AI health lanes refuse a principal with no human behind them,
+             *     and an introduction ask names one colleague, so there is no wider tier for it to
+             *     widen to.
+             *
+             *     A reader asking for `all` therefore gets every shared record they may see PLUS
+             *     their own personal queue, and this field is which half each source answered.
+             *     Without it a manager reading `all` believes they have seen everything, and the
+             *     parts that stayed personal are invisible rather than named.
+             *
+             *     It is a fact about the SOURCE, not about this read, so it is true under `mine`
+             *     as well — where it happens to tell the reader nothing new, because everything
+             *     is theirs. Absent from an older server, which a client reads as false.
+             */
+            personal?: boolean;
             /**
              * @description True when this source was read to its work bound, so candidates MAY exist past what
              *     was considered. A lane that came back exactly full cannot tell a full page from a
@@ -40308,8 +40662,10 @@ export interface components {
             undo?: components["schemas"]["MagicUndo"];
             actor: components["schemas"]["MagicActor"];
             reason?: components["schemas"]["MagicSentence"];
-            /** @description How many records this line stands for. One background job that did the same thing to many records is ONE line with a count, not one line per record: a receipt of 1,200 identical rows says nothing a reader can use. Absent means one; `entity` then names the most recent of them. */
+            /** @description How many records this line stands for. One background job that did the same thing to many records is ONE line with a count, not one line per record: a receipt of 1,200 identical rows says nothing a reader can use. Absent means one; `entity` then names the most recent of them. Read with `count_is_floor`, which says whether this number is the whole of it. */
             count?: number;
+            /** @description True when the line's records were counted from a read that was cut short, so `count` is a lower bound and the job touched at least that many. Lines are grouped from the audit rows one read returns, and that read is capped; a job over more records than the cap reports the cap. Absent or false means the count is exact. A reader deciding whether a machine went too far needs to know which of the two they are looking at. */
+            count_is_floor?: boolean;
         };
         /**
          * @description What happened, as a key and the values to fill it with.
@@ -41748,7 +42104,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The passports in scope for the caller — their own, or the workspace's for a `user_admin` reader (metadata). */
+            /** @description The caller's own passports (metadata). */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -52519,6 +52875,8 @@ export interface operations {
                 list_type?: "static" | "dynamic";
                 /** @description Matches the name or purpose, case-insensitively. */
                 q?: string;
+                /** @description Only lists with one of these sharing settings. `private` alone reads the caller's own private lists; `team` and `workspace` together read the lists shared with others. */
+                sharing?: ("private" | "team" | "workspace")[];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
             };
@@ -52851,6 +53209,32 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    visitList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored visit and the one before it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListVisit"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     getFilterVocabulary: {
         parameters: {
             query: {
@@ -52903,6 +53287,43 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    proposeFilter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FilterProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description The proposed tree and every phrase that could not be used. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FilterProposal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The model was asked and did not answer (`code: assistant_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     pauseReportingSchedules: {
@@ -53274,6 +53695,10 @@ export interface operations {
             query?: {
                 cursor?: string;
                 limit?: number;
+                /** @description Filter by retirement status; omitted includes both active and retired targets. */
+                retired?: boolean;
+                /** @description Filter by the first local day of the target period. */
+                period_start?: string;
             };
             header?: never;
             path?: never;
@@ -59554,6 +59979,32 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listCustomFieldLiveLists: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Live Lists that filter on the field. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFieldLiveLists"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     retireCustomField: {

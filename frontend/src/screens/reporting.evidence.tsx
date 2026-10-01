@@ -1,3 +1,4 @@
+import "./reporting.css";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useRef } from "react";
 import { api } from "../api/client";
@@ -15,6 +16,7 @@ import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   reportingAmount,
+  reportingPeriodLabel,
   reportingQuery,
 } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
@@ -75,6 +77,22 @@ export function ReportingEvidenceDrawer({
     evaluation,
     reference,
   );
+  const stateLabel = editionId
+    ? formatDateTime(
+        evaluation.context.state_at,
+        locale,
+        evaluation.context.timezone,
+      )
+    : t("reporting.currentPipeline");
+  const dateHeading = t(
+    reference.metric === "bookings_won"
+      ? "reporting.closedOn"
+      : reference.metric === "meetings_held"
+        ? "reporting.meetingOn"
+        : reference.metric === "accepted_opportunities"
+          ? "reporting.acceptedOn"
+          : "reporting.period",
+  );
   return (
     <Modal
       open
@@ -87,52 +105,46 @@ export function ReportingEvidenceDrawer({
         <Heading ref={heading} tabIndex={-1} id={title} as="h2" size="medium">
           {metricLabel(reference.metric, t)}
         </Heading>
-        {!point?.at && point?.label && <p>{point.label}</p>}
-        <Popover onHover label={t("reporting.definition")}>
-          <p>{definition?.definition}</p>
+        <MetricDefinition
+          definition={definition}
+          version={metric?.version}
+          frozen={Boolean(editionId)}
+        />
+        <p className="t-caption">
+          {evaluation.context.scope.label}
+          {point?.label ? ` · ${point.label}` : ""}
+        </p>
+        <p className="t-caption">
+          {interval
+            ? reportingPeriodLabel(
+                { ...interval, end_at: reference.through ?? interval.end_at },
+                evaluation.context.timezone,
+                locale,
+              )
+            : stateLabel}
+        </p>
+        {metric?.coverage.status !== undefined &&
+          metric.coverage.status !== "ok" && (
+            <Popover
+              onHover
+              label={t(`reporting.status.${metric.coverage.status}`)}
+            >
+              <p>{metric.coverage.reason}</p>
+            </Popover>
+          )}
+        <Popover onHover label={t("reporting.contextDetails")}>
+          <p>
+            {evaluation.context.currency} · {evaluation.context.timezone}
+          </p>
+          <p>
+            {editionId ? t("reporting.frozen") : t("reporting.live")} ·{" "}
+            {formatDateTime(
+              evaluation.context.evaluated_at,
+              locale,
+              evaluation.context.timezone,
+            )}
+          </p>
         </Popover>
-        <p className="t-caption">
-          {evaluation.context.scope.label} · {evaluation.context.currency} ·{" "}
-          {evaluation.context.timezone}
-        </p>
-        <p className="t-caption">
-          {point?.at && !reference.through
-            ? point.label
-            : formatDateTime(
-                interval?.start_at ?? evaluation.context.state_at,
-                locale,
-                evaluation.context.timezone,
-              )}{" "}
-          {(!point?.at || reference.through) && interval && (
-            <>
-              {" "}
-              –{" "}
-              {formatDateTime(
-                new Date(
-                  Date.parse(reference.through ?? interval.end_at) - 1,
-                ).toISOString(),
-                locale,
-                evaluation.context.timezone,
-              )}
-            </>
-          )}
-        </p>
-        {metric?.coverage.reason && (
-          <Popover
-            onHover
-            label={t(`reporting.status.${metric.coverage.status}`)}
-          >
-            <p>{metric.coverage.reason}</p>
-          </Popover>
-        )}
-        <p className="t-caption">
-          {editionId ? t("reporting.frozen") : t("reporting.live")} ·{" "}
-          {formatDateTime(
-            evaluation.context.evaluated_at,
-            locale,
-            evaluation.context.timezone,
-          )}
-        </p>
         {isVersionSkewOf(query.error) && (
           <Button
             onClick={() => {
@@ -176,16 +188,17 @@ export function ReportingEvidenceDrawer({
                 columns={[
                   {
                     key: "source",
-                    header: t("reporting.evidence"),
+                    header: t("reporting.record"),
                     render: (row) =>
                       row.restricted ? (
                         t("reporting.restricted")
                       ) : row.source_id && row.source_type === "deal" ? (
                         <Button
                           variant="link"
-                          onClick={() =>
-                            navigate({ screen: "deals", id: row.source_id })
-                          }
+                          onClick={() => {
+                            onClose();
+                            navigate({ screen: "deals", id: row.source_id });
+                          }}
                         >
                           {row.label}
                         </Button>
@@ -195,7 +208,7 @@ export function ReportingEvidenceDrawer({
                   },
                   {
                     key: "date",
-                    header: t("reporting.period"),
+                    header: dateHeading,
                     render: (row) =>
                       row.occurred_at
                         ? formatDateTime(
@@ -206,18 +219,14 @@ export function ReportingEvidenceDrawer({
                         : "—",
                   },
                   {
-                    key: "unit",
-                    header: t("reporting.unit"),
-                    render: () =>
-                      metric?.unit === "days"
-                        ? t("reporting.daysUnit")
-                        : metric?.unit === "count"
-                          ? t("reporting.countUnit")
-                          : (metric?.unit ?? definition?.unit),
-                  },
-                  {
                     key: "amount",
-                    header: t("reporting.actual"),
+                    header: t(
+                      metric?.unit === "days"
+                        ? "reporting.daysUnit"
+                        : metric?.unit === "count"
+                          ? "reporting.countUnit"
+                          : "reporting.dealValue",
+                    ),
                     render: (row) =>
                       reportingAmount(
                         row.value,
@@ -284,4 +293,24 @@ function evidenceSelection(
         ? undefined
         : evaluation.context.interval);
   return { metric, point, interval, selectedValue };
+}
+
+function MetricDefinition({
+  definition,
+  version,
+  frozen,
+}: Readonly<{
+  definition?: { version: string; definition: string };
+  version?: string;
+  frozen: boolean;
+}>) {
+  const t = useT();
+  const changed = frozen && definition && version !== definition.version;
+  return (
+    <Popover onHover label={t("reporting.definition")}>
+      <p>
+        {changed ? t("reporting.earlierDefinition") : definition?.definition}
+      </p>
+    </Popover>
+  );
 }

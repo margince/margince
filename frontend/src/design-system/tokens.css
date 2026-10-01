@@ -138,7 +138,7 @@
   --textOnAccentControl: #fff;
   /* The ink for a control FILLED with a state tone — a destructive button, a
    * completion disc, a primary badge. Its ground is the tone's *Text token and
-   * never the base hue. A base is tuned to be SEEN at a figure's or a bar's
+   * never the base hue. A base is tuned to be SEEN at a bar's or a dot's
    * size, and no ink sits on the set of them: white pays 3.68:1 on --info,
    * 2.19:1 on --success, 2.04:1 on --warning and 3.57:1 on --danger, while a
    * near-black pays 3.19:1 on --discovery — and in dark the danger base clears
@@ -280,14 +280,15 @@
    * chooses. Everything else is derived HERE and nowhere else, so a retune
    * moves the whole family at once:
    *
-   *   --<state>        the hue. A fill, a bar, a dot, a border, the figure on
-   *                    a stat card — everything SEEN with nothing read on it.
+   *   --<state>        the hue. A fill, a bar, a dot, a border — everything
+   *                    SEEN with nothing read on it.
    *   --<state>Text    the same hue walked down in lightness (light) or up
    *                    (dark) in OKLCh, chroma kept, until it clears 4.5:1 on
    *                    every ground it lands on AND on its own Surface. Ink:
-   *                    badge lettering, an error line, a caption. It is also
-   *                    the GROUND of a filled control — see
-   *                    --textOnStatusControl for why the base cannot be.
+   *                    badge lettering, an error line, a caption, a stat
+   *                    card's figure. It is also the GROUND of a filled
+   *                    control — see --textOnStatusControl for why the base
+   *                    cannot be.
    *   --<state>Surface the opaque tint, for a badge: a translucent one takes
    *                    its contrast from whatever it lands on, and this reads
    *                    the same on every surface.

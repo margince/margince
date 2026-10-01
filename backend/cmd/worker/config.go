@@ -26,6 +26,7 @@ type workerConfig struct {
 	configPath       string
 	publicBaseURL    string
 	reportingEnabled bool
+	listsEnabled     bool
 	captureConfig    compose.CaptureConfig
 	// allowDataReset is operations.allow_data_reset: whether this installation
 	// armed the destructive reset at all. The worker's only stake is the cache
@@ -77,6 +78,13 @@ type workerConfig struct {
 	logLevel             string
 	logFormat            string
 	observeAddr          string
+	// observePprofRaw is --observe-pprof as typed; observePprof is what it
+	// parsed to. Two fields because the flag is bound through cliflags, which
+	// binds strings only — and a string read back strictly is what lets a
+	// mistyped "ture" fail the boot instead of silently leaving profiling off
+	// on the one night somebody needed it on.
+	observePprofRaw string
+	observePprof    bool
 	// posture is what MARGINCE_ENV says this deployment is, read ONCE here
 	// (OPS-CFG-2). It selects the configuration overlay and which license
 	// authorities are honoured; it decides nothing destructive — see
@@ -179,6 +187,13 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 			"seconds and caches every answer.")
 	env.String(fs, &cfg.observeAddr, "observe-addr", "MARGINCE_OBSERVE_ADDR", "",
 		"address to serve this worker's /healthz, /readyz and /metrics on (e.g. 127.0.0.1:9101). Empty serves nothing. Process-local metrics only — the job-table and outbox gauges stay a single fleet-wide reading on the api.")
+	// Opt-in profiling on the SAME listener, never on a port of its own: a
+	// second unauthenticated surface would need its own bind decision and its
+	// own containment, and an operator diagnosing a memory burst at 3am should
+	// not have to make either. Off by default because a goroutine dump and the
+	// process command line are more than the probes and metrics disclose.
+	env.String(fs, &cfg.observePprofRaw, "observe-pprof", "MARGINCE_OBSERVE_PPROF", "false",
+		"true mounts Go's net/http/pprof handlers under /debug/pprof/ on the --observe-addr listener, for diagnosing a memory or CPU problem in a running worker (heap, allocs, goroutine, profile, trace). Requires --observe-addr. Off by default and meant to be enabled temporarily: the handlers are unauthenticated like the rest of that listener, and a goroutine dump and the command line disclose more than the probes do.")
 	env.String(fs, &cfg.logLevel, "log-level", "MARGINCE_LOG_LEVEL", "info", "log level: debug|info|warn|error")
 	env.String(fs, &cfg.logFormat, "log-format", "MARGINCE_LOG_FORMAT", "text", "log format: text|json")
 	return fs, env, cfg, nil
@@ -225,10 +240,39 @@ func parseWorkerFlags(args []string) (workerConfig, error) {
 	if cfg.sendRateLimit < 0 || cfg.sendRateWindow < 0 || cfg.sendMaxAge < 0 {
 		return workerConfig{}, errors.New("worker: the outbound send pacing values must be zero (default) or positive")
 	}
+	if err := resolveObservePprof(cfg); err != nil {
+		return workerConfig{}, err
+	}
 	if err := validateSchedulerIntervals(*cfg); err != nil {
 		return workerConfig{}, err
 	}
 	return *cfg, nil
+}
+
+// resolveObservePprof parses --observe-pprof and refuses the one pairing it
+// cannot honour.
+//
+// A value strconv.ParseBool rejects is a boot error rather than "off": the
+// operator who typed it was trying to turn profiling ON, and a worker that
+// booted with it silently off would be found out only when the burst it was
+// meant to catch had already come and gone.
+//
+// On with no --observe-addr is refused for the reason the api refuses an open
+// /metrics that was also given a token: the setting would do nothing, and the
+// operator who set it believes it did something. There is no listener to mount
+// the handlers on, and binding one on their behalf would expose a surface
+// nobody chose an interface for.
+func resolveObservePprof(cfg *workerConfig) error {
+	on, err := strconv.ParseBool(cfg.observePprofRaw)
+	if err != nil {
+		return fmt.Errorf("worker: --observe-pprof / MARGINCE_OBSERVE_PPROF %q is not a boolean: true or false", cfg.observePprofRaw)
+	}
+	if on && cfg.observeAddr == "" {
+		return errors.New("worker: --observe-pprof / MARGINCE_OBSERVE_PPROF=true serves profiles on the observe listener, " +
+			"and --observe-addr / MARGINCE_OBSERVE_ADDR is unset so there is none: set an address, or drop the pprof setting")
+	}
+	cfg.observePprof = on
+	return nil
 }
 
 // registerDeepReadFlags declares the three deep-read crawl caps. They are a

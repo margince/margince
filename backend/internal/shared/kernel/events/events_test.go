@@ -72,7 +72,9 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"sla_breached": true,
 		// A record joined or left a Shortlist.
 		"member_added": true, "member_removed": true,
-		"promoted": true, "captured": true, "requested": true,
+		// A Live List's scheduled check saw records join or leave it.
+		"evaluated": true,
+		"promoted":  true, "captured": true, "requested": true,
 		"decided": true, "failed": true, "appended": true,
 		"changed": true, "applied": true, "sent": true, "accepted": true,
 		"rejected": true, "superseded": true, "disqualified": true, "demoted": true,
@@ -308,6 +310,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// verdict rides there, including the `expired` one the sweep writes
 		// when nobody answers a card.
 		"cg:stage-progression-outcome": {"gw:events:crm:approval"},
+		"cg:approval-notice-retract":   {"gw:events:crm:approval"},
 		// Telling the seats that could decide a staged proposal that it is
 		// waiting on them. The same stream as the ledger above and a group of
 		// its own: that one counts what has already happened to a card, this

@@ -39,6 +39,13 @@ func (m Message) SkipReason() (string, bool) {
 	if isDeliverySystemSender(m.from) {
 		return "delivery-system sender", true
 	}
+	// A report is known by its SHAPE, whoever sent it. Dropped for the same
+	// reason a recognised bounce is — there is no correspondent behind a
+	// delivery outcome — and dropping it here is also what carries it to the
+	// bounce recorder, which every connector reaches from this branch.
+	if m.deliveryReport {
+		return "delivery report", true
+	}
 	return "", false
 }
 

@@ -61,8 +61,8 @@ func (KnowledgeIngestArgs) Kind() string { return "knowledge_ingest" }
 // workspace and work in another.
 func (a KnowledgeIngestArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// knowledgeIngestInsertOpts routes the ingest to the AI/capture queue and
-// deduplicates by args over the ACTIVE states only.
+// knowledgeIngestInsertOpts deduplicates the ingest by args over the ACTIVE
+// states only.
 //
 // The state restriction is the load-bearing half. River's default uniqueness
 // window includes completed, so a document whose first ingest finished could
@@ -70,11 +70,10 @@ func (a KnowledgeIngestArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // to the active states keeps an in-flight ingest deduped while letting a
 // finished one be asked again.
 func knowledgeIngestInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue:       aiCaptureQueue,
+	return jobs.QueuedAs[KnowledgeIngestArgs](&river.InsertOpts{
 		MaxAttempts: knowledgeIngestMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-	}
+	})
 }
 
 // knowledgeIngestPrincipal stamps the principal every write of this ingest is

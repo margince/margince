@@ -55,7 +55,7 @@ type foldersPage struct {
 // folderDepthLimit on how deep it goes. Hitting either returns what was read
 // rather than an error, because a long list that stops is more useful to a
 // picker than no list at all.
-func (a *httpAPI) ListFolders(ctx context.Context, accessToken string) ([]connector.NamedContainer, error) {
+func (a *httpAPI) ListFolders(ctx context.Context, accessToken string) ([]connector.NamedContainer, bool, error) {
 	type pending struct {
 		url    string
 		prefix string
@@ -65,6 +65,11 @@ func (a *httpAPI) ListFolders(ctx context.Context, accessToken string) ([]connec
 	queue := []pending{{url: a.base + "/me/mailFolders?" + q.Encode()}}
 
 	var out []connector.NamedContainer
+	// Set where the walk gives up on a branch rather than finishes it: a child
+	// folder past the depth limit, or a page the budget could not buy. Both
+	// leave folders unlisted, and a picker that did not say so would tell
+	// somebody their folder does not exist.
+	truncated := false
 	budget := folderListMaxPages
 	for len(queue) > 0 && budget > 0 {
 		cur := queue[0]
@@ -73,7 +78,7 @@ func (a *httpAPI) ListFolders(ctx context.Context, accessToken string) ([]connec
 
 		var page foldersPage
 		if _, err := a.get(ctx, accessToken, cur.url, nil, &page); err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		for _, f := range page.Value {
 			if f.ID == "" {
@@ -85,6 +90,9 @@ func (a *httpAPI) ListFolders(ctx context.Context, accessToken string) ([]connec
 			}
 			qualified := cur.prefix + name
 			out = append(out, connector.NamedContainer{ID: f.ID, Name: qualified})
+			if f.ChildFolderCount > 0 && cur.depth >= folderDepthLimit {
+				truncated = true
+			}
 			if f.ChildFolderCount > 0 && cur.depth < folderDepthLimit {
 				queue = append(queue, pending{
 					url:    a.base + "/me/mailFolders/" + url.PathEscape(f.ID) + "/childFolders?" + q.Encode(),
@@ -100,7 +108,7 @@ func (a *httpAPI) ListFolders(ctx context.Context, accessToken string) ([]connec
 		// URL the provider chose, and following one off-origin would send this
 		// mailbox's token somewhere Microsoft did not.
 		if err := a.sameAPIOrigin(page.NextLink); err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		// The next page of the SAME level, so it keeps this level's prefix and
 		// depth, and goes to the front: finishing a folder's own pages before
@@ -108,5 +116,7 @@ func (a *httpAPI) ListFolders(ctx context.Context, accessToken string) ([]connec
 		// names are.
 		queue = append([]pending{{url: page.NextLink, prefix: cur.prefix, depth: cur.depth}}, queue...)
 	}
-	return out, nil
+	// A queue with work left means the budget ran out, not that the mailbox
+	// ended.
+	return out, truncated || len(queue) > 0, nil
 }

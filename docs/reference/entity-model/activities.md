@@ -108,13 +108,15 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_restriction_window` — `CHECK (((restricted_until IS NULL) OR (restricted_until > restricted_at)))`
 - `activity_retention_class_known` — `CHECK (((retention_class IS NULL) OR (retention_class = 'commercial_correspondence')))`
 - `activity_retention_class_stamped` — `CHECK (((retention_class IS NULL) = (retention_class_at IS NULL)))`
-- `activity_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))) NOT VALID`
+- `activity_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `activity_task_fields` — `CHECK (((kind = 'task') OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))`
 
 **Indexes**
 
 - `activity_meeting_no_overlap` — `gist (host_user_id, tsrange(timezone('UTC', occurred_at), (timezone('UTC', occurred_at) + (( CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)::double precision * '00:00:01'::interval)), '[)')) WHERE ((kind = 'meeting') AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled'))`
 - `activity_pkey` — `unique, btree (id)`
+- `idx_activity_answer_mail` — `btree (counterparty_email, kind, occurred_at) WHERE ((direction = 'outbound') AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
+- `idx_activity_answer_touch` — `btree (id, occurred_at) WHERE (((kind = 'call') OR ((kind = 'meeting') AND (meeting_status = 'held'))) AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
 - `idx_activity_channel_thread` — `btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)`
 - `idx_activity_counterparty_email` — `btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)`
 - `idx_activity_direction` — `btree (direction, occurred_at DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))`
@@ -342,7 +344,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_aparticipant_address` — `btree (lower(address)) WHERE (address IS NOT NULL)`
 - `idx_aparticipant_contact` — `btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)`
 - `idx_aparticipant_user` — `btree (user_id, activity_id) WHERE (user_id IS NOT NULL)`
-- `uq_activity_participant` — `unique, btree (activity_id, role, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(contact_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(address, ''), COALESCE(channel_user_id, ''))`
+- `uq_activity_participant` — `unique, btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT`
 
 ## activity_reader_state
 
@@ -719,7 +721,6 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `booking_page_pkey` — `unique, btree (id)`
 - `booking_page_slug_key` — `unique, btree (slug)`
-- `idx_booking_page_host` — `btree (host_user_id) WHERE (revoked_at IS NULL)`
 - `idx_booking_page_host_user` — `btree (host_user_id)`
 
 ## deal_document_hide
@@ -917,7 +918,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_scheduled_send_anchor` — `btree (anchor_activity_id) WHERE (anchor_activity_id IS NOT NULL)`
 - `idx_scheduled_send_due` — `btree (scheduled_at) WHERE (status = 'scheduled')`
 - `idx_scheduled_send_owner` — `btree (scheduled_by, status, scheduled_at DESC)`
-- `scheduled_send_one_held_message_per_seat` — `unique, btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, COALESCE(agent_actor_id, ''), COALESCE(agent_passport_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(anchor_activity_id, '00000000-0000-0000-0000-000000000000'::uuid), md5((COALESCE(origin_links, '[]'))), md5((COALESCE(also_links, '[]'))), md5((payload))) WHERE ((status = 'held') AND (held_reason = 'send_refused'))`
+- `scheduled_send_one_held_message_per_seat` — `unique, btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, agent_actor_id, agent_passport_id, anchor_activity_id, md5((COALESCE(origin_links, '[]'))), md5((COALESCE(also_links, '[]'))), md5((payload))) NULLS NOT DISTINCT WHERE ((status = 'held') AND (held_reason = 'send_refused'))`
 - `scheduled_send_pkey` — `unique, btree (id)`
 
 ## stored_object_intent

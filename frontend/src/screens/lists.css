@@ -37,6 +37,13 @@
   gap: var(--space-1);
 }
 
+.lists-library-count,
+.lists-member-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .lists-library-steward {
   flex-direction: row;
   align-items: center;
@@ -81,7 +88,7 @@
 }
 
 .lists-why-unmet {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 .lists-why-unknown {

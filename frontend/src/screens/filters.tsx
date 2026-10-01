@@ -13,11 +13,9 @@
 import { useState } from "react";
 import { navigate } from "../app/router";
 import { Badge, SegmentedControl } from "../design-system/atoms";
-import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatNumber } from "../format/format";
-import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
+import { type PluralBase, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryStates } from "./common";
 import { FilterBuilder } from "./filterbuilder";
@@ -29,10 +27,23 @@ import {
 } from "./filterdata";
 import { canExportFilter, ExportFilterMenu } from "./filterexport";
 import { SaveFilterListAction } from "./filterlist";
+import {
+  buildTabOf,
+  EDIT_LIST_SEGMENT,
+  EditingListNotice,
+  SaveToListAction,
+  useOpenListFromAddress,
+} from "./filterlistedit";
+import { MatchCount } from "./filtermatchcount";
+import {
+  PlainWordsFilter,
+  type UnusedPhrase,
+  UnusedPhrases,
+} from "./filterpropose";
 import { FilterResults } from "./filterresults";
 import { ListLibrary } from "./listlibrary";
 import { ListScreen } from "./listpage";
-import { useListsAvailable } from "./lists.queries";
+import { useList, useListsAvailable } from "./lists.queries";
 import { MyViews } from "./myviews";
 import "./filters.css";
 import {
@@ -158,15 +169,34 @@ export function FiltersScreen({
       </div>
       {section === "lists" && <ListLibrary />}
       {section === "views" && <MyViews />}
-      {section === "build" && <FilterBuildScreen id={id} view={view} />}
+      {section === "build" &&
+        (id === EDIT_LIST_SEGMENT && view ? (
+          <ListFilterBuild listID={view} />
+        ) : (
+          <FilterBuildScreen id={id} view={view} />
+        ))}
     </div>
   );
+}
+
+/**
+ * `#/filters/list/<id>`: the builder on that Live List's filter, on the tab of
+ * its record type once the list has been read.
+ */
+function ListFilterBuild({ listID }: Readonly<{ listID: string }>) {
+  const list = useList(listID);
+  if (list.isPending) {
+    return null;
+  }
+  const tab = list.data ? buildTabOf(list.data.entity_type) : undefined;
+  return <FilterBuildScreen id={tab} editList={tab ? listID : undefined} />;
 }
 
 function FilterBuildScreen({
   id,
   view,
-}: Readonly<{ id?: string; view?: string }>) {
+  editList,
+}: Readonly<{ id?: string; view?: string; editList?: string }>) {
   const t = useT();
   // The ADDRESS is which object is being filtered. It was read once, on mount,
   // and never written back — so pressing a tab moved the screen and left the
@@ -177,7 +207,16 @@ function FilterBuildScreen({
   // nothing on a deal — carrying the tree across would offer the human a filter
   // the new vocabulary refuses.
   const [tree, setTree] = useState<Node>(() => newGroup("and"));
-  const opening = useOpenViewFromAddress(VIEW_OF[tab], view, setTree);
+  // What the last plain-words proposal could not use, kept until the next one
+  // or until the reader puts it away.
+  const [unused, setUnused] = useState<readonly UnusedPhrase[]>([]);
+  const openingView = useOpenViewFromAddress(VIEW_OF[tab], view, setTree);
+  const { edited, opening: openingList } = useOpenListFromAddress(
+    editList,
+    tab,
+    setTree,
+  );
+  const opening = openingView || openingList;
 
   const resource = RESOURCE_OF[tab];
   const vocabulary = useFilterVocabulary(resource);
@@ -189,6 +228,7 @@ function FilterBuildScreen({
     // address changed, not beside it — `id` is what this screen renders from.
     navigate({ screen: "filters", id: next });
     setTree(newGroup("and"));
+    setUnused([]);
   };
 
   return (
@@ -212,6 +252,7 @@ function FilterBuildScreen({
         />
       </div>
 
+      {edited && <EditingListNotice edited={edited} />}
       <Panel
         title={t("filters.builderTitle")}
         // Below the builder, not beside the count: the export takes the filter
@@ -238,7 +279,7 @@ function FilterBuildScreen({
             menus — measured 614px at a 390px viewport. */}
         <PanelBody className="filters-count-row">
           <MatchCount
-            tab={tab}
+            label={MATCH_LABEL[tab]}
             count={preview.data?.match_count}
             stale={preview.isFetching}
             failed={preview.isError}
@@ -249,7 +290,23 @@ function FilterBuildScreen({
           <Badge tone="accent">{t("filters.dynamic")}</Badge>
           <LoadFilterViewMenu resource={VIEW_OF[tab]} onLoad={setTree} />
           <SaveFilterViewAction resource={VIEW_OF[tab]} tree={tree} />
+          {edited && <SaveToListAction edited={edited} tree={tree} />}
           <SaveFilterListAction resource={resource} tree={tree} />
+        </PanelBody>
+        <PanelBody>
+          {/* Keyed by object so a sentence typed for contacts is not offered
+              to deals, whose vocabulary it was never read against. */}
+          <PlainWordsFilter
+            key={resource}
+            resource={resource}
+            tree={tree}
+            onApply={(next, phrases) => {
+              if (next !== null) {
+                setTree(next);
+              }
+              setUnused(phrases);
+            }}
+          />
         </PanelBody>
         <PanelBody>
           <SurfaceState
@@ -270,6 +327,15 @@ function FilterBuildScreen({
             />
           </SurfaceState>
         </PanelBody>
+        {unused.length > 0 && (
+          <PanelBody>
+            <UnusedPhrases
+              unused={unused}
+              fields={vocabulary.data?.fields ?? []}
+              onDismiss={() => setUnused([])}
+            />
+          </PanelBody>
+        )}
       </Panel>
 
       <PreviewSection
@@ -370,65 +436,6 @@ function PreviewSection({
         />
       </PanelBody>
     </Panel>
-  );
-}
-
-/**
- * The count, and whether it is behind.
- *
- * Four readings, and keeping them apart is the point. A count the server has
- * answered reads plainly. A count being recomputed reads as the LAST answer,
- * marked stale — not as a spinner, because a number that vanishes on every
- * keystroke is harder to read than one that lags a moment. A tree with no
- * complete clause has no count at all, which is different from a count of zero:
- * zero means "nothing matches", and this means "you have not asked yet". And a
- * count the server was asked for and refused says exactly that.
- *
- * The refusal outranks the other three. It is read first because the previous
- * answer survives a failed refetch, so a stale number would otherwise be
- * presented as current, and because "you have not asked yet" over a finished
- * clause blames the reader for the server's refusal.
- */
-function MatchCount({
-  tab,
-  count,
-  stale,
-  failed,
-}: Readonly<{
-  tab: ObjectTab;
-  count: number | undefined;
-  stale: boolean;
-  failed: boolean;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  if (failed) {
-    // Silent: the results card below carries the reason in an assertive live
-    // region, and announcing the same failure twice fragments it.
-    return (
-      <span className="filters-count">
-        <ErrorLine inline standing>
-          {t("filters.countUnavailable")}
-        </ErrorLine>
-      </span>
-    );
-  }
-  if (count === undefined) {
-    return <span className="filters-count">{t("filters.noFilterYet")}</span>;
-  }
-  return (
-    <span
-      className="filters-count"
-      // Spoken, because the count changing is the feedback for every edit — a
-      // sighted reader sees the number move and a screen-reader user would
-      // otherwise get nothing back from adding a clause.
-      role="status"
-      aria-busy={stale}
-      data-stale={stale ? "true" : undefined}
-    >
-      {plural(MATCH_LABEL[tab], count, { count: formatNumber(count, locale) })}
-    </span>
   );
 }
 

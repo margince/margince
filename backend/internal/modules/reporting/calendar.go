@@ -45,14 +45,23 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 		start = quarterStart(day, calendar.FiscalStartMonth)
 	case "custom":
 		if selection.Interval == nil {
-			return crmcontracts.ReportingWindow{}, invalid("choose the reporting interval")
+			return crmcontracts.ReportingWindow{}, intervalError("choose the reporting interval")
 		}
 		start, end = selection.Interval.StartAt.In(zone), selection.Interval.EndAt.In(zone)
 	default:
 		return crmcontracts.ReportingWindow{}, invalid("choose a supported reporting period")
 	}
-	if !end.After(start) || end.After(at) || end.After(start.AddDate(1, 0, 0)) {
-		return crmcontracts.ReportingWindow{}, invalid("choose a past interval of no more than twelve months")
+	if !end.After(start) {
+		return crmcontracts.ReportingWindow{}, intervalError("choose an end date after the start date")
+	}
+	if end.After(start.AddDate(1, 0, 0)) {
+		return crmcontracts.ReportingWindow{}, intervalError("choose an interval of no more than twelve months")
+	}
+	if !start.Before(at) {
+		return crmcontracts.ReportingWindow{}, intervalError("choose a start date before the reporting cutoff")
+	}
+	if end.After(at) {
+		end = at
 	}
 	return crmcontracts.ReportingWindow{StartAt: start, EndAt: end}, nil
 }

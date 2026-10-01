@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-22 columns · primary key `(id)` · referenced by 125 foreign keys
+22 columns · primary key `(id)` · referenced by 126 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -270,13 +270,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `oauth_client_client_id_key` — `UNIQUE (client_id)`
 - `oauth_client_created_via_check` — `CHECK ((created_via = ANY (ARRAY['dcr', 'admin', 'cimd'])))`
-- `oauth_client_unique` — `UNIQUE (client_id)`
 
 **Indexes**
 
 - `oauth_client_client_id_key` — `unique, btree (client_id)`
 - `oauth_client_pkey` — `unique, btree (id)`
-- `oauth_client_unique` — `unique, btree (client_id)`
 
 ## oauth_grant
 
@@ -302,17 +300,12 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `lent_passport_id` | `passport` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
-**Rules**
-
-- `oauth_grant_ws_id_key` — `UNIQUE (id)`
-
 **Indexes**
 
 - `idx_oauth_grant_user` — `btree (user_id)`
 - `oauth_grant_lent_passport_ix` — `btree (lent_passport_id)`
 - `oauth_grant_pkey` — `unique, btree (id)`
 - `oauth_grant_user_live_ix` — `btree (user_id, id) WHERE (revoked_at IS NULL)`
-- `oauth_grant_ws_id_key` — `unique, btree (id)`
 
 ## oauth_refresh_token
 
@@ -417,17 +410,14 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `passport_token_hash_key` — `UNIQUE (token_hash)`
 - `uq_passport_id_owner` — `UNIQUE (id, on_behalf_of)`
-- `uq_passport_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
-- `idx_passport_obo` — `btree (on_behalf_of) WHERE (revoked_at IS NULL)`
 - `idx_passport_on_behalf_of` — `btree (on_behalf_of)`
 - `passport_oauth_grant_ix` — `btree (oauth_grant_id)`
 - `passport_pkey` — `unique, btree (id)`
 - `passport_token_hash_key` — `unique, btree (token_hash)`
 - `uq_passport_id_owner` — `unique, btree (id, on_behalf_of)`
-- `uq_passport_ws_id` — `unique, btree (id)`
 
 ## record_grant
 
@@ -462,7 +452,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `idx_record_grant_record` — `btree (record_type, record_id)`
 - `idx_record_grant_subject` — `btree (subject_type, subject_id)`
 - `record_grant_pkey` — `unique, btree (id)`
 - `record_grant_unique` — `unique, btree (record_type, record_id, subject_type, subject_id)`
@@ -523,7 +512,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `idx_role_assignment_team` — `btree (team_id)`
 - `idx_role_assignment_user` — `btree (user_id)`
 - `role_assignment_pkey` — `unique, btree (id)`
-- `uq_role_assignment` — `unique, btree (role_id, user_id, COALESCE(team_id, '00000000-0000-0000-0000-000000000000'::uuid))`
+- `uq_role_assignment` — `unique, btree (role_id, user_id, team_id) NULLS NOT DISTINCT`
 
 **Triggers**
 
@@ -643,7 +632,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `idx_team_membership_team` — `btree (team_id)`
 - `idx_team_membership_user` — `btree (user_id)`
 - `team_membership_pkey` — `unique, btree (id)`
 - `team_membership_unique` — `unique, btree (team_id, user_id)`

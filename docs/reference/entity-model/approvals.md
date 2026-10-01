@@ -54,7 +54,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 - `approval_co_target_whole` — `CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))`
 - `approval_decided` — `CHECK ((((status = 'pending') AND (decided_at IS NULL)) OR (status = 'expired') OR ((status = ANY (ARRAY['approved', 'rejected'])) AND (decided_at IS NOT NULL))))`
-- `approval_effect_failure_is_stated` — `CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL))) NOT VALID`
+- `approval_effect_failure_is_stated` — `CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL)))`
 - `approval_status_check` — `CHECK ((status = ANY (ARRAY['pending', 'approved', 'rejected', 'expired'])))`
 
 **Indexes**
@@ -115,20 +115,15 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## signing_key
 
-6 columns · primary key `(kid)` · referenced by 0 foreign keys
+5 columns · primary key `(kid)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `alg` | `text` | yes | Always `EdDSA` — the column exists for the values it may hold later. |
 | `kid` | `text` | yes | Required `text`. |
 | `private_key` | `bytea` | yes | Required `bytea`. |
 | `public_key` | `bytea` | yes | Required `bytea`. |
 | `retired_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-
-**Rules**
-
-- `workspace_signing_key_alg_check` — `CHECK ((alg = 'EdDSA'))`
 
 **Indexes**
 

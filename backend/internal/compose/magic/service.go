@@ -114,11 +114,15 @@ func (s *Service) Read(
 		SourcesUnavailable: []crmcontracts.WorklistSourceUnavailable{},
 	}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		entries, notShown, err := doneSince(ctx, tx, from, limit)
+		entries, notShown, capped, err := doneSince(ctx, tx, from, limit)
 		if err != nil {
 			return err
 		}
-		lines, housekeeping := linesOf(entries, limit)
+		mask, err := newImageMask(ctx)
+		if err != nil {
+			return err
+		}
+		lines, housekeeping := linesOf(mask, entries, capped, limit)
 		// Asked after the lines are drawn and inside the page's own
 		// transaction: the judge reads the record each line names, and a
 		// second connection inside this one can deadlock against a lock it

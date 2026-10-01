@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { isEntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Button } from "../design-system/atoms";
+import { Badge, Button, Disclosure } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
@@ -101,10 +101,13 @@ function ReviewPanel({
   return (
     <Panel title={title} titleAction={<ReadinessBadge run={run} />}>
       <PanelBody>
-        {/* Coverage first and SEPARATE. A reader who takes "no findings" for a
-            clean pipeline when nobody could look has been told the opposite of
-            what happened. */}
-        <CoverageLine sources={run.sources} />
+        {run.sources?.some((source) => source.state !== "checked") ? (
+          <CoverageLine sources={run.sources} />
+        ) : (
+          <Disclosure summary={t("analytics.sectionCoverage")}>
+            <CoverageLine sources={run.sources} />
+          </Disclosure>
+        )}
         {/* Beside the coverage line rather than in the header: a recheck is an
             answer to what the coverage line just said, and the header already
             carries the verdict. */}

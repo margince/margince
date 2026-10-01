@@ -1351,6 +1351,10 @@ func (stubs) RenameCustomField(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "RenameCustomField")
 }
 
+func (stubs) ListCustomFieldLiveLists(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListCustomFieldLiveLists")
+}
+
 func (stubs) UpdateCustomFieldOptions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateCustomFieldOptionsParams) {
 	httperr.NotImplemented(w, r, "UpdateCustomFieldOptions")
 }
@@ -1621,6 +1625,10 @@ func (stubs) GetFieldHistory(w nethttp.ResponseWriter, r *nethttp.Request, param
 
 func (stubs) PreviewFilter(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewFilter")
+}
+
+func (stubs) ProposeFilter(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ProposeFilter")
 }
 
 func (stubs) GetFilterVocabulary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetFilterVocabularyParams) {
@@ -1957,6 +1965,10 @@ func (stubs) ExplainListMember(w nethttp.ResponseWriter, r *nethttp.Request, id 
 
 func (stubs) RestoreList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RestoreList")
+}
+
+func (stubs) VisitList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "VisitList")
 }
 
 func (stubs) GetMagic(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMagicParams) {

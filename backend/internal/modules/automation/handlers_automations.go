@@ -50,6 +50,12 @@ func NewHandlers(db *database.DB) Handlers {
 // transport's store (see AutomationStore.WithFieldCatalog); compose
 // injects modules/customfields' Service here, the same edge
 // deals.Handlers/contacts.Handlers already wire.
+// WithLists wires the lists seam a list rule's params are checked against.
+func (h Handlers) WithLists(lists Lists) Handlers {
+	h.automations = h.automations.WithLists(lists)
+	return h
+}
+
 func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
 	h.automations = h.automations.WithFieldCatalog(catalog)
 	return h
@@ -60,6 +66,10 @@ func (h Handlers) ListAutomationCatalog(w http.ResponseWriter, r *http.Request) 
 	entries := Catalog()
 	data := make([]crmcontracts.AutomationCatalogEntry, 0, len(entries))
 	for _, e := range entries {
+		if e.ValidateRefs != nil && h.automations.lists == nil {
+			// Its params name records this installation does not offer.
+			continue
+		}
 		entry := crmcontracts.AutomationCatalogEntry{
 			Key:          e.Key,
 			Name:         e.Name,
@@ -360,15 +370,21 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 		}
 	}
 	version := int(a.Version)
+	var paused *crmcontracts.AutomationPausedReason
+	if a.PausedReason != nil {
+		reason := crmcontracts.AutomationPausedReason(*a.PausedReason)
+		paused = &reason
+	}
 	return crmcontracts.Automation{
-		Id:        openapi_types.UUID(a.ID.UUID),
-		Key:       a.Key,
-		Name:      a.Name,
-		Status:    status,
-		Params:    params,
-		Version:   &version,
-		CreatedAt: a.CreatedAt,
-		UpdatedAt: a.UpdatedAt,
+		PausedReason: paused,
+		Id:           openapi_types.UUID(a.ID.UUID),
+		Key:          a.Key,
+		Name:         a.Name,
+		Status:       status,
+		Params:       params,
+		Version:      &version,
+		CreatedAt:    a.CreatedAt,
+		UpdatedAt:    a.UpdatedAt,
 	}, nil
 }
 

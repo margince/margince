@@ -66,6 +66,7 @@ func loadDeployment(cfg *workerConfig) (deployconfig.Config, error) {
 	}
 	cfg.allowDataReset = deployCfg.Operations.AllowDataReset
 	cfg.reportingEnabled = deployCfg.Analytics.PerformanceEnabled
+	cfg.listsEnabled = deployCfg.Lists.Enabled
 	cfg.ratesFx = deployCfg.Rates.Fx
 	cfg.ratesCurrencies = deployCfg.Rates.FxCurrencies
 	return deployCfg, nil
@@ -332,7 +333,11 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// this contact", which is a deterministic question about our own mail.
 	edges := search.NewGraphEdgeGen(search.NewStore(compose.InstallationDB(pool)))
 	_, _ = fmt.Fprintln(stdout, "worker maintaining interaction edges")
-	background.Go(func() { runSubscriber(ctx, rdb, "cg:graph-edge", edges.HandleEvent, logger, 0) })
+	// Coalesced: a capture burst names the same colleagues event after event,
+	// and one refold per read does their shared pairs once (graphedgebatch.go).
+	background.Go(func() {
+		runCoalescingSubscriber(ctx, rdb, "cg:graph-edge", edges.HandleEvent, edges.HandleBatch, logger)
+	})
 
 	// The audience-change corrector: a Limit on an already-summarised message
 	// narrows the derived signals citing it and makes the thread due for a
@@ -372,6 +377,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 
 	startIntroAdvance(ctx, pool, rdb, background, logger, stdout)
 	startStageProgressionOutcome(ctx, pool, rdb, background, logger, stdout)
+	startApprovalNoticeRetract(ctx, pool, rdb, background, logger, stdout)
 	startNoticeCaseOpen(ctx, pool, rdb, background, logger, stdout)
 
 	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)

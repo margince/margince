@@ -15,27 +15,27 @@ open it rather than guessing.
 To see your forecast in Margince, click **Analytics** in the sidebar (under **Intelligence**) and open the **Forecast** section.
 1. Click **Analytics**, then **Forecast** under **Analytics sections**.
 2. Choose the **Period**: **Quarter**, **Month** or **Week**.
-3. Read **Current call**, **Evidence** (confirmed close dates), **Already won** and **Landing**, then **Checks before the call** and **Data and evidence checked**.
-A manager records a call with **Update call**. Also called: sales forecast, projected revenue, quarter forecast, landing.
+3. Read the **Period forecast** and its composition: **Already won**, **Committed · confirmed dates** and **Best-case addition**. The forecast gap compares the manager’s total with won sales plus confirmed committed deals. Review **Checks before the call**; source details are under **Data and evidence checked**.
+A manager records a call with **Update forecast**. Also called: sales forecast, projected revenue, quarter forecast, landing.
 
 ### How do I see my team's pipeline?
 To see your team's pipeline in Margince, open **Analytics** and pick the team in the **Record scope** picker above the numbers. A seat scoped to its teams, such as a team lead's, is offered **My teams**, each of those teams and its own records; a seat that sees everything is also offered **Whole company**. A rep who sees only their own records gets no picker, just "These numbers cover {scope}."
 Also called: team forecast, my team's deals, manager view, team report.
 
 ### How do I see my pipeline report?
-To see your pipeline report in Margince, click **Analytics** in the sidebar and open the **Deals** section.
-1. Click **Analytics**, then the **Deals** tab.
+To see your pipeline report in Margince, click **Analytics** in the sidebar and open the **Pipeline analysis** section.
+1. Click **Analytics**, then the **Pipeline analysis** tab.
 2. Read **Open deals by stage** (deals, value and weighted value per stage), **Forecast categories** and **Open deals per company**.
 3. Press **Explain this number** on any card to see the deals behind it.
 The **Deals** board itself also shows each stage's total and weighted total in its column header. Also called: pipeline report, sales pipeline, deals by stage, funnel report.
 
 ### What analytics sections are there?
-The Analytics screen in Margince has six sections, switched with the **Analytics sections** tabs: **Forecast**, **Deals**, **Performance**, **My outcomes**, **Data coverage** and **Delivery**.
-**Forecast** is where this period will land. **Deals** holds the pipeline reports. **Performance** holds **Won and lost** and **Time in stage**. **My outcomes** shows your own open deals and meetings, for a rep only. **Data coverage** shows which sources the nightly check could read, for a seat allowed to see it. **Delivery** holds the project reports. Also called: reports, dashboards.
+The main Analytics sections are **Performance**, **Forecast**, **Saved reports** and **Pipeline analysis**. **More analysis** holds **Data coverage** and **Custom reports**. Access determines which sections are available.
+**Forecast** is where this period will land. **Pipeline analysis** holds the pipeline reports. **Performance** shows outcome totals, target progress when assigned, trends and pipeline charts. With sales reporting disabled it shows the legacy **Won and lost** and **Time in stage** reports. **My outcomes** shows your own open deals and meetings, for a rep only. **Data coverage** shows which sources the nightly check could read, for a seat allowed to see it. **Delivery** holds the project reports. Also called: reports, dashboards.
 
 ### How do I share a report view?
 To share a forecast view in Margince, open **Analytics** → **Forecast**, press **Share view**, choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**.
-The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows. Only the Forecast section has **Share view**; other sections have no share or export button. Opening a link does not yet show the shared view (see "Sharing a view" below). Also called: send a report, share dashboard, report link.
+The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows. Only the Forecast section has **Share view**; Performance and saved sales reports offer CSV export when sales reporting is enabled. Opening a link does not yet show the shared view (see "Sharing a view" below). Also called: send a report, share dashboard, report link.
 
 ### How do I close a shared forecast link?
 To close a forecast link in Margince before its 30 days run out, open **Analytics** → **Forecast** and press **Shared links** beside **Share view**.
@@ -49,8 +49,9 @@ When sales reporting is enabled, **Performance** offers a closed win rate with a
 
 ## The reporting sections
 
-**Forecast** · **Deals** · **Performance** · **My outcomes** ·
-**Data coverage** · **Delivery**
+**Performance** · **Forecast** · **Saved reports** · **Pipeline analysis**
+
+**More analysis** holds **Data coverage** and **Custom reports**. **Delivery** and **My outcomes** appear when the user has the relevant access.
 
 When sales reporting is enabled, **Reports**, **Targets** and **Definitions**
 join the graph-first Performance view. [Sales reporting](sales-reporting.md) covers
@@ -138,7 +139,7 @@ The Forecast section has no Explain control — it is not built from report card
 
 ## Deals
 
-The **Deals** section of Analytics holds the pipeline reports.
+The **Pipeline analysis** section of Analytics holds the pipeline reports.
 
 **Open deals by stage** — one row per stage, in pipeline order: the stage,
 how many deals, unweighted and weighted. Every figure is converted server-side
@@ -197,7 +198,7 @@ The **Delivery** section of Analytics holds the project reports.
 
 **Project commitments** — project, phase, open, overdue.
 
-**Projects gone quiet** — project, phase, quiet since.
+**Projects inactive for 30 days** — project, phase, quiet since.
 
 When there is nothing, the page says which nothing it means: "No projects yet.
 A won deal creates one." or "No project in delivery has gone quiet."
@@ -241,9 +242,9 @@ blending them.
 
 | Reading | What kind of claim it is |
 |---|---|
-| **Current call** | Somebody's judgement. No call reads "Not called", never a dash |
-| **Evidence** | The part with confirmed close dates behind it |
-| **Already won** | Money that arrived, "Closed this period" |
+| **Manager forecast** | Somebody's judgement. No forecast reads "No manager forecast submitted" |
+| **Committed · confirmed dates** | Open Commit deals with a confirmed expected close date in the period |
+| **Already won** | Value of deals actually closed won in the period |
 
 The membership rules are worth knowing:
 
@@ -251,7 +252,7 @@ The membership rules are worth knowing:
   expected to.
 - **Open** means not won, carrying an expected close date, and that date falls
   in the window.
-- **Evidence** means open, not provisional, and in Commit.
+- **Committed · confirmed dates** means open, not provisional, and in Commit.
 - A **provisional** close date is a guess. It is in the open pipeline and out of
   the evidence.
 
@@ -272,8 +273,8 @@ its place.
 **"A call is the amount you expect to close. It records your number and changes
 no deal."**
 
-To record a call, press **Update call**, fill **Expected total for this period**
-(in the base currency) and a **Supporting note**, then press **Save call**. The call
+To record a call, press **Update forecast**, fill **Expected total for this period**
+(in the base currency) and a **Supporting note**, then press **Save forecast**. The call
 is filed against the period *and* the population you are looking at.
 
 **A call supersedes; it never overwrites.** The first call of a period
@@ -389,3 +390,5 @@ succeed, and the CSV export behind it is unreachable. Closing works: every open
 link you issued is listed under **Shared links**, where **Close link** ends it.
 Treat Share view as unfinished rather than as a way to get figures to somebody
 outside your own seat.
+
+The manager forecast is a full-period total. Its gap compares against already-won sales plus committed open deals with confirmed close dates, in the same currency and period. It is not compared only with the open component. The composition is not guaranteed revenue. **My outcomes → My meetings** counts meetings you host by their current status, without a date filter; use **Performance → SDR outcomes** for period totals.

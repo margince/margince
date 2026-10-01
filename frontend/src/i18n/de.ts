@@ -5,18 +5,54 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "reporting.latestSnapshot": "Letzter Snapshot",
+  "reporting.contextDetails": "Berichtsdetails",
+  "reporting.pipelineFilter": "Offene Pipeline · erwarteter Abschluss",
+  "reporting.targetRemaining": "{amount} fehlen zum Ziel",
+  "reporting.targetExceeded": "{amount} über dem Ziel",
+  "reporting.targetPeriodSummary": "{actual} von {target} · {percent} %",
+  "reporting.sampleDetails": "Stichprobendetails",
+  "reporting.customize": "Bericht anpassen",
+  "reporting.actions": "Berichtsaktionen",
+  "reporting.history": "Verlauf und Zeitpläne",
+  "reporting.activateSchedule": "Zeitplan aktivieren",
+  "reporting.savePaused": "Pausiert speichern",
+  "reporting.updateSchedule": "Zeitplan aktualisieren",
+  "reporting.scheduleResult":
+    "Snapshots des vorherigen abgeschlossenen Zeitraums werden hier gespeichert.",
+  "reporting.useCurrentSettings": "Aktuelle Berichtseinstellungen verwenden",
+  "reporting.pinnedSettings": "Zuvor gespeicherte Einstellungen",
+  "reporting.unallocated": "Nicht zugewiesen",
+  "reporting.overallocated": "Zu viel zugewiesen",
+  "reporting.targetFor": "Ziel für",
+  "reporting.targetStatus": "Zielstatus",
+  "reporting.activeTargets": "Aktive Ziele",
+  "reporting.allTargets": "Alle Ziele",
+  "reporting.periodYear": "Jahr",
+  "reporting.periodMonth": "Startmonat",
+  "reporting.closedOn": "Abgeschlossen am",
+  "reporting.meetingOn": "Meetingdatum",
+  "reporting.acceptedOn": "Angenommen am",
+  "reporting.record": "Eintrag",
+  "reporting.dealValue": "Dealwert",
+  "reporting.valueChanges": "Wertänderungen",
+  "reporting.netChange": "Nettoänderung: {amount}",
+  "reporting.change": "Änderung",
+  "reporting.coverageAction":
+    "Bei ungeprüften Quellen muss das für die Verbindung zuständige Team oder die Administration den Zugriff wiederherstellen.",
+  "reporting.currentPipeline": "Offene Pipeline heute",
   "reporting.retiredHelp":
     "Zurückgezogene Ziele bleiben im Verlauf. Bearbeite dieses Ziel und hebe die Zurückziehung auf, um dieselbe Zuweisung wieder zu nutzen.",
   "reporting.pausedSchedules_one": "Pausierter Zeitplan: {count}",
   "reporting.pausedSchedules_other": "Pausierte Zeitpläne: {count}",
-  "reporting.moreMetrics": "Weitere Kennzahlen und Details",
-  "reporting.selectedValue": "Ausgewählter Wert",
-  "reporting.pageRecords_one": "Datensatz auf dieser Seite: {count}",
-  "reporting.pageRecords_other": "Datensätze auf dieser Seite: {count}",
+  "reporting.moreMetrics": "Alle Kennzahlen",
+  "reporting.selectedValue": "Gesamt",
+  "reporting.pageRecords_one": "{count} Eintrag angezeigt",
+  "reporting.pageRecords_other": "{count} Einträge angezeigt",
   "reporting.currentState": "Aktueller Stand",
   "reporting.attainment": "{percent} % des Ziels",
   "reporting.remaining": "Verbleibend",
-  "reporting.ownerMetric": "{metric} nach Zuständigkeit",
+  "reporting.ownerMetric": "{metric} nach Teammitglied",
   "reporting.quarterStart": "Wähle den ersten Monat des Geschäftsquartals.",
   "reporting.additional": "Weitere Auswertungen",
   "reporting.settings": "Berichtseinstellungen",
@@ -44,10 +80,12 @@ export const de = {
   "reporting.shareSnapshot": "Stand zum Teilen",
   "reporting.capturePending":
     "Stand vorgemerkt. Er erscheint hier, sobald er bereit ist.",
-  "reporting.createReport": "Bericht anlegen",
+  "reporting.createReport": "Aus Performance erstellen",
   "reporting.observations_one": "Beobachtung: {count}",
   "reporting.observations_other": "Beobachtungen: {count}",
   "reporting.observationsUnavailable": "Stichprobengröße nicht verfügbar",
+  "reporting.earlierDefinition":
+    "Dieser Snapshot verwendet eine frühere Kennzahldefinition. Die gespeicherten Werte wurden nicht neu berechnet.",
   "reporting.definition": "Berechnung anzeigen",
   "reporting.viewRecords": "Datensätze anzeigen",
   "reporting.copyName": "Kopie von {name}",
@@ -60,10 +98,8 @@ export const de = {
   "reporting.status.partial": "Teilweise Daten",
   "reporting.status.ok": "Vollständige Daten",
   "retention.scopeReportEdition": "Gespeicherte Berichtsausgaben",
-  "reporting.reviewQueue": "Eigene Worklist öffnen",
   "reporting.lastCapture": "Letzte erfolgreiche Erfassung {at}",
   "reporting.allocationDifference": "Teamziel abzüglich verteilter Ziele",
-  "reporting.allocatedTarget": "Verteilte Ziele",
   "reporting.view": "Leistungsansicht",
   "reporting.fromDate": "Von",
   "reporting.throughDate": "Bis einschließlich",
@@ -76,13 +112,11 @@ export const de = {
     "Bestätigte Kundentermine und Abschlüsse nach damaligem Verantwortlichen · Neue Pipeline zählt angelegte Deals, keine Qualifizierung.",
   "brief.weekly.numericPartial":
     "Einige Nachweise sind nicht verfügbar. Die Werte enthalten nur lesbare Datensätze mit bekanntem Wert.",
-  "reporting.owner": "Verantwortlich",
   "reporting.edit": "Bericht bearbeiten",
   "reporting.moveUp": "Nach oben",
   "reporting.moveDown": "Nach unten",
-  "reporting.scorecard": "Leistung je Verantwortlichem",
   "reporting.exportCsv": "CSV exportieren",
-  "reporting.captureContexts": "Tägliche Prognoseaufnahmen",
+  "reporting.captureContexts": "Täglichen Pipeline-Verlauf speichern",
   "reporting.captureHelp":
     "Feste Teams und Pipelines wählen. Für Veränderungen sind zwei vergleichbare tägliche Aufnahmen nötig.",
   "reporting.addCapture": "Aufnahme hinzufügen",
@@ -103,10 +137,7 @@ export const de = {
   "reporting.monthly": "Monatlich",
   "reporting.day": "Ausführungstag",
   "reporting.time": "Ortszeit",
-  "reporting.enabled": "Zeitplan aktiv",
   "reporting.timezone": "Berichtszeitzone",
-  "reporting.scheduleBasis":
-    "Erfasst die letzte abgeschlossene Woche oder den letzten abgeschlossenen Monat. Die Berichtsversion bleibt bis zu deiner Änderung festgelegt.",
   "reporting.nextRun": "Nächste Ausführung: {at}",
   "reporting.pause": "Pausiert",
   "reporting.resume": "Fortsetzen",
@@ -117,32 +148,30 @@ export const de = {
   "reporting.value": "Ziel",
   "reporting.newTarget": "Ziel festlegen",
   "reporting.revise": "Ziel ändern",
-  "reporting.commitments":
-    "Teamzusagen und persönliche Zuteilungen sind getrennte Ziele. Eine Differenz wird nicht automatisch verteilt.",
   "reporting.up": "Nach oben",
   "reporting.down": "Nach unten",
   "reporting.periodStart": "Erster Tag des Zielzeitraums",
-  "reporting.noComparison": "Keine vergleichbare vorherige Ausgabe vorhanden.",
+  "reporting.noComparison":
+    "Wähle zwei Snapshots mit gleichem Umfang aus aufeinanderfolgenden abgeschlossenen Zeiträumen.",
   "reporting.noSource": "Quelldetails sind nicht verfügbar.",
-  "reporting.framework": "Berichtsrahmen",
+  "reporting.framework": "Berichtseinstellungen",
   "reporting.template": "Standardansicht",
   "reporting.sales": "Vertrieb",
   "reporting.sdr": "SDR-Ergebnisse",
   "reporting.qualification": "Qualifizierungsphasen",
-  "reporting.publish": "Rahmen veröffentlichen",
+  "reporting.publish": "Berichtseinstellungen speichern",
   "reporting.prospective":
-    "Änderungen gelten für künftige Ereignisse. Bestehende Ausgaben behalten ihren ursprünglichen Rahmen.",
+    "Änderungen gelten für zukünftige Ereignisse. Gespeicherte Snapshots behalten ihre Einstellungen.",
   "reporting.performance": "Leistung",
   "reporting.reports": "Gespeicherte Berichte",
   "reporting.targets": "Ziele",
   "reporting.definitions": "Kennzahlendefinitionen",
-  "reporting.purpose":
-    "Fortschritt sehen, Belege prüfen und vergleichbare Ergebnisse aufbewahren.",
   "reporting.save": "Bericht speichern",
-  "reporting.advanced": "Erweiterte Analyse",
   "reporting.period": "Zeitraum",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Alle Pipelines",
+  "reporting.resultsThrough": "Ergebnisse bis {at}",
+  "reporting.noSalesWon": "Keine gewonnenen Abschlüsse",
   "reporting.this_month": "Dieser Monat",
   "reporting.last_month": "Letzter Monat",
   "reporting.last_week": "Letzte abgeschlossene Woche",
@@ -150,16 +179,16 @@ export const de = {
   "reporting.custom": "Eigener Zeitraum",
   "reporting.start": "Startdatum",
   "reporting.end": "Enddatum (nicht eingeschlossen)",
-  "reporting.bookings_trend": "Gewonnener Deal-Wert im Zeitverlauf",
+  "reporting.bookings_trend": "Gewonnener Umsatz im Verlauf",
   "reporting.stage_distribution": "Offene Pipeline nach Phase",
-  "reporting.owner_attainment": "Gewonnener Deal-Wert nach Zuständigkeit",
-  "reporting.stage_age": "Wo verzögern sich Deals?",
+  "reporting.owner_attainment": "Gewonnener Umsatz nach Zuständigkeit",
+  "reporting.stage_age": "Zeit in der aktuellen Phase",
   "reporting.sdr_outcomes": "Termine und angenommene Übergaben",
   "reporting.target_progress": "Fortschritt zum Ziel",
   "reporting.forecast_support": "Was stützt den Forecast?",
   "reporting.pipeline_movement": "Was hat sich in der Pipeline verändert?",
   "reporting.metric_reading": "Kennzahlendetails",
-  "reporting.bookings_won": "Gewonnener Deal-Wert",
+  "reporting.bookings_won": "Gewonnener Umsatz",
   "reporting.closed_win_rate": "Gewinnquote abgeschlossener Deals",
   "reporting.open_pipeline": "Offene Pipeline",
   "reporting.qualified_pipeline_created": "Neu qualifizierte Pipeline",
@@ -179,14 +208,11 @@ export const de = {
   "reporting.data": "Als Tabelle anzeigen",
   "reporting.evidence": "Belege",
   "reporting.details": "Details",
-  "reporting.noTarget": "Kein Ziel festgelegt",
   "reporting.unavailable": "Nicht verfügbar",
-  "reporting.stateAt": "Aktueller Stand vom {at}",
-  "reporting.interval": "{start} bis {end} · {zone}",
   "reporting.restricted": "Geschützter Datensatz",
   "reporting.next": "Nächste Seite",
   "reporting.name": "Berichtsname",
-  "reporting.audience": "Sichtbarkeit",
+  "reporting.audience": "Sichtbar für",
   "reporting.private": "Privat",
   "reporting.team": "Ausgewähltes Team",
   "reporting.workspace": "Unternehmen",
@@ -194,12 +220,12 @@ export const de = {
   "reporting.metrics": "Kennzahlen",
   "reporting.cancel": "Abbrechen",
   "reporting.saved": "Bericht gespeichert",
-  "reporting.live": "Live-Vorschau",
+  "reporting.live": "Aktueller Bericht",
   "reporting.opening": "Anfang",
   "reporting.closing": "Ende",
   "reporting.reconcile":
     "Die Bewegungen stimmen nicht mit dem Endwert überein.",
-  "reporting.managerCall": "Einschätzung der Führungskraft",
+  "reporting.managerCall": "Einschätzung der Vertriebsleitung",
   "reporting.independent":
     "Unabhängige Ereigniszahlen, kein Konversionstrichter.",
   "reporting.frozen": "Gespeicherter Stand",
@@ -3297,6 +3323,35 @@ export const de = {
     "{count} Verknüpfung, Tag oder Listenzuordnung kam nicht zurück.",
   "bulk.undoLeftBehind_other":
     "{count} Verknüpfungen, Tags oder Listenzuordnungen kamen nicht zurück.",
+  "bulk.reason.no_change_list": "Schon auf oder nicht auf der Shortlist",
+  "bulk.reason.no_change_tag": "Hat diesen Tag schon oder hat ihn nicht",
+  "bulk.tag": "Tag",
+  "bulk.tagPick": "Tag wählen",
+  "bulk.addTag": "Tag hinzufügen",
+  "bulk.removeTag": "Tag entfernen",
+  "bulk.titleAddTag": "Ausgewählte {unit} mit {tag} taggen?",
+  "bulk.titleRemoveTag": "{tag} von ausgewählten {unit} entfernen?",
+  "bulk.confirmAddTag": "Tag hinzufügen",
+  "bulk.confirmRemoveTag": "Tag entfernen",
+  "bulk.stateTagged": "Getaggt",
+  "bulk.stateNotTagged": "Nicht getaggt",
+  "bulk.createTask": "Aufgabe anlegen",
+  "bulk.taskTitle": "Eine Aufgabe je ausgewähltem Datensatz",
+  "bulk.taskSubject": "Was zu tun ist",
+  "bulk.taskDue": "Fällig am",
+  "bulk.taskAssignee": "Zuständig",
+  "bulk.taskAssigneeMe": "Du selbst",
+  "bulk.taskNext": "Vorschau",
+  "bulk.titleCreateTask":
+    "Für jeden ausgewählten Datensatz in {unit} eine Aufgabe anlegen?",
+  "bulk.confirmCreateTask": "Aufgaben anlegen",
+  "bulk.stateNewTask": "Neue Aufgabe",
+  "bulk.stateNoTask": "Keine neue Aufgabe",
+  "bulk.removeFromThisShortlist": "Von dieser Shortlist entfernen",
+  "bulk.doneLeads_one": "{count} Lead geändert.",
+  "bulk.doneLeads_other": "{count} Leads geändert.",
+  "bulk.undoneLeads_one": "{count} Lead zurückgesetzt.",
+  "bulk.undoneLeads_other": "{count} Leads zurückgesetzt.",
 
   "deal.offers": "Angebote",
   "deal.newOffer": "Neues Angebot",
@@ -4468,15 +4523,15 @@ export const de = {
   "analytics.currency": "Währung",
   "analytics.count": "Offene Deals",
   "analytics.closedDeals": "Abgeschlossene Deals",
-  "analytics.unweighted": "Ungewichtet",
-  "analytics.weighted": "Gewichtet",
+  "analytics.unweighted": "Dealwert",
+  "analytics.weighted": "Wahrscheinlichkeitsgewichteter Wert",
   "analytics.priced": "{priced} von {total} bepreist",
   "analytics.planNote":
     "Der ausgeführte Plan und die Zeilen, mit denen diese Zahl abgeglichen wird",
   "analytics.reportDeals": "Offene Deals nach Phase",
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Forecast",
-  "analytics.sectionPipeline": "Deals",
+  "analytics.sectionPipeline": "Pipeline-Analyse",
   "analytics.sectionPerformance": "Leistung",
   "analytics.noClosedDeals": "Noch keine Deals abgeschlossen.",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
@@ -4485,7 +4540,7 @@ export const de = {
   // The Questions section: a question composed from the seat's own analytics
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
-  "analytics.sectionQuestions": "Fragen",
+  "analytics.sectionQuestions": "Eigene Berichte",
   "analytics.reportDealsByStage": "Alle Deals nach Phase",
   "analytics.reportLeadsByStatus": "Leads nach Status",
   "analytics.reportActivitiesByKind": "Aktivitäten nach Art",
@@ -4539,9 +4594,9 @@ export const de = {
   "analytics.q.addMeasure": "Kennzahl hinzufügen",
   "analytics.q.allRecords": "Alle Datensätze",
   "analytics.q.answerTitle": "Antwort",
-  "analytics.q.ask": "Frage stellen",
-  "analytics.q.asking": "Wird abgefragt…",
-  "analytics.q.builderTitle": "Frage",
+  "analytics.q.ask": "Bericht ausführen",
+  "analytics.q.asking": "Bericht wird ausgeführt…",
+  "analytics.q.builderTitle": "Benutzerdefinierter Bericht",
   "analytics.q.chooseField": "Feld wählen",
   "analytics.q.choosePopulation": "Bericht wählen",
   "analytics.q.copyLink": "Link kopieren",
@@ -4612,9 +4667,9 @@ export const de = {
     "Füge einen Filter „Währung ist …“ hinzu, um Beträge in der Währung des jeweiligen Deals zu vergleichen.",
   "analytics.q.scopeNotAvailable":
     "Diese Frage wurde für einen Datensatzumfang gespeichert, den du nicht messen kannst. Die Frage wird für {scope} gestellt.",
-  "analytics.q.staleTitle": "Antwort ist veraltet",
+  "analytics.q.staleTitle": "Bericht ist veraltet",
   "analytics.q.staleBody":
-    "Diese Antwort gilt für die zuletzt gestellte Frage. Stelle die Frage erneut, um sie zu aktualisieren.",
+    "Führe den Bericht aus, um deine Änderungen anzuwenden.",
   "analytics.q.calculationN": "Berechnung, Kennzahl {n}",
   "analytics.q.measureFieldN": "Feld, Kennzahl {n}",
   "analytics.q.filterFieldN": "Feld, Filter {n}",
@@ -4624,19 +4679,18 @@ export const de = {
   "analytics.q.withheldGroups_other": "{count} Gruppen verborgen",
   "analytics.reportProjectsByPhase": "Projekte nach Phase",
   "analytics.reportProjectCommitments": "Projektzusagen",
-  "analytics.reportProjectsGoneQuiet": "Verstummte Projekte",
+  "analytics.reportProjectsGoneQuiet": "Projekte ohne Aktivität seit 30 Tagen",
   "analytics.projects": "Projekte",
   "analytics.project": "Projekt",
   "analytics.openDealValue": "Offener Deal-Wert · {currency}",
   "analytics.wonDealValue": "Gewonnener Deal-Wert · {currency}",
-  "analytics.openCommitments": "Offen",
-  "analytics.overdueCommitments": "Überfällig",
+  "analytics.openCommitments": "Offene Zusagen",
+  "analytics.overdueCommitments": "Überfällige Zusagen",
   "analytics.quietSince": "Ruhig seit",
   "analytics.nothingQuiet": "Kein Projekt in Umsetzung ist verstummt.",
   "analytics.noProjectsYet":
     "Noch keine Projekte. Ein gewonnener Deal legt eines an.",
-  "analytics.coverageSub":
-    "Quellen, die die nächtliche Prüfung lesen konnte, und wie weit. Eine gelesene Quelle ohne Aktivität gilt als geprüft; bei einer ungelesenen steht der Grund.",
+  "analytics.coverageSub": "Verbindungsstatus bei der letzten Prüfung.",
   "analytics.covSource": "Quelle",
   "analytics.covState": "Status",
   "analytics.covThrough": "Geprüft bis",
@@ -4646,12 +4700,10 @@ export const de = {
     "Nicht verfügbar, die Prüfung konnte sie nicht lesen",
   "analytics.covPermissionLimited": "Zugriff muss erneuert werden",
   "analytics.covNotConnected": "Nicht verbunden",
-  "analytics.coverageInputsElsewhere":
-    "Eingabeprobleme auf Datensatzebene werden in der Prüfung der Forecast-Eingaben aufgelistet und gelöst.",
   "analytics.myPipeline": "Meine offenen Deals",
   "analytics.myMeetings": "Meine Termine",
   "analytics.meetingsAsTheyStand":
-    "Termine, die du leitest, nach aktuellem Status. Ein stattgefundener Termin zählt nicht mehr als gebucht.",
+    "Von dir organisierte Besprechungen nach aktuellem Status. Ohne Datumsfilter.",
   "analytics.meetingsBooked": "Gebucht",
   "analytics.meetingsHeld": "Stattgefunden",
   "analytics.meetingsNoShow": "Nicht erschienen",
@@ -4747,7 +4799,7 @@ export const de = {
     "Noch nichts geprüft: Die erste Prüfung wurde noch nicht ausgeführt. Die Werte oben geben die aktuellen Datensätze wieder.",
   "review.firstCheck.title": "Eingabeprüfung starten",
   "review.firstCheck.body":
-    "Die nächtliche Prüfung läuft hier erst, wenn du sie startest. Die erste Prüfung meldet alle Befunde auf einmal und öffnet eine Aufgabe je betroffenem Deal. Der Umfang ist deshalb vorab wissenswert.",
+    "Startet nächtliche Prüfungen und erstellt eine Aufgabe pro betroffenem Deal.",
   "review.firstCheck.scope":
     "Zu prüfende Deals: {deals}. Zu meldende Befunde: {findings}.",
   "review.firstCheck.start": "Prüfung starten",
@@ -4800,29 +4852,26 @@ export const de = {
   "review.submit": "Antwort speichern",
   "forecast.question": "Forecast für den Zeitraum",
   "forecast.answerWithCall":
-    "Die aktuelle Einschätzung liegt bei {call}. Die Belege stützen {evidence}.",
+    "Einschätzung: {call}. Gewonnen plus zugesagte Deals mit bestätigtem Abschlussdatum: {evidence}.",
   "forecast.answerNoCall":
-    "Für diesen Zeitraum ist keine Einschätzung erfasst. Die Belege stützen {evidence}.",
+    "Gewonnen plus zugesagte Deals mit bestätigtem Abschlussdatum: {evidence}. Keine Einschätzung abgegeben.",
   "forecast.partialTitle": "Nicht jeder Deal ist bepreist",
   "forecast.partial":
     "{priced} von {eligible} Deals sind bepreist. Deals ohne Preis tragen nichts zu den Summen oben bei.",
-  "forecast.currentCall": "Aktuelle Einschätzung",
-  "forecast.currentCallNone": "Keine Einschätzung",
+  "forecast.currentCall": "Einschätzung",
   "forecast.currentCallDetailOver":
-    "Einschätzung vom {date} · {gap} über den Belegen",
+    "Aktualisiert {date} · {gap} über gewonnen + bestätigt zugesagt",
   "forecast.currentCallDetailUnder":
-    "Einschätzung vom {date} · {gap} unter den Belegen",
+    "Aktualisiert {date} · {gap} unter gewonnen + bestätigt zugesagt",
   "forecast.currentCallDetailEven":
-    "Einschätzung vom {date} · entspricht den Belegen",
-  "forecast.evidence": "Belege",
-  "forecast.evidenceDetail": "Bestätigte Abschlussdaten",
+    "Aktualisiert {date} · entspricht gewonnen + bestätigt zugesagt",
+  "forecast.evidence": "Zugesagt · bestätigtes Datum",
   "forecast.bestCaseAdds": "Zusatz im Best Case",
   "forecast.makeup": "So setzt sich der Zeitraum zusammen",
   "forecast.alreadyWon": "Bereits gewonnen",
-  "forecast.alreadyWonDetail": "In diesem Zeitraum abgeschlossen",
   "forecast.updateCall": "Einschätzung aktualisieren",
   "forecast.callExplains":
-    "Eine Einschätzung ist der Betrag, den du abzuschließen erwartest. Festgehalten wird deine Zahl, kein Deal ändert sich.",
+    "Gib den erwarteten Gesamtumsatz für diesen Zeitraum ein, einschließlich bereits gewonnener Deals.",
   "forecast.expectedTotal": "Erwartete Summe für diesen Zeitraum",
   "forecast.supportingNote": "Begründung",
   "forecast.cancel": "Abbrechen",
@@ -7451,6 +7500,22 @@ export const de = {
   "auto.delete": "Löschen",
   "auto.statusEnabled": "Aktiv",
   "auto.statusPaused": "Pausiert",
+  "auto.pausedReason.listArchived":
+    "Pausiert, weil die beobachtete oder befüllte Liste archiviert wurde. Das Wiederherstellen der Liste setzt die Automatisierung nicht fort.",
+  "auto.pausedReason.listInvalid":
+    "Pausiert, weil der Filter der beobachteten Live-Liste nicht mehr funktioniert. Das Reparieren des Filters setzt die Automatisierung nicht fort.",
+  "auto.pausedReason.listUnavailable":
+    "Pausiert, weil das zuständige Teammitglied die beobachtete Liste nicht mehr findet.",
+  "auto.pausedReason.burst":
+    "Pausiert, weil eine Prüfung mehr als 100 Datensätze bewegt hat. Für keinen davon wurde etwas ausgeführt.",
+  "auto.lists.placeholder": "Liste wählen",
+  "auto.lists.needsWatched":
+    "Zuerst die Live-Liste wählen. Die Shortlist enthält denselben Datensatztyp.",
+  "auto.lists.loadError": "Listen konnten nicht geladen werden.",
+  "auto.lists.noLive":
+    "Noch keine Live-Listen. Zuerst einen Filter als Live-Liste speichern.",
+  "auto.lists.noShortlist":
+    "Keine änderbare Shortlist mit diesem Datensatztyp.",
   "auto.dateField.placeholder": "Datumsfeld auswählen",
   "auto.dateField.needsObject":
     "Wähle zuerst ein Objekt, um seine Datumsfelder anzuzeigen.",
@@ -7595,6 +7660,17 @@ export const de = {
     "Jedes Hinzufügen, Bearbeiten und Archivieren wird dauerhaft im Audit-Log erfasst.",
   "cf.noPermission": "Du hast nur Lesezugriff auf eigene Felder.",
   "cf.retired": "Stillgelegt",
+  "cf.retire.title": "„{label}“ archivieren?",
+  "cf.retire.body":
+    "Das Feld verschwindet aus neuen Datensätzen und Filtern. Gespeicherte Werte bleiben erhalten.",
+  "cf.retire.lists":
+    "Diese Live-Listen filtern danach. Mit den gespeicherten Werten funktionieren sie weiter und bitten ihre Verantwortlichen, die Bedingung zu ersetzen:",
+  "cf.retire.unseen_one":
+    "{count} weitere Live-Liste, die du nicht öffnen kannst, filtert ebenfalls danach.",
+  "cf.retire.unseen_other":
+    "{count} weitere Live-Listen, die du nicht öffnen kannst, filtern ebenfalls danach.",
+  "cf.retire.noLists": "Keine Live-Liste filtert nach diesem Feld.",
+  "cf.retire.checking": "Prüfe, welche Listen dieses Feld nutzen",
   // "Allgemein" statt "Firma" für den ersten Eintrag: die Gruppen-
   // überschrift darüber sagt das Wort schon, und eine Zeile, die ihre eigene
   // Überschrift wiederholt, benennt nichts.
@@ -9189,6 +9265,9 @@ export const de = {
   "captureExclusions.containerLabel": "Ordner oder Label",
   "captureExclusions.noContainers":
     "Dieses Postfach hat keine Ordner gemeldet. Verbinde ein Postfach mit Ordnern, oder schließe Absender nach Adresse oder Domain aus.",
+  "captureExclusions.containersPartial": "Diese Ordnerliste ist unvollständig",
+  "captureExclusions.containersPartialBody":
+    "Dein Postfach hat mehr Ordner, als diese Liste lesen konnte. Ein gesuchter Ordner fehlt möglicherweise. Gib seinen Namen unten ein, oder schließe Absender per Adresse oder Domain aus.",
   "captureExclusions.containersUnreadable":
     "Deine Ordner konnten nicht gelesen werden",
   "captureExclusions.containersUnreadableBody":
@@ -10096,6 +10175,34 @@ export const de = {
   "filters.saveList": "Als Live-Liste speichern",
   "filters.saveListTitle": "Diesen Filter als Live-Liste speichern",
   "filters.saveListConfirm": "Liste speichern",
+  "filters.propose.label": "Beschreibe die Liste in eigenen Worten",
+  "filters.propose.hint":
+    "Margince schlägt Bedingungen für den Filter darunter vor. Gespeichert wird erst, wenn du auf Speichern drückst.",
+  "filters.propose.placeholder":
+    "Unternehmen in Deutschland ohne Aktivität in den letzten 45 Tagen",
+  "filters.propose.submit": "Filter vorschlagen",
+  "filters.propose.busy": "Deine Beschreibung wird gelesen",
+  "filters.propose.noModel":
+    "Filter aus eigenen Worten brauchen ein konfiguriertes KI-Modell. Du kannst den Filter weiterhin von Hand bauen.",
+  "filters.propose.unreadable":
+    "Der Vorschlag ließ sich nicht lesen. Beschreibe die Liste anders.",
+  "filters.propose.readyTitle": "Ein Filter ist bereit",
+  "filters.propose.readyBody":
+    "Dein Filter hat schon Bedingungen. Ersetze sie durch den Vorschlag oder füge den Vorschlag hinzu.",
+  "filters.propose.replace": "Aktuellen Filter ersetzen",
+  "filters.propose.add": "Zum aktuellen Filter hinzufügen",
+  "filters.propose.discard": "Vorschlag verwerfen",
+  "filters.propose.unusedTitle": "Nicht verwendet",
+  "filters.propose.unusedDismiss": "Ausblenden",
+  "filters.propose.unusedItem": "„{phrase}“: {reason}",
+  "filters.propose.reason.unknownField":
+    "Kein Feld, nach dem du hier filtern kannst, erfasst das.",
+  "filters.propose.reason.operator": "{field} lässt sich so nicht vergleichen.",
+  "filters.propose.reason.value": "{field} nimmt diesen Wert nicht an.",
+  "filters.propose.reason.notVerifiable":
+    "{field} hat Optionen, die du nicht sehen kannst, deshalb ließ sich der Wert nicht prüfen.",
+  "filters.propose.reason.tooMany":
+    "Der Filter enthält schon so viele Bedingungen, wie er fassen kann.",
   "lists.page": "Liste",
   "lists.section.label": "Anzeigen",
   "lists.section.views": "Meine Ansichten",
@@ -10122,12 +10229,13 @@ export const de = {
   "lists.audience.unknownTeam": "Ein Team, das du nicht sehen kannst",
   "lists.health.ownerless": "Niemand verantwortlich",
   "lists.health.invalid": "Filter funktioniert nicht mehr",
+  "lists.health.retiredField": "Nutzt ein stillgelegtes Feld",
   "lists.library.title": "Geteilte Ansichten",
   "lists.library.search": "Listen durchsuchen",
   "lists.library.all": "Alle",
   "lists.library.kind": "Listentyp",
   "lists.library.empty":
-    "Noch keine Listen. Speichere einen Filter als Live-Liste oder lege eine Shortlist an.",
+    "Noch keine geteilten Listen. Speichere einen Filter als Live-Liste oder lege eine Shortlist an.",
   "lists.library.loading": "Listen werden geladen",
   "lists.col.name": "Name",
   "lists.col.kind": "Typ",
@@ -10148,8 +10256,7 @@ export const de = {
   "lists.settingsTitle": "Diese Liste bearbeiten",
   "lists.archive": "Liste archivieren",
   "lists.restore": "Wiederherstellen",
-  "lists.unavailable":
-    "Listen sind in dieser Installation nicht eingeschaltet.",
+  "lists.unavailable": "Listen sind in dieser Installation ausgeschaltet.",
   "lists.gone":
     "Diese Liste gibt es nicht, oder sie ist nicht mit dir geteilt.",
   "lists.unnamed": "Ohne Namen",
@@ -10167,6 +10274,11 @@ export const de = {
   "lists.ownerless.body":
     "Niemand ist mehr verantwortlich, oder es war nie jemand. Wer die Liste \u00e4ndern darf, sollte sie \u00fcbernehmen.",
   "lists.ownerless.takeOver": "\u00dcbernehmen",
+  "lists.retiredField.title": "Dieser Filter nutzt ein stillgelegtes Feld",
+  "lists.retiredField.body_one":
+    "{fields} wurde stillgelegt. Die Liste funktioniert weiter mit den gespeicherten Werten, neue kommen dort nicht mehr hinzu. Wer die Liste verantwortet, sollte diese Bedingung im Filter ersetzen.",
+  "lists.retiredField.body_other":
+    "{fields} wurden stillgelegt. Die Liste funktioniert weiter mit den gespeicherten Werten, neue kommen dort nicht mehr hinzu. Wer die Liste verantwortet, sollte diese Bedingungen im Filter ersetzen.",
   "lists.members.title": "Mitglieder",
   "lists.members.loading": "Mitglieder werden geladen",
   "lists.members.emptyLive":
@@ -10177,7 +10289,18 @@ export const de = {
     "Projektlisten zeigen ihre Mitglieder in der Projektliste.",
   "lists.members.whyColumn": "Warum",
   "lists.members.why": "Warum?",
-  "lists.members.more": "Mehr anzeigen",
+  "lists.members.selectAll_one": "{count} Mitglied auswählen",
+  "lists.members.selectAll_other": "Alle {count} Mitglieder auswählen",
+  "lists.members.selectionFullTitle": "Die Auswahl ist voll",
+  "lists.members.selectionFull_one":
+    "Eine Änderung umfasst höchstens {count} Mitglied, weitere lassen sich nicht auswählen. Entferne zuerst eines, um ein anderes auszuwählen.",
+  "lists.members.selectionFull_other":
+    "Eine Änderung umfasst höchstens {count} Mitglieder, weitere lassen sich nicht auswählen. Entferne zuerst eines, um ein anderes auszuwählen.",
+  "lists.members.selectAllCappedTitle": "Nicht alle Mitglieder ausgewählt",
+  "lists.members.selectAllCapped_one":
+    "Nur {count} Mitglied lässt sich auf einmal auswählen. Bearbeite es, dann wähle den Rest.",
+  "lists.members.selectAllCapped_other":
+    "Nur die ersten {count} Mitglieder lassen sich auf einmal auswählen. Bearbeite diese, dann wähle den Rest.",
   "lists.history.title": "Was sich ge\u00e4ndert hat",
   "lists.history.empty": "Bisher hat sich nichts ge\u00e4ndert.",
   "lists.history.loading": "Verlauf wird geladen",
@@ -10225,7 +10348,59 @@ export const de = {
   "lists.views.empty":
     "Noch keine Ansichten. Erstelle einen Filter und klicke auf \u201eAnsicht speichern\u201c.",
   "lists.views.loading": "Gespeicherte Filter werden geladen",
+  "lists.myLists.title": "Meine Listen",
+  "lists.myLists.empty":
+    "Keine privaten Listen. Hier steht jede Liste, die nur du findest. Teilst du sie, wandert sie zu den geteilten Ansichten.",
+  "lists.pulse.chip": "+{entered} / −{left}",
+  "lists.pulse.label":
+    "Seit deinem letzten Besuch: {entered} hinzugekommen, {left} weggefallen",
+  "lists.head.lastChecked": "Zuletzt geprüft {when}",
+  "lists.head.notChecked":
+    "Noch nicht geprüft. Wer hinzukommt und wegfällt, wird ab der ersten Prüfung festgehalten.",
+  "lists.head.tooLarge":
+    "Zuletzt geprüft {when}. Die Liste enthält zu viele Datensätze, um festzuhalten, wer hinzukam und wegfiel.",
+  "lists.head.pulse":
+    "Seit deinem letzten Besuch: {entered} hinzugekommen, {left} weggefallen",
+  "lists.members.new": "Neu",
+  "lists.history.entered": "Hinzugekommen, Stand {when}",
+  "lists.history.left": "Weggefallen, Stand {when}",
+  "lists.history.reason.filterChanged": "nachdem der Filter geändert wurde",
+  "lists.history.checker": "Die 15-Minuten-Prüfung",
+  "lists.history.liveNote":
+    "Die Prüfung läuft alle 15 Minuten und nimmt sich zuerst die Listen vor, die am längsten nicht geprüft wurden. Bei sehr vielen Listen kann eine Liste daher länger warten; „Zuletzt geprüft“ zeigt, wann es war. Wer hinzukam oder wegfiel, wird zum Zeitpunkt der Prüfung festgehalten, die die Änderung bemerkt hat. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder wegfällt, wird nicht festgehalten.",
+  "lists.editFilter": "Filter bearbeiten",
+  "lists.editingTitle": "Du bearbeitest den Filter von {name}",
+  "lists.editingBody":
+    "Speichere in die Liste, um zu ändern, welche Datensätze sie enthält. „Als Live-Liste speichern“ legt stattdessen eine neue Liste an.",
+  "lists.saveFilterTo": "In {name} speichern",
+  "lists.saveFilterTitle": "Filter von {name} ändern?",
+  "lists.saveFilterBody":
+    "Ab jetzt kommen Datensätze nach dem neuen Filter in die Liste und verlassen sie, und die Änderung bleibt in ihrem Verlauf. Alle, die die Liste finden können, sehen die neuen Mitglieder.",
+  "lists.saveFilterConfirm": "Filter speichern",
+  "lists.saveFilterConflict":
+    "Jemand hat diese Liste geändert, nachdem du sie geöffnet hast. Öffne die Liste erneut, um die Änderung zu sehen, und bearbeite dann den Filter.",
   "lists.history.someone": "Jemand",
+  "lists.changes.since": "Seit deinem Besuch am {when}:",
+  "lists.changes.joined_one": "{count} hinzugekommen",
+  "lists.changes.joined_other": "{count} hinzugekommen",
+  "lists.changes.left_one": "{count} weggefallen",
+  "lists.changes.left_other": "{count} weggefallen",
+  "lists.changes.more_one": "+{count} weitere",
+  "lists.changes.more_other": "+{count} weitere",
+  "lists.changes.nothing": "nichts hinzugekommen oder weggefallen.",
+  "lists.changes.filter_one": "Der Filter wurde einmal geändert.",
+  "lists.changes.filter_other": "Der Filter wurde {count}-mal geändert.",
+  "lists.rules.watches": "{name} beobachtet diese Liste",
+  "lists.rules.writes": "{name} fügt dieser Liste Datensätze hinzu",
+  "lists.rules.hidden":
+    "Eine Automatisierung, die hier nicht geöffnet werden kann",
+  "lists.rules.archiveTitle": "Diese Liste archivieren?",
+  "lists.rules.archiveLead":
+    "Diese Automatisierungen pausieren, wenn die Liste archiviert wird. Das Wiederherstellen der Liste setzt sie nicht fort.",
+  "lists.rules.settingsLead": "Automatisierungen, die diese Liste nutzen:",
+  "lists.rules.settingsLeadLive":
+    "Automatisierungen, die diese Liste nutzen. Eine Filteränderung ändert, worauf sie reagieren:",
+  "lists.history.reason.automation": "durch eine Automatisierung",
 
   // Die Oberfl\u00e4che \u201eFilter & Ansichten\u201c.
   "filters.title": "Filter und Ansichten",
@@ -11070,6 +11245,7 @@ export const de = {
   "firstRun.ignite.act":
     "ohne deine Freigabe etwas senden oder einen Datensatz ändern",
   "firstRun.ignite.carryOn": "Weiter",
+  "firstRun.ignite.leaving": "Einrichtung wird geprüft…",
   "firstRun.step.model": "Modell",
   "firstRun.step.platform": "Plattform",
   "firstRun.google.eyebrow": "Modell verbunden · E-Mail nicht verbunden",
@@ -11334,6 +11510,11 @@ export const de = {
   "magic.aboutMany_other": "{label} und {others} weitere",
   "magic.aboutCount_one": "{count} Datensatz",
   "magic.aboutCount_other": "{count} Datensätze",
+  "magic.aboutManyAtLeast_one": "{label} und mindestens {others} weiterer",
+  "magic.aboutManyAtLeast_other": "{label} und mindestens {others} weitere",
+  "magic.aboutCountAtLeast_one": "mindestens {count} Datensatz",
+  "magic.aboutCountAtLeast_other": "mindestens {count} Datensätze",
+  "magic.aboutNamedAtLeast": "{label} und möglicherweise weitere",
   "magic.action.mail_filed": "Erfasste E-Mail diesem Kontakt zugeordnet",
   "magic.action.company_profile_read":
     "Technisches Profil des Unternehmens gelesen",

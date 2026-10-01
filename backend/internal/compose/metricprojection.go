@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func metricFacts(facts []reporting.Fact, metric crmcontracts.ReportingMetricID, contextID string) []reporting.Fact {
@@ -175,6 +176,13 @@ func populateReportingChart(out *reporting.Evaluation, chart crmcontracts.Report
 		chart = reportingTrend(out, chart)
 	case reportingOwnerAttainment:
 		chart = reportingGroups(out, chart, true)
+		if metric.Id == reportingBookingsWon && metric.Version == "2" {
+			for index := range chart.Points {
+				if chart.Points[index].Key == ids.Nil.String() {
+					chart.Points[index].Label = "Unassigned"
+				}
+			}
+		}
 	case "stage_distribution", reportingStageAge:
 		chart = reportingGroups(out, chart, false)
 	case reportingTargetProgress:

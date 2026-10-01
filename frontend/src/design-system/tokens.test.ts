@@ -252,9 +252,8 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     it("every text role clears AA on every ground it sits on, both themes", () => {
       // The status Text tokens are in this list and their bases are not, which
       // is the split the family is built on: --successText and its siblings ARE
-      // prose roles — a form error, a stale-value caveat, a badge's ink — while
-      // --success is a fill, a bar and a 17px figure, measured at the figure's
-      // own size and not at the prose floor.
+      // read roles — a form error, a badge's ink, a stat card's figure — while
+      // --success is a fill, a bar and a dot, seen with nothing read on it.
       const prose = [
         "--textPrimary",
         "--textSecondary",

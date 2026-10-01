@@ -89,3 +89,53 @@ func TestAMixedVendorLadderCarriesWhatBothVendorsDecode(t *testing.T) {
 		t.Fatalf("a mixed-vendor ladder carries %v, want %v", got, want)
 	}
 }
+
+// A rung the LADDER never names still vetoes the lane, because the call can
+// land there.
+//
+// document_extract's ladder is premium alone, and the degrade closure reaches
+// cheap_cloud and then local_small. Read off the ladder, a caller asking "may I
+// hand this task a PDF" is answered by the one rung that can carry it — and the
+// month the budget guardrail degrades the call, the document is refused on a
+// rung nobody asked about, on a call already decided as safe.
+//
+// The task is the one that makes this concrete rather than hypothetical: its
+// whole subject is handing a document to a model.
+func TestARungOnlyTheDegradePathReachesStillVetoesCarriage(t *testing.T) {
+	const oneRung = TaskDocumentExtract
+	if ladder := TaskLadder(oneRung); len(ladder) != 1 {
+		t.Fatalf("this test needs a one-rung ladder; %s has %v", oneRung, ladder)
+	}
+	servable := ServableTiers(oneRung)
+	if len(servable) < 2 {
+		t.Fatalf("%s reaches only %v, so no rung is off its ladder and this test proves nothing",
+			oneRung, servable)
+	}
+
+	// Every servable rung bound, and only the LADDER's rung declaring the
+	// modality — the exact configuration an operator writes when they set
+	// `input:` on the tier they were thinking of.
+	tiers := map[Tier]ProviderConfig{}
+	for _, tier := range servable {
+		declared := ProviderConfig{Provider: providerOpenAICompatible, BaseURL: "https://x", Model: string(tier)}
+		if tier == TaskLadder(oneRung)[0] {
+			declared.Input = []string{"text", "image"}
+		}
+		tiers[tier] = declared
+	}
+	router, err := NewRouter(RoutingConfig{
+		Profile: ProfileCloudFrontier,
+		Tiers:   tiers,
+		Embeddings: EmbeddingsConfig{
+			ProviderConfig: ProviderConfig{Provider: providerOpenAICompatible, BaseURL: "https://x", Model: "e"},
+			Dimensions:     defaultEmbedDimensions,
+		},
+	}.WithKeys(allCloudKeys()), nil, nil, nil, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := router.AttachmentMIMEs(oneRung); len(got) != 0 {
+		t.Fatalf("carriage is %v, want none: the degrade rungs declare no modality, so a document "+
+			"handed to this task is refused the month the guardrail moves the call", got)
+	}
+}

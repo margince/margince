@@ -15,6 +15,7 @@ export type ListRecordType = List["entity_type"];
 export type ListHistoryEntry = components["schemas"]["ListHistoryEntry"];
 export type ListExplanation = components["schemas"]["ListMemberExplanation"];
 export type ListClauseVerdict = components["schemas"]["ListClauseVerdict"];
+export type ListVisit = components["schemas"]["ListVisit"];
 
 /** Every cache entry a list write can make stale starts with this key. */
 export const LISTS_KEY = "lists";
@@ -32,7 +33,15 @@ export type ListQuery = Readonly<{
   entityType?: ListRecordType;
   listType?: List["list_type"];
   q?: string;
+  /** Only lists with one of these settings; absent is every one. */
+  sharing?: readonly List["sharing"][];
 }>;
+
+/** The reader's own lists, which only they and the steward can find. */
+export const PRIVATE_LISTS: readonly List["sharing"][] = ["private"];
+
+/** The lists shared with a team or with everyone. */
+export const SHARED_LISTS: readonly List["sharing"][] = ["team", "workspace"];
 
 export function useLists(query: ListQuery, enabled = true) {
   return useQuery({
@@ -45,6 +54,7 @@ export function useLists(query: ListQuery, enabled = true) {
             entity_type: query.entityType,
             list_type: query.listType,
             q: query.q || undefined,
+            sharing: query.sharing ? [...query.sharing] : undefined,
           },
         },
       });
@@ -56,8 +66,9 @@ export function useLists(query: ListQuery, enabled = true) {
   });
 }
 
-export function useList(id: string) {
+export function useList(id: string, enabled = true) {
   return useQuery({
+    enabled,
     queryKey: [LISTS_KEY, "one", id],
     queryFn: async () => {
       const { data, error } = await api.GET("/lists/{id}", {
@@ -83,6 +94,31 @@ export function useListHistory(id: string) {
       }
       return data;
     },
+  });
+}
+
+/**
+ * Records that the reader opened a list. The server keeps counting from the
+ * visit before this one while it is in progress, so the list and the library
+ * are read again and still say what was new.
+ */
+export function useVisitList() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<ListVisit> => {
+      const { data, error } = await api.POST("/lists/{id}/visit", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: (_visit, id) =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: [LISTS_KEY, "all"] }),
+        client.invalidateQueries({ queryKey: [LISTS_KEY, "one", id] }),
+      ]),
   });
 }
 
@@ -158,6 +194,8 @@ export type ListEdit = Readonly<{
   /** Absent leaves the team as it is; null moves it to the owner's teams. */
   teamId?: string | null;
   stewardId?: string;
+  /** A Live List's new filter tree, in the stored encoding. */
+  definition?: Record<string, unknown>;
 }>;
 
 export function useUpdateList() {
@@ -173,6 +211,7 @@ export function useUpdateList() {
           sharing: edit.sharing,
           team_id: edit.teamId,
           steward_id: edit.stewardId,
+          definition: edit.definition,
         },
       });
       if (error) {

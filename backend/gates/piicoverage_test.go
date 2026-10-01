@@ -305,6 +305,9 @@ var piiTables = map[string]piiHandling{
 	// archive runs to remove them, and the erasure deletes both itself.
 	"list_member":       {erasureWrite: true, sarRead: true},
 	"list_member_event": {erasureWrite: true, sarRead: true},
+	// A Live List's last check says which filters picked the subject out and
+	// since when; erasure removes them from it before the next check could.
+	"list_live_member": {erasureWrite: true, sarRead: true},
 	// The capture disposition ledger keys on the subject's own address and
 	// keeps the display name their mail arrived with (CAP-DDL-8).
 	"capture_pending_counterparty": {erasureWrite: true, sarRead: true},

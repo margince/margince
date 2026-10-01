@@ -435,14 +435,16 @@ func reportRemovals(ctx context.Context, sink connector.Sink, removed []string) 
 
 // ListContainers returns the mailbox's folders, satisfying
 // connector.ContainerLister.
-func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]connector.NamedContainer, error) {
+func (c *Connector) ListContainers(
+	ctx context.Context, auth connector.Auth,
+) ([]connector.NamedContainer, bool, error) {
 	var st graphconn.AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
-		return nil, fmt.Errorf("graph: malformed auth state: %w", err)
+		return nil, false, fmt.Errorf("graph: malformed auth state: %w", err)
 	}
 	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	return c.api.ListFolders(ctx, refreshed.AccessToken)
 }

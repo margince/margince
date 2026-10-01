@@ -28,11 +28,12 @@ func (weeklyNumericEvaluator) Measure(ctx context.Context, tx pgx.Tx, kind strin
 	if err != nil {
 		return out, err
 	}
-	out.Summary = crmcontracts.WeeklyNumericSummary{Version: "analytics-1", Timezone: frame.Timezone, Currency: frame.Currency, Interval: frame.Interval, EvaluatedAt: at}
+	out.Summary = crmcontracts.WeeklyNumericSummary{Version: "analytics", Timezone: frame.Timezone, Currency: frame.Currency, Interval: frame.Interval, EvaluatedAt: at}
 	for _, spec := range reportingMetrics {
 		if spec.definition.Id != reportingBookingsWon && spec.definition.Id != reportingMeetingsHeld {
 			continue
 		}
+		out.Summary.Version += ":" + string(spec.definition.Id) + "@" + spec.definition.Version
 		coverage := reportingGap(reportingUnavailable, "Source access is unavailable")
 		var facts []reporting.Fact
 		if auth.Allows(ctx, spec.object, principal.ActionRead) {

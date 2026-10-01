@@ -200,6 +200,7 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// the meeting brief it carries the routing version.
 		compose.WithContactBrief(modelPath.Summarize, routingVersion),
 		compose.WithRoleProposals(modelPath.ProposeRoles),
+		compose.WithFilterProposals(modelPath.NlSearch),
 		// The ask to a colleague rides the drafting lane: it is the same task
 		// with a different reader, which is what a site is for.
 		compose.WithIntroRequestDraft(modelPath.DraftReply),
