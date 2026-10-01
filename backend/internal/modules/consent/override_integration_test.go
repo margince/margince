@@ -710,3 +710,35 @@ func TestAllowThroughAMergedAwayContactChecksTheSurvivorItWritesOnto(t *testing.
 		t.Errorf("the survivor holds %d override(s), want 0", n)
 	}
 }
+
+// TestARevokeThroughTheLiveSurvivorReachesTheOriginalItWasCopiedFrom is the
+// handle a rep actually holds after a merge: the id Allow answered, and the
+// contact the UI still shows. The original sits on the retired record and the
+// copy on the survivor; the chain is one vouch, so naming the survivor with the
+// original's id takes both back.
+func TestARevokeThroughTheLiveSurvivorReachesTheOriginalItWasCopiedFrom(t *testing.T) {
+	e := setupChannelConsent(t)
+	survivor := seedOverrideContact(t, e, "Live Survivor")
+	recorded, err := e.store.Allow(e.ctx, AllowInput{
+		ContactID: e.contact, Category: "marketing", Reason: "they asked us at the trade fair",
+	})
+	if err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+	carryOverrides(t, e, e.contact, survivor)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE contact SET merged_into_id = $1 WHERE id = $2`, survivor, e.contact); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.store.RevokeOverride(e.ctx, RevokeOverrideInput{
+		ContactID: survivor, OverrideID: recorded, Reason: "the buyer changed their mind",
+	}); err != nil {
+		t.Fatalf("revoking through the survivor with the original's id: %v", err)
+	}
+	for _, c := range []ids.ContactID{e.contact, survivor} {
+		if n := liveOverridesOn(t, e, c); n != 0 {
+			t.Errorf("contact %s still holds %d live override(s), want 0", c.UUID, n)
+		}
+	}
+}

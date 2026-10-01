@@ -335,14 +335,27 @@ func (s *Store) revokeOverrideAdmittedTx(
 		return err
 	}
 
+	// The row must be live, and its chain must touch the contact named or that
+	// contact's survivor. The chain is one subject's vouch under successive ids,
+	// so the handle Allow returned keeps working through whichever id of that
+	// subject the caller holds, while a row whose chain never touches a record
+	// the caller may reach stays hidden.
 	var decided string
 	err = tx.QueryRow(ctx, `
+		WITH RECURSIVE chain AS (
+		    SELECT id, contact_id FROM communication_override WHERE id = $4
+		  UNION ALL
+		    SELECT carried.id, carried.contact_id
+		      FROM communication_override carried
+		      JOIN chain ON carried.carried_from = chain.id
+		)
 		SELECT decided_by_level FROM communication_override
-		 WHERE id = $1 AND contact_id IN ($2, $3) AND revoked_at IS NULL
-		 FOR UPDATE`, in.OverrideID, sub.id, surviving).Scan(&decided)
+		 WHERE id = $1 AND revoked_at IS NULL
+		   AND EXISTS (SELECT 1 FROM chain WHERE contact_id IN ($2, $3))
+		 FOR UPDATE`, in.OverrideID, sub.id, surviving, root).Scan(&decided)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// A row that is already revoked, belongs to another subject than the
-		// one named or its survivor, or never existed all answer alike: a
+		// A row that is already revoked, whose chain never touches the subject
+		// named or its survivor, or that never existed all answer alike: a
 		// caller learns nothing about rows they were not going to be allowed
 		// to touch.
 		return apperrors.ErrNotFound
