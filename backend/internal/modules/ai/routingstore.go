@@ -130,8 +130,19 @@ func (s *RoutingStore) probeBeforeWrite(ctx context.Context, next RoutingConfig)
 	if err != nil {
 		return err
 	}
+	return s.probeCandidate(ctx, stored, next)
+}
+
+// probeCandidate holds next to the bar the write will, then asks Google about
+// what it adds or changes over stored.
+func (s *RoutingStore) probeCandidate(ctx context.Context, stored, next RoutingConfig) error {
 	candidate, err := next.keepingStoredUpstream(stored).finalize()
 	if err != nil {
+		return invalidRouting(err)
+	}
+	// The probe is a call to the bound location, so a location the profile
+	// refuses is refused before it is asked anything.
+	if err := candidate.ResidencyGap(); err != nil {
 		return invalidRouting(err)
 	}
 	if err := s.probeVertexBindings(ctx, stored, candidate); err != nil {
