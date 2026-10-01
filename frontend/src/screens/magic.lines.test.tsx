@@ -91,7 +91,7 @@ describe("a receipt line is one row", () => {
     );
   });
 
-  it("carries one undo for a change to one record and none for a job over many", async () => {
+  it("carries one undo for a change to one record and none for a job over many, a cut count included", async () => {
     stub(
       receipt({
         done: [
@@ -100,6 +100,13 @@ describe("a receipt line is one row", () => {
             id: "00000000-0000-7000-8000-000000000002",
             entity: fleet,
             count: 3,
+            undo: undoable,
+          }),
+          // A read cut short saw one record, and there may be more.
+          line({
+            id: "00000000-0000-7000-8000-000000000003",
+            entity: fleet,
+            count_is_floor: true,
             undo: undoable,
           }),
         ],
@@ -117,6 +124,7 @@ describe("a receipt line is one row", () => {
       "Undo",
       // The job's undos are inside, one per record, behind its record count.
       "Fleet retrofit and 2 more",
+      "Fleet retrofit, and possibly others",
     ]);
   });
 

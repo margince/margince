@@ -145,7 +145,7 @@ function lineDetail(line: MagicLine, t: ReturnType<typeof useT>): string[] {
 // the other lanes nothing changed, so "nothing to put back" would be noise.
 function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
   const entity = line.entity;
-  if (line.lane !== "done" || ((line.count ?? 1) > 1 && entity)) {
+  if (line.lane !== "done" || (standsForMany(line) && entity)) {
     return null;
   }
   if (undoPress(line.undo, entity?.type ?? "", entity?.id ?? "")) {
@@ -166,7 +166,7 @@ function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
   if (
     line.lane !== "done" ||
     !entity ||
-    (line.count ?? 1) > 1 ||
+    standsForMany(line) ||
     !undoPress(line.undo, entity.type, entity.id)
   ) {
     return null;
@@ -277,7 +277,8 @@ function LineSubject({
   // never renders as an exact number — including the one that stands for a
   // single record, which is a group that MIGHT have more beyond the cut.
   const floor = line.count_is_floor === true;
-  const many = count > 1 || floor || (!line.entity && line.count !== undefined);
+  const many =
+    standsForMany(line) || (!line.entity && line.count !== undefined);
   const shown = many
     ? manySummary({ t, plural, locale, label, count, floor })
     : label;
@@ -301,6 +302,16 @@ function LineSubject({
       )}
     </span>
   );
+}
+
+/**
+ * Whether a line stands for more than the record it names. A count cut short
+ * is a group however small: the read saw one record and there may be more,
+ * so its undo is the per-record list's and never a press on the row. The
+ * subject, the row's undo and its "why not" all ask this one question.
+ */
+function standsForMany(line: MagicLine): boolean {
+  return (line.count ?? 1) > 1 || line.count_is_floor === true;
 }
 
 /**
