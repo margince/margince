@@ -39,7 +39,8 @@ type ThreadJoiner struct {
 	// Neighbours answers the live messages a reply links to this one, in
 	// either direction.
 	Neighbours func(ctx context.Context, tx pgx.Tx, self ids.ActivityID, messageID string, referenced []string) ([]ids.ActivityID, error)
-	// Earliest chooses the key the others merge into.
+	// Earliest chooses the key the others merge into, or "" when no live
+	// message holds any of them any more.
 	Earliest func(ctx context.Context, tx pgx.Tx, keys []string) (string, error)
 	// Merge moves thread `from` into thread `to` everywhere a row carries one.
 	Merge func(ctx context.Context, tx pgx.Tx, from, to string) error
@@ -123,7 +124,7 @@ func (s *Sink) mergeLinkedThreads(
 		return err
 	}
 	into, err := s.threadJoin.Earliest(ctx, tx, keys)
-	if err != nil {
+	if err != nil || into == "" {
 		return err
 	}
 	for _, key := range keys {

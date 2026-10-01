@@ -16,6 +16,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -87,6 +88,10 @@ func MailNeighboursTx(
 // knows it, which is the root a capture with an unshortened References chain
 // would have chosen — so the surviving key is the one later mail most likely
 // derives by itself.
+//
+// No live message under any of the keys answers "": the messages were archived
+// between the caller reading the keys and this read, and there is nothing left
+// to join into. That is not an error, or the capture that asked fails on it.
 func EarliestThreadKeyTx(ctx context.Context, tx pgx.Tx, keys []string) (string, error) {
 	var key string
 	err := tx.QueryRow(ctx, `
@@ -96,6 +101,9 @@ func EarliestThreadKeyTx(ctx context.Context, tx pgx.Tx, keys []string) (string,
 		 GROUP BY thread_key
 		 ORDER BY min(occurred_at), thread_key
 		 LIMIT 1`, keys).Scan(&key)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
 	if err != nil {
 		return "", fmt.Errorf("activities: choosing the thread two keys merge into: %w", err)
 	}
