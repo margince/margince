@@ -38954,7 +38954,7 @@ type RecordViewAck struct {
 // RecordViewAckEntityType defines model for RecordViewAck.EntityType.
 type RecordViewAckEntityType string
 
-// RecordedOverride The row allowContact just wrote. It carries the id and nothing else: the category and reason are what the caller sent, and the authority is their own session's, so a body echoing them would only restate the request. The id is the part the caller could not have known, and the part POST /contacts/{id}/consent/allow/{overrideId}/revoke needs.
+// RecordedOverride The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes.
 type RecordedOverride struct {
 	// OverrideId The standing override that now stands. A contact can hold several at once — one per category, and more than one for a single category after a merge — so this names which of them this call created.
 	OverrideId openapi_types.UUID `json:"override_id"`

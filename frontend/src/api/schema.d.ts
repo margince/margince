@@ -37732,7 +37732,7 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
-        /** @description The row allowContact just wrote. It carries the id and nothing else: the category and reason are what the caller sent, and the authority is their own session's, so a body echoing them would only restate the request. The id is the part the caller could not have known, and the part POST /contacts/{id}/consent/allow/{overrideId}/revoke needs. */
+        /** @description The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes. */
         RecordedOverride: {
             /**
              * Format: uuid

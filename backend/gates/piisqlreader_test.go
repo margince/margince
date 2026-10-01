@@ -220,11 +220,9 @@ var retentionSweepFiles = []string{
 	"internal/modules/privacy/retention_graph.go",
 	"internal/modules/privacy/retentionactions.go",
 	// The lead half of the same sweep — anonymizeLead and the communication
-	// record it clears (communication_basis, communication_suppression,
-	// communication_override, communication_decision). The contact arm in
-	// retentionactions.go cannot reach a row keyed to a lead, so absent from
-	// this list a column this file alone stops destroying would pass here with
-	// nothing to notice.
+	// record it clears. Its DELETE of communication_override by lead_id is the
+	// statement that satisfies that table's lead retentionPurge predicate; the
+	// contact arm in retentionactions.go cannot reach a row keyed to a lead.
 	"internal/modules/privacy/retention_leadrecord.go",
 	// The two executors that DELETE a row rather than scrub one — the ai_call
 	// payload and the stored provider original. They left retentionactions.go
