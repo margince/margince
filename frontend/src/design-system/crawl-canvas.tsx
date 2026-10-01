@@ -213,6 +213,12 @@ function paintMotes(
   fitBackingStore(layer, ctx, box);
   const from = graph.getBoundingClientRect();
   const to = core.getBoundingClientRect();
+  // A Core folded out of a short room is in the tree with no box, and its
+  // centre would read as the window's corner: no target, so no motes.
+  if (to.width === 0 || to.height === 0) {
+    ctx.clearRect(0, 0, box.width, box.height);
+    return;
+  }
   drawMotes(ctx, {
     nodes: motePath(nodes, { x: from.left - box.left, y: from.top - box.top }),
     ages,
