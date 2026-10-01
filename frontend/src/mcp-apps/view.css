@@ -253,17 +253,12 @@ ol {
 
 /* The empty answer, which is a real answer on every view: a queue with nothing
    in it, a contact nobody has spoken to. Inside a panel it is the panel's own
-   sentence; alone it sits on the app's plate ground. */
-.empty {
+   sentence, inset by panel.css; with no panel to hold it — a result the host
+   never sent — it sits alone on the app's plate ground. */
+.empty-alone {
   padding: var(--space-4);
   border-radius: var(--r-md);
   background: var(--bgCard);
-}
-
-.panel .empty {
-  padding: var(--padPanel);
-  border-radius: 0;
-  background: none;
 }
 
 @media (max-width: 480px) {

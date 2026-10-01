@@ -135,7 +135,11 @@ export function render(
   root.replaceChildren();
   if (data === null || data === undefined) {
     root.appendChild(
-      el("div", "empty", "The host sent no structured result for this brief."),
+      el(
+        "div",
+        "empty empty-alone",
+        "The host sent no structured result for this brief.",
+      ),
     );
     return;
   }

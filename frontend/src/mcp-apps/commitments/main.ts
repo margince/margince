@@ -157,7 +157,11 @@ export function render(
   root.replaceChildren();
   if (data === null || data === undefined) {
     root.appendChild(
-      el("div", "empty", "The host sent no structured result for this review."),
+      el(
+        "div",
+        "empty empty-alone",
+        "The host sent no structured result for this review.",
+      ),
     );
     return;
   }
@@ -169,7 +173,11 @@ export function render(
   // unreadable RESULT are different things and must not print the same.
   if (!Array.isArray(answer.commitments)) {
     root.appendChild(
-      el("div", "empty", "The host sent no readable commitment review."),
+      el(
+        "div",
+        "empty empty-alone",
+        "The host sent no readable commitment review.",
+      ),
     );
     return;
   }

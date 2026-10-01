@@ -131,7 +131,7 @@ export function render(
     root.appendChild(
       el(
         "div",
-        "empty",
+        "empty empty-alone",
         "The host sent no structured result for this contact.",
       ),
     );

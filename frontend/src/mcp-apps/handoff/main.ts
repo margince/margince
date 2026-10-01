@@ -283,7 +283,7 @@ export function render(
     root.appendChild(
       el(
         "div",
-        "empty",
+        "empty empty-alone",
         "The host sent no structured result for this project.",
       ),
     );
@@ -301,7 +301,11 @@ export function render(
   // proof of skew rather than of a clean project.
   if (asText(answer.project_id) === "" || !Array.isArray(answer.gaps)) {
     root.appendChild(
-      el("div", "empty", "The host sent no readable handoff for this project."),
+      el(
+        "div",
+        "empty empty-alone",
+        "The host sent no readable handoff for this project.",
+      ),
     );
     return;
   }
