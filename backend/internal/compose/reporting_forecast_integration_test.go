@@ -31,7 +31,7 @@ func TestReportingForecastEditionRechecksProjectionPermission(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	worker := &reportScheduleSweepWorker{enabled: true, pool: f.env.Pool, now: func() time.Time { return f.at }}
+	worker := &reportScheduleSweepWorker{pool: f.env.Pool, now: func() time.Time { return f.at }}
 	if err := worker.Work(context.Background(), nil); err != nil {
 		t.Fatal(err)
 	}

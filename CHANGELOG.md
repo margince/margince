@@ -16,7 +16,7 @@ when it has content.
 
 ### Added
 
-- Opt-in visual analytics for sellers and managers: bookings trends, pipeline
+- Visual analytics for sellers and managers: bookings trends, pipeline
   stages and age, SDR outcomes, target attainment, forecast composition and
   captured movement, with permission-checked evidence and CSV export.
 - Saved report revisions, weekly/monthly schedules and dated editions retain
@@ -45,6 +45,12 @@ when it has content.
   import. The column stays; the wire field is gone.
 
 ### Changed
+
+- Analytics uses one reporting implementation across the web, API, MCP and workers.
+  The old performance screen and rollout switch are removed. Existing
+  `analytics.performance_enabled` configuration is accepted but ignored.
+  Installations that disabled reporting after a pilot must pause schedules before
+  upgrading to avoid resuming enabled schedules; see [the reporting upgrade guide](docs/how-to/operate-reporting.md#upgrade-from-a-flag-gated-installation).
 
 - **`/metrics` on the api is closed by default.** It requires `--metrics-token`
   as a Bearer credential. A deployment whose scraper discovers its targets by

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
+import { useCan } from "../app/capability";
 import { Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { formatDateTime } from "../format/format";
@@ -21,6 +22,7 @@ export function ReportingForecastGraphs({
 }: Readonly<{ scope: AnalyticsScope }>) {
   const t = useT();
   const { locale } = useLocale();
+  const showCharts = useCan("report_definition", "read");
   const [snapshot, setSnapshot] = useState("latest");
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const selection: ReportingSelection = {
@@ -33,6 +35,7 @@ export function ReportingForecastGraphs({
   };
   const query = useQuery({
     queryKey: ["reporting-forecast", selection],
+    enabled: showCharts,
     queryFn: async () => {
       const { data, error } = await api.GET("/analytics/evaluate", {
         params: { query: reportingQuery(selection) },
@@ -42,72 +45,77 @@ export function ReportingForecastGraphs({
     },
   });
   return (
-    <QueryGate query={query} pendingLabel={t("reporting.forecast_support")}>
-      {(evaluation) => (
-        <>
-          {evaluation.charts.some((chart) => chart.snapshot_id) && (
-            <div className="reporting-toolbar">
-              <Field label={t("reporting.shareSnapshot")}>
-                {(field) => (
-                  <Select
-                    {...field}
-                    value={snapshot}
-                    onChange={setSnapshot}
-                    options={evaluation.charts
-                      .filter((chart) => chart.kind === "pipeline_movement")
-                      .flatMap((chart) => [
-                        {
-                          value: "latest",
-                          label: chart.state_at
-                            ? formatDateTime(
-                                chart.state_at,
-                                locale,
-                                evaluation.context.timezone,
-                              )
-                            : t("reporting.live"),
-                        },
-                        ...(chart.opening_snapshot_id && chart.interval
-                          ? [
-                              {
-                                value: "opening",
-                                label: formatDateTime(
-                                  chart.interval.start_at,
-                                  locale,
-                                  evaluation.context.timezone,
-                                ),
-                              },
-                            ]
-                          : []),
-                      ])}
-                  />
-                )}
-              </Field>
-              <ForecastShareActions
-                target="forecast"
-                scope={scope}
-                snapshotId={
-                  evaluation.charts.find(
-                    (chart) => chart.kind === "pipeline_movement",
-                  )?.[
-                    snapshot === "opening"
-                      ? "opening_snapshot_id"
-                      : "snapshot_id"
-                  ]
-                }
+    <>
+      <div className="reporting-toolbar">
+        <ForecastShareActions
+          target="forecast"
+          scope={scope}
+          snapshotId={
+            (showCharts ? query.data?.charts : undefined)?.find(
+              (chart) => chart.kind === "pipeline_movement",
+            )?.[snapshot === "opening" ? "opening_snapshot_id" : "snapshot_id"]
+          }
+        />
+      </div>
+      {showCharts && (
+        <QueryGate query={query} pendingLabel={t("reporting.forecast_support")}>
+          {(evaluation) => (
+            <>
+              {evaluation.charts.some((chart) => chart.snapshot_id) && (
+                <div className="reporting-toolbar">
+                  <Field label={t("reporting.shareSnapshot")}>
+                    {(field) => (
+                      <Select
+                        {...field}
+                        value={snapshot}
+                        onChange={setSnapshot}
+                        options={evaluation.charts
+                          .filter((chart) => chart.kind === "pipeline_movement")
+                          .flatMap((chart) => [
+                            {
+                              value: "latest",
+                              label: chart.state_at
+                                ? formatDateTime(
+                                    chart.state_at,
+                                    locale,
+                                    evaluation.context.timezone,
+                                  )
+                                : t("reporting.live"),
+                            },
+                            ...(chart.opening_snapshot_id && chart.interval
+                              ? [
+                                  {
+                                    value: "opening",
+                                    label: formatDateTime(
+                                      chart.interval.start_at,
+                                      locale,
+                                      evaluation.context.timezone,
+                                    ),
+                                  },
+                                ]
+                              : []),
+                          ])}
+                      />
+                    )}
+                  </Field>
+                </div>
+              )}
+              <ReportingCharts
+                evaluation={evaluation}
+                onEvidence={setEvidence}
               />
-            </div>
+              {evidence && (
+                <ReportingEvidenceDrawer
+                  key={JSON.stringify(evidence)}
+                  evaluation={evaluation}
+                  reference={evidence}
+                  onClose={() => setEvidence(null)}
+                />
+              )}
+            </>
           )}
-          <ReportingCharts evaluation={evaluation} onEvidence={setEvidence} />
-          {evidence && (
-            <ReportingEvidenceDrawer
-              key={JSON.stringify(evidence)}
-              evaluation={evaluation}
-              reference={evidence}
-              onClose={() => setEvidence(null)}
-            />
-          )}
-        </>
+        </QueryGate>
       )}
-    </QueryGate>
+    </>
   );
 }

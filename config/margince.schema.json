@@ -324,7 +324,7 @@
       }
     },
     "analytics": {
-      "description": "Analytics switches governed sales reporting on. It is off by default.",
+      "description": "Analytics accepts the inert retired key so existing configuration files still load.",
       "type": "object",
       "additionalProperties": false,
       "properties": {

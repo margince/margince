@@ -5,7 +5,7 @@ import {
   reportingStoryRoutes,
   reportingStoryScope,
 } from "./reporting.story-fixtures";
-import { installFetchStub, StoryProviders } from "./story-utils";
+import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Forecast graphs" };
 export default meta;
@@ -54,6 +54,23 @@ export const CollectingHistory: Story = {
         ),
     } satisfies typeof forecastEvaluation;
     installFetchStub(reportingStoryRoutes(evaluation));
+    return (
+      <StoryProviders>
+        <ReportingForecastGraphs scope={reportingStoryScope} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const LiveBeforeFirstCapture: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes({ ...forecastEvaluation, charts: [] }),
+      "GET /me": meRoute({
+        forecast: ["read", "create"],
+        report_definition: ["read"],
+      }),
+    });
     return (
       <StoryProviders>
         <ReportingForecastGraphs scope={reportingStoryScope} />

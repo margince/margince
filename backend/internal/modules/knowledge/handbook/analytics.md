@@ -1,7 +1,7 @@
 # Analytics and forecasting
 
 **Analytics** in Margince is the reporting screen: forecast, pipeline reports,
-win and loss, time in stage, your own outcomes, delivery and data coverage. It
+sales performance, time in stage, your own outcomes, delivery and data coverage. It
 sits in the sidebar under **Intelligence**. It answers two different kinds of
 question, and the product is careful to keep them apart: what the records
 actually say, and what somebody believes will happen.
@@ -31,11 +31,11 @@ The **Deals** board itself also shows each stage's total and weighted total in i
 
 ### What analytics sections are there?
 The main Analytics sections are **Performance**, **Forecast**, **Saved reports** and **Pipeline analysis**. **More analysis** holds **Data coverage** and **Custom reports**. Access determines which sections are available.
-**Forecast** is where this period will land. **Pipeline analysis** holds the pipeline reports. **Performance** shows outcome totals, target progress when assigned, trends and pipeline charts. With sales reporting disabled it shows the legacy **Won and lost** and **Time in stage** reports. **My outcomes** shows your own open deals and meetings, for a rep only. **Data coverage** shows which sources the nightly check could read, for a seat allowed to see it. **Delivery** holds the project reports. Also called: reports, dashboards.
+**Forecast** is where this period will land. **Pipeline analysis** holds the pipeline reports. **Performance** shows outcome totals, target progress when assigned, trends and pipeline charts. **My outcomes** shows your own open deals and meetings, for a rep only. **Data coverage** shows which sources the nightly check could read, for a seat allowed to see it. **Delivery** holds the project reports. Also called: reports, dashboards.
 
 ### How do I share a report view?
 To share a forecast view in Margince, open **Analytics** → **Forecast**, press **Share view**, choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**.
-The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows. Only the Forecast section has **Share view**; Performance and saved sales reports offer CSV export when sales reporting is enabled. Opening a link does not yet show the shared view (see "Sharing a view" below). Also called: send a report, share dashboard, report link.
+The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows. Only the Forecast section has **Share view**; Performance and saved sales reports offer CSV export. Opening a link shows the shared forecast under the recipient’s current permissions. Also called: send a report, share dashboard, report link.
 
 ### How do I close a shared forecast link?
 To close a forecast link in Margince before its 30 days run out, open **Analytics** → **Forecast** and press **Shared links** beside **Share view**.
@@ -45,7 +45,7 @@ To close a forecast link in Margince before its 30 days run out, open **Analytic
 The row leaves the list and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
 
 ### How do I see a win rate or export a report?
-When sales reporting is enabled, **Performance** offers a closed win rate with a minimum cohort and governed CSV export; see [Performance and saved sales reports](sales-reporting.md). With the feature disabled, the legacy Analytics screen has no win-rate or report-export button. **Won and lost** under **Performance** gives won and lost counts and value, so you can compare them yourself. To get deal rows out, open **Filters and views** in the sidebar, choose **Deals** as the **Record type**, build a filter, then press **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
+**Performance** offers a closed win rate with a minimum cohort and governed CSV export; see [Performance and saved sales reports](sales-reporting.md). To get deal rows out, open **Filters and views** in the sidebar, choose **Deals** as the **Record type**, build a filter, then press **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
 
 ## The reporting sections
 
@@ -93,11 +93,9 @@ what.
 
 Archived teams are never offered.
 
-**One honest limit.** The picker governs the Forecast section. The report cards
-in the other sections do not follow it, so changing the picker does not move
-their figures. **Won and lost**, **Time in stage** and the delivery reports
-count every record you may see. The other cards read under your own default
-population.
+The scope picker governs Performance, Forecast and Questions. Pipeline analysis
+and Delivery report cards use their own authorized populations; changing the
+picker does not change those cards.
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Breaking one down by owner counts only
@@ -162,23 +160,10 @@ priced".
 
 ## Performance
 
-The **Performance** section of Analytics holds two reports.
-
-**Won and lost** — outcome, deals, value, median days to close, P75 days to
-close.
-
-**Time in stage** — stage, deals, median and P75 days in stage. Open deals only,
-aged from the last time each entered the stage it is in now.
-
-Two honest refusals here:
-
-- Below the engine's sample floor, a duration reads **"Too few deals"** rather
-  than a number. A median drawn from a handful of deals moves further than the
-  answer is worth.
-- **No win rate is computed.** A percentage worked out in the browser would be a
-  second answer to the question of what the cohort is, and the two would drift.
-
-A stage the pipeline no longer carries reads **"Former stage"**.
+**Performance** shows sales won, target progress when assigned, trends and pipeline
+charts. Switch to **SDR outcomes** for held meetings and accepted opportunities.
+Every chart opens its evidence and offers a numeric table. Small cohorts are
+withheld rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
 
 ## My outcomes
 
@@ -383,12 +368,8 @@ guesses were closer.
 
 An agent can neither mint one nor open one.
 
-**Honest state of this feature today.** The link mints, but the rest is not
-wired up: opening one lands on the ordinary Analytics screen under your own
-population rather than the shared view, the **Snapshot** option cannot yet
-succeed, and the CSV export behind it is unreachable. Closing works: every open
-link you issued is listed under **Shared links**, where **Close link** ends it.
-Treat Share view as unfinished rather than as a way to get figures to somebody
-outside your own seat.
+Sharing is available for the quarter forecast. Live links open the shared forecast under the recipient's current permissions.
+The snapshot choice is available when the selected scope has a stored capture.
+Use **Shared links** to review issued links and **Close link** to revoke one.
 
 The manager forecast is a full-period total. Its gap compares against already-won sales plus committed open deals with confirmed close dates, in the same currency and period. It is not compared only with the open component. The composition is not guaranteed revenue. **My outcomes → My meetings** counts meetings you host by their current status, without a date filter; use **Performance → SDR outcomes** for period totals.

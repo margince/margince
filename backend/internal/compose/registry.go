@@ -46,10 +46,10 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 	// handle: a registry built for a named workspace must not admit through a
 	// service that resolves a different one.
 	return registryWithGate(db, auth.NewGate(identity.NewServiceFor(db)), nil, send, companyEnricher{}, nil, nil, nil,
-		meetingBriefReader(newMeetingBriefService(db)), slog.Default(), registryFeatures{reporting: true})
+		meetingBriefReader(newMeetingBriefService(db)), slog.Default(), registryFeatures{})
 }
 
-type registryFeatures struct{ lists, reporting bool }
+type registryFeatures struct{ lists bool }
 
 func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) *agents.Registry {
 	db := InstallationDB(pool)
@@ -97,11 +97,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		reportToolCatalog(), reportPlanVocabulary())
 	agents.RegisterReportVocabularyTool(registry,
 		agents.NewReportVocabularyResource(reportToolCatalog()))
-	if features.reporting {
-		agents.RegisterReportingTool(registry, reportingReader(pool))
-	}
+	agents.RegisterReportingTool(registry, reportingReader(pool))
 	agents.RegisterAnalyticsReportTool(registry,
-		analyticsReportComposer(pool, analyticsquery.DefaultFloor, features.reporting))
+		analyticsReportComposer(pool, analyticsquery.DefaultFloor))
 	// The UI and tools share calculation engines and current-reader disclosure rules.
 	agents.RegisterAnalyticsQueryTool(registry,
 		analyticsQueryToolRunner(InstallationDB(pool)))

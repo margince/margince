@@ -45571,7 +45571,7 @@ components:
             installation and currency settings beside it.
         reporting:
           type: boolean
-          description: Whether analytics.performance_enabled makes saved reporting available.
+          description: Reporting is always available. Retained for compatibility with older clients.
         lists:
           type: boolean
           description: >

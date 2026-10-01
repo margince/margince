@@ -122,7 +122,7 @@ func testWeeklyReportingPrivacy(t *testing.T, anonymize bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	worker := &reportScheduleSweepWorker{enabled: true, pool: e.Pool, now: func() time.Time { return at }}
+	worker := &reportScheduleSweepWorker{pool: e.Pool, now: func() time.Time { return at }}
 	if err := worker.Work(context.Background(), nil); err != nil {
 		t.Fatal(err)
 	}

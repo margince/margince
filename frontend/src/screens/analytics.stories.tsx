@@ -5,6 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { StatStrip } from "../design-system/statstrip";
 import { AnalyticsScreen, ForecastTile } from "./analytics";
+import { forecastEvaluation } from "./reporting.scenarios";
+import {
+  reportingStoryEvaluation,
+  reportingStoryRoutes,
+} from "./reporting.story-fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -179,7 +184,18 @@ const forecastReadings = {
 };
 
 const routes: RouteMap = {
-  "GET /me": meRoute({ forecast: ["create"] }),
+  ...reportingStoryRoutes(),
+  "GET /analytics/evaluate": () =>
+    jsonResponse(
+      globalThis.location.hash.includes("/forecast")
+        ? forecastEvaluation
+        : reportingStoryEvaluation,
+    ),
+  "GET /me": meRoute({
+    forecast: ["create"],
+    report_definition: ["read"],
+    reporting_framework: ["read"],
+  }),
   "GET /analytics/context": () =>
     jsonResponse({
       default_scope: { kind: "workspace", label: "Whole company" },
@@ -195,28 +211,6 @@ const routes: RouteMap = {
   "GET /pipelines": () => jsonResponse(pipelines),
   "POST /reports/pipeline-current": () => run("pipeline-current", stageRows),
   "POST /reports/forecast": () => run("forecast", forecastRows),
-  "POST /reports/win-loss": () =>
-    run("win-loss", [
-      {
-        status: "won",
-        deal_count: 8,
-        raw_minor: 500000,
-        median_days: 21,
-        p75_days: 40,
-      },
-      {
-        status: "lost",
-        deal_count: 4,
-        raw_minor: 200000,
-        median_days: 55,
-        p75_days: null,
-      },
-    ]),
-  "POST /reports/stage-age": () =>
-    run("stage-age", [
-      { stage_id: "pl-s1", deal_count: 6, median_days: 12, p75_days: 30 },
-      { stage_id: "pl-s2", deal_count: 3, median_days: null, p75_days: null },
-    ]),
   "POST /reports/open-deals-per-company": () =>
     run("open-deals-per-company", companyRows),
   "GET /reports/pipeline-current/derivation": () => jsonResponse(derivation),
