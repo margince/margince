@@ -229,3 +229,58 @@ func TestHTTPAPIListAfterReportsARejectedPageToken(t *testing.T) {
 		t.Fatal("a 400 on the first page names no token and must not be read as a rejected one")
 	}
 }
+
+func TestHTTPAPIGetHeadersRebuildsTheHeaderBlock(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/gone") {
+			http.Error(w, `{"error":{"code":404}}`, http.StatusNotFound)
+			return
+		}
+		if r.URL.Query().Get("format") != "metadata" {
+			t.Errorf("format = %q, want metadata", r.URL.Query().Get("format"))
+		}
+		_, _ = w.Write([]byte(`{"labelIds":["SENT","Label_7"],"payload":{"headers":[
+			{"name":"From","value":"rep@myco.com"},
+			{"name":"To","value":"alice@acme.com,\r\n bob@acme.com"},
+			{"name":"Bad:Name","value":"x"}]}}`))
+	}))
+	defer srv.Close()
+	api, ok := NewAPI(srv.Client(), srv.URL).(HeaderFetcher)
+	if !ok {
+		t.Fatal("the HTTP API must serve headers")
+	}
+
+	msg, err := api.GetHeaders(context.Background(), "tok", "m1")
+	if err != nil {
+		t.Fatalf("GetHeaders: %v", err)
+	}
+	want := "From: rep@myco.com\r\nTo: alice@acme.com,  bob@acme.com\r\n\r\n"
+	if string(msg.RFC822) != want {
+		t.Fatalf("header block = %q, want %q: one line per header, folds flattened, a bad name dropped", msg.RFC822, want)
+	}
+	if !msg.FiledAsSent || len(msg.Labels) != 2 {
+		t.Fatalf("labels = %v sent=%v, want both labels and the SENT filing", msg.Labels, msg.FiledAsSent)
+	}
+	if _, err := api.GetHeaders(context.Background(), "tok", "gone"); err != ErrMessageGone {
+		t.Fatalf("a 404 = %v, want ErrMessageGone", err)
+	}
+}
+
+func TestRateGateHoldsEveryCallerUntilItOpens(t *testing.T) {
+	g := &rateGate{}
+	g.pause(30 * time.Millisecond)
+	g.pause(time.Millisecond) // a shorter pause never shortens a longer one
+	start := time.Now()
+	if err := g.wait(context.Background()); err != nil {
+		t.Fatalf("wait: %v", err)
+	}
+	if waited := time.Since(start); waited < 25*time.Millisecond {
+		t.Fatalf("the gate opened after %s, want the longer pause kept", waited)
+	}
+	g.pause(time.Hour)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := g.wait(ctx); err == nil {
+		t.Fatal("a closed gate must give way to a cancelled context")
+	}
+}
