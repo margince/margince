@@ -19,11 +19,62 @@ describe("the account brief renders what it was given", () => {
   it("renders one row per queue item, in the order given", () => {
     const el = root();
     render(el, companyBriefFixture.data, []);
-    expect(texts(el, ".name")).toEqual([
-      "8f14e45f-ceea-467a-9a1a-2e9b0e4c3d21",
-      "c9f0f895-fb98-4b1b-9a5b-1d3f2e6a7c04",
+    expect(texts(el, ".ref")).toEqual([
+      "deal 8f14e45f-ceea-467a-9a1a-2e9b0e4c3d21",
+      "deal c9f0f895-fb98-4b1b-9a5b-1d3f2e6a7c04",
     ]);
-    expect(texts(el, ".rank")).toEqual(["#1", "#2"]);
+    expect(texts(el, ".rank")).toEqual(["1", "2"]);
+  });
+
+  it("titles each item the way the Worklist titles a brief item it cannot name", () => {
+    // A brief item carries no deal name, and a lookup for one would be this
+    // view introducing a data path. The app's own fallback is the honest title.
+    const el = root();
+    render(el, companyBriefFixture.data, []);
+    expect(texts(el, ".name")).toEqual(["Deal to review", "Deal to review"]);
+  });
+
+  it("draws the queue in the app's AI-assisted panel", () => {
+    // The app's own ranked queue is the AI-tinted Focus panel; the brief is the
+    // same claim about the same ranking, so it wears the same tone.
+    const el = root();
+    render(el, companyBriefFixture.data, []);
+    expect(el.querySelector(".panel.panel-ai .panel-title")?.textContent).toBe(
+      "Morning brief",
+    );
+    expect(el.querySelector(".panel-head .badge-ai")?.textContent).toBe(
+      "AI-assisted",
+    );
+  });
+
+  it("scores each item out of a hundred and draws a meter per factor", () => {
+    const el = root();
+    render(el, companyBriefFixture.data, []);
+    expect(texts(el, ".score")).toEqual(["Score 82 of 100", "Score 64 of 100"]);
+    const first = el.querySelector(".panel-row");
+    const meters = [...(first?.querySelectorAll(".meterbar") ?? [])];
+    expect(meters.map((m) => m.getAttribute("aria-label"))).toEqual([
+      "Winnability",
+      "Revenue",
+      "Timing",
+      "Momentum",
+      "Warmth",
+    ]);
+    expect(meters.map((m) => m.getAttribute("aria-valuenow"))).toEqual([
+      "90",
+      "70",
+      "85",
+      "94",
+      "61",
+    ]);
+  });
+
+  it("badges the state a reader left an item in, and leaves a new one bare", () => {
+    const el = root();
+    render(el, companyBriefFixture.data, []);
+    const [fresh, snoozed] = [...el.querySelectorAll(".panel-row")];
+    expect(fresh?.querySelector(".badge")).toBeNull();
+    expect(snoozed?.querySelector(".badge")?.textContent).toBe("Snoozed");
   });
 
   it("reports how many candidates the ranking left out, which is the brief's own honesty rule", () => {
@@ -32,7 +83,7 @@ describe("the account brief renders what it was given", () => {
     // a shortlist as the whole field.
     const el = root();
     render(el, companyBriefFixture.data, []);
-    expect(el.querySelector(".meta")?.textContent).toContain(
+    expect(el.querySelector(".panel-foot")?.textContent).toContain(
       "2 of 7 candidates",
     );
   });
@@ -41,7 +92,7 @@ describe("the account brief renders what it was given", () => {
     const el = root();
     render(el, { items: [], candidate_count: 0 }, []);
     expect(el.querySelector(".empty")).not.toBeNull();
-    expect(el.querySelectorAll(".row")).toHaveLength(0);
+    expect(el.querySelectorAll(".panel-row")).toHaveLength(0);
   });
 
   it("renders a missing factor as an em dash, never as NaN", () => {
@@ -63,7 +114,13 @@ describe("the account brief renders what it was given", () => {
     );
     expect(el.textContent).toContain("—");
     expect(el.textContent).not.toContain("NaN");
-    expect(el.textContent).toContain("win 90%");
+    const meters = [...el.querySelectorAll(".meterbar")];
+    expect(meters[0]?.getAttribute("aria-valuenow")).toBe("90");
+    // An absent factor claims no value: an empty trough, not a factor of zero,
+    // and not a meter announced with no reading either.
+    expect(meters[1]?.hasAttribute("aria-valuenow")).toBe(false);
+    expect(meters[1]?.hasAttribute("role")).toBe(false);
+    expect(meters[1]?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("keeps a row whose deal id is arbitrary text as text, never as markup", () => {
@@ -79,7 +136,7 @@ describe("the account brief renders what it was given", () => {
       },
       [],
     );
-    expect(el.querySelector(".name")?.textContent).toBe("<img onerror=x>");
+    expect(el.querySelector(".ref")?.textContent).toBe("deal <img onerror=x>");
     expect(el.querySelector("img")).toBeNull();
   });
 
@@ -92,8 +149,8 @@ describe("the account brief renders what it was given", () => {
       { candidate_count: 9, items: [null, "x", { deal_id: "d-1", rank: 1 }] },
       [],
     );
-    expect(el.querySelectorAll(".row")).toHaveLength(1);
-    expect(el.querySelector(".meta")?.textContent).toContain(
+    expect(el.querySelectorAll(".panel-row")).toHaveLength(1);
+    expect(el.querySelector(".panel-foot")?.textContent).toContain(
       "1 of 9 candidates",
     );
   });
@@ -116,6 +173,6 @@ describe("the account brief renders what it was given", () => {
     const el = root();
     render(el, companyBriefFixture.data, []);
     render(el, { items: [], candidate_count: 0 }, []);
-    expect(el.querySelectorAll(".row")).toHaveLength(0);
+    expect(el.querySelectorAll(".panel-row")).toHaveLength(0);
   });
 });

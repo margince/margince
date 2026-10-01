@@ -31,24 +31,26 @@ describe("the handoff view renders what it was given", () => {
     // the gaps exist to prevent.
     const el = root();
     render(el, handoffFixture.data, []);
-    const titles = texts(el, ".section-title");
-    expect(titles[0]).toMatch(/still missing/i);
-    expect(titles.slice(1)).toEqual([
-      "What was sold",
-      "Who to call",
-      "Already promised",
+    expect(texts(el, ".panel-title")).toEqual([
+      "Not ready to hand over",
+      "Deals",
+      "Stakeholders",
+      "Open commitments",
     ]);
+    expect(el.querySelector(".panel-warning .badge-warning")?.textContent).toBe(
+      "5 missing",
+    );
   });
 
   it("shows every gap with the field it was read off", () => {
     const el = root();
     render(el, handoffFixture.data, []);
     expect(texts(el, ".gap .source")).toEqual([
-      "project.owner_id",
-      "project.target_end_date",
-      "relationship.role",
-      "deal.amount_minor",
-      "activity.due_at",
+      "read from project.owner_id",
+      "read from project.target_end_date",
+      "read from relationship.role",
+      "read from deal.amount_minor",
+      "read from activity.due_at",
     ]);
   });
 
@@ -70,53 +72,59 @@ describe("the handoff view renders what it was given", () => {
   it("says the work is ready when nothing checked for is missing", () => {
     const el = root();
     render(el, ready(), []);
-    expect(el.querySelector(".empty")?.textContent).toMatch(
+    expect(el.querySelector(".callout-success")?.textContent).toMatch(
       /ready to hand over/i,
     );
   });
 
-  it("says no owner in the headline when nobody is receiving the work", () => {
+  it("heads the briefing with the project's own name, phase and key", () => {
     const el = root();
     render(el, handoffFixture.data, []);
-    expect(el.querySelector(".meta")?.textContent).toContain("no owner");
+    expect(el.querySelector("h1")?.textContent).toBe("Acme ERP rollout");
+    expect(el.querySelector(".record-line .badge-success")?.textContent).toBe(
+      "Delivering",
+    );
+    expect(el.querySelector(".record-line")?.textContent).toContain("# ERP");
   });
 
-  it("says no target end date rather than leaving the headline short", () => {
+  it("says unassigned in the head when nobody is receiving the work", () => {
     const el = root();
     render(el, handoffFixture.data, []);
-    expect(el.querySelector(".meta")?.textContent).toContain(
-      "no target end date",
-    );
+    expect(texts(el, ".record-facts .unowned")).toEqual([
+      "Not set",
+      "Unassigned",
+    ]);
   });
 
   // "Who is receiving this work" answered as a UUID restates the question.
   it("names the owner receiving the work, and falls to the id for one it cannot name", () => {
     const el = root();
     render(el, ready(), []);
-    expect(el.querySelector(".meta")?.textContent).toContain(
-      "owner Dana Okafor",
+    expect(el.querySelector(".record-facts")?.textContent).toContain(
+      "Dana Okafor",
     );
 
     const unnamed = { ...ready() };
     unnamed.owner_name = "";
     render(el, unnamed, []);
-    expect(el.querySelector(".meta")?.textContent).toContain(
-      "owner 0f8fad5b-d9cb-469f-a165-70867728950e",
+    expect(el.querySelector(".record-facts")?.textContent).toContain(
+      "0f8fad5b-d9cb-469f-a165-70867728950e",
     );
   });
 
   it("renders the target date when there is one", () => {
     const el = root();
     render(el, ready(), []);
-    expect(el.querySelector(".meta")?.textContent).toContain(
-      "target 2026-09-30",
+    expect(el.querySelector(".record-facts")?.textContent).toContain(
+      "2026-09-30",
     );
+    expect(el.querySelector(".record-facts .unowned")).toBeNull();
   });
 
-  it("shows an untitled seat as having no recorded part, not as a blank", () => {
+  it("shows an untitled seat as having no recorded role, not as a blank", () => {
     const el = root();
     render(el, handoffFixture.data, []);
-    expect(el.textContent).toContain("no recorded part");
+    expect(texts(el, ".badge-warning")).toContain("No role recorded");
   });
 
   // "Who to call" answered as a UUID restates the question. The name is what
@@ -141,15 +149,32 @@ describe("the handoff view renders what it was given", () => {
   it("scales a won deal's amount by the currency's minor units, and shows an unpriced one as absent", () => {
     const el = root();
     render(el, handoffFixture.data, []);
-    const amounts = texts(el, ".score");
+    const amounts = texts(el, ".figure");
     expect(amounts[0]).toContain("240,000");
     expect(amounts[1]).toBe("—");
+    expect(texts(el, ".badge-success")).toContain("won");
   });
 
   it("colours only the promise that is already past due at handover", () => {
     const el = root();
     render(el, handoffFixture.data, []);
-    expect(texts(el, ".state-overdue")).toEqual(["overdue · 2026-06-05"]);
+    const overdue = [...el.querySelectorAll(".item-plain")].find((row) =>
+      row.textContent?.includes("Hand over the security questionnaire"),
+    );
+    expect(overdue?.querySelector(".badge-danger")?.textContent).toBe(
+      "Overdue",
+    );
+    expect(overdue?.textContent).toContain("due 2026-06-05");
+    expect(texts(el, ".badge-danger")).toEqual(["Overdue"]);
+  });
+
+  it("shows a phase the seam has not published in its own word, in no tone", () => {
+    // A tone is a claim; nobody made one about a phase this view cannot name.
+    const el = root();
+    render(el, { ...ready(), phase: "paused" }, []);
+    const phase = el.querySelector(".record-line .badge");
+    expect(phase?.textContent).toBe("paused");
+    expect(phase?.className).toBe("badge");
   });
 
   it("omits a section the project has nothing in rather than heading a void", () => {
@@ -165,7 +190,7 @@ describe("the handoff view renders what it was given", () => {
       },
       [],
     );
-    expect(texts(el, ".section-title")).toEqual([]);
+    expect(texts(el, ".panel-title")).toEqual([]);
   });
 
   // A payload of the wrong shape narrows to an empty record, which has no
@@ -217,13 +242,14 @@ describe("the handoff view renders what it was given", () => {
       },
       [],
     );
-    const empty = el.querySelector(".empty")?.textContent ?? "";
+    const verdict = el.querySelector(".callout")?.textContent ?? "";
     // The positive claim, in the words it is actually made in — the refusal
     // below contains "ready to hand over" too, inside "cannot say".
-    expect(empty).not.toMatch(
+    expect(verdict).not.toMatch(
       /nothing the records were checked for is missing/i,
     );
-    expect(empty).toMatch(/not every check could be made/i);
+    expect(verdict).toMatch(/not every check could be made/i);
+    expect(el.querySelector(".callout-success")).toBeNull();
   });
 
   // The tool WITHHOLDS the absence gaps when a list stopped at its bound and
@@ -232,11 +258,12 @@ describe("the handoff view renders what it was given", () => {
   it("never says the work is ready when a list stopped at its bound", () => {
     const el = root();
     render(el, ready(), [{ code: "sweep_truncated" }]);
-    const empty = el.querySelector(".empty")?.textContent ?? "";
-    expect(empty).not.toMatch(
+    const verdict = el.querySelector(".callout")?.textContent ?? "";
+    expect(verdict).not.toMatch(
       /nothing the records were checked for is missing/i,
     );
-    expect(empty).toMatch(/withheld rather than guessed/i);
+    expect(verdict).toMatch(/withheld rather than guessed/i);
+    expect(el.querySelector(".callout-info")).not.toBeNull();
   });
 
   it("says the lists are partial even when there are gaps to show", () => {
