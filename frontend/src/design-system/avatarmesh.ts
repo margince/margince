@@ -149,3 +149,22 @@ export function meshStyle(mesh: AvatarMesh): MeshVars {
     "--avatar-b-size": mesh.bSize,
   };
 }
+
+/**
+ * The initials a chip falls back to.
+ *
+ * Split on whitespace AND on the punctuation an address uses, because the
+ * signed-in reader is frequently known to the product only by their address:
+ * `jane.doe@example.com` reads as "JD" here, where a whitespace-only split
+ * gives the single letter "J" and every colleague whose address starts with a
+ * J gets the same chip. Two letters at most — a third stops being a monogram
+ * and starts being text set too small to read.
+ */
+export function monogramOf(name: string): string {
+  return name
+    .split(/[\s@._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => [...part][0]?.toUpperCase() ?? "")
+    .join("");
+}

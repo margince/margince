@@ -42,7 +42,7 @@ import {
 const PROTOCOL_VERSION = "2026-01-26";
 
 /** What a view shows for a value it does not have. Never "NaN", never "0". */
-const ABSENT = "—";
+export const ABSENT = "—";
 
 /** The handler a view registers, called once per tool result the host pushes. */
 type ResultHandler = (data: unknown, warnings: Warning[]) => void;
@@ -292,9 +292,10 @@ export function warned(warnings: Warning[], code: string): boolean {
 
 /**
  * el and heading below are the ONLY two ways anything reaches the page, and
- * both take text rather than markup. Nothing else in a view touches the
- * document, which is what keeps the containment property at the top of this
- * file true of every character a reader sees.
+ * both take text rather than markup. parts.ts composes them into the app's
+ * components and touches the document no other way, which is what keeps the
+ * containment property at the top of this file true of every character a
+ * reader sees.
  *
  * el REFUSES a heading tag at compile time. A heading is not just an element
  * here — it carries a size token and the class the stylesheet keys off — so a
