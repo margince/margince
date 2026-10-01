@@ -282,7 +282,7 @@ Every deal report has an **Explain this number** control that shows the rows the
 figure was built from. If a number looks wrong, open it rather than guessing.
 
 The deal reports are **Open deals by stage**, **Forecast categories**, **Open
-deals per company**, **Won and lost**, and **Time in stage**. They live under
+deals per company**, and the sales and stage-age charts in **Performance**. They live under
 **Analytics**; see [Analytics and forecasting](analytics.md).
 
 ## Stage automation: the evidence before trusting a move

@@ -27,12 +27,6 @@ async function openPipeline() {
     .click(await screen.findByRole("button", { name: "Pipeline analysis" }));
 }
 
-async function openPerformance() {
-  await userEvent
-    .setup()
-    .click(await screen.findByRole("button", { name: "Performance" }));
-}
-
 describe("the delivery section", () => {
   it("draws the three project reports with converted money and real links", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];
@@ -296,76 +290,6 @@ describe("the my-outcomes section", () => {
     render(<AnalyticsScreen />);
     await screen.findByRole("button", { name: "Pipeline analysis" });
     expect(screen.queryByRole("button", { name: "My outcomes" })).toBeNull();
-  });
-});
-
-describe("the performance section", () => {
-  it("renders won and lost with converted value and computed durations", async () => {
-    vi.stubGlobal(
-      "fetch",
-      reportsStub({
-        winLossRows: [
-          {
-            status: "won",
-            deal_count: 8,
-            raw_minor: 500000,
-            median_days: 21,
-            p75_days: 40,
-          },
-          {
-            status: "lost",
-            deal_count: 4,
-            raw_minor: 200000,
-            median_days: 55,
-            p75_days: null,
-          },
-        ],
-        stageAgeRows: [
-          { stage_id: "pl-s1", deal_count: 6, median_days: 12, p75_days: 30 },
-        ],
-      }),
-    );
-    render(<AnalyticsScreen />);
-    await openPerformance();
-
-    // Both outcomes, by their words rather than a status key.
-    expect(await screen.findByText("Won")).toBeTruthy();
-    expect(screen.getByText("Lost")).toBeTruthy();
-    // The value arrives converted; the screen only formats it.
-    expect(screen.getByText(formatMoney(500000, "EUR", "en"))).toBeTruthy();
-    // Durations are the server's medians, never a quotient made here.
-    expect(screen.getByText("21 d")).toBeTruthy();
-    // A withheld percentile is words, not a zero and not a dash: below the
-    // sample floor the engine answers null, and the cell says why.
-    expect(screen.getByText("Too few deals")).toBeTruthy();
-    // The stage-age card names the stage from the pipeline, not by UUID.
-    expect(screen.getByText("Qualify")).toBeTruthy();
-    expect(screen.getByText("12 d")).toBeTruthy();
-  });
-
-  it("asks the server for the vocabulary it renders, computing nothing", async () => {
-    const bodies: { key: string; body: Record<string, unknown> }[] = [];
-    vi.stubGlobal(
-      "fetch",
-      reportsStub({
-        onRun: (key, body) => bodies.push({ key, body }),
-        winLossRows: [],
-        stageAgeRows: [],
-      }),
-    );
-    render(<AnalyticsScreen />);
-    await openPerformance();
-    await waitFor(() => {
-      expect(bodies.some((sent) => sent.key === "win-loss")).toBe(true);
-      expect(bodies.some((sent) => sent.key === "stage-age")).toBe(true);
-    });
-    const winLoss = bodies.find((sent) => sent.key === "win-loss");
-    expect(winLoss?.body.aggregates).toEqual([
-      { fn: "count", as: "deal_count" },
-      { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
-      { fn: "median", field: "days_to_close", as: "median_days" },
-      { fn: "p75", field: "days_to_close", as: "p75_days" },
-    ]);
   });
 });
 
@@ -640,10 +564,6 @@ describe("reports never sum money across currencies", () => {
     // construction rather than by somebody remembering to widen the walk.
     await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
-    await openPerformance();
-    await waitFor(() =>
-      expect(bodies.some((sent) => sent.key === "stage-age")).toBe(true),
-    );
 
     expect(bodies.length).toBeGreaterThan(0);
     let nativePlans = 0;
@@ -1052,8 +972,8 @@ describe("sectionFromAddress", () => {
   // A segment is whatever a reader typed. Anything unrecognized lands on the
   // first section rather than rendering an empty screen.
   it("falls back to the first section for anything it does not know", () => {
-    expect(sectionFromAddress(undefined)).toBe("forecast");
-    expect(sectionFromAddress("nonsense")).toBe("forecast");
+    expect(sectionFromAddress(undefined)).toBe("performance");
+    expect(sectionFromAddress("nonsense")).toBe("performance");
   });
 });
 

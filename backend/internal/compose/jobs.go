@@ -82,7 +82,6 @@ func sweepInsertOpts() *river.InsertOpts {
 // Embedder registers nothing for the drift sweep and anyway for a reindex —
 // which is why the posture is stated per kind and never per field.
 type JobRunnerConfig struct {
-	ReportingEnabled bool
 	// ListsEnabled is lists.enabled: off, the Live List check records nothing.
 	ListsEnabled bool
 	// TestOnly is jobs.Config.TestOnly, carried here because jobtest boots its
@@ -398,7 +397,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	// them. The schedules that drive them are the list below, because a
 	// cadence is the declaration's and not the group's.
 	addModelLaneJobs(reg, pool, cfg, log)
-	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail, cfg.ReportingEnabled)
+	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addStoredObjectJobs(reg, pool, cfg, log)
 	addGmailCaptureJobs(reg, pool, cfg, log)

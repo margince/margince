@@ -24,7 +24,7 @@ func TestReportingPipelineCaptureCannotBecomeAWholeTeamOpeningOrShare(t *testing
 	f := reportingBusiness(t)
 	f.at = time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
 	scope := crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(f.env.Team1)}
-	worker := &forecastSnapshotSweepWorker{reportingEnabled: true, pool: f.env.Pool, now: func() time.Time { return f.at }, log: slog.New(slog.DiscardHandler)}
+	worker := &forecastSnapshotSweepWorker{pool: f.env.Pool, now: func() time.Time { return f.at }, log: slog.New(slog.DiscardHandler)}
 	if err := worker.freezeContext(f.writer, crmcontracts.ReportingCaptureContext{Scope: scope}); err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestReportingPipelineCaptureCannotBecomeAWholeTeamOpeningOrShare(t *testing
 	}
 }
 
-func TestReportingDisabledCaptureKeepsTheLegacyDailyIdentity(t *testing.T) {
+func TestDailyCaptureRecordsPopulationAndRemainsIdempotent(t *testing.T) {
 	e := setupSnapshotJob(t)
 	if err := e.run(t); err != nil {
 		t.Fatal(err)
@@ -76,13 +76,31 @@ func TestReportingDisabledCaptureKeepsTheLegacyDailyIdentity(t *testing.T) {
 	if err := e.Pool.QueryRow(context.Background(), "SELECT population_fingerprint FROM forecast_snapshot WHERE id=$1", id).Scan(&fingerprint); err != nil {
 		t.Fatal(err)
 	}
-	if fingerprint != "" {
-		t.Fatal("disabled reporting changed the legacy snapshot identity")
+	if fingerprint == "" {
+		t.Fatal("default capture omitted the reporting population")
 	}
 	if err := e.run(t); err != nil {
 		t.Fatal(err)
 	}
 	if count, _ := e.dailySnapshots(t); count != 1 {
 		t.Fatalf("duplicate daily captures: %d", count)
+	}
+}
+
+func TestFrameworkFailureDoesNotLoseWorkspaceCapture(t *testing.T) {
+	f := reportingBusiness(t)
+	if _, err := f.env.owner.Exec(context.Background(), `UPDATE reporting_framework_revision SET definition='{"template":7}'::jsonb`); err != nil {
+		t.Fatal(err)
+	}
+	worker := &forecastSnapshotSweepWorker{pool: f.env.Pool, now: func() time.Time { return f.at }, log: slog.New(slog.DiscardHandler)}
+	if err := worker.freeze(f.writer, f.env.WS); err == nil {
+		t.Fatal("framework corruption must be reported")
+	}
+	var captures int
+	if err := f.env.owner.QueryRow(context.Background(), "SELECT count(*) FROM forecast_snapshot WHERE scope_kind='workspace' AND pipeline_id IS NULL").Scan(&captures); err != nil {
+		t.Fatal(err)
+	}
+	if captures != 1 {
+		t.Fatalf("workspace capture lost with framework failure: %d", captures)
 	}
 }

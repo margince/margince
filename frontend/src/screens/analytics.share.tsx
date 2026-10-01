@@ -170,6 +170,7 @@ function ShareDialog({
           },
           {
             value: "snapshot",
+            disabled: !snapshotId,
             label: t("analytics.share.snapshotLabel"),
             description: snapshotId
               ? t("analytics.share.snapshotHelp")

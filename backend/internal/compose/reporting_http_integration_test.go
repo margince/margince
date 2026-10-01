@@ -26,7 +26,7 @@ import (
 )
 
 func reportingHTTPRouter(f *reportingBusinessFixture) http.Handler {
-	authHandlers := identity.NewHandlers(identity.NewService(f.env.Pool)).WithReportingAvailable(true)
+	authHandlers := identity.NewHandlers(identity.NewService(f.env.Pool))
 	server := newServer(f.env.Pool, slog.New(slog.DiscardHandler), authHandlers, deals.NewHandlers(InstallationDB(f.env.Pool), DealsInstallation()))
 	server.reportingHandlers = reporting.NewHandlers(f.service)
 	server.reportingExportHandlers = reportingExportHandlers{service: f.service}
@@ -101,7 +101,7 @@ func TestReportingHTTPRevisionsSchedulesAndFrozenHistory(t *testing.T) {
 	}
 	reportingRequest(f.human, t, handler, http.MethodPatch, "schedules/"+schedule.Id.String(), reportingPayload(t, scheduleInput), schedule.Version, http.StatusConflict)
 	execution := reportingResponse[crmcontracts.ReportingExecution](t, reportingRequest(f.human, t, handler, http.MethodPost, path+"/editions", nil, -1, http.StatusAccepted))
-	worker := &reportScheduleSweepWorker{enabled: true, pool: f.env.Pool, now: func() time.Time { return f.at }}
+	worker := &reportScheduleSweepWorker{pool: f.env.Pool, now: func() time.Time { return f.at }}
 	if err := worker.Work(context.Background(), nil); err != nil {
 		t.Fatal(err)
 	}

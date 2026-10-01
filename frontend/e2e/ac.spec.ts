@@ -2112,7 +2112,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   test("no AA violations with a report row's explain drawer open", async ({
     page,
   }) => {
-    await page.goto("/#/analytics/performance");
+    await page.goto("/#/analytics/pipeline");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page

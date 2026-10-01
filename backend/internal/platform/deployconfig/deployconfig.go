@@ -79,7 +79,7 @@ type Operations struct {
 	AllowTestMailbox bool `yaml:"allow_test_mailbox"`
 }
 
-// Analytics switches governed sales reporting on. It is off by default.
+// Analytics accepts the inert retired key so existing configuration files still load.
 type Analytics struct {
 	PerformanceEnabled bool `yaml:"performance_enabled"`
 }

@@ -33151,7 +33151,7 @@ export interface components {
         SettingsAvailability: {
             /** @description True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it. */
             company_context: boolean;
-            /** @description Whether analytics.performance_enabled makes saved reporting available. */
+            /** @description Reporting is always available. Retained for compatibility with older clients. */
             reporting?: boolean;
             /** @description True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
             lists?: boolean;

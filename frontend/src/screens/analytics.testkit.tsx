@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { reportingStoryRoutes } from "./reporting.story-fixtures";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -48,8 +49,6 @@ export type ReportsStubOpts = {
   stageRows?: Record<string, unknown>[];
   forecastRows?: Record<string, unknown>[];
   companyRows?: Record<string, unknown>[];
-  winLossRows?: Record<string, unknown>[];
-  stageAgeRows?: Record<string, unknown>[];
   meetingRows?: Record<string, unknown>[];
   phaseRows?: Record<string, unknown>[];
   commitmentRows?: Record<string, unknown>[];
@@ -81,8 +80,6 @@ function reportRows(
     "projects-by-phase": opts.phaseRows,
     "project-commitments": opts.commitmentRows,
     "projects-gone-quiet": opts.quietRows,
-    "win-loss": opts.winLossRows,
-    "stage-age": opts.stageAgeRows,
     "open-deals-per-company": opts.companyRows,
   };
   if (Object.hasOwn(byReport, key)) {
@@ -102,7 +99,11 @@ function meAnswer(opts: ReportsStubOpts) {
   const granted = opts.coverage !== undefined && opts.coverage.status !== 403;
   return meFixture({
     roles: ["rep"],
-    allow: { data_coverage: granted ? ["read"] : [] },
+    allow: {
+      report_definition: ["read"],
+      reporting_framework: ["read"],
+      data_coverage: granted ? ["read"] : [],
+    },
   });
 }
 
@@ -248,8 +249,14 @@ export function reportsStub(opts: ReportsStubOpts = {}) {
     const route = ROUTES.find((candidate) => candidate.when(asked));
     // An endpoint this table does not name answers an empty page rather than
     // failing: the screen reads several lists it makes no claim about here.
-    return route
-      ? route.answer(asked, opts)
+    if (route) return route.answer(asked, opts);
+    const path = new URL(asked.url, "http://localhost").pathname.replace(
+      /^\/v1/,
+      "",
+    );
+    const reportingRoute = reportingStoryRoutes()[`${asked.method} ${path}`];
+    return reportingRoute
+      ? reportingRoute(undefined)
       : jsonResponse({ data: [], page: { next_cursor: null } });
   });
 }
