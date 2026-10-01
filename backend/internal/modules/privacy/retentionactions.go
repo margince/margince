@@ -469,6 +469,8 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	}
 	// Whatever the detach could not reach — a row whose address is not among
 	// the subject's — names a contact who is going, so it goes with them.
+	// Merged-away records too: their live stops were copied onto this contact,
+	// and that copy is what the detach above carried forward.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM communication_suppression
 		 WHERE contact_id = $1

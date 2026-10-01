@@ -256,3 +256,40 @@ func TestRetentionAnonymizeDeletesAMergedPredecessorsOverride(t *testing.T) {
 		t.Errorf("%d override row(s) survived on the merged-away predecessor of an anonymized contact", n)
 	}
 }
+
+// TestRetentionAnonymizeDeletesAMergedPredecessorsSuppression is the stop twin
+// of the override case above.
+func TestRetentionAnonymizeDeletesAMergedPredecessorsSuppression(t *testing.T) {
+	ctx := context.Background()
+	tx := subjectColumnsTx(ctx, t)
+
+	ws, user := ids.NewV7(), ids.NewV7()
+	contact := ids.New[ids.ContactKind]()
+	predecessor := ids.New[ids.ContactKind]()
+	mustExec(ctx, t, tx, `INSERT INTO workspace (id) VALUES ($1)`, ws)
+	mustExec(ctx, t, tx,
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
+		user, "admin-"+user.String()+"@anon.test")
+	mustExec(ctx, t, tx,
+		`INSERT INTO contact (id, full_name, source, captured_by)
+		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text)`, contact, user)
+	mustExec(ctx, t, tx,
+		`INSERT INTO contact (id, full_name, source, captured_by, merged_into_id, archived_at)
+		 VALUES ($1, 'Hedda Duplicate', 'manual', 'user:'||$2::text, $3, now())`, predecessor, user, contact)
+	mustExec(ctx, t, tx, `
+		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, 'marketing_objection', 'operator_ui', 'human:x', 'subject')`, predecessor)
+
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, noPayloads{t: t}); err != nil {
+		t.Fatalf("anonymizing the contact: %v", err)
+	}
+
+	var n int
+	if err := tx.QueryRow(ctx,
+		`SELECT count(*) FROM communication_suppression WHERE contact_id = $1`, predecessor).Scan(&n); err != nil {
+		t.Fatalf("counting the predecessor's suppressions: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("%d suppression row(s) survived on the merged-away predecessor of an anonymized contact", n)
+	}
+}

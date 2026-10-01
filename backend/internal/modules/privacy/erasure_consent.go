@@ -159,6 +159,7 @@ func deleteConsentCapabilities(
 	// Keyed only on contact_id this delete walks straight past those rows, and
 	// an erased subject's address survives in plaintext in a table nothing will
 	// ever clean.
+	// Merged-away records too, for the reason the override delete below gives.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM communication_suppression
 		 WHERE contact_id = $1
