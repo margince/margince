@@ -144,6 +144,7 @@ const RETIRED_WORDS = [
 const RETIRED_WORD_KEPT = new Map<string, string>([
   ["firstRun.platform.google", "Google Workspace is a product name"],
   ["oauthApp.tenant", "Microsoft Entra labels the directory tenant Mandant"],
+  ["aiProviders.name.geminiVertex", "Vertex AI is Google's product name"],
 ]);
 
 function retiredWordPattern(retired: string): RegExp {

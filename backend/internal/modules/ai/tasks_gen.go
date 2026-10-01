@@ -122,7 +122,7 @@ var taskSummaries = map[Task]string{
 	TaskBriefRanking:                  "Orders the morning brief so the most important items come first.",
 	TaskCaptureClassify:               "Sorts each incoming email and meeting into what it is about, so it lands on the right record.",
 	TaskCaptureConfidentialityVerdict: "Decides whether an email thread in a restricted mailbox is ordinary enough to open to the team.",
-	TaskCaptureCounterpartyVerdict:    "Decides who a first-time sender is — a person, a company mailbox, a newsletter, spam — before a contact is created.",
+	TaskCaptureCounterpartyVerdict:    "Decides who a first-time sender is — an individual, a company mailbox, a newsletter, spam — before a contact is created.",
 	TaskCertJudge:                     "Grades model answers when a model is certified for a task. Used only in testing.",
 	TaskColdStart:                     "Runs the onboarding conversation that sets up your company profile.",
 	TaskCorpusAsk:                     "Answers questions from the documents your company filed, citing where each answer comes from.",
@@ -178,7 +178,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "059878d51df741b1bb4e91b31dda1ab4d88d0058e33970acc5fee1914e70afaa"
+const TaskContractHash = "6872f7b2bcd7886e9cf20f245a2c47eb03fab6ebedb96fb23cc41e1fd808ac53"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed

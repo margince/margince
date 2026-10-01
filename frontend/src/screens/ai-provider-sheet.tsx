@@ -9,6 +9,7 @@ import { Badge, Button, Modal } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { today } from "../format/calendarday";
+import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { borrowedRows, useAiModelCatalogue } from "./ai-models";
@@ -272,7 +273,7 @@ function pricedRows(
 ): SheetRow[] {
   const own = sheet.filter((r) => r.provider === provider);
   return [...own, ...borrowedRows(sheet, provider, pricedBy)].sort((a, b) =>
-    a.model_id.localeCompare(b.model_id),
+    stable(a.model_id, b.model_id),
   );
 }
 

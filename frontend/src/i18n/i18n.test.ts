@@ -38,6 +38,20 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // sentence, so rendering "Trí tuệ nhân tạo" on one nav heading would give
   // that one surface a vocabulary the rest of the product does not use.
   "settings.group.ai",
+  // Vendor and service names on the AI provider rows and the service picker:
+  // each is the vendor's own brand, written the same in every catalog.
+  "aiProviders.name.anthropic",
+  "aiProviders.name.openai",
+  "aiProviders.name.gemini",
+  "aiProviders.name.jev",
+  "aiProviders.name.ollama",
+  "aiProviders.name.vllm",
+  "aiProviderSettings.service.openrouter",
+  "aiProviderSettings.service.openrouterEu",
+  "aiProviderSettings.service.mistral",
+  "aiProviderSettings.service.together",
+  "aiProviderSettings.service.groq",
+  "aiProviderSettings.service.deepseek",
   // Two signed counts and a slash, with no word to translate. Its spoken
   // form, lists.pulse.label, is translated normally.
   "lists.pulse.chip",

@@ -145,7 +145,7 @@ tasks:
 
   capture_counterparty_verdict:
     display_name: "First-time sender check"
-    summary: "Decides who a first-time sender is — a person, a company mailbox, a newsletter, spam — before a contact is created."
+    summary: "Decides who a first-time sender is — an individual, a company mailbox, a newsletter, spam — before a contact is created."
     ladder: [local_small]
     execution_mode: background
     on_budget_exhausted: queue
