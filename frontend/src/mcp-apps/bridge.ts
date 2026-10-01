@@ -292,8 +292,8 @@ export function warned(warnings: Warning[], code: string): boolean {
 
 /**
  * el and heading below are the ONLY two ways anything reaches the page, and
- * both take text rather than markup. parts.ts composes them into the app's
- * components and touches the document no other way, which is what keeps the
+ * both take text rather than markup. parts.ts and badge.ts compose them into
+ * the app's components and touch the document no other way, which is what keeps the
  * containment property at the top of this file true of every character a
  * reader sees.
  *

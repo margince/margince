@@ -158,7 +158,23 @@ describe("the handoff view renders what it was given", () => {
   it("colours only the promise that is already past due at handover", () => {
     const el = root();
     render(el, handoffFixture.data, []);
+    const overdue = [...el.querySelectorAll(".item-plain")].find((row) =>
+      row.textContent?.includes("Hand over the security questionnaire"),
+    );
+    expect(overdue?.querySelector(".badge-danger")?.textContent).toBe(
+      "Overdue",
+    );
+    expect(overdue?.textContent).toContain("due 2026-06-05");
     expect(texts(el, ".badge-danger")).toEqual(["Overdue"]);
+  });
+
+  it("shows a phase the seam has not published in its own word, in no tone", () => {
+    // A tone is a claim; nobody made one about a phase this view cannot name.
+    const el = root();
+    render(el, { ...ready(), phase: "paused" }, []);
+    const phase = el.querySelector(".record-line .badge");
+    expect(phase?.textContent).toBe("paused");
+    expect(phase?.className).toBe("badge");
   });
 
   it("omits a section the project has nothing in rather than heading a void", () => {

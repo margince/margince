@@ -20,9 +20,10 @@ import { type CssRule, rulesIn, withoutComments } from "../testing/css";
 // A label in a pill has one spelling, and it is `Badge`.
 //
 // `badge.css` draws the pill and `atoms.tsx` is the one element that carries
-// its class — with `mcp-apps/parts.ts` beside it, the node builder the
-// standalone views draw through, because those documents carry no React to
-// render the atom with. The tree grew the other two spellings anyway: a screen sheet that
+// its class — with `mcp-apps/badge.ts` beside it, the views' one badge
+// builder, because those documents carry no React to render the atom with.
+// It is a module of its own so the exemption covers that builder and nothing
+// else the views build. The tree grew the other two spellings anyway: a screen sheet that
 // reached into `.badge` for a colour or an uppercase label, so the same status
 // read one way on one page and another way on the next; and a pill class of a
 // screen's own — `.x-tag` with a fill on a `--r-full` corner — that stops
@@ -66,7 +67,7 @@ const extensionsRoot = join(frontendRoot, "..", "extensions");
 /** The sheet that draws the pill, and the elements that carry its class. */
 const homeSheet = "src/design-system/badge.css";
 const homeModule = "src/design-system/atoms.tsx";
-const viewBuilder = "src/mcp-apps/parts.ts";
+const viewBuilder = "src/mcp-apps/badge.ts";
 const tokensSheet = "src/design-system/tokens.css";
 
 function fromFrontend(path: string): string {
@@ -84,7 +85,7 @@ function sheets(): string[] {
     .filter((where) => where !== homeSheet);
 }
 
-/** Every module but the atom's own and the views' builder. */
+/** Every module but the atom's own and the views' badge builder. */
 function modules(): string[] {
   return filesUnder(sourceRoot)
     .concat(extensionFrontendFiles(extensionsRoot))
@@ -525,7 +526,7 @@ describe("a label in a pill has one spelling", () => {
     );
     expect(
       builder.length,
-      "mcp-apps/parts.ts no longer mints the badge class, so its exemption is stale",
+      "mcp-apps/badge.ts no longer mints the badge class, so its exemption is stale",
     ).toBeGreaterThan(0);
   });
 

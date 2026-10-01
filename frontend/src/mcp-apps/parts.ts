@@ -5,7 +5,8 @@
 // same classes, and import the same sheets through view.css. That is what
 // this module is: one builder per component, each a mirror of the component
 // named beside it, so a panel in a host's frame is the app's panel rather
-// than a look of its own.
+// than a look of its own. The badge's builder is badge.ts, alone, because it
+// is the one the badge-spelling gate has to exempt by file.
 //
 // Every builder composes el() and heading() from bridge.ts. Text arrives as
 // text and never as markup, so the containment property stated there holds
@@ -17,14 +18,11 @@
 // view's callout and AI badge carry their meaning in their words alone, which
 // the components already guarantee they do.
 
-import type { BADGE_TONES } from "../design-system/atoms";
 import { meshOf, meshStyle, monogramOf } from "../design-system/avatarmesh";
 import type { CalloutTone } from "../design-system/callout";
 import type { PanelTone } from "../design-system/panel";
 import type { StrengthBand } from "../design-system/strengthmeter";
 import { el, heading } from "./bridge";
-
-type BadgeTone = (typeof BADGE_TONES)[number];
 
 let nextTitleID = 1;
 
@@ -77,13 +75,6 @@ export function panelFoot(): HTMLElement {
   return el("footer", "panel-foot");
 }
 
-/** badge mirrors `Badge` in its soft variant, the one a status wears. */
-export function badge(text: string, tone: BadgeTone = "default"): HTMLElement {
-  const node = el("span", tone === "default" ? "badge" : `badge badge-${tone}`);
-  node.appendChild(el("span", "badge-label", text));
-  return node;
-}
-
 /**
  * avatar mirrors `Avatar`: the monogram on the mesh keyed by the record's own
  * id, so a colleague is one chip in the app and in a host's panel — `sm` in a
@@ -111,22 +102,26 @@ export function avatar(
 
 /**
  * meter mirrors `Meter` dense and flat: a proportion as a thin bar, named for
- * assistive technology. A share that is not known draws an empty trough and
- * claims no value, because an absent factor is not a factor of zero.
+ * assistive technology. A share that is not known draws an empty trough that
+ * is hidden from assistive technology rather than announced as a meter with no
+ * value: an absent factor is not a factor of zero, and the em dash beside it
+ * already says so in words.
  */
 export function meter(share: number | null, label: string): HTMLElement {
   const bar = el("div", "meterbar meterbar-dense meterbar-flat");
+  const fill = el("span");
+  bar.appendChild(fill);
+  if (share === null) {
+    bar.setAttribute("aria-hidden", "true");
+    return bar;
+  }
+  const percent = Math.round(Math.min(1, Math.max(0, share)) * 100);
   bar.setAttribute("role", "meter");
   bar.setAttribute("aria-label", label);
   bar.setAttribute("aria-valuemin", "0");
   bar.setAttribute("aria-valuemax", "100");
-  const fill = el("span");
-  if (share !== null) {
-    const percent = Math.round(Math.min(1, Math.max(0, share)) * 100);
-    bar.setAttribute("aria-valuenow", String(percent));
-    fill.style.width = `${percent}%`;
-  }
-  bar.appendChild(fill);
+  bar.setAttribute("aria-valuenow", String(percent));
+  fill.style.width = `${percent}%`;
   return bar;
 }
 
@@ -142,9 +137,10 @@ export function strengthMeter(band: StrengthBand, word: string): HTMLElement {
 }
 
 /**
- * callout mirrors `Callout`: a bordered notice whose title says the news and
- * whose text says the rest. Announced as a status, the role the component
- * gives every tone but an alert.
+ * callout mirrors `Callout` as a standing notice: a bordered note whose title
+ * says the news and whose text says the rest. No live role, because Callout
+ * gives a notice with no `kind` none — a verdict drawn with the panel is read
+ * with it, not announced over it.
  */
 export function callout(
   tone: CalloutTone,
@@ -152,7 +148,6 @@ export function callout(
   text: string,
 ): HTMLElement {
   const node = el("div", `callout callout-${tone}`);
-  node.setAttribute("role", "status");
   const body = el("div", "callout-body");
   const copy = el("div", "callout-copy");
   copy.append(el("p", "callout-title", title), el("div", "callout-text", text));

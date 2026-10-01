@@ -366,7 +366,7 @@
   .pn-route-line {
     grid-template-columns: auto auto minmax(0, 1fr);
   }
-  .pn-route-line > .pn-meter,
+  .pn-route-line > .strength-meter,
   .pn-route-line > .btn {
     grid-column: 3;
   }

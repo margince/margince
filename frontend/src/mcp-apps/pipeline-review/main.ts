@@ -13,7 +13,7 @@
 // surface is.
 
 import { ABSENT, count, el, money, onResult } from "../bridge";
-import { badge, panel, panelFoot, panelRow } from "../parts";
+import { panel, panelFoot, panelRow } from "../parts";
 import { asList, asRecord, asText, type Warning } from "../types";
 import "../view.css";
 
@@ -143,8 +143,9 @@ export function render(
   }
   for (const deal of deals) review.appendChild(dealRow(deal));
   const foot = panelFoot();
-  foot.append(
-    badge(`${deals.length} at risk`, "warning"),
+  // No count here: the head already says how many are SHOWN, and a count in the
+  // foot would read as how many are at risk, which a capped answer cannot say.
+  foot.appendChild(
     el("p", "meta", "Worst first. Each risk names the field it was read from."),
   );
   review.appendChild(foot);

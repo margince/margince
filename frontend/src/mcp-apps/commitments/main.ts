@@ -13,8 +13,9 @@
 // judged in. A promise with no owner renders as unassigned, which is the state
 // a reviewer is looking for rather than a blank to be filled in silently.
 
+import { badge } from "../badge";
 import { count, day, el, onResult, warned } from "../bridge";
-import { badge, panel, panelFoot, panelRow } from "../parts";
+import { panel, panelFoot, panelRow } from "../parts";
 import {
   asFiniteNumber,
   asList,

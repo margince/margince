@@ -116,8 +116,11 @@ describe("the account brief renders what it was given", () => {
     expect(el.textContent).not.toContain("NaN");
     const meters = [...el.querySelectorAll(".meterbar")];
     expect(meters[0]?.getAttribute("aria-valuenow")).toBe("90");
-    // An absent factor claims no value: an empty trough, not a factor of zero.
+    // An absent factor claims no value: an empty trough, not a factor of zero,
+    // and not a meter announced with no reading either.
     expect(meters[1]?.hasAttribute("aria-valuenow")).toBe(false);
+    expect(meters[1]?.hasAttribute("role")).toBe(false);
+    expect(meters[1]?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("keeps a row whose deal id is arbitrary text as text, never as markup", () => {

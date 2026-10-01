@@ -9,7 +9,7 @@ export const STRENGTH_BANDS = ["strong", "moderate", "weak", "none"] as const;
 export type StrengthBand = (typeof STRENGTH_BANDS)[number];
 
 /**
- * StrengthMeter draws a relationship's band as three rising bars beside its
+ * StrengthMeter draws a relationship's band as three rising bars over its
  * word. The word is the fact and arrives translated; the bars are for a reader
  * scanning a column, so height and colour never carry the band alone.
  *

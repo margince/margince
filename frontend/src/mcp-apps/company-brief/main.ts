@@ -12,8 +12,9 @@
 // surface. Acting on a brief item is a human-only route by contract, so a button
 // here would be a door the contract does not have.
 
+import { badge } from "../badge";
 import { count, day, el, onResult, percent } from "../bridge";
-import { badge, meter, panel, panelFoot, panelRow } from "../parts";
+import { meter, panel, panelFoot, panelRow } from "../parts";
 import {
   asFiniteNumber,
   asList,

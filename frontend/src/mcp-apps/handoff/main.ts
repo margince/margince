@@ -13,10 +13,10 @@
 // visible: a warning with no source beside it is advice, and neither the tool
 // nor the view gives advice.
 
+import { badge } from "../badge";
 import { ABSENT, day, el, heading, money, onResult, warned } from "../bridge";
 import {
   avatar,
-  badge,
   callout,
   panel,
   panelBody,
@@ -102,6 +102,15 @@ function promisesOf(data: Record<string, unknown>): Promise_[] {
     }));
 }
 
+/** phaseBadge reads as the project page's: a live phase in the success tone,
+ *  a closed one neutral. A phase outside the set shows in its own word and
+ *  the neutral tone, because a tone is a claim nobody made about it. */
+function phaseBadge(phase: string): HTMLElement {
+  const word = PHASES.get(phase);
+  if (word === undefined) return badge(phase);
+  return badge(word, phase === "closed" ? "default" : "success");
+}
+
 /** fact is one labelled value in the record's head; an absent one is said in
  *  the warning ink, because it is a gap the verdict below names too. */
 function fact(label: string, value: string, missing: string): HTMLElement {
@@ -126,12 +135,7 @@ function head(answer: Record<string, unknown>): HTMLElement {
   );
   const phase = asText(answer.phase);
   line.appendChild(
-    phase === ""
-      ? el("span", "meta", "no phase")
-      : badge(
-          PHASES.get(phase) ?? phase,
-          phase === "closed" ? "default" : "success",
-        ),
+    phase === "" ? el("span", "meta", "no phase") : phaseBadge(phase),
   );
   const key = asText(answer.key);
   if (key !== "") line.appendChild(el("span", "meta", `# ${key}`));

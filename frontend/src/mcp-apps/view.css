@@ -168,6 +168,13 @@ ol {
   gap: var(--space-2);
 }
 
+/* A list of rows after a panel's body keeps the rule over its first row:
+   panel.css drops the rule on a first child, and inside a list every first
+   row is one, though it follows the body's sentence as any row would. */
+.panel-body + ol > .panel-row:first-child::before {
+  content: "";
+}
+
 /* A record's own text, which is customer data of arbitrary length. It wraps
    rather than escaping its row. */
 .name {
