@@ -194,7 +194,10 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 		Backlog:   func(ctx context.Context) (int64, error) { return events.OutboxBacklog(ctx, pool) },
 		Published: events.PublishedTotal,
 		Extra:     srv.writeMetricsSections,
-		JobStats:  jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
+		JobStats: fleetSections(
+			jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
+			backfillFleetSection(backfillFleetReader(pool)),
+		),
 	})))
 	// The anonymous public edges sit between the session middleware (which
 	// lets /v1/public/ through without session or workspace) and the

@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -127,19 +128,20 @@ func (w *pageWalk) walk() error {
 	}
 	return inOrder(w.ctx, len(keep),
 		func(ctx context.Context, i int) (Message, error) {
-			return rateLimited(ctx, w.gate, func() (Message, error) { return w.c.api.GetRaw(ctx, w.access, keep[i]) })
+			return rateLimited(ctx, w.gate, func() (Message, error) { return w.getRaw(ctx, keep[i]) })
 		},
 		func(i int, msg Message, err error) error {
+			msgCtx, message := capturemetrics.BeginMessage(w.ctx)
 			if errors.Is(err, ErrMessageGone) {
 				// Deleted or moved since this page was listed — nothing to fetch.
 				// A routine 404 across a months-long window must not stall the run.
-				return w.settle(keep[i], false, nil)
+				return w.settleMessage(message, keep[i], false, nil)
 			}
 			if err != nil {
-				return w.settle(keep[i], false, err)
+				return w.settleMessage(message, keep[i], false, err)
 			}
-			captured, err := captureOne(w.ctx, msg, w.sink, w.c.bounces, w.owner)
-			return w.settle(keep[i], captured, err)
+			captured, err := captureOne(msgCtx, msg, w.sink, w.c.bounces, w.owner)
+			return w.settleMessage(message, keep[i], captured, err)
 		})
 }
 
@@ -152,21 +154,22 @@ func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJ
 	keep := make([]string, 0, len(w.ids))
 	err := inOrder(w.ctx, len(w.ids),
 		func(ctx context.Context, i int) (Message, error) {
-			return rateLimited(ctx, w.gate, func() (Message, error) { return headers.GetHeaders(ctx, w.access, w.ids[i]) })
+			return rateLimited(ctx, w.gate, func() (Message, error) { return w.getHeaders(ctx, headers, w.ids[i]) })
 		},
 		func(i int, msg Message, err error) error {
 			id := w.ids[i]
+			msgCtx, message := capturemetrics.BeginMessage(w.ctx)
 			if errors.Is(err, ErrMessageGone) {
-				return w.settle(id, false, nil)
+				return w.settleMessage(message, id, false, nil)
 			}
 			if err != nil {
 				if endsPage(w.ctx, err) {
-					return err
+					return w.settleMessage(message, id, false, err)
 				}
 				keep = append(keep, id)
 				return nil
 			}
-			drop, err := dropFromHeaders(w.ctx, msg, judge, w.owner)
+			drop, err := dropFromHeaders(msgCtx, msg, judge, w.owner)
 			if w.ctx.Err() != nil {
 				return w.ctx.Err()
 			}
@@ -176,7 +179,7 @@ func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJ
 				keep = append(keep, id)
 				return nil //nolint:nilerr // the full path decides and reports for itself
 			}
-			return w.settle(id, false, nil)
+			return w.settleMessage(message, id, false, nil)
 		})
 	return keep, err
 }

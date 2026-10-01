@@ -77,13 +77,22 @@ func (g *rateGate) wait(ctx context.Context) error {
 	}
 }
 
-// pause closes the gate for d, never shortening a longer pause already set.
-func (g *rateGate) pause(d time.Duration) {
+// pause closes the gate for d, never shortening a longer pause already set,
+// and answers how much later the gate now opens.
+func (g *rateGate) pause(d time.Duration) time.Duration {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	if at := time.Now().Add(d); at.After(g.until) {
-		g.until = at
+	now := time.Now()
+	at := now.Add(d)
+	if !at.After(g.until) {
+		return 0
 	}
+	from := g.until
+	if from.Before(now) {
+		from = now
+	}
+	g.until = at
+	return at.Sub(from)
 }
 
 // rateLimited runs one Gmail call through the gate, and on a rate limit closes the
@@ -108,7 +117,7 @@ func rateLimited[T any](ctx context.Context, g *rateGate, fn func() (T, error)) 
 		// The gate closes either way: a wait too long for the page still holds
 		// the other workers, so none of them spends Gmail's patience while the
 		// page winds down and hands the wait to the engine.
-		g.pause(wait)
+		observeGatePause(ctx, g.pause(wait), err)
 		if wait > rateWaitInPage || attempt+1 >= rateRetriesInPage {
 			return zero, err
 		}

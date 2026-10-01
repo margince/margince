@@ -209,7 +209,8 @@ func acquiredFromCapture(replied bool) string {
 // reply (capture's wroteBackTx): a newsletter is a list writing to everyone,
 // not the sender writing to us. A first mail from a stranger is them contacting
 // us, and a disclosure duty for it would be owed to nobody. Only the reverse —
-// an address we wrote to, or saw on a Cc, that never wrote — stays unknown.
+// an address we wrote to, or saw on a Cc, that never wrote — stays unknown,
+// unless a seat wrote to it before connecting the mailbox (mailbox_history).
 func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email string) (string, error) {
 	if kind := acquiredFromCapture(replied); kind == AcquiredSubjectInitiated {
 		return kind, nil
@@ -233,6 +234,13 @@ func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email s
 	}
 	if migrated {
 		return AcquiredCRMMigration, nil
+	}
+	history, err := writtenToBeforeConnectedTx(ctx, tx, email)
+	if err != nil {
+		return "", err
+	}
+	if history {
+		return AcquiredMailboxHistory, nil
 	}
 	return AcquiredUnknownLegacy, nil
 }

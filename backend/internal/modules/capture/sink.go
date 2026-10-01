@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -205,6 +207,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 	// it is the skip's sentence to the connector, so it names the rule, never
 	// an address.
 	var dropped string
+	txStart := time.Now()
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// A channel record's account id IS personal data, and THIS transaction is
 		// the one that makes it durable — so the erasure is excluded here, under
@@ -256,6 +259,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			return fmt.Errorf("capture: unmapped Fields type %T for %s", rec.Fields, rec.EntityType)
 		}
 	})
+	capturemetrics.ObserveStage(ctx, capturemetrics.StageSink, time.Since(txStart))
 	if err != nil {
 		s.traceInvisibleIncumbent(ctx, rec, err)
 		return datasource.EntityRef{}, err
@@ -268,6 +272,9 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// irreversible, and why the own-domain set is admin-visible (ADR-0082 §4).
 		return datasource.EntityRef{}, fmt.Errorf("%w: %s", connector.ErrSkip, dropped)
 	}
+	// Everything after the commit, merge staging included, is the ensure stage.
+	ensureStart := time.Now()
+	defer func() { capturemetrics.ObserveStage(ctx, capturemetrics.StageEnsure, time.Since(ensureStart)) }()
 	if activityCreated {
 		// The tier ladder already decided, and recorded its decision, inside
 		// the transaction above. Creation runs AFTER that commit, in its own

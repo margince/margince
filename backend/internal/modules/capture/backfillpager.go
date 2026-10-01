@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -114,7 +115,9 @@ func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (do
 	}
 
 	pageCtx, _ := withPageProgress(runCtx, r, backfillID, generation)
+	pageCtx = capturemetrics.ForProvider(pageCtx, name)
 	res, pageErr := bf.BackfillPage(pageCtx, auth, after, pageToken, r.sink)
+	capturemetrics.ObservePage(pageCtx, pageErr)
 	if pageErr != nil {
 		if pageToken != "" && classifySyncError(pageErr) == classHistoryGone {
 			return r.restartWindowWalk(ctx, backfillID, pageErr)

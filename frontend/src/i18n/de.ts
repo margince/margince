@@ -5554,6 +5554,8 @@ export const de = {
     "Wir haben Ihre Daten in einer öffentlichen oder geschäftlichen Quelle gefunden, etwa einem Verzeichnis oder einer Unternehmenswebsite.",
   "privacynotice.source.crmMigration":
     "Ihre Daten waren bereits in unserem bisherigen Kundensystem und wurden mit ihm hierher übertragen.",
+  "privacynotice.source.mailboxHistory":
+    "Wir standen bereits per E-Mail mit Ihnen in Kontakt, bevor unser Postfach mit diesem System verbunden wurde.",
   "privacynotice.source.purchasedOrImported":
     "Ihre Daten stammen aus einer gekauften oder importierten Liste.",
   "privacynotice.source.unknown":

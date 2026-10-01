@@ -151,6 +151,14 @@ func TestTheWorkerMetricsAreProcessLocalAndReServeNoFleetGauge(t *testing.T) {
 		"margince_ai_calls_total",
 		"margince_ai_call_duration_seconds",
 		"margince_ai_tokens_total",
+		// The capture counters. The capture lanes run here, so their traced
+		// outcomes, provider calls and backfill stage timings are this
+		// process's to report.
+		"margince_capture_outcomes_total",
+		"margince_connector_requests_total",
+		"margince_connector_request_duration_seconds",
+		"margince_capture_backfill_stage_seconds",
+		"margince_capture_backfill_snooze_seconds_total",
 	} {
 		if !strings.Contains(body, "# TYPE "+family+" ") {
 			t.Errorf("the worker publishes no %s; it is process-local and served nowhere else\ngot:\n%s", family, body)
@@ -165,6 +173,8 @@ func TestTheWorkerMetricsAreProcessLocalAndReServeNoFleetGauge(t *testing.T) {
 		"margince_sweep_workspaces",
 		"margince_sweep_units",
 		"margince_outbox_unpublished",
+		"margince_capture_backfill_runs",
+		"margince_capture_backfill_progress",
 	} {
 		if strings.Contains(body, family) {
 			t.Errorf("the worker re-serves %s, which is a fleet-wide reading the api already answers; "+

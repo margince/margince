@@ -5491,6 +5491,8 @@ export const vi = {
     "Chúng tôi tìm thấy thông tin của quý vị từ nguồn công khai hoặc nguồn doanh nghiệp, chẳng hạn danh bạ hoặc trang web công ty.",
   "privacynotice.source.crmMigration":
     "Thông tin của quý vị đã có trong hệ thống khách hàng chúng tôi dùng trước đây và được chuyển sang đây cùng hệ thống đó.",
+  "privacynotice.source.mailboxHistory":
+    "Chúng tôi đã trao đổi thư với quý vị trước khi hộp thư của chúng tôi được kết nối với hệ thống này.",
   "privacynotice.source.purchasedOrImported":
     "Thông tin của quý vị đến từ một danh sách được mua hoặc nhập vào.",
   "privacynotice.source.unknown":
