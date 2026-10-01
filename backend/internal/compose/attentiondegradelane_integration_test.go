@@ -14,6 +14,7 @@ package compose
 
 import (
 	"context"
+	"maps"
 	"testing"
 	"time"
 
@@ -131,10 +132,8 @@ func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *t
 	// The suggestion read needs company as well as deal, or it is withheld
 	// before it runs and the stall is never reached.
 	perms := leadRepPerms
-	perms.Objects = map[string]principal.ObjectGrant{"company": {Read: true}}
-	for object, grant := range leadRepPerms.Objects {
-		perms.Objects[object] = grant
-	}
+	perms.Objects = maps.Clone(leadRepPerms.Objects)
+	perms.Objects["company"] = principal.ObjectGrant{Read: true}
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 	started := time.Now()
 	page, err := svc.Worklist(ctx, "mine", "", ids.Nil, 50, "")
@@ -153,6 +152,11 @@ func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *t
 	}
 	if !named {
 		t.Errorf("sources_unavailable is %v, want deal_suggestion named as failed", page.SourcesUnavailable)
+	}
+	for _, item := range page.Queue {
+		if string(item.Source) == "deal_suggestion" {
+			t.Errorf("the queue carries suggestion %s from a read that failed", item.Id)
+		}
 	}
 	if got := leadRows(page); len(got) != 1 || got[0] != "Waiting On Rep1" {
 		t.Errorf("the lead lane carries %v after the suggestion read failed, want the one owed lead", got)
