@@ -10,6 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // dealScoutSQL is the scout's one read, in four steps:
@@ -46,7 +47,7 @@ func dealScoutSQL(since, now time.Time, companyCap int) (string, []any) {
 	     AND ` + in("s.detected_at") + `
 	     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
 	           WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
-	             WHERE ca.id::text = cite->>'source_id' AND ` + workspaceEvidence("ca") + `))
+	             WHERE ca.id = ` + storekit.CitedActivityID("cite") + ` AND ` + workspaceEvidence("ca") + `))
 	     AND ` + scoutCandidate("s.resolved_company_id", "s.detected_at") + `
 	  UNION ALL
 	  SELECT filed.company_id, 'attachment', at.id, a.occurred_at, NULL
