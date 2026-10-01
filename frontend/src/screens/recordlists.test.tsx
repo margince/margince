@@ -4,10 +4,11 @@
 
 import "@testing-library/jest-dom/vitest";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
+import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import {
   LIVE_ID,
@@ -19,6 +20,7 @@ import {
   shortlist,
 } from "./lists.fixtures";
 import { RecordListsPanel } from "./recordlists";
+import { recordWriteKeys } from "./recordwritekeys";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 afterEach(() => {
@@ -126,5 +128,50 @@ describe("a record page's lists", () => {
       entity_id: MEMBER_ID,
       note: "left the company",
     });
+  });
+
+  it("reads the record's lists and an open verdict again when the record is written", async () => {
+    let listReads = 0;
+    let whyReads = 0;
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /records/company/${MEMBER_ID}/lists`]: () => {
+        listReads += 1;
+        return jsonResponse({ data: [] });
+      },
+      "GET /lists": () =>
+        jsonResponse({ data: [liveList], page: { has_more: false } }),
+      [`GET /lists/${LIVE_ID}/members/${MEMBER_ID}/why`]: () => {
+        whyReads += 1;
+        return jsonResponse(notOnLiveWhy);
+      },
+      "GET /filters/vocabulary": () =>
+        jsonResponse({ resource: "company", fields: [] }),
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <RecordListsPanel entityType="company" entityId={MEMBER_ID} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("combobox", { name: en["lists.record.check"] }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: liveList.name }),
+    );
+    await screen.findByText("Now: Logistics");
+    expect([listReads, whyReads]).toEqual([1, 1]);
+    await Promise.all(
+      recordWriteKeys("company", MEMBER_ID).map((queryKey) =>
+        client.invalidateQueries({ queryKey }),
+      ),
+    );
+    await vi.waitFor(() => expect([listReads, whyReads]).toEqual([2, 2]));
   });
 });

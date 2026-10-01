@@ -131,7 +131,7 @@ function CheckedList({
   entityId,
 }: RecordRef & Readonly<{ listId: string }>) {
   const t = useT();
-  const why = useExplanation(listId, entityId);
+  const why = useExplanation(listId, entityType, entityId);
   return (
     <SurfaceState
       state={why.isPending ? "loading" : why.isError ? "unavailable" : "ready"}

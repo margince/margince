@@ -8,6 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { recordListsKey } from "./activitykeys";
 import { throwProblem, useMe } from "./common";
 
 export type List = components["schemas"]["List"];
@@ -123,14 +124,21 @@ export function useVisitList() {
   });
 }
 
-export function useExplanation(listId: string, recordId: string | null) {
+/**
+ * Why one record is or is not on a list. Kept under the record's own lists
+ * key, so a write to the record makes an open verdict stale with them.
+ */
+export function useExplanation(
+  listId: string,
+  recordType: ListedRecordType,
+  recordId: string,
+) {
   return useQuery({
-    queryKey: [LISTS_KEY, "why", listId, recordId],
-    enabled: recordId !== null,
+    queryKey: [...recordListsKey(recordType, recordId), "why", listId],
     queryFn: async () => {
       const { data, error } = await api.GET(
         "/lists/{id}/members/{recordId}/why",
-        { params: { path: { id: listId, recordId: recordId ?? "" } } },
+        { params: { path: { id: listId, recordId } } },
       );
       if (error) {
         throwProblem(error);
@@ -167,7 +175,7 @@ export type ListedRecordType = Exclude<ListRecordType, "project">;
 /** The lists one record is on that the reader may find. */
 export function useRecordLists(entityType: ListedRecordType, recordId: string) {
   return useQuery({
-    queryKey: [LISTS_KEY, "record", entityType, recordId],
+    queryKey: recordListsKey(entityType, recordId),
     queryFn: async () => {
       const { data, error } = await api.GET(
         "/records/{entity_type}/{entity_id}/lists",
