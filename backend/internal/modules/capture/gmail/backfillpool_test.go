@@ -266,21 +266,20 @@ func TestHTTPAPIGetHeadersRebuildsTheHeaderBlock(t *testing.T) {
 	}
 }
 
-func TestRateGateHoldsEveryCallerUntilItOpens(t *testing.T) {
+func TestRateGateKeepsTheLongerPauseAndGivesWayToCancel(t *testing.T) {
 	g := &rateGate{}
-	g.pause(30 * time.Millisecond)
-	g.pause(time.Millisecond) // a shorter pause never shortens a longer one
-	start := time.Now()
-	if err := g.wait(context.Background()); err != nil {
-		t.Fatalf("wait: %v", err)
-	}
-	if waited := time.Since(start); waited < 25*time.Millisecond {
-		t.Fatalf("the gate opened after %s, want the longer pause kept", waited)
-	}
 	g.pause(time.Hour)
+	held := g.until
+	g.pause(time.Millisecond)
+	if !g.until.Equal(held) {
+		t.Fatal("a shorter pause shortened a longer one; Gmail's wait must be kept")
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if err := g.wait(ctx); err == nil {
 		t.Fatal("a closed gate must give way to a cancelled context")
+	}
+	if err := (&rateGate{}).wait(context.Background()); err != nil {
+		t.Fatalf("an open gate held the caller: %v", err)
 	}
 }
