@@ -152,7 +152,7 @@ export function MagicPanel({
   const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
-  const doneFloor = sumIsFloor(done);
+  const doneFloor = sumIsFloor("done", done);
   // "All" would claim the whole of a count that is only a floor.
   const doneFold = plural(
     doneFloor ? "magic.done.atLeast" : "magic.done.all",
@@ -254,8 +254,10 @@ function recordsOf(rows: readonly MagicLine[]): number {
 
 // A sum is only a floor over a line whose read was cut short, or over a lane
 // that filled its page and may hold more lines than it shows.
-function sumIsFloor(rows: readonly MagicLine[]): boolean {
-  return fillsPage(rows) || rows.some((row) => row.count_is_floor === true);
+function sumIsFloor(lane: MagicLane, rows: readonly MagicLine[]): boolean {
+  return (
+    fillsPage(lane, rows) || rows.some((row) => row.count_is_floor === true)
+  );
 }
 
 /**
@@ -293,7 +295,7 @@ function LaneSummary({
       text: plural(LANE_COUNT[lane], count, {
         count: floorFigure(
           formatNumber(count, locale),
-          sumIsFloor(rows),
+          sumIsFloor(lane, rows),
           count,
         ),
       }),

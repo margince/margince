@@ -4,13 +4,14 @@
 import { useRecordZone } from "../app/recordzone";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
+import { sameCalendarDay } from "../format/calendarday";
 import {
   formatDateTime,
   formatDayMonth,
   formatTimeOfDay,
 } from "../format/format";
-import { dayInZone, viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { viewerZone } from "../format/timezone";
+import { type Locale, useLocale, useT } from "../i18n";
 import { EntityRef } from "./entityref";
 import { listReadState } from "./worklist.listread";
 import { useHandledForYou } from "./worklist.queries";
@@ -28,6 +29,7 @@ export function BriefChanges() {
   const zone = viewerZone();
   const query = useHandledForYou();
   const receipts = query.data?.receipts;
+  const asOf = query.data?.as_of;
   const state = listReadState(query, receipts);
   if (state === "loading" || state === "empty") {
     return null;
@@ -63,9 +65,7 @@ export function BriefChanges() {
                   dateTime={receipt.occurred_at}
                   title={formatDateTime(receipt.occurred_at, locale, zone)}
                 >
-                  {sameDay(receipt.occurred_at, query.data?.as_of, zone)
-                    ? formatTimeOfDay(receipt.occurred_at, locale, zone)
-                    : formatDayMonth(receipt.occurred_at, locale, zone)}
+                  {changeWhen(receipt.occurred_at, asOf, locale, zone)}
                 </time>
               </li>
             ))}
@@ -79,12 +79,17 @@ export function BriefChanges() {
   );
 }
 
-// A change from today shows its hour, an older one its day: the list spans as
-// many days as changes have waited, and the hour of one from last week says
+// The hour for a change from today, the day for an older one: the list spans
+// as many days as changes have waited, and the hour of last week's change says
 // less than which day it was.
-function sameDay(iso: string, asOf: string | undefined, zone: string): boolean {
-  return (
-    asOf !== undefined &&
-    dayInZone(Date.parse(iso), zone) === dayInZone(Date.parse(asOf), zone)
-  );
+function changeWhen(
+  iso: string,
+  asOf: string | undefined,
+  locale: Locale,
+  zone: string,
+): string {
+  return asOf !== undefined &&
+    sameCalendarDay(new Date(iso), new Date(asOf), zone)
+    ? formatTimeOfDay(iso, locale, zone)
+    : formatDayMonth(iso, locale, zone);
 }

@@ -115,7 +115,7 @@ function glanceReadings(done: readonly MagicLine[]): readonly GlanceReading[] {
   }
   // A lane that filled its page may hold more of any kind beyond it: every
   // total is then a floor, and no job can be said to have done the most.
-  const full = fillsPage(done);
+  const full = fillsPage("done", done);
   return [...byLabel.entries()]
     .map(([label, tally]) => ({
       label,

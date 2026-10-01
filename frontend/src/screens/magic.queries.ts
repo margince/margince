@@ -38,9 +38,21 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // sum taken over that lane is then only a floor.
 export const MAGIC_PAGE_LINES = 100;
 
+// Which lanes the page bounds. Watching is every standing condition there is,
+// read without the bound, so however many it holds it holds them all.
+const PAGE_BOUND: Readonly<Record<MagicLane, boolean>> = {
+  done: true,
+  needs_you: true,
+  could_not_complete: true,
+  watching: false,
+};
+
 /** Whether a lane filled its page, and so may hold more than it shows. */
-export function fillsPage(rows: readonly MagicLine[]): boolean {
-  return rows.length >= MAGIC_PAGE_LINES;
+export function fillsPage(
+  lane: MagicLane,
+  rows: readonly MagicLine[],
+): boolean {
+  return PAGE_BOUND[lane] && rows.length >= MAGIC_PAGE_LINES;
 }
 
 /** The `since` a window asks for, or undefined to leave it to the server. */

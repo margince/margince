@@ -17,6 +17,9 @@ const mailFiling = {
   label: { key: "magic.by.mail_filing" },
 } as const;
 
+const lineId = (n: number) =>
+  `00000000-0000-7000-8000-${String(n).padStart(12, "0")}`;
+
 // Each reading as a reader sees it: its name, its figure, and who did it.
 function readings(strip: HTMLElement): string[][] {
   return Array.from(strip.querySelectorAll(".stat-card")).map((card) =>
@@ -120,13 +123,11 @@ describe("the receipt at a glance", () => {
   });
 
   it("reads every sum as a minimum, and names no job, when the done lane fills its page", async () => {
-    const id = (n: number) =>
-      `00000000-0000-7000-8000-${String(n).padStart(12, "0")}`;
     stub(
       receipt({
         done: Array.from({ length: MAGIC_PAGE_LINES }, (_, n) =>
           line({
-            id: id(n + 1),
+            id: lineId(n + 1),
             summary: { key: "magic.action.mail_filed" },
             actor: mailFiling,
           }),
@@ -142,6 +143,26 @@ describe("the receipt at a glance", () => {
       ),
     ).toBeTruthy();
     expect(screen.getByText("100+ changes, one by one")).toBeTruthy();
+  });
+
+  it("counts a full lane of sources to restore exactly, since the page does not bound it", async () => {
+    stub(
+      receipt({
+        watching: Array.from({ length: MAGIC_PAGE_LINES }, (_, n) =>
+          line({
+            id: lineId(n + 1),
+            lane: "watching",
+            summary: {
+              key: "magic.action.capture_reauth_required",
+              values: { provider: "google" },
+            },
+          }),
+        ),
+      }),
+    );
+    renderMagic();
+    const summary = await screen.findByRole("list", { name: "Summary" });
+    expect(within(summary).getByText("100 need restoring")).toBeTruthy();
   });
 
   it("folds the done lines under the changes they stand for, and counts those", async () => {

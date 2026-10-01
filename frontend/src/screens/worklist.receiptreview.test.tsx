@@ -3,6 +3,8 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
+import { formatDayMonth, formatTimeOfDay } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { BriefChanges } from "./brief.changes";
 import { jsonResponse, render, stubApi, writes } from "./brief.testkit";
 import { ReceiptReview } from "./worklist.receiptreview";
@@ -67,6 +69,34 @@ it("draws no group at all when no change waits for a word", async () => {
   expect(
     screen.queryByRole("heading", { name: "Changes made for you" }),
   ).toBeNull();
+});
+
+it("dates a change from today by its hour and an older one by its day", async () => {
+  const today = automaticStageReceipt;
+  const older = {
+    ...automaticStageReceipt,
+    id: "01a00000-0000-7000-8000-000000000013",
+    occurred_at: "2026-09-09T14:00:00Z",
+  };
+  stubApi({
+    "GET /worklist/handled": () =>
+      jsonResponse({
+        as_of: today.occurred_at,
+        truncated: false,
+        receipts: [today, older],
+      }),
+    [`GET /deals/${today.subject?.id}`]: () =>
+      jsonResponse({ name: "PIM Rollout" }),
+  });
+  const { container } = render(<BriefChanges />);
+  await screen.findByRole("list", { name: "Changes made for you" });
+  const zone = viewerZone();
+  expect(
+    [...container.querySelectorAll("time")].map((time) => time.textContent),
+  ).toEqual([
+    formatTimeOfDay(today.occurred_at, "en", zone),
+    formatDayMonth(older.occurred_at, "en", zone),
+  ]);
 });
 
 it("uses the stage reversal route rather than restoring a stage field", async () => {
