@@ -718,14 +718,13 @@ func assertAContinuedRunIsNotLeftWithoutAJob(t *testing.T, b *backfillWireEnv, w
 		}
 		runID := ids.UUID(*out.BackfillId)
 		wsCtx := principal.WithWorkspaceID(context.Background(), b.env.WS)
-		if err := worker.unlessResumed(wsCtx, runID); err != nil {
-			t.Fatalf("a run that stays ended must end the job, got %v", err)
+		if worker.resumedMeanwhile(wsCtx, runID) {
+			t.Fatal("a run that stays ended must end the job")
 		}
 		setRunStatus(t, b, runID, "queued")
 		defer setRunStatus(t, b, runID, "error")
-		var snooze *river.JobSnoozeError
-		if err := worker.unlessResumed(wsCtx, runID); !errors.As(err, &snooze) {
-			t.Fatalf("a run reopened under the ending job got %v, want a snooze", err)
+		if !worker.resumedMeanwhile(wsCtx, runID) {
+			t.Fatal("a run reopened under the ending job must bring the job back")
 		}
 	})
 }

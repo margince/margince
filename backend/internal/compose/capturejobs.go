@@ -276,7 +276,10 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 			// from this job, because the job context dying mid-page is itself the
 			// commonest fault — and the log carries the detail.
 			w.log.WarnContext(ctx, "capture backfill page failed", "backfill", job.Args.BackfillID, "err", err)
-			return w.unlessResumed(wsCtx, bfID)
+			if w.resumedMeanwhile(wsCtx, bfID) {
+				return river.JobSnooze(time.Second)
+			}
+			return nil
 		}
 		if completed {
 			// The connect-time import just closed: build today's digest for
@@ -293,20 +296,17 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 	return river.JobSnooze(time.Second)
 }
 
-// unlessResumed ends the job, unless the run it just ended is live again.
+// resumedMeanwhile says the run this job just ended is live again.
 //
 // A human pressing Continue reopens the same run, and its enqueue is unique
 // against this job while it is still running — so the start can land on a job
 // that is about to return, and the reopened run would wait for the nightly
-// reconcile with nothing paging it. Coming back in a second instead keeps it
-// moving. A read that fails ends the job as before; the reconcile still covers
-// the run.
-func (w *captureBackfillWorker) unlessResumed(ctx context.Context, bfID ids.UUID) error {
+// reconcile with nothing paging it. The job comes back in a second for it
+// instead. A read that fails answers false and the job ends as before; the
+// reconcile still covers the run.
+func (w *captureBackfillWorker) resumedMeanwhile(ctx context.Context, bfID ids.UUID) bool {
 	live, err := w.registry.LiveBackfills(ctx)
-	if err == nil && slices.Contains(live, bfID) {
-		return river.JobSnooze(time.Second)
-	}
-	return nil
+	return err == nil && slices.Contains(live, bfID)
 }
 
 // enqueueDigest offers a same-day digest build for THIS workspace through the
