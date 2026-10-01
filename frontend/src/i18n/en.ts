@@ -9363,9 +9363,11 @@ export const en = {
     "Full endpoint URL, used as written. Required.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
-  "aiRouting.models.askingLocation": "Asking Google which models {location} serves…",
+  "aiRouting.models.askingLocation":
+    "Asking Google which models {location} serves…",
   "aiRouting.models.noKey": "No key, so no model list. Type any ID it serves.",
-  "aiRouting.models.noEndpoint": "Set this provider’s host under Providers to load its model list.",
+  "aiRouting.models.noEndpoint":
+    "Set this provider’s host under Providers to load its model list.",
   "aiRouting.models.profileForbids":
     "This profile does not allow this provider.",
   "aiRouting.models.notPublished": "This provider publishes no model list.",

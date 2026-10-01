@@ -210,6 +210,28 @@ function settingsBody(
   return body;
 }
 
+/** Where a chosen service sends requests, and what to know before using it. */
+function ServiceCaption({ service }: Readonly<{ service: Service }>) {
+  const t = useT();
+  return (
+    <>
+      <p className="t-caption ai-provider-host">
+        {service.host
+          ? t("aiProviderSettings.host.line", { host: service.host })
+          : t("aiProviderSettings.host.default")}
+      </p>
+      {service.note && (
+        <p className="t-caption">
+          {t(service.note)}{" "}
+          <a href={service.noteLink} target="_blank" rel="noreferrer">
+            {t("aiProviderSettings.service.learnMore")}
+          </a>
+        </p>
+      )}
+    </>
+  );
+}
+
 export function ProviderSettingsForm({
   provider,
   routing,
@@ -259,21 +281,7 @@ export function ProviderSettingsForm({
           )}
         </Field>
       )}
-      {known && (
-        <p className="t-caption ai-provider-host">
-          {known.host
-            ? t("aiProviderSettings.host.line", { host: known.host })
-            : t("aiProviderSettings.host.default")}
-        </p>
-      )}
-      {known?.note && (
-        <p className="t-caption">
-          {t(known.note)}{" "}
-          <a href={known.noteLink} target="_blank" rel="noreferrer">
-            {t("aiProviderSettings.service.learnMore")}
-          </a>
-        </p>
-      )}
+      {known && <ServiceCaption service={known} />}
       {catalog && service === OTHER && (
         <>
           <Field

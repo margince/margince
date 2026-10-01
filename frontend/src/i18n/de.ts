@@ -9225,7 +9225,8 @@ export const de = {
     "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
-  "aiRouting.models.askingLocation": "Google wird gefragt, welche Modelle {location} anbietet …",
+  "aiRouting.models.askingLocation":
+    "Google wird gefragt, welche Modelle {location} anbietet …",
   "aiRouting.models.noKey":
     "Kein Schlüssel, daher keine Modellliste. Beliebige Modell-ID eingeben.",
   "aiRouting.models.noEndpoint":

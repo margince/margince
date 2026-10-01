@@ -86,7 +86,9 @@ export const OpenRouterPinned: Story = {
 export const OpenRouterEu: Story = {
   render: story(
     "openai_compatible",
-    routing({ openai_compatible: { base_url: "https://eu.openrouter.ai/api" } }),
+    routing({
+      openai_compatible: { base_url: "https://eu.openrouter.ai/api" },
+    }),
   ),
 };
 
