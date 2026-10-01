@@ -90,9 +90,8 @@ A binding's own level, in a preset or routing file (this outranks every site):
 ```yaml
 cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite, thinking_level: low }
 cheap_cloud:
-  provider: openai_compatible
+  provider: openai_compatible          # host on providers.openai_compatible
   model: openai/gpt-oss-120b
-  base_url: https://openrouter.ai/api
   routing: { sort: throughput, reasoning_effort: low }
 ```
 

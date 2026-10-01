@@ -50,10 +50,13 @@ local_small: { provider: ollama, model: gemma3 }   # no base_url ⇒ localhost:1
 
 Edit the other tiers to:
 
-- **use a remote/self-hosted Ollama** — add a `base_url` (no trailing slash; the
-  adapter appends `/api/chat`):
+- **use a remote/self-hosted Ollama** — set the provider's `base_url` once (no
+  trailing slash; the adapter appends `/api/chat`), and every Ollama lane uses it:
   ```yaml
-  local_small: { provider: ollama, model: mistral, base_url: https://ollama.internal:11434 }
+  providers:
+    ollama: { base_url: https://ollama.internal:11434 }
+  tiers:
+    local_small: { provider: ollama, model: mistral }
   ```
 - **run cold-start / offer-draft locally too** (they ladder `cheap_cloud` →
   `premium`, cloud by default) — rebind those tiers to `ollama` as well.

@@ -60,14 +60,24 @@ tiers:
   cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
   premium:     { provider: gemini, model: gemini-3.5-flash }
 
-# …or any OpenAI-compatible vendor via the generic adapter. It needs a base_url
-# (the key comes from OPENAI_COMPATIBLE_API_KEY):
+# …or any OpenAI-compatible vendor via the generic adapter. It needs a host,
+# set once on the provider (the key comes from OPENAI_COMPATIBLE_API_KEY):
+providers:
+  openai_compatible:
+    base_url: https://api.mistral.ai # host root, NO /v1 (see the caveat below)
 tiers:
   cheap_cloud:
     provider: openai_compatible
     model: mistral-small-2506        # pin an explicit version — -latest aliases drift
-    base_url: https://api.mistral.ai # host root, NO /v1 (see the caveat below)
 ```
+
+> **A provider's host is set once, on the provider.** `providers.<name>.base_url`
+> is where every lane binding that provider is reached; in the app it is the Host
+> field on the provider's sheet (Settings → AI models → Providers). A lane names
+> only its provider and model. The one exception is the embeddings lane, which
+> may carry its own `base_url` for a separate embeddings server (a self-hosted
+> vLLM serves one model per process). A lane that still writes `base_url` — the
+> older spelling — is lifted onto its provider when the provider names none.
 
 > **`base_url` for the OpenAI-wire providers (`openai_compatible`, `openai`,
 > `vllm`) is the vendor host root with _no_ version segment.** The adapter
@@ -93,8 +103,8 @@ tiers:
 > own level still outranks) — see
 > [configuration.md](../reference/configuration.md).
 >
-> **One key, every open-weight model:** bind `openai_compatible` with
-> `base_url: https://openrouter.ai/api` and one `OPENAI_COMPATIBLE_API_KEY`, and
+> **One key, every open-weight model:** give `openai_compatible` the host
+> `https://openrouter.ai/api` and one `OPENAI_COMPATIBLE_API_KEY`, and
 > a single OpenRouter key reaches every open-weight model. Filter candidates to
 > models declaring both `structured_outputs` and `tools`. To certify one rather
 > than bind it, `make e2e-ai` takes the model outright:
@@ -108,9 +118,10 @@ points it at the same broker the chat tiers use, so a stack needs ONE key rather
 than a second provider's purely for embeddings.
 
 ```yaml
-# the dev default — same broker and key as the chat tiers
+# the dev default — same broker, host and key as the chat tiers
 embeddings: { provider: openai_compatible, model: mistralai/mistral-embed-2312,
-              base_url: https://openrouter.ai/api, dimensions: 1024 }
+              dimensions: 1024 }
+# embeddings: { provider: vllm, model: BAAI/bge-m3, base_url: http://localhost:8001 }  # its own server
 # embeddings: { provider: gemini, model: gemini-embedding-001 }  # native adapter, key from GEMINI_API_KEY
 # embeddings: { provider: ollama, model: bge-m3 }                # fully-local alternative
 # embeddings: { provider: fake }                                 # offline dev
@@ -184,15 +195,21 @@ the file's *contents* (one line, single-quoted in `.env.local`), not a path, and
 the first boot seals it into the key vault. The project comes from the key's
 `project_id`.
 
-**Choose a location.** Every `gemini_vertex` binding, on a tier or on
-`embeddings:`, names one, and it takes no `base_url`:
+**Choose a location.** It is the provider's, set once (the Location field on the
+`gemini_vertex` provider sheet), and `gemini_vertex` takes no `base_url`. The
+embeddings lane may name a location of its own:
 
 ```yaml
 profile: eu_hosted
+providers:
+  gemini_vertex: { location: eu }
 tiers:
-  premium: { provider: gemini_vertex, location: eu, model: gemini-3.5-flash }
+  premium: { provider: gemini_vertex, model: gemini-3.5-flash }
 embeddings: { provider: gemini_vertex, location: europe-west4, model: gemini-embedding-001 }
 ```
+
+Changing the provider's location asks Google about every bound model at the new
+location before it is stored; a model it does not serve refuses the change.
 
 `eu` — the EU multi-region — is the recommendation: Google keeps processing in
 EU member states and picks the region. An EU region
@@ -263,7 +280,7 @@ followed, one that changes host or downgrades to http is refused.
 | Boot error *"profile sovereign forbids cloud provider …"* | A cloud provider is bound under a profile that refuses it. Switch to `eu_hosted`/`cloud_frontier`, or bind that tier to `ollama`/`vllm`. |
 | Boot error *"needs an api key — set X_API_KEY …"* | The bound cloud provider's key env var is unset. Export the one the error names (e.g. `GEMINI_API_KEY`). |
 | Boot error *"field api_key not found"* | You put an `api_key:` in the `seeds.ai_routing` binding — remove it; the key comes from the env var (see the table above). |
-| Boot error *"needs a base_url …"* | `openai_compatible` has no `base_url`. Add the vendor host root (no `/v1`). |
+| Boot error *"needs a base_url …"* | `openai_compatible` has no host. Set `providers.openai_compatible.base_url` (the Host field on its provider sheet) to the vendor host root (no `/v1`). |
 | Boot error *"must name a public host"* | A native vendor binding (`anthropic`/`openai`/`gemini`) points inside your network. Bind `openai_compatible` for a self-hosted gateway (see "Where a `base_url` may point"). |
 | Boot error *"must be https"* | A native vendor binding uses `http://`. Use `https://`, or bind `openai_compatible` if the endpoint is genuinely served over http. |
 | Boot error *"not an address inference is served from"* | The `base_url` names a link-local, CGNAT or documentation address. Give the endpoint's own address (see "Where a `base_url` may point"). |

@@ -243,11 +243,15 @@ costs — read the binding. Each row in **AI tasks** names its tier, and **View
 calls** opens the **AI call log** narrowed to that task.
 
 Changes take effect without a restart, within about a minute; a call in flight
-keeps the binding it started with. A **Gemini on Vertex AI** binding also names
-a **Location**, where Google processes the work: under `eu_hosted` only the EU
-ones can be chosen, and saving checks that the location serves the model.
+keeps the binding it started with. A binding names only its provider and
+model; where the provider is reached is set on the provider.
 
-**Provider keys** — your own keys; Gemini on Vertex AI takes a Google Cloud
+**Providers** — each provider's sheet holds its key and where it is reached:
+the **Host** for an OpenAI-compatible broker or a decision server, which
+**OpenRouter hosts** may serve it (pin EU hosts here for EU residency), and for
+**Gemini on Vertex AI** the **Location** where Google processes the work —
+under `eu_hosted` only the EU ones can be chosen, and saving checks that the
+location serves every bound model. Gemini on Vertex AI takes a Google Cloud
 **service-account key** file. Margince can also run on a local model with no key.
 
 **Automations** — the trigger-and-action catalogue. Three rules watch a Live

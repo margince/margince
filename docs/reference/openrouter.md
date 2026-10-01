@@ -54,8 +54,7 @@ Mistral. There was never a lottery to lose.
 
 ## 3. The default this product ships
 
-A binding whose `base_url` is an OpenRouter host and which declares no
-`routing:` block inherits:
+An `openai_compatible` tier on an OpenRouter provider host with no `routing:` inherits:
 
 ```yaml
 routing:
@@ -118,8 +117,7 @@ Three states, and the last two are different:
 | `routing: {}` | **explicitly nothing** — the broker's own price-weighted routing |
 | `routing: {…}` | exactly what is written |
 
-The distinction survives the settings store, because an omitted key and a
-written `{}` are different JSON.
+An omitted key and a written `{}` are different JSON, so the store keeps both.
 
 ### Pinning a region
 
@@ -134,11 +132,14 @@ than falling back elsewhere. Read a model's endpoints at
 model with no EU endpoint cannot be pinned to the EU at all, and the list
 changes — `mistral-medium-3-5` had none until the broker added `mistral/eu`.
 
-The embeddings lane takes `only`, `ignore` and `allow_fallbacks` — the fields
-that choose hosts — and refuses the rest, which bound a completion's tail. A
-preset whose name ends in `_eu.yaml` must pin every lane, embeddings included,
-to an EU-region slug; `TestAResidencyPresetPinsEveryLaneToAnEURegion` fails one
-that does not.
+**Where a request is served is the provider's; how a model is served is the
+tier's.** `only`, `ignore` and `allow_fallbacks` are set once, as
+`providers.openai_compatible.upstream` (the OpenRouter hosts fields on its
+provider sheet), and reach every lane on it; the embeddings lane may state its
+own. `sort`, `quantizations`, `require_parameters`, `preferred_max_latency_p90`
+and `reasoning_effort` stay on each tier's `routing:`, because two models behind
+one broker need different answers. A preset ending in `_eu.yaml` must pin every
+lane to an EU-region slug; `TestAResidencyPresetPinsEveryLaneToAnEURegion` fails one that does not.
 
 ## 3b. Validated through the config path
 
@@ -382,10 +383,9 @@ silently fall out of the candidate set.
 OpenRouter also brokers TypeSafe Jev at
 `POST https://openrouter.ai/api/alpha/decisions`, billed on input tokens only.
 It is one server on the Jev wire, so it binds the routing config's `decisions:`
-lane under `jev_compatible`, with the FULL endpoint as `base_url` (nothing is
-appended), beside `embeddings:` in `seeds.ai_routing` or through
-`PUT /v1/ai/routing`. The routing card's **Use OpenRouter** button fills the
-same two values, and `openrouter_cloud.yaml` carries them as a commented block:
+lane under `jev_compatible`, whose provider host (`providers.jev_compatible.base_url`)
+is the FULL endpoint; nothing is appended. **Preset: OpenRouter** fills it, and
+`openrouter_cloud.yaml` carries a commented block whose lane endpoint is lifted:
 
 ```yaml
     decisions:
