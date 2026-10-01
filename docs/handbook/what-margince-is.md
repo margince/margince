@@ -135,7 +135,9 @@ Also called: find, look up, global search.
 **Search results** are grouped by kind: Contacts, Companies, Deals, Leads,
 Projects, Products, Offer templates, Emails, Activities and Tags. Each kind
 shows its best few matches, so a company stays on the page however many emails
-mention it. A result that came from a connected system is marked **From a
+mention it. A company's name also finds the contacts who currently work there,
+each marked **Works at** and the company, after the contacts whose own name
+matched. A result that came from a connected system is marked **From a
 connected system**, rather than looking like something somebody here typed.
 
 ### What is the command palette?

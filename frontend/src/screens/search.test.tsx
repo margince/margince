@@ -276,11 +276,11 @@ describe("SearchScreen", () => {
     );
     expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy();
     expect(screen.getByText(/Dana at Acme/)).toBeTruthy();
-    // The hit title renders straight from the search result (no per-hit
-    // record fetch) as a link to the record's 360.
-    const hitLink = screen.getByText("Dana Buyer");
-    expect(hitLink.tagName).toBe("BUTTON");
-    expect(hitLink.className).toContain("entity-link");
+    // A contact is a record card, named straight from the search result (no
+    // per-hit record fetch), whose name links to the record's 360.
+    const hitLink = screen.getByRole("link", { name: "Dana Buyer" });
+    expect(hitLink.getAttribute("href")).toBe("#/contacts/p1");
+    expect(hitLink.className).toContain("record-card-open");
   });
 
   // A stored record is `authoritative` in native mode — every one of them — so
@@ -639,7 +639,13 @@ describe("SearchScreen — narrowing by type", () => {
       const asked = fetchMock.mock.calls.map(([input]) =>
         input instanceof Request ? input.url : String(input),
       );
-      expect(asked.some((url) => url.includes("types=product"))).toBe(true);
+      expect(
+        asked.some(
+          (url) =>
+            url.includes("types=product") &&
+            url.includes("with_employees=true"),
+        ),
+      ).toBe(true);
     });
     expect(globalThis.location.hash).toContain("type=product");
   });
@@ -729,6 +735,7 @@ describe("SearchScreen — grouped by what each hit is", () => {
     const asked = fetchMock.mock.calls.map(([input]) => urlOf(input));
     expect(asked.some((url) => url.includes("per_type=5"))).toBe(true);
     expect(asked.some((url) => url.includes("limit="))).toBe(false);
+    expect(asked.some((url) => url.includes("with_employees=true"))).toBe(true);
     // Nothing was cut, so nothing offers the rest.
     expect(screen.queryByRole("button", { name: /^Show all/ })).toBeNull();
   });
@@ -815,5 +822,103 @@ describe("SearchScreen — one kind, paged", () => {
     expect(await screen.findByText("Acme renewal")).toBeTruthy();
     expect(screen.getByText("Acme expansion")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+  });
+});
+
+// A word that names a company also finds the contacts who work there, and each
+// says why it is listed. Both kinds are drawn as the card the record rails use.
+describe("SearchScreen — a company and the contacts who work there", () => {
+  beforeEach(() => {
+    globalThis.location.hash = "#/search/acme";
+  });
+  const LOGO =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E";
+  const answer = (data: unknown[]) =>
+    vi.fn(async () =>
+      jsonResponse({
+        data,
+        page: { next_cursor: null, has_more: false },
+        types_with_more: [],
+      }),
+    );
+
+  it("draws a company as a record card with its logo, linked to its page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o1", title: "Acme GmbH", logo_url: LOGO },
+      ]),
+    );
+    const { container } = render(<SearchScreen q="acme" />);
+
+    const open = await screen.findByRole("link", { name: "Acme GmbH" });
+    expect(open.getAttribute("href")).toBe("#/companies/o1");
+    expect(open.closest(".record-card")).toBeTruthy();
+    expect(
+      hitRow(container).querySelector(".avatar-img")?.getAttribute("src"),
+    ).toBe(LOGO);
+  });
+
+  it("draws the monogram for a company without a logo", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o1", title: "Acme GmbH", logo_url: null },
+      ]),
+    );
+    const { container } = render(<SearchScreen q="acme" />);
+    await screen.findByRole("link", { name: "Acme GmbH" });
+    expect(hitRow(container).querySelector(".avatar-img")).toBeNull();
+    expect(hitRow(container).querySelector(".avatar")?.textContent).toBe("AG");
+  });
+
+  it("says which matched company a contact works at", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o1", title: "Acme GmbH" },
+        {
+          type: "contact",
+          id: "p1",
+          title: "Jonas Weiß",
+          works_at: { company_id: "o1", company_name: "Acme GmbH" },
+        },
+        { type: "contact", id: "p2", title: "Acme Mustermann" },
+      ]),
+    );
+    render(<SearchScreen q="acme" />);
+
+    const jonas = await screen.findByRole("link", { name: "Jonas Weiß" });
+    expect(jonas.getAttribute("href")).toBe("#/contacts/p1");
+    const card = jonas.closest(".record-card");
+    expect(card?.querySelector(".record-card-position")?.textContent).toBe(
+      "Works at Acme GmbH",
+    );
+    // A contact the word matched by its own name needs no reason given.
+    const own = screen.getByRole("link", { name: "Acme Mustermann" });
+    expect(own.closest(".record-card")?.textContent).not.toContain("Works at");
+    expect(screen.getAllByText(/^Works at/)).toHaveLength(1);
+  });
+
+  // In the facts row, which spans the card and wraps: in the aside's narrow
+  // track the marks squeezed a partner's name to a letter on a phone.
+  it("keeps a partner company's mark and route in its card's facts row", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o2", title: "Brandt GmbH", is_partner: true },
+      ]),
+    );
+    render(<SearchScreen q="brandt" />);
+
+    const open = await screen.findByRole("link", {
+      name: "Open partner record for Brandt GmbH",
+    });
+    const facts = open.closest(".record-card-position");
+    expect(facts?.querySelectorAll(".badge")).toHaveLength(1);
+    expect(facts?.textContent).toContain("Partner");
+    expect(
+      open.closest(".record-card")?.querySelector(".record-card-aside"),
+    ).toBeNull();
   });
 });

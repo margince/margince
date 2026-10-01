@@ -52,7 +52,7 @@ func (r rankedShape) statement(branches []string, within string, arg func(any) i
 			`(score < $%d OR (score = $%d AND (rtype, id) > ($%d, $%d)))`,
 			score, score, arg(r.cursor.Type), arg(r.cursor.ID)))
 	}
-	sql := "SELECT rtype, id, title, snippet, score FROM (" + strings.Join(branches, " UNION ALL ") + ") ranked"
+	sql := "SELECT " + hitColumns + " FROM (" + strings.Join(branches, " UNION ALL ") + ") ranked"
 	if len(where) > 0 {
 		sql += " WHERE " + strings.Join(where, " AND ")
 	}

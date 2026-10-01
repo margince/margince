@@ -75,6 +75,27 @@ func TestAHitWithoutOptionalMembersOmitsThem(t *testing.T) {
 		t.Errorf("a company hit nobody marked rendered is_partner %v, which says the account was "+
 			"checked", *bare.IsPartner)
 	}
+	if bare.WorksAt != nil || bare.LogoUrl != nil {
+		t.Errorf("a bare hit rendered works_at %v and logo_url %v", bare.WorksAt, bare.LogoUrl)
+	}
+}
+
+// The employer a contact was found through, and a company's logo, reach the
+// wire as the store found them.
+func TestAHitRendersItsEmployerAndLogo(t *testing.T) {
+	t.Parallel()
+	employer := Employer{CompanyID: ids.NewV7(), CompanyName: "Acme GmbH"}
+	logo := "/v1/companies/x/logo?v=1"
+	results := wireHits([]Hit{
+		{Type: "contact", ID: ids.NewV7(), WorksAt: &employer},
+		{Type: "company", ID: ids.NewV7(), LogoURL: &logo},
+	})
+	if got := results[0].WorksAt; got == nil || ids.UUID(got.CompanyId) != employer.CompanyID || got.CompanyName != employer.CompanyName {
+		t.Errorf("the employee rendered works_at %+v, want %+v", got, employer)
+	}
+	if got := results[1].LogoUrl; got == nil || *got != logo {
+		t.Errorf("the company rendered logo_url %v, want %s", got, logo)
+	}
 }
 
 // The marker is tri-state on the wire, so a literal `false` has to survive the

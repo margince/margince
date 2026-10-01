@@ -206,8 +206,8 @@ var searchBranches = []searchBranch{
 	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: "left(coalesce(body, ''), 200)", activityWalk: true},
 }
 
-// SearchedTables names every physical table the search union reads, derived
-// from the branch table rather than restated beside it. The PERF-3 structural
+// SearchedTables names every physical table the search union full-text matches,
+// derived from the branch table rather than restated beside it. The PERF-3 structural
 // proof — that each of them defines a GIN index over its search_tsv column —
 // asks the question of THIS list, so a branch added without an index fails the
 // proof instead of quietly not being asked about. A hand-kept copy of this list

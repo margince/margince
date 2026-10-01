@@ -84,7 +84,8 @@ export const Default: Story = {
 // Live record hits under the commands, grouped under the kind each one is, in
 // the reader's language. The mail about the account sits below the account
 // however much higher it ranked: relevance does not compare across kinds, and
-// a short list ranked across them used to be all mail and no company.
+// a short list ranked across them used to be all mail and no company. A
+// contact found only through the account says so, under the record's mark.
 export const WithRecordHits: Story = {
   render: () =>
     palette(() =>
@@ -102,7 +103,19 @@ export const WithRecordHits: Story = {
             },
           },
           { type: "contact", id: "p1", title: "Dana Buyer" },
-          { type: "company", id: "o1", title: "Acme GmbH" },
+          {
+            type: "contact",
+            id: "p2",
+            title: "Jonas Weiß",
+            works_at: { company_id: "o1", company_name: "Acme GmbH" },
+          },
+          {
+            type: "company",
+            id: "o1",
+            title: "Acme GmbH",
+            logo_url:
+              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='8' width='48' height='48' rx='10' fill='%230e7490'/%3E%3C/svg%3E",
+          },
           { type: "company", id: "o2", title: "Brandt GmbH", is_partner: true },
           {
             type: "product",

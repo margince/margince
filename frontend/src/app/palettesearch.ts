@@ -18,6 +18,7 @@ import {
   groupSearchHits,
   SEARCH_GROUP_KEY,
   searchHitDestination,
+  searchHitHasCard,
 } from "./searchkinds";
 
 type SearchResult = components["schemas"]["SearchResult"];
@@ -62,7 +63,13 @@ export function useSearchCommands(query: string): SearchArm {
     enabled,
     queryFn: async () => {
       const { data, error } = await api.GET("/search", {
-        params: { query: { q: deferred, per_type: PALETTE_PER_TYPE } },
+        params: {
+          query: {
+            q: deferred,
+            per_type: PALETTE_PER_TYPE,
+            with_employees: true,
+          },
+        },
       });
       if (error) {
         // Thrown rather than flattened to an empty list: react-query carries it
@@ -82,6 +89,12 @@ export function useSearchCommands(query: string): SearchArm {
     // A partner is a property of a company rather than a kind of its own.
     if (hit.type === "company" && hit.is_partner === true) {
       return t("search.partner.badge");
+    }
+    // A contact found through its employer, which is why it is listed at all.
+    if (hit.works_at) {
+      return t("search.contact.worksAt", {
+        company: hit.works_at.company_name,
+      });
     }
     return hit.snippet ?? undefined;
   };
@@ -111,6 +124,13 @@ export function useSearchCommands(query: string): SearchArm {
                     locale,
                     zone,
                   ),
+                }
+              : undefined,
+            mark: searchHitHasCard(hit.type)
+              ? {
+                  identity: hit.id,
+                  name: hit.title ?? hit.id,
+                  logo: hit.logo_url,
                 }
               : undefined,
             group: t(SEARCH_GROUP_KEY[group]),

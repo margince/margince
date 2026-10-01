@@ -1080,6 +1080,7 @@ export const en = {
   "search.partner.badge": "Partner",
   "search.partner.open": "Open partner record",
   "search.partner.openNamed": "Open partner record for {name}",
+  "search.contact.worksAt": "Works at {company}",
 
   "palette.aria": "Command palette",
   "palette.placeholder": "Search or ask Margince",

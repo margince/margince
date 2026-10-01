@@ -1219,6 +1219,26 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The second line yields first: a long "Works at …" employer truncates, and
+   the record's own name keeps at least half the row. */
+.palette-row .sub {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A record's mark stands where the glyph does, a rung under the list chip so
+   a row of records stands at the height of a row of commands. */
+.palette-mark {
+  display: flex;
+  flex: none;
+}
+.palette-mark .avatar {
+  width: 20px;
+  height: 20px;
+}
 /* A cited message takes the row's free space, as a label does, so a long
    subject truncates inside the row rather than past it. */
 .palette-row > .emailref {

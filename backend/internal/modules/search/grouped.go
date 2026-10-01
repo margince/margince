@@ -41,7 +41,7 @@ func (g groupedShape) statement(branches []string, within string, arg func(any) 
 	capPos := arg(g.perType + 1)
 	capped := make([]string, len(branches))
 	for i, branch := range branches {
-		sql := "SELECT rtype, id, title, snippet, score FROM (" + branch + ") b"
+		sql := "SELECT " + hitColumns + " FROM (" + branch + ") b"
 		if within != "" {
 			sql += " WHERE " + within
 		}
@@ -49,7 +49,7 @@ func (g groupedShape) statement(branches []string, within string, arg func(any) 
 	}
 	// Type first, so each type's hits arrive together: a score is no reason
 	// to interleave two types that it cannot compare.
-	return "SELECT rtype, id, title, snippet, score FROM (" + strings.Join(capped, " UNION ALL ") +
+	return "SELECT " + hitColumns + " FROM (" + strings.Join(capped, " UNION ALL ") +
 		") grouped ORDER BY rtype, score DESC, id"
 }
 

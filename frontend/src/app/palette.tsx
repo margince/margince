@@ -49,6 +49,9 @@ export type Command = {
   // date) in place of the label and second line. The date arrives formatted:
   // the caller owns the reader's timezone.
   cite?: Readonly<{ subject: string | null | undefined; occurredAt: string }>;
+  // A contact's or a company's mark, drawn in place of the row's glyph: the
+  // same chip the record wears everywhere else, keyed on its id.
+  mark?: Readonly<{ identity: string; name: string; logo?: string | null }>;
   // Where the row goes. Absent on a row that opens something OVER the page
   // instead of leaving it — asking does that, and a route it never follows
   // would be a claim about where the reader ends up that is simply untrue.

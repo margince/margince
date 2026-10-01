@@ -63,6 +63,17 @@ export function searchGroupType(group: SearchHitGroup): SearchHitType {
 }
 
 /**
+ * The kinds drawn with the record's own mark — a contact and a company, the
+ * two records a chip stands for — on the results page and in the palette.
+ */
+export type SearchRecordCardType = "contact" | "company";
+export function searchHitHasCard(
+  type: SearchHitType,
+): type is SearchRecordCardType {
+  return type === "contact" || type === "company";
+}
+
+/**
  * A page of hits, grouped and in SEARCH_GROUP_ORDER, each group in the order
  * the server ranked it. Empty groups are absent.
  */

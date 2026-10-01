@@ -44,6 +44,9 @@ type Store struct {
 	// Nil where nothing supplied it (a worker's store, a test that does not
 	// ask), and a company hit then carries no marker.
 	partnerMarks PartnerMarker
+	// companyLogos reads a company hit's logo URL (CompanyLogoReader). Nil
+	// leaves every company hit without one, which the client draws as initials.
+	companyLogos CompanyLogoReader
 }
 
 // NewStore opens this module's store on a handle already bound to the
@@ -70,6 +73,12 @@ func (s *Store) WithPartnerMarks(mark PartnerMarker) *Store {
 	return s
 }
 
+// WithCompanyLogos binds the reader behind a company hit's `logo_url`.
+func (s *Store) WithCompanyLogos(read CompanyLogoReader) *Store {
+	s.companyLogos = read
+	return s
+}
+
 // bounded is this store with a time ceiling on every statement it runs.
 //
 // The ceiling rides the HANDLE, so it reaches the lanes this store opens for
@@ -82,6 +91,7 @@ func (s *Store) bounded(budget time.Duration) *Store {
 	return &Store{
 		db: s.db.Bounded(budget), carriedBy: s.carriedBy,
 		emailSummaries: s.emailSummaries, partnerMarks: s.partnerMarks,
+		companyLogos: s.companyLogos,
 	}
 }
 
@@ -99,7 +109,9 @@ func (s *Store) forWorkspace(ws ids.WorkspaceID) *Store {
 // Hit is one ranked result. Score is ts_rank_cd over the entity's
 // search_tsv: it orders hits of one type well and hits of different types
 // poorly, since a message body repeating a name outranks the record that
-// bears it — which is what a grouped search (Input.PerType) answers.
+// bears it — which is what a grouped search (Input.PerType) answers. A contact
+// the employer arm finds scores -1/(1+its employer's rank), below zero, so it
+// follows every hit matched by its own text.
 type Hit struct {
 	Type    string
 	ID      ids.UUID
@@ -116,6 +128,11 @@ type Hit struct {
 	// IsPartner is set on a `company` hit alone: whether the account carries a
 	// live partner programme. Nil elsewhere, and nil when no marker was taken.
 	IsPartner *bool
+	// WorksAt is set on a `contact` hit the employer arm found: the matched
+	// company it works at. Nil on every hit the query matched by its own text.
+	WorksAt *Employer
+	// LogoURL is set on a `company` hit wearing a logo, when a reader is bound.
+	LogoURL *string
 }
 
 type Page struct {
@@ -139,6 +156,10 @@ type Input struct {
 	// PerType, when set, asks for a grouped page — at most this many hits of
 	// each type — instead of one ranked list. Nil is the ranked list.
 	PerType *int
+	// WithEmployees adds the employer arm (employerArmSQL): contacts found
+	// through a company the query matches. Only the HTTP surface asks for it, so
+	// the agent and plan lanes that reuse Search keep matching by own text alone.
+	WithEmployees bool
 }
 
 // Search runs the cross-object query (contract /search): one ranked list, or
@@ -189,6 +210,15 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		if err != nil {
 			return err
 		}
+		if in.WithEmployees && slices.Contains(types, entityContact) && !carriesOperators(query) {
+			arm, armErr := employerArmSQL(ctx, headPos, tailPos, hasFragment, arg)
+			if armErr != nil {
+				return armErr
+			}
+			if arm != "" {
+				branches = append(branches, arm)
+			}
+		}
 		if len(branches) == 0 {
 			// Every requested type was denied by object RBAC: an empty
 			// page, not an error — search discloses nothing the entity
@@ -220,7 +250,10 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		if err := s.attachEmailSummaries(ctx, tx, page.Hits); err != nil {
 			return err
 		}
-		return s.markPartners(ctx, tx, page.Hits)
+		if err := s.markPartners(ctx, tx, page.Hits); err != nil {
+			return err
+		}
+		return s.attachCompanyLogos(ctx, tx, page.Hits)
 	})
 	if err != nil {
 		return Page{}, err
@@ -280,11 +313,11 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 		}
 		sql := fmt.Sprintf(
 			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
-			        ts_rank_cd(t.search_tsv, %s)::float8 AS score
+			        ts_rank_cd(t.search_tsv, %s)::float8 AS score, %s
 			 FROM %s t
 			 WHERE t.search_tsv @@ %s
 			   AND t.archived_at IS NULL`,
-			branch.entity, branch.title, snippet, tsquery, branch.table, tsquery)
+			branch.entity, branch.title, snippet, tsquery, noEmployer, branch.table, tsquery)
 		if narrowing := branch.narrowing("t"); narrowing != "" {
 			sql += " AND " + narrowing
 		}
@@ -296,14 +329,27 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 	return branches, nil
 }
 
+// hitColumns is what every union element projects and both shapes select, in
+// the order scanHits reads it.
+const hitColumns = "rtype, id, title, snippet, score, employer_id, employer_name"
+
+// noEmployer is the employer pair of an element that finds records by their own
+// text. Typed, because an untyped NULL in the first element of a union resolves
+// as text and the arm's uuid then fails the whole statement.
+const noEmployer = "NULL::uuid AS employer_id, NULL::text AS employer_name"
+
 // scanHits materializes the rows of either shape's statement.
 func scanHits(rows pgx.Rows) ([]Hit, error) {
 	var hits []Hit
 	for rows.Next() {
 		var h Hit
-		var title, snippet *string
-		if err := rows.Scan(&h.Type, &h.ID, &title, &snippet, &h.Score); err != nil {
+		var title, snippet, employerName *string
+		var employerID *ids.UUID
+		if err := rows.Scan(&h.Type, &h.ID, &title, &snippet, &h.Score, &employerID, &employerName); err != nil {
 			return nil, err
+		}
+		if employerID != nil && employerName != nil {
+			h.WorksAt = &Employer{CompanyID: *employerID, CompanyName: *employerName}
 		}
 		if title != nil {
 			h.Title = *title

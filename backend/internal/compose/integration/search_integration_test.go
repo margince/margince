@@ -568,7 +568,7 @@ func TestTheSearchCeilingStillServesAnOrdinarySearch(t *testing.T) {
 func callSearch(t *testing.T, e *SearchEnv, budget time.Duration, q string) (int, string) {
 	t.Helper()
 	db := database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)).Bounded(budget)
-	h := search.NewHandlers(db, nil, nil, nil)
+	h := search.NewHandlers(db, nil, nil, nil, nil)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/search?q="+q, nil).WithContext(searchAs(e))
 	h.Search(rec, req, crmcontracts.SearchParams{Q: q})

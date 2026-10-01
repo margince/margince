@@ -10,6 +10,7 @@ import {
   searchEmailRoute,
   searchGroupType,
   searchHitDestination,
+  searchHitHasCard,
   searchHitRoute,
 } from "./searchkinds";
 
@@ -126,6 +127,17 @@ describe("groupSearchHits", () => {
     ).toEqual([
       ["company", ["o2", "o1"]],
       ["email", ["m1"]],
+    ]);
+  });
+});
+
+describe("searchHitHasCard", () => {
+  // The two records a chip stands for, and nothing else: a deal or a tag
+  // drawn with a monogram would read as a contact or a company.
+  it("draws a card for a contact and a company and for no other kind", () => {
+    expect(SEARCH_HIT_ORDER.filter(searchHitHasCard)).toEqual([
+      "contact",
+      "company",
     ]);
   });
 });

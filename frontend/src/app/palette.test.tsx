@@ -359,7 +359,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       ),
     ).toEqual(["Companies"]);
     // The heading says it once; the row repeats neither the kind nor "Record".
-    expect(row.textContent).toBe("Brandt GmbH");
+    expect(row.querySelector(".label")?.textContent).toBe("Brandt GmbH");
+    expect(row.querySelector(".sub")).toBeNull();
+    expect(row.querySelector(".badge")).toBeNull();
   });
 
   // The fix this grouping exists for: a word that names an account also names
@@ -438,6 +440,69 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     await userEvent.type(screen.getByRole("searchbox"), "brandt");
     const row = await screen.findByRole("button", { name: /Brandt GmbH/ });
     expect(row.querySelector(".sub")?.textContent).toBe("Partner");
+  });
+
+  // A contact found through the company the word named says so, or the
+  // reader meets a name with no reason it is in the list. The palette asks
+  // for those contacts, and the row draws the record's own mark.
+  it("says which matched company a contact works at, under its mark", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({
+        data: [
+          {
+            type: "contact",
+            id: "p1",
+            title: "Jonas Weiß",
+            works_at: { company_id: "o1", company_name: "Acme GmbH" },
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "acme");
+
+    const row = await screen.findByRole("button", {
+      name: "Jonas Weiß Works at Acme GmbH",
+    });
+    expect(row.querySelector(".sub")?.textContent).toBe("Works at Acme GmbH");
+    // The mark is hidden from the row's name, which is why the name above
+    // carries no initials.
+    const mark = row.querySelector(".palette-mark");
+    expect(mark?.getAttribute("aria-hidden")).toBe("true");
+    expect(mark?.querySelector(".avatar")?.textContent).toBe("JW");
+    const asked = fetchMock.mock.calls.map(([input]) =>
+      input instanceof Request ? input.url : String(input),
+    );
+    expect(asked.some((url) => url.includes("with_employees=true"))).toBe(true);
+  });
+
+  it("draws a company's logo on its mark", async () => {
+    const logo =
+      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            { type: "company", id: "o1", title: "Acme GmbH", logo_url: logo },
+            { type: "deal", id: "d1", title: "Acme renewal" },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "acme");
+
+    const company = await screen.findByRole("button", { name: "Acme GmbH" });
+    expect(
+      company.querySelector(".palette-mark .avatar-img")?.getAttribute("src"),
+    ).toBe(logo);
+    // A deal is not a contact or a company, and keeps the row's glyph.
+    const deal = screen.getByRole("button", { name: "Acme renewal" });
+    expect(deal.querySelector(".palette-mark")).toBeNull();
   });
 
   // The marker means nothing off a company, so a hit of another kind draws no

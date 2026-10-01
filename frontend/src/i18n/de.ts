@@ -1085,6 +1085,7 @@ export const de = {
   "search.partner.badge": "Partner",
   "search.partner.open": "Partnerdatensatz öffnen",
   "search.partner.openNamed": "Partnerdatensatz öffnen für {name}",
+  "search.contact.worksAt": "Arbeitet bei {company}",
 
   "palette.aria": "Befehlspalette",
   "palette.placeholder": "Suchen oder Margince fragen",

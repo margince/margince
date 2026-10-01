@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { CornerDownLeft, Sparkles } from "lucide-react";
-import { Badge } from "../design-system/atoms";
+import { Avatar, Badge } from "../design-system/atoms";
 import { EmailReference } from "../design-system/emailreference";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -49,11 +49,7 @@ export function PaletteRow({
           }
         }}
       >
-        {command.id === "ask-ai" ? (
-          <Sparkles aria-hidden />
-        ) : (
-          <CornerDownLeft aria-hidden />
-        )}
+        <RowGlyph command={command} />
         {command.cite ? (
           <EmailReference
             subject={command.cite.subject}
@@ -70,5 +66,26 @@ export function PaletteRow({
         {!command.group && <Badge>{t(TYPE_KEY[command.type])}</Badge>}
       </button>
     </>
+  );
+}
+
+// A record's mark where it has one, hidden from the row's name: its initials
+// are TEXT, and would otherwise be read out before the record they stand for.
+function RowGlyph({ command }: Readonly<{ command: Command }>) {
+  if (command.mark) {
+    return (
+      <span className="palette-mark" aria-hidden="true">
+        <Avatar
+          name={command.mark.name}
+          identity={command.mark.identity}
+          src={command.mark.logo}
+        />
+      </span>
+    );
+  }
+  return command.id === "ask-ai" ? (
+    <Sparkles aria-hidden />
+  ) : (
+    <CornerDownLeft aria-hidden />
   );
 }

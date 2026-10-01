@@ -2469,6 +2469,22 @@ export async function mockApi(
           title: "Brandt Automotive",
           score: 0.86,
         },
+        // A contact found only through the company the word named, and only
+        // for a caller that asked for employees, as the server answers.
+        ...(url.searchParams.get("with_employees") === "true"
+          ? [
+              {
+                type: "contact",
+                id: "p-jonas",
+                title: "Jonas Weiß",
+                score: 0.5,
+                works_at: {
+                  company_id: "o-brandt",
+                  company_name: "Brandt Automotive",
+                },
+              },
+            ]
+          : []),
         { type: "deal", id: "d-fleet", title: "Fleet renewal", score: 0.8 },
         {
           type: "product",

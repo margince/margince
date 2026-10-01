@@ -1072,6 +1072,7 @@ export const vi = {
   "search.partner.badge": "Đối tác",
   "search.partner.open": "Mở hồ sơ đối tác",
   "search.partner.openNamed": "Mở hồ sơ đối tác của {name}",
+  "search.contact.worksAt": "Làm việc tại {company}",
 
   "palette.aria": "Bảng lệnh",
   "palette.placeholder": "Tìm mọi thứ hoặc nhận câu trả lời từ Margince",
