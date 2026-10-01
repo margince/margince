@@ -43,7 +43,7 @@ import (
 const (
 	// fetchTimeout bounds one document read end to end.
 	fetchTimeout = 10 * time.Second
-	// maxDocumentBytes caps a view. The built documents are ~11 KiB; a megabyte
+	// maxDocumentBytes caps a view. The built documents are ~60 KiB; a megabyte
 	// is room for growth and still far below anything that could exhaust a boot.
 	maxDocumentBytes = 1 << 20
 	// documentPrefix is the path the web tier serves the views under, and the

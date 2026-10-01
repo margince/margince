@@ -15,6 +15,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -317,7 +318,7 @@ const notTheReadersOwnStageMove = `NOT coalesce(
 // The muted kinds arrive as one text[] argument rather than a rendered list, so
 // nothing off a preference row is ever formatted into a statement.
 func inTheReadersLane(mutedAt int) string {
-	return notTheReadersOwnStageMove + fmt.Sprintf(" AND kind <> ALL($%d) AND retracted_at IS NULL", mutedAt)
+	return notTheReadersOwnStageMove + fmt.Sprintf(" AND kind <> ALL($%d) AND retracted_at IS NULL", mutedAt) + " AND (kind <> 'lead_sla' OR NOT EXISTS (SELECT 1 FROM lead ld WHERE target_type = 'lead' AND ld.id = target_id AND NOT (" + auth.LiveLeadInquiryClause("ld") + ")))"
 }
 
 // UnreadFor answers the CALLING contact's own unread notices, newest first,

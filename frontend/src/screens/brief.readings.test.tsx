@@ -809,7 +809,7 @@ describe("a slot with no figure names its own source", () => {
     unreadable(
       [
         { source: "meeting", reason: "failed", category: "meetings" },
-        { source: "lead_response", reason: "failed", category: "leads" },
+        { source: "task", reason: "failed", category: "tasks" },
         { source: "decision", reason: "failed", category: "decisions" },
       ],
       { prospecting: 2, review: 0 },
@@ -838,7 +838,7 @@ describe("a slot with no figure names its own source", () => {
   // there was nothing to take it over, so the slot must stop saying it.
   it("drops the basis line from the slot that has no figure", () => {
     unreadable(
-      [{ source: "lead_response", reason: "failed", category: "leads" }],
+      [{ source: "task", reason: "failed", category: "tasks" }],
       { prospecting: 2 },
       [],
       [],

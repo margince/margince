@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { navigate } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { PanelBody, PanelGroupHead, PanelRow } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -15,11 +15,9 @@ import { errorClassKey, isUnhealthy } from "./connector-status";
 import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 
-// What the night shift did, as one panel of Brief's context rail. Its own file
-// because the rail was at its line ceiling and this is the half of it with a
-// shape of its own: counts with doors, a projects block, and the one connector
-// fact worth interrupting a morning for. `screens/brief.rail.tsx` re-exports
-// the panel, so the rail is still assembled from one import.
+// What the night shift did, as the last group of Home's receipt: counts with
+// doors, a projects block, and the one connector fact worth interrupting a
+// morning for.
 
 type DigestProjects = NonNullable<MorningDigest["projects"]>;
 
@@ -46,7 +44,7 @@ function phaseWord(phase: string, t: (key: MessageKey) => string): string {
   return isProjectPhase(phase) ? t(PHASE_LABEL[phase]) : phase;
 }
 
-/** One labelled count inside the overnight panel. */
+/** One labelled count inside the overnight group. */
 function DigestCount({
   label,
   value,
@@ -186,20 +184,26 @@ function DigestProjectsBlock({
  * What the night shift did: capture counts, what it left for review, and the
  * one connector fact worth interrupting a morning for.
  *
- * Before the first nightly run there is no digest, and this panel is absent
+ * Before the first nightly run there is no digest, and this group is absent
  * rather than a row of zeros — a fabricated count is worse than a missing one,
- * because a reader cannot tell it apart from a real one. The rail's quiet panel
- * carries the line that says the digest is not there.
+ * because a reader cannot tell it apart from a real one.
  */
-export function OvernightPanel() {
+export function OvernightDigest() {
   const t = useT();
   const digestQuery = useMorningDigest();
   return (
-    <QueryGate query={digestQuery} pendingLabel={t("brief.panel.overnight")}>
-      {(digest) =>
-        overnightIsEmpty(digest) ? null : <DigestBody digest={digest} />
-      }
-    </QueryGate>
+    <>
+      {/* A failed read is said under the group it failed to fill: a bare
+          "did not load" at the foot of the receipt would not say what. */}
+      {digestQuery.isError && (
+        <PanelGroupHead title={t("brief.panel.overnight")} level="h3" />
+      )}
+      <QueryGate query={digestQuery} pendingLabel={t("brief.panel.overnight")}>
+        {(digest) =>
+          overnightIsEmpty(digest) ? null : <DigestBody digest={digest} />
+        }
+      </QueryGate>
+    </>
   );
 }
 
@@ -215,7 +219,8 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
     (c) => c.status != null && isUnhealthy(c.status),
   );
   return (
-    <Panel title={t("brief.panel.overnight")}>
+    <>
+      <PanelGroupHead title={t("brief.panel.overnight")} level="h3" />
       {projects && <DigestProjectsBlock projects={projects} />}
       {unhealthy.length > 0 && (
         <PanelBody>
@@ -295,6 +300,6 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
           </p>
         </PanelBody>
       </Disclosure>
-    </Panel>
+    </>
   );
 }

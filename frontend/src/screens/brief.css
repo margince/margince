@@ -239,11 +239,6 @@
   gap: var(--space-4);
 }
 
-.brief-change {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 /* ── The context rail ─────────────────────────────────────────────────────
  * One column of `Panel`s, never a grid: a rail that re-columns is a second
  * body rather than a margin. */
@@ -466,41 +461,168 @@
 }
 
 /* ── The receipt ───────────────────────────────────────────────────────────
- * Four lanes inside one panel. The spacing is all that lives here: a lane is a
- * heading, a count and a table, and every one of those draws itself. */
+ * One summary line answering every lane, then a group per lane that has lines
+ * in it. The group heads and the seams between them are the panel's own. */
 
-.magic-lane + .magic-lane {
-  margin-top: var(--space-6);
+.magic-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  list-style: none;
+  border-radius: var(--r-md);
+  background: var(--bgWell);
 }
 
-/* The heading and its page count on one line, the way the queue's own bands
-   carry theirs. */
-.magic-lane-head {
+/* Tone reaches the glyph and, where the lane holds something, the words: a
+   clear lane stays in body ink so four green sentences do not read as alarms. */
+.magic-summary-item {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-2);
+  gap: var(--space-2);
 }
 
-.magic-lane-head > h3 {
+.magic-summary-item > svg {
+  flex: none;
+  color: var(--textSecondary);
+}
+
+.magic-summary-item[data-tone="success"] > svg {
+  color: var(--successText);
+}
+
+.magic-summary-item[data-tone="ai"] {
+  color: var(--aiText);
+}
+
+.magic-summary-item[data-tone="danger"] {
+  color: var(--dangerText);
+}
+
+.magic-summary-item[data-tone="warning"] {
+  color: var(--warningText);
+}
+
+.magic-summary-item:is(
+    [data-tone="ai"],
+    [data-tone="danger"],
+    [data-tone="warning"]
+  )
+  > svg {
+  color: inherit;
+}
+
+.magic-glance {
+  margin-top: var(--space-4);
+}
+
+/* Home's first and widest card takes more air at its edges than a record's
+   panes, and a phone gives back what it cannot spare. Re-bound as the role
+   rather than as one body's padding, so the head, the groups and every
+   hairline move together and stay aligned. */
+.magic-panel {
+  --padPanel: var(--space-8);
+}
+
+@media (max-width: 600px) {
+  .magic-panel {
+    --padPanel: var(--space-5);
+  }
+}
+
+/* A line is one row: what happened and the record it is about, read down the
+   list without stopping at small print. The list is one grid the lines share,
+   so the marks, the undos and the times stand in columns rather than wherever
+   each sentence happened to end. */
+.magic-lines {
+  display: grid;
+  grid-template-columns: var(--space-3) minmax(0, 1fr) auto auto;
+  column-gap: var(--space-3);
+  row-gap: var(--space-3);
   margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.magic-lane-count {
-  margin-left: auto;
+.magic-line {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: baseline;
 }
 
-/* The two caveats: what could not be read, above the lanes, and what was left
-   out, below them. Both are lists of captions and neither wants a bullet. */
+.magic-line > .magic-mark {
+  grid-column: 1;
+}
+
+.magic-line-text {
+  grid-column: 2;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.magic-line-subject {
+  margin-inline-start: var(--space-2);
+  color: var(--textSecondary);
+}
+
+.magic-line-controls {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 3;
+  align-self: center;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
+.magic-line-when {
+  grid-column: 4;
+  justify-self: end;
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* On a phone the controls drop under the line, so the words keep the width
+   and the time keeps its column. */
+@media (max-width: 600px) {
+  .magic-lines {
+    grid-template-columns: var(--space-3) minmax(0, 1fr) auto;
+  }
+
+  .magic-line-controls {
+    grid-row: 2;
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .magic-line-when {
+    grid-column: 3;
+  }
+}
+
+/* The done lines fold under their own group head, which already draws the
+   seam a disclosure would draw again. */
+.magic-fold {
+  border-top: 0;
+  padding-top: 0;
+  margin-bottom: 0;
+}
+
+/* The two caveats: what could not be read, above the summary, and what was
+   left out, under the lanes. Both are lists of captions and neither wants a
+   bullet. */
 .magic-withheld,
 .magic-notshown {
   list-style: none;
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-3);
   padding: 0;
 }
 
 .magic-notshown {
-  margin: var(--space-4) 0 0;
+  margin: 0;
 }
 
 /* An opened line: one row per record, its name and its undo on one line, the

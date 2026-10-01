@@ -37,7 +37,7 @@ func laneOf(source crmcontracts.AttentionItemSource, n int) []crmcontracts.Atten
 // pageOfDay projects a day the way a reader receives it.
 func pageOfDay(day crmcontracts.Attention) crmcontracts.Worklist {
 	return (&Service{}).worklistFrom(
-		context.Background(), day, scopeAll, "", 100, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+		context.Background(), day, scopeAll, "", 100, waitingRead{}, worklistCursor{}, nil)
 }
 
 // bandsBySource counts how many rows of one source landed under each heading.

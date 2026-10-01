@@ -1010,7 +1010,6 @@ function LeadOverviewPane({
   promotion,
   terminalReasonId,
   thread,
-  onReply,
   onOpenEmail,
 }: Readonly<{
   lead: Lead;
@@ -1021,10 +1020,6 @@ function LeadOverviewPane({
   // The lead's unfiltered timeline read, which the thread under the call is
   // drawn from — the whole read, so its failure reaches the call too.
   thread: RecordTimeline;
-  // The "Answer" row's own verb: opens the SAME composer the header's Email
-  // verb opens, owned by LeadRecord so both controls answer to one open
-  // state rather than each mounting its own copy of it.
-  onReply: () => void;
   // The page's one email drawer, for the thread under the call.
   onOpenEmail: (activityId: string) => void;
 }>) {
@@ -1055,15 +1050,7 @@ function LeadOverviewPane({
       <RecordReading>
         <LeadCall lead={lead} thread={thread} onOpenEmail={onOpenEmail} />
         <TodayPanel onOpenTasks={onOpenTasks} tasksLabel={t("today.workQueue")}>
-          {leadTodoRows(
-            lead,
-            t,
-            locale,
-            recordZone,
-            onReply,
-            onOpenTasks,
-            writer.readOnly ? terminalReasonId : undefined,
-          )}
+          {leadTodoRows(lead, t, locale, recordZone, onOpenTasks)}
         </TodayPanel>
         {/* Full width, in sequence, rather than side by side (RecordReadingPair):
             the score card is one line and the signals form is tall, and a
@@ -1509,7 +1496,6 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
             terminalReasonId={terminalReasonId}
             thread={threadQuery}
             onOpenEmail={setOpenEmail}
-            onReply={() => setComposing(true)}
           />
         )}
         {tab === "deals" && (

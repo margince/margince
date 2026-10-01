@@ -35,7 +35,7 @@ type attentionTasks struct{ store *activities.Store }
 func openTasksDueBy(
 	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
 ) (activities.ListActivitiesInput, bool) {
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true}
+	in := activities.ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true, Worklist: true}
 	switch scope {
 	case attention.TasksMine:
 		actor, ok := principal.Actor(ctx)

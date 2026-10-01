@@ -1,5 +1,6 @@
-// The handoff view: prepare_handoff's briefing for one project, with each gap
-// beside the facts it is about.
+// The handoff view: prepare_handoff's briefing for one project, drawn as the
+// app's project page draws one — the record's head, then its Deals,
+// Stakeholders and Open commitments — with the verdict and its gaps between.
 //
 // WHY THE GAPS COME FIRST. This panel is read to answer one question — is this
 // work ready to hand over — and the answer is the list of what is missing. A
@@ -12,7 +13,16 @@
 // visible: a warning with no source beside it is advice, and neither the tool
 // nor the view gives advice.
 
-import { day, el, heading, money, onResult, warned } from "../bridge";
+import { badge } from "../badge";
+import { ABSENT, day, el, heading, money, onResult, warned } from "../bridge";
+import {
+  avatar,
+  callout,
+  panel,
+  panelBody,
+  panelFoot,
+  panelRow,
+} from "../parts";
 import { asList, asRecord, asText, type Warning } from "../types";
 import "../view.css";
 
@@ -22,9 +32,17 @@ import "../view.css";
  *  MISSING as a briefing with nothing missing. */
 const SWEEP_TRUNCATED = "sweep_truncated";
 
+/** The phases a project moves through, as the project page words them. */
+const PHASES: ReadonlyMap<string, string> = new Map([
+  ["initiative", "Initiative"],
+  ["pursuing", "Pursuing"],
+  ["delivering", "Delivering"],
+  ["closed", "Closed"],
+]);
+
 type Gap = { message: string; source: string };
 type Deal = { name: string; status: string; amount: string };
-type Seat = { contact: string; role: string };
+type Seat = { contact: string; contactID: string; role: string };
 type Promise_ = { subject: string; state: string; dueAt: string };
 
 /** The gaps, and how many were unreadable.
@@ -55,7 +73,7 @@ function dealsOf(data: Record<string, unknown>): Deal[] {
       name: asText(deal.name) || asText(deal.deal_id),
       status: asText(deal.status) || "unknown status",
       // Absent, not zero: a deal can be won before it is priced, which is one
-      // of the gaps the panel above may already be reporting.
+      // of the gaps the verdict above may already be reporting.
       amount: money(deal.amount_minor, deal.currency),
     }));
 }
@@ -68,9 +86,8 @@ function seatsOf(data: Record<string, unknown>): Seat[] {
       // whose contact the caller may not read comes back unnamed, and an id is
       // a worse answer than a name but a much better one than a blank.
       contact: asText(seat.name) || asText(seat.contact_id),
-      // "no recorded part", not an empty cell: an untitled seat is a gap the
-      // panel above names, and the row has to agree with it.
-      role: asText(seat.role) || "no recorded part",
+      contactID: asText(seat.contact_id),
+      role: asText(seat.role),
     }))
     .filter((seat) => seat.contact !== "");
 }
@@ -85,90 +102,65 @@ function promisesOf(data: Record<string, unknown>): Promise_[] {
     }));
 }
 
-/** section renders a titled group, or nothing at all when the group is empty —
- *  an empty section here would be a heading over a void, and the gap list
- *  above has already said which absences matter. */
-function section(title: string, rows: HTMLElement[]): HTMLElement | null {
-  if (rows.length === 0) return null;
-  const block = el("div", "section");
-  block.appendChild(heading("large", title, { className: "section-title" }));
-  const list = el("div", "rows");
-  for (const row of rows) list.appendChild(row);
-  block.appendChild(list);
+/** phaseBadge reads as the project page's: a live phase in the success tone,
+ *  a closed one neutral. A phase outside the set shows in its own word and
+ *  the neutral tone, because a tone is a claim nobody made about it. */
+function phaseBadge(phase: string): HTMLElement {
+  const word = PHASES.get(phase);
+  if (word === undefined) return badge(phase);
+  return badge(word, phase === "closed" ? "default" : "success");
+}
+
+/** fact is one labelled value in the record's head; an absent one is said in
+ *  the warning ink, because it is a gap the verdict below names too. */
+function fact(label: string, value: string, missing: string): HTMLElement {
+  const cell = el("div");
+  cell.append(
+    el("div", "meta", label),
+    value === "" ? el("div", "unowned", missing) : el("div", undefined, value),
+  );
+  return cell;
+}
+
+/** head is the project's own panel: its mark, name, phase and key, then who
+ *  receives the work and when it is meant to end. */
+function head(answer: Record<string, unknown>): HTMLElement {
+  const block = el("section", "panel");
+  const body = panelBody();
+  const line = el("div", "record-line");
+  const name = asText(answer.name) || "Delivery handoff";
+  line.append(
+    avatar(name, asText(answer.project_id), "md"),
+    heading("large", name, { as: "h1", className: "name" }),
+  );
+  const phase = asText(answer.phase);
+  line.appendChild(
+    phase === "" ? el("span", "meta", "no phase") : phaseBadge(phase),
+  );
+  const key = asText(answer.key);
+  if (key !== "") line.appendChild(el("span", "meta", `# ${key}`));
+  body.appendChild(line);
+  const facts = el("div", "record-facts");
+  const target = asText(answer.target_end_date);
+  // The name where the answer has one, the id where it does not — the same
+  // fallback the seats take, for the same reason.
+  const owner = asText(answer.owner_name) || asText(answer.owner_id);
+  const started = asText(answer.started_at);
+  facts.append(
+    fact("Target end date", target === "" ? "" : day(target), "Not set"),
+    fact("Owner", owner, "Unassigned"),
+    fact("Started", started === "" ? "" : day(started), "Not recorded"),
+  );
+  body.appendChild(facts);
+  block.appendChild(body);
   return block;
 }
 
-function gapRow(gap: Gap): HTMLElement {
-  const row = el("div", "gap");
-  row.appendChild(el("span", undefined, gap.message));
-  if (gap.source !== "") row.appendChild(el("span", "source", gap.source));
-  return row;
-}
-
-function twoLineRow(primary: string, secondary: string[]): HTMLElement {
-  const row = el("div", "row");
-  const head = el("div", "row-head");
-  head.appendChild(el("span", "name", primary));
-  row.appendChild(head);
-  const facts = el("div", "factors");
-  for (const fact of secondary) facts.appendChild(el("span", "factor", fact));
-  row.appendChild(facts);
-  return row;
-}
-
-function dealRow(deal: Deal): HTMLElement {
-  const row = el("div", "row");
-  const head = el("div", "row-head");
-  head.appendChild(el("span", "name", deal.name));
-  head.appendChild(el("span", "state", deal.status));
-  head.appendChild(el("span", "score", deal.amount));
-  row.appendChild(head);
-  return row;
-}
-
-/** stateClass colours only the state this panel has to act on. An overdue
- *  promise at handover is the one that follows the work across. */
-function stateClass(state: string): string {
-  return state === "overdue" ? "state-overdue" : "state";
-}
-
-function promiseRow(promise: Promise_): HTMLElement {
-  const row = el("div", "row");
-  const head = el("div", "row-head");
-  head.appendChild(el("span", "name", promise.subject));
-  head.appendChild(
-    el(
-      "span",
-      stateClass(promise.state),
-      promise.dueAt === ""
-        ? promise.state || "undated"
-        : `${promise.state || "due"} · ${day(promise.dueAt)}`,
-    ),
-  );
-  row.appendChild(head);
-  return row;
-}
-
-/** headline is the project's own line: what it is called, where it stands, and
- *  when it is meant to end. */
-function headline(answer: Record<string, unknown>): string {
-  const parts = [asText(answer.phase) || "no phase"];
-  const target = asText(answer.target_end_date);
-  parts.push(target === "" ? "no target end date" : `target ${day(target)}`);
-  const key = asText(answer.key);
-  if (key !== "") parts.unshift(key);
-  return parts.join(" · ");
-}
-
-/** ownerLine says who is receiving the work. An unowned project is the gap the
- *  panel leads with, so the line agrees with it rather than going blank. */
-function ownerLine(answer: Record<string, unknown>): string {
-  // The name where the answer has one, the id where it does not — the same
-  // fallback the seats take, for the same reason: an id is a worse answer than
-  // a name and a far better one than a blank.
-  const owner = asText(answer.owner_name) || asText(answer.owner_id);
-  return owner === "" ? "no owner" : `owner ${owner}`;
-}
+/** What a bounded read costs this briefing, in the tool's own terms. */
+const boundedNote =
+  "The lists below stopped at their bound, so they are partial — and the " +
+  "checks for an absent won deal or an absent contact were withheld rather " +
+  "than guessed.";
 
 /**
  * verdict is the panel's answer to the one question it is opened for: is this
@@ -186,38 +178,104 @@ function verdict(
 ): HTMLElement {
   const { gaps, dropped } = gapsOf(answer);
   if (gaps.length > 0) {
-    const block = el("div", "section");
-    block.appendChild(
-      heading("large", `${gaps.length} thing(s) still missing`, {
-        className: "section-title",
-      }),
-    );
-    for (const gap of gaps) block.appendChild(gapRow(gap));
-    if (bounded) block.appendChild(el("div", "state", boundedNote));
-    return block;
+    const missing = panel("Not ready to hand over", {
+      tone: "warning",
+      action: badge(`${gaps.length} missing`, "warning"),
+    });
+    for (const gap of gaps) {
+      const row = panelRow("gap");
+      row.appendChild(el("div", "name", gap.message));
+      if (gap.source !== "") {
+        row.appendChild(el("div", "meta source", `read from ${gap.source}`));
+      }
+      missing.appendChild(row);
+    }
+    if (bounded) {
+      const foot = panelFoot();
+      foot.appendChild(el("p", "meta", boundedNote));
+      missing.appendChild(foot);
+    }
+    return missing;
   }
   if (bounded || dropped > 0) {
-    return el(
-      "div",
-      "empty",
+    return callout(
+      "info",
+      "Can't confirm it's ready",
       "Not every check could be made, so this briefing cannot say the work " +
         "is ready to hand over. " +
         (bounded ? boundedNote : "A reported gap arrived unreadable."),
     );
   }
-  return el(
-    "div",
-    "empty",
-    "Nothing the records were checked for is missing. " +
-      "This work is ready to hand over.",
+  return callout(
+    "success",
+    "Ready to hand over",
+    "Nothing the records were checked for is missing.",
   );
 }
 
-/** What a bounded read costs this briefing, in the tool's own terms. */
-const boundedNote =
-  "The lists below stopped at their bound, so they are partial — and the " +
-  "checks for an absent won deal or an absent contact were withheld rather " +
-  "than guessed.";
+/** section is one of the project page's panels, or nothing when it would be
+ *  empty — a title over a void, where the verdict has already said which
+ *  absences matter. */
+function section(title: string, rows: HTMLElement[]): HTMLElement | null {
+  if (rows.length === 0) return null;
+  const block = panel(title);
+  for (const row of rows) block.appendChild(row);
+  return block;
+}
+
+function dealRow(deal: Deal): HTMLElement {
+  const row = panelRow("item item-plain");
+  row.appendChild(el("div", "name", deal.name));
+  const end = el("div", "item-title");
+  const tone =
+    deal.status === "won"
+      ? "success"
+      : deal.status === "lost"
+        ? "danger"
+        : "default";
+  end.append(
+    badge(deal.status, tone),
+    el(
+      "span",
+      deal.amount === ABSENT ? "figure figure-absent" : "figure",
+      deal.amount,
+    ),
+  );
+  row.appendChild(end);
+  return row;
+}
+
+function seatRow(seat: Seat): HTMLElement {
+  const row = panelRow("item");
+  row.append(
+    avatar(seat.contact, seat.contactID),
+    el("div", "name", seat.contact),
+    // An untitled seat is a gap the verdict names, so the row agrees with it
+    // rather than leaving an empty cell.
+    seat.role === "" ? badge("No role recorded", "warning") : badge(seat.role),
+  );
+  return row;
+}
+
+function promiseRow(promise: Promise_): HTMLElement {
+  const row = panelRow("item item-plain");
+  const main = el("div");
+  main.appendChild(el("div", "name", promise.subject));
+  const facts = el("div", "item-title");
+  facts.appendChild(
+    el(
+      "span",
+      "meta",
+      promise.dueAt === "" ? "no due date" : `due ${day(promise.dueAt)}`,
+    ),
+  );
+  // An overdue promise at handover is the one that follows the work across.
+  if (promise.state === "overdue")
+    facts.appendChild(badge("Overdue", "danger"));
+  main.appendChild(facts);
+  row.appendChild(main);
+  return row;
+}
 
 export function render(
   root: HTMLElement,
@@ -229,7 +287,7 @@ export function render(
     root.appendChild(
       el(
         "div",
-        "empty",
+        "empty empty-alone",
         "The host sent no structured result for this project.",
       ),
     );
@@ -247,28 +305,24 @@ export function render(
   // proof of skew rather than of a clean project.
   if (asText(answer.project_id) === "" || !Array.isArray(answer.gaps)) {
     root.appendChild(
-      el("div", "empty", "The host sent no readable handoff for this project."),
+      el(
+        "div",
+        "empty empty-alone",
+        "The host sent no readable handoff for this project.",
+      ),
     );
     return;
   }
-  root.appendChild(
-    heading("xlarge", asText(answer.name) || "Delivery handoff"),
-  );
-  root.appendChild(
-    el("p", "meta", `${headline(answer)} · ${ownerLine(answer)}`),
-  );
-  root.appendChild(verdict(answer, warned(warnings, SWEEP_TRUNCATED)));
-
+  const page = el("div", "stack");
+  page.append(head(answer), verdict(answer, warned(warnings, SWEEP_TRUNCATED)));
   for (const block of [
-    section("What was sold", dealsOf(answer).map(dealRow)),
-    section(
-      "Who to call",
-      seatsOf(answer).map((seat) => twoLineRow(seat.contact, [seat.role])),
-    ),
-    section("Already promised", promisesOf(answer).map(promiseRow)),
+    section("Deals", dealsOf(answer).map(dealRow)),
+    section("Stakeholders", seatsOf(answer).map(seatRow)),
+    section("Open commitments", promisesOf(answer).map(promiseRow)),
   ]) {
-    if (block !== null) root.appendChild(block);
+    if (block !== null) page.appendChild(block);
   }
+  root.appendChild(page);
 }
 
 onResult((data, warnings) => {

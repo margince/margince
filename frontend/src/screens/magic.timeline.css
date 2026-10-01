@@ -1,0 +1,195 @@
+/* The receipt's clock: a mark per line, standing on a baseline that runs from
+   the window's start to now. Marks are placed by share of the window, so the
+   strip keeps its reading at any width without being measured. */
+.magic-timeline {
+  margin: var(--space-5) 0 0;
+}
+
+.magic-timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  color: var(--textSecondary);
+}
+
+.magic-timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.magic-timeline-legend > li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.magic-timeline-plot {
+  position: relative;
+  block-size: 60px;
+  margin-top: var(--space-3);
+  border-block-end: 1.5px solid var(--borderStrong);
+}
+
+/* Who acted is the colour and nothing else: indigo where a model decided,
+   grey where a sync or rule ran, the danger state where it did not finish. */
+.magic-mark {
+  display: inline-block;
+  flex: none;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--mark);
+}
+
+.magic-mark[data-kind="agent"] {
+  --mark: var(--ai);
+}
+
+/* The control edge is the one grey held to 3:1 against the card, which is
+   what a mark with nothing written on it needs to be seen. */
+.magic-mark[data-kind="sync"] {
+  --mark: var(--borderControl);
+}
+
+.magic-mark[data-kind="failed"] {
+  --mark: var(--danger);
+}
+
+/* Staged, not taken: the dashed ring the rest of the product draws round a
+   proposal nobody has accepted. In full --ai rather than the staged --aiMed:
+   --aiMed is --ai at 30%, about 1.5:1 against the card at this size, and a
+   10px mark with no word on it needs the 3:1 a graphic is owed. */
+.magic-mark[data-kind="waiting"] {
+  --mark: var(--bgElevated);
+  border: 1.5px dashed var(--ai);
+}
+
+/* A source to restore is off the clock, so only the list draws this one: the
+   receipt's summary line wears the same warning. */
+.magic-mark[data-kind="restore"] {
+  --mark: var(--warning);
+}
+
+.magic-timeline-plot > .magic-mark {
+  position: absolute;
+  inset-inline-start: var(--at);
+  bottom: var(--bottom);
+  translate: calc(-50% + var(--nudge)) 0;
+  transform-origin: bottom;
+  animation: magic-mark-arrive var(--dur-enter) var(--ease-spring) both;
+  animation-delay: calc(min(var(--order), 20) * var(--stagger-enter));
+}
+
+/* A job that touched many records stands taller the more it touched. */
+.magic-timeline-plot > .magic-mark[data-shape="bar"] {
+  inline-size: 6px;
+  block-size: var(--height);
+  border-radius: var(--r-xs) var(--r-xs) 0 0;
+  animation-name: magic-bar-arrive;
+}
+
+@keyframes magic-mark-arrive {
+  from {
+    opacity: 0;
+    scale: 0.3;
+  }
+}
+
+@keyframes magic-bar-arrive {
+  from {
+    scale: 1 0;
+  }
+}
+
+/* Now, still running: the one mark that moves after the strip has arrived. */
+.magic-timeline-now {
+  position: absolute;
+  inset-inline-end: 0;
+  bottom: 0;
+  inline-size: 8px;
+  block-size: 8px;
+  translate: 50% 50%;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--accent);
+}
+
+.magic-timeline-now::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  corner-shape: round;
+  background: inherit;
+  animation: magic-now-pulse 2.4s var(--ease-out) infinite;
+}
+
+@keyframes magic-now-pulse {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 0;
+    scale: 3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .magic-timeline-plot > .magic-mark,
+  .magic-timeline-now::after {
+    animation: none;
+  }
+}
+
+.magic-timeline-axis {
+  position: relative;
+  min-block-size: 1.5em;
+  margin-top: var(--space-2);
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.magic-timeline-axis > span {
+  position: absolute;
+  top: 0;
+}
+
+.magic-timeline-start {
+  inset-inline-start: 0;
+}
+
+.magic-timeline-end {
+  inset-inline-end: 0;
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+}
+
+.magic-timeline-tick {
+  inset-inline-start: var(--at);
+  translate: -50% 0;
+}
+
+.magic-timeline-tick::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 50%;
+  bottom: 100%;
+  block-size: 6px;
+  border-inline-start: 1px solid var(--borderStrong);
+}
+
+/* A phone has room for the two ends and not for the hours between them, which
+   printed over each other; the marks still stand at their share of the night. */
+@media (max-width: 600px) {
+  .magic-timeline-tick {
+    display: none;
+  }
+}

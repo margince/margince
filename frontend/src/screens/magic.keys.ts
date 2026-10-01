@@ -50,6 +50,8 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.retention_deal_archive",
 ] as const satisfies readonly MessageKey[];
 
+export type MagicSentenceKey = (typeof MAGIC_SENTENCE_KEYS)[number];
+
 /** Every reason `/magic` can give for a line: why the machinery did it. */
 export const MAGIC_WHY_KEYS = [
   "magic.why.mail_filed",

@@ -1,31 +1,32 @@
 /* The shared look for every MCP App view.
  *
- * It reads the product's own tokens rather than re-declaring a palette. That is
- * the whole reason these documents moved into frontend/src: two definitions of
- * one visual language diverge, and the one nobody looks at is the one served to
- * a third-party host.
+ * A view is the app's own panel, drawn in a host's frame. So it reads the
+ * product's tokens AND the product's component sheets — the panel, the badge,
+ * the avatar, the meter, the callout and the strength meter — rather than a
+ * look of its own. Two definitions of one visual language diverge, and the one
+ * nobody looks at is the one served to a third-party host. What is declared
+ * here is only the layout of each view's rows, which no app screen has.
  *
- * tokens.css only — not brand.css. The derived layer names roles these views do
- * not use (the accent ramp, the Core's light, the fact categories), and a host
- * fetches this document per render, so unused rules are bytes spent on nothing.
- * The three warmth colours below are read straight from the canon; see the
- * contrast note where they are used.
- *
- * The build folds this in, so nothing here is fetched at run time — a stylesheet
- * reached over the network would be an origin this view has declared it does not
- * have.
+ * The build folds every import in, so nothing here is fetched at run time — a
+ * stylesheet reached over the network would be an origin this view has
+ * declared it does not have.
  *
  * THERE IS NO DARK ARM HERE, and that is deliberate. tokens.css answers both
  * ways round on its own — [data-theme="dark"] for a host that states one, and
- * prefers-color-scheme for a document nobody stamped, which is what an unstated
- * host leaves this view as. A media arm here would be a second, partial copy of
- * the dark palette, which is the thing this file exists to stop. */
+ * prefers-color-scheme for a document nobody stamped. A media arm here would be
+ * a second, partial copy of the dark palette. */
 
 @import "../design-system/tokens.css";
 /* The same heading rules the app draws from, so one heading is one heading
    whichever document it is in. bridge.ts's heading() emits the class and the
    data-size these rules key off. */
 @import "../design-system/heading.css";
+@import "../design-system/panel.css";
+@import "../design-system/badge.css";
+@import "../design-system/avatar.css";
+@import "../design-system/readings.css";
+@import "../design-system/callout.css";
+@import "../design-system/strengthmeter.css";
 
 * {
   box-sizing: border-box;
@@ -34,16 +35,15 @@
 body {
   margin: 0;
   padding: var(--space-4);
-  /* An explicit background: the host paints its own ground behind this frame,
-     so a transparent body would borrow whatever is behind it and disagree with
-     the foreground colour set here. */
-  background: var(--bgElevated);
+  /* The app's page ground, so the panel on it reads as the app's panel. An
+     explicit one: the host paints its own ground behind this frame, and a
+     transparent body would borrow it. */
+  background: var(--bgPage);
   /* The size, leading and weight come from the product's own body token; the
      family is overridden back to system-ui straight after it, because
-     `--fontBody` carries `--fontFamilyBody`, and that resolves to a web font —
-     a network request this document's empty origin allowlist can never admit,
-     so it would silently fall back per host instead of per design. A view can
-     wear the product's colour and rhythm; it cannot wear its typeface. */
+     `--fontBody` resolves to a web font this document's empty origin allowlist
+     can never fetch. A view can wear the product's colour and rhythm; it cannot
+     wear its typeface. */
   font: var(--fontBody);
   font-family: system-ui, sans-serif;
   color: var(--textPrimary);
@@ -92,12 +92,9 @@ optgroup {
   color: inherit;
 }
 
-/* And the one weight the reset takes away that a table still needs: a COLUMN
-   head is medium, so it reads as a label over the values rather than as one
-   more row of them. `thead th` and not `th` — a row header in `tbody` is a
-   value's name and stays at body weight. Spelled here as well as in app.css
-   for the reason the reset above is: this document loads tokens.css and nothing
-   else, so it inherits no rule from the app's own sheet. */
+/* The one weight the reset takes away that a table still needs: a COLUMN head
+   is medium, so it reads as a label over the values. Spelled here as well as
+   in app.css because this document inherits no rule from the app's sheet. */
 thead th {
   font-weight: var(--fontWeightMedium);
 }
@@ -110,123 +107,172 @@ optgroup {
   font-family: inherit;
 }
 
-h1 {
-  color: var(--textPrimary);
+p {
+  margin: 0;
 }
 
-.meta {
-  margin: 0 0 var(--space-4);
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.rows {
+/* Panels stacked down the frame, a handoff's head over its sections. */
+.stack {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--gapCards);
 }
 
-.row {
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  padding: var(--space-3);
-}
-
-.row-head {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
+/* A queue position. The same chip the Worklist draws beside each row: a
+   marker beside the row rather than part of its sentence, at a fixed width so
+   a two-digit rank does not shift the titles beside it. */
 .rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--space-6);
+  block-size: var(--space-6);
+  border-radius: var(--r-sm);
+  background: var(--bgChip);
+  font-weight: var(--fontWeightMedium);
   font-variant-numeric: tabular-nums;
 }
 
+/* One ranked or listed thing: its marker, what it is, and its figure. */
+.item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.item-plain {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.item-ranked {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.item-colleague {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.item-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A list of rows after a panel's body keeps the rule over its first row:
+   panel.css drops the rule on a first child, and inside a list every first
+   row is one, though it follows the body's sentence as any row would. */
+.panel-body + ol > .panel-row:first-child::before {
+  content: "";
+}
+
+/* A record's own text, which is customer data of arbitrary length. It wraps
+   rather than escaping its row. */
 .name {
-  /* A record's own text, which is customer data of arbitrary length. It wraps
-     rather than escaping its row. */
   overflow-wrap: anywhere;
 }
 
-.score {
-  margin-left: auto;
-  color: var(--accentText);
+/* The supporting line: Body S in the second ink, the app's caption. */
+.meta {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  overflow-wrap: anywhere;
+}
+
+.figure {
   font-variant-numeric: tabular-nums;
-}
-
-.factors {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-}
-
-.factor {
-  font-variant-numeric: tabular-nums;
-}
-
-/* The warmth bands are TEXT, so each has to clear 4.5:1 against --bgElevated in
-   both themes. Hence the Text half of the status family and not the bright hue
-   the same names carry for shapes: --successText and --warningText are the
-   readings the design system holds at AA for small text. Named by token because
-   check-ds-purity.sh greps comments too, and a hex here would fail the gate this
-   comment explains. */
-.band-high {
-  color: var(--successText);
-}
-
-.band-medium {
-  color: var(--warningText);
-}
-
-/* A promise's state is TEXT, so it takes --dangerText, which the design system
-   holds at AA for small text against --bgElevated in both themes — not the
-   bright --danger the same family gives a bar or a dot. The gap's rule below
-   is a shape, which is why that one keeps the bright hue. Named by token
-   because check-ds-purity.sh greps comments too, and a hex here would fail the
-   gate this note explains. */
-.state-overdue {
-  color: var(--dangerText);
-}
-
-/* A view that reports several kinds of thing at once needs them separated, or
-   the reader takes the first list for the whole answer. */
-.section {
-  margin-top: var(--space-4);
-}
-
-.section-title {
-  margin: 0 0 var(--space-2);
-  color: var(--textPrimary);
-}
-
-/* One thing the records do not answer. It reads as a warning rather than as an
-   error: a gap is work still to do, not a failure. */
-.gap {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  border-left: 2px solid var(--warning);
-  padding: var(--space-1) var(--space-3);
-}
-
-/* The field a gap was read off. It is the evidence, so it is shown rather than
-   summarized away — in the document's own face, because a field name is read,
-   not run. */
-.source {
+  font-weight: var(--fontWeightMedium);
   white-space: nowrap;
 }
 
-/* The empty answer, which is a real answer on both of these views: a queue with
-   nothing in it, a contact nobody has spoken to. Saying so is the difference
-   between an answered question and a view that looks broken. */
-.empty {
-  border: 1px dashed var(--borderSubtle);
-  border-radius: var(--r-sm);
-  padding: var(--space-4);
-  text-align: center;
+.figure-absent {
+  color: var(--textSecondary);
 }
 
-/* Wide content scrolls inside its own box; the page itself never scrolls
-   sideways inside a host's frame. */
-.scroll {
-  overflow-x: auto;
+/* A state read as words at a row's far end. Text, so each takes its family's
+   Text ink — the reading the design system holds at AA on every ground. */
+.late {
+  color: var(--dangerText);
+  white-space: nowrap;
+}
+
+.unowned {
+  color: var(--warningText);
+}
+
+.factors {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* A factor's name over its bar, the figure at the bar's end: the figure is
+   the reading, so it never gives way, and the name has the cell to itself. */
+.factor-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.factor-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.factor-line .meterbar {
+  flex: 1;
+}
+
+/* Pushed to the far end of a flex line: a score beside a title, a foot's
+   sentence beside its counts. */
+.end {
+  margin-left: auto;
+}
+
+/* A handoff's own head: its mark, its name and its phase, then its facts. */
+.record-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.record-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* The empty answer, which is a real answer on every view: a queue with nothing
+   in it, a contact nobody has spoken to. Inside a panel it is the panel's own
+   sentence, inset by panel.css; with no panel to hold it — a result the host
+   never sent — it sits alone on the app's plate ground. */
+.empty-alone {
+  padding: var(--space-4);
+  border-radius: var(--r-md);
+  background: var(--bgCard);
+}
+
+@media (max-width: 480px) {
+  .factors {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .record-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
