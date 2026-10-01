@@ -1,0 +1,73 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package capture
+
+// Continuing a mailbox import that stopped on an error.
+//
+// A run that ends on an error keeps its cursor: the provider page it stopped
+// at, and the counts it had reached. Starting again from the newest message
+// re-reads everything already captured, which on a large mailbox under the
+// provider's rate limits takes hours and spends nothing useful. So a new start
+// whose window that run already covers reopens it instead, and it pages on
+// from where it stopped with its counts intact.
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// resumableRunPredicate is what makes a run continuable, on a query that names
+// the run `b` and its connection `c`: it ended on an error, it still holds the
+// page it stopped at, and it read the account the connection holds now. A page
+// token belongs to one mailbox, so a run from before the connection was bound
+// to another account has nothing to continue.
+const resumableRunPredicate = `b.status = 'error' AND b.cursor IS NOT NULL
+	AND (c.account_bound_at IS NULL OR b.created_at >= c.account_bound_at)`
+
+// resumeFailedBackfillTx reopens the connection's newest run when it is
+// resumable and its window covers windowMonths, and answers it; nil when there
+// is none and the caller starts a new run.
+//
+// The caller holds the connection lock and has already refused a narrowing
+// start, so no other run is live and windowMonths is at least the widest run's.
+// Only the newest run is considered: a later run that finished or was stopped
+// is the newer statement about this mailbox.
+//
+// The run goes back to queued with its cursor, its counts and its estimate as
+// they were; the failure ladder starts again, because the person starting it
+// is the evidence that whatever stopped it may be fixed.
+func resumeFailedBackfillTx(ctx context.Context, tx pgx.Tx, connID ids.UUID, windowMonths int) (*BackfillRun, error) {
+	var run BackfillRun
+	err := tx.QueryRow(ctx, `
+		UPDATE capture_backfill
+		   SET status = 'queued', completed_at = NULL, consecutive_failures = 0,
+		       last_error_class = NULL`+resetInflightProgress+`
+		 WHERE id = (
+		         SELECT b.id FROM capture_backfill b
+		           JOIN capture_connection c ON c.id = b.connection_id
+		          WHERE b.connection_id = $1
+		            AND b.created_at = (SELECT max(created_at) FROM capture_backfill WHERE connection_id = $1)
+		            AND b.window_months >= $2
+		            AND `+resumableRunPredicate+`)
+		RETURNING id, connection_id, window_months, after_date, status, cursor,
+		          total_estimate, total_estimate_is_floor,
+		          scanned, captured, skipped, failed, contacts_created, companies_created,
+		          started_at, updated_at`,
+		connID, windowMonths).Scan(&run.ID, &run.ConnectionID, &run.WindowMonths, &run.AfterDate, &run.Status, &run.Cursor,
+		&run.Estimate, &run.EstimateIsFloor,
+		&run.Scanned, &run.Captured, &run.Skipped, &run.Failed, &run.Contacts, &run.Companies,
+		&run.StartedAt, &run.UpdatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil //nolint:nilnil // no resumable run is the ordinary answer: the caller starts a new one
+	}
+	if err != nil {
+		return nil, fmt.Errorf("capture: resuming the failed backfill: %w", err)
+	}
+	return &run, nil
+}

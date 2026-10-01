@@ -1410,6 +1410,7 @@ public.capture_backfill.contacts_created integer NOT NULL gen=- def=0
 public.capture_backfill.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_backfill.cursor jsonb gen=- def=-
 public.capture_backfill.dedupe_candidates integer NOT NULL gen=- def=0
+public.capture_backfill.failed integer NOT NULL gen=- def=0
 public.capture_backfill.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_backfill.inflight_captured integer NOT NULL gen=- def=0
 public.capture_backfill.inflight_scanned integer NOT NULL gen=- def=0

@@ -29682,6 +29682,7 @@ components:
       required: [window]
       properties:
         window: { type: string, enum: [3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m], description: '`none` is expressed by never calling this op. Widen-only versus a prior run.' }
+        start_over: { type: boolean, description: 'Read the window again from the newest message even where the last run ended on an error and could be continued (BackfillStatus.resumable). Omitted or false continues that run, with its counts, when its window covers this one.' }
     BackfillStatus:
       type: object
       description: 'The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1).'
@@ -29707,8 +29708,10 @@ components:
             messages_scanned: { type: integer }
             captured: { type: integer }
             skipped: { type: integer }
+            failed: { type: integer, description: 'Messages the run could not capture and walked past. Committed pages only.' }
             contacts_created: { type: integer }
             companies_created: { type: integer }
+        resumable: { type: boolean, description: 'The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again.' }
         started_at: { type: [string, 'null'], format: date-time }
         completed_at: { type: [string, 'null'], format: date-time }
         updated_at: { type: [string, 'null'], format: date-time, description: 'Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").' }

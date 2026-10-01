@@ -68,6 +68,37 @@ func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.N
 	return "a capture exclusion rule keeps this message out (" + excluded + ")", nil
 }
 
+var _ connector.PreStoreJudge = (*Sink)(nil)
+
+// DropBeforeStore runs the gates Upsert runs first — the colleagues-only gate
+// and the exclusion lists — on a record built from a message's headers, and
+// answers true when the message is kept out. A connector asks before it
+// downloads the full message, so mail that would be dropped anyway costs one
+// small read instead of a full download.
+//
+// The verdict is Upsert's own: the same dropBeforeStoreTx, on the same
+// addresses and containers, leaving the same breadcrumb and trace. A record
+// Upsert would refuse to admit is not judged here (false, nil); the full path
+// then answers for it exactly as it always did.
+func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedRecord) (bool, error) {
+	if _, err := admitRecord(ctx, rec); err != nil {
+		return false, nil //nolint:nilerr // not judged here; the full capture path answers for an unadmitted record
+	}
+	var dropped bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := s.refuseErasedChannelAccount(ctx, tx, rec.Counterparty); err != nil {
+			return err
+		}
+		reason, err := s.dropBeforeStoreTx(ctx, tx, rec)
+		dropped = reason != ""
+		return err
+	})
+	if err != nil {
+		return false, err
+	}
+	return dropped, nil
+}
+
 // excludedTx reports whether any address this message names — sender,
 // recipients, copies — is kept out by a workspace exclusion, or by one the
 // mailbox owner behind this connection set for themselves. Runs on the

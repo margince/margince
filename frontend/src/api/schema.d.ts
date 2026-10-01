@@ -20305,6 +20305,8 @@ export interface components {
              * @enum {string}
              */
             window: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
+            /** @description Read the window again from the newest message even where the last run ended on an error and could be continued (BackfillStatus.resumable). Omitted or false continues that run, with its counts, when its window covers this one. */
+            start_over?: boolean;
         };
         /** @description The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1). */
         BackfillStatus: {
@@ -20324,9 +20326,13 @@ export interface components {
                 messages_scanned?: number;
                 captured?: number;
                 skipped?: number;
+                /** @description Messages the run could not capture and walked past. Committed pages only. */
+                failed?: number;
                 contacts_created?: number;
                 companies_created?: number;
             };
+            /** @description The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again. */
+            resumable?: boolean;
             /** Format: date-time */
             started_at?: string | null;
             /** Format: date-time */

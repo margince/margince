@@ -6065,65 +6065,75 @@ export const de = {
     "Liest deine E-Mails und kann aus dem Postfach senden. Beides erlaubst du auf der Seite von Google und kannst die Verbindung jederzeit trennen.",
   "ob.s4.googleUnverified":
     "Wenn Google vor einer „nicht verifizierten App“ warnt, wähle „Erweitert“ und dann „Weiter“. Die Seite von Google zeigt genau, was erlaubt wird.",
-  "backfill.title": "Postfachverlauf importieren",
+  "backfill.title": "Alte E-Mails importieren",
   "backfill.intro":
-    "Wähle, wie weit zurück importiert wird. Umfang und geschätzte Kosten werden angezeigt, bevor etwas startet, und dieser Schritt lässt sich überspringen.",
-  "backfill.windowLabel": "Importzeitraum",
+    "Wähle, wie weit du zurückgehen willst. Es startet erst, wenn du auf „Import starten“ klickst.",
+  "backfill.windowLabel": "Wie weit zurück",
   "backfill.window36m": "3 Jahre",
   "backfill.window84m": "7 Jahre",
   "backfill.window120m": "10 Jahre",
-  "backfill.since": "Importiert E-Mails seit {date}.",
+  "backfill.since": "E-Mails seit {date}.",
   "backfill.extendNote":
-    "Der Verlauf lässt sich später erweitern. Bereits importierte E-Mails bleiben erhalten und werden nicht doppelt angelegt.",
-  "backfill.costFloorNote":
-    "Diese Schätzung umfasst nur die bisher gezählten Nachrichten. Der vollständige Import kann mehr Nachrichten enthalten und mehr kosten.",
+    "Du kannst später weiter zurückgehen. E-Mails, die schon da sind, kommen nicht doppelt.",
+  "backfill.costFloorNote": "Gibt es mehr E-Mails, kann es auch mehr kosten.",
   "backfill.window3m": "3 Monate",
   "backfill.window6m": "6 Monate",
   "backfill.window12m": "1 Jahr",
   "backfill.window24m": "2 Jahre",
   "backfill.window60m": "5 Jahre",
-  "backfill.previewLoading": "Nachrichten werden gezählt…",
-  "backfill.scopeIs": "Importiert {window} deines Postfachs.",
-  "backfill.estimateMessagesExact_one": "{count} Nachricht in diesem Zeitraum.",
-  "backfill.estimateMessagesExact_other":
-    "{count} Nachrichten in diesem Zeitraum.",
+  "backfill.previewLoading": "E-Mails werden gezählt…",
+  "backfill.scopeIs": "Geht {window} zurück.",
+  "backfill.estimateMessagesExact_one": "{count} E-Mail in dieser Zeit.",
+  "backfill.estimateMessagesExact_other": "{count} E-Mails in dieser Zeit.",
   "backfill.estimateMessagesAtLeast_one":
-    "Mindestens {count} Nachricht in diesem Zeitraum. Dort wurde das Zählen beendet, es können also mehr sein.",
+    "{count} E-Mail oder mehr. Weiter wurde nicht gezählt.",
   "backfill.estimateMessagesAtLeast_other":
-    "Mindestens {count} Nachrichten in diesem Zeitraum. Dort wurde das Zählen beendet, es können also mehr sein.",
-  "backfill.estimateCost": "Geschätzte KI-Kosten:",
+    "{count} E-Mails oder mehr. Weiter wurde nicht gezählt.",
+  "backfill.estimateCost": "KI-Kosten: etwa {cost}.",
   "backfill.estimateNote":
-    "Eine Schätzung, keine Rechnung. Die tatsächliche Nutzung wird gemessen und laufend angezeigt.",
+    "Das ist eine Schätzung, keine Rechnung. Du zahlst nur, was wirklich anfällt.",
   "backfill.startCta": "Import starten",
   "backfill.starting": "Wird gestartet…",
-  "backfill.skip": "Import des Postfachverlaufs überspringen",
+  "backfill.skip": "Jetzt nicht",
   "backfill.skippedNote":
-    "Kein Verlauf importiert. Neue E-Mails werden weiterhin erfasst, und ein Import lässt sich später in den Einstellungen starten.",
-  "backfill.loading": "Importstatus wird geprüft…",
+    "Keine alten E-Mails importiert. Neue E-Mails kommen weiter an. Alte E-Mails kannst du später in den Einstellungen importieren.",
+  "backfill.loading": "Import wird geprüft…",
   "backfill.statusUnavailable":
-    "Importstatus ist nicht verfügbar. Die Erfassung läuft weiter.",
-  "backfill.queuedTitle": "Import eingereiht",
-  "backfill.runningTitle": "Postfachverlauf wird importiert",
-  "backfill.readingBadge": "Wird analysiert",
-  "backfill.doneTitle": "Import des Postfachverlaufs abgeschlossen",
-  "backfill.errorTitle": "Importfehler",
-  "backfill.cancelledTitle": "Import abgebrochen",
+    "Der Import lässt sich gerade nicht anzeigen. Neue E-Mails kommen weiter an.",
+  "backfill.queuedTitle": "Import startet gleich",
+  "backfill.runningTitle": "Alte E-Mails werden importiert",
+  "backfill.readingBadge": "Liest",
+  "backfill.doneTitle": "Alte E-Mails importiert",
+  "backfill.errorTitle": "Import angehalten",
+  "backfill.cancelledTitle": "Du hast den Import gestoppt",
   "backfill.progressLabel": "Importfortschritt",
-  "backfill.countScanned": "Durchsuchte Nachrichten",
-  "backfill.statEmails": "Erfasste E-Mails",
-  "backfill.statContacts": "Kontakte",
-  "backfill.statCompanies": "Zu prüfende Unternehmen",
+  "backfill.statEmails": "Neue E-Mails",
+  "backfill.statContacts": "Neue Kontakte",
+  "backfill.statCompanies": "Unternehmen zum Prüfen",
   "backfill.errorNote":
-    "Der Import wird automatisch wiederholt. Alles bisher Erfasste bleibt erhalten.",
-  "backfill.cancel": "Import stoppen",
-  "backfill.cancelledNote": "Gestoppt. Alles bisher Erfasste bleibt erhalten.",
-  "backfill.restart": "Weiteren Import starten",
+    "Der Import ist wegen eines Fehlers stehen geblieben. Alles bisher Importierte bleibt erhalten.",
+  "backfill.cancel": "Stoppen",
+  "backfill.cancelledNote": "Alles bisher Importierte bleibt erhalten.",
+  "backfill.restart": "Neuen Import starten",
   "backfill.unsupportedNote":
-    "Dieser Postfachtyp unterstützt keinen Import des Verlaufs. Nur neue E-Mails werden erfasst.",
+    "Dieses Postfach kann keine alten E-Mails importieren. Neue E-Mails kommen weiter an.",
   "backfill.narrowingNote":
-    "Für dieses Postfach lief bereits ein größerer Zeitraum. Der Importzeitraum kann nur erweitert werden.",
-  "backfill.staleUpdated":
-    "Zuletzt aktualisiert vor {duration}. Kein aktueller Fortschritt.",
+    "Für dieses Postfach lief schon ein längerer Zeitraum. Wähle denselben oder einen längeren.",
+  "backfill.staleUpdated": "Seit {duration} kein Fortschritt.",
+  "backfill.countScanned_one": "{count} E-Mail geprüft",
+  "backfill.countScanned_other": "{count} E-Mails geprüft",
+  "backfill.errorResumeNote":
+    "Der Import ist wegen eines Fehlers stehen geblieben. Du kannst dort weitermachen, wo er aufgehört hat.",
+  "backfill.resumeNote_one":
+    "Der letzte Import hat nach {count} E-Mail angehalten.",
+  "backfill.resumeNote_other":
+    "Der letzte Import hat nach {count} E-Mails angehalten.",
+  "backfill.resumeCta": "Weitermachen",
+  "backfill.startOverCta": "Neu beginnen",
+  "backfill.failedNote_one":
+    "{count} E-Mail ließ sich nicht hinzufügen und wurde ausgelassen.",
+  "backfill.failedNote_other":
+    "{count} E-Mails ließen sich nicht hinzufügen und wurden ausgelassen.",
 
   // Connected inboxes (Einstellungen → Verbindungen).
   // Die Einheiten dieser Installation, auf der Einstellungsseite, die bereits

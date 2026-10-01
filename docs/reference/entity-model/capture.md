@@ -76,7 +76,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_backfill
 
-23 columns · primary key `(id)` · referenced by 1 foreign key
+24 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -90,6 +90,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `contacts_created` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `cursor` | `jsonb` |  | Optional `jsonb`. |
 | `dedupe_candidates` | `integer` | yes | Required `integer`, defaulting to `0`. |
+| `failed` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `inflight_captured` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `inflight_scanned` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `inflight_skipped` | `integer` | yes | Required `integer`, defaulting to `0`. |

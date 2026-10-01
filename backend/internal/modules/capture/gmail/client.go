@@ -26,7 +26,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
-	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -426,10 +425,9 @@ func (a *httpAPI) Watch(ctx context.Context, accessToken, topic string) (string,
 // Retry-After Google had supplied.
 func classifyStatus(resp *http.Response, op string, body []byte) error {
 	switch {
-	case resp.StatusCode == http.StatusTooManyRequests:
-		return &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
-	case resp.StatusCode == http.StatusForbidden && googleconn.RateLimitBody(body):
-		return &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
+	case resp.StatusCode == http.StatusTooManyRequests,
+		resp.StatusCode == http.StatusForbidden && googleconn.RateLimitBody(body):
+		return &connector.RateLimitedError{RetryAfter: rateLimitWait(resp, body)}
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		return &connector.ProviderError{
 			Op: op, Status: resp.StatusCode, Reason: googleconn.Reason(body), Class: ErrAuthRejected,

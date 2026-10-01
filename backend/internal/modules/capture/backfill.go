@@ -74,12 +74,18 @@ type BackfillRun struct {
 	Scanned         int
 	Captured        int
 	Skipped         int
-	Contacts        int
-	Companies       int
-	StartedAt       *time.Time
-	CompletedAt     *time.Time
-	UpdatedAt       time.Time
-	ErrorClass      *string
+	// Failed counts messages the run could not capture and walked past.
+	Failed      int
+	Contacts    int
+	Companies   int
+	StartedAt   *time.Time
+	CompletedAt *time.Time
+	UpdatedAt   time.Time
+	ErrorClass  *string
+	// Resumable says a new start continues this run from where it stopped
+	// rather than reading the window again from the top: it ended on an error
+	// and still holds the page it stopped at.
+	Resumable bool
 }
 
 // connectionForUser resolves the calling user's connection for provider.
@@ -165,7 +171,21 @@ type EnqueueBackfill func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) e
 // enqueue is required. A run with no job is not a run: uq_capture_backfill_live
 // keeps the queued row forever, nothing pages it, and every later start for that
 // connection answers 409 backfill_running.
+//
+// A start whose window an earlier run that ended on an error already covers
+// CONTINUES that run (resumeFailedBackfillTx) instead of reading the mailbox
+// again from the newest message. StartBackfillOver is the explicit fresh start.
 func (r *Registry) StartBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
+	return r.startBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, true)
+}
+
+// StartBackfillOver starts a new run from the top of the window even where a
+// failed run could be continued — the human's "start over".
+func (r *Registry) StartBackfillOver(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
+	return r.startBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, false)
+}
+
+func (r *Registry) startBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, resume bool) (BackfillRun, error) {
 	// Checked HERE as well as at the estimate, and not only there: the estimate
 	// is a preview a client may skip, and a start that trusted it would take
 	// the whole window from anyone who called this door directly.
@@ -210,6 +230,21 @@ func (r *Registry) StartBackfill(ctx context.Context, provider string, userID id
 		}
 		if widest != nil && windowMonths < *widest {
 			return ErrWindowNarrowing
+		}
+		if resume {
+			resumed, err := resumeFailedBackfillTx(ctx, tx, connID, windowMonths)
+			if err != nil {
+				return err
+			}
+			if resumed != nil {
+				if err := enqueue(ctx, tx, resumed.ID); err != nil {
+					return fmt.Errorf("capture: scheduling the backfill: %w", err)
+				}
+				run = *resumed
+				return auditLifecycle(ctx, tx, "update", captureConnectionObject, connID,
+					map[string]any{"backfill_window_months": widest},
+					map[string]any{"backfill_window_months": windowMonths, "backfill_resumed": resumed.ID.String()})
+			}
 		}
 		after := r.now().AddDate(0, -windowMonths, 0)
 		err = tx.QueryRow(ctx, `
@@ -293,14 +328,16 @@ func latestBackfill(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*BackfillR
 	row := tx.QueryRow(ctx, `
 		SELECT b.id, b.connection_id, b.window_months, b.after_date, b.status, b.cursor, b.total_estimate, b.total_estimate_is_floor,
 		       b.scanned + b.inflight_scanned, b.captured + b.inflight_captured, b.skipped + b.inflight_skipped,
-		       b.contacts_created, b.companies_created,
-		       b.started_at, b.completed_at, b.updated_at, b.last_error_class
-		FROM capture_backfill b WHERE b.connection_id = $1
+		       b.failed, b.contacts_created, b.companies_created,
+		       b.started_at, b.completed_at, b.updated_at, b.last_error_class,
+		       `+resumableRunPredicate+`
+		FROM capture_backfill b JOIN capture_connection c ON c.id = b.connection_id
+		WHERE b.connection_id = $1
 		ORDER BY b.created_at DESC LIMIT 1`, connID)
 	var b BackfillRun
 	err := row.Scan(&b.ID, &b.ConnectionID, &b.WindowMonths, &b.AfterDate, &b.Status, &b.Cursor, &b.Estimate, &b.EstimateIsFloor,
-		&b.Scanned, &b.Captured, &b.Skipped, &b.Contacts, &b.Companies,
-		&b.StartedAt, &b.CompletedAt, &b.UpdatedAt, &b.ErrorClass)
+		&b.Scanned, &b.Captured, &b.Skipped, &b.Failed, &b.Contacts, &b.Companies,
+		&b.StartedAt, &b.CompletedAt, &b.UpdatedAt, &b.ErrorClass, &b.Resumable)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil //nolint:nilnil // absence IS the answer: the contract's state "none", not an error
 	}
