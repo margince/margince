@@ -51,8 +51,23 @@ const routingDefsTemplate = `{
   "decisions": {
     "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, on a certified site, and falls back to its ladder whenever the answer does not stand.",
     "$ref": "#/$defs/decisionsBinding"
+  },
+  "providers": {
+    "description": "Provider name to what that provider is configured with, independent of any lane: its host and the broker's upstream pins. Every lane binding a provider reads them from here, so a host is written once. A lane's own base_url or pins (the older spelling) are lifted here when the provider names none.",
+    "type": "object",
+    "additionalProperties": { "$ref": "#/$defs/providerSettings" }
   }
 }
+  },
+
+  "providerSettings": {
+    "description": "One provider's configuration. An entry no lane binds is held to its shape only.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "base_url": { "type": "string", "description": "Where the provider is reached. REQUIRED on openai_compatible while a lane binds it (the vendor host root, NO /v1), and on jev_compatible while the decisions lane binds it (the FULL decision endpoint, posted to as written). Empty ⇒ the adapter's compiled default." },
+      "upstream": { "$ref": "#/$defs/embeddingsRouting" }
+    }
   },
 
   "binding": {
@@ -65,7 +80,7 @@ const routingDefsTemplate = `{
         "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini", "gemini_vertex"]
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
-      "base_url": { "type": "string", "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default." },
+      "base_url": { "type": "string", "description": "Deprecated here: set the host on providers.<name>.base_url. Still accepted, and lifted onto the provider when it names none." },
       "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only, and REQUIRED there: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4. The host follows from it, so gemini_vertex takes no base_url." },
       "input": {
         "description": "What the bound model can be GIVEN. On openai_compatible/vllm it is the whole answer (the carriage depends on which model was bound). On every other provider it NARROWS the carriage fixed in that adapter's wire — at most what the wire carries, at most what is declared — so it can take image away from a gemini tier and can never add a lane a wire lacks. Omit to take whatever the provider carries; write [text] to send it no attachments. Must include text.",
@@ -82,10 +97,6 @@ const routingDefsTemplate = `{
       }
     },
     "allOf": [
-      {
-        "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
-        "then": { "required": ["base_url"] }
-      },
       { "$ref": "#/$defs/routingNeedsOpenRouter" },
       {
         "if":   { "properties": { "provider": { "const": "gemini_vertex" } } },
@@ -102,14 +113,14 @@ const routingDefsTemplate = `{
     ]
   },
   "routingNeedsOpenRouter": {
-    "description": "A routing block is OpenRouter's own fields, so a lane may declare one only when it is an openai_compatible binding whose base_url is an OpenRouter host. One clause for both lanes, so the chat tiers and the embeddings lane cannot come to disagree about which host that is. The pattern is case-insensitive because URL hosts are, and the parser lowercases the host before it compares.",
+    "description": "A routing block is OpenRouter's own fields, so a lane may declare one only when it is an openai_compatible binding, and a base_url it still writes must be an OpenRouter host. One clause for both lanes, so the chat tiers and the embeddings lane cannot come to disagree about which host that is. The host usually lives on providers.openai_compatible, which this schema cannot follow; the parser checks the resolved host. The pattern is case-insensitive because URL hosts are, and the parser lowercases the host before it compares.",
     "if": { "required": ["routing"] },
     "then": {
       "properties": {
         "provider": { "const": "openai_compatible" },
         "base_url": { "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://([^/]*\\.)?[Oo][Pp][Ee][Nn][Rr][Oo][Uu][Tt][Ee][Rr]\\.[Aa][Ii](:[0-9]+)?(/|$)" }
       },
-      "required": ["provider", "base_url"]
+      "required": ["provider"]
     }
   },
   "upstreamRouting": {
@@ -172,16 +183,12 @@ const routingDefsTemplate = `{
         "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini", "gemini_vertex"]
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
-      "base_url": { "type": "string", "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default." },
+      "base_url": { "type": "string", "description": "A separate embeddings server for this lane alone (vLLM serves one model per process). Empty ⇒ the provider's host (providers.<name>.base_url)." },
       "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only, and REQUIRED there: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4. The host follows from it, so gemini_vertex takes no base_url." },
       "dimensions": { "type": "integer", "minimum": 0, "maximum": 2000, "description": "Vector width the provider is asked to emit. Optional; 0 or omitted defaults to 1536." },
       "routing": { "$ref": "#/$defs/embeddingsRouting" }
     },
     "allOf": [
-      {
-        "if":   { "properties": { "provider": { "const": "openai_compatible" } } },
-        "then": { "required": ["base_url"] }
-      },
       { "$ref": "#/$defs/routingNeedsOpenRouter" },
       {
         "if":   { "properties": { "provider": { "const": "gemini_vertex" } } },
@@ -204,14 +211,8 @@ const routingDefsTemplate = `{
         "enum": [__DECISION_PROVIDERS__]
       },
       "model":    { "type": "string", "minLength": 1, "description": "The decision model id, e.g. jev-1.13.0 on jev, or typesafe/jev-1.13 on OpenRouter." },
-      "base_url": { "type": "string", "description": "The FULL decision endpoint URL, posted to as written: nothing is appended. REQUIRED for jev_compatible (e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone). Empty on jev ⇒ TypeSafe's own endpoint." }
-    },
-    "allOf": [
-      {
-        "if":   { "properties": { "provider": { "const": "jev_compatible" } } },
-        "then": { "required": ["base_url"] }
-      }
-    ]
+      "base_url": { "type": "string", "description": "Deprecated here: set the endpoint on providers.<name>.base_url. Still accepted (the FULL decision endpoint URL, posted to as written) and lifted onto the provider when it names none." }
+    }
   },
   "embeddingsRouting": {
     "description": "Which of a broker's upstream hosts may read the text this lane embeds. Only the host-selection fields: the lane embeds the same text the chat tiers send, so a residency pin must reach it too, and the other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to leave the broker's own choice of host.",

@@ -440,6 +440,27 @@
         "decisions": {
           "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, on a certified site, and falls back to its ladder whenever the answer does not stand.",
           "$ref": "#/$defs/decisionsBinding"
+        },
+        "providers": {
+          "description": "Provider name to what that provider is configured with, independent of any lane: its host and the broker's upstream pins. Every lane binding a provider reads them from here, so a host is written once. A lane's own base_url or pins (the older spelling) are lifted here when the provider names none.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/providerSettings"
+          }
+        }
+      }
+    },
+    "providerSettings": {
+      "description": "One provider's configuration. An entry no lane binds is held to its shape only.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "description": "Where the provider is reached. REQUIRED on openai_compatible while a lane binds it (the vendor host root, NO /v1), and on jev_compatible while the decisions lane binds it (the FULL decision endpoint, posted to as written). Empty ⇒ the adapter's compiled default."
+        },
+        "upstream": {
+          "$ref": "#/$defs/embeddingsRouting"
         }
       }
     },
@@ -469,7 +490,7 @@
         },
         "base_url": {
           "type": "string",
-          "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default."
+          "description": "Deprecated here: set the host on providers.\u003cname\u003e.base_url. Still accepted, and lifted onto the provider when it names none."
         },
         "location": {
           "type": "string",
@@ -505,20 +526,6 @@
         }
       },
       "allOf": [
-        {
-          "if": {
-            "properties": {
-              "provider": {
-                "const": "openai_compatible"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "base_url"
-            ]
-          }
-        },
         {
           "$ref": "#/$defs/routingNeedsOpenRouter"
         },
@@ -575,7 +582,7 @@
       ]
     },
     "routingNeedsOpenRouter": {
-      "description": "A routing block is OpenRouter's own fields, so a lane may declare one only when it is an openai_compatible binding whose base_url is an OpenRouter host. One clause for both lanes, so the chat tiers and the embeddings lane cannot come to disagree about which host that is. The pattern is case-insensitive because URL hosts are, and the parser lowercases the host before it compares.",
+      "description": "A routing block is OpenRouter's own fields, so a lane may declare one only when it is an openai_compatible binding, and a base_url it still writes must be an OpenRouter host. One clause for both lanes, so the chat tiers and the embeddings lane cannot come to disagree about which host that is. The host usually lives on providers.openai_compatible, which this schema cannot follow; the parser checks the resolved host. The pattern is case-insensitive because URL hosts are, and the parser lowercases the host before it compares.",
       "if": {
         "required": [
           "routing"
@@ -591,8 +598,7 @@
           }
         },
         "required": [
-          "provider",
-          "base_url"
+          "provider"
         ]
       }
     },
@@ -703,7 +709,7 @@
         },
         "base_url": {
           "type": "string",
-          "description": "Endpoint override. REQUIRED for openai_compatible (the vendor host root, NO /v1). Empty ⇒ provider default."
+          "description": "A separate embeddings server for this lane alone (vLLM serves one model per process). Empty ⇒ the provider's host (providers.\u003cname\u003e.base_url)."
         },
         "location": {
           "type": "string",
@@ -721,20 +727,6 @@
         }
       },
       "allOf": [
-        {
-          "if": {
-            "properties": {
-              "provider": {
-                "const": "openai_compatible"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "base_url"
-            ]
-          }
-        },
         {
           "$ref": "#/$defs/routingNeedsOpenRouter"
         },
@@ -796,25 +788,9 @@
         },
         "base_url": {
           "type": "string",
-          "description": "The FULL decision endpoint URL, posted to as written: nothing is appended. REQUIRED for jev_compatible (e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone). Empty on jev ⇒ TypeSafe's own endpoint."
+          "description": "Deprecated here: set the endpoint on providers.\u003cname\u003e.base_url. Still accepted (the FULL decision endpoint URL, posted to as written) and lifted onto the provider when it names none."
         }
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "provider": {
-                "const": "jev_compatible"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "base_url"
-            ]
-          }
-        }
-      ]
+      }
     },
     "embeddingsRouting": {
       "description": "Which of a broker's upstream hosts may read the text this lane embeds. Only the host-selection fields: the lane embeds the same text the chat tiers send, so a residency pin must reach it too, and the other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to leave the broker's own choice of host.",

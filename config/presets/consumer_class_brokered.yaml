@@ -60,6 +60,9 @@ seeds:
     # promise — the endpoints it reaches at fp8 are DeepInfra's and Parasail's,
     # pinned by precision and not by region.
     profile: cloud_frontier
+    providers:
+      openai_compatible:
+        base_url: https://openrouter.ai/api
     tiers:
       # Every rung is sized to a hardware class an operator can check against
       # their own box. The Q4 footprints are for the eventual Ollama run; they
@@ -76,7 +79,6 @@ seeds:
       local_small:
         provider: openai_compatible
         model: google/gemma-4-26b-a4b-it   # ~16GB at Q4; MoE, ~4B active
-        base_url: https://openrouter.ai/api
         # An anchor, reused by every tier below: the serving preferences are one
         # decision about what a consumer box looks like, so they are written
         # once. Copy the WHOLE seeds block — lifting a single tier out of this
@@ -112,7 +114,6 @@ seeds:
       cheap_cloud:
         provider: openai_compatible
         model: google/gemma-4-31b-it       # ~19GB at Q4; one 24GB card / 32GB Mac
-        base_url: https://openrouter.ai/api
         routing: *consumer_serving
       # premium leads 6 tasks and is the rung that decides whether any of this
       # works. corpus_ask and site_extract drop every claim whose quote is not
@@ -128,7 +129,6 @@ seeds:
       premium:
         provider: openai_compatible
         model: google/gemma-4-31b-it
-        base_url: https://openrouter.ai/api
         routing: *consumer_serving
       # No ladder leads at frontier (backend/api/ai-tasks.yaml), so this is here
       # only so a task reaching for the top rung finds something bound. It is
@@ -137,7 +137,6 @@ seeds:
       frontier:
         provider: openai_compatible
         model: google/gemma-4-31b-it
-        base_url: https://openrouter.ai/api
         routing: *consumer_serving
     # The embed lane is the one place this preset is NOT consumer-class, and it
     # is the broker's fault rather than a choice: it fronts no open-weight
@@ -151,10 +150,9 @@ seeds:
     # embedding model means re-embedding everything already filed, whatever the
     # width says. Equal width saves a migration, not a re-embed.
     #
-    # No `routing:` block: the parser refuses one on the embed lane, since a
-    # single forward pass has no latency tail to bound.
+    # No serving preferences: the parser refuses them on the embed lane, since
+    # a single forward pass has no latency tail to bound.
     embeddings:
       provider: openai_compatible
       model: mistralai/mistral-embed-2312
-      base_url: https://openrouter.ai/api
       dimensions: 1024
