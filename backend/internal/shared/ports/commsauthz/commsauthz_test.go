@@ -127,7 +127,6 @@ func TestOnlySubjectServingCategoriesPassASuppression(t *testing.T) {
 // and a vouch has no lawful message to unlock there. Asserting the whole set
 // (not a sample) means the day ServesTheSubject moves, this door's membership
 // moves with it.
-// ServesTheSubject moves, this door's membership moves with it.
 func TestKnownForOverrideIsTheResolvableSetMinusSubjectServing(t *testing.T) {
 	for _, c := range Categories() {
 		want := c.Valid() && !c.ServesTheSubject()
