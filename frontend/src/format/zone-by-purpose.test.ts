@@ -154,6 +154,14 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The booking API fixture supplies the host’s effective working-hours timezone independently of the viewer’s zone, so the form can show the actual calendar policy.",
   },
   {
+    file: "screens/booking-guest-month.test.ts",
+    why: "A month is read in the guest's zone, and only a zone with a fall-back clock change makes it longer than the server's 31-day bound.",
+  },
+  {
+    file: "screens/booking-picker.test.ts",
+    why: "The week grid's empty working days depend on the host's zone against the reader's, so the test pins both to make them disagree.",
+  },
+  {
     file: "screens/book.test.tsx",
     why: "The guest deliberately selects Bangkok and the test verifies that its slot labels follow that chosen zone rather than the browser default.",
   },

@@ -1,29 +1,54 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { CalendarDays, Clock, MapPin } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { navigate } from "../app/router";
-import {
-  Button,
-  Checkbox,
-  Field,
-  Textarea,
-  TextInput,
-} from "../design-system/atoms";
+import { Calendar, type ISODay } from "../design-system/calendar";
 import { CompanyLogo } from "../design-system/companylogo";
-import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { MeetingSlots } from "../design-system/meetingslots";
 import { Panel, PanelBody } from "../design-system/panel";
-import { formatDateTime, formatNumber } from "../format/format";
-import { dayInZone, startOfDayInZone, viewerZone } from "../format/timezone";
+import {
+  formatDateTime,
+  formatDayLong,
+  formatTimeOfDay,
+} from "../format/format";
+import { dayInZone, viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { BookingFooter, BookingZone, useBookingIntent } from "./booking-common";
-
+import { BookingFooter, useBookingIntent } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
-import { QueryGate, throwProblem } from "./common";
+import {
+  dayRefusal,
+  dayWindow,
+  type GuestSlot,
+  isoMonth,
+  monthDays,
+  monthOf,
+  monthWindow,
+  pastKnown,
+  readMonth,
+} from "./booking-guest-month";
+import {
+  type GuestDetails,
+  GuestDetailsForm,
+  GuestHost,
+  GuestUnavailable,
+  PreviewNotice,
+  videoAppOf,
+} from "./booking-guest-parts";
+import { QueryGate, type QueryLike, throwProblem } from "./common";
+import "./booking-guest.css";
+
+type Availability = components["schemas"]["MeetingAvailability"];
 
 export const PUBLIC_BOOKING_CONSENT = { policy_version: "2026-07" };
+const NO_DETAILS: GuestDetails = {
+  name: "",
+  email: "",
+  topic: "",
+  consent: false,
+};
+
 export function BookingGuestScreen({
   hostSlug,
   proposalToken,
@@ -33,15 +58,15 @@ export function BookingGuestScreen({
   const { locale } = useLocale();
   const [zone, setZone] = useState(viewerZone);
   const intent = useBookingIntent();
-  const [from, setFrom] = useState(() => new Date().toISOString());
-  const [selected, setSelected] = useState<{
-    start: string;
-    end: string;
-  } | null>(null);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [topic, setTopic] = useState("");
-  const [consent, setConsent] = useState(false);
+  const client = useQueryClient();
+  const [now] = useState(() => Date.now());
+  const [month, setMonth] = useState(() => {
+    const today = new Date(now);
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+  const [pickedDay, setPickedDay] = useState<ISODay | "">("");
+  const [selected, setSelected] = useState<GuestSlot | null>(null);
+  const [details, setDetails] = useState(NO_DETAILS);
   const profile = useQuery({
     queryKey: preview
       ? ["scheduling-profile"]
@@ -51,6 +76,7 @@ export function BookingGuestScreen({
       host_name: value.host_name ?? "",
       company_name: value.company_name ?? "",
       proposal: "proposal" in value ? value.proposal : null,
+      video_app: videoAppOf(value, preview),
     }),
     queryFn: async () => {
       if (preview) {
@@ -77,69 +103,45 @@ export function BookingGuestScreen({
     preview &&
     profile.isSuccess &&
     !("provider" in profile.data && profile.data.provider);
-  const slots = useQuery({
-    queryKey: [
-      preview ? "reliable-availability" : "public-booking-slots",
-      preview ? "booking-preview" : hostSlug,
-      proposalToken,
-      from,
-      locale,
-      preview ? profile.data : undefined,
-    ],
-    enabled:
-      profile.isSuccess && !needsCalendar && (preview || profile.data.enabled),
-    queryFn: async () => {
-      if (preview) {
-        const { data, error } = await api.GET("/availability", {
-          params: {
-            query: {
-              from,
-              to: new Date(
-                new Date(from).getTime() + 7 * 86400000,
-              ).toISOString(),
-              reliable: true,
-            },
-          },
-        });
-        if (error) throwBookingProblem(error, t);
-        return data;
-      }
-      if (proposalToken) {
-        const { data, error } = await api.GET(
-          "/public/proposal/{token}/availability",
-          {
-            params: {
-              path: { token: proposalToken },
-              query: {
-                from,
-                to: new Date(
-                  new Date(from).getTime() + 7 * 86400000,
-                ).toISOString(),
-              },
-            },
-          },
-        );
-        if (error) throwBookingProblem(error, t);
-        return data;
-      }
-
+  const visible = monthWindow(month, zone, now);
+  const read = async (from: string, to: string) => {
+    if (preview) {
+      const { data, error } = await api.GET("/availability", {
+        params: { query: { from, to, reliable: true } },
+      });
+      if (error) throwBookingProblem(error, t);
+      return data;
+    }
+    if (proposalToken) {
       const { data, error } = await api.GET(
-        "/public/booking/{host_slug}/availability",
-        {
-          params: {
-            path: { host_slug: hostSlug },
-            query: {
-              from,
-              to: new Date(
-                new Date(from).getTime() + 7 * 86400000,
-              ).toISOString(),
-            },
-          },
-        },
+        "/public/proposal/{token}/availability",
+        { params: { path: { token: proposalToken }, query: { from, to } } },
       );
       if (error) throwBookingProblem(error, t);
       return data;
-    },
+    }
+    const { data, error } = await api.GET(
+      "/public/booking/{host_slug}/availability",
+      { params: { path: { host_slug: hostSlug }, query: { from, to } } },
+    );
+    if (error) throwBookingProblem(error, t);
+    return data;
+  };
+  const readKey = [
+    preview ? "reliable-availability" : "public-booking-slots",
+    preview ? "booking-preview" : hostSlug,
+    proposalToken,
+    preview ? profile.data : undefined,
+  ];
+  const readable =
+    profile.isSuccess && !needsCalendar && (preview || profile.data.enabled);
+  const slots = useQuery({
+    queryKey: [...readKey, visible?.from, visible?.to, locale],
+    enabled: readable,
+    // A month already over has no times left to offer, and says so rather
+    // than asking the server about the past.
+    queryFn: () =>
+      visible ? readMonth(read, visible) : { slots: [], truncated: false },
   });
   const book = useMutation({
     mutationFn: async (input: {
@@ -191,68 +193,41 @@ export function BookingGuestScreen({
         });
     },
     onError: () => {
-      void slots.refetch();
+      void client.invalidateQueries({ queryKey: readKey });
       void profile.refetch();
     },
   });
+  const days = slots.data ? monthDays(slots.data, zone) : undefined;
+  const monthKey = isoMonth(month);
+  const day = pickedDay?.startsWith(monthKey)
+    ? pickedDay
+    : (days?.free.find((free) => free.startsWith(monthKey)) ?? "");
+  const today = dayInZone(now, zone);
+  const { dayRead, dayTimes } = useDayTimes({
+    day,
+    days,
+    slots,
+    readKey,
+    readable,
+    read: (window) => readMonth(read, window),
+    window: (late) => dayWindow(late, zone, now),
+  });
+  const pickDay = (next: ISODay) => {
+    setPickedDay(next);
+    setSelected(null);
+    if (!next.startsWith(monthKey)) setMonth(monthOf(next));
+  };
   const publicUnavailable = !preview && !profile.data?.enabled;
-  const previewNotice = t(
-    profile.data?.enabled
-      ? "scheduling.previewActive"
-      : "scheduling.previewPaused",
-  );
   return (
     <div className="book-guest-page">
       <div className="book-guest-column">
         <QueryGate pendingLabel={t("common.loading")} query={profile}>
           {(host) =>
             publicUnavailable ? (
-              <Panel>
-                <PanelBody>
-                  {host.proposal?.meeting?.management_token ? (
-                    <>
-                      <Heading as="h1" size="large">
-                        {host.proposal.meeting.subject}
-                      </Heading>
-                      <p>
-                        {formatDateTime(
-                          host.proposal.meeting.start,
-                          locale,
-                          zone,
-                        )}
-                      </p>
-                      <p className="t-caption">
-                        {t("scheduling.savedRequest")}
-                      </p>
-                      <Button
-                        variant="primary"
-                        onClick={() =>
-                          navigate({
-                            screen: "book",
-                            id: `manage-${host.proposal?.meeting?.management_token}`,
-                          })
-                        }
-                      >
-                        {t("scheduling.openMeeting")}
-                      </Button>
-                    </>
-                  ) : (
-                    <p>{t("scheduling.unavailable")}</p>
-                  )}
-                </PanelBody>
-              </Panel>
+              <GuestUnavailable host={host} zone={zone} />
             ) : (
               <>
-                {preview && (
-                  <Panel title={t("scheduling.preview")} tone="accent">
-                    <PanelBody>
-                      <p>{previewNotice}</p>
-                      <a href="#/settings/meetings">
-                        {t("scheduling.openSettings")}
-                      </a>
-                    </PanelBody>
-                  </Panel>
-                )}
+                {preview && <PreviewNotice enabled={host.enabled} />}
                 {host.company_name && (
                   <header className="book-brand">
                     <CompanyLogo
@@ -268,187 +243,88 @@ export function BookingGuestScreen({
                 )}
                 <Panel>
                   <PanelBody>
-                    <div className="book-guest-grid">
-                      <section className="book-host">
-                        <p className="t-caption">{host.host_name}</p>
-                        <Heading as="h1" size="large">
-                          {host.title}
-                        </Heading>
-                        <p>
-                          <Clock aria-hidden />
-                          {t("co.recent.minutes", {
-                            count: formatNumber(host.duration_minutes, locale),
-                          })}
-                        </p>
-                        <p>
-                          <MapPin aria-hidden />
-                          {host.location}
-                        </p>
-                        <p>
-                          <CalendarDays aria-hidden />
-                          {zone}
-                        </p>
-                      </section>
-                      <section className="book-form">
-                        <Heading as="h2" size="medium">
-                          {t("scheduling.chooseTime")}
-                        </Heading>
+                    <div className="bookguest-grid">
+                      <GuestHost
+                        host={host}
+                        videoApp={host.video_app}
+                        selected={selected}
+                        zone={zone}
+                        onZone={setZone}
+                      >
                         {host.proposal && (
                           <>
                             <p>{host.proposal.description}</p>
                             <p className="t-caption">
                               {t("scheduling.personalGuest")}
                             </p>
-                            {host.proposal.options.length > 0 && (
-                              <MeetingSlots
-                                slots={host.proposal.options.map((slot) => ({
-                                  ...slot,
-                                  label: formatDateTime(
-                                    slot.start,
-                                    locale,
-                                    zone,
-                                  ),
-                                }))}
-                                selected={selected?.start}
-                                onSelect={setSelected}
-                                empty={t("scheduling.noTimes")}
-                              />
-                            )}
                           </>
                         )}
-                        <BookingZone value={zone} onChange={setZone} />
-                        <Field label={t("scheduling.date")}>
-                          {(control) => (
-                            <TextInput
-                              {...control}
-                              type="date"
-                              value={dayInZone(new Date(from).getTime(), zone)}
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  setFrom(
-                                    startOfDayInZone(e.target.value, zone),
-                                  );
-                                  setSelected(null);
-                                }
-                              }}
-                            />
-                          )}
-                        </Field>
-                        {needsCalendar ? (
-                          <p className="t-caption">
-                            {t("scheduling.previewCalendarSetup")}
-                          </p>
-                        ) : (
-                          <QueryGate
-                            pendingLabel={t("common.loading")}
-                            query={slots}
-                          >
-                            {(value) => (
-                              <>
-                                <MeetingSlots
-                                  slots={value.slots.map((slot) => ({
-                                    ...slot,
-                                    label: formatDateTime(
-                                      slot.start,
-                                      locale,
-                                      zone,
-                                    ),
-                                  }))}
-                                  selected={selected?.start}
-                                  onSelect={setSelected}
-                                  empty={t("scheduling.noTimes")}
-                                />
-                                {value.truncated && (
-                                  <Button
-                                    onClick={() => {
-                                      const last = value.slots.at(-1);
-                                      if (last) {
-                                        setFrom(
-                                          new Date(
-                                            new Date(last.start).getTime() +
-                                              15 * 60000,
-                                          ).toISOString(),
-                                        );
-                                        setSelected(null);
-                                      }
-                                    }}
-                                  >
-                                    {t("scheduling.next")}
-                                  </Button>
-                                )}
-                              </>
-                            )}
-                          </QueryGate>
-                        )}
-                        <form
-                          className="book-form"
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            if (!preview && selected && consent)
-                              book.mutate({
-                                slug: hostSlug,
-                                name,
-                                email,
-                                topic,
-                                ...selected,
-                                wording: t("book.consentWording"),
-                              });
+                      </GuestHost>
+                      <section className="bookguest-month">
+                        <Heading as="h2" size="medium">
+                          {t("scheduling.pickDay")}
+                        </Heading>
+                        <Calendar
+                          month={month}
+                          onMonthChange={(next) => {
+                            setMonth(next);
+                            setPickedDay("");
+                            setSelected(null);
                           }}
-                        >
-                          {!proposalToken && (
-                            <>
-                              <Field label={t("book.name")}>
-                                {(control) => (
-                                  <TextInput
-                                    {...control}
-                                    required
-                                    autoComplete="name"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                  />
-                                )}
-                              </Field>
-                              <Field label={t("book.email")}>
-                                {(control) => (
-                                  <TextInput
-                                    {...control}
-                                    required
-                                    type="email"
-                                    autoComplete="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                  />
-                                )}
-                              </Field>
-                              <Field label={t("scheduling.guestAgenda")}>
-                                {(control) => (
-                                  <Textarea
-                                    {...control}
-                                    value={topic}
-                                    onChange={(e) => setTopic(e.target.value)}
-                                  />
-                                )}
-                              </Field>
-                            </>
-                          )}
-                          <Checkbox
-                            checked={consent}
-                            onChange={(event) =>
-                              setConsent(event.target.checked)
-                            }
-                            label={t("book.consentWording")}
+                          selected={day}
+                          onSelect={pickDay}
+                          today={new Date(now)}
+                          locale={locale}
+                          refusal={(candidate) => {
+                            const why = dayRefusal(
+                              candidate,
+                              today,
+                              monthKey,
+                              days,
+                            );
+                            if (why === "past") return t("scheduling.dayPast");
+                            if (why === "full") return t("scheduling.dayFull");
+                            return undefined;
+                          }}
+                        />
+                      </section>
+                      <section className="bookguest-times">
+                        {selected ? (
+                          <GuestDetailsForm
+                            selected={selected}
+                            zone={zone}
+                            personal={Boolean(proposalToken)}
+                            details={details}
+                            onDetails={setDetails}
+                            onChangeTime={() => setSelected(null)}
+                            refused={preview}
+                            pending={book.isPending}
+                            error={book.error}
+                            onSubmit={() => {
+                              if (!preview && details.consent)
+                                book.mutate({
+                                  slug: hostSlug,
+                                  name: details.name,
+                                  email: details.email,
+                                  topic: details.topic,
+                                  ...selected,
+                                  wording: t("book.consentWording"),
+                                });
+                            }}
                           />
-                          <Button
-                            type="submit"
-                            variant="primary"
-                            disabled={
-                              preview || !selected || !consent || book.isPending
-                            }
-                          >
-                            {t("scheduling.book")}
-                          </Button>
-                          <ErrorLine error={book.error} />
-                        </form>
+                        ) : (
+                          <GuestTimes
+                            offered={host.proposal?.options ?? []}
+                            day={day}
+                            days={days}
+                            times={dayTimes}
+                            monthKey={monthKey}
+                            zone={zone}
+                            needsCalendar={needsCalendar}
+                            slots={dayRead}
+                            onSelect={setSelected}
+                          />
+                        )}
                       </section>
                     </div>
                   </PanelBody>
@@ -460,5 +336,109 @@ export function BookingGuestScreen({
         <BookingFooter />
       </div>
     </div>
+  );
+}
+
+// A busy month's read stops after a bounded number of pages; a day past where
+// it stopped is still open, and its times are read on their own.
+function useDayTimes({
+  day,
+  days,
+  slots,
+  readKey,
+  readable,
+  read,
+  window,
+}: Readonly<{
+  day: ISODay | "";
+  days: ReturnType<typeof monthDays> | undefined;
+  slots: QueryLike<Availability>;
+  readKey: readonly unknown[];
+  readable: boolean;
+  read: (
+    window: Readonly<{ from: string; to: string }>,
+  ) => Promise<Availability>;
+  window: (day: ISODay) => Readonly<{ from: string; to: string }>;
+}>) {
+  const lateDay = pastKnown(day, days) ? day : "";
+  const lateSlots = useQuery({
+    queryKey: [...readKey, "day", lateDay, lateDay && window(lateDay).from],
+    enabled: readable && lateDay !== "",
+    queryFn: () =>
+      lateDay ? read(window(lateDay)) : { slots: [], truncated: false },
+  });
+  if (!lateDay) return { dayRead: slots, dayTimes: days?.byDay.get(day) ?? [] };
+  return { dayRead: lateSlots, dayTimes: lateSlots.data?.slots ?? [] };
+}
+
+/**
+ * The right-hand column before a time is picked: the times a personal
+ * proposal offers first, then the chosen day's free times.
+ */
+function GuestTimes({
+  offered,
+  day,
+  days,
+  times,
+  monthKey,
+  zone,
+  needsCalendar,
+  slots,
+  onSelect,
+}: Readonly<{
+  offered: readonly GuestSlot[];
+  day: ISODay | "";
+  days: ReturnType<typeof monthDays> | undefined;
+  times: readonly GuestSlot[];
+  monthKey: string;
+  zone: string;
+  needsCalendar: boolean;
+  slots: QueryLike<unknown>;
+  onSelect: (slot: GuestSlot) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const monthHasTimes = days?.free.some((free) => free.startsWith(monthKey));
+  return (
+    <>
+      {offered.length > 0 && (
+        <div className="bookguest-suggested">
+          <Heading as="h2" size="medium">
+            {t("scheduling.suggestedTimes")}
+          </Heading>
+          <MeetingSlots
+            slots={offered.map((slot) => ({
+              ...slot,
+              label: formatDateTime(slot.start, locale, zone),
+            }))}
+            onSelect={onSelect}
+            empty={t("scheduling.noTimes")}
+          />
+        </div>
+      )}
+      <Heading as="h2" size="medium">
+        {day ? formatDayLong(day, locale, zone) : t("scheduling.chooseTime")}
+      </Heading>
+      {needsCalendar ? (
+        <p className="t-caption">{t("scheduling.previewCalendarSetup")}</p>
+      ) : (
+        <QueryGate pendingLabel={t("common.loading")} query={slots}>
+          {() => (
+            <MeetingSlots
+              slots={times.map((slot) => ({
+                ...slot,
+                label: formatTimeOfDay(slot.start, locale, zone),
+              }))}
+              onSelect={onSelect}
+              empty={t(
+                monthHasTimes
+                  ? "scheduling.noTimesDay"
+                  : "scheduling.noTimesMonth",
+              )}
+            />
+          )}
+        </QueryGate>
+      )}
+    </>
   );
 }

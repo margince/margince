@@ -799,7 +799,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 | `management_hash` | `text` | yes | Required `text`. |
 | `management_ref` | `text` | yes | Required `text`. |
 | `next_attempt_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
-| `provider` | `text` | yes | One of `gcal`, `graphcal`. |
+| `provider` | `text` | yes | The calendar provider that holds the event. |
 | `public_intent` | `jsonb` |  | Optional `jsonb`. |
 | `receipt` | `jsonb` |  | Optional `jsonb`. |
 | `reminder_status` | `text` | yes | One of `off`, `pending`, `queued`, `unavailable`. |

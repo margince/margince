@@ -232,6 +232,85 @@ export const de = {
   "reporting.redacted": "Datenschutzbereinigung angewandt",
   "reporting.withheld":
     "Einige Beiträge sind aufgrund deiner aktuellen Berechtigungen ausgeblendet.",
+  "scheduling.proposeHelp":
+    "Biete zwei oder drei Zeiten per E-Mail an. Nichts wird blockiert, bis eine gewählt ist.",
+  "scheduling.inviteHelp":
+    "Die Zeit steht schon fest. Die Kalendereinladung geht sofort raus.",
+  "scheduling.linkHelp":
+    "Dein Kontakt wählt eine freie Zeit. Der Link bucht einmal und läuft nach 7 Tagen ab.",
+  "scheduling.pickOffer": "Wähle zwei oder drei Zeiten zum Anbieten",
+  "scheduling.pickAgreed": "Wähle die vereinbarte Zeit",
+  "scheduling.guestPicks": "{name} wählt die Zeit",
+  "scheduling.guestPicksHelp":
+    "Du sendest einen persönlichen Link. Dein Kontakt sieht deine freien Zeiten und bucht eine.",
+  "scheduling.guest": "Dein Gast",
+  "scheduling.length": "Dauer",
+  "scheduling.minutes_one": "{count} Min.",
+  "scheduling.minutes_other": "{count} Min.",
+  "scheduling.previousWeek": "Vorherige Woche",
+  "scheduling.nextWeek": "Nächste Woche",
+  "scheduling.noFreeTime": "Keine freie Zeit",
+  "scheduling.review": "Prüfen",
+  "scheduling.details": "Details",
+  "scheduling.timesToOffer": "Angebotene Zeiten",
+  "scheduling.agreedTime": "Vereinbarte Zeit",
+  "scheduling.pickedOf_one": "{count} von 3",
+  "scheduling.pickedOf_other": "{count} von 3",
+  "scheduling.pickOfferEmpty": "Wähle 2 oder 3 Zeiten im Kalender.",
+  "scheduling.pickAgreedEmpty": "Wähle die vereinbarte Zeit im Kalender.",
+  "scheduling.removeTime": "{time} entfernen",
+  "scheduling.reviewTimes_one": "E-Mail prüfen · {count} Zeit",
+  "scheduling.reviewTimes_other": "E-Mail prüfen · {count} Zeiten",
+  "scheduling.pickTwo": "Wähle mindestens 2 Zeiten",
+  "scheduling.pickOne": "Wähle eine Zeit",
+  "scheduling.sendInviteAt": "Einladung senden · {time}",
+  "scheduling.createLinkReview": "Link erstellen und E-Mail prüfen",
+  "scheduling.connectFirst": "Verbinde zuerst einen Kalender",
+  "scheduling.proposeNote":
+    "Diese Zeiten bleiben in deinem Kalender frei, bis eine gewählt ist. Margince prüft vor der Buchung erneut.",
+  "scheduling.inviteNote":
+    "Wird aus deinem Kalender gesendet. Du siehst, wann der Kalender sie annimmt; die Antwort des Gasts kommt separat.",
+  "scheduling.linkNote":
+    "Du prüfst die E-Mail vor dem Versand. Der Link bucht einmal und läuft nach 7 Tagen ab.",
+  "scheduling.videoGoogle": "Google-Meet-Link hinzufügen",
+  "scheduling.videoTeams": "Microsoft-Teams-Link hinzufügen",
+  "scheduling.videoGeneric": "Videocall-Link hinzufügen",
+  "scheduling.videoHint": "Wird mit der Kalendereinladung erstellt.",
+  "scheduling.linkReady": "Link erstellt · läuft ab am {date}",
+  "scheduling.dayPast": "vergangen",
+  "scheduling.dayFull": "nichts frei",
+  "scheduling.linkReplaced":
+    "Du hast den Vorschlag geändert, deshalb bekommt er einen neuen Link. Der vorherige bleibt offen, bis du ihn unter „Termine“ beim Kontakt zurückziehst.",
+  "scheduling.bookWith": "Termin mit {name} buchen",
+  "scheduling.setupTitle":
+    "Buchung fertig einrichten · {done} von {total} erledigt",
+  "scheduling.stepCalendar": "Ein Kalender, der Einladungen senden kann",
+  "scheduling.stepHours": "Deine Zeiten und Zeitzone",
+  "scheduling.stepLink": "Dein Buchungslink ist aktiv",
+  "scheduling.stepDone": "Erledigt",
+  "scheduling.stepOpen": "Noch offen",
+  "scheduling.calendarTitle": "Kalender",
+  "scheduling.calendarIntro":
+    "Von hier gehen Einladungen raus, und hier wird deine belegte Zeit gelesen.",
+  "scheduling.availabilityTitle": "Verfügbarkeit",
+  "scheduling.defaultsTitle": "Standards für Termine",
+  "scheduling.defaultsIntro":
+    "Gilt für jeden neuen Termin. Beim Buchen kannst du sie ändern.",
+  "scheduling.videoDefaultGoogle":
+    "Neuen Terminen einen Google-Meet-Link hinzufügen",
+  "scheduling.videoDefaultTeams":
+    "Neuen Terminen einen Microsoft-Teams-Link hinzufügen",
+  "scheduling.videoDefaultGeneric":
+    "Neuen Terminen einen Videocall-Link hinzufügen",
+  "scheduling.videoDefaultHelp":
+    "Wird mit jeder Kalendereinladung erstellt, auch bei Buchungen über deinen Link. Beim Buchen kannst du ihn für einen einzelnen Termin abschalten.",
+  "scheduling.videoTeamsHelp":
+    "Benötigt ein Microsoft-365-Geschäfts- oder Schulkonto.",
+  "scheduling.locationFallback": "Gilt für Termine ohne Videocall.",
+  "scheduling.unsaved": "Du hast ungespeicherte Änderungen",
+  "scheduling.discard": "Verwerfen",
+  "scheduling.brand": "Firmenname und Logo",
+  "scheduling.copyBookingLink": "Buchungslink kopieren",
   "scheduling.back": "Zurück zu Margince",
   "scheduling.prepare": "Auf diesen Termin vorbereiten",
   "scheduling.timezone": "Zeitzone",
@@ -364,7 +443,7 @@ export const de = {
   "scheduling.hostName": "Dein öffentlicher Name",
   "scheduling.subject": "Termintitel",
   "scheduling.location": "Ort oder Besprechungslink",
-  "scheduling.duration": "Dauer in Minuten",
+  "scheduling.duration": "Termindauer",
   "scheduling.noticeHelp":
     "24 Stunden bedeutet mindestens einen vollen Tag im Voraus.",
   "scheduling.anchorBrand":
@@ -408,6 +487,55 @@ export const de = {
   "scheduling.publicUrlMissing":
     "Richte eine öffentliche Adresse für diese Installation ein, bevor du Buchungslinks teilst.",
   "scheduling.new": "Termin buchen",
+  "scheduling.backLink": "Zurück",
+  "scheduling.deliveryTitle": "Zustellung",
+  "scheduling.step.created": "Einladung erstellt",
+  "scheduling.step.sending": "Wird an den Kalender gesendet…",
+  "scheduling.step.sendingChange": "Neue Zeit wird an den Kalender gesendet…",
+  "scheduling.step.sendingCancel": "Absage wird an den Kalender gesendet…",
+  "scheduling.step.accepted": "Kalender hat die Einladung angenommen",
+  "scheduling.step.refused": "Kalender hat die Einladung nicht angenommen",
+  "scheduling.step.canceled": "Im Kalender abgesagt",
+  "scheduling.step.reply": "Antwort des Gasts ausstehend",
+  "scheduling.fact.video": "Videoanruf",
+  "scheduling.fact.location": "Ort",
+  "scheduling.fact.reminder": "Erinnerung",
+  "scheduling.videoPending":
+    "Der Link erscheint, sobald der Kalender die Einladung annimmt.",
+  "scheduling.videoMissing":
+    "Der Kalender hat keinen Videolink hinzugefügt. Füge ihn in deinem Kalender hinzu.",
+  "scheduling.openGoogleCalendar": "In Google Kalender öffnen",
+  "scheduling.openOutlookCalendar": "In Outlook-Kalender öffnen",
+  "scheduling.attentionTitle":
+    "Der Kalender hat die Einladung nicht angenommen",
+  "scheduling.retryHelp":
+    "Ein neuer Versuch sendet dieselbe Einladung, der Gast erhält also keine zweite.",
+  "scheduling.videoApp": "{app} · Link in deiner Einladung",
+  "scheduling.pickDay": "Tag auswählen",
+  "scheduling.changeTime": "Zeit ändern",
+  "scheduling.confirmAt": "{day}, {time} bestätigen",
+  "scheduling.suggestedTimes": "Vorgeschlagene Zeiten",
+  "scheduling.noTimesDay":
+    "An diesem Tag sind keine Zeiten frei. Wähle einen anderen Tag.",
+  "scheduling.noTimesMonth":
+    "In diesem Monat sind keine Zeiten frei. Versuche den nächsten Monat.",
+  "contact.meetings.countUpcoming_one": "{count} anstehend",
+  "contact.meetings.countUpcoming_other": "{count} anstehend",
+  "contact.meetings.countWaiting_one": "{count} wartet auf Antwort",
+  "contact.meetings.countWaiting_other": "{count} warten auf Antwort",
+  "contact.meetings.copyBookingLink": "Meinen Buchungslink kopieren",
+  "contact.meetings.waitingOn": "Warten auf {name}",
+  "contact.meetings.waitingOnReply": "Warten auf Antwort",
+  "contact.meetings.proposed_one": "{count} Zeit vorgeschlagen · {subject}",
+  "contact.meetings.proposed_other": "{count} Zeiten vorgeschlagen · {subject}",
+  "contact.meetings.personalLink": "Persönlicher Link · {subject}",
+  "contact.meetings.sentExpires": "Gesendet am {sent} · gültig bis {expires}",
+  "contact.meetings.resend": "Erneut senden",
+  "contact.meetings.withdraw": "Zurückziehen",
+  "contact.meetings.withdrawTitle": "Diese Einladung zurückziehen?",
+  "contact.meetings.withdrawBody":
+    "Der Link funktioniert nicht mehr, und der Gast kann darüber nicht mehr buchen.",
+  "contact.meetings.withdrawConfirm": "Einladung zurückziehen",
 
   "aiAdmin.allowance": "Monatliches KI-Kontingent",
   "aiAdmin.pool":
@@ -9765,7 +9893,7 @@ export const de = {
   "contact.deals.untitled": "Deal ohne Titel",
   "contact.deals.noStage": "Noch keine Phase",
   "contact.meetings.upcoming": "Anstehend",
-  "contact.meetings.past": "Vergangene Termine",
+  "contact.meetings.past": "Stattgefundene Termine",
   "contact.meetings.noneBooked": "Keine anstehenden Termine.",
   "contact.meetings.noneLogged": "Keine Termine erfasst.",
   "contact.meetings.untitled": "Termin ohne Titel",

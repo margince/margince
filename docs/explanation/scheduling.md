@@ -48,9 +48,39 @@ calendar client can still race that final check.
 A calendar invitation requires a connected calendar with write permission.
 Existing read-only connections must be reconnected: Google adds
 `calendar.events.owned` and Microsoft uses `Calendars.ReadWrite`. The host chooses
-an owned Google calendar or an editable Microsoft calendar. Calendar connection consent explicitly includes event writes; mailbox connection consent is separate. Destination IDs are bound to the actual calendar, so reconnecting a different account cannot turn a missing event into a false cancellation. Lost calendar authority surfaces as **needs attention**. A video-call URL,
-telephone number or physical address can be entered as the location; this flow
-does not create a conferencing account or generate a new conferencing link.
+an owned Google calendar or an editable Microsoft calendar. Calendar connection consent explicitly includes event writes; mailbox connection consent is separate. Destination IDs are bound to the actual calendar, so reconnecting a different account cannot turn a missing event into a false cancellation. Lost calendar authority surfaces as **needs attention**.
+
+## Video call links
+
+A new meeting asks the host's calendar for a video call link unless the host
+turned **Add a video call link to new meetings** off. The setting is stored on
+the scheduling profile, and a profile saved before it existed reads as on. Each
+invitation and each personal proposal may override it for that meeting; a
+proposal's choice travels with it to the guest's acceptance, and a public
+booking follows the host's setting.
+
+Google Calendar receives a conference request keyed to the invitation's stable
+request ID, so a retried create cannot ask for a second Google Meet. For Outlook
+the calendar's own default online meeting provider is read and sent as
+`onlineMeetingProvider` with `isOnlineMeeting` set, because Graph applies none
+by itself: Microsoft Teams for a work or school account, and no link for a
+calendar that offers none. Only
+creation asks for a link; a reschedule keeps the conference the event already
+has, and never rewrites an Outlook event's body, where Outlook keeps the join
+details.
+
+The link is read from the provider's answer. Google may still be creating it,
+in which case the event is read again for a few seconds and no longer; a link
+still pending, or a read that fails, leaves the delivered meeting without a link
+rather than failing it. A calendar that
+creates no link has still delivered the invitation: the meeting is
+**confirmed** without a link, and the host can add one in the calendar. The
+public booking page names the calendar's video app (Google Meet or Microsoft
+Teams) whenever new meetings ask for a link, even for a calendar that turns out
+to offer none, and guest reads carry the join link but never which provider the
+host uses. A
+telephone number, physical address or an existing conferencing link can still
+be entered as the location.
 
 Creating an invitation commits one activity, its delivery command, audit and
 outbox evidence. The response is **pending**. The worker creates the provider
@@ -98,7 +128,7 @@ image without each host saving their settings again.
 Minimum notice is entered in hours and stored in the API's existing minutes.
 24 hours means a full day ahead, rather than a midnight cutoff. The location
 field accepts a physical address or an existing Google Meet, Zoom or Teams link;
-it does not generate a video conference or refer to the reusable booking page.
+a generated link comes from the video call setting above, never from the location.
 Replacing it revokes old public URLs; it does not revoke existing guests' private
 meeting-management links. A paused page stops new public bookings. Already issued personal proposals remain usable until their expiry; pause is not a recall of invitations. Profile
 responses contain only the public host name, company, logo, meeting details and
@@ -110,6 +140,10 @@ expire after seven days, or the last proposed time if sooner, and can be consume
 once. Offered times are proposals, not holds; accepting one rechecks availability.
 The guest may choose another available time. The host reviews the proposal email
 in the existing composer before sending it.
+
+A contact's open proposals list only the acting host's own links that are
+unused, unexpired and not withdrawn, newest first. Withdrawing archives the
+proposal's activity, and the guest's link stops resolving at once.
 
 Management and proposal tokens are random capabilities stored as hashes. A
 management and proposal URL also lives encrypted in the existing vault because the delivery

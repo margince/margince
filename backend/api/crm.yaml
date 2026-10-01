@@ -7744,6 +7744,33 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
   /scheduling/proposals:
+    get:
+      tags: [Activities]
+      operationId: listMeetingProposals
+      security:
+        - cookieAuth: []
+      summary: List the acting host's open proposals and personal links for one contact.
+      description: Open means not yet used, not expired and not withdrawn. Withdraw one by archiving its activity.
+      x-agent-access: human-only
+      parameters:
+        - { name: contact_id, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Open proposals, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/MeetingProposal' }
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
     post:
       tags: [Activities]
       operationId: createMeetingProposal
@@ -39144,6 +39171,7 @@ components:
         location: { type: string }
         duration_minutes: { type: integer }
         enabled: { type: boolean }
+        video_app: { type: string, enum: [google_meet, microsoft_teams], description: Present when new meetings get a video call link from the host's calendar. }
     SchedulingProfile:
       type: object
       required: [enabled, provider, calendar_id, duration_minutes, notice_minutes, horizon_days, buffer_minutes, title, location]
@@ -39165,6 +39193,7 @@ components:
         public_url: { type: string, readOnly: true }
         replace_link: { type: boolean, writeOnly: true }
         email_reminder: { type: boolean, description: Send one operational email reminder one hour before future meetings. }
+        video_call: { type: boolean, description: Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on. }
     MeetingInvitationRequest:
       type: object
       required: [contact_id, attendee_email, start, end, subject, location, description]
@@ -39176,6 +39205,7 @@ components:
         subject: { type: string, maxLength: 200 }
         location: { type: string, maxLength: 1000 }
         description: { type: string, maxLength: 5000 }
+        video_call: { type: boolean, description: Add a video call link from the connected calendar. Absent follows the host's profile setting. }
     MeetingAvailability:
       type: object
       required: [slots, truncated]
@@ -39199,6 +39229,7 @@ components:
         location: { type: string, maxLength: 1000 }
         description: { type: string, maxLength: 5000 }
         duration_minutes: { type: integer, minimum: 15, maximum: 480 }
+        video_call: { type: boolean, description: Add a video call link when the guest books. Absent follows the host's profile setting. }
         options:
           type: array
           maxItems: 3
@@ -39239,6 +39270,28 @@ components:
         calendar_url: { type: string }
         management_token: { type: string }
         reminder_status: { type: string, enum: [off, pending, queued, unavailable] }
+        provider: { type: string, enum: [gcal, graphcal], description: The calendar provider that holds the event. Omitted on guest reads. }
+        video_call: { type: boolean, description: A video call link was requested for this meeting. }
+        video_url: { type: string, description: "The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one." }
+    MeetingProposal:
+      type: object
+      required: [id, subject, duration_minutes, options, url, created_at, expires_at]
+      properties:
+        id: { type: string, format: uuid, description: The proposal's activity id; archive it to withdraw the link. }
+        subject: { type: string }
+        duration_minutes: { type: integer }
+        options:
+          type: array
+          description: The offered times. Empty for a personal link where the guest picks any open time.
+          items:
+            type: object
+            required: [start, end]
+            properties:
+              start: { type: string, format: date-time }
+              end: { type: string, format: date-time }
+        url: { type: string, description: "The personal link, for copying or resending." }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
     MeetingInvitationChange:
       type: object
       required: [action, version]

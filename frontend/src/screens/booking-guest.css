@@ -1,0 +1,74 @@
+/* The public booking page: who and what on the left, the month in the middle,
+   the chosen day's times (then the guest's details) on the right. Tokens only
+   (make ds-purity). */
+
+.bookguest-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 0.9fr)
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.bookguest-host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-self: stretch;
+  border-inline-end: 1px solid var(--borderSubtle);
+  padding-inline-end: var(--space-6);
+}
+.bookguest-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+.bookguest-line svg {
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+  flex: none;
+}
+/* The zone closes the column: it changes how every time on the page reads,
+   so it sits apart from the facts about the meeting itself. */
+.bookguest-zone {
+  margin-top: auto;
+  padding-top: var(--space-4);
+}
+
+.bookguest-month,
+.bookguest-times,
+.bookguest-suggested,
+.bookguest-form {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  min-inline-size: 0;
+}
+
+.bookguest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
+
+@media (max-width: 1000px) {
+  .bookguest-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .bookguest-host {
+    grid-column: 1 / -1;
+    border-inline-end: none;
+    border-bottom: 1px solid var(--borderSubtle);
+    padding-inline-end: 0;
+    padding-bottom: var(--space-4);
+  }
+}
+
+@media (max-width: 760px) {
+  .bookguest-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

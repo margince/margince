@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { formatDateTime } from "../format/format";
+import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { BookingScreen, PUBLIC_BOOKING_CONSENT } from "./book";
@@ -74,11 +74,18 @@ function mount(hostSlug?: string) {
     </QueryClientProvider>,
   );
 }
-const slotName = (index: number) =>
-  formatDateTime(bookingSlots[index].start, "en", viewerZone()).replace(
-    /\s+/g,
-    " ",
-  );
+// The guest page lists the chosen day's times by their time alone; the day is
+// the calendar's, and the first day with a free time is chosen for the guest.
+const slotName = (index: number, zone = viewerZone()) =>
+  formatTimeOfDay(bookingSlots[index].start, "en", zone);
+const CONFIRM = /^Confirm \d/;
+// The month on show is the one the guest opens the page in, so the clock is
+// pinned to the month the fixture's free times fall in: midday UTC on the 1st
+// is October in every zone.
+function inBookingMonth() {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
+}
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -99,18 +106,20 @@ it("offers one reusable copy action without requiring a contact", async () => {
   expect(calls.some((call) => call.path.includes("/contacts"))).toBe(false);
 });
 it("submits a real invitation only after the visitor confirms their details and consent", async () => {
+  inBookingMonth();
   const user = userEvent.setup();
   const calls = serve();
   mount("ada-lovelace");
   await user.click(await screen.findByRole("button", { name: slotName(0) }));
   expect(calls.filter((call) => call.method === "POST")).toHaveLength(0);
-  expect(
-    screen.getByRole("button", { name: "Confirm meeting" }),
-  ).toHaveProperty("disabled", true);
+  expect(screen.getByRole("button", { name: CONFIRM })).toHaveProperty(
+    "disabled",
+    true,
+  );
   await user.type(screen.getByLabelText("Your name"), "Nina Weber");
   await user.type(screen.getByLabelText("Your email"), "nina@brandt.example");
   await user.click(screen.getByRole("checkbox"));
-  await user.click(screen.getByRole("button", { name: "Confirm meeting" }));
+  await user.click(screen.getByRole("button", { name: CONFIRM }));
   await waitFor(() =>
     expect(window.location.hash).toContain("manage-private-link"),
   );
@@ -124,6 +133,7 @@ it("submits a real invitation only after the visitor confirms their details and 
   expect(posted?.key).toBeTruthy();
 });
 it("retains the visitor's details and retry identity when a slot is refused", async () => {
+  inBookingMonth();
   const user = userEvent.setup();
   const calls = serve(true);
   mount("ada-lovelace");
@@ -131,13 +141,13 @@ it("retains the visitor's details and retry identity when a slot is refused", as
   await user.type(screen.getByLabelText("Your name"), "Nina Weber");
   await user.type(screen.getByLabelText("Your email"), "nina@brandt.example");
   await user.click(screen.getByRole("checkbox"));
-  await user.click(screen.getByRole("button", { name: "Confirm meeting" }));
+  await user.click(screen.getByRole("button", { name: CONFIRM }));
   await screen.findByText("Choose another time.");
   expect(screen.getByLabelText("Your email")).toHaveProperty(
     "value",
     "nina@brandt.example",
   );
-  await user.click(screen.getByRole("button", { name: "Confirm meeting" }));
+  await user.click(screen.getByRole("button", { name: CONFIRM }));
   await waitFor(() =>
     expect(calls.filter((call) => call.method === "POST")).toHaveLength(2),
   );
@@ -148,9 +158,13 @@ it("retains the visitor's details and retry identity when a slot is refused", as
 it("keeps a pending provider operation distinct from a confirmed invitation", async () => {
   serve();
   mount("manage-private-link");
+  // The status is a badge over the meeting's own name, not the page's title.
   expect(
-    await screen.findByRole("heading", { name: "Creating your invitation…" }),
+    await screen.findByRole("heading", { level: 1, name: "Project discovery" }),
   ).toBeTruthy();
+  expect(screen.getByRole("status").textContent).toBe(
+    "Creating your invitation…",
+  );
   expect(screen.queryByText("Calendar invitation created")).toBeNull();
   expect(
     screen
@@ -189,16 +203,15 @@ it("recovers the existing meeting from a used personal proposal", async () => {
 });
 
 it("shows guest slots in the city selected from the timezone dropdown", async () => {
-  vi.useFakeTimers({ toFake: ["Date"] });
+  inBookingMonth();
   const user = userEvent.setup();
   serve();
   mount("ada-lovelace");
   await user.click(await screen.findByRole("combobox", { name: "Time zone" }));
   await user.keyboard("Bangkok{Enter}");
-  const expected = formatDateTime(
-    bookingSlots[0].start,
-    "en",
-    "Asia/Bangkok",
-  ).replace(/\s+/g, " ");
-  expect(await screen.findByRole("button", { name: expected })).toBeTruthy();
+  expect(
+    await screen.findByRole("button", {
+      name: slotName(0, "Asia/Bangkok"),
+    }),
+  ).toBeTruthy();
 });

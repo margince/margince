@@ -2667,6 +2667,10 @@ func (stubs) PutSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "PutSchedulingProfile")
 }
 
+func (stubs) ListMeetingProposals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListMeetingProposalsParams) {
+	httperr.NotImplemented(w, r, "ListMeetingProposals")
+}
+
 func (stubs) CreateMeetingProposal(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateMeetingProposalParams) {
 	httperr.NotImplemented(w, r, "CreateMeetingProposal")
 }

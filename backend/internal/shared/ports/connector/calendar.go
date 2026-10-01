@@ -43,6 +43,9 @@ type CalendarAppointment struct {
 	Start         time.Time
 	End           time.Time
 	Attendees     []string
+	// VideoCall asks the provider for a conference on create only; an update
+	// keeps whatever conference the event already has.
+	VideoCall bool
 }
 
 // CalendarReceipt is evidence of a provider event, not guest acceptance.
@@ -50,6 +53,9 @@ type CalendarReceipt struct {
 	EventID string `json:"event_id"`
 	UID     string `json:"uid,omitempty"`
 	URL     string `json:"url,omitempty"`
+	// VideoURL stays empty when the provider could not create a conference;
+	// the event itself was still delivered.
+	VideoURL string `json:"video_url,omitempty"`
 }
 
 // CalendarOption names a selectable provider calendar and its current write authority.

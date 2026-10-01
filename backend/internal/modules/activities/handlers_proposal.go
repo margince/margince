@@ -29,6 +29,18 @@ func (h Handlers) CreateMeetingProposal(w http.ResponseWriter, r *http.Request, 
 	httperr.WriteJSON(w, http.StatusCreated, out)
 }
 
+// ListMeetingProposals shows the acting host's open links to one contact.
+func (h Handlers) ListMeetingProposals(w http.ResponseWriter, r *http.Request, params crmcontracts.ListMeetingProposalsParams) {
+	out, err := h.store.OpenProposals(r.Context(), ids.UUID(params.ContactId))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, struct {
+		Data []crmcontracts.MeetingProposal `json:"data"`
+	}{out})
+}
+
 func (h Handlers) proposalForRequest(w http.ResponseWriter, r *http.Request, token string) (proposalRow, bool) {
 	id, _, err := h.store.ResolveProposalToken(r.Context(), token)
 	if err != nil {
@@ -43,7 +55,9 @@ func (h Handlers) proposalForRequest(w http.ResponseWriter, r *http.Request, tok
 	return row, true
 }
 
-func publicProfile(profile crmcontracts.SchedulingProfile) crmcontracts.PublicSchedulingProfile {
+// publicProfile is the guest's view of a booking page. requested is a
+// proposal's own video choice, nil on the host's standing page.
+func publicProfile(profile crmcontracts.SchedulingProfile, requested *bool) crmcontracts.PublicSchedulingProfile {
 	out := crmcontracts.PublicSchedulingProfile{Title: profile.Title, Location: profile.Location, DurationMinutes: profile.DurationMinutes, Enabled: profile.Enabled, LogoUrl: profile.LogoUrl}
 	if profile.HostName != nil {
 		out.HostName = *profile.HostName
@@ -51,7 +65,22 @@ func publicProfile(profile crmcontracts.SchedulingProfile) crmcontracts.PublicSc
 	if profile.CompanyName != nil {
 		out.CompanyName = *profile.CompanyName
 	}
+	if app, ok := videoApp(profile.Provider); ok && videoCallFor(profile, requested) {
+		out.VideoApp = &app
+	}
 	return out
+}
+
+// videoApp names the conferencing app each calendar provider attaches to a new
+// meeting, which is what a guest needs to know before booking.
+func videoApp(provider crmcontracts.SchedulingProfileProvider) (crmcontracts.PublicSchedulingProfileVideoApp, bool) {
+	switch provider {
+	case crmcontracts.SchedulingProfileProviderGcal:
+		return crmcontracts.PublicSchedulingProfileVideoAppGoogleMeet, true
+	case crmcontracts.SchedulingProfileProviderGraphcal:
+		return crmcontracts.PublicSchedulingProfileVideoAppMicrosoftTeams, true
+	}
+	return "", false
 }
 
 // GetPublicMeetingProposal discloses only the recipient-safe proposal projection.
@@ -66,7 +95,7 @@ func (h Handlers) GetPublicMeetingProposal(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	profile = h.store.brandSchedulingProfile(r.Context(), profile)
-	out := crmcontracts.PublicMeetingProposal{Profile: publicProfile(profile), Description: row.Request.Description, ExpiresAt: row.Expires, Used: row.Used != nil, Options: row.Request.Options}
+	out := crmcontracts.PublicMeetingProposal{Profile: publicProfile(profile, row.Request.VideoCall), Description: row.Request.Description, ExpiresAt: row.Expires, Used: row.Used != nil, Options: row.Request.Options}
 	out.Profile.Title = row.Request.Subject
 	out.Profile.Location = row.Request.Location
 	out.Profile.DurationMinutes = row.Request.DurationMinutes
@@ -146,7 +175,7 @@ func (h Handlers) AcceptPublicMeetingProposal(w http.ResponseWriter, r *http.Req
 		writeStoreErr(w, r, err)
 		return
 	}
-	in := crmcontracts.MeetingInvitationRequest{ContactId: row.Request.ContactId, AttendeeEmail: row.Request.AttendeeEmail, Subject: row.Request.Subject, Description: row.Request.Description, Location: row.Request.Location, Start: req.Start, End: req.End}
+	in := crmcontracts.MeetingInvitationRequest{ContactId: row.Request.ContactId, AttendeeEmail: row.Request.AttendeeEmail, Subject: row.Request.Subject, Description: row.Request.Description, Location: row.Request.Location, Start: req.Start, End: req.End, VideoCall: row.Request.VideoCall}
 	out, err := h.store.reserveAndQueueInvitation(r.Context(), row.Host, in, invitationIntent{ProposalID: row.ID})
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -155,5 +184,5 @@ func (h Handlers) AcceptPublicMeetingProposal(w http.ResponseWriter, r *http.Req
 	if err := h.publicConsent.RecordBookingInquiry(r.Context(), ids.UUID(in.ContactId), ids.UUID(out.Id)); err != nil {
 		slog.WarnContext(r.Context(), "booking: inquiry basis could not be recorded", "activity_id", out.Id, "err", err)
 	}
-	httperr.WriteJSON(w, http.StatusAccepted, out)
+	httperr.WriteJSON(w, http.StatusAccepted, guestInvitationView(out))
 }

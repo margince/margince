@@ -97,11 +97,8 @@ type scheduledEvent struct {
 	RequestID  string            `json:"transactionId,omitempty"`
 	Properties []requestProperty `json:"singleValueExtendedProperties,omitempty"`
 	Subject    string            `json:"subject"`
-	Body       struct {
-		Type    string `json:"contentType"`
-		Content string `json:"content"`
-	} `json:"body"`
-	Location struct {
+	Body       *scheduledBody    `json:"body,omitempty"`
+	Location   struct {
 		Name string `json:"displayName"`
 	} `json:"location"`
 	Start     scheduledTime       `json:"start"`
@@ -113,6 +110,25 @@ type scheduledEvent struct {
 	Response  struct {
 		Response string `json:"response"`
 	} `json:"responseStatus,omitempty"`
+	Online        bool           `json:"isOnlineMeeting,omitempty"`
+	Provider      string         `json:"onlineMeetingProvider,omitempty"`
+	OnlineMeeting *onlineMeeting `json:"onlineMeeting,omitempty"`
+}
+
+type scheduledBody struct {
+	Type    string `json:"contentType"`
+	Content string `json:"content"`
+}
+
+type onlineMeeting struct {
+	JoinURL string `json:"joinUrl"`
+}
+
+func (e scheduledEvent) videoURL() string {
+	if e.OnlineMeeting == nil {
+		return ""
+	}
+	return e.OnlineMeeting.JoinURL
 }
 
 func calendarPath(calendar string) string {
@@ -175,7 +191,6 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 		Start: scheduledTime{in.Start.UTC().Format("2006-01-02T15:04:05"), calendarUTC},
 		End:   scheduledTime{in.End.UTC().Format("2006-01-02T15:04:05"), calendarUTC},
 	}
-	event.Body.Type, event.Body.Content = "text", in.Description
 	event.Location.Name = in.Location
 	for _, email := range in.Attendees {
 		attendee := scheduledAttendee{Type: "required"}
@@ -188,6 +203,17 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 		path = a.base + "/me/events/" + url.PathEscape(in.EventID)
 		method = http.MethodPatch
 		event.RequestID = ""
+	} else {
+		// Only a new event carries a body: Outlook keeps an online meeting's
+		// join details in it, and a reschedule that rewrote it would drop them.
+		event.Body = &scheduledBody{"text", in.Description}
+		if in.VideoCall {
+			provider, err := a.meetingProvider(ctx, token, in.CalendarID)
+			if err != nil {
+				return connector.CalendarReceipt{}, err
+			}
+			event.Online, event.Provider = provider != "", provider
+		}
 	}
 	var result scheduledEvent
 	if _, err := calendarwire.Request(ctx, a.client, token, method, path, event, &result); err != nil {
@@ -196,7 +222,27 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 	if result.ID == "" || result.Canceled {
 		return connector.CalendarReceipt{}, fmt.Errorf("calendar: event was not confirmed")
 	}
-	return connector.CalendarReceipt{EventID: result.ID, UID: result.UID, URL: result.URL}, nil
+	return connector.CalendarReceipt{EventID: result.ID, UID: result.UID, URL: result.URL, VideoURL: result.videoURL()}, nil
+}
+
+// meetingProvider names the calendar's own conferencing default. Graph applies
+// none by itself, so an event that names no provider gets no join link; a
+// calendar that offers none books the meeting without one.
+func (a *httpAPI) meetingProvider(ctx context.Context, token, calendar string) (string, error) {
+	var settings struct {
+		Default string   `json:"defaultOnlineMeetingProvider"`
+		Allowed []string `json:"allowedOnlineMeetingProviders"`
+	}
+	path := a.base + calendarPath(calendar) + "?$select=defaultOnlineMeetingProvider,allowedOnlineMeetingProviders"
+	if _, err := calendarwire.Request(ctx, a.client, token, http.MethodGet, path, nil, &settings); err != nil {
+		return "", err
+	}
+	for _, provider := range append([]string{settings.Default}, settings.Allowed...) {
+		if provider != "" && provider != "unknown" {
+			return provider, nil
+		}
+	}
+	return "", nil
 }
 
 func (a *httpAPI) Cancel(ctx context.Context, token, _ string, event string) error {

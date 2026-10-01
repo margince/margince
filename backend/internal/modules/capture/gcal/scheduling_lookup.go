@@ -39,7 +39,7 @@ func (a *httpAPI) Lookup(ctx context.Context, token string, in connector.Calenda
 		}
 		return nil, fmt.Errorf("calendar: existing invitation has changed; reconcile before retrying")
 	}
-	return &connector.CalendarReceipt{EventID: event.ID, UID: event.UID, URL: event.URL}, nil
+	return &connector.CalendarReceipt{EventID: event.ID, UID: event.UID, URL: event.URL, VideoURL: event.VideoURL}, nil
 }
 
 type occupancyTime struct {
