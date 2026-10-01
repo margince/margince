@@ -72,11 +72,12 @@ func (s *Store) UpsertEmbedding(ctx context.Context, entityType string, entityID
 		return false, nil
 	}
 
-	existingHash, existingModel, err := s.storedEmbeddingStamp(ctx, entityType, entityID)
+	stored, err := s.storedEmbeddingStamp(ctx, entityType, entityID)
 	if err != nil {
 		return false, err
 	}
-	if existingHash == hash && existingModel == identity {
+	next := embeddingStamp{hash: hash, model: identity}
+	if stored == next {
 		return false, nil // unchanged text, unchanged binding — never re-embed
 	}
 
@@ -94,39 +95,47 @@ func (s *Store) UpsertEmbedding(ctx context.Context, entityType string, entityID
 	if isZero(res.Vectors[0]) {
 		return false, fmt.Errorf("search: embedder returned a zero vector (cosine NaN)")
 	}
-	return s.writeEmbedding(ctx, entityType, entityID, hash, identity, res.Vectors[0], existingHash)
+	return s.writeEmbedding(ctx, entityType, entityID, next, res.Vectors[0], stored)
 }
 
-// storedEmbeddingStamp reads the hash and model the entity's vector was last
-// written under, both "" when no row exists — the honest "nothing stored",
-// distinct from a real empty hash or model.
-func (s *Store) storedEmbeddingStamp(ctx context.Context, entityType string, entityID ids.UUID) (hash, embedModel string, err error) {
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+// embeddingStamp is what a stored vector was computed from: the text's hash
+// and the binding's identity. Either one changing makes the vector stale.
+type embeddingStamp struct {
+	hash  string
+	model string
+}
+
+// storedEmbeddingStamp reads the entity's stamp, the zero stamp when no row
+// exists — the honest "nothing stored", distinct from a real empty hash or model.
+func (s *Store) storedEmbeddingStamp(ctx context.Context, entityType string, entityID ids.UUID) (embeddingStamp, error) {
+	var stored embeddingStamp
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			SELECT chunk_hash, model FROM embedding
 			WHERE entity_type = $1 AND entity_id = $2 AND chunk_ix = 0`,
-			entityType, entityID).Scan(&hash, &embedModel)
+			entityType, entityID).Scan(&stored.hash, &stored.model)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		return err
 	})
 	if err != nil {
-		return "", "", fmt.Errorf("search: reading the stored embedding stamp: %w", err)
+		return embeddingStamp{}, fmt.Errorf("search: reading the stored embedding stamp: %w", err)
 	}
-	return hash, embedModel, nil
+	return stored, nil
 }
 
-// writeEmbedding stores vec unless the row has moved past readHash since it
-// was read, and reports whether it wrote.
-func (s *Store) writeEmbedding(ctx context.Context, entityType string, entityID ids.UUID, hash, identity string, vec []float32, readHash string) (bool, error) {
+// writeEmbedding stores vec under next unless the row has moved past read since
+// it was read, and reports whether it wrote.
+func (s *Store) writeEmbedding(ctx context.Context, entityType string, entityID ids.UUID, next embeddingStamp, vec []float32, read embeddingStamp) (bool, error) {
 	fresh := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// CAS on readHash ('' when no row existed): a
-		// concurrent writer that already advanced chunk_hash past what we
-		// read (a redelivered event racing this one, or another identity
-		// swap) already won — leave fresh=false rather than clobbering a
-		// row fresher than the one this call started from.
+		// CAS on the whole stamp read (zero when no row existed): a concurrent
+		// writer that already moved the row past it — a redelivered event racing
+		// this one, or a worker bound to another model re-embedding the same
+		// text — already won, so leave fresh=false rather than clobber a row
+		// fresher than the one this call started from. The hash alone misses
+		// the second: a same-text swap leaves chunk_hash where it was.
 		//
 		// The activity arm re-checks the RESTRICTION and the AUDIENCE on write,
 		// not only on the read that produced the text: a worker that read the
@@ -162,8 +171,8 @@ func (s *Store) writeEmbedding(ctx context.Context, entityType string, entityID 
 			ON CONFLICT (entity_type, entity_id, chunk_ix)
 			DO UPDATE SET chunk_hash = EXCLUDED.chunk_hash, model = EXCLUDED.model,
 			              embedding = EXCLUDED.embedding, created_at = now()
-			WHERE embedding.chunk_hash IS NOT DISTINCT FROM $6`,
-			entityType, entityID, hash, identity, vectorLiteral(vec), readHash)
+			WHERE embedding.chunk_hash IS NOT DISTINCT FROM $6 AND embedding.model IS NOT DISTINCT FROM $7`,
+			entityType, entityID, next.hash, next.model, vectorLiteral(vec), read.hash, read.model)
 		if err != nil {
 			return fmt.Errorf("search: upsert embedding: %w", err)
 		}
