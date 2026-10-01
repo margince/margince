@@ -123,14 +123,14 @@ func (c Category) ServesTheSubject() bool {
 // the subject.
 //
 // The ServesTheSubject five — security_notice, privacy_notice,
-// optout_confirmation, consent_confirmation, record_confirmation — are excluded
-// because an override there could never do anything. They are duty-discharge
-// messages that pass even a hard suppression and are never refused for lack of
-// evidence, so a machine refusal never resolves to one; an override naming one
-// would be a dead row that liveOverride can never match. Narrowing here blocks
-// no lawful vouch — it refuses only rows that could never apply — and it reads
-// the ServesTheSubject invariant rather than a second hand-typed set, so it
-// moves automatically the day that set changes.
+// optout_confirmation, consent_confirmation, record_confirmation — are refused
+// as vouch targets by policy. Their evidence is minted by the system for the
+// subject to act on: a confirm token, the subject's own stop. A rep's word
+// cannot stand in for it, and a confirmation sent on a vouch would be a message
+// with nothing to confirm. A machine refusal naming one of them is answered by
+// issuing the evidence, not by overruling it. The door reads the
+// ServesTheSubject invariant rather than a second hand-typed set, so it moves
+// the day that set changes.
 //
 // The door narrows; the STORAGE does not. The migration's CHECK on
 // communication_override.category

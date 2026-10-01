@@ -120,11 +120,11 @@ func TestOnlySubjectServingCategoriesPassASuppression(t *testing.T) {
 
 // TestKnownForOverrideIsTheResolvableSetMinusSubjectServing pins the override
 // door's vocabulary to a derived set rather than a hand-typed one: exactly the
-// valid categories that do NOT serve the subject. A ServesTheSubject category
-// is a dead override target — never refused for lack of evidence, so no machine
-// refusal ever resolves to one — and the door refuses it rather than writing a
-// row that could never apply. Asserting the whole set (not a sample) means the
-// day ServesTheSubject moves, this door's membership moves with it.
+// valid categories that do NOT serve the subject. A subject-serving category's
+// evidence is minted by the system for the subject to act on, so a rep's word
+// is refused as a stand-in for it and the answer to a refusal there is to issue
+// the evidence. Asserting the whole set (not a sample) means the day
+// ServesTheSubject moves, this door's membership moves with it.
 func TestKnownForOverrideIsTheResolvableSetMinusSubjectServing(t *testing.T) {
 	for _, c := range Categories() {
 		want := c.Valid() && !c.ServesTheSubject()

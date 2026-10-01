@@ -69,14 +69,14 @@ func TestUnknownPurposeIsOverrulableButNotByCategory(t *testing.T) {
 	}
 }
 
-// TestOnlyUnknownPurposeIsExcludedByCategory pins the exclusion to exactly the
-// no-category reason, over EVERY reason this package declares. The corpus is
-// every reason the package declares, read off its own files rather than
-// retyped here: a list kept beside the constants is one a new reason silently
-// falls outside of, and a reason that resolves to no category but is missing
-// from CanBeOverruledByCategory's exclusion would then be flippable by a vouch
-// for the default category — the one way this census must not fail short.
-func TestOnlyUnknownPurposeIsExcludedByCategory(t *testing.T) {
+// TestTheCategoryExclusionIsExactlyUnknownPurposeOverEveryReason pins the
+// exclusion set: over every reason this package declares, read off its own
+// files rather than retyped, the two predicates part on unknown_purpose and on
+// nothing else. Adding a second exclusion, or moving this one, fails here. It
+// cannot tell whether a NEW reason ought to be excluded; the behavioural proof
+// that an unresolved category is never answered by a vouch is
+// TestAnOverrideCannotFlipAnUnknownPurpose (modules/consent).
+func TestTheCategoryExclusionIsExactlyUnknownPurposeOverEveryReason(t *testing.T) {
 	t.Parallel()
 
 	for _, reason := range reasonConstants(t) {

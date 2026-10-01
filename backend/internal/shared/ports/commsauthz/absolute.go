@@ -237,7 +237,8 @@ func (d Decision) CanBeOverruled() bool {
 // genuinely resolved value — and a per-category vouch has nothing to answer; the
 // remedy is to resend with a recognised purpose (see LevelForReason).
 //
-// Held by: TestUnknownPurposeIsOverrulableButNotByCategory (override_test.go)
+// Held by: TestUnknownPurposeIsOverrulableButNotByCategory and
+// TestTheCategoryExclusionIsExactlyUnknownPurposeOverEveryReason (override_test.go)
 func (d Decision) CanBeOverruledByCategory() bool {
 	return d.CanBeOverruled() && d.ReasonCode != ReasonUnknownPurpose
 }
