@@ -29,6 +29,7 @@ const SOURCE_LABEL: Record<string, MessageKey> = {
   public_or_business_source: "privacynotice.source.publicSource",
   purchased_or_imported: "privacynotice.source.purchasedOrImported",
   crm_migration: "privacynotice.source.crmMigration",
+  mailbox_history: "privacynotice.source.mailboxHistory",
   unknown_legacy: "privacynotice.source.unknown",
 };
 
