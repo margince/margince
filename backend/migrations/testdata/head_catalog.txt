@@ -5101,6 +5101,7 @@ public.offer.offer_buyer_company_fkey FOREIGN KEY (buyer_company_id) REFERENCES 
 public.offer.offer_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.offer.offer_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE RESTRICT
 public.offer.offer_deal_id_id_key UNIQUE (deal_id, id)
+public.offer.offer_gross_is_net_plus_tax CHECK ((gross_minor = (net_minor + tax_minor)))
 public.offer.offer_number text NOT NULL gen=- def=-
 public.offer.offer_number_rev_unique UNIQUE (offer_number, revision)
 public.offer.offer_pkey PRIMARY KEY (id)

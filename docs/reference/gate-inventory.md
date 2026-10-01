@@ -265,6 +265,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `messagingruleapplied_test.go` | H2 | Every obligation a messaging pack declares is one the engine applies, or one this file records as not yet applied and says why. |
 | `metricsuffix_test.go` | H2 | A `\_total` suffix means COUNTER, in both directions. |
 | `migrationcitations_test.go` | H1 | No file acquires a citation of a migration version that does not exist. |
+| `moneysum_test.go` | H2 | Money this product COMPUTES has its arithmetic held by the database. |
 | `narrowindextwin_test.go` | H2 | A partial index whose columns already carry an unpredicated one says why it is worth a second B-tree on every write. |
 | `noticecasecolumns_test.go` | H2 | One SELECT list per whole-row read in the consent package. |
 | `noticedutycensus_test.go` | H3 | Every way a contact can arrive has a decided disclosure duty. |

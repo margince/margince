@@ -608,6 +608,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `offer_accepted_at` — `CHECK (((status <> 'accepted') OR (accepted_at IS NOT NULL)))`
 - `offer_currency_check` — `CHECK ((currency ~ '^[A-Z]{3}$'))`
 - `offer_deal_id_id_key` — `UNIQUE (deal_id, id)`
+- `offer_gross_is_net_plus_tax` — `CHECK ((gross_minor = (net_minor + tax_minor)))`
 - `offer_number_rev_unique` — `UNIQUE (offer_number, revision)`
 - `offer_revision_check` — `CHECK ((revision >= 1))`
 - `offer_status_check` — `CHECK ((status = ANY (ARRAY['draft', 'sent', 'accepted', 'rejected', 'expired', 'superseded'])))`
