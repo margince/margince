@@ -375,13 +375,13 @@ func hasRejectedLabel(labelIDs []string) bool {
 	return slices.Contains(labelIDs, spamLabelID) || slices.Contains(labelIDs, trashLabelID)
 }
 
-// Watch registers a users.watch so Gmail publishes change notifications for
+// watchOnce registers a users.watch so Gmail publishes change notifications for
 // the mailbox to the Pub/Sub topic. Gmail returns the mailbox's current
 // historyId and an expiration as a string of milliseconds since the epoch;
 // re-calling watch renews it (Gmail keeps one watch per mailbox). A non-200 is
 // classified by classifyStatus like every other Gmail call — Google's raw body
 // never reaches the caller.
-func (a *httpAPI) Watch(ctx context.Context, accessToken, topic string) (string, time.Time, error) {
+func (a *httpAPI) watchOnce(ctx context.Context, accessToken, topic string) (string, time.Time, error) {
 	reqBody, err := json.Marshal(map[string]string{"topicName": topic})
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("gmail: encoding watch request: %w", err)
@@ -453,13 +453,13 @@ const (
 	maxRawMessageBytes   = 96 << 20 // 96 MiB — a full-size RAW message
 )
 
-// get performs an authorized GET and JSON-decodes into out. It returns the
+// getOnce performs an authorized GET and JSON-decodes into out. It returns the
 // HTTP status (so History can special-case 404) alongside the failure
 // classifyStatus assigns, each carrying Google's own reason code. Google's raw
 // body is never surfaced to the caller.
 //
 //craft:ignore naked-any out is the caller-supplied JSON decode target — its concrete type varies per endpoint
-func (a *httpAPI) get(ctx context.Context, accessToken, path string, q url.Values, out any, maxBytes int64) (int, error) {
+func (a *httpAPI) getOnce(ctx context.Context, accessToken, path string, q url.Values, out any, maxBytes int64) (int, error) {
 	u := a.base + path
 	if len(q) > 0 {
 		u += "?" + q.Encode()
