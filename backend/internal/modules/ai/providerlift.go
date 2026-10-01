@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"cmp"
 	"log/slog"
 	"maps"
 	"reflect"
@@ -196,13 +197,14 @@ func (l providerLift) warnKept(msg, provider string, from map[string]string, dro
 }
 
 // compiledHost is where a provider is dialled when no host is written: the
-// local adapters' endpoint, or a decision adapter's.
+// local adapter's endpoint, the vendor's public API, or a decision adapter's.
+// An unknown provider has none; validateProviderEntries refuses its name.
 func compiledHost(provider string) string {
-	d, _ := providerByName(provider)
-	if d.defaultBaseURL != "" {
-		return d.defaultBaseURL
+	d, known := providerByName(provider)
+	if !known {
+		return ""
 	}
-	return d.defaultEndpoint
+	return cmp.Or(d.defaultBaseURL, d.vendorBaseURL, d.defaultEndpoint)
 }
 
 // sameHost compares two hosts for one provider, reading an empty one as the

@@ -237,8 +237,15 @@ func FromStored(stored RoutingConfig, keys config.Lookup) (RoutingConfig, error)
 // It reads the RESOLVED lanes and leaves out Providers: the lanes already carry
 // every host and pin, and digesting them twice would re-attribute every cached
 // brief the day the document's shape changed while nothing it routes did.
+//
+// An embeddings host spelled as its provider's compiled default digests as the
+// empty one it dials identically: the lift writes the default out to keep that
+// lane off a gateway its tiers moved the provider to, and the binding is unchanged.
 func (cfg RoutingConfig) bindingDigest() string {
 	cfg.Providers = nil
+	if cfg.Embeddings.BaseURL != "" && sameHost(cfg.Embeddings.Provider, cfg.Embeddings.BaseURL, "") {
+		cfg.Embeddings.BaseURL = ""
+	}
 	return digestJSON(cfg)
 }
 

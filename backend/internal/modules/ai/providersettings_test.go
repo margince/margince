@@ -26,6 +26,17 @@ tiers:
 embeddings: {provider: vllm, model: BAAI/bge-m3, base_url: "http://localhost:8001", dimensions: 1024}
 `
 
+// geminiBehindAGateway sends every chat tier through a proxy and embeds at the
+// vendor directly, which an empty host meant before providers held hosts.
+const geminiBehindAGateway = `profile: eu_hosted
+tiers:
+  local_small: {provider: gemini, model: gemini-3.1-flash-lite, base_url: "https://eu-gateway.example"}
+  cheap_cloud: {provider: gemini, model: gemini-3.1-flash-lite, base_url: "https://eu-gateway.example"}
+  premium: {provider: gemini, model: gemini-3.5-flash, base_url: "https://eu-gateway.example"}
+  frontier: {provider: gemini, model: gemini-3.1-pro-preview, base_url: "https://eu-gateway.example"}
+embeddings: {provider: gemini, model: gemini-embedding-001, dimensions: 1536}
+`
+
 // A routing document written before hosts and upstream preferences moved onto
 // the provider, in the two shapes installations store: an EU broker binding
 // pinned on every lane, and a frontier binding with a capped tier and a
@@ -67,6 +78,18 @@ embeddings: {provider: openai_compatible, model: mistralai/mistral-embed-2312, b
 		"a local binding with a separate embeddings server": {
 			doc:  qwenLocalVLLM,
 			want: "8d8fff91f8bdf5171d385a521a601f7723ac92b14c1a2f8d0b3b6e1120e50260",
+		},
+		"native tiers behind a gateway and an embedder on the vendor": {
+			doc:  geminiBehindAGateway,
+			want: "2ee6e7d8d9ed2c3d827609956cfdd96b233ff3f476c383036bc6121d1f60de91",
+		},
+		"local tiers on a GPU box and an embedder on the compiled default": {
+			doc: `profile: cloud_frontier
+tiers:
+  premium: {provider: vllm, model: m, base_url: "http://10.0.0.5:8000"}
+embeddings: {provider: vllm, model: e}
+`,
+			want: "9b082bb3258f84115f7a16bb706305f17d0fc88c6019f24ec7b0de45431c5ff7",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -504,4 +527,53 @@ func TestRevision_SeesTheHostOfAnUnliftedRow(t *testing.T) {
 	if row("https://a.example").Revision() == row("https://b.example").Revision() {
 		t.Error("two stored rows differing only in a tier's host share a revision; a concurrent host edit would be overwritten unseen")
 	}
+}
+
+func TestLift_AnEmbedderOnTheVendorStaysOffItsTiersGateway(t *testing.T) {
+	var raw RoutingConfig
+	if err := yaml.Unmarshal([]byte(geminiBehindAGateway), &raw); err != nil {
+		t.Fatal(err)
+	}
+	log, buf := warnings()
+	raw.liftLaneProviderFields(log)
+	if lines := warnLines(buf); len(lines) != 0 {
+		t.Errorf("warnings = %v, want none: nothing dials anywhere new", lines)
+	}
+	cfg := mustParse(t, geminiBehindAGateway)
+	if got := cfg.Tiers[TierPremium].BaseURL; got != "https://eu-gateway.example" {
+		t.Errorf("tier premium resolved to %q, want the gateway", got)
+	}
+	if got := cfg.Embeddings.BaseURL; !sameHost(providerGemini, got, "") {
+		t.Errorf("embeddings resolved to %q, want the Gemini API it dialled before", got)
+	}
+}
+
+// Writing a provider's compiled default out is how a lift keeps a lane where
+// it was, which is only true if the adapter dials it exactly as it dials none.
+func TestEveryCompiledHostDialsAsAnEmptyOneDoes(t *testing.T) {
+	for _, provider := range providerNamesWhere(speaksChat) {
+		host := compiledHost(provider)
+		if host == "" {
+			continue
+		}
+		model := ProviderConfig{Provider: provider, Model: "m"}
+		spelled := model
+		spelled.BaseURL = host
+		if got, want := clientBaseURL(t, spelled), clientBaseURL(t, model); got != want {
+			t.Errorf("%s: base_url %q dials %q, an empty one dials %q", provider, host, got, want)
+		}
+	}
+}
+
+func clientBaseURL(t *testing.T, binding ProviderConfig) string {
+	t.Helper()
+	client, err := SelectBrain(binding, allCloudKeys())
+	if err != nil {
+		t.Fatalf("SelectBrain(%s): %v", binding.Provider, err)
+	}
+	field := reflect.ValueOf(client).Elem().FieldByName("baseURL")
+	if !field.IsValid() {
+		t.Fatalf("%s: the client carries no baseURL to compare", binding.Provider)
+	}
+	return field.String()
 }

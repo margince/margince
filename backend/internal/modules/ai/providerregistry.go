@@ -38,6 +38,10 @@ type providerDescriptor struct {
 	// vendorHosted marks an adapter whose omitted base_url is the vendor's own
 	// public API, which is what the routing preview calls cloud processing.
 	vendorHosted bool
+	// vendorBaseURL is that public API's address, the same constant the adapter
+	// defaults to — so a lift can write out "the vendor directly" for a lane
+	// whose provider now sits behind a gateway.
+	vendorBaseURL string
 	// public is whether the anonymous profile may name the adapter. The fake is
 	// a development mechanism, not a provider identity.
 	public bool
@@ -100,7 +104,7 @@ var providerRegistry = []providerDescriptor{
 	},
 	{
 		name: providerAnthropic, caps: capChat, egress: egressPublicOnly, keyEnv: "ANTHROPIC_API_KEY",
-		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
+		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultAnthropicBaseURL, public: true,
 		carriage: anthropicCarries, thinkingFloor: anthropicTakesThinkingFloor, floorSkipsTools: true,
 	},
 	{
@@ -140,12 +144,12 @@ var providerRegistry = []providerDescriptor{
 	},
 	{
 		name: providerOpenAI, caps: capChat, egress: egressPublicOnly, keyEnv: "OPENAI_API_KEY",
-		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
+		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultOpenAIBaseURL, public: true,
 		carriage: openAICarries, thinkingFloor: openaiTakesThinkingFloor,
 	},
 	{
 		name: providerGemini, caps: capChat, egress: egressPublicOnly, keyEnv: "GEMINI_API_KEY",
-		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
+		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultGeminiBaseURL, public: true,
 		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
 	},
 	{
