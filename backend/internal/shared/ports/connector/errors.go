@@ -6,6 +6,7 @@ package connector
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 	"unicode/utf8"
 )
@@ -64,8 +65,13 @@ var ErrRateLimited = errors.New("connector: provider rate limit")
 
 // RateLimitedError carries the provider's Retry-After. RetryAfter zero means
 // the provider named no delay — the caller falls back to its own backoff.
+// Reason is which of the provider's limits was met, from a closed vocabulary
+// the connector defines ("" when it names none), and Status the HTTP status
+// that carried it (0 when unknown).
 type RateLimitedError struct {
 	RetryAfter time.Duration
+	Reason     string
+	Status     int
 }
 
 func (e *RateLimitedError) Error() string {
@@ -78,6 +84,17 @@ func (e *RateLimitedError) Error() string {
 // Is makes every RateLimitedError answer errors.Is(err, ErrRateLimited), so
 // callers classify on the sentinel and read Retry-After via errors.As.
 func (e *RateLimitedError) Is(target error) bool { return target == ErrRateLimited }
+
+// RateLimitLogAttr answers the reason and status of a rate limit err carries as
+// one inlined log attribute, or the empty attribute a handler omits when err is
+// no rate limit.
+func RateLimitLogAttr(err error) slog.Attr {
+	limited, ok := errors.AsType[*RateLimitedError](err)
+	if !ok {
+		return slog.Attr{}
+	}
+	return slog.Group("", "reason", limited.Reason, "status", limited.Status)
+}
 
 // ProviderError carries the provider's OWN diagnosis alongside the shared class.
 // The class answers "park or retry?", which is all the scheduler needs, but not

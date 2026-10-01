@@ -82,11 +82,10 @@ func Get(ctx context.Context, client *http.Client, base, accessToken, path strin
 	// A throttled provider is weather, not a bad credential: honor Retry-After
 	// and let the registry back off rather than parking the connection. Google
 	// signals quota/rate limits as 429, or as 403 with a rate/quota reason.
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return resp.StatusCode, &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
-	}
-	if resp.StatusCode == http.StatusForbidden && RateLimitBody(body) {
-		return resp.StatusCode, &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
+	if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusForbidden && RateLimitBody(body) {
+		return resp.StatusCode, &connector.RateLimitedError{
+			RetryAfter: retryafter.Of(resp), Reason: RateLimitReason(body), Status: resp.StatusCode,
+		}
 	}
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return resp.StatusCode, &connector.ProviderError{

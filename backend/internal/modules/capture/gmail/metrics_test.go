@@ -257,3 +257,58 @@ func TestATokenRefreshIsCountedAsAProviderCall(t *testing.T) {
 			moved[requests("token", "ok")], moved[requests("token", "error")])
 	}
 }
+
+// A Gmail rate limit names which of Google's limits it met, on the error and
+// on the rate-limited counter, so a per-user limit is told apart from a
+// project quota or the concurrency cap.
+func TestAGmailRateLimitIsCountedByTheLimitGoogleNamed(t *testing.T) {
+	userLimit := `{"error":{"code":403,"message":"User-rate limit exceeded.","errors":[{"domain":"usageLimits","reason":"userRateLimitExceeded"}],"status":"PERMISSION_DENIED"}}`
+	concurrent := `{"error":{"code":429,"message":"Too many concurrent requests for user.","errors":[{"domain":"global","reason":"rateLimitExceeded"}],"status":"RESOURCE_EXHAUSTED"}}`
+	mux := http.NewServeMux()
+	mux.HandleFunc("/messages/m1", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		writeJSONBody(t, w, userLimit)
+	})
+	mux.HandleFunc("/messages/m2", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusTooManyRequests)
+		writeJSONBody(t, w, concurrent)
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	api := NewAPI(srv.Client(), srv.URL)
+	limited := func(op, reason string) string {
+		return `margince_connector_rate_limited_total{provider="gmail",op="` + op + `",reason="` + reason + `"}`
+	}
+
+	var errs []error
+	moved := deltas(t, func() {
+		for _, id := range []string{"m1", "m2"} {
+			_, err := api.GetRaw(context.Background(), "access", id)
+			errs = append(errs, err)
+		}
+	}, limited("get_raw", "userRateLimitExceeded"), limited("get_raw", "concurrent"), requests("get_raw", "rate_limited"))
+
+	for i, want := range []connector.RateLimitedError{
+		{Reason: "userRateLimitExceeded", Status: http.StatusForbidden},
+		{Reason: "concurrent", Status: http.StatusTooManyRequests},
+	} {
+		got, ok := errors.AsType[*connector.RateLimitedError](errs[i])
+		if !ok || got.Reason != want.Reason || got.Status != want.Status {
+			t.Errorf("call %d: err = %v, want a rate limit with reason %q and status %d", i, errs[i], want.Reason, want.Status)
+		}
+	}
+	for series, want := range map[string]float64{
+		limited("get_raw", "userRateLimitExceeded"): 1, limited("get_raw", "concurrent"): 1, requests("get_raw", "rate_limited"): 2,
+	} {
+		if moved[series] != want {
+			t.Errorf("%s moved by %v, want %v", series, moved[series], want)
+		}
+	}
+}
+
+func writeJSONBody(t *testing.T, w http.ResponseWriter, body string) {
+	t.Helper()
+	if _, err := w.Write([]byte(body)); err != nil {
+		t.Errorf("writing the stub body: %v", err)
+	}
+}
