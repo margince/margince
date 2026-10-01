@@ -42,6 +42,31 @@ func TestRecordMeasuresMatchesTheRungItGrades(t *testing.T) {
 	}
 }
 
+// A Vertex rung is graded by the AI Studio record for the same model, since it
+// is sent the same request; its own record, once one is run, grades it first.
+func TestAVertexRungIsGradedByTheGeminiRecordForItsModel(t *testing.T) {
+	vertex := ai.ProviderConfig{Provider: "gemini_vertex", Location: "eu", Model: "gemini-3.5-flash"}
+	studio := Record{Task: string(ai.TaskSummarize), Provider: "gemini", ServedModel: vertex.Model, EnvClass: string(ai.ProfileCloudFrontier)}
+	if !recordMeasures(studio, vertex, ai.ProfileEUHosted, ai.TaskSummarize) {
+		t.Error("the AI Studio record for the same model does not grade the Vertex rung")
+	}
+	for name, rec := range map[string]Record{
+		"another model": {Task: studio.Task, Provider: "gemini", ServedModel: "gemini-3.1-flash-lite", EnvClass: studio.EnvClass},
+		"another wire":  {Task: studio.Task, Provider: "openai", ServedModel: vertex.Model, EnvClass: studio.EnvClass},
+	} {
+		if recordMeasures(rec, vertex, ai.ProfileEUHosted, ai.TaskSummarize) {
+			t.Errorf("%s grades the Vertex rung", name)
+		}
+	}
+	own := Record{Task: studio.Task, Provider: "gemini_vertex", ServedModel: vertex.Model, EnvClass: string(ai.ProfileEUHosted)}
+	if !recordMeasures(own, vertex, ai.ProfileEUHosted, ai.TaskSummarize) {
+		t.Error("a Vertex record does not grade its own rung")
+	}
+	if recordMeasures(own, ai.ProviderConfig{Provider: "gemini", Model: vertex.Model}, ai.ProfileCloudFrontier, ai.TaskSummarize) {
+		t.Error("a Vertex record grades an AI Studio rung: the borrowing runs one way only")
+	}
+}
+
 // A run whose every candidate is current sends nothing: no candidate is probed,
 // and neither is the judge, since there is nothing left for it to grade.
 func TestARunWithEveryCandidateCurrentProbesNothing(t *testing.T) {

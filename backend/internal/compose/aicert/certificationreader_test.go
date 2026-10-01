@@ -291,9 +291,18 @@ func writeAICertPresetDetail(page *strings.Builder, p aiCertPreset) {
 	for _, row := range p.Tasks {
 		fmt.Fprintf(page, "| `%s` | %s | %s | %s | %s |\n",
 			row.Task, aiCertCell(row.Tier), aiCertCell(row.Model.Model),
-			aiCertGrade(row), aiCertStateWords(row))
+			aiCertGrade(row), aiCertStateWords(row)+aiCertMeasuredOnNote(row))
 	}
 	page.WriteString("\n</details>\n\n")
+}
+
+// aiCertMeasuredOnNote names the provider whose record graded a rung that is
+// not its own, so a grade borrowed from AI Studio never reads as a Vertex run.
+func aiCertMeasuredOnNote(row aiCertPresetTask) string {
+	if row.MeasuredOn == nil {
+		return ""
+	}
+	return "; measured on `" + row.MeasuredOn.Provider + "`"
 }
 
 // aiCertGradeCell is the grade with the route behind it on a smaller line, so

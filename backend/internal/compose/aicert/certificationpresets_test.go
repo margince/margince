@@ -91,6 +91,9 @@ type aiCertPresetTask struct {
 	Passed               int `json:"passed"`
 	CasesFailingOften    int `json:"cases_failing_often"`
 	CasesBelowQualityBar int `json:"cases_below_quality_bar"`
+	// MeasuredOn is the binding whose record grades this rung when it is not
+	// the rung's own (aicert.MeasuredAs), so the page can say so.
+	MeasuredOn *aiCertBindingRef `json:"measured_on,omitempty"`
 	// record is the measuring record, which grades a rung only where
 	// aicert.RecordMeasures says it measured that rung.
 	record aicert.Record
@@ -196,7 +199,8 @@ func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertP
 	}
 	first := rungs[0]
 	row.Tier, row.Model = string(first.Tier), presetBindingRef(first.Binding, preset.Profile)
-	if seen, ok := measuredOn(task, first.Binding, row.Model, measured); ok {
+	if seen, on, ok := measuredOn(task, first.Binding, row.Model, measured); ok {
+		row.MeasuredOn = on
 		row.Band, row.State, row.Runs, row.Passed = seen.Band, seen.State, seen.Runs, seen.Passed
 		row.CasesFailingOften, row.CasesBelowQualityBar = seen.CasesFailingOften, seen.CasesBelowQualityBar
 		row.Abandoned = seen.Abandoned
@@ -207,7 +211,7 @@ func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertP
 			Tier: string(next.Tier), Model: presetBindingRef(next.Binding, preset.Profile),
 			SameModel: next.Binding.Provider == first.Binding.Provider && next.Binding.Model == first.Binding.Model,
 		}
-		if seen, ok := measuredOn(task, next.Binding, row.Fallback.Model, measured); ok {
+		if seen, _, ok := measuredOn(task, next.Binding, row.Fallback.Model, measured); ok {
 			row.Fallback.Band, row.Fallback.State = seen.Band, seen.State
 		}
 	}
@@ -215,15 +219,25 @@ func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertP
 }
 
 // measuredOn is the record that grades a rung, by the rule the runner's
-// STALE_ONLY skip and the readiness report read too (aicert.RecordMeasures).
+// STALE_ONLY skip and the readiness report read too (aicert.RecordMeasures):
+// the rung's own record, else the one aicert.MeasuredAs names, which it
+// returns so the page can say where the grade was measured.
 func measuredOn(task string, binding ai.ProviderConfig, ref aiCertBindingRef,
 	measured map[string]aiCertPresetTask,
-) (aiCertPresetTask, bool) {
-	seen, ok := measured[aiCertRouteKey(task, ref)]
-	if !ok || !aicert.RecordMeasures(seen.record, binding, ai.Profile(ref.Env), ai.Task(task)) {
-		return aiCertPresetTask{}, false
+) (aiCertPresetTask, *aiCertBindingRef, bool) {
+	if seen, ok := measured[aiCertRouteKey(task, ref)]; ok && aicert.RecordMeasures(seen.record, binding, ai.Profile(ref.Env), ai.Task(task)) {
+		return seen, nil, true
 	}
-	return seen, true
+	as, env := aicert.MeasuredAs(binding, ai.Profile(ref.Env))
+	if as.Provider == binding.Provider {
+		return aiCertPresetTask{}, nil, false
+	}
+	on := presetBindingRef(as, string(env))
+	seen, ok := measured[aiCertRouteKey(task, on)]
+	if !ok || !aicert.RecordMeasures(seen.record, binding, ai.Profile(ref.Env), ai.Task(task)) {
+		return aiCertPresetTask{}, nil, false
+	}
+	return seen, &on, true
 }
 
 func presetBindingRef(binding ai.ProviderConfig, profile string) aiCertBindingRef {
@@ -372,9 +386,7 @@ func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc 
 // aiCertUnmeasuredWaivers names the presets allowed to reach no measured band,
 // each with why. An entry is stale once its preset is measured or gone
 // (AssertAllMatched), or once any record measures one of its models.
-var aiCertUnmeasuredWaivers = gatekit.Waive(map[string]string{
-	"gemini_vertex_eu.yaml": "no gemini_vertex certification run has been paid for yet",
-})
+var aiCertUnmeasuredWaivers = gatekit.Waive(map[string]string{})
 
 // unmeasuredPresetProblems asks, PER PRESET and not summed across them,
 // whether each reaches a measured band. A total hides the failure this asks
@@ -456,7 +468,11 @@ func assertAICertPresetsReadTheRecords(t *testing.T, presets []aiCertPreset, rec
 			if row.Band == "" {
 				continue
 			}
-			key := row.Task + "/" + row.Model.Provider + "/" + row.Model.Model + "/" + row.Model.Env
+			graded := row.Model
+			if row.MeasuredOn != nil {
+				graded = *row.MeasuredOn
+			}
+			key := row.Task + "/" + graded.Provider + "/" + graded.Model + "/" + graded.Env
 			rec, found := byKey[key]
 			switch {
 			case !found:

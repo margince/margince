@@ -55,6 +55,10 @@ type providerDescriptor struct {
 	// serviceAccountKey marks an adapter whose keyEnv credential is a Google
 	// service-account JSON rather than an API key.
 	serviceAccountKey bool
+	// measuredBy is the provider whose certification records grade this one:
+	// an adapter sending the same request to the same weights through another
+	// host. Empty means its own records.
+	measuredBy string
 	// defaultEndpoint is the full decision endpoint an omitted base_url resolves
 	// to; empty means the binding must name one. A decision binding's base_url
 	// is the whole URL, posted to as written.
@@ -155,7 +159,8 @@ var providerRegistry = []providerDescriptor{
 		// The Gemini wire served by Vertex AI. Its key is a service-account
 		// JSON, and its host is derived from the binding's location.
 		name: providerGeminiVertex, caps: capChat, egress: egressPublicOnly, keyEnv: "GEMINI_VERTEX_SA_JSON",
-		serviceAccountKey: true, servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
+		serviceAccountKey: true, measuredBy: providerGemini,
+		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
 		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
 	},
 	{
@@ -191,6 +196,15 @@ func providerByName(name string) (providerDescriptor, bool) {
 func providerIsVendorHosted(name string) bool {
 	d, _ := providerByName(name)
 	return d.vendorHosted
+}
+
+// MeasuredBy is the provider whose certification records grade a binding on
+// provider: provider itself, unless the registry names another.
+func MeasuredBy(provider string) string {
+	if d, _ := providerByName(provider); d.measuredBy != "" {
+		return d.measuredBy
+	}
+	return provider
 }
 
 func providerDefaultModel(name string) string {
