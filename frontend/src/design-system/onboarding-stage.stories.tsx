@@ -59,10 +59,23 @@ export const OnAPhone: Story = {
   args: { ...Lit.args, coreStateLabel: "Core · reading input" },
 };
 
-// The longest end slot a laptop meets, which fe-uat renders at 1024px: the
-// German runtime chip outgrows its third there, so the slot wraps after the
-// state in words and the chip keeps the theme toggle beside it.
+// The longest end slot a laptop meets: the German runtime chip outgrows its
+// third at 1024px, so the slot wraps after the state in words and the chip
+// keeps the theme toggle beside it. Pinned to that width here, as fe-uat pins
+// every non-phone story, so the play fails at a width where nothing wraps
+// rather than passing on a band that never had to.
 export const AGermanChipAtALaptopWidth: Story = {
+  parameters: {
+    viewport: {
+      options: {
+        laptop: {
+          name: "Laptop (1024px)",
+          styles: { width: "1024px", height: "720px" },
+        },
+      },
+    },
+  },
+  globals: { viewport: { value: "laptop" } },
   args: {
     ...Lit.args,
     coreStateLabel: de["ob.core.warning"],
@@ -89,14 +102,20 @@ export const AGermanChipAtALaptopWidth: Story = {
     ),
   },
   play: async ({ canvasElement }) => {
-    const band = canvasElement.querySelector(".ob-stage-band");
     const toggle = await within(canvasElement).findByRole("button", {
       name: /theme/i,
     });
-    if (band === null) throw new Error("the stage drew no band");
-    const edge = band.getBoundingClientRect().right;
+    const band = canvasElement.querySelector(".ob-stage-band");
+    const state = canvasElement.querySelector(".ob-stage-corestate");
+    const tools = canvasElement.querySelector(".ob-stage-tools");
+    if (band === null || state === null || tools === null) {
+      throw new Error("the band drew without its state or its tools");
+    }
+    await expect(tools.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      state.getBoundingClientRect().bottom,
+    );
     await expect(toggle.getBoundingClientRect().right).toBeLessThanOrEqual(
-      edge,
+      band.getBoundingClientRect().right,
     );
   },
 };
