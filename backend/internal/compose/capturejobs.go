@@ -282,7 +282,8 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 			// commonest fault — and the log carries the detail.
 			w.log.WarnContext(ctx, "capture backfill page failed", "backfill", job.Args.BackfillID, "err", err)
 			if w.resumedMeanwhile(wsCtx, bfID) {
-				return river.JobSnooze(time.Second)
+				capturemetrics.ObserveResumed(wsCtx, backfillPageYield)
+				return river.JobSnooze(backfillPageYield)
 			}
 			return nil
 		}

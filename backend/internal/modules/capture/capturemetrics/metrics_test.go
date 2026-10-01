@@ -104,7 +104,7 @@ func TestAPageIsClassedTheWayThePagerDecidesItsFate(t *testing.T) {
 		{fmt.Errorf("gmail: %w", connector.ErrUnreachable), resultUnreachable},
 		{connector.ErrAuthRejected, resultFailed},
 		{errors.Join(connector.ErrUnreachable, connector.ErrAuthRejected), resultFailed},
-		{connector.ErrCursorGone, resultFailed},
+		{connector.ErrCursorGone, resultTokenGone},
 	} {
 		if got := pageResult(tc.err); got != tc.want {
 			t.Errorf("pageResult(%v) = %q, want %q", tc.err, got, tc.want)
@@ -121,9 +121,12 @@ func TestNothingIsRecordedOutsideARun(t *testing.T) {
 	ObservePage(ctx, nil)
 	ObservePacing(ctx, time.Second)
 	ObserveDeferral(ctx, time.Minute, connector.ErrUnreachable)
+	ObserveResumed(ctx, time.Second)
+	ObserveInPageWait(ctx, time.Second, time.Second)
 	ctx, message := BeginMessage(ctx)
 	NoteOutcome(ctx, "internal")
 	message.End(true, nil)
+	message.Refuse()
 
 	ObservePacing(WithRun(context.Background()), time.Second)
 
@@ -155,11 +158,19 @@ func TestAFaultsWaitIsCountedBesideTheRetryAfterTheProviderAsked(t *testing.T) {
 	ObserveDeferral(ctx, 240*time.Second, fmt.Errorf("page: %w", &connector.RateLimitedError{RetryAfter: 30 * time.Second}))
 	ObserveDeferral(ctx, 60*time.Second, fmt.Errorf("page: %w", connector.ErrRateLimited))
 	ObserveDeferral(ctx, 20*time.Second, fmt.Errorf("page: %w", connector.ErrUnreachable))
+	ObserveDeferral(ctx, time.Second, fmt.Errorf("page: %w", connector.ErrCursorGone))
+	ObserveDeferral(ctx, 10*time.Second, errors.New("a run of refused messages"))
+	ObserveInPageWait(ctx, 5*time.Second, 4*time.Second)
+	ObserveResumed(ctx, time.Second)
 
 	mustContain(t, render(),
 		`margince_capture_backfill_snooze_seconds_total{provider="gmail",reason="rate_limited"} 300`,
 		`margince_capture_backfill_snooze_seconds_total{provider="gmail",reason="unreachable"} 20`,
-		`margince_capture_backfill_retry_after_seconds_total{provider="gmail"} 30`,
+		`margince_capture_backfill_snooze_seconds_total{provider="gmail",reason="token_rejected"} 1`,
+		`margince_capture_backfill_snooze_seconds_total{provider="gmail",reason="internal"} 10`,
+		`margince_capture_backfill_snooze_seconds_total{provider="gmail",reason="rate_limited_in_page"} 5`,
+		`margince_capture_backfill_snooze_seconds_total{provider="gmail",reason="resumed"} 1`,
+		`margince_capture_backfill_retry_after_seconds_total{provider="gmail"} 34`,
 	)
 }
 
@@ -178,6 +189,8 @@ func TestAMessageEndsOnItsTracedDecisionOrOnHowItsWalkEnded(t *testing.T) {
 	walk("", true, nil)
 	walk("", false, nil)
 	walk("captured", true, connector.ErrUnreachable)
+	_, refused := BeginMessage(run)
+	refused.Refuse()
 
 	mustContain(t, render(),
 		`margince_capture_backfill_messages_total{provider="gmail",outcome="internal"} 1`,
@@ -185,6 +198,7 @@ func TestAMessageEndsOnItsTracedDecisionOrOnHowItsWalkEnded(t *testing.T) {
 		`margince_capture_backfill_messages_total{provider="gmail",outcome="captured"} 1`,
 		`margince_capture_backfill_messages_total{provider="gmail",outcome="skipped"} 1`,
 		`margince_capture_backfill_messages_total{provider="gmail",outcome="failed"} 1`,
+		`margince_capture_backfill_messages_total{provider="gmail",outcome="refused"} 1`,
 	)
 }
 

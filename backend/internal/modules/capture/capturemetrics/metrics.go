@@ -22,30 +22,37 @@ import (
 )
 
 // The provider API calls a connector names, so a dashboard can tell the
-// listing of ids from the per-message download it drives. OpToken is a round
-// trip to the provider's OAuth token endpoint.
+// listing of ids from the per-message downloads it drives: OpGetMetadata reads
+// a message's headers, OpGetRaw downloads it in full. OpToken is a round trip
+// to the provider's OAuth token endpoint.
 const (
-	OpList    = "list"
-	OpGetRaw  = "get_raw"
-	OpHistory = "history"
-	OpToken   = "token"
-	OpOther   = "other"
+	OpList        = "list"
+	OpGetMetadata = "get_metadata"
+	OpGetRaw      = "get_raw"
+	OpHistory     = "history"
+	OpToken       = "token"
+	OpOther       = "other"
 )
 
-// The stages one backfilled message passes through, in order.
+// The stages one backfilled message passes through, in order. A message its
+// headers settle stops after StageFetchHeaders; StageFetch is the full download.
 const (
-	StageFetch  = "fetch"
-	StageParse  = "parse"
-	StageSink   = "sink"
-	StageEnsure = "ensure"
+	StageFetchHeaders = "fetch_headers"
+	StageFetch        = "fetch"
+	StageParse        = "parse"
+	StageSink         = "sink"
+	StageEnsure       = "ensure"
 )
 
 // The outcomes a message ends on besides the ones the capture trace records.
 // OutcomeCaptured is the trace's own `captured`, used for a message the sink
 // accepted without tracing a decision — a replay of one already stored.
+// OutcomeRefused is a message the capture refused and the page walked past;
+// OutcomeFailed is one whose failure ended the page.
 const (
 	OutcomeCaptured = "captured"
 	OutcomeSkipped  = "skipped"
+	OutcomeRefused  = "refused"
 	OutcomeFailed   = "failed"
 )
 
@@ -56,9 +63,13 @@ const (
 	resultUnreachable = "unreachable"
 	resultNotFound    = "not_found"
 	resultError       = "error"
+	resultTokenGone   = "token_rejected"
 	resultFailed      = "failed"
 
-	reasonPacing = "pacing"
+	reasonPacing   = "pacing"
+	reasonResumed  = "resumed"
+	reasonInPage   = "rate_limited_in_page"
+	reasonInternal = "internal"
 )
 
 // requestBounds are the provider-call histogram's upper bounds in seconds: a
@@ -134,6 +145,8 @@ func pageResult(err error) string {
 		return resultRateLimited
 	case errors.Is(err, connector.ErrUnreachable) && !errors.Is(err, connector.ErrAuthRejected):
 		return resultUnreachable
+	case errors.Is(err, connector.ErrCursorGone):
+		return resultTokenGone
 	default:
 		return resultFailed
 	}
@@ -164,15 +177,21 @@ func (c *collector) observePage(provider, result string) {
 	c.pages[pair{provider: provider, value: result}]++
 }
 
-// observeSnooze adds one chosen wait, and beside it what the provider asked
-// for, so the gap between the two is a subtraction on the dashboard.
-func (c *collector) observeSnooze(provider, reason string, wait, asked time.Duration) {
+// observeSnooze adds one chosen wait.
+func (c *collector) observeSnooze(provider, reason string, wait time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.snoozed[pair{provider: provider, value: reason}] += wait.Seconds()
-	if reason != reasonPacing {
-		c.retryAfter[provider] += asked.Seconds()
-	}
+}
+
+// observeFaultWait adds a wait taken after a provider fault, and beside it what
+// the provider asked for, so the gap between the two is a subtraction on the
+// dashboard.
+func (c *collector) observeFaultWait(provider, reason string, wait, asked time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.snoozed[pair{provider: provider, value: reason}] += wait.Seconds()
+	c.retryAfter[provider] += asked.Seconds()
 }
 
 func observeLocked(family map[pair]*httpserver.Histogram, k pair, bounds []float64, elapsed time.Duration) {
@@ -188,11 +207,16 @@ func observeLocked(family map[pair]*httpserver.Histogram, k pair, bounds []float
 // the provider itself asked for (zero when it named no Retry-After).
 func deferralOf(cause error) (reason string, asked time.Duration) {
 	var limited *connector.RateLimitedError
-	if errors.As(cause, &limited) {
+	switch {
+	case errors.As(cause, &limited):
 		return resultRateLimited, limited.RetryAfter
-	}
-	if errors.Is(cause, connector.ErrRateLimited) {
+	case errors.Is(cause, connector.ErrRateLimited):
 		return resultRateLimited, 0
+	case errors.Is(cause, connector.ErrUnreachable):
+		return resultUnreachable, 0
+	case errors.Is(cause, connector.ErrCursorGone):
+		return resultTokenGone, 0
+	default:
+		return reasonInternal, 0
 	}
-	return resultUnreachable, 0
 }

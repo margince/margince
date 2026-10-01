@@ -8,12 +8,14 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // sample reads one series' current value off the process exposition. The
@@ -54,16 +56,23 @@ func requests(op, result string) string {
 	return `margince_connector_requests_total{provider="gmail",op="` + op + `",result="` + result + `"}`
 }
 
-func TestAGetPathNamesTheCallItMakes(t *testing.T) {
-	for path, want := range map[string]string{
-		"/messages":    capturemetrics.OpList,
-		"/messages/m1": capturemetrics.OpGetRaw,
-		"/history":     capturemetrics.OpHistory,
-		"/profile":     capturemetrics.OpOther,
-		"/labels":      capturemetrics.OpOther,
+func TestAGetNamesTheCallItMakes(t *testing.T) {
+	for _, tc := range []struct {
+		path, format, want string
+	}{
+		{"/messages", "", capturemetrics.OpList},
+		{"/messages/m1", "metadata", capturemetrics.OpGetMetadata},
+		{"/messages/m1", "RAW", capturemetrics.OpGetRaw},
+		{"/history", "", capturemetrics.OpHistory},
+		{"/profile", "", capturemetrics.OpOther},
+		{"/labels", "", capturemetrics.OpOther},
 	} {
-		if got := getOp(path); got != want {
-			t.Errorf("getOp(%q) = %q, want %q", path, got, want)
+		q := url.Values{}
+		if tc.format != "" {
+			q.Set("format", tc.format)
+		}
+		if got := getOp(tc.path, q); got != tc.want {
+			t.Errorf("getOp(%q, format=%q) = %q, want %q", tc.path, tc.format, got, tc.want)
 		}
 	}
 }
@@ -76,6 +85,9 @@ func TestEveryGmailCallIsCountedByOpAndResult(t *testing.T) {
 		writeJSON(w, map[string]any{"messages": []map[string]string{{"id": "m1"}}})
 	})
 	mux.HandleFunc("/messages/gone", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+	mux.HandleFunc("/messages/m1", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{"payload": map[string]any{"headers": []map[string]string{{"name": "Subject", "value": "hi"}}}})
+	})
 	mux.HandleFunc("/history", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusTooManyRequests) })
 	mux.HandleFunc("/profile", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusUnauthorized) })
 	mux.HandleFunc("/messages/send", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadGateway) })
@@ -90,6 +102,9 @@ func TestEveryGmailCallIsCountedByOpAndResult(t *testing.T) {
 	moved := deltas(t, func() {
 		if _, err := api.ListRecent(ctx, "access", 10); err != nil {
 			t.Errorf("ListRecent: %v", err)
+		}
+		if _, err := api.(HeaderFetcher).GetHeaders(ctx, "access", "m1"); err != nil {
+			t.Errorf("GetHeaders: %v", err)
 		}
 		if _, err := api.GetRaw(ctx, "access", "gone"); !errors.Is(err, ErrMessageGone) {
 			t.Errorf("GetRaw of a deleted message = %v, want ErrMessageGone", err)
@@ -107,13 +122,13 @@ func TestEveryGmailCallIsCountedByOpAndResult(t *testing.T) {
 			t.Errorf("Watch: %v", err)
 		}
 	},
-		requests("list", "ok"), requests("get_raw", "not_found"), requests("history", "rate_limited"),
+		requests("list", "ok"), requests("get_metadata", "ok"), requests("get_raw", "not_found"), requests("history", "rate_limited"),
 		requests("other", "auth"), requests("other", "unreachable"), requests("other", "ok"),
 		`margince_connector_request_duration_seconds_count{provider="gmail",op="other"}`,
 	)
 
 	for series, want := range map[string]float64{
-		requests("list", "ok"): 1, requests("get_raw", "not_found"): 1, requests("history", "rate_limited"): 1,
+		requests("list", "ok"): 1, requests("get_metadata", "ok"): 1, requests("get_raw", "not_found"): 1, requests("history", "rate_limited"): 1,
 		requests("other", "auth"): 1, requests("other", "unreachable"): 1, requests("other", "ok"): 1,
 		`margince_connector_request_duration_seconds_count{provider="gmail",op="other"}`: 3,
 	} {
@@ -158,19 +173,67 @@ func TestABackfillPageTalliesEachMessageAndTimesItsStages(t *testing.T) {
 	}
 }
 
-func TestAMessageThatStopsThePageIsCountedFailed(t *testing.T) {
+// A message the capture refuses is walked past and counted refused; a failure
+// of the connection ends the page and the message it stopped on is failed.
+func TestARefusedMessageIsWalkedPastAndAPageEndingOneIsFailed(t *testing.T) {
 	api := &pagedAPI{pages: map[string][]string{"": {"m1@mail.gmail.com"}}}
 	api.raws = map[string][]byte{"m1@mail.gmail.com": rawMsg("m1@mail.gmail.com", "alice@acme.com")}
-	c := New(fakeOAuth{access: "access-1"}, api)
 	ctx := capturemetrics.ForProvider(context.Background(), connectorName)
 
 	moved := deltas(t, func() {
-		if _, err := c.BackfillPage(ctx, authBytes(t), time.Now(), "", failingSink{err: errors.New("db down")}); err == nil {
-			t.Error("a sink fault did not stop the page")
+		if _, err := New(fakeOAuth{access: "access-1"}, api).BackfillPage(ctx, authBytes(t), time.Now(), "", failingSink{err: errors.New("refused")}); err != nil {
+			t.Errorf("one refused message ended the page: %v", err)
 		}
-	}, messages("failed"))
-	if moved[messages("failed")] != 1 {
-		t.Errorf("failed moved by %v, want 1", moved[messages("failed")])
+		down := &pagedAPI{pages: api.pages}
+		down.getErr = connector.ErrUnreachable
+		if _, err := New(fakeOAuth{access: "access-1"}, down).BackfillPage(ctx, authBytes(t), time.Now(), "", &recordingSink{}); err == nil {
+			t.Error("an unreachable provider did not end the page")
+		}
+	}, messages("refused"), messages("failed"))
+	if moved[messages("refused")] != 1 || moved[messages("failed")] != 1 {
+		t.Errorf("refused moved by %v and failed by %v, want 1 each", moved[messages("refused")], moved[messages("failed")])
+	}
+}
+
+// The header pass is timed apart from the full download, and a message its
+// headers settle is counted under the decision without being fetched in full.
+func TestTheHeaderPassIsTimedApartFromTheDownload(t *testing.T) {
+	api := pageOf("m1@mail.gmail.com", "m2@mail.gmail.com")
+	api.raws["m1@mail.gmail.com"] = rawMsg("m1@mail.gmail.com", "colleague@myco.com")
+	api.raws["m2@mail.gmail.com"] = rawMsg("m2@mail.gmail.com", "alice@acme.com")
+	ctx := capturemetrics.ForProvider(context.Background(), connectorName)
+
+	moved := deltas(t, func() {
+		if _, err := New(fakeOAuth{access: "access-1"}, api).BackfillPage(ctx, authBytes(t), time.Now(), "", &judgingSink{dropDomain: "myco.com"}); err != nil {
+			t.Errorf("page: %v", err)
+		}
+	}, stageCount("fetch_headers"), stageCount("fetch"), messages("skipped"), messages("captured"))
+	for series, want := range map[string]float64{
+		stageCount("fetch_headers"): 2, stageCount("fetch"): 1, messages("skipped"): 1, messages("captured"): 1,
+	} {
+		if moved[series] != want {
+			t.Errorf("%s moved by %v, want %v", series, moved[series], want)
+		}
+	}
+}
+
+// A rate limit the page waits out inside itself is counted once per pause it
+// set, beside what Google asked for.
+func TestAnInPageRateLimitWaitIsCountedBesideTheAsk(t *testing.T) {
+	inPage := `margince_capture_backfill_snooze_seconds_total{provider="gmail",reason="rate_limited_in_page"}`
+	asked := `margince_capture_backfill_retry_after_seconds_total{provider="gmail"}`
+	ctx := capturemetrics.ForProvider(context.Background(), connectorName)
+	moved := deltas(t, func() {
+		g := &rateGate{}
+		limited := &connector.RateLimitedError{RetryAfter: 20 * time.Millisecond}
+		observeGatePause(ctx, g.pause(20*time.Millisecond), limited)
+		observeGatePause(ctx, g.pause(time.Millisecond), limited)
+	}, inPage, asked)
+	if moved[inPage] <= 0 || moved[inPage] > 0.021 {
+		t.Errorf("in-page wait moved by %v, want the one 20ms pause", moved[inPage])
+	}
+	if moved[asked] < 0.0199 || moved[asked] > 0.0201 {
+		t.Errorf("retry_after moved by %v, want the 20ms Google asked for once", moved[asked])
 	}
 }
 

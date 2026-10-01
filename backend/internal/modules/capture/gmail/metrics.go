@@ -9,6 +9,7 @@ package gmail
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"strings"
 	"time"
@@ -26,7 +27,7 @@ import (
 func (a *httpAPI) get(ctx context.Context, accessToken, path string, q url.Values, out any, maxBytes int64) (int, error) {
 	start := time.Now()
 	status, err := a.getOnce(ctx, accessToken, path, q, out, maxBytes)
-	capturemetrics.ObserveRequest(connectorName, getOp(path), status, err, time.Since(start))
+	capturemetrics.ObserveRequest(connectorName, getOp(path, q), status, err, time.Since(start))
 	return status, err
 }
 
@@ -68,13 +69,49 @@ func (a timedAuthorizer) Exchange(ctx context.Context, code, redirectURI string)
 	return grant, err
 }
 
-// backfillMessage walks one listed message under its own tally, which the
-// capture trace fills in with the decision it reached.
-func (c *Connector) backfillMessage(ctx context.Context, access, id string, sink connector.Sink, owner string) (bool, error) {
-	ctx, message := capturemetrics.BeginMessage(ctx)
-	captured, err := c.backfillOne(ctx, access, id, sink, owner)
-	message.End(captured, err)
-	return captured, err
+// getRaw downloads one message in full, timed as a backfill's fetch stage.
+func (w *pageWalk) getRaw(ctx context.Context, id string) (Message, error) {
+	start := time.Now()
+	msg, err := w.c.api.GetRaw(ctx, w.access, id)
+	capturemetrics.ObserveStage(ctx, capturemetrics.StageFetch, time.Since(start))
+	return msg, err
+}
+
+// getHeaders reads one message's headers, timed as a backfill's
+// fetch_headers stage.
+func (w *pageWalk) getHeaders(ctx context.Context, headers HeaderFetcher, id string) (Message, error) {
+	start := time.Now()
+	msg, err := headers.GetHeaders(ctx, w.access, id)
+	capturemetrics.ObserveStage(ctx, capturemetrics.StageFetchHeaders, time.Since(start))
+	return msg, err
+}
+
+// observeGatePause records how much longer a rate limit closed the page's
+// gate, beside the Retry-After the provider asked for with it. Concurrent
+// refusals that fall inside a pause already set add nothing.
+func observeGatePause(ctx context.Context, extended time.Duration, cause error) {
+	if extended <= 0 {
+		return
+	}
+	var limited *connector.RateLimitedError
+	var asked time.Duration
+	if errors.As(cause, &limited) {
+		asked = limited.RetryAfter
+	}
+	capturemetrics.ObserveInPageWait(ctx, extended, asked)
+}
+
+// settleMessage settles one message through settle and counts it under the
+// outcome it came to: refused when the page walked past its failure, failed
+// when the failure ended the page.
+func (w *pageWalk) settleMessage(message *capturemetrics.Message, id string, captured bool, err error) error {
+	settled := w.settle(id, captured, err)
+	if err != nil && settled == nil {
+		message.Refuse()
+	} else {
+		message.End(captured, settled)
+	}
+	return settled
 }
 
 // parseTimed parses one fetched message, timed as a backfill's parse stage.
@@ -85,12 +122,14 @@ func parseTimed(ctx context.Context, raw []byte, owner string) (mailmap.Message,
 	return msg, err
 }
 
-// getOp names the call a GET path makes: the id listing, the per-message RAW
-// download a backfill makes once per message, the history delta, or another.
-func getOp(path string) string {
+// getOp names the call a GET makes: the id listing, a message's headers or its
+// full RAW download, the history delta, or another.
+func getOp(path string, q url.Values) string {
 	switch {
 	case path == "/messages":
 		return capturemetrics.OpList
+	case strings.HasPrefix(path, "/messages/") && q.Get("format") == "metadata":
+		return capturemetrics.OpGetMetadata
 	case strings.HasPrefix(path, "/messages/"):
 		return capturemetrics.OpGetRaw
 	case path == "/history":

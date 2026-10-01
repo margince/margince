@@ -83,14 +83,30 @@ func ObservePage(ctx context.Context, err error) {
 func ObserveDeferral(ctx context.Context, wait time.Duration, cause error) {
 	if provider, ok := providerOf(ctx); ok {
 		reason, asked := deferralOf(cause)
-		shared.observeSnooze(provider, reason, wait, asked)
+		shared.observeFaultWait(provider, reason, wait, asked)
 	}
 }
 
 // ObservePacing records the yield a backfill takes between two good pages.
 func ObservePacing(ctx context.Context, wait time.Duration) {
 	if provider, ok := providerOf(ctx); ok {
-		shared.observeSnooze(provider, reasonPacing, wait, 0)
+		shared.observeSnooze(provider, reasonPacing, wait)
+	}
+}
+
+// ObserveResumed records the yield a job takes to page a run that was reopened
+// while the job was ending it.
+func ObserveResumed(ctx context.Context, wait time.Duration) {
+	if provider, ok := providerOf(ctx); ok {
+		shared.observeSnooze(provider, reasonResumed, wait)
+	}
+}
+
+// ObserveInPageWait records a rate-limit wait the page took inside itself,
+// beside the Retry-After the provider asked for.
+func ObserveInPageWait(ctx context.Context, wait, asked time.Duration) {
+	if provider, ok := providerOf(ctx); ok {
+		shared.observeFaultWait(provider, reasonInPage, wait, asked)
 	}
 }
 
@@ -125,9 +141,17 @@ func NoteOutcome(ctx context.Context, outcome string) {
 	m.outcome = outcome
 }
 
+// Refuse counts the message as one the capture refused and the page walked
+// past.
+func (m *Message) Refuse() {
+	if m != nil {
+		shared.observeMessage(m.provider, OutcomeRefused)
+	}
+}
+
 // End counts the message once, under the outcome its walk came to: failed on
-// an error, the traced decision when there was one, and otherwise captured or
-// skipped as the connector tallied it.
+// an error that ended the page, the traced decision when there was one, and
+// otherwise captured or skipped as the connector tallied it.
 func (m *Message) End(captured bool, err error) {
 	if m == nil {
 		return

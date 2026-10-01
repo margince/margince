@@ -412,16 +412,18 @@ messages and `fetch`/`parse` stages are not counted.
 
 | Family | Labels | Meaning |
 |---|---|---|
-| `margince_connector_requests_total` | `provider`, `op`, `result` | every Gmail API call; `op` is `list`, `get_raw`, `history`, `token` (an OAuth token refresh or exchange) or `other`, `result` is `ok`, `rate_limited`, `auth`, `unreachable`, `not_found` or `error` |
+| `margince_connector_requests_total` | `provider`, `op`, `result` | every Gmail API call; `op` is `list`, `get_metadata` (a message's headers), `get_raw` (a full download), `history`, `token` (an OAuth token refresh or exchange) or `other`, `result` is `ok`, `rate_limited`, `auth`, `unreachable`, `not_found` or `error` |
 | `margince_connector_request_duration_seconds` | `provider`, `op` | histogram of the same calls' wall time |
-| `margince_capture_backfill_messages_total` | `provider`, `outcome` | one per message walked: the capture trace's outcome (`captured`, `internal`, `suppressed`, `deferred`, `fault`), else `skipped`, or `failed` when the message stopped its page |
-| `margince_capture_backfill_stage_seconds` | `provider`, `stage` | histogram per message: `fetch` (the RAW download), `parse`, `sink` (the capture transaction), `ensure` (counterparty and project work after it) |
-| `margince_capture_backfill_pages_total` | `provider`, `result` | pages by `ok`, `rate_limited`, `unreachable` or `failed` |
-| `margince_capture_backfill_snooze_seconds_total` | `provider`, `reason` | seconds the import chose to wait: `pacing` between good pages, `rate_limited` or `unreachable` after a failed one |
-| `margince_capture_backfill_retry_after_seconds_total` | `provider` | the Retry-After the provider asked for on those faults; the gap to the snooze total is the wait our own ladder added |
+| `margince_capture_backfill_messages_total` | `provider`, `outcome` | one per message settled: the capture trace's outcome (`captured`, `internal`, `suppressed`, `deferred`, `fault`), else `skipped`; `refused` when the capture refused it and the page walked past, `failed` when its failure ended the page |
+| `margince_capture_backfill_stage_seconds` | `provider`, `stage` | histogram per fetch attempt or per message: `fetch_headers` (the headers read every listed message gets first), `fetch` (the RAW download, only for messages the headers did not settle), `parse`, `sink` (the capture transaction), `ensure` (counterparty, project and merge-staging work after it) |
+| `margince_capture_backfill_pages_total` | `provider`, `result` | pages by `ok`, `rate_limited`, `unreachable`, `token_rejected` (Gmail refused the page token; the run walks its window again once) or `failed` |
+| `margince_capture_backfill_snooze_seconds_total` | `provider`, `reason` | seconds the import chose to wait: `pacing` between good pages; after a failed page `rate_limited`, `unreachable`, `token_rejected` or `internal`; `rate_limited_in_page` for a short rate limit a page waited out inside itself; `resumed` when a run was reopened while its job was ending |
+| `margince_capture_backfill_retry_after_seconds_total` | `provider` | the Retry-After the provider asked for on the fault and in-page waits; the gap to their snooze total is the wait our own ladder added |
 
 Compare `sum by (stage) (rate(margince_capture_backfill_stage_seconds_sum[5m]))` across stages to see whether Google's
-download or our transaction dominates a message, and
+download or our transaction dominates a message,
+`sum(rate(margince_connector_requests_total{op="get_metadata"}[5m])) - sum(rate(margince_connector_requests_total{op="get_raw"}[5m]))`
+for the full downloads the headers read saves, and
 `rate(margince_connector_requests_total{result="rate_limited"}[5m])` to see
 whether the provider is pacing the import.
 
