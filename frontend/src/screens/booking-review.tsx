@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
@@ -25,6 +25,7 @@ import type { BookingMode, BookingSlot } from "./booking-picker";
 import { proposalEmailBody } from "./booking-proposal-message";
 import { throwProblem } from "./common";
 import { ComposeModal } from "./compose";
+import { refreshContactMeetings } from "./contactmeetings.waiting";
 
 type Invitation = components["schemas"]["MeetingInvitationRequest"];
 type Proposal = components["schemas"]["MeetingProposalRequest"];
@@ -281,6 +282,7 @@ function InviteSend({
   request,
 }: Readonly<{ label: string; disabled: boolean; request?: Invitation }>) {
   const intent = useBookingIntent();
+  const client = useQueryClient();
   const send = useMutation({
     mutationFn: async (body: Invitation) => {
       const { data, error } = await api.POST("/scheduling/invitations", {
@@ -290,8 +292,10 @@ function InviteSend({
       if (error) throwProblem(error);
       return data;
     },
-    onSuccess: (value) =>
-      navigate({ screen: "book", id: `meeting-${value.id}` }),
+    onSuccess: async (value, body) => {
+      await refreshContactMeetings(client, body.contact_id);
+      navigate({ screen: "book", id: `meeting-${value.id}` });
+    },
   });
   return (
     <div className="book-form">
@@ -324,6 +328,7 @@ function ProposalSend({
   const t = useT();
   const { locale } = useLocale();
   const intent = useBookingIntent();
+  const client = useQueryClient();
   const [review, setReview] = useState(false);
   const create = useMutation({
     mutationFn: async (body: Proposal) => {
@@ -334,7 +339,10 @@ function ProposalSend({
       if (error) throwProblem(error);
       return data;
     },
-    onSuccess: () => setReview(true),
+    onSuccess: async (_proposal, body) => {
+      setReview(true);
+      await refreshContactMeetings(client, body.contact_id);
+    },
   });
   const current =
     create.data && JSON.stringify(create.variables) === JSON.stringify(request);

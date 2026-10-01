@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
-
-import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "../screens/common";
+import { useActivity } from "../screens/activityread";
 import { Button } from "./atoms";
 import { SourceEmailPanel } from "./sourceemailpanel";
 import { SurfaceState } from "./surfacestate";
@@ -41,20 +38,7 @@ export function SourceEvidence({
   // The kind decides the form, so it is resolved before either is drawn. The
   // PLAIN activity read, not the email presentation: that endpoint refuses any
   // kind but `email`, so asking it first would 404 on every transcript.
-  const query = useQuery({
-    queryKey: ["activity", activityId],
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id: activityId } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-  });
+  const query = useActivity(activityId);
   // A failed lookup is SAID, not swallowed. Returning nothing here removed the
   // evidence altogether — no panel, no button, no reason — and the email
   // panel's own failure arm cannot help, because a kind nobody resolved never

@@ -384,7 +384,9 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
     page.getByRole("heading", { name: bookingProfile.title }),
   ).toBeVisible();
   await page.getByRole("button", { name: de["calendar.nextMonth"] }).click();
-  await expect.poll(() => availability.length).toBe(2);
+  // October in Berlin holds the clock going back, so it runs past the
+  // server's 31-day bound and is read in two windows after September's one.
+  await expect.poll(() => availability.length).toBe(3);
   const slot = page.locator(".bookguest-times .meeting-slots button").first();
   await expect(slot).toBeVisible();
   await slot.click();

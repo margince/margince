@@ -31,7 +31,7 @@
 // the capture upsert is `ON CONFLICT (source_system, source_id) DO NOTHING`, so
 // a second sync of the same event returns the incumbent row untouched.
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
@@ -49,6 +49,7 @@ import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import { useT } from "../i18n";
+import { useActivity } from "./activityread";
 import { throwProblem } from "./common";
 import { useMeetingOutcome } from "./taskactions";
 import { worklistKey } from "./worklist.queries";
@@ -147,20 +148,7 @@ function MeetingOutcomeDialog({
   const [draft, setDraft] = useState<OutcomeDraft | null>(null);
   // The SAME read the task detail makes, and keyed the same way, so a write
   // that invalidates ["activity", id] refreshes whichever of the two is open.
-  const meeting = useQuery({
-    queryKey: ["activity", id],
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-  });
+  const meeting = useActivity(id);
   // Seeded from the read, once, during render rather than in an effect — an
   // effect paints the empty form first, and a reader who types into that frame
   // has their words replaced when the seed lands.
@@ -218,7 +206,9 @@ function MeetingOutcomeDialog({
         <p className="t-caption">{t("worklist.verb.meetingReading")}</p>
       )}
       <ErrorLine error={meeting.error} />
-      {draft && (
+      {/* Only while the read holds the meeting: a refused re-read withdraws
+          what the draft was seeded from, and the version a save needs. */}
+      {draft && meeting.data && (
         <form
           className="form-stack"
           onSubmit={(event) => {
