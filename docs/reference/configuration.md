@@ -391,6 +391,42 @@ counts and the oldest waiting age, plus up to 50 recent failures.
   before it ran — says so, rather than borrowing the unvettable-failure
   sentence and claiming a failure that never happened.
 
+### Reading a mailbox import
+
+A Gmail or Microsoft 365 history import (`capture_backfill`) is read from two
+places. **Where it stands** is fleet-wide, read from `capture_backfill` at
+scrape time and served by `cmd/api` beside the job gauges; every api replica
+answers the same numbers, so read them with `max`, never `sum`:
+
+| Family | Labels | Meaning |
+|---|---|---|
+| `margince_capture_backfill_runs` | `status` | imports per status (`queued`, `running`, `done`, `error`, `cancelled`); a status no run holds reads 0 |
+| `margince_capture_backfill_progress` | `field` | summed over the queued and running imports: `scanned`, `captured` and `skipped` are each the committed count plus the running page's live tally; `total_estimate` is the preview's estimate of the window, a floor where the preview said so |
+
+**Why it is slow** is per-process, counted by the worker that pages the import
+and served on its `--observe-addr` (the api serves its own copy for the provider
+calls it makes itself, such as the preview estimate). Every family below is
+emitted for a Gmail import. A Microsoft 365 import emits only the `sink` and
+`ensure` stages, the pages, the snoozes and the Retry-After: its requests,
+messages and `fetch`/`parse` stages are not counted.
+
+| Family | Labels | Meaning |
+|---|---|---|
+| `margince_connector_requests_total` | `provider`, `op`, `result` | every Gmail API call; `op` is `list`, `get_metadata` (a message's headers), `get_raw` (a full download), `history`, `token` (an OAuth token refresh or exchange) or `other`, `result` is `ok`, `rate_limited`, `auth`, `unreachable`, `not_found` or `error` |
+| `margince_connector_request_duration_seconds` | `provider`, `op` | histogram of the same calls' wall time |
+| `margince_capture_backfill_messages_total` | `provider`, `outcome` | one per message settled: the capture trace's outcome (`captured`, `internal`, `suppressed`, `deferred`, `fault`), else `skipped`; `refused` when the capture refused it and the page walked past, `failed` when its failure ended the page |
+| `margince_capture_backfill_stage_seconds` | `provider`, `stage` | histogram per fetch attempt or per message: `fetch_headers` (the headers read every listed message gets first), `fetch` (the RAW download, only for messages the headers did not settle), `parse`, `sink` (the capture transaction), `ensure` (counterparty, project and merge-staging work after it) |
+| `margince_capture_backfill_pages_total` | `provider`, `result` | pages by `ok`, `rate_limited`, `unreachable`, `token_rejected` (Gmail refused the page token; the run walks its window again once) or `failed` |
+| `margince_capture_backfill_snooze_seconds_total` | `provider`, `reason` | seconds the import chose to wait: `pacing` between good pages; after a failed page `rate_limited`, `unreachable`, `token_rejected` or `internal`; `rate_limited_in_page` for a short rate limit a page waited out inside itself; `resumed` when a run was reopened while its job was ending |
+| `margince_capture_backfill_retry_after_seconds_total` | `provider` | the Retry-After the provider asked for on the fault and in-page waits; the gap to their snooze total is the wait our own ladder added |
+
+Compare `sum by (stage) (rate(margince_capture_backfill_stage_seconds_sum[5m]))` across stages to see whether Google's
+download or our transaction dominates a message,
+`sum(rate(margince_connector_requests_total{op="get_metadata"}[5m])) - sum(rate(margince_connector_requests_total{op="get_raw"}[5m]))`
+for the full downloads the headers read saves, and
+`rate(margince_connector_requests_total{result="rate_limited"}[5m])` to see
+whether the provider is pacing the import.
+
 ## cmd/worker — the background process role
 
 **Outbound mail does not leave without this process.** Every role that accepts
@@ -485,6 +521,7 @@ re-serves no fleet-wide reading:
 | `margince_pgxpool_*` | this process's own connection pool — see the connection-pool section |
 | `margince_relay_published_total` | outbox rows *this* relay has shipped since start |
 | `margince_ai_*` | the AI calls *this* process made — every Router in a binary increments one process-wide collector |
+| `margince_connector_*`, `margince_capture_backfill_*` (counters and histograms) | the provider calls and mailbox imports *this* process ran — see [Reading a mailbox import](#reading-a-mailbox-import) |
 
 The AI families are labelled by `provider`, `model`, `served_identity_source`,
 `task` and `tier`. `model` is the **served** identity, not the configured one: a

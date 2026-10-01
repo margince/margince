@@ -14,7 +14,8 @@
 //
 // So this listener carries only what is PROCESS-LOCAL and therefore differs
 // per target — the Go runtime, this process's own pool, this process's relay
-// counter, and the AI calls this process made. It re-serves no job-table
+// counter, the AI calls this process made, and the provider calls and mailbox
+// imports its capture lanes ran. It re-serves no job-table
 // gauge, and passes a nil outbox backlog for the same reason: that read is the
 // api's, and a second copy of a fleet-wide number is a worse operator surface
 // than one copy. It carries no workspace id and no tenant data at all, which
@@ -30,6 +31,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -131,7 +133,7 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 	// of a shared table the api already serves, and a second copy of one
 	// number is a worse operator surface than one copy.
 	//
-	// Extra carries the AI counters, and they belong here by the same test
+	// Extra carries the AI and mailbox-import counters, and they belong here by the same test
 	// everything else on this listener passes: they count what THIS process
 	// routed, so they differ per target and no other role can answer them.
 	// While this was nil every call the enrichment lanes made was missing from
@@ -149,7 +151,7 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 	mux.HandleFunc("/metrics", httpserver.Metrics(httpserver.MetricsInput{
 		Pool:      pool,
 		Published: events.PublishedTotal,
-		Extra:     ai.WriteProcessMetrics,
+		Extra:     writeProcessSections,
 	}))
 
 	if cfg.observePprof {
@@ -202,6 +204,14 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 			log.Warn("stopping the worker observability listener", "err", err)
 		}
 	}}, nil
+}
+
+// writeProcessSections renders the counter families this process increments:
+// the AI calls it routed, and what its capture lanes decided, called and
+// imported.
+func writeProcessSections(w io.Writer) {
+	ai.WriteProcessMetrics(w)
+	compose.WriteCaptureProcessMetrics(w)
 }
 
 // mountPprof puts Go's runtime profiles on the observe mux, and ONLY there.
