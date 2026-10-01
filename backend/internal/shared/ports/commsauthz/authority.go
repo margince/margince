@@ -89,9 +89,9 @@ func (l AuthorityLevel) CanOverrule(decided AuthorityLevel) bool {
 
 // CanRevoke reports whether a party at this level may TAKE BACK a decision
 // recorded at `decided`. It is CanOverrule plus one case: an admin may revoke
-// another admin's, because admin is the top human authority and issue #4275's
-// table makes an admin decision "overruled by admin". LevelSubject stays the
-// one tier nothing revokes — no seat reaches it, admin included.
+// another admin's, because admin is the top human authority and an admin vouch
+// would otherwise have no seat able to take it back. LevelSubject stays the one
+// tier nothing revokes — no seat reaches it, admin included.
 func (l AuthorityLevel) CanRevoke(decided AuthorityLevel) bool {
 	if decided == LevelSubject {
 		return false

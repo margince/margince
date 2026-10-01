@@ -35,8 +35,8 @@ func TestWhoMayOverruleWhom(t *testing.T) {
 
 // TestWhoMayRevokeWhom is CanOverrule's table with one square flipped: an admin
 // may TAKE BACK another admin's decision, because admin is the top human
-// authority and issue #4275's table makes an admin decision "overruled by
-// admin". Every other square is CanOverrule's own answer, LevelSubject included:
+// authority and an admin vouch would otherwise have no seat able to take it
+// back. Every other square is CanOverrule's own answer, LevelSubject included:
 // nothing revokes the subject.
 func TestWhoMayRevokeWhom(t *testing.T) {
 	t.Parallel()

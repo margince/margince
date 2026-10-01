@@ -115,8 +115,11 @@ func reasonConstants(t *testing.T) []string {
 				continue
 			}
 			for i, name := range values.Names {
-				if !strings.HasPrefix(name.Name, "Reason") || i >= len(values.Values) {
+				if !strings.HasPrefix(name.Name, "Reason") {
 					continue
+				}
+				if i >= len(values.Values) {
+					t.Fatalf("%s has no explicit value; this census reads reason codes as literals", name.Name)
 				}
 				lit, ok := values.Values[i].(*ast.BasicLit)
 				if !ok || lit.Kind != token.STRING {

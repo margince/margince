@@ -206,10 +206,11 @@ func (s *Store) allowAdmittedTx(
 // overrideRecordedPayload names WHICH row was written, what was vouched for and
 // at which authority.
 //
-// The id is on the payload because it is the only place a caller ever learns it:
-// the door answers 204 with no body, and the revoke door takes that id in its
-// path. Without it a rep could record a vouch and never be able to take it back.
-// The reason stays off, as suppress.go keeps it off theirs.
+// The id is on the payload for the subscriber's sake, as the 201 body carries
+// it for the caller's: a consumer mirroring this contact's record needs the
+// handle the revoke door takes, and a lifted event names the same id so the
+// two can be paired without a lookup. The reason stays off, as suppress.go
+// keeps it off theirs.
 func overrideRecordedPayload(
 	id ids.UUID, category string, level commsauthz.AuthorityLevel,
 ) crmcontracts.PublicEventConsentOverrideRecorded {
