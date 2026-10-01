@@ -522,6 +522,10 @@ describe("a gemini_vertex lane", () => {
       within(lane).getByRole("combobox", { name: "Provider" }),
       "gemini_vertex",
     );
+    await user.type(
+      within(lane).getByRole("combobox", { name: "Model" }),
+      "gemini-3.5-flash",
+    );
     // The tier names no location of its own: it is the provider's.
     expect(
       within(lane).queryByRole("combobox", { name: "Location" }),
@@ -558,6 +562,10 @@ describe("a tier newly pointed at Vertex", () => {
       within(lane).getByRole("combobox", { name: "Provider" }),
       "gemini_vertex",
     );
+    await user.type(
+      within(lane).getByRole("combobox", { name: "Model" }),
+      "gemini-3.5-flash",
+    );
     await save(user);
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
     expect(backend.getCapturedPut()?.tiers.cheap_cloud.location).toBe(
@@ -567,21 +575,40 @@ describe("a tier newly pointed at Vertex", () => {
 });
 
 describe("withProvider", () => {
-  it("drops the location leaving Vertex and the host arriving at it", () => {
+  // A model id names a model on ONE vendor: carried onto another it is a model
+  // that vendor does not serve, so a provider change empties it.
+  it("empties the model and drops what belongs to the old provider", () => {
     const vertex = withProvider(
-      { provider: "openai_compatible", model: "m", base_url: "https://x" },
+      {
+        provider: "openai_compatible",
+        model: "openai/gpt-oss-120b",
+        base_url: "https://x",
+      },
       "gemini_vertex",
       "eu",
     );
     expect(JSON.parse(JSON.stringify(vertex))).toEqual({
       provider: "gemini_vertex",
-      model: "m",
+      model: "",
       location: "eu",
     });
-    const back = withProvider(vertex, "gemini", "eu");
+    const back = withProvider(
+      { ...vertex, model: "gemini-3.5-flash" },
+      "gemini",
+      "eu",
+    );
     expect(JSON.parse(JSON.stringify(back))).toEqual({
       provider: "gemini",
-      model: "m",
+      model: "",
     });
+  });
+
+  it("keeps the model when the provider does not change", () => {
+    const same = withProvider(
+      { provider: "gemini", model: "gemini-3.5-flash" },
+      "gemini",
+      "eu",
+    );
+    expect(same.model).toBe("gemini-3.5-flash");
   });
 });

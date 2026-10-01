@@ -288,6 +288,15 @@ describe("AiRoutingCard", () => {
       within(tier).getByRole("combobox", { name: "Provider" }),
       "openai_compatible",
     );
+    // Emptied, and focused, so the list of what the new vendor serves opens.
+    const modelBox = within(tier).getByRole("combobox", { name: "Model" });
+    expect(modelBox).toHaveValue("");
+    await vi.waitFor(() => expect(modelBox).toHaveFocus());
+    // A provider change empties the model; the reader picks one.
+    await user.type(
+      within(tier).getByRole("combobox", { name: "Model" }),
+      "openai/gpt-oss-120b",
+    );
     expect(within(tier).queryByLabelText("Host")).toBeNull();
     expect(
       within(tier).getByText(/openai_compatible has no host yet/),
@@ -324,6 +333,11 @@ describe("AiRoutingCard", () => {
       within(tier).getByRole("combobox", { name: "Provider" }),
       "gemini",
     );
+    // A provider change empties the model; the reader picks one.
+    await user.type(
+      within(tier).getByRole("combobox", { name: "Model" }),
+      "gemini-3.5-flash",
+    );
     await saveEditor(user, backend);
     const sent = backend.getCapturedPut()?.tiers.premium;
     expect(sent?.provider).toBe("gemini");
@@ -344,6 +358,11 @@ describe("AiRoutingCard", () => {
       user,
       within(lane).getByRole("combobox", { name: "Provider" }),
       "openai_compatible",
+    );
+    // A provider change empties the model; the reader picks one.
+    await user.type(
+      within(lane).getByRole("combobox", { name: "Model" }),
+      "mistralai/mistral-embed-2312",
     );
     // Its own embeddings server, for this lane alone.
     await user.type(

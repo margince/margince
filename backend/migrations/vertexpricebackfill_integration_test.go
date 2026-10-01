@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package migrations_test
+
+import (
+	"context"
+	"os"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+)
+
+const vertexBackfill = "core/1790867851_gemini_on_vertex_takes_a_copy_of_geminis_prices"
+
+func seedRate(ctx context.Context, t *testing.T, conn *pgx.Conn, provider, model, day string, input int64) {
+	t.Helper()
+	if _, err := conn.Exec(ctx, `
+		INSERT INTO ai_model_rate (provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd, effective_date)
+		VALUES ($1, $2, $3, 0, $4)`, provider, model, input, day); err != nil {
+		t.Fatalf("seeding %s/%s: %v", provider, model, err)
+	}
+}
+
+func runFile(ctx context.Context, t *testing.T, conn *pgx.Conn, path string) {
+	t.Helper()
+	sql, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, string(sql)); err != nil {
+		t.Fatalf("%s: %v", path, err)
+	}
+}
+
+func vertexRates(ctx context.Context, t *testing.T, conn *pgx.Conn) map[string]int64 {
+	t.Helper()
+	rows, err := conn.Query(ctx, `SELECT model_id || '@' || effective_date, input_per_mtok_microusd FROM ai_model_rate WHERE provider = 'gemini_vertex'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int64{}
+	for rows.Next() {
+		var k string
+		var v int64
+		if err := rows.Scan(&k, &v); err != nil {
+			t.Fatal(err)
+		}
+		got[k] = v
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+// An installation whose Vertex sheet is empty takes a copy of every Gemini
+// row, audited; running it again copies nothing more, and rolling it back
+// removes only the copies nobody has touched.
+func TestAnEmptyVertexSheetTakesACopyOfGeminisPricesOnce(t *testing.T) {
+	dsn, _ := dsns(t)
+	conn := connect(t, dsn)
+	headSchema(t, conn)
+	ctx := context.Background()
+	if _, err := conn.Exec(ctx, `DELETE FROM ai_model_rate`); err != nil {
+		t.Fatal(err)
+	}
+	seedRate(ctx, t, conn, "gemini", "gemini-2.5-flash", "2026-08-01", 300_000)
+	seedRate(ctx, t, conn, "gemini", "gemini-2.5-flash", "2026-10-01", 350_000)
+	seedRate(ctx, t, conn, "openai", "gpt-5-mini", "2026-08-01", 750_000)
+
+	runFile(ctx, t, conn, vertexBackfill+".up.sql")
+	runFile(ctx, t, conn, vertexBackfill+".up.sql")
+
+	got := vertexRates(ctx, t, conn)
+	want := map[string]int64{"gemini-2.5-flash@2026-08-01": 300_000, "gemini-2.5-flash@2026-10-01": 350_000}
+	if len(got) != len(want) || got["gemini-2.5-flash@2026-08-01"] != 300_000 || got["gemini-2.5-flash@2026-10-01"] != 350_000 {
+		t.Errorf("Vertex rows after the upgrade = %v, want %v", got, want)
+	}
+	var audited int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE entity_type = 'ai_model_rate' AND after->>'copied_from' = 'gemini'`).Scan(&audited); err != nil {
+		t.Fatal(err)
+	}
+	if audited != 2 {
+		t.Errorf("%d copies audited, want 2 (a second run copies nothing)", audited)
+	}
+
+	seedRate(ctx, t, conn, "gemini_vertex", "gemini-3.5-flash", "2026-08-01", 1_600_000)
+	runFile(ctx, t, conn, vertexBackfill+".down.sql")
+	if got := vertexRates(ctx, t, conn); len(got) != 1 || got["gemini-3.5-flash@2026-08-01"] != 1_600_000 {
+		t.Errorf("Vertex rows after rollback = %v, want only the price an admin wrote", got)
+	}
+}
+
+// An installation that already prices Vertex keeps exactly what it has.
+func TestAVertexSheetWithPricesIsLeftAlone(t *testing.T) {
+	dsn, _ := dsns(t)
+	conn := connect(t, dsn)
+	headSchema(t, conn)
+	ctx := context.Background()
+	if _, err := conn.Exec(ctx, `DELETE FROM ai_model_rate`); err != nil {
+		t.Fatal(err)
+	}
+	seedRate(ctx, t, conn, "gemini", "gemini-2.5-flash", "2026-08-01", 300_000)
+	seedRate(ctx, t, conn, "gemini_vertex", "gemini-3.5-flash", "2026-08-01", 1_600_000)
+
+	runFile(ctx, t, conn, vertexBackfill+".up.sql")
+
+	if got := vertexRates(ctx, t, conn); len(got) != 1 {
+		t.Errorf("Vertex rows = %v, want the one it already had", got)
+	}
+}

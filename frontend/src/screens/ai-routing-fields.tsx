@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
@@ -119,7 +119,12 @@ export function withProvider<B extends TierBindingLike>(
   provider: string,
   vertexLocation: string,
 ): B {
-  const next = rebind(binding, { provider });
+  // A model id names a model on one vendor; carried onto another it names one
+  // that vendor does not serve, so a provider change starts the model empty.
+  const next = rebind(binding, {
+    provider,
+    ...(provider === binding.provider ? {} : { model: "" }),
+  });
   if (provider === VERTEX_PROVIDER) {
     return {
       ...next,
@@ -195,6 +200,15 @@ export function AdapterFields<B extends TierBindingLike>({
     vertex ? location : undefined,
   );
   const ownServer = laneName === "embeddings";
+  // After a provider change the model is empty, and the next thing to do is
+  // pick one: focus lands in the box, which opens what the new vendor serves.
+  const modelBox = useRef<string | undefined>(undefined);
+  const [pickModel, setPickModel] = useState(false);
+  useEffect(() => {
+    if (!pickModel) return;
+    setPickModel(false);
+    if (modelBox.current) document.getElementById(modelBox.current)?.focus();
+  }, [pickModel]);
   const unhosted =
     NEEDS_HOST.has(binding.provider) &&
     providerSettings !== undefined &&
@@ -228,6 +242,7 @@ export function AdapterFields<B extends TierBindingLike>({
               onChange={(provider) => {
                 probe.forget();
                 onChange(withProvider(binding, provider, vertexLocation));
+                if (provider !== binding.provider) setPickModel(true);
               }}
             />
           )}
@@ -270,23 +285,26 @@ export function AdapterFields<B extends TierBindingLike>({
         }
         error={hint?.error}
       >
-        {(control) => (
-          <ComboBox
-            {...control}
-            value={binding.model}
-            suggestions={suggestions}
-            disabled={disabled}
-            onChange={(model) => {
-              // A pick from the list is a choice worth checking; a keystroke
-              // is not, and each probe is a call on the service account.
-              probe.picked(
-                model,
-                suggestions.some((s) => s.value === model),
-              );
-              onChange(rebind(binding, { model }));
-            }}
-          />
-        )}
+        {(control) => {
+          modelBox.current = control.id;
+          return (
+            <ComboBox
+              {...control}
+              value={binding.model}
+              suggestions={suggestions}
+              disabled={disabled}
+              onChange={(model) => {
+                // A pick from the list is a choice worth checking; a keystroke
+                // is not, and each probe is a call on the service account.
+                probe.picked(
+                  model,
+                  suggestions.some((s) => s.value === model),
+                );
+                onChange(rebind(binding, { model }));
+              }}
+            />
+          );
+        }}
       </Field>
       {ownServer && EMBEDDINGS_SERVER.has(binding.provider) && (
         <Field
