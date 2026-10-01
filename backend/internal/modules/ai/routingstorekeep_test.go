@@ -141,11 +141,11 @@ func TestKeep_EmbeddingsServingPrefsStayOnTheSameServer(t *testing.T) {
 func TestKeep_ThinkingLevelCarriesOnSameProviderAndModel(t *testing.T) {
 	t.Parallel()
 	stored := RoutingConfig{Tiers: map[Tier]ProviderConfig{
-		TierPremium: {Provider: providerOpenAICompatible, Model: "m", BaseURL: keepBroker, ThinkingLevel: "low"},
+		TierPremium: {Provider: providerGemini, Model: "gemini-3.5-flash", BaseURL: "https://gateway.example", ThinkingLevel: "low"},
 	}}
 	next := RoutingConfig{
-		Providers: map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: "https://api.mistral.ai"}},
-		Tiers:     map[Tier]ProviderConfig{TierPremium: {Provider: providerOpenAICompatible, Model: "m"}},
+		Providers: map[string]ProviderSettings{providerGemini: {BaseURL: "https://eu-gateway.example"}},
+		Tiers:     map[Tier]ProviderConfig{TierPremium: {Provider: providerGemini, Model: "gemini-3.5-flash"}},
 	}
 	if level := next.keepingStoredUpstream(stored).Tiers[TierPremium].ThinkingLevel; level != "low" {
 		t.Errorf("thinking_level = %q, want the stored level kept across a host change", level)

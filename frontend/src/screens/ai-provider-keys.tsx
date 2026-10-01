@@ -139,14 +139,18 @@ export function AiProviderKeysCard() {
                         status={openStatus}
                         canManage={canManage}
                       />
-                      {hasProviderSettings(openStatus.provider) && (
-                        <ProviderSettingsForm
-                          key={openStatus.provider}
-                          provider={openStatus.provider}
-                          routing={routing.data?.routing}
-                          canManage={canManage}
-                        />
-                      )}
+                      {/* Drawn once the stored settings are read: the form
+                          starts from them, and one started empty would save
+                          an empty entry over what is stored. */}
+                      {hasProviderSettings(openStatus.provider) &&
+                        routing.data && (
+                          <ProviderSettingsForm
+                            key={openStatus.provider}
+                            provider={openStatus.provider}
+                            routing={routing.data.routing}
+                            canManage={canManage}
+                          />
+                        )}
                     </>
                   }
                   onClose={() => setOpened(null)}

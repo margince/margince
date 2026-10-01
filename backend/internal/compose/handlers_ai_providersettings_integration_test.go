@@ -91,3 +91,43 @@ func TestAProviderThisBuildDoesNotKnowIsNotFound(t *testing.T) {
 		t.Errorf("status = %d, want 404: %s", rec.Code, rec.Body)
 	}
 }
+
+// The answer to a write is the document as stored: its ETag is the one the next
+// GET answers, so a client may send it straight back as If-Match, and its tier
+// routing is what was written, so sending the body back freezes nothing.
+func TestAWritesAnswerIsTheDocumentGETReadsBack(t *testing.T) {
+	e := integration.Setup(t)
+	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), config.Static(nil))
+	h := aiRoutingHandlers{store: store}
+	planted, err := ai.ParseRouting([]byte(pinnedBrokerRouting))
+	if err != nil {
+		t.Fatalf("the planted binding does not parse: %v", err)
+	}
+	if _, err := store.Replace(routingAdmin(e), planted); err != nil {
+		t.Fatalf("storing the planted binding: %v", err)
+	}
+
+	put := putProviderSettings(t, h, e, "openai_compatible", `{"base_url":"https://openrouter.ai/api","upstream":{"only":["mistral/eu"]}}`)
+	if put.Code != http.StatusOK {
+		t.Fatalf("PUT provider settings = %d: %s", put.Code, put.Body)
+	}
+	got := httptest.NewRecorder()
+	h.GetAiRouting(got, httptest.NewRequest(http.MethodGet, "/v1/ai/routing", nil).WithContext(routingAdmin(e)))
+	if put.Header().Get("ETag") != got.Header().Get("ETag") {
+		t.Errorf("PUT answered ETag %s, the next GET %s", put.Header().Get("ETag"), got.Header().Get("ETag"))
+	}
+	if put.Body.String() != got.Body.String() {
+		t.Errorf("PUT answered\n%s\nthe next GET\n%s", put.Body, got.Body)
+	}
+
+	req := httptest.NewRequest(http.MethodPut, "/v1/ai/routing", strings.NewReader(put.Body.String())).WithContext(routingAdmin(e))
+	req.Header.Set("If-Match", put.Header().Get("ETag"))
+	again := httptest.NewRecorder()
+	h.ReplaceAiRouting(again, req)
+	if again.Code != http.StatusOK {
+		t.Fatalf("writing back the answer with its own ETag = %d: %s", again.Code, again.Body)
+	}
+	if again.Header().Get("ETag") != put.Header().Get("ETag") {
+		t.Error("writing the answer back unchanged moved the revision: it froze something into the document")
+	}
+}

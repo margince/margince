@@ -9,7 +9,21 @@ import (
 	"maps"
 	"reflect"
 	"slices"
+	"sync"
 )
+
+// liftedRevisions holds each stored revision this process has lifted. The
+// routing watcher re-reads the row on every recheck on every role, and a lift's
+// warnings describe the row, so they are said once per revision; the set grows
+// by one per saved edit.
+var liftedRevisions sync.Map
+
+// firstLiftOf reports whether this process has not lifted rev before, and
+// records that it now has.
+func firstLiftOf(rev string) bool {
+	_, seen := liftedRevisions.LoadOrStore(rev, struct{}{})
+	return !seen
+}
 
 // providerLift carries a lift's state across lanes: the providers being built,
 // which lane decided each kept value (for the warning that names both), and the

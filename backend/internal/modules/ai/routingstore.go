@@ -114,9 +114,7 @@ func (s *RoutingStore) Get(ctx context.Context) (RoutingConfig, error) {
 // applies. The write is audit-only (EVT-NOEVT-3): the settings store stamps the
 // audit row, and the closed event catalog defines no routing verb.
 //
-// It returns the FINALIZED config — defaults applied, version computed — rather
-// than what the caller sent, because that is what will be served, and because
-// the version is what a caller re-pointing a lane needs to see change.
+// It returns the document as stored, as Get reads it (see write).
 func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (RoutingConfig, error) {
 	return s.ReplaceIfVersion(ctx, next, "")
 }
@@ -142,6 +140,8 @@ func (s *RoutingStore) probeBeforeWrite(ctx context.Context, next RoutingConfig,
 
 // probeBeforeProviderWrite is probeBeforeWrite for a provider-settings write:
 // only a Vertex provider moves a Vertex binding, so any other reads nothing.
+// Like probeBeforeWrite it runs before the lock, so a routing write landing
+// between the probe and this write is not probed against the new location.
 func (s *RoutingStore) probeBeforeProviderWrite(ctx context.Context, provider string, next ProviderSettings) error {
 	if provider != providerGeminiVertex {
 		return nil
@@ -232,7 +232,7 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 // the document changes. A zero entry removes it. A provider this build does not
 // know is not found.
 //
-// It returns the finalized config, as Replace does.
+// It returns the document as stored, as Replace does.
 func (s *RoutingStore) SetProviderSettings(ctx context.Context, provider string, next ProviderSettings) (RoutingConfig, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
 		return RoutingConfig{}, err
@@ -249,11 +249,16 @@ func (s *RoutingStore) SetProviderSettings(ctx context.Context, provider string,
 }
 
 // write runs one routing write under the setting's row lock: settle derives the
-// document to store and the binding it serves from the current one. The write
-// is audit-only (EVT-NOEVT-3) — the settings store stamps the audit row — and
-// SetTx re-runs the entry's validator, residency included.
+// document to store from the current one, having held the binding it serves to
+// the bar. The write is audit-only (EVT-NOEVT-3) — the settings store stamps the
+// audit row — and SetTx re-runs the entry's validator, residency included.
+//
+// It answers with the document as stored, which is what Get reads back: its
+// Revision is the next If-Match, and its tier routing is what was written. The
+// served binding carries the product default, which a client writing the
+// answer back would freeze into every tier.
 func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingConfig) (stored, served RoutingConfig, err error)) (RoutingConfig, error) {
-	var served RoutingConfig
+	var written RoutingConfig
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		if err := settings.LockForWrite(ctx, tx, RoutingKey); err != nil {
 			return err
@@ -262,17 +267,17 @@ func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingCon
 		if err != nil {
 			return err
 		}
-		stored, finalized, err := settle(current)
+		stored, _, err := settle(current)
 		if err != nil {
 			return err
 		}
-		served = finalized
+		written = stored
 		return settings.SetTx(ctx, s.settings, tx, Routing, stored)
 	})
 	if err != nil {
 		return RoutingConfig{}, err
 	}
-	return served, nil
+	return written, nil
 }
 
 // replacing settles a whole document written over current. Lane fields an old

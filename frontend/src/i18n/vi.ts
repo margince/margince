@@ -11286,7 +11286,7 @@ export const vi = {
   "aiProviderSettings.preset.openrouter": "Mẫu: OpenRouter",
   "aiProviderSettings.upstream.label": "Máy chủ OpenRouter",
   "aiProviderSettings.upstream.help":
-    "Những máy chủ OpenRouter được phục vụ nhà cung cấp này, trên mọi luồng. Ghim máy chủ EU tại đây để lưu trú dữ liệu tại EU.",
+    "Những máy chủ OpenRouter được phép phục vụ nhà cung cấp này, trên mọi luồng. Ghim máy chủ EU tại đây để lưu trú dữ liệu tại EU.",
   "aiProviderSettings.upstream.only": "Chỉ những máy chủ này",
   "aiProviderSettings.upstream.ignore": "Không bao giờ dùng những máy chủ này",
   "aiProviderSettings.upstream.fallbacks": "Chuyển sang máy chủ khác",

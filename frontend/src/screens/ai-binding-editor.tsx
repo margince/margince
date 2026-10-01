@@ -41,7 +41,7 @@ import {
   problemMessageOf,
   throwProblem,
 } from "./common";
-import { savedVertexLocation } from "./vertex-location";
+import { savedVertexLocation, VERTEX_PROVIDER } from "./vertex-location";
 
 // One binding's editor: provider, model, and whatever else only that lane has.
 //
@@ -230,11 +230,11 @@ function SliceFields({
   const t = useT();
   const label = t("aiRouting.provider.label");
   const probes = useKeylessProbes(laneName(draft), draft.kind !== "decisions");
-  // A lane newly pointed at Vertex starts where another saved Vertex lane is.
-  const vertexLocation = savedVertexLocation([
-    ...Object.values(routing.tiers),
-    routing.embeddings,
-  ]);
+  // A lane newly pointed at Vertex starts at the provider's location, which
+  // every tier on it is served from; else where another saved Vertex lane is.
+  const vertexLocation =
+    routing.providers?.[VERTEX_PROVIDER]?.location ??
+    savedVertexLocation([...Object.values(routing.tiers), routing.embeddings]);
   switch (draft.kind) {
     case "tier":
       return (

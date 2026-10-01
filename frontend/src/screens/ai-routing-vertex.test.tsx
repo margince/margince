@@ -534,6 +534,38 @@ describe("a gemini_vertex lane", () => {
   });
 });
 
+describe("a tier newly pointed at Vertex", () => {
+  // The provider's location is where every tier on it is served, so a tier
+  // starts there rather than at the embeddings lane's own location.
+  it("starts at the provider's location, not the embeddings lane's", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor({
+      routing: {
+        ...VERTEX_ROUTING,
+        tiers: {
+          cheap_cloud: { provider: "gemini", model: "gemini-3.1-flash-lite" },
+        },
+        embeddings: { ...VERTEX_ROUTING.embeddings, location: "europe-west1" },
+        providers: { gemini_vertex: { location: "europe-west4" } },
+      },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    const lane = await openLane(user, "ai-routing-tier-cheap_cloud");
+    await pickOption(
+      user,
+      within(lane).getByRole("combobox", { name: "Provider" }),
+      "gemini_vertex",
+    );
+    await save(user);
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    expect(backend.getCapturedPut()?.tiers.cheap_cloud.location).toBe(
+      "europe-west4",
+    );
+  });
+});
+
 describe("withProvider", () => {
   it("drops the location leaving Vertex and the host arriving at it", () => {
     const vertex = withProvider(

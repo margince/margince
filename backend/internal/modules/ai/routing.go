@@ -175,7 +175,11 @@ func ParseRouting(raw []byte) (RoutingConfig, error) {
 // over the DEFAULTED value, which is what makes an omitted width and an
 // explicitly-written default the same binding.
 func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
-	cfg = cfg.liftLaneProviderFields(slog.Default())
+	log := slog.New(slog.DiscardHandler)
+	if firstLiftOf(cfg.Revision()) {
+		log = slog.Default()
+	}
+	cfg = cfg.liftLaneProviderFields(log)
 	if err := cfg.validateProviderEntries(); err != nil {
 		return RoutingConfig{}, err
 	}

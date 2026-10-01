@@ -44,6 +44,7 @@ function backend(
   routing: Routing,
   answer: (body: ProviderSettings) => Response = () =>
     jsonResponse(routing, 200),
+  routingRead: () => Promise<Response> = async () => jsonResponse(routing),
 ) {
   const puts: Array<{ provider: string; body: ProviderSettings }> = [];
   const fetchMock = vi.fn(
@@ -87,7 +88,7 @@ function backend(
         });
       }
       if (req.url.includes("/ai/routing")) {
-        return jsonResponse(routing);
+        return routingRead();
       }
       if (req.url.includes("/ai-model-rates")) {
         return jsonResponse({}, 404);
@@ -146,6 +147,32 @@ describe("a provider's settings on its sheet", () => {
           body: { base_url: "https://gateway.example" },
         },
       ]),
+    );
+  });
+
+  // The form starts from what is stored; drawn before the routing read lands
+  // it would start empty, and Save would then remove the stored entry.
+  it("waits for the stored settings before drawing the form", async () => {
+    let release: (r: Response) => void = () => undefined;
+    const routing = routingWith({
+      openai_compatible: { base_url: "https://old.example" },
+    });
+    backend(
+      routing,
+      () => jsonResponse(routing),
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    const sheet = await openSheet(user, "openai_compatible");
+    expect(within(sheet).queryByLabelText("Host")).toBeNull();
+    release(jsonResponse(routing));
+    expect(await within(sheet).findByLabelText("Host")).toHaveValue(
+      "https://old.example",
     );
   });
 

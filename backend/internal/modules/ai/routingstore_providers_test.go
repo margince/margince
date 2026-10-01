@@ -186,8 +186,27 @@ func TestReplace_PersistsCanonical(t *testing.T) {
 	if e := stored.Embeddings; e.BaseURL != "" || e.Routing != nil {
 		t.Errorf("embeddings stored as host %q routing %+v, want it reading its provider", e.BaseURL, e.Routing)
 	}
-	if served.Revision() != stored.Revision() {
-		t.Error("the stored document's revision differs from the served one's; the ETag would move on a no-op write")
+}
+
+// A write of the document as stored stores it unchanged: the ETag a client was
+// handed is still the stored revision afterwards, and no tier gains the product
+// default it did not write.
+func TestReplace_ANoOpWriteKeepsTheRevision(t *testing.T) {
+	t.Parallel()
+	before := storedOnBroker().canonical()
+
+	stored, _, err := before.replacing(storedOnBroker())
+	if err != nil {
+		t.Fatalf("replacing: %v", err)
+	}
+
+	if stored.Revision() != before.Revision() {
+		t.Errorf("a no-op write moved the revision from %s to %s", before.Revision(), stored.Revision())
+	}
+	for tier, lane := range stored.Tiers {
+		if lane.Routing != nil {
+			t.Errorf("%s stored routing %+v, want none: it wrote none", tier, lane.Routing)
+		}
 	}
 }
 

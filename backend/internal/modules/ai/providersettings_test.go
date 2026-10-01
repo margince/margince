@@ -373,6 +373,14 @@ func TestValidateProviderEntries(t *testing.T) {
 			ProfileCloudFrontier, map[string]ProviderSettings{providerAnthropic: {BaseURL: "https://gateway.example"}}, "",
 		},
 		"a host that is not http(s)": {ProfileCloudFrontier, map[string]ProviderSettings{providerVLLM: {BaseURL: "ftp://x"}}, "not an http(s) URL"},
+		// An entry no lane binds is still dialled by the key test and the model
+		// list, so it meets the egress rule a bound host does, at the write.
+		"an unbound host carrying a credential": {
+			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: "https://user:pw@gateway.example"}}, "credential",
+		},
+		"an unbound link-local host": {
+			ProfileEUHosted, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: "http://169.254.169.254/latest"}}, "not an address inference is served from",
+		},
 		"an unbound local host under sovereign": {
 			ProfileSovereign, map[string]ProviderSettings{providerOllama: {BaseURL: "http://localhost:11434"}}, "",
 		},
@@ -594,4 +602,43 @@ func clientBaseURL(t *testing.T, binding ProviderConfig) string {
 	}
 	t.Fatalf("%s: %T has a compiled host this test cannot read; add its case", binding.Provider, client)
 	return ""
+}
+
+// The routing watcher re-reads the stored row every recheck on every role, so
+// a lift's warnings are said once per stored revision, not once per read.
+func TestALiftWarnsOncePerStoredRevision(t *testing.T) {
+	rev := "rev-" + t.Name()
+	if !firstLiftOf(rev) {
+		t.Fatal("the first read of a revision was not allowed to warn")
+	}
+	if firstLiftOf(rev) {
+		t.Error("a second read of the same revision warned again")
+	}
+	if !firstLiftOf(rev + "-edited") {
+		t.Error("an edited revision was not allowed to warn")
+	}
+}
+
+// Two spellings of one host are one provider host, and the first lane's
+// spelling is the one every lane on it is then served at. A row stored with
+// both therefore changes its routing version once on upgrade — the one shape
+// where the lift is not byte-stable, accepted rather than canonicalising the
+// spelling, which would move the version of every row that wrote a slash.
+func TestLift_TheFirstLanesSpellingOfAHostWins(t *testing.T) {
+	cfg := RoutingConfig{
+		Profile: ProfileCloudFrontier,
+		Tiers: map[Tier]ProviderConfig{
+			TierCheapCloud: {Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://openrouter.ai/api/"},
+			TierPremium:    {Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://OpenRouter.ai/api"},
+		},
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: "fake"}},
+	}
+
+	resolved, err := cfg.finalize()
+	if err != nil {
+		t.Fatalf("finalize: %v", err)
+	}
+	if got := resolved.Tiers[TierPremium].BaseURL; got != "https://openrouter.ai/api/" {
+		t.Errorf("premium served at %q, want cheap_cloud's spelling, which sorts first", got)
+	}
 }

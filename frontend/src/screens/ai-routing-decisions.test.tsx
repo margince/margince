@@ -157,6 +157,27 @@ describe("the decision model lane", () => {
     ).toBeNull();
   });
 
+  // A provider already pointed at another decision server keeps it, so a
+  // preset that would set OpenRouter's model there is not offered.
+  it("offers no OpenRouter preset when the provider is pointed elsewhere", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      decisions: { provider: "jev_compatible", model: "jev-classify" },
+      providers: {
+        jev_compatible: { base_url: "http://127.0.0.1:8767/v1/systemone" },
+      },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    await screen.findByTestId("ai-routing-decisions");
+    const lane = await openEditor(user, "ai-routing-decisions");
+    expect(
+      within(lane).queryByRole("button", { name: "Preset: OpenRouter" }),
+    ).toBeNull();
+  });
+
   // A model and a host name one adapter's endpoint; carried onto another
   // adapter they would point TypeSafe's own API at OpenRouter. A provider
   // switch clears both.

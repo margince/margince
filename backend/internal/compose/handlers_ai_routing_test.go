@@ -223,12 +223,11 @@ func TestAnAbsentDecisionLaneStaysAbsent(t *testing.T) {
 }
 
 // assertEveryFieldSet walks a fixture and fails on any exported field left at
-// its zero value, descending through pointers, structs and map values. Only
+// its zero value, descending through pointers, structs and map values, except
+// the paths in exempt, which the wire deliberately has no field for. Only
 // exported fields are configuration a document carries; the unexported ones
 // (a source digest, a key resolver) are stamped by whoever loaded the config
 // and have no wire spelling to lose.
-// assertEveryFieldSet fails on any zero field of v not named in exempt, the
-// paths the wire deliberately has no field for.
 func assertEveryFieldSet(t *testing.T, v reflect.Value, path string, exempt map[string]bool) {
 	t.Helper()
 	if exempt[path] {

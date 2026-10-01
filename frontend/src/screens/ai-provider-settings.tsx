@@ -110,11 +110,11 @@ export function ProviderSettingsForm({
   canManage,
 }: Readonly<{
   provider: string;
-  routing: Routing | undefined;
+  routing: Routing;
   canManage: boolean;
 }>) {
   const t = useT();
-  const stored = routing?.providers?.[provider] ?? {};
+  const stored = routing.providers?.[provider] ?? {};
   const [draft, setDraft] = useState<ProviderSettings>(stored);
   const save = useSetProviderSettings();
   const host = HOST_FIELDS.get(provider);
@@ -154,7 +154,7 @@ export function ProviderSettingsForm({
       {provider === VERTEX_PROVIDER && (
         <VertexLocationField
           value={draft.location ?? ""}
-          profile={routing?.profile ?? ""}
+          profile={routing.profile}
           disabled={disabled}
           onChange={(location) => setDraft({ ...draft, location })}
         />

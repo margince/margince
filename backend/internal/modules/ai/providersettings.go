@@ -175,6 +175,14 @@ func validateProviderEntry(name string, settings ProviderSettings, bound bool) e
 	if !bound && settings.BaseURL != "" && !isFetchableURL(settings.BaseURL) {
 		return fmt.Errorf("ai: routing config: providers: %s: base_url is not an http(s) URL with a host; give the vendor host root, e.g. https://openrouter.ai/api", name)
 	}
+	// The key test and the model list dial an unbound entry too, so its host
+	// meets the egress rule here rather than at the Test button. A bound one
+	// meets it on each lane, whose refusal names the lane.
+	if !bound {
+		if err := requireDialableEndpoint("providers: "+name, name, settings.BaseURL); err != nil {
+			return err
+		}
+	}
 	if settings.Location != "" && name != providerGeminiVertex {
 		return fmt.Errorf("ai: routing config: providers: %s: `location` names a Vertex AI location and only gemini_vertex is served from one; remove it", name)
 	}

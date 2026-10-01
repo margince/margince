@@ -14,6 +14,7 @@ import {
   offeredModels,
   useAvailableModels,
 } from "./ai-models";
+import { isOpenRouter } from "./ai-provider-links";
 import "./ai-settings.css";
 import {
   DEFAULT_VERTEX_LOCATION,
@@ -59,6 +60,8 @@ export const OPENROUTER_DECISION_PRESET = {
 
 // The providers that cannot be dialled until their host is set: neither has a
 // host of its own. A lane bound to one with no host set says where to set it.
+// Mirrors the server's chatHostMissing and decisionHostMissing; the server's
+// refusal stays the hard check, so a drift here costs only the early notice.
 const NEEDS_HOST: ReadonlySet<string> = new Set([
   "openai_compatible",
   "jev_compatible",
@@ -386,7 +389,12 @@ export function openRouterPreset<
   onChange: (next: B) => void,
   t: ReturnType<typeof useT>,
 ): { action: ReactNode; note: ReactNode } | undefined {
-  if (binding.provider !== OPENROUTER_DECISION_PRESET.provider) {
+  // A provider already pointed at another decision server keeps it; setting
+  // OpenRouter's model there would name a model that server does not serve.
+  if (
+    binding.provider !== OPENROUTER_DECISION_PRESET.provider ||
+    (providerHost && !isOpenRouter(providerHost))
+  ) {
     return undefined;
   }
   return {

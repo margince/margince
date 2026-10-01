@@ -102,7 +102,15 @@ describe("a lane's fields", () => {
 function mountSheet(provider: string) {
   stubModels();
   wrap(
-    <ProviderSettingsForm provider={provider} routing={undefined} canManage />,
+    <ProviderSettingsForm
+      provider={provider}
+      routing={{
+        profile: "cloud_frontier",
+        tiers: {},
+        embeddings: { provider: "gemini", model: "e" },
+      }}
+      canManage
+    />,
   );
 }
 
