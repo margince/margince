@@ -77,7 +77,7 @@ func (s *Store) RecordListsFor(ctx context.Context, entityType string, entityID 
 	return out, nil
 }
 
-// listsHolding is every Shortlist the record was chosen for, up to one past
+// listsHolding reads the Shortlists the record was chosen for, up to one past
 // the cap, and every findable Live List whose filter selects it, by name.
 func listsHolding(ctx context.Context, tx pgx.Tx, engine storekit.Query, entityType string, entityID ids.UUID) ([]listRow, error) {
 	chosen, err := findableShortlistsHolding(ctx, tx, entityType, entityID, catalogCap+1)
