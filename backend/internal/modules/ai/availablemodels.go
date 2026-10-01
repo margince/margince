@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -298,36 +299,18 @@ func unavailableFor(err error) ModelAvailability {
 }
 
 // providerConfigFor is where an availability read asks `provider`: its own
-// host, read through the lift so a document still in the per-lane shape gives
-// the same answer every time. No lane decides it, with one exception: the
-// embeddings lane may sit on a server of its own, and a picker opened on that
-// lane asks there. No model id: this asks what the vendor serves.
+// host and Vertex location, read through the lift so a document still in the
+// per-lane shape gives the same answer every time. No lane decides it, with one
+// exception: the embeddings lane may sit on a server or at a location of its
+// own, and a picker opened on that lane asks there. No model id: this asks what
+// the vendor serves.
 func providerConfigFor(cfg RoutingConfig, provider, lane string) ProviderConfig {
 	lifted := cfg.canonical()
-	out := ProviderConfig{Provider: provider, BaseURL: lifted.Providers[provider].BaseURL, Location: laneLocation(cfg, provider, lane)}
-	if embeddings := lifted.Embeddings; lane == string(LaneEmbeddings) && embeddings.Provider == provider && embeddings.BaseURL != "" {
-		out.BaseURL = embeddings.BaseURL
+	settings := lifted.Providers[provider]
+	out := ProviderConfig{Provider: provider, BaseURL: settings.BaseURL, Location: settings.Location}
+	if embeddings := lifted.Embeddings; lane == string(LaneEmbeddings) && embeddings.Provider == provider {
+		out.BaseURL = cmp.Or(embeddings.BaseURL, out.BaseURL)
+		out.Location = cmp.Or(embeddings.Location, out.Location)
 	}
 	return out
-}
-
-// laneLocation is the Vertex location an availability read asks at: the named
-// lane's when it binds provider, else the first lane in a fixed order that
-// names one, else none (the adapter's default).
-func laneLocation(cfg RoutingConfig, provider, lane string) string {
-	if binding, ok := cfg.Tiers[Tier(lane)]; ok && binding.Provider == provider {
-		return binding.Location
-	}
-	if lane == string(LaneEmbeddings) && cfg.Embeddings.Provider == provider {
-		return cfg.Embeddings.Location
-	}
-	for _, t := range cfg.sortedTiers() {
-		if binding := cfg.Tiers[t]; binding.Provider == provider && binding.Location != "" {
-			return binding.Location
-		}
-	}
-	if cfg.Embeddings.Provider == provider {
-		return cfg.Embeddings.Location
-	}
-	return ""
 }

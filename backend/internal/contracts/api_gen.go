@@ -21610,10 +21610,11 @@ type AiEmbeddingsBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
-	// Location The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
-	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-	// on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
-	// On save, the model is asked for at this location, and one it does not serve is a 422.
+	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// it is accepted only when empty or equal to the provider's, and a different one is a 422
+	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
+	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
+	// Refused on every provider but `gemini_vertex`.
 	Location *string `json:"location,omitempty"`
 
 	// Model The provider-native model id.
@@ -21876,6 +21877,12 @@ type AiProviderSettings struct {
 	// BaseUrl Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default.
 	BaseUrl *string `json:"base_url,omitempty"`
 
+	// Location The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
+	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+	// while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
+	// Google about each bound model at the new location first; one it does not serve is a 422.
+	Location *string `json:"location,omitempty"`
+
 	// Upstream Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
 	// residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
 	// How one model is served (sort, quantizations, …) stays on the tier's `routing`.
@@ -22030,10 +22037,11 @@ type AiTierBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
-	// Location The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
-	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-	// on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
-	// On save, the model is asked for at this location, and one it does not serve is a 422.
+	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// it is accepted only when empty or equal to the provider's, and a different one is a 422
+	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
+	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
+	// Refused on every provider but `gemini_vertex`.
 	Location *string `json:"location,omitempty"`
 
 	// Model The provider-native model id.

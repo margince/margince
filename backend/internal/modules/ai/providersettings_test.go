@@ -64,6 +64,15 @@ decisions: {provider: jev_compatible, model: typesafe/jev-1.13, base_url: "https
 `,
 			want: "498572ba4efcfbfd7e27eaeda5f259192d1cc99596e65cda4366ecbf86dfdfa6",
 		},
+		"an EU-resident Vertex binding": {
+			doc: `profile: eu_hosted
+tiers:
+  frontier: {provider: gemini_vertex, location: europe-west4, model: gemini-3.1-pro-preview}
+  premium: {provider: gemini_vertex, location: europe-west4, model: gemini-3.5-flash}
+embeddings: {provider: gemini_vertex, location: europe-west4, model: gemini-embedding-001}
+`,
+			want: "5553cf42f9bf43dc60984ed7bba23427fea3ca0f5a69ff029ff6837866fc5fe9",
+		},
 		"a broker binding whose tiers are served differently per model": {
 			doc: `profile: cloud_frontier
 tiers:

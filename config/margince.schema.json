@@ -461,6 +461,11 @@
         },
         "upstream": {
           "$ref": "#/$defs/embeddingsRouting"
+        },
+        "location": {
+          "type": "string",
+          "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
+          "description": "gemini_vertex only, and REQUIRED while a lane binds it: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4."
         }
       }
     },
@@ -495,7 +500,7 @@
         "location": {
           "type": "string",
           "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
-          "description": "gemini_vertex only, and REQUIRED there: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4. The host follows from it, so gemini_vertex takes no base_url."
+          "description": "Deprecated here: set the location on providers.gemini_vertex.location. Still accepted, and lifted onto the provider when it names none."
         },
         "input": {
           "description": "What the bound model can be GIVEN. On openai_compatible/vllm it is the whole answer (the carriage depends on which model was bound). On every other provider it NARROWS the carriage fixed in that adapter's wire — at most what the wire carries, at most what is declared — so it can take image away from a gemini tier and can never add a lane a wire lacks. Omit to take whatever the provider carries; write [text] to send it no attachments. Must include text.",
@@ -538,9 +543,6 @@
             }
           },
           "then": {
-            "required": [
-              "location"
-            ],
             "not": {
               "required": [
                 "base_url"
@@ -714,7 +716,7 @@
         "location": {
           "type": "string",
           "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
-          "description": "gemini_vertex only, and REQUIRED there: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4. The host follows from it, so gemini_vertex takes no base_url."
+          "description": "gemini_vertex only: a location of this lane's own, since Vertex serves an embedding model at fewer locations than a chat model. Empty ⇒ the provider's (providers.gemini_vertex.location)."
         },
         "dimensions": {
           "type": "integer",
@@ -739,9 +741,6 @@
             }
           },
           "then": {
-            "required": [
-              "location"
-            ],
             "not": {
               "required": [
                 "base_url"

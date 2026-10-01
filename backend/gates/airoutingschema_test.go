@@ -254,24 +254,35 @@ func TestTheSchemaAndTheParserAgreeOnEveryVertexPlacement(t *testing.T) {
 	routing := func(tier, embeddings string) string {
 		return "profile: cloud_frontier\ntiers:\n  premium: " + tier + "\nembeddings: " + embeddings + "\n"
 	}
+	// A lane may take its location from providers.gemini_vertex, which the
+	// schema cannot follow from the lane; for a lane naming none, only the
+	// parser, reading the resolved lane, can say whether it has one.
+	onProvider := func(location, tier string) string {
+		return "profile: cloud_frontier\nproviders:\n  gemini_vertex: {location: " + location + "}\ntiers:\n  premium: " + tier + "\nembeddings: " + embedder + "\n"
+	}
 	for name, tc := range map[string]struct {
-		yaml  string
-		legal bool
+		yaml          string
+		legal         bool
+		editorLenient bool
 	}{
-		"the EU multi-region":        {routing("{provider: gemini_vertex, model: m, location: eu}", embedder), true},
-		"a region":                   {routing("{provider: gemini_vertex, model: m, location: europe-west4}", embedder), true},
-		"global":                     {routing("{provider: gemini_vertex, model: m, location: global}", embedder), true},
-		"the US multi-region":        {routing("{provider: gemini_vertex, model: m, location: us}", embedder), true},
-		"a region with no number":    {routing("{provider: gemini_vertex, model: m, location: europe-west}", embedder), false},
-		"a region with no area":      {routing("{provider: gemini_vertex, model: m, location: west4}", embedder), false},
-		"no location":                {routing("{provider: gemini_vertex, model: m}", embedder), false},
-		"a base_url beside it":       {routing("{provider: gemini_vertex, model: m, location: eu, base_url: 'https://x.example'}", embedder), false},
-		"a host smuggled in":         {routing("{provider: gemini_vertex, model: m, location: 'eu.attacker.example'}", embedder), false},
-		"an uppercase location":      {routing("{provider: gemini_vertex, model: m, location: EU}", embedder), false},
-		"a location on another wire": {routing("{provider: gemini, model: m, location: eu}", embedder), false},
-		"the embeddings lane":        {routing(embedder, "{provider: gemini_vertex, model: e, location: eu}"), true},
+		"the EU multi-region":        {routing("{provider: gemini_vertex, model: m, location: eu}", embedder), true, false},
+		"a region":                   {routing("{provider: gemini_vertex, model: m, location: europe-west4}", embedder), true, false},
+		"global":                     {routing("{provider: gemini_vertex, model: m, location: global}", embedder), true, false},
+		"the US multi-region":        {routing("{provider: gemini_vertex, model: m, location: us}", embedder), true, false},
+		"a region with no number":    {routing("{provider: gemini_vertex, model: m, location: europe-west}", embedder), false, false},
+		"a region with no area":      {routing("{provider: gemini_vertex, model: m, location: west4}", embedder), false, false},
+		"no location":                {routing("{provider: gemini_vertex, model: m}", embedder), false, true},
+		"a location on the provider": {onProvider("europe-west4", "{provider: gemini_vertex, model: m}"), true, false},
+		"a provider location the parser refuses": {
+			onProvider("'eu.attacker.example'", "{provider: gemini_vertex, model: m}"), false, false,
+		},
+		"a base_url beside it":       {routing("{provider: gemini_vertex, model: m, location: eu, base_url: 'https://x.example'}", embedder), false, false},
+		"a host smuggled in":         {routing("{provider: gemini_vertex, model: m, location: 'eu.attacker.example'}", embedder), false, false},
+		"an uppercase location":      {routing("{provider: gemini_vertex, model: m, location: EU}", embedder), false, false},
+		"a location on another wire": {routing("{provider: gemini, model: m, location: eu}", embedder), false, false},
+		"the embeddings lane":        {routing(embedder, "{provider: gemini_vertex, model: e, location: eu}"), true, false},
 		"the embeddings lane with no location": {
-			routing(embedder, "{provider: gemini_vertex, model: e}"), false,
+			routing(embedder, "{provider: gemini_vertex, model: e}"), false, true,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -282,8 +293,8 @@ func TestTheSchemaAndTheParserAgreeOnEveryVertexPlacement(t *testing.T) {
 			}
 			schemaAccepts := sch.Validate(doc) == nil
 			_, parseErr := ai.ParseRouting([]byte(tc.yaml))
-			if schemaAccepts != tc.legal {
-				t.Errorf("the EDITOR accepts=%v, want %v", schemaAccepts, tc.legal)
+			if want := tc.legal || tc.editorLenient; schemaAccepts != want {
+				t.Errorf("the EDITOR accepts=%v, want %v", schemaAccepts, want)
 			}
 			if parserAccepts := parseErr == nil; parserAccepts != tc.legal {
 				t.Errorf("the PARSER accepts=%v, want %v (err: %v)", parserAccepts, tc.legal, parseErr)

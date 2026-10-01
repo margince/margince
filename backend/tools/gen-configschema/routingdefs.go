@@ -66,7 +66,8 @@ const routingDefsTemplate = `{
     "additionalProperties": false,
     "properties": {
       "base_url": { "type": "string", "description": "Where the provider is reached. REQUIRED on openai_compatible while a lane binds it (the vendor host root, NO /v1), and on jev_compatible while the decisions lane binds it (the FULL decision endpoint, posted to as written). Empty ⇒ the adapter's compiled default." },
-      "upstream": { "$ref": "#/$defs/embeddingsRouting" }
+      "upstream": { "$ref": "#/$defs/embeddingsRouting" },
+      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only, and REQUIRED while a lane binds it: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4." }
     }
   },
 
@@ -81,7 +82,7 @@ const routingDefsTemplate = `{
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
       "base_url": { "type": "string", "description": "Deprecated here: set the host on providers.<name>.base_url. Still accepted, and lifted onto the provider when it names none." },
-      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only, and REQUIRED there: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4. The host follows from it, so gemini_vertex takes no base_url." },
+      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "Deprecated here: set the location on providers.gemini_vertex.location. Still accepted, and lifted onto the provider when it names none." },
       "input": {
         "description": "What the bound model can be GIVEN. On openai_compatible/vllm it is the whole answer (the carriage depends on which model was bound). On every other provider it NARROWS the carriage fixed in that adapter's wire — at most what the wire carries, at most what is declared — so it can take image away from a gemini tier and can never add a lane a wire lacks. Omit to take whatever the provider carries; write [text] to send it no attachments. Must include text.",
         "type": "array",
@@ -100,7 +101,7 @@ const routingDefsTemplate = `{
       { "$ref": "#/$defs/routingNeedsOpenRouter" },
       {
         "if":   { "properties": { "provider": { "const": "gemini_vertex" } } },
-        "then": { "required": ["location"], "not": { "required": ["base_url"] } }
+        "then": { "not": { "required": ["base_url"] } }
       },
       {
         "if":   { "required": ["location"] },
@@ -184,7 +185,7 @@ const routingDefsTemplate = `{
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
       "base_url": { "type": "string", "description": "A separate embeddings server for this lane alone (vLLM serves one model per process). Empty ⇒ the provider's host (providers.<name>.base_url)." },
-      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only, and REQUIRED there: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4. The host follows from it, so gemini_vertex takes no base_url." },
+      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only: a location of this lane's own, since Vertex serves an embedding model at fewer locations than a chat model. Empty ⇒ the provider's (providers.gemini_vertex.location)." },
       "dimensions": { "type": "integer", "minimum": 0, "maximum": 2000, "description": "Vector width the provider is asked to emit. Optional; 0 or omitted defaults to 1536." },
       "routing": { "$ref": "#/$defs/embeddingsRouting" }
     },
@@ -192,7 +193,7 @@ const routingDefsTemplate = `{
       { "$ref": "#/$defs/routingNeedsOpenRouter" },
       {
         "if":   { "properties": { "provider": { "const": "gemini_vertex" } } },
-        "then": { "required": ["location"], "not": { "required": ["base_url"] } }
+        "then": { "not": { "required": ["base_url"] } }
       },
       {
         "if":   { "required": ["location"] },

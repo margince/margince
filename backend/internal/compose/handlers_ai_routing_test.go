@@ -151,6 +151,7 @@ func TestEveryRoutingFieldSurvivesTheRoundTrip(t *testing.T) {
 			"openai_compatible": {
 				BaseURL:  "https://openrouter.ai/api",
 				Upstream: &ai.OpenRouterRouting{Only: []string{"a"}, Ignore: []string{"b"}, AllowFallbacks: &yes},
+				Location: "eu",
 			},
 		},
 	}

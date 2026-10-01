@@ -100,18 +100,19 @@ func (h aiRoutingHandlers) SetAiProviderSettings(w http.ResponseWriter, r *http.
 // says "nothing is bound", where a null would leave a client guessing whether
 // the field was omitted or the read failed.
 //
-// A lane's base_url is the host its provider is reached at, so a client that
+// A lane's base_url and location are its provider's, so a client that
 // predates `providers` still sees where each lane goes and writes back a value
 // the store recognises as the provider's. Routing goes out as stored: resolving
 // it would write the provider's pins and the product default onto every tier
 // such a client saves.
 func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 	host := func(provider string) string { return cfg.Providers[provider].BaseURL }
+	location := func(provider string) string { return cfg.Providers[provider].Location }
 	tiers := make(map[string]crmcontracts.AiTierBinding, len(cfg.Tiers))
 	for tier, b := range cfg.Tiers {
 		tiers[string(tier)] = crmcontracts.AiTierBinding{
 			Provider: b.Provider, Model: b.Model,
-			BaseUrl: optionalString(cmp.Or(b.BaseURL, host(b.Provider))), Location: optionalString(b.Location), Input: optionalStrings(b.Input),
+			BaseUrl: optionalString(cmp.Or(b.BaseURL, host(b.Provider))), Location: optionalString(cmp.Or(b.Location, location(b.Provider))), Input: optionalStrings(b.Input),
 			Routing:       routingToWire(b.Routing),
 			ThinkingLevel: optionalEnum[crmcontracts.AiTierBindingThinkingLevel](b.ThinkingLevel),
 		}
@@ -122,7 +123,7 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 		Embeddings: crmcontracts.AiEmbeddingsBinding{
 			Provider: cfg.Embeddings.Provider, Model: cfg.Embeddings.Model,
 			BaseUrl:       optionalString(cmp.Or(cfg.Embeddings.BaseURL, host(cfg.Embeddings.Provider))),
-			Location:      optionalString(cfg.Embeddings.Location),
+			Location:      optionalString(cmp.Or(cfg.Embeddings.Location, location(cfg.Embeddings.Provider))),
 			Input:         optionalStrings(cfg.Embeddings.Input),
 			Routing:       routingToWire(cfg.Embeddings.Routing),
 			ThinkingLevel: optionalEnum[crmcontracts.AiEmbeddingsBindingThinkingLevel](cfg.Embeddings.ThinkingLevel),
@@ -145,7 +146,7 @@ func providersToWire(in map[string]ai.ProviderSettings) *map[string]crmcontracts
 	}
 	out := make(map[string]crmcontracts.AiProviderSettings, len(in))
 	for name, p := range in {
-		out[name] = crmcontracts.AiProviderSettings{BaseUrl: optionalString(p.BaseURL), Upstream: upstreamToWire(p.Upstream)}
+		out[name] = crmcontracts.AiProviderSettings{BaseUrl: optionalString(p.BaseURL), Upstream: upstreamToWire(p.Upstream), Location: optionalString(p.Location)}
 	}
 	return &out
 }
@@ -165,6 +166,9 @@ func providerSettingsFromWire(p crmcontracts.AiProviderSettings) ai.ProviderSett
 	out := ai.ProviderSettings{Upstream: upstreamFromWire(p.Upstream)}
 	if p.BaseUrl != nil {
 		out.BaseURL = *p.BaseUrl
+	}
+	if p.Location != nil {
+		out.Location = *p.Location
 	}
 	return out
 }

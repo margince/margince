@@ -25,6 +25,9 @@ type ProviderSettings struct {
 	// thinking) stays on each tier: two models behind one broker need different
 	// answers.
 	Upstream *OpenRouterRouting `yaml:"upstream" json:"upstream,omitempty"`
+	// Location is the Vertex AI location a gemini_vertex provider is served
+	// from, which is where Google processes the call for every lane on it.
+	Location string `yaml:"location" json:"location,omitempty"`
 }
 
 // The lane labels a lift warning and BoundProviders name, in the words every
@@ -105,7 +108,7 @@ func (cfg RoutingConfig) resolveProviders() RoutingConfig {
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
 	for tier, lane := range cfg.Tiers {
 		settings := cfg.Providers[lane.Provider]
-		lane.BaseURL = settings.BaseURL
+		lane.BaseURL, lane.Location = settings.BaseURL, settings.Location
 		lane.Routing = UpstreamPreferencesFor(lane).withPins(settings.Upstream.pins())
 		tiers[tier] = lane
 	}
@@ -126,6 +129,9 @@ func (cfg RoutingConfig) resolveProviders() RoutingConfig {
 func (e EmbeddingsConfig) resolved(settings ProviderSettings) ProviderConfig {
 	lane := e.ProviderConfig
 	lane.Routing = lane.Routing.clone()
+	if lane.Location == "" {
+		lane.Location = settings.Location
+	}
 	if lane.BaseURL != "" {
 		return lane
 	}
@@ -168,6 +174,12 @@ func validateProviderEntry(name string, settings ProviderSettings, bound bool) e
 	// host meets refuses that without repeating it either.
 	if !bound && settings.BaseURL != "" && !isFetchableURL(settings.BaseURL) {
 		return fmt.Errorf("ai: routing config: providers: %s: base_url is not an http(s) URL with a host; give the vendor host root, e.g. https://openrouter.ai/api", name)
+	}
+	if settings.Location != "" && name != providerGeminiVertex {
+		return fmt.Errorf("ai: routing config: providers: %s: `location` names a Vertex AI location and only gemini_vertex is served from one; remove it", name)
+	}
+	if settings.Location != "" && !vertexLocationShape.MatchString(settings.Location) {
+		return fmt.Errorf("ai: routing config: providers: %s: location must be eu, us, global, or a region such as europe-west4", name)
 	}
 	upstream := settings.Upstream
 	if upstream == nil {

@@ -18,6 +18,7 @@ type providerLift struct {
 	providers map[string]ProviderSettings
 	hostFrom  map[string]string
 	pinsFrom  map[string]string
+	placeFrom map[string]string
 	unpinned  map[string][]string
 	tierBound map[string]bool
 	// perLane is true for a document written before providers held hosts, where
@@ -35,7 +36,7 @@ type providerLift struct {
 // cleared silently, so the lift is idempotent and safe over a resolved config.
 func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig {
 	lift := providerLift{
-		providers: maps.Clone(cfg.Providers), hostFrom: map[string]string{}, pinsFrom: map[string]string{},
+		providers: maps.Clone(cfg.Providers), hostFrom: map[string]string{}, pinsFrom: map[string]string{}, placeFrom: map[string]string{},
 		unpinned: map[string][]string{}, tierBound: map[string]bool{}, perLane: len(cfg.Providers) == 0, log: log,
 	}
 	if lift.providers == nil {
@@ -47,6 +48,9 @@ func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig 
 		}
 		if settings.Upstream != nil {
 			lift.pinsFrom[name] = providerEntryLabel
+		}
+		if settings.Location != "" {
+			lift.placeFrom[name] = providerEntryLabel
 		}
 	}
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
@@ -63,6 +67,7 @@ func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig 
 		cfg.Decisions = &decisions
 	}
 	cfg.Embeddings.ProviderConfig = lift.embeddings(cfg.Embeddings.ProviderConfig)
+	cfg.Embeddings.Location = lift.embeddingsLocation(cfg.Embeddings.Provider, cfg.Embeddings.Location)
 	lift.warnInherited()
 	if len(lift.providers) == 0 {
 		lift.providers = nil
@@ -81,6 +86,7 @@ func (l providerLift) tier(label string, lane ProviderConfig) ProviderConfig {
 		l.unpinned[lane.Provider] = append(l.unpinned[lane.Provider], label)
 	}
 	lane.BaseURL, lane.Routing = "", lane.Routing.withoutPins()
+	lane.Location = l.location(label, lane.Provider, lane.Location)
 	// A block that held only pins no broker can honour is no declaration at all,
 	// and a left-over `{}` would be refused on the same non-broker host.
 	if dropped && lane.Routing.IsEmpty() {
@@ -108,6 +114,40 @@ func (l providerLift) host(label, provider, baseURL string) {
 		settings.BaseURL = baseURL
 		l.providers[provider] = settings
 	}
+}
+
+// location lets the first tier that names one decide its provider's Vertex
+// location, warns for each later tier naming another, and returns the tier's
+// copy cleared.
+func (l providerLift) location(label, provider, location string) string {
+	if location == "" {
+		return ""
+	}
+	if _, decided := l.placeFrom[provider]; !decided {
+		l.placeFrom[provider] = label
+		settings := l.providers[provider]
+		settings.Location = location
+		l.providers[provider] = settings
+		return ""
+	}
+	if l.providers[provider].Location != location {
+		l.warnKept("ai: routing: lane location differs from its provider's; the provider's wins", provider, l.placeFrom, label)
+	}
+	return ""
+}
+
+// embeddingsLocation is the embeddings lane's own location after the lift.
+// Vertex serves an embedding model at fewer locations than a chat model, so
+// the lane may sit elsewhere, as it may sit on a server of its own; it decides
+// the provider's location only for a provider no tier binds.
+func (l providerLift) embeddingsLocation(provider, location string) string {
+	if !l.tierBound[provider] {
+		return l.location(embeddingsLaneLabel, provider, location)
+	}
+	if location == l.providers[provider].Location {
+		return ""
+	}
+	return location
 }
 
 // pins lets the first lane decide its provider's pins. Pins that cannot reach a

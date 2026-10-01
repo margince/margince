@@ -99,7 +99,7 @@ func TestOneSaveAsksEachQuestionOnceOnOneToken(t *testing.T) {
 	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
 	next := vertexRouting("europe-west4")
 	next.Tiers[TierFrontier] = next.Tiers[TierPremium]
-	next.Tiers[TierCheapCloud] = ProviderConfig{Provider: providerGeminiVertex, Location: "eu", Model: "gemini-3.5-flash"}
+	next.Tiers[TierCheapCloud] = ProviderConfig{Provider: providerGeminiVertex, Location: "europe-west4", Model: "gemini-3.5-flash-lite"}
 
 	if err := store.probeVertexBindings(context.Background(), RoutingConfig{}, next); err != nil {
 		t.Fatalf("a served binding was refused: %v", err)

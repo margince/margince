@@ -25,8 +25,8 @@ const (
 )
 
 // reconcileLaneProviderFields settles what an old client writes on its lanes —
-// the host each tier and the decisions lane named, and the pins inside a
-// tier's routing — against the provider that owns them now. A value its
+// the host each tier and the decisions lane named, a tier's Vertex location,
+// and the pins inside a tier's routing — against the provider that owns them now. A value its
 // provider lacks is lifted onto it, an equal one is cleared, and a different
 // one is refused naming the lane.
 //
@@ -83,8 +83,24 @@ func (r laneReconcile) tier(label string, lane ProviderConfig) (ProviderConfig, 
 		}
 		lane.Routing = lane.Routing.withoutPins()
 	}
-	lane.BaseURL = ""
+	if err := r.location(label, lane.Provider, lane.Location); err != nil {
+		return ProviderConfig{}, err
+	}
+	lane.BaseURL, lane.Location = "", ""
 	return lane, nil
+}
+
+func (r laneReconcile) location(label, provider, location string) error {
+	entry := r.providers[provider]
+	switch {
+	case location == "" || location == entry.Location:
+		return nil
+	case entry.Location == "":
+		entry.Location = location
+		r.providers[provider] = entry
+		return nil
+	}
+	return movedToProvider(label, "the location is set on the provider now; change it", provider)
 }
 
 func (r laneReconcile) host(label, provider, host string) error {

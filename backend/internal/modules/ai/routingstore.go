@@ -140,6 +140,36 @@ func (s *RoutingStore) probeBeforeWrite(ctx context.Context, next RoutingConfig,
 	return s.probeCandidate(ctx, stored, next)
 }
 
+// probeBeforeProviderWrite is probeBeforeWrite for a provider-settings write:
+// only a Vertex provider moves a Vertex binding, so any other reads nothing.
+func (s *RoutingStore) probeBeforeProviderWrite(ctx context.Context, provider string, next ProviderSettings) error {
+	if provider != providerGeminiVertex {
+		return nil
+	}
+	stored, err := settings.Get(ctx, s.settings, Routing)
+	if err != nil {
+		return err
+	}
+	return s.probeProviderSettings(ctx, stored, provider, next)
+}
+
+// probeProviderSettings asks Google about each Vertex binding that one
+// provider's new settings would move, as probeCandidate does for a whole
+// document.
+func (s *RoutingStore) probeProviderSettings(ctx context.Context, stored RoutingConfig, provider string, next ProviderSettings) error {
+	_, candidate, err := stored.withProviderSettings(provider, next)
+	if err != nil {
+		return err
+	}
+	if err := candidate.ResidencyGap(); err != nil {
+		return invalidRouting(err)
+	}
+	if err := s.probeVertexBindings(ctx, stored, candidate); err != nil {
+		return invalidRouting(err)
+	}
+	return nil
+}
+
 // probeCandidate holds next to the bar the write will, then asks Google about
 // what it adds or changes over stored.
 func (s *RoutingStore) probeCandidate(ctx context.Context, stored, next RoutingConfig) error {
@@ -210,6 +240,9 @@ func (s *RoutingStore) SetProviderSettings(ctx context.Context, provider string,
 	if _, known := providerByName(provider); !known {
 		return RoutingConfig{}, apperrors.ErrNotFound
 	}
+	if err := s.probeBeforeProviderWrite(ctx, provider, next); err != nil {
+		return RoutingConfig{}, err
+	}
 	return s.write(ctx, func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {
 		return current.withProviderSettings(provider, next)
 	})
@@ -261,10 +294,10 @@ func (cfg RoutingConfig) withProviderSettings(provider string, next ProviderSett
 	if providers == nil {
 		providers = map[string]ProviderSettings{}
 	}
-	if next.BaseURL == "" && next.Upstream == nil {
+	if next == (ProviderSettings{}) {
 		delete(providers, provider)
 	} else {
-		providers[provider] = ProviderSettings{BaseURL: next.BaseURL, Upstream: next.Upstream.clone()}
+		providers[provider] = ProviderSettings{BaseURL: next.BaseURL, Upstream: next.Upstream.clone(), Location: next.Location}
 	}
 	if len(providers) == 0 {
 		providers = nil
