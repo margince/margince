@@ -293,7 +293,11 @@ func (s *Store) revokeOverrideAdmittedTx(
 	// subject it started on, and the merge that would extend it locks two
 	// subjects this caller never named. overridechain.go carries that argument
 	// and the lock order both.
-	if err := lockOverrideFamilyOf(ctx, tx, in.OverrideID); err != nil {
+	root, err := overrideFamilyRoot(ctx, tx, in.OverrideID)
+	if err != nil {
+		return err
+	}
+	if err := lockOverrideFamily(ctx, tx, root); err != nil {
 		return err
 	}
 	// EnsureRetractable, which IS EnsureWritable and says so: this write
@@ -330,7 +334,7 @@ func (s *Store) revokeOverrideAdmittedTx(
 			"this override was recorded at a level you may not revoke: %w", apperrors.ErrPermissionDenied)
 	}
 
-	revoked, err := revokeOverrideChain(ctx, tx, in.OverrideID)
+	revoked, err := revokeOverrideChain(ctx, tx, root)
 	if err != nil {
 		return err
 	}

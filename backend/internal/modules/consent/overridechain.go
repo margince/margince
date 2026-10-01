@@ -36,7 +36,7 @@ package consent
 // then FAMILY keys. Both writers hold to it — CarryOverridesTx takes
 // lockBothSidesOfACarry before it reaches lockCarriedFamilies, and
 // revokeOverrideAdmittedTx takes lockSubjectSuppressions before
-// lockOverrideFamilyOf — so neither ever waits on a subject key while holding a
+// lockOverrideFamily — so neither ever waits on a subject key while holding a
 // family key, and the two classes cannot cycle.
 
 import (
@@ -84,10 +84,13 @@ func lockOverrideFamily(ctx context.Context, tx pgx.Tx, root ids.UUID) error {
 	return nil
 }
 
-// lockOverrideFamilyOf is the revoke side: the chain of the one row the caller
-// named. A row that is not there locks nothing and leaves the caller's own
-// read to answer 404, so a bad id learns nothing from which of the two spoke.
-func lockOverrideFamilyOf(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+// overrideFamilyRoot is the one answer both halves of a revoke start from: the
+// family lock is keyed on it, and the walk that takes the rows back starts at
+// it, so the set the lock serialises and the set the UPDATE reaches are the
+// same set whichever member of the chain the caller named. Zero for an id that
+// is not a row; the caller's own read then answers 404, so a bad id learns
+// nothing from which of the two spoke.
+func overrideFamilyRoot(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, error) {
 	var root ids.UUID
 	err := tx.QueryRow(ctx, `
 		WITH RECURSIVE ancestry AS (
@@ -99,12 +102,12 @@ func lockOverrideFamilyOf(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		)
 		SELECT id FROM ancestry WHERE carried_from IS NULL`, id).Scan(&root)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
+		return ids.UUID{}, nil
 	}
 	if err != nil {
-		return fmt.Errorf("consent: finding this override's carry chain: %w", err)
+		return ids.UUID{}, fmt.Errorf("consent: finding this override's carry chain: %w", err)
 	}
-	return lockOverrideFamily(ctx, tx, root)
+	return root, nil
 }
 
 // lockCarriedFamilies is the carry side: every chain the copy about to run
@@ -155,13 +158,16 @@ func lockCarriedFamilies(ctx context.Context, tx pgx.Tx, from commsauthz.StopSub
 	return nil
 }
 
-// revokeOverrideChain takes back the named row and every copy a merge made of
-// it, and names each one it took.
+// revokeOverrideChain takes back the whole chain the given ROOT heads — the
+// original and every copy a merge made of it — and names each row it took.
+// Given the root and not the row the caller named, so that a revoke through a
+// carried copy reaches the original it was copied from: the lock above is keyed
+// on the root, and the write covers what the lock covers.
 //
 // Every copy carries the original's authority verbatim (overridecarry.go), so
 // the caller's one CanRevoke check answers for the whole chain: a merge cannot
 // introduce a descendant recorded at a level the caller could not have revoked.
-func revokeOverrideChain(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]revokedOverride, error) {
+func revokeOverrideChain(ctx context.Context, tx pgx.Tx, root ids.UUID) ([]revokedOverride, error) {
 	rows, err := tx.Query(ctx, `
 		WITH RECURSIVE chain AS (
 		    SELECT id FROM communication_override WHERE id = $1
@@ -173,7 +179,7 @@ func revokeOverrideChain(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]revoked
 		UPDATE communication_override
 		   SET revoked_at = now()
 		 WHERE id IN (SELECT id FROM chain) AND revoked_at IS NULL
-		RETURNING id, contact_id`, id)
+		RETURNING id, contact_id`, root)
 	if err != nil {
 		return nil, fmt.Errorf("consent: revoking the override: %w", err)
 	}

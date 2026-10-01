@@ -127,6 +127,39 @@ func TestAMergeCannotCarryAVouchPastTheRevokeTakingItBack(t *testing.T) {
 	}
 }
 
+// TestRevokingACarriedCopyTakesBackItsOriginalToo is the walk's other
+// direction. The family lock is keyed on the chain's ROOT, so the set it
+// serialises is the whole chain whichever member the caller names — and the
+// write has to cover the same set, or a revoke through the survivor's id
+// leaves the original standing on the retired record, where the SAR export
+// and anything that un-merges still finds a live vouch.
+func TestRevokingACarriedCopyTakesBackItsOriginalToo(t *testing.T) {
+	e := setupChannelConsent(t)
+	survivor := seedOverrideContact(t, e, "Copy Survivor")
+
+	if _, err := e.store.Allow(e.ctx, AllowInput{
+		ContactID: e.contact, Category: "marketing", Reason: "they asked us at the trade fair",
+	}); err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+	carryOverrides(t, e, e.contact, survivor)
+	copied := liveOverrideID(t, e, survivor)
+
+	if err := e.store.RevokeOverride(e.ctx, RevokeOverrideInput{
+		ContactID: survivor, OverrideID: copied, Reason: "the buyer changed their mind",
+	}); err != nil {
+		t.Fatalf("revoking the carried copy: %v", err)
+	}
+
+	if n := liveOverridesOn(t, e, e.contact); n != 0 {
+		t.Errorf("the retired contact still holds %d live override(s) after its copy was revoked, "+
+			"want 0: the walk started at the copy and never reached the original", n)
+	}
+	if n := liveOverridesOn(t, e, survivor); n != 0 {
+		t.Errorf("the survivor still holds %d live override(s), want 0", n)
+	}
+}
+
 // seedOverrideContact plants a contact for a chain to run through.
 func seedOverrideContact(t *testing.T, e *channelConsentEnv, name string) ids.ContactID {
 	t.Helper()
