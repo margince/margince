@@ -16,6 +16,7 @@ import { QueryGate, throwProblem, useMe } from "./common";
 import "./aiusage.css";
 import { calendarMonth } from "../format/calendarday";
 import { viewerZone } from "../format/timezone";
+import { TaskName } from "./ai-task-name";
 
 type AiUsage = components["schemas"]["AiUsage"];
 type UsageTask = AiUsage["days"][number]["tasks"][number];
@@ -115,7 +116,12 @@ function usageColumns(
     {
       key: "task",
       header: t("aiusage.col.task"),
-      render: (r: UsageTask) => r.task_display_name ?? r.task,
+      render: (r: UsageTask) => (
+        <TaskName
+          name={r.task_display_name ?? r.task}
+          summary={r.task_summary}
+        />
+      ),
     },
     {
       key: "tier",

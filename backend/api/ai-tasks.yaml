@@ -109,6 +109,7 @@ tiers: [local_small, cheap_cloud, premium, frontier, local_large]
 tasks:
   capture_classify:
     display_name: "Message classification"
+    summary: "Sorts each incoming email and meeting into what it is about, so it lands on the right record."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -120,6 +121,7 @@ tasks:
 
   owed_verdict:
     display_name: "Unanswered-message triage"
+    summary: "Decides whether an unanswered message actually asks us for something, or only informs us."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -131,6 +133,7 @@ tasks:
 
   request_settlement:
     display_name: "Did our reply settle it"
+    summary: "Checks whether our reply actually answered what the other side asked for."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -142,6 +145,7 @@ tasks:
 
   capture_counterparty_verdict:
     display_name: "First-time sender check"
+    summary: "Decides who a first-time sender is — a person, a company mailbox, a newsletter, spam — before a contact is created."
     ladder: [local_small]
     execution_mode: background
     on_budget_exhausted: queue
@@ -155,6 +159,7 @@ tasks:
 
   capture_confidentiality_verdict:
     display_name: "Thread confidentiality check"
+    summary: "Decides whether an email thread in a restricted mailbox is ordinary enough to open to the team."
     ladder: [local_small]
     execution_mode: background
     on_budget_exhausted: queue
@@ -168,6 +173,7 @@ tasks:
 
   signal_extract:
     display_name: "Signal extraction"
+    summary: "Picks out important events from a finished thread, such as a contract ending or a new opportunity."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -179,6 +185,7 @@ tasks:
 
   stage_evidence_extract:
     display_name: "Stage evidence extraction"
+    summary: "Reads what the buyer wrote or said against a deal stage's exit criteria."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -190,6 +197,7 @@ tasks:
 
   transcript_propose:
     display_name: "Meeting follow-up extraction"
+    summary: "Reads next steps and commitments out of a meeting transcript."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -200,6 +208,7 @@ tasks:
 
   propose_roles:
     display_name: "Buying-role reading"
+    summary: "Suggests each contact's buying role — who signs, who champions, who can block."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -210,6 +219,7 @@ tasks:
 
   enrich:
     display_name: "Signature enrichment"
+    summary: "Fills in a contact's title, phone and other details from their own email signature."
     ladder: [local_small, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -221,6 +231,7 @@ tasks:
 
   summarize:
     display_name: "Record summary"
+    summary: "Writes the short summaries shown on account, contact and deal pages."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -231,6 +242,7 @@ tasks:
 
   growth_fit:
     display_name: "Company fit assessment"
+    summary: "Judges how well a company fits what we sell."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -241,6 +253,7 @@ tasks:
 
   draft_reply:
     display_name: "Reply drafting"
+    summary: "Drafts emails and replies for you to review before sending."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -251,6 +264,7 @@ tasks:
 
   nl_search:
     display_name: "Natural-language search"
+    summary: "Turns a list described in plain words into filters you can check and save."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -261,6 +275,7 @@ tasks:
 
   cold_start:
     display_name: "Onboarding read"
+    summary: "Runs the onboarding conversation that sets up your company profile."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -275,6 +290,7 @@ tasks:
 
   transcript:
     display_name: "Transcript reading"
+    summary: "Reads pasted meeting transcripts. Not in use yet."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -284,6 +300,7 @@ tasks:
 
   corpus_ask:
     display_name: "Document corpus question"
+    summary: "Answers questions from the documents your company filed, citing where each answer comes from."
     ladder: [premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -294,6 +311,7 @@ tasks:
 
   account_scan:
     display_name: "Reading what an account needs"
+    summary: "Reads an account's recent emails and pipeline to find what it needs from you."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -305,6 +323,7 @@ tasks:
 
   deal_health:
     display_name: "Deal status card"
+    summary: "Writes the deal page's status card: where the deal stands and what could lose it."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -315,6 +334,7 @@ tasks:
 
   weekly_review:
     display_name: "Weekly review narrative"
+    summary: "Writes the one or two sentences that open your weekly review."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -325,6 +345,7 @@ tasks:
 
   weekly_learnings:
     display_name: "What last week taught"
+    summary: "Suggests what last week's results teach for the week ahead."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -335,6 +356,7 @@ tasks:
 
   brief_ranking:
     display_name: "Morning brief ranking"
+    summary: "Orders the morning brief so the most important items come first."
     ladder: [premium, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -345,6 +367,7 @@ tasks:
 
   agent_loop:
     display_name: "Agent reasoning loop"
+    summary: "Runs the scheduled AI agents that act on your behalf with the tools they are given."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -362,6 +385,7 @@ tasks:
 
   offer_draft:
     display_name: "Offer drafting"
+    summary: "Drafts offers and quotes from a deal's details."
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -371,6 +395,7 @@ tasks:
 
   document_extract:
     display_name: "Document extraction"
+    summary: "Reads an attached document, such as an invoice or order, for deal facts you can accept."
     ladder: [premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -382,6 +407,7 @@ tasks:
 
   site_extract:
     display_name: "Website deep read"
+    summary: "Reads a company's website in depth, quoting the pages each fact comes from."
     ladder: [premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -392,6 +418,7 @@ tasks:
 
   site_fact_extract:
     display_name: "Website fact extraction"
+    summary: "Picks short, quoted facts out of each page of a company's website."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -402,6 +429,7 @@ tasks:
 
   site_triage:
     display_name: "Website triage"
+    summary: "Decides what an email domain's website is — a company, a personal site or a mailbox provider — before a company is created."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -413,6 +441,7 @@ tasks:
 
   cert_judge:
     display_name: "Certification judging"
+    summary: "Grades model answers when a model is certified for a task. Used only in testing."
     ladder: [premium, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -423,6 +452,7 @@ tasks:
 
   voice_build:
     display_name: "Voice DNA build"
+    summary: "Learns your writing voice from emails you wrote, so drafts sound like you."
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -433,6 +463,7 @@ tasks:
 
   rate_extract:
     display_name: "Exchange rate extraction"
+    summary: "Reads exchange rates from a published rates page for the currency refresh."
     ladder: [premium, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue

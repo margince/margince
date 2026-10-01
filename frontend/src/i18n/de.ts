@@ -9168,6 +9168,7 @@ export const de = {
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
     "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile zeigt die Stufe und das Modell, auf dem sie gerade läuft.",
+  "aiTasks.whatItDoes": "{task}: was es tut",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
   "aiTasks.viewCalls": "Aufrufe ansehen",
   "workingHours.title": "Buchbare Zeiten",

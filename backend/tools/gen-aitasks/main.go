@@ -198,6 +198,7 @@ type taskDef struct {
 	CostUnit          string             `yaml:"cost_unit"`
 	Doc               string             `yaml:"doc"`
 	DisplayName       string             `yaml:"display_name"`
+	Summary           string             `yaml:"summary"`
 }
 
 // contract is the parsed ai-tasks.yaml. Tiers is a YAML sequence, so its
@@ -332,6 +333,17 @@ func emitGo(c contract, contractHash string) (string, error) {
 	b.WriteString("// task answers the empty string: a caller with nothing to show is better\n")
 	b.WriteString("// served saying nothing than showing the key it was handed.\n")
 	b.WriteString("func DisplayName(t Task) string { return taskDisplayNames[t] }\n\n")
+
+	b.WriteString("// taskSummaries say in one plain sentence what each task does, for a reader\n")
+	b.WriteString("// deciding which model should serve it.\n")
+	b.WriteString("var taskSummaries = map[Task]string{\n")
+	for _, name := range taskNames {
+		fmt.Fprintf(&b, "\t%s: %q,\n", taskConst(name), c.Tasks[name].Summary)
+	}
+	b.WriteString("}\n\n")
+
+	b.WriteString("// Summary is what this task does, in one sentence; empty for an unknown task.\n")
+	b.WriteString("func Summary(t Task) string { return taskSummaries[t] }\n\n")
 
 	b.WriteString("// ExecutionMode distinguishes request-bound work from work carried by a\n")
 	b.WriteString("// durable background job. Budget exhaustion degrades the former and\n")

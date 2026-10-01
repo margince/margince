@@ -154,16 +154,15 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 		}
 		normal, normalBlocked := boundPlan(normalConfig, task, normalBand)
 		effective, blocked := boundPlan(effectiveConfig, task, band)
-		name := DisplayName(task)
+		name, summary := taskLabel(task)
 		mode := string(taskExecutionModes[task])
 		leading := string(LeadingTier(task))
 		if task == TaskEmbeddings {
-			name = "Search and retrieval"
 			mode = "embedding"
 			leading = "embeddings"
 		}
 		row := crmcontracts.AiFeatureRoute{
-			Task: string(task), DisplayName: name, ExecutionMode: mode, LeadingTier: leading,
+			Task: string(task), DisplayName: name, Summary: &summary, ExecutionMode: mode, LeadingTier: leading,
 			NormalCandidates: wireCandidates(normal), EffectiveCandidates: wireCandidates(effective),
 			Impact: routeImpact(normal, effective, blocked), BudgetExempt: task == TaskEmbeddings,
 		}

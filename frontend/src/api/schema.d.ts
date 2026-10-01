@@ -20934,6 +20934,8 @@ export interface components {
         AiFeatureRoute: {
             task: string;
             display_name: string;
+            /** @description What the task does, in one plain sentence. */
+            summary?: string;
             execution_mode: string;
             leading_tier: string;
             normal_candidates: components["schemas"]["AiRouteCandidate"][];
@@ -20991,6 +20993,8 @@ export interface components {
                     /** @description capture_classify, enrich, summarize, … */
                     task: string;
                     task_display_name?: string;
+                    /** @description What the task does, in one plain sentence, for a reader deciding what it costs. */
+                    task_summary?: string;
                     /** @description local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane). */
                     tier: string;
                     calls: number;

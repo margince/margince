@@ -11,6 +11,7 @@ import { useT } from "../i18n";
 import { decisionSkipLabel, tierLabel } from "./ai-decision-labels";
 import { decisionFirstOrder } from "./ai-feature-order";
 import { TaskState } from "./ai-lane-state";
+import { TaskName } from "./ai-task-name";
 import { ModelChain, ModelRef, TermChip } from "./ai-terms";
 import { CALL_TASK_PARAM } from "./aicalls";
 import { settingsHref } from "./settingsrouting";
@@ -85,7 +86,7 @@ export function AiFeatureTable({
             const changed = impact(row);
             return (
               <CellStack>
-                <span>{row.display_name}</span>
+                <TaskName name={row.display_name} summary={row.summary} />
                 <span className="t-caption">
                   {row.task} · {row.execution_mode}
                 </span>

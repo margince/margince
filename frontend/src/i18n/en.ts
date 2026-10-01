@@ -9309,6 +9309,7 @@ export const en = {
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
     "Read-only: each task’s tier is fixed by contract. Each row shows the tier and the model it runs on now.",
+  "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
   "aiTasks.viewCalls": "View calls",
   "workingHours.title": "Bookable hours",

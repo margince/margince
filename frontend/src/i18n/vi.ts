@@ -9083,6 +9083,7 @@ export const vi = {
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
     "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng hiển thị tầng và mô hình nó đang chạy.",
+  "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
   "aiTasks.viewCalls": "Xem lượt gọi",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
