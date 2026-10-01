@@ -4,7 +4,6 @@
 package ai
 
 import (
-	"maps"
 	"reflect"
 	"slices"
 	"time"
@@ -59,10 +58,11 @@ type plannedBinding struct {
 	dimensions int
 }
 
-// The plan resolves the stored binding. A serving role can lag it until its
-// next rebind; in-flight calls retain their original installed snapshot.
+// The plan resolves the stored binding, whose lanes read their host and pins
+// from its providers. A serving role can lag it until its next rebind;
+// in-flight calls retain their original installed snapshot.
 func boundPlan(cfg RoutingConfig, task Task, band string) ([]plannedBinding, bool) {
-	cfg.Tiers = maps.Clone(cfg.Tiers)
+	cfg = cfg.canonical().resolveProviders()
 	cfg.applyUpstreamDefaults()
 	if cfg.Embeddings.Dimensions == 0 {
 		cfg.Embeddings.Dimensions = defaultEmbedDimensions

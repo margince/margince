@@ -106,15 +106,17 @@ func (s *AdminStore) PreviewRouting(ctx context.Context, next RoutingConfig) (cr
 	if err != nil {
 		return crmcontracts.AiRoutingPreview{}, err
 	}
-	// The wire carries no upstream preferences, so the draft is judged as the
-	// write would store it — with the stored pins of unchanged lanes carried —
-	// or every pinned eu_hosted binding would preview as a residency breach
-	// the save itself would accept.
-	next = next.keepingStoredUpstream(cfg)
-	if err := validateStoredRouting(next); err != nil {
+	// Judged as the write would store it — settled against the stored document,
+	// which holds the providers an old client never sends — or a binding the
+	// save accepts could preview as unhosted or as a residency breach.
+	draft, _, err := next.replacing(cfg)
+	if err != nil {
+		return crmcontracts.AiRoutingPreview{}, err
+	}
+	if err := validateStoredRouting(draft); err != nil {
 		return crmcontracts.AiRoutingPreview{}, settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
 	}
-	return crmcontracts.AiRoutingPreview{CurrentVersion: cfg.Revision(), Features: compareFeatureRoutes(cfg, next, budget.Band, budget.Band), UnusedTiers: unusedTiers(next)}, nil
+	return crmcontracts.AiRoutingPreview{CurrentVersion: cfg.Revision(), Features: compareFeatureRoutes(cfg, draft, budget.Band, budget.Band), UnusedTiers: unusedTiers(draft)}, nil
 }
 
 // Budget-only editors can preview their policy without gaining diagnostics or

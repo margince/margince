@@ -90,8 +90,12 @@ func (l providerLift) tier(label string, lane ProviderConfig) ProviderConfig {
 }
 
 // host lets the first lane decide its provider's host — an empty one included,
-// which is the compiled default — and warns for each later lane elsewhere.
+// which is the compiled default — and warns for each later lane elsewhere. Once
+// providers hold hosts, an empty lane host is the provider's and states nothing.
 func (l providerLift) host(label, provider, baseURL string) {
+	if baseURL == "" && !l.perLane {
+		return
+	}
 	if _, decided := l.hostFrom[provider]; decided {
 		if !sameHost(provider, l.providers[provider].BaseURL, baseURL) {
 			l.warnKept("ai: routing: lane host differs from its provider's; the provider's wins", provider, l.hostFrom, label)

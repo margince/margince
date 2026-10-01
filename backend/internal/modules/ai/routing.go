@@ -362,10 +362,10 @@ func (cfg RoutingConfig) validate() error {
 	//
 	// The rule itself is the chat tiers': SelectBrain builds this lane's client
 	// too, and refuses openai_compatible without a host.
-	if cfg.Embeddings.Provider == providerOpenAICompatible && strings.TrimSpace(cfg.Embeddings.BaseURL) == "" {
-		return fmt.Errorf("ai: routing config: the embeddings lane binds openai_compatible with no base_url: " +
+	if chatHostMissing(cfg.Embeddings.Provider, cfg.Embeddings.BaseURL) {
+		return missingHostError{provider: cfg.Embeddings.Provider, reason: "ai: routing config: the embeddings lane binds openai_compatible with no base_url: " +
 			"give it the vendor host root, with no version segment (the adapter adds /v1), " +
-			"e.g. https://openrouter.ai/api")
+			"e.g. https://openrouter.ai/api"}
 	}
 	return cfg.validateDecisionsLane()
 }
@@ -432,10 +432,10 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 	// declines to adopt it and goes on serving the binding it already had. The
 	// operator sees "saved" and no change, with the reason in a log they are not
 	// reading.
-	if binding.Provider == providerOpenAICompatible && strings.TrimSpace(binding.BaseURL) == "" {
-		return fmt.Errorf("ai: routing config: tier %s binds openai_compatible with no base_url: "+
+	if chatHostMissing(binding.Provider, binding.BaseURL) {
+		return missingHostError{provider: binding.Provider, reason: fmt.Sprintf("ai: routing config: tier %s binds openai_compatible with no base_url: "+
 			"give it the vendor host root, with no version segment (the adapter adds /v1), "+
-			"e.g. https://openrouter.ai/api", tier)
+			"e.g. https://openrouter.ai/api", tier)}
 	}
 	return validateInput(fmt.Sprintf("tier %s", tier), binding.Input)
 }

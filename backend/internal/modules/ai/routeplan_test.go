@@ -114,3 +114,18 @@ func mustPlan(t *testing.T, cfg RoutingConfig, task Task) []plannedBinding {
 	}
 	return plan
 }
+
+// A stored document is canonical, so the preview reads each lane's host from
+// its provider: a broker tier stored with no host of its own is still served
+// at the configured endpoint.
+func TestRoutePreviewReadsACanonicalLaneHostFromItsProvider(t *testing.T) {
+	cfg := mustParse(t, geminiBehindAGateway).canonical()
+	if host := cfg.Tiers[TierPremium].BaseURL; host != "" {
+		t.Fatalf("canonical premium host = %q, want it on the provider", host)
+	}
+	for _, candidate := range wireCandidates(mustPlan(t, cfg, TaskBriefRanking)) {
+		if candidate.Processing != "configured_endpoint" {
+			t.Errorf("tier %s = %s, want configured_endpoint: its provider dials the gateway", candidate.Tier, candidate.Processing)
+		}
+	}
+}
