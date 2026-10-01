@@ -37,9 +37,10 @@ function rowOf(item: HTMLElement) {
   };
 }
 
+// Found whether or not its lane is folded, as the done lane is.
 async function onlyLine(name: string): Promise<HTMLElement> {
-  const list = await screen.findByRole("list", { name });
-  return within(list).getByRole("listitem");
+  const list = await screen.findByRole("list", { name, hidden: true });
+  return within(list).getByRole("listitem", { hidden: true });
 }
 
 describe("a receipt line is one row", () => {
@@ -113,10 +114,13 @@ describe("a receipt line is one row", () => {
       }),
     );
     renderMagic();
-    const done = await screen.findByRole("list", { name: "Done for you" });
+    const done = await screen.findByRole("list", {
+      name: "Done for you",
+      hidden: true,
+    });
     expect(
       within(done)
-        .getAllByRole("button")
+        .getAllByRole("button", { hidden: true })
         .map((b) => b.textContent),
     ).toEqual([
       // The record's name opens what changed on it; the undo stands beside.

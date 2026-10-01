@@ -68,6 +68,56 @@ describe("the receipt at a glance", () => {
     ]);
   });
 
+  it("names the job with the most records across a reading's lines", async () => {
+    const mailReader = {
+      type: "system",
+      id: "mail-reader",
+      label: { key: "magic.by.mail_reader" },
+    } as const;
+    const filed = (
+      id: string,
+      actor: typeof mailFiling | typeof mailReader,
+      count: number,
+    ) =>
+      line({ id, summary: { key: "magic.action.mail_filed" }, actor, count });
+    stub(
+      receipt({
+        done: [
+          filed("00000000-0000-7000-8000-000000000001", mailFiling, 4),
+          filed("00000000-0000-7000-8000-000000000002", mailReader, 5),
+          filed("00000000-0000-7000-8000-000000000003", mailFiling, 4),
+        ],
+      }),
+    );
+    renderMagic();
+    const glance = await screen.findByRole("region", { name: "What got done" });
+    expect(readings(glance)).toEqual([["Emails filed", "13", "Mail filing"]]);
+  });
+
+  it("names nobody where a cut-short count could hide a larger share", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            id: "00000000-0000-7000-8000-000000000001",
+            summary: { key: "magic.action.mail_filed" },
+            actor: mailFiling,
+            count: 10,
+          }),
+          line({
+            id: "00000000-0000-7000-8000-000000000002",
+            summary: { key: "magic.action.mail_filed" },
+            count: 3,
+            count_is_floor: true,
+          }),
+        ],
+      }),
+    );
+    renderMagic();
+    const glance = await screen.findByRole("region", { name: "What got done" });
+    expect(readings(glance)).toEqual([["Emails filed", "13+", ""]]);
+  });
+
   it("folds the done lines under the changes they stand for, and counts those", async () => {
     stub(
       receipt({
@@ -89,7 +139,11 @@ describe("the receipt at a glance", () => {
       ),
     ).toBeTruthy();
     expect(
-      within(fold ?? document.body).getByRole("list", { name: "Done for you" }),
+      // Folded, so hidden until opened: present is what is being asked.
+      within(fold ?? document.body).getByRole("list", {
+        name: "Done for you",
+        hidden: true,
+      }),
     ).toBeTruthy();
   });
 
@@ -119,7 +173,8 @@ describe("the receipt at a glance", () => {
         "5,001+ done for you",
       ),
     ).toBeTruthy();
-    expect(screen.getByText("All 5,001+ changes, one by one")).toBeTruthy();
+    // "All" would claim the whole of a figure that is only a floor.
+    expect(screen.getByText("5,001+ changes, one by one")).toBeTruthy();
     const bulk = screen
       .getByRole("img", { name: /When each line in this receipt happened/ })
       .querySelector<HTMLElement>('.magic-mark[data-shape="bar"]');

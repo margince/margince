@@ -50,10 +50,20 @@ it("draws no group at all when no change waits for a word", async () => {
         receipts: [],
       }),
   });
-  const { container } = render(<BriefChanges />);
+  const { container, client } = render(<BriefChanges />);
+  // It draws nothing while loading too, so the empty answer has to have come
+  // back before "nothing" says anything about it.
+  await waitFor(() =>
+    expect(
+      client
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.state.status),
+    ).toEqual(["success"]),
+  );
   // The receipt's summary already answers for a quiet day, so an empty group
   // would be a heading over nothing.
-  await waitFor(() => expect(container.innerHTML).toBe(""));
+  expect(container.innerHTML).toBe("");
   expect(
     screen.queryByRole("heading", { name: "Changes made for you" }),
   ).toBeNull();

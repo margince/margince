@@ -115,11 +115,6 @@ describe("BriefScreen — the context rail", () => {
     expect(window.location.hash).toBe("#/worklist");
   });
 
-  // /digest is a specified operation an installation may not implement yet, so
-  // the honest answer is 501 — and a refusal is not a delay. Read as an error,
-  // the client retried it, and React Query pauses between retries while the tab
-  // is hidden: the panel carried skeleton bars that would still be there the
-  // next day.
   it("draws the night inside Home's receipt rather than beside it", async () => {
     stubApi({
       "GET /digest": () => jsonResponse({ ...digestBase, connectors: [] }),
@@ -135,6 +130,11 @@ describe("BriefScreen — the context rail", () => {
     expect(within(receipt).getByText("Emails synced")).toBeTruthy();
   });
 
+  // /digest is a specified operation an installation may not implement yet, so
+  // the honest answer is 501 — and a refusal is not a delay. Read as an error,
+  // the client retried it, and React Query pauses between retries while the tab
+  // is hidden: the panel carried skeleton bars that would still be there the
+  // next day.
   it("renders no overnight panel for a 501, and no loading block either", async () => {
     stubApi({
       "GET /digest": () =>

@@ -28,8 +28,10 @@ afterEach(() => {
 // The lane a reader looks at, found by its own name rather than by position:
 // an assertion keyed on order would pass while the rows sat under the wrong
 // words.
+// The done lane is folded and so hidden until opened; present is what a case
+// asks of it, so a lane is found whether or not it is open.
 function lane(name: string): Promise<HTMLElement> {
-  return screen.findByRole("list", { name });
+  return screen.findByRole("list", { name, hidden: true });
 }
 
 function summary(): Promise<HTMLElement> {
@@ -449,6 +451,8 @@ describe("the receipt draws every lane it promises", () => {
     // would sit under a section that says it did not load.
     expect(await screen.findByText("This section did not load.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    // Nor does it date a window it could not read.
+    expect(screen.queryByText(/What Margince did since/)).toBeNull();
     expect(screen.queryByRole("list", { name: "Done for you" })).toBeNull();
   });
 

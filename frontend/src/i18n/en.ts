@@ -11619,6 +11619,8 @@ export const en = {
   "magic.timeline.now": "Now",
   "magic.done.all_one": "{count} change, in full",
   "magic.done.all_other": "All {count} changes, one by one",
+  "magic.done.atLeast_one": "{count} change, one by one",
+  "magic.done.atLeast_other": "{count} changes, one by one",
   "magic.action.advance_stage": "A deal moved to its next stage",
   "magic.action.promote": "A lead became a deal",
   "magic.action.update": "A record was updated",

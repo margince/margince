@@ -11458,6 +11458,8 @@ export const de = {
   "magic.timeline.now": "Jetzt",
   "magic.done.all_one": "{count} Änderung im Einzelnen",
   "magic.done.all_other": "Alle {count} Änderungen im Einzelnen",
+  "magic.done.atLeast_one": "{count} Änderung im Einzelnen",
+  "magic.done.atLeast_other": "{count} Änderungen im Einzelnen",
   "magic.action.advance_stage": "Ein Deal ist eine Phase weitergerückt",
   "magic.action.promote": "Aus einem Lead wurde ein Deal",
   "magic.action.update": "Ein Datensatz wurde aktualisiert",

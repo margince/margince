@@ -63,7 +63,9 @@
 }
 
 /* Staged, not taken: the dashed ring the rest of the product draws round a
-   proposal nobody has accepted. */
+   proposal nobody has accepted. In full --ai rather than the staged --aiMed:
+   --aiMed is --ai at 30%, about 1.5:1 against the card at this size, and a
+   10px mark with no word on it needs the 3:1 a graphic is owed. */
 .magic-mark[data-kind="waiting"] {
   --mark: var(--bgElevated);
   border: 1.5px dashed var(--ai);

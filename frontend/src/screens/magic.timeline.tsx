@@ -14,6 +14,7 @@ import {
   formatTimeOfDay,
   hourInZone,
 } from "../format/format";
+import { zoneOffsetMs } from "../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { magicSentenceKey } from "./magic.keys";
@@ -160,9 +161,9 @@ export function axisTicks(
   const ticks: AxisTick[] = [];
   let midnights = 0;
   for (
-    let instant = Math.ceil(start / HOUR_MS) * HOUR_MS;
+    let instant = wholeHourFrom(start, zone);
     instant < start + span;
-    instant += HOUR_MS
+    instant = wholeHourFrom(instant + 1, zone)
   ) {
     const hour = hourInZone(new Date(instant), zone);
     const at = (instant - start) / span;
@@ -184,6 +185,15 @@ export function axisTicks(
     }
   }
   return ticks;
+}
+
+// The first whole hour on the zone's clock at or after `ms`. A whole UTC hour
+// is not one in a zone set off by a half or three quarters of an hour, where
+// it would print "00:45" under a tick drawn as midnight.
+function wholeHourFrom(ms: number, zone: string): number {
+  const offset = zoneOffsetMs(ms, zone) % HOUR_MS;
+  const shift = (offset + HOUR_MS) % HOUR_MS;
+  return Math.ceil((ms + shift) / HOUR_MS) * HOUR_MS - shift;
 }
 
 // Past a day "03:00" alone would not say which day, so the axis, and a line's

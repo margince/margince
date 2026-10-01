@@ -151,6 +151,13 @@ export function MagicPanel({
   const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
+  const doneFloor = anyFloor(done);
+  // "All" would claim the whole of a count that is only a floor.
+  const doneFold = plural(
+    doneFloor ? "magic.done.atLeast" : "magic.done.all",
+    doneRecords,
+    { count: floorFigure(formatNumber(doneRecords, locale), doneFloor) },
+  );
   const byDay = shown ? spansDays(shown.since, shown.as_of) : false;
   return (
     <Panel
@@ -173,10 +180,10 @@ export function MagicPanel({
       <PanelBody>
         {/* WHICH WINDOW: "nothing happened" over an hour and over a day are
             different claims, and only the server knows which one this is. */}
-        {receipt?.since && (
+        {shown?.since && (
           <PanelIntro>
             {t("magic.intro", {
-              when: formatDateTime(receipt.since, locale, zone),
+              when: formatDateTime(shown.since, locale, zone),
             })}
           </PanelIntro>
         )}
@@ -210,16 +217,7 @@ export function MagicPanel({
           since={shown?.since}
           zone={zone}
           byDay={byDay}
-          fold={
-            lane === "done"
-              ? plural("magic.done.all", doneRecords, {
-                  count: floorFigure(
-                    formatNumber(doneRecords, locale),
-                    anyFloor(done),
-                  ),
-                })
-              : undefined
-          }
+          fold={lane === "done" ? doneFold : undefined}
         />
       ))}
       {(shown?.not_shown?.length ?? 0) > 0 && (

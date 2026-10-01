@@ -31,6 +31,12 @@ function strip(receipt: MagicReceipt) {
 /** Evening to morning: a bulk sync after midnight, agents towards morning. */
 export const OneNight: Story = { render: () => strip(BUSY_NIGHT) };
 
+/** The same night in dark, where every mark's colour is a theme token. */
+export const OneNightDark: Story = {
+  globals: { theme: "dark" },
+  render: () => strip(BUSY_NIGHT),
+};
+
 /** The same lines over a week: the axis names days rather than hours. */
 export const AWeek: Story = {
   render: () => strip({ ...BUSY_NIGHT, since: "2026-09-06T08:05:00Z" }),

@@ -33,6 +33,21 @@ describe("the strip's clock", () => {
     ]);
   });
 
+  it("ticks on the reader's whole hours where their zone is not a whole hour off UTC", () => {
+    // Kathmandu is UTC+5:45, so its midnight falls at a quarter past a UTC hour.
+    expect(
+      axisTicks(
+        "2026-09-12T08:00:00Z",
+        "2026-09-13T08:00:00Z",
+        "Asia/Kathmandu",
+      ).map((tick) => [tick.iso, tick.day]),
+    ).toEqual([
+      ["2026-09-12T12:15:00.000Z", false],
+      ["2026-09-12T18:15:00.000Z", true],
+      ["2026-09-13T00:15:00.000Z", false],
+    ]);
+  });
+
   it("names each day across a week", () => {
     expect(
       axisTicks("2026-09-06T08:05:00Z", "2026-09-13T08:05:00Z", "UTC").map(

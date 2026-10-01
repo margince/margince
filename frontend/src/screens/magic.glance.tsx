@@ -64,9 +64,20 @@ type GlanceReading = Readonly<{
   // A line counted into it was cut short, so the total is only a floor.
   floor: boolean;
   // The job that did most of it, named the way the line below names it.
-  actor: MagicLine["actor"];
-  actorShare: number;
+  actor: MagicLine["actor"] | null;
 }>;
+
+type ActorShare = {
+  actor: MagicLine["actor"];
+  records: number;
+  floor: boolean;
+};
+
+type Tally = {
+  total: number;
+  floor: boolean;
+  actors: Map<string, ActorShare>;
+};
 
 /**
  * The done lane folded into readings: records per kind of work, largest first.
@@ -76,26 +87,55 @@ type GlanceReading = Readonly<{
  * this build predates counts toward no reading; its line still stands below.
  */
 function glanceReadings(done: readonly MagicLine[]): readonly GlanceReading[] {
-  const byLabel = new Map<MessageKey, GlanceReading>();
+  const byLabel = new Map<MessageKey, Tally>();
   for (const line of done) {
     const label = READINGS.get(line.summary.key);
     if (!label) {
       continue;
     }
     const count = line.count ?? 1;
-    const seen = byLabel.get(label);
-    const leads = !seen || count > seen.actorShare;
-    byLabel.set(label, {
-      label,
-      total: (seen?.total ?? 0) + count,
-      floor: seen?.floor === true || line.count_is_floor === true,
-      actor: leads ? line.actor : seen.actor,
-      actorShare: leads ? count : seen.actorShare,
-    });
+    const floor = line.count_is_floor === true;
+    const tally = byLabel.get(label) ?? {
+      total: 0,
+      floor: false,
+      actors: new Map(),
+    };
+    tally.total += count;
+    tally.floor ||= floor;
+    const who = `${line.actor.type}:${line.actor.id}`;
+    const share = tally.actors.get(who) ?? {
+      actor: line.actor,
+      records: 0,
+      floor: false,
+    };
+    share.records += count;
+    share.floor ||= floor;
+    tally.actors.set(who, share);
+    byLabel.set(label, tally);
   }
-  return [...byLabel.values()]
+  return [...byLabel.entries()]
+    .map(([label, tally]) => ({
+      label,
+      total: tally.total,
+      floor: tally.floor,
+      actor: leadActor(tally.actors),
+    }))
     .sort((a, b) => b.total - a.total)
     .slice(0, GLANCE_SLOTS);
+}
+
+// The job with the most records in a reading. None where another job's count
+// was cut short, since its true share could pass the leader's.
+function leadActor(
+  actors: ReadonlyMap<string, ActorShare>,
+): MagicLine["actor"] | null {
+  const [lead, ...rest] = [...actors.values()].sort(
+    (a, b) => b.records - a.records,
+  );
+  if (!lead || rest.some((share) => share.floor)) {
+    return null;
+  }
+  return lead.actor;
 }
 
 export function MagicGlance({
@@ -110,7 +150,7 @@ export function MagicGlance({
   return (
     <StatStrip label={t("magic.glance.label")} className="magic-glance">
       {readings.map((reading) => {
-        const by = reading.actor.label
+        const by = reading.actor?.label
           ? magicByKey(reading.actor.label.key)
           : null;
         return (
@@ -121,7 +161,7 @@ export function MagicGlance({
               formatNumber(reading.total, locale),
               reading.floor,
             )}
-            detail={by ? t(by, reading.actor.label?.values) : undefined}
+            detail={by ? t(by, reading.actor?.label?.values) : undefined}
           />
         );
       })}

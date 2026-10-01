@@ -11348,6 +11348,8 @@ export const vi = {
   "magic.timeline.now": "Bây giờ",
   "magic.done.all_one": "{count} thay đổi, chi tiết",
   "magic.done.all_other": "Tất cả {count} thay đổi, từng mục một",
+  "magic.done.atLeast_one": "{count} thay đổi, từng mục một",
+  "magic.done.atLeast_other": "{count} thay đổi, từng mục một",
   "magic.action.advance_stage": "Một deal đã chuyển sang giai đoạn tiếp theo",
   "magic.action.promote": "Một lead đã trở thành deal",
   "magic.action.update": "Một bản ghi đã được cập nhật",

@@ -36,15 +36,21 @@ const DIGEST_ROUTES: RouteMap = {
     }),
 };
 
-function panel(routes: RouteMap = DIGEST_ROUTES) {
+// Inside a Panel, as Home's receipt draws it. `framed: false` for a state the
+// digest draws nothing in, where a bordered empty Panel would read as a card.
+function panel(routes: RouteMap = DIGEST_ROUTES, framed = true) {
   return () => {
     installFetchStub(routes);
     return (
       <StoryProviders>
         <div style={{ maxWidth: 720 }}>
-          <Panel>
+          {framed ? (
+            <Panel>
+              <OvernightDigest />
+            </Panel>
+          ) : (
             <OvernightDigest />
-          </Panel>
+          )}
         </div>
       </StoryProviders>
     );
@@ -66,21 +72,30 @@ export const Overnight: Story = {
 // before they visit Settings. EVERY broken connector is named, not the first —
 // a reader with two dead mailboxes was being told about one of them — in
 // Settings' own vocabulary, with the door to where their mailboxes live.
+const UNHEALTHY_ROUTES: RouteMap = {
+  ...DIGEST_ROUTES,
+  "GET /digest": () =>
+    jsonResponse({
+      ...digest,
+      connectors: [
+        {
+          provider: "gmail",
+          status: "reauth_required",
+          last_sync_error_class: "auth",
+        },
+      ],
+    }),
+};
+
 export const OvernightUnhealthy: Story = {
-  render: panel({
-    ...DIGEST_ROUTES,
-    "GET /digest": () =>
-      jsonResponse({
-        ...digest,
-        connectors: [
-          {
-            provider: "gmail",
-            status: "reauth_required",
-            last_sync_error_class: "auth",
-          },
-        ],
-      }),
-  }),
+  render: panel(UNHEALTHY_ROUTES),
+};
+
+// The warning family lifts its ink in dark, and the digest now sits on the
+// receipt's panel rather than the recessed rail, so the callout is held here.
+export const OvernightUnhealthyDark: Story = {
+  globals: { theme: "dark" },
+  render: panel(UNHEALTHY_ROUTES),
 };
 
 // THE INSTALLATION'S FIRST MORNING. /v1/digest answers 404 before the first
@@ -90,10 +105,13 @@ export const OvernightUnhealthy: Story = {
 // rail's quiet panel carries "No overnight digest" instead, so the absence is
 // still said once. An empty frame here is the pass.
 export const OvernightCollapsed: Story = {
-  render: panel({
-    ...DIGEST_ROUTES,
-    "GET /digest": () => jsonResponse(NOT_FOUND, 404),
-  }),
+  render: panel(
+    {
+      ...DIGEST_ROUTES,
+      "GET /digest": () => jsonResponse(NOT_FOUND, 404),
+    },
+    false,
+  ),
 };
 
 // The digest read failed, which is not the same as there being none. The panel
