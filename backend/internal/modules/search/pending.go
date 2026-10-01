@@ -193,12 +193,15 @@ func (s *Store) workspacePending(ctx context.Context, currentIdentity string) (c
 				      AND %s
 				      AND NOT EXISTS (
 				            SELECT 1 FROM embedding e
-				            WHERE e.entity_type = '%s' AND e.entity_id = t.id AND e.model = $1))
-				SELECT count(*), coalesce(sum(octet_length(btrim(%s))), 0)
-				FROM %s t
-				JOIN unembedded u ON u.id = t.id
-				WHERE btrim(%s) <> ''`,
-				src.table, src.embeddablePredicate(), entityType, src.text, src.table, src.text)
+				            WHERE e.entity_type = '%s' AND e.entity_id = t.id AND e.model = $1)),
+				pending_text AS MATERIALIZED (
+				    SELECT btrim(%s) AS trimmed
+				    FROM %s t
+				    JOIN unembedded u ON u.id = t.id)
+				SELECT count(*), coalesce(sum(octet_length(trimmed)), 0)
+				FROM pending_text
+				WHERE trimmed <> ''`,
+				src.table, src.embeddablePredicate(), entityType, src.text, src.table)
 			var c int
 			var l int64
 			if err := tx.QueryRow(ctx, sql, currentIdentity).Scan(&c, &l); err != nil {
