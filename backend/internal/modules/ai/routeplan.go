@@ -129,8 +129,10 @@ func withDecisionLeadChange(tierImpact string) string {
 func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 	out := make([]crmcontracts.AiRouteCandidate, 0, len(plan))
 	for _, binding := range plan {
+		// A vendor's default spelled out dials its public cloud exactly as an
+		// empty host does, so it is not an endpoint the operator configured.
 		processing := "configured_endpoint"
-		if providerIsVendorHosted(binding.config.Provider) && binding.config.BaseURL == "" {
+		if providerIsVendorHosted(binding.config.Provider) && sameHost(binding.config.Provider, binding.config.BaseURL, "") {
 			processing = "cloud_provider"
 		}
 		out = append(out, crmcontracts.AiRouteCandidate{Tier: string(binding.tier), Provider: binding.config.Provider, Model: binding.config.Model, Processing: processing})
