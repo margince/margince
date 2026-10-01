@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -20,9 +21,34 @@ import (
 // endpoint. Vault-less on purpose: every refusal these cases prove comes
 // before the seal, and a key that passes reads as ErrVaultUnavailable.
 func keyStoreOver(endpoint *tokenEndpoint) *ProviderKeyStore {
-	return &ProviderKeyStore{selectBrain: func(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
-		return selectBrainOn(cfg, keys, &http.Client{Timeout: CallCeiling, Transport: endpoint})
-	}}
+	return keyStoreUnder(endpoint, ProfileCloudFrontier)
+}
+
+func keyStoreUnder(endpoint *tokenEndpoint, profile Profile) *ProviderKeyStore {
+	return &ProviderKeyStore{
+		selectBrain: func(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
+			return selectBrainOn(cfg, keys, &http.Client{Timeout: CallCeiling, Transport: endpoint})
+		},
+		profile: func(context.Context) (Profile, error) { return profile, nil },
+	}
+}
+
+// Under sovereign the key check is egress like any other, so a service-account
+// key is refused before Google is asked anything.
+func TestSovereignRefusesAServiceAccountKeyWithoutAskingGoogle(t *testing.T) {
+	t.Parallel()
+	endpoint := &tokenEndpoint{respond: grantedToken("ya29.unused")}
+	admin := keySeatCtx(principal.ObjectGrant{Read: true, Update: true})
+
+	err := keyStoreUnder(endpoint, ProfileSovereign).Set(admin, providerGeminiVertex, ProviderCredential{ServiceAccountJSON: serviceAccountJSON(t, nil)})
+
+	var invalid settings.InvalidValue
+	if !errors.As(err, &invalid) || !strings.Contains(invalid.Reason, "profile sovereign forbids reaching Google") {
+		t.Fatalf("want the sovereign refusal, got %v", err)
+	}
+	if n := endpoint.exchanges.Load() + endpoint.elsewhere.Load(); n != 0 {
+		t.Errorf("%d request(s) reached Google under sovereign", n)
+	}
 }
 
 func TestAServiceAccountKeyIsSealedOnlyOnceGoogleExchangesIt(t *testing.T) {

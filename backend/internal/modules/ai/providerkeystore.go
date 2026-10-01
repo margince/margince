@@ -90,6 +90,9 @@ type ProviderKeyStore struct {
 	// selectBrain builds the client a service-account key is checked through;
 	// the zero value is SelectBrain.
 	selectBrain brainSelector
+	// profile reads the installation's stored profile, which decides whether a
+	// key may be checked with its vendor at all.
+	profile func(context.Context) (Profile, error)
 }
 
 // NewProviderKeyStore builds the store over the settings catalog and the vault.
@@ -99,7 +102,10 @@ func NewProviderKeyStore(s *settings.Store, vault keyvault.Vault, log *slog.Logg
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
-	return &ProviderKeyStore{settings: s, vault: vault, log: log}
+	return &ProviderKeyStore{settings: s, vault: vault, log: log, profile: func(ctx context.Context) (Profile, error) {
+		cfg, err := settings.Get(ctx, s, Routing)
+		return cfg.Profile, err
+	}}
 }
 
 // credentialWorkspace is the caller's tenant, or a refusal. A credential write outside
@@ -205,6 +211,15 @@ func (s *ProviderKeyStore) acceptedCredential(ctx context.Context, provider stri
 		return "", keyRefused("the api key is empty — remove the credential instead of storing nothing")
 	case !serviceAccount:
 		return apiKey, nil
+	}
+	// Checking the key is a call to Google, which sovereign forbids like any
+	// other; and under it no gemini_vertex binding could use the key anyway.
+	profile, err := s.profile(ctx)
+	if err != nil {
+		return "", err
+	}
+	if profile == ProfileSovereign {
+		return "", keyRefused(fmt.Sprintf("profile sovereign forbids reaching Google, so a %q key cannot be checked or used — change the profile first", provider))
 	}
 	if err := s.verifyServiceAccount(ctx, keyFile); err != nil {
 		return "", keyRefused(err.Error())

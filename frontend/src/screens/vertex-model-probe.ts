@@ -90,9 +90,12 @@ export function useVertexModelProbe<B extends ProbedBinding>({
     /** A model was chosen; one picked from the list is worth asking about. */
     picked: (model: string, fromList: boolean) => {
       setCleared(undefined);
-      if (vertex && fromList) {
-        setTarget({ location, model, clearIfUnserved: false });
-      }
+      // A hand edit drops the question, so a pending clear cannot wipe it.
+      setTarget(
+        vertex && fromList
+          ? { location, model, clearIfUnserved: false }
+          : undefined,
+      );
     },
   };
 }

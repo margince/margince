@@ -169,8 +169,11 @@ func TestAnEUHostedSaveOutsideTheEUAsksGoogleNothing(t *testing.T) {
 	}
 }
 
-// A save that binds no gemini_vertex lane never reads the stored binding: the
-// store below has no settings to read, and would panic if it tried.
+// A save that binds no gemini_vertex lane is left wholly to the write: nothing
+// is read, built or judged before the lock. The store below has no settings to
+// read and would panic if it tried, and the binding is an eu_hosted broker lane
+// with no pin of its own — which the write accepts when it carries the stored
+// lane's pin, so refusing it here would break that carry.
 func TestASaveWithoutVertexReadsAndProbesNothing(t *testing.T) {
 	t.Parallel()
 	store := &RoutingStore{selectBrain: func(ProviderConfig, config.Lookup) (model.Client, error) {
@@ -178,15 +181,14 @@ func TestASaveWithoutVertexReadsAndProbesNothing(t *testing.T) {
 		return nil, errors.New("unreachable")
 	}}
 	cfg := RoutingConfig{
-		Tiers:      map[Tier]ProviderConfig{TierPremium: {Provider: providerAnthropic, Model: "m"}},
+		Profile: ProfileEUHosted,
+		Tiers: map[Tier]ProviderConfig{TierPremium: {
+			Provider: providerOpenAICompatible, BaseURL: "https://openrouter.ai/api", Model: "m",
+		}},
 		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake, Model: "e"}},
 	}
-	stored, err := store.storedBeforeProbe(context.Background(), cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := store.probeVertexBindings(context.Background(), stored, cfg); err != nil {
-		t.Errorf("probing a binding without vertex: %v", err)
+	if err := store.probeBeforeWrite(context.Background(), cfg, "stale"); err != nil {
+		t.Errorf("a save without vertex was judged before the write: %v", err)
 	}
 }
 

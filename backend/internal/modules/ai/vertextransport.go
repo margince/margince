@@ -182,7 +182,11 @@ func (c *geminiClient) predictEmbedding(ctx context.Context, t vertexTransport, 
 			} `json:"embeddings"`
 		} `json:"predictions"`
 	}
-	if err := c.postEmbed(ctx, t.modelURL(embedModel, "predict"), wire, &out); err != nil {
+	payload, _, err := SendablePayload(ctx, wire, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.postEmbed(ctx, t.modelURL(embedModel, "predict"), payload, func(d *json.Decoder) error { return d.Decode(&out) }); err != nil {
 		return nil, err
 	}
 	if len(out.Predictions) != 1 {

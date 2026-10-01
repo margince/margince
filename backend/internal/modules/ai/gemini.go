@@ -240,33 +240,32 @@ func (c *geminiClient) embedOne(ctx context.Context, embedModel, input string, d
 	if vertex, ok := c.transport.(vertexTransport); ok {
 		return c.predictEmbedding(ctx, vertex, embedModel, input, dims)
 	}
-	wire := geminiEmbedWire{
+	payload, _, err := SendablePayload(ctx, geminiEmbedWire{
 		Model:                "models/" + embedModel,
 		Content:              geminiContent{Parts: []geminiPart{{Text: input}}},
 		OutputDimensionality: dims, // 0 ⇒ omitted ⇒ provider default
+	}, nil)
+	if err != nil {
+		return nil, err
 	}
 	var out struct {
 		Embedding struct {
 			Values []float32 `json:"values"`
 		} `json:"embedding"`
 	}
-	if err := c.postEmbed(ctx, c.transport.modelURL(embedModel, "embedContent"), wire, &out); err != nil {
+	if err := c.postEmbed(ctx, c.transport.modelURL(embedModel, "embedContent"), payload, func(d *json.Decoder) error { return d.Decode(&out) }); err != nil {
 		return nil, err
 	}
 	return out.Embedding.Values, nil
 }
 
-// postEmbed posts one embedding request and decodes its answer into out.
-func (c *geminiClient) postEmbed(ctx context.Context, endpoint string, wire, out any) error {
-	payload, _, err := SendablePayload(ctx, wire, nil)
-	if err != nil {
-		return err
-	}
+// postEmbed posts one embedding request and hands its answer to decode.
+func (c *geminiClient) postEmbed(ctx context.Context, endpoint string, payload []byte, decode func(*json.Decoder) error) error {
 	body, err := c.post(ctx, endpoint, payload)
 	if err != nil {
 		return err
 	}
-	decErr := json.NewDecoder(body).Decode(out)
+	decErr := decode(json.NewDecoder(body))
 	//craft:ignore swallowed-errors best-effort close of a response body already read to completion — the decode result decides the outcome
 	_ = body.Close()
 	if decErr != nil {

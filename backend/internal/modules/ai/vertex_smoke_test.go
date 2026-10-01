@@ -31,7 +31,8 @@ import (
 func TestVertexLiveSmoke(t *testing.T) {
 	path := os.Getenv("MARGINCE_VERTEX_SA_FILE")
 	if path == "" {
-		t.Skip("MARGINCE_VERTEX_SA_FILE unset; live smoke skipped")
+		// Fatal, not Skip: this tag is asked for by hand, and a skip would read as a pass.
+		t.Fatal("MARGINCE_VERTEX_SA_FILE is unset — point it at the service-account key file")
 	}
 	raw, err := os.ReadFile(path) // #nosec G304 -- an operator-named key file, read by a manual test
 	if err != nil {

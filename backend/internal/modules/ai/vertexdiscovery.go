@@ -351,10 +351,10 @@ func (s *RoutingStore) probeVertexBindings(ctx context.Context, stored, next Rou
 		if refusal := refuseUnserved(p, err); refusal != nil {
 			return refusal
 		}
+		// Unanswered is not an answer: logged, and the rest are still asked.
 		if err != nil {
 			s.logger().WarnContext(ctx, "ai: routing saved with a gemini_vertex model unchecked: Google did not answer the probe",
 				"lane", p.label, "location", p.location, "model", p.model, "error", err.Error())
-			return nil
 		}
 	}
 	return nil

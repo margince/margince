@@ -61,7 +61,7 @@ func TestTheLocationListIsGooglesOptionsStampedWithThisBuildsResidency(t *testin
 			writeBody(t, w, `{"locations":[{"locationId":"europe-west4","displayName":"Netherlands"},{"locationId":"europe-west2","displayName":"London"},{"locationId":"attacker.example","displayName":"x"}],"nextPageToken":"p2"}`)
 			return
 		}
-		writeBody(t, w, `{"locations":[{"locationId":"europe-west10","displayName":"Berlin"},{"locationId":"us-central1","displayName":"Iowa"}]}`)
+		writeBody(t, w, `{"locations":[{"locationId":"europe-west99","displayName":"Somewhere new"},{"locationId":"us-central1","displayName":"Iowa"}]}`)
 	})
 	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
 
@@ -79,7 +79,7 @@ func TestTheLocationListIsGooglesOptionsStampedWithThisBuildsResidency(t *testin
 		"global":        {ID: "global", DisplayName: "Global", Jurisdiction: "global"},
 		"europe-west4":  {ID: "europe-west4", DisplayName: "Netherlands", Jurisdiction: "eu", Resident: true},
 		"europe-west2":  {ID: "europe-west2", DisplayName: "London", Jurisdiction: "other"},
-		"europe-west10": {ID: "europe-west10", DisplayName: "Berlin", Jurisdiction: "other"},
+		"europe-west99": {ID: "europe-west99", DisplayName: "Somewhere new", Jurisdiction: "other"},
 		"us-central1":   {ID: "us-central1", DisplayName: "Iowa", Jurisdiction: "us"},
 	}
 	if len(byID) != len(want) {

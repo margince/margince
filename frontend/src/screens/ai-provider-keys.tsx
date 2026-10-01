@@ -1,15 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanUpsert, useCanWrite } from "../app/capability";
-import {
-  Badge,
-  Button,
-  EmptyState,
-  Field,
-  TextInput,
-} from "../design-system/atoms";
+import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";

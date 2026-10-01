@@ -59,10 +59,7 @@ export function KeyEntry({
   }
   return (
     <Field label={t("aiProviderKeys.field")} hint={hint}>
-      {/* One paste and the verbs that act on it, on one line. It carried
-          `row-inline`, which nothing in this tree styles, so the field,
-          its verb and the removal each took a full-width block of their
-          own. */}
+      {/* One paste and the verbs that act on it, on one line. */}
       {(control) => (
         <div className="ai-key-entry">
           <TextInput

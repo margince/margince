@@ -20,8 +20,10 @@ var euResidentLocations = map[string]bool{
 	"europe-west4":      true,
 	"europe-west8":      true,
 	"europe-west9":      true,
+	"europe-west10":     true,
 	"europe-west12":     true,
 	"europe-north1":     true,
+	"europe-north2":     true,
 	"europe-central2":   true,
 	"europe-southwest1": true,
 }

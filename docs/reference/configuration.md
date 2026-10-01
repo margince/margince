@@ -1430,8 +1430,8 @@ would double it (`…/v1/v1/…` → 404). Use `https://api.mistral.ai`, not
 location that serves the call and processes the prompt: `eu`, `us`, `global`, or
 a region such as `europe-west4`. The API host follows from it, so no `base_url`
 is accepted. Under `profile: eu_hosted` it must be `eu` or an EU region
-(`europe-west1`, `-west3`, `-west4`, `-west8`, `-west9`, `-west12`, `-north1`,
-`-central2`, `-southwest1`); London `europe-west2`, Zürich `europe-west6`,
+(`europe-west1`, `-west3`, `-west4`, `-west8`, `-west9`, `-west10`, `-west12`,
+`-north1`, `-north2`, `-central2`, `-southwest1`); London `europe-west2`, Zürich `europe-west6`,
 `global` and `us` are refused. Saving a `gemini_vertex` binding asks Google
 whether the location serves the model and refuses it with a 422 if not.
 The key is a service account's JSON key file, whose account holds

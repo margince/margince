@@ -113,22 +113,21 @@ func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (Routing
 	return s.ReplaceIfVersion(ctx, next, "")
 }
 
-// storedBeforeProbe is what a save's probes are measured against, read only
-// when the save names gemini_vertex at all, so every other save is unchanged.
-func (s *RoutingStore) storedBeforeProbe(ctx context.Context, next RoutingConfig) (RoutingConfig, error) {
-	if len(vertexProbesOf(next)) == 0 {
-		return RoutingConfig{}, nil
-	}
-	return settings.Get(ctx, s.settings, Routing)
-}
-
 // probeBeforeWrite asks Google about each Vertex binding the save adds or
 // changes. It runs before the write's lock is taken, because a network call
-// must not hold it; the write then validates again under the lock.
-func (s *RoutingStore) probeBeforeWrite(ctx context.Context, next RoutingConfig) error {
-	stored, err := s.storedBeforeProbe(ctx, next)
+// must not hold it; the write then validates again under the lock. A save
+// that names no gemini_vertex lane reads and asks nothing, and a stale one is
+// refused as stale before Google is asked.
+func (s *RoutingStore) probeBeforeWrite(ctx context.Context, next RoutingConfig, expected string) error {
+	if len(vertexProbesOf(next)) == 0 {
+		return nil
+	}
+	stored, err := settings.Get(ctx, s.settings, Routing)
 	if err != nil {
 		return err
+	}
+	if expected != "" && stored.Revision() != expected {
+		return apperrors.ErrVersionSkew
 	}
 	return s.probeCandidate(ctx, stored, next)
 }
@@ -176,7 +175,7 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 		return RoutingConfig{}, err
 	}
 	if !next.Unconfigured() {
-		if err := s.probeBeforeWrite(ctx, next); err != nil {
+		if err := s.probeBeforeWrite(ctx, next, expected); err != nil {
 			return RoutingConfig{}, err
 		}
 	}

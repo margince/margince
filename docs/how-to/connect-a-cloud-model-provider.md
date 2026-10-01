@@ -196,8 +196,8 @@ embeddings: { provider: gemini_vertex, location: europe-west4, model: gemini-emb
 
 `eu` — the EU multi-region — is the recommendation: Google keeps processing in
 EU member states and picks the region. An EU region
-(`europe-west1`, `-west3`, `-west4`, `-west8`, `-west9`, `-west12`, `-north1`,
-`-central2`, `-southwest1`) pins one country, when that is what you need.
+(`europe-west1`, `-west3`, `-west4`, `-west8`, `-west9`, `-west10`, `-west12`,
+`-north1`, `-north2`, `-central2`, `-southwest1`) pins one country, when that is what you need.
 `europe-west2` is London and `europe-west6` is Zürich, both outside the EU;
 `global` may process anywhere; `us` is the US. None of those is in the EU.
 [`config/presets/gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml)
