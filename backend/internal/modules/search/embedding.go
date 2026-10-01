@@ -65,7 +65,7 @@ func (s *Store) UpsertEmbedding(ctx context.Context, entityType string, entityID
 		// declared an embeddings model) — a legitimate deployment shape
 		// (brain.go's seedEmbedBinding carve-out), not an error. Embedding
 		// is a no-op system-wide when unbound: returning here before the
-		// transaction skips both the DB round-trip and the width guard
+		// stamp read skips both the DB round-trip and the width guard
 		// below, which would otherwise fire on every call (dims stays 0,
 		// but Embed's own zero-width default fills a live-width vector) and
 		// keep EmbedGen.HandleEvent from ever acking, redelivering forever.
@@ -95,7 +95,7 @@ func (s *Store) UpsertEmbedding(ctx context.Context, entityType string, entityID
 	if isZero(res.Vectors[0]) {
 		return false, fmt.Errorf("search: embedder returned a zero vector (cosine NaN)")
 	}
-	return s.writeEmbedding(ctx, entityType, entityID, next, res.Vectors[0], stored)
+	return s.writeEmbedding(ctx, entityType, entityID, stored, next, res.Vectors[0])
 }
 
 // embeddingStamp is what a stored vector was computed from: the text's hash
@@ -127,7 +127,7 @@ func (s *Store) storedEmbeddingStamp(ctx context.Context, entityType string, ent
 
 // writeEmbedding stores vec under next unless the row has moved past read since
 // it was read, and reports whether it wrote.
-func (s *Store) writeEmbedding(ctx context.Context, entityType string, entityID ids.UUID, next embeddingStamp, vec []float32, read embeddingStamp) (bool, error) {
+func (s *Store) writeEmbedding(ctx context.Context, entityType string, entityID ids.UUID, read, next embeddingStamp, vec []float32) (bool, error) {
 	fresh := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// CAS on the whole stamp read (zero when no row existed): a concurrent

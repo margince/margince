@@ -5,10 +5,7 @@
 
 package integration
 
-// An embed call is a provider round trip of up to ai.CallCeiling, and no
-// transaction may stay open across it: an idle-in-transaction session holds a
-// pool slot, pins the vacuum horizon database-wide, and is killed by
-// database.IdleTransactionCeiling, throwing away a model call already paid for.
+// No transaction stays open across an embed call; UpsertEmbedding says why.
 
 import (
 	"context"
@@ -24,8 +21,8 @@ import (
 
 // txProbeEmbedder counts, from inside Embed, the sessions sitting idle in a
 // transaction on this package's database. Each integration package runs on its
-// own clone and this suite's tests run serially, so any such session is the
-// upsert's own.
+// own clone, and a test that is not parallel never runs beside another in its
+// package, so any such session is the upsert's own.
 type txProbeEmbedder struct {
 	search.Embedder
 	owner    *pgx.Conn
@@ -73,7 +70,7 @@ type racingEmbedder struct {
 	search.Embedder
 	owner    *pgx.Conn
 	entityID ids.UUID
-	setRace  string
+	race     string
 	raceErr  error
 }
 
@@ -82,38 +79,51 @@ func (r *racingEmbedder) Embed(ctx context.Context, req model.EmbedRequest) (mod
 	if err != nil {
 		return res, err
 	}
-	_, r.raceErr = r.owner.Exec(ctx, `UPDATE embedding SET `+r.setRace+`
-		 WHERE entity_type = 'contact' AND entity_id = $1 AND chunk_ix = 0`, r.entityID)
+	_, r.raceErr = r.owner.Exec(ctx, r.race, r.entityID)
 	return res, nil
 }
 
 func TestUpsertYieldsToAWriterThatLandedDuringTheEmbedCall(t *testing.T) {
 	fake := ai.NewFakeClient()
 	cases := []struct {
-		name, setRace, column, want string
-		text                        string
-		embedder                    func(t *testing.T) search.Embedder
+		name, race, column, want string
+		seeded                   bool
+		text                     string
+		embedder                 func(t *testing.T) search.Embedder
 	}{
 		{
-			name: "a newer text", setRace: `chunk_hash = 'won-the-race'`, column: "chunk_hash", want: "won-the-race",
+			name: "a newer text", column: "chunk_hash", want: "won-the-race", seeded: true,
+			race: `UPDATE embedding SET chunk_hash = 'won-the-race'
+			        WHERE entity_type = 'contact' AND entity_id = $1 AND chunk_ix = 0`,
 			text:     "Race Contact renamed",
 			embedder: func(t *testing.T) search.Embedder { return fakeEmbedder(t, fake) },
 		},
 		{
-			name: "the same text under another model", setRace: `model = 'fake/won-the-race@1024'`, column: "model", want: "fake/won-the-race@1024",
+			name: "the same text under another model", column: "model", want: "fake/won-the-race@1024", seeded: true,
+			race: `UPDATE embedding SET model = 'fake/won-the-race@1024'
+			        WHERE entity_type = 'contact' AND entity_id = $1 AND chunk_ix = 0`,
 			text:     "Race Contact",
 			embedder: func(t *testing.T) search.Embedder { return fakeEmbedderNamed(t, fake, "model-swapped") },
+		},
+		{
+			name: "a first vector for an entity that had none", column: "chunk_hash", want: "won-the-race",
+			race: `INSERT INTO embedding (entity_type, entity_id, chunk_ix, chunk_hash, model, embedding)
+			       VALUES ('contact', $1, 0, 'won-the-race', 'fake/won-the-race@3', '[1,2,3]')`,
+			text:     "Race Contact",
+			embedder: func(t *testing.T) search.Embedder { return fakeEmbedder(t, fake) },
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := SetupSearch(t)
 			contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Race Contact', 'manual', 'human:x')`)
-			if fresh, err := e.Store.UpsertEmbedding(e.Admin(), "contact", contactID, "Race Contact", fakeEmbedder(t, fake)); err != nil || !fresh {
-				t.Fatalf("seeding upsert: fresh=%v err=%v", fresh, err)
+			if tc.seeded {
+				if fresh, err := e.Store.UpsertEmbedding(e.Admin(), "contact", contactID, "Race Contact", fakeEmbedder(t, fake)); err != nil || !fresh {
+					t.Fatalf("seeding upsert: fresh=%v err=%v", fresh, err)
+				}
 			}
 
-			racer := &racingEmbedder{Embedder: tc.embedder(t), owner: e.Owner, entityID: contactID, setRace: tc.setRace}
+			racer := &racingEmbedder{Embedder: tc.embedder(t), owner: e.Owner, entityID: contactID, race: tc.race}
 			fresh, err := e.Store.UpsertEmbedding(e.Admin(), "contact", contactID, tc.text, racer)
 			if racer.raceErr != nil {
 				t.Fatalf("landing the concurrent write: %v", racer.raceErr)
