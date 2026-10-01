@@ -116,16 +116,6 @@ func (s *Service) WithTeammates(t Teammates) *Service {
 	return s
 }
 
-// WithLeadResponses binds the inbound leads still owed a first reply.
-//
-// Read BESIDE the assembled day rather than as a fifteenth lane, the way the
-// waiting-customer source already is: /attention publishes a fourteen-lane
-// promise, and this is not one of them. The queue is where the two orders meet.
-func (s *Service) WithLeadResponses(l LeadResponses) *Service {
-	s.leads = l
-	return s
-}
-
 // WithOverdueLoad binds the team board's counting reader for tasks — an option
 // for the reason WithWaiting is one.
 //

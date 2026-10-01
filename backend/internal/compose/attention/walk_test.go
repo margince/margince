@@ -260,7 +260,7 @@ func walkFrom(
 		t.Fatalf("resolving the walk this cursor names: %v", err)
 	}
 	return svc.readingWalk(walk, walking).worklistFrom(context.Background(), day, scopeAll, "", limit,
-		waitingRead{}, leadRead{}, cursor, nil)
+		waitingRead{}, cursor, nil)
 }
 
 // decodedCursor reads a minted token back the way the handler does.

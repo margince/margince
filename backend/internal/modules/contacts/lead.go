@@ -182,7 +182,7 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	if err != nil {
 		return crmcontracts.Lead{}, false, fmt.Errorf("audit lead create: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventLeadCreated{}); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventLeadCreated{SourceSystem: in.SourceSystem}); err != nil {
 		return crmcontracts.Lead{}, false, fmt.Errorf("emit lead.created: %w", err)
 	}
 	out, err := readLead(ctx, tx, id, storekit.LiveOnly, active)

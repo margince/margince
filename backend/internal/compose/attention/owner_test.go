@@ -36,14 +36,9 @@ func TestEveryProducerStatesAnOwner(t *testing.T) {
 		t.Fatalf("plan source: %+v", missing)
 	}
 	rows = append(rows, planRows.planRows...)
-	// The two lanes read BESIDE the assembled day rather than as part of it —
-	// the who-is-waiting and owed-leads reads take the scope as a query argument
-	// — so classifyDay never produces them and a census over it alone would
-	// leave both unexamined. They are appended through their own classifiers,
-	// which is what the assembler calls.
+	// Waiting messages are read beside the assembled day.
 	rows = append(rows,
-		classifyWaiting(WaitingCustomer{Since: rankInstant}, rankInstant),
-		classifyLead(OwedLead{}, rankInstant))
+		classifyWaiting(WaitingCustomer{Since: rankInstant}, rankInstant))
 	// And the FOLD, which mints rows of its own after everything above has run.
 	// A census that stopped at the classifiers never met the one producer that
 	// synthesises a row rather than classifying one, so a batch reached readers
@@ -70,6 +65,10 @@ func TestEveryProducerStatesAnOwner(t *testing.T) {
 	// passes on a day that produced three sources: a producer added later would
 	// be as unexamined as it was before anybody wrote this test.
 	for _, source := range ClassifiedSources() {
+		// The public enum retains the retired bare-lead source for older clients.
+		if source == sourceLeadResponse {
+			continue
+		}
 		if !seen[source] {
 			t.Errorf("no %q row reached this census, so nothing here proves that producer "+
 				"states an owner: give dayOfEveryLane a row for it", source)
