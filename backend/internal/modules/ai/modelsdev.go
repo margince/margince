@@ -103,11 +103,20 @@ func parseModelsDev(body []byte) (map[string]map[string]modelsDevModel, error) {
 	return out, nil
 }
 
+// A catalogue figure is a short decimal; past these bounds it is a corrupt or
+// hostile file, never a price, and no model costs a million dollars per MTok.
+const maxCatalogueFigureLen = 32
+
+var maxCatalogueUsdPerMTok = big.NewRat(1_000_000, 1)
+
 // usdPerMTok re-spells a JSON number as the sheet's plain decimal of six places;
 // the file may write an exponent the sheet's parser refuses.
 func usdPerMTok(n json.Number) (string, bool) {
+	if len(n) > maxCatalogueFigureLen {
+		return "", false
+	}
 	r, ok := new(big.Rat).SetString(n.String())
-	if !ok || r.Sign() < 0 {
+	if !ok || r.Sign() < 0 || r.Cmp(maxCatalogueUsdPerMTok) > 0 {
 		return "", false
 	}
 	return r.FloatString(6), true

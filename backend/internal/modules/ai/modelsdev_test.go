@@ -47,6 +47,8 @@ func TestModelsDevFiguresAreReadAsTheSheetsDecimal(t *testing.T) {
 		{"0.1234567", "0.123457", true},
 		{"-1", "", false},
 		{"free", "", false},
+		{"1e999999999", "", false},
+		{"2000000", "", false},
 	}
 	for _, tc := range cases {
 		got, ok := usdPerMTok(json.Number(tc.in))
