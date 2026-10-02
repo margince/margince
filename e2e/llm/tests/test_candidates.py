@@ -41,6 +41,21 @@ class ResolveTest(unittest.TestCase):
         with self.assertRaisesRegex(candidates.RouteError, "E2E_LLM_FOLDER"):
             candidates.resolve("gpt", "openrouter", model="openai/gpt-5.5", folder="openai/gpt-5.5")
 
+    def test_an_effort_experiment_needs_its_own_folder(self):
+        with self.assertRaisesRegex(candidates.RouteError, "E2E_LLM_FOLDER"):
+            candidates.resolve("mistral", "openrouter", effort="reasoning high")
+        route = candidates.resolve("mistral", "openrouter", effort="reasoning high",
+                                   folder="mistral-medium-3-5-reasoning-high")
+        self.assertEqual((route.effort, route.folder),
+                         ("reasoning high", "mistral-medium-3-5-reasoning-high"))
+
+    def test_the_default_effort_named_out_loud_is_not_an_experiment(self):
+        self.assertEqual(candidates.resolve("gpt", "api", effort="reasoning medium").folder, "gpt-5.6-sol")
+
+    def test_an_effort_the_wire_cannot_express_is_refused(self):
+        with self.assertRaisesRegex(candidates.RouteError, "reasoning low|medium|high"):
+            candidates.resolve("mistral", "openrouter", effort="think hard", folder="x")
+
     def test_openrouter_base_url_defaults_and_can_be_moved(self):
         self.assertEqual(candidates.resolve("mistral", "openrouter").base_url, "https://openrouter.ai/api/v1")
         os.environ["OPENAI_COMPATIBLE_BASE_URL"] = "http://127.0.0.1:1/v1"

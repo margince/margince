@@ -8,6 +8,7 @@ model, and a pass rate filed under two folders would read as two models.
 import collections
 import json
 import os
+import re
 
 Route = collections.namedtuple(
     "Route", "candidate via model folder wire base_url key_env effort routing"
@@ -26,7 +27,7 @@ def table():
         return json.load(handle)
 
 
-def resolve(candidate, via, model="", folder=""):
+def resolve(candidate, via, model="", folder="", effort=""):
     rows = {name: row for name, row in table().items() if "routes" in row}
     if candidate not in rows:
         raise RouteError(
@@ -39,13 +40,19 @@ def resolve(candidate, via, model="", folder=""):
         )
     route = row["routes"][via]
     chosen = model or route["model"]
-    base_folder = folder or (row["folder"] if chosen == route["model"] else "")
+    # An effort other than the table's is an experiment, filed apart like a
+    # different model: its number must never overwrite the default's.
+    experiment = bool(effort) and effort != row["effort"]
+    if experiment and not re.fullmatch(r"reasoning (low|medium|high)", effort):
+        raise RouteError(f"E2E_LLM_EFFORT={effort!r} must be 'reasoning low|medium|high'")
+    default = chosen == route["model"] and not experiment
+    base_folder = folder or (row["folder"] if default else "")
     # A '/' nests the folder one level deeper than the coverage page reads, and
     # an unknown model has no folder to borrow: both are refused before boot.
     if not base_folder or "/" in base_folder:
         raise RouteError(
-            f"model {chosen!r} is not this candidate's default, so set E2E_LLM_FOLDER to the "
-            "folder its verdicts belong in, without a '/'"
+            f"model {chosen!r} at effort {effort or row['effort']!r} is not this candidate's "
+            "default, so set E2E_LLM_FOLDER to the folder its verdicts belong in, without a '/'"
         )
     # A CLI carries its own system prompt and tools, so its number is filed
     # beside the comparison rather than in it.
@@ -55,7 +62,7 @@ def resolve(candidate, via, model="", folder=""):
         base_url = os.environ.get("OPENAI_COMPATIBLE_BASE_URL") or _OPENROUTER
     return Route(
         candidate, via, chosen, filed, route["wire"], base_url, route["key_env"],
-        row["effort"], route.get("routing"),
+        effort or row["effort"], route.get("routing"),
     )
 
 

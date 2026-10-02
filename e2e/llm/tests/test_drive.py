@@ -159,6 +159,15 @@ class OpenRouterTest(Bridge):
         self.drive([chat("ok")], via="openrouter")
         self.assertNotIn("parallel_tool_calls", self.requests[0])
 
+    def test_an_effort_experiment_reaches_the_request(self):
+        out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        with FakeMcp(TOOLS, "") as mcp, FakeProvider([chat("ok")]) as provider:
+            route = candidates.resolve("mistral", "openrouter", effort="reasoning high",
+                                       folder="m-high")._replace(base_url=provider.url)
+            with contextlib.redirect_stderr(io.StringIO()):
+                drive.run(route, "k", mcp.url, "tok", "q", out, sleep=lambda _s: None)
+        self.assertEqual(provider.requests[0][2]["reasoning"], {"effort": "high"})
+
     def test_gpt_on_openrouter_asks_for_the_pinned_effort(self):
         self.drive([chat("ok")], candidate="gpt", via="openrouter")
         self.assertEqual(self.requests[0]["reasoning"], {"effort": "medium"})

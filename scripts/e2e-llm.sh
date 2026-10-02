@@ -43,7 +43,9 @@ ONLY="${SCENARIO:-}"
 #                      cli — `claude -p` or `codex exec`, each with its own system
 #                      prompt and tools, filed apart under <model>@<cli>.
 #                                                                (default api)
-#   E2E_LLM_MODEL      a different model, measured deliberately; with
+#   E2E_LLM_MODEL      a different model, or
+#   E2E_LLM_EFFORT     a different effort ('reasoning low|medium|high'), measured
+#                      deliberately; either needs
 #   E2E_LLM_FOLDER     the folder its verdicts belong in.
 #
 # The verdicts under claude-opus-5/ were measured over the claude CLI before
@@ -80,7 +82,8 @@ command -v python3 >/dev/null || { echo "python3 is required to read the scenari
 
 # MODEL FOLDER WIRE KEY_ENV EFFORT DRIVER, or the reason this candidate has no
 # such route — refused here, before anything boots.
-ROUTE="$(python3 "$ROOT/e2e/llm/check.py" --candidate "$CANDIDATE" "$VIA" "${E2E_LLM_MODEL:-}" "${E2E_LLM_FOLDER:-}")"
+ROUTE="$(python3 "$ROOT/e2e/llm/check.py" --candidate "$CANDIDATE" "$VIA" "${E2E_LLM_MODEL:-}" \
+  "${E2E_LLM_FOLDER:-}" "${E2E_LLM_EFFORT:-}")"
 eval "$ROUTE"
 # The VERDICTS are committed and the transcripts are not, so they do not share a
 # directory. A verdict is filed the way the certification lane files one: under
@@ -395,7 +398,7 @@ run_once() {
     return
   fi
   MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/drive.py" \
-    --candidate "$CANDIDATE" --via "$VIA" --model "$MODEL" --folder "${FOLDER%@*}" \
+    --candidate "$CANDIDATE" --via "$VIA" --model "$MODEL" --folder "${FOLDER%@*}" --effort "$EFFORT" \
     --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN \
     --prompt-file "$prompt_file" --out "$out" 2>"$out.err" || status=$?
   if [[ "$status" -eq 3 ]]; then

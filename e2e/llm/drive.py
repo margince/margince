@@ -167,13 +167,14 @@ def main():
     parser.add_argument("--via", required=True)
     parser.add_argument("--model", default="")
     parser.add_argument("--folder", default="")
+    parser.add_argument("--effort", default="")
     parser.add_argument("--mcp-url", required=True)
     parser.add_argument("--token-env", required=True, help="the variable holding the MCP passport")
     parser.add_argument("--prompt-file", required=True)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
     try:
-        route = candidates.resolve(args.candidate, args.via, args.model, args.folder)
+        route = candidates.resolve(args.candidate, args.via, args.model, args.folder, args.effort)
     except candidates.RouteError as err:
         print(err, file=sys.stderr)
         return HARNESS
