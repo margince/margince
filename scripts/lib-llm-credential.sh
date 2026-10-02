@@ -34,3 +34,37 @@ llm_credential() {
     return 1
   fi
 }
+
+# llm_route_credential <candidate> <via> prints what a route of the multi-vendor
+# lane spends — a variable's NAME, or the CLI login — and never its value. The
+# claude CLI route keeps llm_credential's order unchanged.
+llm_route_credential() {
+  local candidate="$1" via="$2" name
+  case "$candidate/$via" in
+    claude/cli)
+      llm_credential
+      return
+      ;;
+    gpt/cli)
+      if codex login status >/dev/null 2>&1; then
+        echo "codex login"
+        return
+      fi
+      echo "codex is not logged in: run \`codex login\`" >&2
+      return 1
+      ;;
+    claude/api) name=ANTHROPIC_API_KEY ;;
+    gpt/api) name=OPENAI_API_KEY ;;
+    mistral/api) name=MISTRAL_API_KEY ;;
+    */openrouter) name=OPENAI_COMPATIBLE_API_KEY ;;
+    *)
+      echo "no $candidate/$via route: see e2e/llm/candidates.json" >&2
+      return 1
+      ;;
+  esac
+  if [[ -z "${!name:-}" ]]; then
+    echo "$name is not set; the $candidate/$via route spends it" >&2
+    return 1
+  fi
+  echo "$name"
+}

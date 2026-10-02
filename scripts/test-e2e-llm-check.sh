@@ -1174,6 +1174,47 @@ else
 	failures=$((failures + 1))
 fi
 
+# --- WHICH CREDENTIAL A ROUTE SPENDS -----------------------------------------
+#
+# Printed by NAME before the stack boots, so a run that ends in a 401 says which
+# account was on trial. The environment is emptied for each case: the shell this
+# runs in may carry any of these keys.
+route_cred_is() {
+	local name="$1" want="$2" candidate="$3" via="$4" got status=0
+	shift 4
+	got="$(env -i PATH="$PATH" HOME="$HOME" "$@" bash -c \
+		". '$root/scripts/lib-llm-credential.sh'; llm_route_credential '$candidate' '$via'" 2>&1)" || status=$?
+	if [[ "$got" != *"$want"* ]]; then
+		echo "FAIL: route credential/$name — got '$got' (exit $status), want '$want'"
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: route credential/$name"
+}
+
+route_cred_is "gpt over its own key" OPENAI_API_KEY gpt api OPENAI_API_KEY=x
+route_cred_is "a missing key is named" "MISTRAL_API_KEY is not set" mistral api
+route_cred_is "openrouter for any candidate" OPENAI_COMPATIBLE_API_KEY claude openrouter OPENAI_COMPATIBLE_API_KEY=x
+route_cred_is "the claude CLI keeps its own order" CLAUDE_CODE_OAUTH_TOKEN claude cli CLAUDE_CODE_OAUTH_TOKEN=x
+route_cred_is "a route the table lacks" "no mistral/cli route" mistral cli
+
+# --- A VERDICT SAYS HOW IT WAS MEASURED --------------------------------------
+#
+# Two folders can hold one model's number (the comparable route and a CLI), and
+# only the verdict can say which route produced it, with which effort, under
+# which system prompt, and whether the judge shares the candidate's family.
+verdict="$(E2E_LLM_DRIVER=gpt:api E2E_LLM_EFFORT='reasoning medium' E2E_LLM_SYSTEM_PROMPT=mcp-instructions \
+	E2E_LLM_SELF_JUDGED=false python3 "$check" --record "$root/e2e/llm/scenarios/case6-ask-the-company.yaml" 2 3)"
+for field in '"driver": "gpt:api"' '"effort": "reasoning medium"' '"system_prompt": "mcp-instructions"' '"self_judged": false'; do
+	if [[ "$verdict" == *"$field"* ]]; then
+		echo "ok: verdict carries $field"
+	else
+		echo "FAIL: verdict lacks $field"
+		echo "$verdict" | sed 's/^/    /'
+		failures=$((failures + 1))
+	fi
+done
+
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2
 	exit 1

@@ -549,6 +549,17 @@ def main():
             "runs": runs,
             "pass_at": scenario.get("pass_at"),
         }
+        # How the number was measured, which the folder alone cannot say: a CLI
+        # route and the comparable bridge can both have run one model.
+        for field, variable in (
+            ("driver", "E2E_LLM_DRIVER"),
+            ("effort", "E2E_LLM_EFFORT"),
+            ("system_prompt", "E2E_LLM_SYSTEM_PROMPT"),
+        ):
+            if os.environ.get(variable):
+                record[field] = os.environ[variable]
+        if os.environ.get("E2E_LLM_SELF_JUDGED") in ("true", "false"):
+            record["self_judged"] = os.environ["E2E_LLM_SELF_JUDGED"] == "true"
         if usage is not None:
             # runs_measured rides WITH the totals into the committed record. A
             # later reader summing cost across scenarios can then tell a cheap
