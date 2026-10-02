@@ -279,7 +279,7 @@ func (stubs) GetAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiTaskOverrides")
 }
 
-func (stubs) ReplaceAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ReplaceAiTaskOverridesParams) {
+func (stubs) ReplaceAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ReplaceAiTaskOverrides")
 }
 

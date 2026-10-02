@@ -1113,42 +1113,8 @@
       }
     },
     "embeddingsRouting": {
-      "description": "Which of a broker's upstream hosts may read the text this lane embeds, and under what privacy. Only the connection keys: the lane embeds the same text the chat tiers send, so a residency pin or a retention rule must reach it too, and the other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to leave the broker's own choice of host.",
-      "anyOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "provider": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "only": {
-                  "$ref": "#/$defs/openRouterProvider/properties/only"
-                },
-                "ignore": {
-                  "$ref": "#/$defs/openRouterProvider/properties/ignore"
-                },
-                "allow_fallbacks": {
-                  "$ref": "#/$defs/openRouterProvider/properties/allow_fallbacks"
-                },
-                "zdr": {
-                  "$ref": "#/$defs/openRouterProvider/properties/zdr"
-                },
-                "data_collection": {
-                  "$ref": "#/$defs/openRouterProvider/properties/data_collection"
-                },
-                "enforce_distillable_text": {
-                  "$ref": "#/$defs/openRouterProvider/properties/enforce_distillable_text"
-                }
-              }
-            }
-          }
-        },
-        {
-          "$ref": "#/$defs/embeddingsRoutingFlat"
-        }
-      ]
+      "description": "Which of a broker's upstream hosts may read the text this lane embeds, and under what privacy: the connection keys, which the lane may state for itself. The other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to read the connection's.",
+      "$ref": "#/$defs/connectionUpstream"
     },
     "embeddingsRoutingFlat": {
       "type": "object",

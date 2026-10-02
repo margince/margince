@@ -12105,10 +12105,13 @@ export const de = {
   "aiOutcome.fallback": "Vom Ausweichen beantwortet",
   "aiOutcome.noAnswer": "Keine Antwort",
   "aiOutcome.legend": "Wie Aufrufe eine Antwort bekamen",
-  "aiOutcome.headline.all": "Alle {total} Aufrufe bekamen eine Antwort.",
+  "aiOutcome.headline.all_one": "Der eine Aufruf bekam eine Antwort.",
+  "aiOutcome.headline.all_other": "Alle {total} Aufrufe bekamen eine Antwort.",
   "aiOutcome.headline.lost":
     "{share} von {total} Aufrufen bekamen eine Antwort. {lost} nicht.",
-  "aiOutcome.lostNote":
+  "aiOutcome.lostNote_one":
+    "{lost} Aufruf bekam von keinem Schritt eine Antwort. Die Aufgabe behandelt ihn wie ohne Modellantwort.",
+  "aiOutcome.lostNote_other":
     "{lost} Aufrufe bekamen von keinem Schritt eine Antwort. Die Aufgabe behandelt sie wie ohne Modellantwort.",
   "aiOutcome.step": "Schritt {n} · {role}",
   "aiOutcome.role.decision": "Entscheidungsmodell",
@@ -12138,4 +12141,9 @@ export const de = {
   "aiOutcome.limitNear": "│ {name} {seconds} s: p95 liegt nah daran",
   "aiOutcome.limitOver": "│ {name} {seconds} s: p95 liegt darüber",
   "aiOutcome.limitFar": "{name} {seconds} s, weit über jedem Aufruf",
+  "aiServing.notJson":
+    "ist kein gültiges JSON; prüfe Kommas und Klammern in dieser Zeile.",
+  "aiServing.notObject": "muss ein Objekt sein: der Text zwischen { und }.",
+  "aiServing.previewFailed":
+    "Der Server konnte diesen Wert nicht prüfen: {reason} Speichern bleibt aus, bis er es kann.",
 } as const satisfies Record<MessageKey, string>;

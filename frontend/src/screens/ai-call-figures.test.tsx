@@ -139,7 +139,7 @@ describe("ProviderRecentCalls", () => {
     expect(host.getAttribute("href")).toBe(
       "#/settings/model-calls?provider=openai_compatible&served_provider=Cerebras",
     );
-    expect(screen.getByRole("link", { name: "No host answered" })).toBeTruthy();
+    expect(screen.getByText("No host answered").closest("a")).toBeNull();
     expect(screen.getAllByText(/0\.02/)).toHaveLength(2);
 
     await user.click(screen.getByRole("button", { name: "By model" }));

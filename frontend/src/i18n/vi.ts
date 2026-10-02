@@ -11981,10 +11981,14 @@ export const vi = {
   "aiOutcome.fallback": "Trả lời bởi dự phòng",
   "aiOutcome.noAnswer": "Không có câu trả lời",
   "aiOutcome.legend": "Cách các lượt gọi nhận được câu trả lời",
-  "aiOutcome.headline.all": "Cả {total} lượt gọi đều nhận được câu trả lời.",
+  "aiOutcome.headline.all_one": "Lượt gọi duy nhất đã nhận được câu trả lời.",
+  "aiOutcome.headline.all_other":
+    "Cả {total} lượt gọi đều nhận được câu trả lời.",
   "aiOutcome.headline.lost":
     "{share} trong {total} lượt gọi nhận được câu trả lời. {lost} lượt thì không.",
-  "aiOutcome.lostNote":
+  "aiOutcome.lostNote_one":
+    "{lost} lượt gọi không nhận được câu trả lời từ bước nào. Tác vụ xử lý nó như khi không mô hình nào trả lời.",
+  "aiOutcome.lostNote_other":
     "{lost} lượt gọi không nhận được câu trả lời từ bước nào. Tác vụ xử lý chúng như khi không mô hình nào trả lời.",
   "aiOutcome.step": "Bước {n} · {role}",
   "aiOutcome.role.decision": "mô hình quyết định",
@@ -12014,4 +12018,9 @@ export const vi = {
   "aiOutcome.limitNear": "│ {name} {seconds} giây: p95 gần chạm ngưỡng",
   "aiOutcome.limitOver": "│ {name} {seconds} giây: p95 vượt ngưỡng",
   "aiOutcome.limitFar": "{name} {seconds} giây, cao hơn hẳn mọi lượt gọi",
+  "aiServing.notJson":
+    "không phải JSON hợp lệ; hãy kiểm tra dấu phẩy và dấu ngoặc ở dòng này.",
+  "aiServing.notObject": "phải là một đối tượng: phần văn bản giữa { và }.",
+  "aiServing.previewFailed":
+    "Máy chủ không kiểm tra được giá trị này: {reason} Chưa thể lưu cho tới khi kiểm tra được.",
 } as const satisfies Record<MessageKey, string>;

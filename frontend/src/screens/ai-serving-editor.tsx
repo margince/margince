@@ -3,10 +3,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import {
   JsonField,
@@ -14,13 +15,14 @@ import {
   lineOfPath,
   parseProblem,
 } from "../design-system/jsonfield";
-import { usePlural, useT } from "../i18n";
+import { formatNumber, identifierNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { OPENROUTER_ROUTING_DOCS } from "./ai-openrouter-settings";
 import { isOpenRouter } from "./ai-provider-links";
 import { type SliceValue, withSlice } from "./ai-routing-slice";
 import { FieldReference, RequestSummary } from "./ai-serving-reference";
-import { throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import "./ai-settings.css";
 
 // How OpenRouter serves one lane, as the JSON OpenRouter itself takes. The
@@ -85,36 +87,44 @@ function routingPath(value: SliceValue): string {
     : "embeddings.routing";
 }
 
+type Unreadable = Readonly<{
+  line?: number;
+  why: "aiServing.notJson" | "aiServing.notObject";
+}>;
+
 /** The value the text says, or why it says nothing the server can read. */
 function readText(text: string): {
   routing: ServingValue | undefined;
-  problem: JsonProblem | null;
+  problem: Unreadable | null;
 } {
-  const problem = parseProblem(text);
-  if (problem) return { routing: undefined, problem };
+  const unparsed = parseProblem(text);
+  if (unparsed)
+    return {
+      routing: undefined,
+      problem: { line: unparsed.line, why: "aiServing.notJson" },
+    };
   if (text.trim() === "") return { routing: undefined, problem: null };
   const parsed: unknown = JSON.parse(text);
   return isServingValue(parsed)
     ? { routing: parsed, problem: null }
-    : { routing: undefined, problem: { message: "must be an object" } };
+    : { routing: undefined, problem: { line: 1, why: "aiServing.notObject" } };
 }
 
 // Debounced on the document's TEXT: a draft rebuilt each render is a new
 // object every time, and an object key would restart the wait forever.
-function usePreview(body: Routing | null) {
+function usePreview(body: Routing | null, delayMs: number, enabled: boolean) {
   const key = body === null ? null : JSON.stringify(body);
   const [debounced, setDebounced] = useState({ key, body });
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on the body's text; the object is new every render
   useEffect(() => {
-    const timer = setTimeout(
-      () => setDebounced({ key, body }),
-      PREVIEW_DELAY_MS,
-    );
+    const timer = setTimeout(() => setDebounced({ key, body }), delayMs);
     return () => clearTimeout(timer);
-  }, [key]);
+  }, [key, delayMs]);
   const query = useQuery({
     queryKey: ["ai-routing-preview", debounced.key],
-    enabled: debounced.body !== null,
+    // A reader who may not save is not sent a check: the preview is a write's
+    // rehearsal and asks the write's grants.
+    enabled: enabled && debounced.body !== null,
     queryFn: async () => {
       if (debounced.body === null) return null;
       const { data, error } = await api.POST("/ai/routing/preview", {
@@ -138,12 +148,15 @@ export function ServingSection({
   disabled,
   onChange,
   onValid,
+  previewDelayMs = PREVIEW_DELAY_MS,
 }: Readonly<{
   value: SliceValue;
   routing: Routing;
   disabled: boolean;
   onChange: (routing: ServingValue | undefined) => void;
   onValid: (valid: boolean) => void;
+  // How long typing pauses before the server is asked; a test sets 0.
+  previewDelayMs?: number;
 }>) {
   const t = useT();
   const blocked = servingBlocked(value, routing);
@@ -170,6 +183,7 @@ export function ServingSection({
           disabled={disabled}
           onChange={onChange}
           onValid={onValid}
+          previewDelayMs={previewDelayMs}
         />
       ) : (
         <p className="t-caption ai-serving-note">
@@ -194,24 +208,25 @@ function ServingEditor({
   disabled,
   onChange,
   onValid,
+  previewDelayMs,
 }: Readonly<{
   value: Exclude<SliceValue, { kind: "decisions" }>;
   routing: Routing;
   disabled: boolean;
   onChange: (routing: ServingValue | undefined) => void;
   onValid: (valid: boolean) => void;
+  previewDelayMs: number;
 }>) {
   const t = useT();
+  const problemsId = useId();
   const [text, setText] = useState(() => textOf(value.binding.routing));
   const read = readText(text);
   const path = routingPath(value);
   const body = read.problem
     ? null
     : withSlice(routing, withRouting(value, read.routing));
-  const { query, checking } = usePreview(body);
-  const problems = read.problem
-    ? [read.problem]
-    : serverProblems(query.data, path, text);
+  const { query, checking } = usePreview(body, previewDelayMs, !disabled);
+  const problems = problemsOf(read.problem, query, path, text, t);
   const valid =
     !read.problem && !checking && query.isSuccess && problems.length === 0;
   useEffect(() => onValid(valid), [valid, onValid]);
@@ -223,6 +238,7 @@ function ServingEditor({
   const tierKey = value.kind === "tier" ? value.tier : "";
   const effective = tierKey ? query.data?.effective?.tiers[tierKey] : undefined;
   const sample = value.kind === "embeddings" ? SAMPLE_EMBEDDINGS : SAMPLE_TIER;
+  const status = disabled ? null : statusOf(checking, problems.length, text);
   return (
     <div className="ai-serving-grid">
       <div className="form-stack">
@@ -235,6 +251,7 @@ function ServingEditor({
           onChange={edit}
           problemLines={problems.flatMap((p) => (p.line ? [p.line] : []))}
           invalid={problems.length > 0}
+          aria-describedby={problems.length > 0 ? problemsId : undefined}
         />
         <div className="ai-serving-actions">
           <Button
@@ -250,13 +267,13 @@ function ServingEditor({
             {t("aiServing.useDefault")}
           </Button>
           <span className="t-caption" aria-live="polite">
-            {statusOf(checking, problems.length, text) === "aiServing.valid" ? (
+            {status === "aiServing.valid" ? (
               <Check aria-hidden size={14} />
             ) : null}
-            {statusText(t, statusOf(checking, problems.length, text))}
+            {statusText(t, status)}
           </span>
         </div>
-        <ProblemList problems={problems} />
+        <ProblemList id={problemsId} problems={problems} />
       </div>
       <FieldReference embeddings={value.kind === "embeddings"} />
       {value.kind === "tier" && (
@@ -282,24 +299,50 @@ function statusOf(
   return text.trim() ? "aiServing.valid" : "aiServing.shippedDefault";
 }
 
-function ProblemList({ problems }: Readonly<{ problems: JsonProblem[] }>) {
+/**
+ * Every problem the editor shows: the text's own, or the server's for this
+ * lane, or the check itself failing — which must never read as valid.
+ */
+function problemsOf(
+  unreadable: Unreadable | null,
+  query: { isError: boolean; error: unknown; data: Preview | null | undefined },
+  path: string,
+  text: string,
+  t: ReturnType<typeof useT>,
+): JsonProblem[] {
+  if (unreadable)
+    return [{ line: unreadable.line, message: t(unreadable.why) }];
+  if (query.isError)
+    return [
+      {
+        message: t("aiServing.previewFailed", {
+          reason: problemMessageOf(query.error, t),
+        }),
+      },
+    ];
+  return serverProblems(query.data, path, text);
+}
+
+function ProblemList({
+  id,
+  problems,
+}: Readonly<{ id: string; problems: JsonProblem[] }>) {
   const plural = usePlural();
+  const { locale } = useLocale();
   if (problems.length === 0) return null;
   return (
-    <div className="ai-serving-problems" role="alert">
+    <div className="ai-serving-problems" id={id}>
       <strong>
         {plural("aiServing.problems", problems.length, {
-          count: String(problems.length),
+          count: formatNumber(problems.length, locale),
         })}
       </strong>
-      <ul>
-        {problems.map((p) => (
-          <li key={`${p.path}-${p.message}`}>
-            {p.line ? <code>L{p.line}</code> : null}{" "}
-            {p.path ? <code>{p.path}</code> : null} {p.message}
-          </li>
-        ))}
-      </ul>
+      {problems.map((p) => (
+        <ErrorLine key={`${p.path}-${p.message}`}>
+          {p.line ? <code>{`L${identifierNumber(p.line)}`}</code> : null}{" "}
+          {p.path ? <code>{p.path}</code> : null} {p.message}
+        </ErrorLine>
+      ))}
     </div>
   );
 }

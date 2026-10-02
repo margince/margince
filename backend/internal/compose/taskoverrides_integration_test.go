@@ -36,12 +36,11 @@ func overrideSeat(e *integration.Env, update bool) context.Context {
 
 func putTaskOverrides(ctx context.Context, h aiRoutingHandlers, body, ifMatch string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodPut, "/v1/ai/task-overrides", strings.NewReader(body)).WithContext(ctx)
-	var params crmcontracts.ReplaceAiTaskOverridesParams
 	if ifMatch != "" {
-		params.IfMatch = &ifMatch
+		req.Header.Set("If-Match", ifMatch)
 	}
 	rec := httptest.NewRecorder()
-	h.ReplaceAiTaskOverrides(rec, req, params)
+	h.ReplaceAiTaskOverrides(rec, req)
 	return rec
 }
 

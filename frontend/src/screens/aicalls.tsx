@@ -225,10 +225,7 @@ export function AiCallsCard() {
                 tone="info"
                 title={t("aicalls.filtered", {
                   filter: Object.entries(filter)
-                    .map(
-                      ([key, value]) =>
-                        `${key}: ${value || t("aiFigures.noHost")}`,
-                    )
+                    .map(([key, value]) => `${key}: ${value}`)
                     .join(" · "),
                 })}
               >

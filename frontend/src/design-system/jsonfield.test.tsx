@@ -41,8 +41,7 @@ describe("parseProblem", () => {
 
   it("names the line the parser stopped at", () => {
     const problem = parseProblem(`{\n  "a": 1,\n}`);
-    expect(problem?.line).toBe(3);
-    expect(problem?.message).not.toBe("");
+    expect(problem).toEqual({ line: 3 });
   });
 });
 

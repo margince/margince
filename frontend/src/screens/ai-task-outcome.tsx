@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { ErrorLine } from "../design-system/errorline";
 import { SegmentBar, type SegmentBarParts } from "../design-system/readings";
 import { formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
@@ -39,6 +40,7 @@ function share(part: number, total: number, locale: Locale): string {
 
 export function TaskOutcome({ flow }: Readonly<{ flow: Flow }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const total = flow.total;
   if (!total) return <p className="t-caption">{t("aiFigures.empty")}</p>;
@@ -76,7 +78,7 @@ export function TaskOutcome({ flow }: Readonly<{ flow: Flow }>) {
               total: number(total),
               lost: number(lost),
             })
-          : t("aiOutcome.headline.all", { total: number(total) })}
+          : plural("aiOutcome.headline.all", total, { total: number(total) })}
       </p>
       <SegmentBar label={t("aiOutcome.legend")} parts={parts} />
       <ol className="ai-outcome-steps">
@@ -90,9 +92,9 @@ export function TaskOutcome({ flow }: Readonly<{ flow: Flow }>) {
         ))}
       </ol>
       {lost ? (
-        <p className="t-caption ai-outcome-lost">
-          {t("aiOutcome.lostNote", { lost: number(lost) })}
-        </p>
+        <ErrorLine standing>
+          {plural("aiOutcome.lostNote", lost, { lost: number(lost) })}
+        </ErrorLine>
       ) : null}
     </div>
   );
@@ -134,6 +136,7 @@ function StepCard({
           {reasons.map(([reason, count]) => (
             <span
               key={reason}
+              // ds:ignore a give-up count in the danger ink, not a message
               className={`t-caption ${last ? "ai-figures-bad" : "ai-outcome-passed"}`}
             >
               {plural(
@@ -206,6 +209,7 @@ export function LatencyAgainstTimeout({
         </span>
         <span
           className={
+            // ds:ignore a latency reading in the danger ink, not a message
             over ? "ai-figures-bad" : near ? "ai-latency-near" : undefined
           }
         >

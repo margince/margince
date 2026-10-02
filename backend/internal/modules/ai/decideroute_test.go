@@ -525,3 +525,20 @@ func TestTheDecisionHalfReadsTheBindingItWasHanded(t *testing.T) {
 		t.Fatalf("try=%+v err=%v calls=%d, want the handed binding's lane to answer", try, err, len(decider.calls))
 	}
 }
+
+// An admin's thinking level is part of the cache key, so the peek before the
+// decision call keys the request the walk will: a cached answer at that level
+// still skips the decision model.
+func TestACachedAnswerUnderAThinkingOverrideSkipsTheDecisionCall(t *testing.T) {
+	decider := &scriptedDecider{replies: []decisionReply{answered("parked", 0.95)}}
+	f := newDecideFixture(t, decider, 0)
+	f.router.SetTaskOverrides(TaskOverrides{TaskSiteTriage: {Thinking: "high"}})
+	ctx := wsContext(t)
+	if _, _, err := f.router.CompleteStructured(ctx, TaskSiteTriage, triageLLMRequest, acceptAnything); err != nil {
+		t.Fatal(err)
+	}
+	out, info, err := f.router.Decide(ctx, TaskSiteTriage, "triage", triageQuestion, triageLLMRequest, acceptAnything, floorGate)
+	if err != nil || out.Decided || !info.Cached || len(decider.calls) != 0 {
+		t.Fatalf("outcome=%+v info=%+v err=%v, %d decider calls; want the cached answer and no decision call", out, info, err, len(decider.calls))
+	}
+}

@@ -19,21 +19,49 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 type Routing = components["schemas"]["AiRouting"];
 type Feature = components["schemas"]["AiFeatureRoute"];
 
-const ADMIN: GrantSpec = { ai_routing: ["read", "update"], ai_diagnostics: ["read"], ai_model_rate: ["read"] };
+const ADMIN: GrantSpec = {
+  ai_routing: ["read", "update"],
+  ai_diagnostics: ["read"],
+  ai_model_rate: ["read"],
+};
 const READER: GrantSpec = { ai_routing: ["read"], ai_diagnostics: ["read"] };
 
 const ROUTING: Routing = {
   profile: "cloud_frontier",
   tiers: {
-    local_small: { provider: "openai_compatible", model: "openai/gpt-oss-120b", base_url: "https://openrouter.ai/api" },
-    cheap_cloud: { provider: "openai_compatible", model: "openai/gpt-oss-120b", base_url: "https://openrouter.ai/api" },
+    local_small: {
+      provider: "openai_compatible",
+      model: "openai/gpt-oss-120b",
+      base_url: "https://openrouter.ai/api",
+    },
+    cheap_cloud: {
+      provider: "openai_compatible",
+      model: "openai/gpt-oss-120b",
+      base_url: "https://openrouter.ai/api",
+    },
     premium: { provider: "gemini", model: "gemini-3.1-flash-lite" },
   },
-  embeddings: { provider: "openai_compatible", model: "mistralai/mistral-embed-2312" },
-  providers: { openai_compatible: { base_url: "https://openrouter.ai/api", upstream: { zdr: true, only: ["mistral/eu", "cerebras"] } } },
+  embeddings: {
+    provider: "openai_compatible",
+    model: "mistralai/mistral-embed-2312",
+  },
+  providers: {
+    openai_compatible: {
+      base_url: "https://openrouter.ai/api",
+      upstream: { zdr: true, only: ["mistral/eu", "cerebras"] },
+    },
+  },
 };
 
-const stat = (key: string, calls: number, failed: number, timeouts: number, p50: number, p95: number, cost: number) => ({
+const stat = (
+  key: string,
+  calls: number,
+  failed: number,
+  timeouts: number,
+  p50: number,
+  p95: number,
+  cost: number,
+) => ({
   key,
   calls,
   failed,
@@ -60,27 +88,82 @@ const FLOW = {
   total: 360,
   unanswered: 4,
   steps: [
-    { decision: true, tier: "decide", provider: "jev_compatible", model: "typesafe/jev-1.13", attempts: 360, answered: 349, p50_ms: 500, gave_up: { timeout: 11 } },
-    { decision: false, tier: "local_small", provider: "openai_compatible", model: "openai/gpt-oss-120b", attempts: 11, answered: 7, p50_ms: 1100, gave_up: { provider_error: 4 } },
+    {
+      decision: true,
+      tier: "decide",
+      provider: "jev_compatible",
+      model: "typesafe/jev-1.13",
+      attempts: 360,
+      answered: 349,
+      p50_ms: 500,
+      gave_up: { timeout: 11 },
+    },
+    {
+      decision: false,
+      tier: "local_small",
+      provider: "openai_compatible",
+      model: "openai/gpt-oss-120b",
+      attempts: 11,
+      answered: 7,
+      p50_ms: 1100,
+      gave_up: { provider_error: 4 },
+    },
   ],
 };
 
 const SCHEMA = {
   openRouterProvider: {
     properties: {
-      sort: { description: "Order candidate hosts by throughput, price or latency.", "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection", "x-placement": "tier", oneOf: [] },
-      quantizations: { description: "Serving precisions a host may use.", type: "array", "x-placement": "tier" },
-      zdr: { description: "Only hosts that keep no copy of the prompt.", type: "boolean", "x-placement": "connection" },
-      only: { description: "Allowlist of upstream host slugs.", type: "array", "x-placement": "connection" },
+      sort: {
+        description: "Order candidate hosts by throughput, price or latency.",
+        "x-doc-url":
+          "https://openrouter.ai/docs/guides/routing/provider-selection",
+        "x-placement": "tier",
+        oneOf: [],
+      },
+      quantizations: {
+        description: "Serving precisions a host may use.",
+        type: "array",
+        "x-placement": "tier",
+      },
+      zdr: {
+        description: "Only hosts that keep no copy of the prompt.",
+        type: "boolean",
+        "x-placement": "connection",
+      },
+      only: {
+        description: "Allowlist of upstream host slugs.",
+        type: "array",
+        "x-placement": "connection",
+      },
     },
   },
-  openRouterReasoning: { properties: { effort: { enum: ["minimal", "low", "medium", "high"], description: "The thinking budget as a level." } } },
+  openRouterReasoning: {
+    properties: {
+      effort: {
+        enum: ["minimal", "low", "medium", "high"],
+        description: "The thinking budget as a level.",
+      },
+    },
+  },
 };
 
 const KEYS = {
   providers: [
-    { provider: "openai_compatible", configured: true, env_var: "OPENAI_COMPATIBLE_API_KEY", usable: true, optional: false },
-    { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY", usable: true, optional: false },
+    {
+      provider: "openai_compatible",
+      configured: true,
+      env_var: "OPENAI_COMPATIBLE_API_KEY",
+      usable: true,
+      optional: false,
+    },
+    {
+      provider: "gemini",
+      configured: true,
+      env_var: "GEMINI_API_KEY",
+      usable: true,
+      optional: false,
+    },
   ],
 };
 
@@ -88,8 +171,28 @@ function stub({
   allow = ADMIN,
   overrides = {},
   conflict = false,
-  preview = { current_version: "v1", features: [], unused_tiers: [], effective: { tiers: { cheap_cloud: { provider: { sort: "latency", zdr: true, only: ["mistral/eu", "cerebras"] } } } } },
-}: { allow?: GrantSpec; overrides?: unknown; conflict?: boolean; preview?: unknown } = {}) {
+  preview = {
+    current_version: "v1",
+    features: [],
+    unused_tiers: [],
+    effective: {
+      tiers: {
+        cheap_cloud: {
+          provider: {
+            sort: "latency",
+            zdr: true,
+            only: ["mistral/eu", "cerebras"],
+          },
+        },
+      },
+    },
+  },
+}: {
+  allow?: GrantSpec;
+  overrides?: unknown;
+  conflict?: boolean;
+  preview?: unknown;
+} = {}) {
   installFetchStub({
     "GET /me": () => jsonResponse(meFixture({ allow })),
     "GET /ai/provider-keys": () => jsonResponse(KEYS),
@@ -97,11 +200,17 @@ function stub({
     "GET /ai-model-rates": () => jsonResponse({ data: [] }),
     "GET /ai/routing/schema": () => jsonResponse(SCHEMA),
     "POST /ai/routing/preview": () => jsonResponse(preview),
-    "GET /ai/call-stats": () => jsonResponse({ window: "7d", group: "provider", rows: STATS }),
+    "GET /ai/call-stats": () =>
+      jsonResponse({ window: "7d", group: "provider", rows: STATS }),
     "GET /ai/call-stats/flow": () => jsonResponse(FLOW),
     "GET /ai/task-overrides": () => jsonResponse(overrides),
     "PUT /ai/task-overrides": () =>
-      conflict ? jsonResponse({ title: "Conflict", status: 409, code: "version_skew" }, 409) : jsonResponse(overrides),
+      conflict
+        ? jsonResponse(
+            { title: "Conflict", status: 409, code: "version_skew" },
+            409,
+          )
+        : jsonResponse(overrides),
   });
 }
 
@@ -116,7 +225,7 @@ const DECIDING: Feature = {
 };
 
 const meta: Meta = {
-  title: "Settings/AI/Request settings",
+  title: "Settings/AI/AI models/Request settings",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -136,20 +245,41 @@ export const ProvidersWithFigures: Story = {
 
 const openConnection: Story["play"] = async ({ canvasElement }) => {
   const body = within(canvasElement.ownerDocument.body);
-  await userEvent.click(within(await body.findByTestId("ai-provider-row-openai_compatible")).getByRole("button", { name: /^Edit/ }));
+  await userEvent.click(
+    within(
+      await body.findByTestId("ai-provider-row-openai_compatible"),
+    ).getByRole("button", { name: /^Edit/ }),
+  );
 };
 
 /** The OpenRouter connection: its privacy rules, then its calls by host. */
-export const OpenRouterConnection: Story = { ...ProvidersWithFigures, play: openConnection };
-export const OpenRouterConnectionDark: Story = { ...ProvidersWithFigures, play: openConnection, globals: { theme: "dark" } };
+export const OpenRouterConnection: Story = {
+  ...ProvidersWithFigures,
+  play: openConnection,
+};
+export const OpenRouterConnectionDark: Story = {
+  ...ProvidersWithFigures,
+  play: openConnection,
+  globals: { theme: "dark" },
+};
 
-const TIER: SliceValue = { kind: "tier", tier: "cheap_cloud", binding: ROUTING.tiers.cheap_cloud };
+const TIER: SliceValue = {
+  kind: "tier",
+  tier: "cheap_cloud",
+  binding: ROUTING.tiers.cheap_cloud,
+};
 
 function Serving({ value }: Readonly<{ value: SliceValue }>) {
   return (
     <StoryProviders>
       <div style={{ maxWidth: 960 }}>
-        <ServingSection value={value} routing={ROUTING} disabled={false} onChange={() => {}} onValid={() => {}} />
+        <ServingSection
+          value={value}
+          routing={ROUTING}
+          disabled={false}
+          onChange={() => {}}
+          onValid={() => {}}
+        />
       </div>
     </StoryProviders>
   );
@@ -159,10 +289,23 @@ function Serving({ value }: Readonly<{ value: SliceValue }>) {
 export const ServingValid: Story = {
   render: () => {
     stub();
-    return <Serving value={{ ...TIER, binding: { ...TIER.binding, routing: { provider: { sort: "latency" } } } }} />;
+    return (
+      <Serving
+        value={{
+          ...TIER,
+          binding: {
+            ...TIER.binding,
+            routing: { provider: { sort: "latency" } },
+          },
+        }}
+      />
+    );
   },
 };
-export const ServingValidDark: Story = { ...ServingValid, globals: { theme: "dark" } };
+export const ServingValidDark: Story = {
+  ...ServingValid,
+  globals: { theme: "dark" },
+};
 
 /** Two keys the server refused, each on its line. */
 export const ServingRefused: Story = {
@@ -173,12 +316,36 @@ export const ServingRefused: Story = {
         features: [],
         unused_tiers: [],
         errors: [
-          { field: "tiers.cheap_cloud.routing.provider.sort.by", code: "setting_invalid", message: "must be one of price, throughput, latency." },
-          { field: "tiers.cheap_cloud.routing.provider.zdr", code: "moved_to_provider", message: "is set on the connection, under OpenRouter settings, and applies to every tier. Remove it here." },
+          {
+            field: "tiers.cheap_cloud.routing.provider.sort.by",
+            code: "setting_invalid",
+            message: "must be one of price, throughput, latency.",
+          },
+          {
+            field: "tiers.cheap_cloud.routing.provider.zdr",
+            code: "moved_to_provider",
+            message:
+              "is set on the connection, under OpenRouter settings, and applies to every tier. Remove it here.",
+          },
         ],
       },
     });
-    return <Serving value={{ ...TIER, binding: { ...TIER.binding, routing: { provider: { sort: { by: "price", partition: "model" }, zdr: true } } } }} />;
+    return (
+      <Serving
+        value={{
+          ...TIER,
+          binding: {
+            ...TIER.binding,
+            routing: {
+              provider: {
+                sort: { by: "price", partition: "model" },
+                zdr: true,
+              },
+            },
+          },
+        }}
+      />
+    );
   },
 };
 
@@ -186,14 +353,30 @@ export const ServingRefused: Story = {
 export const ServingNotApplicable: Story = {
   render: () => {
     stub();
-    return <Serving value={{ kind: "tier", tier: "premium", binding: ROUTING.tiers.premium }} />;
+    return (
+      <Serving
+        value={{
+          kind: "tier",
+          tier: "premium",
+          binding: ROUTING.tiers.premium,
+        }}
+      />
+    );
   },
 };
 
-function Sheet({ route, canManage = true }: Readonly<{ route: Feature; canManage?: boolean }>) {
+function Sheet({
+  route,
+  canManage = true,
+}: Readonly<{ route: Feature; canManage?: boolean }>) {
   return (
     <StoryProviders>
-      <TaskSheet route={route} canManage={canManage} canSeeCalls onClose={() => {}} />
+      <TaskSheet
+        route={route}
+        canManage={canManage}
+        canSeeCalls
+        onClose={() => {}}
+      />
     </StoryProviders>
   );
 }
@@ -205,12 +388,22 @@ export const TaskDecisionDefault: Story = {
     return <Sheet route={DECIDING} />;
   },
 };
-export const TaskDecisionDefaultDark: Story = { ...TaskDecisionDefault, globals: { theme: "dark" } };
+export const TaskDecisionDefaultDark: Story = {
+  ...TaskDecisionDefault,
+  globals: { theme: "dark" },
+};
 
 /** A deciding task an admin customised. */
 export const TaskDecisionOverridden: Story = {
   render: () => {
-    stub({ overrides: { capture_confidentiality_verdict: { thinking: "low", decision_timeout_ms: 30000 } } });
+    stub({
+      overrides: {
+        capture_confidentiality_verdict: {
+          thinking: "low",
+          decision_timeout_ms: 30000,
+        },
+      },
+    });
     return <Sheet route={DECIDING} />;
   },
 };
@@ -239,7 +432,9 @@ export const TaskConflict: Story = {
   },
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(await body.findByRole("combobox", { name: /Thinking level/ }));
+    await userEvent.click(
+      await body.findByRole("combobox", { name: /Thinking level/ }),
+    );
     await userEvent.click(await body.findByRole("option", { name: "low" }));
     await userEvent.click(body.getByRole("button", { name: "Save settings" }));
   },

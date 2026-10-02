@@ -12247,10 +12247,13 @@ export const en = {
   "aiOutcome.fallback": "Answered by the fallback",
   "aiOutcome.noAnswer": "No answer",
   "aiOutcome.legend": "How calls got an answer",
-  "aiOutcome.headline.all": "All {total} calls got an answer.",
+  "aiOutcome.headline.all_one": "The one call got an answer.",
+  "aiOutcome.headline.all_other": "All {total} calls got an answer.",
   "aiOutcome.headline.lost":
     "{share} of {total} calls got an answer. {lost} did not.",
-  "aiOutcome.lostNote":
+  "aiOutcome.lostNote_one":
+    "{lost} call got no answer from any step. The task handles it as it does when no model answers.",
+  "aiOutcome.lostNote_other":
     "{lost} calls got no answer from any step. The task handles them as it does when no model answers.",
   "aiOutcome.step": "Step {n} · {role}",
   "aiOutcome.role.decision": "decision model",
@@ -12279,6 +12282,11 @@ export const en = {
   "aiOutcome.limitNear": "│ {name} {seconds} s: p95 is close to it",
   "aiOutcome.limitOver": "│ {name} {seconds} s: p95 is above it",
   "aiOutcome.limitFar": "{name} {seconds} s, far above every call",
+  "aiServing.notJson":
+    "is not valid JSON; check the commas and brackets on this line.",
+  "aiServing.notObject": "must be an object: the text between { and }.",
+  "aiServing.previewFailed":
+    "The server could not check this value: {reason} Save stays off until it can.",
 } as const;
 
 export type MessageKey = keyof typeof en;

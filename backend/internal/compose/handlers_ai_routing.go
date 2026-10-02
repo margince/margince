@@ -451,7 +451,8 @@ func routingPrecondition(header http.Header) (string, error) {
 	if !present || value == "*" {
 		return "", nil
 	}
-	value = strings.Trim(value, `"`)
+	// A proxy may weaken the validator; the revision inside is the same.
+	value = strings.Trim(strings.TrimPrefix(value, "W/"), `"`)
 	if value == "" {
 		return "", apperrors.ErrVersionSkew
 	}

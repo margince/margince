@@ -6,7 +6,7 @@ import { useState } from "react";
 import { JsonField, lineOfPath, parseProblem } from "./jsonfield";
 
 const meta: Meta<typeof JsonField> = {
-  title: "Components/Controls/Json field",
+  title: "Components/Forms and input/Json field",
   component: JsonField,
 };
 export default meta;

@@ -487,10 +487,11 @@
 }
 
 .ai-serving-problems {
-  color: var(--dangerText);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
-.ai-serving-problems ul,
 .ai-serving-lines {
   margin: 0;
   padding: 0;
@@ -569,11 +570,6 @@
   color: var(--warningText);
 }
 
-.ai-outcome-lost {
-  margin: 0;
-  color: var(--dangerText);
-}
-
 /* Latency against the timeout: two marks and a limit line on one track. */
 .ai-latency {
   display: flex;
@@ -598,6 +594,7 @@
   width: var(--space-2);
   height: var(--space-2);
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent);
   transform: translate(-50%, -50%);
 }

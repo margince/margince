@@ -136,6 +136,7 @@ describe("ServingSection", () => {
         disabled={false}
         onChange={() => {}}
         onValid={() => {}}
+        previewDelayMs={0}
       />,
     );
     expect(screen.queryByRole("textbox", { name: "Serving JSON" })).toBeNull();
@@ -189,6 +190,7 @@ describe("ServingSection", () => {
         disabled={false}
         onChange={() => {}}
         onValid={() => {}}
+        previewDelayMs={0}
       />,
     );
 
@@ -218,6 +220,7 @@ describe("ServingSection", () => {
         disabled={false}
         onChange={onChange}
         onValid={onValid}
+        previewDelayMs={0}
       />,
     );
 
@@ -264,6 +267,7 @@ describe("ServingSection", () => {
         disabled={false}
         onChange={onChange}
         onValid={() => {}}
+        previewDelayMs={0}
       />,
     );
     fireEvent.click(
@@ -271,6 +275,61 @@ describe("ServingSection", () => {
     );
     expect(onChange).toHaveBeenLastCalledWith(undefined);
     expect(await screen.findByText("Shipped default")).toBeTruthy();
+  });
+});
+
+describe("ServingSection when the check fails", () => {
+  it("never reads as valid when the server cannot check the value", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me"))
+          return jsonResponse(
+            meFixture({ allow: { ai_routing: ["read", "update"] } }),
+          );
+        if (req.url.includes("/ai/routing/schema")) return jsonResponse(SCHEMA);
+        return jsonResponse(
+          { title: "Unavailable", status: 503, code: "unavailable" },
+          503,
+        );
+      }),
+    );
+    const onValid = vi.fn();
+    render(
+      <ServingSection
+        value={TIER}
+        routing={ROUTING}
+        disabled={false}
+        onChange={() => {}}
+        onValid={onValid}
+        previewDelayMs={0}
+      />,
+    );
+
+    type(`{"provider":{"sort":"latency"}}`);
+
+    expect(
+      await screen.findByText(/The server could not check this value/),
+    ).toBeTruthy();
+    expect(screen.queryByText("Valid")).toBeNull();
+    expect(onValid).not.toHaveBeenCalledWith(true);
+  });
+
+  it("asks nothing for a reader who may not save", () => {
+    const sent = previewServer(() => ({}));
+    render(
+      <ServingSection
+        value={TIER}
+        routing={ROUTING}
+        disabled
+        onChange={() => {}}
+        onValid={() => {}}
+        previewDelayMs={0}
+      />,
+    );
+    expect(sent).toEqual([]);
   });
 });
 

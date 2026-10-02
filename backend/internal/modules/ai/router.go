@@ -215,7 +215,7 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// existing. striprecorder.go says why that matters.
 	strips := newStripRecorder(req.SecretStripper)
 	req.SecretStripper = strips
-	req.ThinkingLevel = r.taskSettings(task).Thinking
+	req = r.withTaskThinking(lc, task, req)
 	key, keyErr := cacheKey(wsID, task, req)
 	if keyErr == nil {
 		// The site's own defect, found with the key's: before any provider.

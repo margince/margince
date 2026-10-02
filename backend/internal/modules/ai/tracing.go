@@ -194,7 +194,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		lc.renewRailLease(ctx)
 		// Each rung gets its own deadline, so one slow host spends at most its
 		// share and the walk still reaches the rung above it.
-		callCtx, cancel := context.WithTimeout(ctx, r.taskSettings(task).AttemptTimeout)
+		callCtx, cancel := context.WithTimeout(ctx, r.callSettings(lc, task).AttemptTimeout)
 		out, callErr := b.clients[t].Complete(callCtx, req)
 		cancel()
 		if callErr != nil {
@@ -276,7 +276,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 // is still traced when a config-dimension write fails, just without a
 // config_hash on the attempts that snapshot covers.
 func (r *Router) stampConfigs(ctx context.Context, b *binding, lc *logicalCall) {
-	settings := r.taskSettings(lc.terminal().Task)
+	settings := r.callSettings(lc, lc.terminal().Task)
 	planted := map[string]bool{}
 	for i := range lc.attempts {
 		snap := b.snapshotFor(lc.attempts[i].Tier, lc.attempts[i].Kind, settings)

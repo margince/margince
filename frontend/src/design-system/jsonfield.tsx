@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ComponentPropsWithoutRef, useRef } from "react";
+import { identifierNumber } from "../format/format";
 import "./jsonfield.css";
 
 /** One problem the field shows: where it is, and what to do about it. */
@@ -10,6 +11,9 @@ export type JsonProblem = Readonly<{
   path?: string;
   message: string;
 }>;
+
+/** Where text stops parsing; the caller words it, the engine's own text never reaches a reader. */
+export type ParseProblem = Readonly<{ line?: number }>;
 
 /**
  * A JSON value an advanced reader edits by hand, with a line-number gutter that
@@ -53,7 +57,7 @@ export function JsonField({
             key={i}
             className={marked.has(i + 1) ? "json-field-mark" : undefined}
           >
-            {i + 1}
+            {identifierNumber(i + 1)}
           </span>
         ))}
       </div>
@@ -86,22 +90,22 @@ export function JsonField({
 }
 
 /**
- * Why `text` does not parse, with the line the parser stopped at; null when it
- * parses or is empty. The engines report a position or a line, never both in
- * one shape, so both are read.
+ * Where `text` stops parsing; null when it parses or is empty. The engines
+ * report a position or a line, never both in one shape, so both are read.
  */
-export function parseProblem(text: string): JsonProblem | null {
+export function parseProblem(text: string): ParseProblem | null {
   if (text.trim() === "") return null;
   try {
     JSON.parse(text);
     return null;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const byLine = /line (\d+)/.exec(message);
-    if (byLine) return { line: Number(byLine[1]), message };
-    const byPosition = /position (\d+)/.exec(message);
-    const line = byPosition ? lineAt(text, Number(byPosition[1])) : undefined;
-    return { line, message };
+    const said = error instanceof Error ? error.message : "";
+    const byLine = /line (\d+)/.exec(said);
+    if (byLine) return { line: Number(byLine[1]) };
+    const byPosition = /position (\d+)/.exec(said);
+    return {
+      line: byPosition ? lineAt(text, Number(byPosition[1])) : undefined,
+    };
   }
 }
 

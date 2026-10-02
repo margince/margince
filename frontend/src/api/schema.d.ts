@@ -10830,7 +10830,12 @@ export interface paths {
         };
         /** Read the per-task thinking level and timeouts (ai_routing read). */
         get: operations["getAiTaskOverrides"];
-        /** Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute. */
+        /**
+         * Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+         * @description Optional If-Match carries the revision returned in the GET ETag header. A stale revision
+         *     returns 409 without changing settings. Omitting If-Match, or sending *, replaces whatever
+         *     is stored.
+         */
         put: operations["replaceAiTaskOverrides"];
         post?: never;
         delete?: never;
@@ -19554,8 +19559,8 @@ export interface components {
         /**
          * @description How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
          *     own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
-         *     thinks). Refused on any other binding; on the embeddings lane only provider.only,
-         *     provider.ignore and provider.allow_fallbacks are accepted. Absent means the product
+         *     thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+         *     are accepted. Absent means the product
          *     default (reliability over price); an empty object means no preferences (the broker's own
          *     price-weighted routing). The two are different choices and a client must not turn one
          *     into the other. The keys that say which hosts may read a request (only, ignore,
@@ -21489,6 +21494,7 @@ export interface components {
              * @description Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
              *     The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
              *     Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+             *     `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
              *     `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
              */
             error_sentinel?: string | null;
@@ -59077,10 +59083,7 @@ export interface operations {
     replaceAiTaskOverrides: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description The ETag the editor read; a different stored revision is a 409. */
-                "If-Match"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };

@@ -9,13 +9,11 @@ package compose
 
 import (
 	"net/http"
-	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 func (h aiRoutingHandlers) GetAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +33,7 @@ func (h aiRoutingHandlers) GetAiTaskOverrides(w http.ResponseWriter, r *http.Req
 	writeTaskOverrides(w, stored)
 }
 
-func (h aiRoutingHandlers) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request, params crmcontracts.ReplaceAiTaskOverridesParams) {
+func (h aiRoutingHandlers) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, "ReplaceAiTaskOverrides")
 		return
@@ -48,7 +46,7 @@ func (h aiRoutingHandlers) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	expected, err := taskOverridesPrecondition(params.IfMatch)
+	expected, err := routingPrecondition(r.Header)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -80,23 +78,6 @@ func (h aiRoutingHandlers) PreviewAiTaskOverrides(w http.ResponseWriter, r *http
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, taskOverridesPreviewToWire(preview))
-}
-
-// taskOverridesPrecondition reads If-Match: absent or * replaces whatever is
-// stored, and an explicitly empty tag must not unpin the write.
-func taskOverridesPrecondition(ifMatch *string) (string, error) {
-	if ifMatch == nil {
-		return "", nil
-	}
-	value := strings.TrimSpace(*ifMatch)
-	if value == "*" {
-		return "", nil
-	}
-	value = strings.Trim(value, `"`)
-	if value == "" {
-		return "", apperrors.ErrVersionSkew
-	}
-	return value, nil
 }
 
 func writeTaskOverrides(w http.ResponseWriter, stored ai.TaskOverrides) {

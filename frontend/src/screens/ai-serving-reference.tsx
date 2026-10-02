@@ -78,9 +78,7 @@ export function FieldReference({
     : fieldsOf(schema.data, "openRouterReasoning");
   return (
     <aside className="ai-serving-reference">
-      <Heading size="xsmall" className="t-h4">
-        {t("aiServing.reference")}
-      </Heading>
+      <Heading size="xsmall">{t("aiServing.reference")}</Heading>
       <dl>
         {[
           ...provider.map(([k, f]) => [`provider.${k}`, f] as const),
@@ -139,9 +137,7 @@ export function RequestSummary({
   return (
     <section className="ai-serving-summary">
       <div className="ai-figures-head">
-        <Heading size="xsmall" className="t-h4">
-          {t("aiServing.asked")}
-        </Heading>
+        <Heading size="xsmall">{t("aiServing.asked")}</Heading>
         <span className="t-caption">{t("aiServing.askedFor", { lane })}</span>
       </div>
       {!effective ? (

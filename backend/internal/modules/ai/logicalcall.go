@@ -47,6 +47,10 @@ type logicalCall struct {
 	// occurrence was opened, because a recorder with no database cannot open
 	// one and a start that failed has nothing to renew.
 	rail *railOccurrence
+	// settings is what this call's task is sent with, read once on first use
+	// so every attempt, its deadline and its recorded snapshot agree even when
+	// an admin saves new overrides mid-call.
+	settings *EffectiveTask
 }
 
 func newLogicalCall() *logicalCall {

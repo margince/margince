@@ -11,7 +11,8 @@ import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   useCallStats,
@@ -51,8 +52,9 @@ const STEPS = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 240, 300];
 export function timeoutOptions(
   [low, high]: readonly [number, number],
   fallback: number,
+  current: number = fallback,
 ): number[] {
-  return [...new Set([...STEPS, fallback])]
+  return [...new Set([...STEPS, fallback, current])]
     .filter((s) => s >= low && s <= high)
     .sort((a, b) => a - b);
 }
@@ -225,10 +227,18 @@ function useSaveOverrides(onSaved: () => void) {
   return useMutation({
     mutationFn: async (vars: { overrides: Overrides; version: string }) => {
       const { error } = await api.PUT("/ai/task-overrides", {
-        params: { header: { "If-Match": vars.version } },
+        // Always sent: an absent If-Match is an unconditional overwrite.
+        headers: { "If-Match": vars.version },
         body: vars.overrides,
       });
       if (error) throwProblem(error);
+    },
+    // A colleague's newer save is read back, so the next Save is held to it
+    // rather than to the revision this sheet opened on.
+    onError: async (error) => {
+      if (problemCodeOf(error) === "version_skew") {
+        await queryClient.invalidateQueries({ queryKey: OVERRIDES_KEY });
+      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: OVERRIDES_KEY });
@@ -254,6 +264,7 @@ function TaskSettings({
   onChange: (next: Draft) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const set = (patch: Partial<Draft>) => onChange({ ...draft, ...patch });
   return (
     <section className="ai-sheet-section">
@@ -298,8 +309,8 @@ function TaskSettings({
         <TimeoutField
           label={t("aiTaskSheet.decisionTimeout")}
           hint={t("aiTaskSheet.decisionTimeout.help", {
-            low: String(DECISION_BOUNDS[0]),
-            high: String(DECISION_BOUNDS[1]),
+            low: formatNumber(DECISION_BOUNDS[0], locale),
+            high: formatNumber(DECISION_BOUNDS[1], locale),
           })}
           bounds={DECISION_BOUNDS}
           value={draft.decision}
@@ -315,8 +326,8 @@ function TaskSettings({
             ? "aiTaskSheet.attemptTimeout.help.decision"
             : "aiTaskSheet.attemptTimeout.help",
           {
-            low: String(ATTEMPT_BOUNDS[0]),
-            high: String(ATTEMPT_BOUNDS[1]),
+            low: formatNumber(ATTEMPT_BOUNDS[0], locale),
+            high: formatNumber(ATTEMPT_BOUNDS[1], locale),
           },
         )}
         bounds={ATTEMPT_BOUNDS}
@@ -401,6 +412,7 @@ function TimeoutField({
   onChange: (seconds: number) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <Field label={label} hint={hint}>
       {(control) => (
@@ -408,12 +420,16 @@ function TimeoutField({
           {...control}
           value={String(value)}
           disabled={disabled}
-          options={timeoutOptions(bounds, fallback).map((s) => ({
+          options={timeoutOptions(bounds, fallback, value).map((s) => ({
             value: String(s),
             label:
               s === fallback
-                ? t("aiTaskSheet.seconds.default", { seconds: String(s) })
-                : t("aiTaskSheet.seconds", { seconds: String(s) }),
+                ? t("aiTaskSheet.seconds.default", {
+                    seconds: formatNumber(s, locale),
+                  })
+                : t("aiTaskSheet.seconds", {
+                    seconds: formatNumber(s, locale),
+                  }),
           }))}
           onChange={(next) => onChange(Number(next))}
         />

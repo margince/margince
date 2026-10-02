@@ -289,9 +289,14 @@ function FiguresTable({
         {
           key: "key",
           header: keyHeader,
-          render: (row) => (
-            <a href={hrefFor(row)}>{row.key || t("aiFigures.noHost")}</a>
-          ),
+          // A row no host served has no value to filter the log by, so it is
+          // named and not linked: a link would open every call on the lane.
+          render: (row) =>
+            row.key ? (
+              <a href={hrefFor(row)}>{row.key}</a>
+            ) : (
+              t("aiFigures.noHost")
+            ),
         },
         {
           key: "calls",
@@ -304,6 +309,7 @@ function FiguresTable({
           header: t("aiFigures.col.failed"),
           align: "end",
           render: (row) => (
+            // ds:ignore a failure count in the danger ink, not a message
             <span className={row.failed ? "ai-figures-bad" : undefined}>
               {number(row.failed)}
             </span>
@@ -314,6 +320,7 @@ function FiguresTable({
           header: t("aiFigures.col.timeouts"),
           align: "end",
           render: (row) => (
+            // ds:ignore a failure count in the danger ink, not a message
             <span className={row.timeouts ? "ai-figures-bad" : undefined}>
               {number(row.timeouts)}
             </span>

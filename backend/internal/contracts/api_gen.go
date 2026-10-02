@@ -21761,6 +21761,7 @@ type AiCall struct {
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
 	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
@@ -21910,6 +21911,7 @@ type AiCallSummary struct {
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
 	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
@@ -22007,8 +22009,8 @@ type AiEmbeddingsBinding struct {
 
 	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
 	// own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
-	// thinks). Refused on any other binding; on the embeddings lane only provider.only,
-	// provider.ignore and provider.allow_fallbacks are accepted. Absent means the product
+	// thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+	// are accepted. Absent means the product
 	// default (reliability over price); an empty object means no preferences (the broker's own
 	// price-weighted routing). The two are different choices and a client must not turn one
 	// into the other. The keys that say which hosts may read a request (only, ignore,
@@ -22283,8 +22285,8 @@ type AiOpenRouterReasoningEffort string
 
 // AiOpenRouterRouting How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
 // own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
-// thinks). Refused on any other binding; on the embeddings lane only provider.only,
-// provider.ignore and provider.allow_fallbacks are accepted. Absent means the product
+// thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+// are accepted. Absent means the product
 // default (reliability over price); an empty object means no preferences (the broker's own
 // price-weighted routing). The two are different choices and a client must not turn one
 // into the other. The keys that say which hosts may read a request (only, ignore,
@@ -22737,8 +22739,8 @@ type AiTierBinding struct {
 
 	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
 	// own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
-	// thinks). Refused on any other binding; on the embeddings lane only provider.only,
-	// provider.ignore and provider.allow_fallbacks are accepted. Absent means the product
+	// thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+	// are accepted. Absent means the product
 	// default (reliability over price); an empty object means no preferences (the broker's own
 	// price-weighted routing). The two are different choices and a client must not turn one
 	// into the other. The keys that say which hosts may read a request (only, ignore,
@@ -47346,12 +47348,6 @@ type ListAiCallsParams struct {
 	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
 }
 
-// ReplaceAiTaskOverridesParams defines parameters for ReplaceAiTaskOverrides.
-type ReplaceAiTaskOverridesParams struct {
-	// IfMatch The ETag the editor read; a different stored revision is a 409.
-	IfMatch *string `json:"If-Match,omitempty"`
-}
-
 // GetAiUsageParams defines parameters for GetAiUsage.
 type GetAiUsageParams struct {
 	// From Default: first day of the current month. Must not be after `to`; the window is capped at 366 days (422 otherwise).
@@ -64362,7 +64358,7 @@ type ServerInterface interface {
 	GetAiTaskOverrides(w http.ResponseWriter, r *http.Request)
 	// Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
 	// (PUT /ai/task-overrides)
-	ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request, params ReplaceAiTaskOverridesParams)
+	ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request)
 	// Judge a draft of the overrides without saving it (ai_routing read and update).
 	// (POST /ai/task-overrides/preview)
 	PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request)
@@ -66885,7 +66881,7 @@ func (_ Unimplemented) GetAiTaskOverrides(w http.ResponseWriter, r *http.Request
 
 // Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
 // (PUT /ai/task-overrides)
-func (_ Unimplemented) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request, params ReplaceAiTaskOverridesParams) {
+func (_ Unimplemented) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -73768,41 +73764,14 @@ func (siw *ServerInterfaceWrapper) GetAiTaskOverrides(w http.ResponseWriter, r *
 // ReplaceAiTaskOverrides operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
 
-	var err error
-	_ = err
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ReplaceAiTaskOverridesParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "If-Match" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
-		var IfMatch string
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
-			return
-		}
-
-		params.IfMatch = &IfMatch
-
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ReplaceAiTaskOverrides(w, r, params)
+		siw.Handler.ReplaceAiTaskOverrides(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

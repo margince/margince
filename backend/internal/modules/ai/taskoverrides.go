@@ -163,7 +163,7 @@ func (v TaskOverrides) Revision() string {
 }
 
 // SetTaskOverrides publishes the overrides every later call on this Router is
-// sent with. A call loads them once, so one call never mixes two versions.
+// sent with. A call reads them once (callSettings), so it never mixes two.
 func (r *Router) SetTaskOverrides(v TaskOverrides) {
 	r.overrides.Store(&v)
 }
@@ -184,4 +184,15 @@ func (r *Router) taskOverrides() TaskOverrides {
 // taskSettings is what task's calls are sent with right now.
 func (r *Router) taskSettings(task Task) EffectiveTask {
 	return r.taskOverrides().Effective(task)
+}
+
+// callSettings is what one logical call's task is sent with, read on first use
+// and kept, so a save mid-call cannot give two of its attempts different
+// deadlines or record one it was not sent under.
+func (r *Router) callSettings(lc *logicalCall, task Task) EffectiveTask {
+	if lc.settings == nil {
+		settings := r.taskSettings(task)
+		lc.settings = &settings
+	}
+	return *lc.settings
 }

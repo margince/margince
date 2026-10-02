@@ -244,3 +244,12 @@ func TestTheConnectionTakesNoServingKey(t *testing.T) {
 		t.Fatalf("a serving key on the connection = %v", err)
 	}
 }
+
+func TestANullFieldStatesNoPreference(t *testing.T) {
+	for _, in := range []string{`{"provider":{"preferred_max_latency":null}}`, `{"provider":{"max_price":null,"sort":null}}`} {
+		r, err := parseRoutingAt("x", []byte(in))
+		if err != nil || r.providerWire() != nil {
+			t.Errorf("%s read as %+v (%v), want no preference", in, r, err)
+		}
+	}
+}

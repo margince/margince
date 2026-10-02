@@ -161,7 +161,11 @@ func (w *RoutingWatcher) applyIfChanged(ctx context.Context, next ai.RoutingConf
 // reason Recheck keeps the current binding.
 func (w *RoutingWatcher) refreshTaskOverrides(ctx context.Context) {
 	ws, err := singletonWorkspace(ctx, w.pool)
-	if err != nil || ws == (ids.UUID{}) {
+	if err != nil {
+		w.log.WarnContext(ctx, "resolving the installation to re-read the AI task overrides failed; keeping the ones this process is serving", "error", err)
+		return
+	}
+	if ws == (ids.UUID{}) {
 		return
 	}
 	stored, err := settings.Get(routingCtx(ctx, ws), NewSettingsStore(w.pool), ai.TaskOverridesSetting)

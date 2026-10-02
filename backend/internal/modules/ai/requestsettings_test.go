@@ -327,3 +327,47 @@ func TestTwoTiersRecordTheirOwnWireBlocks(t *testing.T) {
 		t.Fatalf("snapshots %s", fcs.configSnapshots)
 	}
 }
+
+// swappingClient fails, saving new overrides as it does: a save that lands
+// while a call is between rungs.
+type swappingClient struct {
+	stubClient
+	router *Router
+	next   TaskOverrides
+}
+
+func (s swappingClient) Complete(context.Context, model.Request) (model.Response, error) {
+	s.router.SetTaskOverrides(s.next)
+	return model.Response{}, errors.New("down")
+}
+
+func TestOneCallKeepsTheSettingsItStartedWith(t *testing.T) {
+	fcs := &fakeCallStore{}
+	fast := &deadlineClient{}
+	r := twoRungRouter(t, stubClient{}, fast, fcs)
+	r.install(r.binding().withConfig(RoutingConfig{}, nil))
+	r.SetTaskOverrides(TaskOverrides{TaskColdStart: {AttemptTimeoutMs: 120000}})
+	r.install(binding{
+		clients:   map[Tier]model.Client{TierLocalSmall: swappingClient{router: r, next: TaskOverrides{TaskColdStart: {AttemptTimeoutMs: 30000}}}, TierCheapCloud: fast},
+		routeMeta: r.binding().routeMeta,
+	}.withConfig(RoutingConfig{}, nil))
+
+	if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierLocalSmall, TierCheapCloud}, model.Request{}); err != nil {
+		t.Fatal(err)
+	}
+
+	if fast.deadline <= 60*time.Second {
+		t.Fatalf("the second rung ran under %s, the override saved mid-call", fast.deadline)
+	}
+	for _, snap := range fcs.configSnapshots {
+		var params struct {
+			DeadlineMs int64 `json:"deadline_ms"`
+		}
+		if err := json.Unmarshal(snap.ProviderParams, &params); err != nil {
+			t.Fatal(err)
+		}
+		if params.DeadlineMs != 120000 {
+			t.Errorf("recorded deadline_ms %d, want the 120000 the call was sent under", params.DeadlineMs)
+		}
+	}
+}

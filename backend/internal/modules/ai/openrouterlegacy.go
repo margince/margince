@@ -241,6 +241,11 @@ func decodeProvider(path string, data []byte) (OpenRouterProvider, error) {
 			errs = append(errs, unknownKey(joinPath(path, key), strings.Join(providerKeys, ", ")))
 			continue
 		}
+		// null states no preference, as an absent key does, for every field
+		// alike: a threshold must not read it as zero.
+		if string(fields[key]) == "null" {
+			continue
+		}
 		errs = append(errs, decode(joinPath(path, key), fields[key]))
 	}
 	return p, joinFaults(errs...)
