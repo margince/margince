@@ -698,14 +698,10 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
-**Rules**
-
-- `offer_template_name_unique` — `UNIQUE (name)`
-
 **Indexes**
 
 - `idx_offer_template_search` — `gin (search_tsv)`
-- `offer_template_name_unique` — `unique, btree (name)`
+- `offer_template_name_unique` — `unique, btree (name) WHERE (archived_at IS NULL)`
 - `offer_template_pkey` — `unique, btree (id)`
 - `uq_offer_template_default` — `unique, btree (locale) WHERE (is_default AND (archived_at IS NULL))`
 
@@ -728,13 +724,9 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
-**Rules**
-
-- `pipeline_name_unique` — `UNIQUE (name)`
-
 **Indexes**
 
-- `pipeline_name_unique` — `unique, btree (name)`
+- `pipeline_name_unique` — `unique, btree (name) WHERE (archived_at IS NULL)`
 - `pipeline_pkey` — `unique, btree (id)`
 - `uq_pipeline_default` — `unique, btree ((true)) WHERE (is_default AND (archived_at IS NULL))`
 

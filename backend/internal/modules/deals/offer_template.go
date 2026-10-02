@@ -82,16 +82,19 @@ func (e *DefaultConflictError) Is(target error) bool { return target == apperror
 // checkTemplateNameConflict pre-checks a name collision within the
 // workspace, excluding the row being written itself (a zero-value
 // excludeID on create matches no real row, since uuidv7 never mints an
-// all-zero id). offer_template_name_unique (0071) is NOT partial — it
-// spans archived rows too, so this check must too: filtering to live
-// rows only would let a false negative slip an INSERT through to the
-// real constraint, leaking a raw 23505 instead of the named 409. An
-// archived template's name is never freed for reuse; the caller renames
-// or truly deletes the row (there is no hard-delete path here).
+// all-zero id).
+//
+// Its WHERE mirrors offer_template_name_unique, which is partial on
+// archived_at IS NULL: this check exists to turn the constraint into a
+// named 409, so a check that saw MORE rows than the index would refuse a
+// name the index allows — an archived template's, which the caller
+// cannot see to rename — and one that saw fewer would slip an insert
+// through to the index and leak a raw 23505. Either way the two have to
+// read the same rows.
 func (s *Store) checkTemplateNameConflict(ctx context.Context, tx pgx.Tx, excludeID ids.OfferTemplateID, name string) error {
 	var existing ids.OfferTemplateID
 	err := tx.QueryRow(ctx,
-		`SELECT id FROM offer_template WHERE name = $1 AND id <> $2`,
+		`SELECT id FROM offer_template WHERE name = $1 AND archived_at IS NULL AND id <> $2`,
 		name, excludeID).Scan(&existing)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil

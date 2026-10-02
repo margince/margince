@@ -110,6 +110,12 @@ func (s *Store) ArchivePipeline(ctx context.Context, id ids.PipelineID, ifVersio
 // move elsewhere first, and putting a pipeline back is not a claim about where
 // new deals should go — that is updatePipeline's to say, and inferring it here
 // would silently demote whichever pipeline took over.
+//
+// A restore can CONFLICT, which an archive cannot: pipeline_name_unique covers the
+// live rows, so the name this pipeline held was free while it was retired and
+// another pipeline may hold it now. That is answered as a conflict naming the
+// holder, because the caller's way out is to rename one of the two and only they
+// can say which.
 func (s *Store) RestorePipeline(ctx context.Context, id ids.PipelineID) (crmcontracts.Pipeline, error) {
 	if err := auth.Require(ctx, "pipeline", principal.ActionUpdate); err != nil {
 		return crmcontracts.Pipeline{}, err
@@ -124,6 +130,9 @@ func (s *Store) RestorePipeline(ctx context.Context, id ids.PipelineID) (crmcont
 		// prior state — that is what separates it from a create — and an image
 		// pair naming nothing would make the trail unable to say when the
 		// pipeline had been retired.
+		if err := nameStillFree(ctx, tx, id); err != nil {
+			return err
+		}
 		var wasArchivedAt time.Time
 		err := tx.QueryRow(ctx,
 			`UPDATE pipeline SET archived_at = NULL
@@ -134,6 +143,12 @@ func (s *Store) RestorePipeline(ctx context.Context, id ids.PipelineID) (crmcont
 			// Not archived: nothing to restore, and no decision to record. The
 			// read below still answers the pipeline, so a retry after a lost
 			// response reads the same as the call that landed.
+		case nameTakenMeanwhile(err):
+			// The lock above holds THIS row; nothing stops another transaction
+			// creating a live pipeline under the same name between the check and
+			// this update. The index settles it, and the caller is owed the same
+			// answer either way — which of the two gets renamed is still theirs.
+			return errPipelineNameTaken
 		case err != nil:
 			return fmt.Errorf("restore pipeline: %w", err)
 		default:
@@ -153,4 +168,46 @@ func (s *Store) RestorePipeline(ctx context.Context, id ids.PipelineID) (crmcont
 		return nil
 	})
 	return out, txErr
+}
+
+// errPipelineNameTaken says a retired pipeline cannot come back under its own name
+// because a live pipeline now holds it.
+var errPipelineNameTaken = fmt.Errorf("%w: a live pipeline already has this name", apperrors.ErrConflict)
+
+// nameStillFree answers whether this pipeline's name is free for it to hold again.
+//
+// Checked rather than left to the index: the index raises 23505, which reaches the
+// caller as a 500 saying nothing, and the caller is the only one who can choose
+// which of the two pipelines gets renamed. Inside the row lock, so the answer cannot
+// go stale between the read and the update.
+//
+// Excluding itself is what keeps the restore idempotent: a pipeline that is not
+// archived is live, so it holds its own name, and without this it would read as its
+// own conflict.
+func nameStillFree(ctx context.Context, tx pgx.Tx, id ids.PipelineID) error {
+	var taken bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM pipeline live
+			 WHERE live.archived_at IS NULL
+			   AND live.id <> $1
+			   AND live.name = (SELECT name FROM pipeline WHERE id = $1)
+		)`, id).Scan(&taken); err != nil {
+		return fmt.Errorf("check whether a restored pipeline's name is free: %w", err)
+	}
+	if taken {
+		return errPipelineNameTaken
+	}
+	return nil
+}
+
+// nameTakenMeanwhile reports the index refusing a restore because the name went to a
+// live pipeline after nameStillFree looked.
+//
+// By the constraint's name rather than the code alone: another unique on this table
+// would otherwise read as this conflict and send the caller to rename a name that was
+// never the problem.
+func nameTakenMeanwhile(err error) bool {
+	constraint, isUnique := storekit.UniqueViolation(err)
+	return isUnique && constraint == "pipeline_name_unique"
 }
