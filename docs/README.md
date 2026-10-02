@@ -92,6 +92,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [work-on-an-issue.md](how-to/work-on-an-issue.md) — check whether an issue is already somebody's before you start it, claim the one you take, hand it back when you stop, and re-derive its ruling from the code before you build any of it.
 - [mint-a-passport.md](how-to/mint-a-passport.md) — issue an agent passport token.
 - [connect-an-mcp-client.md](how-to/connect-an-mcp-client.md) — connect a client to the governed MCP tool surface.
+- [test-the-mcp-surface-end-to-end.md](how-to/test-the-mcp-surface-end-to-end.md) — drive the MCP surface with a real Claude, GPT or Mistral (`make e2e-llm`): pick the assistant and route, give the stack a working search, read a harness stop apart from a finding, publish to the coverage page.
 - [run-the-frontend.md](how-to/run-the-frontend.md) — run the SPA in dev.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md) — connect a mailbox for capture: Gmail OAuth (standing sync + backfill), IMAP app-password, Microsoft Graph OAuth, or Google Calendar — all standing connections.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md) — point the AI lanes at a local Ollama and enrich a company with no cloud key.
