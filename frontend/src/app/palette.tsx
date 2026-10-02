@@ -218,7 +218,9 @@ export function CommandPalette({
 }>) {
   const t = useT();
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(0);
+  // The row the reader moved to with the arrows; null until they do, which
+  // leaves Enter to defaultSelection.
+  const [picked, setPicked] = useState<number | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const overlay = useRef<HTMLDivElement>(null);
 
@@ -243,7 +245,7 @@ export function CommandPalette({
   useEffect(() => {
     if (open) {
       setQuery("");
-      setSelected(0);
+      setPicked(null);
     }
   }, [open]);
 
@@ -263,8 +265,9 @@ export function CommandPalette({
   }, [commands, query]);
 
   // RS-1: live record hits from /search, plus a "see all" row that lands
-  // on the full results screen. Row order: builtin matches, then records,
-  // then see-all, then the Ask-AI row last.
+  // on the full results screen. Row order: builtin matches, then see-all,
+  // then records, so the row Enter takes on a half-typed name is one arrow
+  // above the hits it summarises.
   const search = useSearchCommands(query);
   const seeAll: Command | null = query.trim()
     ? {
@@ -281,9 +284,10 @@ export function CommandPalette({
   // then hunt past every screen whose name happened to match it, so the row sat
   // last on the one journey it exists for. It carries the query when there is
   // one and opens an empty box when there is not; either way it goes nowhere.
-  const rows = [...filtered, ...search.commands, ...(seeAll ? [seeAll] : [])];
+  const rows = [...filtered, ...(seeAll ? [seeAll] : []), ...search.commands];
   const clamp = (index: number) =>
     Math.max(0, Math.min(index, rows.length - 1));
+  const selected = picked ?? defaultSelection(rows, filtered.length, query);
 
   const run = (command: Command) => {
     onClose();
@@ -346,7 +350,7 @@ export function CommandPalette({
             aria-label={t("palette.aria")}
             onChange={(event) => {
               setQuery(event.target.value);
-              setSelected(0);
+              setPicked(null);
             }}
             onKeyDown={(event) => {
               // No Escape arm here: `useDialogFocus` answers it for the whole
@@ -355,10 +359,10 @@ export function CommandPalette({
               // put a reader — did nothing at all.
               if (event.key === "ArrowDown") {
                 event.preventDefault();
-                setSelected((index) => clamp(index + 1));
+                setPicked(clamp(selected + 1));
               } else if (event.key === "ArrowUp") {
                 event.preventDefault();
-                setSelected((index) => clamp(index - 1));
+                setPicked(clamp(selected - 1));
               } else if (event.key === "Enter" && rows[selected]) {
                 run(rows[selected]);
               }
@@ -432,6 +436,25 @@ export function CommandPalette({
       </div>
     </div>
   );
+}
+
+// Where Enter lands before the reader picks a row. A destination the words
+// matched keeps it: typing "pipeline" means going to Deals. A record found by
+// search does not, because half a name is still a search: Enter takes the
+// see-all row, which then leads the list, unless the words name a record whole.
+function defaultSelection(
+  rows: readonly Command[],
+  destinations: number,
+  query: string,
+): number {
+  if (destinations > 0) {
+    return 0;
+  }
+  const needle = query.trim().toLowerCase();
+  const named = rows.findIndex(
+    (row) => row.type === "record" && row.label.toLowerCase() === needle,
+  );
+  return Math.max(named, 0);
 }
 
 // Global ⌘K / Ctrl+K binding (AC-shell-3).

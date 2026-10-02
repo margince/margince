@@ -143,7 +143,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(window.location.hash).toBe("#/deals");
   });
 
-  it("filters by label+subtitle case-insensitively and appends the see-all row last", async () => {
+  it("filters by label+subtitle case-insensitively and puts the see-all row after them", async () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
     await userEvent.type(screen.getByRole("searchbox"), "COMPANY");
     const rows = destinationRows();
