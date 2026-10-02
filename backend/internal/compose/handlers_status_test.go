@@ -23,7 +23,9 @@ func TestGetStatusAnswersAFixedUncachedBody(t *testing.T) {
 	if got := rec.Header().Get("Content-Type"); !strings.HasPrefix(got, "application/json") {
 		t.Fatalf("Content-Type = %q, want application/json", got)
 	}
-	if got := strings.TrimSpace(rec.Body.String()); got != `{"status":"ok"}` {
-		t.Fatalf("body = %s, want exactly {\"status\":\"ok\"}: monitors string-match it", got)
+	// The exact wire bytes, newline included: monitors match on this text, so
+	// the test must see what they see rather than a trimmed copy of it.
+	if got := rec.Body.String(); got != "{\"status\":\"ok\"}\n" {
+		t.Fatalf("body = %q, want exactly %q", got, "{\"status\":\"ok\"}\n")
 	}
 }
