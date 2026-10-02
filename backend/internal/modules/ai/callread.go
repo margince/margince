@@ -164,8 +164,11 @@ type CallListFilter struct {
 func (f CallListFilter) columns() []struct{ column, value string } {
 	var out []struct{ column, value string }
 	for _, c := range []struct{ column, value string }{
-		{"c.task", f.Task}, {"c.provider", f.Provider}, {"c.model_id", f.Model},
-		{"c.served_provider", f.ServedProvider}, {"c.tier", f.Tier},
+		{"c.task", f.Task},
+		{"c.provider", f.Provider},
+		{"c.model_id", f.Model},
+		{"c.served_provider", f.ServedProvider},
+		{"c.tier", f.Tier},
 	} {
 		if c.value != "" {
 			out = append(out, c)

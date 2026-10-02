@@ -333,10 +333,11 @@ func validateUpstreamPreferences(path string, binding ProviderConfig) error {
 	return binding.Routing.Validate(path)
 }
 
-// TierRoutingPath and EmbeddingsRoutingPath address a lane's routing in the
-// routing document, the root every fault path below them hangs from.
+// TierRoutingPath addresses a tier's routing in the routing document, the root
+// every fault path below it hangs from.
 func TierRoutingPath(tier Tier) string { return "tiers." + string(tier) + ".routing" }
 
+// EmbeddingsRoutingPath is TierRoutingPath for the embeddings lane.
 const EmbeddingsRoutingPath = "embeddings.routing"
 
 // validateEmbeddingsRouting admits on the embeddings lane only the connection

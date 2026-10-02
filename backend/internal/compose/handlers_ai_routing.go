@@ -273,13 +273,6 @@ func optionalInt(v int) *int {
 	return &v
 }
 
-func optionalFloat(v float64) *float64 {
-	if v == 0 {
-		return nil
-	}
-	return &v
-}
-
 // ListAvailableModels asks one vendor what it serves, for the form that binds a
 // lane to it.
 //

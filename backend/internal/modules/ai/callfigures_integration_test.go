@@ -35,15 +35,21 @@ func seedFigures(t *testing.T) figuresFixture {
 	db := env.dbFor(ws)
 	meter := NewCallMeter(db)
 	task := Task("figures_" + ids.NewV7().String()[:8])
-	env.insertRate(ctx, t, ModelRate{Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b",
-		InputPerMTokMicroUSD: 1_000_000, OutputPerMTokMicroUSD: 2_000_000, EffectiveDate: time.Now().AddDate(0, 0, -1)})
+	env.insertRate(ctx, t, ModelRate{
+		Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b",
+		InputPerMTokMicroUSD: 1_000_000, OutputPerMTokMicroUSD: 2_000_000, EffectiveDate: time.Now().AddDate(0, 0, -1),
+	})
 	decision := func(sentinel string, terminal bool) Call {
-		return Call{Kind: callKindDecision, Task: task, Tier: TierDecideLane, Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13",
-			RequestFingerprint: "fp-" + ids.NewV7().String(), ErrorSentinel: sentinel, IsTerminal: terminal, LatencyMS: 900}
+		return Call{
+			Kind: callKindDecision, Task: task, Tier: TierDecideLane, Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13",
+			RequestFingerprint: "fp-" + ids.NewV7().String(), ErrorSentinel: sentinel, IsTerminal: terminal, LatencyMS: 900,
+		}
 	}
 	ladder := func(sentinel, reason string) Call {
-		c := Call{Kind: callKindCompletion, Task: task, Tier: TierCheapCloud, Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b",
-			RequestFingerprint: "fp-" + ids.NewV7().String(), ErrorSentinel: sentinel, AttemptReason: reason, Attempt: 2, IsTerminal: true, LatencyMS: 4000}
+		c := Call{
+			Kind: callKindCompletion, Task: task, Tier: TierCheapCloud, Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b",
+			RequestFingerprint: "fp-" + ids.NewV7().String(), ErrorSentinel: sentinel, AttemptReason: reason, Attempt: 2, IsTerminal: true, LatencyMS: 4000,
+		}
 		if sentinel == "" {
 			c.TokensIn, c.TokensOut = 1000, 500
 		}
@@ -53,7 +59,8 @@ func seedFigures(t *testing.T) figuresFixture {
 	for range 8 {
 		calls = append(calls, []Call{decision("", true)})
 	}
-	calls = append(calls,
+	calls = append(
+		calls,
 		[]Call{decision(sentinelTimeout, false), ladder("", attemptReasonDecisionError)},
 		[]Call{decision(sentinelTimeout, false), ladder("provider_error", attemptReasonDecisionError)},
 	)
@@ -69,8 +76,10 @@ func seedFigures(t *testing.T) figuresFixture {
 			t.Fatal(err)
 		}
 	}
-	if err := meter.Record(ctx, []Call{{LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: task,
-		Tier: TierCheapCloud, Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b", RequestFingerprint: "fp-cached", CacheHit: true}}); err != nil {
+	if err := meter.Record(ctx, []Call{{
+		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: task,
+		Tier: TierCheapCloud, Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b", RequestFingerprint: "fp-cached", CacheHit: true,
+	}}); err != nil {
 		t.Fatal(err)
 	}
 	return figuresFixture{reader: NewCallReadStore(db), ctx: diagnosticsReader(ws), task: task}
@@ -80,7 +89,6 @@ func TestCallStatsCountsFailuresTimeoutsAndCost(t *testing.T) {
 	f := seedFigures(t)
 
 	rows, err := f.reader.CallStats(f.ctx, CallStatsQuery{Window: 7 * 24 * time.Hour, GroupBy: GroupByProvider, Filter: CallStatsFilter{Task: f.task}})
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +113,6 @@ func TestTaskFlowCountsTheUnansweredLogicalCall(t *testing.T) {
 	f := seedFigures(t)
 
 	flow, err := f.reader.TaskFlow(f.ctx, f.task, 7*24*time.Hour)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +146,6 @@ func TestTheCallListNarrowsToOneProviderAndTier(t *testing.T) {
 	f := seedFigures(t)
 
 	page, err := f.reader.ListCalls(f.ctx, nil, nil, CallListFilter{Task: string(f.task), Provider: providerOpenAICompatible, Tier: string(TierCheapCloud)})
-
 	if err != nil {
 		t.Fatal(err)
 	}

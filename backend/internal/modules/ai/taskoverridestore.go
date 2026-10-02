@@ -136,8 +136,10 @@ func (o TaskOverride) Wire() crmcontracts.AiTaskOverride {
 // rather than read as that, since neither is a value the contract allows.
 func TaskOverridesFromWire(v crmcontracts.AiTaskOverrides) (TaskOverrides, error) {
 	if v == nil {
-		return nil, settings.InvalidValue{Setting: TaskOverridesKey, Code: settings.CodeInvalidValue,
-			Reason: "must be an object of task overrides; send {} to clear every task"}
+		return nil, settings.InvalidValue{
+			Setting: TaskOverridesKey, Code: settings.CodeInvalidValue,
+			Reason: "must be an object of task overrides; send {} to clear every task",
+		}
 	}
 	out := TaskOverrides{}
 	var errs []error

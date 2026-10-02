@@ -100,11 +100,13 @@ func TestTheEmbeddingsLaneTakesOnlyHostSelection(t *testing.T) {
 // Each key the lane does not take is refused on its own path, so the editor
 // marks the line it was written on.
 func TestAnEmbeddingsRefusalNamesEachKeyByItsPath(t *testing.T) {
-	binding := ProviderConfig{Provider: providerOpenAICompatible, Model: "e", BaseURL: "https://openrouter.ai/api",
+	binding := ProviderConfig{
+		Provider: providerOpenAICompatible, Model: "e", BaseURL: "https://openrouter.ai/api",
 		Routing: &OpenRouterRouting{
 			Provider:  OpenRouterProvider{Sort: &OpenRouterSort{By: SortPrice}, Only: []string{"mistral"}},
 			Reasoning: &OpenRouterReasoning{Effort: "low"},
-		}}
+		},
+	}
 	var faults routingFaults
 	if err := validateEmbeddingsRouting(binding); !errors.As(err, &faults) {
 		t.Fatalf("err = %v, want path faults", err)

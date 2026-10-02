@@ -48,7 +48,24 @@ func (cfg RoutingConfig) sortedTiers() []Tier {
 // connectionKeys are the `provider` keys that say WHICH hosts may read a
 // request. They live on the connection, so every tier on it is served under
 // the same privacy and no tier can loosen it.
-var connectionKeys = []string{"only", "ignore", "allow_fallbacks", "zdr", "data_collection", "enforce_distillable_text"}
+// The connection keys and the host lists as OpenRouter spells them, and two words the decoder
+// reads by: the provider block's name and JSON's null.
+const (
+	keyOnly               = "only"
+	keyIgnore             = "ignore"
+	keyAllowFallbacks     = "allow_fallbacks"
+	keyZDR                = "zdr"
+	keyDataCollection     = "data_collection"
+	keyEnforceDistillable = "enforce_distillable_text"
+	keyOrder              = "order"
+	keyQuantizations      = "quantizations"
+	keyRequireParameters  = "require_parameters"
+	keySort               = "sort"
+	blockProvider         = "provider"
+	jsonNull              = "null"
+)
+
+var connectionKeys = []string{keyOnly, keyIgnore, keyAllowFallbacks, keyZDR, keyDataCollection, keyEnforceDistillable}
 
 // clone copies the preferences so a lane never aliases its provider's block or a
 // sibling lane's.

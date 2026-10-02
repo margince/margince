@@ -127,8 +127,8 @@ func refuseConnectionKeysOnTier(path string, pins *OpenRouterRouting) error {
 	// and `only: []` on a tier is a connection key all the same.
 	p := pins.Provider
 	written := map[string]bool{
-		"only": p.Only != nil, "ignore": p.Ignore != nil, "allow_fallbacks": p.AllowFallbacks != nil,
-		"zdr": p.ZDR != nil, "data_collection": p.DataCollection != "", "enforce_distillable_text": p.EnforceDistillableText != nil,
+		keyOnly: p.Only != nil, keyIgnore: p.Ignore != nil, keyAllowFallbacks: p.AllowFallbacks != nil,
+		keyZDR: p.ZDR != nil, keyDataCollection: p.DataCollection != "", keyEnforceDistillable: p.EnforceDistillableText != nil,
 	}
 	var faults []error
 	for _, key := range connectionKeys {

@@ -20,7 +20,7 @@ import (
 // shape, whose sort and thresholds are each a string-or-object union.
 func routingToWire(r *ai.OpenRouterRouting) (*crmcontracts.AiOpenRouterRouting, error) {
 	if r == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // nil is "the product default", a value
 	}
 	raw, err := r.RequestJSON()
 	if err != nil {
@@ -38,7 +38,7 @@ func routingToWire(r *ai.OpenRouterRouting) (*crmcontracts.AiOpenRouterRouting, 
 // path; without it the decoded contract value is read.
 func routingFromWire(path string, r *crmcontracts.AiOpenRouterRouting, raw json.RawMessage) (*ai.OpenRouterRouting, error) {
 	if r == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // nil is "the product default", a value
 	}
 	if raw == nil {
 		var err error

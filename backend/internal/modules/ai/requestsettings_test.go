@@ -308,8 +308,10 @@ func TestTwoTiersRecordTheirOwnWireBlocks(t *testing.T) {
 	fcs := &fakeCallStore{}
 	r := twoRungRouter(t, stubClient{err: errors.New("down")}, stubClient{resp: model.Response{Text: "ok", InputTokens: 1, OutputTokens: 1}}, fcs)
 	broker := func(sort string) ProviderConfig {
-		return ProviderConfig{Provider: providerOpenAICompatible, BaseURL: "https://openrouter.ai/api", Model: "m",
-			Routing: &OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: sort}}}}
+		return ProviderConfig{
+			Provider: providerOpenAICompatible, BaseURL: "https://openrouter.ai/api", Model: "m",
+			Routing: &OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: sort}}},
+		}
 	}
 	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierLocalSmall: broker(SortThroughput), TierCheapCloud: broker(SortLatency)}}
 	r.install(r.binding().withConfig(cfg, nil))
@@ -435,8 +437,10 @@ func TestAnEmptyPriceCapIsUnsetAndATokenBudgetTakesNoFloor(t *testing.T) {
 		t.Fatalf("max_price {} = %+v, %v; want unset", r, err)
 	}
 	budget := 2048
-	binding := ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://openrouter.ai/api",
-		Routing: &OpenRouterRouting{Reasoning: &OpenRouterReasoning{MaxTokens: &budget}}}
+	binding := ProviderConfig{
+		Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://openrouter.ai/api",
+		Routing: &OpenRouterRouting{Reasoning: &OpenRouterReasoning{MaxTokens: &budget}},
+	}
 	if openRouterTakesThinkingFloor(binding) {
 		t.Error("a binding that sends its own reasoning budget was reported as taking the site floor")
 	}

@@ -33,8 +33,8 @@ func (r *OpenRouterRouting) Validate(path string) error {
 
 func (p OpenRouterProvider) validate(path string) error {
 	errs := []error{
-		oneOf(joinPath(path, "data_collection"), p.DataCollection, dataCollections),
-		p.Sort.validate(joinPath(path, "sort")),
+		oneOf(joinPath(path, keyDataCollection), p.DataCollection, dataCollections),
+		p.Sort.validate(joinPath(path, keySort)),
 		p.MaxPrice.validate(joinPath(path, "max_price")),
 		p.PreferredMinThroughput.validate(joinPath(path, "preferred_min_throughput")),
 		p.PreferredMaxLatency.validate(joinPath(path, "preferred_max_latency")),
@@ -45,7 +45,7 @@ func (p OpenRouterProvider) validate(path string) error {
 	for _, list := range []struct {
 		key     string
 		entries []string
-	}{{"order", p.Order}, {"only", p.Only}, {"ignore", p.Ignore}, {"quantizations", p.Quantizations}} {
+	}{{keyOrder, p.Order}, {keyOnly, p.Only}, {keyIgnore, p.Ignore}, {keyQuantizations, p.Quantizations}} {
 		errs = append(errs, refuseEmptyOrRepeated(joinPath(path, list.key), list.entries))
 	}
 	for i, q := range p.Quantizations {

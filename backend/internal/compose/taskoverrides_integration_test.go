@@ -27,9 +27,9 @@ func taskOverrideHandlers(e *integration.Env) aiRoutingHandlers {
 	return aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), config.Static(nil))}
 }
 
-func overrideSeat(e *integration.Env, update bool) context.Context {
+func overrideSeat(e *integration.Env) context.Context {
 	return e.As(e.AdminUser, nil, principal.Permissions{
-		Objects:  map[string]principal.ObjectGrant{"ai_routing": {Read: true, Update: update}, "ai_budget": {Read: true}, "ai_diagnostics": {Read: true}},
+		Objects:  map[string]principal.ObjectGrant{"ai_routing": {Read: true, Update: true}, "ai_budget": {Read: true}, "ai_diagnostics": {Read: true}},
 		RowScope: principal.RowScopeAll,
 	})
 }
@@ -45,7 +45,7 @@ func countAudit(t *testing.T, e *integration.Env) int {
 
 func TestTaskOverridesSaveUnderTheirOwnETagAndAuditTheWrite(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := overrideSeat(e, true)
+	ctx := overrideSeat(e)
 	h := taskOverrideHandlers(e)
 	first := getTaskOverrides(ctx, h)
 	if first.Code != http.StatusOK || strings.TrimSpace(first.Body.String()) != "{}" {
@@ -73,7 +73,7 @@ func TestTaskOverridesSaveUnderTheirOwnETagAndAuditTheWrite(t *testing.T) {
 
 func TestATaskOverrideOutOfBoundsIsRefusedByItsPath(t *testing.T) {
 	e := integration.Setup(t)
-	put := putTaskOverrides(overrideSeat(e, true), taskOverrideHandlers(e), `{"capture_classify":{"decision_timeout_ms":15000,"attempt_timeout_ms":400000}}`, "")
+	put := putTaskOverrides(overrideSeat(e), taskOverrideHandlers(e), `{"capture_classify":{"decision_timeout_ms":15000,"attempt_timeout_ms":400000}}`, "")
 	if put.Code != http.StatusUnprocessableEntity ||
 		!strings.Contains(put.Body.String(), "capture_classify.decision_timeout_ms") ||
 		!strings.Contains(put.Body.String(), "capture_classify.attempt_timeout_ms") {
@@ -83,7 +83,7 @@ func TestATaskOverrideOutOfBoundsIsRefusedByItsPath(t *testing.T) {
 
 func TestTheTaskOverridePreviewWritesNothingAndNamesStaleTasks(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := overrideSeat(e, true)
+	ctx := overrideSeat(e)
 	h := taskOverrideHandlers(e)
 	audited := countAudit(t, e)
 	rec := httptest.NewRecorder()
@@ -111,14 +111,13 @@ func TestTheTaskOverridePreviewWritesNothingAndNamesStaleTasks(t *testing.T) {
 
 func TestTheStatusMarksATaskWithAnOverride(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := overrideSeat(e, true)
+	ctx := overrideSeat(e)
 	if rec := putTaskOverrides(ctx, taskOverrideHandlers(e), `{"cold_start":{"thinking":"high"}}`, ""); rec.Code != http.StatusOK {
 		t.Fatalf("PUT = %d %s", rec.Code, rec.Body)
 	}
 	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
 
 	status, err := store.ReadStatus(ctx)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +137,7 @@ func TestTheStatusMarksATaskWithAnOverride(t *testing.T) {
 // store the handler wrote with.
 func TestASavedTaskOverrideReachesARunningRouter(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := overrideSeat(e, true)
+	ctx := overrideSeat(e)
 	w, router := watcherServing(t, routingFixture(t, "serving"))
 	w.pool = e.Pool
 	before := router.TaskOverridesRevision()

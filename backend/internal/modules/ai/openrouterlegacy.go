@@ -21,8 +21,8 @@ import (
 // MARGINCE_AICERT_UPSTREAM still carry it, so it is read at every door and
 // written nested on the next save.
 var legacyRoutingKeys = []string{
-	"only", "ignore", "quantizations", "sort", "require_parameters",
-	"allow_fallbacks", "preferred_max_latency_p90", "reasoning_effort",
+	keyOnly, keyIgnore, keyQuantizations, keySort, keyRequireParameters,
+	keyAllowFallbacks, "preferred_max_latency_p90", "reasoning_effort",
 }
 
 // UnmarshalJSON reads either spelling. Unknown keys are refused at every depth
@@ -121,7 +121,7 @@ func DecodeRouting(path string, data []byte) (*OpenRouterRouting, error) {
 		switch {
 		case slices.Contains(legacyRoutingKeys, key):
 			flat = append(flat, key)
-		case key == "provider" || key == "reasoning":
+		case key == blockProvider || key == "reasoning":
 			nested = append(nested, key)
 		default:
 			return nil, unknownKey(joinPath(path, key), "provider, reasoning")
@@ -135,8 +135,8 @@ func DecodeRouting(path string, data []byte) (*OpenRouterRouting, error) {
 		return decodeFlatRouting(path, fields)
 	}
 	out := &OpenRouterRouting{}
-	if raw, ok := fields["provider"]; ok {
-		if out.Provider, err = decodeProvider(joinPath(path, "provider"), raw); err != nil {
+	if raw, ok := fields[blockProvider]; ok {
+		if out.Provider, err = decodeProvider(joinPath(path, blockProvider), raw); err != nil {
 			return nil, err
 		}
 	}
@@ -198,8 +198,8 @@ func decodeFlatRouting(path string, fields map[string]json.RawMessage) (*OpenRou
 // providerKeys lists the keys the `provider` object takes, in the order the
 // refusal for an unknown one names them.
 var providerKeys = []string{
-	"order", "only", "ignore", "allow_fallbacks", "require_parameters", "data_collection", "zdr",
-	"enforce_distillable_text", "quantizations", "sort", "max_price", "preferred_min_throughput", "preferred_max_latency",
+	keyOrder, keyOnly, keyIgnore, keyAllowFallbacks, keyRequireParameters, keyDataCollection, keyZDR,
+	keyEnforceDistillable, keyQuantizations, keySort, "max_price", "preferred_min_throughput", "preferred_max_latency",
 }
 
 func decodeProvider(path string, data []byte) (OpenRouterProvider, error) {
@@ -209,17 +209,17 @@ func decodeProvider(path string, data []byte) (OpenRouterProvider, error) {
 	}
 	var p OpenRouterProvider
 	decoders := map[string]func(string, json.RawMessage) error{
-		"order":                    func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Order) },
-		"only":                     func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Only) },
-		"ignore":                   func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Ignore) },
-		"allow_fallbacks":          func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.AllowFallbacks) },
-		"require_parameters":       func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.RequireParameters) },
-		"data_collection":          func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.DataCollection) },
-		"zdr":                      func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.ZDR) },
-		"enforce_distillable_text": func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.EnforceDistillableText) },
-		"quantizations":            func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Quantizations) },
-		"sort":                     func(at string, raw json.RawMessage) (err error) { p.Sort, err = decodeSort(at, raw); return err },
-		"max_price":                func(at string, raw json.RawMessage) (err error) { p.MaxPrice, err = decodePrice(at, raw); return err },
+		keyOrder:              func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Order) },
+		keyOnly:               func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Only) },
+		keyIgnore:             func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Ignore) },
+		keyAllowFallbacks:     func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.AllowFallbacks) },
+		keyRequireParameters:  func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.RequireParameters) },
+		keyDataCollection:     func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.DataCollection) },
+		keyZDR:                func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.ZDR) },
+		keyEnforceDistillable: func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.EnforceDistillableText) },
+		keyQuantizations:      func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Quantizations) },
+		keySort:               func(at string, raw json.RawMessage) (err error) { p.Sort, err = decodeSort(at, raw); return err },
+		"max_price":           func(at string, raw json.RawMessage) (err error) { p.MaxPrice, err = decodePrice(at, raw); return err },
 		"preferred_min_throughput": func(at string, raw json.RawMessage) (err error) {
 			p.PreferredMinThroughput, err = decodePctile(at, raw)
 			return err
@@ -238,7 +238,7 @@ func decodeProvider(path string, data []byte) (OpenRouterProvider, error) {
 		}
 		// null states no preference, as an absent key does, for every field
 		// alike: a threshold must not read it as zero.
-		if string(fields[key]) == "null" {
+		if string(fields[key]) == jsonNull {
 			continue
 		}
 		errs = append(errs, decode(joinPath(path, key), fields[key]))
@@ -276,7 +276,7 @@ func decodePrice(path string, data []byte) (*OpenRouterPrice, error) {
 	}
 	// `max_price: {}` caps nothing; kept, it would send an empty object.
 	if p == (OpenRouterPrice{}) {
-		return nil, nil
+		return nil, nil //nolint:nilnil // nil is "no cap", a value, not a failure
 	}
 	return &p, nil
 }
@@ -367,7 +367,7 @@ func yamlNodeJSON(node *yaml.Node) (json.RawMessage, error) {
 	switch node.Kind {
 	case yaml.DocumentNode:
 		if len(node.Content) == 0 {
-			return json.RawMessage("null"), nil
+			return json.RawMessage(jsonNull), nil
 		}
 		return yamlNodeJSON(node.Content[0])
 	case yaml.AliasNode:
@@ -404,7 +404,7 @@ func yamlNodeJSON(node *yaml.Node) (json.RawMessage, error) {
 func yamlScalarJSON(node *yaml.Node) (json.RawMessage, error) {
 	switch node.ShortTag() {
 	case "!!null":
-		return json.RawMessage("null"), nil
+		return json.RawMessage(jsonNull), nil
 	case "!!bool":
 		var b bool
 		if err := node.Decode(&b); err != nil {
