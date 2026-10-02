@@ -127,7 +127,7 @@ Each Margince screen sits in one place in the sidebar, and a few are reached ano
 ### How do I search for something?
 To search Margince, click the search field **Search or ask Margince** in the top bar, or press ⌘K (Ctrl+K), and start typing.
 1. Type a name, company, deal or any other word. Matches appear as you type, a few of each kind, under headings such as **Companies**, **Contacts** and **Emails**.
-2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page. Pressing Enter does the same: it opens a screen or action the words name, a record whose whole name you typed, and the **Search results** page for anything else, so Enter on half a name shows every match rather than the first.
+2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page. Enter opens the row you moved to with the arrow keys. If you have not moved, Enter opens a screen or action that matches what you typed, or else a record whose whole name you typed, or else the **Search results** page. So Enter on half a name shows the results instead of opening the first one.
 3. On that page, **Show all** beside a kind, or **Show only**, lists every match of that kind.
 If nothing matches, the palette says **No matches.** If record search fails, it says **Search failed** and the screen commands still work.
 Also called: find, look up, global search.
