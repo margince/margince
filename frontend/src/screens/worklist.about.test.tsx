@@ -190,7 +190,7 @@ it("claims no moments for an account whose activity was withheld", async () => {
 });
 
 // The pair belongs to whoever a reply would go to, so a row naming both a
-// person and their account says when that person last wrote, not the account.
+// contact and their account says when the contact last wrote, not the account.
 it("prefers the contact's moments to the account's on a row naming both", async () => {
   stub(
     accountTask(
