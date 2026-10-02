@@ -6,85 +6,87 @@ package contacts
 import (
 	"bytes"
 	"context"
-	"image"
-	"image/color"
-	"image/png"
+	"errors"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"strconv"
-	"strings"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// letterboxedWordmark is a 4:1 wordmark centred in a square transparent
-// canvas — the shape older uploads were stored in.
-func letterboxedWordmark(t *testing.T) []byte {
-	t.Helper()
-	wide := image.NewNRGBA(image.Rect(0, 0, 32, 8))
-	for y := range 8 {
-		for x := range 32 {
-			wide.SetNRGBA(x, y, color.NRGBA{R: 255, G: 90, A: 255})
-		}
-	}
-	square, err := imagenorm.SquarePNG(wide, 32)
-	if err != nil {
-		t.Fatalf("encoding a letterboxed wordmark: %v", err)
-	}
-	return square
-}
-
-func storedObject(t *testing.T, blob blobstore.Store, key string) []byte {
-	t.Helper()
-	rc, _, err := blob.Get(context.Background(), key)
-	if err != nil {
-		t.Fatalf("reading %q back: %v", key, err)
-	}
-	stored, err := io.ReadAll(rc)
-	if cerr := rc.Close(); cerr != nil {
-		t.Fatalf("closing %q: %v", key, cerr)
-	}
-	if err != nil {
-		t.Fatalf("reading %q's bytes: %v", key, err)
-	}
-	return stored
-}
-
-func TestPutLogoStoresTheTrimmedMarkUnderAKeyThatSaysSo(t *testing.T) {
-	blob := blobstore.NewMemory()
-	key, err := PutLogo(context.Background(), blob, "ws/company_logo/c/1", letterboxedWordmark(t))
-	if err != nil {
-		t.Fatalf("PutLogo: %v", err)
-	}
-	if !storedTrimmed(key) || !strings.HasPrefix(key, "ws/company_logo/c/1") {
-		t.Fatalf("stored at %q, want the base key marked as trimmed", key)
-	}
-	stored := storedObject(t, blob, key)
-	decoded, err := png.Decode(bytes.NewReader(stored))
-	if err != nil {
-		t.Fatalf("the stored object is not a PNG: %v", err)
-	}
-	if bounds := decoded.Bounds(); bounds.Dx() != 32 || bounds.Dy() != 8 {
-		t.Fatalf("stored mark is %v, want the 32x8 wordmark without its canvas", bounds)
-	}
-	again, err := imagenorm.TrimTransparentPNG(stored)
-	if err != nil {
-		t.Fatalf("trimming the stored mark: %v", err)
-	}
-	if !bytes.Equal(again, stored) {
-		t.Fatal("a second trim changed the stored bytes; the serve path relies on them being final")
-	}
-}
-
+// Refused at the trim, which comes before the intent is recorded and before the
+// bytes are put: the error is the decode's own, and the store holds nothing.
 func TestPutLogoRefusesBytesThatAreNotAnImageAndStoresNothing(t *testing.T) {
 	blob := blobstore.NewMemory()
-	key, err := PutLogo(context.Background(), blob, "ws/company_logo/c/2", []byte("not a png"))
-	if err == nil {
-		t.Fatalf("PutLogo stored undecodable bytes at %q", key)
+	ctx := principal.SystemActing(context.Background(), "deepread")
+	const base = "ws/company_logo/c/2"
+	key, err := new(Store).PutLogo(ctx, blob, base, []byte("not a png"))
+	if !errors.Is(err, imagenorm.ErrUnsupported) {
+		t.Fatalf("PutLogo answered %v, want the bytes refused as no image", err)
 	}
 	if key != "" {
 		t.Fatalf("a refused trim answered key %q, want none: nothing was written to collect", key)
+	}
+	if _, _, err := blob.Get(ctx, base+trimmedLogoSuffix); !errors.Is(err, blobstore.ErrNotFound) {
+		t.Fatalf("a refused trim left an object behind: %v", err)
+	}
+}
+
+// countingBlobs reports how many bytes the handler read out of the store.
+type countingBlobs struct {
+	blobstore.Store
+	read int64
+}
+
+func (c *countingBlobs) Get(ctx context.Context, key string) (io.ReadCloser, blobstore.Object, error) {
+	rc, object, err := c.Store.Get(ctx, key)
+	if err != nil {
+		return nil, object, err
+	}
+	return countedReader{ReadCloser: rc, read: &c.read}, object, nil
+}
+
+type countedReader struct {
+	io.ReadCloser
+	read *int64
+}
+
+func (r countedReader) Read(p []byte) (int, error) {
+	n, err := r.ReadCloser.Read(p)
+	*r.read += int64(n)
+	return n, err
+}
+
+func TestALegacyMarkLargerThanAnyLogoWriterStoresIsRefusedNotBuffered(t *testing.T) {
+	blob := &countingBlobs{Store: blobstore.NewMemory()}
+	const key = "ws/company_logo/c/legacy.png"
+	oversized := bytes.Repeat([]byte{0}, 4*MaxLogoBytes)
+	if err := blob.Put(context.Background(), key, bytes.NewReader(oversized), int64(len(oversized)), imagenorm.ContentType); err != nil {
+		t.Fatalf("seeding the oversized object: %v", err)
+	}
+	handlers := NewHandlers(nil).WithBlobstore(blob)
+	id := crmcontracts.Id(ids.NewV7())
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+ids.UUID(id).String()+"/logo", nil)
+	handlers.streamLogoKey(rec, req, id, LogoWide, key, "GetCompanyLogo", logoCacheControl, false)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("GET an oversized legacy logo = %d, want 500", rec.Code)
+	}
+	if got := rec.Header().Get("Content-Type"); got == imagenorm.ContentType {
+		t.Fatal("an oversized object was answered as a logo")
+	}
+	// One byte past the cap tells an oversized object from one that fits.
+	if blob.read > MaxLogoBytes+1 {
+		t.Fatalf("the handler read %d bytes of an oversized object, want at most %d: it buffered past the cap",
+			blob.read, MaxLogoBytes+1)
 	}
 }
 

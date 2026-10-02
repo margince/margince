@@ -72,8 +72,29 @@ Peer of the outbox: an event announces something happened, a job asks for work t
 
 ### `platform/blobstore` — object bytes
 DB row stays system-of-record; the store holds opaque bytes at a workspace-prefixed key.
-- `type Store interface { Put; Get; Delete; Health }`, `WorkspaceKey(ws, kind, id)`, `NewMemory()`, `New(ctx, cfg)`, `FromEnv(ctx)`, `ErrNotFound`.
+- `type Store interface { Put; Get; Delete; DeletePrefix; Health }`, `WorkspaceKey(ws, kind, id)`, `Digest(r)`, `NewMemory()`, `New(ctx, cfg)`, `FromEnv(ctx)`, `ErrNotFound`, `ErrInvalidPrefix`.
+- `DeletePrefix` takes a non-empty prefix ending in `/` and refuses any other, so a sweep cannot reach a sibling tenant.
 - **Reach for it when:** persisting/fetching binary blobs tied to an entity (attachments, logos).
+
+### `platform/storedobject` — the intent ledger behind every blob write
+Every writer puts the bytes before the row, so a failed row transaction leaves an object nothing names
+and no erasure can reach. The ledger is how that object is found again.
+- `Record(ctx, db, key)` — on its own transaction, BEFORE the put; `Clear(ctx, tx, key)` — on the
+  transaction that writes the referencing row. Both answer `ErrExpired` for a key the reap has
+  condemned, so nothing starts naming bytes that are being deleted.
+- `Claim(ctx, db, key)` — for a writer whose row follows the put after an open-ended wait (an import
+  source being mapped): restarts the grace before the bytes are read, and answers `ErrExpired` (a
+  not-found) for a key the reap has condemned.
+- `Reference{Kind, Columns []Column{Table, Name}, Grace}` — declared by the module that owns the
+  referencing table (`<module>.StoredObjectReference()`) and collected in `compose/jobs_storedobject.go`;
+  `gates/storedobjectcolumns_test.go` holds every key-shaped column in the schema to a declaration.
+- `NewLedger(db, refs...)`, `Ledger.Orphans(ctx, now, limit)`, `Ledger.Condemn(ctx, now, key)`,
+  `Ledger.Retire(ctx, key)` — the reap's system-only view: a key of an undeclared kind is never listed,
+  and one named by any declared column is never listed either. Condemn re-checks one key under its row
+  lock and stamps `reaping_since` before the bytes are deleted outside any transaction; Retire removes
+  only a condemned key.
+- **Reach for it when:** adding a writer that stores bytes under `WorkspaceKey` — record the key, clear it
+  with the row, and declare the kind's columns.
 
 ### `platform/keyvault` — secret material
 A domain row references an opaque, workspace-scoped `Ref`; the vault holds the secret bytes. Plaintext/root key never reach a log.

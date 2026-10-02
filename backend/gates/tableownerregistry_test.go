@@ -224,14 +224,10 @@ var tableOwners = map[string]string{
 	"linkedin_account":    "internal/modules/contacts",
 	"linkedin_connection": "internal/modules/contacts",
 	"attachment":          "internal/modules/activities",
-	// The intent ledger beside it: a key is provisional from before the bytes
-	// are stored until the attachment row that speaks for them commits, so it
-	// is written by exactly the module that writes those rows.
-	"stored_object_intent": "internal/modules/activities",
-	"deal_document_hide":   "internal/modules/activities",
-	"meeting_proposal":     "internal/modules/activities",
-	"meeting_invitation":   "internal/modules/activities",
-	"booking_page":         "internal/modules/activities",
+	"deal_document_hide":  "internal/modules/activities",
+	"meeting_proposal":    "internal/modules/activities",
+	"meeting_invitation":  "internal/modules/activities",
+	"booking_page":        "internal/modules/activities",
 	// approvals (signing_key backs the approval-token JWS; the autonomy policy
 	// is what each rep has decided about a KIND of proposal, so it belongs to
 	// the module that owns the kinds and records the decisions it counts)
@@ -324,6 +320,10 @@ var tableOwners = map[string]string{
 	// the one thing this table exists to be. platform/extsecrets is
 	// therefore a walked root below, so the ownership really is enforced.
 	"extension_secret": "internal/platform/extsecrets",
+	// The intent ledger: a key is provisional from before its bytes are stored
+	// until the row that names them commits. Owned by the platform mechanism
+	// because every module that stores bytes writes it, through one package.
+	"stored_object_intent": "internal/platform/storedobject",
 	// search
 	"embedding":           "internal/modules/search",
 	"embed_store_binding": "internal/modules/search",

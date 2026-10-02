@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/storedobject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -42,8 +43,8 @@ const (
 	// truncated read that imports half a customer's estate and reports success.
 	importSpillBytes = 1 << 20
 	// importBlobKind namespaces uploaded sources inside the workspace's blob
-	// prefix, beside attachments and logos.
-	importBlobKind = "import"
+	// prefix. Migration declares it beside the column the reap reads it with.
+	importBlobKind = migration.ImportSourceObjectKind
 	// importSourceProvenance is the `source` every run row carries: this
 	// surface, not the connector, which lives in its own column.
 	importSourceProvenance = "import_api"
@@ -116,6 +117,8 @@ func (h importHandlers) discardSource(ctx context.Context, ref string) error {
 	if err := h.ownsSource(ctx, ref); err != nil {
 		return err
 	}
+	// The intent stays: the reap's delete of an absent object is a no-op, and
+	// it retires the key only after that delete, never before.
 	return h.blobs.Delete(ctx, ref)
 }
 
@@ -144,6 +147,11 @@ func (h importHandlers) profileAndStore(
 			"no workspace is bound to this request: %w", apperrors.ErrPermissionDenied)
 	}
 	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), importBlobKind, ids.NewV7().String())
+	// Provisional until a staged run names it: an upload nobody maps is an
+	// orphan the reap collects after the import kind's grace.
+	if err := storedobject.Record(ctx, h.db, key); err != nil {
+		return crmcontracts.ImportSourceProfile{}, err
+	}
 	if err := h.blobs.Put(ctx, key, bytes.NewReader(body), int64(len(body)), "text/csv"); err != nil {
 		return crmcontracts.ImportSourceProfile{}, fmt.Errorf("storing the import source: %w", err)
 	}
@@ -216,6 +224,12 @@ func (h importHandlers) stageRun(
 		return crmcontracts.ImportRun{}, err
 	}
 
+	// Claimed BEFORE the bytes are read: the source has waited on somebody for
+	// as long as mapping took, and a reap that condemned it first must refuse
+	// this run rather than have it read bytes the reap is about to delete.
+	if err := storedobject.Claim(ctx, h.db, req.SourceRef); err != nil {
+		return crmcontracts.ImportRun{}, err
+	}
 	source, err := checkedSource(ctx, h.blobs, req.SourceRef, mapping)
 	if err != nil {
 		return crmcontracts.ImportRun{}, err

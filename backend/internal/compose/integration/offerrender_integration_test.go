@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -344,6 +343,8 @@ func TestOfferRenderSetPdfAssetRef_PersistsAndAuditsExactlyOnce(t *testing.T) {
 
 	before := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'offer' AND action = 'update'`)
 
+	// An offer PDF keyed offers/<ws>/..., outside the workspace prefix: rows
+	// carry that shape too, and the store treats a ref as opaque.
 	ref := "offers/" + e.WS.String() + "/" + ids.UUID(created.Id).String() + "/1/" + ids.NewV7().String() + ".pdf"
 	updated, oldRef, err := e.Deals.SetPdfAssetRef(ctx, offerID, ref, *created.Version)
 	if err != nil {
@@ -467,7 +468,6 @@ func TestOfferRenderHandler_ReadOnlyOfferGrantDeniedBeforeAnyBlobWrite(t *testin
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
 
 	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{})
-	offerID := ids.From[ids.OfferKind](ids.UUID(created.Id))
 
 	blob := &spyBlobStore{Store: blobstore.NewMemory()}
 	h := deals.NewHandlers(e.DB(), installseam.Deals()).WithBlobstore(blob)
@@ -483,9 +483,8 @@ func TestOfferRenderHandler_ReadOnlyOfferGrantDeniedBeforeAnyBlobWrite(t *testin
 	if blob.putCalled {
 		t.Fatal("a denied render must never reach the blob write — that is the whole point of gating update up front")
 	}
-	key := fmt.Sprintf("offers/%s/%s/%d.pdf", e.WS, offerID.UUID, *created.Revision)
-	if _, _, err := blob.Get(context.Background(), key); !errors.Is(err, blobstore.ErrNotFound) {
-		t.Fatalf("the render key must carry no object after a denied render, got err=%v", err)
+	if held := e.WsCount(t, `SELECT count(*) FROM stored_object_intent WHERE split_part(storage_key, '/', 2) = 'offer_pdf'`); held != 0 {
+		t.Fatalf("a denied render must declare no provisional object either, the ledger holds %d", held)
 	}
 }
 

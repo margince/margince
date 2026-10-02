@@ -105,8 +105,13 @@ func catalogRecords(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("reading %s: %v", headCatalogPath, err)
 	}
+	return catalogRecordsOf(string(raw))
+}
+
+// catalogRecordsOf joins one catalog's lines back into one record each.
+func catalogRecordsOf(raw string) []string {
 	var records []string
-	for _, line := range strings.Split(string(raw), "\n") {
+	for _, line := range strings.Split(raw, "\n") {
 		if line == "" {
 			continue
 		}

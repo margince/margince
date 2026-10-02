@@ -5,18 +5,20 @@
 
 package compose
 
-// The reap itself: what the pass does to the bytes and to the ledger.
+// The reap over real Postgres: what one pass does to the bytes and to the
+// ledger, for every kind the modules declare.
 //
-// The ledger's reads are proved where they live (activities). This is the other
-// half of the issue's acceptance — "a transaction that fails after a put leaves
-// no object behind ONCE THE CLEANUP JOB HAS RUN" — which is a claim about the
-// pass, and about the order it does its two deletes in.
+// Real Postgres because the whole mechanism is about what survives a
+// transaction that failed, and the read it rests on is a predicate assembled
+// from every module's declaration — a column named wrongly anywhere fails the
+// pass here and nowhere else.
 
 import (
+	"bytes"
 	"context"
 	"errors"
-	"io"
 	"log/slog"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -25,34 +27,68 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/knowledge"
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/storedobject"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// orphanedObject plants an object and the ledger row that says it is
-// provisional, dated past the grace period.
-func orphanedObject(t *testing.T, e *integration.Env, blob blobstore.Store, key string) {
+// pastEveryGrace is far enough ahead that every declared kind's key is overdue.
+const pastEveryGrace = 48 * time.Hour
+
+// attachmentKind is the kind most cases reap, having the shortest grace.
+const attachmentKind = "attachment"
+
+// storedKey mints a key as the writers do, under the given workspace.
+func storedKey(ws ids.UUID, kind string) string {
+	return blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), kind, ids.NewV7().String())
+}
+
+// provisionalObject stores bytes at key and declares them provisional, the way
+// a writer does before its row: through the ledger's own writer.
+func provisionalObject(t *testing.T, e *integration.Env, blob blobstore.Store, key string) {
 	t.Helper()
-	ctx := context.Background()
-	if err := blob.Put(ctx, key, strings.NewReader("bytes nobody claimed"), 20, "application/octet-stream"); err != nil {
-		t.Fatalf("storing the orphan's bytes: %v", err)
+	declareProvisional(t, e, key)
+	if err := blob.Put(context.Background(), key, strings.NewReader("bytes nobody claimed"), 20, "application/octet-stream"); err != nil {
+		t.Fatalf("storing the bytes at %s: %v", key, err)
 	}
-	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO stored_object_intent (storage_key, recorded_at)
-			VALUES ($1, now() - $2::interval)`, key, (2 * activities.ProvisionalObjectGrace).String())
-		return err
-	}); err != nil {
-		t.Fatalf("planting the provisional key: %v", err)
+}
+
+// declareProvisional records a key as a writer does — and, for a key whose row
+// already exists, is what a clear that never ran looks like.
+func declareProvisional(t *testing.T, e *integration.Env, key string) {
+	t.Helper()
+	if err := storedobject.Record(e.Admin(), e.DB(), key); err != nil {
+		t.Fatalf("recording %s provisional: %v", key, err)
+	}
+}
+
+// reapAt runs one pass with the clock at `at`.
+func reapAt(t *testing.T, e *integration.Env, blob blobstore.Store, at time.Time) {
+	t.Helper()
+	worker := &storedObjectReapWorker{
+		pool: e.Pool,
+		blob: blob,
+		log:  slog.New(slog.DiscardHandler),
+		now:  func() time.Time { return at },
+	}
+	if err := worker.reap(context.Background()); err != nil {
+		t.Fatalf("reap: %v", err)
 	}
 }
 
 // provisionalKeys is what the ledger still holds.
-func provisionalKeys(t *testing.T, e *integration.Env) []string {
+func provisionalKeys(t *testing.T, e *integration.Env) map[string]bool {
 	t.Helper()
-	var keys []string
-	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(context.Background(), `SELECT storage_key FROM stored_object_intent ORDER BY storage_key`)
+	keys := map[string]bool{}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(context.Background(), `SELECT storage_key FROM stored_object_intent`)
 		if err != nil {
 			return err
 		}
@@ -62,7 +98,7 @@ func provisionalKeys(t *testing.T, e *integration.Env) []string {
 			if err := rows.Scan(&key); err != nil {
 				return err
 			}
-			keys = append(keys, key)
+			keys[key] = true
 		}
 		return rows.Err()
 	}); err != nil {
@@ -74,40 +110,412 @@ func provisionalKeys(t *testing.T, e *integration.Env) []string {
 func TestTheReapDestroysAnOrphansBytesAndRetiresItsKey(t *testing.T) {
 	e := integration.Setup(t)
 	blob := newReapBlobstore()
-	const key = "reap/attachment/orphan"
-	orphanedObject(t, e, blob, key)
+	key := storedKey(e.WS, attachmentKind)
+	provisionalObject(t, e, blob, key)
 
-	worker := &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now}
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
-		t.Fatalf("reapWorkspace: %v", err)
-	}
+	reapAt(t, e, blob, time.Now().Add(2*graceOf(t, attachmentKind)))
 
 	if !blob.deleted[key] {
 		t.Error("the orphan's bytes are still in the store — an object with no row is one an erasure cannot reach")
 	}
-	if got := provisionalKeys(t, e); len(got) != 0 {
-		t.Errorf("the ledger still holds %v, so every later pass would delete bytes that are already gone", got)
+	if provisionalKeys(t, e)[key] {
+		t.Error("the ledger still holds the key, so every later pass would delete bytes that are already gone")
 	}
 }
 
-func TestAnObjectTheStoreWillNotDeleteStaysInTheLedger(t *testing.T) {
+func TestACondemnedKeyWhoseDeleteFailedIsRetiredByTheNextPass(t *testing.T) {
 	e := integration.Setup(t)
 	blob := newReapBlobstore()
 	blob.refuseDelete = errors.New("the bucket said no")
-	const key = "reap/attachment/stubborn"
-	orphanedObject(t, e, blob, key)
+	key := storedKey(e.WS, attachmentKind)
+	provisionalObject(t, e, blob, key)
 
-	worker := &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now}
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
-		t.Fatalf("reapWorkspace: %v — one key that will not delete must not stop the pass", err)
-	}
+	reapAt(t, e, blob, time.Now().Add(2*graceOf(t, attachmentKind)))
 
 	// The BYTES first, then the ledger. The other order forgets an object that
-	// is still there, which is the state the whole ledger exists to make
-	// impossible — so a refused delete has to leave the key for the next pass.
-	if got := provisionalKeys(t, e); len(got) != 1 || got[0] != key {
-		t.Errorf("the ledger holds %v, want the key whose bytes are still in the store", got)
+	// is still there, so a refused delete has to leave the key for the next pass.
+	if !provisionalKeys(t, e)[key] || !condemned(t, e, key) {
+		t.Fatal("a key whose delete was refused is not held condemned, so nothing would try it again")
 	}
+
+	// Inside its grace by the clock: only the condemnation lets this pass reach it.
+	blob.refuseDelete = nil
+	reapAt(t, e, blob, time.Now())
+
+	if !blob.deleted[key] || provisionalKeys(t, e)[key] {
+		t.Error("the next pass did not retire a condemned key, so its bytes outlive the decision to delete them")
+	}
+}
+
+// TestAClaimAfterTheListingKeepsTheSourcesBytes is the race the condemnation
+// closes: the reap lists an aged import source, a run claims it for staging,
+// and only then does the reap reach the key.
+func TestAClaimAfterTheListingKeepsTheSourcesBytes(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	source := agedImportSource(t, e, blob)
+	ledger, system := reapLedger(t, e)
+	orphans, err := ledger.Orphans(system, time.Now(), storedObjectReapBatch)
+	if err != nil || !slices.ContainsFunc(orphans, func(o storedobject.Orphan) bool { return o.StorageKey == source }) {
+		t.Fatalf("the aged source was not listed (err %v), so this case interleaves nothing", err)
+	}
+
+	if err := storedobject.Claim(e.Admin(), e.DB(), source); err != nil {
+		t.Fatalf("claiming an unexpired source: %v", err)
+	}
+	if condemned, err := ledger.Condemn(system, time.Now(), source); err != nil || condemned {
+		t.Fatalf("the reap condemned a source a run had just claimed (condemned=%v, err %v)", condemned, err)
+	}
+	reapAt(t, e, blob, time.Now())
+
+	if blob.deleted[source] {
+		t.Error("the reap deleted the bytes of a source a run is being staged from")
+	}
+}
+
+func TestAClaimOnASourceTheReapCondemnedIsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	source := agedImportSource(t, e, blob)
+	ledger, system := reapLedger(t, e)
+	if condemned, err := ledger.Condemn(system, time.Now(), source); err != nil || !condemned {
+		t.Fatalf("condemning an aged, unreferenced source: condemned=%v, err %v", condemned, err)
+	}
+
+	err := storedobject.Claim(e.Admin(), e.DB(), source)
+
+	if !errors.Is(err, storedobject.ErrExpired) || !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a claim on a condemned source answered %v, want it refused as expired and not found", err)
+	}
+}
+
+// graceOf is the grace a kind declared, read off the declarations the reap runs on.
+func graceOf(t *testing.T, kind string) time.Duration {
+	t.Helper()
+	for _, ref := range StoredObjectReferences() {
+		if ref.Kind == kind {
+			return ref.Grace
+		}
+	}
+	t.Fatalf("no module declares the %q kind", kind)
+	return 0
+}
+
+// agedImportSource is an upload left unmapped past its grace. Aged
+// in the row rather than by the reap's clock: a claim stamps the database's
+// own now, and the race exists only while the two clocks agree.
+func agedImportSource(t *testing.T, e *integration.Env, blob blobstore.Store) string {
+	t.Helper()
+	source := storedKey(e.WS, migration.ImportSourceObjectKind)
+	provisionalObject(t, e, blob, source)
+	ageKey(t, e, source, 2*graceOf(t, migration.ImportSourceObjectKind))
+	return source
+}
+
+// ageKey backdates when key was recorded, in the row and so on the database's
+// own clock, the one Record, Claim and Condemn's grace re-check all read.
+func ageKey(t *testing.T, e *integration.Env, key string, by time.Duration) {
+	t.Helper()
+	e.WsExec(t, `UPDATE stored_object_intent SET recorded_at = now() - make_interval(secs => $2)
+		WHERE storage_key = $1`, key, by.Seconds())
+}
+
+// condemnedAttachment is a provisional attachment past its grace, condemned by
+// the reap, as a pass leaves it the moment before its delete.
+func condemnedAttachment(t *testing.T, e *integration.Env, blob blobstore.Store) string {
+	t.Helper()
+	key := storedKey(e.WS, attachmentKind)
+	provisionalObject(t, e, blob, key)
+	ageKey(t, e, key, 2*graceOf(t, attachmentKind))
+	ledger, system := reapLedger(t, e)
+	if condemned, err := ledger.Condemn(system, time.Now(), key); err != nil || !condemned {
+		t.Fatalf("condemning an aged, unreferenced attachment: condemned=%v, err %v", condemned, err)
+	}
+	return key
+}
+
+// TestARowNamingACondemnedKeyIsRefusedItsCommit is a writer whose transaction
+// outlived its grace: the reap's re-check could not see the uncommitted row, so
+// the clear is what has to stop it naming bytes about to be deleted.
+func TestARowNamingACondemnedKeyIsRefusedItsCommit(t *testing.T) {
+	e := integration.Setup(t)
+	key := condemnedAttachment(t, e, newReapBlobstore())
+
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return storedobject.Clear(e.Admin(), tx, key)
+	})
+
+	if !errors.Is(err, storedobject.ErrExpired) {
+		t.Fatalf("clearing a condemned key answered %v, want ErrExpired so the row's transaction aborts", err)
+	}
+	if !condemned(t, e, key) {
+		t.Error("the clear forgot a condemned key, so the reap deletes bytes and nothing tries the key again")
+	}
+}
+
+func TestARecordOfACondemnedKeyIsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	key := condemnedAttachment(t, e, newReapBlobstore())
+
+	err := storedobject.Record(e.Admin(), e.DB(), key)
+
+	if !errors.Is(err, storedobject.ErrExpired) {
+		t.Fatalf("recording a condemned key answered %v, want ErrExpired: a put after it lands on bytes being deleted", err)
+	}
+}
+
+func TestARecordedKeyRecordedAgainWaitsAWholeGrace(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	key := storedKey(e.WS, attachmentKind)
+	provisionalObject(t, e, blob, key)
+	ageKey(t, e, key, 2*graceOf(t, attachmentKind))
+
+	declareProvisional(t, e, key)
+	reapAt(t, e, blob, time.Now())
+
+	if blob.deleted[key] {
+		t.Error("a retried put of a recorded key was reaped on the first attempt's clock")
+	}
+}
+
+// TestAKeyTheReapLastTriedGoesBehindOneThatHasWaitedLonger holds the listing's
+// order: a delete that keeps failing must not hold the head of every pass.
+func TestAKeyTheReapLastTriedGoesBehindOneThatHasWaitedLonger(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	grace := graceOf(t, attachmentKind)
+	failing := condemnedAttachment(t, e, blob)
+	ageKey(t, e, failing, 3*grace)
+	waiting := storedKey(e.WS, attachmentKind)
+	provisionalObject(t, e, blob, waiting)
+	ageKey(t, e, waiting, 2*grace)
+	ledger, system := reapLedger(t, e)
+
+	orphans, err := ledger.Orphans(system, time.Now(), 1)
+
+	if err != nil || len(orphans) != 1 || orphans[0].StorageKey != waiting {
+		t.Fatalf("a one-key pass listed %v (err %v), want the key never tried ahead of the one recorded "+
+			"earlier and already tried", orphans, err)
+	}
+}
+
+// reapLedger is the ledger the reap builds, under the principal it binds.
+func reapLedger(t *testing.T, e *integration.Env) (*storedobject.Ledger, context.Context) {
+	t.Helper()
+	ledger, err := storedobject.NewLedger(InstallationDB(e.Pool), StoredObjectReferences()...)
+	if err != nil {
+		t.Fatalf("building the reap's ledger: %v", err)
+	}
+	return ledger, principal.SystemActing(context.Background(), "stored_object_reap_test")
+}
+
+// condemned reports whether the reap has committed to deleting key.
+func condemned(t *testing.T, e *integration.Env, key string) bool {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM stored_object_intent
+		WHERE storage_key = $1 AND reaping_since IS NOT NULL`, key) > 0
+}
+
+func TestAnUploadStillInsideItsGraceIsLeftAlone(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	inflight := storedKey(e.WS, attachmentKind)
+	provisionalObject(t, e, blob, inflight)
+
+	reapAt(t, e, blob, time.Now())
+
+	if blob.deleted[inflight] || !provisionalKeys(t, e)[inflight] {
+		t.Error("an upload still inside its grace period was reaped — its row may be a statement away")
+	}
+}
+
+// TestAReferencedKeyOfEveryDeclaredKindKeepsItsBytes is the second lock, asked
+// of every module: a key that is BOTH provisional and named by a live row — a
+// clear that never ran — survives a pass past every grace period.
+func TestAReferencedKeyOfEveryDeclaredKindKeepsItsBytes(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	live := map[string]string{
+		"attachment":   liveAttachmentKey(t, e, blob),
+		"company_logo": liveCompanyLogoKey(t, e),
+		"import":       liveImportSourceKey(t, e),
+		"knowledge":    liveKnowledgeDocumentKey(t, e, blob),
+		"offer_pdf":    liveOfferPDFKey(t, e),
+	}
+	for _, ref := range StoredObjectReferences() {
+		if live[ref.Kind] == "" {
+			t.Errorf("kind %q is declared and this case seeds no live row for it", ref.Kind)
+		}
+	}
+	for _, key := range live {
+		declareProvisional(t, e, key)
+	}
+
+	reapAt(t, e, blob, time.Now().Add(pastEveryGrace))
+
+	held := provisionalKeys(t, e)
+	for kind, key := range live {
+		if blob.deleted[key] || !held[key] {
+			t.Errorf("a %s object a live row still names was reaped — a reader can still open it", kind)
+		}
+	}
+}
+
+func TestAKeyOfAnUndeclaredKindIsNeverReaped(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	undeclared := storedKey(e.WS, "scratch")
+	provisionalObject(t, e, blob, undeclared)
+
+	reapAt(t, e, blob, time.Now().Add(pastEveryGrace))
+
+	// No module said which columns name a "scratch" key, so nothing can prove
+	// one unreferenced. Keeping an orphan is the safe failure; deleting a live
+	// file is not.
+	if blob.deleted[undeclared] || !provisionalKeys(t, e)[undeclared] {
+		t.Error("a key of a kind no module declared was reaped")
+	}
+}
+
+func TestAnImportSourceWaitsADayForItsColumnsToBeMapped(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	source := storedKey(e.WS, migration.ImportSourceObjectKind)
+	attachment := storedKey(e.WS, attachmentKind)
+	provisionalObject(t, e, blob, source)
+	provisionalObject(t, e, blob, attachment)
+
+	reapAt(t, e, blob, time.Now().Add(2*time.Hour))
+
+	if blob.deleted[source] {
+		t.Error("an import source two hours old was reaped while its run may still be being mapped")
+	}
+	// The same pass reaped the hour-grace kind, so the source was kept by its
+	// own grace rather than by a pass that did nothing.
+	if !blob.deleted[attachment] {
+		t.Error("the attachment orphan beside it was not reaped, so this pass proves nothing")
+	}
+}
+
+func TestOnePassReapsTheOrphansOfEveryWorkspace(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	ours := storedKey(e.WS, attachmentKind)
+	theirs := storedKey(ids.NewV7(), attachmentKind)
+	provisionalObject(t, e, blob, ours)
+	provisionalObject(t, e, blob, theirs)
+
+	reapAt(t, e, blob, time.Now().Add(2*graceOf(t, attachmentKind)))
+
+	if !blob.deleted[ours] || !blob.deleted[theirs] {
+		t.Errorf("one pass reaped ours=%v theirs=%v, want both — the ledger names no workspace, so one pass answers for all",
+			blob.deleted[ours], blob.deleted[theirs])
+	}
+}
+
+// liveAttachmentKey uploads through the real writer, which records and then
+// clears the key with its row.
+func liveAttachmentKey(t *testing.T, e *integration.Env, blob blobstore.Store) string {
+	t.Helper()
+	contact := e.SeedContact(t, "Ada Live", nil)
+	att, err := activities.NewStore(e.DB()).WithBlobstore(blob).UploadAttachment(e.Admin(), activities.AttachmentInput{
+		EntityType: "contact", EntityID: contact, Filename: "live.pdf", ContentType: "application/pdf",
+		Content: bytes.NewReader([]byte("a document somebody can open")),
+	})
+	if err != nil {
+		t.Fatalf("uploading the live attachment: %v", err)
+	}
+	return e.WsScalar(t, `SELECT storage_key FROM attachment WHERE id = $1`, att.Id)
+}
+
+// liveCompanyLogoKey names a mark through the real logo writer.
+func liveCompanyLogoKey(t *testing.T, e *integration.Env) string {
+	t.Helper()
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Live Marks GmbH", nil))
+	key := storedKey(e.WS, contacts.CompanyLogoObjectKind)
+	if _, _, err := e.Contacts.SetCompanyLogo(e.Admin(), company, key, "https://example.test/logo.png"); err != nil {
+		t.Fatalf("recording the live logo: %v", err)
+	}
+	return key
+}
+
+// liveImportSourceKey opens a run naming its source through the real run writer.
+func liveImportSourceKey(t *testing.T, e *integration.Env) string {
+	t.Helper()
+	key := storedKey(e.WS, migration.ImportSourceObjectKind)
+	ctx := e.As(e.AdminUser, nil, principal.Permissions{Objects: map[string]principal.ObjectGrant{
+		"import_run": {Create: true, Read: true, Update: true},
+	}})
+	if _, err := migration.NewRunStore(e.DB()).CreateStagedRun(ctx, migration.CreateStagedRunInput{
+		Connector: migration.ConnectorCSV, SourceRef: key, Source: "import_api",
+		Mapping: migration.RunMapping{Object: migration.ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email"},
+	}); err != nil {
+		t.Fatalf("opening the live import run: %v", err)
+	}
+	return key
+}
+
+// liveKnowledgeDocumentKey uploads through the real document writer, which
+// records and then clears the key with its row. The ingest it queues is not
+// this case's subject, so the queue accepts and runs nothing.
+func liveKnowledgeDocumentKey(t *testing.T, e *integration.Env, blob blobstore.Store) string {
+	t.Helper()
+	ctx := e.As(e.AdminUser, nil, principal.Permissions{
+		RoleKeys: []string{"admin"},
+		Objects: map[string]principal.ObjectGrant{
+			"knowledge_corpus":   {Create: true, Read: true},
+			"knowledge_document": {Create: true, Read: true},
+		},
+		RowScope: principal.RowScopeAll,
+	})
+	store := knowledge.NewStore(e.DB()).WithBlobstore(blob)
+	corpus, err := store.CreateCorpus(ctx, knowledge.NewCorpus{Name: "Live corpus", TopicStatement: "what the live document covers"})
+	if err != nil {
+		t.Fatalf("creating the live corpus: %v", err)
+	}
+	doc, err := store.UploadDocument(ctx, knowledge.NewDocument{
+		CorpusID: ids.UUID(corpus.Id), Filename: "live.md", ContentType: "text/markdown",
+		Content: strings.NewReader("# A document somebody can open"),
+	}, func(context.Context, pgx.Tx, ids.UUID) error { return nil })
+	if err != nil {
+		t.Fatalf("uploading the live document: %v", err)
+	}
+	return e.WsScalar(t, `SELECT storage_key FROM knowledge_document WHERE id = $1`, doc.Id)
+}
+
+// liveOfferPDFKey names a rendered PDF on an offer the way the render handler
+// does: declared provisional, then recorded on the offer by its own writer.
+func liveOfferPDFKey(t *testing.T, e *integration.Env) string {
+	t.Helper()
+	ctx := e.As(e.AdminUser, nil, principal.Permissions{
+		RoleKeys: []string{"admin"},
+		Objects: map[string]principal.ObjectGrant{
+			"deal":  {Create: true, Read: true, Update: true},
+			"offer": {Create: true, Read: true, Update: true},
+		},
+		RowScope: principal.RowScopeAll,
+	})
+	pipeline, open, _ := integration.DealFixture(t, e)
+	deal := e.SeedDeal(t, "Live PDF deal", pipeline, open, &e.AdminUser)
+	description, price, taxRate := "Retainer", int64(10000), "19.00"
+	offer, err := e.Deals.CreateOffer(ctx, ids.From[ids.DealKind](deal), deals.CreateOfferInput{
+		Currency: "EUR", Source: "manual",
+		LineItems: []deals.OfferLineInputRow{{
+			Description: &description, Quantity: "1", UnitPriceMinor: &price, TaxRate: &taxRate,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("creating the live offer: %v", err)
+	}
+	key := storedKey(e.WS, "offer_pdf")
+	if err := e.Deals.DeclarePdfProvisional(ctx, key); err != nil {
+		t.Fatalf("declaring the live PDF: %v", err)
+	}
+	if _, _, err := e.Deals.SetPdfAssetRef(ctx, ids.From[ids.OfferKind](ids.UUID(offer.Id)), key, *offer.Version); err != nil {
+		t.Fatalf("recording the live PDF on its offer: %v", err)
+	}
+	return key
 }
 
 // reapBlobstore records what the pass deleted, and can refuse.
@@ -131,5 +539,3 @@ func (b *reapBlobstore) Delete(ctx context.Context, key string) error {
 	b.deleted[key] = true
 	return nil
 }
-
-var _ io.Reader = strings.NewReader("")

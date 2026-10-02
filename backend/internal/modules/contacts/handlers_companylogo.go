@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -126,13 +127,19 @@ func (h Handlers) streamLogoKey(w http.ResponseWriter, r *http.Request, id crmco
 // such an object may still carry the transparent square canvas older uploads
 // were given, so it is cropped here and the crop written back.
 func (h Handlers) streamLegacyLogo(w http.ResponseWriter, r *http.Request, companyID ids.CompanyID, id crmcontracts.Id, slot LogoSlot, key, etag string, rc io.ReadCloser, cacheControl string, writeBack bool) {
-	source, readErr := io.ReadAll(rc)
+	// One byte past the cap is how an oversized object is told from one that
+	// fits exactly; no logo writer stores one, so it is refused, not buffered.
+	source, readErr := io.ReadAll(io.LimitReader(rc, MaxLogoBytes+1))
 	closeErr := rc.Close()
 	if closeErr != nil {
 		slog.WarnContext(r.Context(), "closing company logo reader", "err", closeErr)
 	}
 	if readErr != nil {
 		httperr.Write(w, r, readErr)
+		return
+	}
+	if len(source) > MaxLogoBytes {
+		httperr.Write(w, r, fmt.Errorf("contacts: the object at %s exceeds the %d-byte logo cap", key, MaxLogoBytes))
 		return
 	}
 	logo, err := imagenorm.TrimTransparentPNG(source)
@@ -225,6 +232,7 @@ func (h Handlers) writeBackTrimmedLogo(ctx context.Context, companyID ids.Compan
 	if current != key {
 		return
 	}
+	// No storedobject.Record: the row already names this key, so it is not provisional.
 	if err := h.blob.Put(writeCtx, key, bytes.NewReader(logo), int64(len(logo)), imagenorm.ContentType); err != nil {
 		slog.WarnContext(ctx, "writing back a trimmed company logo", "err", err)
 		return

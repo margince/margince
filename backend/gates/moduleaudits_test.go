@@ -140,6 +140,9 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// Extension-tier secrets, audited into the OTHER ledger on purpose.
 	"internal/platform/extsecrets": "extension_secret is written with storekit.LogSystem rather than storekit.Audit, and the package says why in-source: a secret changing hands moves no domain row, so there is no audit_log entry to attach it to. It belongs in system_log, the non-entity operational ledger, which is the same posture the boot's extension inventory takes. This gate deliberately does not count LogSystem, so the module appears here — it is recorded, in the ledger that fits it",
 
+	// Bookkeeping about bytes, not a record fact.
+	"internal/platform/storedobject": "stored_object_intent says which stored objects are still waiting for their row; the row that names an object is audited by the module that writes it, and a ledger entry is retired in that same transaction, so an audit row here would record the same act twice under a key rather than an entity",
+
 	// NOT a waiver of the obligation — a different defect, filed.
 })
 

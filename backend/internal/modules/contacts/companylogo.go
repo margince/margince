@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -105,6 +106,9 @@ func (s *Store) SetCompanyLogo(ctx context.Context, id ids.CompanyID, objectKey,
 		}
 		if err != nil {
 			return fmt.Errorf("set company logo: %w", err)
+		}
+		if err := storedobject.Clear(ctx, tx, objectKey); err != nil {
+			return err
 		}
 		written = true
 		supersededKey = supersededObject(previous, objectKey)

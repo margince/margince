@@ -8,10 +8,10 @@ package integration
 // The bytes an upload wrote must not outlive the write that failed.
 //
 // Every sweep in the knowledge module walks ROWS — abandoned ingests, drifted
-// bindings, deleted documents. An object no row names is therefore reachable by
-// nothing and collected by nothing: it is a permanent leak of a tenant's file
-// content, still readable by anyone who can enumerate the bucket, long after
-// the upload that produced it was refused.
+// bindings, deleted documents. An object no row names is reachable only through
+// the intent ledger the upload records before its put: the failed write deletes
+// it at once, and the ledger keeps the key for the reap should that delete never
+// run.
 //
 // The duplicate race is the ordinary way to get one. Two uploads of identical
 // bytes both clear the pre-flight check, both call Put, and the loser is
@@ -98,6 +98,13 @@ func (c *countingBlobstore) Delete(ctx context.Context, key string) error {
 	return c.Store.Delete(ctx, key)
 }
 
+// putKeys are the keys Put wrote, in order.
+func (c *countingBlobstore) putKeys() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return append([]string(nil), c.put...)
+}
+
 // orphans are keys that were written and never removed.
 func (c *countingBlobstore) orphans(named map[string]bool) []string {
 	c.mu.Lock()
@@ -143,10 +150,7 @@ func TestAWriteThatFailsAfterStoringItsBytesRemovesThem(t *testing.T) {
 	}
 
 	// Put was reached — otherwise this test proves nothing about cleanup.
-	blobs.mu.Lock()
-	wrote := len(blobs.put)
-	blobs.mu.Unlock()
-	if wrote == 0 {
+	if len(blobs.putKeys()) == 0 {
 		t.Fatal("the upload never reached Put, so this case does not exercise the cleanup at all")
 	}
 
@@ -154,5 +158,41 @@ func TestAWriteThatFailsAfterStoringItsBytesRemovesThem(t *testing.T) {
 	// is an orphan unless it was deleted.
 	if left := blobs.orphans(map[string]bool{}); len(left) != 0 {
 		t.Fatalf("a failed write left %d stored object(s) no row names: %v", len(left), left)
+	}
+
+	// The intent outlives the rolled-back row: a crash between the put and the
+	// delete above would leave the reap only this to find the object by.
+	provisional := provisionalKeys(t, e.DB())
+	for _, key := range blobs.putKeys() {
+		if !provisional[key] {
+			t.Fatalf("a failed write cleared the intent for %s, so a crash before its delete would orphan it for good", key)
+		}
+	}
+}
+
+// A committed upload clears its intent with the row, so the reap never sees a
+// live document's key as provisional.
+func TestAnUploadThatCommitsLeavesNoIntentBehind(t *testing.T) {
+	e := Setup(t)
+	blobs := newCountingBlobstore()
+	h := newKnowledgeHTTPWithBlobs(e, blobs)
+	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
+	made := httpCorpus(ctx, t, h)
+
+	body, ctype := multipartDocument(t, "operating.md", "text/markdown", []byte(onePassage))
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/knowledge/corpora/x/documents", body).WithContext(ctx)
+	req.Header.Set("Content-Type", ctype)
+	h.handlers.UploadCorpusDocument(rec, req, made.Id)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("upload: status %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	keys := blobs.putKeys()
+	if len(keys) != 1 {
+		t.Fatalf("the upload stored %d object(s), want 1", len(keys))
+	}
+	if keyIsProvisional(t, e.DB(), keys[0]) {
+		t.Fatalf("a committed upload left %s provisional, which only the column join keeps the reap off", keys[0])
 	}
 }

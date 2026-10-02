@@ -186,6 +186,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `audittraildoor_test.go` | H2 | The audit trail is a SECOND door onto an activity's content, and every reader of it says what it does about a held one. |
 | `basecurrencyguard_test.go` | H2 | The base-currency lock as a fitness function. |
 | `belowtheauthgate_test.go` | H2 | What can be reached without credentials is a declared list, not whatever the routing code happens to allow. |
+| `blobputintent_test.go` | H2 | Every put into the object store declares its key provisional first, or says why it need not. |
 | `bootcomposition_test.go` | H2 | The fitness gate on the boot sequence: a process role that composes extensions also records what it composed. |
 | `boundedfixture_test.go` | H3 | An integration suite that only ever acts unbounded proves nothing about row scope. |
 | `briefevidencestrip_test.go` | H2 | "Never persist an email summary" is spelled once, and every writer that caches evidence says it that way. |
@@ -331,6 +332,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sourcecensus_test.go` | H2 | The two source censuses that used to be awk, and the corpus that holds both halves of each of them to the same cases. |
 | `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
+| `storedobjectcolumns_test.go` | H2 | Every column shaped like a stored object's key is one the reap consults, or says why not. |
 | `suppressionauthority_test.go` | H2 | Every kind of suppression says who decided it. |
 | `tableownershipdiscovery_test.go` | H2 | WHICH packages the ownership gate walks, derived rather than remembered. |
 | `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |

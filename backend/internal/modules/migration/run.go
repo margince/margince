@@ -33,6 +33,10 @@ const importRunObject = ImportRunObject
 // auditFieldStatus names the run status in an import_run audit row.
 const auditFieldStatus = "status"
 
+// sourceRefColumn is where a run records its source, in the row and in its
+// audit image alike.
+const sourceRefColumn = "source_ref"
+
 // RunID names an import_run row.
 type RunID = ids.UUID
 
@@ -117,7 +121,7 @@ func (s *RunStore) Create(ctx context.Context, in CreateRunInput) (Run, error) {
 			return fmt.Errorf("creating import run: %w", err)
 		}
 		_, err := storekit.Audit(ctx, tx, "create", importRunObject, run.ID, nil, map[string]any{
-			"connector": run.Connector, auditFieldStatus: run.Status, "source_ref": run.SourceRef,
+			"connector": run.Connector, auditFieldStatus: run.Status, sourceRefColumn: run.SourceRef,
 		})
 		return err
 	})

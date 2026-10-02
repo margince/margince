@@ -7,6 +7,7 @@ import (
 	"mime"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -56,11 +57,9 @@ func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 	}
 }
 
-// What a company mark may arrive as. Generous for what it holds — a 5 MB
-// source is a photograph, not a logo — because the cost of refusing a contact's
-// own file is that they go and find image software, while the cost of
-// accepting it is one decode of an image this server immediately shrinks.
-const companyLogoUploadBytes = 5_000_000
+// What a company mark may arrive as: contacts owns the number, because its
+// serve path bounds a stored mark's read by the same one.
+const companyLogoUploadBytes = contacts.MaxLogoBytes
 
 // bodyCeilingFor is the chassis's BodyCeiling for this composition.
 //
