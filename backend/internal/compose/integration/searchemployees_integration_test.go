@@ -428,6 +428,7 @@ func TestThePaletteFindsTheStaffOfACompanyMadeThroughTheApp(t *testing.T) {
 		staff[contact.ID] = true
 	}
 
+	// The parameters palettesearch.ts sends; per_type is its PALETTE_PER_TYPE.
 	asked := url.Values{"q": {"strai"}, "per_type": {"3"}, "with_employees": {"true"}}
 	var page crmcontracts.SearchResponse
 	if status := e.Call(t, "GET", "/v1/search?"+asked.Encode(), nil, nil, &page); status != 200 {

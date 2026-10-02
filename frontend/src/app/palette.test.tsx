@@ -350,6 +350,20 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(window.location.hash).toBe("#/companies/o1");
   });
 
+  // Until the search answers, the palette cannot know the words name a record,
+  // and the results page is where a reader lands; the record leads it there.
+  it("opens every result on Enter pressed before the search has answered", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await user.type(screen.getByRole("searchbox"), "straight");
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/search/straight");
+  });
+
   // The arrows still choose: the see-all row leads, and the hits sit one
   // press below it.
   it("opens the hit the reader arrowed to", async () => {
