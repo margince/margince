@@ -316,7 +316,7 @@ press anything. The three reasons you will actually meet:
   whatever was written after it, so it is refused. The reason names the field,
   so you can look at what happened in between and decide.
 - **The record was archived.** A change cannot be put back onto an archived
-  record, and an archived record cannot be restored.
+  record; bring a contact, company or deal back first with **Undo** on its archive entry.
 - **The change did not come from an editable path.** Some entries record things
   the record's own edit path cannot write — an entry that would have to clear a
   field nothing can clear. These are shown as history, not as something to undo.

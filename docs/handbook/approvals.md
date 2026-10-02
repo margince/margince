@@ -134,8 +134,9 @@ An approval has three answers.
 **Accept.** The proposed change commits, in one transaction that also writes
 the audit record. When it changed a record, the toast offers **Undo on
 record**, which opens that record's history to reverse it. A kind that sends
-mail, creates a record or names no record has nothing to put back, so it offers
-no undo.
+mail or names no record has nothing to put back, so it offers no undo. A new
+contact, company or deal is taken back from its "Created" entry in the record's
+history.
 
 **Approve edited.** You change the payload first (retype the subject line,
 correct a value) and *the edited version is what executes*. Not the original.

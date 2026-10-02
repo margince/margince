@@ -131,7 +131,8 @@ func (s *Store) DemoteLead(
 		if err != nil {
 			return err
 		}
-		if err := refuseIfColleagueWorkedOnCreated(ctx, tx, contactID, outcome, options, true); err != nil {
+		archived := unwind == crmcontracts.DemoteLeadResponseUnwindDemoteUnwindReversed
+		if err := refuseIfColleagueWorkedOnCreated(ctx, tx, contactID, outcome, options, archived); err != nil {
 			return err
 		}
 		setBy, err := statusSetByFor(ctx)

@@ -45,6 +45,9 @@ func TestEveryAdmittedActionSaysWhatItDidAndWhetherItCanBeTakenBack(t *testing.T
 // A create or an archive names what it made or put away, so its sentence is per
 // kind of record, and a kind this page cannot place has none.
 func TestABulkVerbIsSaidPerKindOfRecord(t *testing.T) {
+	if len(bulkActions) == 0 {
+		t.Fatal("no bulk verb is declared, so this gate is judging nothing")
+	}
 	for action := range bulkActions {
 		meaning, ok := meaningOf(action)
 		if !ok {

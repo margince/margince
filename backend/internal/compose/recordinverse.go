@@ -189,7 +189,7 @@ func (e Evaluator) inverseState(ctx context.Context, tx pgx.Tx, row AuditRow, ki
 	case inverseUnarchive:
 		return e.archiveStands(ctx, tx, row)
 	case inverseDemote:
-		return promotionStands(ctx, tx, row)
+		return e.promotionStands(ctx, tx, row)
 	case inverseRetractFill:
 		return e.fillStands(ctx, tx, row)
 	case inverseRearchive:
@@ -206,7 +206,7 @@ func (e Evaluator) inverseState(ctx context.Context, tx pgx.Tx, row AuditRow, ki
 // or once a colleague has worked on the contact the promotion created: the
 // demotion archives that contact. DemoteLead asks the same question again,
 // through the same contacts.ColleagueWorkedOnSince, inside its own transaction.
-func promotionStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, bool, error) {
+func (e Evaluator) promotionStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, bool, error) {
 	// The lead's current promotion must be this one: demoted by hand and
 	// promoted again into the same contact, its fields read the same while
 	// the demotion would reverse the later promotion.
@@ -235,7 +235,14 @@ func promotionStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability,
 	if err := json.Unmarshal(row.After, &promoted); err != nil {
 		return Undoability{}, false, fmt.Errorf("compose: read the promotion's outcome: %w", err)
 	}
-	if promoted.Contact == nil || promoted.Outcome != promotionCreatedContact {
+	if promoted.Contact == nil {
+		return Undoability{}, false, nil
+	}
+	// The demotion writes the contact as well as the lead, and asks for both.
+	if answer, refused, err := e.contactWritable(ctx, tx, *promoted.Contact); err != nil || refused {
+		return answer, refused, err
+	}
+	if promoted.Outcome != promotionCreatedContact {
 		return Undoability{}, false, nil
 	}
 	touched, err := contacts.ColleagueWorkedOnSince(ctx, tx, entityTypeContact, *promoted.Contact, row.OccurredAt, row.ID)
@@ -244,6 +251,26 @@ func promotionStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability,
 	}
 	if touched {
 		return refuse(ReasonSuperseded, "the contact it created was changed by a colleague since"), true, nil
+	}
+	return Undoability{}, false, nil
+}
+
+// contactWritable refuses when the caller may not change the promoted contact.
+func (e Evaluator) contactWritable(ctx context.Context, tx pgx.Tx, contact ids.UUID) (Undoability, bool, error) {
+	if err := auth.Require(ctx, entityTypeContact, principal.ActionUpdate); err != nil {
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			return Undoability{}, false, err
+		}
+		return refuse(ReasonNotWritableByCaller, ""), true, nil
+	}
+	if e.Writable == nil {
+		return Undoability{}, false, nil
+	}
+	if err := e.Writable(ctx, tx, entityTypeContact, contact); err != nil {
+		if !isWriteScopeRefusal(err) {
+			return Undoability{}, false, err
+		}
+		return refuse(ReasonNotWritableByCaller, ""), true, nil
 	}
 	return Undoability{}, false, nil
 }
@@ -259,6 +286,20 @@ const promotionCreatedContact = "created"
 func (e Evaluator) createStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, bool, error) {
 	if answer, archived, err := e.archivedRefusal(ctx, tx, row); err != nil || archived {
 		return answer, archived, err
+	}
+	if row.EntityType == entityTypeActivity {
+		// A meeting with a live calendar invitation is changed through the
+		// invitation; archiving it here would hide a meeting still on
+		// somebody's calendar, which the activity archive refuses too.
+		var invited bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM meeting_invitation WHERE activity_id = $1 AND status <> 'canceled')`,
+			row.EntityID).Scan(&invited); err != nil {
+			return Undoability{}, false, err
+		}
+		if invited {
+			return refuse(ReasonNotAReplayableVerb, "a meeting with a calendar invitation"), true, nil
+		}
 	}
 	touched, err := contacts.ColleagueWorkedOnSince(ctx, tx, row.EntityType, row.EntityID, row.OccurredAt, row.ID)
 	if err != nil {

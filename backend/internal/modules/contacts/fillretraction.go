@@ -8,8 +8,7 @@ package contacts
 // A signature or a site read fills blanks: a title, a phone number, the company
 // a contact says they work for. Each fill is one audit row naming the fields it
 // landed and the message or page it read. Undoing that row clears those fields
-// again, and this file is the only place that knows what "clear" means for each
-// of them — a sidecar evidence row, the title column it mirrors, the phone
+// again: the sidecar evidence row, the title column it mirrors, the phone
 // number it added, the LinkedIn slot it claimed.
 //
 // Only a FILL is taken back here. Where the pass replaced a value somebody had

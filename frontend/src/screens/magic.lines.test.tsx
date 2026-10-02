@@ -144,7 +144,7 @@ describe("a receipt line is one row", () => {
               label: "Anna Weber",
             },
             count: 2146,
-            undo: undefined,
+            undo: undoable,
           }),
         ],
       }),

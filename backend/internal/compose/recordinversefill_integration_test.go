@@ -78,8 +78,8 @@ func whatTheFillLeft(t *testing.T, e *integration.Env, contact ids.UUID) (title 
 	return title, evidence, phones, linkedin
 }
 
-// The fills the receipt reported as "cannot be undone": a signature filled a
-// title, a phone, a company name and a LinkedIn profile. Undo clears all four.
+// A signature that filled a title, a phone, a company name and a LinkedIn
+// profile is undone by clearing all four.
 func TestUndoingASignatureFillClearsEveryFieldItFilled(t *testing.T) {
 	e := integration.Setup(t)
 	contact, fill := seedSignatureFill(t, e)
@@ -140,9 +140,9 @@ func judgeOnTheReceipt(seat context.Context, t *testing.T, e *integration.Env, e
 	return answer
 }
 
-// The receipt judged every undo with the DEAL grant. A seat that may change
-// contacts and not deals was refused every contact undo, and a seat with the
-// opposite grants was offered them.
+// The receipt judges an undo with the grant of the entry's own record type: a
+// seat that may change contacts and not deals is offered a contact undo, and a
+// seat with the opposite grants is refused it.
 func TestTheReceiptJudgesAnUndoWithTheRecordTypesOwnGrant(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Petra Machine", nil)
@@ -197,7 +197,11 @@ func TestTheReceiptFoldsCreatesAndArchivesAndOffersAnUndoPerRecord(t *testing.T)
 	for _, line := range receipt.Done {
 		lines[line.Summary.Key] = line
 	}
-	created, archived := lines["magic.action.create_contact"], lines["magic.action.archive_company"]
+	created, drawn := lines["magic.action.create_contact"]
+	archived, archivedDrawn := lines["magic.action.archive_company"]
+	if !drawn || !archivedDrawn {
+		t.Fatalf("the receipt drew no create line (%v) or no archive line (%v): %+v", drawn, archivedDrawn, receipt.Done)
+	}
 	if created.Count == nil || *created.Count != 3 {
 		t.Errorf("the import's creates drew %+v, want one line counting 3 contacts", created)
 	}
@@ -215,6 +219,9 @@ func TestTheReceiptFoldsCreatesAndArchivesAndOffersAnUndoPerRecord(t *testing.T)
 	for _, record := range records.Data {
 		if !record.Undo.Undoable || record.Undo.AuditId == nil || record.Undo.Version == nil {
 			t.Errorf("record %v offers %+v, want an undo it can send", record.Entity.Label, record.Undo)
+		}
+		if len(record.Changes) != 0 {
+			t.Errorf("record %v lists %d field changes, want none: a create is the whole record", record.Entity.Label, len(record.Changes))
 		}
 	}
 }
@@ -385,8 +392,12 @@ func TestUndoingASignatureLeavesATitleItOnlyConfirmed(t *testing.T) {
 	if err := undoEntry(t, e, "contact", contact, fill); err != nil {
 		t.Fatalf("undoing the signature: %v", err)
 	}
-	if title, _, _, _ := whatTheFillLeft(t, e, contact); title == nil || *title != typed {
+	title, evidence, _, _ := whatTheFillLeft(t, e, contact)
+	if title == nil || *title != typed {
 		t.Errorf("title = %v, want the colleague's %q kept", title, typed)
+	}
+	if evidence != 1 {
+		t.Errorf("%d evidence rows after the undo, want only the title's confirmation: the company name it filled is cleared", evidence)
 	}
 }
 

@@ -160,7 +160,8 @@ func ColleagueWorkedOnSince(ctx context.Context, tx pgx.Tx, entityType string, i
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM audit_log a
-			 WHERE a.actor_type = 'human' AND (a.occurred_at > $3 OR a.id > $6) AND a.occurred_at <> now()
+			 WHERE a.actor_type = 'human' AND (a.occurred_at > $3 OR ($6::uuid IS NOT NULL AND a.id > $6))
+			   AND a.occurred_at <> now()
 			   AND NOT (coalesce(a.evidence, '{}'::jsonb) ? $4)
 			   AND ((a.entity_type = $1 AND a.entity_id = $2)
 			        OR (a.entity_type = $1 AND a.after ->> 'merged_into_id' = $2::text)
@@ -176,7 +177,7 @@ func ColleagueWorkedOnSince(ctx context.Context, tx pgx.Tx, entityType string, i
 		    OR EXISTS (
 			SELECT 1 FROM list_member m
 			 WHERE m.entity_type = $1 AND m.entity_id = $2 AND m.added_by LIKE 'human:%')`,
-		entityType, id, since, storekit.EvidenceKeyUndidAuditLog, tableRelationship, after).Scan(&worked); err != nil {
+		entityType, id, since, storekit.EvidenceKeyUndidAuditLog, tableRelationship, entryOrNone(after)).Scan(&worked); err != nil {
 		return false, fmt.Errorf("checking whether a colleague worked on this %s: %w", entityType, err)
 	}
 	return worked, nil
@@ -203,4 +204,12 @@ func ArchiveDroppedColleagueWork(ctx context.Context, tx pgx.Tx, entityType stri
 		}
 	}
 	return false, nil
+}
+
+// entryOrNone is the entry to order by, or none when the caller had only a time.
+func entryOrNone(entry ids.UUID) *ids.UUID {
+	if entry == ids.Nil {
+		return nil
+	}
+	return &entry
 }
