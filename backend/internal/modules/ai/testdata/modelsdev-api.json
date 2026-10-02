@@ -1,0 +1,26 @@
+{
+  "google": {"id": "google", "name": "Google", "models": {
+    "gemini-3.5-flash": {"id": "gemini-3.5-flash", "name": "Gemini 3.5 Flash", "family": "gemini-flash", "modalities": {"input": ["text", "image", "video", "audio", "pdf"], "output": ["text"]}, "cost": {"input": 1.5, "output": 9, "cache_read": 0.15, "input_audio": 1.5}},
+    "gemini-3.1-flash-lite": {"id": "gemini-3.1-flash-lite", "name": "Gemini 3.1 Flash Lite", "family": "gemini-flash-lite", "modalities": {"input": ["text", "image", "video", "audio", "pdf"], "output": ["text"]}, "cost": {"input": 0.25, "output": 1.5, "cache_read": 0.025, "input_audio": 0.5}},
+    "gemini-embedding-001": {"id": "gemini-embedding-001", "name": "Gemini Embedding 001", "family": "gemini", "modalities": {"input": ["text"], "output": ["text"]}, "cost": {"input": 0.15, "output": 0}},
+    "gemini-2.5-flash-image": {"id": "gemini-2.5-flash-image", "name": "Nano Banana", "family": "gemini-flash", "modalities": {"input": ["text", "image"], "output": ["text", "image"]}, "cost": {"input": 0.3, "output": 30, "cache_read": 0.075}},
+    "gemma-4-31b-it": {"id": "gemma-4-31b-it", "name": "Gemma 4 31B IT", "family": "gemma", "modalities": {"input": ["text", "image"], "output": ["text"]}},
+    "gemini-2.5-flash-preview-tts": {"id": "gemini-2.5-flash-preview-tts", "name": "Gemini 2.5 Flash Preview TTS", "family": "gemini-flash", "modalities": {"input": ["text"], "output": ["audio"]}, "cost": {"input": 0.5, "output": 10}}
+  }},
+  "google-vertex": {"id": "google-vertex", "name": "Vertex", "models": {
+    "gemini-3.5-flash": {"id": "gemini-3.5-flash", "name": "Gemini 3.5 Flash", "family": "gemini-flash", "modalities": {"input": ["text", "image", "video", "audio", "pdf"], "output": ["text"]}, "cost": {"input": 1.5, "output": 9, "cache_read": 0.15, "input_audio": 1.5}},
+    "gemini-embedding-001": {"id": "gemini-embedding-001", "name": "Gemini Embedding 001", "family": "gemini", "modalities": {"input": ["text"], "output": ["text"]}, "cost": {"input": 0.15, "output": 0}}
+  }},
+  "openai": {"id": "openai", "name": "OpenAI", "models": {
+    "gpt-5-mini": {"id": "gpt-5-mini", "name": "GPT-5 Mini", "family": "gpt-mini", "modalities": {"input": ["text", "image"], "output": ["text"]}, "cost": {"input": 0.25, "output": 2, "cache_read": 0.025}},
+    "text-embedding-3-small": {"id": "text-embedding-3-small", "name": "text-embedding-3-small", "family": "text-embedding", "modalities": {"input": ["text"], "output": ["text"]}, "cost": {"input": 0.02, "output": 0}},
+    "gpt-image-1": {"id": "gpt-image-1", "name": "gpt-image-1", "family": "gpt-image", "modalities": {"input": ["text", "image"], "output": ["image"]}}
+  }},
+  "anthropic": {"id": "anthropic", "name": "Anthropic", "models": {
+    "claude-sonnet-4-6": {"id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6", "family": "claude-sonnet", "modalities": {"input": ["text", "image", "pdf"], "output": ["text"]}, "cost": {"input": 3, "output": 15, "cache_read": 0.3, "cache_write": 3.75}},
+    "claude-haiku-4-5-20251001": {"id": "claude-haiku-4-5-20251001", "name": "Claude Haiku 4.5", "family": "claude-haiku", "modalities": {"input": ["text", "image", "pdf"], "output": ["text"]}, "cost": {"input": 1, "output": 5, "cache_read": 0.1, "cache_write": 1.25}}
+  }},
+  "mistral": {"id": "mistral", "name": "Mistral", "models": {
+    "open-mistral-nemo": {"id": "open-mistral-nemo", "name": "Open Mistral Nemo", "family": "mistral-nemo", "modalities": {"input": ["text"], "output": ["text"]}, "cost": {"input": 0.15, "output": 0.15}}
+  }}
+}

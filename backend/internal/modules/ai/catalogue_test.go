@@ -33,7 +33,7 @@ const happyCatalogueBody = `{"data":[
 	 "benchmarks":{"artificial_analysis":{"intelligence_index":40.5}}}
 ]}`
 
-// fakeCatalogueFetcher is the injected catalogueFetcher: it never touches
+// fakeCatalogueFetcher is the injected CatalogueFetcher: it never touches
 // the network, counts how many times it was asked, and returns either a
 // fixed body or a fixed error.
 type fakeCatalogueFetcher struct {
