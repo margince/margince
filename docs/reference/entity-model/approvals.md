@@ -56,6 +56,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 - `approval_decided` — `CHECK ((((status = 'pending') AND (decided_at IS NULL)) OR (status = 'expired') OR ((status = ANY (ARRAY['approved', 'rejected'])) AND (decided_at IS NOT NULL))))`
 - `approval_effect_failure_is_stated` — `CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL)))`
 - `approval_status_check` — `CHECK ((status = ANY (ARRAY['pending', 'approved', 'rejected', 'expired'])))`
+- `approval_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

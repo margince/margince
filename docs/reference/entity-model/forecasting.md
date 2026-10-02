@@ -34,10 +34,12 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 **Rules**
 
+- `forecast_call_amount_minor_js_safe` — `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `forecast_call_amount_not_negative` — `CHECK ((amount_minor >= 0))`
 - `forecast_call_period_ordered` — `CHECK ((period_end >= period_start))`
 - `forecast_call_scope_id_matches_kind` — `CHECK (((scope_kind = 'workspace') = (scope_id IS NULL)))`
 - `forecast_call_scope_kind_check` — `CHECK ((scope_kind = ANY (ARRAY['workspace', 'team', 'owner'])))`
+- `forecast_call_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -108,10 +110,13 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 **Rules**
 
 - `forecast_contribution_amount_currency_pair` — `CHECK (((amount_minor IS NULL) = (currency IS NULL)))`
+- `forecast_contribution_amount_minor_js_safe` — `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `forecast_contribution_exclusion_reason_check` — `CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced', 'fx_missing', 'out_of_period', 'not_eligible']))))`
 - `forecast_contribution_probability_is_a_percent` — `CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))`
 - `forecast_contribution_rate_dated` — `CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))`
 - `forecast_contribution_rate_positive` — `CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))`
+- `forecast_contribution_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
+- `forecast_contribution_weighted_minor_js_safe` — `CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))`
 - `forecast_contribution_weighted_needs_a_base` — `CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))`
 - `uq_forecast_contribution_deal` — `UNIQUE (snapshot_id, deal_id)`
 
@@ -164,12 +169,18 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 **Rules**
 
+- `forecast_snapshot_best_case_minor_js_safe` — `CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_counts_are_tallies` — `CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))`
+- `forecast_snapshot_evidence_minor_js_safe` — `CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))`
+- `forecast_snapshot_open_minor_js_safe` — `CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_period_ordered` — `CHECK ((period_end >= period_start))`
 - `forecast_snapshot_readings_not_negative` — `CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (best_case_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))`
 - `forecast_snapshot_scope_id_matches_kind` — `CHECK (((scope_kind = 'workspace') = (scope_id IS NULL)))`
 - `forecast_snapshot_scope_kind_check` — `CHECK ((scope_kind = ANY (ARRAY['workspace', 'team', 'owner'])))`
 - `forecast_snapshot_trigger_check` — `CHECK ((trigger = ANY (ARRAY['daily', 'call', 'period_close', 'recheck'])))`
+- `forecast_snapshot_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
+- `forecast_snapshot_weighted_minor_js_safe` — `CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))`
+- `forecast_snapshot_won_minor_js_safe` — `CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

@@ -31,6 +31,8 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 - `report_definition_audience_check` — `CHECK ((audience = ANY (ARRAY['private', 'team', 'workspace'])))`
 - `report_definition_check` — `CHECK (((audience = 'team') = (audience_team_id IS NOT NULL)))`
+- `report_definition_revision_js_safe` — `CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))`
+- `report_definition_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -56,6 +58,11 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 |---|---|---|
 | `created_by` | `app_user` | the parent cannot be deleted while this row points at it |
 | `report_id` | `report_definition` | the parent cannot be deleted while this row points at it |
+
+**Rules**
+
+- `report_definition_revision_framework_revision_js_safe` — `CHECK (((framework_revision >= '-9007199254740991'::bigint) AND (framework_revision <= '9007199254740991'::bigint)))`
+- `report_definition_revision_revision_js_safe` — `CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -90,6 +97,7 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 **Rules**
 
 - `report_edition_execution_id_key` — `UNIQUE (execution_id)`
+- `report_edition_report_revision_js_safe` — `CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -160,8 +168,10 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 **Rules**
 
+- `report_execution_attempt_js_safe` — `CHECK (((attempt >= '-9007199254740991'::bigint) AND (attempt <= '9007199254740991'::bigint)))`
 - `report_execution_check` — `CHECK (((retry_base_attempt >= 0) AND (retry_base_attempt <= attempt)))`
 - `report_execution_execution_key_key` — `UNIQUE (execution_key)`
+- `report_execution_report_revision_js_safe` — `CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))`
 - `report_execution_status_check` — `CHECK ((status = ANY (ARRAY['pending', 'running', 'succeeded', 'partial', 'failed', 'suspended', 'skipped'])))`
 
 **Indexes**
@@ -195,6 +205,11 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 | `owner_id` | `app_user` | the parent cannot be deleted while this row points at it |
 | `report_id, report_revision` | `report_definition_revision` | the parent cannot be deleted while this row points at it |
 
+**Rules**
+
+- `report_schedule_report_revision_js_safe` — `CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))`
+- `report_schedule_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
+
 **Indexes**
 
 - `report_schedule_due` — `btree (next_due_at, id) WHERE enabled`
@@ -214,7 +229,9 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 **Rules**
 
 - `reporting_framework_id_key` — `UNIQUE (id)`
+- `reporting_framework_revision_js_safe` — `CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))`
 - `reporting_framework_singleton_check` — `CHECK (singleton)`
+- `reporting_framework_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -237,6 +254,10 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `created_by` | `app_user` | the parent cannot be deleted while this row points at it |
+
+**Rules**
+
+- `reporting_framework_revision_revision_js_safe` — `CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -272,7 +293,9 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 - `sales_target_check` — `CHECK ((period_end > period_start))`
 - `sales_target_check1` — `CHECK (((scope_kind = 'workspace') = (scope_id IS NULL)))`
 - `sales_target_period_kind_check` — `CHECK ((period_kind = ANY (ARRAY['month', 'fiscal_quarter'])))`
+- `sales_target_revision_js_safe` — `CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))`
 - `sales_target_scope_kind_check` — `CHECK ((scope_kind = ANY (ARRAY['owner', 'team', 'workspace'])))`
+- `sales_target_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -297,6 +320,10 @@ The 10 tables owned by `reporting`, as the migrations build them. [Back to the e
 |---|---|---|
 | `created_by` | `app_user` | the parent cannot be deleted while this row points at it |
 | `target_id` | `sales_target` | the parent cannot be deleted while this row points at it |
+
+**Rules**
+
+- `sales_target_revision_revision_js_safe` — `CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

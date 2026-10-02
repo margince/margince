@@ -671,6 +671,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `channel_connection_provider_check` — `CHECK ((provider = 'telegram'))`
 - `channel_connection_status_check` — `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
+- `channel_connection_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

@@ -56,11 +56,13 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `assurance_exception_affected_minor_js_safe` — `CHECK (((affected_minor >= '-9007199254740991'::bigint) AND (affected_minor <= '9007199254740991'::bigint)))`
 - `assurance_exception_amount_currency_pair` — `CHECK (((affected_minor IS NULL) = (currency IS NULL)))`
 - `assurance_exception_seen_ordered` — `CHECK ((last_seen_at >= first_seen_at))`
 - `assurance_exception_severity_check` — `CHECK ((severity = ANY (ARRAY['low', 'medium', 'high'])))`
 - `assurance_exception_status_check` — `CHECK ((status = ANY (ARRAY['open', 'resolved', 'expired', 'condition_cleared', 'subject_departed'])))`
 - `assurance_exception_subject_kind_check` — `CHECK ((subject_kind = ANY (ARRAY['deal', 'signal', 'offer', 'contract'])))`
+- `assurance_exception_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_assurance_exception_logical_key` — `UNIQUE (logical_key)`
 
 **Indexes**
@@ -103,6 +105,7 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_resolution_expiry_after_creation` — `CHECK (((expires_at IS NULL) OR (expires_at > created_at)))`
 - `assurance_resolution_outcome_check` — `CHECK ((outcome = ANY (ARRAY['fixed_record', 'added_evidence', 'value_correct', 'not_relevant', 'remind_later', 'reassign', 'condition_cleared'])))`
 - `assurance_resolution_suppression_expires` — `CHECK (((outcome <> ALL (ARRAY['value_correct', 'not_relevant'])) OR (expires_at IS NOT NULL)))`
+- `assurance_resolution_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -136,6 +139,7 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_run_readiness_matches_status` — `CHECK (((status = 'running') = (readiness IS NULL)))`
 - `assurance_run_requester_is_named` — `CHECK (((requested_by IS NULL) OR (length(btrim(requested_by)) > 0)))`
 - `assurance_run_status_check` — `CHECK ((status = ANY (ARRAY['running', 'complete', 'incomplete'])))`
+- `assurance_run_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -192,6 +196,7 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_source_coverage_date_matches_state` — `CHECK (((state = 'checked') OR (checked_through IS NULL)))`
 - `assurance_source_coverage_source_check` — `CHECK ((source = ANY (ARRAY['mail', 'calendar', 'documents', 'contracts', 'offers', 'incumbent'])))`
 - `assurance_source_coverage_state_check` — `CHECK ((state = ANY (ARRAY['checked', 'stale', 'unavailable', 'permission_limited', 'not_connected'])))`
+- `assurance_source_coverage_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_assurance_source_coverage_run_source` — `UNIQUE (run_id, source)`
 
 **Indexes**

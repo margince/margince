@@ -47,6 +47,7 @@ The 4 tables owned by `integrations`, as the migrations build them. [Back to the
 - `provider_connection_provider_key` — `UNIQUE (provider)`
 - `provider_connection_refresh_after_days_check` — `CHECK ((refresh_after_days > 0))`
 - `provider_connection_status_check` — `CHECK ((status = ANY (ARRAY['disconnected', 'validating', 'connected', 'invalid_credentials', 'insufficient_credits', 'rate_limited', 'provider_error'])))`
+- `provider_connection_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -131,6 +132,7 @@ The 4 tables owned by `integrations`, as the migrations build them. [Back to the
 
 - `provider_run_attempt_count_check` — `CHECK ((attempt_count >= 0))`
 - `provider_run_claims_unwritten_shape` — `CHECK (((NOT claims_unwritten) OR (state = 'completed')))`
+- `provider_run_connection_version_js_safe` — `CHECK (((connection_version >= '-9007199254740991'::bigint) AND (connection_version <= '9007199254740991'::bigint)))`
 - `provider_run_external_correlation_id_key` — `UNIQUE (external_correlation_id)`
 - `provider_run_skip_reason_check` — `CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted', 'low_balance', 'suppressed', 'not_eligible', 'duplicate_subject_candidate', 'rate_limited', 'already_fresh', 'no_identifiers']))))`
 - `provider_run_skip_reason_shape` — `CHECK (((state = 'skipped') = (skip_reason IS NOT NULL)))`

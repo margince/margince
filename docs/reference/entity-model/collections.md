@@ -38,6 +38,7 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 - `list_entity_type_check` — `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
 - `list_list_type_check` — `CHECK ((list_type = ANY (ARRAY['static', 'dynamic'])))`
 - `list_sharing_check` — `CHECK ((sharing = ANY (ARRAY['private', 'team', 'workspace'])))`
+- `list_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -69,6 +70,7 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
+- `list_evaluation_definition_version_js_safe` — `CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))`
 - `list_evaluation_outcome_check` — `CHECK ((outcome = ANY (ARRAY['complete', 'too_large', 'invalid'])))`
 
 **Indexes**
@@ -96,6 +98,7 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
+- `list_live_member_definition_version_js_safe` — `CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))`
 - `list_live_member_entity_type_check` — `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
 
 **Indexes**
@@ -160,6 +163,7 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 **Rules**
 
 - `list_member_event_action_check` — `CHECK ((action = ANY (ARRAY['added', 'removed', 'entered', 'left'])))`
+- `list_member_event_definition_version_js_safe` — `CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))`
 - `list_member_event_entity_type_check` — `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
 - `list_member_event_reason_check` — `CHECK ((reason = ANY (ARRAY['chosen', 'bulk', 'record_archived', 'record_restored', 'evaluated', 'filter_changed', 'automation'])))`
 
@@ -195,6 +199,7 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
+- `list_revision_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `list_revision_version_key` — `UNIQUE (list_id, version)`
 
 **Indexes**
@@ -252,6 +257,7 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `saved_view_resource_check` — `CHECK ((resource = ANY (ARRAY['contacts', 'companies', 'deals', 'activities', 'leads', 'partners', 'projects'])))`
 - `saved_view_shared_scope_check` — `CHECK ((shared_scope = ANY (ARRAY['private', 'team', 'workspace'])))`
+- `saved_view_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -282,6 +288,7 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 **Rules**
 
 - `tag_color_check` — `CHECK (((color IS NULL) OR (color = ANY (ARRAY['teal', 'amber', 'rose', 'slate', 'sky', 'violet', 'lime', 'orange']))))`
+- `tag_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

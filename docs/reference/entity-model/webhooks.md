@@ -77,6 +77,7 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 - `webhook_subscription_event_types_check` — `CHECK ((cardinality(event_types) > 0))`
 - `webhook_subscription_state_check` — `CHECK ((state = ANY (ARRAY['active', 'paused'])))`
 - `webhook_subscription_target_url_check` — `CHECK ((target_url ~ '^https://'))`
+- `webhook_subscription_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

@@ -374,6 +374,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `onboarding_wizard_state_step_check` — `CHECK ((step = ANY (ARRAY['read', 'confirm', 'basis', 'invite', 'team', 'voice', 'results', 'connect', 'complete'])))`
 - `onboarding_wizard_state_user_id_key` — `UNIQUE (user_id)`
 - `onboarding_wizard_state_version_check` — `CHECK ((version >= 1))`
+- `onboarding_wizard_state_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -449,6 +450,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `record_grant_record_type_check` — `CHECK ((record_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
 - `record_grant_subject_type_check` — `CHECK ((subject_type = ANY (ARRAY['user', 'team'])))`
 - `record_grant_unique` — `UNIQUE (record_type, record_id, subject_type, subject_id)`
+- `record_grant_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -475,6 +477,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Rules**
 
 - `role_key_unique` — `UNIQUE (key)`
+- `role_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
