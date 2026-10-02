@@ -592,13 +592,9 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 |---|---|---|
 | `parent_team_id` | `team` | deleting the parent keeps this row and clears the link |
 
-**Rules**
-
-- `team_name_unique` — `UNIQUE (name)`
-
 **Indexes**
 
-- `team_name_unique` — `unique, btree (name)`
+- `team_name_unique` — `unique, btree (name) WHERE (archived_at IS NULL)`
 - `team_pkey` — `unique, btree (id)`
 
 **Triggers**

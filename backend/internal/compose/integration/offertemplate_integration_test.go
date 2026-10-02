@@ -125,19 +125,36 @@ func TestOfferTemplateCreate_DuplicateNameConflict(t *testing.T) {
 		t.Fatalf("a refused duplicate create must leave exactly the first row, found %d", n)
 	}
 
-	// offer_template_name_unique (0071) is NOT partial — it spans
-	// archived rows too, so archiving the incumbent does NOT free the
-	// name for reuse; the pre-check must still answer the named 409
-	// (never let a false negative through to the raw 23505).
+	// Archiving the incumbent frees the name. offer_template_name_unique is partial
+	// on archived_at IS NULL, and checkTemplateNameConflict mirrors it, so the two
+	// agree: an archived template is absent from the lists a caller works from, so a
+	// conflict naming it reads as a collision with nothing and leaves them inventing
+	// a different name. It stays readable by id, and listable under
+	// include_archived — which is how they would find what to rename, if renaming an
+	// archived template were the answer.
 	if _, err := e.Deals.ArchiveOfferTemplate(ctx, ids.From[ids.OfferTemplateKind](ids.UUID(first.Id))); err != nil {
 		t.Fatal(err)
 	}
+	reused, err := e.Deals.CreateOfferTemplate(ctx, basicTemplateInput("Standard DE"))
+	if err != nil {
+		t.Fatalf("the name an archived template held must be free, got %v", err)
+	}
+	if ids.UUID(reused.Id) == ids.UUID(first.Id) {
+		t.Fatal("reusing the name returned the archived template rather than a new one")
+	}
+	// Both rows carry the name now, and only one of them is live — which is what the
+	// predicate permits and the pre-check has to permit with it.
+	if n := e.WsCount(t, `SELECT count(*) FROM offer_template WHERE name = 'Standard DE'`); n != 2 {
+		t.Fatalf("after reusing an archived name the table holds %d rows, want 2", n)
+	}
+	// And the guard still guards: the name is taken again by the live row.
 	_, err = e.Deals.CreateOfferTemplate(ctx, basicTemplateInput("Standard DE"))
 	if !errors.As(err, &dup) {
-		t.Fatalf("the name must stay blocked after archiving the incumbent, got %v", err)
+		t.Fatalf("a THIRD template took the name the reused one now holds, got %v", err)
 	}
-	if dup.ExistingID.UUID != ids.UUID(first.Id) {
-		t.Fatalf("DuplicateTemplateNameError.ExistingID = %s, want the archived incumbent's id %s", dup.ExistingID, first.Id)
+	if dup.ExistingID.UUID != ids.UUID(reused.Id) {
+		t.Fatalf("DuplicateTemplateNameError.ExistingID = %s, want the live template's id %s",
+			dup.ExistingID, reused.Id)
 	}
 }
 
