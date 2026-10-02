@@ -81,21 +81,16 @@ var (
 // lockTimeoutBaseline is where this obligation starts: migrations sorting at or
 // after it must comply.
 //
-// THIS GATE CURRENTLY EXAMINES NOTHING, and saying so is the point. The pin was
-// armed above main to spare a backlog — roughly a hundred migrations taking a
-// blocking lock on a pre-existing table without a timeout, most long applied
-// everywhere, where adding timeouts to versions that will never re-run is churn
-// with no effect on any deployed database. The baseline consolidation deleted
-// every one of them, and what core opens with now sorts BELOW this pin. So the
-// count of files this gate reads is zero, and it passes over an empty set.
+// The pin scopes the gate to migrations written after it. Below it sits the baseline,
+// which CREATES its tables: nothing to contend with, no lock to bound, and demanding
+// a timeout from statements that cannot block would teach the next reader that the
+// timeout is a ritual rather than a lock budget. Raise it only when a shipped backlog
+// is deliberately being exempted, and say why.
 //
-// It is DORMANT, not broken, and it arms itself: a new core migration is named
-// for the unix second it was written, which is above this value, so the very
-// next migration is examined. That is why the pin stays where it is rather than
-// dropping to reach the baseline — the baseline CREATES its tables, so there is
-// nothing to contend with and no lock to bound, and demanding a timeout from
-// statements that cannot block would teach the next reader that the timeout is a
-// ritual rather than a lock budget.
+// lock_timeout bounds ACQUISITION only. How long a statement may HOLD what it took is
+// bounded on the migrate command's connection (cmd/migrate's statement-timeout flag),
+// not here: a session ceiling reaches every migration including the ones this pin
+// spares, where a per-file rule would reach only the ones written after it.
 //
 // assertExaminedSomethingOnceArmed below is what keeps that claim honest: the
 // moment any migration sorts above the pin, this gate has to have read it.
@@ -192,14 +187,7 @@ func unboundedLock(sql string) string {
 	// mentions a CREATE for `foo` while its first statement takes ACCESS
 	// EXCLUSIVE on the live `foo` — the exact hazard this gate exists for. So a
 	// table counts as the file's own only from the point it is created onward.
-	own := map[string]int{}
-	for _, m := range createsTable.FindAllStringSubmatchIndex(statements, -1) {
-		name := strings.ToLower(strings.Trim(statements[m[4]:m[5]], `"`))
-		if _, seen := own[name]; !seen {
-			own[name] = m[0]
-		}
-	}
-
+	own := tablesCreatedIn(statements)
 	at := firstBlockingIndex(statements, own)
 	if at < 0 {
 		return ""
@@ -213,6 +201,35 @@ func unboundedLock(sql string) string {
 	default:
 		return ""
 	}
+}
+
+// tablesCreatedIn maps each table a file certainly creates to the offset it is
+// created at.
+//
+// POSITIONAL, not a set: a table counts as the file's own only from the point it is
+// created onward, so a statement above its CREATE is read against the live table.
+// The first creation wins, since a file creating one name twice has already failed.
+//
+// `IF NOT EXISTS` creates NOTHING when the table is already there, so it cannot
+// establish that the rows a later statement scans are this file's. Reading it as a
+// creation exempts a statement on a table that has been live, with rows, since some
+// earlier migration — which is precisely the case both callers exist to catch.
+//
+// Shared with plainconstraintscan_test.go, which asks the same question of a
+// different obligation: both need to know whether a statement's table existed before
+// this file ran, and two readings of that could disagree.
+func tablesCreatedIn(statements string) map[string]int {
+	own := map[string]int{}
+	for _, m := range createsTable.FindAllStringSubmatchIndex(statements, -1) {
+		if m[2] >= 0 {
+			continue // IF NOT EXISTS: the table may well have been there already
+		}
+		name := strings.ToLower(strings.Trim(statements[m[4]:m[5]], `"`))
+		if _, seen := own[name]; !seen {
+			own[name] = m[0]
+		}
+	}
+	return own
 }
 
 // commaSiblings picks up the tables AFTER the first in a comma-separated list.
@@ -350,6 +367,11 @@ func TestTheLockGateReportsWhatItClaimsTo(t *testing.T) {
 		// And the noise that class would bury it under, if the check could not
 		// tell a fresh table from a live one.
 		{"an index on a table this file creates", "CREATE TABLE thing (id uuid);\nCREATE INDEX i ON thing (id);", false},
+		// A CONDITIONAL create establishes nothing: when the table is already
+		// there it survives untouched, with its rows and its writers, so the
+		// index below takes a blocking lock on a live table. Reading this as the
+		// file's own would exempt the very case this gate is for.
+		{"an index after CREATE TABLE IF NOT EXISTS", "CREATE TABLE IF NOT EXISTS thing (id uuid);\nCREATE INDEX i ON thing (id);", true},
 		{"ACCESS SHARE blocks no writer", "LOCK TABLE relationship IN ACCESS SHARE MODE;", false},
 
 		// Presence is not enough: a timeout has to precede what it bounds.
