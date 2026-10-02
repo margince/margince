@@ -117,7 +117,7 @@ func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *t
 	}
 
 	seen := map[string]int{}
-	var kindIndexUnderCounterpartyArm, addressIndexBoundsKind int
+	var kindIndexUnderCounterpartyArm, addressIndexBoundsKind, touchRangedOnTime int
 	plans[0].Plan.walk(func(n planNode) {
 		// A relation planned twice is aliased twice: answer_thread, answer_thread_1.
 		alias := planCopySuffix.ReplaceAllString(n.Alias, "")
@@ -128,6 +128,9 @@ func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *t
 		if alias == "answer_mail" && n.IndexName == "idx_activity_answer_mail" && strings.Contains(n.IndexCond, "kind") {
 			addressIndexBoundsKind++
 		}
+		if alias == "answer_touch" && n.IndexName != "" && !strings.Contains(n.IndexCond, "(id = ") {
+			touchRangedOnTime++
+		}
 	})
 	// Flattened, the planner pastes the LEAST into the row filter and again
 	// into the percentile, so the thread arm is planned twice.
@@ -136,6 +139,10 @@ func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *t
 	}
 	if addressIndexBoundsKind == 0 {
 		t.Errorf("no answer arm reads idx_activity_answer_mail with the kind in its key, so the time bound falls to a second index")
+	}
+	if touchRangedOnTime != 0 {
+		t.Errorf("a touch arm reads activity %d times by something other than the linked id: it walks every later call and meeting of the installation for each message, where the sender's contact bounds it",
+			touchRangedOnTime)
 	}
 	if kindIndexUnderCounterpartyArm != 0 {
 		t.Errorf("the same-subject arm reads idx_activity_kind %d times: it walks every later email of the installation for each message, where idx_activity_answer_mail bounds it",
