@@ -56,6 +56,7 @@ function backendFor(configured: boolean) {
               provider: "gemini_vertex",
               configured,
               env_var: "GEMINI_VERTEX_SA_JSON",
+              usable: configured,
               optional: false,
               credential_kind: "service_account",
             },

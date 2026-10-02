@@ -52,6 +52,7 @@ func (h Handlers) ListAiProviderKeys(w http.ResponseWriter, r *http.Request) {
 			Optional:       s.Optional,
 			CredentialKind: crmcontracts.AiProviderKeyStatusCredentialKind(s.CredentialKind),
 			PricedBy:       optionalPricedBy(s.PricedBy),
+			Usable:         s.Usable(),
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)

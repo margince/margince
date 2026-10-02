@@ -16371,9 +16371,9 @@ paths:
                 mixed:
                   value:
                     providers:
-                      - { provider: anthropic, configured: true, env_var: ANTHROPIC_API_KEY }
-                      - { provider: openai, configured: false, env_var: OPENAI_API_KEY }
-                      - { provider: gemini, configured: true, env_var: GEMINI_API_KEY }
+                      - { provider: anthropic, configured: true, env_var: ANTHROPIC_API_KEY, usable: true }
+                      - { provider: openai, configured: false, env_var: OPENAI_API_KEY, usable: false }
+                      - { provider: gemini, configured: true, env_var: GEMINI_API_KEY, usable: true }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
 
@@ -28563,13 +28563,19 @@ components:
     AiProviderKeyStatus:
       type: object
       additionalProperties: false
-      required: [provider, configured, env_var, optional, credential_kind]
+      required: [provider, configured, env_var, optional, credential_kind, usable]
       description: >-
         What may be known about one vendor's credential. Facts about the vendor and whether a key
         is held, and nothing about the key: it has no read path, and neither does anything derived
         from it — a length, a prefix or a masked tail would each narrow a brute force while
         feeling harmless.
       properties:
+        usable:
+          type: boolean
+          description: >-
+            Whether this vendor can be called as the installation stands: a key is held, the
+            adapter calls without one, or it takes no key. The daily price sync reads this same
+            answer to decide which vendors it prices.
         provider:
           type: string
           description: The routing name of the vendor, the same string a binding uses.

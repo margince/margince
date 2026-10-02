@@ -37,12 +37,14 @@ const LISTED = {
       provider: "gemini",
       configured: true,
       env_var: "GEMINI_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "openai",
       configured: false,
       env_var: "OPENAI_API_KEY",
+      usable: false,
       optional: false,
     },
   ],
@@ -162,6 +164,7 @@ describe("AiProviderKeysCard", () => {
       provider: "jev_compatible",
       configured: false,
       env_var: "JEV_COMPATIBLE_API_KEY",
+      usable: true,
       optional: true,
     };
     vi.stubGlobal(

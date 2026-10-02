@@ -56,6 +56,10 @@ type ProviderKeyStatus struct {
 	PricedBy string
 }
 
+// Usable reports whether this vendor can be called: a key is held, the adapter
+// needs none, or it takes no key. The sync's scope and the badge both read it.
+func (s ProviderKeyStatus) Usable() bool { return s.Configured || s.Optional || s.EnvVar == "" }
+
 // The two credential kinds. A property of the vendor, so List answers it
 // without opening the vault.
 const (

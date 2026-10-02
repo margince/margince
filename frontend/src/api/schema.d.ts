@@ -19254,6 +19254,8 @@ export interface components {
         };
         /** @description What may be known about one vendor's credential. Facts about the vendor and whether a key is held, and nothing about the key: it has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
         AiProviderKeyStatus: {
+            /** @description Whether this vendor can be called as the installation stands: a key is held, the adapter calls without one, or it takes no key. The daily price sync reads this same answer to decide which vendors it prices. */
+            usable: boolean;
             /** @description The routing name of the vendor, the same string a binding uses. */
             provider: string;
             /** @description Whether a credential is held. A screen reads this to offer "add" or "rotate"; it says nothing about whether the key still works, which only the vendor can answer. */

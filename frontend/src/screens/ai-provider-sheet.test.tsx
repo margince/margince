@@ -10,6 +10,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { AiProviderKeysCard } from "./ai-provider-keys";
+import { providerState } from "./ai-provider-sheet";
 
 afterEach(() => {
   cleanup();
@@ -29,24 +30,28 @@ const KEYS = {
       provider: "gemini",
       configured: true,
       env_var: "GEMINI_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "anthropic",
       configured: true,
       env_var: "ANTHROPIC_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "openai",
       configured: false,
       env_var: "OPENAI_API_KEY",
+      usable: false,
       optional: false,
     },
     {
       provider: "jev",
       configured: false,
       env_var: "TYPESAFE_API_KEY",
+      usable: false,
       optional: false,
     },
   ],
@@ -434,5 +439,22 @@ describe("a provider's sheet", () => {
     expect(within(sheet).queryByText("Prices")).toBeNull();
     expect(asked).not.toContain("GET /v1/ai-model-rates");
     expect(asked).toContain("GET /v1/ai/provider-keys");
+  });
+});
+
+describe("providerState", () => {
+  it("reads the server's usable answer rather than re-deriving it", () => {
+    const status = {
+      provider: "openai",
+      configured: false,
+      optional: false,
+      env_var: "OPENAI_API_KEY",
+      credential_kind: "api_key" as const,
+      usable: true,
+    };
+    expect(providerState(status, undefined)).toBe("ready");
+    expect(providerState({ ...status, usable: false }, undefined)).toBe(
+      "inactive",
+    );
   });
 });

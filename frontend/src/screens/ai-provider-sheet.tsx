@@ -29,8 +29,8 @@ type SheetRow = components["schemas"]["AiModelRate"];
 
 export type ProviderUsage = ProviderUse;
 
-// Whether a vendor can be called (`usable`) crossed with whether routing binds
-// it. Four readings, and the two worth a reader's attention are the off-diagonal
+// Whether a vendor can be called (`usable`, the server's answer) crossed with
+// whether routing binds it. Four readings, and the two worth a reader's attention are the off-diagonal
 // ones: a binding with nothing to call it with fails closed, and a keyed vendor
 // nothing is bound to is ready to take a binding.
 export type ProviderState = "active" | "ready" | "needs_key" | "inactive";
@@ -39,7 +39,7 @@ export function providerState(
   status: ProviderStatus,
   usage: ProviderUsage | undefined,
 ): ProviderState {
-  const usable = status.configured || status.optional || status.env_var === "";
+  const usable = status.usable;
   if (usage) return usable ? "active" : "needs_key";
   return usable ? "ready" : "inactive";
 }

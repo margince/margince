@@ -28,6 +28,7 @@ function story(
     provider: string;
     configured: boolean;
     env_var: string;
+    usable: boolean;
     optional: boolean;
     credential_kind: "api_key" | "service_account";
   }[],
@@ -52,6 +53,7 @@ const gemini = {
   provider: "gemini",
   configured: true,
   env_var: "GEMINI_API_KEY",
+  usable: true,
   optional: false,
   credential_kind: "api_key" as const,
 };
@@ -59,6 +61,7 @@ const anthropic = {
   provider: "anthropic",
   configured: false,
   env_var: "ANTHROPIC_API_KEY",
+  usable: false,
   optional: false,
   credential_kind: "api_key" as const,
 };
@@ -68,6 +71,7 @@ const vertex = {
   provider: "gemini_vertex",
   configured: true,
   env_var: "GEMINI_VERTEX_SA_JSON",
+  usable: true,
   optional: false,
   credential_kind: "service_account" as const,
 };
@@ -76,6 +80,7 @@ const jevCompatible = {
   provider: "jev_compatible",
   configured: false,
   env_var: "JEV_COMPATIBLE_API_KEY",
+  usable: true,
   optional: true,
   credential_kind: "api_key" as const,
 };

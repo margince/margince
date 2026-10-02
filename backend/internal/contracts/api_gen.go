@@ -21974,6 +21974,9 @@ type AiProviderKeyStatus struct {
 
 	// Provider The routing name of the vendor, the same string a binding uses.
 	Provider string `json:"provider"`
+
+	// Usable Whether this vendor can be called as the installation stands: a key is held, the adapter calls without one, or it takes no key. The daily price sync reads this same answer to decide which vendors it prices.
+	Usable bool `json:"usable"`
 }
 
 // AiProviderKeyStatusCredentialKind Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a service-account key file (`service_account_json`), `api_key` is a pasted key. A property of the vendor, not of what is stored.
