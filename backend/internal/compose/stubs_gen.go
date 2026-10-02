@@ -2759,6 +2759,10 @@ func (stubs) UpdateStageExitCriterion(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "UpdateStageExitCriterion")
 }
 
+func (stubs) GetStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetStatus")
+}
+
 func (stubs) ListTags(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListTagsParams) {
 	httperr.NotImplemented(w, r, "ListTags")
 }

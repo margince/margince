@@ -16,6 +16,9 @@ when it has content.
 
 ### Added
 
+- `GET /v1/status`: an anonymous, fixed-body reachability probe for external
+  uptime monitors. It does no dependency work; `/healthz` and `/readyz` stay
+  internal.
 - Visual analytics for sellers and managers: bookings trends, pipeline
   stages and age, SDR outcomes, target attainment, forecast composition and
   captured movement, with permission-checked evidence and CSV export.

@@ -254,6 +254,35 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AuthCapabilities' }
 
+  /status:
+    get:
+      tags: [Identity]
+      operationId: getStatus
+      security: []
+      x-agent-access: human-only
+      summary: Anonymous reachability probe for external uptime monitors.
+      description: |
+        Answers a fixed body and does no work: it proves the public path (DNS, TLS,
+        any load balancer or ingress, and routing into the api) and nothing else.
+        Dependency health is `/readyz`'s job: an instance that cannot reach its
+        dependencies fails readiness and stops receiving traffic, so this probe then
+        fails at the edge. Discloses nothing: no version, dependency, or AI state.
+        Before the installation is bootstrapped it answers 503, like every `/v1` route.
+      responses:
+        '200':
+          description: The api is reachable through the public path.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServiceStatus' }
+        '503':
+          description: The installation is not bootstrapped yet.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /auth/login:
     post:
       tags: [Identity]
@@ -44023,6 +44052,16 @@ components:
           enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm]
           x-enum-varnames: [AssistantModelProviderAnthropic, AssistantModelProviderGemini, AssistantModelProviderGeminiVertex, AssistantModelProviderOllama, AssistantModelProviderOpenAI, AssistantModelProviderOpenAICompatible, AssistantModelProviderVLLM]
         model: { type: string }
+
+    ServiceStatus:
+      type: object
+      description: The fixed answer of `GET /status`.
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
 
     AuthCapabilities:
       type: object

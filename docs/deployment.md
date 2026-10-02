@@ -193,7 +193,15 @@ One host, not two, because three things cross the split:
 - `/readyz` — readiness: 200 when every dependency (Postgres, Redis, and any
   configured object store / vault / AI) is up, else 503 naming the unready one.
 
-Point liveness at `/healthz` and readiness at `/readyz`.
+- `/v1/status` — reachability: an anonymous, fixed `200 {"status":"ok"}`
+  with `Cache-Control: no-store`. It does no dependency work and discloses
+  nothing; it answers 503 before the installation is bootstrapped.
+
+Point liveness at `/healthz` and readiness at `/readyz`. Point an external
+uptime monitor at `/v1/status`: it travels the same path a user does (DNS,
+TLS, proxy, `/v1` routing), and when every instance fails readiness the proxy
+has nowhere to send it, so it fails too. `/healthz` and `/readyz` need not be
+routed publicly at all.
 
 `/readyz` also answers 503 while the **database is behind the binary** — the
 versions this build ships that the ledger does not record, for the core and

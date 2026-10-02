@@ -30,6 +30,9 @@ var publicRequests = map[string]map[string]bool{
 	"/v1/auth/logout":          {http.MethodPost: true},
 	"/v1/auth/forgot-password": {http.MethodPost: true},
 	"/v1/auth/reset-password":  {http.MethodPost: true},
+	// The reachability probe external uptime monitors call: a fixed body,
+	// no dependency work, nothing disclosed (see compose.Server.GetStatus).
+	"/v1/status": {http.MethodGet: true},
 	// The OAuth AS endpoints authenticate by their own means: DCR is
 	// open (public clients + PKCE), token exchange proves possession via
 	// the code + verifier, and RFC 7009 revocation proves it by presenting
