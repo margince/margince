@@ -37006,7 +37006,7 @@ type Offer struct {
 	// OfferNumber Human-facing Angebot number, minted server-side, unique per workspace (with revision).
 	OfferNumber *string `json:"offer_number,omitempty"`
 
-	// PdfAssetRef Rendered PDF ref, set by renderOffer (B-E03.22/WP7).
+	// PdfAssetRef Rendered PDF ref, set by renderOffer. Null, as are buyer_company_id and buyer_snapshot, for a reader who cannot open the buyer company; cleared when a draft's buyer changes.
 	PdfAssetRef *string `json:"pdf_asset_ref,omitempty"`
 
 	// Revision Bumped when a sent offer is regenerated; the prior revision becomes superseded.
