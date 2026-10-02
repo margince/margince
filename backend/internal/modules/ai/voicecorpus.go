@@ -280,35 +280,6 @@ func isCueIdentifier(line string) bool {
 	return true
 }
 
-// parseSRT reads SubRip blocks: index + timing lines dropped,
-// `Speaker:` prefixes attribute turns across wrapped lines.
-func parseSRT(content string) []speakerTurn {
-	var turns []speakerTurn
-	current := ""
-	for _, line := range strings.Split(content, "\n") {
-		trimmed := strings.TrimSpace(strings.TrimRight(line, "\r"))
-		switch {
-		case trimmed == "":
-			current = ""
-			continue
-		case strings.Contains(trimmed, "-->") || isCueIdentifier(trimmed):
-			continue
-		}
-		if speaker, ok := timestampSpeakerLine(trimmed); ok {
-			current = speaker
-			continue
-		}
-		speaker, text := SplitSpeakerLine(trimmed)
-		if speaker != "" {
-			current = speaker
-		}
-		if text != "" {
-			turns = append(turns, speakerTurn{Speaker: current, Text: text})
-		}
-	}
-	return turns
-}
-
 // SplitSpeakerLine extracts attribution from one cue line: a WebVTT
 // `<v Name>text</v>` voice tag, or the `Name: text` convention. A name is
 // letters-first with at most a short trailing number — that admits the
