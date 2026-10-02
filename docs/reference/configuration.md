@@ -1390,10 +1390,12 @@ currency sheet (worker role). A refresh never writes a rate directly — it stag
 before it applies. It is read only by the worker (the api enqueues the job; the
 worker fetches and stages).
 
-Model prices are not configured here. **Refresh model prices** (Settings → AI)
-reads OpenRouter's public model list and writes today's price for each
-OpenRouter-hosted model the installation binds, in the request itself; every
-provider that publishes no price list is set by hand on the sheet.
+Model prices are not configured here. They sync daily from public catalogues
+(Settings → AI → **Model prices**): each vendor API whose key is usable is priced
+from models.dev, and the OpenRouter-hosted models the installation binds from
+OpenRouter's list. New chat and embedding models a key lists are added with their
+price; a price set by hand is never rewritten. **Auto-sync daily** turns the job
+off; **Refresh model prices** runs it on demand.
 
 | field | default | effect |
 |---|---|---|
