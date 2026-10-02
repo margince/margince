@@ -32,7 +32,7 @@ class ApiJudgeTest(unittest.TestCase):
         body = provider.requests[0][2]
         self.assertEqual(body["model"], "claude-haiku-4-5-20251001")
         self.assertNotIn("tools", body)
-        self.assertIn("crit", body["messages"][0]["content"])
+        self.assertIn("crit", json.dumps(body["messages"][0]["content"]))
 
     def test_an_unparseable_reply_is_retried_once_with_the_reason(self):
         with FakeProvider([messages_reply("sure!"), messages_reply(NO)]) as provider:
@@ -40,7 +40,7 @@ class ApiJudgeTest(unittest.TestCase):
                    "E2E_LLM_JUDGE_BASE_URL": provider.url}
             with unittest.mock.patch.dict(os.environ, env):
                 self.assertEqual(judge.verdict("crit", "ans"), (False, "it does not"))
-        self.assertIn("could not be read", provider.requests[1][2]["messages"][0]["content"])
+        self.assertIn("could not be read", json.dumps(provider.requests[1][2]["messages"][0]["content"]))
 
     def test_openrouter_judge_records_the_canonical_model_not_the_wire_id(self):
         directory = tempfile.mkdtemp()

@@ -102,6 +102,23 @@ class _Wire:
             raise ProviderFault(f"{self._route.candidate} answered in a shape the bridge does not read: {err!r}") from err
 
 
+# Anthropic caches only up to a marked block, and at most four of them. The
+# system prompt is marked (the tools ahead of it are cached with it) and so is
+# the newest message, which rolls forward each turn — marks are added to the
+# request, never to the stored history, so they cannot accumulate.
+_EPHEMERAL = {"type": "ephemeral"}
+
+
+def _marked(message):
+    """A copy of `message` whose last content block is a cache breakpoint."""
+    content = message["content"]
+    blocks = [{"type": "text", "text": content}] if isinstance(content, str) else [dict(b) for b in content]
+    if not blocks:
+        return message
+    blocks[-1] = dict(blocks[-1], cache_control=_EPHEMERAL)
+    return dict(message, content=blocks)
+
+
 def _effort(route):
     """The pinned reasoning effort, or None where the candidate pins none."""
     kind, _, level = route.effort.partition(" ")
@@ -129,7 +146,14 @@ class _Chat(_Wire):
     def _step(self, results):
         for call_id, text, _is_error in results or ():
             self._messages.append({"role": "tool", "tool_call_id": call_id, "content": text})
-        body = {"model": self._route.model, "messages": self._messages}
+        messages = list(self._messages)
+        # Through a broker only Claude needs the marks; GPT and Mistral cache
+        # a repeated prefix on their own.
+        if self._route.candidate == "claude":
+            if messages[0]["role"] == "system":
+                messages[0] = _marked(messages[0])
+            messages[-1] = _marked(messages[-1])
+        body = {"model": self._route.model, "messages": messages}
         # No parallel_tool_calls: the vendor's default already allows them, and
         # a broker routing on require_parameters drops any endpoint lacking it.
         if self._tools:
@@ -165,9 +189,10 @@ class _Chat(_Wire):
             return None
         details = usage.get("prompt_tokens_details") or {}
         cached = details.get("cached_tokens") or 0
+        written = details.get("cache_write_tokens") or 0
         return {
-            "input": usage["prompt_tokens"] - cached, "output": usage["completion_tokens"],
-            "cache_read": cached, "cache_write": details.get("cache_write_tokens") or 0,
+            "input": usage["prompt_tokens"] - cached - written, "output": usage["completion_tokens"],
+            "cache_read": cached, "cache_write": written,
             "cost": usage.get("cost"),
         }
 
@@ -243,9 +268,10 @@ class _Messages(_Wire):
                 {"type": "tool_result", "tool_use_id": call_id, "content": text, "is_error": is_error}
                 for call_id, text, is_error in results
             ]})
-        body = {"model": self._route.model, "max_tokens": 8192, "messages": self._messages}
+        messages = self._messages[:-1] + [_marked(self._messages[-1])]
+        body = {"model": self._route.model, "max_tokens": 8192, "messages": messages}
         if self._system:
-            body["system"] = self._system
+            body["system"] = [{"type": "text", "text": self._system, "cache_control": _EPHEMERAL}]
         if self._tools:
             body["tools"] = self._tools
         reply = _post(self._route.candidate, f"{self._route.base_url}/v1/messages",

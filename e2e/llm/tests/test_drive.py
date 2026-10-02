@@ -1,5 +1,6 @@
 import contextlib
 import io
+import json
 import os
 import sys
 import tempfile
@@ -201,7 +202,7 @@ class MessagesWireTest(Bridge):
         self.assertEqual(code, 0)
         self.assert_scored_answer(out)
         first, second = self.requests
-        self.assertEqual(first["system"], "be careful")
+        self.assertEqual(first["system"][0]["text"], "be careful")
         self.assertEqual(first["tools"][0]["input_schema"], {"type": "object"})
         self.assertEqual(second["messages"][-1]["content"][0]["tool_use_id"], "c1")
         self.assertEqual(self.headers[0]["x-api-key"], "k")
@@ -221,3 +222,52 @@ class McpFailureTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def markers(body):
+    return json.dumps(body).count('"cache_control"')
+
+
+class CacheTest(Bridge):
+    """Claude caches only what a request marks, so the bridge marks the system
+    prompt (which caches the tools ahead of it) and the newest message; the
+    other vendors cache on their own and are sent no marker."""
+
+    TWO_TURNS = [call_search(), chat("September.")]
+
+    def test_claude_on_openrouter_marks_system_and_newest_message(self):
+        self.drive(self.TWO_TURNS, candidate="claude", via="openrouter")
+        first, second = self.requests
+        system = first["messages"][0]
+        self.assertEqual(system["role"], "system")
+        self.assertEqual(system["content"][-1]["cache_control"], {"type": "ephemeral"})
+        self.assertEqual(system["content"][-1]["text"], "be careful")
+        self.assertEqual(second["messages"][-1]["content"][-1]["cache_control"], {"type": "ephemeral"})
+        # Rolling, not accumulating: Anthropic refuses a fifth breakpoint.
+        self.assertEqual((markers(first), markers(second)), (2, 2))
+
+    def test_claude_on_its_own_api_marks_system_and_newest_message(self):
+        self.drive([
+            messages([{"type": "tool_use", "id": "c1", "name": "search_context", "input": {"q": "x"}}]),
+            messages([{"type": "text", "text": "September."}]),
+        ], candidate="claude")
+        first, second = self.requests
+        self.assertEqual(first["system"][-1]["cache_control"], {"type": "ephemeral"})
+        self.assertEqual(second["messages"][-1]["content"][-1]["cache_control"], {"type": "ephemeral"})
+        self.assertEqual((markers(first), markers(second)), (2, 2))
+
+    def test_the_other_vendors_get_no_marker(self):
+        for candidate in ("gpt", "mistral"):
+            self.drive(list(self.TWO_TURNS), candidate=candidate, via="openrouter")
+            self.assertEqual([markers(body) for body in self.requests], [0, 0], candidate)
+
+
+class ChatUsageTest(Bridge):
+    def test_cache_writes_are_not_also_counted_as_input(self):
+        # A broker's prompt_tokens covers the cached and the newly cached
+        # prefix too; input is what was neither, as the claude CLI reports it.
+        usage = {"prompt_tokens": 4451, "completion_tokens": 66,
+                 "prompt_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 4447}}
+        _code, out = self.drive([chat("ok", usage=usage)], candidate="claude", via="openrouter")
+        counted = check.read_usage(out)[0]
+        self.assertEqual((counted["input_tokens"], counted["cache_creation_input_tokens"]), (4, 4447))
