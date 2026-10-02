@@ -219,7 +219,9 @@ function GuestPicks({ name }: Readonly<{ name?: string }>) {
   return (
     <section className="book-picks">
       <span className="t-name">
-        {t("scheduling.guestPicks", { name: name ?? t("scheduling.guest") })}
+        {t("scheduling.guestPicks", {
+          name: name?.trim() || t("scheduling.guest"),
+        })}
       </span>
       <p className="t-caption">{t("scheduling.guestPicksOne")}</p>
     </section>
