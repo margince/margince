@@ -58,6 +58,9 @@
         "model": "mistralai/mistral-medium-3-5",
         "key_env": "OPENAI_COMPATIBLE_API_KEY",
         "routing": {
+          "only": [
+            "mistral/eu"
+          ],
           "require_parameters": true
         }
       }

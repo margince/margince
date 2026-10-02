@@ -138,7 +138,7 @@ class OpenRouterTest(Bridge):
     def test_routing_and_usage_accounting_are_requested(self):
         usage = dict(CHAT_USAGE, cost=0.002)
         _code, out = self.drive([chat("ok", usage=usage)], via="openrouter")
-        self.assertEqual(self.requests[0]["provider"], {"require_parameters": True})
+        self.assertEqual(self.requests[0]["provider"], {"only": ["mistral/eu"], "require_parameters": True})
         self.assertEqual(self.requests[0]["usage"], {"include": True})
         self.assertEqual(self.requests[0]["model"], "mistralai/mistral-medium-3-5")
         self.assertEqual(check.read_usage(out)[1], 0.002)

@@ -646,6 +646,10 @@ func readE2ELLMVerdicts(dir string) (map[verdictKey]e2eVerdict, error) {
 			return nil, readErr
 		}
 		for _, entry := range files {
+			if entry.IsDir() {
+				return nil, fmt.Errorf("%s/%s: a verdict folder may not nest — the model id carried a '/'; "+
+					"file it under E2E_LLM_FOLDER", model.Name(), entry.Name())
+			}
 			if !strings.HasSuffix(entry.Name(), ".json") {
 				continue
 			}
