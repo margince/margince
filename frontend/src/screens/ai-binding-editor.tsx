@@ -30,7 +30,11 @@ import {
   type RoutingRead,
 } from "./ai-routing-query";
 import { type SliceValue, sameSlice, sliceOf } from "./ai-routing-slice";
-import { ServingSection, servingBlocked } from "./ai-serving-editor";
+import {
+  laneBrokered,
+  ServingSection,
+  servingBlocked,
+} from "./ai-serving-editor";
 import { problemMessageOf } from "./common";
 import { savedVertexLocation, VERTEX_PROVIDER } from "./vertex-location";
 
@@ -141,7 +145,10 @@ export function BindingEditor({
             model={binding.model}
             lane={laneName(draft)}
           />
-          <TierRecentCalls tier={callTier(draft)} />
+          <TierRecentCalls
+            tier={callTier(draft)}
+            broker={laneBrokered(draft.binding, opened.routing)}
+          />
           <ServingSection
             key={`${binding.provider}|${binding.model}`}
             value={draft}

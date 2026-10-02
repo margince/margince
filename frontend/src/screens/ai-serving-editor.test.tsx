@@ -11,6 +11,7 @@ import { summarize } from "./ai-request-summary";
 import { jsonResponse, render } from "./ai-routing.testkit";
 import type { SliceValue } from "./ai-routing-slice";
 import { ServingSection, servingBlocked } from "./ai-serving-editor";
+import { RequestSummary } from "./ai-serving-reference";
 
 // The serving editor in the binding dialog: when it applies, what the server's
 // preview says about the text, and the request it shows for the tier.
@@ -362,5 +363,27 @@ describe("summarize", () => {
     );
     expect(lines.map((l) => l.source)).toEqual(["default", "default", "task"]);
     expect(lines[1].sentence.params).toEqual({ prices: "$1 prompt" });
+  });
+});
+
+describe("RequestSummary", () => {
+  it("says OpenRouter picks the host when nothing beyond the task's level is sent", () => {
+    previewServer(() => ({}));
+    render(
+      <RequestSummary
+        lane="cheap_cloud"
+        effective={{}}
+        written={{}}
+        pending={false}
+      />,
+    );
+    expect(
+      screen.getByText("Nothing extra: OpenRouter picks the host on its own."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Thinking level comes from each task’s setting under AI tasks.",
+      ),
+    ).toBeTruthy();
   });
 });

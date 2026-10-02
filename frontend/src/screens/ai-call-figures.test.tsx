@@ -167,12 +167,31 @@ describe("ProviderRecentCalls", () => {
 describe("TierRecentCalls", () => {
   it("lists each host that served the tier this week", async () => {
     const { asked } = statsServer(() => [row("Cerebras")]);
-    render(<TierRecentCalls tier="local_small" />);
+    render(<TierRecentCalls tier="local_small" broker />);
     expect(await screen.findByRole("link", { name: "Cerebras" })).toBeTruthy();
     expect(asked[0].searchParams.get("tier")).toBe("local_small");
     expect(
       screen.getByRole("link", { name: "View calls" }).getAttribute("href"),
     ).toBe("#/settings/model-calls?tier=local_small");
+  });
+
+  it("lists models off the broker, where the vendor is the host", async () => {
+    const { asked } = statsServer(() => [row("gemini-3.1-flash-lite")]);
+    render(<TierRecentCalls tier="premium" broker={false} />);
+    const link = await screen.findByRole("link", {
+      name: "gemini-3.1-flash-lite",
+    });
+    expect(link.getAttribute("href")).toBe(
+      "#/settings/model-calls?model=gemini-3.1-flash-lite&tier=premium",
+    );
+    expect(asked[0].searchParams.get("group")).toBe("model");
+  });
+
+  it("names a hostless row by whether any call was answered", async () => {
+    statsServer(() => [row("", { calls: 41, failed: 0, timeouts: 0 })]);
+    render(<TierRecentCalls tier="embed" broker />);
+    expect(await screen.findByText("Host not recorded")).toBeTruthy();
+    expect(screen.queryByText("No host answered")).toBeNull();
   });
 });
 
@@ -206,9 +225,11 @@ describe("OpenRouter settings", () => {
   it("shows only for an OpenRouter host, and saves the rules with the connection", async () => {
     const { puts } = statsServer(() => []);
     const user = userEvent.setup();
+    const onHostChange = vi.fn();
     render(
       <ProviderSettingsForm
         provider="openai_compatible"
+        onHostChange={onHostChange}
         canManage
         routing={{
           profile: "cloud_frontier",
@@ -221,6 +242,9 @@ describe("OpenRouter settings", () => {
       />,
     );
     const section = screen.getByRole("region", { name: "OpenRouter settings" });
+    expect(
+      screen.getByRole("button", { name: "Save connection" }),
+    ).toBeDisabled();
     await user.click(
       within(section).getByRole("checkbox", { name: /Zero data retention/ }),
     );
@@ -236,6 +260,8 @@ describe("OpenRouter settings", () => {
     expect(
       screen.queryByRole("region", { name: "OpenRouter settings" }),
     ).toBeNull();
+    // The sheet's figures follow the host being chosen, not the stored one.
+    expect(onHostChange).toHaveBeenLastCalledWith("https://api.mistral.ai");
   });
 
   it("disables every rule for a reader who may not change it", () => {

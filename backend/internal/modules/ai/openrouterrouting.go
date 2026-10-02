@@ -6,8 +6,10 @@ package ai
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/url"
 	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -354,11 +356,33 @@ func validateEmbeddingsRouting(binding ProviderConfig) error {
 	// An allowlist, not a list of what is refused: a preference added to
 	// OpenRouterRouting later is refused here until somebody decides it belongs,
 	// which is what the generated schema's additionalProperties:false says too.
-	if !r.withoutPins().IsEmpty() {
-		return invalidAt(EmbeddingsRoutingPath, "the embeddings lane takes only "+strings.Join(connectionKeys, ", ")+" — "+
-			"they say which hosts may read the text; the other preferences bound a completion, and an embedding is one forward pass")
+	if rest := r.withoutPins(); !rest.IsEmpty() {
+		return refuseOnEmbeddings(rest)
 	}
 	return nil
+}
+
+// refuseOnEmbeddings names each key rest carries by its path: the lane takes
+// only the connection's host rules, which say which hosts may read the text,
+// and every other preference bounds a completion.
+func refuseOnEmbeddings(rest *OpenRouterRouting) error {
+	why := "is not taken on the embeddings lane, which accepts only the connection's host rules (" +
+		strings.Join(connectionKeys, ", ") + "). Remove it."
+	raw, err := rest.RequestJSON()
+	var written map[string]map[string]json.RawMessage
+	if err == nil {
+		err = json.Unmarshal(raw, &written)
+	}
+	if err != nil {
+		return fmt.Errorf("ai: reading the embeddings lane's routing: %w", err)
+	}
+	var errs []error
+	for _, block := range slices.Sorted(maps.Keys(written)) {
+		for _, key := range slices.Sorted(maps.Keys(written[block])) {
+			errs = append(errs, invalidAt(joinPath(EmbeddingsRoutingPath, block+"."+key), why))
+		}
+	}
+	return joinFaults(errs...)
 }
 
 // refuseEmptyOrRepeated holds a preference list to the shape the schema

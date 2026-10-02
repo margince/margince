@@ -144,34 +144,38 @@ export function RequestSummary({
         <p className="t-caption">
           {pending ? t("aiServing.checking") : t("aiServing.fixFirst")}
         </p>
-      ) : lines.length === 0 ? (
-        <p className="t-caption">{t("aiServing.brokerOwn")}</p>
       ) : (
-        <ul className="ai-serving-lines">
-          {lines.map((line) => (
-            <li key={line.key}>
-              <Badge
-                tone={
-                  line.source === "tier"
-                    ? "accent"
-                    : line.source === "connection"
-                      ? "warning"
-                      : undefined
-                }
-              >
-                {t(SOURCE_LABEL[line.source])}
-              </Badge>
-              <span>
-                <span>{t(line.sentence.key, line.sentence.params)}</span>
-                {line.value ? (
-                  <code className="t-caption">
-                    {line.key} = {line.value}
-                  </code>
-                ) : null}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <>
+          {/* The task's own thinking line is always there; nothing else is. */}
+          {lines.every((line) => line.source === "task") && (
+            <p className="t-caption">{t("aiServing.brokerOwn")}</p>
+          )}
+          <ul className="ai-serving-lines">
+            {lines.map((line) => (
+              <li key={line.key}>
+                <Badge
+                  tone={
+                    line.source === "tier"
+                      ? "accent"
+                      : line.source === "connection"
+                        ? "warning"
+                        : undefined
+                  }
+                >
+                  {t(SOURCE_LABEL[line.source])}
+                </Badge>
+                <span>
+                  <span>{t(line.sentence.key, line.sentence.params)}</span>
+                  {line.value ? (
+                    <code className="t-caption">
+                      {line.key} = {line.value}
+                    </code>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       <Disclosure summary={t("aiServing.showJson")}>
         <pre className="code-block">

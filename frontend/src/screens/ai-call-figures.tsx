@@ -231,12 +231,19 @@ export function ProviderRecentCalls({
   );
 }
 
-/** The binding dialog's Recent calls: each host that served the tier this week. */
-export function TierRecentCalls({ tier }: Readonly<{ tier: string }>) {
+/**
+ * The binding dialog's Recent calls: each host that served the tier this week
+ * on the broker, and each model elsewhere, where the vendor is the host.
+ */
+export function TierRecentCalls({
+  tier,
+  broker,
+}: Readonly<{ tier: string; broker: boolean }>) {
   const t = useT();
   const canSee = useCan("ai_diagnostics", "read");
+  const by: Grouping = broker ? "host" : "model";
   const stats = useCallStats(
-    { window: "7d", group: "served_provider", tier },
+    { window: "7d", group: GROUP_OF[by], tier },
     canSee,
   );
   if (!canSee) return null;
@@ -256,8 +263,16 @@ export function TierRecentCalls({ tier }: Readonly<{ tier: string }>) {
       <FiguresTable
         rows={stats.data?.rows}
         failed={stats.isError}
-        keyHeader={t("aiFigures.by.host")}
-        hrefFor={(row) => callsHrefFor({ tier, served_provider: row.key })}
+        keyHeader={t(
+          by === "host" ? "aiFigures.by.host" : "aiFigures.by.model",
+        )}
+        hrefFor={(row) =>
+          callsHrefFor(
+            by === "host"
+              ? { tier, served_provider: row.key }
+              : { tier, model: row.key },
+          )
+        }
       />
     </section>
   );
@@ -291,11 +306,15 @@ function FiguresTable({
           header: keyHeader,
           // A row no host served has no value to filter the log by, so it is
           // named and not linked: a link would open every call on the lane.
+          // A row whose calls all failed had no host answer; one with answers
+          // is a lane, embeddings among them, whose broker names no host.
           render: (row) =>
             row.key ? (
               <a href={hrefFor(row)}>{row.key}</a>
-            ) : (
+            ) : row.failed === row.calls ? (
               t("aiFigures.noHost")
+            ) : (
+              t("aiFigures.hostUnrecorded")
             ),
         },
         {

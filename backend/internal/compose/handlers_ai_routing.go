@@ -221,11 +221,10 @@ func fromContractAiRouting(req crmcontracts.AiRouting, sent map[string]json.RawM
 	return cfg, ai.JoinRoutingFaults(errs...)
 }
 
+// tierFromWire keeps the rest of the lane when its routing is refused, so a
+// preview judges the lane with its stored routing rather than as unbound.
 func tierFromWire(path string, b crmcontracts.AiTierBinding, sent map[string]json.RawMessage) (ai.ProviderConfig, error) {
 	routing, err := routingFromWire(path, b.Routing, sent[path])
-	if err != nil {
-		return ai.ProviderConfig{}, err
-	}
 	out := ai.ProviderConfig{Provider: b.Provider, Model: b.Model, Routing: routing}
 	if b.BaseUrl != nil {
 		out.BaseURL = *b.BaseUrl
@@ -239,7 +238,7 @@ func tierFromWire(path string, b crmcontracts.AiTierBinding, sent map[string]jso
 	if b.ThinkingLevel != nil {
 		out.ThinkingLevel = string(*b.ThinkingLevel)
 	}
-	return out, nil
+	return out, err
 }
 
 // The omitempty helpers exist so an absent value reads as absent rather

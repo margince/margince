@@ -146,7 +146,7 @@ func TestASavedTaskOverrideReachesARunningRouter(t *testing.T) {
 	if rec := putTaskOverrides(ctx, taskOverrideHandlers(e), `{"capture_classify":{"thinking":"low"}}`, ""); rec.Code != http.StatusOK {
 		t.Fatalf("PUT = %d %s", rec.Code, rec.Body)
 	}
-	w.Recheck(context.Background())
+	w.refreshTaskOverrides(context.Background())
 
 	want := ai.TaskOverrides{ai.TaskCaptureClassify: {Thinking: "low"}}.Revision()
 	if got := router.TaskOverridesRevision(); got != want || got == before {

@@ -520,3 +520,32 @@ it("leaves the reason out of an attempt that had none", async () => {
   expect(first?.textContent).toContain("jev_compatible/jev-classify · 600 ms");
   expect(first?.textContent).not.toContain("—");
 });
+
+it("shows the request settings the attempts were sent with, and the host that served one", async () => {
+  mount(true, true, OPERATOR, {
+    call: {
+      ...summary,
+      config: {
+        task_contract_hash: "c",
+        routing_config_hash: "r",
+        prompt_version: "p",
+        provider_params: { provider: { sort: "latency" }, deadline_ms: 30000 },
+      },
+    },
+    attempts: [
+      { ...RETRIED.attempts[0] },
+      {
+        ...RETRIED.attempts[1],
+        attempt_reason: "timeout",
+        served_provider: "Cerebras",
+      },
+    ],
+  });
+  await userEvent.click(
+    await screen.findByRole("button", { name: /show attempts/i }),
+  );
+  expect(await screen.findByText("Request settings sent")).toBeTruthy();
+  expect(screen.getByText(/"deadline_ms": 30000/)).toBeTruthy();
+  expect(screen.getByText(/served by Cerebras/)).toBeTruthy();
+  expect(screen.getByText(/The attempt before ran out of time/)).toBeTruthy();
+});

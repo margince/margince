@@ -231,6 +231,9 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			if i < len(boundRungs)-1 {
 				lc.append(r.traceForFailedRung(b, *trace, t, callErr, start))
 				trace.AttemptReason = attemptReasonProviderError
+				if isDeadline(callErr) {
+					trace.AttemptReason = attemptReasonTimeout
+				}
 			}
 			continue
 		}

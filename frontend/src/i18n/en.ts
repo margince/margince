@@ -9038,6 +9038,7 @@ export const en = {
     "Decision model not certified for this task",
   "aicalls.reason.decision_local_only":
     "Task is local-only and the decision model is not",
+  "aicalls.reason.timeout": "The attempt before ran out of time",
   "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
   "aicalls.filter.all": "All tasks",
@@ -9050,6 +9051,8 @@ export const en = {
   "aicalls.detail.contextNone": "No company context injected",
   "aicalls.detail.attempts": "Attempts",
   "aicalls.detail.request": "Request payload",
+  "aicalls.detail.settings": "Request settings sent",
+  "aicalls.detail.servedBy": "served by {host}",
   "aicalls.detail.response": "Response payload",
   "aicalls.payload.off":
     "Payload capture is off. Set ai.capture_payloads: true in margince.yaml to record request and response content.",
@@ -9453,7 +9456,7 @@ export const en = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
-    "Read-only: each task’s tier is fixed by contract. Each row shows the tier and the model it runs on now.",
+    "Edit a task to see how its calls went and to set its thinking level and timeouts. Its tier is fixed by contract; each row shows the tier and the model it runs on now.",
   "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
   "aiTasks.viewCalls": "View calls",
@@ -12083,6 +12086,7 @@ export const en = {
   "aiFigures.openRow": "Open a row to see the matching calls.",
   "aiFigures.lastWeek": "Last 7 days",
   "aiFigures.noHost": "No host answered",
+  "aiFigures.hostUnrecorded": "Host not recorded",
   "aiFigures.empty": "No calls in this window.",
   "aiFigures.pending": "Reading the call record…",
   "aiFigures.unread":
@@ -12144,6 +12148,8 @@ export const en = {
     "Host routing applies only to OpenRouter. The connection points at another service. Thinking level and timeout are still set per task under AI tasks.",
   "aiServing.empty":
     "Empty uses the shipped default: sort by throughput, fp16 or bf16, require parameters. {} lets OpenRouter route on its own.",
+  "aiServing.empty.embeddings":
+    "Empty adds nothing to the connection’s host rules. This lane takes only only, ignore, allow_fallbacks, zdr, data_collection and enforce_distillable_text.",
   "aiServing.json": "Serving JSON",
   "aiServing.format": "Format",
   "aiServing.example": "Insert example",

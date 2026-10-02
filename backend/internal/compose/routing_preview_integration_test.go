@@ -202,3 +202,19 @@ func TestTheRoutingSchemaIsServedToAnAdmin(t *testing.T) {
 		t.Fatalf("the schema carries no openRouterProvider: %v", err)
 	}
 }
+
+// A key the decoder refuses is a problem on that path, not a lane gone
+// missing: the preview still knows the tier's provider and judges the rest.
+func TestPreviewNamesAnUnknownKeyAndKeepsTheLane(t *testing.T) {
+	h := newPreviewHarness(t)
+	body, _ := h.documentWithTier(t, "cheap_cloud", `{"model":"x"}`)
+
+	got := h.preview(t, body)
+
+	if got.Errors == nil || len(*got.Errors) != 1 || (*got.Errors)[0].Field != "tiers.cheap_cloud.routing.model" {
+		t.Fatalf("errors %+v, want one at tiers.cheap_cloud.routing.model", got.Errors)
+	}
+	if msg := (*got.Errors)[0].Message; strings.Contains(msg, "ai:") || strings.Contains(msg, "setting ") {
+		t.Errorf("the refusal leaks an internal prefix: %q", msg)
+	}
+}

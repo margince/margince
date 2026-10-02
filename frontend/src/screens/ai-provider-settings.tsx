@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
@@ -247,10 +247,13 @@ export function ProviderSettingsForm({
   provider,
   routing,
   canManage,
+  onHostChange,
 }: Readonly<{
   provider: string;
   routing: Routing;
   canManage: boolean;
+  /** The host the form would save, as it changes, for figures beside it. */
+  onHostChange?: (host: string) => void;
 }>) {
   const t = useT();
   const stored = routing.providers?.[provider] ?? {};
@@ -273,6 +276,11 @@ export function ProviderSettingsForm({
   const host = hostOf(known, service, typed);
   const brokered = provider === "openai_compatible" && isOpenRouter(host);
   const unchosen = catalog !== undefined && service === UNCHOSEN;
+  const body = settingsBody(host, location, brokered ? openRouter : null);
+  const written = JSON.stringify(body);
+  // What is stored, as this form would write it: Save waits for a change.
+  const [saved, setSaved] = useState(written);
+  useEffect(() => onHostChange?.(host), [host, onHostChange]);
   return (
     <div className="ai-provider-settings">
       {catalog && (
@@ -323,17 +331,13 @@ export function ProviderSettingsForm({
         <Button
           variant="primary"
           pending={save.isPending}
-          disabled={!canManage || unchosen}
+          disabled={!canManage || unchosen || written === saved}
           reason={canManage ? undefined : t("aiProviderKeys.adminOnly")}
           onClick={() =>
-            save.mutate({
-              provider,
-              settings: settingsBody(
-                host,
-                location,
-                brokered ? openRouter : null,
-              ),
-            })
+            save.mutate(
+              { provider, settings: body },
+              { onSuccess: () => setSaved(written) },
+            )
           }
         >
           {t("aiProviderSettings.save")}

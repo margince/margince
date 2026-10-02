@@ -8893,6 +8893,7 @@ export const de = {
     "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
   "aicalls.reason.decision_local_only":
     "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
+  "aicalls.reason.timeout": "Der Versuch davor lief in sein Zeitlimit",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
   "aicalls.callsLabel": "Letzte Aufrufe",
   "aicalls.filter.all": "Alle Aufgaben",
@@ -8905,6 +8906,8 @@ export const de = {
   "aicalls.detail.contextNone": "Kein Unternehmenskontext eingefügt",
   "aicalls.detail.attempts": "Versuche",
   "aicalls.detail.request": "Anfrage-Nutzdaten",
+  "aicalls.detail.settings": "Gesendete Anfrage-Einstellungen",
+  "aicalls.detail.servedBy": "bedient von {host}",
   "aicalls.detail.response": "Antwort-Nutzdaten",
   "aicalls.payload.off":
     "Die Erfassung der Nutzdaten ist ausgeschaltet. Setze ai.capture_payloads: true in margince.yaml, um Inhalte von Anfrage und Antwort aufzuzeichnen.",
@@ -9317,7 +9320,7 @@ export const de = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
-    "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile zeigt die Stufe und das Modell, auf dem sie gerade läuft.",
+    "Bearbeite eine Aufgabe, um zu sehen, wie ihre Aufrufe liefen, und um Denkstufe und Zeitlimits festzulegen. Die Stufe ist vertraglich festgelegt; jede Zeile zeigt die Stufe und das Modell, auf dem sie gerade läuft.",
   "aiTasks.whatItDoes": "{task}: was es tut",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
   "aiTasks.viewCalls": "Aufrufe ansehen",
@@ -11932,6 +11935,7 @@ export const de = {
   "aiFigures.openRow": "Öffne eine Zeile, um die passenden Aufrufe zu sehen.",
   "aiFigures.lastWeek": "Letzte 7 Tage",
   "aiFigures.noHost": "Kein Host hat geantwortet",
+  "aiFigures.hostUnrecorded": "Host nicht erfasst",
   "aiFigures.empty": "Keine Aufrufe in diesem Zeitraum.",
   "aiFigures.pending": "Aufrufprotokoll wird gelesen …",
   "aiFigures.unread":
@@ -11993,6 +11997,8 @@ export const de = {
     "Host-Routing gilt nur für OpenRouter. Die Verbindung zeigt auf einen anderen Dienst. Denkstufe und Zeitlimit werden weiterhin pro Aufgabe unter KI-Aufgaben festgelegt.",
   "aiServing.empty":
     "Leer nutzt die mitgelieferte Vorgabe: nach Durchsatz sortieren, fp16 oder bf16, Parameter verlangen. {} lässt OpenRouter selbst routen.",
+  "aiServing.empty.embeddings":
+    "Leer ergänzt nichts zu den Host-Regeln der Verbindung. Diese Spur nimmt nur only, ignore, allow_fallbacks, zdr, data_collection und enforce_distillable_text.",
   "aiServing.json": "Bereitstellungs-JSON",
   "aiServing.format": "Formatieren",
   "aiServing.example": "Beispiel einfügen",

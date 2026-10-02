@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -93,5 +94,27 @@ func TestTheEmbeddingsLaneTakesOnlyHostSelection(t *testing.T) {
 	native := "profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\nembeddings: {provider: gemini, model: e, routing: {only: [x]}}\n"
 	if _, err := ParseRouting([]byte(native)); err == nil {
 		t.Error("a host pin on a native embeddings vendor was accepted; it fronts one host and would be sent a field it never asked for")
+	}
+}
+
+// Each key the lane does not take is refused on its own path, so the editor
+// marks the line it was written on.
+func TestAnEmbeddingsRefusalNamesEachKeyByItsPath(t *testing.T) {
+	binding := ProviderConfig{Provider: providerOpenAICompatible, Model: "e", BaseURL: "https://openrouter.ai/api",
+		Routing: &OpenRouterRouting{
+			Provider:  OpenRouterProvider{Sort: &OpenRouterSort{By: SortPrice}, Only: []string{"mistral"}},
+			Reasoning: &OpenRouterReasoning{Effort: "low"},
+		}}
+	var faults routingFaults
+	if err := validateEmbeddingsRouting(binding); !errors.As(err, &faults) {
+		t.Fatalf("err = %v, want path faults", err)
+	}
+	var paths []string
+	for _, f := range faults {
+		paths = append(paths, f.Path)
+	}
+	want := []string{"embeddings.routing.provider.sort", "embeddings.routing.reasoning.effort"}
+	if !slices.Equal(paths, want) {
+		t.Errorf("paths %v, want %v", paths, want)
 	}
 }

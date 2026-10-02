@@ -98,6 +98,11 @@ export function AiFeatureTable({
                 {row.decision_first ? (
                   <Badge>{t("aiTasks.decisionFirst")}</Badge>
                 ) : null}
+                {onEdit &&
+                row.overrides &&
+                Object.keys(row.overrides).length > 0 ? (
+                  <Badge tone="accent">{t("aiTasks.custom")}</Badge>
+                ) : null}
                 <TaskState
                   health={health}
                   tier={row.leading_tier}
@@ -157,18 +162,12 @@ export function AiFeatureTable({
                 // ladder, thinking or timeout of its own.
                 render: (row: Feature) =>
                   row.defaults === undefined ? null : (
-                    <span className="cell-actions">
-                      {row.overrides &&
-                      Object.keys(row.overrides).length > 0 ? (
-                        <Badge tone="accent">{t("aiTasks.custom")}</Badge>
-                      ) : null}
-                      <Button
-                        onClick={() => onEdit(row)}
-                        aria-label={`${t("aiRouting.edit")} ${row.display_name}`}
-                      >
-                        {t("aiRouting.edit")}
-                      </Button>
-                    </span>
+                    <Button
+                      onClick={() => onEdit(row)}
+                      aria-label={`${t("aiRouting.edit")} ${row.display_name}`}
+                    >
+                      {t("aiRouting.edit")}
+                    </Button>
                   ),
               },
             ]

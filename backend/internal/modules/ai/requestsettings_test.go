@@ -91,6 +91,9 @@ func TestEachRungGetsItsOwnDeadline(t *testing.T) {
 	if len(fcs.recorded) != 2 || fcs.recorded[0].ErrorSentinel != sentinelTimeout || fcs.recorded[1].ErrorSentinel != "" {
 		t.Fatalf("rows %+v, want a timeout on the slow rung and the answer above it", fcs.recorded)
 	}
+	if got := fcs.recorded[1].AttemptReason; got != attemptReasonTimeout {
+		t.Errorf("the rung above says it ran because of %q, want %q", got, attemptReasonTimeout)
+	}
 }
 
 func TestACanceledCallIsNotATimeout(t *testing.T) {

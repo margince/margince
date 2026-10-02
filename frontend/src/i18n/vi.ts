@@ -8806,6 +8806,7 @@ export const vi = {
     "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
   "aicalls.reason.decision_local_only":
     "Tác vụ chỉ chạy cục bộ, mô hình quyết định thì không",
+  "aicalls.reason.timeout": "Lần thử trước đã hết thời gian",
   "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Các lệnh gọi gần đây",
   "aicalls.filter.all": "Mọi tác vụ",
@@ -8818,6 +8819,8 @@ export const vi = {
   "aicalls.detail.contextNone": "Không đưa ngữ cảnh công ty nào vào",
   "aicalls.detail.attempts": "Số lần thử",
   "aicalls.detail.request": "Nội dung yêu cầu",
+  "aicalls.detail.settings": "Cài đặt yêu cầu đã gửi",
+  "aicalls.detail.servedBy": "do {host} phục vụ",
   "aicalls.detail.response": "Nội dung phản hồi",
   "aicalls.payload.off":
     "Việc ghi nội dung đang tắt — hãy đặt ai.capture_payloads: true trong margince.yaml để ghi lại nội dung yêu cầu và phản hồi.",
@@ -9224,7 +9227,7 @@ export const vi = {
   "aiRouting.median": "Trung vị {ms} ms",
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
-    "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng hiển thị tầng và mô hình nó đang chạy.",
+    "Sửa một tác vụ để xem các lệnh gọi của nó diễn ra thế nào và đặt mức suy nghĩ cùng thời gian chờ. Tầng của nó do hợp đồng cố định; mỗi dòng hiển thị tầng và mô hình nó đang chạy.",
   "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
   "aiTasks.viewCalls": "Xem lượt gọi",
@@ -11815,6 +11818,7 @@ export const vi = {
   "aiFigures.openRow": "Mở một dòng để xem các lượt gọi tương ứng.",
   "aiFigures.lastWeek": "7 ngày qua",
   "aiFigures.noHost": "Không máy chủ nào trả lời",
+  "aiFigures.hostUnrecorded": "Không ghi lại máy chủ",
   "aiFigures.empty": "Không có lượt gọi nào trong khoảng này.",
   "aiFigures.pending": "Đang đọc bản ghi lượt gọi…",
   "aiFigures.unread":
@@ -11874,6 +11878,8 @@ export const vi = {
     "Định tuyến máy chủ chỉ áp dụng cho OpenRouter. Kết nối đang trỏ tới dịch vụ khác. Mức suy nghĩ và thời gian chờ vẫn được đặt theo từng tác vụ trong Tác vụ AI.",
   "aiServing.empty":
     "Để trống dùng mặc định có sẵn: sắp theo thông lượng, fp16 hoặc bf16, yêu cầu tham số. {} để OpenRouter tự định tuyến.",
+  "aiServing.empty.embeddings":
+    "Để trống không thêm gì vào quy tắc máy chủ của kết nối. Làn này chỉ nhận only, ignore, allow_fallbacks, zdr, data_collection và enforce_distillable_text.",
   "aiServing.json": "JSON phục vụ",
   "aiServing.format": "Định dạng",
   "aiServing.example": "Chèn ví dụ",

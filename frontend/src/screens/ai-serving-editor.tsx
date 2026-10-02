@@ -43,11 +43,18 @@ export function servingBlocked(
 ): ServingBlocked {
   if (value.kind === "decisions") return "decisions";
   if (value.binding.provider !== "openai_compatible") return "provider";
-  const host =
-    value.binding.base_url ||
-    routing.providers?.openai_compatible?.base_url ||
-    "";
-  return isOpenRouter(host) ? null : "host";
+  return laneBrokered(value.binding, routing) ? null : "host";
+}
+
+/** Whether a lane's calls go through the OpenRouter broker, which names a host. */
+export function laneBrokered(
+  binding: { provider: string; base_url?: string } | undefined,
+  routing: Routing,
+): boolean {
+  if (binding?.provider !== "openai_compatible") return false;
+  return isOpenRouter(
+    binding.base_url || routing.providers?.openai_compatible?.base_url || "",
+  );
 }
 
 const PREVIEW_DELAY_MS = 400;
@@ -242,11 +249,16 @@ function ServingEditor({
   return (
     <div className="ai-serving-grid">
       <div className="form-stack">
-        <p className="t-caption">{t("aiServing.empty")}</p>
+        <p className="t-caption">
+          {t(
+            value.kind === "embeddings"
+              ? "aiServing.empty.embeddings"
+              : "aiServing.empty",
+          )}
+        </p>
         <JsonField
           aria-label={t("aiServing.json")}
           value={text}
-          placeholder={sample}
           disabled={disabled}
           onChange={edit}
           problemLines={problems.flatMap((p) => (p.line ? [p.line] : []))}

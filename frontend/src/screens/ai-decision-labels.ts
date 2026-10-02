@@ -39,6 +39,8 @@ export function attemptReasonLabel(reason: string, t: T): string {
       return t("aicalls.reason.decision_uncertified");
     case "decision_local_only":
       return t("aicalls.reason.decision_local_only");
+    case "timeout":
+      return t("aicalls.reason.timeout");
     default:
       return reason || "—";
   }

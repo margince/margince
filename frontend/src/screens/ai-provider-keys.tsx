@@ -75,6 +75,8 @@ export function AiProviderKeysCard() {
   // The provider whose sheet is open, by name so it follows the list as a key
   // is saved rather than holding a copy that goes stale.
   const [opened, setOpened] = useState<string | null>(null);
+  // The host the open sheet's form would save; null until it reports one.
+  const [draftHost, setDraftHost] = useState<string | null>(null);
 
   if (!canSee) {
     // Withheld, not absent. An absent key card would say this installation has
@@ -113,7 +115,10 @@ export function AiProviderKeysCard() {
                   key={p.provider}
                   status={p}
                   usage={usage?.get(p.provider)}
-                  onOpen={() => setOpened(p.provider)}
+                  onOpen={() => {
+                    setDraftHost(null);
+                    setOpened(p.provider);
+                  }}
                 />
               ))}
               {openStatus ? (
@@ -136,6 +141,7 @@ export function AiProviderKeysCard() {
                             provider={openStatus.provider}
                             routing={routing.data.routing}
                             canManage={canManage}
+                            onHostChange={setDraftHost}
                           />
                         )}
                     </>
@@ -146,13 +152,19 @@ export function AiProviderKeysCard() {
                       broker={
                         openStatus.provider === "openai_compatible" &&
                         isOpenRouter(
-                          routing.data?.routing.providers?.[openStatus.provider]
-                            ?.base_url ?? "",
+                          draftHost ??
+                            routing.data?.routing.providers?.[
+                              openStatus.provider
+                            ]?.base_url ??
+                            "",
                         )
                       }
                     />
                   }
-                  onClose={() => setOpened(null)}
+                  onClose={() => {
+                    setDraftHost(null);
+                    setOpened(null);
+                  }}
                 />
               ) : null}
             </>

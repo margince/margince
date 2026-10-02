@@ -15,6 +15,7 @@ import (
 // attempt ran, distinct from an ordinary first try (which carries "").
 const (
 	attemptReasonProviderError = "provider_error"
+	attemptReasonTimeout       = sentinelTimeout
 	attemptReasonSchemaInvalid = "schema_invalid"
 	attemptReasonBudgetDegrade = "budget_degrade"
 )
@@ -24,7 +25,7 @@ const (
 //
 // Held by: TestTheAttemptReasonDescriptionNamesEveryReason (backend/internal/modules/ai/logicalcall_test.go)
 var attemptReasons = append([]string{
-	attemptReasonProviderError, attemptReasonSchemaInvalid, attemptReasonBudgetDegrade,
+	attemptReasonProviderError, attemptReasonTimeout, attemptReasonSchemaInvalid, attemptReasonBudgetDegrade,
 }, decisionAttemptReasons...)
 
 // logicalCall buffers every attempt of one served-or-failed decision —
