@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -31,6 +32,7 @@ type ModelRateRow struct {
 	CacheWriteUsd string
 	EffectiveDate time.Time
 	Lane          Lane
+	Source        RateSource
 }
 
 // SetModelRateInput sets one effective-dated model price. The four prices
@@ -49,6 +51,9 @@ type SetModelRateInput struct {
 	// has never seen. A re-price must not re-file an embedder, and the refresh
 	// job re-prices models it knows nothing else about.
 	Lane Lane
+	// Source is who is writing; empty is an admin by hand, the reading that keeps the
+	// sync's hands off the price.
+	Source RateSource
 }
 
 func (s *RateStore) todayUTC() time.Time {
@@ -125,7 +130,8 @@ type preparedModelRate struct {
 	input, output, cacheRead, cacheWrite int64
 	// lane is empty when the caller did not name one; writeModelRate resolves
 	// it against the sheet, which needs the transaction this half does not have.
-	lane Lane
+	lane   Lane
+	source RateSource
 }
 
 // prepareModelRate runs the connection-free, clock-free gates — RBAC admission,
@@ -156,10 +162,14 @@ func (s *RateStore) prepareModelRate(ctx context.Context, in SetModelRateInput) 
 	if in.Lane != "" && !knownLane(in.Lane) {
 		return preparedModelRate{}, unknownLane()
 	}
+	source := cmp.Or(in.Source, RateSourceManual)
+	if !knownRateSource(source) {
+		return preparedModelRate{}, rateInvalid(rateSourceField, "rate_source_unknown", "source must be manual, catalogue or seed")
+	}
 	return preparedModelRate{
 		provider: provider, modelID: modelID,
 		input: input, output: output, cacheRead: cacheRead, cacheWrite: cacheWrite,
-		lane: in.Lane,
+		lane: in.Lane, source: source,
 	}, nil
 }
 
@@ -224,13 +234,14 @@ func replacedModelRate(ctx context.Context, tx pgx.Tx, p preparedModelRate, effD
 	var (
 		in, out, cacheRead, cacheWrite int64
 		lane                           Lane
+		source                         RateSource
 	)
 	err = tx.QueryRow(ctx, `
 		SELECT input_per_mtok_microusd, output_per_mtok_microusd,
-		       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, lane
+		       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, lane, source
 		FROM ai_model_rate
 		WHERE provider = $1 AND model_id = $2 AND effective_date = $3`,
-		p.provider, p.modelID, effDate).Scan(&in, &out, &cacheRead, &cacheWrite, &lane)
+		p.provider, p.modelID, effDate).Scan(&in, &out, &cacheRead, &cacheWrite, &lane, &source)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, nil
 	}
@@ -240,7 +251,7 @@ func replacedModelRate(ctx context.Context, tx pgx.Tx, p preparedModelRate, effD
 	prior := preparedModelRate{
 		provider: p.provider, modelID: p.modelID,
 		input: in, output: out, cacheRead: cacheRead, cacheWrite: cacheWrite,
-		lane: lane,
+		lane: lane, source: source,
 	}
 	return modelRateImage(prior, effDate), true, nil
 }
@@ -253,7 +264,7 @@ func modelRateImage(r preparedModelRate, effDate time.Time) map[string]any {
 		"provider": r.provider, "model_id": r.modelID,
 		"input_microusd": r.input, "output_microusd": r.output,
 		"cache_read_microusd": r.cacheRead, "cache_write_microusd": r.cacheWrite,
-		"date": effDate, "lane": string(r.lane),
+		"date": effDate, "lane": string(r.lane), rateSourceField: string(r.source),
 	}
 }
 
@@ -288,6 +299,9 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	if err != nil {
 		return ModelRateRow{}, err
 	}
+	if replacing && p.source == RateSourceCatalogue && before[rateSourceField] == string(RateSourceManual) {
+		return ModelRateRow{}, errHandSetSinceRead
+	}
 	// The specific half of the admission pair prepareModelRate opened: now that
 	// insert-vs-overwrite is known, demand the grant this write really needs.
 	action := auth.UpsertAction(replacing)
@@ -301,6 +315,7 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 		eff                                 time.Time
 		provOut, modelOut                   string
 		laneOut                             Lane
+		sourceOut                           RateSource
 	)
 	if err := tx.QueryRow(
 		ctx, `
@@ -308,27 +323,28 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 			provider, model_id,
 			input_per_mtok_microusd, output_per_mtok_microusd,
 			cache_read_per_mtok_microusd, cache_write_per_mtok_microusd,
-			effective_date, lane)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			effective_date, lane, source)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (provider, model_id, effective_date)
 		DO UPDATE SET
 			input_per_mtok_microusd       = EXCLUDED.input_per_mtok_microusd,
 			output_per_mtok_microusd      = EXCLUDED.output_per_mtok_microusd,
 			cache_read_per_mtok_microusd  = EXCLUDED.cache_read_per_mtok_microusd,
 			cache_write_per_mtok_microusd = EXCLUDED.cache_write_per_mtok_microusd,
-			lane                          = EXCLUDED.lane
+			lane                          = EXCLUDED.lane,
+			source                        = EXCLUDED.source
 		RETURNING id, provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-		          cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane`,
+		          cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source`,
 		p.provider, p.modelID,
-		p.input, p.output, p.cacheRead, p.cacheWrite, effDate, string(p.lane),
-	).Scan(&id, &provOut, &modelOut, &inMicro, &outMicro, &crMicro, &cwMicro, &eff, &laneOut); err != nil {
+		p.input, p.output, p.cacheRead, p.cacheWrite, effDate, string(p.lane), string(p.source),
+	).Scan(&id, &provOut, &modelOut, &inMicro, &outMicro, &crMicro, &cwMicro, &eff, &laneOut, &sourceOut); err != nil {
 		return ModelRateRow{}, fmt.Errorf("upsert ai_model_rate: %w", err)
 	}
 	out = ModelRateRow{
 		Provider: provOut, ModelID: modelOut,
 		InputUsd: MicroUSDToUsdPerMTok(inMicro), OutputUsd: MicroUSDToUsdPerMTok(outMicro),
 		CacheReadUsd: MicroUSDToUsdPerMTok(crMicro), CacheWriteUsd: MicroUSDToUsdPerMTok(cwMicro),
-		EffectiveDate: eff, Lane: laneOut,
+		EffectiveDate: eff, Lane: laneOut, Source: sourceOut,
 	}
 	// Audit the UTC-truncated day actually stored, not the caller's raw
 	// timestamp, so the ledger is faithful to the persisted rate (matches the
@@ -355,7 +371,7 @@ func (s *RateStore) ListLatestModelRates(ctx context.Context) ([]ModelRateRow, e
 		r, err := tx.Query(ctx, `
 			SELECT DISTINCT ON (provider, model_id)
 			       provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane
+			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source
 			FROM ai_model_rate
 			ORDER BY provider, model_id, effective_date DESC`)
 		if err != nil {
@@ -385,7 +401,7 @@ func (s *RateStore) ListEffectiveModelRates(ctx context.Context) ([]ModelRateRow
 		r, err := tx.Query(ctx, `
 			SELECT DISTINCT ON (provider, model_id)
 			       provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane
+			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source
 			FROM ai_model_rate WHERE effective_date <= $1
 			ORDER BY provider, model_id, effective_date DESC`, s.todayUTC())
 		if err != nil {
@@ -408,7 +424,7 @@ func (s *RateStore) ModelRateHistory(ctx context.Context, provider, modelID stri
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		r, err := tx.Query(ctx, `
 			SELECT provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane
+			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source
 			FROM ai_model_rate WHERE provider = $1 AND model_id = $2
 			ORDER BY effective_date DESC`, strings.TrimSpace(provider), strings.TrimSpace(modelID))
 		if err != nil {
@@ -428,7 +444,7 @@ func scanModelRateRows(r pgx.Rows) ([]ModelRateRow, error) {
 			row                                 ModelRateRow
 			inMicro, outMicro, crMicro, cwMicro int64
 		)
-		if err := r.Scan(&row.Provider, &row.ModelID, &inMicro, &outMicro, &crMicro, &cwMicro, &row.EffectiveDate, &row.Lane); err != nil {
+		if err := r.Scan(&row.Provider, &row.ModelID, &inMicro, &outMicro, &crMicro, &cwMicro, &row.EffectiveDate, &row.Lane, &row.Source); err != nil {
 			return nil, fmt.Errorf("scan ai_model_rate: %w", err)
 		}
 		row.InputUsd = MicroUSDToUsdPerMTok(inMicro)

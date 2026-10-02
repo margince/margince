@@ -56,6 +56,7 @@ function backendFor(configured: boolean) {
               provider: "gemini_vertex",
               configured,
               env_var: "GEMINI_VERTEX_SA_JSON",
+              usable: configured,
               optional: false,
               credential_kind: "service_account",
             },
@@ -122,6 +123,9 @@ describe("a service-account provider key", () => {
     expect(box.tagName).toBe("TEXTAREA");
     expect(box).toHaveValue("");
     expect(within(row).queryByPlaceholderText(/paste the api key/i)).toBeNull();
+    expect(
+      within(row).getByText(/needs the Vertex AI User role/),
+    ).toBeInTheDocument();
   });
 
   it("reads a picked key file into the box and sends it as service_account_json", async () => {

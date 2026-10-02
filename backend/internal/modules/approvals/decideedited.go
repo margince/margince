@@ -14,7 +14,6 @@ package approvals
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -62,16 +61,9 @@ func applyEditedPayload(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, edite
 	// kind's proposed_change shape varies by kind, so the payload carries
 	// it as a raw map rather than a narrowly typed struct that would drop
 	// a future kind's fields.
-	var editedChange map[string]any
-	if err := json.Unmarshal(canonical, &editedChange); err != nil {
+	editedChange, err := diffhash.DecodeObject(canonical)
+	if err != nil {
 		return fmt.Errorf("approvals: canonicalized edited change did not decode as a JSON object: %w", err)
-	}
-	if editedChange == nil {
-		// A literal JSON `null` decodes without error but leaves the map nil,
-		// which would emit edited_change: null (violating the public contract)
-		// and could resume a parked run with null args — reject it as an
-		// invalid edit (422) rather than a JSON object.
-		return &InvalidEditError{Cause: errors.New("payload is not a JSON object")}
 	}
 	wasEdited := true
 	decidedPayload.Edited = &wasEdited

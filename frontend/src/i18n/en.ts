@@ -3559,6 +3559,8 @@ export const en = {
   "offer.committedNet": "Committed net",
   "offer.edit": "Edit header",
   "offer.currency": "Currency",
+  "offer.currencyFixedByLines":
+    "The currency is fixed once a line has a price: moving it would re-read every price in the new currency. Remove the lines to change it, or start a new offer.",
   "offer.buyerCompany": "Buyer company",
   "offer.buyerCompanyConfirm": "Buyer company: {name}",
   "offer.template": "Template",
@@ -9285,6 +9287,8 @@ export const en = {
     "Stored in the key vault and cannot be read back. Paste a new key to replace it. It can also be supplied as {envVar}.",
   "aiProviderKeys.absentHint":
     "This provider has no key, so models bound to it cannot be called. It can also be supplied as {envVar}.",
+  "aiProviderKeys.vertexRoleHint":
+    "The service account needs the Vertex AI User role (roles/aiplatform.user).",
   "aiProviderKeys.addPlaceholder": "Paste API key",
   "aiProviderKeys.replacePlaceholder": "Paste new key",
   "aiProviderKeys.add": "Add",
@@ -9406,6 +9410,10 @@ export const en = {
   "aiProviderKeys.modelCount_other": "{count} models available",
   "aiProviderKeys.reason.authFailed":
     "The provider refused this key. Check it, then replace it.",
+  "aiProviderKeys.reason.permissionDenied":
+    "The provider accepted the key but refused the call. Check the key’s permissions.",
+  "aiProviderKeys.reason.permissionDeniedVertex":
+    "Google accepted the key but refused the call. Grant the service account Vertex AI User (roles/aiplatform.user) and enable the Vertex AI API on its project.",
   "aiProviderKeys.reason.rateLimited":
     "The provider is rate-limiting this key. It may still be valid; try again later.",
   "aiProviderKeys.reason.noKey": "No key is stored for this provider.",
@@ -11664,6 +11672,21 @@ export const en = {
   "aiRates.refresh.outcome.unreachable": "Unreachable",
   "aiRates.refresh.outcome.not_bound": "Not in use",
   "aiRates.refresh.outcome.not_listed": "Not in the list",
+  "aiRates.refresh.outcome.not_configured": "No key",
+  "aiPriceSync.title": "Model prices",
+  "aiPriceSync.autoSync.label": "Auto-sync daily",
+  "aiPriceSync.autoSync.help":
+    "Reads each configured provider’s prices once a day. A price you set by hand is kept.",
+  "aiPriceSync.sources": "Sources: models.dev · OpenRouter",
+  "aiPriceSync.lastSynced": "Last synced {ago}",
+  "aiPriceSync.never": "Not synced yet",
+  "aiPriceSync.adminOnly": "Your role cannot change this.",
+  "aiPriceSync.withheld": "Model prices are not yours to see.",
+  "aiRates.refresh.addedCount_one": "{count} model added",
+  "aiRates.refresh.addedCount_other": "{count} models added",
+  "aiRates.refresh.keptCount_one": "{count} hand-set price kept",
+  "aiRates.refresh.keptCount_other": "{count} hand-set prices kept",
+  "aiProviders.setByHand": "Hand-set",
   "aiRates.refresh.unlisted": "Not in the broker’s list: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} price written",
   "aiRates.refresh.updatedCount_other": "{count} prices written",

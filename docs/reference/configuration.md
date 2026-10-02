@@ -218,9 +218,9 @@ not the fleet.
 | `margince_job_cancelled` | `kind`, `workspace_id` | stopped deliberately, attempts unspent — counted apart from discarded because the operator story differs, not because it is less dead. The sweep pair counts either as a workspace missed |
 | `margince_job_oldest_queued_age_seconds` | `queue`, `workspace_id` | how long the oldest runnable-and-unclaimed job has waited |
 | `margince_sweep_workspaces` | `sweep` | workspaces with a surviving child of that fleet pass |
-| `margince_sweep_workspaces_failed` | `sweep` | those whose MOST RECENT child is discarded or cancelled |
+| `margince_sweep_workspaces_failed` | `sweep` | those whose most recent child THAT ENDED is discarded or cancelled. A pending or running next tick is not an outcome, and reading one as the pass's verdict is what let an hourly discard report as healthy |
 | `margince_sweep_units` | `sweep`, `unit` | the same reading one grain down, for the dispatchers that fan out per **connection** or per **build**: units with a surviving child |
-| `margince_sweep_units_failed` | `sweep`, `unit` | those whose MOST RECENT child is discarded or cancelled |
+| `margince_sweep_units_failed` | `sweep`, `unit` | those whose most recent child THAT ENDED is discarded or cancelled, for the reason the workspace pair above gives |
 | `margince_job_failures` | `kind`, `class` | failing work (retryable or discarded) by WHAT went wrong — the same class the failure list shows. `unclassified` is a failure whose recorded text nothing recognises, which is what an outage nobody has enumerated looks like. Cancelled work is not here: a deliberate stop is not an outage |
 
 `margince_job_failures` is the one that makes an outage alertable rather than
@@ -1390,10 +1390,15 @@ currency sheet (worker role). A refresh never writes a rate directly — it stag
 before it applies. It is read only by the worker (the api enqueues the job; the
 worker fetches and stages).
 
-Model prices are not configured here. **Refresh model prices** (Settings → AI)
-reads OpenRouter's public model list and writes today's price for each
-OpenRouter-hosted model the installation binds, in the request itself; every
-provider that publishes no price list is set by hand on the sheet.
+Model prices are not configured here. They sync daily from public catalogues
+(Settings → AI → **Model prices**): anthropic, openai, gemini and gemini_vertex,
+when their key is usable, are priced from models.dev; the OpenRouter-hosted models
+the installation binds, and the `openai_compatible` rows on the sheet while
+something is bound there, from OpenRouter's list. Every other provider keeps the
+prices set by hand. A chat or embedding model a key lists is added when models.dev
+prices it in the same lane; a price set by hand is never rewritten. Turning
+**Auto-sync daily** off stops the daily job; **Refresh model prices** still runs
+it on demand.
 
 | field | default | effect |
 |---|---|---|

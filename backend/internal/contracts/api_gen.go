@@ -826,6 +826,45 @@ func (e AiModelRateLane) Valid() bool {
 	}
 }
 
+// Defines values for AiModelRateSource.
+const (
+	AiModelRateSourceCatalogue AiModelRateSource = "catalogue"
+	AiModelRateSourceManual    AiModelRateSource = "manual"
+	AiModelRateSourceSeed      AiModelRateSource = "seed"
+)
+
+// Valid indicates whether the value is a known member of the AiModelRateSource enum.
+func (e AiModelRateSource) Valid() bool {
+	switch e {
+	case AiModelRateSourceCatalogue:
+		return true
+	case AiModelRateSourceManual:
+		return true
+	case AiModelRateSourceSeed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiPriceSyncRunTrigger.
+const (
+	AiPriceSyncRunTriggerManual    AiPriceSyncRunTrigger = "manual"
+	AiPriceSyncRunTriggerScheduled AiPriceSyncRunTrigger = "scheduled"
+)
+
+// Valid indicates whether the value is a known member of the AiPriceSyncRunTrigger enum.
+func (e AiPriceSyncRunTrigger) Valid() bool {
+	switch e {
+	case AiPriceSyncRunTriggerManual:
+		return true
+	case AiPriceSyncRunTriggerScheduled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiProfileInferenceMode.
 const (
 	AiProfileInferenceModeCloud       AiProfileInferenceMode = "cloud"
@@ -957,13 +996,14 @@ func (e AiProviderKeyStatusCredentialKind) Valid() bool {
 
 // Defines values for AiProviderKeyTestResultReason.
 const (
-	AiProviderKeyTestResultReasonAuthFailed     AiProviderKeyTestResultReason = "auth_failed"
-	AiProviderKeyTestResultReasonNoEndpoint     AiProviderKeyTestResultReason = "no_endpoint"
-	AiProviderKeyTestResultReasonNoKey          AiProviderKeyTestResultReason = "no_key"
-	AiProviderKeyTestResultReasonNotPublished   AiProviderKeyTestResultReason = "not_published"
-	AiProviderKeyTestResultReasonProfileForbids AiProviderKeyTestResultReason = "profile_forbids"
-	AiProviderKeyTestResultReasonRateLimited    AiProviderKeyTestResultReason = "rate_limited"
-	AiProviderKeyTestResultReasonUnreachable    AiProviderKeyTestResultReason = "unreachable"
+	AiProviderKeyTestResultReasonAuthFailed       AiProviderKeyTestResultReason = "auth_failed"
+	AiProviderKeyTestResultReasonNoEndpoint       AiProviderKeyTestResultReason = "no_endpoint"
+	AiProviderKeyTestResultReasonNoKey            AiProviderKeyTestResultReason = "no_key"
+	AiProviderKeyTestResultReasonNotPublished     AiProviderKeyTestResultReason = "not_published"
+	AiProviderKeyTestResultReasonPermissionDenied AiProviderKeyTestResultReason = "permission_denied"
+	AiProviderKeyTestResultReasonProfileForbids   AiProviderKeyTestResultReason = "profile_forbids"
+	AiProviderKeyTestResultReasonRateLimited      AiProviderKeyTestResultReason = "rate_limited"
+	AiProviderKeyTestResultReasonUnreachable      AiProviderKeyTestResultReason = "unreachable"
 )
 
 // Valid indicates whether the value is a known member of the AiProviderKeyTestResultReason enum.
@@ -976,6 +1016,8 @@ func (e AiProviderKeyTestResultReason) Valid() bool {
 	case AiProviderKeyTestResultReasonNoKey:
 		return true
 	case AiProviderKeyTestResultReasonNotPublished:
+		return true
+	case AiProviderKeyTestResultReasonPermissionDenied:
 		return true
 	case AiProviderKeyTestResultReasonProfileForbids:
 		return true
@@ -21788,6 +21830,12 @@ type AiModelRate struct {
 	ModelId       string          `json:"model_id"`
 	OutputPerMtok string          `json:"output_per_mtok"`
 	Provider      string          `json:"provider"`
+
+	// Source Who wrote this price. `manual` was typed into the sheet and the daily sync never
+	// rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+	// planted when the installation was provisioned. Removing a model's price hands it back
+	// to the sync.
+	Source AiModelRateSource `json:"source"`
 }
 
 // AiModelRateLane What the model is FOR. A property of the model rather than of this dated row: the
@@ -21797,6 +21845,12 @@ type AiModelRate struct {
 // carries one too.
 type AiModelRateLane string
 
+// AiModelRateSource Who wrote this price. `manual` was typed into the sheet and the daily sync never
+// rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+// planted when the installation was provisioned. Removing a model's price hands it back
+// to the sync.
+type AiModelRateSource string
+
 // AiModelRateListResponse defines model for AiModelRateListResponse.
 type AiModelRateListResponse struct {
 	Data []AiModelRate `json:"data"`
@@ -21804,6 +21858,12 @@ type AiModelRateListResponse struct {
 
 // AiModelRateProviderRefresh defines model for AiModelRateProviderRefresh.
 type AiModelRateProviderRefresh struct {
+	// Added Models priced for the first time today.
+	Added int `json:"added"`
+
+	// Kept Models whose price was set by hand, which the sync never rewrites.
+	Kept int `json:"kept"`
+
 	// Models Model ids written this run.
 	Models []string `json:"models"`
 
@@ -21812,7 +21872,8 @@ type AiModelRateProviderRefresh struct {
 	// publishes no price to read; `not_listed` means a bound model is absent from the
 	// catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
 	// could not be read;
-	// `not_bound` means nothing this provider serves is bound or on the sheet.
+	// `not_bound` means nothing this provider serves is bound or on the sheet;
+	// `not_configured` means the provider holds no usable key, so the sync did not touch it.
 	Outcome string `json:"outcome"`
 
 	// Provider The provider as the routing document spells it.
@@ -21880,6 +21941,32 @@ type AiOpenRouterUpstream struct {
 	Only *[]string `json:"only,omitempty"`
 }
 
+// AiPriceSync defines model for AiPriceSync.
+type AiPriceSync struct {
+	// AutoSync Whether the daily job syncs model prices.
+	AutoSync bool            `json:"auto_sync"`
+	LastRun  *AiPriceSyncRun `json:"last_run,omitempty"`
+}
+
+// AiPriceSyncChange defines model for AiPriceSyncChange.
+type AiPriceSyncChange struct {
+	AutoSync bool `json:"auto_sync"`
+}
+
+// AiPriceSyncRun defines model for AiPriceSyncRun.
+type AiPriceSyncRun struct {
+	RanAt time.Time `json:"ran_at"`
+
+	// Report The outcome of a catalogue refresh, one entry per provider this build knows.
+	Report AiModelRateRefreshReport `json:"report"`
+
+	// Trigger `manual` was an admin pressing Refresh now; `scheduled` the daily job.
+	Trigger AiPriceSyncRunTrigger `json:"trigger"`
+}
+
+// AiPriceSyncRunTrigger `manual` was an admin pressing Refresh now; `scheduled` the daily job.
+type AiPriceSyncRunTrigger string
+
 // AiProfile defines model for AiProfile.
 type AiProfile struct {
 	// ConfiguredModels Authenticated tier-to-model bindings. Credentials and endpoints never appear here.
@@ -21941,6 +22028,9 @@ type AiProviderKeyStatus struct {
 
 	// Provider The routing name of the vendor, the same string a binding uses.
 	Provider string `json:"provider"`
+
+	// Usable Whether this vendor can be called as the installation stands: a key is held, the adapter calls without one, or it takes no key. The daily price sync reads this same answer to decide which vendors it prices.
+	Usable bool `json:"usable"`
 }
 
 // AiProviderKeyStatusCredentialKind Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a service-account key file (`service_account_json`), `api_key` is a pasted key. A property of the vendor, not of what is stored.
@@ -21960,11 +22050,11 @@ type AiProviderKeyTestResult struct {
 	// Provider The routing name of the vendor that was asked.
 	Provider string `json:"provider"`
 
-	// Reason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+	// Reason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `permission_denied` — the vendor accepted the credential and refused the call: the account lacks a role or has not enabled the API (for Vertex AI, `roles/aiplatform.user` and the Vertex AI API). `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
 	Reason *AiProviderKeyTestResultReason `json:"reason,omitempty"`
 }
 
-// AiProviderKeyTestResultReason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+// AiProviderKeyTestResultReason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `permission_denied` — the vendor accepted the credential and refused the call: the account lacks a role or has not enabled the API (for Vertex AI, `roles/aiplatform.user` and the Vertex AI API). `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
 type AiProviderKeyTestResultReason string
 
 // AiProviderSettings One provider's configuration. An entry no lane binds is held to its shape only, so a
@@ -43485,7 +43575,14 @@ type UpdateOfferLineItemRequestBillingModel string
 
 // UpdateOfferRequest Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422).
 type UpdateOfferRequest struct {
-	BuyerCompanyId       *openapi_types.UUID    `json:"buyer_company_id,omitempty"`
+	BuyerCompanyId *openapi_types.UUID `json:"buyer_company_id,omitempty"`
+
+	// Currency Refused while the draft carries priced lines. A line's price is an integer with no
+	// unit of its own, so moving the currency would leave every one of them where it is
+	// and read it in the new one — a silent reprice of a document a buyer will sign.
+	// Remove the lines and re-enter them in the new currency, or start a new offer in it.
+	// Changing the currency on a draft with no priced lines is free, and re-sending the
+	// currency the offer already holds is not a change.
 	Currency             *string                `json:"currency,omitempty"`
 	IntroText            *string                `json:"intro_text,omitempty"`
 	TemplateId           *openapi_types.UUID    `json:"template_id,omitempty"`
@@ -52232,6 +52329,9 @@ type PreviewAiBudgetJSONRequestBody = AiBudgetChange
 
 // RecordAIFeedbackJSONRequestBody defines body for RecordAIFeedback for application/json ContentType.
 type RecordAIFeedbackJSONRequestBody = AIFeedbackInput
+
+// ReplaceAiPriceSyncJSONRequestBody defines body for ReplaceAiPriceSync for application/json ContentType.
+type ReplaceAiPriceSyncJSONRequestBody = AiPriceSyncChange
 
 // SetAiProviderKeyJSONRequestBody defines body for SetAiProviderKey for application/json ContentType.
 type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
@@ -63471,6 +63571,12 @@ type ServerInterface interface {
 	// Whether the model lanes are answering.
 	// (GET /ai/health)
 	GetAiHealth(w http.ResponseWriter, r *http.Request)
+	// Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+	// (GET /ai/price-sync)
+	GetAiPriceSync(w http.ResponseWriter, r *http.Request)
+	// Turn the daily model price sync on or off (ai_model_rate update).
+	// (PUT /ai/price-sync)
+	ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request)
 	// Authenticated AI configuration posture for transparent human-facing workspaces.
 	// (GET /ai/profile)
 	GetAiProfile(w http.ResponseWriter, r *http.Request)
@@ -65916,6 +66022,18 @@ func (_ Unimplemented) RecordAIFeedback(w http.ResponseWriter, r *http.Request) 
 // Whether the model lanes are answering.
 // (GET /ai/health)
 func (_ Unimplemented) GetAiHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+// (GET /ai/price-sync)
+func (_ Unimplemented) GetAiPriceSync(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Turn the daily model price sync on or off (ai_model_rate update).
+// (PUT /ai/price-sync)
+func (_ Unimplemented) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72278,6 +72396,46 @@ func (siw *ServerInterfaceWrapper) GetAiHealth(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiPriceSync operation middleware
+func (siw *ServerInterfaceWrapper) GetAiPriceSync(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiPriceSync(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiPriceSync operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiPriceSync(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -103407,6 +103565,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/health", wrapper.GetAiHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/price-sync", wrapper.GetAiPriceSync)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/price-sync", wrapper.ReplaceAiPriceSync)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/profile", wrapper.GetAiProfile)
