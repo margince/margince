@@ -66,10 +66,6 @@ type catalogueTarget struct {
 	lane              Lane
 }
 
-// brokerProviders are the providers an OpenRouter binding can carry. A model
-// of any other provider is not priced by OpenRouter's list, whatever its id.
-var brokerProviders = []string{providerOpenAICompatible, providerJevCompatible}
-
 // catalogueTargets is the scope of a refresh: the OpenRouter-hosted models the
 // routing document binds, plus the openai_compatible models already on the
 // sheet. The sheet rows are kept because a model unbound last week still shows
@@ -247,7 +243,7 @@ func reportProviders(lines map[string]*ProviderRefresh, catalogueDown bool) Rate
 	for _, name := range names {
 		line, ok := lines[name]
 		switch {
-		case !slices.Contains(brokerProviders, name):
+		case !brokerPriced(name):
 			line = &ProviderRefresh{Provider: name, Outcome: RefreshNotAvailable}
 		case !ok:
 			line = &ProviderRefresh{Provider: name, Outcome: RefreshNotBound}
