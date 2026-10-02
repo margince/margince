@@ -103,10 +103,12 @@ def _loop(model, session, out):
 
 # Every codex capability that is not a call to this lane's server, switched
 # off; what codex cannot switch off, transcript.from_codex stops the run on.
+# Code mode stays on: it is the path codex's MCP calls take, and without it the
+# server attaches with none of its tools callable.
 _CODEX_OFF = (
     "shell_tool", "unified_exec", "view_image", "multi_agent", "apps", "browser_use",
     "browser_use_external", "computer_use", "sleep_tool", "tool_suggest", "skill_search",
-    "code_mode_host", "image_generation", "goals",
+    "image_generation", "goals",
 )
 # codex has no turn cap, so a wall clock stands in for one.
 CODEX_TIMEOUT = 900

@@ -82,10 +82,13 @@ class FromCodexTest(unittest.TestCase):
         lines.insert(1, item("error", message="MCP client for `margince_e2e_llm` failed to start"))
         self.assertEqual(convert(lines)[0], 3)
 
-    def test_the_code_mode_notice_is_not_a_fault(self):
-        lines = sample()
-        lines.insert(1, item("error", message="Code Mode is unavailable because code-mode host is disabled."))
-        self.assertEqual(convert(lines)[0], 0)
+    def test_a_run_that_never_reached_the_lanes_server_is_a_harness_fault(self):
+        # Codex says nothing about what it attached, and a run whose tools never
+        # reached the model reads exactly like one that chose to call nothing.
+        lines = [l for l in sample() if '"mcp_tool_call"' not in l]
+        code, _out, raw = convert(lines)
+        self.assertEqual(code, 3)
+        self.assertIn("no call to the lane's server", raw)
 
     def test_a_failed_turn_is_a_harness_fault(self):
         lines = [l for l in sample() if "turn.completed" not in l]
@@ -173,6 +176,9 @@ class RunCodexTest(unittest.TestCase):
         self.assertEqual(argv[argv.index("--sandbox") + 1], "read-only")
         self.assertEqual(seen["cdir"], [])
         self.assertIn("features.shell_tool=false", argv)
+        # Code mode is the path codex's MCP calls take: switched off, codex
+        # attaches the server and can call none of its tools.
+        self.assertNotIn("features.code_mode_host=false", argv)
         self.assertIn('mcp_servers.margince_e2e_llm.bearer_token_env_var="MARGINCE_E2E_TOKEN"', argv)
         self.assertNotIn("s3cr3t-passport", " ".join(argv))
         self.assertEqual(argv[-1], "List the pipelines.")

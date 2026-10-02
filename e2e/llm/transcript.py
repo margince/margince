@@ -96,8 +96,6 @@ class Transcript:
 # never rests on a shell read of the scenario files.
 _CODEX_HARMLESS_ITEMS = {"agent_message", "reasoning", "todo_list"}
 _CODEX_RESOURCE_HELPERS = {"list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"}
-# Disabling code mode (so `exec` fails closed) makes codex say so in an error item.
-_CODEX_NOTICE = "Code Mode is unavailable"
 
 
 def _codex_result_text(entry):
@@ -120,7 +118,7 @@ def _codex_item(out, entry):
         return ""
     if kind == "error":
         message = entry.get("message") or ""
-        return message if "mcp" in message.lower() and _CODEX_NOTICE not in message else ""
+        return message if "mcp" in message.lower() else ""
     if kind == "mcp_tool_call" and entry.get("server") == SERVER:
         # codex sends arguments as a JSON object; a string is read as one too.
         arguments = entry.get("arguments")
@@ -144,7 +142,7 @@ def from_codex(lines, path, model, driver, offered):
     Codex emits no list of the tools it offered, so `offered` is the lane's own
     tools/list over the same passport, and the status says so.
     """
-    answer, finished = "", False
+    answer, finished, lane_calls = "", False, 0
     with Transcript(path) as out:
         out.init(model, driver, "cli-default", "listed-by-lane", offered)
         for line in lines:
@@ -157,6 +155,8 @@ def from_codex(lines, path, model, driver, offered):
                 entry = event.get("item") or {}
                 if entry.get("type") == "agent_message" and entry.get("text"):
                     answer = entry["text"]
+                if entry.get("type") == "mcp_tool_call" and entry.get("server") == SERVER:
+                    lane_calls += 1
                 stop = _codex_item(out, entry)
                 if stop:
                     out.finish(True, f"HARNESS: {stop}", 0)
@@ -176,6 +176,13 @@ def from_codex(lines, path, model, driver, offered):
                 return 3
         if not finished:
             out.finish(True, "HARNESS: codex stopped before its turn completed", 0)
+            return 3
+        # Codex reports nothing of what it attached, so a run with no call to
+        # this server cannot be told from one whose tools never reached the
+        # model — which once read as three failed runs of a working case.
+        if not lane_calls:
+            out.finish(True, "HARNESS: codex made no call to the lane's server; whether it was "
+                             "attached cannot be told from its stream", 0)
             return 3
         out.finish(False, answer, 1)
         return 0
