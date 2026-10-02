@@ -370,6 +370,36 @@ def unrun(path):
     return ""
 
 
+def offered_problem(scenario, path):
+    """Why this run could not have satisfied must_call, or "" when it could.
+
+    A required tool the server never offered fails must_call for a reason that
+    is not the model's — a scope, a page the client did not follow, a server
+    that attached nothing — so the lane stops rather than scoring it. The
+    tools are the ones the transcript's system line says were offered.
+    """
+    offered = None
+    for line in _open_checked(path):
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "system" and event.get("subtype") == "init":
+            offered = event.get("tools") or []
+            break
+    if offered is None:
+        return "the transcript carries no system line, so what was offered is unknown"
+    if not offered:
+        return "the server offered no tools at all"
+    missing = [
+        entry for entry in scenario.get("must_call", [])
+        if not any(tool_matches(offered, alt) for alt in alternatives(entry))
+    ]
+    if missing:
+        return f"a required tool was never offered to the model: {', '.join(map(str, missing))}"
+    return ""
+
+
 def tool_matches(called, want):
     """A tool is reached when any call names it.
 
@@ -541,6 +571,13 @@ def main():
             print(why)
             sys.exit(1)
         sys.exit(0)
+
+    if sys.argv[1] == "--offered":
+        problem = offered_problem(parse_scenario(sys.argv[2]), sys.argv[3])
+        if problem:
+            print(problem)
+            return 1
+        return 0
 
     if sys.argv[1] == "--judge-ready":
         # Asked before the lane spends a token on the candidate: a scenario with
