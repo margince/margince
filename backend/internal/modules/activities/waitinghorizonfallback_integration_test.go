@@ -30,9 +30,11 @@ func TestATimedOutHorizonMeasurementLeavesTheTransactionUsable(t *testing.T) {
 		}
 	}()
 	seedMailbox(ctx, t, tx)
-	// A year of mail cannot be measured in a millisecond, so the statement is
-	// stopped the way a statement budget stops it.
-	if _, err := tx.Exec(ctx, `SET LOCAL statement_timeout = '1ms'`); err != nil {
+	// The seeded year takes well over a hundred milliseconds to measure, so a
+	// 20 ms budget stops the measurement the way a statement budget does,
+	// while the savepoint and SET statements around it, which take
+	// microseconds, keep ample headroom.
+	if _, err := tx.Exec(ctx, `SET LOCAL statement_timeout = '20ms'`); err != nil {
 		t.Fatal(err)
 	}
 

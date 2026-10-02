@@ -31,6 +31,7 @@ var planCopySuffix = regexp.MustCompile(`_\d+$`)
 //
 //nolint:tagliatelle // fixed by the server's plan format
 type planNode struct {
+	NodeType  string     `json:"Node Type"`
 	Alias     string     `json:"Alias"`
 	IndexName string     `json:"Index Name"`
 	IndexCond string     `json:"Index Cond"`
@@ -128,7 +129,12 @@ func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *t
 		if alias == "answer_mail" && n.IndexName == "idx_activity_answer_mail" && strings.Contains(n.IndexCond, "kind") {
 			addressIndexBoundsKind++
 		}
-		if alias == "answer_touch" && n.IndexName != "" && !strings.Contains(n.IndexCond, "(id = ") {
+		// A heap scan of activity under the touch alias, or an index read keyed
+		// on anything but the walked id, is the per-message walk of every
+		// later call and meeting. The lateral's own Subquery Scan carries the
+		// alias too and reads no relation, so it is not counted.
+		heapScan := n.NodeType == "Seq Scan" || n.NodeType == "Bitmap Heap Scan"
+		if alias == "answer_touch" && (heapScan || (n.IndexName != "" && !strings.Contains(n.IndexCond, "(id = "))) {
 			touchRangedOnTime++
 		}
 	})
