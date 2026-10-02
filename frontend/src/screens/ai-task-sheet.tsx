@@ -7,11 +7,10 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Badge, Button, Field, SegmentedControl } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
-import { formatNumber, identifierNumber } from "../format/format";
+import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -23,8 +22,9 @@ import {
 } from "./ai-call-figures";
 import { tierLabel } from "./ai-decision-labels";
 import { LatencyAgainstTimeout, TaskOutcome } from "./ai-task-outcome";
+import { ReadProblem, SaveProblem, TimeoutField } from "./ai-task-sheet-fields";
 import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";
-import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
+import { problemCodeOf, throwProblem } from "./common";
 import "./ai-settings.css";
 
 // One task's request settings, and what its calls did under them. The figures
@@ -47,18 +47,6 @@ const THINKING_GUIDE =
 /** The bounds a save is held to, in seconds, as the server's own validation. */
 const DECISION_BOUNDS = [5, 60] as const;
 const ATTEMPT_BOUNDS = [10, 300] as const;
-const STEPS = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 240, 300];
-
-export function timeoutOptions(
-  [low, high]: readonly [number, number],
-  fallback: number,
-  current: number = fallback,
-): number[] {
-  return [...new Set([...STEPS, fallback, current])]
-    .filter((s) => s >= low && s <= high)
-    .sort((a, b) => a - b);
-}
-
 const THINKING_HELP: Readonly<
   Record<Thinking | typeof DEFAULT_THINKING, MessageKey>
 > = {
@@ -377,83 +365,6 @@ function ContractFacts({ route }: Readonly<{ route: Feature }>) {
         </a>
       </p>
     </section>
-  );
-}
-
-/** A refused save: a colleague's newer save, or the server's own reason. */
-/** The stored settings could not be read: the controls stay off until they are. */
-function ReadProblem({
-  error,
-  onRetry,
-}: Readonly<{ error: Error | null; onRetry: () => void }>) {
-  const t = useT();
-  if (!error) return null;
-  return (
-    <Callout tone="danger" kind="outcome" title={t("aiTaskSheet.readFailed")}>
-      {problemMessageOf(error, t)}{" "}
-      <Button onClick={onRetry}>{t("common.retry")}</Button>
-    </Callout>
-  );
-}
-
-function SaveProblem({ error }: Readonly<{ error: Error | null }>) {
-  const t = useT();
-  if (!error) return null;
-  if (problemCodeOf(error) === "version_skew") {
-    return (
-      <Callout tone="warning" kind="standing" title={t("aiTaskSheet.conflict")}>
-        {t("aiTaskSheet.conflict.help")}
-      </Callout>
-    );
-  }
-  return (
-    <Callout tone="danger" kind="outcome" title={t("aiTaskSheet.saveFailed")}>
-      {problemMessageOf(error, t)}
-    </Callout>
-  );
-}
-
-function TimeoutField({
-  label,
-  hint,
-  bounds,
-  value,
-  fallback,
-  disabled,
-  onChange,
-}: Readonly<{
-  label: string;
-  hint: string;
-  bounds: readonly [number, number];
-  value: number;
-  fallback: number;
-  disabled: boolean;
-  onChange: (seconds: number) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  return (
-    <Field label={label} hint={hint}>
-      {(control) => (
-        <Select
-          {...control}
-          value={identifierNumber(value)}
-          disabled={disabled}
-          options={timeoutOptions(bounds, fallback, value).map((s) => ({
-            value: identifierNumber(s),
-            label:
-              s === fallback
-                ? t("aiTaskSheet.seconds.default", {
-                    seconds: formatNumber(s, locale),
-                  })
-                : t("aiTaskSheet.seconds", {
-                    seconds: formatNumber(s, locale),
-                  }),
-          }))}
-          onChange={(next) => onChange(Number(next))}
-        />
-      )}
-    </Field>
   );
 }
 

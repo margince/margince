@@ -28953,8 +28953,8 @@ components:
         residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
         How one model is served (sort, quantizations, …) stays on the tier's `routing`.
       properties:
-        only: { type: array, minItems: 1, uniqueItems: true, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
-        ignore: { type: array, minItems: 1, uniqueItems: true, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
+        only: { type: array, uniqueItems: true, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
+        ignore: { type: array, uniqueItems: true, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
         allow_fallbacks: { type: boolean, description: "Override the broker's host fallback. False is a real choice, distinct from absent." }
         zdr: { type: boolean, description: "Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request." }
         data_collection: { type: string, enum: [allow, deny], description: "deny keeps every request off hosts that may store or train on prompts." }

@@ -10,7 +10,8 @@ import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { feature } from "./ai-admin.testkit";
 import { jsonResponse, render } from "./ai-routing.testkit";
-import { overrideOf, TaskSheet, timeoutOptions } from "./ai-task-sheet";
+import { overrideOf, TaskSheet } from "./ai-task-sheet";
+import { timeoutOptions } from "./ai-task-sheet-fields";
 
 // A task's thinking level and timeouts: which selects a task gets, what a save
 // sends, and what a colleague's newer save does to it.
