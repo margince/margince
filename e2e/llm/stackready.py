@@ -39,11 +39,12 @@ def semantic_problem(session):
     reply = json.loads(text)
     data = reply.get("data") if isinstance(reply, dict) else None
     notes = data.get("notes") or [] if isinstance(data, dict) else None
-    if not isinstance(notes, list):
+    hits = data.get("hits") or [] if isinstance(data, dict) else None
+    if not isinstance(notes, list) or not isinstance(hits, list):
         return f"search_context answered in a shape the probe cannot read: {text[:200]}", False
     if any(isinstance(note, dict) and note.get("code") == _DEGRADED for note in notes):
         return "search_context is ranking by word overlap alone (lexical): no embedding model serves it", True
-    if not data.get("hits"):
+    if not hits:
         return "search_context answered with no hits: nothing is indexed yet", False
     return "", False
 
