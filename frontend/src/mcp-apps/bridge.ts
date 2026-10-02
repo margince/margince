@@ -31,6 +31,7 @@
 //   cannot become a second door onto a record.
 
 import { minorUnitDigits, toMajorUnits } from "../format/minorunits";
+import { followContentSize } from "./size";
 import {
   asFiniteNumber,
   asRecord,
@@ -210,57 +211,9 @@ function completeHandshake(
   hostOrigin = event.origin;
   applyTheme(asRecord(message.result).hostContext);
   send({ method: "ui/notifications/initialized", params: {} });
-  followContentSize();
-}
-
-// The size last reported, so a resize that changes nothing sends nothing.
-let reportedSize: { width: number; height: number } | null = null;
-let measurePending = false;
-
-/**
- * followContentSize tells the host how big this document's content is, now and
- * whenever it changes. A host draws a view in a frame of its own default height
- * until it is told otherwise, so a view that never says cuts its own panel off
- * part way down — the reader sees the head and a hairline and none of the rows.
- *
- * It starts only after the handshake, for the reason every other outbound
- * message waits for it: the host's origin is pinned then, and a size sent
- * before it would go to '*'.
- */
-function followContentSize(): void {
-  const observer = new ResizeObserver(scheduleMeasure);
-  observer.observe(document.documentElement);
-  observer.observe(document.body);
-  scheduleMeasure();
-}
-
-/** One measurement per frame, however many resizes landed in it. */
-function scheduleMeasure(): void {
-  if (measurePending) return;
-  measurePending = true;
-  requestAnimationFrame(reportSize);
-}
-
-/**
- * reportSize measures the content and sends it as `ui/notifications/size-changed`
- * (SEP-1865), the way the extension's own SDK measures it.
- *
- * The height is read with the root at `max-content`, not as it stands: the root
- * stretches to the frame, so reading it as it stands reports the frame's height
- * back to the host and a frame shorter than its content never grows. The width
- * is the frame's own, because the host decides it and the content wraps to it.
- */
-function reportSize(): void {
-  measurePending = false;
-  const root = document.documentElement;
-  const declared = root.style.height;
-  root.style.height = "max-content";
-  const height = Math.ceil(root.getBoundingClientRect().height);
-  root.style.height = declared;
-  const width = Math.ceil(window.innerWidth);
-  if (reportedSize?.width === width && reportedSize.height === height) return;
-  reportedSize = { width, height };
-  send({ method: "ui/notifications/size-changed", params: { width, height } });
+  // Started here and not at import: the host's origin is pinned now, and a
+  // size sent before it would go to '*'.
+  followContentSize(send);
 }
 
 /**
