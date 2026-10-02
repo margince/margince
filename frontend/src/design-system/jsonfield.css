@@ -1,0 +1,53 @@
+/* The gutter and the text share one line box, so a number always sits beside
+   the line it counts; the text keeps .code-block's own ground and face. */
+.json-field {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+  background: var(--bgCard);
+  overflow: hidden;
+  /* One line box for both faces: the numbers are the body face and the text
+     the code face, and only a shared line-height keeps them level. */
+  font: var(--fontBody);
+}
+.json-field:focus-within {
+  border-color: var(--accent);
+}
+.json-field-invalid {
+  border-color: var(--danger);
+}
+.json-field-gutter {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3) var(--space-2);
+  min-height: 12lh;
+  max-height: 300px;
+  overflow: hidden;
+  border-right: 1px solid var(--borderSubtle);
+  color: var(--textSecondary);
+  text-align: right;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.json-field-gutter > span {
+  line-height: inherit;
+}
+.json-field-mark {
+  color: var(--dangerText);
+  font-weight: var(--fontWeightMedium);
+}
+.json-field-text {
+  min-height: 12lh;
+  font-size: inherit;
+  line-height: inherit;
+  resize: vertical;
+  border: 0;
+  border-radius: 0;
+  white-space: pre;
+  overflow-wrap: normal;
+  color: var(--textPrimary);
+}
+.json-field-text:focus {
+  outline: none;
+}

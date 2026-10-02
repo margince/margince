@@ -125,7 +125,7 @@ const openSheet =
       within(await body.findByTestId(`ai-provider-row-${name}`)).getByRole(
         "button",
         {
-          name: /^Manage/,
+          name: /^Edit/,
         },
       ),
     );

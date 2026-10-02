@@ -398,3 +398,238 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* A section head that carries dials or links on its trailing edge: the title
+ * and what acts on it on one line, wrapping under it on a narrow sheet. */
+.ai-figures-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.ai-figures-dials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ai-figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* A count that is a failure, in the danger ink: a figure, not a message. */
+.ai-figures-bad {
+  color: var(--dangerText);
+}
+
+/* The connection's privacy rules: four ticks in two columns, then the lists. */
+.ai-openrouter-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.ai-openrouter-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.ai-openrouter-toggle {
+  align-items: flex-start;
+}
+
+.ai-openrouter-help {
+  display: block;
+}
+
+/* The serving editor beside its field reference; the summary under both. */
+.ai-serving {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ai-serving-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-4);
+}
+
+.ai-serving-summary {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+@media (max-width: 720px) {
+  .ai-serving-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ai-serving-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+.ai-serving-note {
+  margin: 0;
+}
+
+.ai-serving-problems {
+  color: var(--dangerText);
+}
+
+.ai-serving-problems ul,
+.ai-serving-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-serving-lines li {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2);
+}
+
+.ai-serving-lines li > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-serving-reference {
+  max-height: 24rem;
+  overflow: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+}
+
+.ai-serving-reference dl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ai-serving-reference dd {
+  margin: 0;
+}
+
+/* A task's outcome: the headline, the bar, then one card per step. */
+.ai-outcome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ai-outcome-headline {
+  margin: 0;
+}
+
+.ai-outcome-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-outcome-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+}
+
+.ai-outcome-big {
+  font-weight: var(--fontWeightMedium);
+}
+
+.ai-outcome-passed,
+.ai-latency-near {
+  color: var(--warningText);
+}
+
+.ai-outcome-lost {
+  margin: 0;
+  color: var(--dangerText);
+}
+
+/* Latency against the timeout: two marks and a limit line on one track. */
+.ai-latency {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-latency-title {
+  font-weight: var(--fontWeightMedium);
+}
+
+.ai-latency-track {
+  position: relative;
+  height: var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--bgChip);
+}
+
+.ai-latency-mark {
+  position: absolute;
+  top: 50%;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}
+
+.ai-latency-p95 {
+  border-radius: 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.ai-latency-limit {
+  position: absolute;
+  top: calc(var(--space-1) * -1);
+  bottom: calc(var(--space-1) * -1);
+  width: 2px;
+  background: var(--danger);
+}
+
+.ai-latency-caption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ai-task-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.ai-task-facts dd {
+  margin: 0;
+}

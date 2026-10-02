@@ -185,7 +185,7 @@ async function open(
   await user.click(
     within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     ),
   );
   return screen.findByRole("dialog");

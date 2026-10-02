@@ -8,6 +8,7 @@ import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { ProviderCallsLine, ProviderRecentCalls } from "./ai-call-figures";
 import {
   credentialKindOf,
   KeyEntry,
@@ -24,6 +25,7 @@ import {
   KeyTestOutcome,
   useTestProviderKey,
 } from "./ai-provider-key-test";
+import { isOpenRouter } from "./ai-provider-links";
 import { providerName } from "./ai-provider-names";
 import {
   hasProviderSettings,
@@ -138,6 +140,18 @@ export function AiProviderKeysCard() {
                         )}
                     </>
                   }
+                  figures={
+                    <ProviderRecentCalls
+                      provider={openStatus.provider}
+                      broker={
+                        openStatus.provider === "openai_compatible" &&
+                        isOpenRouter(
+                          routing.data?.routing.providers?.[openStatus.provider]
+                            ?.base_url ?? "",
+                        )
+                      }
+                    />
+                  }
                   onClose={() => setOpened(null)}
                 />
               ) : null}
@@ -170,6 +184,7 @@ function ProviderRow({
       >
         <span className="ai-provider-who">
           <span>{providerName(status.provider, t)}</span>
+          <ProviderCallsLine provider={status.provider} />
         </span>
         <span
           className="t-caption ai-provider-used"
@@ -181,7 +196,7 @@ function ProviderRow({
         </span>
         <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>
         <Button onClick={onOpen}>
-          {t("aiProviders.manage")}
+          {t("aiRouting.edit")}
           <span className="sr-only"> {providerName(status.provider, t)}</span>
         </Button>
       </div>

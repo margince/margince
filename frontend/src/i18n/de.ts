@@ -11551,7 +11551,6 @@ export const de = {
   "aiProviders.inUse": "In Verwendung",
   "aiProviders.unpriced": "{model} ist in Verwendung und hat keinen Preis.",
   "aiProviders.setPrice": "Preis festlegen",
-  "aiProviders.manage": "Verwalten",
   "aiProviderSettings.service.choose": "Dienst auswählen",
   "aiProviderSettings.service.label": "Dienst",
   "aiProviderSettings.service.openrouter": "OpenRouter",
@@ -11913,4 +11912,230 @@ export const de = {
     "Was du aus dieser Quelle siehst, kann unvollständig sein.",
   "magic.consequence.capture_history_incomplete":
     "Älterer Austausch aus dieser Quelle fehlt.",
+  "aiFigures.window.24h": "24 Std.",
+  "aiFigures.window.7d": "7 T.",
+  "aiFigures.window.30d": "30 T.",
+  "aiFigures.window": "Zeitraum",
+  "aiFigures.groupBy": "Gruppieren nach",
+  "aiFigures.by.host": "Nach Host",
+  "aiFigures.by.model": "Nach Modell",
+  "aiFigures.by.tier": "Nach Stufe",
+  "aiFigures.recentCalls": "Letzte Aufrufe",
+  "aiFigures.intro":
+    "Jeder Aufruf über diese Verbindung. Gelesen aus demselben Aufrufprotokoll wie Status und Verlauf.",
+  "aiFigures.intro.broker":
+    "Jeder Aufruf über diese Verbindung und welcher OpenRouter-Host ihn bedient hat. Gelesen aus demselben Aufrufprotokoll wie Status und Verlauf.",
+  "aiFigures.openRow": "Öffne eine Zeile, um die passenden Aufrufe zu sehen.",
+  "aiFigures.lastWeek": "Letzte 7 Tage",
+  "aiFigures.noHost": "Kein Host hat geantwortet",
+  "aiFigures.empty": "Keine Aufrufe in diesem Zeitraum.",
+  "aiFigures.pending": "Aufrufprotokoll wird gelesen …",
+  "aiFigures.unread":
+    "Die Aufrufzahlen konnten nicht gelesen werden. Versuche es gleich noch einmal.",
+  "aiFigures.col.calls": "Aufrufe",
+  "aiFigures.col.failed": "Fehlgeschlagen",
+  "aiFigures.col.timeouts": "Zeitüberschreitungen",
+  "aiFigures.col.p50": "p50",
+  "aiFigures.col.p95": "p95",
+  "aiFigures.col.cost": "Kosten",
+  "aiFigures.line.none": "Keine Aufrufe in den letzten 7 Tagen",
+  "aiFigures.line.calls_one": "{count} Aufruf",
+  "aiFigures.line.calls_other": "{count} Aufrufe",
+  "aiFigures.line.noneFailed": "0 fehlgeschlagen",
+  "aiFigures.line.failed_one": "{count} fehlgeschlagen",
+  "aiFigures.line.failed_other": "{count} fehlgeschlagen",
+  "aiFigures.line.timeouts_one": "({count} Zeitüberschreitung)",
+  "aiFigures.line.timeouts_other": "({count} Zeitüberschreitungen)",
+  "aiFigures.line.timeoutCount_one": "{count} Zeitüberschreitung",
+  "aiFigures.line.timeoutCount_other": "{count} Zeitüberschreitungen",
+  "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.line.sort": "Sortierung: {sort}",
+  "aiFigures.line.week": "7 T.: {figures}",
+  "aiFigures.line.prefix": "7 T.: {sentence}",
+  "aicalls.filtered": "Es werden Aufrufe gezeigt, die bei {filter} endeten.",
+  "aicalls.filtered.clear": "Alle Aufrufe zeigen",
+  "aiOpenRouter.title": "OpenRouter-Einstellungen",
+  "aiOpenRouter.privacyDocs": "Datenrichtlinien ↗",
+  "aiOpenRouter.routingDocs": "Anbieter-Routing ↗",
+  "aiOpenRouter.intro":
+    "Erscheint, weil der Dienst OpenRouter ist. Gilt für jede Stufe dieser Verbindung, und keine Stufe kann es lockern.",
+  "aiOpenRouter.zdr": "Keine Datenspeicherung",
+  "aiOpenRouter.zdr.help": "Nur Hosts, die nichts speichern.",
+  "aiOpenRouter.deny": "Hosts ablehnen, die mit Prompts trainieren",
+  "aiOpenRouter.deny.help": "Sendet data_collection: deny.",
+  "aiOpenRouter.distill": "Nur destillierbare Modelle",
+  "aiOpenRouter.distill.help":
+    "Nur Modelle, deren Lizenz die Weiterverwendung der Ausgabe erlaubt.",
+  "aiOpenRouter.fallbacks": "Ausweichen erlauben",
+  "aiOpenRouter.fallbacks.help":
+    "Einen anderen Host versuchen, wenn der bevorzugte ausfällt.",
+  "aiOpenRouter.only": "Nur diese Hosts verwenden",
+  "aiOpenRouter.only.help":
+    "OpenRouter-Hostnamen, durch Komma getrennt. Leer heißt jeder Host, der die Regeln oben erfüllt.",
+  "aiOpenRouter.only.placeholder": "zum Beispiel mistral/eu, cerebras",
+  "aiOpenRouter.ignore": "Nie verwenden",
+  "aiOpenRouter.ignore.help": "Hosts, die überall übersprungen werden.",
+  "aiOpenRouter.ignore.placeholder": "zum Beispiel coreweave",
+  "aiOpenRouter.account":
+    "Einstellungen in deinem OpenRouter-Konto gelten ebenfalls und werden hier nicht gezeigt.",
+  "aiServing.title": "Bereitstellung",
+  "aiServing.openRouter": "OpenRouter",
+  "aiServing.guide": "Routing-Leitfaden ↗",
+  "aiServing.blocked.decisions":
+    "Das Entscheidungsmodell antwortet über den Entscheidungs-Endpunkt von OpenRouter, der keinen Routing-Block annimmt. Sein Zeitlimit wird pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.blocked.provider":
+    "Host-Routing gilt nur für OpenRouter. {provider} stellt dieses Modell selbst bereit. Denkstufe und Zeitlimit werden weiterhin pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.blocked.host":
+    "Host-Routing gilt nur für OpenRouter. Die Verbindung zeigt auf einen anderen Dienst. Denkstufe und Zeitlimit werden weiterhin pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.empty":
+    "Leer nutzt die mitgelieferte Vorgabe: nach Durchsatz sortieren, fp16 oder bf16, Parameter verlangen. {} lässt OpenRouter selbst routen.",
+  "aiServing.json": "Bereitstellungs-JSON",
+  "aiServing.format": "Formatieren",
+  "aiServing.example": "Beispiel einfügen",
+  "aiServing.useDefault": "Mitgelieferte Vorgabe nutzen",
+  "aiServing.checking": "Wird mit dem Server geprüft …",
+  "aiServing.valid": "Gültig",
+  "aiServing.shippedDefault": "Mitgelieferte Vorgabe",
+  "aiServing.problems_one": "{count} Problem",
+  "aiServing.problems_other": "{count} Probleme",
+  "aiServing.reference": "Feldreferenz",
+  "aiServing.connectionOnly": "nur Verbindung",
+  "aiServing.openRouterDocs": "OpenRouter ↗",
+  "aiServing.referenceNote":
+    "Gelesen aus GET /ai/routing/schema. Schlüssel, die Margince pro Aufruf setzt (model, messages, tools, response_format …), werden abgelehnt.",
+  "aiServing.asked": "Was OpenRouter angefragt wird",
+  "aiServing.askedFor":
+    "jeder Aufruf von {lane}, nachdem deine Einstellungen, die Verbindung und die Vorgaben von Margince zusammengeführt sind",
+  "aiServing.fixFirst":
+    "Behebe die Probleme oben, um zu sehen, was gesendet wird.",
+  "aiServing.brokerOwn": "Nichts zusätzlich: OpenRouter wählt den Host selbst.",
+  "aiServing.showJson": "Gesendetes JSON zeigen",
+  "aiServing.source.default": "Vorgabe von Margince",
+  "aiServing.source.connection": "Verbindung",
+  "aiServing.source.tier": "Hier festgelegt",
+  "aiServing.source.task": "Jede Aufgabe",
+  "aiServing.say.sort": "Den Host nach {by} wählen.",
+  "aiServing.say.sortAcross":
+    "Den Host nach {by} wählen und dabei auch Ausweichmodelle vergleichen.",
+  "aiServing.say.quantizations":
+    "Nur Hosts, die das Modell mit {levels}-Genauigkeit ausführen.",
+  "aiServing.say.requireParameters":
+    "Nur Hosts, die jede Option unterstützen, die Margince sendet, etwa das Antwortformat.",
+  "aiServing.say.requireParametersOff":
+    "Hosts dürfen Optionen ignorieren, die sie nicht unterstützen.",
+  "aiServing.say.zdr":
+    "Nur Hosts, die keine Kopie von Prompts oder Antworten behalten.",
+  "aiServing.say.denyCollection":
+    "Hosts überspringen, die Prompts speichern oder damit trainieren könnten.",
+  "aiServing.say.allowCollection":
+    "Hosts, die Prompts speichern, sind erlaubt.",
+  "aiServing.say.distill":
+    "Nur Modelle, deren Lizenz die Weiterverwendung ihrer Ausgabe erlaubt.",
+  "aiServing.say.only": "Nur {hosts} verwenden.",
+  "aiServing.say.ignore": "Nie {hosts} verwenden.",
+  "aiServing.say.order": "Zuerst {hosts} versuchen.",
+  "aiServing.say.fallbacks":
+    "Auf einen anderen Host ausweichen, wenn diese ausfallen.",
+  "aiServing.say.noFallbacks":
+    "Lieber fehlschlagen als einen anderen Host verwenden.",
+  "aiServing.say.maxPrice":
+    "Hosts überspringen, die mehr als {prices} pro 1 Mio. Tokens berechnen.",
+  "aiServing.say.maxLatency":
+    "Hosts bevorzugen, die innerhalb von {latency} zu antworten beginnen. Ein langsamerer Host antwortet trotzdem, wenn kein schnellerer frei ist.",
+  "aiServing.say.minThroughput":
+    "Hosts bevorzugen, die mindestens {throughput} Tokens pro Sekunde erzeugen.",
+  "aiServing.say.effort": "Mit Stufe {effort} denken.",
+  "aiServing.say.maxTokens": "Höchstens {tokens} Tokens lang denken.",
+  "aiServing.say.exclude":
+    "Denken, aber die Begründung aus der Antwort lassen.",
+  "aiServing.say.include": "Die Begründung mit der Antwort zurückgeben.",
+  "aiServing.say.thinkOn": "Denken einschalten.",
+  "aiServing.say.thinkOff": "Denken ausschalten.",
+  "aiServing.say.taskEffort":
+    "Die Denkstufe kommt aus der Einstellung jeder Aufgabe unter KI-Aufgaben.",
+  "aiServing.say.raw": "{key} = {value}",
+  "aiFigures.line.brokerOwn": "eigenes Routing des Brokers",
+  "aiTasks.settings": "Einstellungen",
+  "aiTasks.custom": "Angepasst",
+  "aiTaskSheet.decision": "Entscheidung",
+  "aiTaskSheet.settings": "Einstellungen",
+  "aiTaskSheet.thinkingGuide": "Was Denkstufen bewirken ↗",
+  "aiTaskSheet.thinking": "Denkstufe",
+  "aiTaskSheet.thinking.default":
+    "Standard (Bindung und jeder Prompt entscheiden)",
+  "aiTaskSheet.thinking.default.help":
+    "Die Untergrenze jedes Prompts und die Bindung der Stufe entscheiden, wie viel das Modell denkt.",
+  "aiTaskSheet.thinking.minimal.help":
+    "Sofort antworten. Am günstigsten und schnellsten. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.thinking.low.help":
+    "Kurz nachdenken vor der Antwort. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.thinking.medium.help":
+    "Die Schritte durchdenken. Langsamer, mehr Tokens. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.thinking.high.help":
+    "Ausführlich nachdenken. Am langsamsten und teuersten. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.decisionTimeout": "Zeitlimit des Entscheidungsmodells",
+  "aiTaskSheet.decisionTimeout.help":
+    "{low} bis {high} s. Gibt das Entscheidungsmodell auf, weicht die Aufgabe auf ihr Stufenmodell aus.",
+  "aiTaskSheet.attemptTimeout": "Zeitlimit pro Modellaufruf",
+  "aiTaskSheet.attemptTimeout.help":
+    "{low} bis {high} s pro Aufruf eines Stufenmodells. Ein längerer Aufruf wird gestoppt und als Zeitüberschreitung gezählt. Gilt für jeden Anbieter.",
+  "aiTaskSheet.attemptTimeout.help.decision":
+    "{low} bis {high} s pro Aufruf eines Stufenmodells, auch beim Ausweichen. Ein längerer Aufruf wird gestoppt und als Zeitüberschreitung gezählt. Gilt für jeden Anbieter.",
+  "aiTaskSheet.seconds": "{seconds} s",
+  "aiTaskSheet.seconds.default": "{seconds} s (Standard)",
+  "aiTaskSheet.reset": "Auf Standard zurücksetzen",
+  "aiTaskSheet.fixed": "Durch Vertrag festgelegt",
+  "aiTaskSheet.tiersTried": "Versuchte Stufen",
+  "aiTaskSheet.runs": "Läuft",
+  "aiTaskSheet.fixed.help": "Ändere diese in ai-tasks.yaml.",
+  "aiTaskSheet.addTask": "KI-Aufgabe hinzufügen oder ändern ↗",
+  "aiTaskSheet.conflict":
+    "Jemand hat diese Einstellungen während deiner Bearbeitung gespeichert",
+  "aiTaskSheet.conflict.help":
+    "Schließe dieses Fenster und öffne es erneut, um vom jetzt gespeicherten Stand auszugehen.",
+  "aiTaskSheet.saveFailed": "Die Einstellungen wurden nicht gespeichert",
+  "aiTaskSheet.unsaved": "Nicht gespeicherte Änderungen",
+  "aiTaskSheet.applies":
+    "Gilt innerhalb einer Minute für die ganze Installation.",
+  "aiTaskSheet.save": "Einstellungen speichern",
+  "aiTaskSheet.viewCalls": "Diese Aufrufe ansehen →",
+  "aiTaskSheet.hostsUnder":
+    "· welcher Host jeden Aufruf bedient hat, steht unter Anbieter.",
+  "aiOutcome.firstTry": "Beim ersten Versuch beantwortet",
+  "aiOutcome.fallback": "Vom Ausweichen beantwortet",
+  "aiOutcome.noAnswer": "Keine Antwort",
+  "aiOutcome.legend": "Wie Aufrufe eine Antwort bekamen",
+  "aiOutcome.headline.all": "Alle {total} Aufrufe bekamen eine Antwort.",
+  "aiOutcome.headline.lost":
+    "{share} von {total} Aufrufen bekamen eine Antwort. {lost} nicht.",
+  "aiOutcome.lostNote":
+    "{lost} Aufrufe bekamen von keinem Schritt eine Antwort. Die Aufgabe behandelt sie wie ohne Modellantwort.",
+  "aiOutcome.step": "Schritt {n} · {role}",
+  "aiOutcome.role.decision": "Entscheidungsmodell",
+  "aiOutcome.role.tier": "Stufenmodell",
+  "aiOutcome.role.fallback": "Ausweichen",
+  "aiOutcome.answered": "{answered} von {attempts} beantwortet",
+  "aiOutcome.usually": "meist in {latency}",
+  "aiOutcome.notNeeded": "In diesem Zeitraum nicht gebraucht",
+  "aiOutcome.gaveUp.on_one": "{count} {reason} → weitergegeben",
+  "aiOutcome.gaveUp.on_other": "{count} {reason} → weitergegeben",
+  "aiOutcome.gaveUp.last_one": "{count} {reason} → keine Antwort",
+  "aiOutcome.gaveUp.last_other": "{count} {reason} → keine Antwort",
+  "aiOutcome.gaveUp.timeout": "Zeit überschritten",
+  "aiOutcome.gaveUp.failed": "fehlgeschlagen",
+  "aiOutcome.gaveUp.throttled": "gedrosselt",
+  "aiOutcome.gaveUp.quota": "Kontingent erschöpft",
+  "aiOutcome.gaveUp.refused": "abgelehnt",
+  "aiOutcome.gaveUp.unsure": "nicht sicher genug",
+  "aiOutcome.gaveUp.offEnum": "außerhalb der Auswahl beantwortet",
+  "aiOutcome.gaveUp.invalid": "in falscher Form beantwortet",
+  "aiOutcome.latencyTitle": "Wie lange Aufrufe dauern, gemessen am Zeitlimit",
+  "aiOutcome.latencyMarks":
+    "● die Hälfte endet innerhalb von {p50} · ◆ 95 % innerhalb von {p95}",
+  "aiOutcome.timeout": "Zeitlimit",
+  "aiOutcome.decisionTimeout": "Zeitlimit des Entscheidungsmodells",
+  "aiOutcome.limit": "│ {name} {seconds} s",
+  "aiOutcome.limitNear": "│ {name} {seconds} s: p95 liegt nah daran",
+  "aiOutcome.limitOver": "│ {name} {seconds} s: p95 liegt darüber",
+  "aiOutcome.limitFar": "{name} {seconds} s, weit über jedem Aufruf",
 } as const satisfies Record<MessageKey, string>;

@@ -70,11 +70,12 @@ seeds:
         provider: openai_compatible
         model: anthropic/claude-sonnet-4.6
         routing:
-          # A frontier answer is worth waiting for, so this tier does not sort
-          # for speed. What it does refuse is a quantized serving of a model
-          # bound for its quality.
-          quantizations: [fp16, bf16, fp32]
-          require_parameters: true
+          provider:
+            # A frontier answer is worth waiting for, so this tier does not sort
+            # for speed. What it does refuse is a quantized serving of a model
+            # bound for its quality.
+            quantizations: [fp16, bf16, fp32]
+            require_parameters: true
     # KNOWN GAP: this preset cannot serve document_extract, which sends a PDF.
     # On the OpenAI-compatible wire the carriage is the operator's `input:`
     # declaration, and that vocabulary is text and image only — there is no way

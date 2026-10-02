@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCan } from "../app/capability";
+import { useState } from "react";
+import { useCan, useCanWrite } from "../app/capability";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
 import { AiFeaturesWithheldPanel, useAiStatus } from "./ai-admin";
 import { AiFeatureTable } from "./ai-feature-table";
 import { useAiHealth } from "./ai-health";
+import { TaskSheet } from "./ai-task-sheet";
 import { PanelTitle } from "./ai-terms";
 import { QueryGate } from "./common";
 
@@ -18,6 +20,8 @@ import { QueryGate } from "./common";
 // their say — rather than with the policy's first pick.
 export function AiTasksCard() {
   const t = useT();
+  const canManage = useCanWrite("ai_routing", "update");
+  const [opened, setOpened] = useState<string | null>(null);
   const canDiagnose = useCan("ai_diagnostics", "read");
   const canBudget = useCan("ai_budget", "read");
   const canRoute = useCan("ai_routing", "read");
@@ -35,13 +39,27 @@ export function AiTasksCard() {
       <PanelBody>
         <PanelIntro>{t("aiTasks.intro")}</PanelIntro>
         <QueryGate query={status} pendingLabel={t("aiTasks.title")}>
-          {(current) => (
-            <AiFeatureTable
-              rows={current.features}
-              health={health}
-              canTrace={canDiagnose}
-            />
-          )}
+          {(current) => {
+            const route = current.features.find((f) => f.task === opened);
+            return (
+              <>
+                <AiFeatureTable
+                  rows={current.features}
+                  health={health}
+                  canTrace={canDiagnose}
+                  onEdit={(row) => setOpened(row.task)}
+                />
+                {route ? (
+                  <TaskSheet
+                    route={route}
+                    canManage={canManage}
+                    canSeeCalls={canDiagnose}
+                    onClose={() => setOpened(null)}
+                  />
+                ) : null}
+              </>
+            );
+          }}
         </QueryGate>
       </PanelBody>
     </Panel>

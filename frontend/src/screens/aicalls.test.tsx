@@ -356,6 +356,34 @@ it("narrows the trace to the task the address names, and writes a new pick back"
   globalThis.location.hash = "";
 });
 
+it("narrows the trace to where a figure's calls ended, and lets the reader clear it", async () => {
+  const user = userEvent.setup();
+  globalThis.location.hash =
+    "#/settings/model-calls?provider=openai_compatible&served_provider=Cerebras";
+  mount();
+  expect(
+    await screen.findByText(
+      "Showing calls that ended on provider: openai_compatible · served_provider: Cerebras.",
+    ),
+  ).toBeTruthy();
+  const asked = vi
+    .mocked(fetch)
+    .mock.calls.map(([input]) =>
+      input instanceof Request ? input.url : String(input),
+    );
+  expect(
+    asked.some(
+      (url) =>
+        url.includes("provider=openai_compatible") &&
+        url.includes("served_provider=Cerebras"),
+    ),
+  ).toBe(true);
+
+  await user.click(screen.getByRole("button", { name: "Show all calls" }));
+  expect(globalThis.location.hash).toBe("#/settings/model-calls");
+  globalThis.location.hash = "";
+});
+
 it("distinguishes capture disabled from a call without payload", async () => {
   mount(false, false);
   await userEvent.click(
