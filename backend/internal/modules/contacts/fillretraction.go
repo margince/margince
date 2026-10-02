@@ -187,11 +187,11 @@ func retractableFields(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	var held bool
 	err := tx.QueryRow(ctx, `
 		SELECT coalesce((
-			SELECT jsonb_typeof(a.after -> $2) <> 'null' FROM audit_log a
-			 WHERE a.entity_type = $1 AND a.entity_id = $3 AND a.after ? $2
-			   AND (a.occurred_at < $4 OR (a.occurred_at = $4 AND a.id < $5))
-			 ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1), false)`,
-		entityContact, fieldTitle, contactID, fill.FilledAt, fill.Entry).Scan(&held)
+			SELECT jsonb_typeof(prior.after -> $1) <> 'null' FROM audit_log prior
+			 WHERE prior.entity_type = 'contact' AND prior.entity_id = $2 AND prior.after ? $1
+			   AND (prior.occurred_at < $3 OR (prior.occurred_at = $3 AND prior.id < $4))
+			 ORDER BY prior.occurred_at DESC, prior.id DESC LIMIT 1), false)`,
+		fieldTitle, contactID, fill.FilledAt, fill.Entry).Scan(&held)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading whether the title was set before the fill: %w", err)
 	}
