@@ -4,12 +4,18 @@
 package compose
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A module that refuses at the write answers with the reason the button would
@@ -60,5 +66,60 @@ func TestOnlyAnUnarchiveIsRedoneByArchiving(t *testing.T) {
 	}
 	if undoGrantFor(unarchive) != "delete" || undoGrantFor(field) != "update" {
 		t.Errorf("grants = %q / %q, want delete for the archive and update for the field", undoGrantFor(unarchive), undoGrantFor(field))
+	}
+}
+
+// systemSeatCtx is a seat holding every grant, so the object gate passes and the
+// branches after it are what a case is about.
+func systemSeatCtx() context.Context {
+	return principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
+}
+
+// The refusals an inverse decides from the ports alone, before it reads the
+// database: who may act, whether it is undone, and the record's archived state.
+func TestAnInverseIsRefusedFromItsPortsBeforeItReadsTheTrail(t *testing.T) {
+	created := AuditRow{ID: ids.NewV7(), EntityType: "contact", EntityID: ids.NewV7(), Action: actionCreate}
+	archive := AuditRow{ID: ids.NewV7(), EntityType: "company", EntityID: ids.NewV7(), Action: actionArchive}
+	fill := AuditRow{
+		ID: ids.NewV7(), EntityType: "contact", EntityID: ids.NewV7(), Action: auditActionUpdate,
+		Before:   json.RawMessage(`{"title":null}`),
+		After:    json.RawMessage(`{"title":"filled"}`),
+		Evidence: json.RawMessage(`{"source":"capture_enrich","source_ref":"activity:x","confirmed":["title"]}`),
+	}
+	archived := func(v bool) func(context.Context, pgx.Tx, string, ids.UUID) (bool, error) {
+		return func(context.Context, pgx.Tx, string, ids.UUID) (bool, error) { return v, nil }
+	}
+	notMine := func(context.Context, pgx.Tx, string, ids.UUID) error { return errRecordNotWritable }
+	cases := []struct {
+		name string
+		e    Evaluator
+		row  AuditRow
+		want Reason
+	}{
+		{"not the caller's", Evaluator{Writable: notMine}, created, ReasonNotWritableByCaller},
+		{"create of an archived record", Evaluator{Archived: archived(true)}, created, ReasonRecordArchived},
+		{"archive of a live record", Evaluator{Archived: archived(false)}, archive, ReasonSuperseded},
+		{"a fill that only confirmed", Evaluator{}, fill, ReasonNotRestorableByThisPath},
+	}
+	for _, c := range cases {
+		answer, err := c.e.Evaluate(systemSeatCtx(), nil, c.row, Advisory)
+		if err != nil {
+			t.Errorf("%s: %v", c.name, err)
+			continue
+		}
+		if answer.Reason != c.want {
+			t.Errorf("%s: reason = %q, want %q", c.name, answer.Reason, c.want)
+		}
+	}
+	boom := errors.New("the scope read failed")
+	failing := Evaluator{Writable: func(context.Context, pgx.Tx, string, ids.UUID) error { return boom }}
+	if _, err := failing.Evaluate(systemSeatCtx(), nil, created, Advisory); !errors.Is(err, boom) {
+		t.Errorf("a failed scope read answered %v, want the fault", err)
+	}
+	if err := (recordInverses{}).perform(systemSeatCtx(), nil, created, inverseNone, 1); err == nil {
+		t.Error("an entry with no module verb was performed")
+	}
+	if err := (recordInverses{}).unarchive(systemSeatCtx(), nil, AuditRow{EntityType: "project"}, 1); err == nil {
+		t.Error("a project was un-archived")
 	}
 }
