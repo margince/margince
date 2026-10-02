@@ -20,7 +20,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "usage: presetbodycmd <preset.yaml>")
 		os.Exit(2)
 	}
-	raw, err := os.ReadFile(os.Args[1]) // #nosec G304 -- the preset the operator named
+	raw, err := os.ReadFile(os.Args[1]) // #nosec G304 G703 -- the preset the operator named on the command line
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -30,5 +30,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", os.Args[1], err)
 		os.Exit(1)
 	}
-	fmt.Println(string(out))
+	if _, err := fmt.Fprintf(os.Stdout, "%s\n", out); err != nil {
+		fmt.Fprintf(os.Stderr, "presetbodycmd: writing the body: %v\n", err)
+		os.Exit(1)
+	}
 }
