@@ -58908,7 +58908,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
-            /** @description The routing document kept changing while the Vertex AI bindings this location moves were being checked. Retry. */
+            /** @description The routing document kept changing while its Vertex AI bindings were being checked against the new location. Read it again and retry. */
             409: {
                 headers: {
                     [name: string]: unknown;

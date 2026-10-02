@@ -100,9 +100,7 @@ func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig 
 	return cfg
 }
 
-// liftable reports whether a lane's provider can hold what the lane wrote. A
-// provider this build does not know keeps it on the lane, which fails when it is
-// asked to serve rather than refusing the whole document and every other lane.
+// knownProvider reports whether this build knows a provider.
 func knownProvider(provider string) bool {
 	_, known := providerByName(provider)
 	return known
