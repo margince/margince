@@ -11,7 +11,8 @@ type Send = (message: Record<string, unknown>) => void;
  * the reader sees the head and a hairline and none of the rows.
  *
  * `send` is the bridge's own, so the report goes to the host's pinned origin
- * like every other message after the handshake.
+ * like every other message after the handshake. The bridge starts this once
+ * the first result is drawn, so the first report is the answer's height.
  */
 export function followContentSize(send: Send): void {
   let reported: Size | null = null;

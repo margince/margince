@@ -446,7 +446,8 @@ describe("the bridge tells the host how tall its content is", () => {
 
   async function handshaken() {
     const parent = stubParent();
-    await loadBridge(parent.win);
+    const bridge = await loadBridge(parent.win);
+    bridge.onResult(() => {});
     deliver(parent.win, "https://host.example", {
       jsonrpc: "2.0",
       id: parent.sent[0].msg.id,
@@ -455,14 +456,23 @@ describe("the bridge tells the host how tall its content is", () => {
     return parent;
   }
 
+  function answer(parent: { win: Window }) {
+    deliver(parent.win, "https://host.example", {
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: { structuredContent: { data: {} } },
+    });
+  }
+
   function sizes(sent: Sent[]) {
     return sent.filter((s) => s.msg.method === "ui/notifications/size-changed");
   }
 
-  it("reports its content height to the pinned host once the handshake is done", async () => {
+  it("reports its content height to the pinned host once an answer is drawn", async () => {
     const layout = stubLayout();
     contentHeight(812.4);
     const parent = await handshaken();
+    answer(parent);
     layout.paint();
     const [report] = sizes(parent.sent);
     expect(report?.target).toBe("https://host.example");
@@ -472,20 +482,33 @@ describe("the bridge tells the host how tall its content is", () => {
     });
   });
 
-  it("says nothing about its size before the host has answered", async () => {
+  // Before the first answer the document is only its padding. Reported, that
+  // height would shrink the host's frame just to grow it again on the answer.
+  it("says nothing about its size until the first answer is drawn", async () => {
     const layout = stubLayout();
-    contentHeight(400);
-    const parent = stubParent();
-    await loadBridge(parent.win);
+    contentHeight(32);
+    const parent = await handshaken();
     layout.paint();
     expect(sizes(parent.sent)).toEqual([]);
     expect(layout.observed).toEqual([]);
+  });
+
+  it("starts watching once, however many answers arrive", async () => {
+    const layout = stubLayout();
+    contentHeight(400);
+    const parent = await handshaken();
+    answer(parent);
+    answer(parent);
+    layout.paint();
+    expect(layout.observed).toHaveLength(1);
+    expect(sizes(parent.sent)).toHaveLength(1);
   });
 
   it("watches the document for resizes and reports only a size that changed", async () => {
     const layout = stubLayout();
     contentHeight(300);
     const parent = await handshaken();
+    answer(parent);
     layout.paint();
     const [watcher] = layout.observed;
     expect(watcher?.targets).toEqual([document.documentElement, document.body]);
@@ -518,7 +541,7 @@ describe("the bridge tells the host how tall its content is", () => {
       measuredAs = root.style.height;
       return new DOMRect(0, 0, 640, 700);
     });
-    await handshaken();
+    answer(await handshaken());
     layout.paint();
     expect(measuredAs).toBe("max-content");
     expect(root.style.height).toBe("100%");
