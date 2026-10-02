@@ -1,13 +1,13 @@
 {
   "totals": {
     "sites": 47,
-    "sites_best_current": 46,
+    "sites_best_current": 47,
     "sites_best_partial": 0,
     "sites_best_stale": 0,
-    "sites_absent": 1,
-    "scenarios": 165,
-    "records": 245,
-    "bindings": 13,
+    "sites_absent": 0,
+    "scenarios": 167,
+    "records": 247,
+    "bindings": 14,
     "self_judged_records": 0
   },
   "presets": [
@@ -1226,8 +1226,8 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "band": "",
-          "state": "",
+          "band": "certified",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1241,8 +1241,8 @@
             "state": ""
           },
           "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
+          "runs": 39,
+          "passed": 37,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -1670,11 +1670,11 @@
         }
       ],
       "bands": {
-        "certified": 22,
+        "certified": 23,
         "supported_degraded": 7,
         "not_supported": 0
       },
-      "untested": 1,
+      "untested": 0,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -2203,8 +2203,8 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": "",
+          "band": "certified",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2218,10 +2218,15 @@
             "state": ""
           },
           "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
+          "runs": 39,
+          "passed": 37,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
         },
         {
           "task": "offer_draft",
@@ -2805,11 +2810,11 @@
         }
       ],
       "bands": {
-        "certified": 22,
+        "certified": 23,
         "supported_degraded": 7,
         "not_supported": 0
       },
-      "untested": 1,
+      "untested": 0,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -6103,8 +6108,8 @@
       "name": "Gemini",
       "answer": "mostly",
       "sites_shipped": 47,
-      "sites_measured": 46,
-      "ready": 38,
+      "sites_measured": 47,
+      "ready": 39,
       "usable_with_care": 7,
       "not_reliable_yet": 1,
       "recheck_pending": 0,
@@ -6115,16 +6120,16 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "sites": 43,
-          "sites_current": 43,
+          "sites": 44,
+          "sites_current": 44,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 591,
-          "passed": 583,
-          "reliability": 0.9864636209813875,
+          "runs": 630,
+          "passed": 620,
+          "reliability": 0.9841269841269841,
           "slowest_p95_ms": 26137,
           "bands": {
-            "certified": 25,
+            "certified": 26,
             "supported_degraded": 16,
             "not_supported": 2
           }
@@ -6482,6 +6487,20 @@
           "runs": 12,
           "passed": 12,
           "records": 2
+        },
+        {
+          "key": "nl_search/filter_propose",
+          "task": "nl_search",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 39,
+          "passed": 37,
+          "records": 1
         },
         {
           "key": "offer_draft/draft",
@@ -9554,16 +9573,16 @@
         "model": "gemini-3.1-flash-lite",
         "env": "cloud_frontier"
       },
-      "sites": 44,
-      "sites_current": 44,
+      "sites": 45,
+      "sites_current": 45,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 606,
-      "passed": 598,
-      "reliability": 0.9867986798679867,
+      "runs": 645,
+      "passed": 635,
+      "reliability": 0.9844961240310077,
       "slowest_p95_ms": 26137,
       "bands": {
-        "certified": 26,
+        "certified": 27,
         "supported_degraded": 16,
         "not_supported": 2
       }
@@ -9585,6 +9604,26 @@
       "bands": {
         "certified": 2,
         "supported_degraded": 4,
+        "not_supported": 0
+      }
+    },
+    {
+      "binding": {
+        "provider": "gemini",
+        "model": "gemini-3.5-flash",
+        "env": "cloud_frontier"
+      },
+      "sites": 1,
+      "sites_current": 1,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 33,
+      "passed": 33,
+      "reliability": 1,
+      "slowest_p95_ms": 4416,
+      "bands": {
+        "certified": 1,
+        "supported_degraded": 0,
         "not_supported": 0
       }
     },
@@ -15505,9 +15544,21 @@
       "site": "filter_propose",
       "key": "nl_search/filter_propose",
       "scope": "full_invocation",
-      "missing_context_scopes": [],
-      "best_state": "absent",
-      "recommended": null,
+      "missing_context_scopes": [
+        "offer",
+        "market"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash",
+          "env": "cloud_frontier"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "nl_search_bounds_a_score_and_a_start_date",
@@ -15552,10 +15603,22 @@
           "file": "backend/internal/compose/aicert/corpus/nl_search/reads_a_list_of_countries_as_membership_01.yaml"
         },
         {
+          "name": "nl_search_reads_german_input",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/nl_search/reads_german_input_01.yaml"
+        },
+        {
           "name": "nl_search_reads_not_as_a_negation",
           "expects": "accepted",
           "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/nl_search/reads_not_as_a_negation_01.yaml"
+        },
+        {
+          "name": "nl_search_reads_vietnamese_input",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/nl_search/reads_vietnamese_input_01.yaml"
         },
         {
           "name": "nl_search_refuses_a_value_outside_a_picklist",
@@ -15564,7 +15627,54 @@
           "file": "backend/internal/compose/aicert/corpus/nl_search/refuses_a_value_outside_a_picklist_01.yaml"
         }
       ],
-      "records": []
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 39,
+          "passed": 37,
+          "reliability": 0.9487179487179487,
+          "latency_p50_ms": 1308,
+          "latency_p95_ms": 1653,
+          "reported": {
+            "accepted": 37,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 33,
+          "reliability": 1,
+          "latency_p50_ms": 2895,
+          "latency_p95_ms": 4416,
+          "reported": {
+            "accepted": 33,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
     },
     {
       "task": "offer_draft",
