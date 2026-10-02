@@ -1,0 +1,8 @@
+/* The refusal sits under the box it is about. The row owns the label and the
+   rule; this is only what went wrong with the value typed in, so it lays out
+   in the control's column rather than beside it. */
+.numbersetting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

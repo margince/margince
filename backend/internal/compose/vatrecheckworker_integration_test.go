@@ -27,19 +27,22 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/vatcheck"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // countingRegister answers every consultation the same way and counts them.
 // The count IS the assertion: whether the register was asked at all is exactly
 // what the requested flag decides.
 type countingRegister struct {
-	asked   int
-	numbers []string
+	asked      int
+	numbers    []string
+	requesters []string
 }
 
-func (c *countingRegister) Check(_ context.Context, number string) (vatcheck.Result, error) {
+func (c *countingRegister) Check(_ context.Context, number, requester string) (vatcheck.Result, error) {
 	c.asked++
 	c.numbers = append(c.numbers, number)
+	c.requesters = append(c.requesters, requester)
 	return vatcheck.Result{Status: vatcheck.StatusValid, ConsultationNumber: "WAPIAAAA"}, nil
 }
 
@@ -47,7 +50,7 @@ func (c *countingRegister) Check(_ context.Context, number string) (vatcheck.Res
 // refuses it rather than spending somebody else's service on it.
 type refusingRegister struct{ asked int }
 
-func (r *refusingRegister) Check(_ context.Context, _ string) (vatcheck.Result, error) {
+func (r *refusingRegister) Check(_ context.Context, _, _ string) (vatcheck.Result, error) {
 	r.asked++
 	return vatcheck.Result{}, vatcheck.ErrMalformedNumber
 }
@@ -111,6 +114,52 @@ func (v *vatRecheckEnv) work(t *testing.T, requested bool) {
 	})
 	if err != nil {
 		t.Fatalf("working the consultation (requested=%v): %v", requested, err)
+	}
+}
+
+// The consultation is made under this installation's OWN VAT number, and only
+// one somebody gave or confirmed: a number the website reader proposed is not
+// this installation's legal identity until somebody says it is.
+func TestTheConsultationIsMadeUnderTheVatNumberAnAdminConfirmed(t *testing.T) {
+	v := setupVatRecheck(t)
+	const own = "DE999999999"
+	lastRequester := func() string { return v.register.requesters[len(v.register.requesters)-1] }
+
+	v.work(t, true)
+	if got := lastRequester(); got != "" {
+		t.Fatalf("an installation with no company profile asked under %q, want no requester", got)
+	}
+
+	website := "https://ourselves.example"
+	anchor, err := v.Contacts.SaveCompany(v.Admin(), contacts.SaveCompanyInput{DisplayName: "Ourselves GmbH", Website: &website})
+	if err != nil {
+		t.Fatalf("describe the installation's own company: %v", err)
+	}
+	agent := principal.WithActor(v.Admin(), principal.Principal{
+		Type: principal.PrincipalSystem, ID: "agent:coldstart",
+		UserID: v.AdminUser, OnBehalfOf: v.AdminUser, Permissions: integration.AdminPerms,
+	})
+	if _, err := v.Contacts.ApplyColdStartProfile(agent, contacts.ApplyColdStartProfileInput{
+		SourceURL: website,
+		Fields: []contacts.ColdStartFieldInput{{
+			Field: "register_vat", Value: own,
+			EvidenceSnippet: "USt-IdNr. " + own, SourceURL: website, Confidence: 0.9,
+		}},
+	}); err != nil {
+		t.Fatalf("the website reader proposes the installation's VAT number: %v", err)
+	}
+	v.work(t, true)
+	if got := lastRequester(); got != "" {
+		t.Fatalf("a VAT number nobody confirmed was used as the requester %q", got)
+	}
+
+	if _, err := v.Contacts.ConfirmCompanyProfileField(v.Admin(), anchor.CompanyID, "register_vat",
+		contacts.ProfileFieldWriteInput{}); err != nil {
+		t.Fatalf("confirm the installation's VAT number: %v", err)
+	}
+	v.work(t, true)
+	if got := lastRequester(); got != own {
+		t.Fatalf("after an admin confirmed it the consultation asked under %q, want %s", got, own)
 	}
 }
 
@@ -210,7 +259,7 @@ type movingRegister struct {
 	move    func(number string) error
 }
 
-func (m *movingRegister) Check(_ context.Context, number string) (vatcheck.Result, error) {
+func (m *movingRegister) Check(_ context.Context, number, _ string) (vatcheck.Result, error) {
 	m.asked++
 	m.numbers = append(m.numbers, number)
 	if m.asked == 1 && m.move != nil {
@@ -288,7 +337,7 @@ type throttledRegister struct {
 	after time.Duration
 }
 
-func (r *throttledRegister) Check(_ context.Context, _ string) (vatcheck.Result, error) {
+func (r *throttledRegister) Check(_ context.Context, _, _ string) (vatcheck.Result, error) {
 	r.asked++
 	return vatcheck.Result{}, &vatcheck.ProviderRefusedError{Status: 429, RetryAfter: r.after}
 }
@@ -324,7 +373,7 @@ func TestAThrottledRegisterReschedulesRatherThanAskingAgain(t *testing.T) {
 // failingRegister cannot answer at all — a transport fault rather than a verdict.
 type failingRegister struct{ asked int }
 
-func (r *failingRegister) Check(_ context.Context, _ string) (vatcheck.Result, error) {
+func (r *failingRegister) Check(_ context.Context, _, _ string) (vatcheck.Result, error) {
 	r.asked++
 	return vatcheck.Result{}, errors.New("dial tcp: connection refused")
 }

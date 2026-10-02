@@ -35,25 +35,24 @@ that file and both the api and the worker inherit it, so no value lands in a con
 
 ```
 MARGINCE_VAT_CHECK_BASE_URL=public
-MARGINCE_VAT_CHECK_REQUESTER=DE123456789
 ```
 
 `public` is a shorthand, not a URL: it resolves to the European Commission's own VIES service. Point it
 at a different base URL to use a proxy or a test double.
 
-`MARGINCE_VAT_CHECK_REQUESTER` is **this installation's own VAT ID**, and it is separately optional. VIES
-issues a consultation number only for a check made under a requester's number, so without it the check
-still runs and still answers — it just comes back with no proof attached, and the card says
-*"None issued."* If you intend to rely on these checks for filings, set it.
+Each check is made under **this installation's own VAT ID**: the **Register / VAT ID** on Settings →
+Company profile, once somebody has entered or confirmed it. A number the website reader proposed is not
+used until somebody confirms it. VIES issues a consultation number only for a check made under a
+requester's number, so without one the check still runs and still answers — it comes back with no proof
+attached, and the card says *"None issued."* If you rely on these checks for filings, confirm it.
 
 > **Restart after backend config.** The api is a compiled binary — changing an env var needs `make dev`
 > again to take effect. Vite hot-reloads the SPA but not the Go api, so a stale api keeps answering
 > happily and the feature breaks exactly like a bug in your own work.
 
-Both are also plain command-line flags on a deployment that configures processes rather than
+It is also a plain command-line flag on a deployment that configures processes rather than
 environments: `--vat-check-base-url` on **both** the api and the worker (the worker makes the request,
-the api decides whether to queue one at all — set it on only one role and the other silently disagrees),
-`--vat-check-requester` on the worker alone.
+the api decides whether to queue one at all — set it on only one role and the other silently disagrees).
 
 ## Give a company a VAT number
 

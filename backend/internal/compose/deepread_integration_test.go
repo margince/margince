@@ -763,3 +763,30 @@ func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames(t *testing.T) {
 		t.Errorf("%d audit rows on behalf of the payload's requester — the row is the authority", n)
 	}
 }
+
+// The page limit is a setting read when a read starts, so an admin's change
+// bounds the next read with no restart: the two-page site is cut to one.
+func TestDeepReadHonoursThePageLimitAnAdminSetBeforeItStarted(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	site := acmeDeepSite()
+	worker, _ := newDeepReadTestWorker(e, site, acmeDeepBrain())
+	read, args := startDeepRead(t, e, company)
+
+	onePage := 1
+	if _, err := capture.NewSettings(NewSettingsStore(e.Pool)).Update(e.Admin(),
+		capture.SettingsPatch{SiteReadMaxPages: &onePage}); err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.run(context.Background(), args); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+
+	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(done.Pages) != 1 {
+		t.Fatalf("the read kept %d pages, want the 1 the admin's limit allows", len(done.Pages))
+	}
+}

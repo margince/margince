@@ -18,6 +18,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -770,6 +771,24 @@ func TestPageCeilingOnlyNarrows(t *testing.T) {
 	}
 	if base.maxPages != 20 {
 		t.Errorf("the shared crawler was mutated to %d — a per-run cap must not outlive its run", base.maxPages)
+	}
+}
+
+// The worker's crawler is built at the ceiling and narrowed to the admin's
+// limits on every read, so a limit can only ever take a crawl lower — never
+// above what the crawler was built with — and a read never changes the next.
+func TestTheAdminsLimitsOnlyNarrowTheCrawler(t *testing.T) {
+	base := newSiteCrawler(nil, crawlCeiling)
+	chosen := base.within(crawlCapsFrom(capture.SiteReadLimits{MaxPages: 5, MaxMiB: 2, WallSeconds: 45}))
+	if chosen.maxPages != 5 || chosen.maxBytes != 2<<20 || chosen.wall != 45*time.Second {
+		t.Errorf("narrowed to pages %d, bytes %d, wall %v; want 5, 2 MiB, 45s", chosen.maxPages, chosen.maxBytes, chosen.wall)
+	}
+	small := newSiteCrawler(nil, CrawlCaps{MaxPages: 3, MaxBytes: 1 << 20, Wall: 10 * time.Second})
+	if wider := small.within(crawlCeiling); wider.maxPages != 3 || wider.maxBytes != 1<<20 || wider.wall != 10*time.Second {
+		t.Errorf("a wider limit raised the crawler to pages %d, bytes %d, wall %v", wider.maxPages, wider.maxBytes, wider.wall)
+	}
+	if base.maxPages != capture.MaxSiteReadMaxPages || base.wall != capture.MaxSiteReadWallSeconds*time.Second {
+		t.Errorf("the shared crawler was mutated to pages %d, wall %v — a read's limits must not outlive it", base.maxPages, base.wall)
 	}
 }
 

@@ -216,7 +216,7 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// unavailable — which is honest for an installation that geocodes
 		// nothing, and better than answering from an empty table.
 		Geocoder:   geocoderFor(cfg.geocodeBaseURL),
-		VatChecker: vatCheckerFor(cfg.vatCheckBaseURL, cfg.vatCheckRequester),
+		VatChecker: vatCheckerFor(cfg.vatCheckBaseURL),
 		Geocoding:  compose.GeocodingConfig{BackfillInterval: cfg.geocodeBackfill},
 		// The technical lookup, when the operator turned it on. Nil leaves the
 		// sweep unregistered and the button answering 501 — declared absent
@@ -307,7 +307,6 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		FxSourceURL:           cmp.Or(cfg.ratesFx, "https://api.frankfurter.dev/v1/latest"),
 		FxBootstrapCurrencies: fxBootstrapCurrencies(cfg.ratesCurrencies),
 		FxExtractBrain:        modelPath.RateExtract,
-		DeepReadCaps:          compose.CrawlCaps{MaxPages: cfg.deepReadMaxPages, MaxBytes: cfg.deepReadMaxBytes, Wall: cfg.deepReadWall},
 		// The same object store retention purges from: a deep read resolves
 		// the company's logo out of the site it just crawled and stores the
 		// normalized bytes here. Nil (no blobstore configured) leaves every
@@ -371,14 +370,14 @@ const baseURLPublic = "public"
 // with no consultation number attached.
 //
 //nolint:ireturn // the PORT is the return type: nil means this deployment checks no VAT numbers, which a concrete type cannot express.
-func vatCheckerFor(baseURL, requester string) vatcheck.Checker {
+func vatCheckerFor(baseURL string) vatcheck.Checker {
 	if !vatcheck.Configured(baseURL) {
 		return nil
 	}
 	if baseURL == baseURLPublic {
-		return vatcheck.NewVIES(vatcheck.PublicBaseURL, requester, nil)
+		return vatcheck.NewVIES(vatcheck.PublicBaseURL, nil)
 	}
-	return vatcheck.NewVIES(baseURL, requester, nil)
+	return vatcheck.NewVIES(baseURL, nil)
 }
 
 // geocoderFor builds the geocoding client, or nil for a deployment that

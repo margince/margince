@@ -102,8 +102,11 @@ func (w *siteDeepReadWorker) readAndResolveTriage(ctx context.Context, args Site
 	if err := w.contacts.UpdateSiteReadProgress(ctx, args.SiteReadID, "crawling", nil); err != nil {
 		w.log.WarnContext(ctx, "site read progress update failed", "read", args.SiteReadID.String(), "err", err)
 	}
+	crawler, err := w.crawlerFor(ctx, claim, args.MaxPages)
+	if err != nil {
+		return fmt.Errorf("site deep read %s: %w", args.SiteReadID, err)
+	}
 	progress, publishDraft := w.progressiveCallbacks(ctx, args.SiteReadID)
-	crawler := w.crawler.withPageCeiling(w.pageCeiling(claim.RequestedBy, args.MaxPages))
 	crawl, extraction, err := crawlAndExtract(ctx, crawler, w.extract, claim.SeedURL, progress, publishDraft)
 	if err != nil {
 		if deferred, deferErr := w.deferForBudget(ctx, args.SiteReadID, err); deferred {

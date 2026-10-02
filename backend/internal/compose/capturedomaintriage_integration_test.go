@@ -120,8 +120,13 @@ func TestTriageOnCaptureLeavesTheCompanyToTheSweepAtTheDailyCap(t *testing.T) {
 
 	// A cap of its own, not the shipped 500: filling the real one costs 500
 	// round trips to demonstrate a bound that behaves identically at three, and
-	// the number under test is "the cap", not its value.
-	const testCap = 3
+	// the number under test is "the cap", not its value. Set through the admin's
+	// own write, so the trigger reads it the way it reads any change.
+	testCap := 3
+	if _, err := capture.NewSettings(NewSettingsStore(e.Pool)).Update(e.Admin(),
+		capture.SettingsPatch{AutoEnrichDailyCap: &testCap}); err != nil {
+		t.Fatal(err)
+	}
 	store := capture.NewAutoEnrichStore(e.DB())
 	for i := 0; i < testCap; i++ {
 		slot, err := store.ReserveBudget(e.Admin(), testCap)
@@ -134,7 +139,6 @@ func TestTriageOnCaptureLeavesTheCompanyToTheSweepAtTheDailyCap(t *testing.T) {
 	}
 
 	trigger := newDomainTriageTrigger(e.Pool, slog.New(slog.DiscardHandler))
-	trigger.dailyCap = testCap
 	trigger.domainPending(e.Admin(), "capped.example")
 
 	if n := budgetSpent(t, e); n != testCap {

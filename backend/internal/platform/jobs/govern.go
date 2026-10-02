@@ -44,8 +44,7 @@ func (w governedWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 	return w.work.Work(ctx, job)
 }
 
-// Govern binds a worker to its declaration. supplied is used only by a
-// TimeoutPolicy that declares {operator: …}; every other policy ignores it.
-func Govern[T river.JobArgs](w WorkOnly[T], s Spec, supplied time.Duration) river.Worker[T] {
-	return governedWorker[T]{work: w, timeout: s.Timeout.Duration(supplied)}
+// Govern binds a worker to its declaration.
+func Govern[T river.JobArgs](w WorkOnly[T], s Spec) river.Worker[T] {
+	return governedWorker[T]{work: w, timeout: s.Timeout.Duration()}
 }
