@@ -74,9 +74,12 @@ type workerConfig struct {
 	deepReadMaxPages     int
 	deepReadMaxBytes     int
 	deepReadWall         time.Duration
-	logLevel             string
-	logFormat            string
-	observeAddr          string
+	// jobDrainWindow is how long a job already running at shutdown keeps its
+	// work context; see defaultJobDrainWindow for the budget it is part of.
+	jobDrainWindow time.Duration
+	logLevel       string
+	logFormat      string
+	observeAddr    string
 	// observePprofRaw is --observe-pprof as typed; observePprof is what it
 	// parsed to. Two fields because the flag is bound through cliflags, which
 	// binds strings only — and a string read back strictly is what lets a
@@ -146,6 +149,14 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 	if err := registerDeepReadFlags(fs, cfg); err != nil {
 		return nil, nil, nil, err
 	}
+	drain, err := envDurationOr(jobDrainWindowEnv, defaultJobDrainWindow)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	fs.DurationVar(&cfg.jobDrainWindow, "job-drain-window", drain,
+		"how long a job already running at shutdown is given to finish before its context is cancelled; "+
+			"shutdown then waits a further 5s for cancelled jobs to return, so the pod's termination grace "+
+			"period must cover the drain window plus that and a few seconds of teardown")
 	// Outbound pacing. Zero on any of the three takes the compose default —
 	// a forgotten flag must degrade to the conservative rule, never to "no
 	// limit" or "defer forever".
@@ -238,6 +249,11 @@ func parseWorkerFlags(args []string) (workerConfig, error) {
 	// which quietly ignores what the operator actually typed.
 	if cfg.sendRateLimit < 0 || cfg.sendRateWindow < 0 || cfg.sendMaxAge < 0 {
 		return workerConfig{}, errors.New("worker: the outbound send pacing values must be zero (default) or positive")
+	}
+	// Zero would make River's stop hard: every running job cancelled the moment
+	// the shutdown signal arrives, which is what the window is there to prevent.
+	if cfg.jobDrainWindow <= 0 {
+		return workerConfig{}, fmt.Errorf("worker: --job-drain-window / %s must be a positive duration, got %s", jobDrainWindowEnv, cfg.jobDrainWindow)
 	}
 	if err := resolveObservePprof(cfg); err != nil {
 		return workerConfig{}, err
