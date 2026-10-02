@@ -376,9 +376,7 @@ function withRouting(
   value: Exclude<SliceValue, { kind: "decisions" }>,
   next: ServingValue | undefined,
 ): SliceValue {
-  return value.kind === "tier"
-    ? { ...value, binding: { ...value.binding, routing: next } }
-    : { ...value, binding: { ...value.binding, routing: next } };
+  return { ...value, binding: { ...value.binding, routing: next } };
 }
 
 /** The preview's problems on this lane, each placed on its line. */
