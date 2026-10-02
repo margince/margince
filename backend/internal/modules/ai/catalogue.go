@@ -21,7 +21,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/outbound"
@@ -58,30 +57,41 @@ const (
 // wall clock.
 type Clock interface{ Now() time.Time }
 
-// catalogueFetcher is the vendor read this module depends on. Production
-// wires an unauthenticated OpenRouter GET; tests inject a fake and never
-// touch the network.
-type catalogueFetcher interface {
+// CatalogueFetcher is the vendor read this module depends on; production wires
+// an unauthenticated GET, tests a fake.
+type CatalogueFetcher interface {
 	Fetch(ctx context.Context) ([]byte, error)
 }
 
-// ModelCatalogue serves OpenRouter's published list behind a mutex-guarded,
-// TTL cache. The full vendor payload is what is cached; each request derives
-// its own ranked-or-full view from it, so a `top` that differs from a prior
-// caller's is never served a stale shape.
+// ModelCatalogue serves OpenRouter's published list from a 15-minute cache. The
+// full payload is cached; each request derives its ranked-or-full view from it.
 type ModelCatalogue struct {
-	fetcher catalogueFetcher
-	clock   Clock
-
-	mu        sync.Mutex
-	cached    []openRouterModel
-	fetchedAt time.Time
+	cache *catalogueCache[[]openRouterModel]
 }
 
-// NewModelCatalogue wires the production catalogue over OpenRouter's public
-// read. clock is compose's real wall clock in production and a fake in tests.
+// NewModelCatalogue wires the production catalogue over OpenRouter's public read.
 func NewModelCatalogue(clock Clock) *ModelCatalogue {
-	return &ModelCatalogue{fetcher: openRouterFetcher{}, clock: clock}
+	return NewModelCatalogueOver(vendorCatalogueFetcher{
+		vendor: openRouterProvider, url: openRouterModelsURL, maxBytes: catalogueMaxResponseBytes,
+	}, clock)
+}
+
+// NewModelCatalogueOver is NewModelCatalogue over another fetcher: a test's fake.
+func NewModelCatalogueOver(fetcher CatalogueFetcher, clock Clock) *ModelCatalogue {
+	return &ModelCatalogue{cache: &catalogueCache[[]openRouterModel]{
+		fetcher: fetcher, clock: clock, parse: parseNonEmptyOpenRouter,
+	}}
+}
+
+func parseNonEmptyOpenRouter(body []byte) ([]openRouterModel, error) {
+	models, err := parseOpenRouterCatalogue(body)
+	if err != nil {
+		return nil, err
+	}
+	if len(models) == 0 {
+		return nil, fmt.Errorf("ai model catalogue: openrouter answered with no models")
+	}
+	return models, nil
 }
 
 // WithCatalogue wires the OpenRouter read into the store. Absent it, the
@@ -103,7 +113,7 @@ func (s *RoutingStore) WithCatalogue(catalogue *ModelCatalogue) *RoutingStore {
 // the result). top == 0 answers the vendor's full list in the vendor's own
 // order: priced where the vendor prices it, and unranked.
 func (c *ModelCatalogue) List(ctx context.Context, top int) AvailableModels {
-	models, err := c.fresh(ctx)
+	models, err := c.cache.fresh(ctx)
 	if err != nil {
 		slog.WarnContext(ctx, "ai model catalogue unusable; serving unavailable",
 			"provider", openRouterProvider, "error", err)
@@ -116,63 +126,37 @@ func (c *ModelCatalogue) List(ctx context.Context, top int) AvailableModels {
 	return AvailableModels{Provider: openRouterProvider, Models: fullAvailableModels(models)}
 }
 
-// fresh returns the cached vendor payload when the TTL still covers it, else
-// re-reads and re-parses OpenRouter. Only a successful read is ever cached; a
-// failure is retried on the very next request rather than pinned for 15
-// minutes.
-func (c *ModelCatalogue) fresh(ctx context.Context) ([]openRouterModel, error) {
-	c.mu.Lock()
-	cached, fetchedAt := c.cached, c.fetchedAt
-	c.mu.Unlock()
-	if cached != nil && c.clock.Now().Sub(fetchedAt) < catalogueCacheTTL {
-		return cached, nil
-	}
-
-	body, err := c.fetcher.Fetch(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("ai model catalogue: openrouter unreachable: %w", err)
-	}
-	models, err := parseOpenRouterCatalogue(body)
-	if err != nil {
-		return nil, err
-	}
-	if len(models) == 0 {
-		return nil, fmt.Errorf("ai model catalogue: openrouter answered with no models")
-	}
-
-	c.mu.Lock()
-	c.cached, c.fetchedAt = models, c.clock.Now()
-	c.mu.Unlock()
-	return models, nil
+// vendorCatalogueFetcher is the production CatalogueFetcher: an unauthenticated
+// GET of one vendor's public list, refused once it runs past maxBytes.
+type vendorCatalogueFetcher struct {
+	vendor, url string
+	maxBytes    int64
 }
-
-// openRouterFetcher is the production catalogueFetcher: a plain,
-// unauthenticated GET of OpenRouter's public model list.
-type openRouterFetcher struct{}
 
 var catalogueHTTPClient = &http.Client{Timeout: catalogueFetchTimeout}
 
-func (openRouterFetcher) Fetch(ctx context.Context) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, openRouterModelsURL, nil)
+func (f vendorCatalogueFetcher) Fetch(ctx context.Context) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, f.url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("ai model catalogue: building the openrouter request: %w", err)
+		return nil, fmt.Errorf("ai model catalogue: building the %s request: %w", f.vendor, err)
 	}
-	// How this product names itself to a server it calls is `outbound`'s to
-	// say, for every call this product makes. A token minted here would be a
-	// second answer to that, carrying its own copy of the version.
+	// How this product names itself to a server it calls is `outbound`'s to say.
 	req.Header.Set("User-Agent", outbound.ModelCatalogueHeader)
 	resp, err := catalogueHTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("ai model catalogue: openrouter unreachable: %w", err)
+		return nil, fmt.Errorf("ai model catalogue: %s unreachable: %w", f.vendor, err)
 	}
 	//craft:ignore swallowed-errors best-effort close: the capped read below may leave the body mid-stream, so a close error carries no signal for the fetch result
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("ai model catalogue: openrouter answered %d", resp.StatusCode)
+		return nil, fmt.Errorf("ai model catalogue: %s answered %d", f.vendor, resp.StatusCode)
 	}
-	out, err := io.ReadAll(io.LimitReader(resp.Body, catalogueMaxResponseBytes))
+	out, err := io.ReadAll(io.LimitReader(resp.Body, f.maxBytes+1))
 	if err != nil {
-		return nil, fmt.Errorf("ai model catalogue: reading the openrouter response: %w", err)
+		return nil, fmt.Errorf("ai model catalogue: reading the %s response: %w", f.vendor, err)
+	}
+	if int64(len(out)) > f.maxBytes {
+		return nil, fmt.Errorf("ai model catalogue: %s answered more than %d bytes", f.vendor, f.maxBytes)
 	}
 	return out, nil
 }

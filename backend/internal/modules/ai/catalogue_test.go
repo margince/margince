@@ -57,7 +57,7 @@ type fixedClock struct{ now time.Time }
 func (c *fixedClock) Now() time.Time { return c.now }
 
 func newTestCatalogue(fetcher *fakeCatalogueFetcher, clock *fixedClock) *ModelCatalogue {
-	return &ModelCatalogue{fetcher: fetcher, clock: clock}
+	return NewModelCatalogueOver(fetcher, clock)
 }
 
 func TestModelCatalogueListRanksDedupesAndPrices(t *testing.T) {
