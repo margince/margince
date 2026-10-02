@@ -17,6 +17,10 @@ class TlsContextTest(unittest.TestCase):
         context = providers.tls_context(default_store_empty=True)
         self.assertGreater(context.cert_store_stats()["x509_ca"], 0)
 
+    def test_no_protocol_older_than_tls_1_2_is_offered(self):
+        import ssl
+        self.assertGreaterEqual(providers.tls_context().minimum_version, ssl.TLSVersion.TLSv1_2)
+
     def test_verification_is_never_switched_off(self):
         import ssl
         context = providers.tls_context(default_store_empty=True)

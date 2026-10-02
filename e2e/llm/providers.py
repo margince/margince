@@ -41,6 +41,7 @@ def tls_context(default_store_empty=None):
     asked. Verification is never relaxed: an empty store borrows the system's.
     """
     context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     if default_store_empty is None:
         default_store_empty = context.cert_store_stats()["x509_ca"] == 0
     if default_store_empty:

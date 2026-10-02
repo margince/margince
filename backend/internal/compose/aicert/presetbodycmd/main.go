@@ -10,28 +10,43 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/margince/margince/backend/internal/compose"
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintln(os.Stderr, "usage: presetbodycmd <preset.yaml>")
-		os.Exit(2)
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
+
+// run is the command with its arguments and streams passed in: 0 when the body
+// was printed, 1 when the file is not a preset the product would accept, 2 on
+// a usage error.
+func run(args []string, stdout, stderr io.Writer) int {
+	if len(args) != 1 {
+		return fail(stderr, 2, "usage: presetbodycmd <preset.yaml>")
 	}
-	raw, err := os.ReadFile(os.Args[1]) // #nosec G304 G703 -- the preset the operator named on the command line
+	raw, err := os.ReadFile(args[0]) // #nosec G304 G703 -- the preset the operator named on the command line
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return fail(stderr, 1, err.Error())
 	}
 	out, err := compose.PresetRoutingBody(raw)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %v\n", os.Args[1], err)
-		os.Exit(1)
+		return fail(stderr, 1, fmt.Sprintf("%s: %v", args[0], err))
 	}
-	if _, err := fmt.Fprintf(os.Stdout, "%s\n", out); err != nil {
-		fmt.Fprintf(os.Stderr, "presetbodycmd: writing the body: %v\n", err)
-		os.Exit(1)
+	if _, err := fmt.Fprintf(stdout, "%s\n", out); err != nil {
+		return fail(stderr, 1, "presetbodycmd: writing the body: "+err.Error())
 	}
+	return 0
+}
+
+// fail reports why the command stopped and returns its exit code. A report
+// that cannot be written has nowhere left to go, so it can only turn a usage
+// error into a plain failure.
+func fail(stderr io.Writer, code int, message string) int {
+	if _, err := fmt.Fprintln(stderr, message); err != nil {
+		return 1
+	}
+	return code
 }

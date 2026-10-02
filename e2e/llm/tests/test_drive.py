@@ -5,6 +5,7 @@ import os
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -280,3 +281,12 @@ class ChatUsageTest(Bridge):
         _code, out = self.drive([chat("ok", usage=usage)], candidate="claude", via="openrouter")
         counted = check.read_usage(out)[0]
         self.assertEqual((counted["input_tokens"], counted["cache_creation_input_tokens"]), (4, 4447))
+
+
+class MainTest(unittest.TestCase):
+    def test_a_prompt_file_outside_the_repo_and_temp_is_refused(self):
+        argv = ["drive.py", "--candidate", "mistral", "--via", "api", "--mcp-url", "http://127.0.0.1:9/mcp",
+                "--token-env", "T", "--prompt-file", "/etc/hosts", "--out", tempfile.mktemp(suffix=".jsonl")]
+        with unittest.mock.patch.object(sys, "argv", argv), contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(drive.main(), drive.HARNESS)
+        self.assertIn("outside the repo", err.getvalue())

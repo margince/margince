@@ -22,6 +22,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import candidates  # noqa: E402
+import check  # noqa: E402  — its path containment, shared rather than spelled twice
 import mcpclient  # noqa: E402
 import providers  # noqa: E402
 import transcript  # noqa: E402
@@ -178,8 +179,12 @@ def main():
     except candidates.RouteError as err:
         print(err, file=sys.stderr)
         return HARNESS
-    with open(args.prompt_file, encoding="utf-8") as handle:
-        prompt = handle.read()
+    try:
+        with check._open_checked(args.prompt_file) as handle:
+            prompt = handle.read()
+    except (ValueError, OSError) as err:
+        print(err, file=sys.stderr)
+        return HARNESS
     if route.wire == "codex-cli":
         return run_codex(route, args.mcp_url, args.token_env, prompt, args.out)
     key = os.environ.get(route.key_env, "")
