@@ -1,0 +1,42 @@
+name: nl_search_reads_vietnamese_input
+task: nl_search
+site: filter_propose
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  resource: company
+  text: các công ty ở Việt Nam không có hoạt động nào trong 60 ngày qua
+  today: '2026-09-30'
+  lang: vi
+  fields:
+  - {name: name, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: country, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: city, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: industry, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: created_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: last_activity_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+expect:
+  outcome: accepted
+  answer:
+    filter:
+      and:
+      - field: country
+        op: eq
+        value: VN
+      - or:
+        - field: last_activity_at
+          op: lt
+          value:
+            days_ago: 60
+        - field: last_activity_at
+          op: exists
+          value: false
+    unsupported: 0
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: 'The passing filter is country VN AND (last_activity_at before 60 days ago OR last_activity_at empty),
+    the date as a relative window (days_ago 60). Vietnamese reads as any other
+    language here, and a company nobody ever contacted has no activity in 60 days too, so a filter reading only the date comparison
+    fails.'
