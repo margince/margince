@@ -95,6 +95,15 @@ class FromCodexTest(unittest.TestCase):
         lines.insert(len(lines) - 1, item("error", message="stream disconnected before completion"))
         self.assertEqual(convert(lines)[0], 3)
 
+    def test_a_call_codex_refused_for_want_of_approval_stops_the_run(self):
+        lines = sample()
+        lines.insert(2, item("mcp_tool_call", server=transcript.SERVER, tool="create_record", arguments={},
+                             result=None, status="failed",
+                             error={"message": "MCP tool call requires approval, but approval policy is never"}))
+        code, _out, raw = convert(lines)
+        self.assertEqual(code, 3)
+        self.assertIn("requires approval", raw)
+
     def test_a_failed_turn_is_a_harness_fault(self):
         lines = [l for l in sample() if "turn.completed" not in l]
         lines.append(json.dumps({"type": "turn.failed", "error": {"message": "401 Unauthorized"}}))
@@ -178,6 +187,9 @@ class RunCodexTest(unittest.TestCase):
         self.assertEqual(argv[argv.index("--sandbox") + 1], "read-only")
         self.assertEqual(seen["cdir"], [])
         self.assertIn("features.shell_tool=false", argv)
+        # Codex's default refuses every MCP write in exec mode; the lane's own
+        # server is approved, and only it.
+        self.assertIn('mcp_servers.margince_e2e_llm.default_tools_approval_mode="approve"', argv)
         # Code mode is the path codex's MCP calls take: switched off, codex
         # attaches the server and can call none of its tools.
         self.assertNotIn("features.code_mode_host=false", argv)
