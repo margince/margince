@@ -151,6 +151,13 @@ class OpenRouterTest(Bridge):
         self.assertEqual(self.requests[0]["model"], "mistralai/mistral-medium-3-5")
         self.assertEqual(check.read_usage(out)[1], 0.002)
 
+    def test_no_parameter_a_routed_endpoint_may_lack_is_sent(self):
+        # Under require_parameters the broker drops every endpoint that cannot
+        # honour a parameter: Mistral's declare no parallel_tool_calls, so
+        # sending it leaves no endpoint at all.
+        self.drive([chat("ok")], via="openrouter")
+        self.assertNotIn("parallel_tool_calls", self.requests[0])
+
     def test_gpt_on_openrouter_asks_for_the_pinned_effort(self):
         self.drive([chat("ok")], candidate="gpt", via="openrouter")
         self.assertEqual(self.requests[0]["reasoning"], {"effort": "medium"})

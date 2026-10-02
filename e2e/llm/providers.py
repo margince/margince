@@ -130,8 +130,10 @@ class _Chat(_Wire):
         for call_id, text, _is_error in results or ():
             self._messages.append({"role": "tool", "tool_call_id": call_id, "content": text})
         body = {"model": self._route.model, "messages": self._messages}
+        # No parallel_tool_calls: the vendor's default already allows them, and
+        # a broker routing on require_parameters drops any endpoint lacking it.
         if self._tools:
-            body.update(tools=self._tools, parallel_tool_calls=True)
+            body["tools"] = self._tools
         if _effort(self._route):
             body["reasoning"] = {"effort": _effort(self._route)}
         if self._route.via == "openrouter":
