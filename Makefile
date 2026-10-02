@@ -780,6 +780,8 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## on a degraded tool. E2E_LLM_STACK_PRESET=config/presets/<name>.yaml binds the
 ## stack to a committed preset first (its key in .env.local);
 ## E2E_LLM_ALLOW_LEXICAL=1 runs anyway and files the verdict as lexical.
+## E2E_LLM_VERDICTS=<dir> writes the verdicts there instead of the committed
+## records tree, so the run publishes nothing.
 ##
 ## HALF THE JUDGING IS A MODEL. A scenario's mechanical assertions are regexes —
 ## does the answer carry this name, this date, this count; its `judge:` criteria

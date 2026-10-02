@@ -47,6 +47,9 @@ ONLY="${SCENARIO:-}"
 #   E2E_LLM_EFFORT     a different effort ('reasoning low|medium|high'), measured
 #                      deliberately; either needs
 #   E2E_LLM_FOLDER     the folder its verdicts belong in.
+#   E2E_LLM_VERDICTS   write the verdicts to this directory INSTEAD of the
+#                      committed records tree — a run that sets it publishes
+#                      nothing (the scheduled job does, on purpose).
 #
 # The verdicts under claude-opus-5/ were measured over the claude CLI before
 # routes existed, and those before 2026-08-27 on claude-fable-5 because nothing
