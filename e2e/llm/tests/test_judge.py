@@ -62,6 +62,14 @@ class ApiJudgeTest(unittest.TestCase):
                 with self.assertRaisesRegex(judge.JudgeUnavailable, "401"):
                     judge.verdict("crit", "ans")
 
+    def test_a_200_carrying_an_error_body_is_unavailable_not_a_crash(self):
+        with FakeProvider([(200, {"error": {"message": "upstream"}})]) as provider:
+            env = {"E2E_LLM_JUDGE": "live", "E2E_LLM_JUDGE_VIA": "openrouter",
+                   "OPENAI_COMPATIBLE_API_KEY": "k", "OPENAI_COMPATIBLE_BASE_URL": provider.url}
+            with unittest.mock.patch.dict(os.environ, env):
+                with self.assertRaises(judge.JudgeUnavailable):
+                    judge.verdict("crit", "ans")
+
     def test_ready_names_the_missing_key(self):
         env = {"E2E_LLM_JUDGE": "live", "E2E_LLM_JUDGE_VIA": "api"}
         with unittest.mock.patch.dict(os.environ, env, clear=True):

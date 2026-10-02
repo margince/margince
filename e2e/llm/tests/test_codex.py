@@ -110,13 +110,28 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class CodexArgumentsTest(unittest.TestCase):
+    def test_arguments_codex_sends_as_an_object_are_read(self):
+        lines = sample()
+        lines.insert(2, item("mcp_tool_call", server=transcript.SERVER, tool="search_context",
+                             arguments={"q": "Reply"}, result={"content": [{"type": "text", "text": "hit"}]},
+                             error=None, status="completed"))
+        code, out, _raw = convert(lines)
+        self.assertEqual(code, 0)
+        self.assertIn(("search_context", {"q": "Reply"}),
+                      [(name.rsplit("__", 1)[-1], args) for name, args in check.read_transcript(out)[2]])
+
+
 FAKE_CODEX = """#!/usr/bin/env python3
 import json, os, sys, time
 with open(os.environ["FAKE_CODEX_ARGV"], "w") as f:
-    json.dump({"argv": sys.argv[1:], "token": os.environ.get("MARGINCE_E2E_TOKEN")}, f)
+    cdir = sys.argv[sys.argv.index("-C") + 1]
+    json.dump({"argv": sys.argv[1:], "token": os.environ.get("MARGINCE_E2E_TOKEN"),
+               "cdir": os.listdir(cdir)}, f)
 if os.environ.get("FAKE_CODEX_SLEEP"):
     time.sleep(float(os.environ["FAKE_CODEX_SLEEP"]))
 sys.stdout.write(open(os.environ["FAKE_CODEX_OUT"]).read())
+sys.exit(int(os.environ.get("FAKE_CODEX_EXIT", "0")))
 """
 
 
@@ -156,13 +171,23 @@ class RunCodexTest(unittest.TestCase):
         for flag in ("--json", "--strict-config", "--ignore-user-config", "--skip-git-repo-check"):
             self.assertIn(flag, argv)
         self.assertEqual(argv[argv.index("--sandbox") + 1], "read-only")
-        self.assertEqual(os.listdir(argv[argv.index("-C") + 1]), [])
+        self.assertEqual(seen["cdir"], [])
         self.assertIn("features.shell_tool=false", argv)
         self.assertIn('mcp_servers.margince_e2e_llm.bearer_token_env_var="MARGINCE_E2E_TOKEN"', argv)
         self.assertNotIn("s3cr3t-passport", " ".join(argv))
         self.assertEqual(argv[-1], "List the pipelines.")
         self.assertTrue(check.tool_matches(check.read_transcript(out)[0], "list_pipelines"))
         self.assertIn("mcp__margince_e2e_llm__search_context", open(out, encoding="utf-8").read())
+
+    def test_a_codex_that_exits_nonzero_is_a_harness_fault_even_with_a_complete_stream(self):
+        code, _out = self.run_codex(FAKE_CODEX_EXIT="1")
+        self.assertEqual(code, 3)
+
+    def test_the_empty_working_directory_is_removed_after_the_run(self):
+        self.run_codex()
+        with open(self.argv_file, encoding="utf-8") as handle:
+            argv = json.load(handle)["argv"]
+        self.assertFalse(os.path.exists(argv[argv.index("-C") + 1]))
 
     def test_a_codex_that_overruns_is_killed_and_is_a_harness_fault(self):
         code, _out = self.run_codex(timeout=0.5, FAKE_CODEX_SLEEP="5")

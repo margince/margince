@@ -122,10 +122,13 @@ def _codex_item(out, entry):
         message = entry.get("message") or ""
         return message if "mcp" in message.lower() and _CODEX_NOTICE not in message else ""
     if kind == "mcp_tool_call" and entry.get("server") == SERVER:
-        try:
-            arguments = json.loads(entry.get("arguments") or "{}")
-        except ValueError:
-            arguments = {}
+        # codex sends arguments as a JSON object; a string is read as one too.
+        arguments = entry.get("arguments")
+        if isinstance(arguments, str):
+            try:
+                arguments = json.loads(arguments)
+            except ValueError:
+                arguments = {}
         out.assistant("", [(entry["id"], entry["tool"], arguments if isinstance(arguments, dict) else {})])
         text, is_error = _codex_result_text(entry)
         out.tool_results([(entry["id"], text, is_error)])

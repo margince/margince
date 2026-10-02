@@ -79,13 +79,12 @@ def run(route, key, mcp_url, token, prompt, out_path, sleep=time.sleep):
 
 
 def _loop(model, session, out):
-    results, answer = None, ""
+    results = None
     try:
         for turn_no in range(1, MAX_TURNS + 1):
             turn = model.step(results)
             out.add_usage(turn.usage)
             out.assistant(turn.text, [(i, t, _arguments_for_transcript(a)) for i, t, a in turn.calls])
-            answer = turn.text or answer
             if not turn.calls:
                 if not turn.text:
                     out.finish(True, "the model returned no answer", turn_no)
@@ -129,27 +128,32 @@ def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT
             out.finish(True, f"HARNESS: {fault}", 0)
         print(fault, file=sys.stderr)
         return HARNESS
-    argv = [
-        "codex", "exec", "--json", "--strict-config", "--ignore-user-config", "--skip-git-repo-check",
-        "-C", tempfile.mkdtemp(prefix="e2e-llm-codex."), "--sandbox", "read-only", "-m", route.model,
-        "-c", f'mcp_servers.{transcript.SERVER}.url="{mcp_url}"',
-        "-c", f'mcp_servers.{transcript.SERVER}.bearer_token_env_var="{token_env}"',
-        "-c", 'web_search="disabled"',
-    ]
-    for feature in _CODEX_OFF:
-        argv += ["-c", f"features.{feature}=false"]
-    argv.append(prompt)
-    try:
-        done = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                              timeout=timeout, check=False)
-        lines, stderr = done.stdout.splitlines(), done.stderr
-    except subprocess.TimeoutExpired as expired:
-        # The partial stream is converted anyway: it ends without a completed
-        # turn, which from_codex reports as a run that never finished.
-        partial = expired.stdout or b""
-        lines = (partial.decode("utf-8", "replace") if isinstance(partial, bytes) else partial).splitlines()
-        stderr = f"codex overran its {timeout}s wall clock and was killed"
+    with tempfile.TemporaryDirectory(prefix="e2e-llm-codex.") as empty:
+        argv = [
+            "codex", "exec", "--json", "--strict-config", "--ignore-user-config", "--skip-git-repo-check",
+            "-C", empty, "--sandbox", "read-only", "-m", route.model,
+            "-c", f'mcp_servers.{transcript.SERVER}.url="{mcp_url}"',
+            "-c", f'mcp_servers.{transcript.SERVER}.bearer_token_env_var="{token_env}"',
+            "-c", 'web_search="disabled"',
+        ]
+        for feature in _CODEX_OFF:
+            argv += ["-c", f"features.{feature}=false"]
+        argv.append(prompt)
+        try:
+            done = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                                  timeout=timeout, check=False)
+            lines, stderr, exited = done.stdout.splitlines(), done.stderr, done.returncode
+        except subprocess.TimeoutExpired as expired:
+            # The partial stream is converted anyway: it ends without a completed
+            # turn, which from_codex reports as a run that never finished.
+            partial = expired.stdout or b""
+            lines = (partial.decode("utf-8", "replace") if isinstance(partial, bytes) else partial).splitlines()
+            stderr, exited = f"codex overran its {timeout}s wall clock and was killed", None
     code = transcript.from_codex(lines, out_path, route.model, driver, [t["name"] for t in tools])
+    # A codex that exits non-zero failed as a program (config, auth, a renamed
+    # feature key under --strict-config) whatever its stream says.
+    if exited:
+        code = HARNESS
     if code:
         print(stderr.strip()[-2000:], file=sys.stderr)
     return code
@@ -184,4 +188,10 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # Any crash is the bridge's, not the model's: exit 3 so the lane stops
+    # instead of scoring a run that never happened.
+    try:
+        sys.exit(main())
+    except Exception as crash:  # noqa: BLE001 — the backstop is the point
+        print(f"the bridge crashed: {crash!r}", file=sys.stderr)
+        sys.exit(HARNESS)

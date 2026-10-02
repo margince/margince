@@ -771,7 +771,10 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## neutral bridge that offers every vendor the same tools under the server's own
 ## instructions — the comparable route. cli runs `claude -p` or `codex exec`,
 ## each with its own system prompt, filed apart under <model>@<cli>. The judge
-## is reached by E2E_LLM_JUDGE_VIA=cli|api|openrouter.
+## is reached by E2E_LLM_JUDGE_VIA=cli|api|openrouter. Codex reports no list of
+## the tools it offered, so its run is held against the lane's own tools/list;
+## a codex release that renames a switched-off feature key fails every run with
+## exit 2, a harness stop, until e2e/llm/drive.py's list follows it.
 ##
 ## HALF THE JUDGING IS A MODEL. A scenario's mechanical assertions are regexes —
 ## does the answer carry this name, this date, this count; its `judge:` criteria

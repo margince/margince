@@ -96,6 +96,14 @@ class ChatWireTest(Bridge):
         self.assertEqual(code, 3)
         self.assertEqual(len(self.requests), 1)
 
+    def test_a_200_carrying_an_error_body_is_a_harness_fault(self):
+        code, _out = self.drive([(200, {"error": {"message": "upstream provider error", "code": 502}})])
+        self.assertEqual(code, 3)
+
+    def test_a_200_that_is_not_json_is_a_harness_fault(self):
+        code, _out = self.drive([(200, "<html>proxy</html>")])
+        self.assertEqual(code, 3)
+
     def test_turn_cap_is_a_finding(self):
         code, out = self.drive([call_search(f"c{i}") for i in range(drive.MAX_TURNS)])
         self.assertEqual((code, check.unrun(out)), (0, ""))

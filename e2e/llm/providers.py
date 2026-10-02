@@ -37,7 +37,15 @@ def _post(vendor, url, headers, body, sleep):
         )
         try:
             with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-                return json.loads(response.read())
+                raw = response.read()
+            try:
+                reply = json.loads(raw)
+            except ValueError as err:
+                raise ProviderFault(f"{vendor} answered with something other than JSON: {raw[:200]!r}") from err
+            # A broker can carry an upstream failure in a 200.
+            if not isinstance(reply, dict) or "error" in reply:
+                raise ProviderFault(f"{vendor} answered with an error: {str(reply)[:300]}")
+            return reply
         except urllib.error.HTTPError as err:
             detail = err.read().decode("utf-8", "replace")[:300]
             # A 4xx other than 429 will answer the same way every time.
@@ -51,13 +59,25 @@ def _post(vendor, url, headers, body, sleep):
     raise ProviderFault(f"{vendor} kept failing after {ATTEMPTS} attempts: {last}")
 
 
+class _Wire:
+    """step() turns a reply whose shape this adapter does not know into a
+    ProviderFault, so a vendor changing a field stops the lane rather than
+    crashing the bridge into a run the lane would score."""
+
+    def step(self, results):
+        try:
+            return self._step(results)
+        except (KeyError, IndexError, TypeError, AttributeError) as err:
+            raise ProviderFault(f"{self._route.candidate} answered in a shape the bridge does not read: {err!r}") from err
+
+
 def _effort(route):
     """The pinned reasoning effort, or None where the candidate pins none."""
     kind, _, level = route.effort.partition(" ")
     return level if kind == "reasoning" else None
 
 
-class _Chat:
+class _Chat(_Wire):
     """OpenAI-compatible Chat Completions: Mistral directly, anything via OpenRouter."""
 
     def __init__(self, route, key, sleep):
@@ -75,7 +95,7 @@ class _Chat:
             for tool in tools
         ]
 
-    def step(self, results):
+    def _step(self, results):
         for call_id, text, _is_error in results or ():
             self._messages.append({"role": "tool", "tool_call_id": call_id, "content": text})
         body = {"model": self._route.model, "messages": self._messages}
@@ -119,7 +139,7 @@ class _Chat:
         }
 
 
-class _Responses:
+class _Responses(_Wire):
     """OpenAI's Responses API, which carries GPT's reasoning between tool turns."""
 
     def __init__(self, route, key, sleep):
@@ -134,7 +154,7 @@ class _Responses:
             for tool in tools
         ]
 
-    def step(self, results):
+    def _step(self, results):
         for call_id, text, _is_error in results or ():
             self._input.append({"type": "function_call_output", "call_id": call_id, "output": text})
         # store=false keeps nothing at OpenAI, so reasoning travels back to the
@@ -169,7 +189,7 @@ class _Responses:
                 "cache_read": cached, "cache_write": 0, "cost": None}
 
 
-class _Messages:
+class _Messages(_Wire):
     """Anthropic's Messages API."""
 
     def __init__(self, route, key, sleep):
@@ -184,7 +204,7 @@ class _Messages:
             for tool in tools
         ]
 
-    def step(self, results):
+    def _step(self, results):
         if results:
             self._messages.append({"role": "user", "content": [
                 {"type": "tool_result", "tool_use_id": call_id, "content": text, "is_error": is_error}
