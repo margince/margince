@@ -1195,6 +1195,30 @@ func (e AiRunSummaryCurrency) Valid() bool {
 	}
 }
 
+// Defines values for AiTaskOverrideThinking.
+const (
+	AiTaskOverrideThinkingHigh    AiTaskOverrideThinking = "high"
+	AiTaskOverrideThinkingLow     AiTaskOverrideThinking = "low"
+	AiTaskOverrideThinkingMedium  AiTaskOverrideThinking = "medium"
+	AiTaskOverrideThinkingMinimal AiTaskOverrideThinking = "minimal"
+)
+
+// Valid indicates whether the value is a known member of the AiTaskOverrideThinking enum.
+func (e AiTaskOverrideThinking) Valid() bool {
+	switch e {
+	case AiTaskOverrideThinkingHigh:
+		return true
+	case AiTaskOverrideThinkingLow:
+		return true
+	case AiTaskOverrideThinkingMedium:
+		return true
+	case AiTaskOverrideThinkingMinimal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiTierBindingThinkingLevel.
 const (
 	AiTierBindingThinkingLevelDefault AiTierBindingThinkingLevel = "default"
@@ -21918,14 +21942,20 @@ type AiEmbeddingsBindingThinkingLevel string
 
 // AiFeatureRoute defines model for AiFeatureRoute.
 type AiFeatureRoute struct {
-	BudgetExempt      bool              `json:"budget_exempt"`
+	BudgetExempt bool `json:"budget_exempt"`
+
+	// Decides The task declares a decision form, so a decision model may answer it first and its decision timeout applies.
+	Decides           *bool             `json:"decides,omitempty"`
 	DecisionCandidate *AiRouteCandidate `json:"decision_candidate,omitempty"`
 
 	// DecisionFirst The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.
 	DecisionFirst bool `json:"decision_first"`
 
 	// DecisionSkipReason Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
-	DecisionSkipReason  *string            `json:"decision_skip_reason,omitempty"`
+	DecisionSkipReason *string `json:"decision_skip_reason,omitempty"`
+
+	// Defaults What a task's calls are sent with.
+	Defaults            *AiTaskSettings    `json:"defaults,omitempty"`
 	DisplayName         string             `json:"display_name"`
 	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
 	ExecutionMode       string             `json:"execution_mode"`
@@ -21934,6 +21964,9 @@ type AiFeatureRoute struct {
 	Impact           string             `json:"impact"`
 	LeadingTier      string             `json:"leading_tier"`
 	NormalCandidates []AiRouteCandidate `json:"normal_candidates"`
+
+	// Overrides An admin's settings for one task. An absent field keeps the product's own value.
+	Overrides *AiTaskOverride `json:"overrides,omitempty"`
 
 	// Summary What the task does, in plain words.
 	Summary *string `json:"summary,omitempty"`
@@ -22509,6 +22542,45 @@ type AiStatus struct {
 	RoutingVersion       string           `json:"routing_version"`
 	TaskContractHash     string           `json:"task_contract_hash"`
 	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
+}
+
+// AiTaskOverride An admin's settings for one task. An absent field keeps the product's own value.
+type AiTaskOverride struct {
+	// AttemptTimeoutMs How long one model call on the ladder may take before the next tier is tried.
+	AttemptTimeoutMs *int `json:"attempt_timeout_ms,omitempty"`
+
+	// DecisionTimeoutMs How long the decision model may take before the task falls back to its ladder. Decision tasks only.
+	DecisionTimeoutMs *int `json:"decision_timeout_ms,omitempty"`
+
+	// Thinking The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.
+	Thinking *AiTaskOverrideThinking `json:"thinking,omitempty"`
+}
+
+// AiTaskOverrideThinking The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.
+type AiTaskOverrideThinking string
+
+// AiTaskOverrides Every task's override, keyed by task id.
+type AiTaskOverrides map[string]AiTaskOverride
+
+// AiTaskOverridesPreview defines model for AiTaskOverridesPreview.
+type AiTaskOverridesPreview struct {
+	// Effective What each task would be sent with.
+	Effective map[string]AiTaskSettings `json:"effective"`
+
+	// Errors Every field the save would refuse, by its path (<task>.<field>).
+	Errors *[]AiFieldError `json:"errors,omitempty"`
+
+	// Stale Stored overrides for tasks this installation no longer runs; calls ignore them.
+	Stale []string `json:"stale"`
+}
+
+// AiTaskSettings What a task's calls are sent with.
+type AiTaskSettings struct {
+	AttemptTimeoutMs  int `json:"attempt_timeout_ms"`
+	DecisionTimeoutMs int `json:"decision_timeout_ms"`
+
+	// Thinking Absent when no level is chosen: the binding and the site floor decide.
+	Thinking *string `json:"thinking,omitempty"`
 }
 
 // AiTierBinding defines model for AiTierBinding.
@@ -47112,6 +47184,12 @@ type ListAiCallsParams struct {
 	Task *string `form:"task,omitempty" json:"task,omitempty"`
 }
 
+// ReplaceAiTaskOverridesParams defines parameters for ReplaceAiTaskOverrides.
+type ReplaceAiTaskOverridesParams struct {
+	// IfMatch The ETag the editor read; a different stored revision is a 409.
+	IfMatch *string `json:"If-Match,omitempty"`
+}
+
 // GetAiUsageParams defines parameters for GetAiUsage.
 type GetAiUsageParams struct {
 	// From Default: first day of the current month. Must not be after `to`; the window is capped at 366 days (422 otherwise).
@@ -52650,6 +52728,12 @@ type ReplaceAiRoutingJSONRequestBody = AiRouting
 
 // PreviewAiRoutingJSONRequestBody defines body for PreviewAiRouting for application/json ContentType.
 type PreviewAiRoutingJSONRequestBody = AiRouting
+
+// ReplaceAiTaskOverridesJSONRequestBody defines body for ReplaceAiTaskOverrides for application/json ContentType.
+type ReplaceAiTaskOverridesJSONRequestBody = AiTaskOverrides
+
+// PreviewAiTaskOverridesJSONRequestBody defines body for PreviewAiTaskOverrides for application/json ContentType.
+type PreviewAiTaskOverridesJSONRequestBody = AiTaskOverrides
 
 // ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
 type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
@@ -64105,6 +64189,15 @@ type ServerInterface interface {
 	// Read AI administration status (ai_diagnostics and ai_budget read).
 	// (GET /ai/status)
 	GetAiStatus(w http.ResponseWriter, r *http.Request)
+	// Read the per-task thinking level and timeouts (ai_routing read).
+	// (GET /ai/task-overrides)
+	GetAiTaskOverrides(w http.ResponseWriter, r *http.Request)
+	// Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+	// (PUT /ai/task-overrides)
+	ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request, params ReplaceAiTaskOverridesParams)
+	// Judge a draft of the overrides without saving it (ai_routing read and update).
+	// (POST /ai/task-overrides/preview)
+	PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request)
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
@@ -66601,6 +66694,24 @@ func (_ Unimplemented) GetAiRoutingSchema(w http.ResponseWriter, r *http.Request
 // Read AI administration status (ai_diagnostics and ai_budget read).
 // (GET /ai/status)
 func (_ Unimplemented) GetAiStatus(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the per-task thinking level and timeouts (ai_routing read).
+// (GET /ai/task-overrides)
+func (_ Unimplemented) GetAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+// (PUT /ai/task-overrides)
+func (_ Unimplemented) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request, params ReplaceAiTaskOverridesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Judge a draft of the overrides without saving it (ai_routing read and update).
+// (POST /ai/task-overrides/preview)
+func (_ Unimplemented) PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -73237,6 +73348,93 @@ func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiTaskOverrides operation middleware
+func (siw *ServerInterfaceWrapper) GetAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiTaskOverrides(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiTaskOverrides operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReplaceAiTaskOverridesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiTaskOverrides(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAiTaskOverrides operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAiTaskOverrides(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -104128,6 +104326,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/status", wrapper.GetAiStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/task-overrides", wrapper.GetAiTaskOverrides)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/task-overrides", wrapper.ReplaceAiTaskOverrides)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/task-overrides/preview", wrapper.PreviewAiTaskOverrides)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)

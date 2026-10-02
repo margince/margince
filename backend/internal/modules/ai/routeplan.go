@@ -166,6 +166,13 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 			NormalCandidates: wireCandidates(normal), EffectiveCandidates: wireCandidates(effective),
 			Impact: routeImpact(normal, effective, blocked), BudgetExempt: task == TaskEmbeddings,
 		}
+		if task != TaskEmbeddings {
+			decides, defaults := TaskDecides(task), TaskDefaults()
+			row.Decides = &decides
+			row.Defaults = &crmcontracts.AiTaskSettings{
+				DecisionTimeoutMs: int(defaults.DecisionTimeout.Milliseconds()), AttemptTimeoutMs: int(defaults.AttemptTimeout.Milliseconds()),
+			}
+		}
 		decisionRoute(&row, effectiveConfig, task, blocked)
 		if decisionLeadChanged(normalConfig, effectiveConfig, task, normalBlocked, row) {
 			row.Impact = withDecisionLeadChange(row.Impact)

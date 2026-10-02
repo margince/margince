@@ -56,13 +56,43 @@ func (s *AdminStore) ReadStatus(ctx context.Context) (crmcontracts.AiStatus, err
 	}
 	unused := unusedTiers(cfg)
 	version := ""
+	features := visibleFeatureRoutes(ctx, cfg, budget.Band)
 	if auth.Require(ctx, routingSettingsObject, principal.ActionRead) == nil {
 		version = cfg.Revision()
+		overrides, err := settings.Get(ctx, s.settings, TaskOverridesSetting)
+		if err != nil {
+			return crmcontracts.AiStatus{}, err
+		}
+		withTaskOverrides(features, overrides)
 	}
 	return crmcontracts.AiStatus{
 		UnusedTiers: &unused, Budget: budget, ObservedAt: budget.ObservedAt, RoutingVersion: version, TaskContractHash: TaskContractHash,
-		Features: visibleFeatureRoutes(ctx, cfg, budget.Band), DeferredWork: deferred, DeferredWorkCoverage: "durable_builds_and_scans",
+		Features: features, DeferredWork: deferred, DeferredWorkCoverage: "durable_builds_and_scans",
 	}, nil
+}
+
+// withTaskOverrides marks each feature row with the override an admin stored
+// for its task, so the tasks table can say which are custom without a second
+// read.
+func withTaskOverrides(rows []crmcontracts.AiFeatureRoute, overrides TaskOverrides) {
+	for i := range rows {
+		o, ok := overrides[Task(rows[i].Task)]
+		if !ok || o == (TaskOverride{}) {
+			continue
+		}
+		wire := crmcontracts.AiTaskOverride{}
+		if o.Thinking != "" {
+			level := crmcontracts.AiTaskOverrideThinking(o.Thinking)
+			wire.Thinking = &level
+		}
+		if o.DecisionTimeoutMs != 0 {
+			wire.DecisionTimeoutMs = &o.DecisionTimeoutMs
+		}
+		if o.AttemptTimeoutMs != 0 {
+			wire.AttemptTimeoutMs = &o.AttemptTimeoutMs
+		}
+		rows[i].Overrides = &wire
+	}
 }
 
 // PreviewBudget evaluates a draft without reserving capacity or starting work.

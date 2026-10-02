@@ -11,8 +11,10 @@ package ai
 // the adapter cannot map it (a tool-carrying request, an unreadable model
 // list) it is not sent. The router puts it on Request.ThinkingFloor and each
 // adapter maps it to its own wire. Precedence, strongest first: the request's
-// own ProviderOptions, then the binding's explicit setting (`thinking_level`,
-// `routing.reasoning_effort`), then the site floor, then the adapter default.
+// own ProviderOptions, then an admin's level for the task (ai.task_overrides,
+// Request.ThinkingLevel), then the binding's explicit setting
+// (`thinking_level`, `routing.reasoning`), then the site floor, then the
+// adapter default.
 // docs/reference/ai-thinking.md is the per-provider table.
 
 import (

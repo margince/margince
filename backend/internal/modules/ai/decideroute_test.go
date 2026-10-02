@@ -334,7 +334,9 @@ func TestACachedAnswerSkipsTheDecisionCall(t *testing.T) {
 func TestAHungDecisionFallsBackAtItsTimeout(t *testing.T) {
 	decider := &scriptedDecider{block: true}
 	f := newDecideFixture(t, decider, 0)
-	f.router.decisionTimeout = 10 * time.Millisecond
+	// Below the bound a save accepts: the router serves whatever it is given,
+	// and the blocking decider returns the moment the deadline fires.
+	f.router.SetTaskOverrides(TaskOverrides{TaskSiteTriage: {DecisionTimeoutMs: 10}})
 	out, _, err := f.decide(t, triageQuestion)
 	if err != nil || out.Decided {
 		t.Fatalf("outcome=%+v err=%v", out, err)

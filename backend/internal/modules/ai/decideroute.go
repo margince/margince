@@ -208,7 +208,7 @@ func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, t
 	lc.renewRailLease(ctx)
 	trace := r.newDecisionTrace(ctx, task, b.decisions.meta)
 	start := r.now()
-	callCtx, cancel := context.WithTimeout(ctx, r.decisionTimeout)
+	callCtx, cancel := context.WithTimeout(ctx, r.taskSettings(task).DecisionTimeout)
 	resp, callErr := b.decisions.client.Decide(callCtx, dreq)
 	cancel()
 	var meterErr error

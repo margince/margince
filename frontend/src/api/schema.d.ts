@@ -10821,6 +10821,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/task-overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the per-task thinking level and timeouts (ai_routing read). */
+        get: operations["getAiTaskOverrides"];
+        /** Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute. */
+        put: operations["replaceAiTaskOverrides"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/task-overrides/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Judge a draft of the overrides without saving it (ai_routing read and update). */
+        post: operations["previewAiTaskOverrides"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/routing/schema": {
         parameters: {
             query?: never;
@@ -21173,6 +21208,43 @@ export interface components {
              */
             decision_skip_reason?: "unbound" | "uncertified" | "local_only";
             decision_candidate?: components["schemas"]["AiRouteCandidate"];
+            /** @description The task declares a decision form, so a decision model may answer it first and its decision timeout applies. */
+            decides?: boolean;
+            overrides?: components["schemas"]["AiTaskOverride"];
+            defaults?: components["schemas"]["AiTaskSettings"];
+        };
+        /** @description An admin's settings for one task. An absent field keeps the product's own value. */
+        AiTaskOverride: {
+            /**
+             * @description The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.
+             * @enum {string}
+             */
+            thinking?: "minimal" | "low" | "medium" | "high";
+            /** @description How long the decision model may take before the task falls back to its ladder. Decision tasks only. */
+            decision_timeout_ms?: number;
+            /** @description How long one model call on the ladder may take before the next tier is tried. */
+            attempt_timeout_ms?: number;
+        };
+        /** @description Every task's override, keyed by task id. */
+        AiTaskOverrides: {
+            [key: string]: components["schemas"]["AiTaskOverride"];
+        };
+        /** @description What a task's calls are sent with. */
+        AiTaskSettings: {
+            /** @description Absent when no level is chosen: the binding and the site floor decide. */
+            thinking?: string;
+            decision_timeout_ms: number;
+            attempt_timeout_ms: number;
+        };
+        AiTaskOverridesPreview: {
+            /** @description Every field the save would refuse, by its path (<task>.<field>). */
+            errors?: components["schemas"]["AiFieldError"][];
+            /** @description What each task would be sent with. */
+            effective: {
+                [key: string]: components["schemas"]["AiTaskSettings"];
+            };
+            /** @description Stored overrides for tasks this installation no longer runs; calls ignore them. */
+            stale: string[];
         };
         AiDeferredWork: {
             carrier: string;
@@ -58869,6 +58941,93 @@ export interface operations {
                 content?: never;
             };
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiTaskOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored overrides; the ETag is the If-Match a save is held to. */
+            200: {
+                headers: {
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskOverrides"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    replaceAiTaskOverrides: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The ETag the editor read; a different stored revision is a 409. */
+                "If-Match"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiTaskOverrides"];
+            };
+        };
+        responses: {
+            /** @description The overrides as stored. */
+            200: {
+                headers: {
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskOverrides"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description Someone saved the overrides since they were read; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewAiTaskOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiTaskOverrides"];
+            };
+        };
+        responses: {
+            /** @description Every field a save refuses, what each task would be sent with, and stale overrides. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskOverridesPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     getAiRoutingSchema: {

@@ -267,6 +267,18 @@ func (stubs) GetAiStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiStatus")
 }
 
+func (stubs) GetAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiTaskOverrides")
+}
+
+func (stubs) ReplaceAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ReplaceAiTaskOverridesParams) {
+	httperr.NotImplemented(w, r, "ReplaceAiTaskOverrides")
+}
+
+func (stubs) PreviewAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewAiTaskOverrides")
+}
+
 func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiUsageParams) {
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }

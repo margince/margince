@@ -16188,6 +16188,71 @@ paths:
           description: The configuration changed; reload before saving.
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ai/task-overrides:
+    get:
+      tags: [AI]
+      operationId: getAiTaskOverrides
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Read the per-task thinking level and timeouts (ai_routing read).
+      responses:
+        '200':
+          description: The stored overrides; the ETag is the If-Match a save is held to.
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+    put:
+      tags: [AI]
+      operationId: replaceAiTaskOverrides
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+      parameters:
+        - { name: If-Match, in: header, required: false, schema: { type: string }, description: 'The ETag the editor read; a different stored revision is a 409.' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+      responses:
+        '200':
+          description: The overrides as stored.
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409':
+          description: Someone saved the overrides since they were read; reload before saving.
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/task-overrides/preview:
+    post:
+      tags: [AI]
+      operationId: previewAiTaskOverrides
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Judge a draft of the overrides without saving it (ai_routing read and update).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+      responses:
+        '200':
+          description: Every field a save refuses, what each task would be sent with, and stale overrides.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskOverridesPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /ai/routing/schema:
     get:
       tags: [AI]
@@ -30645,6 +30710,36 @@ components:
           description: 'Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.'
         decision_candidate:
           $ref: '#/components/schemas/AiRouteCandidate'
+        decides: { type: boolean, description: 'The task declares a decision form, so a decision model may answer it first and its decision timeout applies.' }
+        overrides: { $ref: '#/components/schemas/AiTaskOverride' }
+        defaults: { $ref: '#/components/schemas/AiTaskSettings' }
+    AiTaskOverride:
+      type: object
+      additionalProperties: false
+      description: An admin's settings for one task. An absent field keeps the product's own value.
+      properties:
+        thinking: { type: string, enum: [minimal, low, medium, high], description: 'The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.' }
+        decision_timeout_ms: { type: integer, minimum: 5000, maximum: 60000, description: 'How long the decision model may take before the task falls back to its ladder. Decision tasks only.' }
+        attempt_timeout_ms: { type: integer, minimum: 10000, maximum: 300000, description: 'How long one model call on the ladder may take before the next tier is tried.' }
+    AiTaskOverrides:
+      type: object
+      description: Every task's override, keyed by task id.
+      additionalProperties: { $ref: '#/components/schemas/AiTaskOverride' }
+    AiTaskSettings:
+      type: object
+      required: [decision_timeout_ms, attempt_timeout_ms]
+      description: What a task's calls are sent with.
+      properties:
+        thinking: { type: string, description: 'Absent when no level is chosen: the binding and the site floor decide.' }
+        decision_timeout_ms: { type: integer }
+        attempt_timeout_ms: { type: integer }
+    AiTaskOverridesPreview:
+      type: object
+      required: [effective, stale]
+      properties:
+        errors: { type: array, items: { $ref: '#/components/schemas/AiFieldError' }, description: 'Every field the save would refuse, by its path (<task>.<field>).' }
+        effective: { type: object, additionalProperties: { $ref: '#/components/schemas/AiTaskSettings' }, description: 'What each task would be sent with.' }
+        stale: { type: array, items: { type: string }, description: 'Stored overrides for tasks this installation no longer runs; calls ignore them.' }
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]

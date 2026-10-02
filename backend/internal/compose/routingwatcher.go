@@ -28,6 +28,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // routingRecheckInterval bounds how long a role may serve a superseded binding.
@@ -70,6 +72,10 @@ func (w *RoutingWatcher) Run(ctx context.Context) {
 	if w == nil {
 		return
 	}
+	// The overrides are read now rather than on the first tick: the binding
+	// was resolved at boot, and its calls must not run on the defaults for
+	// half a minute after it.
+	w.refreshTaskOverrides(ctx)
 	ticker := time.NewTicker(routingRecheckInterval)
 	defer ticker.Stop()
 	for {
@@ -91,6 +97,7 @@ func (w *RoutingWatcher) Recheck(ctx context.Context) {
 	if w == nil {
 		return
 	}
+	w.refreshTaskOverrides(ctx)
 	next, err := ResolveRouting(ctx, w.pool, "", w.keys, w.log)
 	if err != nil {
 		w.log.WarnContext(ctx, "re-reading the model binding failed; keeping the one this process is serving",
@@ -147,4 +154,24 @@ func (w *RoutingWatcher) applyIfChanged(ctx context.Context, next ai.RoutingConf
 		"from", previous, "to", next.RoutingVersion(),
 		"credentials_changed", next.CredentialVersion() != previousCredentials)
 	return true
+}
+
+// refreshTaskOverrides publishes the stored per-task overrides when they differ
+// from what the Router serves. A failed read keeps the current ones, for the
+// reason Recheck keeps the current binding.
+func (w *RoutingWatcher) refreshTaskOverrides(ctx context.Context) {
+	ws, err := singletonWorkspace(ctx, w.pool)
+	if err != nil || ws == (ids.UUID{}) {
+		return
+	}
+	stored, err := settings.Get(routingCtx(ctx, ws), NewSettingsStore(w.pool), ai.TaskOverridesSetting)
+	if err != nil {
+		w.log.WarnContext(ctx, "re-reading the AI task overrides failed; keeping the ones this process is serving", "error", err)
+		return
+	}
+	if stored.Revision() == w.target.TaskOverridesRevision() {
+		return
+	}
+	w.target.SetTaskOverrides(stored)
+	w.log.InfoContext(ctx, "adopted changed AI task overrides without restarting", "tasks", len(stored))
 }
