@@ -6,7 +6,7 @@
     "sites_best_stale": 0,
     "sites_absent": 0,
     "scenarios": 167,
-    "records": 247,
+    "records": 251,
     "bindings": 14,
     "self_judged_records": 0
   },
@@ -4022,8 +4022,8 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "",
-          "state": "",
+          "band": "supported_degraded",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -4032,14 +4032,14 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
-            "band": "",
-            "state": ""
+            "band": "not_supported",
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
+          "runs": 51,
+          "passed": 47,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
+          "cases_below_quality_bar": 3
         },
         {
           "task": "offer_draft",
@@ -4453,10 +4453,10 @@
       ],
       "bands": {
         "certified": 13,
-        "supported_degraded": 9,
+        "supported_degraded": 10,
         "not_supported": 6
       },
-      "untested": 2,
+      "untested": 1,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -4843,8 +4843,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": "",
+          "band": "not_supported",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -4853,14 +4853,14 @@
               "env": "eu_hosted"
             },
             "same_model": false,
-            "band": "",
-            "state": ""
+            "band": "not_supported",
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
+          "runs": 42,
+          "passed": 27,
+          "cases_failing_often": 4,
+          "cases_below_quality_bar": 5
         },
         {
           "task": "offer_draft",
@@ -5275,9 +5275,9 @@
       "bands": {
         "certified": 13,
         "supported_degraded": 2,
-        "not_supported": 13
+        "not_supported": 14
       },
-      "untested": 2,
+      "untested": 1,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -6838,6 +6838,744 @@
       ]
     },
     {
+      "name": "Mistral",
+      "answer": "mostly",
+      "sites_shipped": 47,
+      "sites_measured": 46,
+      "ready": 27,
+      "usable_with_care": 10,
+      "not_reliable_yet": 9,
+      "recheck_pending": 0,
+      "models": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "sites": 42,
+          "sites_current": 42,
+          "sites_partial": 0,
+          "sites_stale": 0,
+          "runs": 570,
+          "passed": 454,
+          "reliability": 0.7964912280701755,
+          "slowest_p95_ms": 83052,
+          "bands": {
+            "certified": 12,
+            "supported_degraded": 9,
+            "not_supported": 21
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "sites": 6,
+          "sites_current": 6,
+          "sites_partial": 0,
+          "sites_stale": 0,
+          "runs": 177,
+          "passed": 153,
+          "reliability": 0.864406779661017,
+          "slowest_p95_ms": 6454,
+          "bands": {
+            "certified": 4,
+            "supported_degraded": 0,
+            "not_supported": 2
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "sites": 40,
+          "sites_current": 40,
+          "sites_partial": 0,
+          "sites_stale": 0,
+          "runs": 564,
+          "passed": 537,
+          "reliability": 0.9521276595744681,
+          "slowest_p95_ms": 13541,
+          "bands": {
+            "certified": 22,
+            "supported_degraded": 11,
+            "not_supported": 7
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "sites": 40,
+          "sites_current": 40,
+          "sites_partial": 0,
+          "sites_stale": 0,
+          "runs": 522,
+          "passed": 494,
+          "reliability": 0.946360153256705,
+          "slowest_p95_ms": 17751,
+          "bands": {
+            "certified": 18,
+            "supported_degraded": 14,
+            "not_supported": 8
+          }
+        }
+      ],
+      "sites": [
+        {
+          "key": "account_scan/company_scan",
+          "task": "account_scan",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "agent_loop/morning_brief",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "agent_loop/overnight_at_risk_sweep",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "brief_ranking/rank",
+          "task": "brief_ranking",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "capture_classify/classify",
+          "task": "capture_classify",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 2
+        },
+        {
+          "key": "capture_confidentiality_verdict/thread",
+          "task": "capture_confidentiality_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 48,
+          "passed": 45,
+          "records": 1
+        },
+        {
+          "key": "capture_counterparty_verdict/verdict",
+          "task": "capture_counterparty_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 63,
+          "passed": 51,
+          "records": 1
+        },
+        {
+          "key": "cert_judge/judge",
+          "task": "cert_judge",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "cold_start/acts",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "cold_start/company_message",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "cold_start/field_extract",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "cold_start/sitereadmessage",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "corpus_ask/corpus_ask",
+          "task": "corpus_ask",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 2
+        },
+        {
+          "key": "deal_health/deal_status",
+          "task": "deal_health",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 21,
+          "passed": 21,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/account",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/contact",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/first",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/intro",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/intro_note",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/reply",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 36,
+          "passed": 36,
+          "records": 3
+        },
+        {
+          "key": "enrich/signature",
+          "task": "enrich",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 2
+        },
+        {
+          "key": "growth_fit/growth_fit",
+          "task": "growth_fit",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "nl_search/filter_propose",
+          "task": "nl_search",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 33,
+          "passed": 30,
+          "records": 3
+        },
+        {
+          "key": "offer_draft/draft",
+          "task": "offer_draft",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 24,
+          "passed": 24,
+          "records": 3
+        },
+        {
+          "key": "owed_verdict/owed",
+          "task": "owed_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 12,
+          "passed": 9,
+          "records": 2
+        },
+        {
+          "key": "propose_roles/committee",
+          "task": "propose_roles",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "rate_extract/fx",
+          "task": "rate_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "request_settlement/request_settle",
+          "task": "request_settlement",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 2
+        },
+        {
+          "key": "signal_extract/thread_events",
+          "task": "signal_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "site_extract/profile",
+          "task": "site_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 30,
+          "passed": 24,
+          "records": 2
+        },
+        {
+          "key": "site_fact_extract/page_facts",
+          "task": "site_fact_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 6,
+          "records": 3
+        },
+        {
+          "key": "site_triage/triage",
+          "task": "site_triage",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "stage_evidence_extract/criteria",
+          "task": "stage_evidence_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 27,
+          "passed": 21,
+          "records": 3
+        },
+        {
+          "key": "summarize/company_ask",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "summarize/company_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "records": 3
+        },
+        {
+          "key": "summarize/company_dossier",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "records": 3
+        },
+        {
+          "key": "summarize/contact_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "summarize/meeting_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "summarize/meeting_plan",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "records": 3
+        },
+        {
+          "key": "transcript_propose/next_steps",
+          "task": "transcript_propose",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "voice_build/demo_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "voice_build/derive",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "voice_build/eval_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "voice_build/eval_scores",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "weekly_learnings/learn",
+          "task": "weekly_learnings",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "weekly_review/narrative",
+          "task": "weekly_review",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 45,
+          "passed": 45,
+          "records": 3
+        }
+      ]
+    },
+    {
       "name": "Gemma",
       "answer": "mostly",
       "sites_shipped": 47,
@@ -7542,730 +8280,6 @@
       ]
     },
     {
-      "name": "Mistral",
-      "answer": "mostly",
-      "sites_shipped": 47,
-      "sites_measured": 45,
-      "ready": 27,
-      "usable_with_care": 10,
-      "not_reliable_yet": 8,
-      "recheck_pending": 0,
-      "models": [
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "sites": 41,
-          "sites_current": 41,
-          "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 528,
-          "passed": 427,
-          "reliability": 0.8087121212121212,
-          "slowest_p95_ms": 83052,
-          "bands": {
-            "certified": 12,
-            "supported_degraded": 9,
-            "not_supported": 20
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-8b-2512",
-            "env": "eu_hosted"
-          },
-          "sites": 6,
-          "sites_current": 6,
-          "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 177,
-          "passed": 153,
-          "reliability": 0.864406779661017,
-          "slowest_p95_ms": 6454,
-          "bands": {
-            "certified": 4,
-            "supported_degraded": 0,
-            "not_supported": 2
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "sites": 39,
-          "sites_current": 39,
-          "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 531,
-          "passed": 507,
-          "reliability": 0.9548022598870056,
-          "slowest_p95_ms": 13541,
-          "bands": {
-            "certified": 22,
-            "supported_degraded": 11,
-            "not_supported": 6
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "sites": 39,
-          "sites_current": 39,
-          "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 489,
-          "passed": 464,
-          "reliability": 0.9488752556237219,
-          "slowest_p95_ms": 17751,
-          "bands": {
-            "certified": 18,
-            "supported_degraded": 14,
-            "not_supported": 7
-          }
-        }
-      ],
-      "sites": [
-        {
-          "key": "account_scan/company_scan",
-          "task": "account_scan",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "agent_loop/morning_brief",
-          "task": "agent_loop",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "agent_loop/overnight_at_risk_sweep",
-          "task": "agent_loop",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "brief_ranking/rank",
-          "task": "brief_ranking",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "capture_classify/classify",
-          "task": "capture_classify",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 2
-        },
-        {
-          "key": "capture_confidentiality_verdict/thread",
-          "task": "capture_confidentiality_verdict",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-8b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 48,
-          "passed": 45,
-          "records": 1
-        },
-        {
-          "key": "capture_counterparty_verdict/verdict",
-          "task": "capture_counterparty_verdict",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-8b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 63,
-          "passed": 51,
-          "records": 1
-        },
-        {
-          "key": "cert_judge/judge",
-          "task": "cert_judge",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "cold_start/acts",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 3
-        },
-        {
-          "key": "cold_start/company_message",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "cold_start/field_extract",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 3
-        },
-        {
-          "key": "cold_start/sitereadmessage",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "corpus_ask/corpus_ask",
-          "task": "corpus_ask",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 2
-        },
-        {
-          "key": "deal_health/deal_status",
-          "task": "deal_health",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 21,
-          "passed": 21,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/account",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/contact",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/first",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/intro",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/intro_note",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 15,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/reply",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 36,
-          "passed": 36,
-          "records": 3
-        },
-        {
-          "key": "enrich/signature",
-          "task": "enrich",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 2
-        },
-        {
-          "key": "growth_fit/growth_fit",
-          "task": "growth_fit",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 3
-        },
-        {
-          "key": "offer_draft/draft",
-          "task": "offer_draft",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 24,
-          "passed": 24,
-          "records": 3
-        },
-        {
-          "key": "owed_verdict/owed",
-          "task": "owed_verdict",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 12,
-          "passed": 9,
-          "records": 2
-        },
-        {
-          "key": "propose_roles/committee",
-          "task": "propose_roles",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "rate_extract/fx",
-          "task": "rate_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "request_settlement/request_settle",
-          "task": "request_settlement",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 2
-        },
-        {
-          "key": "signal_extract/thread_events",
-          "task": "signal_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "site_extract/profile",
-          "task": "site_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 30,
-          "passed": 24,
-          "records": 2
-        },
-        {
-          "key": "site_fact_extract/page_facts",
-          "task": "site_fact_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 9,
-          "passed": 6,
-          "records": 3
-        },
-        {
-          "key": "site_triage/triage",
-          "task": "site_triage",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 3
-        },
-        {
-          "key": "stage_evidence_extract/criteria",
-          "task": "stage_evidence_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 27,
-          "passed": 21,
-          "records": 3
-        },
-        {
-          "key": "summarize/company_ask",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "summarize/company_brief",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 18,
-          "passed": 18,
-          "records": 3
-        },
-        {
-          "key": "summarize/company_dossier",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 6,
-          "passed": 6,
-          "records": 3
-        },
-        {
-          "key": "summarize/contact_brief",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 3
-        },
-        {
-          "key": "summarize/meeting_brief",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "summarize/meeting_plan",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 6,
-          "passed": 6,
-          "records": 3
-        },
-        {
-          "key": "transcript_propose/next_steps",
-          "task": "transcript_propose",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "voice_build/demo_draft",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "voice_build/derive",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 3
-        },
-        {
-          "key": "voice_build/eval_draft",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 3
-        },
-        {
-          "key": "voice_build/eval_scores",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 3
-        },
-        {
-          "key": "weekly_learnings/learn",
-          "task": "weekly_learnings",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "weekly_review/narrative",
-          "task": "weekly_review",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 45,
-          "passed": 45,
-          "records": 3
-        }
-      ]
-    },
-    {
       "name": "Qwen",
       "answer": "not_yet",
       "sites_shipped": 47,
@@ -8933,9 +8947,9 @@
       "name": "GPT",
       "answer": "not_yet",
       "sites_shipped": 47,
-      "sites_measured": 43,
+      "sites_measured": 44,
       "ready": 13,
-      "usable_with_care": 19,
+      "usable_with_care": 20,
       "not_reliable_yet": 11,
       "recheck_pending": 0,
       "models": [
@@ -8945,17 +8959,17 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "sites": 43,
-          "sites_current": 43,
+          "sites": 44,
+          "sites_current": 44,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 777,
-          "passed": 695,
-          "reliability": 0.8944658944658944,
+          "runs": 828,
+          "passed": 742,
+          "reliability": 0.8961352657004831,
           "slowest_p95_ms": 6569,
           "bands": {
             "certified": 13,
-            "supported_degraded": 19,
+            "supported_degraded": 20,
             "not_supported": 11
           }
         }
@@ -9253,6 +9267,20 @@
           "state": "current",
           "runs": 12,
           "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "nl_search/filter_propose",
+          "task": "nl_search",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 51,
+          "passed": 47,
           "records": 1
         },
         {
@@ -9714,18 +9742,18 @@
         "model": "mistralai/ministral-14b-2512",
         "env": "eu_hosted"
       },
-      "sites": 41,
-      "sites_current": 41,
+      "sites": 42,
+      "sites_current": 42,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 528,
-      "passed": 427,
-      "reliability": 0.8087121212121212,
+      "runs": 570,
+      "passed": 454,
+      "reliability": 0.7964912280701755,
       "slowest_p95_ms": 83052,
       "bands": {
         "certified": 12,
         "supported_degraded": 9,
-        "not_supported": 20
+        "not_supported": 21
       }
     },
     {
@@ -9754,18 +9782,18 @@
         "model": "mistralai/mistral-medium-3-5",
         "env": "cloud_frontier"
       },
-      "sites": 39,
-      "sites_current": 39,
+      "sites": 40,
+      "sites_current": 40,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 531,
-      "passed": 507,
-      "reliability": 0.9548022598870056,
+      "runs": 564,
+      "passed": 537,
+      "reliability": 0.9521276595744681,
       "slowest_p95_ms": 13541,
       "bands": {
         "certified": 22,
         "supported_degraded": 11,
-        "not_supported": 6
+        "not_supported": 7
       }
     },
     {
@@ -9774,18 +9802,18 @@
         "model": "mistralai/mistral-medium-3-5",
         "env": "eu_hosted"
       },
-      "sites": 39,
-      "sites_current": 39,
+      "sites": 40,
+      "sites_current": 40,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 489,
-      "passed": 464,
-      "reliability": 0.9488752556237219,
+      "runs": 522,
+      "passed": 494,
+      "reliability": 0.946360153256705,
       "slowest_p95_ms": 17751,
       "bands": {
         "certified": 18,
         "supported_degraded": 14,
-        "not_supported": 7
+        "not_supported": 8
       }
     },
     {
@@ -9814,17 +9842,17 @@
         "model": "openai/gpt-oss-120b",
         "env": "cloud_frontier"
       },
-      "sites": 43,
-      "sites_current": 43,
+      "sites": 44,
+      "sites_current": 44,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 777,
-      "passed": 695,
-      "reliability": 0.8944658944658944,
+      "runs": 828,
+      "passed": 742,
+      "reliability": 0.8961352657004831,
       "slowest_p95_ms": 6569,
       "bands": {
         "certified": 13,
-        "supported_degraded": 19,
+        "supported_degraded": 20,
         "not_supported": 11
       }
     },
@@ -15669,6 +15697,98 @@
           "reported": {
             "accepted": 33,
             "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 42,
+          "passed": 27,
+          "reliability": 0.6428571428571429,
+          "latency_p50_ms": 3097,
+          "latency_p95_ms": 15207,
+          "reported": {
+            "accepted": 27,
+            "wrong_answer": 15,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 30,
+          "reliability": 0.9090909090909091,
+          "latency_p50_ms": 1360,
+          "latency_p95_ms": 2570,
+          "reported": {
+            "accepted": 30,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 30,
+          "reliability": 0.9090909090909091,
+          "latency_p50_ms": 1525,
+          "latency_p95_ms": 2443,
+          "reported": {
+            "accepted": 30,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 51,
+          "passed": 47,
+          "reliability": 0.9215686274509803,
+          "latency_p50_ms": 846,
+          "latency_p95_ms": 1178,
+          "reported": {
+            "accepted": 47,
+            "wrong_answer": 4,
             "invalid": 0,
             "abstained": 0
           },
