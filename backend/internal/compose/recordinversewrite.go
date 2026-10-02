@@ -83,7 +83,7 @@ func (r recordInverses) perform(ctx context.Context, pool *pgxpool.Pool, row Aud
 		})
 	case inverseDemote:
 		_, err := r.contacts.DemoteLead(ctx, ids.From[ids.LeadKind](row.EntityID), demoteReason,
-			contacts.OnlyAtVersion(&ifVersion), contacts.NotTouchedByHumanSince(row.OccurredAt))
+			contacts.OnlyAtVersion(&ifVersion), contacts.NotWorkedOnByAColleagueSince(row.OccurredAt, row.ID))
 		return err
 	case inverseRetractFill:
 		fill, _ := fillOf(row)
@@ -123,19 +123,31 @@ func (r recordInverses) archiveCreated(ctx context.Context, pool *pgxpool.Pool, 
 		})
 		return err
 	}
+	// Asked before the archive, while the record still carries the tags and
+	// lists it drops, and again after it, when a link a colleague added
+	// meanwhile is one the archive retired.
 	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := refuseColleagueWork(ctx, tx, row); err != nil {
+			return err
+		}
 		if err := archive(tx); err != nil {
 			return err
 		}
-		worked, err := contacts.ColleagueWorkedOnSince(ctx, tx, row.EntityType, row.EntityID, row.OccurredAt)
-		if err != nil {
-			return err
-		}
-		if worked {
-			return RefusedRestore{Reason: ReasonSuperseded, Detail: "changed by a colleague since it was created"}
-		}
-		return nil
+		return refuseColleagueWork(ctx, tx, row)
 	})
+}
+
+// refuseColleagueWork refuses an archive of a record a colleague has worked on
+// since the entry being undone.
+func refuseColleagueWork(ctx context.Context, tx pgx.Tx, row AuditRow) error {
+	worked, err := contacts.ColleagueWorkedOnSince(ctx, tx, row.EntityType, row.EntityID, row.OccurredAt, row.ID)
+	if err != nil {
+		return err
+	}
+	if worked {
+		return RefusedRestore{Reason: ReasonSuperseded, Detail: "changed by a colleague since"}
+	}
+	return nil
 }
 
 // unarchive brings the record back through its own module's un-archive.

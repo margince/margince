@@ -41,6 +41,9 @@ type FillRetraction struct {
 	SourceRef string
 	Fields    []string
 	FilledAt  time.Time
+	// Entry is the fill's own audit row. A colleague's later save is ordered
+	// after it by id as well as by time (ColleagueWorkedOnSince says why).
+	Entry ids.UUID
 	// MirroredTitle is the title a site read wrote straight onto the column
 	// with no title evidence row of its own (fillSiteContactFields). Empty for
 	// a signature, whose title has its own row.
@@ -67,8 +70,9 @@ const fillRetractSource = "fill_retracted"
 func FillOf(before, after, evidence json.RawMessage, occurredAt time.Time) (FillRetraction, bool) {
 	var was, now map[string]json.RawMessage
 	var said struct {
-		Source    string `json:"source"`
-		SourceRef string `json:"source_ref"`
+		Source    string   `json:"source"`
+		SourceRef string   `json:"source_ref"`
+		Confirmed []string `json:"confirmed"`
 	}
 	if json.Unmarshal(before, &was) != nil || json.Unmarshal(after, &now) != nil ||
 		json.Unmarshal(evidence, &said) != nil {
@@ -82,6 +86,11 @@ func FillOf(before, after, evidence json.RawMessage, occurredAt time.Time) (Fill
 		prior, stated := was[field]
 		if !stated || string(prior) != "null" || !profileFields[field] {
 			return FillRetraction{}, false
+		}
+		// A field the statement found already showing its value was confirmed,
+		// not filled, and undoing the statement leaves it.
+		if slices.Contains(said.Confirmed, field) {
+			continue
 		}
 		fields = append(fields, field)
 	}
@@ -176,8 +185,8 @@ func slotsStand(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill Fi
 			SELECT EXISTS (
 				SELECT 1 FROM audit_log a
 				 WHERE a.entity_type = $1 AND a.entity_id = $2 AND a.actor_type = 'human'
-				   AND a.occurred_at > $3 AND a.after ? $4)`,
-			entityContact, contactID, fill.FilledAt, auditKeySocial).Scan(&moved)
+				   AND (a.occurred_at > $3 OR a.id > $5) AND a.after ? $4)`,
+			entityContact, contactID, fill.FilledAt, auditKeySocial, fill.Entry).Scan(&moved)
 	}
 	if err != nil {
 		return false, fmt.Errorf("contacts: reading whether the %s the fill wrote still stands: %w", field, err)
@@ -211,13 +220,13 @@ func fillStands(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill Fi
 		         AND NOT EXISTS (
 		         SELECT 1 FROM audit_log a
 		          WHERE a.entity_type = 'contact' AND a.entity_id = f.contact_id
-		            AND a.actor_type = 'human' AND a.occurred_at > $7 AND a.after ? 'phones'))),
+		            AND a.actor_type = 'human' AND (a.occurred_at > $7 OR a.id > $8) AND a.after ? 'phones'))),
 		       coalesce(bool_or(f.superseded_value IS NOT NULL OR (f.field = $6 AND NOT EXISTS (
 		         SELECT 1 FROM contact_phone n
 		          WHERE n.contact_id = f.contact_id AND n.phone = f.value AND n.created_at = $7))), false)
 		  FROM contact_profile_field f
 		 WHERE f.contact_id = $1 AND f.field = $2 AND f.source = $3 AND f.source_ref = $4`,
-		contactID, field, fill.Source, fill.SourceRef, fieldTitle, fieldPhone, fill.FilledAt).Scan(&rows, &stands, &replaced)
+		contactID, field, fill.Source, fill.SourceRef, fieldTitle, fieldPhone, fill.FilledAt, fill.Entry).Scan(&rows, &stands, &replaced)
 	if err != nil {
 		return 0, false, false, fmt.Errorf("contacts: reading whether the %s fill still stands: %w", field, err)
 	}

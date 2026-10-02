@@ -219,3 +219,23 @@ func TestUndoingAMachinePromotionDemotesTheLead(t *testing.T) {
 		t.Errorf("the undone promotion reads %+v, want %q", answer, ReasonAlreadyUndone)
 	}
 }
+
+// A colleague who tagged or shortlisted an imported contact did their work on
+// the tag and the list, not the contact; archiving it would drop both.
+func TestACreateAColleagueTaggedIsNotUndone(t *testing.T) {
+	e := integration.Setup(t)
+	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := ids.UUID(created.Id)
+	createID := latestAuditRowID(t, e, "contact", contact, actionCreate)
+	taggedAndListed(t, e, "contact", contact)
+
+	if reason := refusedFor(t, undoEntry(t, e, "contact", contact, createID)); reason != ReasonSuperseded {
+		t.Errorf("the undo of a create a colleague tagged refused %q, want %q", reason, ReasonSuperseded)
+	}
+	if isArchived(t, e, "contact", contact) {
+		t.Error("the refused undo archived the contact anyway")
+	}
+}

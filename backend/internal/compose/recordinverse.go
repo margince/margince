@@ -111,7 +111,9 @@ func fillOf(row AuditRow) (contacts.FillRetraction, bool) {
 	if row.Action != auditActionUpdate || len(row.Before) == 0 || len(row.After) == 0 || len(row.Evidence) == 0 {
 		return contacts.FillRetraction{}, false
 	}
-	return contacts.FillOf(row.Before, row.After, row.Evidence, row.OccurredAt)
+	fill, ok := contacts.FillOf(row.Before, row.After, row.Evidence, row.OccurredAt)
+	fill.Entry = row.ID
+	return fill, ok
 }
 
 // The record kinds an inverse is about.
@@ -222,7 +224,7 @@ func promotionStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability,
 	if promoted.Contact == nil || promoted.Outcome != promotionCreatedContact {
 		return Undoability{}, false, nil
 	}
-	touched, err := contacts.ColleagueWorkedOnSince(ctx, tx, entityTypeContact, *promoted.Contact, row.OccurredAt)
+	touched, err := contacts.ColleagueWorkedOnSince(ctx, tx, entityTypeContact, *promoted.Contact, row.OccurredAt, row.ID)
 	if err != nil {
 		return Undoability{}, false, err
 	}
@@ -244,7 +246,7 @@ func (e Evaluator) createStands(ctx context.Context, tx pgx.Tx, row AuditRow) (U
 	if answer, archived, err := e.archivedRefusal(ctx, tx, row); err != nil || archived {
 		return answer, archived, err
 	}
-	touched, err := contacts.ColleagueWorkedOnSince(ctx, tx, row.EntityType, row.EntityID, row.OccurredAt)
+	touched, err := contacts.ColleagueWorkedOnSince(ctx, tx, row.EntityType, row.EntityID, row.OccurredAt, row.ID)
 	if err != nil {
 		return Undoability{}, false, err
 	}
@@ -286,6 +288,9 @@ func (e Evaluator) fillStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Und
 		return answer, archived, err
 	}
 	fill, _ := fillOf(row)
+	if len(fill.Fields) == 0 {
+		return refuse(ReasonNotRestorableByThisPath, "the statement only confirmed what the record showed"), true, nil
+	}
 	err := contacts.JudgeFillRetraction(ctx, tx, ids.From[ids.ContactKind](row.EntityID), fill)
 	var refusal *contacts.FillRetractionRefusal
 	if errors.As(err, &refusal) {

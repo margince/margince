@@ -67,8 +67,8 @@ func fillFromSignatureObserved(ctx context.Context, t *testing.T, e *dedupeEnv, 
 			applied = landed > 0
 			return err
 		}
-		var err error
-		applied, err = e.store.applySignatureField(ctx, tx, contactID, "mailto:signature", observedAt, f)
+		outcome, err := e.store.applySignatureField(ctx, tx, contactID, "mailto:signature", observedAt, f)
+		applied = outcome == observedApplied || outcome == observedConfirmed
 		return err
 	}); err != nil {
 		t.Fatalf("apply the signature field %s: %v", f.Name, err)

@@ -121,6 +121,12 @@ func (s *Store) DemoteLead(
 		if err != nil {
 			return err
 		}
+		// Asked before the unwind, while the contact still carries the tags
+		// and lists it would drop, and again after it, when a link a colleague
+		// added meanwhile is one the unwind retired.
+		if err := refuseIfColleagueWorkedOnCreated(ctx, tx, contactID, outcome, options); err != nil {
+			return err
+		}
 		unwind, err := unwindContact(ctx, tx, id, contactID, outcome)
 		if err != nil {
 			return err
@@ -377,17 +383,15 @@ func promotedContactOf(ctx context.Context, tx pgx.Tx, id ids.LeadID) (ids.Conta
 }
 
 // refuseIfColleagueWorkedOnCreated refuses, for a caller that asked, a
-// demotion that archived a contact a colleague has worked on since: their work
-// would be archived with it. Asked AFTER the unwind, in its transaction, so a
-// link a colleague added while this ran is either retired by the unwind and
-// seen here, or added after it and left standing.
+// demotion that archives a contact a colleague has worked on since: their work
+// would be archived with it.
 func refuseIfColleagueWorkedOnCreated(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, outcome promotionOutcome, options writeOptions,
 ) error {
 	if options.untouchedSince == nil || outcome != outcomeCreated {
 		return nil
 	}
-	worked, err := ColleagueWorkedOnSince(ctx, tx, entityContact, contactID.UUID, *options.untouchedSince)
+	worked, err := ColleagueWorkedOnSince(ctx, tx, entityContact, contactID.UUID, *options.untouchedSince, options.untouchedAfter)
 	if err != nil {
 		return err
 	}
