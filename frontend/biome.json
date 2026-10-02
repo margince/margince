@@ -1,10 +1,22 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-  "files": {
-    "includes": ["**", "!src/api/schema.d.ts", "!src/api/public-events.ts"]
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
   },
-  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2 },
+  "files": {
+    "includes": [
+      "**",
+      "!src/api/schema.d.ts",
+      "!src/api/public-events.ts"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
   "linter": {
     "enabled": true,
     "rules": {
@@ -12,7 +24,9 @@
       "complexity": {
         "noExcessiveCognitiveComplexity": {
           "level": "error",
-          "options": { "maxAllowedComplexity": 15 }
+          "options": {
+            "maxAllowedComplexity": 15
+          }
         }
       },
       "a11y": {
@@ -37,7 +51,12 @@
         "noExplicitAny": "error",
         "noConsole": {
           "level": "error",
-          "options": { "allow": ["error", "warn"] }
+          "options": {
+            "allow": [
+              "error",
+              "warn"
+            ]
+          }
         }
       },
       "style": {
@@ -46,19 +65,33 @@
         "noParameterAssign": "error",
         "noUselessElse": "error",
         "useImportType": "error"
+      },
+      "nursery": {
+        "noFloatingPromises": "error"
       }
     }
   },
   "javascript": {
-    "formatter": { "quoteStyle": "double", "semicolons": "always" }
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
   },
   "overrides": [
     {
-      "includes": ["**/*.test.ts", "**/*.test.tsx", "e2e/**"],
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "e2e/**"
+      ],
       "linter": {
         "rules": {
-          "complexity": { "noExcessiveCognitiveComplexity": "off" },
-          "suspicious": { "noConsole": "off" }
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off"
+          },
+          "suspicious": {
+            "noConsole": "off"
+          }
         }
       }
     }
