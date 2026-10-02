@@ -37,3 +37,20 @@ func newAIPriceSync(pool *pgxpool.Pool, vault keyvault.Vault, env config.Lookup,
 		Settings:  store,
 	})
 }
+
+// WithPriceCatalogues reads the two public price lists through these fetchers
+// instead of the network, for the picker and the price sync alike.
+func WithPriceCatalogues(broker, modelsDev ai.CatalogueFetcher) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		s.priceCatalogues = aiPriceCatalogues{
+			broker:    ai.NewModelCatalogueOver(broker, systemClock{}),
+			modelsDev: ai.NewModelsDevCatalogueOver(modelsDev, systemClock{}),
+		}
+		routing := ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).WithCatalogue(s.priceCatalogues.broker)
+		if s.vault != nil {
+			routing = routing.WithVault(s.vault)
+		}
+		s.aiRoutingHandlers = aiRoutingHandlers{store: routing}
+		s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, config.FromOS, s.log, s.priceCatalogues))
+	}
+}
