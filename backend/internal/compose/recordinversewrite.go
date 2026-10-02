@@ -123,9 +123,9 @@ func (r recordInverses) archiveCreated(ctx context.Context, pool *pgxpool.Pool, 
 		})
 		return err
 	}
-	// Asked before the archive, while the record still carries the tags and
-	// lists it drops, and again after it, when a link a colleague added
-	// meanwhile is one the archive retired.
+	// Asked before the archive, and again after it: a link a colleague added
+	// meanwhile is one the archive retired, and a tag or list they added is
+	// one the archive's own cascade names.
 	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		if err := refuseColleagueWork(ctx, tx, row); err != nil {
 			return err
@@ -133,7 +133,17 @@ func (r recordInverses) archiveCreated(ctx context.Context, pool *pgxpool.Pool, 
 		if err := archive(tx); err != nil {
 			return err
 		}
-		return refuseColleagueWork(ctx, tx, row)
+		if err := refuseColleagueWork(ctx, tx, row); err != nil {
+			return err
+		}
+		dropped, err := contacts.ArchiveDroppedColleagueWork(ctx, tx, row.EntityType, row.EntityID)
+		if err != nil {
+			return err
+		}
+		if dropped {
+			return RefusedRestore{Reason: ReasonSuperseded, Detail: "a colleague tagged or listed it since"}
+		}
+		return nil
 	})
 }
 

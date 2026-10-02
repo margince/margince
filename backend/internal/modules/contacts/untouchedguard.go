@@ -20,6 +20,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -143,7 +144,9 @@ func refuseIfHumanTouched(
 // ColleagueWorkedOnSince reports whether a colleague has acted on the record
 // since the audit entry `after`, written at `since`: a human audit row on the
 // record itself or on a link it is an end of, or a tag or list membership a
-// human gave it — archiving the record retires all of them. A human's undo of
+// human gave it — archiving the record retires all of them. Tags and lists are
+// asked without a time: every caller's entry made the record or brought it
+// back, and a human tag on it is work a colleague did on it either way. A human's undo of
 // some other change is not work on the record, so a reversal does not count,
 // and neither does a row this transaction wrote itself.
 //
@@ -165,12 +168,35 @@ func ColleagueWorkedOnSince(ctx context.Context, tx pgx.Tx, entityType string, i
 			                            r.counterparty_company_id, r.deal_id, r.project_id)))))
 		    OR EXISTS (
 			SELECT 1 FROM taggable g
-			 WHERE g.entity_type = $1 AND g.entity_id = $2 AND g.assigned_by_kind = 'human' AND g.assigned_at > $3)
+			 WHERE g.entity_type = $1 AND g.entity_id = $2 AND g.assigned_by_kind = 'human')
 		    OR EXISTS (
 			SELECT 1 FROM list_member m
-			 WHERE m.entity_type = $1 AND m.entity_id = $2 AND m.added_by LIKE 'human:%' AND m.created_at > $3)`,
+			 WHERE m.entity_type = $1 AND m.entity_id = $2 AND m.added_by LIKE 'human:%')`,
 		entityType, id, since, storekit.EvidenceKeyUndidAuditLog, tableRelationship, after).Scan(&worked); err != nil {
 		return false, fmt.Errorf("checking whether a colleague worked on this %s: %w", entityType, err)
 	}
 	return worked, nil
+}
+
+// ArchiveDroppedColleagueWork reports whether the newest archive of the record
+// deleted a tag or a list membership a human gave it. Asked after an archive in
+// its own transaction, it sees exactly what that archive took down — a tag a
+// colleague added while the decision was being made included, which a check
+// of the live rows can no longer see once the archive has deleted them.
+func ArchiveDroppedColleagueWork(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) (bool, error) {
+	archive, err := storekit.LatestArchive(ctx, tx, entityType, id)
+	if err != nil {
+		return false, err
+	}
+	for _, m := range archive.Cascade.Memberships {
+		if strings.HasPrefix(m.AddedBy, "human:") {
+			return true, nil
+		}
+	}
+	for _, tag := range archive.Cascade.Tags {
+		if tag.AssignedByKind != nil && *tag.AssignedByKind == "human" {
+			return true, nil
+		}
+	}
+	return false, nil
 }

@@ -44,6 +44,9 @@ type FillRetraction struct {
 	// Entry is the fill's own audit row. A colleague's later save is ordered
 	// after it by id as well as by time (ColleagueWorkedOnSince says why).
 	Entry ids.UUID
+	// Legacy is a signature written before confirmations were named: its
+	// image says title was empty even where the statement only repeated it.
+	Legacy bool
 	// MirroredTitle is the title a site read wrote straight onto the column
 	// with no title evidence row of its own (fillSiteContactFields). Empty for
 	// a signature, whose title has its own row.
@@ -70,9 +73,9 @@ const fillRetractSource = "fill_retracted"
 func FillOf(before, after, evidence json.RawMessage, occurredAt time.Time) (FillRetraction, bool) {
 	var was, now map[string]json.RawMessage
 	var said struct {
-		Source    string   `json:"source"`
-		SourceRef string   `json:"source_ref"`
-		Confirmed []string `json:"confirmed"`
+		Source    string    `json:"source"`
+		SourceRef string    `json:"source_ref"`
+		Confirmed *[]string `json:"confirmed"`
 	}
 	if json.Unmarshal(before, &was) != nil || json.Unmarshal(after, &now) != nil ||
 		json.Unmarshal(evidence, &said) != nil {
@@ -89,13 +92,16 @@ func FillOf(before, after, evidence json.RawMessage, occurredAt time.Time) (Fill
 		}
 		// A field the statement found already showing its value was confirmed,
 		// not filled, and undoing the statement leaves it.
-		if slices.Contains(said.Confirmed, field) {
+		if said.Confirmed != nil && slices.Contains(*said.Confirmed, field) {
 			continue
 		}
 		fields = append(fields, field)
 	}
 	slices.Sort(fields)
-	fill := FillRetraction{Source: said.Source, SourceRef: said.SourceRef, Fields: fields, FilledAt: occurredAt}
+	fill := FillRetraction{
+		Source: said.Source, SourceRef: said.SourceRef, Fields: fields, FilledAt: occurredAt,
+		Legacy: said.Source == enrichSource && said.Confirmed == nil,
+	}
 	var title string
 	if json.Unmarshal(now[fieldTitle], &title) == nil && title != signatureFieldFilled {
 		fill.MirroredTitle = title
@@ -120,8 +126,17 @@ func (e *FillRetractionRefusal) Error() string {
 // it, on the caller's transaction: nil when it can be taken back, a
 // *FillRetractionRefusal when it cannot, any other error when the read failed.
 func JudgeFillRetraction(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill FillRetraction) error {
+	fields, err := retractableFields(ctx, tx, contactID, fill)
+	if err != nil {
+		return err
+	}
+	if len(fields) == 0 {
+		// Everything it named was already on the record: there is nothing it
+		// filled to clear.
+		return &FillRetractionRefusal{Replaced: fill.Fields}
+	}
 	var refusal FillRetractionRefusal
-	for _, field := range fill.Fields {
+	for _, field := range fields {
 		stands, replaced, err := fieldStands(ctx, tx, contactID, fill, field)
 		if err != nil {
 			return err
@@ -144,7 +159,7 @@ func JudgeFillRetraction(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 // read wrote there.
 func fieldStands(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill FillRetraction, field string) (stands, replaced bool, err error) {
 	rows, stands, replaced, err := fillStands(ctx, tx, contactID, fill, field)
-	if err == nil && stands && (field == fieldPhone || field == fieldLinkedin) {
+	if err == nil && stands && (field == fieldPhone || field == fieldLinkedin || field == fieldTitle) {
 		stands, err = slotsStand(ctx, tx, contactID, fill, field)
 	}
 	if err != nil || rows > 0 || field != fieldTitle || fill.MirroredTitle == "" {
@@ -161,11 +176,36 @@ func fieldStands(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill F
 	return stands, false, nil
 }
 
+// retractableFields is what undoing the fill clears. A legacy signature named
+// a title it only repeated as filled, so its title is cleared only when the
+// trail shows the title empty before it: the newest earlier entry that stated
+// a title stated none.
+func retractableFields(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill FillRetraction) ([]string, error) {
+	if !fill.Legacy || !slices.Contains(fill.Fields, fieldTitle) {
+		return fill.Fields, nil
+	}
+	var held bool
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce((
+			SELECT jsonb_typeof(a.after -> $2) <> 'null' FROM audit_log a
+			 WHERE a.entity_type = $1 AND a.entity_id = $3 AND a.after ? $2
+			   AND (a.occurred_at < $4 OR (a.occurred_at = $4 AND a.id < $5))
+			 ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1), false)`,
+		entityContact, fieldTitle, contactID, fill.FilledAt, fill.Entry).Scan(&held)
+	if err != nil {
+		return nil, fmt.Errorf("contacts: reading whether the title was set before the fill: %w", err)
+	}
+	if !held {
+		return fill.Fields, nil
+	}
+	return slices.DeleteFunc(slices.Clone(fill.Fields), func(f string) bool { return f == fieldTitle }), nil
+}
+
 // slotsStand answers what the evidence rows cannot. A phone: every number the
 // fill inserted is still live and still carries this fill's evidence — a later
 // statement that replaced one of them leaves the rest looking whole. A LinkedIn
-// slot: no colleague has saved the contact's social handles since, because a
-// handle they re-entered is theirs even when it reads the same.
+// slot or a title: no colleague has saved it since, because a value they
+// entered again is theirs even when it reads the same.
 func slotsStand(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill FillRetraction, field string) (bool, error) {
 	var moved bool
 	var err error
@@ -180,13 +220,17 @@ func slotsStand(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill Fi
 				      WHERE f.contact_id = n.contact_id AND f.field = $4 AND f.value = n.phone
 				        AND f.source = $2 AND f.source_ref = $5)))`,
 			contactID, fill.Source, fill.FilledAt, fieldPhone, fill.SourceRef).Scan(&moved)
-	case fieldLinkedin:
+	case fieldLinkedin, fieldTitle:
+		key := auditKeySocial
+		if field == fieldTitle {
+			key = fieldTitle
+		}
 		err = tx.QueryRow(ctx, `
 			SELECT EXISTS (
 				SELECT 1 FROM audit_log a
 				 WHERE a.entity_type = $1 AND a.entity_id = $2 AND a.actor_type = 'human'
 				   AND (a.occurred_at > $3 OR a.id > $5) AND a.after ? $4)`,
-			entityContact, contactID, fill.FilledAt, auditKeySocial, fill.Entry).Scan(&moved)
+			entityContact, contactID, fill.FilledAt, key, fill.Entry).Scan(&moved)
 	}
 	if err != nil {
 		return false, fmt.Errorf("contacts: reading whether the %s the fill wrote still stands: %w", field, err)
@@ -254,7 +298,11 @@ func (s *Store) RetractFill(ctx context.Context, contactID ids.ContactID, fill F
 		if err := JudgeFillRetraction(ctx, tx, contactID, fill); err != nil {
 			return err
 		}
-		for _, field := range fill.Fields {
+		fields, err := retractableFields(ctx, tx, contactID, fill)
+		if err != nil {
+			return err
+		}
+		for _, field := range fields {
 			if err := retractField(ctx, tx, contactID, fill, field); err != nil {
 				return err
 			}

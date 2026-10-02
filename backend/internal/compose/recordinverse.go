@@ -207,6 +207,20 @@ func (e Evaluator) inverseState(ctx context.Context, tx pgx.Tx, row AuditRow, ki
 // demotion archives that contact. DemoteLead asks the same question again,
 // through the same contacts.ColleagueWorkedOnSince, inside its own transaction.
 func promotionStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, bool, error) {
+	// The lead's current promotion must be this one: demoted by hand and
+	// promoted again into the same contact, its fields read the same while
+	// the demotion would reverse the later promotion.
+	var current ids.UUID
+	if err := tx.QueryRow(ctx, `
+		SELECT id FROM audit_log
+		 WHERE entity_type = $1 AND entity_id = $2 AND action = $3
+		 ORDER BY occurred_at DESC, id DESC LIMIT 1`,
+		entityTypeLead, row.EntityID, actionPromote).Scan(&current); err != nil {
+		return Undoability{}, false, err
+	}
+	if current != row.ID {
+		return refuse(ReasonSuperseded, "the lead was promoted again since"), true, nil
+	}
 	moved, err := fieldsThatMovedSince(ctx, tx, row)
 	if err != nil {
 		return Undoability{}, false, err

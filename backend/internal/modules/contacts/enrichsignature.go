@@ -192,11 +192,14 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 		// are context ABOUT the mutation and ride evidence: anything placed in
 		// the images is projected by field history as a change to a field of
 		// that name (storekit.AuditWithEvidence).
+		// "confirmed" is written even when empty: its absence is how an undo
+		// tells a signature from before confirmations were named.
+		if confirmed == nil {
+			confirmed = []string{}
+		}
 		evidence := map[string]any{
 			auditKeySource: enrichSource, auditKeyFields: appliedFields, auditKeySourceRef: sourceRef,
-		}
-		if len(confirmed) > 0 {
-			evidence[auditKeyConfirmed] = confirmed
+			auditKeyConfirmed: confirmed,
 		}
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", entityContact, contactID.UUID,
 			before, after, evidence)
