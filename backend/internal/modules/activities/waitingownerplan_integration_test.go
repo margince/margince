@@ -88,11 +88,16 @@ func TestTheWaitingQueryKeysEachReplyOwnerLookupOnItsLink(t *testing.T) {
 }
 
 // planWithoutKeyedJoins plans the statement with every way to key a join taken
-// away: no index or bitmap probe, no hash or merge join. A plain join over an
-// owner table can then only leave the link comparison in a join filter, which
-// is the rescan production's misestimate chose; only a lateral keyed on its
-// link still carries the comparison into its own scan. Neither depends on the
-// seeded rows or the statistics.
+// away: no index or bitmap probe, no hash or merge join. A plain join over an owner
+// table can then only leave the link comparison in a join filter, which is the shape
+// production's misestimate chose; a lateral keyed on its link carries the comparison
+// into its own scan instead.
+//
+// ANALYZED first, because choosing between those two is still a COST decision — this
+// test used to claim it depended on neither rows nor statistics, and in the parallel
+// lane the estimates are whatever the instance last computed while seven other
+// packages wrote to the same tables. Inside the planning transaction the deferred
+// Rollback undoes, so nothing leaks into the next test.
 func planWithoutKeyedJoins(t *testing.T, pool *pgxpool.Pool, sent *waitingStatement) string {
 	t.Helper()
 	ctx := context.Background()
@@ -109,6 +114,14 @@ func planWithoutKeyedJoins(t *testing.T, pool *pgxpool.Pool, sent *waitingStatem
 		SET LOCAL enable_indexscan = off; SET LOCAL enable_indexonlyscan = off;
 		SET LOCAL enable_bitmapscan = off`); err != nil {
 		t.Fatalf("setting the planner's costs: %v", err)
+	}
+	// The whole database rather than a list. The statement reaches further than its
+	// joins — owedSQL and requestCandidateSQL bring in activity_participant,
+	// activity_reader_state, contact_email and two more — and every one of their
+	// estimates feeds the outer row count that decides this plan. A hand-kept list
+	// is a completeness claim that was already wrong once.
+	if _, err := tx.Exec(ctx, `ANALYZE`); err != nil {
+		t.Fatalf("analyzing before planning: %v", err)
 	}
 	var raw string
 	if err := tx.QueryRow(ctx, "EXPLAIN (FORMAT JSON) "+sent.sql, sent.args...).Scan(&raw); err != nil {
