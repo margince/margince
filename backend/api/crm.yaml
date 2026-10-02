@@ -28953,8 +28953,8 @@ components:
         residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
         How one model is served (sort, quantizations, …) stays on the tier's `routing`.
       properties:
-        only: { type: array, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
-        ignore: { type: array, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
+        only: { type: array, minItems: 1, uniqueItems: true, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
+        ignore: { type: array, minItems: 1, uniqueItems: true, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
         allow_fallbacks: { type: boolean, description: "Override the broker's host fallback. False is a real choice, distinct from absent." }
         zdr: { type: boolean, description: "Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request." }
         data_collection: { type: string, enum: [allow, deny], description: "deny keeps every request off hosts that may store or train on prompts." }
@@ -29039,7 +29039,7 @@ components:
       additionalProperties: false
       description: OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each.
       properties:
-        order: { type: array, items: { type: string }, description: 'Host slugs to try first, in this order.' }
+        order: { type: array, minItems: 1, uniqueItems: true, items: { type: string }, description: 'Host slugs to try first, in this order.' }
         only: { type: array, items: { type: string }, description: 'Upstream slugs allowed; a hard filter. Set on the provider.' }
         ignore: { type: array, items: { type: string }, description: 'Upstream slugs excluded; a hard filter. Set on the provider.' }
         allow_fallbacks: { type: boolean, description: "Whether the broker may switch hosts on failure. Set on the provider." }
@@ -29047,7 +29047,7 @@ components:
         data_collection: { type: string, enum: [allow, deny], description: 'Whether hosts that may store prompts are allowed. Set on the provider.' }
         zdr: { type: boolean, description: 'Zero data retention only. Set on the provider.' }
         enforce_distillable_text: { type: boolean, description: 'Only models whose output may train other models. Set on the provider.' }
-        quantizations: { type: array, items: { type: string }, description: 'Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.' }
+        quantizations: { type: array, minItems: 1, uniqueItems: true, items: { type: string }, description: 'Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.' }
         sort:
           description: 'price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing.'
           oneOf:
@@ -29086,6 +29086,7 @@ components:
     AiOpenRouterPercentiles:
       type: object
       additionalProperties: false
+      minProperties: 1
       properties:
         p50: { type: number, format: double, minimum: 0 }
         p75: { type: number, format: double, minimum: 0 }
@@ -29096,6 +29097,7 @@ components:
       type: object
       additionalProperties: false
       description: OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one.
+      not: { required: [effort, max_tokens] }
       properties:
         effort: { type: string, enum: [max, xhigh, high, medium, low, minimal, none] }
         max_tokens: { type: integer, minimum: 1 }

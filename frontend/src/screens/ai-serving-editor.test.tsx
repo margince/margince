@@ -355,6 +355,18 @@ describe("summarize", () => {
     expect(lines[1].sentence.key).toBe("aiServing.say.sortAcross");
   });
 
+  it("says a privacy rule turned off is off, not on", () => {
+    const lines = summarize(
+      { provider: { zdr: false, enforce_distillable_text: false } },
+      undefined,
+      false,
+    );
+    expect(lines.map((l) => l.sentence.key)).toEqual([
+      "aiServing.say.zdrOff",
+      "aiServing.say.distillOff",
+    ]);
+  });
+
   it("calls a key the tier did not write the shipped default, and says the task decides an unset effort", () => {
     const lines = summarize(
       { provider: { quantizations: ["fp16"], max_price: { prompt: 1 } } },
@@ -362,7 +374,7 @@ describe("summarize", () => {
       true,
     );
     expect(lines.map((l) => l.source)).toEqual(["default", "default", "task"]);
-    expect(lines[1].sentence.params).toEqual({ prices: "$1 prompt" });
+    expect(lines[1].sentence.params).toEqual({ prices: "prompt $1/1M" });
   });
 });
 

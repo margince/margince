@@ -46,12 +46,17 @@ func (h aiRoutingHandlers) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	next, err := ai.TaskOverridesFromWire(req)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	expected, err := routingPrecondition(r.Header)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	stored, err := h.store.ReplaceTaskOverrides(r.Context(), taskOverridesFromWire(req), expected)
+	stored, err := h.store.ReplaceTaskOverrides(r.Context(), next, expected)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -72,7 +77,12 @@ func (h aiRoutingHandlers) PreviewAiTaskOverrides(w http.ResponseWriter, r *http
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	preview, err := h.store.PreviewTaskOverrides(r.Context(), taskOverridesFromWire(req))
+	next, err := ai.TaskOverridesFromWire(req)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	preview, err := h.store.PreviewTaskOverrides(r.Context(), next)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -89,24 +99,6 @@ func taskOverridesToWire(v ai.TaskOverrides) crmcontracts.AiTaskOverrides {
 	out := crmcontracts.AiTaskOverrides{}
 	for task, o := range v {
 		out[string(task)] = o.Wire()
-	}
-	return out
-}
-
-func taskOverridesFromWire(v crmcontracts.AiTaskOverrides) ai.TaskOverrides {
-	out := ai.TaskOverrides{}
-	for task, o := range v {
-		var next ai.TaskOverride
-		if o.Thinking != nil {
-			next.Thinking = string(*o.Thinking)
-		}
-		if o.DecisionTimeoutMs != nil {
-			next.DecisionTimeoutMs = *o.DecisionTimeoutMs
-		}
-		if o.AttemptTimeoutMs != nil {
-			next.AttemptTimeoutMs = *o.AttemptTimeoutMs
-		}
-		out[ai.Task(task)] = next
 	}
 	return out
 }

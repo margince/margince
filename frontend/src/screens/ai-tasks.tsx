@@ -31,6 +31,7 @@ export function AiTasksCard() {
   // there is no payload, and without routing read its task list is empty —
   // either way the withheld panel says so, rather than drawing a table that
   // reads as "no tasks".
+  const route = status.data?.features.find((f) => f.task === opened);
   if (!canDiagnose || !canBudget || !canRoute) {
     return <AiFeaturesWithheldPanel />;
   }
@@ -39,28 +40,25 @@ export function AiTasksCard() {
       <PanelBody>
         <PanelIntro>{t("aiTasks.intro")}</PanelIntro>
         <QueryGate query={status} pendingLabel={t("aiTasks.title")}>
-          {(current) => {
-            const route = current.features.find((f) => f.task === opened);
-            return (
-              <>
-                <AiFeatureTable
-                  rows={current.features}
-                  health={health}
-                  canTrace={canDiagnose}
-                  onEdit={(row) => setOpened(row.task)}
-                />
-                {route ? (
-                  <TaskSheet
-                    route={route}
-                    canManage={canManage}
-                    canSeeCalls={canDiagnose}
-                    onClose={() => setOpened(null)}
-                  />
-                ) : null}
-              </>
-            );
-          }}
+          {(current) => (
+            <AiFeatureTable
+              rows={current.features}
+              health={health}
+              canTrace={canDiagnose}
+              onEdit={(row) => setOpened(row.task)}
+            />
+          )}
         </QueryGate>
+        {/* Outside the gate, from the last good read: a failed refetch
+            behind an open sheet must not take the draft in it away. */}
+        {route ? (
+          <TaskSheet
+            route={route}
+            canManage={canManage}
+            canSeeCalls={canDiagnose}
+            onClose={() => setOpened(null)}
+          />
+        ) : null}
       </PanelBody>
     </Panel>
   );

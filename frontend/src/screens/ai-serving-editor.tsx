@@ -243,7 +243,12 @@ function ServingEditor({
     if (!parsed.problem) onChange(parsed.routing);
   };
   const tierKey = value.kind === "tier" ? value.tier : "";
-  const effective = tierKey ? query.data?.effective?.tiers[tierKey] : undefined;
+  // A checked tier the preview leaves out of `effective` sends no routing
+  // block at all: the broker routes it on its own.
+  const effective =
+    tierKey && query.data
+      ? (query.data.effective?.tiers[tierKey] ?? {})
+      : undefined;
   const sample = value.kind === "embeddings" ? SAMPLE_EMBEDDINGS : SAMPLE_TIER;
   const status = disabled ? null : statusOf(checking, problems.length, text);
   return (

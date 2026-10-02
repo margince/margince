@@ -49,7 +49,12 @@ func (p OpenRouterProvider) validate(path string) error {
 		errs = append(errs, refuseEmptyOrRepeated(joinPath(path, list.key), list.entries))
 	}
 	for i, q := range p.Quantizations {
-		errs = append(errs, oneOf(fmt.Sprintf("%s.quantizations[%d]", path, i), q, quantizationLevels))
+		at := fmt.Sprintf("%s.quantizations[%d]", path, i)
+		if q == "" {
+			errs = append(errs, invalidAt(at, "is written empty; name a level or remove the entry"))
+			continue
+		}
+		errs = append(errs, oneOf(at, q, quantizationLevels))
 	}
 	return joinFaults(errs...)
 }

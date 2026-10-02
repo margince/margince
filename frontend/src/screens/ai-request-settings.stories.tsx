@@ -74,13 +74,41 @@ const stat = (
   unpriced: failed,
 });
 
-const STATS = [
-  stat("openai_compatible", 98, 11, 4, 1100, 2600, 20000),
-  stat("Cerebras", 55, 0, 0, 1100, 2600, 20000),
-  stat("", 11, 11, 4, 15000, 19500, 0),
-  stat("gemini", 43, 0, 0, 1300, 2600, 10000),
-  stat("decide", 239, 7, 7, 500, 1300, 40000),
-];
+// Each grouping answers with rows of its own kind, so every table a story
+// draws shows the keys its control asked for.
+const STATS: Record<string, ReturnType<typeof stat>[]> = {
+  provider: [
+    stat("openai_compatible", 98, 11, 4, 1100, 2600, 20000),
+    stat("gemini", 43, 0, 0, 1300, 2600, 10000),
+  ],
+  served_provider: [
+    stat("Cerebras", 55, 0, 0, 1100, 2600, 20000),
+    stat("mistral/eu", 32, 0, 0, 1200, 2700, 9000),
+    stat("", 11, 11, 4, 15000, 19500, 0),
+  ],
+  model: [stat("openai/gpt-oss-120b", 98, 11, 4, 1100, 2600, 20000)],
+  tier: [
+    stat("decide", 239, 7, 7, 500, 1300, 40000),
+    stat("local_small", 98, 11, 4, 1100, 2600, 20000),
+    stat("cheap_cloud", 37, 0, 0, 900, 2100, 7000),
+  ],
+  task: [stat("capture_confidentiality_verdict", 360, 4, 4, 600, 1500, 30000)],
+};
+
+/** Answers /ai/call-stats by the group it asks for; everything else goes on. */
+function statsByGroup(next: typeof fetch): typeof fetch {
+  return (input, init) => {
+    const url = new URL(
+      input instanceof Request ? input.url : String(input),
+      "https://story",
+    );
+    if (!url.pathname.endsWith("/ai/call-stats")) return next(input, init);
+    const group = url.searchParams.get("group") ?? "provider";
+    return Promise.resolve(
+      jsonResponse({ window: "7d", group, rows: STATS[group] ?? [] }),
+    );
+  };
+}
 
 const FLOW = {
   task: "capture_confidentiality_verdict",
@@ -200,8 +228,6 @@ function stub({
     "GET /ai-model-rates": () => jsonResponse({ data: [] }),
     "GET /ai/routing/schema": () => jsonResponse(SCHEMA),
     "POST /ai/routing/preview": () => jsonResponse(preview),
-    "GET /ai/call-stats": () =>
-      jsonResponse({ window: "7d", group: "provider", rows: STATS }),
     "GET /ai/call-stats/flow": () => jsonResponse(FLOW),
     "GET /ai/task-overrides": () => jsonResponse(overrides),
     "PUT /ai/task-overrides": () =>
@@ -212,6 +238,7 @@ function stub({
           )
         : jsonResponse(overrides),
   });
+  globalThis.fetch = statsByGroup(globalThis.fetch);
 }
 
 const DECIDING: Feature = {

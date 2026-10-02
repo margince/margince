@@ -179,6 +179,10 @@ export function TaskSheet({
         {canSeeCalls ? (
           <TaskRecentCalls route={route} draft={draft} decides={decides} />
         ) : null}
+        <ReadProblem
+          error={stored.isError ? stored.error : null}
+          onRetry={() => stored.refetch()}
+        />
         <TaskSettings
           draft={draft}
           defaults={defaults}
@@ -377,6 +381,21 @@ function ContractFacts({ route }: Readonly<{ route: Feature }>) {
 }
 
 /** A refused save: a colleague's newer save, or the server's own reason. */
+/** The stored settings could not be read: the controls stay off until they are. */
+function ReadProblem({
+  error,
+  onRetry,
+}: Readonly<{ error: Error | null; onRetry: () => void }>) {
+  const t = useT();
+  if (!error) return null;
+  return (
+    <Callout tone="danger" kind="outcome" title={t("aiTaskSheet.readFailed")}>
+      {problemMessageOf(error, t)}{" "}
+      <Button onClick={onRetry}>{t("common.retry")}</Button>
+    </Callout>
+  );
+}
+
 function SaveProblem({ error }: Readonly<{ error: Error | null }>) {
   const t = useT();
   if (!error) return null;

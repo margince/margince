@@ -104,8 +104,8 @@ func (next RoutingConfig) routingValueFaults(stored RoutingConfig) routingFaults
 	return faultsOf(errs...)
 }
 
-// withStoredRoutingAt is next with each refused routing value replaced by the
-// stored one at the same path.
+// withStoredRoutingAt is next with each refused routing value, a connection's
+// upstream among them, replaced by the stored one at the same path.
 func (next RoutingConfig) withStoredRoutingAt(stored RoutingConfig, faults routingFaults) RoutingConfig {
 	if len(faults) == 0 {
 		return next
@@ -122,6 +122,16 @@ func (next RoutingConfig) withStoredRoutingAt(stored RoutingConfig, faults routi
 	}
 	if faults.under(EmbeddingsRoutingPath) {
 		next.Embeddings.Routing = stored.Embeddings.Routing.clone()
+	}
+	providers := make(map[string]ProviderSettings, len(next.Providers))
+	for name, settings := range next.Providers {
+		if faults.under("providers." + name + ".upstream") {
+			settings.Upstream = stored.Providers[name].Upstream.clone()
+		}
+		providers[name] = settings
+	}
+	if next.Providers != nil {
+		next.Providers = providers
 	}
 	return next
 }

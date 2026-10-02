@@ -384,7 +384,10 @@ function servingSort(
   if (!routing) return "throughput";
   const sort = routing.provider?.sort;
   if (!sort) return t("aiFigures.line.brokerOwn");
-  return typeof sort === "string" ? sort : sort.by;
+  if (typeof sort === "string") return sort;
+  return sort.partition === "none"
+    ? t("aiFigures.line.sortAcross", { by: sort.by })
+    : sort.by;
 }
 
 function laneGloss(name: string, t: ReturnType<typeof useT>): string | null {

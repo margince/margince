@@ -70,14 +70,17 @@ const SAY: Readonly<Record<string, (value: Json) => Sentence>> = {
     "aiServing.say.requireParameters",
     "aiServing.say.requireParametersOff",
   ),
-  "provider.zdr": () => ({ key: "aiServing.say.zdr" }),
+  "provider.zdr": flag("aiServing.say.zdr", "aiServing.say.zdrOff"),
   "provider.data_collection": (value) => ({
     key:
       value === "deny"
         ? "aiServing.say.denyCollection"
         : "aiServing.say.allowCollection",
   }),
-  "provider.enforce_distillable_text": () => ({ key: "aiServing.say.distill" }),
+  "provider.enforce_distillable_text": flag(
+    "aiServing.say.distill",
+    "aiServing.say.distillOff",
+  ),
   "provider.only": hostsSay("aiServing.say.only"),
   "provider.ignore": hostsSay("aiServing.say.ignore"),
   "provider.order": hostsSay("aiServing.say.order"),
@@ -88,9 +91,14 @@ const SAY: Readonly<Record<string, (value: Json) => Sentence>> = {
   "provider.max_price": (value) => ({
     key: "aiServing.say.maxPrice",
     params: {
+      // prompt and completion are per 1M tokens; request and image per item.
       prices: isObject(value)
         ? Object.entries(value)
-            .map(([k, v]) => `$${v} ${k}`)
+            .map(([k, v]) =>
+              k === "prompt" || k === "completion"
+                ? `${k} $${v}/1M`
+                : `${k} $${v}`,
+            )
             .join(", ")
         : String(value),
     },

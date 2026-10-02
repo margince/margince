@@ -103,7 +103,9 @@ func (o TaskOverride) validate(task string, decides bool) error {
 }
 
 func withinBounds(path string, ms int, low, high time.Duration) error {
-	if d := time.Duration(ms) * time.Millisecond; d < low || d > high {
+	// Compared in milliseconds: converting first would let a huge value wrap
+	// into the range.
+	if int64(ms) < low.Milliseconds() || int64(ms) > high.Milliseconds() {
 		return invalidAt(path, fmt.Sprintf("must be between %d and %d ms. You wrote %d.", low.Milliseconds(), high.Milliseconds(), ms))
 	}
 	return nil

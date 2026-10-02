@@ -88,7 +88,8 @@ func (r OpenRouterRouting) legacy() (legacyRouting, bool) {
 		}
 		out.PreferredMaxLatencyP90 = *l.P90
 	}
-	if r.Reasoning != nil {
+	// An empty reasoning block says nothing, so it does not keep a value nested.
+	if !r.Reasoning.isEmpty() {
 		if (*r.Reasoning != OpenRouterReasoning{Effort: r.Reasoning.Effort}) || r.Reasoning.Effort == "" {
 			return legacyRouting{}, false
 		}
@@ -273,6 +274,10 @@ func decodePrice(path string, data []byte) (*OpenRouterPrice, error) {
 	if err := decodeStrictObject(path, data, &p, "prompt", "completion", "request", "image"); err != nil {
 		return nil, err
 	}
+	// `max_price: {}` caps nothing; kept, it would send an empty object.
+	if p == (OpenRouterPrice{}) {
+		return nil, nil
+	}
 	return &p, nil
 }
 
@@ -370,11 +375,16 @@ func yamlNodeJSON(node *yaml.Node) (json.RawMessage, error) {
 	case yaml.MappingNode:
 		fields := make(map[string]json.RawMessage, len(node.Content)/2)
 		for i := 0; i+1 < len(node.Content); i += 2 {
+			key := node.Content[i].Value
+			// Two answers to one key: keeping either would be a guess.
+			if _, twice := fields[key]; twice {
+				return nil, fmt.Errorf("line %d: %q is written twice", node.Content[i].Line, key)
+			}
 			value, err := yamlNodeJSON(node.Content[i+1])
 			if err != nil {
 				return nil, err
 			}
-			fields[node.Content[i].Value] = value
+			fields[key] = value
 		}
 		return json.Marshal(fields)
 	case yaml.SequenceNode:

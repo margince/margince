@@ -155,7 +155,11 @@ const defaultStatsWindow = "7d"
 
 // GetAiCallStats implements (GET /ai/call-stats).
 func (h Handlers) GetAiCallStats(w http.ResponseWriter, r *http.Request, params crmcontracts.GetAiCallStatsParams) {
-	window, span := statsWindow((*string)(params.Window))
+	window, span, err := statsWindow((*string)(params.Window))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	group := string(GroupByProvider)
 	if params.Group != nil {
 		group = string(*params.Group)
@@ -184,7 +188,11 @@ func (h Handlers) GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params c
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
-	window, span := statsWindow((*string)(params.Window))
+	window, span, err := statsWindow((*string)(params.Window))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	flow, err := h.calls.TaskFlow(r.Context(), Task(params.Task), span)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -200,12 +208,15 @@ func (h Handlers) GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params c
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// statsWindow is the named window and its length; the contract's enum has
-// already refused any other name.
-func statsWindow(named *string) (string, time.Duration) {
-	window := defaultStatsWindow
-	if named != nil && CallStatsWindows[*named] != 0 {
-		window = *named
+// statsWindow is the named window and its length, refusing a name the
+// screens do not offer rather than answering for another window under it.
+func statsWindow(named *string) (string, time.Duration, error) {
+	if named == nil {
+		return defaultStatsWindow, CallStatsWindows[defaultStatsWindow], nil
 	}
-	return window, CallStatsWindows[window]
+	span, ok := CallStatsWindows[*named]
+	if !ok {
+		return "", 0, invalidAt("window", "must be one of 24h, 7d, 30d")
+	}
+	return *named, span, nil
 }

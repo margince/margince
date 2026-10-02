@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -137,7 +138,9 @@ func TestTaskOverrideBoundsAreTheSpecs(t *testing.T) {
 		"capture_classify.decision_timeout_ms":                {TaskCaptureClassify: {DecisionTimeoutMs: 15000}},
 		"capture_classify.attempt_timeout_ms":                 {TaskCaptureClassify: {AttemptTimeoutMs: 301000}},
 		"cold_start.attempt_timeout_ms":                       {TaskColdStart: {AttemptTimeoutMs: 9999}},
-		"capture_classify.thinking":                           {TaskCaptureClassify: {Thinking: "max"}},
+		// Wraps to 10 s if converted to a Duration before it is compared.
+		"site_triage.attempt_timeout_ms": {TaskSiteTriage: {AttemptTimeoutMs: 288230376151721744}},
+		"capture_classify.thinking":      {TaskCaptureClassify: {Thinking: "max"}},
 	}
 	for path, v := range bad {
 		var f routingFaults
@@ -383,5 +386,58 @@ func TestOneCallKeepsTheSettingsItStartedWith(t *testing.T) {
 		if params.DeadlineMs != 120000 {
 			t.Errorf("recorded deadline_ms %d, want the 120000 the call was sent under", params.DeadlineMs)
 		}
+	}
+}
+
+// A field written empty is not the same as one left out, and a null body is
+// not an empty one: both are refused rather than read as "clear".
+func TestAnOverrideWrittenEmptyIsRefusedNotCleared(t *testing.T) {
+	if _, err := TaskOverridesFromWire(nil); err == nil {
+		t.Error("a null body was read as clearing every override")
+	}
+	zero, empty := 0, crmcontracts.AiTaskOverrideThinking("")
+	_, err := TaskOverridesFromWire(crmcontracts.AiTaskOverrides{
+		"cold_start": {AttemptTimeoutMs: &zero, Thinking: &empty},
+	})
+	var faults routingFaults
+	if !errors.As(err, &faults) || len(faults) != 2 {
+		t.Fatalf("err = %v, want a fault on each field written empty", err)
+	}
+	if got, err := TaskOverridesFromWire(crmcontracts.AiTaskOverrides{"cold_start": {}}); err != nil || got[TaskColdStart] != (TaskOverride{}) {
+		t.Errorf("an override with nothing written = %+v, %v; want the task reset", got, err)
+	}
+}
+
+// An admin's minimal on a family whose default is none is sent as low, the
+// same rule a floor follows there.
+func TestAMinimalOverrideOnANoneFamilyIsSentAsLow(t *testing.T) {
+	var body map[string]json.RawMessage
+	client := newOpenAIForTest(t, func(w http.ResponseWriter, r *http.Request) {
+		if err := json.Unmarshal(readBody(t, r.Body), &body); err != nil {
+			t.Error(err)
+		}
+		_, _ = w.Write([]byte(`{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"ok"}]}]}`))
+	})
+	ask := model.Request{Model: "gpt-5.1", ThinkingLevel: "minimal", Messages: []model.Message{{Role: "user", Content: "hi"}}}
+	if _, err := client.Complete(context.Background(), ask); err != nil {
+		t.Fatal(err)
+	}
+	if got := string(body["reasoning"]); got != `{"effort":"low"}` {
+		t.Errorf("reasoning = %s, want low", got)
+	}
+}
+
+// `max_price: {}` caps nothing and sends nothing; a reasoning budget in
+// tokens replaces a site's floor as an effort would.
+func TestAnEmptyPriceCapIsUnsetAndATokenBudgetTakesNoFloor(t *testing.T) {
+	r, err := DecodeRouting("routing", []byte(`{"provider":{"max_price":{}}}`))
+	if err != nil || r.Provider.MaxPrice != nil {
+		t.Fatalf("max_price {} = %+v, %v; want unset", r, err)
+	}
+	budget := 2048
+	binding := ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://openrouter.ai/api",
+		Routing: &OpenRouterRouting{Reasoning: &OpenRouterReasoning{MaxTokens: &budget}}}
+	if openRouterTakesThinkingFloor(binding) {
+		t.Error("a binding that sends its own reasoning budget was reported as taking the site floor")
 	}
 }

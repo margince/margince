@@ -12083,9 +12083,10 @@ export const en = {
     "Every call this connection made. Read from the call record that health and the trace already use.",
   "aiFigures.intro.broker":
     "Every call this connection made, and which OpenRouter host served it. Read from the call record that health and the trace already use.",
-  "aiFigures.openRow": "Open a row to see the matching calls.",
+  "aiFigures.openRow": "Open a row to see the calls that ended there.",
   "aiFigures.lastWeek": "Last 7 days",
   "aiFigures.noHost": "No host answered",
+  "aiFigures.costAtLeast": "at least {cost}",
   "aiFigures.hostUnrecorded": "Host not recorded",
   "aiFigures.empty": "No calls in this window.",
   "aiFigures.pending": "Reading the call record…",
@@ -12184,18 +12185,19 @@ export const en = {
   "aiServing.say.requireParametersOff":
     "Hosts may ignore options they do not support.",
   "aiServing.say.zdr": "Only hosts that keep no copy of prompts or replies.",
+  "aiServing.say.zdrOff": "Hosts that keep a copy of prompts are allowed.",
   "aiServing.say.denyCollection":
     "Skip hosts that may store or train on prompts.",
   "aiServing.say.allowCollection": "Hosts that store prompts are allowed.",
   "aiServing.say.distill":
     "Only models whose license allows reusing their output.",
+  "aiServing.say.distillOff": "Models of any license are allowed.",
   "aiServing.say.only": "Use only {hosts}.",
   "aiServing.say.ignore": "Never use {hosts}.",
   "aiServing.say.order": "Try {hosts} first.",
   "aiServing.say.fallbacks": "Fall back to another host if these fail.",
   "aiServing.say.noFallbacks": "Fail rather than use another host.",
-  "aiServing.say.maxPrice":
-    "Skip hosts charging more than {prices} per 1M tokens.",
+  "aiServing.say.maxPrice": "Skip hosts charging more than: {prices}.",
   "aiServing.say.maxLatency":
     "Prefer hosts that start answering within {latency}. A slower host still answers if nothing faster is free.",
   "aiServing.say.minThroughput":
@@ -12210,6 +12212,7 @@ export const en = {
     "Thinking level comes from each task’s setting under AI tasks.",
   "aiServing.say.raw": "{key} = {value}",
   "aiFigures.line.brokerOwn": "broker’s own routing",
+  "aiFigures.line.sortAcross": "{by} across models",
   "aiTasks.settings": "Settings",
   "aiTasks.custom": "Custom",
   "aiTaskSheet.decision": "decision",
@@ -12248,6 +12251,7 @@ export const en = {
   "aiTaskSheet.conflict.help":
     "Close this sheet and open it again to start from what is saved now.",
   "aiTaskSheet.saveFailed": "The settings were not saved",
+  "aiTaskSheet.readFailed": "The saved settings could not be read",
   "aiTaskSheet.unsaved": "Unsaved changes",
   "aiTaskSheet.applies": "Applies installation-wide within a minute.",
   "aiTaskSheet.save": "Save settings",
@@ -12291,7 +12295,7 @@ export const en = {
   "aiOutcome.limit": "│ {name} {seconds} s",
   "aiOutcome.limitNear": "│ {name} {seconds} s: p95 is close to it",
   "aiOutcome.limitOver": "│ {name} {seconds} s: p95 is above it",
-  "aiOutcome.limitFar": "{name} {seconds} s, far above every call",
+  "aiOutcome.limitFar": "{name} {seconds} s, far above p95",
   "aiServing.notJson":
     "is not valid JSON; check the commas and brackets on this line.",
   "aiServing.notObject": "must be an object: the text between { and }.",

@@ -174,8 +174,9 @@ export function ProviderRecentCalls({
   const groupings: Grouping[] = broker
     ? ["host", "model", "tier"]
     : ["model", "tier"];
-  const [chosen, setChosen] = useState<Grouping>(groupings[0]);
-  const by = groupings.includes(chosen) ? chosen : groupings[0];
+  // Unchosen follows the broker as the host becomes known.
+  const [chosen, setChosen] = useState<Grouping | null>(null);
+  const by = chosen && groupings.includes(chosen) ? chosen : groupings[0];
   const [window, setWindow] = useState<Window>("7d");
   const windows = useWindowLabels();
   const stats = useCallStats({ window, group: GROUP_OF[by], provider }, canSee);
@@ -361,10 +362,15 @@ function FiguresTable({
           key: "cost",
           header: t("aiFigures.col.cost"),
           align: "end",
+          // A cost with unpriced calls in it is a floor, and says so.
           render: (row) =>
-            row.unpriced && !row.cost_microusd
+            row.unpriced === row.calls
               ? "—"
-              : formatMicroUsd(row.cost_microusd, locale),
+              : row.unpriced
+                ? t("aiFigures.costAtLeast", {
+                    cost: formatMicroUsd(row.cost_microusd, locale),
+                  })
+                : formatMicroUsd(row.cost_microusd, locale),
         },
       ]}
     />

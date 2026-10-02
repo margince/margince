@@ -11932,9 +11932,11 @@ export const de = {
     "Jeder Aufruf über diese Verbindung. Gelesen aus demselben Aufrufprotokoll wie Status und Verlauf.",
   "aiFigures.intro.broker":
     "Jeder Aufruf über diese Verbindung und welcher OpenRouter-Host ihn bedient hat. Gelesen aus demselben Aufrufprotokoll wie Status und Verlauf.",
-  "aiFigures.openRow": "Öffne eine Zeile, um die passenden Aufrufe zu sehen.",
+  "aiFigures.openRow":
+    "Öffne eine Zeile, um die Aufrufe zu sehen, die dort endeten.",
   "aiFigures.lastWeek": "Letzte 7 Tage",
   "aiFigures.noHost": "Kein Host hat geantwortet",
+  "aiFigures.costAtLeast": "mindestens {cost}",
   "aiFigures.hostUnrecorded": "Host nicht erfasst",
   "aiFigures.empty": "Keine Aufrufe in diesem Zeitraum.",
   "aiFigures.pending": "Aufrufprotokoll wird gelesen …",
@@ -11996,7 +11998,7 @@ export const de = {
   "aiServing.blocked.host":
     "Host-Routing gilt nur für OpenRouter. Die Verbindung zeigt auf einen anderen Dienst. Denkstufe und Zeitlimit werden weiterhin pro Aufgabe unter KI-Aufgaben festgelegt.",
   "aiServing.empty":
-    "Leer nutzt die mitgelieferte Vorgabe: nach Durchsatz sortieren, fp16 oder bf16, Parameter verlangen. {} lässt OpenRouter selbst routen.",
+    "Leer nutzt die mitgelieferte Vorgabe: nach Durchsatz sortieren, fp16 oder bf16, nur Hosts, die alle gesendeten Parameter unterstützen. {} lässt OpenRouter selbst routen.",
   "aiServing.empty.embeddings":
     "Leer ergänzt nichts zu den Host-Regeln der Verbindung. Diese Spur nimmt nur only, ignore, allow_fallbacks, zdr, data_collection und enforce_distillable_text.",
   "aiServing.json": "Bereitstellungs-JSON",
@@ -12035,12 +12037,15 @@ export const de = {
     "Hosts dürfen Optionen ignorieren, die sie nicht unterstützen.",
   "aiServing.say.zdr":
     "Nur Hosts, die keine Kopie von Prompts oder Antworten behalten.",
+  "aiServing.say.zdrOff":
+    "Hosts, die eine Kopie von Prompts behalten, sind erlaubt.",
   "aiServing.say.denyCollection":
     "Hosts überspringen, die Prompts speichern oder damit trainieren könnten.",
   "aiServing.say.allowCollection":
     "Hosts, die Prompts speichern, sind erlaubt.",
   "aiServing.say.distill":
     "Nur Modelle, deren Lizenz die Weiterverwendung ihrer Ausgabe erlaubt.",
+  "aiServing.say.distillOff": "Modelle jeder Lizenz sind erlaubt.",
   "aiServing.say.only": "Nur {hosts} verwenden.",
   "aiServing.say.ignore": "Nie {hosts} verwenden.",
   "aiServing.say.order": "Zuerst {hosts} versuchen.",
@@ -12049,7 +12054,7 @@ export const de = {
   "aiServing.say.noFallbacks":
     "Lieber fehlschlagen als einen anderen Host verwenden.",
   "aiServing.say.maxPrice":
-    "Hosts überspringen, die mehr als {prices} pro 1 Mio. Tokens berechnen.",
+    "Hosts überspringen, die mehr berechnen als: {prices}.",
   "aiServing.say.maxLatency":
     "Hosts bevorzugen, die innerhalb von {latency} zu antworten beginnen. Ein langsamerer Host antwortet trotzdem, wenn kein schnellerer frei ist.",
   "aiServing.say.minThroughput":
@@ -12065,6 +12070,7 @@ export const de = {
     "Die Denkstufe kommt aus der Einstellung jeder Aufgabe unter KI-Aufgaben.",
   "aiServing.say.raw": "{key} = {value}",
   "aiFigures.line.brokerOwn": "eigenes Routing des Brokers",
+  "aiFigures.line.sortAcross": "{by} über alle Modelle",
   "aiTasks.settings": "Einstellungen",
   "aiTasks.custom": "Angepasst",
   "aiTaskSheet.decision": "Entscheidung",
@@ -12104,6 +12110,8 @@ export const de = {
   "aiTaskSheet.conflict.help":
     "Schließe dieses Fenster und öffne es erneut, um vom jetzt gespeicherten Stand auszugehen.",
   "aiTaskSheet.saveFailed": "Die Einstellungen wurden nicht gespeichert",
+  "aiTaskSheet.readFailed":
+    "Die gespeicherten Einstellungen konnten nicht gelesen werden",
   "aiTaskSheet.unsaved": "Nicht gespeicherte Änderungen",
   "aiTaskSheet.applies":
     "Gilt innerhalb einer Minute für die ganze Installation.",
@@ -12150,7 +12158,7 @@ export const de = {
   "aiOutcome.limit": "│ {name} {seconds} s",
   "aiOutcome.limitNear": "│ {name} {seconds} s: p95 liegt nah daran",
   "aiOutcome.limitOver": "│ {name} {seconds} s: p95 liegt darüber",
-  "aiOutcome.limitFar": "{name} {seconds} s, weit über jedem Aufruf",
+  "aiOutcome.limitFar": "{name} {seconds} s, weit über p95",
   "aiServing.notJson":
     "ist kein gültiges JSON; prüfe Kommas und Klammern in dieser Zeile.",
   "aiServing.notObject": "muss ein Objekt sein: der Text zwischen { und }.",

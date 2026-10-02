@@ -77,7 +77,8 @@ export function BindingEditor({
   const [conflict, setConflict] = useState(false);
   // A serving block the server has not yet cleared holds the save, so a value
   // it would refuse never reaches the write.
-  const [servingValid, setServingValid] = useState(true);
+  // Unchecked until the serving preview answers: Save waits for the server.
+  const [servingValid, setServingValid] = useState(false);
   const onServingValid = useCallback(
     (valid: boolean) => setServingValid(valid),
     [],

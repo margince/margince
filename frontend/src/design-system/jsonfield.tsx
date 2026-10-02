@@ -3,6 +3,7 @@
 
 import { type ComponentPropsWithoutRef, useRef } from "react";
 import { identifierNumber } from "../format/format";
+import { scanJson } from "./jsonscan";
 import "./jsonfield.css";
 
 /** One problem the field shows: where it is, and what to do about it. */
@@ -69,20 +70,15 @@ export function JsonField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onScroll={(e) => {
+          rest.onScroll?.(e);
           if (gutter.current)
             gutter.current.scrollTop = e.currentTarget.scrollTop;
         }}
         onKeyDown={(e) => {
-          if (e.key !== "Tab" || e.shiftKey) return;
+          rest.onKeyDown?.(e);
+          if (e.defaultPrevented || e.key !== "Tab" || e.shiftKey) return;
           e.preventDefault();
-          const box = e.currentTarget;
-          const { selectionStart, selectionEnd } = box;
-          onChange(
-            `${value.slice(0, selectionStart)}  ${value.slice(selectionEnd)}`,
-          );
-          requestAnimationFrame(() =>
-            box.setSelectionRange(selectionStart + 2, selectionStart + 2),
-          );
+          indent(e.currentTarget, value, onChange);
         }}
       />
     </div>
@@ -90,46 +86,50 @@ export function JsonField({
 }
 
 /**
- * Where `text` stops parsing; null when it parses or is empty. The engines
- * report a position or a line, never both in one shape, so both are read.
+ * Two spaces at the caret; a selection that spans lines is indented line by
+ * line and stays selected, rather than replaced.
  */
-export function parseProblem(text: string): ParseProblem | null {
-  if (text.trim() === "") return null;
-  try {
-    JSON.parse(text);
-    return null;
-  } catch (error) {
-    return { line: lineOfSyntaxError(text, error) };
-  }
+function indent(
+  box: HTMLTextAreaElement,
+  value: string,
+  onChange: (next: string) => void,
+) {
+  const { selectionStart: start, selectionEnd: end } = box;
+  const selected = value.slice(start, end);
+  const block = selected.includes("\n");
+  const inserted = block ? selected.replaceAll(/^/gm, "  ") : "  ";
+  onChange(`${value.slice(0, start)}${inserted}${value.slice(end)}`);
+  requestAnimationFrame(() =>
+    block
+      ? box.setSelectionRange(start, start + inserted.length)
+      : box.setSelectionRange(start + 2, start + 2),
+  );
 }
 
-// The engine's own SyntaxError, never a server's words: only the line number is
-// read out of it, and nothing of its text reaches the screen.
-function lineOfSyntaxError(text: string, error: unknown): number | undefined {
-  const said = error instanceof SyntaxError ? error.message : "";
-  const byLine = /line (\d+)/.exec(said);
-  if (byLine) return Number(byLine[1]);
-  const byPosition = /position (\d+)/.exec(said);
-  return byPosition ? lineAt(text, Number(byPosition[1])) : undefined;
+/** Where `text` stops parsing; null when it parses or is empty. */
+export function parseProblem(text: string): ParseProblem | null {
+  if (text.trim() === "") return null;
+  const { error } = scanJson(text);
+  return error === undefined ? null : { line: lineAt(text, error) };
 }
 
 /**
  * The line a dotted key path (`provider.sort.by`, `provider.only[1]`) is
- * written on, found by walking its keys in order through the text; undefined
- * when a key is not in it. An index names the key that holds the list.
+ * written on. A path the text does not hold falls back to its nearest written
+ * parent, so a missing key still marks the object it belongs in.
  */
 export function lineOfPath(text: string, path: string): number | undefined {
-  let from = 0;
-  let found = -1;
-  for (const segment of path.split(".")) {
-    const key = segment.replace(/\[\d+\]$/, "");
-    if (key === "") continue;
-    const at = text.indexOf(JSON.stringify(key), from);
-    if (at < 0) return found < 0 ? undefined : lineAt(text, found);
-    found = at;
-    from = at + key.length;
+  const { keys } = scanJson(text);
+  for (let at = path; at !== ""; at = parentOf(at)) {
+    const offset = keys.get(at);
+    if (offset !== undefined) return lineAt(text, offset);
   }
-  return found < 0 ? undefined : lineAt(text, found);
+  return undefined;
+}
+
+function parentOf(path: string): string {
+  const cut = Math.max(path.lastIndexOf("."), path.lastIndexOf("["));
+  return cut < 0 ? "" : path.slice(0, cut);
 }
 
 function lineAt(text: string, offset: number): number {

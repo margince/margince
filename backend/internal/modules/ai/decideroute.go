@@ -9,6 +9,7 @@ package ai
 // exactly, row for row.
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -146,8 +147,9 @@ func (r *Router) DecideProbe(ctx context.Context, task Task, site string, dreq d
 
 // withTaskThinking is req carrying the call's thinking override, the field the
 // result cache keys on beside the request's own; serveAttempt sets the same.
+// An unset override leaves a level the request already names.
 func (r *Router) withTaskThinking(lc *logicalCall, task Task, req model.Request) model.Request {
-	req.ThinkingLevel = r.callSettings(lc, task).Thinking
+	req.ThinkingLevel = cmp.Or(r.callSettings(lc, task).Thinking, req.ThinkingLevel)
 	return req
 }
 

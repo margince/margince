@@ -57,10 +57,14 @@ const FLOW = {
 function server({
   overrides = {},
   conflict = false,
+  unreadable = 0,
 }: {
   overrides?: unknown;
   conflict?: boolean;
+  /** How many reads of the stored overrides fail before one answers. */
+  unreadable?: number;
 } = {}) {
+  let failures = unreadable;
   const puts: { body: unknown; ifMatch: string | null }[] = [];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -83,6 +87,10 @@ function server({
               { title: "Conflict", status: 409, code: "version_skew" },
               409,
             );
+        }
+        if (req.method === "GET" && failures > 0) {
+          failures--;
+          return jsonResponse({ title: "Unavailable", status: 503 }, 503);
         }
         const response = jsonResponse(overrides);
         response.headers.set("ETag", '"overrides-v1"');
@@ -272,6 +280,28 @@ describe("TaskSheet", () => {
     expect(within(sheet).getByText("2 timed out → passed on")).toBeTruthy();
     expect(within(sheet).getByText("1 failed → no answer")).toBeTruthy();
     expect(await within(sheet).findByText(/p95 is close to it/)).toBeTruthy();
+  });
+
+  it("says the stored settings could not be read, and reads them again on retry", async () => {
+    server({ unreadable: 1 });
+    const user = userEvent.setup();
+    render(
+      <TaskSheet
+        route={feature}
+        canManage
+        canSeeCalls={false}
+        onClose={() => {}}
+      />,
+    );
+    expect(
+      await screen.findByText("The saved settings could not be read"),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByText("The saved settings could not be read"),
+      ).toBeNull(),
+    );
   });
 
   it("disables every control for a reader who may look but not change", async () => {

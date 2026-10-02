@@ -130,7 +130,9 @@ export function AiFeatureTable({
           render: (row: Feature) => (
             <CellStack>
               <TermChip term="tier">{tierLabel(row.leading_tier, t)}</TermChip>
-              {canTrace && !onEdit ? (
+              {/* An editable row reaches its calls from its sheet; the
+                  embeddings row has no sheet, so it keeps the link. */}
+              {canTrace && (!onEdit || row.defaults === undefined) ? (
                 <a className="link-button t-caption" href={callsHref(row.task)}>
                   {t("aiTasks.viewCalls")}
                 </a>

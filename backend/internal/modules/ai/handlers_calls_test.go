@@ -5,6 +5,7 @@ package ai
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -131,5 +132,22 @@ func TestWireAiCallCarriesEachAttemptsServedIdentityAndAnswer(t *testing.T) {
 	}
 	if completed.ErrorSentinel == nil || *completed.ErrorSentinel != sentinel {
 		t.Errorf("error_sentinel = %v, want %s", completed.ErrorSentinel, sentinel)
+	}
+}
+
+// A window the screens do not offer is refused, not answered as the default
+// under the name the caller sent.
+func TestAnUnknownStatsWindowIsRefused(t *testing.T) {
+	if name, span, err := statsWindow(nil); err != nil || name != defaultStatsWindow || span != 7*24*time.Hour {
+		t.Errorf("no window = %q %s %v, want the 7d default", name, span, err)
+	}
+	month := "30d"
+	if name, _, err := statsWindow(&month); err != nil || name != month {
+		t.Errorf("30d = %q %v", name, err)
+	}
+	typo := "1h"
+	var faults routingFaults
+	if _, _, err := statsWindow(&typo); !errors.As(err, &faults) || faults[0].Path != "window" {
+		t.Errorf("1h = %v, want a refusal on window", err)
 	}
 }

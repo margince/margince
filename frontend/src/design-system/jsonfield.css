@@ -10,6 +10,9 @@
   /* One line box for both faces: the numbers are the body face and the text
      the code face, and only a shared line-height keeps them level. */
   font: var(--fontBody);
+  /* .json-field-text inherits .code-block's 300px cap; the gutter shares it, or
+     the row keeps growing with the line count while the text scrolls. */
+  max-height: 300px;
 }
 .json-field:focus-within {
   border-color: var(--accent);

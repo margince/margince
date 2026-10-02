@@ -130,3 +130,39 @@ func (o TaskOverride) Wire() crmcontracts.AiTaskOverride {
 	}
 	return wire
 }
+
+// TaskOverridesFromWire reads a request body. A missing field keeps the
+// product's value; a field written empty, or a body that is null, is refused
+// rather than read as that, since neither is a value the contract allows.
+func TaskOverridesFromWire(v crmcontracts.AiTaskOverrides) (TaskOverrides, error) {
+	if v == nil {
+		return nil, settings.InvalidValue{Setting: TaskOverridesKey, Code: settings.CodeInvalidValue,
+			Reason: "must be an object of task overrides; send {} to clear every task"}
+	}
+	out := TaskOverrides{}
+	var errs []error
+	for task, o := range v {
+		var next TaskOverride
+		if o.Thinking != nil {
+			next.Thinking = string(*o.Thinking)
+			errs = append(errs, refuseWrittenEmpty(task+".thinking", next.Thinking == ""))
+		}
+		if o.DecisionTimeoutMs != nil {
+			next.DecisionTimeoutMs = *o.DecisionTimeoutMs
+			errs = append(errs, refuseWrittenEmpty(task+".decision_timeout_ms", next.DecisionTimeoutMs == 0))
+		}
+		if o.AttemptTimeoutMs != nil {
+			next.AttemptTimeoutMs = *o.AttemptTimeoutMs
+			errs = append(errs, refuseWrittenEmpty(task+".attempt_timeout_ms", next.AttemptTimeoutMs == 0))
+		}
+		out[Task(task)] = next
+	}
+	return out, joinFaults(errs...)
+}
+
+func refuseWrittenEmpty(path string, empty bool) error {
+	if !empty {
+		return nil
+	}
+	return invalidAt(path, "is written empty; omit it to keep the product's value")
+}

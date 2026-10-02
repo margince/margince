@@ -253,3 +253,43 @@ func TestANullFieldStatesNoPreference(t *testing.T) {
 		}
 	}
 }
+
+// An empty list written on a tier is still a connection key there, and the
+// refusal names it rather than arriving blank.
+func TestAnEmptyPinListOnATierIsNamed(t *testing.T) {
+	err := refuseConnectionKeysOnTier("tiers.premium.routing", &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{}}})
+	var faults routingFaults
+	if !errors.As(err, &faults) || len(faults) != 1 || faults[0].Path != "tiers.premium.routing.provider.only" {
+		t.Fatalf("err = %v, want one fault on provider.only", err)
+	}
+	if err := refuseConnectionKeysOnTier("tiers.premium.routing", &OpenRouterRouting{}); err != nil {
+		t.Errorf("no connection key = %#v, want nil", err)
+	}
+}
+
+// A routing key written twice in a seed is refused, not settled by whichever
+// line the decoder happened to keep.
+func TestARoutingKeyWrittenTwiceInASeedIsRefused(t *testing.T) {
+	yaml := "profile: cloud_frontier\ntiers:\n  premium:\n    provider: openai_compatible\n    model: m\n" +
+		"    base_url: https://openrouter.ai/api\n    routing:\n      provider:\n        sort: price\n        sort: latency\n" +
+		"embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}\n"
+	if _, err := ParseRouting([]byte(yaml)); err == nil || !strings.Contains(err.Error(), "written twice") {
+		t.Fatalf("err = %v, want the repeated key refused", err)
+	}
+}
+
+// An empty reasoning block is the same opt-out as none, so it is stored in the
+// same spelling and keys the same cached briefs.
+func TestAnEmptyReasoningBlockKeepsTheFlatSpelling(t *testing.T) {
+	bare, err := json.Marshal(&OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: SortPrice}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	empty, err := json.Marshal(&OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: SortPrice}}, Reasoning: &OpenRouterReasoning{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(bare) != string(empty) {
+		t.Errorf("an empty reasoning block stores %s, the same value without one %s", empty, bare)
+	}
+}

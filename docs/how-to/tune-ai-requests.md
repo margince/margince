@@ -43,16 +43,18 @@ connection, this tier, or each task.
 The OpenAI-compatible provider's sheet has **OpenRouter settings** while its
 service is OpenRouter: zero data retention, refuse hosts that train on prompts,
 distillable models only, allow fallbacks, and the host lists. These apply to
-every tier on the connection, and a tier cannot carry them: the save refuses a
-tier that writes one. Settings in your OpenRouter account also apply and are not
+every tier on the connection, and a tier cannot carry different ones: the save
+refuses a tier value that disagrees with the connection's. Settings in your OpenRouter account also apply and are not
 shown here.
 
 ## 4. Set a task's thinking level and timeouts
 
 In a task's sheet:
 
-- **Thinking level** sends one exact level to every provider through its own
-  setting. *Default* leaves it to the binding and each prompt's floor.
+- **Thinking level** sends one level through each provider's own thinking
+  setting; a model with no thinking control ignores it, and a broker model is
+  sent the nearest level it lists. *Default* leaves it to the binding and each
+  prompt's floor.
 - **Decision model timeout** (deciding tasks only, 5 to 60 s, default 15 s) is
   how long the decision model may take before the task falls back to its tier
   model. If its p95 sits near the line and the fallback answers, raising it a

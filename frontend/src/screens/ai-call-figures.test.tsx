@@ -52,12 +52,16 @@ function statsServer(
 ) {
   const asked: URL[] = [];
   const puts: unknown[] = [];
+  const me = { answered: 0 };
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
         input instanceof Request ? input : new Request(String(input), init);
-      if (req.url.endsWith("/v1/me")) return jsonResponse(meFixture({ allow }));
+      if (req.url.endsWith("/v1/me")) {
+        me.answered++;
+        return jsonResponse(meFixture({ allow }));
+      }
       if (req.url.includes("/ai/call-stats")) {
         const url = new URL(req.url);
         asked.push(url);
@@ -74,7 +78,7 @@ function statsServer(
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     }),
   );
-  return { asked, puts };
+  return { asked, puts, me };
 }
 
 afterEach(() => {
@@ -104,11 +108,14 @@ describe("ProviderCallsLine", () => {
   });
 
   it("draws nothing for a reader who may not see the call record", async () => {
-    const { asked } = statsServer(() => [row("gemini")], {
+    const { asked, me } = statsServer(() => [row("gemini")], {
       ai_routing: ["read"],
     });
     const { container } = render(<ProviderCallsLine provider="gemini" />);
-    await waitFor(() => expect(container.textContent).toBe(""));
+    // Judged once the grant is known: before /me answers nothing is asked anyway.
+    await waitFor(() => expect(me.answered).toBeGreaterThan(0));
+    await new Promise((settled) => setTimeout(settled, 0));
+    expect(container.textContent).toBe("");
     expect(asked).toEqual([]);
   });
 });
@@ -283,7 +290,7 @@ describe("OpenRouter settings", () => {
 });
 
 describe("LatencyAgainstTimeout", () => {
-  it("draws no limit line for a timeout far above every call", () => {
+  it("draws no limit line for a timeout far above p95", () => {
     statsServer(() => []);
     const { container } = render(
       <LatencyAgainstTimeout
@@ -293,9 +300,7 @@ describe("LatencyAgainstTimeout", () => {
         decision={false}
       />,
     );
-    expect(
-      screen.getByText("timeout 300 s, far above every call"),
-    ).toBeTruthy();
+    expect(screen.getByText("timeout 300 s, far above p95")).toBeTruthy();
     expect(container.querySelector(".ai-latency-limit")).toBeNull();
   });
 

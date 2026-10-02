@@ -64,7 +64,8 @@ func geminiTakesThinkingFloor(binding ProviderConfig) bool {
 
 func openRouterTakesThinkingFloor(binding ProviderConfig) bool {
 	routing := UpstreamPreferencesFor(binding)
-	return IsOpenRouterHost(binding.BaseURL) && (routing == nil || routing.reasoningEffort() == "")
+	// Any reasoning block the binding sends replaces the floor's, not only an effort.
+	return IsOpenRouterHost(binding.BaseURL) && (routing == nil || routing.reasoningWire() == nil)
 }
 
 func anthropicTakesThinkingFloor(binding ProviderConfig) bool {

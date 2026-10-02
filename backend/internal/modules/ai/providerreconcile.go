@@ -4,7 +4,6 @@
 package ai
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -124,21 +123,20 @@ func (r laneReconcile) host(label, provider, host string) error {
 // fault per key. They are accepted only as an echo of the connection's own
 // value, which is what a client writing back a resolved binding sends.
 func refuseConnectionKeysOnTier(path string, pins *OpenRouterRouting) error {
-	written, err := json.Marshal(pins.Provider)
-	if err != nil {
-		return err
+	// Read off the fields, not the JSON: omitempty drops a written-empty list,
+	// and `only: []` on a tier is a connection key all the same.
+	p := pins.Provider
+	written := map[string]bool{
+		"only": p.Only != nil, "ignore": p.Ignore != nil, "allow_fallbacks": p.AllowFallbacks != nil,
+		"zdr": p.ZDR != nil, "data_collection": p.DataCollection != "", "enforce_distillable_text": p.EnforceDistillableText != nil,
 	}
-	var keys map[string]json.RawMessage
-	if err := json.Unmarshal(written, &keys); err != nil {
-		return err
-	}
-	var faults routingFaults
+	var faults []error
 	for _, key := range connectionKeys {
-		if _, ok := keys[key]; ok {
-			faults = append(faults, routingFault{Path: path + ".provider." + key, Code: CodeMovedToProvider, Message: connectionKeyOnTier})
+		if written[key] {
+			faults = append(faults, faultAt(path+".provider."+key, CodeMovedToProvider, connectionKeyOnTier))
 		}
 	}
-	return faults
+	return joinFaults(faults...)
 }
 
 // connectionKeyOnTier is the refusal for a host filter or privacy key on a tier.

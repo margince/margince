@@ -11815,9 +11815,10 @@ export const vi = {
     "Mọi lượt gọi qua kết nối này. Đọc từ cùng bản ghi lượt gọi mà trạng thái và nhật ký dùng.",
   "aiFigures.intro.broker":
     "Mọi lượt gọi qua kết nối này, và máy chủ OpenRouter nào đã phục vụ. Đọc từ cùng bản ghi lượt gọi mà trạng thái và nhật ký dùng.",
-  "aiFigures.openRow": "Mở một dòng để xem các lượt gọi tương ứng.",
+  "aiFigures.openRow": "Mở một dòng để xem các lệnh gọi đã kết thúc ở đó.",
   "aiFigures.lastWeek": "7 ngày qua",
   "aiFigures.noHost": "Không máy chủ nào trả lời",
+  "aiFigures.costAtLeast": "ít nhất {cost}",
   "aiFigures.hostUnrecorded": "Không ghi lại máy chủ",
   "aiFigures.empty": "Không có lượt gọi nào trong khoảng này.",
   "aiFigures.pending": "Đang đọc bản ghi lượt gọi…",
@@ -11915,18 +11916,19 @@ export const vi = {
     "Máy chủ có thể bỏ qua tùy chọn không hỗ trợ.",
   "aiServing.say.zdr":
     "Chỉ máy chủ không giữ bản sao câu lệnh hay câu trả lời.",
+  "aiServing.say.zdrOff": "Cho phép máy chủ giữ bản sao câu lệnh.",
   "aiServing.say.denyCollection":
     "Bỏ qua máy chủ có thể lưu hoặc huấn luyện bằng câu lệnh.",
   "aiServing.say.allowCollection": "Cho phép máy chủ lưu câu lệnh.",
   "aiServing.say.distill": "Chỉ mô hình có giấy phép cho dùng lại đầu ra.",
+  "aiServing.say.distillOff": "Cho phép mô hình với mọi giấy phép.",
   "aiServing.say.only": "Chỉ dùng {hosts}.",
   "aiServing.say.ignore": "Không bao giờ dùng {hosts}.",
   "aiServing.say.order": "Thử {hosts} trước.",
   "aiServing.say.fallbacks":
     "Chuyển sang máy chủ khác nếu các máy chủ này lỗi.",
   "aiServing.say.noFallbacks": "Thà thất bại còn hơn dùng máy chủ khác.",
-  "aiServing.say.maxPrice":
-    "Bỏ qua máy chủ tính hơn {prices} cho mỗi 1 triệu token.",
+  "aiServing.say.maxPrice": "Bỏ qua máy chủ tính cao hơn: {prices}.",
   "aiServing.say.maxLatency":
     "Ưu tiên máy chủ bắt đầu trả lời trong {latency}. Máy chủ chậm hơn vẫn trả lời nếu không có máy nhanh hơn.",
   "aiServing.say.minThroughput":
@@ -11942,6 +11944,7 @@ export const vi = {
     "Mức suy nghĩ lấy từ cài đặt của từng tác vụ trong Tác vụ AI.",
   "aiServing.say.raw": "{key} = {value}",
   "aiFigures.line.brokerOwn": "định tuyến riêng của broker",
+  "aiFigures.line.sortAcross": "{by} trên mọi mô hình",
   "aiTasks.settings": "Cài đặt",
   "aiTasks.custom": "Tùy chỉnh",
   "aiTaskSheet.decision": "quyết định",
@@ -11980,6 +11983,7 @@ export const vi = {
   "aiTaskSheet.conflict.help":
     "Đóng bảng này và mở lại để bắt đầu từ bản đã lưu hiện tại.",
   "aiTaskSheet.saveFailed": "Cài đặt chưa được lưu",
+  "aiTaskSheet.readFailed": "Không đọc được cài đặt đã lưu",
   "aiTaskSheet.unsaved": "Có thay đổi chưa lưu",
   "aiTaskSheet.applies": "Áp dụng cho toàn bộ hệ thống trong vòng một phút.",
   "aiTaskSheet.save": "Lưu cài đặt",
@@ -12026,7 +12030,7 @@ export const vi = {
   "aiOutcome.limit": "│ {name} {seconds} giây",
   "aiOutcome.limitNear": "│ {name} {seconds} giây: p95 gần chạm ngưỡng",
   "aiOutcome.limitOver": "│ {name} {seconds} giây: p95 vượt ngưỡng",
-  "aiOutcome.limitFar": "{name} {seconds} giây, cao hơn hẳn mọi lượt gọi",
+  "aiOutcome.limitFar": "{name} {seconds} s, cao hơn nhiều so với p95",
   "aiServing.notJson":
     "không phải JSON hợp lệ; hãy kiểm tra dấu phẩy và dấu ngoặc ở dòng này.",
   "aiServing.notObject": "phải là một đối tượng: phần văn bản giữa { và }.",
