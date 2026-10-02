@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 293 |
-| Columns | 3484 |
+| Columns | 3486 |
 | Foreign keys | 472 |
 | Owning areas | 36 |
 
@@ -254,13 +254,13 @@ erDiagram
 | [`deal_risk_day`](deals.md#deal_risk_day) | deals | 7 | 1 |
 | [`deal_risk_verdict`](deals.md#deal_risk_verdict) | deals | 2 | 0 |
 | [`deal_room`](dealrooms.md#deal_room) | dealrooms | 14 | 6 |
-| [`deal_room_comment`](dealrooms.md#deal_room_comment) | dealrooms | 9 | 0 |
+| [`deal_room_comment`](dealrooms.md#deal_room_comment) | dealrooms | 10 | 0 |
 | [`deal_room_document`](dealrooms.md#deal_room_document) | dealrooms | 12 | 2 |
 | [`deal_room_engagement`](dealrooms.md#deal_room_engagement) | dealrooms | 6 | 0 |
 | [`deal_room_invitation`](dealrooms.md#deal_room_invitation) | dealrooms | 14 | 0 |
 | [`deal_room_participant`](dealrooms.md#deal_room_participant) | dealrooms | 13 | 5 |
 | [`deal_room_session`](dealrooms.md#deal_room_session) | dealrooms | 10 | 0 |
-| [`deal_room_thread`](dealrooms.md#deal_room_thread) | dealrooms | 15 | 1 |
+| [`deal_room_thread`](dealrooms.md#deal_room_thread) | dealrooms | 16 | 1 |
 | [`deal_stage_evidence`](deals.md#deal_stage_evidence) | deals | 19 | 1 |
 | [`deal_stage_history`](deals.md#deal_stage_history) | deals | 19 | 2 |
 | [`deal_status_card`](compose.md#deal_status_card) | compose | 6 | 0 |

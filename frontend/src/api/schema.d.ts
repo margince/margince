@@ -37573,10 +37573,40 @@ export interface components {
             required_change?: boolean;
             /** @description Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for someone writing through this product. */
             source?: string;
+            /**
+             * Format: uuid
+             * @description An id the CLIENT mints for this attempt, so a repeated delivery of the
+             *     same attempt lands once.
+             *
+             *     Repeating an attempt answers with the SAME thread rather than an error: a
+             *     double-click, a mobile retry and a proxy replay are one attempt arriving
+             *     twice. Scoped to the room, so an id only has to be unique within the one
+             *     being written to. Omit it and no deduplication applies.
+             *
+             *     Mint it fresh per attempt rather than deriving it from the message —
+             *     saying the same thing twice on purpose is allowed, and a key derived from
+             *     the text would refuse the second one.
+             */
+            request_id?: string;
         };
         PostDealRoomCommentRequest: {
             body: string;
             source?: string;
+            /**
+             * Format: uuid
+             * @description An id the CLIENT mints for this attempt, so a repeated delivery of the
+             *     same attempt lands once.
+             *
+             *     Repeating an attempt answers with the SAME thread rather than an error: a
+             *     double-click, a mobile retry and a proxy replay are one attempt arriving
+             *     twice. Scoped to the room, so an id only has to be unique within the one
+             *     being written to. Omit it and no deduplication applies.
+             *
+             *     Mint it fresh per attempt rather than deriving it from the message —
+             *     saying the same thing twice on purpose is allowed, and a key derived from
+             *     the text would refuse the second one.
+             */
+            request_id?: string;
         };
         DealRoomCredentialRequest: {
             /** @description The one-time credential from the invitation link's fragment. */
