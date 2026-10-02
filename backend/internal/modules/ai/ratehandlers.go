@@ -26,6 +26,7 @@ func toContractModelRate(r ModelRateRow) crmcontracts.AiModelRate {
 		CacheWritePerMtok: r.CacheWriteUsd,
 		EffectiveDate:     openapi_types.Date{Time: r.EffectiveDate},
 		Lane:              crmcontracts.AiModelRateLane(r.Lane),
+		Source:            crmcontracts.AiModelRateSource(r.Source),
 	}
 }
 
@@ -126,6 +127,7 @@ func (h Handlers) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 		OutputUsd:     req.OutputPerMtok,
 		CacheReadUsd:  req.CacheReadPerMtok,
 		CacheWriteUsd: req.CacheWritePerMtok,
+		Source:        RateSourceManual,
 		Lane:          lane,
 		EffectiveDate: effective,
 	})

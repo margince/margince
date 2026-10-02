@@ -27187,7 +27187,7 @@ components:
     AiModelRate:
       type: object
       description: One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
-      required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok, effective_date, lane]
+      required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok, effective_date, lane, source]
       properties:
         provider: { type: string }
         model_id: { type: string }
@@ -27205,6 +27205,14 @@ components:
         cache_read_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         cache_write_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         effective_date: { type: string, format: date }
+        source:
+          type: string
+          enum: [manual, catalogue, seed]
+          description: |
+            Who wrote this price. `manual` was typed into the sheet and the daily sync never
+            rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+            planted when the installation was provisioned. Removing a model's price hands it back
+            to the sync.
     AiModelRateListResponse:
       type: object
       required: [data]

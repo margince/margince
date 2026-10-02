@@ -826,6 +826,27 @@ func (e AiModelRateLane) Valid() bool {
 	}
 }
 
+// Defines values for AiModelRateSource.
+const (
+	AiModelRateSourceCatalogue AiModelRateSource = "catalogue"
+	AiModelRateSourceManual    AiModelRateSource = "manual"
+	AiModelRateSourceSeed      AiModelRateSource = "seed"
+)
+
+// Valid indicates whether the value is a known member of the AiModelRateSource enum.
+func (e AiModelRateSource) Valid() bool {
+	switch e {
+	case AiModelRateSourceCatalogue:
+		return true
+	case AiModelRateSourceManual:
+		return true
+	case AiModelRateSourceSeed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiProfileInferenceMode.
 const (
 	AiProfileInferenceModeCloud       AiProfileInferenceMode = "cloud"
@@ -21788,6 +21809,12 @@ type AiModelRate struct {
 	ModelId       string          `json:"model_id"`
 	OutputPerMtok string          `json:"output_per_mtok"`
 	Provider      string          `json:"provider"`
+
+	// Source Who wrote this price. `manual` was typed into the sheet and the daily sync never
+	// rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+	// planted when the installation was provisioned. Removing a model's price hands it back
+	// to the sync.
+	Source AiModelRateSource `json:"source"`
 }
 
 // AiModelRateLane What the model is FOR. A property of the model rather than of this dated row: the
@@ -21796,6 +21823,12 @@ type AiModelRate struct {
 // binds, and a zero output price cannot tell them apart — every local chat row
 // carries one too.
 type AiModelRateLane string
+
+// AiModelRateSource Who wrote this price. `manual` was typed into the sheet and the daily sync never
+// rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+// planted when the installation was provisioned. Removing a model's price hands it back
+// to the sync.
+type AiModelRateSource string
 
 // AiModelRateListResponse defines model for AiModelRateListResponse.
 type AiModelRateListResponse struct {

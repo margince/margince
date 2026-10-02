@@ -18319,6 +18319,14 @@ export interface components {
             cache_write_per_mtok: string;
             /** Format: date */
             effective_date: string;
+            /**
+             * @description Who wrote this price. `manual` was typed into the sheet and the daily sync never
+             *     rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+             *     planted when the installation was provisioned. Removing a model's price hands it back
+             *     to the sync.
+             * @enum {string}
+             */
+            source: "manual" | "catalogue" | "seed";
         };
         AiModelRateListResponse: {
             data: components["schemas"]["AiModelRate"][];

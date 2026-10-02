@@ -57,7 +57,7 @@ func seedSheetRate(ctx context.Context, t *testing.T, store *ai.RateStore, provi
 	t.Helper()
 	if _, err := store.SetModelRate(ctx, ai.SetModelRateInput{
 		Provider: provider, ModelID: modelID, InputUsd: input, OutputUsd: "1",
-		CacheReadUsd: "0", CacheWriteUsd: "0", Lane: lane, EffectiveDate: day,
+		CacheReadUsd: "0", CacheWriteUsd: "0", Lane: lane, EffectiveDate: day, Source: ai.RateSourceSeed,
 	}); err != nil {
 		t.Fatalf("seeding %s/%s: %v", provider, modelID, err)
 	}
