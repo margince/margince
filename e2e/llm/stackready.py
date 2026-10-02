@@ -23,7 +23,7 @@ import mcpclient  # noqa: E402
 
 # Any seeded world answers this; its words are chosen to share little with the
 # records, so only the meaning lane can rank them.
-_PROBE = "customers unhappy when we swap the person looking after them"
+_PROBE = "clients upset when we keep changing who looks after their account"
 _DEGRADED = "semantic_ranking_degraded_to_lexical"
 
 
