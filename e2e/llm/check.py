@@ -52,6 +52,7 @@ network.
 import json
 import os
 import re
+import shlex
 import sys
 import tempfile
 
@@ -484,6 +485,22 @@ def main():
         scenario = parse_scenario(sys.argv[3])
         value = scenario.get(sys.argv[2], "")
         print(value if not isinstance(value, list) else "\n".join(map(str, value)))
+        return 0
+
+    if sys.argv[1] == "--candidate":
+        # KEY=value lines for the lane to eval: which model, folder and wire a
+        # candidate names on a route, refused before the stack boots.
+        import candidates
+
+        args = sys.argv[2:] + ["", ""]
+        try:
+            route = candidates.resolve(args[0], args[1], args[2], args[3])
+        except candidates.RouteError as err:
+            print(err, file=sys.stderr)
+            return 1
+        for key in ("model", "folder", "wire", "key_env", "effort"):
+            print(f"{key.upper()}={shlex.quote(getattr(route, key))}")
+        print(f"DRIVER={route.candidate}:{route.via}")
         return 0
 
     if sys.argv[1] == "--record":

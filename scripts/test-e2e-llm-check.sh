@@ -1161,6 +1161,19 @@ eval_refuses "a relative escape is refused" "../../../tmp/escape"
 eval_refuses "an absolute path is refused" "/tmp/escape"
 eval_refuses "a bare separator is refused" "a/b"
 
+# --- THE BRIDGE AND ITS NEIGHBOURS -------------------------------------------
+#
+# The candidate table, the transcript writer, the MCP client and the bridge are
+# Python and carry unittest suites under e2e/llm/tests/, against in-process
+# fakes: no key, no network, like everything else in this file.
+if python3 -m unittest discover -s "$root/e2e/llm/tests" -t "$root/e2e/llm" >"$work/unittest.log" 2>&1; then
+	echo "ok: e2e/llm unit tests"
+else
+	echo "FAIL: e2e/llm unit tests"
+	sed 's/^/    /' "$work/unittest.log"
+	failures=$((failures + 1))
+fi
+
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2
 	exit 1
