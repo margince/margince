@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { Badge, Button } from "../design-system/atoms";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 
 // Whether a stored key works, asked of the vendor that issued it.
@@ -94,7 +95,7 @@ export function KeyTestOutcome({
       ) : (
         <>
           <Badge tone="danger">{t("aiProviderKeys.testFailed")}</Badge>{" "}
-          {keyTestReason(result.reason, t)}
+          {t(keyTestReasonKey(result.provider, result.reason))}
         </>
       )}
     </p>
@@ -115,24 +116,29 @@ function passLine(
   return confirmed ? "aiProviderKeys.accepted" : "aiProviderKeys.unconfirmed";
 }
 
-function keyTestReason(
+/** The sentence for why a test failed; a Vertex refusal names the role it lacks. */
+export function keyTestReasonKey(
+  provider: string,
   reason: KeyTestResult["reason"],
-  t: ReturnType<typeof useT>,
-): string {
+): MessageKey {
   switch (reason) {
     case "auth_failed":
-      return t("aiProviderKeys.reason.authFailed");
+      return "aiProviderKeys.reason.authFailed";
+    case "permission_denied":
+      return provider === "gemini_vertex"
+        ? "aiProviderKeys.reason.permissionDeniedVertex"
+        : "aiProviderKeys.reason.permissionDenied";
     case "rate_limited":
-      return t("aiProviderKeys.reason.rateLimited");
+      return "aiProviderKeys.reason.rateLimited";
     case "no_key":
-      return t("aiProviderKeys.reason.noKey");
+      return "aiProviderKeys.reason.noKey";
     case "no_endpoint":
-      return t("aiProviderKeys.reason.noEndpoint");
+      return "aiProviderKeys.reason.noEndpoint";
     case "profile_forbids":
-      return t("aiProviderKeys.reason.profileForbids");
+      return "aiProviderKeys.reason.profileForbids";
     case "not_published":
-      return t("aiProviderKeys.reason.notPublished");
+      return "aiProviderKeys.reason.notPublished";
     default:
-      return t("aiProviderKeys.reason.unreachable");
+      return "aiProviderKeys.reason.unreachable";
   }
 }

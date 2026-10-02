@@ -9055,6 +9055,8 @@ export const vi = {
     "Đã niêm phong trong kho khóa. Không thể đọc lại — dán khóa mới để thay thế. Khóa cũng có thể đến qua {envVar}.",
   "aiProviderKeys.absentHint":
     "Nhà cung cấp này chưa có thông tin xác thực, nên không thể gọi mô hình gắn với nó. Khóa cũng có thể đến qua {envVar}.",
+  "aiProviderKeys.vertexRoleHint":
+    "Tài khoản dịch vụ cần vai trò Vertex AI User (roles/aiplatform.user).",
   "aiProviderKeys.addPlaceholder": "Dán khóa API",
   "aiProviderKeys.replacePlaceholder": "Dán khóa mới để thay thế",
   "aiProviderKeys.add": "Thêm",
@@ -9177,6 +9179,10 @@ export const vi = {
   "aiProviderKeys.modelCount_other": "Có {count} mô hình",
   "aiProviderKeys.reason.authFailed":
     "Nhà cung cấp từ chối khóa này. Hãy kiểm tra rồi thay khóa.",
+  "aiProviderKeys.reason.permissionDenied":
+    "Nhà cung cấp đã chấp nhận khóa nhưng từ chối lệnh gọi. Hãy kiểm tra quyền của khóa.",
+  "aiProviderKeys.reason.permissionDeniedVertex":
+    "Google đã chấp nhận khóa nhưng từ chối lệnh gọi. Hãy cấp cho tài khoản dịch vụ vai trò Vertex AI User (roles/aiplatform.user) và bật Vertex AI API cho dự án.",
   "aiProviderKeys.reason.rateLimited":
     "Nhà cung cấp đang giới hạn tốc độ với khóa này. Khóa có thể vẫn hợp lệ; hãy thử lại sau.",
   "aiProviderKeys.reason.noKey": "Chưa lưu khóa nào cho nhà cung cấp này.",

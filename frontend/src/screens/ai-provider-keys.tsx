@@ -189,6 +189,20 @@ function ProviderRow({
   );
 }
 
+// What the paste field says about the key it holds. A Vertex key is only as good
+// as its account's role, which no paste can show, so its hint names the role.
+function keyEntryHint(
+  status: ProviderStatus,
+  t: ReturnType<typeof useT>,
+): string {
+  const stored = status.configured
+    ? t("aiProviderKeys.configuredHint", { envVar: status.env_var })
+    : t("aiProviderKeys.absentHint", { envVar: status.env_var });
+  return status.provider === "gemini_vertex"
+    ? `${stored} ${t("aiProviderKeys.vertexRoleHint")}`
+    : stored;
+}
+
 // The credential controls for ONE vendor, drawn inside its sheet: whether it is
 // keyed, the test, and the paste field that adds, replaces or removes the key.
 function ProviderConnection({
@@ -248,9 +262,7 @@ function ProviderConnection({
   // about it would report a gap that is not one.
   const keyless = status.env_var === "";
 
-  const entryHint = status.configured
-    ? t("aiProviderKeys.configuredHint", { envVar: status.env_var })
-    : t("aiProviderKeys.absentHint", { envVar: status.env_var });
+  const entryHint = keyEntryHint(status, t);
   // Save and Remove, the same pair whichever field holds the secret.
   const verbs = (
     <>

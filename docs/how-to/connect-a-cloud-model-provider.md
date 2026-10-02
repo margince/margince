@@ -290,6 +290,7 @@ followed, one that changes host or downgrades to http is refused.
 | `http 404` on `/embeddings` | That `openai_compatible` vendor is chat-only. Rebind `embeddings:` to a lane-serving vendor or a local `bge-m3` (§3). |
 | Embed error *"returned N vectors of width W, need 1×D"* | On `openai_compatible` the adapter never sends `dimensions`, so `dimensions:` must equal the model's NATIVE width (§3). Set it to `W`. |
 | Model 404 / *"model not found"* | A drifting `-latest` alias or a wrong id. Pin an explicit versioned model, or resolve it from the vendor's `/models` endpoint. |
+| **Test** says *"Google accepted the key but refused the call"* | Google answered 403: the key is valid, but the service account lacks `roles/aiplatform.user` on its project, or the project has not enabled the Vertex AI API. Grant the role or enable the API; the key needs no replacing. |
 | Settings says *"No service-account key is held yet"* (`unavailable: no_key`) | No service-account key is held. Add it under Model provider keys (§5), or set `GEMINI_VERTEX_SA_JSON` and restart. |
 | 422 *"the service-account key was not accepted by Google: … invalid_grant"* | The key was revoked, the account deleted, or the machine clock is off. Create a new JSON key on the account. |
 | 422 *"invalid service account key: …"* | Not a service-account JSON key file — the message names the field. Paste the whole downloaded file. |

@@ -123,7 +123,7 @@ func TestAnyOtherDecisionServerIsProbedWithAnEmptyDecision(t *testing.T) {
 		http.StatusOK:                  KeyTestUnreachable,
 		http.StatusFound:               KeyTestUnreachable,
 		http.StatusUnauthorized:        KeyTestAuthFailed,
-		http.StatusForbidden:           KeyTestAuthFailed,
+		http.StatusForbidden:           KeyTestPermissionDenied,
 		http.StatusBadGateway:          KeyTestUnreachable,
 	} {
 		host := &scriptedHost{t: t, answer: func(r *http.Request) (int, string) {

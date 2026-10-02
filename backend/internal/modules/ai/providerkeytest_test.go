@@ -130,7 +130,7 @@ func TestKeyTest_ReachesAnEmbeddingsOnlyServer(t *testing.T) {
 func TestAVendorRefusalIsToldApartByItsStatus(t *testing.T) {
 	cases := map[int]KeyTestReason{
 		http.StatusUnauthorized:        KeyTestAuthFailed,
-		http.StatusForbidden:           KeyTestAuthFailed,
+		http.StatusForbidden:           KeyTestPermissionDenied,
 		http.StatusTooManyRequests:     KeyTestRateLimited,
 		http.StatusInternalServerError: KeyTestUnreachable,
 		http.StatusNotFound:            KeyTestUnreachable,

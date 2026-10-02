@@ -63,9 +63,25 @@ It needs an OpenRouter Business or Enterprise plan, and only EU-eligible models
 are served there.
 
 ### How do I set up Gemini on Vertex AI?
-To set up Gemini on Vertex AI in Margince, open the **Gemini on Vertex AI** sheet,
-add a Google Cloud **service-account key** file under **Connection**, choose a
-**Location**, and choose **Save connection**.
+To set up Gemini on Vertex AI in Margince, give Margince a Google Cloud
+service account that may call Vertex AI, then add its key:
+
+1. In the Google Cloud project that will be billed, enable the **Vertex AI API**
+   (`aiplatform.googleapis.com`).
+2. Create a service account in that project.
+3. Grant it the **Vertex AI User** role (`roles/aiplatform.user`) on the
+   project. That one role covers everything Margince asks of Vertex AI:
+   generating text, creating embeddings, checking that a location serves a
+   model, and listing models and locations.
+4. Create a **JSON key** for the service account and download it.
+5. In Margince, open the **Gemini on Vertex AI** sheet, paste or drop the key
+   file under **Connection**, choose a **Location**, choose **Save connection**,
+   then choose **Test**.
+
+The project comes from the key file itself, so there is nothing else to enter.
+If **Test** says Google accepted the key but refused the call, the service
+account is missing the **Vertex AI User** role or the project has not enabled
+the Vertex AI API.
 The **Location** is where Google processes every call: **eu**, the EU
 multi-region, keeps processing in the EU and is the usual choice. Under the
 **eu_hosted** profile, only EU locations can be chosen.
