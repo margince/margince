@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -258,5 +259,29 @@ func TestACreateAColleagueMergedIntoIsNotUndone(t *testing.T) {
 
 	if reason := refusedFor(t, undoEntry(t, e, "contact", survivor, createID)); reason != ReasonSuperseded {
 		t.Errorf("the undo of a create a colleague merged into refused %q, want %q", reason, ReasonSuperseded)
+	}
+}
+
+// A colleague who corrected what Margince read about an imported contact did
+// that work in the correction ledger, not on the contact; archiving the contact
+// would take it out of view.
+func TestACreateAColleagueCorrectedIsNotUndone(t *testing.T) {
+	e := integration.Setup(t)
+	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := ids.UUID(created.Id)
+	createID := latestAuditRowID(t, e, "contact", contact, actionCreate)
+	corrected := "Head of Engineering"
+	if err := ai.NewFeedbackStore(InstallationDB(e.Pool)).Record(e.Admin(), ai.RecordInput{
+		SubjectType: "contact", SubjectID: contact, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: ai.ProfileFieldClaimPath("title"), Verdict: ai.VerdictCorrected, CorrectedValue: &corrected,
+	}); err != nil {
+		t.Fatalf("a colleague correcting the title: %v", err)
+	}
+
+	if reason := refusedFor(t, undoEntry(t, e, "contact", contact, createID)); reason != ReasonSuperseded {
+		t.Errorf("the undo of a create a colleague corrected refused %q, want %q", reason, ReasonSuperseded)
 	}
 }
