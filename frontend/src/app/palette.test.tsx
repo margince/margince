@@ -309,9 +309,8 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(window.location.hash).toBe("#/contacts/p1");
   });
 
-  // Half a name is still a search. Enter used to open whatever ranked first,
-  // so a reader who stopped typing at "strai" landed on one record when they
-  // meant to see what matched.
+  // Half a name is still a search: a reader who stops typing at "strai" wants
+  // to see what matched, so Enter opens the results rather than one record.
   it("opens every result on Enter when the words only begin a record's name", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
