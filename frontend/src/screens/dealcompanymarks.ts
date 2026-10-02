@@ -1,6 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { stable } from "../format/collate";
 import { throwProblem } from "./common";
 
 // The companies a deals board names, resolved to the names and marks its
@@ -75,7 +76,7 @@ export function useCompanyMarks(
               : [],
           ),
         ),
-      ].sort()
+      ].sort(stable)
     : [];
   const batches: string[][] = [];
   for (let at = 0; at < unnamed.length; at += COMPANY_MARK_BATCH) {
