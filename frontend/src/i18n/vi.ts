@@ -247,9 +247,9 @@ export const vi = {
     "Họ chọn một giờ trống bất kỳ. Liên kết đặt được một lần và hết hạn sau 7 ngày.",
   "scheduling.pickOffer": "Chọn hai hoặc ba thời điểm để đề xuất",
   "scheduling.pickAgreed": "Chọn thời gian đã thống nhất",
+  "scheduling.openTimes": "Các giờ trống của bạn",
   "scheduling.guestPicks": "{name} chọn thời gian",
-  "scheduling.guestPicksHelp":
-    "Bạn gửi một liên kết riêng. Họ xem các giờ trống của bạn và đặt một giờ.",
+  "scheduling.guestPicksOne": "Họ đặt một trong các giờ trống trên lịch.",
   "scheduling.guest": "Khách của bạn",
   "scheduling.length": "Thời lượng",
   "scheduling.minutes_one": "{count} phút",
@@ -11572,6 +11572,9 @@ export const vi = {
   "stageAutomation.rules": "Mỗi bước chuyển được phép làm gì",
   "stageAutomation.rulesIntro":
     "Bật một bước chuyển không làm nó bắt đầu di chuyển giao dịch. Margince vẫn hỏi cho đến khi hồ sơ ở trên đạt ngưỡng, rồi tự áp dụng — bạn không phải quay lại.",
+  "stageAutomation.offTitle": "Tự động hóa giai đoạn đang tắt",
+  "stageAutomation.offBody":
+    "Khi đang tắt, không giao dịch nào tự chuyển, bất kể bước chuyển bên dưới được đặt thế nào. Quản trị viên bật nó cho toàn bộ bản cài đặt trong cài đặt tự động hóa giai đoạn.",
   "stageAutomation.modeHint":
     "Khi bật và hồ sơ đã đạt, Margince chuyển giao dịch rồi báo cho bạn sau.",
   "stageAutomation.notEarnedYet": "Chưa đạt: {why}",

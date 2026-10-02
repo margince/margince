@@ -43379,7 +43379,15 @@ type TransitionPolicyMode string
 
 // TransitionPolicyList defines model for TransitionPolicyList.
 type TransitionPolicyList struct {
-	Data []TransitionPolicy `json:"data"`
+	// AutomationEnabled Whether this installation permits stage automation at all
+	// (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
+	// off every transition is forced to `propose` regardless of its own rule.
+	//
+	// A rule's `mode` therefore describes what was asked for, not what will
+	// happen: read both before telling somebody a transition moves deals by
+	// itself.
+	AutomationEnabled bool               `json:"automation_enabled"`
+	Data              []TransitionPolicy `json:"data"`
 }
 
 // TransitionRef One transition, named by the stages at its two ends. Both must belong

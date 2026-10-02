@@ -240,9 +240,10 @@ export const de = {
     "Dein Kontakt wählt eine freie Zeit. Der Link bucht einmal und läuft nach 7 Tagen ab.",
   "scheduling.pickOffer": "Wähle zwei oder drei Zeiten zum Anbieten",
   "scheduling.pickAgreed": "Wähle die vereinbarte Zeit",
+  "scheduling.openTimes": "Deine freien Zeiten",
   "scheduling.guestPicks": "{name} wählt die Zeit",
-  "scheduling.guestPicksHelp":
-    "Du sendest einen persönlichen Link. Dein Kontakt sieht deine freien Zeiten und bucht eine.",
+  "scheduling.guestPicksOne":
+    "Dein Kontakt bucht eine der freien Zeiten im Kalender.",
   "scheduling.guest": "Dein Gast",
   "scheduling.length": "Dauer",
   "scheduling.minutes_one": "{count} Min.",
@@ -11678,6 +11679,9 @@ export const de = {
   "stageAutomation.rules": "Regeln für Übergänge",
   "stageAutomation.rulesIntro":
     "Das Einschalten eines Übergangs verschiebt noch keine Deals. Margince fragt weiter nach, bis die Bilanz oben die Schwelle erreicht, und verschiebt dann automatisch.",
+  "stageAutomation.offTitle": "Phasen-Automatik ist ausgeschaltet",
+  "stageAutomation.offBody":
+    "Solange sie aus ist, bewegt sich kein Deal von selbst, unabhängig davon, was unten eingestellt ist. Admins schalten sie in den Einstellungen zur Phasen-Automatik für die gesamte Installation ein.",
   "stageAutomation.modeHint":
     "Wenn eingeschaltet und die Bilanz ausreicht, verschiebt Margince den Deal und benachrichtigt dich danach.",
   "stageAutomation.notEarnedYet": "Noch nicht qualifiziert: {why}",

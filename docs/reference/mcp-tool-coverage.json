@@ -33,7 +33,8 @@
         "case4_use_the_moment",
         "case5_before_the_meeting",
         "case6_ask_the_company"
-      ]
+      ],
+      "route": "Claude Code CLI"
     },
     {
       "model": "claude-opus-5",
@@ -45,7 +46,8 @@
       "reliability": 0.9365079365079365,
       "cases_below_their_bar_named": [
         "case3_spreadsheet"
-      ]
+      ],
+      "route": "Claude Code CLI"
     },
     {
       "model": "claude-sonnet-5",
@@ -61,7 +63,8 @@
         "case4_use_the_moment",
         "case5_before_the_meeting",
         "case6_ask_the_company"
-      ]
+      ],
+      "route": "Claude Code CLI"
     }
   ],
   "judges": [
@@ -115,6 +118,7 @@
   "cases": [
     {
       "name": "case1_log_it",
+      "title": "Log it while it is fresh",
       "file": "case1-log-it.yaml",
       "criteria": [
         8,
@@ -151,6 +155,7 @@
     },
     {
       "name": "case10_finish_the_import",
+      "title": "Finish the import",
       "file": "case10-finish-the-import.yaml",
       "criteria": [
         1,
@@ -188,6 +193,7 @@
     },
     {
       "name": "case2_business_card",
+      "title": "When somebody hands you a business card",
       "file": "case2-business-card.yaml",
       "criteria": [
         4
@@ -222,6 +228,7 @@
     },
     {
       "name": "case20_put_it_in_the_board_pack",
+      "title": "Put it in the board pack",
       "file": "case20-put-it-in-the-board-pack.yaml",
       "criteria": [
         1,
@@ -258,6 +265,7 @@
     },
     {
       "name": "case21_what_are_we_closing",
+      "title": "What are we closing",
       "file": "case21-what-are-we-closing.yaml",
       "criteria": [
         1,
@@ -293,6 +301,7 @@
     },
     {
       "name": "case22_can_i_trust_the_numbers",
+      "title": "Can I trust the numbers",
       "file": "case22-can-i-trust-the-numbers.yaml",
       "criteria": [
         1,
@@ -328,6 +337,7 @@
     },
     {
       "name": "case23_find_us_a_slot",
+      "title": "Find us a slot",
       "file": "case23-find-us-a-slot.yaml",
       "criteria": [
         1,
@@ -363,6 +373,7 @@
     },
     {
       "name": "case3_spreadsheet",
+      "title": "A spreadsheet arrives",
       "file": "case3-spreadsheet.yaml",
       "criteria": [
         1,
@@ -398,6 +409,7 @@
     },
     {
       "name": "case30_a_word_for_it",
+      "title": "A word for the ones from the fair",
       "file": "case30-a-word-for-it.yaml",
       "criteria": [
         1,
@@ -435,6 +447,7 @@
     },
     {
       "name": "case31_wrong_word_on_the_record",
+      "title": "The word that should not be on this one",
       "file": "case31-wrong-word-on-the-record.yaml",
       "criteria": [
         1,
@@ -471,6 +484,7 @@
     },
     {
       "name": "case32_two_words_for_one_thing",
+      "title": "Two words for one thing",
       "file": "case32-two-words-for-one-thing.yaml",
       "criteria": [
         1,
@@ -510,6 +524,7 @@
     },
     {
       "name": "case33_two_cards_for_one_company",
+      "title": "Two cards for one company, and one that is gone",
       "file": "case33-two-cards-for-one-company.yaml",
       "criteria": [
         1,
@@ -549,6 +564,7 @@
     },
     {
       "name": "case4_use_the_moment",
+      "title": "Use the moment",
       "file": "case4-use-the-moment.yaml",
       "criteria": [
         1,
@@ -584,6 +600,7 @@
     },
     {
       "name": "case40_sort_the_queue",
+      "title": "Sort the lead queue",
       "file": "case40-sort-the-queue.yaml",
       "criteria": [
         1,
@@ -622,6 +639,7 @@
     },
     {
       "name": "case41_close_the_project",
+      "title": "Close the project out",
       "file": "case41-close-the-project.yaml",
       "criteria": [
         1,
@@ -658,6 +676,7 @@
     },
     {
       "name": "case42_can_i_answer_on_whatsapp",
+      "title": "Can I answer her on WhatsApp?",
       "file": "case42-can-i-answer-on-whatsapp.yaml",
       "criteria": [
         1,
@@ -694,6 +713,7 @@
     },
     {
       "name": "case5_before_the_meeting",
+      "title": "Before the meeting",
       "file": "case5-before-the-meeting.yaml",
       "criteria": [
         1,
@@ -731,6 +751,7 @@
     },
     {
       "name": "case6_ask_the_company",
+      "title": "Ask the company",
       "file": "case6-ask-the-company.yaml",
       "criteria": [
         1,
@@ -767,6 +788,7 @@
     },
     {
       "name": "case7_ask_for_a_number",
+      "title": "Ask for a number",
       "file": "case7-ask-for-a-number.yaml",
       "criteria": [
         1,
@@ -805,6 +827,7 @@
     },
     {
       "name": "case8_whats_waiting",
+      "title": "What is waiting on me",
       "file": "case8-whats-waiting.yaml",
       "criteria": [
         1,
@@ -843,6 +866,7 @@
     },
     {
       "name": "case9_filed_in_the_wrong_place",
+      "title": "Filed in the wrong place",
       "file": "case9-filed-in-the-wrong-place.yaml",
       "criteria": [
         1,

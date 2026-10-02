@@ -52,6 +52,7 @@ network.
 import json
 import os
 import re
+import shlex
 import sys
 import tempfile
 
@@ -369,6 +370,36 @@ def unrun(path):
     return ""
 
 
+def offered_problem(scenario, path):
+    """Why this run could not have satisfied must_call, or "" when it could.
+
+    A required tool the server never offered fails must_call for a reason that
+    is not the model's — a scope, a page the client did not follow, a server
+    that attached nothing — so the lane stops rather than scoring it. The
+    tools are the ones the transcript's system line says were offered.
+    """
+    offered = None
+    for line in _open_checked(path):
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "system" and event.get("subtype") == "init":
+            offered = event.get("tools") or []
+            break
+    if offered is None:
+        return "the transcript carries no system line, so what was offered is unknown"
+    if not offered:
+        return "the server offered no tools at all"
+    missing = [
+        entry for entry in scenario.get("must_call", [])
+        if not any(tool_matches(offered, alt) for alt in alternatives(entry))
+    ]
+    if missing:
+        return f"a required tool was never offered to the model: {', '.join(map(str, missing))}"
+    return ""
+
+
 def tool_matches(called, want):
     """A tool is reached when any call names it.
 
@@ -486,6 +517,22 @@ def main():
         print(value if not isinstance(value, list) else "\n".join(map(str, value)))
         return 0
 
+    if sys.argv[1] == "--candidate":
+        # KEY=value lines for the lane to eval: which model, folder and wire a
+        # candidate names on a route, refused before the stack boots.
+        import candidates
+
+        args = sys.argv[2:] + [""] * 5
+        try:
+            route = candidates.resolve(args[0], args[1], args[2], args[3], args[4])
+        except candidates.RouteError as err:
+            print(err, file=sys.stderr)
+            return 1
+        for key in ("model", "folder", "wire", "key_env", "effort"):
+            print(f"{key.upper()}={shlex.quote(getattr(route, key))}")
+        print(f"DRIVER={route.candidate}:{route.via}")
+        return 0
+
     if sys.argv[1] == "--record":
         scenario = parse_scenario(sys.argv[2])
         runs = int(sys.argv[4])
@@ -502,6 +549,18 @@ def main():
             "runs": runs,
             "pass_at": scenario.get("pass_at"),
         }
+        # How the number was measured, which the folder alone cannot say: a CLI
+        # route and the comparable bridge can both have run one model.
+        for field, variable in (
+            ("driver", "E2E_LLM_DRIVER"),
+            ("effort", "E2E_LLM_EFFORT"),
+            ("system_prompt", "E2E_LLM_SYSTEM_PROMPT"),
+            ("search", "E2E_LLM_SEARCH"),
+        ):
+            if os.environ.get(variable):
+                record[field] = os.environ[variable]
+        if os.environ.get("E2E_LLM_SELF_JUDGED") in ("true", "false"):
+            record["self_judged"] = os.environ["E2E_LLM_SELF_JUDGED"] == "true"
         if usage is not None:
             # runs_measured rides WITH the totals into the committed record. A
             # later reader summing cost across scenarios can then tell a cheap
@@ -525,6 +584,13 @@ def main():
             sys.exit(1)
         sys.exit(0)
 
+    if sys.argv[1] == "--offered":
+        problem = offered_problem(parse_scenario(sys.argv[2]), sys.argv[3])
+        if problem:
+            print(problem)
+            return 1
+        return 0
+
     if sys.argv[1] == "--judge-ready":
         # Asked before the lane spends a token on the candidate: a scenario with
         # judged criteria and no judge configured is a lane that would drive
@@ -532,7 +598,7 @@ def main():
         for path in sys.argv[2:]:
             if not parse_scenario(path).get("judge", []):
                 continue
-            judge.configured()
+            judge.ready()
             break
         return 0
 
