@@ -19,8 +19,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -283,5 +285,90 @@ func TestACreateAColleagueCorrectedIsNotUndone(t *testing.T) {
 
 	if reason := refusedFor(t, undoEntry(t, e, "contact", contact, createID)); reason != ReasonSuperseded {
 		t.Errorf("the undo of a create a colleague corrected refused %q, want %q", reason, ReasonSuperseded)
+	}
+}
+
+// A deal a machine made is undone through the deals module's own archive, and
+// its archive is undone through the deals module's own un-archive.
+func TestUndoingAMachineDealCreateAndItsArchive(t *testing.T) {
+	e := integration.Setup(t)
+	pipeline, open, _ := integration.DealFixture(t, e)
+	created, err := e.Deals.CreateDeal(machineCtx(e), deals.CreateDealInput{Name: "Imported Fleet", PipelineID: pipeline, StageID: open})
+	if err != nil {
+		t.Fatalf("a machine creating the deal: %v", err)
+	}
+	deal := ids.UUID(created.Id)
+	if err := undoEntry(t, e, entityTypeDeal, deal, latestAuditRowID(t, e, entityTypeDeal, deal, actionCreate)); err != nil {
+		t.Fatalf("undoing the deal's create: %v", err)
+	}
+	if !isArchived(t, e, entityTypeDeal, deal) {
+		t.Fatal("the create was undone and the deal is still live")
+	}
+	if err := undoEntry(t, e, entityTypeDeal, deal, latestAuditRowID(t, e, entityTypeDeal, deal, actionArchive)); err != nil {
+		t.Fatalf("undoing the archive: %v", err)
+	}
+	if isArchived(t, e, entityTypeDeal, deal) {
+		t.Error("the archive was undone and the deal is still archived")
+	}
+}
+
+// A note a machine logged is undone through the activities module's archive.
+func TestUndoingAMachineActivityCreateArchivesIt(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Noted Nora", nil)
+	subject := "captured"
+	logged, _, err := e.Activities.LogActivity(machineCtx(e), activities.LogActivityInput{
+		Kind: "note", Subject: &subject, Source: "import",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+	})
+	if err != nil {
+		t.Fatalf("a machine logging the note: %v", err)
+	}
+	activity := ids.UUID(logged.Id)
+	if err := undoEntry(t, e, entityTypeActivity, activity, latestAuditRowID(t, e, entityTypeActivity, activity, actionCreate)); err != nil {
+		t.Fatalf("undoing the note's create: %v", err)
+	}
+	if !isArchived(t, e, entityTypeActivity, activity) {
+		t.Error("the create was undone and the note is still live")
+	}
+}
+
+// Undoing a create archives the record, which asks the delete grant: a seat
+// that may edit contacts and not archive them is told so up front.
+func TestACreateUndoIsRefusedToASeatThatMayNotArchive(t *testing.T) {
+	e := integration.Setup(t)
+	owner := ids.From[ids.UserKind](e.Rep1)
+	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import", OwnerID: &owner})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := ids.UUID(created.Id)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	answer := advisoryAnswer(rep, t, e, "contact", contact, latestAuditRowID(t, e, "contact", contact, actionCreate))
+	if answer.Undoable || answer.Reason != string(ReasonNotWritableByCaller) {
+		t.Errorf("a seat without contact delete was answered %+v, want %q", answer, ReasonNotWritableByCaller)
+	}
+}
+
+// A demotion writes the contact as well as the lead, so a seat that may change
+// leads and not contacts is told so up front.
+func TestAPromotionUndoIsRefusedToASeatThatMayNotChangeTheContact(t *testing.T) {
+	e := integration.Setup(t)
+	name, email := "Lena Lead", "lena@prospect.test"
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leadID := ids.UUID(lead.Id)
+	if _, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "inbound_reply"}); err != nil {
+		t.Fatal(err)
+	}
+	seat := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{"lead": {Read: true, Update: true}, "contact": {Read: true}},
+	})
+	answer := advisoryAnswer(seat, t, e, entityTypeLead, leadID, latestAuditRowID(t, e, entityTypeLead, leadID, actionPromote))
+	if answer.Undoable || answer.Reason != string(ReasonNotWritableByCaller) {
+		t.Errorf("a seat without contact update was answered %+v, want %q", answer, ReasonNotWritableByCaller)
 	}
 }

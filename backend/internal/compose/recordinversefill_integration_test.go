@@ -443,3 +443,49 @@ func TestASiteReadTitleAColleagueSavedAgainIsNotUndone(t *testing.T) {
 		t.Errorf("the undo refused %q, want %q", reason, ReasonSuperseded)
 	}
 }
+
+// A signature written before confirmations were named says it filled a title
+// even where it only repeated one. Its undo leaves a title the trail shows was
+// already set, and clears what it did fill.
+func TestUndoingALegacySignatureLeavesATitleTheRecordAlreadyHad(t *testing.T) {
+	e := integration.Setup(t)
+	contact := seedEnrichContact(t, e, "bob@acme.example", "Best,\nBob Contact\nCTO\nAcme GmbH")
+	typed := "CTO"
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{Title: &typed}); err != nil {
+		t.Fatal(err)
+	}
+	var activity ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Contacts.ApplySignatureFields(machineCtx(e), ids.From[ids.ContactKind](contact), activity,
+		[]contacts.SignatureField{
+			{Name: "title", Value: "CTO", Evidence: "CTO", Confidence: 0.9},
+			{Name: "company_name", Value: "Acme GmbH", Evidence: "Acme GmbH", Confidence: 0.9},
+		}); err != nil {
+		t.Fatal(err)
+	}
+	// The same statement as the shape it was audited in before: title named as
+	// filled, and no confirmed list.
+	legacy := ids.NewV7()
+	e.WsExec(t, `
+		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, before, after, evidence)
+		VALUES ($1, 'agent', 'agent:enrich', 'update', 'contact', $2,
+		        '{"title":null,"company_name":null}', '{"title":"filled","company_name":"filled"}',
+		        jsonb_build_object('source', 'capture_enrich', 'source_ref', 'activity:' || $3::text))`,
+		legacy, contact, activity)
+
+	if err := undoEntry(t, e, "contact", contact, legacy); err != nil {
+		t.Fatalf("undoing the legacy signature: %v", err)
+	}
+	title, evidence, _, _ := whatTheFillLeft(t, e, contact)
+	if title == nil || *title != typed {
+		t.Errorf("title = %v, want the colleague's %q kept", title, typed)
+	}
+	if evidence != 1 {
+		t.Errorf("%d evidence rows after the undo, want the title's alone", evidence)
+	}
+}
