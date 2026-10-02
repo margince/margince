@@ -5,21 +5,21 @@
     3,
     5
   ],
-  "passed": 0,
+  "passed": 3,
   "runs": 3,
   "pass_at": 2,
-  "driver": "mistral:openrouter",
-  "effort": "n/a",
+  "driver": "gpt:openrouter",
+  "effort": "reasoning medium",
   "system_prompt": "mcp-instructions",
   "search": "semantic",
   "self_judged": false,
   "usage": {
-    "input_tokens": 133813,
-    "output_tokens": 4535,
-    "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 2366848,
+    "input_tokens": 158371,
+    "output_tokens": 8539,
+    "cache_creation_input_tokens": 158254,
+    "cache_read_input_tokens": 1361304,
     "runs_measured": 3,
     "runs_costed": 3,
-    "cost_usd": 4.1635
+    "cost_usd": 0.7535
   }
 }

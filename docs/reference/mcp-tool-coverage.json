@@ -62,6 +62,38 @@
         "case5_before_the_meeting",
         "case6_ask_the_company"
       ]
+    },
+    {
+      "model": "claude-sonnet-5-5",
+      "cases_with_a_committed_run": 1,
+      "cases_that_reached_their_bar": 1,
+      "cases_below_their_bar": 0,
+      "runs": 3,
+      "passed": 3,
+      "reliability": 1,
+      "cases_below_their_bar_named": []
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "cases_with_a_committed_run": 1,
+      "cases_that_reached_their_bar": 1,
+      "cases_below_their_bar": 0,
+      "runs": 3,
+      "passed": 3,
+      "reliability": 1,
+      "cases_below_their_bar_named": []
+    },
+    {
+      "model": "mistral-medium-3-5",
+      "cases_with_a_committed_run": 1,
+      "cases_that_reached_their_bar": 0,
+      "cases_below_their_bar": 1,
+      "runs": 3,
+      "passed": 0,
+      "reliability": 0,
+      "cases_below_their_bar_named": [
+        "case6_ask_the_company"
+      ]
     }
   ],
   "judges": [
@@ -758,6 +790,27 @@
         },
         {
           "model": "claude-sonnet-5",
+          "runs": 3,
+          "passed": 0,
+          "pass_at": 2,
+          "held": false
+        },
+        {
+          "model": "claude-sonnet-5-5",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true
+        },
+        {
+          "model": "mistral-medium-3-5",
           "runs": 3,
           "passed": 0,
           "pass_at": 2,
@@ -2253,6 +2306,26 @@
           "cases_below_their_bar": []
         },
         "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case6_ask_the_company"
+          ]
+        },
+        "claude-sonnet-5-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "mistral-medium-3-5": {
           "runs": 3,
           "passed": 0,
           "reliability": 0,

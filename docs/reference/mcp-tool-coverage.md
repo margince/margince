@@ -44,12 +44,23 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | `claude-haiku-4-5-20251001` | 21 of 21 | 10 | 11 | 30/63 | 48% |
 | `claude-opus-5` | 21 of 21 | 20 | 1 | 59/63 | 94% |
 | `claude-sonnet-5` | 21 of 21 | 16 | 5 | 45/63 | 71% |
+| `claude-sonnet-5-5` | 1 of 21 | 1 | 0 | 3/3 | 100% |
+| `gpt-5.6-sol` | 1 of 21 | 1 | 0 | 3/3 | 100% |
+| `mistral-medium-3-5` | 1 of 21 | 0 | 1 | 0/3 | 0% |
 
 > `claude-haiku-4-5-20251001` below its bar on: case10_finish_the_import, case1_log_it, case20_put_it_in_the_board_pack, case21_what_are_we_closing, case31_wrong_word_on_the_record, case32_two_words_for_one_thing, case41_close_the_project, case42_can_i_answer_on_whatsapp, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company
 
 > `claude-opus-5` below its bar on: case3_spreadsheet
 
 > `claude-sonnet-5` below its bar on: case10_finish_the_import, case41_close_the_project, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company
+
+> `claude-sonnet-5-5` has no committed run for 20 of 21 cases.
+
+> `gpt-5.6-sol` has no committed run for 20 of 21 cases.
+
+> `mistral-medium-3-5` has no committed run for 20 of 21 cases.
+
+> `mistral-medium-3-5` below its bar on: case6_ask_the_company
 
 ## The two surfaces
 
@@ -151,6 +162,9 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-haiku-4-5-20251001` | **FAIL** | 0/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
+| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5-5` | pass | 3/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
+| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol` | pass | 3/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
+| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `mistral-medium-3-5` | **FAIL** | 0/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-haiku-4-5-20251001` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-sonnet-5` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
@@ -301,6 +315,24 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
 | `get_record_tags` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
 
+### `claude-sonnet-5-5`
+
+| Tool | Reliability | Runs | Required by |
+|---|---:|---:|---|
+| `search_context` | 1.00 | 3 | `case6_ask_the_company` |
+
+### `gpt-5.6-sol`
+
+| Tool | Reliability | Runs | Required by |
+|---|---:|---:|---|
+| `search_context` | 1.00 | 3 | `case6_ask_the_company` |
+
+### `mistral-medium-3-5`
+
+| Tool | Reliability | Runs | Required by |
+|---|---:|---:|---|
+| _nothing yet_ | - | - | - |
+
 ## 2. What is failing now
 
 Driven, and not every run passed. Open the case to see what was asked.
@@ -364,6 +396,24 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `list_tags` | 0.83 | 5/6 | — | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
 | `get_tag` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
 | `read_import_report` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
+
+### `claude-sonnet-5-5`
+
+| Tool | Reliability | Passed | Below its bar | Required by |
+|---|---:|---:|---|---|
+| _nothing driven is failing_ | - | - | - | - |
+
+### `gpt-5.6-sol`
+
+| Tool | Reliability | Passed | Below its bar | Required by |
+|---|---:|---:|---|---|
+| _nothing driven is failing_ | - | - | - | - |
+
+### `mistral-medium-3-5`
+
+| Tool | Reliability | Passed | Below its bar | Required by |
+|---|---:|---:|---|---|
+| `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 
 ## Who judged it, and how well
 
