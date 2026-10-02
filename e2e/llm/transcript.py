@@ -59,8 +59,9 @@ class Transcript:
             {"type": "tool_use", "id": call_id, "name": tool_name(bare), "input": arguments}
             for call_id, bare, arguments in calls
         ]
-        if blocks:
-            self._emit({"type": "assistant", "message": {"content": blocks}})
+        # Emitted even when empty: an empty reply is a turn the model took, and
+        # check.unrun reads a transcript with no assistant turn as never run.
+        self._emit({"type": "assistant", "message": {"content": blocks}})
 
     def tool_results(self, results):
         self._emit({"type": "user", "message": {"content": [

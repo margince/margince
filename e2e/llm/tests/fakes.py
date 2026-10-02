@@ -29,7 +29,7 @@ class _Server:
         self.url = f"http://127.0.0.1:{self._httpd.server_port}"
 
     def __enter__(self):
-        threading.Thread(target=self._httpd.serve_forever, daemon=True).start()
+        threading.Thread(target=self._httpd.serve_forever, args=(0.01,), daemon=True).start()
         return self
 
     def __exit__(self, *_exc):
