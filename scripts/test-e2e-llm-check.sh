@@ -1180,31 +1180,37 @@ fi
 # account was on trial. The environment is emptied for each case: the shell this
 # runs in may carry any of these keys.
 route_cred_is() {
-	local name="$1" want="$2" candidate="$3" via="$4" got status=0
-	shift 4
+	local name="$1" want_status="$2" want="$3" candidate="$4" via="$5" got status=0
+	shift 5
 	got="$(env -i PATH="$PATH" HOME="$HOME" "$@" bash -c \
 		". '$root/scripts/lib-llm-credential.sh'; llm_route_credential '$candidate' '$via'" 2>&1)" || status=$?
-	if [[ "$got" != *"$want"* ]]; then
-		echo "FAIL: route credential/$name — got '$got' (exit $status), want '$want'"
+	if [[ "$status" -ne "$want_status" || "$got" != *"$want"* ]]; then
+		echo "FAIL: route credential/$name — got '$got' (exit $status), want '$want' (exit $want_status)"
 		failures=$((failures + 1))
 		return
 	fi
 	echo "ok: route credential/$name"
 }
 
-route_cred_is "gpt over its own key" OPENAI_API_KEY gpt api OPENAI_API_KEY=x
-route_cred_is "a missing key is named" "MISTRAL_API_KEY is not set" mistral api
-route_cred_is "openrouter for any candidate" OPENAI_COMPATIBLE_API_KEY claude openrouter OPENAI_COMPATIBLE_API_KEY=x
-route_cred_is "the claude CLI keeps its own order" CLAUDE_CODE_OAUTH_TOKEN claude cli CLAUDE_CODE_OAUTH_TOKEN=x
-route_cred_is "a route the table lacks" "no mistral/cli route" mistral cli
+route_cred_is "gpt over its own key" 0 OPENAI_API_KEY gpt api OPENAI_API_KEY=x
+route_cred_is "a missing key is named and refused" 1 "MISTRAL_API_KEY is not set" mistral api
+route_cred_is "openrouter for any candidate" 0 OPENAI_COMPATIBLE_API_KEY claude openrouter OPENAI_COMPATIBLE_API_KEY=x
+route_cred_is "the claude CLI ranks a gateway bearer over a subscription token" 0 ANTHROPIC_AUTH_TOKEN claude cli \
+	CLAUDE_CODE_OAUTH_TOKEN=x ANTHROPIC_AUTH_TOKEN=y
+route_cred_is "a route the table lacks is refused" 1 "no mistral/cli route" mistral cli
 
 # --- A VERDICT SAYS HOW IT WAS MEASURED --------------------------------------
 #
 # Two folders can hold one model's number (the comparable route and a CLI), and
 # only the verdict can say which route produced it, with which effort, under
 # which system prompt, and whether the judge shares the candidate's family.
+record_status=0
 verdict="$(E2E_LLM_DRIVER=gpt:api E2E_LLM_EFFORT='reasoning medium' E2E_LLM_SYSTEM_PROMPT=mcp-instructions \
-	E2E_LLM_SELF_JUDGED=false E2E_LLM_SEARCH=lexical python3 "$check" --record "$root/e2e/llm/scenarios/case6-ask-the-company.yaml" 2 3)"
+	E2E_LLM_SELF_JUDGED=false E2E_LLM_SEARCH=lexical python3 "$check" --record "$root/e2e/llm/scenarios/case6-ask-the-company.yaml" 2 3 2>&1)" || record_status=$?
+if [[ "$record_status" -ne 0 ]]; then
+	echo "FAIL: --record exited $record_status"
+	failures=$((failures + 1))
+fi
 for field in '"driver": "gpt:api"' '"effort": "reasoning medium"' '"system_prompt": "mcp-instructions"' '"self_judged": false' '"search": "lexical"'; do
 	if [[ "$verdict" == *"$field"* ]]; then
 		echo "ok: verdict carries $field"

@@ -1,7 +1,10 @@
+import contextlib
+import io
 import json
 import os
 import sys
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -35,6 +38,29 @@ class SemanticTest(unittest.TestCase):
 
     def test_a_refused_search_is_named(self):
         self.assertIn("refused", self.problem(("not allowed", True)))
+
+
+class MainTest(unittest.TestCase):
+    def run_main(self, url):
+        argv = ["stackready.py", "--mcp-url", url, "--token-env", "T", "--wait", "0"]
+        with unittest.mock.patch.object(sys, "argv", argv), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            return stackready.main(), out.getvalue()
+
+    def test_an_unreachable_server_is_a_harness_fault_not_a_lexical_search(self):
+        code, out = self.run_main("http://127.0.0.1:9/mcp")
+        self.assertEqual(code, 3)
+        self.assertIn("could not be reached", out)
+
+    def test_a_reply_that_is_not_json_is_a_harness_fault(self):
+        with FakeMcp(SEARCH, replies={"search_context": ("<html>", False)}) as server:
+            code, out = self.run_main(server.url)
+        self.assertEqual(code, 3)
+
+    def test_a_lexical_search_is_exit_1_with_its_reason(self):
+        with FakeMcp(SEARCH, replies={"search_context": reply(0, ["semantic_ranking_degraded_to_lexical"])}) as server:
+            code, out = self.run_main(server.url)
+        self.assertEqual((code, "lexical" in out), (1, True))
 
 
 if __name__ == "__main__":

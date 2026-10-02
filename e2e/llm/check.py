@@ -522,7 +522,7 @@ def main():
         # candidate names on a route, refused before the stack boots.
         import candidates
 
-        args = sys.argv[2:] + ["", "", ""]
+        args = sys.argv[2:] + [""] * 5
         try:
             route = candidates.resolve(args[0], args[1], args[2], args[3], args[4])
         except candidates.RouteError as err:

@@ -90,6 +90,11 @@ class FromCodexTest(unittest.TestCase):
         self.assertEqual(code, 3)
         self.assertIn("no call to the lane's server", raw)
 
+    def test_any_error_item_stops_the_run_whatever_its_wording(self):
+        lines = sample()
+        lines.insert(len(lines) - 1, item("error", message="stream disconnected before completion"))
+        self.assertEqual(convert(lines)[0], 3)
+
     def test_a_failed_turn_is_a_harness_fault(self):
         lines = [l for l in sample() if "turn.completed" not in l]
         lines.append(json.dumps({"type": "turn.failed", "error": {"message": "401 Unauthorized"}}))
@@ -108,9 +113,6 @@ class FromCodexTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("permission denied", raw)
 
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 class CodexArgumentsTest(unittest.TestCase):
@@ -198,3 +200,7 @@ class RunCodexTest(unittest.TestCase):
     def test_a_codex_that_overruns_is_killed_and_is_a_harness_fault(self):
         code, _out = self.run_codex(timeout=0.5, FAKE_CODEX_SLEEP="5")
         self.assertEqual(code, 3)
+
+
+if __name__ == "__main__":
+    unittest.main()

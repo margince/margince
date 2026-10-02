@@ -125,8 +125,8 @@ one-sentence reason.
 ## 5. Diagnose a failure from the transcript
 
 The verdict says which scenario failed; only the transcript says what the model
-did. Transcripts land in the gitignored `e2e/llm/records/` (the last run of each
-scenario) in the same shape for every route:
+did. Transcripts land in the gitignored `e2e/llm/records/` — every run of each
+scenario from the last sweep — in the same shape for every route:
 
 ```bash
 python3 - e2e/llm/records/case6_ask_the_company.run1.jsonl <<'PY'

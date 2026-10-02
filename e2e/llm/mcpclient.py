@@ -42,8 +42,9 @@ class Session:
                 self._session_id = response.headers.get("Mcp-Session-Id") or self._session_id
                 return response.headers.get("Content-Type", ""), response.read().decode()
         except urllib.error.HTTPError as err:
+            detail = err.read().decode("utf-8", "replace")[:300]
             raise McpFault(
-                f"the MCP server answered HTTP {err.code} to {message.get('method')}"
+                f"the MCP server answered HTTP {err.code} to {message.get('method')}: {detail}"
             ) from err
         except (urllib.error.URLError, TimeoutError, ConnectionError) as err:
             raise McpFault(f"the MCP server could not be reached: {err}") from err
@@ -55,15 +56,20 @@ class Session:
         )
         # An event stream may carry notifications ahead of the response, so the
         # response is the event whose id is this request's.
-        if "event-stream" in kind:
-            docs = [json.loads(line[5:]) for line in body.splitlines() if line.startswith("data:")]
-        else:
-            docs = [json.loads(body)]
+        try:
+            if "event-stream" in kind:
+                docs = [json.loads(line[5:]) for line in body.splitlines() if line.startswith("data:")]
+            else:
+                docs = [json.loads(body)]
+        except ValueError as err:
+            raise McpFault(f"{method}: the server answered with something that is not JSON-RPC: {body[:200]!r}") from err
         for doc in docs:
-            if doc.get("id") != self._next_id:
+            if not isinstance(doc, dict) or doc.get("id") != self._next_id:
                 continue
             if "error" in doc:
                 raise McpFault(f"{method} failed: {doc['error'].get('message')}")
+            if "result" not in doc:
+                raise McpFault(f"{method}: the response carries no result and no error")
             return doc["result"]
         raise McpFault(f"{method}: no response carried id {self._next_id}")
 

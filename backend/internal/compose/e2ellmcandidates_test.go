@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -21,9 +22,10 @@ const (
 	// EU-hosted one, because Mistral's own consumer app is served from the EU.
 	e2eLLMMistralPreset = "../../../config/presets/openrouter_cloud_eu.yaml"
 	e2eLLMMistralModel  = "mistralai/mistral-medium-3-5"
-	// The lane's tool prefix, mcp__<server>__, and OpenAI's function-name limit.
-	e2eLLMToolPrefix   = "mcp__margince_e2e_llm__"
-	openAIFunctionName = 64
+	// The bridge names every tool mcp__<SERVER>__<tool>, SERVER read from the
+	// one file that writes it, so this census follows a rename.
+	e2eLLMTranscriptWriter = "../../../e2e/llm/transcript.py"
+	openAIFunctionName     = 64
 )
 
 type e2eLLMCandidateTable map[string]struct {
@@ -80,12 +82,13 @@ func TestTheLanesMistralRoutingMirrorsThePreset(t *testing.T) {
 // The bridge offers every served tool under the lane's prefix, and OpenAI
 // refuses a whole request whose function name runs past its limit.
 func TestEveryServedToolFitsAFunctionNameUnderTheLanesPrefix(t *testing.T) {
+	prefix := e2eLLMToolPrefix(t)
 	specs := servedSurface(t).Specs()
 	if len(specs) == 0 {
 		t.Fatal("the served surface lists no tools; this census would pass having read nothing")
 	}
 	for _, spec := range specs {
-		if name := e2eLLMToolPrefix + spec.Name; len(name) > openAIFunctionName {
+		if name := prefix + spec.Name; len(name) > openAIFunctionName {
 			t.Errorf("%s is %d characters; OpenAI refuses a function name over %d, so the GPT lane could not offer it",
 				name, len(name), openAIFunctionName)
 		}
@@ -107,4 +110,19 @@ func TestANestedVerdictFolderIsRefusedNotSkipped(t *testing.T) {
 	if _, err := readE2ELLMVerdicts(dir); err == nil {
 		t.Fatal("a verdict filed one folder too deep was read as no verdict at all")
 	}
+}
+
+var e2eLLMServerLine = regexp.MustCompile(`(?m)^SERVER = "([A-Za-z0-9_]+)"$`)
+
+func e2eLLMToolPrefix(t *testing.T) string {
+	t.Helper()
+	raw, err := os.ReadFile(e2eLLMTranscriptWriter)
+	if err != nil {
+		t.Fatalf("reading %s: %v", e2eLLMTranscriptWriter, err)
+	}
+	got := e2eLLMServerLine.FindSubmatch(raw)
+	if got == nil {
+		t.Fatalf("%s declares no `SERVER = \"...\"` line; the tool prefix cannot be derived", e2eLLMTranscriptWriter)
+	}
+	return "mcp__" + string(got[1]) + "__"
 }

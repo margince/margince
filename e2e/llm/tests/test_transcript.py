@@ -35,6 +35,16 @@ class TranscriptTest(unittest.TestCase):
         self.assertIn("two pipelines", said)
         self.assertEqual(check.unrun(path), "")
 
+    def test_the_checker_rejects_a_run_that_skipped_the_tool_or_the_fact(self):
+        path = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        with transcript.Transcript(path) as out:
+            out.init("m", "gpt:api", "mcp-instructions", "connected", ["list_pipelines"])
+            out.assistant("There are three pipelines.")
+            out.finish(False, "There are three pipelines.", 1)
+        problems = check.check({"must_call": ["list_pipelines"], "must_mention": ["two"]}, path)
+        self.assertTrue(any("never called list_pipelines" in p for p in problems), problems)
+        self.assertTrue(any("two" in p for p in problems), problems)
+
     def test_usage_is_summed_across_requests(self):
         counted, cost = check.read_usage(write(usages=[MEASURED, MEASURED]))
         self.assertEqual((counted["input_tokens"], counted["cache_read_input_tokens"]), (20, 4))

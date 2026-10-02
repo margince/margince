@@ -901,13 +901,14 @@ func modelsThatRan(cases []caseRow) []string {
 // summariseModel folds one model's whole lane for the page's top table.
 func summariseModel(cases []caseRow, model string) modelCoverage {
 	summary := modelCoverage{Model: model, BelowBar: []string{}}
+	var routes []string
 	for _, c := range cases {
 		for _, run := range c.ByModel {
 			if run.Model != model {
 				continue
 			}
 			summary.CasesRecorded++
-			summary.Route = routeOf(model, run.Driver)
+			routes = append(routes, routeOf(model, run.Driver))
 			if run.Search == "lexical" {
 				summary.Search = "lexical"
 			}
@@ -925,6 +926,7 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 		summary.Reliability = float64(summary.Passed) / float64(summary.Runs)
 	}
 	sort.Strings(summary.BelowBar)
+	summary.Route = strings.Join(sortedCopy(routes), " + ")
 	return summary
 }
 

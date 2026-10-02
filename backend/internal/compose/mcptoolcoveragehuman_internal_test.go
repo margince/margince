@@ -58,3 +58,32 @@ func TestAJobsCriteriaAreReadWithoutTheirNumbers(t *testing.T) {
 		t.Errorf("plainCriteria = %q, want %q", got, want)
 	}
 }
+
+// One folder can hold a model's verdicts from more than one route — the vendor
+// API and OpenRouter share it — and the page must name every route it averaged.
+func TestAModelRunTwoWaysNamesBothRoutes(t *testing.T) {
+	cases := []caseRow{
+		{Name: "a", ByModel: []caseModelRun{{Model: "gpt-5.6-sol", Runs: 3, Passed: 3, Held: true, Driver: "gpt:api"}}},
+		{Name: "b", ByModel: []caseModelRun{{Model: "gpt-5.6-sol", Runs: 3, Passed: 3, Held: true, Driver: "gpt:openrouter"}}},
+	}
+	if got, want := summariseModel(cases, "gpt-5.6-sol").Route, "neutral harness, vendor API + neutral harness, via OpenRouter"; got != want {
+		t.Errorf("Route = %q, want %q", got, want)
+	}
+}
+
+// Every job on the page is named by its scenario's first line; one that breaks
+// the convention would render a row with no name and fail nothing.
+func TestEveryScenarioNamesItsJob(t *testing.T) {
+	cases, err := readE2ELLMCases(e2eLLMScenarioDir, e2eLLMRecordDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) == 0 {
+		t.Fatal("read no scenarios; this census would pass having read nothing")
+	}
+	for _, c := range cases {
+		if c.Title == "" {
+			t.Errorf("%s: its first line is not `# CASE <n> — <the job in a contact's words>.`", c.File)
+		}
+	}
+}

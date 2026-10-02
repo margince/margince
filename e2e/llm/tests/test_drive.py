@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import candidates  # noqa: E402
 import check  # noqa: E402
 import drive  # noqa: E402
+import providers  # noqa: E402
 from tests.fakes import FakeMcp, FakeProvider  # noqa: E402
 
 TOOLS = [{"name": "search_context", "description": "d", "inputSchema": {"type": "object"}}]
@@ -98,13 +99,35 @@ class ChatWireTest(Bridge):
         self.assertEqual(code, 3)
         self.assertEqual(len(self.requests), 1)
 
-    def test_a_200_carrying_an_error_body_is_a_harness_fault(self):
-        code, _out = self.drive([(200, {"error": {"message": "upstream provider error", "code": 502}})])
+    def test_a_200_carrying_an_error_body_is_retried_then_a_harness_fault(self):
+        code, _out = self.drive([(200, {"error": {"message": "upstream provider error", "code": 502}})] * 3)
+        self.assertEqual((code, len(self.requests)), (3, 3))
+
+    def test_a_brokers_transient_200_error_is_retried_and_the_run_goes_on(self):
+        code, out = self.drive([(200, {"error": {"message": "upstream"}}), call_search(), chat("September.")])
+        self.assertEqual(code, 0)
+        self.assert_scored_answer(out)
+
+    def test_a_200_that_is_not_json_is_retried_then_a_harness_fault(self):
+        code, _out = self.drive([(200, "<html>proxy</html>")] * 3)
         self.assertEqual(code, 3)
 
-    def test_a_200_that_is_not_json_is_a_harness_fault(self):
-        code, _out = self.drive([(200, "<html>proxy</html>")])
-        self.assertEqual(code, 3)
+    def test_a_truncated_body_is_retried(self):
+        import http.client
+        real = providers.urllib.request.urlopen
+        calls = []
+
+        def flaky(request, *args, **kwargs):
+            # Only the model's endpoint truncates; the MCP handshake is untouched.
+            if request.full_url.endswith("/chat/completions"):
+                calls.append(1)
+                if len(calls) == 1:
+                    raise http.client.IncompleteRead(b"partial")
+            return real(request, *args, **kwargs)
+
+        with unittest.mock.patch.object(providers.urllib.request, "urlopen", flaky):
+            code, _out = self.drive([chat("September.")])
+        self.assertEqual((code, len(calls)), (0, 2))
 
     def test_turn_cap_is_a_finding(self):
         code, out = self.drive([call_search(f"c{i}") for i in range(drive.MAX_TURNS)])
@@ -230,9 +253,6 @@ class McpFailureTest(unittest.TestCase):
             self.assertIn('"status": "failed"', handle.read())
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 def markers(body):
     return json.dumps(body).count('"cache_control"')
@@ -290,3 +310,7 @@ class MainTest(unittest.TestCase):
         with unittest.mock.patch.object(sys, "argv", argv), contextlib.redirect_stderr(io.StringIO()) as err:
             self.assertEqual(drive.main(), drive.HARNESS)
         self.assertIn("outside the repo", err.getvalue())
+
+
+if __name__ == "__main__":
+    unittest.main()

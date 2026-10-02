@@ -510,7 +510,11 @@ jobs:
         uses: ./.github/actions/upload-artifact-retried
         with:
           name: e2e-llm-transcripts
-          path: e2e/llm/records/
+          # The verdicts too: each says how it was measured (route, search mode),
+          # which the transcripts alone do not.
+          path: |
+            e2e/llm/records/
+            backend/internal/compose/aicert/records/mcp_e2e/
           retention-days: 30
           # ERROR, not warn. An empty records/ means the lane never drove a
           # scenario, and the first CI run passed this step while uploading

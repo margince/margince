@@ -224,6 +224,26 @@ MCP_SERVER=margince_e2e_llm
 #
 # It also runs AFTER seeding, because the seed lifts the admin's first-login
 # hold, and a passport cannot be minted by an account that is still held.
+# write_mcp_config points the claude CLI at the stack where it is NOW. Every
+# restart below re-asks for the stack's address and calls this again: a stop
+# releases the port claim, and the stack may come back on another one.
+write_mcp_config() {
+  python3 -c 'import json,sys
+cfg = {"mcpServers": {sys.argv[4]: {"type": "http", "url": sys.argv[1] + "/mcp",
+       "headers": {"Authorization": "Bearer " + sys.argv[2]}}}}
+open(sys.argv[3], "w").write(json.dumps(cfg))' \
+    "$APP_BASE" "$PASSPORT" "$MCP_CONFIG" "$MCP_SERVER"
+}
+
+# restart_stack stops and starts this slug's stack and re-reads its address.
+restart_stack() {
+  (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
+  "$@"
+  (cd "$ROOT" && make dev DEV_SLUG="$SLUG" >/dev/null)
+  APP_BASE="$(DEV_SLUG="$SLUG" dev_app_base_url)"
+  write_mcp_config
+}
+
 mint_passport() {
   curl -sS -c "$COOKIES" -X POST -H 'Content-Type: application/json' \
     -d '{"email":"admin@demo.test","password":"demo-password-123"}' \
@@ -236,11 +256,7 @@ try: print(json.load(sys.stdin).get("token",""))
 except Exception: print("")')"
   [[ -n "$PASSPORT" ]] || { echo "could not mint a passport" >&2; exit 1; }
 
-  python3 -c 'import json,sys
-cfg = {"mcpServers": {sys.argv[4]: {"type": "http", "url": sys.argv[1] + "/mcp",
-       "headers": {"Authorization": "Bearer " + sys.argv[2]}}}}
-open(sys.argv[3], "w").write(json.dumps(cfg))' \
-    "$APP_BASE" "$PASSPORT" "$MCP_CONFIG" "$MCP_SERVER"
+  write_mcp_config
 
   # A config the CLI cannot connect with produces an assistant with no tools,
   # which reads downstream as a model that chose not to call anything. Fail
@@ -275,12 +291,19 @@ if [[ -n "$STACK_PRESET" ]]; then
     head -c 600 "$WORK/routing.out" >&2
     exit 1
   fi
-  (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
-  (cd "$ROOT" && make dev DEV_SLUG="$SLUG" >/dev/null)
+  restart_stack
 fi
 SEARCH=semantic
-if ! why="$(MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/stackready.py" \
-  --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN)"; then
+ready=0
+why="$(MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/stackready.py" \
+  --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN)" || ready=$?
+# 3 is a probe that could not run at all: no search was measured, so no
+# allowance for a lexical one applies to it.
+if [[ "$ready" -ne 0 && "$ready" -ne 1 ]]; then
+  echo "HARNESS: $why" >&2
+  exit 2
+fi
+if [[ "$ready" -eq 1 ]]; then
   if [[ "${E2E_LLM_ALLOW_LEXICAL:-0}" != "1" ]]; then
     echo "HARNESS: $why." >&2
     echo "  Every candidate would be measured on a degraded search. Put GEMINI_API_KEY in" >&2
@@ -311,9 +334,10 @@ echo "==> search $SEARCH"
 # The stack comes down for the copy and straight back up, because Postgres will
 # not copy a database a session is connected to. That is the one time it stops.
 echo "==> snapshotting the seeded world"
-(cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
-(cd "$ROOT" && make dev-snapshot DEV_SLUG="$SLUG" >/dev/null)
-(cd "$ROOT" && make dev DEV_SLUG="$SLUG" >/dev/null)
+snapshot_world() {
+  (cd "$ROOT" && make dev-snapshot DEV_SLUG="$SLUG" >/dev/null)
+}
+restart_stack snapshot_world
 
 # --- run one scenario once ---------------------------------------------------
 #

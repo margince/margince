@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -57,12 +58,18 @@ class ResolveTest(unittest.TestCase):
             candidates.resolve("mistral", "openrouter", effort="think hard", folder="x")
 
     def test_openrouter_base_url_defaults_and_can_be_moved(self):
-        self.assertEqual(candidates.resolve("mistral", "openrouter").base_url, "https://openrouter.ai/api/v1")
-        os.environ["OPENAI_COMPATIBLE_BASE_URL"] = "http://127.0.0.1:1/v1"
-        try:
+        with unittest.mock.patch.dict(os.environ, {"OPENAI_COMPATIBLE_BASE_URL": ""}):
+            self.assertEqual(candidates.resolve("mistral", "openrouter").base_url, "https://openrouter.ai/api/v1")
+        with unittest.mock.patch.dict(os.environ, {"OPENAI_COMPATIBLE_BASE_URL": "http://127.0.0.1:1/v1"}):
             self.assertEqual(candidates.resolve("mistral", "openrouter").base_url, "http://127.0.0.1:1/v1")
-        finally:
-            del os.environ["OPENAI_COMPATIBLE_BASE_URL"]
+
+    def test_check_refuses_a_short_candidate_line_cleanly(self):
+        import subprocess
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        done = subprocess.run([sys.executable, os.path.join(here, "check.py"), "--candidate", "claude"],
+                              capture_output=True, text=True, check=False)
+        self.assertEqual(done.returncode, 1)
+        self.assertNotIn("Traceback", done.stderr)
 
 
 if __name__ == "__main__":

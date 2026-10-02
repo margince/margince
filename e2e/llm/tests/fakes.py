@@ -78,6 +78,8 @@ class FakeMcp(_Server):
             if end < len(tools):
                 page["nextCursor"] = str(end)
             return page
+        if method != "tools/call":
+            raise AssertionError(f"FakeMcp was sent {method!r}, which it does not serve")
         self.calls.append((params["name"], params.get("arguments")))
         text, is_error = replies.get(params["name"], ("ok", False))
         return {"content": [{"type": "text", "text": text}], "isError": is_error}
@@ -92,6 +94,8 @@ class FakeProvider(_Server):
 
         def handle(path, headers, body):
             self.requests.append((path, headers, body))
+            if not queue:
+                raise AssertionError(f"FakeProvider's script ran out at request {len(self.requests)}")
             status, doc = queue.pop(0)
             return status, {"Content-Type": "application/json"}, json.dumps(doc).encode()
 

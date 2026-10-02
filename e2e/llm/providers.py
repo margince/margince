@@ -10,6 +10,7 @@ exactly what that vendor sent.
 """
 
 import collections
+import http.client
 import json
 import os
 import ssl
@@ -70,22 +71,20 @@ def _post(vendor, url, headers, body, sleep):
         try:
             with urllib.request.urlopen(request, timeout=TIMEOUT, context=_TLS) as response:
                 raw = response.read()
-            try:
-                reply = json.loads(raw)
-            except ValueError as err:
-                raise ProviderFault(f"{vendor} answered with something other than JSON: {raw[:200]!r}") from err
-            # A broker can carry an upstream failure in a 200.
-            if not isinstance(reply, dict) or "error" in reply:
-                raise ProviderFault(f"{vendor} answered with an error: {str(reply)[:300]}")
-            return reply
+            reply = _decoded(raw)
+            # A broker carries an upstream failure in a 200, and a proxy answers
+            # with a page: both are as transient as the 5xx they stand for.
+            if isinstance(reply, dict) and "error" not in reply:
+                return reply
+            last = f"HTTP 200 carrying {str(reply if reply is not None else raw[:200])[:300]}"
         except urllib.error.HTTPError as err:
             detail = err.read().decode("utf-8", "replace")[:300]
             # A 4xx other than 429 will answer the same way every time.
             if err.code != 429 and err.code < 500:
                 raise ProviderFault(f"{vendor} refused the request: HTTP {err.code}: {detail}") from err
             last = f"HTTP {err.code}: {detail}"
-        except (urllib.error.URLError, TimeoutError, ConnectionError) as err:
-            last = str(err)
+        except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.HTTPException) as err:
+            last = repr(err)
         if attempt < ATTEMPTS - 1:
             sleep(2 ** (attempt + 1))
     raise ProviderFault(f"{vendor} kept failing after {ATTEMPTS} attempts: {last}")
@@ -118,6 +117,14 @@ def _marked(message):
         return message
     blocks[-1] = dict(blocks[-1], cache_control=_EPHEMERAL)
     return dict(message, content=blocks)
+
+
+def _decoded(raw):
+    """The reply as JSON, or None when it is not JSON at all."""
+    try:
+        return json.loads(raw)
+    except ValueError:
+        return None
 
 
 def _effort(route):

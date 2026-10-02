@@ -117,8 +117,8 @@ def _codex_item(out, entry):
     if kind in _CODEX_HARMLESS_ITEMS:
         return ""
     if kind == "error":
-        message = entry.get("message") or ""
-        return message if "mcp" in message.lower() else ""
+        # The stream's own failure signal: whatever it says, the run is not scored.
+        return entry.get("message") or "codex reported an error"
     if kind == "mcp_tool_call" and entry.get("server") == SERVER:
         # codex sends arguments as a JSON object; a string is read as one too.
         arguments = entry.get("arguments")

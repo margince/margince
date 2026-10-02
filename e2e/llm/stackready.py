@@ -8,7 +8,9 @@ asks before it snapshots the world.
 
     stackready.py --mcp-url URL --token-env NAME [--wait SECONDS]
 
-Exit 0 when semantic search answers, 1 (with the reason) when it never did.
+Exit 0 when semantic search answers, 1 (with the reason) when it never did,
+3 when the server could not be asked at all — a harness fault the lane stops on
+whatever E2E_LLM_ALLOW_LEXICAL says, because it is not a lexical search.
 """
 
 import argparse
@@ -47,16 +49,20 @@ def main():
     parser.add_argument("--wait", type=int, default=300, help="seconds to wait for indexing")
     args = parser.parse_args()
     session = mcpclient.Session(args.mcp_url, os.environ.get(args.token_env, ""))
-    session.open()
     deadline = time.monotonic() + args.wait
-    while True:
-        problem = semantic_problem(session)
-        if not problem:
-            return 0
-        if time.monotonic() >= deadline:
-            print(problem)
-            return 1
-        time.sleep(10)
+    try:
+        session.open()
+        while True:
+            problem = semantic_problem(session)
+            if not problem:
+                return 0
+            if time.monotonic() >= deadline:
+                print(problem)
+                return 1
+            time.sleep(10)
+    except (mcpclient.McpFault, ValueError) as fault:
+        print(f"the search probe could not be run: {fault}")
+        return 3
 
 
 if __name__ == "__main__":
