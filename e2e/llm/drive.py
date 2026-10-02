@@ -14,7 +14,9 @@ lane reads 3 as a harness stop: such a run is never scored.
 import argparse
 import json
 import os
+import subprocess
 import sys
+import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -100,6 +102,59 @@ def _loop(model, session, out):
         return HARNESS
 
 
+# Every codex capability that is not a call to this lane's server, switched
+# off; what codex cannot switch off, transcript.from_codex stops the run on.
+_CODEX_OFF = (
+    "shell_tool", "unified_exec", "view_image", "multi_agent", "apps", "browser_use",
+    "browser_use_external", "computer_use", "sleep_tool", "tool_suggest", "skill_search",
+    "code_mode_host", "image_generation", "goals",
+)
+# codex has no turn cap, so a wall clock stands in for one.
+CODEX_TIMEOUT = 900
+
+
+def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT):
+    """Drive one prompt through `codex exec` and write it as a transcript.
+
+    Run from an empty directory under a read-only sandbox, so nothing of the
+    repository is within reach of a tool that slips through. The passport
+    reaches codex by the name of its variable, never on the command line.
+    """
+    driver = f"{route.candidate}:{route.via}"
+    try:
+        _instructions, tools = mcpclient.Session(mcp_url, os.environ.get(token_env, "")).open()
+    except mcpclient.McpFault as fault:
+        with transcript.Transcript(out_path) as out:
+            out.init(route.model, driver, "cli-default", "failed", [])
+            out.finish(True, f"HARNESS: {fault}", 0)
+        print(fault, file=sys.stderr)
+        return HARNESS
+    argv = [
+        "codex", "exec", "--json", "--strict-config", "--ignore-user-config", "--skip-git-repo-check",
+        "-C", tempfile.mkdtemp(prefix="e2e-llm-codex."), "--sandbox", "read-only", "-m", route.model,
+        "-c", f'mcp_servers.{transcript.SERVER}.url="{mcp_url}"',
+        "-c", f'mcp_servers.{transcript.SERVER}.bearer_token_env_var="{token_env}"',
+        "-c", 'web_search="disabled"',
+    ]
+    for feature in _CODEX_OFF:
+        argv += ["-c", f"features.{feature}=false"]
+    argv.append(prompt)
+    try:
+        done = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                              timeout=timeout, check=False)
+        lines, stderr = done.stdout.splitlines(), done.stderr
+    except subprocess.TimeoutExpired as expired:
+        # The partial stream is converted anyway: it ends without a completed
+        # turn, which from_codex reports as a run that never finished.
+        partial = expired.stdout or b""
+        lines = (partial.decode("utf-8", "replace") if isinstance(partial, bytes) else partial).splitlines()
+        stderr = f"codex overran its {timeout}s wall clock and was killed"
+    code = transcript.from_codex(lines, out_path, route.model, driver, [t["name"] for t in tools])
+    if code:
+        print(stderr.strip()[-2000:], file=sys.stderr)
+    return code
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--candidate", required=True)
@@ -116,13 +171,15 @@ def main():
     except candidates.RouteError as err:
         print(err, file=sys.stderr)
         return HARNESS
+    with open(args.prompt_file, encoding="utf-8") as handle:
+        prompt = handle.read()
+    if route.wire == "codex-cli":
+        return run_codex(route, args.mcp_url, args.token_env, prompt, args.out)
     key = os.environ.get(route.key_env, "")
     token = os.environ.get(args.token_env, "")
     if not key or not token:
         print(f"{route.key_env if not key else args.token_env} is not set", file=sys.stderr)
         return HARNESS
-    with open(args.prompt_file, encoding="utf-8") as handle:
-        prompt = handle.read()
     return run(route, key, args.mcp_url, token, prompt, args.out)
 
 

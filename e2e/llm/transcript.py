@@ -89,3 +89,90 @@ class Transcript:
         if self._measured:
             event["usage"] = dict(self._usage)
         self._emit(event)
+
+
+# What a codex run may do besides call this lane's server. Codex cannot offer
+# MCP tools alone: whatever else it reaches for stops the run, so a GPT verdict
+# never rests on a shell read of the scenario files.
+_CODEX_HARMLESS_ITEMS = {"agent_message", "reasoning", "todo_list"}
+_CODEX_RESOURCE_HELPERS = {"list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"}
+# Disabling code mode (so `exec` fails closed) makes codex say so in an error item.
+_CODEX_NOTICE = "Code Mode is unavailable"
+
+
+def _codex_result_text(entry):
+    if entry.get("error"):
+        return str((entry["error"] or {}).get("message") or entry["error"]), True
+    result = entry.get("result") or {}
+    text = "\n".join(
+        block.get("text", "") for block in result.get("content") or () if block.get("type") == "text"
+    )
+    return text, bool(result.get("isError"))
+
+
+def _codex_item(out, entry):
+    """Write one completed codex item; return why the run must stop, or ""."""
+    kind = entry.get("type")
+    if kind == "agent_message":
+        out.assistant(entry.get("text") or "")
+        return ""
+    if kind in _CODEX_HARMLESS_ITEMS:
+        return ""
+    if kind == "error":
+        message = entry.get("message") or ""
+        return message if "mcp" in message.lower() and _CODEX_NOTICE not in message else ""
+    if kind == "mcp_tool_call" and entry.get("server") == SERVER:
+        try:
+            arguments = json.loads(entry.get("arguments") or "{}")
+        except ValueError:
+            arguments = {}
+        out.assistant("", [(entry["id"], entry["tool"], arguments if isinstance(arguments, dict) else {})])
+        text, is_error = _codex_result_text(entry)
+        out.tool_results([(entry["id"], text, is_error)])
+        return ""
+    if kind == "mcp_tool_call" and entry.get("server") == "codex" and entry.get("tool") in _CODEX_RESOURCE_HELPERS:
+        return ""
+    return f"codex used a tool outside the lane's MCP server: {kind} {entry.get('server') or ''} {entry.get('tool') or entry.get('command') or ''}".strip()
+
+
+def from_codex(lines, path, model, driver, offered):
+    """Write a `codex exec --json` run as a transcript: 0 when it ran, 3 when not.
+
+    Codex emits no list of the tools it offered, so `offered` is the lane's own
+    tools/list over the same passport, and the status says so.
+    """
+    answer, finished = "", False
+    with Transcript(path) as out:
+        out.init(model, driver, "cli-default", "listed-by-lane", offered)
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            kind = event.get("type")
+            if kind == "item.completed":
+                entry = event.get("item") or {}
+                if entry.get("type") == "agent_message" and entry.get("text"):
+                    answer = entry["text"]
+                stop = _codex_item(out, entry)
+                if stop:
+                    out.finish(True, f"HARNESS: {stop}", 0)
+                    return 3
+            elif kind == "turn.completed":
+                usage = event.get("usage") or {}
+                cached = usage.get("cached_input_tokens") or 0
+                out.add_usage({
+                    "input": usage.get("input_tokens", 0) - cached, "output": usage.get("output_tokens", 0),
+                    "cache_read": cached, "cache_write": usage.get("cache_write_input_tokens") or 0,
+                    "cost": None,
+                } if "input_tokens" in usage and "output_tokens" in usage else None)
+                finished = True
+            elif kind == "turn.failed":
+                message = (event.get("error") or {}).get("message") or "the turn failed"
+                out.finish(True, f"HARNESS: codex: {message}", 0)
+                return 3
+        if not finished:
+            out.finish(True, "HARNESS: codex stopped before its turn completed", 0)
+            return 3
+        out.finish(False, answer, 1)
+        return 0
