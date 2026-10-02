@@ -11298,6 +11298,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/call-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+         * @description Counts every model-call attempt in the window, cache hits excluded. A failure is an
+         *     attempt with a sentinel that is not an answer, the same rule the health dot reads;
+         *     a timeout is an attempt its deadline stopped. Cost is priced from the rate sheet the
+         *     way /ai/usage prices it, and calls no rate prices are counted in `unpriced`.
+         */
+        get: operations["getAiCallStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/call-stats/flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which step of one task's route answered its calls over a window (ai_diagnostics read). */
+        get: operations["getAiTaskFlow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/calls/{id}": {
         parameters: {
             query?: never;
@@ -21245,6 +21285,74 @@ export interface components {
             };
             /** @description Stored overrides for tasks this installation no longer runs; calls ignore them. */
             stale: string[];
+        };
+        AiCallStats: {
+            window: string;
+            group: string;
+            rows: components["schemas"]["AiCallStatsRow"][];
+        };
+        AiCallStatsRow: {
+            /** @description The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report). */
+            key: string;
+            /** Format: int64 */
+            calls: number;
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            timeouts: number;
+            /** Format: int64 */
+            p50_ms: number;
+            /** Format: int64 */
+            p95_ms: number;
+            /** Format: int64 */
+            tokens_in: number;
+            /** Format: int64 */
+            tokens_out: number;
+            /**
+             * Format: int64
+             * @description USD micro-units, priced at each call's day.
+             */
+            cost_microusd: number;
+            /**
+             * Format: int64
+             * @description Calls that spent tokens no rate prices; their cost is not in cost_microusd.
+             */
+            unpriced: number;
+        };
+        AiTaskFlow: {
+            task: string;
+            window: string;
+            /**
+             * Format: int64
+             * @description Logical calls in the window, cache hits excluded.
+             */
+            total: number;
+            /**
+             * Format: int64
+             * @description Logical calls whose last attempt failed.
+             */
+            unanswered: number;
+            /** @description The decision model first, then each tier in ladder order. */
+            steps: components["schemas"]["AiFlowStep"][];
+        };
+        AiFlowStep: {
+            decision: boolean;
+            tier: string;
+            provider: string;
+            model: string;
+            /** Format: int64 */
+            attempts: number;
+            /**
+             * Format: int64
+             * @description Logical calls this step answered.
+             */
+            answered: number;
+            /** Format: int64 */
+            p50_ms: number;
+            /** @description Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt's reason (decision_below_floor, …). */
+            gave_up: {
+                [key: string]: number;
+            };
         };
         AiDeferredWork: {
             carrier: string;
@@ -59439,6 +59547,14 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Filter to one task (capture_classify, enrich, …). */
                 task?: string;
+                /** @description Filter to calls that ended on one provider (openai_compatible, gemini, …). */
+                provider?: string;
+                /** @description Filter to calls that ended on one configured model id. */
+                model?: string;
+                /** @description Filter to calls a broker served from one upstream host. */
+                served_provider?: string;
+                /** @description Filter to calls that ended on one tier. */
+                tier?: string;
             };
             header?: never;
             path?: never;
@@ -59457,6 +59573,63 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiCallStats: {
+        parameters: {
+            query?: {
+                window?: "24h" | "7d" | "30d";
+                group?: "provider" | "model" | "served_provider" | "tier" | "task";
+                provider?: string;
+                model?: string;
+                tier?: string;
+                task?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One row per group, most calls first; empty when the window holds none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiCallStats"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiTaskFlow: {
+        parameters: {
+            query: {
+                task: string;
+                window?: "24h" | "7d" | "30d";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The task's logical calls, how many got no answer, and each step of its route. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskFlow"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

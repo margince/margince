@@ -5,11 +5,13 @@ package ai
 
 import (
 	"net/http"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -26,7 +28,10 @@ func (h Handlers) ListAiCalls(
 	r *http.Request,
 	params crmcontracts.ListAiCallsParams,
 ) {
-	page, err := h.calls.ListCalls(r.Context(), params.Cursor, params.Limit, params.Task)
+	page, err := h.calls.ListCalls(r.Context(), params.Cursor, params.Limit, CallListFilter{
+		Task: deref(params.Task), Provider: deref(params.Provider), Model: deref(params.Model),
+		ServedProvider: deref(params.ServedProvider), Tier: deref(params.Tier),
+	})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -136,4 +141,71 @@ func optionalText(value string) *string {
 		return nil
 	}
 	return &value
+}
+
+func deref(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
+}
+
+// defaultStatsWindow is the window a figures read takes when it names none.
+const defaultStatsWindow = "7d"
+
+// GetAiCallStats implements (GET /ai/call-stats).
+func (h Handlers) GetAiCallStats(w http.ResponseWriter, r *http.Request, params crmcontracts.GetAiCallStatsParams) {
+	window, span := statsWindow((*string)(params.Window))
+	group := string(GroupByProvider)
+	if params.Group != nil {
+		group = string(*params.Group)
+	}
+	rows, err := h.calls.CallStats(r.Context(), CallStatsQuery{
+		Window: span, GroupBy: CallStatsGroup(group),
+		Filter: CallStatsFilter{Provider: deref(params.Provider), Model: deref(params.Model), Tier: deref(params.Tier), Task: Task(deref(params.Task))},
+	})
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.AiCallStats{Window: window, Group: group, Rows: make([]crmcontracts.AiCallStatsRow, 0, len(rows))}
+	for _, row := range rows {
+		out.Rows = append(out.Rows, crmcontracts.AiCallStatsRow{
+			Key: row.Key, Calls: row.Calls, Failed: row.Failed, Timeouts: row.Timeouts, P50Ms: row.P50Ms, P95Ms: row.P95Ms,
+			TokensIn: row.TokensIn, TokensOut: row.TokensOut, CostMicrousd: row.CostMicroUSD, Unpriced: row.Unpriced,
+		})
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// GetAiTaskFlow implements (GET /ai/call-stats/flow).
+func (h Handlers) GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params crmcontracts.GetAiTaskFlowParams) {
+	if _, known := taskLadders[Task(params.Task)]; !known {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	window, span := statsWindow((*string)(params.Window))
+	flow, err := h.calls.TaskFlow(r.Context(), Task(params.Task), span)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.AiTaskFlow{Task: params.Task, Window: window, Total: flow.Total, Unanswered: flow.Unanswered, Steps: make([]crmcontracts.AiFlowStep, 0, len(flow.Steps))}
+	for _, step := range flow.Steps {
+		out.Steps = append(out.Steps, crmcontracts.AiFlowStep{
+			Decision: step.Decision, Tier: string(step.Tier), Provider: step.Provider, Model: step.Model,
+			Attempts: step.Attempts, Answered: step.Answered, P50Ms: step.P50Ms, GaveUp: step.GaveUp,
+		})
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// statsWindow is the named window and its length; the contract's enum has
+// already refused any other name.
+func statsWindow(named *string) (string, time.Duration) {
+	window := defaultStatsWindow
+	if named != nil && CallStatsWindows[*named] != 0 {
+		window = *named
+	}
+	return window, CallStatsWindows[window]
 }

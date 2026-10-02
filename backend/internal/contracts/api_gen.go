@@ -18817,6 +18817,75 @@ func (e DeleteAiModelRateParamsLane) Valid() bool {
 	}
 }
 
+// Defines values for GetAiCallStatsParamsWindow.
+const (
+	GetAiCallStatsParamsWindowN24h GetAiCallStatsParamsWindow = "24h"
+	GetAiCallStatsParamsWindowN30d GetAiCallStatsParamsWindow = "30d"
+	GetAiCallStatsParamsWindowN7d  GetAiCallStatsParamsWindow = "7d"
+)
+
+// Valid indicates whether the value is a known member of the GetAiCallStatsParamsWindow enum.
+func (e GetAiCallStatsParamsWindow) Valid() bool {
+	switch e {
+	case GetAiCallStatsParamsWindowN24h:
+		return true
+	case GetAiCallStatsParamsWindowN30d:
+		return true
+	case GetAiCallStatsParamsWindowN7d:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAiCallStatsParamsGroup.
+const (
+	GetAiCallStatsParamsGroupModel          GetAiCallStatsParamsGroup = "model"
+	GetAiCallStatsParamsGroupProvider       GetAiCallStatsParamsGroup = "provider"
+	GetAiCallStatsParamsGroupServedProvider GetAiCallStatsParamsGroup = "served_provider"
+	GetAiCallStatsParamsGroupTask           GetAiCallStatsParamsGroup = "task"
+	GetAiCallStatsParamsGroupTier           GetAiCallStatsParamsGroup = "tier"
+)
+
+// Valid indicates whether the value is a known member of the GetAiCallStatsParamsGroup enum.
+func (e GetAiCallStatsParamsGroup) Valid() bool {
+	switch e {
+	case GetAiCallStatsParamsGroupModel:
+		return true
+	case GetAiCallStatsParamsGroupProvider:
+		return true
+	case GetAiCallStatsParamsGroupServedProvider:
+		return true
+	case GetAiCallStatsParamsGroupTask:
+		return true
+	case GetAiCallStatsParamsGroupTier:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAiTaskFlowParamsWindow.
+const (
+	GetAiTaskFlowParamsWindowN24h GetAiTaskFlowParamsWindow = "24h"
+	GetAiTaskFlowParamsWindowN30d GetAiTaskFlowParamsWindow = "30d"
+	GetAiTaskFlowParamsWindowN7d  GetAiTaskFlowParamsWindow = "7d"
+)
+
+// Valid indicates whether the value is a known member of the GetAiTaskFlowParamsWindow enum.
+func (e GetAiTaskFlowParamsWindow) Valid() bool {
+	switch e {
+	case GetAiTaskFlowParamsWindowN24h:
+		return true
+	case GetAiTaskFlowParamsWindowN30d:
+		return true
+	case GetAiTaskFlowParamsWindowN7d:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EvaluateReportingParamsScopeKind.
 const (
 	EvaluateReportingParamsScopeKindOwner     EvaluateReportingParamsScopeKind = "owner"
@@ -21799,6 +21868,33 @@ type AiCallListResponse struct {
 	Tasks []string `json:"tasks"`
 }
 
+// AiCallStats defines model for AiCallStats.
+type AiCallStats struct {
+	Group  string           `json:"group"`
+	Rows   []AiCallStatsRow `json:"rows"`
+	Window string           `json:"window"`
+}
+
+// AiCallStatsRow defines model for AiCallStatsRow.
+type AiCallStatsRow struct {
+	Calls int64 `json:"calls"`
+
+	// CostMicrousd USD micro-units, priced at each call's day.
+	CostMicrousd int64 `json:"cost_microusd"`
+	Failed       int64 `json:"failed"`
+
+	// Key The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).
+	Key       string `json:"key"`
+	P50Ms     int64  `json:"p50_ms"`
+	P95Ms     int64  `json:"p95_ms"`
+	Timeouts  int64  `json:"timeouts"`
+	TokensIn  int64  `json:"tokens_in"`
+	TokensOut int64  `json:"tokens_out"`
+
+	// Unpriced Calls that spent tokens no rate prices; their cost is not in cost_microusd.
+	Unpriced int64 `json:"unpriced"`
+}
+
 // AiCallSummary One terminal model call from the ai_call trace (AIRT-SCHEMA-2).
 type AiCallSummary struct {
 	CacheHit     bool `json:"cache_hit"`
@@ -21982,6 +22078,21 @@ type AiFieldError struct {
 
 	// Message What is wrong and what to write instead.
 	Message string `json:"message"`
+}
+
+// AiFlowStep defines model for AiFlowStep.
+type AiFlowStep struct {
+	// Answered Logical calls this step answered.
+	Answered int64 `json:"answered"`
+	Attempts int64 `json:"attempts"`
+	Decision bool  `json:"decision"`
+
+	// GaveUp Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt's reason (decision_below_floor, …).
+	GaveUp   map[string]int64 `json:"gave_up"`
+	Model    string           `json:"model"`
+	P50Ms    int64            `json:"p50_ms"`
+	Provider string           `json:"provider"`
+	Tier     string           `json:"tier"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -22542,6 +22653,20 @@ type AiStatus struct {
 	RoutingVersion       string           `json:"routing_version"`
 	TaskContractHash     string           `json:"task_contract_hash"`
 	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
+}
+
+// AiTaskFlow defines model for AiTaskFlow.
+type AiTaskFlow struct {
+	// Steps The decision model first, then each tier in ladder order.
+	Steps []AiFlowStep `json:"steps"`
+	Task  string       `json:"task"`
+
+	// Total Logical calls in the window, cache hits excluded.
+	Total int64 `json:"total"`
+
+	// Unanswered Logical calls whose last attempt failed.
+	Unanswered int64  `json:"unanswered"`
+	Window     string `json:"window"`
 }
 
 // AiTaskOverride An admin's settings for one task. An absent field keeps the product's own value.
@@ -47165,6 +47290,31 @@ type ListAvailableModelsParams struct {
 	Model *string `form:"model,omitempty" json:"model,omitempty"`
 }
 
+// GetAiCallStatsParams defines parameters for GetAiCallStats.
+type GetAiCallStatsParams struct {
+	Window   *GetAiCallStatsParamsWindow `form:"window,omitempty" json:"window,omitempty"`
+	Group    *GetAiCallStatsParamsGroup  `form:"group,omitempty" json:"group,omitempty"`
+	Provider *string                     `form:"provider,omitempty" json:"provider,omitempty"`
+	Model    *string                     `form:"model,omitempty" json:"model,omitempty"`
+	Tier     *string                     `form:"tier,omitempty" json:"tier,omitempty"`
+	Task     *string                     `form:"task,omitempty" json:"task,omitempty"`
+}
+
+// GetAiCallStatsParamsWindow defines parameters for GetAiCallStats.
+type GetAiCallStatsParamsWindow string
+
+// GetAiCallStatsParamsGroup defines parameters for GetAiCallStats.
+type GetAiCallStatsParamsGroup string
+
+// GetAiTaskFlowParams defines parameters for GetAiTaskFlow.
+type GetAiTaskFlowParams struct {
+	Task   string                     `form:"task" json:"task"`
+	Window *GetAiTaskFlowParamsWindow `form:"window,omitempty" json:"window,omitempty"`
+}
+
+// GetAiTaskFlowParamsWindow defines parameters for GetAiTaskFlow.
+type GetAiTaskFlowParamsWindow string
+
 // ListAiCallsParams defines parameters for ListAiCalls.
 type ListAiCallsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -47182,6 +47332,18 @@ type ListAiCallsParams struct {
 
 	// Task Filter to one task (capture_classify, enrich, …).
 	Task *string `form:"task,omitempty" json:"task,omitempty"`
+
+	// Provider Filter to calls that ended on one provider (openai_compatible, gemini, …).
+	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
+
+	// Model Filter to calls that ended on one configured model id.
+	Model *string `form:"model,omitempty" json:"model,omitempty"`
+
+	// ServedProvider Filter to calls a broker served from one upstream host.
+	ServedProvider *string `form:"served_provider,omitempty" json:"served_provider,omitempty"`
+
+	// Tier Filter to calls that ended on one tier.
+	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
 }
 
 // ReplaceAiTaskOverridesParams defines parameters for ReplaceAiTaskOverrides.
@@ -64135,6 +64297,12 @@ type ServerInterface interface {
 	// Preview an allowance change (ai_budget read/update).
 	// (POST /ai/budget/preview)
 	PreviewAiBudget(w http.ResponseWriter, r *http.Request)
+	// Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+	// (GET /ai/call-stats)
+	GetAiCallStats(w http.ResponseWriter, r *http.Request, params GetAiCallStatsParams)
+	// Which step of one task's route answered its calls over a window (ai_diagnostics read).
+	// (GET /ai/call-stats/flow)
+	GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params GetAiTaskFlowParams)
 	// The AI call trace — every terminal model call, newest first.
 	// (GET /ai/calls)
 	ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams)
@@ -66586,6 +66754,18 @@ func (_ Unimplemented) ReplaceAiBudget(w http.ResponseWriter, r *http.Request) {
 // Preview an allowance change (ai_budget read/update).
 // (POST /ai/budget/preview)
 func (_ Unimplemented) PreviewAiBudget(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+// (GET /ai/call-stats)
+func (_ Unimplemented) GetAiCallStats(w http.ResponseWriter, r *http.Request, params GetAiCallStatsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which step of one task's route answered its calls over a window (ai_diagnostics read).
+// (GET /ai/call-stats/flow)
+func (_ Unimplemented) GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params GetAiTaskFlowParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72880,6 +73060,162 @@ func (siw *ServerInterfaceWrapper) PreviewAiBudget(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetAiCallStats operation middleware
+func (siw *ServerInterfaceWrapper) GetAiCallStats(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAiCallStatsParams
+
+	// ------------- Optional query parameter "window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window", r.URL.Query(), &params.Window, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "group" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "group", r.URL.Query(), &params.Group, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "group"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "model" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "model", r.URL.Query(), &params.Model, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tier" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tier", r.URL.Query(), &params.Tier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "task" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "task", r.URL.Query(), &params.Task, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "task"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "task", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiCallStats(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiTaskFlow operation middleware
+func (siw *ServerInterfaceWrapper) GetAiTaskFlow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAiTaskFlowParams
+
+	// ------------- Required query parameter "task" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "task", r.URL.Query(), &params.Task, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "task"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "task", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window", r.URL.Query(), &params.Window, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiTaskFlow(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListAiCalls operation middleware
 func (siw *ServerInterfaceWrapper) ListAiCalls(w http.ResponseWriter, r *http.Request) {
 
@@ -72930,6 +73266,58 @@ func (siw *ServerInterfaceWrapper) ListAiCalls(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "task"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "task", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "model" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "model", r.URL.Query(), &params.Model, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "served_provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "served_provider", r.URL.Query(), &params.ServedProvider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "served_provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "served_provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tier" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tier", r.URL.Query(), &params.Tier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
 		}
 		return
 	}
@@ -104272,6 +104660,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai/budget/preview", wrapper.PreviewAiBudget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/call-stats", wrapper.GetAiCallStats)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/call-stats/flow", wrapper.GetAiTaskFlow)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/calls", wrapper.ListAiCalls)

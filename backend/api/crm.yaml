@@ -16820,6 +16820,10 @@ paths:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - { name: task, in: query, schema: { type: string }, description: 'Filter to one task (capture_classify, enrich, …).' }
+        - { name: provider, in: query, schema: { type: string }, description: 'Filter to calls that ended on one provider (openai_compatible, gemini, …).' }
+        - { name: model, in: query, schema: { type: string }, description: 'Filter to calls that ended on one configured model id.' }
+        - { name: served_provider, in: query, schema: { type: string }, description: 'Filter to calls a broker served from one upstream host.' }
+        - { name: tier, in: query, schema: { type: string }, description: 'Filter to calls that ended on one tier.' }
       responses:
         '200':
           description: One page of terminal calls.
@@ -16828,6 +16832,56 @@ paths:
               schema: { $ref: '#/components/schemas/AiCallListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/call-stats:
+    get:
+      tags: [AI]
+      operationId: getAiCallStats
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+      description: |
+        Counts every model-call attempt in the window, cache hits excluded. A failure is an
+        attempt with a sentinel that is not an answer, the same rule the health dot reads;
+        a timeout is an attempt its deadline stopped. Cost is priced from the rate sheet the
+        way /ai/usage prices it, and calls no rate prices are counted in `unpriced`.
+      parameters:
+        - { name: window, in: query, schema: { type: string, enum: ['24h', '7d', '30d'], default: '7d' } }
+        - { name: group, in: query, schema: { type: string, enum: [provider, model, served_provider, tier, task], default: provider } }
+        - { name: provider, in: query, schema: { type: string } }
+        - { name: model, in: query, schema: { type: string } }
+        - { name: tier, in: query, schema: { type: string } }
+        - { name: task, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: One row per group, most calls first; empty when the window holds none.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiCallStats' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/call-stats/flow:
+    get:
+      tags: [AI]
+      operationId: getAiTaskFlow
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Which step of one task's route answered its calls over a window (ai_diagnostics read).
+      parameters:
+        - { name: task, in: query, required: true, schema: { type: string } }
+        - { name: window, in: query, schema: { type: string, enum: ['24h', '7d', '30d'], default: '7d' } }
+      responses:
+        '200':
+          description: The task's logical calls, how many got no answer, and each step of its route.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskFlow' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/calls/{id}:
@@ -30740,6 +30794,48 @@ components:
         errors: { type: array, items: { $ref: '#/components/schemas/AiFieldError' }, description: 'Every field the save would refuse, by its path (<task>.<field>).' }
         effective: { type: object, additionalProperties: { $ref: '#/components/schemas/AiTaskSettings' }, description: 'What each task would be sent with.' }
         stale: { type: array, items: { type: string }, description: 'Stored overrides for tasks this installation no longer runs; calls ignore them.' }
+    AiCallStats:
+      type: object
+      required: [window, group, rows]
+      properties:
+        window: { type: string }
+        group: { type: string }
+        rows: { type: array, items: { $ref: '#/components/schemas/AiCallStatsRow' } }
+    AiCallStatsRow:
+      type: object
+      required: [key, calls, failed, timeouts, p50_ms, p95_ms, tokens_in, tokens_out, cost_microusd, unpriced]
+      properties:
+        key: { type: string, description: 'The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).' }
+        calls: { type: integer, format: int64 }
+        failed: { type: integer, format: int64 }
+        timeouts: { type: integer, format: int64 }
+        p50_ms: { type: integer, format: int64 }
+        p95_ms: { type: integer, format: int64 }
+        tokens_in: { type: integer, format: int64 }
+        tokens_out: { type: integer, format: int64 }
+        cost_microusd: { type: integer, format: int64, description: 'USD micro-units, priced at each call''s day.' }
+        unpriced: { type: integer, format: int64, description: 'Calls that spent tokens no rate prices; their cost is not in cost_microusd.' }
+    AiTaskFlow:
+      type: object
+      required: [task, window, total, unanswered, steps]
+      properties:
+        task: { type: string }
+        window: { type: string }
+        total: { type: integer, format: int64, description: 'Logical calls in the window, cache hits excluded.' }
+        unanswered: { type: integer, format: int64, description: 'Logical calls whose last attempt failed.' }
+        steps: { type: array, items: { $ref: '#/components/schemas/AiFlowStep' }, description: 'The decision model first, then each tier in ladder order.' }
+    AiFlowStep:
+      type: object
+      required: [decision, tier, provider, model, attempts, answered, p50_ms, gave_up]
+      properties:
+        decision: { type: boolean }
+        tier: { type: string }
+        provider: { type: string }
+        model: { type: string }
+        attempts: { type: integer, format: int64 }
+        answered: { type: integer, format: int64, description: 'Logical calls this step answered.' }
+        p50_ms: { type: integer, format: int64 }
+        gave_up: { type: object, additionalProperties: { type: integer, format: int64 }, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).' }
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]

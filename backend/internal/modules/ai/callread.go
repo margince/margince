@@ -23,10 +23,13 @@ import (
 
 // CallReadStore serves the admin-only AI trace without loading payload
 // content into list responses.
-type CallReadStore struct{ db *database.DB }
+type CallReadStore struct {
+	db  *database.DB
+	now func() time.Time
+}
 
 // NewCallReadStore constructs the workspace-bound AI trace read store.
-func NewCallReadStore(db *database.DB) *CallReadStore { return &CallReadStore{db: db} }
+func NewCallReadStore(db *database.DB) *CallReadStore { return &CallReadStore{db: db, now: time.Now} }
 
 // CallSummary is one terminal attempt in the newest-first trace list.
 type CallSummary struct {
@@ -151,13 +154,33 @@ func finishCallPage(items []CallSummary, limit int) (CallPage, error) {
 	return page, nil
 }
 
+// CallListFilter narrows the call list to the calls that ended on one task,
+// provider, model, upstream host or tier; an empty field filters nothing.
+type CallListFilter struct {
+	Task, Provider, Model, ServedProvider, Tier string
+}
+
+// columns is each set filter beside its column, a compile-time literal.
+func (f CallListFilter) columns() []struct{ column, value string } {
+	var out []struct{ column, value string }
+	for _, c := range []struct{ column, value string }{
+		{"c.task", f.Task}, {"c.provider", f.Provider}, {"c.model_id", f.Model},
+		{"c.served_provider", f.ServedProvider}, {"c.tier", f.Tier},
+	} {
+		if c.value != "" {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
 // ListCalls returns terminal attempts newest-first. Retry siblings remain
 // available through the detail ladder, not as duplicate list entries.
 func (s *CallReadStore) ListCalls(
 	ctx context.Context,
 	cursor *string,
 	limit *int,
-	task *string,
+	filter CallListFilter,
 ) (CallPage, error) {
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		return CallPage{}, err
@@ -169,8 +192,8 @@ func (s *CallReadStore) ListCalls(
 		args = append(args, value)
 		return len(args)
 	}
-	if task != nil && *task != "" {
-		where += fmt.Sprintf(" AND c.task = $%d", addArg(*task))
+	for _, f := range filter.columns() {
+		where += fmt.Sprintf(" AND %s = $%d", f.column, addArg(f.value))
 	}
 	if cursor != nil && *cursor != "" {
 		decoded, err := storekit.DecodeCursor(*cursor)

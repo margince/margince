@@ -195,6 +195,14 @@ func (stubs) PreviewAiBudget(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewAiBudget")
 }
 
+func (stubs) GetAiCallStats(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiCallStatsParams) {
+	httperr.NotImplemented(w, r, "GetAiCallStats")
+}
+
+func (stubs) GetAiTaskFlow(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiTaskFlowParams) {
+	httperr.NotImplemented(w, r, "GetAiTaskFlow")
+}
+
 func (stubs) ListAiCalls(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAiCallsParams) {
 	httperr.NotImplemented(w, r, "ListAiCalls")
 }

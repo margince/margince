@@ -176,6 +176,8 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/agent-tools":                                                   {Op: "listAgentTools", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/ai/available-models/{provider}":                                {Op: "listAvailableModels", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/ai/budget":                                                     {Op: "getAiBudget", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/ai/call-stats":                                                 {Op: "getAiCallStats", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/ai/call-stats/flow":                                            {Op: "getAiTaskFlow", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/ai/calls":                                                      {Op: "listAiCalls", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/ai/calls/{id}":                                                 {Op: "getAiCall", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/ai/health":                                                     {Op: "getAiHealth", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
