@@ -38,6 +38,7 @@ import { ContactResearchDrawer } from "./contactdrawers";
 import { ContactFilesTab } from "./contactfiles";
 import { ContactMeetingsTab } from "./contactmeetings";
 import { ContactNetworkTab } from "./contactnetwork";
+import { ContactOpening } from "./contactopening";
 import { BRIEF_ANCHOR, ContactOverview } from "./contactoverview";
 import {
   BRIEF_PARAM,
@@ -387,9 +388,7 @@ export function ContactPageV2({
   });
   const refusedReasonId = readOnlyReason ? readOnlyReasonId : undefined;
 
-  if (view.isLoading) {
-    return <div className="wrap">{t("contact.page.loading")}</div>;
-  }
+  if (view.isLoading) return <ContactOpening id={id} />;
   if (view.isError || !view.data) {
     return <div className="wrap">{t("contact.page.notOpened")}</div>;
   }
