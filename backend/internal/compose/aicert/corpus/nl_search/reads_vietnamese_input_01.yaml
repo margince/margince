@@ -37,6 +37,6 @@ expect:
     degraded_min: 60
     floor: 50
   rubric: 'The passing filter is country VN AND (last_activity_at before 60 days ago OR last_activity_at empty),
-    the date as a relative window (days_ago 60). A Vietnamese sentence selects the same list its English twin does,
-    and a company nobody ever contacted has no activity in 60 days too, so a filter reading only the date comparison
+    the date as a relative window (days_ago 60). Vietnamese reads as any other
+    language here, and a company nobody ever contacted has no activity in 60 days too, so a filter reading only the date comparison
     fails.'
