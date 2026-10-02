@@ -20,8 +20,11 @@ func renderMCPToolCoveragePage(r mcpToolCoverage) []byte {
 	var p strings.Builder
 	p.WriteString("# What the assistant can be relied on to do\n\n")
 	p.WriteString("<!-- Generated together with mcp-tool-coverage.json; do not edit by hand. -->\n\n")
-	p.WriteString(r.Note + "\n\n")
-	p.WriteString("**This page is generated, and an edit made here is lost.**\n\n")
+	writeCoverageIntro(&p, r)
+	writeCoverageAssistants(&p, r)
+	writeCoverageJobs(&p, r)
+	p.WriteString("---\n\n## For engineers\n\nEverything below is the detail behind the two tables above: " +
+		"which tools each job requires, every run's numbers, and what no job tests yet.\n\n")
 	writeCoverageHowToRead(&p)
 	writeCoverageTotals(&p, r)
 	writeCoverageSurfaces(&p, r)
@@ -254,12 +257,7 @@ func criteriaNames(caseName string, numbers []int, catalog []criterionRow) strin
 	if len(numbers) == 0 {
 		return "—"
 	}
-	named := map[int]string{}
-	for _, c := range catalog {
-		if c.Case == caseName {
-			named[c.Number] = c.Name
-		}
-	}
+	named := criterionNames(caseName, catalog)
 	out := make([]string, 0, len(numbers))
 	for _, n := range numbers {
 		if name, ok := named[n]; ok {
@@ -269,6 +267,17 @@ func criteriaNames(caseName string, numbers []int, catalog []criterionRow) strin
 		out = append(out, fmt.Sprintf("**%d**", n))
 	}
 	return strings.Join(out, "<br>")
+}
+
+// criterionNames is one case's criteria by number.
+func criterionNames(caseName string, catalog []criterionRow) map[int]string {
+	named := map[int]string{}
+	for _, c := range catalog {
+		if c.Case == caseName {
+			named[c.Number] = c.Name
+		}
+	}
+	return named
 }
 
 // requiresColumn renders what a case demands, with an any-of group written as
