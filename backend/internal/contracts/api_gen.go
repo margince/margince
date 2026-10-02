@@ -43485,7 +43485,14 @@ type UpdateOfferLineItemRequestBillingModel string
 
 // UpdateOfferRequest Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422).
 type UpdateOfferRequest struct {
-	BuyerCompanyId       *openapi_types.UUID    `json:"buyer_company_id,omitempty"`
+	BuyerCompanyId *openapi_types.UUID `json:"buyer_company_id,omitempty"`
+
+	// Currency Refused while the draft carries priced lines. A line's price is an integer with no
+	// unit of its own, so moving the currency would leave every one of them where it is
+	// and read it in the new one — a silent reprice of a document a buyer will sign.
+	// Remove the lines and re-enter them in the new currency, or start a new offer in it.
+	// Changing the currency on a draft with no priced lines is free, and re-sending the
+	// currency the offer already holds is not a change.
 	Currency             *string                `json:"currency,omitempty"`
 	IntroText            *string                `json:"intro_text,omitempty"`
 	TemplateId           *openapi_types.UUID    `json:"template_id,omitempty"`

@@ -387,6 +387,14 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		if err := ensureDraft(current); err != nil {
 			return err
 		}
+		// Refused before anything is built. The patch is a statement of what
+		// the edit changes, and a currency this draft may not take is not a
+		// field to record — it is a request to turn down.
+		if in.Currency != nil {
+			if err := refuseRepricingByCurrency(ctx, tx, current, *in.Currency); err != nil {
+				return err
+			}
+		}
 		p, dropped, err := offerHeaderPatch(ctx, tx, current, in)
 		if err != nil {
 			return err

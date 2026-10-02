@@ -33,6 +33,7 @@ import {
 } from "./offerlinebilling";
 import { NewLineRates } from "./offerlinerates";
 import { OfferTotalsPanel } from "./offerrecurring";
+import { OfferCurrencyField } from "./offers.currencyfield";
 import { searchProductCandidates } from "./products";
 import "./offers.css";
 
@@ -198,23 +199,11 @@ function EditOfferHeaderModal({
         {t("offer.edit")}
       </Heading>
       <div className="form-stack">
-        <Field label={t("offer.currency")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={values.currency}
-              onChange={(currency) =>
-                setValues((prev) => ({ ...prev, currency }))
-              }
-              // A currency code is its own label — an ISO 4217 code is not
-              // copy, so there is nothing to translate.
-              options={["EUR", "USD", "GBP", "CHF"].map((code) => ({
-                value: code,
-                label: code,
-              }))}
-            />
-          )}
-        </Field>
+        <OfferCurrencyField
+          value={values.currency}
+          lineItems={offer.line_items}
+          onChange={(currency) => setValues((prev) => ({ ...prev, currency }))}
+        />
         <Field label={t("offer.validUntil")}>
           {(control) => (
             <TextInput

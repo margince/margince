@@ -3559,6 +3559,8 @@ export const en = {
   "offer.committedNet": "Committed net",
   "offer.edit": "Edit header",
   "offer.currency": "Currency",
+  "offer.currencyFixedByLines":
+    "The currency is fixed once a line has a price: moving it would re-read every price in the new currency. Remove the lines to change it, or start a new offer.",
   "offer.buyerCompany": "Buyer company",
   "offer.buyerCompanyConfirm": "Buyer company: {name}",
   "offer.template": "Template",

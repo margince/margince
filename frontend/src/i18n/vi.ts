@@ -3471,6 +3471,8 @@ export const vi = {
   "offer.committedNet": "Giá trị ròng cam kết",
   "offer.edit": "Sửa phần đầu",
   "offer.currency": "Tiền tệ",
+  "offer.currencyFixedByLines":
+    "Tiền tệ được cố định khi một dòng đã có giá: thay đổi sẽ khiến mọi giá được đọc theo tiền tệ mới. Hãy xóa các dòng để thay đổi, hoặc tạo báo giá mới.",
   "offer.buyerCompany": "Tổ chức mua",
   "offer.buyerCompanyConfirm": "Tổ chức mua: {name}",
   "offer.template": "Mẫu",
