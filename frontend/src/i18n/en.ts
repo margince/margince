@@ -9350,6 +9350,11 @@ export const en = {
   "aiRouting.dimensions.label": "Vector width",
   "aiRouting.dimensions.help":
     "Leave blank for the provider default. Values outside 1 to 2000 are refused.",
+  "aiRouting.provider.noHost":
+    "{provider} has no host yet. Set its host under Providers before saving.",
+  "aiRouting.embeddingsServer.label": "Embeddings server",
+  "aiRouting.embeddingsServer.help":
+    "Only if the embeddings model runs on its own server. Blank uses the provider’s host.",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
@@ -9361,8 +9366,11 @@ export const en = {
     "Full endpoint URL, used as written. Required.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.models.askingLocation":
+    "Asking Google which models {location} serves…",
   "aiRouting.models.noKey": "No key, so no model list. Type any ID it serves.",
-  "aiRouting.models.noEndpoint": "Enter the host above to load its model list.",
+  "aiRouting.models.noEndpoint":
+    "Set this provider’s host under Providers to load its model list.",
   "aiRouting.models.profileForbids":
     "This profile does not allow this provider.",
   "aiRouting.models.notPublished": "This provider publishes no model list.",
@@ -9426,6 +9434,7 @@ export const en = {
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
     "Read-only: each task’s tier is fixed by contract. Each row shows the tier and the model it runs on now.",
+  "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
   "aiTasks.viewCalls": "View calls",
   "workingHours.title": "Bookable hours",
@@ -11660,6 +11669,35 @@ export const en = {
   "aiProviders.unpriced": "{model} is in use and has no price.",
   "aiProviders.setPrice": "Set price",
   "aiProviders.manage": "Manage",
+  "aiProviderSettings.service.choose": "Choose a service",
+  "aiProviderSettings.service.label": "Service",
+  "aiProviderSettings.service.openrouter": "OpenRouter",
+  "aiProviderSettings.service.openrouterEu": "OpenRouter (EU)",
+  "aiProviderSettings.service.openrouterEu.note":
+    "Requests are processed only inside the EU. Needs an OpenRouter Business or Enterprise plan, and only EU-eligible models are served.",
+  "aiProviderSettings.service.mistral": "Mistral",
+  "aiProviderSettings.service.together": "Together",
+  "aiProviderSettings.service.groq": "Groq",
+  "aiProviderSettings.service.deepseek": "DeepSeek",
+  "aiProviderSettings.service.typesafe": "TypeSafe (default)",
+  "aiProviderSettings.service.otherChat": "Other OpenAI-compatible service",
+  "aiProviderSettings.service.otherDecisions": "Other decision server",
+  "aiProviderSettings.service.otherAddress": "Other address",
+  "aiProviderSettings.service.learnMore": "About OpenRouter EU",
+  "aiProviderSettings.host.line": "Host: {host}",
+  "aiProviderSettings.host.default": "Uses the service’s own address.",
+  "aiProviderSettings.host.guide": "How to find your host",
+  "aiProviderSettings.save": "Save connection",
+  "aiProviders.name.anthropic": "Anthropic",
+  "aiProviders.name.openaiCompatible": "OpenAI-compatible",
+  "aiProviders.name.openai": "OpenAI",
+  "aiProviders.name.gemini": "Google Gemini",
+  "aiProviders.name.geminiVertex": "Gemini on Vertex AI",
+  "aiProviders.name.jev": "TypeSafe Jev",
+  "aiProviders.name.jevCompatible": "Jev-compatible",
+  "aiProviders.name.ollama": "Ollama",
+  "aiProviders.name.vllm": "vLLM",
+  "aiProviders.borrowedFrom": "From {provider}",
   "aiProviders.connection": "Connection",
   "aiProviders.prices": "Prices",
   "aiProviders.addPrice": "Add price",

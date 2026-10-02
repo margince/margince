@@ -84,3 +84,48 @@ func TestEmbeddingsRemainSelectedBeyondAllowance(t *testing.T) {
 	}
 	t.Fatal("missing embeddings")
 }
+
+// The preview says where a lane's data is processed. An embedder left on its
+// vendor while the tiers moved behind a gateway resolves with the vendor's
+// default spelled out, and that is the vendor's cloud, not an endpoint the
+// operator configured; the gateway is.
+func TestRoutePreviewReadsASpelledOutVendorDefaultAsTheCloud(t *testing.T) {
+	cfg := mustParse(t, geminiBehindAGateway)
+	embed, _ := boundPlan(cfg, TaskEmbeddings, BandNormal)
+	if got := wireCandidates(embed); len(got) != 1 || got[0].Processing != "cloud_provider" {
+		t.Errorf("embeddings candidate = %+v, want cloud_provider: it dials the Gemini API", got)
+	}
+	for _, candidate := range wireCandidates(mustPlan(t, cfg, TaskBriefRanking)) {
+		if candidate.Processing != "configured_endpoint" {
+			t.Errorf("tier %s = %s, want configured_endpoint: it dials the gateway", candidate.Tier, candidate.Processing)
+		}
+	}
+	byHand := []plannedBinding{{tier: TierPremium, config: ProviderConfig{Provider: providerGemini, Model: "m", BaseURL: compiledHost(providerGemini) + "/"}}}
+	if got := wireCandidates(byHand)[0].Processing; got != "cloud_provider" {
+		t.Errorf("a tier with the default written by hand = %s, want cloud_provider", got)
+	}
+}
+
+func mustPlan(t *testing.T, cfg RoutingConfig, task Task) []plannedBinding {
+	t.Helper()
+	plan, blocked := boundPlan(cfg, task, BandNormal)
+	if blocked || len(plan) == 0 {
+		t.Fatalf("%s: no plan (blocked=%v)", task, blocked)
+	}
+	return plan
+}
+
+// A stored document is canonical, so the preview reads each lane's host from
+// its provider: a broker tier stored with no host of its own is still served
+// at the configured endpoint.
+func TestRoutePreviewReadsACanonicalLaneHostFromItsProvider(t *testing.T) {
+	cfg := mustParse(t, geminiBehindAGateway).canonical()
+	if host := cfg.Tiers[TierPremium].BaseURL; host != "" {
+		t.Fatalf("canonical premium host = %q, want it on the provider", host)
+	}
+	for _, candidate := range wireCandidates(mustPlan(t, cfg, TaskBriefRanking)) {
+		if candidate.Processing != "configured_endpoint" {
+			t.Errorf("tier %s = %s, want configured_endpoint: its provider dials the gateway", candidate.Tier, candidate.Processing)
+		}
+	}
+}

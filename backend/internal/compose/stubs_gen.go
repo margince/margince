@@ -235,6 +235,10 @@ func (stubs) ListProviderLocations(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "ListProviderLocations")
 }
 
+func (stubs) SetAiProviderSettings(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
+	httperr.NotImplemented(w, r, "SetAiProviderSettings")
+}
+
 func (stubs) GetAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiRouting")
 }

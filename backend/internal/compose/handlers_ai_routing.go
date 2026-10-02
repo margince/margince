@@ -11,6 +11,7 @@ package compose
 // wire mapping and the human-only refusal.
 
 import (
+	"cmp"
 	"net/http"
 	"strings"
 
@@ -74,12 +75,20 @@ func (h aiRoutingHandlers) ReplaceAiRouting(w http.ResponseWriter, r *http.Reque
 // Tiers is always a map, never nil: an unbound installation answers `{}`, which
 // says "nothing is bound", where a null would leave a client guessing whether
 // the field was omitted or the read failed.
+//
+// A lane's base_url and location are its provider's, so a client that
+// predates `providers` still sees where each lane goes and writes back a value
+// the store recognises as the provider's. Routing goes out as stored: resolving
+// it would write the provider's pins and the product default onto every tier
+// such a client saves.
 func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
+	host := func(provider string) string { return cfg.Providers[provider].BaseURL }
+	location := func(provider string) string { return cfg.Providers[provider].Location }
 	tiers := make(map[string]crmcontracts.AiTierBinding, len(cfg.Tiers))
 	for tier, b := range cfg.Tiers {
 		tiers[string(tier)] = crmcontracts.AiTierBinding{
 			Provider: b.Provider, Model: b.Model,
-			BaseUrl: optionalString(b.BaseURL), Location: optionalString(b.Location), Input: optionalStrings(b.Input),
+			BaseUrl: optionalString(cmp.Or(b.BaseURL, host(b.Provider))), Location: optionalString(cmp.Or(b.Location, location(b.Provider))), Input: optionalStrings(b.Input),
 			Routing:       routingToWire(b.Routing),
 			ThinkingLevel: optionalEnum[crmcontracts.AiTierBindingThinkingLevel](b.ThinkingLevel),
 		}
@@ -89,8 +98,8 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 		Tiers:   tiers,
 		Embeddings: crmcontracts.AiEmbeddingsBinding{
 			Provider: cfg.Embeddings.Provider, Model: cfg.Embeddings.Model,
-			BaseUrl:       optionalString(cfg.Embeddings.BaseURL),
-			Location:      optionalString(cfg.Embeddings.Location),
+			BaseUrl:       optionalString(cmp.Or(cfg.Embeddings.BaseURL, host(cfg.Embeddings.Provider))),
+			Location:      optionalString(cmp.Or(cfg.Embeddings.Location, location(cfg.Embeddings.Provider))),
 			Input:         optionalStrings(cfg.Embeddings.Input),
 			Routing:       routingToWire(cfg.Embeddings.Routing),
 			ThinkingLevel: optionalEnum[crmcontracts.AiEmbeddingsBindingThinkingLevel](cfg.Embeddings.ThinkingLevel),
@@ -99,18 +108,19 @@ func toContractAiRouting(cfg ai.RoutingConfig) crmcontracts.AiRouting {
 			// the document as though an operator had chosen it.
 			Dimensions: optionalInt(cfg.Embeddings.Dimensions),
 		},
-		Decisions: decisionsToWire(cfg.Decisions),
+		Decisions: decisionsToWire(cfg.Decisions, host),
+		Providers: providersToWire(cfg.Providers),
 	}
 }
 
 // decisionsToWire and decisionsFromWire carry the decision lane. The pointer is
 // the meaning, as with routing: nil is "no decision model", which sends every
 // decision site to its LLM ladder, so neither direction may invent a lane.
-func decisionsToWire(d *ai.DecisionsConfig) *crmcontracts.AiDecisionsBinding {
+func decisionsToWire(d *ai.DecisionsConfig, host func(provider string) string) *crmcontracts.AiDecisionsBinding {
 	if d == nil {
 		return nil
 	}
-	return &crmcontracts.AiDecisionsBinding{Provider: d.Provider, Model: d.Model, BaseUrl: optionalString(d.BaseURL)}
+	return &crmcontracts.AiDecisionsBinding{Provider: d.Provider, Model: d.Model, BaseUrl: optionalString(cmp.Or(d.BaseURL, host(d.Provider)))}
 }
 
 func decisionsFromWire(d *crmcontracts.AiDecisionsBinding) *ai.DecisionsConfig {
@@ -145,6 +155,7 @@ func fromContractAiRouting(req crmcontracts.AiRouting) ai.RoutingConfig {
 		Profile:    ai.Profile(req.Profile),
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: tierFromWire(embeddings)},
 		Decisions:  decisionsFromWire(req.Decisions),
+		Providers:  providersFromWire(req.Providers),
 	}
 	if req.Embeddings.Dimensions != nil {
 		cfg.Embeddings.Dimensions = *req.Embeddings.Dimensions
@@ -355,6 +366,9 @@ func toContractAvailableModels(a ai.AvailableModels) crmcontracts.AvailableModel
 		})
 	}
 	out := crmcontracts.AvailableModelList{Provider: a.Provider, Models: models, RankedBy: optionalString(a.RankedBy)}
+	if a.Complete {
+		out.Complete = &a.Complete
+	}
 	if a.Unavailable != ai.AvailabilityOK {
 		reason := crmcontracts.AvailableModelListUnavailable(a.Unavailable)
 		out.Unavailable = &reason

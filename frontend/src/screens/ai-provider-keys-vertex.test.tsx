@@ -88,7 +88,9 @@ const render = (ui: ReactNode) => {
 // The credential lives on the vendor's sheet, one click past the list.
 async function openSheet(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
-    await screen.findByRole("button", { name: "Manage gemini_vertex" }),
+    within(
+      await screen.findByTestId("ai-provider-row-gemini_vertex"),
+    ).getByRole("button", { name: /^Manage/ }),
   );
   return screen.findByTestId("ai-provider-key-gemini_vertex");
 }

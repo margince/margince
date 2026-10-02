@@ -1454,6 +1454,17 @@ construction, naming what is missing.
 | `jev` | `TYPESAFE_API_KEY` | optional (default `https://api.typesafe.ai/v1/systemone`, the FULL endpoint) | decisions lane only; TypeSafe's own API |
 | `jev_compatible` | `JEV_COMPATIBLE_API_KEY` (**optional**: sent when held, never demanded) | **required**, the FULL endpoint | decisions lane only; any server on the Jev wire — OpenRouter (`https://openrouter.ai/api/alpha/decisions`, key = your OpenRouter key) or a self-hosted server (`http://127.0.0.1:8767/v1/systemone`, usually keyless) |
 
+`base_url` and `location` are the PROVIDER's, set once under `providers:` —
+`providers.<name>.base_url`, `providers.gemini_vertex.location`, and for an
+OpenRouter host `providers.openai_compatible.upstream` (`only`, `ignore`,
+`allow_fallbacks`) — and every lane binding that provider reads them. In the app
+they are the fields on the provider's sheet, or
+`PUT /v1/ai/provider-settings/{provider}`. The embeddings lane alone may carry
+its own `base_url`, `location` or upstream pins, overriding the provider's for
+that lane. A tier or decisions lane that still writes one — the older spelling —
+is lifted onto its provider when the provider names none; on a write that
+disagrees with the provider's, `PUT /ai/routing` answers 422 `moved_to_provider`.
+
 A decision provider's `base_url` is the whole endpoint URL and is posted to as
 written; nothing is appended.
 
@@ -1464,15 +1475,16 @@ would double it (`…/v1/v1/…` → 404). Use `https://api.mistral.ai`, not
 `https://api.mistral.ai/v1`. `gemini` is the mirror: its default base keeps the
 `/v1beta` segment and the paths are version-relative.
 
-`location` is a field of a `gemini_vertex` binding only, on a tier or on
-`embeddings:`, and refused on any other provider. It names the Vertex AI
+`location` belongs to `gemini_vertex` only, set on the provider (and optionally
+overridden on `embeddings:`), and refused on any other provider. It names the Vertex AI
 location that serves the call and processes the prompt: `eu`, `us`, `global`, or
 a region such as `europe-west4`. The API host follows from it, so no `base_url`
 is accepted. Under `profile: eu_hosted` it must be `eu` or an EU region
 (`europe-west1`, `-west3`, `-west4`, `-west8`, `-west9`, `-west10`, `-west12`,
 `-north1`, `-north2`, `-central2`, `-southwest1`); London `europe-west2`, Zürich `europe-west6`,
 `global` and `us` are refused. Saving a `gemini_vertex` binding asks Google
-whether the location serves the model and refuses it with a 422 if not.
+whether the location serves the model and refuses it with a 422 if not; so does
+moving the provider's location, for every bound model.
 The key is a service account's JSON key file, whose account holds
 `roles/aiplatform.user`; `GEMINI_VERTEX_SA_JSON` carries the file's contents,
 not a path. [how-to/connect-a-cloud-model-provider.md](../how-to/connect-a-cloud-model-provider.md) §5
@@ -1538,8 +1550,7 @@ A chat tier may declare the input modalities its model accepts:
 
 ```yaml
 premium:
-  provider: openai_compatible
-  base_url: https://openrouter.ai/api
+  provider: openai_compatible        # host on providers.openai_compatible
   model: mistralai/mistral-large-2512
   input: [text, image]
 ```

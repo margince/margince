@@ -114,6 +114,45 @@ var taskDisplayNames = map[Task]string{
 // served saying nothing than showing the key it was handed.
 func DisplayName(t Task) string { return taskDisplayNames[t] }
 
+// taskSummaries say in plain words what each task does, for a reader
+// deciding which model should serve it.
+var taskSummaries = map[Task]string{
+	TaskAccountScan:                   "Reads an account's recent emails and pipeline to find what it needs from you.",
+	TaskAgentLoop:                     "Runs the scheduled AI agents that act on your behalf with the tools they are given.",
+	TaskBriefRanking:                  "Orders the morning brief so the most important items come first.",
+	TaskCaptureClassify:               "Sorts each incoming email and meeting into what it is about, so it lands on the right record.",
+	TaskCaptureConfidentialityVerdict: "Decides whether an email thread in a restricted mailbox is ordinary enough to open to the team.",
+	TaskCaptureCounterpartyVerdict:    "Decides who a first-time sender is — an individual, a company mailbox, a newsletter, spam — before a contact is created.",
+	TaskCertJudge:                     "Grades model answers when a model is certified for a task. Used only in testing.",
+	TaskColdStart:                     "Runs the onboarding conversation that sets up your company profile.",
+	TaskCorpusAsk:                     "Answers questions from the documents your company filed, citing where each answer comes from.",
+	TaskDealHealth:                    "Writes the deal page's status card: where the deal stands and what could lose it.",
+	TaskDocumentExtract:               "Reads an attached document, such as an invoice or order, for deal facts you can accept.",
+	TaskDraftReply:                    "Drafts emails and replies for you to review before sending.",
+	TaskEnrich:                        "Fills in a contact's title, phone and other details from their own email signature.",
+	TaskGrowthFit:                     "Judges how well a company fits what we sell.",
+	TaskNlSearch:                      "Turns a list described in plain words into filters you can check and save.",
+	TaskOfferDraft:                    "Drafts offers and quotes from a deal's details.",
+	TaskOwedVerdict:                   "Decides whether an unanswered message actually asks us for something, or only informs us.",
+	TaskProposeRoles:                  "Suggests each contact's buying role — who signs, who champions, who can block.",
+	TaskRateExtract:                   "Reads exchange rates from a published rates page for the currency refresh.",
+	TaskRequestSettlement:             "Checks whether our reply actually answered what the other side asked for.",
+	TaskSignalExtract:                 "Picks out important events from a finished thread, such as a contract ending or a new opportunity.",
+	TaskSiteExtract:                   "Reads a company's website in depth, quoting the pages each fact comes from.",
+	TaskSiteFactExtract:               "Picks short, quoted facts out of each page of a company's website.",
+	TaskSiteTriage:                    "Decides what an email domain's website is — a company, a personal site or a mailbox provider — before a company is created.",
+	TaskStageEvidenceExtract:          "Reads what the buyer wrote or said against a deal stage's exit criteria.",
+	TaskSummarize:                     "Writes the short summaries shown on account, contact and deal pages.",
+	TaskTranscript:                    "Reads pasted meeting transcripts. Not in use yet.",
+	TaskTranscriptPropose:             "Reads next steps and commitments out of a meeting transcript.",
+	TaskVoiceBuild:                    "Learns your writing voice from emails you wrote, so drafts sound like you.",
+	TaskWeeklyLearnings:               "Suggests what last week's results teach for the week ahead.",
+	TaskWeeklyReview:                  "Writes the one or two sentences that open your weekly review.",
+}
+
+// Summary is what this task does, in plain words; empty for an unknown task.
+func Summary(t Task) string { return taskSummaries[t] }
+
 // ExecutionMode distinguishes request-bound work from work carried by a
 // durable background job. Budget exhaustion degrades the former and
 // defers the latter.
@@ -139,7 +178,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "63f5cb255ed46204722aef9a6d513d43a073a8ecc9bd81a450833bfa979ea19f"
+const TaskContractHash = "3b41073ae5919983eb4aa9520dd3f20d467e8d2e6e45c629e91a09956d810a85"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed

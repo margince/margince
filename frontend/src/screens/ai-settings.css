@@ -91,6 +91,29 @@
   padding-block: var(--space-4);
 }
 
+/* A provider's own settings, under its key: separated from the key row by a
+   hairline, because they answer a different question (where, not who). */
+.ai-provider-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* A known service's host, read rather than typed: the URL may be long and is
+   allowed to break anywhere rather than push the sheet wider. */
+.ai-provider-host {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ai-provider-settings-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
 .ai-sheet-section + .ai-sheet-section {
   border-top: 1px solid var(--borderSubtle);
 }
@@ -170,6 +193,13 @@
 .ai-key-verbs {
   display: flex;
   gap: var(--space-2);
+}
+
+.ai-key-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
 /* Air between a credential's reading and the field it opens. Without it the

@@ -51,6 +51,9 @@ type ProviderKeyStatus struct {
 	Optional bool
 	// CredentialKind is which ProviderCredential field this vendor takes.
 	CredentialKind string
+	// PricedBy is the provider whose prices this one's unpriced models take,
+	// so its sheet can show them; empty for one that borrows none.
+	PricedBy string
 }
 
 // The two credential kinds. A property of the vendor, so List answers it
@@ -148,6 +151,7 @@ func (s *ProviderKeyStore) List(ctx context.Context) ([]ProviderKeyStatus, error
 			EnvVar:         KeyEnvVarFor(provider),
 			Optional:       keyIsOptional(provider),
 			CredentialKind: credentialKindFor(provider),
+			PricedBy:       pricedByFor(provider),
 		})
 	}
 	return out, nil

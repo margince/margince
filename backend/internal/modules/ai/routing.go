@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"slices"
 	"sort"
 	"strings"
@@ -63,6 +64,9 @@ type RoutingConfig struct {
 	Tiers      map[Tier]ProviderConfig `yaml:"tiers" json:"tiers"`
 	Embeddings EmbeddingsConfig        `yaml:"embeddings" json:"embeddings"`
 	Profile    Profile                 `yaml:"profile" json:"profile"`
+	// Providers is each provider's host and upstream preferences, the authority
+	// every lane's BaseURL and Routing are resolved from (providersettings.go).
+	Providers map[string]ProviderSettings `yaml:"providers" json:"providers,omitempty"`
 	// Decisions is the optional decision-model lane (decisionlane.go). Last and
 	// omitempty, so a config binding none encodes and digests as it always did.
 	Decisions *DecisionsConfig `yaml:"decisions" json:"decisions,omitempty"`
@@ -171,6 +175,15 @@ func ParseRouting(raw []byte) (RoutingConfig, error) {
 // over the DEFAULTED value, which is what makes an omitted width and an
 // explicitly-written default the same binding.
 func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
+	log := slog.New(slog.DiscardHandler)
+	if firstLiftOf(cfg.Revision()) {
+		log = slog.Default()
+	}
+	cfg = cfg.liftLaneProviderFields(log)
+	if err := cfg.validateProviderEntries(); err != nil {
+		return RoutingConfig{}, err
+	}
+	cfg = cfg.resolveProviders()
 	if d := cfg.Embeddings.Dimensions; d < 0 || d > maxEmbedDimensions {
 		return RoutingConfig{}, fmt.Errorf("ai: routing config: embeddings dimensions %d out of range [1,%d]", d, maxEmbedDimensions)
 	} else if d == 0 {
@@ -225,11 +238,30 @@ func FromStored(stored RoutingConfig, keys config.Lookup) (RoutingConfig, error)
 // re-pointed tier, a different base URL, a narrowed `input`. Those are exactly
 // the cases where content a model wrote must stop being attributed to a model
 // that no longer produces it.
+//
+// It reads the RESOLVED lanes and leaves out Providers: the lanes already carry
+// every host and pin, and digesting them twice would re-attribute every cached
+// brief the day the document's shape changed while nothing it routes did.
+//
+// An embeddings host spelled as its provider's compiled default digests as the
+// empty one it dials identically: the lift writes the default out to keep that
+// lane off a gateway its tiers moved the provider to, and the binding is unchanged.
 func (cfg RoutingConfig) bindingDigest() string {
-	// A plain struct of strings, ints and a string-keyed map — marshal cannot
+	cfg.Providers = nil
+	if cfg.Embeddings.BaseURL != "" && sameHost(cfg.Embeddings.Provider, cfg.Embeddings.BaseURL, "") {
+		cfg.Embeddings.BaseURL = ""
+	}
+	return digestJSON(cfg)
+}
+
+// digestJSON is the sha256 of a routing document's JSON encoding, which orders
+// struct fields by declaration and sorts map keys, so it is deterministic across
+// processes.
+func digestJSON(cfg RoutingConfig) string {
+	// A plain struct of strings, ints and string-keyed maps — marshal cannot
 	// fail on it, and the same spelling guards the sibling fingerprints in
 	// compose/companybrief and compose/companydossier that this digest feeds.
-	encoded, _ := json.Marshal(cfg) //nolint:errchkjson // plain scalars and a string-keyed map; marshal cannot fail
+	encoded, _ := json.Marshal(cfg) //nolint:errchkjson // plain scalars and string-keyed maps; marshal cannot fail
 	sum := sha256.Sum256(encoded)
 	return hex.EncodeToString(sum[:])
 }
@@ -341,10 +373,10 @@ func (cfg RoutingConfig) validate() error {
 	//
 	// The rule itself is the chat tiers': SelectBrain builds this lane's client
 	// too, and refuses openai_compatible without a host.
-	if cfg.Embeddings.Provider == providerOpenAICompatible && strings.TrimSpace(cfg.Embeddings.BaseURL) == "" {
-		return fmt.Errorf("ai: routing config: the embeddings lane binds openai_compatible with no base_url: " +
+	if chatHostMissing(cfg.Embeddings.Provider, cfg.Embeddings.BaseURL) {
+		return missingHostError{provider: cfg.Embeddings.Provider, reason: "ai: routing config: the embeddings lane binds openai_compatible with no base_url: " +
 			"give it the vendor host root, with no version segment (the adapter adds /v1), " +
-			"e.g. https://openrouter.ai/api")
+			"e.g. https://openrouter.ai/api"}
 	}
 	return cfg.validateDecisionsLane()
 }
@@ -414,10 +446,10 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 	// declines to adopt it and goes on serving the binding it already had. The
 	// operator sees "saved" and no change, with the reason in a log they are not
 	// reading.
-	if binding.Provider == providerOpenAICompatible && strings.TrimSpace(binding.BaseURL) == "" {
-		return fmt.Errorf("ai: routing config: tier %s binds openai_compatible with no base_url: "+
+	if chatHostMissing(binding.Provider, binding.BaseURL) {
+		return missingHostError{provider: binding.Provider, reason: fmt.Sprintf("ai: routing config: tier %s binds openai_compatible with no base_url: "+
 			"give it the vendor host root, with no version segment (the adapter adds /v1), "+
-			"e.g. https://openrouter.ai/api", tier)
+			"e.g. https://openrouter.ai/api", tier)}
 	}
 	return validateInput(fmt.Sprintf("tier %s", tier), binding.Input)
 }

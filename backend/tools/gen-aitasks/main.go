@@ -198,6 +198,7 @@ type taskDef struct {
 	CostUnit          string             `yaml:"cost_unit"`
 	Doc               string             `yaml:"doc"`
 	DisplayName       string             `yaml:"display_name"`
+	Summary           string             `yaml:"summary"`
 }
 
 // contract is the parsed ai-tasks.yaml. Tiers is a YAML sequence, so its
@@ -316,22 +317,7 @@ func emitGo(c contract, contractHash string) (string, error) {
 	}
 	b.WriteString(")\n\n")
 
-	b.WriteString("// taskDisplayNames is what each task is CALLED, for a surface that has to\n")
-	b.WriteString("// name one to a contact. The constant is vocabulary — a reader shown\n")
-	b.WriteString("// \"site_triage failed 8 times\" learns nothing they can act on.\n")
-	b.WriteString("//\n")
-	b.WriteString("// Generated from the same declaration as the constants, so a task cannot\n")
-	b.WriteString("// be added without a name and the two cannot drift.\n")
-	b.WriteString("var taskDisplayNames = map[Task]string{\n")
-	for _, name := range taskNames {
-		fmt.Fprintf(&b, "\t%s: %q,\n", taskConst(name), c.Tasks[name].DisplayName)
-	}
-	b.WriteString("}\n\n")
-
-	b.WriteString("// DisplayName is what to call this task in front of a contact. An unknown\n")
-	b.WriteString("// task answers the empty string: a caller with nothing to show is better\n")
-	b.WriteString("// served saying nothing than showing the key it was handed.\n")
-	b.WriteString("func DisplayName(t Task) string { return taskDisplayNames[t] }\n\n")
+	writeTaskTexts(&b, c, taskNames)
 
 	b.WriteString("// ExecutionMode distinguishes request-bound work from work carried by a\n")
 	b.WriteString("// durable background job. Budget exhaustion degrades the former and\n")
@@ -374,6 +360,38 @@ func emitGo(c contract, contractHash string) (string, error) {
 		return "", fmt.Errorf("formatting generated source: %w", err)
 	}
 	return string(formatted), nil
+}
+
+// writeTaskTexts appends what each task is called and what it does, both
+// read from the contract so neither can be missing for a new task.
+func writeTaskTexts(b *strings.Builder, c contract, taskNames []string) {
+	b.WriteString("// taskDisplayNames is what each task is CALLED, for a surface that has to\n")
+	b.WriteString("// name one to a contact. The constant is vocabulary — a reader shown\n")
+	b.WriteString("// \"site_triage failed 8 times\" learns nothing they can act on.\n")
+	b.WriteString("//\n")
+	b.WriteString("// Generated from the same declaration as the constants, so a task cannot\n")
+	b.WriteString("// be added without a name and the two cannot drift.\n")
+	b.WriteString("var taskDisplayNames = map[Task]string{\n")
+	for _, name := range taskNames {
+		fmt.Fprintf(b, "\t%s: %q,\n", taskConst(name), c.Tasks[name].DisplayName)
+	}
+	b.WriteString("}\n\n")
+
+	b.WriteString("// DisplayName is what to call this task in front of a contact. An unknown\n")
+	b.WriteString("// task answers the empty string: a caller with nothing to show is better\n")
+	b.WriteString("// served saying nothing than showing the key it was handed.\n")
+	b.WriteString("func DisplayName(t Task) string { return taskDisplayNames[t] }\n\n")
+
+	b.WriteString("// taskSummaries say in plain words what each task does, for a reader\n")
+	b.WriteString("// deciding which model should serve it.\n")
+	b.WriteString("var taskSummaries = map[Task]string{\n")
+	for _, name := range taskNames {
+		fmt.Fprintf(b, "\t%s: %q,\n", taskConst(name), c.Tasks[name].Summary)
+	}
+	b.WriteString("}\n\n")
+
+	b.WriteString("// Summary is what this task does, in plain words; empty for an unknown task.\n")
+	b.WriteString("func Summary(t Task) string { return taskSummaries[t] }\n\n")
 }
 
 // writeRoutingTables appends the routing half of tasks_gen.go: the per-task

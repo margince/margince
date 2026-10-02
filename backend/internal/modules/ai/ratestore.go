@@ -59,13 +59,12 @@ func (s *RateStore) RateFor(ctx context.Context, provider, modelID string, day t
 
 func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day time.Time) (*ModelRate, error) {
 	var rate ModelRate
+	from, to := rateFallbacks()
 	err := tx.QueryRow(ctx, `
-		SELECT provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-		       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date
-		FROM ai_model_rate
-		WHERE provider = $1 AND model_id = $2 AND effective_date <= $3
-		ORDER BY effective_date DESC LIMIT 1`,
-		provider, modelID, day).Scan(
+		SELECT r.provider, r.model_id, r.input_per_mtok_microusd, r.output_per_mtok_microusd,
+		       r.cache_read_per_mtok_microusd, r.cache_write_per_mtok_microusd, r.effective_date
+		FROM (`+rateMatch("$1", "$2", "$3", 4, 5)+`) r`,
+		provider, modelID, day, from, to).Scan(
 		&rate.Provider, &rate.ModelID, &rate.InputPerMTokMicroUSD, &rate.OutputPerMTokMicroUSD,
 		&rate.CacheReadPerMTokMicroUSD, &rate.CacheWritePerMTokMicroUSD, &rate.EffectiveDate,
 	)
@@ -104,6 +103,7 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 // transparency, never a gate).
 func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCost, error) {
 	var report []DayCost
+	fallbackFrom, fallbackTo := rateFallbacks()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT
@@ -126,19 +126,11 @@ func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCo
 			      AND r.id IS NULL
 			  ) AS unpriced_calls
 			FROM ai_call ac
-			LEFT JOIN LATERAL (
-			  SELECT mr.id, mr.input_per_mtok_microusd, mr.output_per_mtok_microusd,
-			         mr.cache_read_per_mtok_microusd, mr.cache_write_per_mtok_microusd
-			  FROM ai_model_rate mr
-			  WHERE mr.provider = ac.provider AND mr.model_id = ac.model_id
-			    AND mr.effective_date <= ac.occurred_at::date
-			  ORDER BY mr.effective_date DESC
-			  LIMIT 1
-			) r ON true
+			LEFT JOIN LATERAL (`+rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date", 3, 4)+`) r ON true
 			WHERE ac.occurred_at >= $1 AND ac.occurred_at < $2
 			GROUP BY ac.occurred_at::date, ac.task, ac.tier
 			ORDER BY day, ac.task, ac.tier`,
-			from, to)
+			from, to, fallbackFrom, fallbackTo)
 		if err != nil {
 			return err
 		}

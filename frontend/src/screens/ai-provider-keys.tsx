@@ -1,6 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanUpsert, useCanWrite } from "../app/capability";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
@@ -11,17 +9,26 @@ import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
-  type CredentialKind,
   credentialKindOf,
   KeyEntry,
   keyStateLabel,
   keyStateTone,
 } from "./ai-provider-key-entry";
 import {
+  useProviderKeys,
+  useRemoveProviderKey,
+  useSetProviderKey,
+} from "./ai-provider-key-hooks";
+import {
   KeyTestButton,
   KeyTestOutcome,
   useTestProviderKey,
 } from "./ai-provider-key-test";
+import { providerName } from "./ai-provider-names";
+import {
+  hasProviderSettings,
+  ProviderSettingsForm,
+} from "./ai-provider-settings";
 import {
   ProviderSheet,
   type ProviderUsage,
@@ -31,7 +38,7 @@ import {
 } from "./ai-provider-sheet";
 import { providerUsage, useRouting } from "./ai-routing-query";
 import { PanelTitle } from "./ai-terms";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate } from "./common";
 import {
   RefreshModelPricesButton,
   RefreshSummary,
@@ -54,87 +61,6 @@ import "./ai-settings.css";
 // shape the routing card uses.
 
 type ProviderStatus = components["schemas"]["AiProviderKeyStatus"];
-
-export function useProviderKeys(enabled: boolean) {
-  return useQuery({
-    enabled,
-    queryKey: ["ai-provider-keys"],
-    queryFn: async () => {
-      const { data, error, response } = await api.GET("/ai/provider-keys");
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
-
-// Exported for onboarding's AI step, which writes the same credential through
-// the same endpoint. A second mutation there would be a second set of rules
-// about how long a key lives in memory, and the ones below are not obvious
-// enough to expect anybody to rediscover them.
-export function useSetProviderKey() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    // Collected the moment nothing observes it, because what this mutation's
-    // `variables` hold is a credential rather than a form field.
-    gcTime: 0,
-    // The provider AND the key travel as variables rather than closing over
-    // render state: a click belongs to the render that drew it, so a value it
-    // carries cannot be older than the button.
-    //
-    // That is also why the caller RESETS this mutation once it settles. React
-    // Query keeps `variables` in the mutation's state after success, and for
-    // this one mutation the variables are a credential — so what is convenient
-    // for every other form is a secret held in memory, readable through the
-    // observer and the devtools, until garbage collection gets to it. Passing
-    // the key some other way would trade that for a stale-closure refusal,
-    // which is the defect the variables rule exists to prevent, so the answer
-    // is to keep the variable and drop it early.
-    mutationFn: async (vars: {
-      provider: string;
-      kind: CredentialKind;
-      secret: string;
-    }) => {
-      // The server refuses the field the vendor does not take, so the kind
-      // decides which one carries the secret.
-      const body =
-        vars.kind === "service_account"
-          ? { service_account_json: vars.secret }
-          : { api_key: vars.secret };
-      const { error } = await api.PUT("/ai/provider-keys/{provider}", {
-        params: { path: { provider: vars.provider } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
-      // The locations a key reaches are asked with that key.
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-locations"] });
-    },
-  });
-}
-
-function useRemoveProviderKey() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (vars: { provider: string }) => {
-      const { error } = await api.DELETE("/ai/provider-keys/{provider}", {
-        params: { path: { provider: vars.provider } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-locations"] });
-    },
-  });
-}
 
 export function AiProviderKeysCard() {
   const t = useT();
@@ -209,10 +135,24 @@ export function AiProviderKeysCard() {
                   usage={usage?.get(openStatus.provider)}
                   refresh={refresh}
                   connection={
-                    <ProviderConnection
-                      status={openStatus}
-                      canManage={canManage}
-                    />
+                    <>
+                      <ProviderConnection
+                        status={openStatus}
+                        canManage={canManage}
+                      />
+                      {/* Drawn once the stored settings are read: the form
+                          starts from them, and one started empty would save
+                          an empty entry over what is stored. */}
+                      {hasProviderSettings(openStatus.provider) &&
+                        routing.data && (
+                          <ProviderSettingsForm
+                            key={openStatus.provider}
+                            provider={openStatus.provider}
+                            routing={routing.data.routing}
+                            canManage={canManage}
+                          />
+                        )}
+                    </>
                   }
                   onClose={() => setOpened(null)}
                 />
@@ -245,10 +185,7 @@ function ProviderRow({
         data-testid={`ai-provider-row-${status.provider}`}
       >
         <span className="ai-provider-who">
-          <span>{status.provider}</span>
-          <span className="ai-provider-env">
-            {status.env_var === "" ? "\u2014" : status.env_var}
-          </span>
+          <span>{providerName(status.provider, t)}</span>
         </span>
         <span
           className="t-caption ai-provider-used"
@@ -261,7 +198,7 @@ function ProviderRow({
         <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>
         <Button onClick={onOpen}>
           {t("aiProviders.manage")}
-          <span className="sr-only"> {status.provider}</span>
+          <span className="sr-only"> {providerName(status.provider, t)}</span>
         </Button>
       </div>
     </PanelRow>

@@ -87,7 +87,10 @@ async function openSheet(
   provider: string,
 ) {
   await user.click(
-    await screen.findByRole("button", { name: `Manage ${provider}` }),
+    within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
+      "button",
+      { name: /^Manage/ },
+    ),
   );
   return screen.findByTestId(`ai-provider-key-${provider}`);
 }
@@ -134,8 +137,18 @@ describe("AiProviderKeysCard", () => {
     // missing one Not active; the credential itself is one click deeper.
     expect(await screen.findByText(/^ready$/i)).toBeTruthy();
     expect(screen.getByText(/^not active$/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Manage gemini" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Manage openai" })).toBeTruthy();
+    expect(
+      within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
+        "button",
+        { name: /^Manage/ },
+      ),
+    ).toBeTruthy();
+    expect(
+      within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
+        "button",
+        { name: /^Manage/ },
+      ),
+    ).toBeTruthy();
     // And no paste field until a sheet is opened and asked for one. Six open
     // password boxes is what this card used to be.
     expect(screen.queryByPlaceholderText(/paste/i)).toBeNull();
@@ -167,7 +180,10 @@ describe("AiProviderKeysCard", () => {
   it("never renders the key, and offers no field that could hold one read back", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByRole("button", { name: "Manage gemini" });
+    within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
+      "button",
+      { name: /^Manage/ },
+    );
 
     const user = userEvent.setup();
     for (const provider of ["gemini", "openai"]) {
@@ -189,7 +205,10 @@ describe("AiProviderKeysCard", () => {
     const backend = backendFor(KEY_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByRole("button", { name: "Manage openai" });
+    within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
+      "button",
+      { name: /^Manage/ },
+    );
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
@@ -209,7 +228,10 @@ describe("AiProviderKeysCard", () => {
   it("clears the field on success so the credential does not linger on screen", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByRole("button", { name: "Manage openai" });
+    within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
+      "button",
+      { name: /^Manage/ },
+    );
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
@@ -238,7 +260,10 @@ describe("AiProviderKeysCard", () => {
   it("drops the credential from the mutation cache once the save settles", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     const { client } = render(<AiProviderKeysCard />);
-    await screen.findByRole("button", { name: "Manage openai" });
+    within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
+      "button",
+      { name: /^Manage/ },
+    );
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
@@ -262,7 +287,10 @@ describe("AiProviderKeysCard", () => {
     const backend = backendFor(KEY_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByRole("button", { name: "Manage openai" });
+    within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
+      "button",
+      { name: /^Manage/ },
+    );
 
     const user = userEvent.setup();
     const row = await openKey(user, "openai");
@@ -280,7 +308,10 @@ describe("AiProviderKeysCard", () => {
     const backend = backendFor(KEY_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByRole("button", { name: "Manage gemini" });
+    within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
+      "button",
+      { name: /^Manage/ },
+    );
 
     // Removing is behind the row's own verb, with the paste field: it is a
     // change to the credential, not a reading of it.
@@ -311,7 +342,10 @@ describe("AiProviderKeysCard", () => {
     const backend = backendFor(KEY_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByRole("button", { name: "Manage gemini" });
+    within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
+      "button",
+      { name: /^Manage/ },
+    );
 
     await openKey(user, "gemini");
     await user.click(screen.getByRole("button", { name: /remove/i }));
@@ -332,7 +366,10 @@ describe("AiProviderKeysCard", () => {
   it("names the environment variable in the hint, with no stray braces", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByRole("button", { name: "Manage gemini" });
+    within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
+      "button",
+      { name: /^Manage/ },
+    );
 
     const user = userEvent.setup();
     for (const [provider, envVar] of [
@@ -374,7 +411,10 @@ describe("AiProviderKeysCard", () => {
   it("disables the controls for a reader who may look but not change", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_READER).fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByRole("button", { name: "Manage gemini" });
+    within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
+      "button",
+      { name: /^Manage/ },
+    );
 
     // Refused, not hidden: an operator who must ask somebody else to rotate a
     // key still reads which vendors hold one, off the rows themselves. What is
@@ -402,7 +442,10 @@ describe("AiProviderKeysCard", () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);
-    await screen.findByRole("button", { name: "Manage openai" });
+    within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
+      "button",
+      { name: /^Manage/ },
+    );
 
     const row = await openKey(user, "openai");
     await user.type(

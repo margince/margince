@@ -38,9 +38,17 @@ type providerDescriptor struct {
 	// vendorHosted marks an adapter whose omitted base_url is the vendor's own
 	// public API, which is what the routing preview calls cloud processing.
 	vendorHosted bool
+	// vendorBaseURL is that public API's address, the same constant the adapter
+	// defaults to — so a lift can write out "the vendor directly" for a lane
+	// whose provider now sits behind a gateway.
+	vendorBaseURL string
 	// public is whether the anonymous profile may name the adapter. The fake is
 	// a development mechanism, not a provider identity.
 	public bool
+	// pricedBy is the provider whose price sheet prices a model this one's own
+	// sheet does not: the same models behind another front door. Empty means
+	// an unpriced model stays unpriced.
+	pricedBy string
 	// defaultModel is the model an omitted model resolves to, for the adapters
 	// that have one.
 	defaultModel string
@@ -107,7 +115,7 @@ var providerRegistry = []providerDescriptor{
 	},
 	{
 		name: providerAnthropic, caps: capChat, egress: egressPublicOnly, keyEnv: "ANTHROPIC_API_KEY",
-		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
+		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultAnthropicBaseURL, public: true,
 		carriage: anthropicCarries, thinkingFloor: anthropicTakesThinkingFloor, floorSkipsTools: true,
 	},
 	{
@@ -147,19 +155,19 @@ var providerRegistry = []providerDescriptor{
 	},
 	{
 		name: providerOpenAI, caps: capChat, egress: egressPublicOnly, keyEnv: "OPENAI_API_KEY",
-		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
+		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultOpenAIBaseURL, public: true,
 		carriage: openAICarries, thinkingFloor: openaiTakesThinkingFloor,
 	},
 	{
 		name: providerGemini, caps: capChat, egress: egressPublicOnly, keyEnv: "GEMINI_API_KEY",
-		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
+		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultGeminiBaseURL, public: true,
 		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
 	},
 	{
 		// The Gemini wire served by Vertex AI. Its key is a service-account
 		// JSON, and its host is derived from the binding's location.
 		name: providerGeminiVertex, caps: capChat, egress: egressPublicOnly, keyEnv: "GEMINI_VERTEX_SA_JSON",
-		serviceAccountKey: true, measuredBy: providerGemini,
+		serviceAccountKey: true, measuredBy: providerGemini, pricedBy: providerGemini,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
 		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
 	},

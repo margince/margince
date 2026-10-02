@@ -9211,6 +9211,11 @@ export const de = {
   "aiRouting.dimensions.label": "Vektorbreite",
   "aiRouting.dimensions.help":
     "Leer lassen für den Standardwert des Anbieters. Werte außerhalb von 1 bis 2.000 werden abgelehnt.",
+  "aiRouting.provider.noHost":
+    "{provider} hat noch keinen Host. Lege ihn unter Anbieter fest, bevor du speicherst.",
+  "aiRouting.embeddingsServer.label": "Embedding-Server",
+  "aiRouting.embeddingsServer.help":
+    "Nur wenn das Embedding-Modell auf einem eigenen Server läuft. Leer nutzt den Host des Anbieters.",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
@@ -9222,10 +9227,12 @@ export const de = {
     "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.models.askingLocation":
+    "Google wird gefragt, welche Modelle {location} bedient …",
   "aiRouting.models.noKey":
     "Kein Schlüssel, daher keine Modellliste. Beliebige Modell-ID eingeben.",
   "aiRouting.models.noEndpoint":
-    "Host oben eintragen, um die Modellliste zu laden.",
+    "Lege den Host dieses Anbieters unter Anbieter fest, um seine Modellliste zu laden.",
   "aiRouting.models.profileForbids":
     "Dieses Profil erlaubt diesen Anbieter nicht.",
   "aiRouting.models.notPublished":
@@ -9292,6 +9299,7 @@ export const de = {
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
     "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile zeigt die Stufe und das Modell, auf dem sie gerade läuft.",
+  "aiTasks.whatItDoes": "{task}: was es tut",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
   "aiTasks.viewCalls": "Aufrufe ansehen",
   "workingHours.title": "Buchbare Zeiten",
@@ -11511,6 +11519,35 @@ export const de = {
   "aiProviders.unpriced": "{model} ist in Verwendung und hat keinen Preis.",
   "aiProviders.setPrice": "Preis festlegen",
   "aiProviders.manage": "Verwalten",
+  "aiProviderSettings.service.choose": "Dienst auswählen",
+  "aiProviderSettings.service.label": "Dienst",
+  "aiProviderSettings.service.openrouter": "OpenRouter",
+  "aiProviderSettings.service.openrouterEu": "OpenRouter (EU)",
+  "aiProviderSettings.service.openrouterEu.note":
+    "Anfragen werden nur in der EU verarbeitet. Erfordert einen OpenRouter-Business- oder -Enterprise-Tarif, und es werden nur EU-fähige Modelle bedient.",
+  "aiProviderSettings.service.mistral": "Mistral",
+  "aiProviderSettings.service.together": "Together",
+  "aiProviderSettings.service.groq": "Groq",
+  "aiProviderSettings.service.deepseek": "DeepSeek",
+  "aiProviderSettings.service.typesafe": "TypeSafe (Standard)",
+  "aiProviderSettings.service.otherChat": "Anderer OpenAI-kompatibler Dienst",
+  "aiProviderSettings.service.otherDecisions": "Anderer Entscheidungsserver",
+  "aiProviderSettings.service.otherAddress": "Andere Adresse",
+  "aiProviderSettings.service.learnMore": "Über OpenRouter EU",
+  "aiProviderSettings.host.line": "Host: {host}",
+  "aiProviderSettings.host.default": "Nutzt die eigene Adresse des Dienstes.",
+  "aiProviderSettings.host.guide": "So findest du deinen Host",
+  "aiProviderSettings.save": "Verbindung speichern",
+  "aiProviders.name.anthropic": "Anthropic",
+  "aiProviders.name.openaiCompatible": "OpenAI-kompatibel",
+  "aiProviders.name.openai": "OpenAI",
+  "aiProviders.name.gemini": "Google Gemini",
+  "aiProviders.name.geminiVertex": "Gemini auf Vertex AI",
+  "aiProviders.name.jev": "TypeSafe Jev",
+  "aiProviders.name.jevCompatible": "Jev-kompatibel",
+  "aiProviders.name.ollama": "Ollama",
+  "aiProviders.name.vllm": "vLLM",
+  "aiProviders.borrowedFrom": "Von {provider}",
   "aiProviders.connection": "Verbindung",
   "aiProviders.prices": "Preise",
   "aiProviders.addPrice": "Preis hinzufügen",

@@ -242,13 +242,10 @@ tokens, and a tier name proves nothing about where data is processed or what it
 costs — read the binding. Each row in **AI tasks** names its tier, and **View
 calls** opens the **AI call log** narrowed to that task.
 
-Changes take effect without a restart, within about a minute; a call in flight
-keeps the binding it started with. A **Gemini on Vertex AI** binding also names
-a **Location**, where Google processes the work: under `eu_hosted` only the EU
-ones can be chosen, and saving checks that the location serves the model.
+Changes take effect within about a minute; a call in flight keeps its binding.
 
-**Provider keys** — your own keys; Gemini on Vertex AI takes a Google Cloud
-**service-account key** file. Margince can also run on a local model with no key.
+**Providers** — each provider's key, and where it is reached: a host, OpenRouter
+hosts, or a Vertex location. See [AI providers](ai-providers.md).
 
 **Automations** — the trigger-and-action catalogue. Three rules watch a Live
 List and, when a record joins or leaves it, add a task, notify the rule's owner,

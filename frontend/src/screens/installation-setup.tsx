@@ -26,7 +26,7 @@ import {
   type VendorCatalogue,
   vendorSuggestions,
 } from "./ai-models";
-import { useSetProviderKey } from "./ai-provider-keys";
+import { useSetProviderKey } from "./ai-provider-key-hooks";
 import { ModelRatePlate } from "./ai-rates";
 import { throwProblem, WriteRefused } from "./common";
 import { ImapMailboxForm } from "./imap-connect-form";
@@ -288,7 +288,10 @@ function AiStep({
         secret: apiKey.trim(),
       },
       {
-        onSuccess: () =>
+        // The key is stored, so its copy in the mutation goes now, before a
+        // binding that may fail keeps it there; the field keeps its own.
+        onSuccess: () => {
+          saveKey.reset();
           bind.mutate(
             {
               provider: preset.provider,
@@ -304,14 +307,14 @@ function AiStep({
                 // Both landed, so the field has done its job and this is the
                 // only copy of the key the app was holding.
                 setApiKey("");
-                saveKey.reset();
                 // And the screen becomes the ignition. Nothing is refetched
                 // yet: see `useBindModels` for why the reader, not the query,
                 // decides when this step is over.
                 onIgnite(preset.label);
               },
             },
-          ),
+          );
+        },
       },
     );
   };

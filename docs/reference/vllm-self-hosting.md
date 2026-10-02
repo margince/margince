@@ -59,7 +59,10 @@ the network, so start it with `--ssl-certfile` and `--ssl-keyfile` (or put it
 behind a TLS proxy) and bind it by `https`:
 
 ```yaml
-local_small: { provider: vllm, model: "mlx-community/Qwen3-14B-4bit", base_url: https://gpu-box.internal:8000 }
+providers:
+  vllm: { base_url: https://gpu-box.internal:8000 }
+tiers:
+  local_small: { provider: vllm, model: "mlx-community/Qwen3-14B-4bit" }
 ```
 
 Two more things the server decides, and the product cannot see:

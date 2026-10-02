@@ -98,6 +98,21 @@ func TestAnOpenRouterDecisionKeyIsTestedAtItsKeyEndpoint(t *testing.T) {
 	}
 }
 
+// A decision key is tested at its provider's endpoint even before the
+// decisions lane binds it.
+func TestDecisionKeyTest_UsesTheProviderEndpointWithNoBinding(t *testing.T) {
+	host := &scriptedHost{t: t, answer: func(*http.Request) (int, string) { return http.StatusOK, `{"data":{}}` }}
+	cfg := RoutingConfig{
+		Profile:   ProfileCloudFrontier,
+		Providers: map[string]ProviderSettings{providerJevCompatible: {BaseURL: "https://openrouter.ai/api/alpha/decisions"}},
+	}
+	got := probeProviderKey(context.Background(), cfg, providerJevCompatible,
+		cloudKeyFor(providerJevCompatible, "or"), host.probes())
+	if !got.OK || len(host.asked) != 1 || host.asked[0] != "GET https://openrouter.ai/api/v1/key auth=Bearer or" {
+		t.Fatalf("got %+v after asking %v, want a pass at the provider's key endpoint", got, host.asked)
+	}
+}
+
 // Any other Jev-wire server promises the decision route and nothing else. An
 // empty body is refused as malformed only once the caller is let in, so a 400
 // is a pass — and with no model named, nothing is billed.

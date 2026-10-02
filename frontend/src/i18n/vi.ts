@@ -9121,6 +9121,11 @@ export const vi = {
   "aiRouting.dimensions.label": "Độ rộng vector",
   "aiRouting.dimensions.help":
     "Để trống để dùng mặc định của nhà cung cấp. Giá trị ngoài khoảng 1 đến 2000 sẽ bị từ chối.",
+  "aiRouting.provider.noHost":
+    "{provider} chưa có máy chủ. Hãy đặt máy chủ trong mục Nhà cung cấp trước khi lưu.",
+  "aiRouting.embeddingsServer.label": "Máy chủ embedding",
+  "aiRouting.embeddingsServer.help":
+    "Chỉ khi mô hình embedding chạy trên máy chủ riêng. Để trống sẽ dùng máy chủ của nhà cung cấp.",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Máy chủ",
   "aiRouting.baseUrl.help":
@@ -9132,9 +9137,12 @@ export const vi = {
     "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.models.askingLocation":
+    "Đang hỏi Google những mô hình {location} phục vụ…",
   "aiRouting.models.noKey":
     "Chưa có khóa nên không có danh sách mô hình. Hãy nhập ID bất kỳ.",
-  "aiRouting.models.noEndpoint": "Nhập host ở trên để tải danh sách mô hình.",
+  "aiRouting.models.noEndpoint":
+    "Đặt máy chủ của nhà cung cấp này trong mục Nhà cung cấp để tải danh sách mô hình.",
   "aiRouting.models.profileForbids":
     "Hồ sơ này không cho phép nhà cung cấp này.",
   "aiRouting.models.notPublished":
@@ -9200,6 +9208,7 @@ export const vi = {
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
     "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng hiển thị tầng và mô hình nó đang chạy.",
+  "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
   "aiTasks.viewCalls": "Xem lượt gọi",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
@@ -11401,6 +11410,35 @@ export const vi = {
   "aiProviders.unpriced": "{model} đang được dùng và chưa có giá.",
   "aiProviders.setPrice": "Đặt giá",
   "aiProviders.manage": "Quản lý",
+  "aiProviderSettings.service.choose": "Chọn dịch vụ",
+  "aiProviderSettings.service.label": "Dịch vụ",
+  "aiProviderSettings.service.openrouter": "OpenRouter",
+  "aiProviderSettings.service.openrouterEu": "OpenRouter (EU)",
+  "aiProviderSettings.service.openrouterEu.note":
+    "Yêu cầu chỉ được xử lý trong EU. Cần gói OpenRouter Business hoặc Enterprise, và chỉ các mô hình đủ điều kiện tại EU được phục vụ.",
+  "aiProviderSettings.service.mistral": "Mistral",
+  "aiProviderSettings.service.together": "Together",
+  "aiProviderSettings.service.groq": "Groq",
+  "aiProviderSettings.service.deepseek": "DeepSeek",
+  "aiProviderSettings.service.typesafe": "TypeSafe (mặc định)",
+  "aiProviderSettings.service.otherChat": "Dịch vụ tương thích OpenAI khác",
+  "aiProviderSettings.service.otherDecisions": "Máy chủ quyết định khác",
+  "aiProviderSettings.service.otherAddress": "Địa chỉ khác",
+  "aiProviderSettings.service.learnMore": "Về OpenRouter EU",
+  "aiProviderSettings.host.line": "Máy chủ: {host}",
+  "aiProviderSettings.host.default": "Dùng địa chỉ riêng của dịch vụ.",
+  "aiProviderSettings.host.guide": "Cách tìm máy chủ của bạn",
+  "aiProviderSettings.save": "Lưu kết nối",
+  "aiProviders.name.anthropic": "Anthropic",
+  "aiProviders.name.openaiCompatible": "Tương thích OpenAI",
+  "aiProviders.name.openai": "OpenAI",
+  "aiProviders.name.gemini": "Google Gemini",
+  "aiProviders.name.geminiVertex": "Gemini trên Vertex AI",
+  "aiProviders.name.jev": "TypeSafe Jev",
+  "aiProviders.name.jevCompatible": "Tương thích Jev",
+  "aiProviders.name.ollama": "Ollama",
+  "aiProviders.name.vllm": "vLLM",
+  "aiProviders.borrowedFrom": "Từ {provider}",
   "aiProviders.connection": "Kết nối",
   "aiProviders.prices": "Giá",
   "aiProviders.addPrice": "Thêm giá",

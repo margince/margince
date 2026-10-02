@@ -734,6 +734,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/activities/{id}/disposition":                                   {Op: "setActivityDisposition", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/ai/budget":                                                     {Op: "replaceAiBudget", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/ai/provider-keys/{provider}":                                   {Op: "setAiProviderKey", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/ai/provider-settings/{provider}":                               {Op: "setAiProviderSettings", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/ai/routing":                                                    {Op: "replaceAiRouting", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/analytics/framework":                                           {Op: "publishReportingFramework", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/brief/annotations":                                             {Op: "annotateMorningBrief", Access: "tool", Tool: "annotate_brief", RecordType: "", Tier: "auto_execute", Scope: "write"},

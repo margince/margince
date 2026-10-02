@@ -21610,7 +21610,8 @@ type AiDecisionSummary struct {
 // one. It serves a task only when certified for that site and when its endpoint
 // reaches no further than the task's own bindings.
 type AiDecisionsBinding struct {
-	// BaseUrl The FULL decision endpoint URL, posted to as written. Optional for jev (default https://api.typesafe.ai/v1/systemone); required for jev_compatible, e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone.
+	// BaseUrl The decision provider's endpoint as resolved from `providers` (the FULL URL, posted to as written; jev defaults to https://api.typesafe.ai/v1/systemone). On write it is accepted only when empty or equal to the provider's; a different one is a 422 `moved_to_provider`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	BaseUrl *string `json:"base_url,omitempty"`
 
 	// Model The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter.
@@ -21630,7 +21631,10 @@ type AiDeferredWork struct {
 
 // AiEmbeddingsBinding defines model for AiEmbeddingsBinding.
 type AiEmbeddingsBinding struct {
-	// BaseUrl Endpoint override; empty means the provider default.
+	// BaseUrl On a tier, the provider's host as resolved from `providers`; on write it is accepted
+	// only when empty or equal to the provider's, and a different one is a 422
+	// `moved_to_provider`. On the embeddings lane it is a live override: a separate
+	// embeddings server for that lane alone. Empty means the provider's host.
 	BaseUrl *string `json:"base_url,omitempty"`
 
 	// Dimensions The vector width the provider is asked to emit. Omit (or 0) for the compiled
@@ -21642,10 +21646,11 @@ type AiEmbeddingsBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
-	// Location The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
-	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-	// on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
-	// On save, the model is asked for at this location, and one it does not serve is a 422.
+	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// it is accepted only when empty or equal to the provider's, and a different one is a 422
+	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
+	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
+	// Refused on every provider but `gemini_vertex`.
 	Location *string `json:"location,omitempty"`
 
 	// Model The provider-native model id.
@@ -21655,12 +21660,13 @@ type AiEmbeddingsBinding struct {
 	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
-	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
-	// OpenRouter; refused on any other binding, and on the embeddings lane every
-	// preference but only, ignore and allow_fallbacks is refused. Absent means the
-	// product default (reliability over price); an empty object means no preferences
-	// (the broker's own price-weighted routing). The two are different choices and a
-	// client must not turn one into the other.
+	// Routing How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
+	// other binding, and on the embeddings lane every preference but only, ignore and
+	// allow_fallbacks is refused. Absent means the product default (reliability over price);
+	// an empty object means no preferences (the broker's own price-weighted routing). The two
+	// are different choices and a client must not turn one into the other. `only`, `ignore`
+	// and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
+	// are accepted only when equal to the provider's, or lifted onto a provider that has none.
 	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 
 	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
@@ -21698,7 +21704,10 @@ type AiFeatureRoute struct {
 	Impact           string             `json:"impact"`
 	LeadingTier      string             `json:"leading_tier"`
 	NormalCandidates []AiRouteCandidate `json:"normal_candidates"`
-	Task             string             `json:"task"`
+
+	// Summary What the task does, in plain words.
+	Summary *string `json:"summary,omitempty"`
+	Task    string  `json:"task"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -21770,12 +21779,13 @@ type AiModelRateRefreshReport struct {
 	Providers []AiModelRateProviderRefresh `json:"providers"`
 }
 
-// AiOpenRouterRouting Upstream-selection preferences for an openai_compatible binding pointed at
-// OpenRouter; refused on any other binding, and on the embeddings lane every
-// preference but only, ignore and allow_fallbacks is refused. Absent means the
-// product default (reliability over price); an empty object means no preferences
-// (the broker's own price-weighted routing). The two are different choices and a
-// client must not turn one into the other.
+// AiOpenRouterRouting How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
+// other binding, and on the embeddings lane every preference but only, ignore and
+// allow_fallbacks is refused. Absent means the product default (reliability over price);
+// an empty object means no preferences (the broker's own price-weighted routing). The two
+// are different choices and a client must not turn one into the other. `only`, `ignore`
+// and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
+// are accepted only when equal to the provider's, or lifted onto a provider that has none.
 type AiOpenRouterRouting struct {
 	// AllowFallbacks Override the broker's host fallback. False is a real choice, distinct from absent.
 	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
@@ -21800,6 +21810,20 @@ type AiOpenRouterRouting struct {
 
 	// Sort price | throughput | latency. Reorders rather than filters, and disables load balancing.
 	Sort *string `json:"sort,omitempty"`
+}
+
+// AiOpenRouterUpstream Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
+// residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
+// How one model is served (sort, quantizations, …) stays on the tier's `routing`.
+type AiOpenRouterUpstream struct {
+	// AllowFallbacks Override the broker's host fallback. False is a real choice, distinct from absent.
+	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
+
+	// Ignore Upstream slugs excluded; a hard filter.
+	Ignore *[]string `json:"ignore,omitempty"`
+
+	// Only Upstream slugs allowed; a hard filter.
+	Only *[]string `json:"only,omitempty"`
 }
 
 // AiProfile defines model for AiProfile.
@@ -21858,6 +21882,9 @@ type AiProviderKeyStatus struct {
 	// Optional Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix.
 	Optional bool `json:"optional"`
 
+	// PricedBy The provider whose prices this one's calls take for a model its own price sheet does not list: `gemini` for `gemini_vertex`, which serves the same models. A price written for this provider overrides it. Absent for a provider whose unpriced models stay unpriced.
+	PricedBy *string `json:"priced_by,omitempty"`
+
 	// Provider The routing name of the vendor, the same string a binding uses.
 	Provider string `json:"provider"`
 }
@@ -21879,12 +21906,30 @@ type AiProviderKeyTestResult struct {
 	// Provider The routing name of the vendor that was asked.
 	Provider string `json:"provider"`
 
-	// Reason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+	// Reason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
 	Reason *AiProviderKeyTestResultReason `json:"reason,omitempty"`
 }
 
-// AiProviderKeyTestResultReason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+// AiProviderKeyTestResultReason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
 type AiProviderKeyTestResultReason string
+
+// AiProviderSettings One provider's configuration. An entry no lane binds is held to its shape only, so a
+// host can be set before anything is bound to it.
+type AiProviderSettings struct {
+	// BaseUrl Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default.
+	BaseUrl *string `json:"base_url,omitempty"`
+
+	// Location The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
+	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+	// while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
+	// Google about each bound model at the new location first; one it does not serve is a 422.
+	Location *string `json:"location,omitempty"`
+
+	// Upstream Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
+	// residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
+	// How one model is served (sort, quantizations, …) stays on the tier's `routing`.
+	Upstream *AiOpenRouterUpstream `json:"upstream,omitempty"`
+}
 
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
@@ -21911,6 +21956,12 @@ type AiRouting struct {
 	// `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
 	// `gemini_vertex` lane must name an EU location.
 	Profile AiRoutingProfile `json:"profile"`
+
+	// Providers Provider name to what that provider is configured with, independent of any lane: its
+	// host and the broker's upstream pins. Every lane binding a provider reads them from
+	// here. A client that omits the field keeps the stored entries; one that sends it owns
+	// the map, so an entry it leaves out is removed.
+	Providers *map[string]AiProviderSettings `json:"providers,omitempty"`
 
 	// Tiers Tier name to the model bound on it. Empty means no models are bound.
 	Tiers map[string]AiTierBinding `json:"tiers"`
@@ -22017,7 +22068,10 @@ type AiStatus struct {
 
 // AiTierBinding defines model for AiTierBinding.
 type AiTierBinding struct {
-	// BaseUrl Endpoint override; empty means the provider default.
+	// BaseUrl On a tier, the provider's host as resolved from `providers`; on write it is accepted
+	// only when empty or equal to the provider's, and a different one is a 422
+	// `moved_to_provider`. On the embeddings lane it is a live override: a separate
+	// embeddings server for that lane alone. Empty means the provider's host.
 	BaseUrl *string `json:"base_url,omitempty"`
 
 	// Input What the bound model may be GIVEN, in the accepted-modality vocabulary. On the
@@ -22025,10 +22079,11 @@ type AiTierBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
-	// Location The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
-	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-	// on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
-	// On save, the model is asked for at this location, and one it does not serve is a 422.
+	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// it is accepted only when empty or equal to the provider's, and a different one is a 422
+	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
+	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
+	// Refused on every provider but `gemini_vertex`.
 	Location *string `json:"location,omitempty"`
 
 	// Model The provider-native model id.
@@ -22038,12 +22093,13 @@ type AiTierBinding struct {
 	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
-	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
-	// OpenRouter; refused on any other binding, and on the embeddings lane every
-	// preference but only, ignore and allow_fallbacks is refused. Absent means the
-	// product default (reliability over price); an empty object means no preferences
-	// (the broker's own price-weighted routing). The two are different choices and a
-	// client must not turn one into the other.
+	// Routing How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
+	// other binding, and on the embeddings lane every preference but only, ignore and
+	// allow_fallbacks is refused. Absent means the product default (reliability over price);
+	// an empty object means no preferences (the broker's own price-weighted routing). The two
+	// are different choices and a client must not turn one into the other. `only`, `ignore`
+	// and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
+	// are accepted only when equal to the provider's, or lifted onto a provider that has none.
 	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 
 	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
@@ -22091,6 +22147,9 @@ type AiUsage struct {
 			// Task capture_classify, enrich, summarize, …
 			Task            string  `json:"task"`
 			TaskDisplayName *string `json:"task_display_name,omitempty"`
+
+			// TaskSummary What the task does, in plain words, for a reader deciding what it costs.
+			TaskSummary *string `json:"task_summary,omitempty"`
 
 			// Tier local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane).
 			Tier      string `json:"tier"`
@@ -24008,7 +24067,9 @@ type AvailableModelLane string
 // AvailableModelList One vendor's own answer about what it serves.
 // An empty `models` with NO `unavailable` is a vendor that answered and serves nothing — a local runner with no model pulled onto it is the ordinary case. It is a different state from a vendor that could not be asked, which always sets `unavailable`, and a client that folded the two would tell a reader to paste a key they already have.
 type AvailableModelList struct {
-	Models []AvailableModel `json:"models"`
+	// Complete True when `models` is exactly what the asked place serves — a `gemini_vertex` list, each model asked of the location — so a client offers nothing beside it. Absent or false for a vendor's own list, which may lag a model the vendor shipped since.
+	Complete *bool            `json:"complete,omitempty"`
+	Models   []AvailableModel `json:"models"`
 
 	// Provider The routing name of the vendor that was asked.
 	Provider string `json:"provider"`
@@ -24016,11 +24077,11 @@ type AvailableModelList struct {
 	// RankedBy The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten.
 	RankedBy *string `json:"ranked_by,omitempty"`
 
-	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — the provider has no host set, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
 	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
 }
 
-// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
+// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — the provider has no host set, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
 type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
@@ -46535,7 +46596,7 @@ type ListAiModelRatesParams struct {
 
 // ListAvailableModelsParams defines parameters for ListAvailableModels.
 type ListAvailableModelsParams struct {
-	// Tier The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default.
+	// Tier The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). A vendor's host is set once, on the provider (`providers` in the routing document), so this matters only for `embeddings`, which may name a server of its own. Every other value asks the provider's host, and a vendor with none set asks the adapter's own default.
 	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
 
 	// Top Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
@@ -52088,6 +52149,9 @@ type RecordAIFeedbackJSONRequestBody = AIFeedbackInput
 
 // SetAiProviderKeyJSONRequestBody defines body for SetAiProviderKey for application/json ContentType.
 type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
+
+// SetAiProviderSettingsJSONRequestBody defines body for SetAiProviderSettings for application/json ContentType.
+type SetAiProviderSettingsJSONRequestBody = AiProviderSettings
 
 // ReplaceAiRoutingJSONRequestBody defines body for ReplaceAiRouting for application/json ContentType.
 type ReplaceAiRoutingJSONRequestBody = AiRouting
@@ -63339,6 +63403,9 @@ type ServerInterface interface {
 	// Where one vendor can process a call (admin/ops).
 	// (GET /ai/provider-locations/{provider})
 	ListProviderLocations(w http.ResponseWriter, r *http.Request, provider string)
+	// Set one provider's host, upstream pins and location (admin/ops).
+	// (PUT /ai/provider-settings/{provider})
+	SetAiProviderSettings(w http.ResponseWriter, r *http.Request, provider string)
 	// The tier-to-model binding this installation runs on (admin/ops).
 	// (GET /ai/routing)
 	GetAiRouting(w http.ResponseWriter, r *http.Request)
@@ -65796,6 +65863,12 @@ func (_ Unimplemented) TestAiProviderKey(w http.ResponseWriter, r *http.Request,
 // Where one vendor can process a call (admin/ops).
 // (GET /ai/provider-locations/{provider})
 func (_ Unimplemented) ListProviderLocations(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set one provider's host, upstream pins and location (admin/ops).
+// (PUT /ai/provider-settings/{provider})
+func (_ Unimplemented) SetAiProviderSettings(w http.ResponseWriter, r *http.Request, provider string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72278,6 +72351,38 @@ func (siw *ServerInterfaceWrapper) ListProviderLocations(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListProviderLocations(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetAiProviderSettings operation middleware
+func (siw *ServerInterfaceWrapper) SetAiProviderSettings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetAiProviderSettings(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -103185,6 +103290,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/provider-locations/{provider}", wrapper.ListProviderLocations)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/provider-settings/{provider}", wrapper.SetAiProviderSettings)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/routing", wrapper.GetAiRouting)
