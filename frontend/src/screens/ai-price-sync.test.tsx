@@ -130,7 +130,7 @@ describe("ModelPricesCard", () => {
     });
     expect(toggle).toBeDisabled();
     expect(
-      screen.getByText("Only an admin can change this."),
+      screen.getByText("Your role cannot change this."),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Refresh model prices" }),

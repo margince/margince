@@ -208,3 +208,15 @@ func TestASyncWithNothingToPriceReadsNoCatalogue(t *testing.T) {
 		t.Error("a keyed vendor did not read models.dev")
 	}
 }
+
+// A write that yields to a price typed since the read is reported as kept, so the
+// recorded run never claims a price it did not write.
+func TestAWriteThatYieldedIsReportedKept(t *testing.T) {
+	src := vendorSources(t, providerGemini, model.Info{ID: "gemini-3.5-flash", Lane: model.LaneChat})
+	plan := planPriceSync(src, nil)
+	plan.yielded(plan.writes[0])
+	line := plan.lines[providerGemini]
+	if line.Added != 0 || line.Kept != 1 || len(line.Models) != 0 {
+		t.Errorf("line = %+v, want the add turned into a kept price", line)
+	}
+}

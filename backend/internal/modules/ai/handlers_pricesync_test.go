@@ -4,12 +4,15 @@
 package ai
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -48,5 +51,22 @@ func TestTheLastRunTravelsWithItsReport(t *testing.T) {
 	}
 	if never := toContractPriceSync(PriceSyncState{AutoSync: true}); never.LastRun != nil {
 		t.Error("a sync that never ran reported a last run")
+	}
+}
+
+// The switch answers with the sync's state, which takes a read; a seat that may
+// only update is refused before anything is written, never after.
+func TestTheSwitchRefusesASeatThatCannotReadTheAnswerBeforeWriting(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:update-only",
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"fixture"},
+			Objects:  map[string]principal.ObjectGrant{"ai_model_rate": {Update: true}},
+		},
+	})
+	// No settings store: reaching the write would panic, so a refusal proves it came first.
+	_, err := NewPriceSync(PriceSyncDeps{}).SetAutoSync(ctx, false)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("SetAutoSync = %v, want permission denied", err)
 	}
 }

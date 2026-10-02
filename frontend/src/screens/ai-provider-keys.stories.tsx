@@ -100,7 +100,7 @@ export const Mixed: Story = { render: story([gemini, anthropic]) };
 // where the AI lanes are absent until somebody pastes a key. It must read as
 // "nothing set yet" and not as an error.
 export const NothingConfigured: Story = {
-  render: story([anthropic, { ...gemini, configured: false }]),
+  render: story([anthropic, { ...gemini, configured: false, usable: false }]),
 };
 
 // An optional key not held reads as optional, not as a gap: the adapter calls

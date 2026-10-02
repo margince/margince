@@ -56,10 +56,17 @@ func TestAnAdminCorrectingASyncedPriceMakesItTheirs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	found := false
 	for _, r := range rows {
-		if r.ModelID == "gpt-5-nano" && r.Source != RateSourceManual {
-			t.Errorf("corrected row source = %q, want manual", r.Source)
+		if r.ModelID == "gpt-5-nano" {
+			found = true
+			if r.Source != RateSourceManual {
+				t.Errorf("corrected row source = %q, want manual", r.Source)
+			}
 		}
+	}
+	if !found {
+		t.Fatal("no gpt-5-nano price in force")
 	}
 }
 
@@ -85,9 +92,16 @@ func TestASyncWriteYieldsToAPriceTypedSinceItsRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	found := false
 	for _, r := range rows {
-		if r.ModelID == "gpt-5-nano" && (r.InputUsd != "0.07" || r.Source != RateSourceManual) {
-			t.Errorf("hand-set price = %+v, want 0.07 kept as manual", r)
+		if r.ModelID == "gpt-5-nano" {
+			found = true
+			if r.InputUsd != "0.07" || r.Source != RateSourceManual {
+				t.Errorf("hand-set price = %+v, want 0.07 kept as manual", r)
+			}
 		}
+	}
+	if !found {
+		t.Fatal("no gpt-5-nano price in force")
 	}
 }

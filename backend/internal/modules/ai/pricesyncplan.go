@@ -27,6 +27,8 @@ type PriceSources struct {
 type pricePlan struct {
 	writes []SetModelRateInput
 	lines  map[string]*ProviderRefresh
+	// added is the writes that price a model for the first time, by provider/model.
+	added map[[2]string]bool
 }
 
 func (p *pricePlan) line(provider string) *ProviderRefresh {
@@ -55,16 +57,30 @@ func (p *pricePlan) apply(t catalogueTarget, cur *ModelRateRow, price func(*Mode
 		line.Updated++
 	default:
 		line.Added++
+		p.added[[2]string{t.provider, t.modelID}] = true
 	}
 	next.Provider, next.ModelID, next.Lane, next.Source = t.provider, t.modelID, t.lane, RateSourceCatalogue
 	p.writes = append(p.writes, next)
 	line.Models = append(line.Models, t.modelID)
 }
 
+// yielded re-reports a planned write that found a hand-set price under its lock:
+// the model was kept, not priced.
+func (p *pricePlan) yielded(w SetModelRateInput) {
+	line := p.line(w.Provider)
+	if p.added[[2]string{w.Provider, w.ModelID}] {
+		line.Added--
+	} else {
+		line.Updated--
+	}
+	line.Kept++
+	line.Models = slices.DeleteFunc(line.Models, func(id string) bool { return id == w.ModelID })
+}
+
 // planPriceSync decides every write before any is made, so the transaction
 // that follows only applies it.
 func planPriceSync(src PriceSources, sheet []ModelRateRow) pricePlan {
-	plan := pricePlan{lines: map[string]*ProviderRefresh{}}
+	plan := pricePlan{lines: map[string]*ProviderRefresh{}, added: map[[2]string]bool{}}
 	inForce := make(map[[2]string]ModelRateRow, len(sheet))
 	for _, row := range sheet {
 		inForce[[2]string{row.Provider, row.ModelID}] = row

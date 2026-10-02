@@ -9,7 +9,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -76,6 +78,10 @@ func (p *PriceSync) State(ctx context.Context) (PriceSyncState, error) {
 
 // SetAutoSync turns the daily sweep on or off; Refresh now runs either way.
 func (p *PriceSync) SetAutoSync(ctx context.Context, on bool) (PriceSyncState, error) {
+	// The answer is the state, which takes a read; refuse before writing, not after.
+	if err := auth.Require(ctx, "ai_model_rate", principal.ActionRead); err != nil {
+		return PriceSyncState{}, err
+	}
 	if err := settings.Set(ctx, p.d.Settings, PriceSyncSettings, PriceSyncConfig{AutoSync: on}); err != nil {
 		return PriceSyncState{}, err
 	}

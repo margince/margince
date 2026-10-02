@@ -134,7 +134,7 @@ func probeProviderKey(
 	defer cancel()
 	models, err := lister.ListModels(asked)
 	if err != nil {
-		out.Reason = keyTestFailure(err)
+		out.Reason = vendorKeyTestFailure(provider, err)
 		return out
 	}
 	out.OK, out.ModelCount, out.Counted = true, len(models), true
@@ -165,7 +165,7 @@ func probeDecisionKey(
 	defer cancel()
 	count, counted, err := client.probeKey(asked, provider)
 	if err != nil {
-		out.Reason = keyTestFailure(err)
+		out.Reason = vendorKeyTestFailure(provider, err)
 		return out
 	}
 	out.OK, out.ModelCount, out.Counted = true, count, counted
@@ -201,6 +201,16 @@ const geminiKeyInvalid = "API_KEY_INVALID"
 // Gemini is the exception: it answers an invalid key with 400 and names it
 // API_KEY_INVALID in the error's structured details. The code, not the status,
 // decides — a 400 from a proxy in front of it is not a refused key.
+// vendorKeyTestFailure keeps a 403 a refused key at an endpoint an operator runs:
+// only a named vendor's 403 reliably means the key was accepted.
+func vendorKeyTestFailure(provider string, err error) KeyTestReason {
+	reason := keyTestFailure(err)
+	if d, _ := providerByName(provider); reason == KeyTestPermissionDenied && d.egress == egressOperatorEndpoint {
+		return KeyTestAuthFailed
+	}
+	return reason
+}
+
 func keyTestFailure(err error) KeyTestReason {
 	var refused *listStatusError
 	if !errors.As(err, &refused) {

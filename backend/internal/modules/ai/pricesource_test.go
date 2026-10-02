@@ -21,10 +21,12 @@ func TestEveryProviderDeclaresWhereItsPricesComeFrom(t *testing.T) {
 			if _, ok := prices.byKey[d.priceSource.catalogueKey]; !ok {
 				t.Errorf("%s reads models.dev key %q, which the catalogue does not have", d.name, d.priceSource.catalogueKey)
 			}
-		default:
+		case priceFromBroker, priceNotPublished:
 			if d.priceSource.catalogueKey != "" {
 				t.Errorf("%s names catalogue key %q but is not priced from models.dev", d.name, d.priceSource.catalogueKey)
 			}
+		default:
+			t.Errorf("%s declares unknown price source kind %d", d.name, d.priceSource.kind)
 		}
 	}
 }

@@ -11527,7 +11527,7 @@ export const de = {
   "aiPriceSync.sources": "Quellen: models.dev · OpenRouter",
   "aiPriceSync.lastSynced": "Zuletzt abgeglichen {ago}",
   "aiPriceSync.never": "Noch nicht abgeglichen",
-  "aiPriceSync.adminOnly": "Nur ein Admin kann das ändern.",
+  "aiPriceSync.adminOnly": "Deine Rolle kann das nicht ändern.",
   "aiPriceSync.withheld": "Modellpreise sind für dich nicht sichtbar.",
   "aiRates.refresh.addedCount_one": "{count} Modell hinzugefügt",
   "aiRates.refresh.addedCount_other": "{count} Modelle hinzugefügt",

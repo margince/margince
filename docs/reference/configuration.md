@@ -1391,11 +1391,14 @@ before it applies. It is read only by the worker (the api enqueues the job; the
 worker fetches and stages).
 
 Model prices are not configured here. They sync daily from public catalogues
-(Settings → AI → **Model prices**): each vendor API whose key is usable is priced
-from models.dev, and the OpenRouter-hosted models the installation binds from
-OpenRouter's list. New chat and embedding models a key lists are added with their
-price; a price set by hand is never rewritten. **Auto-sync daily** turns the job
-off; **Refresh model prices** runs it on demand.
+(Settings → AI → **Model prices**): anthropic, openai, gemini and gemini_vertex,
+when their key is usable, are priced from models.dev; the OpenRouter-hosted models
+the installation binds, and the `openai_compatible` rows on the sheet while
+something is bound there, from OpenRouter's list. Every other provider keeps the
+prices set by hand. A chat or embedding model a key lists is added when models.dev
+prices it in the same lane; a price set by hand is never rewritten. Turning
+**Auto-sync daily** off stops the daily job; **Refresh model prices** still runs
+it on demand.
 
 | field | default | effect |
 |---|---|---|

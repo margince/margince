@@ -276,3 +276,17 @@ func TestAnErrorCodeIsAdmittedOnlyAsACode(t *testing.T) {
 		t.Fatalf("prose was read as a code: %q", got)
 	}
 }
+
+// A 403 from an endpoint an operator runs says nothing certain about the key, so
+// it stays a refusal of the key; only a named vendor's 403 means "permissions".
+func TestAnOperatorEndpointsForbiddenStaysARefusedKey(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	t.Cleanup(srv.Close)
+	got := probeProviderKey(context.Background(), boundAt(providerOpenAICompatible, srv.URL), providerOpenAICompatible,
+		cloudKeyFor(providerOpenAICompatible, "k"), stubBuilder)
+	if got.OK || got.Reason != KeyTestAuthFailed {
+		t.Errorf("got %+v, want auth_failed", got)
+	}
+}

@@ -97,8 +97,9 @@ export function ModelPricesCard() {
                 <SettingRow
                   label={t("aiPriceSync.autoSync.label")}
                   description={t("aiPriceSync.autoSync.help")}
-                  control={
+                  control={(props) => (
                     <Switch
+                      describedBy={props["aria-describedby"]}
                       testId="ai-price-sync-auto"
                       label={t("aiPriceSync.autoSync.label")}
                       labelHidden
@@ -111,7 +112,7 @@ export function ModelPricesCard() {
                         setAutoSync.mutate({ autoSync: next })
                       }
                     />
-                  }
+                  )}
                 />
               </SettingList>
               <p className="t-caption">{t("aiPriceSync.sources")}</p>

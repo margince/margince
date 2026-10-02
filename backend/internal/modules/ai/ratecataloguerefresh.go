@@ -184,13 +184,19 @@ func (s *RateStore) SyncPrices(ctx context.Context, src PriceSources, record fun
 		return RateRefreshReport{}, err
 	}
 	plan := planPriceSync(src, sheet)
-	report := reportProviders(plan.lines, src.Broker.Unavailable != "")
+	var report RateRefreshReport
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		for _, w := range plan.writes {
-			if _, err := s.SetModelRateInTx(ctx, tx, w); err != nil && !errors.Is(err, errHandSetSinceRead) {
+			_, err := s.SetModelRateInTx(ctx, tx, w)
+			switch {
+			case errors.Is(err, errHandSetSinceRead):
+				plan.yielded(w)
+			case err != nil:
 				return err
 			}
 		}
+		// Built after the writes, so the recorded run says what was written.
+		report = reportProviders(plan.lines, src.Broker.Unavailable != "")
 		return record(ctx, tx, report)
 	}); err != nil {
 		return RateRefreshReport{}, err

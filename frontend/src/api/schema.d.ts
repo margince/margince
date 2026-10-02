@@ -17934,7 +17934,8 @@ export interface paths {
          * Re-price the models this installation calls from the providers' own catalogues.
          * @description Admin/ops-only. Runs the price sync now: vendor APIs whose key is usable are priced from
          *     models.dev (each model already on the sheet, plus each chat or embedding model the key
-         *     lists that models.dev prices), and the OpenRouter-hosted models this installation binds
+         *     lists that models.dev prices), and the OpenRouter-hosted models this installation binds,
+         *     plus the `openai_compatible` models already on the sheet while something is bound there,
          *     from OpenRouter's list. A price set by hand is never rewritten (`kept`), and a
          *     future-dated price is not touched. A model at its catalogue price writes nothing and
          *     leaves no audit row; the run itself is recorded as the last sync. Runs inline and

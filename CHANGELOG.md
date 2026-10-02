@@ -18,7 +18,7 @@ when it has content.
 
 - Model prices sync themselves: once a day (and on **Refresh model prices**) every
   provider with a usable key is re-priced from models.dev or OpenRouter, newly
-  listed chat and embedding models are added with their price, and a price you set
+  listed chat and embedding models the catalogue prices are added, and a price you set
   by hand is kept. The new **Model prices** card under Settings → AI shows when it
   last ran and what changed, and can turn the daily sync off.
 - `GET /v1/status`: an anonymous, fixed-body reachability probe for external

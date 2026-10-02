@@ -98,3 +98,7 @@ export const Reader: Story = {
     return <Demo />;
   },
 };
+export const SyncedDark: Story = {
+  ...Synced,
+  globals: { theme: "dark" },
+};

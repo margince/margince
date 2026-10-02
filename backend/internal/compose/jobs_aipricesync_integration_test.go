@@ -133,9 +133,20 @@ func TestAHandSetPriceSurvivesTheDailySweep(t *testing.T) {
 	if got := geminiInForce(t, e); got.InputUsd != "9.99" || got.Source != ai.RateSourceManual {
 		t.Errorf("hand-set price = %+v, want 9.99 kept", got)
 	}
-	for _, line := range lastRun(t, e).Report.Providers {
-		if line.Provider == "gemini" && line.Kept != 1 {
-			t.Errorf("gemini line = %+v, want kept 1", line)
+	run := lastRun(t, e)
+	if run == nil {
+		t.Fatal("no run recorded")
+	}
+	found := false
+	for _, line := range run.Report.Providers {
+		if line.Provider == "gemini" {
+			found = true
+			if line.Kept != 1 {
+				t.Errorf("gemini line = %+v, want kept 1", line)
+			}
 		}
+	}
+	if !found {
+		t.Error("the run has no gemini line")
 	}
 }
