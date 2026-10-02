@@ -82,12 +82,23 @@ describe("the decision model lane", () => {
     const user = userEvent.setup();
     const backend = backendFor(ROUTING_EDITOR, BOUND, {
       providerKeys: [
-        { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-        { provider: "jev", configured: false, env_var: "TYPESAFE_API_KEY" },
+        {
+          provider: "gemini",
+          configured: true,
+          env_var: "GEMINI_API_KEY",
+          usable: true,
+        },
+        {
+          provider: "jev",
+          configured: false,
+          env_var: "TYPESAFE_API_KEY",
+          usable: false,
+        },
         {
           provider: "jev_compatible",
           configured: false,
           env_var: "JEV_COMPATIBLE_API_KEY",
+          usable: true,
           optional: true,
         },
       ],

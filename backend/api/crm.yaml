@@ -16371,9 +16371,9 @@ paths:
                 mixed:
                   value:
                     providers:
-                      - { provider: anthropic, configured: true, env_var: ANTHROPIC_API_KEY }
-                      - { provider: openai, configured: false, env_var: OPENAI_API_KEY }
-                      - { provider: gemini, configured: true, env_var: GEMINI_API_KEY }
+                      - { provider: anthropic, configured: true, env_var: ANTHROPIC_API_KEY, usable: true }
+                      - { provider: openai, configured: false, env_var: OPENAI_API_KEY, usable: false }
+                      - { provider: gemini, configured: true, env_var: GEMINI_API_KEY, usable: true }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
 
@@ -26239,13 +26239,14 @@ paths:
       operationId: refreshAiModelRates
       summary: Re-price the models this installation calls from the providers' own catalogues.
       description: |
-        Admin/ops-only. Reads OpenRouter's public model list and writes today's price for each
-        OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and,
-        while something is bound at OpenRouter, each `openai_compatible` model already on the
-        sheet that the list still names. A self-hosted model priced by hand is never touched. A model
-        whose price already matches is left alone and leaves no audit row; a future-dated manual
-        price is not touched. Runs inline and answers with what happened per provider. A provider
-        that publishes no price list reports `not_available`: its prices are set by hand.
+        Admin/ops-only. Runs the price sync now: vendor APIs whose key is usable are priced from
+        models.dev (each model already on the sheet, plus each chat or embedding model the key
+        lists that models.dev prices), and the OpenRouter-hosted models this installation binds,
+        plus the `openai_compatible` models already on the sheet while something is bound there,
+        from OpenRouter's list. A price set by hand is never rewritten (`kept`), and a
+        future-dated price is not touched. A model at its catalogue price writes nothing and
+        leaves no audit row; the run itself is recorded as the last sync. Runs inline and
+        answers with what happened per provider.
         Human session only (x-agent-access: human-only).
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
@@ -26257,6 +26258,47 @@ paths:
               schema: { $ref: '#/components/schemas/AiModelRateRefreshReport' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /ai/price-sync:
+    get:
+      tags: [Rates]
+      operationId: getAiPriceSync
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+      description: |
+        `auto_sync` is on until an admin turns it off. `last_run` is absent until the sync has run
+        once, by the daily job or by `POST /ai-model-rates/refresh`.
+      responses:
+        '200':
+          description: The sync's posture and its last run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiPriceSync' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+    put:
+      tags: [Rates]
+      operationId: replaceAiPriceSync
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Turn the daily model price sync on or off (ai_model_rate update).
+      description: |
+        Off stops only the daily job; `POST /ai-model-rates/refresh` still runs on demand. Audited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiPriceSyncChange' }
+      responses:
+        '200':
+          description: The sync's posture and its last run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiPriceSync' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai-model-rates/propose-refresh:
     post:
@@ -27187,7 +27229,7 @@ components:
     AiModelRate:
       type: object
       description: One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
-      required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok, effective_date, lane]
+      required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok, effective_date, lane, source]
       properties:
         provider: { type: string }
         model_id: { type: string }
@@ -27205,6 +27247,14 @@ components:
         cache_read_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         cache_write_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         effective_date: { type: string, format: date }
+        source:
+          type: string
+          enum: [manual, catalogue, seed]
+          description: |
+            Who wrote this price. `manual` was typed into the sheet and the daily sync never
+            rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+            planted when the installation was provisioned. Removing a model's price hands it back
+            to the sync.
     AiModelRateListResponse:
       type: object
       required: [data]
@@ -27220,12 +27270,12 @@ components:
           items: { $ref: '#/components/schemas/AiModelRateProviderRefresh' }
     AiModelRateProviderRefresh:
       type: object
-      required: [provider, outcome, updated, unchanged, models, unlisted]
+      required: [provider, outcome, updated, unchanged, added, kept, models, unlisted]
       properties:
         provider: { type: string, description: The provider as the routing document spells it. }
         outcome:
           type: string
-          enum: [updated, unchanged, not_available, not_listed, unreachable, not_bound]
+          enum: [updated, unchanged, not_available, not_listed, unreachable, not_bound, not_configured]
           x-go-type: string
           description: |
             `updated` wrote at least one price; `unchanged` found every priced model already
@@ -27233,9 +27283,12 @@ components:
             publishes no price to read; `not_listed` means a bound model is absent from the
             catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
             could not be read;
-            `not_bound` means nothing this provider serves is bound or on the sheet.
+            `not_bound` means nothing this provider serves is bound or on the sheet;
+            `not_configured` means the provider holds no usable key, so the sync did not touch it.
         updated: { type: integer, minimum: 0, description: Prices written today. }
         unchanged: { type: integer, minimum: 0, description: Models already at the catalogue price. }
+        added: { type: integer, minimum: 0, description: Models priced for the first time today. }
+        kept: { type: integer, minimum: 0, description: "Models whose price was set by hand, which the sync never rewrites." }
         models:
           type: array
           items: { type: string }
@@ -27244,6 +27297,30 @@ components:
           type: array
           items: { type: string }
           description: Bound model ids the catalogue does not name.
+    AiPriceSync:
+      type: object
+      additionalProperties: false
+      required: [auto_sync]
+      properties:
+        auto_sync: { type: boolean, description: Whether the daily job syncs model prices. }
+        last_run: { $ref: '#/components/schemas/AiPriceSyncRun' }
+    AiPriceSyncRun:
+      type: object
+      additionalProperties: false
+      required: [ran_at, trigger, report]
+      properties:
+        ran_at: { type: string, format: date-time }
+        trigger:
+          type: string
+          enum: [manual, scheduled]
+          description: '`manual` was an admin pressing Refresh now; `scheduled` the daily job.'
+        report: { $ref: '#/components/schemas/AiModelRateRefreshReport' }
+    AiPriceSyncChange:
+      type: object
+      additionalProperties: false
+      required: [auto_sync]
+      properties:
+        auto_sync: { type: boolean }
     SetAiModelRateRequest:
       type: object
       required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok]
@@ -28555,13 +28632,19 @@ components:
     AiProviderKeyStatus:
       type: object
       additionalProperties: false
-      required: [provider, configured, env_var, optional, credential_kind]
+      required: [provider, configured, env_var, optional, credential_kind, usable]
       description: >-
         What may be known about one vendor's credential. Facts about the vendor and whether a key
         is held, and nothing about the key: it has no read path, and neither does anything derived
         from it — a length, a prefix or a masked tail would each narrow a brute force while
         feeling harmless.
       properties:
+        usable:
+          type: boolean
+          description: >-
+            Whether this vendor can be called as the installation stands: a key is held, the
+            adapter calls without one, or it takes no key. The daily price sync reads this same
+            answer to decide which vendors it prices.
         provider:
           type: string
           description: The routing name of the vendor, the same string a binding uses.
@@ -28627,7 +28710,7 @@ components:
             a vendor tested at a key endpoint or with the decision probe passes without one.
         reason:
           type: string
-          enum: [no_key, profile_forbids, not_published, no_endpoint, auth_failed, rate_limited, unreachable]
+          enum: [no_key, profile_forbids, not_published, no_endpoint, auth_failed, permission_denied, rate_limited, unreachable]
           description: >-
             Why the test did not pass, present only when `ok` is false.
             `no_key` — the vendor takes a credential and holds none.
@@ -28635,6 +28718,9 @@ components:
             `not_published` — this build cannot ask the vendor anything (an unknown adapter).
             `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet.
             `auth_failed` — the vendor refused the credential.
+            `permission_denied` — the vendor accepted the credential and refused the call: the
+            account lacks a role or has not enabled the API (for Vertex AI, `roles/aiplatform.user`
+            and the Vertex AI API).
             `rate_limited` — the vendor is throttling this credential; it may still be valid.
             `unreachable` — the vendor did not answer, or answered with something else.
     AiProviderKeyInput:

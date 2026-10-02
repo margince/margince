@@ -123,8 +123,9 @@ func TestAnyOtherDecisionServerIsProbedWithAnEmptyDecision(t *testing.T) {
 		http.StatusOK:                  KeyTestUnreachable,
 		http.StatusFound:               KeyTestUnreachable,
 		http.StatusUnauthorized:        KeyTestAuthFailed,
-		http.StatusForbidden:           KeyTestAuthFailed,
-		http.StatusBadGateway:          KeyTestUnreachable,
+		// An operator's endpoint: its 403 may be a bad key, so it reads as one.
+		http.StatusForbidden:  KeyTestAuthFailed,
+		http.StatusBadGateway: KeyTestUnreachable,
 	} {
 		host := &scriptedHost{t: t, answer: func(r *http.Request) (int, string) {
 			body, err := io.ReadAll(r.Body)

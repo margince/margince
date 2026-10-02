@@ -9146,6 +9146,8 @@ export const de = {
     "Im Schlüsseltresor gespeichert und nicht auslesbar. Füge einen neuen Schlüssel ein, um ihn zu ersetzen. Er kann auch als {envVar} bereitgestellt werden.",
   "aiProviderKeys.absentHint":
     "Für diesen Anbieter gibt es keinen Schlüssel, daher können ihm zugeordnete Modelle nicht aufgerufen werden. Ein Schlüssel kann auch als {envVar} bereitgestellt werden.",
+  "aiProviderKeys.vertexRoleHint":
+    "Das Dienstkonto braucht die Rolle Vertex AI User (roles/aiplatform.user).",
   "aiProviderKeys.addPlaceholder": "API-Schlüssel einfügen",
   "aiProviderKeys.replacePlaceholder": "Neuen Schlüssel einfügen",
   "aiProviderKeys.add": "Hinzufügen",
@@ -9270,6 +9272,10 @@ export const de = {
   "aiProviderKeys.modelCount_other": "{count} Modelle verfügbar",
   "aiProviderKeys.reason.authFailed":
     "Der Anbieter hat diesen Schlüssel abgelehnt. Prüfe ihn und ersetze ihn.",
+  "aiProviderKeys.reason.permissionDenied":
+    "Der Anbieter hat den Schlüssel akzeptiert, den Aufruf aber abgelehnt. Prüfe die Berechtigungen des Schlüssels.",
+  "aiProviderKeys.reason.permissionDeniedVertex":
+    "Google hat den Schlüssel akzeptiert, den Aufruf aber abgelehnt. Gib dem Dienstkonto die Rolle Vertex AI User (roles/aiplatform.user) und aktiviere die Vertex AI API im Projekt.",
   "aiProviderKeys.reason.rateLimited":
     "Der Anbieter drosselt diesen Schlüssel. Er kann trotzdem gültig sein; versuche es später erneut.",
   "aiProviderKeys.reason.noKey":
@@ -11515,6 +11521,21 @@ export const de = {
   "aiRates.refresh.outcome.unreachable": "Nicht erreichbar",
   "aiRates.refresh.outcome.not_bound": "Nicht in Verwendung",
   "aiRates.refresh.outcome.not_listed": "Nicht in der Liste",
+  "aiRates.refresh.outcome.not_configured": "Kein Schlüssel",
+  "aiPriceSync.title": "Modellpreise",
+  "aiPriceSync.autoSync.label": "Täglich automatisch abgleichen",
+  "aiPriceSync.autoSync.help":
+    "Liest die Preise jedes eingerichteten Anbieters einmal täglich. Manuell gesetzte Preise bleiben erhalten.",
+  "aiPriceSync.sources": "Quellen: models.dev · OpenRouter",
+  "aiPriceSync.lastSynced": "Zuletzt abgeglichen {ago}",
+  "aiPriceSync.never": "Noch nicht abgeglichen",
+  "aiPriceSync.adminOnly": "Deine Rolle kann das nicht ändern.",
+  "aiPriceSync.withheld": "Modellpreise sind für dich nicht sichtbar.",
+  "aiRates.refresh.addedCount_one": "{count} Modell hinzugefügt",
+  "aiRates.refresh.addedCount_other": "{count} Modelle hinzugefügt",
+  "aiRates.refresh.keptCount_one": "{count} manueller Preis beibehalten",
+  "aiRates.refresh.keptCount_other": "{count} manuelle Preise beibehalten",
+  "aiProviders.setByHand": "Manuell",
   "aiRates.refresh.unlisted": "Nicht in der Liste des Anbieters: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} Preis geschrieben",
   "aiRates.refresh.updatedCount_other": "{count} Preise geschrieben",

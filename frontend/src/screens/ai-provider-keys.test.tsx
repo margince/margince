@@ -37,12 +37,14 @@ const LISTED = {
       provider: "gemini",
       configured: true,
       env_var: "GEMINI_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "openai",
       configured: false,
       env_var: "OPENAI_API_KEY",
+      usable: false,
       optional: false,
     },
   ],
@@ -129,6 +131,19 @@ afterEach(() => {
 });
 
 describe("AiProviderKeysCard", () => {
+  it("no longer carries the price refresh — it moved to the Model prices card", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor({ ...KEY_EDITOR, ai_model_rate: ["read", "create", "update"] })
+        .fetchMock,
+    );
+    render(<AiProviderKeysCard />);
+    await screen.findByTestId("ai-provider-row-gemini");
+    expect(
+      screen.queryByRole("button", { name: "Refresh model prices" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("says which vendors hold a key and which do not", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);
@@ -162,6 +177,7 @@ describe("AiProviderKeysCard", () => {
       provider: "jev_compatible",
       configured: false,
       env_var: "JEV_COMPATIBLE_API_KEY",
+      usable: true,
       optional: true,
     };
     vi.stubGlobal(

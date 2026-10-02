@@ -9057,6 +9057,8 @@ export const vi = {
     "Đã niêm phong trong kho khóa. Không thể đọc lại — dán khóa mới để thay thế. Khóa cũng có thể đến qua {envVar}.",
   "aiProviderKeys.absentHint":
     "Nhà cung cấp này chưa có thông tin xác thực, nên không thể gọi mô hình gắn với nó. Khóa cũng có thể đến qua {envVar}.",
+  "aiProviderKeys.vertexRoleHint":
+    "Tài khoản dịch vụ cần vai trò Vertex AI User (roles/aiplatform.user).",
   "aiProviderKeys.addPlaceholder": "Dán khóa API",
   "aiProviderKeys.replacePlaceholder": "Dán khóa mới để thay thế",
   "aiProviderKeys.add": "Thêm",
@@ -9179,6 +9181,10 @@ export const vi = {
   "aiProviderKeys.modelCount_other": "Có {count} mô hình",
   "aiProviderKeys.reason.authFailed":
     "Nhà cung cấp từ chối khóa này. Hãy kiểm tra rồi thay khóa.",
+  "aiProviderKeys.reason.permissionDenied":
+    "Nhà cung cấp đã chấp nhận khóa nhưng từ chối lệnh gọi. Hãy kiểm tra quyền của khóa.",
+  "aiProviderKeys.reason.permissionDeniedVertex":
+    "Google đã chấp nhận khóa nhưng từ chối lệnh gọi. Hãy cấp cho tài khoản dịch vụ vai trò Vertex AI User (roles/aiplatform.user) và bật Vertex AI API cho dự án.",
   "aiProviderKeys.reason.rateLimited":
     "Nhà cung cấp đang giới hạn tốc độ với khóa này. Khóa có thể vẫn hợp lệ; hãy thử lại sau.",
   "aiProviderKeys.reason.noKey": "Chưa lưu khóa nào cho nhà cung cấp này.",
@@ -11404,6 +11410,21 @@ export const vi = {
   "aiRates.refresh.outcome.unreachable": "Không truy cập được",
   "aiRates.refresh.outcome.not_bound": "Không dùng",
   "aiRates.refresh.outcome.not_listed": "Không có trong danh sách",
+  "aiRates.refresh.outcome.not_configured": "Chưa có khóa",
+  "aiPriceSync.title": "Giá mô hình",
+  "aiPriceSync.autoSync.label": "Tự đồng bộ hằng ngày",
+  "aiPriceSync.autoSync.help":
+    "Đọc giá của từng nhà cung cấp đã cấu hình mỗi ngày một lần. Giá bạn đặt tay được giữ nguyên.",
+  "aiPriceSync.sources": "Nguồn: models.dev · OpenRouter",
+  "aiPriceSync.lastSynced": "Đồng bộ lần cuối {ago}",
+  "aiPriceSync.never": "Chưa đồng bộ",
+  "aiPriceSync.adminOnly": "Vai trò của bạn không thể thay đổi mục này.",
+  "aiPriceSync.withheld": "Bạn không có quyền xem giá mô hình.",
+  "aiRates.refresh.addedCount_one": "Đã thêm {count} mô hình",
+  "aiRates.refresh.addedCount_other": "Đã thêm {count} mô hình",
+  "aiRates.refresh.keptCount_one": "Đã giữ {count} giá đặt tay",
+  "aiRates.refresh.keptCount_other": "Đã giữ {count} giá đặt tay",
+  "aiProviders.setByHand": "Đặt tay",
   "aiRates.refresh.unlisted":
     "Không có trong danh sách của nhà môi giới: {ids}",
   "aiRates.refresh.updatedCount_one": "Đã ghi {count} giá",

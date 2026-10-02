@@ -63,9 +63,25 @@ It needs an OpenRouter Business or Enterprise plan, and only EU-eligible models
 are served there.
 
 ### How do I set up Gemini on Vertex AI?
-To set up Gemini on Vertex AI in Margince, open the **Gemini on Vertex AI** sheet,
-add a Google Cloud **service-account key** file under **Connection**, choose a
-**Location**, and choose **Save connection**.
+To set up Gemini on Vertex AI in Margince, give Margince a Google Cloud
+service account that may call Vertex AI, then add its key:
+
+1. In the Google Cloud project that will be billed, enable the **Vertex AI API**
+   (`aiplatform.googleapis.com`).
+2. Create a service account in that project.
+3. Grant it the **Vertex AI User** role (`roles/aiplatform.user`) on the
+   project. That one role covers everything Margince asks of Vertex AI:
+   generating text, creating embeddings, checking that a location serves a
+   model, and listing models and locations.
+4. Create a **JSON key** for the service account and download it.
+5. In Margince, open the **Gemini on Vertex AI** sheet, paste or drop the key
+   file under **Connection**, choose a **Location**, choose **Save connection**,
+   then choose **Test**.
+
+The project comes from the key file itself, so there is nothing else to enter.
+If **Test** says Google accepted the key but refused the call, the service
+account is missing the **Vertex AI User** role or the project has not enabled
+the Vertex AI API.
 The **Location** is where Google processes every call: **eu**, the EU
 multi-region, keeps processing in the EU and is the usual choice. Under the
 **eu_hosted** profile, only EU locations can be chosen.
@@ -77,6 +93,19 @@ model's editor under **Model tiers**.
 Gemini on Vertex AI serves Gemini's models, so a model its own **Prices** do not
 list is priced at Google Gemini's price, marked **From Google Gemini**. Edit one
 to give Vertex its own price for that model.
+
+### How do model prices stay current?
+Model prices update themselves once a day. The **Model prices** card under
+Settings → AI shows when they last synced and what changed for each provider.
+Anthropic, OpenAI, Google Gemini and Gemini on Vertex AI are priced from
+models.dev when their key is usable; the OpenRouter models a model tier uses are
+priced from OpenRouter's own list. Other providers keep the prices you set. A new
+chat or embedding model your key lists is added when models.dev prices it in the
+same lane. A price you set by hand is never changed by
+the sync; remove it to hand the model back. Turn **Auto-sync daily** off to
+stop the daily run, or choose **Refresh model prices** to run it now.
+Gemini on Vertex AI lists its models only for a location a model tier uses, so
+it adds new models once one of its models is bound.
 
 ### How do I add a decision model?
 To add a decision model, set up its provider first, then bind it under **Model

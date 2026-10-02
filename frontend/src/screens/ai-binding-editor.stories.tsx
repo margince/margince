@@ -35,6 +35,7 @@ const KEYS = [
     provider: "gemini",
     configured: true,
     env_var: "GEMINI_API_KEY",
+    usable: true,
     optional: false,
     credential_kind: "api_key" as const,
   },
@@ -42,6 +43,7 @@ const KEYS = [
     provider: "anthropic",
     configured: false,
     env_var: "ANTHROPIC_API_KEY",
+    usable: false,
     optional: false,
     credential_kind: "api_key" as const,
   },
@@ -57,6 +59,7 @@ const SHEET = [
     cache_read_per_mtok: "0",
     cache_write_per_mtok: "0",
     effective_date: "2026-08-12",
+    source: "seed" as const,
   },
 ];
 

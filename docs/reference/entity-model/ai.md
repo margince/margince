@@ -159,7 +159,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 ## ai_model_rate
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -173,6 +173,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `output_per_mtok_microusd` | `bigint` | yes | Required `bigint`. |
 | `provider` | `text` | yes | Required `text`. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
+| `source` | `text` | yes | Who wrote this price. |
 
 **Rules**
 
@@ -182,6 +183,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_model_rate_key` — `UNIQUE (provider, model_id, effective_date)`
 - `ai_model_rate_lane_check` — `CHECK ((lane = ANY (ARRAY['chat', 'embeddings', 'decisions'])))`
 - `ai_model_rate_output_per_mtok_microusd_check` — `CHECK ((output_per_mtok_microusd >= 0))`
+- `ai_model_rate_source_check` — `CHECK ((source = ANY (ARRAY['manual', 'catalogue', 'seed'])))`
 
 **Indexes**
 

@@ -17932,16 +17932,42 @@ export interface paths {
         put?: never;
         /**
          * Re-price the models this installation calls from the providers' own catalogues.
-         * @description Admin/ops-only. Reads OpenRouter's public model list and writes today's price for each
-         *     OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and,
-         *     while something is bound at OpenRouter, each `openai_compatible` model already on the
-         *     sheet that the list still names. A self-hosted model priced by hand is never touched. A model
-         *     whose price already matches is left alone and leaves no audit row; a future-dated manual
-         *     price is not touched. Runs inline and answers with what happened per provider. A provider
-         *     that publishes no price list reports `not_available`: its prices are set by hand.
+         * @description Admin/ops-only. Runs the price sync now: vendor APIs whose key is usable are priced from
+         *     models.dev (each model already on the sheet, plus each chat or embedding model the key
+         *     lists that models.dev prices), and the OpenRouter-hosted models this installation binds,
+         *     plus the `openai_compatible` models already on the sheet while something is bound there,
+         *     from OpenRouter's list. A price set by hand is never rewritten (`kept`), and a
+         *     future-dated price is not touched. A model at its catalogue price writes nothing and
+         *     leaves no audit row; the run itself is recorded as the last sync. Runs inline and
+         *     answers with what happened per provider.
          *     Human session only (x-agent-access: human-only).
          */
         post: operations["refreshAiModelRates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/price-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+         * @description `auto_sync` is on until an admin turns it off. `last_run` is absent until the sync has run
+         *     once, by the daily job or by `POST /ai-model-rates/refresh`.
+         */
+        get: operations["getAiPriceSync"];
+        /**
+         * Turn the daily model price sync on or off (ai_model_rate update).
+         * @description Off stops only the daily job; `POST /ai-model-rates/refresh` still runs on demand. Audited.
+         */
+        put: operations["replaceAiPriceSync"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -18319,6 +18345,14 @@ export interface components {
             cache_write_per_mtok: string;
             /** Format: date */
             effective_date: string;
+            /**
+             * @description Who wrote this price. `manual` was typed into the sheet and the daily sync never
+             *     rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+             *     planted when the installation was provisioned. Removing a model's price hands it back
+             *     to the sync.
+             * @enum {string}
+             */
+            source: "manual" | "catalogue" | "seed";
         };
         AiModelRateListResponse: {
             data: components["schemas"]["AiModelRate"][];
@@ -18336,18 +18370,41 @@ export interface components {
              *     publishes no price to read; `not_listed` means a bound model is absent from the
              *     catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
              *     could not be read;
-             *     `not_bound` means nothing this provider serves is bound or on the sheet.
+             *     `not_bound` means nothing this provider serves is bound or on the sheet;
+             *     `not_configured` means the provider holds no usable key, so the sync did not touch it.
              * @enum {string}
              */
-            outcome: "updated" | "unchanged" | "not_available" | "not_listed" | "unreachable" | "not_bound";
+            outcome: "updated" | "unchanged" | "not_available" | "not_listed" | "unreachable" | "not_bound" | "not_configured";
             /** @description Prices written today. */
             updated: number;
             /** @description Models already at the catalogue price. */
             unchanged: number;
+            /** @description Models priced for the first time today. */
+            added: number;
+            /** @description Models whose price was set by hand, which the sync never rewrites. */
+            kept: number;
             /** @description Model ids written this run. */
             models: string[];
             /** @description Bound model ids the catalogue does not name. */
             unlisted: string[];
+        };
+        AiPriceSync: {
+            /** @description Whether the daily job syncs model prices. */
+            auto_sync: boolean;
+            last_run?: components["schemas"]["AiPriceSyncRun"];
+        };
+        AiPriceSyncRun: {
+            /** Format: date-time */
+            ran_at: string;
+            /**
+             * @description `manual` was an admin pressing Refresh now; `scheduled` the daily job.
+             * @enum {string}
+             */
+            trigger: "manual" | "scheduled";
+            report: components["schemas"]["AiModelRateRefreshReport"];
+        };
+        AiPriceSyncChange: {
+            auto_sync: boolean;
         };
         SetAiModelRateRequest: {
             provider: string;
@@ -19246,6 +19303,8 @@ export interface components {
         };
         /** @description What may be known about one vendor's credential. Facts about the vendor and whether a key is held, and nothing about the key: it has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
         AiProviderKeyStatus: {
+            /** @description Whether this vendor can be called as the installation stands: a key is held, the adapter calls without one, or it takes no key. The daily price sync reads this same answer to decide which vendors it prices. */
+            usable: boolean;
             /** @description The routing name of the vendor, the same string a binding uses. */
             provider: string;
             /** @description Whether a credential is held. A screen reads this to offer "add" or "rotate"; it says nothing about whether the key still works, which only the vendor can answer. */
@@ -19273,10 +19332,10 @@ export interface components {
             /** @description How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one. */
             model_count?: number;
             /**
-             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `permission_denied` — the vendor accepted the credential and refused the call: the account lacks a role or has not enabled the API (for Vertex AI, `roles/aiplatform.user` and the Vertex AI API). `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
              * @enum {string}
              */
-            reason?: "no_key" | "profile_forbids" | "not_published" | "no_endpoint" | "auth_failed" | "rate_limited" | "unreachable";
+            reason?: "no_key" | "profile_forbids" | "not_published" | "no_endpoint" | "auth_failed" | "permission_denied" | "rate_limited" | "unreachable";
         };
         /** @description Exactly one of the two fields, the one the vendor's `credential_kind` names. The server refuses neither, both, or the other one with a 422. */
         AiProviderKeyInput: {
@@ -68549,6 +68608,55 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getAiPriceSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sync's posture and its last run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiPriceSync"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    replaceAiPriceSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiPriceSyncChange"];
+            };
+        };
+        responses: {
+            /** @description The sync's posture and its last run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiPriceSync"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
         };
     };
     proposeAiModelRateRefresh: {

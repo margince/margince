@@ -383,3 +383,18 @@
     justify-self: start;
   }
 }
+
+/* One vendor's line of the last price sync: name in the providers' column, then what the run did. */
+.ai-price-sync-line {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* On a phone the vendor's name sits above what the run did for it. */
+@media (max-width: 720px) {
+  .ai-price-sync-line {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
