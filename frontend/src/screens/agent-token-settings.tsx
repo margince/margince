@@ -17,7 +17,7 @@ const TOKEN_BOUNDS = {
 
 // How long a connected agent's access token lives. It sits with sign-in
 // because it is the same question — how long a credential this installation
-// issued stays good — asked of an agent instead of a person.
+// issued stays good — asked of an agent instead of a human.
 export function AgentConnectionsCard() {
   const t = useT();
   const canManage = useCanWrite("installation_settings", "update");

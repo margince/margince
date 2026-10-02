@@ -273,7 +273,7 @@ func (s *Store) VatNumberForCheck(ctx context.Context, company ids.CompanyID) (s
 }
 
 // RequesterVatNumber answers this installation's OWN VAT ID — the number a
-// register consultation is made under — or empty when no person has stated or
+// register consultation is made under — or empty when nobody has stated or
 // confirmed one. A number the website reader proposed and nobody confirmed is
 // not this installation's legal identity, and asking under a wrong one would
 // file somebody else's name on the receipt.

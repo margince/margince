@@ -50,7 +50,7 @@ var AutoEnrichDailyCap = settings.Define[int](
 )
 
 // SiteReadMaxPages bounds how many pages one deep read fetches. An automatic
-// read runs under its own lower ceiling; this is what a read a person asked
+// read runs under its own lower ceiling; this is what a read somebody asked
 // for may reach.
 var SiteReadMaxPages = settings.Define[int](
 	"capture.site_read_max_pages", captureSettingsObject, "update",

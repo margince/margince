@@ -36,8 +36,8 @@ import (
 // matched none — a renamed schema root, a changed key shape — still trips it.
 const boundedPropertyFloor = 8
 
-// frontendBoundMirror is the one spelling a screen gives a bound it refuses
-// before the request.
+// frontendBoundMirror is how a screen spells a bound it refuses before the
+// request.
 var frontendBoundMirror = regexp.MustCompile(`\b([a-z][a-z0-9_]*): \{ min: ([0-9_]+), max: ([0-9_]+) \}`)
 
 type contractBound struct {

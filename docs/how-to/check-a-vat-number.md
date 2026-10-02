@@ -41,7 +41,7 @@ MARGINCE_VAT_CHECK_BASE_URL=public
 at a different base URL to use a proxy or a test double.
 
 Each check is made under **this installation's own VAT ID**: the **Register / VAT ID** on Settings →
-Company profile, once a person has entered or confirmed it. A number the website reader proposed is not
+Company profile, once somebody has entered or confirmed it. A number the website reader proposed is not
 used until somebody confirms it. VIES issues a consultation number only for a check made under a
 requester's number, so without one the check still runs and still answers — it comes back with no proof
 attached, and the card says *"None issued."* If you rely on these checks for filings, confirm it.

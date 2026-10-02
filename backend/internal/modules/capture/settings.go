@@ -87,7 +87,7 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 		}
 		*f.into = value
 	}
-	dailyCap, err := s.DailyCap(ctx)
+	dailyCap, err := s.dailyCap(ctx)
 	if err != nil {
 		return Settings{}, err
 	}
@@ -99,9 +99,8 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 	return out, nil
 }
 
-// DailyCap reads the automatic-read ceiling on its own, for the paths that
-// reserve against it on every company and want no more than that one value.
-func (s *SettingsStore) DailyCap(ctx context.Context) (int, error) {
+// dailyCap reads the automatic-read ceiling.
+func (s *SettingsStore) dailyCap(ctx context.Context) (int, error) {
 	dailyCap, err := settings.Get(ctx, s.settings, AutoEnrichDailyCap)
 	if err != nil {
 		return 0, fmt.Errorf("capture: reading the daily read cap: %w", err)

@@ -118,9 +118,9 @@ func (v *vatRecheckEnv) work(t *testing.T, requested bool) {
 }
 
 // The consultation is made under this installation's OWN VAT number, and only
-// one a person gave or confirmed: a number the website reader proposed is not
+// one somebody gave or confirmed: a number the website reader proposed is not
 // this installation's legal identity until somebody says it is.
-func TestTheConsultationIsMadeUnderTheVatNumberAPersonConfirmed(t *testing.T) {
+func TestTheConsultationIsMadeUnderTheVatNumberAnAdminConfirmed(t *testing.T) {
 	v := setupVatRecheck(t)
 	const own = "DE999999999"
 	lastRequester := func() string { return v.register.requesters[len(v.register.requesters)-1] }
