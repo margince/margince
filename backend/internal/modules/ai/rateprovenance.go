@@ -3,7 +3,7 @@
 
 package ai
 
-// RateSource is who wrote a price: a person, the price sync, or provisioning.
+// RateSource is who wrote a price: an admin by hand, the price sync, or provisioning.
 // The sync never rewrites a model whose price in force is RateSourceManual.
 type RateSource string
 

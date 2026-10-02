@@ -51,7 +51,7 @@ type SetModelRateInput struct {
 	// has never seen. A re-price must not re-file an embedder, and the refresh
 	// job re-prices models it knows nothing else about.
 	Lane Lane
-	// Source is who is writing; empty is a person, the reading that keeps the
+	// Source is who is writing; empty is an admin by hand, the reading that keeps the
 	// sync's hands off the price.
 	Source RateSource
 }

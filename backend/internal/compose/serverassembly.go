@@ -192,7 +192,7 @@ func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.wireStagedSurfaces(pool)
 	s.wireAnalyticsSurface(pool)
-	s.wireCaptureSettingsSurface(pool)
+	s.wireCaptureSettingsSurface(pool, log)
 	s.wireExportSurface(pool, log)
 	s.wireOnboardingSurface(pool)
 	s.wireSystemOfRecordReads(pool)
@@ -246,7 +246,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	)
 }
 
-func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
+func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger) {
 	// The workspace capture-settings surface (CAP-WIRE-7, ADR-0072):
 	// read the auto-enrich posture (all roles), toggle it (admin/ops).
 	s.captureSettingsHandlers = captureSettingsHandlers{store: capture.NewSettings(NewSettingsStore(pool))}
@@ -263,12 +263,12 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 	// WithCatalogue wires the public OpenRouter model read unconditionally: it
 	// needs no tenant credential, so there is no "no provider connected"
 	// configuration to honor here.
-	catalogue := ai.NewModelCatalogue(systemClock{})
-	routing := ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).WithCatalogue(catalogue)
+	s.priceCatalogues = newAIPriceCatalogues()
+	routing := ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).WithCatalogue(s.priceCatalogues.broker)
 	s.aiRoutingHandlers = aiRoutingHandlers{store: routing}
-	// The price refresh reads the same bindings and the same broker list, so
-	// its 15-minute cache is the picker's too.
-	s.voiceHandlers = s.WithCatalogueRefresh(routing, catalogue)
+	// The sync reads the picker's broker cache. s.vault is nil until WithKeyvault,
+	// which rebuilds the sync over the vault it brings.
+	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, config.FromOS, log, s.priceCatalogues))
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 	// The installation's own identity and reporting basis (ADR-0090/A135):

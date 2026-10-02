@@ -4,13 +4,11 @@
 package ai
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -155,49 +153,4 @@ func (h Handlers) DeleteAiModelRate(w http.ResponseWriter, r *http.Request, para
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// WithCatalogueRefresh wires the two reads RefreshAiModelRates needs. Absent
-// them the route answers 501, like any operation this role does not serve.
-func (h Handlers) WithCatalogueRefresh(routing *RoutingStore, catalogue *ModelCatalogue) Handlers {
-	h.refreshRouting, h.refreshCatalogue = routing, catalogue
-	return h
-}
-
-// RefreshAiModelRates re-prices the bound OpenRouter models from the broker's
-// own list and reports what happened per provider. Human-only, like the manual
-// write it stands in for.
-func (h Handlers) RefreshAiModelRates(w http.ResponseWriter, r *http.Request) {
-	if err := auth.RequireHuman(r.Context()); err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	if h.refreshRouting == nil || h.refreshCatalogue == nil {
-		httperr.NotImplemented(w, r, "model price refresh")
-		return
-	}
-	cfg, err := h.refreshRouting.Get(r.Context())
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	src := PriceSources{Routing: cfg, Broker: h.refreshCatalogue.List(r.Context(), 0)}
-	report, err := h.rates.SyncPrices(r.Context(), src, func(context.Context, pgx.Tx, RateRefreshReport) error { return nil })
-	if err != nil {
-		writeRateErr(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, toContractRefreshReport(report))
-}
-
-func toContractRefreshReport(report RateRefreshReport) crmcontracts.AiModelRateRefreshReport {
-	out := crmcontracts.AiModelRateRefreshReport{Providers: make([]crmcontracts.AiModelRateProviderRefresh, 0, len(report.Providers))}
-	for _, p := range report.Providers {
-		out.Providers = append(out.Providers, crmcontracts.AiModelRateProviderRefresh{
-			Provider: p.Provider, Outcome: string(p.Outcome),
-			Updated: p.Updated, Unchanged: p.Unchanged, Added: p.Added, Kept: p.Kept,
-			Models: p.Models, Unlisted: p.Unlisted,
-		})
-	}
-	return out
 }

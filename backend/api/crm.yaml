@@ -26258,6 +26258,47 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /ai/price-sync:
+    get:
+      tags: [Rates]
+      operationId: getAiPriceSync
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+      description: |
+        `auto_sync` is on until an admin turns it off. `last_run` is absent until the sync has run
+        once, by the daily job or by `POST /ai-model-rates/refresh`.
+      responses:
+        '200':
+          description: The sync's posture and its last run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiPriceSync' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+    put:
+      tags: [Rates]
+      operationId: replaceAiPriceSync
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Turn the daily model price sync on or off (ai_model_rate update).
+      description: |
+        Off stops only the daily job; `POST /ai-model-rates/refresh` still runs on demand. Audited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiPriceSyncChange' }
+      responses:
+        '200':
+          description: The sync's posture and its last run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiPriceSync' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /ai-model-rates/propose-refresh:
     post:
       tags: [Rates]
@@ -27255,6 +27296,30 @@ components:
           type: array
           items: { type: string }
           description: Bound model ids the catalogue does not name.
+    AiPriceSync:
+      type: object
+      additionalProperties: false
+      required: [auto_sync]
+      properties:
+        auto_sync: { type: boolean, description: Whether the daily job syncs model prices. }
+        last_run: { $ref: '#/components/schemas/AiPriceSyncRun' }
+    AiPriceSyncRun:
+      type: object
+      additionalProperties: false
+      required: [ran_at, trigger, report]
+      properties:
+        ran_at: { type: string, format: date-time }
+        trigger:
+          type: string
+          enum: [manual, scheduled]
+          description: '`manual` was an admin pressing Refresh now; `scheduled` the daily job.'
+        report: { $ref: '#/components/schemas/AiModelRateRefreshReport' }
+    AiPriceSyncChange:
+      type: object
+      additionalProperties: false
+      required: [auto_sync]
+      properties:
+        auto_sync: { type: boolean }
     SetAiModelRateRequest:
       type: object
       required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok]

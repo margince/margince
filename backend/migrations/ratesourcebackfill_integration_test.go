@@ -44,7 +44,7 @@ func rateSources(ctx context.Context, t *testing.T, conn *pgx.Conn) map[string]s
 	return out
 }
 
-// A price a person wrote carries a human on its audit trail; the seed writes
+// A price typed by hand carries a human on its audit trail; the seed writes
 // none and the Vertex copy is the migration's, so those are the seed's.
 func TestEveryExistingPriceIsFiledByWhoWroteIt(t *testing.T) {
 	dsn, _ := dsns(t)

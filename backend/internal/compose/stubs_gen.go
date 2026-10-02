@@ -211,6 +211,14 @@ func (stubs) GetAiHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiHealth")
 }
 
+func (stubs) GetAiPriceSync(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiPriceSync")
+}
+
+func (stubs) ReplaceAiPriceSync(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReplaceAiPriceSync")
+}
+
 func (stubs) GetAiProfile(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiProfile")
 }

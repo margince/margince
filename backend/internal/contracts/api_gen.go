@@ -847,6 +847,24 @@ func (e AiModelRateSource) Valid() bool {
 	}
 }
 
+// Defines values for AiPriceSyncRunTrigger.
+const (
+	AiPriceSyncRunTriggerManual    AiPriceSyncRunTrigger = "manual"
+	AiPriceSyncRunTriggerScheduled AiPriceSyncRunTrigger = "scheduled"
+)
+
+// Valid indicates whether the value is a known member of the AiPriceSyncRunTrigger enum.
+func (e AiPriceSyncRunTrigger) Valid() bool {
+	switch e {
+	case AiPriceSyncRunTriggerManual:
+		return true
+	case AiPriceSyncRunTriggerScheduled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiProfileInferenceMode.
 const (
 	AiProfileInferenceModeCloud       AiProfileInferenceMode = "cloud"
@@ -21919,6 +21937,32 @@ type AiOpenRouterUpstream struct {
 	// Only Upstream slugs allowed; a hard filter.
 	Only *[]string `json:"only,omitempty"`
 }
+
+// AiPriceSync defines model for AiPriceSync.
+type AiPriceSync struct {
+	// AutoSync Whether the daily job syncs model prices.
+	AutoSync bool            `json:"auto_sync"`
+	LastRun  *AiPriceSyncRun `json:"last_run,omitempty"`
+}
+
+// AiPriceSyncChange defines model for AiPriceSyncChange.
+type AiPriceSyncChange struct {
+	AutoSync bool `json:"auto_sync"`
+}
+
+// AiPriceSyncRun defines model for AiPriceSyncRun.
+type AiPriceSyncRun struct {
+	RanAt time.Time `json:"ran_at"`
+
+	// Report The outcome of a catalogue refresh, one entry per provider this build knows.
+	Report AiModelRateRefreshReport `json:"report"`
+
+	// Trigger `manual` was an admin pressing Refresh now; `scheduled` the daily job.
+	Trigger AiPriceSyncRunTrigger `json:"trigger"`
+}
+
+// AiPriceSyncRunTrigger `manual` was an admin pressing Refresh now; `scheduled` the daily job.
+type AiPriceSyncRunTrigger string
 
 // AiProfile defines model for AiProfile.
 type AiProfile struct {
@@ -52276,6 +52320,9 @@ type PreviewAiBudgetJSONRequestBody = AiBudgetChange
 // RecordAIFeedbackJSONRequestBody defines body for RecordAIFeedback for application/json ContentType.
 type RecordAIFeedbackJSONRequestBody = AIFeedbackInput
 
+// ReplaceAiPriceSyncJSONRequestBody defines body for ReplaceAiPriceSync for application/json ContentType.
+type ReplaceAiPriceSyncJSONRequestBody = AiPriceSyncChange
+
 // SetAiProviderKeyJSONRequestBody defines body for SetAiProviderKey for application/json ContentType.
 type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
 
@@ -63514,6 +63561,12 @@ type ServerInterface interface {
 	// Whether the model lanes are answering.
 	// (GET /ai/health)
 	GetAiHealth(w http.ResponseWriter, r *http.Request)
+	// Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+	// (GET /ai/price-sync)
+	GetAiPriceSync(w http.ResponseWriter, r *http.Request)
+	// Turn the daily model price sync on or off (ai_model_rate update).
+	// (PUT /ai/price-sync)
+	ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request)
 	// Authenticated AI configuration posture for transparent human-facing workspaces.
 	// (GET /ai/profile)
 	GetAiProfile(w http.ResponseWriter, r *http.Request)
@@ -65959,6 +66012,18 @@ func (_ Unimplemented) RecordAIFeedback(w http.ResponseWriter, r *http.Request) 
 // Whether the model lanes are answering.
 // (GET /ai/health)
 func (_ Unimplemented) GetAiHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+// (GET /ai/price-sync)
+func (_ Unimplemented) GetAiPriceSync(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Turn the daily model price sync on or off (ai_model_rate update).
+// (PUT /ai/price-sync)
+func (_ Unimplemented) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72321,6 +72386,46 @@ func (siw *ServerInterfaceWrapper) GetAiHealth(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiPriceSync operation middleware
+func (siw *ServerInterfaceWrapper) GetAiPriceSync(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiPriceSync(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiPriceSync operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiPriceSync(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -103450,6 +103555,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/health", wrapper.GetAiHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/price-sync", wrapper.GetAiPriceSync)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/price-sync", wrapper.ReplaceAiPriceSync)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/profile", wrapper.GetAiProfile)

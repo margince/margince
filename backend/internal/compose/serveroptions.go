@@ -233,6 +233,11 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		if s.aiRoutingHandlers.store != nil {
 			s.aiRoutingHandlers.store = s.aiRoutingHandlers.store.WithVault(vault)
 		}
+		// The sync lists each vendor's models with the key sealed here; guarded
+		// like the store above, for a role that composed no AI surface.
+		if s.priceCatalogues.broker != nil {
+			s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, vault, config.FromOS, s.log, s.priceCatalogues))
+		}
 		// The connector OAuth apps ride the same reasoning: each client SECRET is
 		// sealed, so the surface exists only where there is somewhere to seal it.
 		connectorApps := capture.NewConnectorAppStore(NewSettingsStore(pool), vault, s.log)

@@ -17948,6 +17948,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/price-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+         * @description `auto_sync` is on until an admin turns it off. `last_run` is absent until the sync has run
+         *     once, by the daily job or by `POST /ai-model-rates/refresh`.
+         */
+        get: operations["getAiPriceSync"];
+        /**
+         * Turn the daily model price sync on or off (ai_model_rate update).
+         * @description Off stops only the daily job; `POST /ai-model-rates/refresh` still runs on demand. Audited.
+         */
+        put: operations["replaceAiPriceSync"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai-model-rates/propose-refresh": {
         parameters: {
             query?: never;
@@ -18361,6 +18386,24 @@ export interface components {
             models: string[];
             /** @description Bound model ids the catalogue does not name. */
             unlisted: string[];
+        };
+        AiPriceSync: {
+            /** @description Whether the daily job syncs model prices. */
+            auto_sync: boolean;
+            last_run?: components["schemas"]["AiPriceSyncRun"];
+        };
+        AiPriceSyncRun: {
+            /** Format: date-time */
+            ran_at: string;
+            /**
+             * @description `manual` was an admin pressing Refresh now; `scheduled` the daily job.
+             * @enum {string}
+             */
+            trigger: "manual" | "scheduled";
+            report: components["schemas"]["AiModelRateRefreshReport"];
+        };
+        AiPriceSyncChange: {
+            auto_sync: boolean;
         };
         SetAiModelRateRequest: {
             provider: string;
@@ -68556,6 +68599,55 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getAiPriceSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sync's posture and its last run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiPriceSync"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    replaceAiPriceSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiPriceSyncChange"];
+            };
+        };
+        responses: {
+            /** @description The sync's posture and its last run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiPriceSync"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
         };
     };
     proposeAiModelRateRefresh: {

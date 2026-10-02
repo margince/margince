@@ -34,9 +34,9 @@ func TestEveryWriterFilesWhereItsPriceCameFrom(t *testing.T) {
 	}
 }
 
-// Same-day writes upsert one row; the person's correction must take the row's
+// Same-day writes upsert one row; an admin's correction must take the row's
 // provenance with it, or the next sync would overwrite what they just typed.
-func TestAPersonCorrectingASyncedPriceMakesItTheirs(t *testing.T) {
+func TestAnAdminCorrectingASyncedPriceMakesItTheirs(t *testing.T) {
 	e := setupRateStore(t)
 	ws, _ := e.seedWorkspace(context.Background(), t)
 	ctx := laneWriterCtx(ws)
