@@ -11,6 +11,8 @@ exactly what that vendor sent.
 
 import collections
 import json
+import os
+import ssl
 import time
 import urllib.error
 import urllib.request
@@ -21,6 +23,35 @@ Turn = collections.namedtuple("Turn", "text calls usage")
 
 ATTEMPTS = 3
 TIMEOUT = 300
+
+
+# Where an operating system keeps its CA bundle: macOS, Debian/Ubuntu, Fedora.
+SYSTEM_CA_BUNDLES = (
+    "/etc/ssl/cert.pem",
+    "/etc/ssl/certs/ca-certificates.crt",
+    "/etc/pki/tls/certs/ca-bundle.crt",
+)
+
+
+def tls_context(default_store_empty=None):
+    """A verifying TLS context that also works on python.org's macOS build.
+
+    That build ships no CA certificates until its installer script is run, so
+    every vendor call fails verification and the lane stops before a model is
+    asked. Verification is never relaxed: an empty store borrows the system's.
+    """
+    context = ssl.create_default_context()
+    if default_store_empty is None:
+        default_store_empty = context.cert_store_stats()["x509_ca"] == 0
+    if default_store_empty:
+        for bundle in SYSTEM_CA_BUNDLES:
+            if os.path.exists(bundle):
+                context.load_verify_locations(cafile=bundle)
+                break
+    return context
+
+
+_TLS = tls_context()
 
 
 class ProviderFault(Exception):
@@ -36,7 +67,7 @@ def _post(vendor, url, headers, body, sleep):
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            with urllib.request.urlopen(request, timeout=TIMEOUT, context=_TLS) as response:
                 raw = response.read()
             try:
                 reply = json.loads(raw)
