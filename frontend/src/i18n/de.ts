@@ -3504,6 +3504,8 @@ export const de = {
   "offer.committedNet": "Verbindlicher Nettowert",
   "offer.edit": "Kopfdaten bearbeiten",
   "offer.currency": "Währung",
+  "offer.currencyFixedByLines":
+    "Die Währung ist festgelegt, sobald eine Position einen Preis hat: Bei einem Wechsel würde jeder vorhandene Preis als Betrag in der neuen Währung interpretiert. Entferne die Positionen, um die Währung zu ändern, oder erstelle ein neues Angebot.",
   "offer.buyerCompany": "Käuferunternehmen",
   "offer.buyerCompanyConfirm": "Käuferunternehmen: {name}",
   "offer.template": "Vorlage",

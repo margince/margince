@@ -34,7 +34,7 @@
 1312 frontend/src/screens/company-context.tsx
 1328 frontend/src/screens/listquery.test.tsx
 1385 frontend/src/screens/listquery.tsx
-1317 frontend/src/screens/offers.tsx
+1306 frontend/src/screens/offers.tsx
 1365 frontend/src/app/agentrail.test.tsx
 1504 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1436 frontend/src/design-system/listtable.test.tsx
