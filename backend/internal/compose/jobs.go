@@ -175,6 +175,9 @@ type JobRunnerConfig struct {
 	// could only fail every job it enqueued. Declared by omission, the posture
 	// GmailRegistry already takes.
 	ChannelVault keyvault.Vault
+	// AIKeyVault holds the sealed vendor keys the price sweep lists models with.
+	// Nil lists with the environment's keys only; the sweep still registers.
+	AIKeyVault keyvault.Vault
 	// ChannelAPI is the Telegram Bot API seam the poller dials out through. Nil
 	// takes the real client, which is what every process role passes; the
 	// acceptance suites substitute a fake, because a poller left on the real
@@ -427,6 +430,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addDealScoutJobs(reg, pool, cfg, log),
 		addListEvaluateJobs(reg, pool, cfg, log),
 		addFinanceJobs(reg, pool, cfg, log),
+		addAIPriceSyncJobs(reg, pool, cfg, log),
 		registerTelegramPoll(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:
 		// the ext_ kinds and their ticks do not exist there at all.

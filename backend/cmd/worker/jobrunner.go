@@ -262,6 +262,8 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// sealed token. Without a configured vault there is no token to unseal
 		// and the poller stays off by omission.
 		ChannelVault: vault,
+		// The price sweep lists each keyed vendor's models with the key sealed here.
+		AIKeyVault: vault,
 		// The classify + enrich passes run only where a model is
 		// configured; without one both are absent by omission.
 		ClassifyBrain:        modelPath.CaptureClassify,
