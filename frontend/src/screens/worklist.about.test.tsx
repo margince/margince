@@ -1,7 +1,13 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
+import {
+  day,
+  renderWorklist,
+  row,
+  stub,
+  type WorklistItem,
+} from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();
@@ -129,5 +135,52 @@ it("claims no moments when the server withheld them", async () => {
   renderWorklist();
 
   await screen.findByText("Confirm the workshop date");
+  expect(document.querySelector(".worklist-row-touch")).toBeNull();
+});
+
+const ACCOUNT = "01a05500-0000-7000-8000-0000000000c0";
+
+function accountTask(company: WorklistItem["company"]) {
+  return day({
+    queue: [
+      row({
+        id: "t2",
+        source: "task",
+        category: "tasks",
+        title: "Send the renewal terms",
+        subject: { type: "company", id: ACCOUNT, label: "Turbinenbau GmbH" },
+        company,
+      }),
+    ],
+    summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+  });
+}
+
+// A row about an account says which side went last in the same two terms a
+// contact's row does.
+it("says which side wrote last on a row about an account", async () => {
+  stub(
+    accountTask({
+      id: ACCOUNT,
+      touch: {
+        last_inbound_at: null,
+        last_outbound_at: "2026-08-28T09:00:00Z",
+      },
+    }),
+  );
+  renderWorklist();
+
+  await screen.findByText("Send the renewal terms · Turbinenbau GmbH");
+  const touch = document.querySelector(".worklist-row-touch");
+  expect(touch?.textContent).toContain("Last inbound Never");
+  expect(touch?.textContent).toContain("Last outbound");
+  expect(touch?.textContent).toContain("28/08/2026");
+});
+
+it("claims no moments for an account whose activity was withheld", async () => {
+  stub(accountTask({ id: ACCOUNT }));
+  renderWorklist();
+
+  await screen.findByText("Send the renewal terms · Turbinenbau GmbH");
   expect(document.querySelector(".worklist-row-touch")).toBeNull();
 });

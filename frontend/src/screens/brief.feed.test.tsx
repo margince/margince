@@ -276,6 +276,35 @@ it("claims no moments when the server withheld them", () => {
   expect(screen.queryByText(en["worklist.pane.never"])).toBeNull();
 });
 
+it("names the account a row in hand is about, and which side wrote last", () => {
+  stubApi({});
+  const row = {
+    ...taskRow("renewal", "Send the renewal terms"),
+    subject: {
+      type: "company" as const,
+      id: "company-nordwind",
+      label: "Nordwind",
+    },
+    company: {
+      id: "company-nordwind",
+      touch: {
+        last_inbound_at: "2026-09-03T16:46:00Z",
+        last_outbound_at: null,
+      },
+    },
+  };
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+  );
+  const about = container.querySelector(".brief-triage-about");
+  expect(about?.querySelector("a")?.textContent).toBe("Nordwind");
+  expect(about?.textContent).toContain(en["worklist.pane.lastInbound"]);
+  expect(about?.textContent).toContain("03/09/2026");
+  expect(about?.textContent).toContain(
+    `${en["worklist.pane.lastOutbound"]} ${en["worklist.pane.never"]}`,
+  );
+});
+
 // THE RANKED COLUMN NAMES ITS ROWS FROM THE CONTACT, not from a message.
 //
 // Read off `email_summary.counterparty`, the line named the sender of a

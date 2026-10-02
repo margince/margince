@@ -202,7 +202,8 @@ function spoken(
 }
 
 /** The two moments as any read spells them: the contact's own page and a
- *  queue row's `contact.touch` carry the same pair under the same names. */
+ *  queue row's `contact.touch` or `company.touch` carry the same pair under
+ *  the same names. */
 export type TouchMoments = Readonly<{
   last_inbound_at?: string | null;
   last_outbound_at?: string | null;

@@ -44,7 +44,8 @@ type ContactTouch interface {
 	LastTouch(ctx context.Context, contactIDs []ids.UUID) (map[ids.UUID]TouchMoments, error)
 }
 
-// TouchMoments is one contact's two directions. Nil means it never happened.
+// TouchMoments is one contact's or account's two directions. Nil means it
+// never happened.
 type TouchMoments struct {
 	LastInbound  *time.Time
 	LastOutbound *time.Time
