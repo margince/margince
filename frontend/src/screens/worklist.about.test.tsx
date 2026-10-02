@@ -79,7 +79,7 @@ it("names the sender behind a deal-filed thread, and which side wrote last", asy
             id: "01a05500-0000-7000-8000-000000000009",
             label: "Sonya Beck",
             touch: {
-              last_inbound_at: "2026-09-03T16:46:00Z",
+              last_inbound_at: "2026-09-03T09:00:00Z",
               last_outbound_at: null,
             },
           },
@@ -205,7 +205,7 @@ it("prefers the contact's moments to the account's on a row naming both", async 
         id: "01a05500-0000-7000-8000-000000000009",
         label: "Sonya Beck",
         touch: {
-          last_inbound_at: "2026-09-03T16:46:00Z",
+          last_inbound_at: "2026-09-03T09:00:00Z",
           last_outbound_at: null,
         },
       },
