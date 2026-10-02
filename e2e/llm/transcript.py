@@ -98,6 +98,11 @@ _CODEX_HARMLESS_ITEMS = {"agent_message", "reasoning", "todo_list"}
 _CODEX_RESOURCE_HELPERS = {"list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"}
 
 
+def _codex_refused(entry):
+    error = entry.get("error")
+    return isinstance(error, dict) and "requires approval" in str(error.get("message"))
+
+
 def _codex_result_text(entry):
     if entry.get("error"):
         return str((entry["error"] or {}).get("message") or entry["error"]), True
@@ -119,6 +124,10 @@ def _codex_item(out, entry):
     if kind == "error":
         # The stream's own failure signal: whatever it says, the run is not scored.
         return entry.get("message") or "codex reported an error"
+    if kind == "mcp_tool_call" and entry.get("server") == SERVER and _codex_refused(entry):
+        # Codex declined to make the call: the model never reached the tool,
+        # so the run measures codex's approval setting, not the model.
+        return f"codex refused to call {entry.get('tool')}: {(entry.get('error') or {}).get('message')}"
     if kind == "mcp_tool_call" and entry.get("server") == SERVER:
         # codex sends arguments as a JSON object; a string is read as one too.
         arguments = entry.get("arguments")

@@ -38007,6 +38007,19 @@ type OpenDealRoomThreadRequest struct {
 	// DocumentId The room document the thread is about. Omit for a room-level exchange.
 	DocumentId *openapi_types.UUID `json:"document_id,omitempty"`
 
+	// RequestId An id the CLIENT mints for this attempt, so a repeated delivery of the
+	// same attempt lands once.
+	//
+	// Repeating an attempt answers with the SAME thread rather than an error: a
+	// double-click, a mobile retry and a proxy replay are one attempt arriving
+	// twice. Scoped to the room, so an id only has to be unique within the one
+	// being written to. Omit it and no deduplication applies.
+	//
+	// Mint it fresh per attempt rather than deriving it from the message —
+	// saying the same thing twice on purpose is allowed, and a key derived from
+	// the text would refuse the second one.
+	RequestId *openapi_types.UUID `json:"request_id,omitempty"`
+
 	// RequiredChange Only with a document. Marks the thread as one the seller still owes an answer on.
 	RequiredChange *bool `json:"required_change,omitempty"`
 
@@ -38280,8 +38293,21 @@ type PopulationNarrowed string
 
 // PostDealRoomCommentRequest defines model for PostDealRoomCommentRequest.
 type PostDealRoomCommentRequest struct {
-	Body   string  `json:"body"`
-	Source *string `json:"source,omitempty"`
+	Body string `json:"body"`
+
+	// RequestId An id the CLIENT mints for this attempt, so a repeated delivery of the
+	// same attempt lands once.
+	//
+	// Repeating an attempt answers with the SAME thread rather than an error: a
+	// double-click, a mobile retry and a proxy replay are one attempt arriving
+	// twice. Scoped to the room, so an id only has to be unique within the one
+	// being written to. Omit it and no deduplication applies.
+	//
+	// Mint it fresh per attempt rather than deriving it from the message —
+	// saying the same thing twice on purpose is allowed, and a key derived from
+	// the text would refuse the second one.
+	RequestId *openapi_types.UUID `json:"request_id,omitempty"`
+	Source    *string             `json:"source,omitempty"`
 }
 
 // PreferenceCenter The buyer-facing preference center's per-purpose view (B-E11.32): each tracked consent purpose

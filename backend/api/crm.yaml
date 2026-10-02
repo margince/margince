@@ -51281,6 +51281,21 @@ components:
           type: boolean
           description: Only with a document. Marks the thread as one the seller still owes an answer on.
         source: { type: string, description: 'Provenance. Required on the seller edge; a buyer''s comment always carries the credential''s own value. `manual` for someone writing through this product.' }
+        request_id:
+          type: string
+          format: uuid
+          description: |
+            An id the CLIENT mints for this attempt, so a repeated delivery of the
+            same attempt lands once.
+
+            Repeating an attempt answers with the SAME thread rather than an error: a
+            double-click, a mobile retry and a proxy replay are one attempt arriving
+            twice. Scoped to the room, so an id only has to be unique within the one
+            being written to. Omit it and no deduplication applies.
+
+            Mint it fresh per attempt rather than deriving it from the message —
+            saying the same thing twice on purpose is allowed, and a key derived from
+            the text would refuse the second one.
       additionalProperties: false
 
     PostDealRoomCommentRequest:
@@ -51289,6 +51304,21 @@ components:
       properties:
         body: { type: string, minLength: 1 }
         source: { type: string }
+        request_id:
+          type: string
+          format: uuid
+          description: |
+            An id the CLIENT mints for this attempt, so a repeated delivery of the
+            same attempt lands once.
+
+            Repeating an attempt answers with the SAME thread rather than an error: a
+            double-click, a mobile retry and a proxy replay are one attempt arriving
+            twice. Scoped to the room, so an id only has to be unique within the one
+            being written to. Omit it and no deduplication applies.
+
+            Mint it fresh per attempt rather than deriving it from the message —
+            saying the same thing twice on purpose is allowed, and a key derived from
+            the text would refuse the second one.
       additionalProperties: false
 
     DealRoomCredentialRequest:

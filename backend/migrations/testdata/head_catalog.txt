@@ -3281,6 +3281,7 @@ public.deal_room_comment.deal_room_comment_pkey PRIMARY KEY (id)
 public.deal_room_comment.deal_room_comment_room_fkey FOREIGN KEY (room_id) REFERENCES deal_room(id) ON DELETE CASCADE
 public.deal_room_comment.deal_room_comment_thread_fkey FOREIGN KEY (thread_id) REFERENCES deal_room_thread(id) ON DELETE CASCADE
 public.deal_room_comment.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_room_comment.request_id uuid gen=- def=-
 public.deal_room_comment.room_id uuid NOT NULL gen=- def=-
 public.deal_room_comment.source text NOT NULL gen=- def=-
 public.deal_room_comment.thread_id uuid NOT NULL gen=- def=-
@@ -3401,6 +3402,7 @@ public.deal_room_thread.deal_room_thread_state_check CHECK ((state = ANY (ARRAY[
 public.deal_room_thread.deal_room_thread_touch CREATE TRIGGER deal_room_thread_touch BEFORE UPDATE ON public.deal_room_thread FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.deal_room_thread.document_id uuid gen=- def=-
 public.deal_room_thread.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_room_thread.request_id uuid gen=- def=-
 public.deal_room_thread.required_change boolean NOT NULL gen=- def=false
 public.deal_room_thread.resolved_at timestamp with time zone gen=- def=-
 public.deal_room_thread.resolved_by_user_id uuid gen=- def=-
@@ -6711,6 +6713,7 @@ public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON publ
 public.uq_custom_field_slug CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug)
 public.uq_deal_risk_day CREATE UNIQUE INDEX uq_deal_risk_day ON public.deal_risk_day USING btree (local_day)
 public.uq_deal_room_active CREATE UNIQUE INDEX uq_deal_room_active ON public.deal_room USING btree (deal_id) WHERE ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text])) AND (archived_at IS NULL))
+public.uq_deal_room_comment_request CREATE UNIQUE INDEX uq_deal_room_comment_request ON public.deal_room_comment USING btree (room_id, request_id) WHERE (request_id IS NOT NULL)
 public.uq_deal_room_document_in_room CREATE UNIQUE INDEX uq_deal_room_document_in_room ON public.deal_room_document USING btree (id, room_id)
 public.uq_deal_room_document_live CREATE UNIQUE INDEX uq_deal_room_document_live ON public.deal_room_document USING btree (room_id, attachment_id) WHERE (archived_at IS NULL)
 public.uq_deal_room_invitation_attempt CREATE UNIQUE INDEX uq_deal_room_invitation_attempt ON public.deal_room_invitation USING btree (participant_id, attempt_no)
@@ -6720,6 +6723,7 @@ public.uq_deal_room_participant_email CREATE UNIQUE INDEX uq_deal_room_participa
 public.uq_deal_room_participant_in_room CREATE UNIQUE INDEX uq_deal_room_participant_in_room ON public.deal_room_participant USING btree (id, room_id)
 public.uq_deal_room_preview_per_rep CREATE UNIQUE INDEX uq_deal_room_preview_per_rep ON public.deal_room_participant USING btree (room_id, invited_by) WHERE ((revoked_at IS NULL) AND preview)
 public.uq_deal_room_session_token CREATE UNIQUE INDEX uq_deal_room_session_token ON public.deal_room_session USING btree (token_hash)
+public.uq_deal_room_thread_request CREATE UNIQUE INDEX uq_deal_room_thread_request ON public.deal_room_thread USING btree (room_id, request_id) WHERE (request_id IS NOT NULL)
 public.uq_deal_suggestion_fingerprint CREATE UNIQUE INDEX uq_deal_suggestion_fingerprint ON public.deal_suggestion USING btree (fingerprint)
 public.uq_deal_suggestion_open_company CREATE UNIQUE INDEX uq_deal_suggestion_open_company ON public.deal_suggestion USING btree (company_id) WHERE (state = 'open'::text)
 public.uq_dedupe_candidate_pair CREATE UNIQUE INDEX uq_dedupe_candidate_pair ON public.dedupe_candidate USING btree (entity_type, COALESCE(left_contact_id, left_company_id, left_lead_id), COALESCE(right_contact_id, right_company_id, right_lead_id))

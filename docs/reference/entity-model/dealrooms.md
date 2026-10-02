@@ -49,7 +49,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 ## deal_room_comment
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -57,6 +57,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 | `author_participant_id` | `uuid` |  | Optional `uuid`. |
 | `author_user_id` | `uuid` |  | Points at `app_user.id` — the parent cannot be deleted while this row points at it. |
 | `body` | `text` | yes | Required `text`. |
+| `request_id` | `uuid` |  | Optional `uuid`. |
 | `room_id` | `uuid` | yes | Points at `deal_room.id` — deleting the parent deletes this row. |
 | `thread_id` | `uuid` | yes | Points at `deal_room_thread.id` — deleting the parent deletes this row. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -82,6 +83,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 - `deal_room_comment_pkey` — `unique, btree (id)`
 - `idx_deal_room_comment_room` — `btree (room_id)`
 - `idx_deal_room_comment_thread` — `btree (thread_id, created_at)`
+- `uq_deal_room_comment_request` — `unique, btree (room_id, request_id) WHERE (request_id IS NOT NULL)`
 
 ## deal_room_document
 
@@ -284,7 +286,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 ## deal_room_thread
 
-15 columns · primary key `(id)` · referenced by 1 foreign key
+16 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -293,6 +295,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 | `author_participant_id` | `uuid` |  | Optional `uuid`. |
 | `author_user_id` | `uuid` |  | Points at `app_user.id` — the parent cannot be deleted while this row points at it. |
 | `document_id` | `uuid` |  | Null for a room-level thread. |
+| `request_id` | `uuid` |  | Optional `uuid`. |
 | `required_change` | `boolean` | yes | Required `boolean`, defaulting to `false`. |
 | `resolved_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `resolved_by_user_id` | `uuid` |  | Points at `app_user.id` — the parent cannot be deleted while this row points at it. |
@@ -328,6 +331,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 - `idx_deal_room_thread_document` — `btree (document_id)`
 - `idx_deal_room_thread_document_open` — `btree (document_id) WHERE ((state = 'open') AND required_change)`
 - `idx_deal_room_thread_room` — `btree (room_id, created_at)`
+- `uq_deal_room_thread_request` — `unique, btree (room_id, request_id) WHERE (request_id IS NOT NULL)`
 
 **Triggers**
 
