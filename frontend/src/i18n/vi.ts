@@ -247,9 +247,9 @@ export const vi = {
     "Họ chọn một giờ trống bất kỳ. Liên kết đặt được một lần và hết hạn sau 7 ngày.",
   "scheduling.pickOffer": "Chọn hai hoặc ba thời điểm để đề xuất",
   "scheduling.pickAgreed": "Chọn thời gian đã thống nhất",
+  "scheduling.openTimes": "Các giờ trống của bạn",
   "scheduling.guestPicks": "{name} chọn thời gian",
-  "scheduling.guestPicksHelp":
-    "Bạn gửi một liên kết riêng. Họ xem các giờ trống của bạn và đặt một giờ.",
+  "scheduling.guestPicksOne": "Họ đặt một trong các giờ trống trên lịch.",
   "scheduling.guest": "Khách của bạn",
   "scheduling.length": "Thời lượng",
   "scheduling.minutes_one": "{count} phút",
