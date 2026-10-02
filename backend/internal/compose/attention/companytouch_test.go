@@ -8,6 +8,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -53,8 +54,8 @@ func TestCompanyRowsSayWhenEachSideLastWrote(t *testing.T) {
 		t.Fatalf("naming the companies: %v", err)
 	}
 
-	if len(touch.asked) != 1 || len(touch.asked[0]) != 2 {
-		t.Fatalf("the reader was asked %v, wanted one call naming each company without repeats", touch.asked)
+	if want := [][]ids.UUID{{acme, hidden}}; !slices.EqualFunc(touch.asked, want, slices.Equal) {
+		t.Fatalf("the reader was asked %v, wanted one call naming %v, each once, as first met", touch.asked, want)
 	}
 	for _, row := range rows[:2] {
 		got := row.Company

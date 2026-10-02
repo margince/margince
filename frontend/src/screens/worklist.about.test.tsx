@@ -140,7 +140,10 @@ it("claims no moments when the server withheld them", async () => {
 
 const ACCOUNT = "01a05500-0000-7000-8000-0000000000c0";
 
-function accountTask(company: WorklistItem["company"]) {
+function accountTask(
+  company: WorklistItem["company"],
+  contact?: WorklistItem["contact"],
+) {
   return day({
     queue: [
       row({
@@ -150,6 +153,7 @@ function accountTask(company: WorklistItem["company"]) {
         title: "Send the renewal terms",
         subject: { type: "company", id: ACCOUNT, label: "Turbinenbau GmbH" },
         company,
+        contact,
       }),
     ],
     summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
@@ -183,4 +187,36 @@ it("claims no moments for an account whose activity was withheld", async () => {
 
   await screen.findByText("Send the renewal terms · Turbinenbau GmbH");
   expect(document.querySelector(".worklist-row-touch")).toBeNull();
+});
+
+// The pair belongs to whoever a reply would go to, so a row naming both a
+// person and their account says when that person last wrote, not the account.
+it("prefers the contact's moments to the account's on a row naming both", async () => {
+  stub(
+    accountTask(
+      {
+        id: ACCOUNT,
+        touch: {
+          last_inbound_at: "2026-07-14T09:00:00Z",
+          last_outbound_at: "2026-08-28T09:00:00Z",
+        },
+      },
+      {
+        id: "01a05500-0000-7000-8000-000000000009",
+        label: "Sonya Beck",
+        touch: {
+          last_inbound_at: "2026-09-03T16:46:00Z",
+          last_outbound_at: null,
+        },
+      },
+    ),
+  );
+  renderWorklist();
+
+  await screen.findByText(/Send the renewal terms/);
+  const touch = document.querySelector(".worklist-row-touch")?.textContent;
+  expect(touch).toContain("03/09/2026");
+  expect(touch).toContain("Last outbound Never");
+  expect(touch).not.toContain("14/07/2026");
+  expect(touch).not.toContain("28/08/2026");
 });

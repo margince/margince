@@ -77,8 +77,9 @@ export function aboutRecord(
 }
 
 /**
- * How the silence runs both ways with whoever the row is about: the contact
- * the server put on it, else the account a company row names. Keyed on which
+ * How the silence runs both ways with whoever the row is about. A contact on
+ * the row outranks its account, since the pair belongs to whoever a reply would
+ * go to; the account's shows only on a row naming no one. Keyed on which
  * record is present rather than on which pair is, so a contact whose moments
  * were withheld never borrows the account's.
  */
