@@ -72,6 +72,39 @@ describe("the receipt at a glance", () => {
     ]);
   });
 
+  it("counts records created and archived as readings of their own", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            id: lineId(1),
+            summary: { key: "magic.action.create_contact" },
+            actor: mailFiling,
+            count: 30,
+          }),
+          line({
+            id: lineId(2),
+            summary: { key: "magic.action.create_company" },
+            actor: mailFiling,
+            count: 4,
+          }),
+          line({
+            id: lineId(3),
+            summary: { key: "magic.action.archive_activity" },
+            actor: mailFiling,
+            count: 9,
+          }),
+        ],
+      }),
+    );
+    renderMagic();
+    const glance = await screen.findByRole("region", { name: "What got done" });
+    expect(readings(glance)).toEqual([
+      ["Records created", "34", "Mail filing"],
+      ["Records archived", "9", "Mail filing"],
+    ]);
+  });
+
   it("names the job with the most records across a reading's lines", async () => {
     const mailReader = {
       type: "system",

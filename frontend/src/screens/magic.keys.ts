@@ -48,6 +48,18 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.retention_activity_archive",
   "magic.action.retention_activity_erase",
   "magic.action.retention_deal_archive",
+  "magic.action.create_contact",
+  "magic.action.create_company",
+  "magic.action.create_deal",
+  "magic.action.create_lead",
+  "magic.action.create_project",
+  "magic.action.create_activity",
+  "magic.action.archive_contact",
+  "magic.action.archive_company",
+  "magic.action.archive_deal",
+  "magic.action.archive_lead",
+  "magic.action.archive_project",
+  "magic.action.archive_activity",
 ] as const satisfies readonly MessageKey[];
 
 export type MagicSentenceKey = (typeof MAGIC_SENTENCE_KEYS)[number];

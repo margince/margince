@@ -20,10 +20,12 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -33,6 +35,9 @@ type WriteOption func(*writeOptions)
 
 type writeOptions struct {
 	untouchedSince *time.Time
+	// untouchedAfter is the audit entry untouchedSince was read from, when the
+	// caller has one: ColleagueWorkedOnSince orders by it as well as by time.
+	untouchedAfter ids.UUID
 	atVersion      *int64
 }
 
@@ -43,6 +48,13 @@ type writeOptions struct {
 // act too.
 func NotTouchedByHumanSince(at time.Time) WriteOption {
 	return func(o *writeOptions) { o.untouchedSince = &at }
+}
+
+// NotWorkedOnByAColleagueSince refuses the write when a colleague has worked
+// on the record since the audit entry `entry`, written at `at`, in the sense
+// ColleagueWorkedOnSince answers.
+func NotWorkedOnByAColleagueSince(at time.Time, entry ids.UUID) WriteOption {
+	return func(o *writeOptions) { o.untouchedSince, o.untouchedAfter = &at, entry }
 }
 
 // OnlyAtVersion refuses the write unless the record is still at this version —
@@ -127,4 +139,77 @@ func refuseIfHumanTouched(
 		return &HumanTouchedError{EntityType: entityType, EntityID: id}
 	}
 	return nil
+}
+
+// ColleagueWorkedOnSince reports whether a colleague has acted on the record
+// since the audit entry `after`, written at `since`: a human audit row on the
+// record itself, on a record a human merged into it, a correction a human
+// ruled about it, or a link it is an end of, or a tag or list membership a
+// human gave it — archiving the record retires all of them. Tags and lists are
+// asked without a time: every caller's entry made the record or brought it
+// back, and a human tag on it is work a colleague did on it either way. A human's undo of
+// some other change is not work on the record, so a reversal does not count,
+// and neither does a row this transaction wrote itself.
+//
+// "Since" is asked of the audit id as well as the time. A row's occurred_at is
+// when its transaction STARTED, so a colleague whose save began before the
+// entry and committed after it carries an earlier time; its id is minted at
+// the write, so the id still orders it after.
+func ColleagueWorkedOnSince(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, since time.Time, after ids.UUID) (bool, error) {
+	var worked bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM audit_log a
+			 WHERE a.actor_type = 'human' AND (a.occurred_at > $3 OR ($6::uuid IS NOT NULL AND a.id > $6))
+			   AND a.occurred_at <> now()
+			   AND NOT (coalesce(a.evidence, '{}'::jsonb) ? $4)
+			   AND ((a.entity_type = $1 AND a.entity_id = $2)
+			        OR (a.entity_type = $1 AND a.after ->> 'merged_into_id' = $2::text)
+			        OR (a.entity_type = 'ai_feedback' AND a.after ->> 'subject_type' = $1
+			            AND a.after ->> 'subject_id' = $2::text)
+			        OR (a.entity_type = $5 AND a.entity_id IN (
+			              SELECT r.id FROM relationship r
+			               WHERE $2 IN (r.contact_id, r.counterparty_contact_id, r.company_id,
+			                            r.counterparty_company_id, r.deal_id, r.project_id)))))
+		    OR EXISTS (
+			SELECT 1 FROM taggable g
+			 WHERE g.entity_type = $1 AND g.entity_id = $2 AND g.assigned_by_kind = 'human')
+		    OR EXISTS (
+			SELECT 1 FROM list_member m
+			 WHERE m.entity_type = $1 AND m.entity_id = $2 AND m.added_by LIKE 'human:%')`,
+		entityType, id, since, storekit.EvidenceKeyUndidAuditLog, tableRelationship, entryOrNone(after)).Scan(&worked); err != nil {
+		return false, fmt.Errorf("checking whether a colleague worked on this %s: %w", entityType, err)
+	}
+	return worked, nil
+}
+
+// ArchiveDroppedColleagueWork reports whether the newest archive of the record
+// deleted a tag or a list membership a human gave it. Asked after an archive in
+// its own transaction, it sees exactly what that archive took down — a tag a
+// colleague added while the decision was being made included, which a check
+// of the live rows can no longer see once the archive has deleted them.
+func ArchiveDroppedColleagueWork(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) (bool, error) {
+	archive, err := storekit.LatestArchive(ctx, tx, entityType, id)
+	if err != nil {
+		return false, err
+	}
+	for _, m := range archive.Cascade.Memberships {
+		if strings.HasPrefix(m.AddedBy, "human:") {
+			return true, nil
+		}
+	}
+	for _, tag := range archive.Cascade.Tags {
+		if tag.AssignedByKind != nil && *tag.AssignedByKind == "human" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// entryOrNone is the entry to order by, or none when the caller had only a time.
+func entryOrNone(entry ids.UUID) *ids.UUID {
+	if entry == ids.Nil {
+		return nil
+	}
+	return &entry
 }

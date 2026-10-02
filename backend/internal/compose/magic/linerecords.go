@@ -132,7 +132,7 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 	out := make([]crmcontracts.MagicLineRecord, 0, len(members))
 	subjects := make([]UndoSubject, 0, len(members))
 	for _, e := range members {
-		changes, err := visibleChanges(ctx, e.EntityType, fieldChanges(e.Before, e.After))
+		changes, err := visibleChanges(ctx, e.EntityType, changesOf(e))
 		if err != nil {
 			return nil, err
 		}
@@ -164,6 +164,16 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 		}
 	}
 	return out, nil
+}
+
+// changesOf is what one member's row shows as changed. A create or an archive
+// changed the whole record rather than some of its fields, and listing every
+// column of a new contact as "empty → value" says less than its name does.
+func changesOf(e entry) []crmcontracts.MagicFieldChange {
+	if bulkActions[e.Action] {
+		return []crmcontracts.MagicFieldChange{}
+	}
+	return fieldChanges(e.Before, e.After)
 }
 
 // fieldChanges lists every field an audit image moved, old value to new, sorted

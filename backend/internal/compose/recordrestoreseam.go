@@ -36,12 +36,17 @@ func NewRestoreSeam(pool *pgxpool.Pool, provider *Provider, corrections *deals.S
 	// reaches them through that module's own store rather than restating any of
 	// them, which is also why it owns no relationship SQL.
 	edges := contacts.NewStore(InstallationDB(pool))
+	dealStore := corrections
+	if dealStore == nil {
+		dealStore = deals.NewStore(InstallationDB(pool), DealsInstallation())
+	}
 	return RestoreSeam{
 		pool:        pool,
 		provider:    provider,
 		visible:     recordIsVisibleToCaller,
 		edges:       edges,
 		corrections: corrections,
+		inverses:    recordInverses{provider: provider, contacts: edges, deals: dealStore},
 		evaluator: Evaluator{
 			Archived:      recordIsArchived,
 			Writable:      recordIsWritableByCaller,

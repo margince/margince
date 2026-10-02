@@ -209,7 +209,7 @@ describe("the receipt draws every lane it promises", () => {
     expect(screen.queryByText(/magic\.action\./)).toBeNull();
   });
 
-  it("gives a waiting decision no verb, because decisions are decided elsewhere", async () => {
+  it("points a waiting decision at the worklist, where it is decided", async () => {
     stub(
       receipt({
         needs_you: [
@@ -220,6 +220,8 @@ describe("the receipt draws every lane it promises", () => {
               values: { target: "Fleet retrofit" },
             },
             consequence: "magic.consequence.awaits_your_decision",
+            // An older server still sends a refusal here; the line must not
+            // repeat it as "cannot be undone" about a change nobody made.
             undo: { undoable: false, reason: "no_completed_change" },
           }),
         ],
@@ -231,8 +233,10 @@ describe("the receipt draws every lane it promises", () => {
     expect(
       within(waiting).getByText("Nothing happens until you decide."),
     ).toBeTruthy();
+    const decide = within(waiting).getByRole("link", { name: "Decide" });
+    expect(decide.getAttribute("href")).toBe("#/worklist");
     expect(within(waiting).queryAllByRole("button")).toEqual([]);
-    // Nothing changed yet, so a way back is not a question this line asks.
+    expect(within(waiting).queryByText("Undo")).toBeNull();
     expect(
       within(waiting).queryByText(
         "Nothing changed, so there is nothing to put back.",

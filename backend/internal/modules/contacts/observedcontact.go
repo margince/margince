@@ -33,6 +33,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -143,14 +144,24 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		return observedApplied, nil
 	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE contact SET `+column+` = $2 WHERE id = $1 AND archived_at IS NULL`, contactID, f.Value)
+		UPDATE contact SET `+column+` = $2
+		 WHERE id = $1 AND archived_at IS NULL AND `+column+` IS DISTINCT FROM $2`, contactID, f.Value)
 	if err != nil {
 		return observedSkipped, fmt.Errorf("contacts: observed %s fill: %w", f.Field, err)
 	}
 	if tag.RowsAffected() == 0 {
-		// The subject went between the two statements: the evidence row must
-		// not claim a value the record does not carry.
-		return observedSkipped, revokeSignatureEvidence(ctx, tx, contactID, f.Field)
+		// Either the record already showed this value, so the statement
+		// confirmed it rather than filling it and undoing it must not clear
+		// it; or the subject went between the two statements, and the
+		// evidence row must not claim a value the record does not carry.
+		_, err := storekit.LockRow(ctx, tx, entityContact, contactID.UUID, storekit.LiveOnly)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return observedSkipped, revokeSignatureEvidence(ctx, tx, contactID, f.Field)
+		}
+		if err != nil {
+			return observedSkipped, err
+		}
+		return observedConfirmed, nil
 	}
 	return observedApplied, nil
 }

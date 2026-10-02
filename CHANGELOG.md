@@ -25,6 +25,13 @@ when it has content.
 
 - Mail history: setup and Settings share a dropdown through ten years, show the
   preview start date, and qualify capped message and cost estimates.
+- Undo reaches what Margince did on its own. A record it created can be
+  archived again, an archived contact, company or deal can be brought back, a
+  lead it promoted can be demoted, and the fields a mail signature or a website
+  filled on a contact can be cleared. Each is one **Undo** on the record's
+  history and on the "Since your last brief" panel, which now lists what was
+  created and archived, one line per job, kind of record and day. A decision
+  waiting there offers **Decide** instead of saying it cannot be undone.
 - Mailbox imports report where their time goes on `/metrics`: every Gmail API
   call by op and result, each message's fetch, parse, transaction and
   follow-up time, pages and waits by cause, and the fleet's runs and progress.

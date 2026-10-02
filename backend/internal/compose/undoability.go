@@ -45,10 +45,10 @@ const (
 	// an image whose only keys are non-writable filters to nothing, and an
 	// entry that says "restore" over nothing is a button that does nothing.
 	ReasonNoBeforeImage Reason = "no_before_image"
-	// ReasonNotAReplayableVerb — the action is outside {update, restore}. A
-	// restore row IS replayable — it carries real images by construction, and
-	// admitting it is what makes undoing an undo work. archive, promote and
-	// merge have their own verbs; a field patch is not how you reverse them.
+	// ReasonNotAReplayableVerb — no undo exists for this action on this record
+	// type. update and restore replay an image; a create, an archive and a
+	// promotion are undone by the module's own verb where one exists
+	// (recordinverse.go). Merge, a send and the rest have none.
 	ReasonNotAReplayableVerb Reason = "not_a_replayable_verb"
 	// ReasonUnsupportedRecordType — the type is outside what this path serves:
 	// the six record types, and the link rows that appear on their histories.
@@ -149,7 +149,10 @@ type AuditRow struct {
 	// After is what this entry left the fields at. Supersession compares it
 	// with what the record holds now, which is what lets several changes be
 	// undone in a row.
-	After      json.RawMessage
+	After json.RawMessage
+	// Evidence is the entry's own account of why it happened: which pass
+	// wrote a fill, and what it read.
+	Evidence   json.RawMessage
 	OccurredAt time.Time
 }
 
@@ -233,6 +236,11 @@ func (e Evaluator) Evaluate(ctx context.Context, tx pgx.Tx, row AuditRow, mode M
 	// table this row is not on.
 	if row.EntityType == edgeEntityType {
 		return e.evaluateEdge(ctx, tx, row)
+	}
+	// A create, an archive, a promotion and a machine fill are undone by the
+	// module's own verb, not by replaying an image.
+	if kind := inverseOf(row); kind != inverseNone {
+		return e.evaluateInverse(ctx, tx, row, kind)
 	}
 	if !replayableVerb(row.Action) {
 		return refuse(ReasonNotAReplayableVerb, row.Action), nil

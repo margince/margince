@@ -177,7 +177,7 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 		if err != nil {
 			return err
 		}
-		appliedFields, err := s.applySignatureStatement(ctx, tx, contactID, sourceRef, observedAt, fields, corrected, &res)
+		appliedFields, confirmed, err := s.applySignatureStatement(ctx, tx, contactID, sourceRef, observedAt, fields, corrected, &res)
 		if err != nil {
 			return err
 		}
@@ -192,10 +192,17 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 		// are context ABOUT the mutation and ride evidence: anything placed in
 		// the images is projected by field history as a change to a field of
 		// that name (storekit.AuditWithEvidence).
+		// "confirmed" is written even when empty: its absence is how an undo
+		// tells a signature from before confirmations were named.
+		if confirmed == nil {
+			confirmed = []string{}
+		}
+		evidence := map[string]any{
+			auditKeySource: enrichSource, auditKeyFields: appliedFields, auditKeySourceRef: sourceRef,
+			auditKeyConfirmed: confirmed,
+		}
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", entityContact, contactID.UUID,
-			before, after, map[string]any{
-				auditKeySource: enrichSource, auditKeyFields: appliedFields, auditKeySourceRef: sourceRef,
-			})
+			before, after, evidence)
 		if err != nil {
 			return err
 		}
@@ -211,8 +218,8 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 
 // applySignatureStatement lands every field of one signature that no human has
 // ruled on, and returns the names of those that landed.
-func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, fields []SignatureField, corrected map[string]bool, res *SignatureApplyResult) ([]string, error) {
-	var appliedFields []string
+func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, fields []SignatureField, corrected map[string]bool, res *SignatureApplyResult) ([]string, []string, error) {
+	var appliedFields, confirmed []string
 	var numbers []SignatureField
 	for _, f := range fields {
 		if corrected[f.Name] {
@@ -228,28 +235,35 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 			numbers = append(numbers, f)
 			continue
 		}
-		applied, err := s.applySignatureField(ctx, tx, contactID, sourceRef, observedAt, f)
+		outcome, err := s.applySignatureField(ctx, tx, contactID, sourceRef, observedAt, f)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		if !applied {
+		if outcome != observedApplied && outcome != observedConfirmed {
 			res.Skipped++
 			continue
 		}
 		res.Applied++
 		appliedFields = append(appliedFields, f.Name)
+		if outcome == observedConfirmed {
+			confirmed = append(confirmed, f.Name)
+		}
 	}
 	landed, err := applySignatureNumbers(ctx, tx, contactID, sourceRef, observedAt, numbers)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	res.Applied += landed
 	res.Skipped += len(numbers) - landed
 	if landed > 0 {
 		appliedFields = append(appliedFields, fieldPhone)
 	}
-	return appliedFields, nil
+	return appliedFields, confirmed, nil
 }
+
+// auditKeyConfirmed names the fields a statement found already showing its
+// value: their evidence was written, and undoing the statement leaves them.
+const auditKeyConfirmed = "confirmed"
 
 // signatureImages builds the audit images for the fields this pass landed, as
 // it found them and as it left them — keyed by the field name, whether it is a column of the contact or
@@ -281,10 +295,10 @@ const signatureFieldFilled = "filled"
 
 // applySignatureField lands one single-answer field and reports whether it did.
 // A value that is only whitespace is a skipped field, not a failure.
-func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, f SignatureField) (bool, error) {
+func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, f SignatureField) (observedOutcome, error) {
 	value := strings.TrimSpace(f.Value)
 	if value == "" {
-		return false, nil
+		return observedSkipped, nil
 	}
 	// The contact's own dated statement, applied by the writer both this pass
 	// and the card import share, which records the evidence row that keeps the
@@ -294,14 +308,14 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, contactID id
 		Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
 		ObservedAt: observedAt,
 	})
-	if err != nil || outcome != observedApplied {
-		return false, err
+	if err != nil || (outcome != observedApplied && outcome != observedConfirmed) {
+		return observedSkipped, err
 	}
 	if err := storekit.StampFields(ctx, tx, entityContact, contactID.UUID, sourceRef, enrichCapturedBy,
 		[]storekit.FieldStamp{{Field: f.Name}}); err != nil {
-		return false, err
+		return observedSkipped, err
 	}
-	return true, nil
+	return outcome, nil
 }
 
 // applySignatureNumbers lands every number one signature lists and reports how

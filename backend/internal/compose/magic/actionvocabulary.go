@@ -38,10 +38,25 @@ type admittedAction struct {
 	// action. A true here is a necessary condition and never a sufficient one:
 	// compose/undoability still judges the individual row, and its answer wins.
 	reversible bool
+	// perType is the sentence for each kind of record, for an action whose
+	// sentence has to name what it made or put away. A record type absent here
+	// is not shown, for the reason an unknown action is not.
+	perType map[string]string
 }
 
 // actionUpdate is the audit verb for a change to a record's fields.
 const actionUpdate = "update"
+
+// The verbs a machine runs over records in bulk: a mailbox import creates
+// thousands of contacts, and the mail reader archives messages it judges noise.
+const (
+	actionCreate  = "create"
+	actionArchive = "archive"
+)
+
+// bulkActions are read and counted apart from the rest (doneSince), so an
+// import of thousands cannot push every other change off the page.
+var bulkActions = map[string]bool{actionCreate: true, actionArchive: true}
 
 // admitted is the closed set, keyed by the audit action.
 //
@@ -93,6 +108,38 @@ var admitted = map[string]admittedAction{
 		consequence: "magic.consequence.lead_disqualified",
 		reversible:  true,
 	},
+	actionCreate: {
+		reversible: true,
+		perType: map[string]string{
+			typeContact:  "magic.action.create_contact",
+			typeCompany:  "magic.action.create_company",
+			typeDeal:     "magic.action.create_deal",
+			typeLead:     "magic.action.create_lead",
+			typeProject:  "magic.action.create_project",
+			typeActivity: "magic.action.create_activity",
+		},
+	},
+	actionArchive: {
+		reversible: true,
+		perType: map[string]string{
+			typeContact:  "magic.action.archive_contact",
+			typeCompany:  "magic.action.archive_company",
+			typeDeal:     "magic.action.archive_deal",
+			typeLead:     "magic.action.archive_lead",
+			typeProject:  "magic.action.archive_project",
+			typeActivity: "magic.action.archive_activity",
+		},
+	},
+}
+
+// sentenceFor answers the sentence for one action on one kind of record, and
+// whether there is one.
+func (a admittedAction) sentenceFor(entityType string) (string, bool) {
+	if a.perType != nil {
+		key, ok := a.perType[entityType]
+		return key, ok
+	}
+	return a.sentence, a.sentence != ""
 }
 
 // meaningOf answers what an action means to a reader, and whether it means

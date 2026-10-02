@@ -160,8 +160,19 @@ function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
  * A line standing for many offers its undos inside, one per record: one press
  * that put back 150 changes nobody had looked at would be the same unasked
  * bulk write this page exists to report.
+ *
+ * A decision waiting has nothing to undo. Its control is the way to the
+ * worklist, where every staged decision is answered.
  */
 function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
+  const t = useT();
+  if (line.lane === "needs_you") {
+    return (
+      <div className="magic-line-controls">
+        <a href={routeHash({ screen: "worklist" })}>{t("magic.decide")}</a>
+      </div>
+    );
+  }
   const entity = line.entity;
   if (
     line.lane !== "done" ||

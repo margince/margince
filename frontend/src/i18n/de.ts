@@ -842,6 +842,12 @@ export const de = {
   "history.undo.confirmTitle": "Diese Änderung rückgängig machen?",
   "history.undo.confirmEdgeBody":
     "Damit ändert sich die Verknüpfung mit {other}. Beide Datensätze bleiben bestehen, nur die Verknüpfung zwischen ihnen ändert sich.",
+  "history.undo.confirmCreateBody":
+    "Der Datensatz wird archiviert. Über seinen Verlauf kannst du ihn zurückholen.",
+  "history.undo.confirmArchiveBody":
+    "Der Datensatz wird aus dem Archiv zurückgeholt.",
+  "history.undo.confirmPromoteBody":
+    "Der Kontakt wird wieder zum Lead. Hat die Umwandlung den Kontakt erst angelegt, wird er archiviert.",
   "history.undo.confirmBody_one":
     "{count} Feld wird auf seinen Wert vor dieser Änderung zurückgesetzt:",
   "history.undo.confirmBody_other":
@@ -1164,7 +1170,7 @@ export const de = {
   "record.archive": "Archivieren",
   "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
-    "Diesen Datensatz archivieren? Das lässt sich nicht rückgängig machen.",
+    "Diesen Datensatz archivieren? Über seinen Verlauf kannst du ihn zurückholen.",
   "record.archived": "Archiviert",
   "record.archivedReadOnly":
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
@@ -3326,7 +3332,7 @@ export const de = {
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
   "deal.archive": "Deal archivieren",
   "deal.archiveConfirm":
-    "Das Archivieren entfernt diesen Deal aus den offenen Deals. Das lässt sich hier nicht rückgängig machen.",
+    "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über seinen Verlauf kannst du ihn zurückholen.",
   "deal.archivedReadOnly":
     "Dieser Deal ist archiviert und lässt keine Änderungen zu.",
   "deal.notYoursToChange":
@@ -11751,6 +11757,18 @@ export const de = {
     "Transkriptinhalte nach Ablauf der Aufbewahrungsfrist gelöscht",
   "magic.action.retention_deal_archive":
     "Abgeschlossene Deals nach Ablauf der Aufbewahrungsfrist archiviert",
+  "magic.action.create_contact": "Kontakt angelegt:",
+  "magic.action.create_company": "Unternehmen angelegt:",
+  "magic.action.create_deal": "Deal angelegt:",
+  "magic.action.create_lead": "Lead angelegt:",
+  "magic.action.create_project": "Projekt angelegt:",
+  "magic.action.create_activity": "E-Mail oder Termin gespeichert:",
+  "magic.action.archive_contact": "Kontakt archiviert:",
+  "magic.action.archive_company": "Unternehmen archiviert:",
+  "magic.action.archive_deal": "Deal archiviert:",
+  "magic.action.archive_lead": "Lead archiviert:",
+  "magic.action.archive_project": "Projekt archiviert:",
+  "magic.action.archive_activity": "E-Mail oder Termin archiviert:",
   "magic.why.mail_filed": "Die Absenderadresse gehört zu diesem Kontakt.",
   "magic.why.public_records":
     "Aus der öffentlichen Website und den DNS-Einträgen des Unternehmens.",
@@ -11777,6 +11795,7 @@ export const de = {
   "magic.noRecord": "Kein Datensatz genannt",
   "magic.undo.action": "Rückgängig",
   "magic.undo.done": "Rückgängig gemacht",
+  "magic.decide": "Entscheiden",
   "magic.records.title": "Was sich geändert hat, Datensatz für Datensatz",
   "magic.records.empty": "Keiner dieser Datensätze ist noch sichtbar.",
   "magic.records.more": "Mehr anzeigen",
@@ -11806,6 +11825,8 @@ export const de = {
   "magic.glance.meetingsBooked": "Termine gebucht",
   "magic.glance.leadsDisqualified": "Leads disqualifiziert",
   "magic.glance.retention": "Aufbewahrung angewendet",
+  "magic.glance.recordsCreated": "Datensätze angelegt",
+  "magic.glance.recordsArchived": "Datensätze archiviert",
   "magic.timeline.title": "Wann es passiert ist",
   "magic.timeline.agent": "Agenten",
   "magic.timeline.sync": "Synchronisierung und Regeln",

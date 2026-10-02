@@ -61,11 +61,11 @@ To log a GDPR access request, an administrator opens **Settings → Privacy and 
 Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
 ### How do I archive a record?
-To archive a contact or company, open it and choose **More actions → Archive**, then confirm "Archive this record? There is no undo." For a deal, choose **Archive deal**; for a project, **Archive project**. Leads are not archived: choose **Disqualify**. To see archived rows on a list, choose **Show archived**.
+To archive a contact or company, open it and choose **More actions → Archive**, then confirm "Archive this record? You can bring it back from its history." For a deal, choose **Archive deal**; for a project, **Archive project**. Leads are not archived: choose **Disqualify**. To see archived rows on a list, choose **Show archived**.
 Also called: hide, remove, retire a record.
 
 ### How do I restore an archived record?
-Margince cannot restore an archived contact, company, deal or project: there is no unarchive. The archived record can still be opened read-only, and **Show archived** on a list shows it. Individual field changes can be reversed with **Undo** in the record's **History**. Tags and pipelines have their own **Restore**; an archived team comes back with **Undo** on the "Team archived" notice.
+An archived contact, company or deal comes back with **Undo** on the entry that archived it in the record's **History**; open it with **Show archived** on its list. A project cannot be brought back from the app. Individual field changes can be reversed with **Undo** in the record's **History** too. Tags and pipelines have their own **Restore**; an archived team comes back with **Undo** on the "Team archived" notice.
 Also called: unarchive, undelete, recover.
 
 ### How do I change how long Margince keeps data?

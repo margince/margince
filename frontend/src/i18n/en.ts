@@ -824,6 +824,12 @@ export const en = {
   "history.undo.confirmTitle": "Undo this change?",
   "history.undo.confirmEdgeBody":
     "This changes the link with {other}. Both records stay; only the link between them changes.",
+  "history.undo.confirmCreateBody":
+    "This archives the record. You can bring it back from its history.",
+  "history.undo.confirmArchiveBody":
+    "This brings the record back from the archive.",
+  "history.undo.confirmPromoteBody":
+    "This turns the contact back into a lead. If the promotion created the contact, the contact is archived.",
   "history.undo.confirmBody_one":
     "{count} field reverts to its value before this change:",
   "history.undo.confirmBody_other":
@@ -1163,7 +1169,8 @@ export const en = {
   "record.archiveDone": "“{name}” archived",
   "record.archive": "Archive",
   "record.disqualify": "Disqualify",
-  "record.archiveConfirm": "Archive this record? There is no undo.",
+  "record.archiveConfirm":
+    "Archive this record? You can bring it back from its history.",
   "record.archived": "Archived",
   "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange":
@@ -3382,7 +3389,7 @@ export const en = {
   "deal.fxBase": "Base {value} · rate {rate} as of {date}",
   "deal.archive": "Archive deal",
   "deal.archiveConfirm":
-    "Archiving removes this deal from open deals. This cannot be undone here.",
+    "Archiving removes this deal from open deals. You can bring it back from its history.",
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",
   "deal.notYoursToChange":
     "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights.",
@@ -11907,6 +11914,18 @@ export const en = {
     "Erased transcript content past its retention period",
   "magic.action.retention_deal_archive":
     "Archived closed deals past their retention period",
+  "magic.action.create_contact": "Created contact",
+  "magic.action.create_company": "Created company",
+  "magic.action.create_deal": "Created deal",
+  "magic.action.create_lead": "Created lead",
+  "magic.action.create_project": "Created project",
+  "magic.action.create_activity": "Saved email or meeting",
+  "magic.action.archive_contact": "Archived contact",
+  "magic.action.archive_company": "Archived company",
+  "magic.action.archive_deal": "Archived deal",
+  "magic.action.archive_lead": "Archived lead",
+  "magic.action.archive_project": "Archived project",
+  "magic.action.archive_activity": "Archived email or meeting",
   "magic.why.mail_filed": "The sender’s address belongs to this contact.",
   "magic.why.public_records":
     "From the company’s public website and DNS records.",
@@ -11932,6 +11951,7 @@ export const en = {
   "magic.noRecord": "No record named",
   "magic.undo.action": "Undo",
   "magic.undo.done": "Undone",
+  "magic.decide": "Decide",
   "magic.records.title": "What changed, record by record",
   "magic.records.empty": "None of these records is in view any more.",
   "magic.records.more": "Show more",
@@ -11960,6 +11980,8 @@ export const en = {
   "magic.glance.meetingsBooked": "Meetings booked",
   "magic.glance.leadsDisqualified": "Leads disqualified",
   "magic.glance.retention": "Retention applied",
+  "magic.glance.recordsCreated": "Records created",
+  "magic.glance.recordsArchived": "Records archived",
   "magic.timeline.title": "When it happened",
   "magic.timeline.agent": "Agents",
   "magic.timeline.sync": "Sync and rules",

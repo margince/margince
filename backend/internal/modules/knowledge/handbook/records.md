@@ -213,16 +213,21 @@ how each connects are on their own page:
 
 ### How do I archive a contact, company, deal or project?
 To archive a record in Margince, open it, choose **More actions**, then the archive entry: **Archive** on a contact or company, **Archive deal** on a deal, **Archive project** on a project.
-Confirm the dialog. For contacts and companies it reads "Archive this record? There is no undo."
+Confirm the dialog. For contacts and companies it reads "Archive this record? You can bring it back from its history."
 Several contacts, companies or deals can be archived at once with **Archive** in the list's bulk bar. A lead is not archived; disqualify it instead.
 An archived record leaves the live list; turn on **Show archived** on the list to see it again. It becomes read-only.
 Also called: remove, hide, deactivate a record.
 
 ### Can I restore or unarchive an archived record?
-No. Margince has no way to restore an archived contact, company, deal or project: archiving is final from the app, and an archived record takes no edits, merges or undo. You can still open it with **Show archived** and read its history.
-If you archived by mistake, create the record again, or ask an administrator.
+Yes, for a contact, company or deal. Open the record with **Show archived** and go to its history. Find the entry that archived it and press **Undo**. The record comes back, with its email addresses, phone numbers, links, list memberships and tags where they can still come back. Anything that could not come back is named in the history. Undo is refused when the record was archived again since, merged into another record, or erased. It is also refused when another record now holds its email address or domain.
+Records Margince archived on its own, such as emails it judged to be noise, are listed in the **Since your last brief** panel on Home, which says what Margince did while you were away. A contact, company or deal there has its own **Undo**. An archived email or meeting cannot be brought back yet. A project cannot be brought back from the app; create it again, or ask an administrator. An archived record takes no edits or merges.
 Tags and pipelines do have a **Restore**; an archived team comes back with **Undo** on its archived notice. A disqualified lead can be reopened with **Reopen**.
 Also called: unarchive, undelete, bring back a record.
+
+### Can I undo a record Margince created?
+Yes. The **Since your last brief** panel on Home groups what Margince created on its own, for example "Created contact" for the contacts it found in your mail. Open the line to see every record, and press **Undo** on one to archive it. The same **Undo** is on the "Created" entry in the record's history.
+Undo is refused once a colleague has changed the record, so their work is never archived with it. A lead cannot be undone this way; disqualify it instead.
+Also called: remove an imported contact, take back an automatic record.
 
 ### How do I delete a contact or company?
 You cannot delete a company or a contact in Margince: there is no delete button for a contact, company, lead, deal or project. To remove one, archive it — open the record, choose **More actions** → **Archive** — which keeps the record but takes it off the live lists.
@@ -311,7 +316,7 @@ press anything. The three reasons you will actually meet:
   whatever was written after it, so it is refused. The reason names the field,
   so you can look at what happened in between and decide.
 - **The record was archived.** A change cannot be put back onto an archived
-  record, and an archived record cannot be restored.
+  record; bring a contact, company or deal back first with **Undo** on its archive entry.
 - **The change did not come from an editable path.** Some entries record things
   the record's own edit path cannot write — an entry that would have to clear a
   field nothing can clear. These are shown as history, not as something to undo.

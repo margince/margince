@@ -63,12 +63,12 @@ type entry struct {
 // line's About column shows. An activity is named by its subject, read through
 // the content clause that already decided the reader may see it.
 var recordLabels = map[string]string{
-	typeDeal:    "e.name",
-	typeCompany: "e.display_name",
-	typeContact: "e.full_name",
-	typeLead:    "e.full_name",
-	typeProject: "e.name",
-	"activity":  "e.subject",
+	typeDeal:     "e.name",
+	typeCompany:  "e.display_name",
+	typeContact:  "e.full_name",
+	typeLead:     "e.full_name",
+	typeProject:  "e.name",
+	typeActivity: "e.subject",
 }
 
 // readCap bounds the audit rows one arm reads before lines are grouped. The
@@ -103,10 +103,17 @@ const (
 	typeContact = "contact"
 	typeLead    = "lead"
 	typeProject = "project"
+	// typeActivity is placed by its own arm, under the audience gate.
+	typeActivity = "activity"
 )
 
 // doneSince reads the admitted machine actions in the window, for the records
 // this reader may see.
+//
+// TWO READS PER TYPE. Creates and archives are read apart from everything
+// else, each under its own readCap: a mailbox import writes one create per
+// contact, and in one read thousands of them would fill the cap and push every
+// other change on contacts off the page.
 func doneSince(
 	ctx context.Context, tx pgx.Tx, since time.Time, limit int,
 ) ([]entry, map[string]int, map[string]bool, error) {
@@ -116,24 +123,27 @@ func doneSince(
 	// did not return are indistinguishable from rows that do not exist, and
 	// every count grouped out of it is a floor rather than a total.
 	capped := map[string]bool{}
-	for entityType, table := range scopedTypes {
-		rows, err := doneForType(ctx, tx, entityType, table, since, limit)
+	for _, bulk := range []bool{false, true} {
+		actions := admittedActions(bulk)
+		for entityType, table := range scopedTypes {
+			rows, err := doneForType(ctx, tx, entityType, table, since, actions)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if len(rows) == readCap {
+				capped[armOf(entityType, bulk)] = true
+			}
+			found = append(found, rows...)
+		}
+		activities, err := doneForActivities(ctx, tx, since, actions)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		if len(rows) == readCap {
-			capped[entityType] = true
+		if len(activities) == readCap {
+			capped[armOf(typeActivity, bulk)] = true
 		}
-		found = append(found, rows...)
+		found = append(found, activities...)
 	}
-	activities, err := doneForActivities(ctx, tx, since, limit)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if len(activities) == readCap {
-		capped["activity"] = true
-	}
-	found = append(found, activities...)
 	// WHAT THIS READ COULD NOT PLACE, counted rather than guessed at. `update`
 	// alone is audited against some forty entity types and this build places
 	// seven; without the count, a receipt showing four lines implies those were
@@ -149,13 +159,32 @@ func doneSince(
 	return found, notShown, capped, nil
 }
 
+// armOf names the read an entry came from, which is what a cut is recorded
+// against.
+func armOf(entityType string, bulk bool) string {
+	if bulk {
+		return entityType + "/bulk"
+	}
+	return entityType
+}
+
+// armOfEntry names the read one entry came from.
+func armOfEntry(e entry) string {
+	return armOf(e.EntityType, bulkActions[e.Action])
+}
+
+// notRetention keeps retention's own creates and archives out of the done lane:
+// retentionSince reports them as counts, and listing them here as well would
+// say twice what retention did.
+const notRetention = `NOT (a.action = ANY('{create,archive}'::text[]) AND coalesce(a.evidence, '{}'::jsonb) ? 'retention_action')`
+
 // doneForType reads one owner-scoped entity type's machine actions.
 //
 // The JOIN is what scopes the row: an audit entry whose record this reader
 // cannot see does not survive it, and the predicate is the table's own rather
 // than one written here.
 func doneForType(
-	ctx context.Context, tx pgx.Tx, entityType, table string, since time.Time, limit int,
+	ctx context.Context, tx pgx.Tx, entityType, table string, since time.Time, actions []string,
 ) ([]entry, error) {
 	// THE GRANT FIRST, and it is not optional even though the clause below often
 	// renders nothing. auth.UnboundedFor answers true for a rep on most of these
@@ -178,7 +207,7 @@ func doneForType(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	sinceAt := arg(since)
 	actors := arg(machineActors())
-	actions := arg(admittedActions())
+	actionsAt := arg(actions)
 	typeAt := arg(entityType)
 	scope, err := auth.ScopeClauseFor(ctx, table, "e", arg)
 	if err != nil {
@@ -198,8 +227,8 @@ func doneForType(
 	unscrubbed := privacy.UnscrubbedImageSQL("a", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs())))
 
 	where := fmt.Sprintf(
-		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = $%d AND %s`,
-		sinceAt, actors, actions, typeAt, unscrubbed)
+		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = $%d AND %s AND %s`,
+		sinceAt, actors, actionsAt, typeAt, unscrubbed, notRetention)
 	if scope != "" {
 		where += " AND " + scope
 	}
@@ -226,7 +255,7 @@ func doneForType(
 // without the grant serves every row to a seat that lost activity.read entirely,
 // which is the trap of taking a scope clause for a gate.
 func doneForActivities(
-	ctx context.Context, tx pgx.Tx, since time.Time, limit int,
+	ctx context.Context, tx pgx.Tx, since time.Time, actions []string,
 ) ([]entry, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		// A DENIAL narrows this arm to nothing and leaves the rest of the page
@@ -245,7 +274,7 @@ func doneForActivities(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	sinceAt := arg(since)
 	actors := arg(machineActors())
-	actions := arg(admittedActions())
+	actionsAt := arg(actions)
 	content, err := auth.ActivityContentClause(ctx, "e", arg)
 	if err != nil {
 		return nil, err
@@ -254,8 +283,8 @@ func doneForActivities(
 	// hold what the erasure certified gone.
 	unscrubbed := privacy.UnscrubbedImageSQL("a", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs())))
 	where := fmt.Sprintf(
-		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = 'activity' AND %s`,
-		sinceAt, actors, actions, unscrubbed)
+		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = 'activity' AND %s AND %s`,
+		sinceAt, actors, actionsAt, unscrubbed, notRetention)
 	if content != "" {
 		where += " AND " + content
 	}
@@ -267,7 +296,7 @@ func doneForActivities(
 		  JOIN activity e ON e.id = a.entity_id
 		 WHERE %s
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, recordLabels["activity"], where, arg(readCap))
+		 LIMIT $%d`, recordLabels[typeActivity], where, arg(readCap))
 	return scanEntries(ctx, tx, query, args)
 }
 
@@ -293,15 +322,18 @@ func scanEntries(ctx context.Context, tx pgx.Tx, query string, args []any) ([]en
 	return found, rows.Err()
 }
 
-// admittedActions lists the actions this surface shows, for the SQL filter.
+// admittedActions lists the actions one read shows, for the SQL filter: the
+// bulk verbs, or every other admitted one.
 //
 // Filtering in the query rather than in Go is what keeps the count honest: a
 // read that fetched everything and dropped the rest would page over rows it
 // never shows, so a page of twenty could come back holding three.
-func admittedActions() []string {
+func admittedActions(bulk bool) []string {
 	actions := make([]string, 0, len(admitted))
 	for action := range admitted {
-		actions = append(actions, action)
+		if bulkActions[action] == bulk {
+			actions = append(actions, action)
+		}
 	}
 	return actions
 }
@@ -313,6 +345,11 @@ func admittedActions() []string {
 // it would serve a row this read cannot prove the reader may see — but it is
 // COUNTED, so the receipt can say how much it is not showing.
 //
+// Creates and archives are not counted. They are admitted for the records this
+// page places, and every other kind of row — a tag, a list membership, an
+// approval — is created and archived by the machinery as bookkeeping, which is
+// not a change to a record the reader keeps.
+//
 // The count is deliberately coarse: it does not name the types, because naming
 // them would say which kinds of record exist and were touched, which is a fact
 // about the installation rather than about this reader's work.
@@ -321,7 +358,7 @@ func unplaceableSince(ctx context.Context, tx pgx.Tx, since time.Time) (int, err
 	for entityType := range scopedTypes {
 		placed = append(placed, entityType)
 	}
-	placed = append(placed, "activity")
+	placed = append(placed, typeActivity)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	query := fmt.Sprintf(`
@@ -330,7 +367,7 @@ func unplaceableSince(ctx context.Context, tx pgx.Tx, since time.Time) (int, err
 		   AND a.actor_type = ANY($%d)
 		   AND a.action = ANY($%d)
 		   AND NOT (a.entity_type = ANY($%d))`,
-		arg(since), arg(machineActors()), arg(admittedActions()), arg(placed))
+		arg(since), arg(machineActors()), arg(admittedActions(false)), arg(placed))
 	var count int
 	if err := tx.QueryRow(ctx, query, args...).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count the machine actions this build cannot place: %w", err)
