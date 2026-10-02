@@ -28,16 +28,19 @@ class SemanticTest(unittest.TestCase):
             return stackready.semantic_problem(session)
 
     def test_semantic_hits_are_ready(self):
-        self.assertEqual(self.problem(reply(3)), "")
+        self.assertEqual(self.problem(reply(3)), ("", False))
 
-    def test_lexical_fallback_is_named(self):
-        self.assertIn("lexical", self.problem(reply(0, ["semantic_ranking_degraded_to_lexical"])))
+    def test_lexical_fallback_is_named_as_lexical(self):
+        why, lexical = self.problem(reply(0, ["semantic_ranking_degraded_to_lexical"]))
+        self.assertEqual((lexical, "lexical" in why), (True, True))
 
-    def test_no_hits_is_not_ready(self):
-        self.assertIn("no hits", self.problem(reply(0)))
+    def test_no_hits_is_not_ready_and_not_lexical(self):
+        why, lexical = self.problem(reply(0))
+        self.assertEqual((lexical, "no hits" in why), (False, True))
 
-    def test_a_refused_search_is_named(self):
-        self.assertIn("refused", self.problem(("not allowed", True)))
+    def test_a_refused_search_is_not_lexical(self):
+        why, lexical = self.problem(("not allowed", True))
+        self.assertEqual((lexical, "refused" in why), (False, True))
 
 
 class MainTest(unittest.TestCase):
@@ -56,6 +59,11 @@ class MainTest(unittest.TestCase):
         with FakeMcp(SEARCH, replies={"search_context": ("<html>", False)}) as server:
             code, out = self.run_main(server.url)
         self.assertEqual(code, 3)
+
+    def test_a_stack_that_never_indexed_is_a_harness_fault_not_lexical(self):
+        with FakeMcp(SEARCH, replies={"search_context": reply(0)}) as server:
+            code, out = self.run_main(server.url)
+        self.assertEqual((code, "no hits" in out), (3, True))
 
     def test_a_lexical_search_is_exit_1_with_its_reason(self):
         with FakeMcp(SEARCH, replies={"search_context": reply(0, ["semantic_ranking_degraded_to_lexical"])}) as server:

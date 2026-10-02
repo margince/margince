@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -30,8 +31,29 @@ func TestTheCommandRefusesWhatIsNotAPreset(t *testing.T) {
 		{"a file with no routing", []string{"main.go"}, 1},
 	} {
 		var out, errs bytes.Buffer
-		if code := run(tc.args, &out, &errs); code != tc.want || out.Len() != 0 {
-			t.Errorf("%s: exit %d with %q on stdout, want exit %d and nothing printed", tc.name, code, out.String(), tc.want)
+		if code := run(tc.args, &out, &errs); code != tc.want || out.Len() != 0 || errs.Len() == 0 {
+			t.Errorf("%s: exit %d, stdout %q, stderr %q; want exit %d, nothing printed and a reason given",
+				tc.name, code, out.String(), errs.String(), tc.want)
 		}
+	}
+}
+
+type brokenWriter struct{}
+
+func (brokenWriter) Write([]byte) (int, error) { return 0, errors.New("closed") }
+
+func TestABodyThatCannotBeWrittenIsAFailure(t *testing.T) {
+	var errs bytes.Buffer
+	if code := run([]string{"../../../../../config/presets/openrouter_cloud_eu.yaml"}, brokenWriter{}, &errs); code != 1 ||
+		!strings.Contains(errs.String(), "writing the body") {
+		t.Errorf("exit %d, stderr %q; want exit 1 naming the write", code, errs.String())
+	}
+}
+
+// A usage error whose report cannot be written still fails, as a plain failure.
+func TestAReportThatCannotBeWrittenStillFails(t *testing.T) {
+	var out bytes.Buffer
+	if code := run(nil, &out, brokenWriter{}); code != 1 {
+		t.Errorf("exit %d, want 1", code)
 	}
 }

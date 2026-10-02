@@ -110,7 +110,7 @@ class ChatWireTest(Bridge):
 
     def test_a_200_that_is_not_json_is_retried_then_a_harness_fault(self):
         code, _out = self.drive([(200, "<html>proxy</html>")] * 3)
-        self.assertEqual(code, 3)
+        self.assertEqual((code, len(self.requests)), (3, 3))
 
     def test_a_truncated_body_is_retried(self):
         import http.client

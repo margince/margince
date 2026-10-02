@@ -297,8 +297,8 @@ SEARCH=semantic
 ready=0
 why="$(MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/stackready.py" \
   --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN)" || ready=$?
-# 3 is a probe that could not run at all: no search was measured, so no
-# allowance for a lexical one applies to it.
+# Only 1 is a confirmed lexical search; anything else not 0 means search was
+# never measured, so no allowance for a lexical one applies to it.
 if [[ "$ready" -ne 0 && "$ready" -ne 1 ]]; then
   echo "HARNESS: $why" >&2
   exit 2

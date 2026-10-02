@@ -8,9 +8,10 @@ asks before it snapshots the world.
 
     stackready.py --mcp-url URL --token-env NAME [--wait SECONDS]
 
-Exit 0 when semantic search answers, 1 (with the reason) when it never did,
-3 when the server could not be asked at all — a harness fault the lane stops on
-whatever E2E_LLM_ALLOW_LEXICAL says, because it is not a lexical search.
+Exit 0 when semantic search answers; 1 only when search is confirmed lexical,
+the one state E2E_LLM_ALLOW_LEXICAL may wave through; 3 for anything else — a
+server that could not be asked, a refused probe, or nothing indexed by the
+deadline — which the lane stops on, because none of them is a lexical search.
 """
 
 import argparse
@@ -30,16 +31,17 @@ _DEGRADED = "semantic_ranking_degraded_to_lexical"
 
 
 def semantic_problem(session):
-    """Why search_context is not answering semantically, or "" when it is."""
+    """(why search_context is not answering semantically, whether that is a
+    lexical fallback) — ("", False) when it answers by meaning."""
     text, is_error = session.call("search_context", {"query": _PROBE, "limit": 5})
     if is_error:
-        return f"search_context refused the probe: {text[:200]}"
+        return f"search_context refused the probe: {text[:200]}", False
     data = json.loads(text).get("data") or {}
     if any(note.get("code") == _DEGRADED for note in data.get("notes") or ()):
-        return "search_context is ranking by word overlap alone (lexical): no embedding model serves it"
+        return "search_context is ranking by word overlap alone (lexical): no embedding model serves it", True
     if not data.get("hits"):
-        return "search_context answered with no hits: nothing is indexed yet"
-    return ""
+        return "search_context answered with no hits: nothing is indexed yet", False
+    return "", False
 
 
 def main():
@@ -53,12 +55,12 @@ def main():
     try:
         session.open()
         while True:
-            problem = semantic_problem(session)
+            problem, lexical = semantic_problem(session)
             if not problem:
                 return 0
             if time.monotonic() >= deadline:
                 print(problem)
-                return 1
+                return 1 if lexical else 3
             time.sleep(10)
     except (mcpclient.McpFault, ValueError) as fault:
         print(f"the search probe could not be run: {fault}")

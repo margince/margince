@@ -21,8 +21,9 @@ func main() {
 }
 
 // run is the command with its arguments and streams passed in: 0 when the body
-// was printed, 1 when the file is not a preset the product would accept, 2 on
-// a usage error.
+// was printed, 2 on a usage error, and 1 for any other failure — a file that
+// cannot be read, one that is not a preset the product would accept, or a
+// body that cannot be written.
 func run(args []string, stdout, stderr io.Writer) int {
 	if len(args) != 1 {
 		return fail(stderr, 2, "usage: presetbodycmd <preset.yaml>")

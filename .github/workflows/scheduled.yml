@@ -510,17 +510,24 @@ jobs:
         uses: ./.github/actions/upload-artifact-retried
         with:
           name: e2e-llm-transcripts
-          # The verdicts too: each says how it was measured (route, search mode),
-          # which the transcripts alone do not.
-          path: |
-            e2e/llm/records/
-            backend/internal/compose/aicert/records/mcp_e2e/
+          path: e2e/llm/records/
           retention-days: 30
           # ERROR, not warn. An empty records/ means the lane never drove a
           # scenario, and the first CI run passed this step while uploading
           # nothing — a green step on top of a job that had already failed 30
           # seconds in. The absence of transcripts is itself the finding.
           if-no-files-found: error
+      # The verdicts each say how they were measured (route, search mode), which
+      # the transcripts do not. A separate step: the directory is tracked, so
+      # sharing the step above would make its empty-records error unreachable.
+      - name: Keep the run verdicts
+        if: always() && steps.funded.outputs.configured == 'yes'
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: e2e-llm-verdicts
+          path: backend/internal/compose/aicert/records/mcp_e2e/
+          retention-days: 30
+          if-no-files-found: warn
 
   # PERF-1's PERCEIVED budget (MOBILE-AC-2), the browser half of what
   # perf-budgets measures over HTTP.
